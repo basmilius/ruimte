@@ -117,9 +117,9 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
             term.write(screen);
         });
 
-        const cwd = useCanvas.getState().nodes[id]?.cwd;
+        const node = useCanvas.getState().nodes[id];
         sessionClient
-            .open(id, cwd, term.cols, term.rows)
+            .open(id, { cwd: node?.cwd, command: node?.command }, term.cols, term.rows)
             .then((result) => {
                 if (!cancelled && result) {
                     term.write(result.screen);

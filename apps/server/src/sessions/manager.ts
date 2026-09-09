@@ -1,10 +1,13 @@
+import { randomBytes } from 'node:crypto';
 import { homedir } from 'node:os';
-import type { EventMap, EventType, SessionInfo } from '@ruimte/contracts';
+import type { AgentInfo, AgentKind, EventMap, EventType, SessionInfo } from '@ruimte/contracts';
+import type { AgentStore } from '../agents/agent-store.ts';
+import { normalizeHook, resumeCommand } from '../agents/hooks.ts';
 import { defaultShell, defaultShellArgs, type PtyAdapter } from '../pty/pty.ts';
 import { Session } from './session.ts';
 import type { SnapshotStore } from './snapshot-store.ts';
 
-export type SessionErrorCode = 'session-exists' | 'session-not-found' | 'session-exited' | 'spawn-failed';
+export type SessionErrorCode = 'session-exists' | 'session-not-found' | 'session-exited' | 'spawn-failed' | 'agent-not-found' | 'agent-live';
 
 export class SessionError extends Error {
     readonly code: SessionErrorCode;
@@ -26,6 +29,7 @@ export interface CreateSessionOptions {
     rows: number;
     cwd?: string;
     shell?: string;
+    command?: string;
     // Not on the wire; lets a test skip the login flag so the user's profile stays out of the output.
     args?: string[];
 }
@@ -33,22 +37,32 @@ export interface CreateSessionOptions {
 export interface SessionManagerOptions {
     adapter: PtyAdapter;
     snapshots?: SnapshotStore;
+    agents?: AgentStore;
     env?: Record<string, string | undefined>;
+    // Where the CLIs' hooks POST to; without it no hook variables reach the shell.
+    hookUrl?: string;
 }
+
+export type HookResult = 'applied' | 'ignored' | 'unknown-token';
 
 export class SessionManager {
     private readonly adapter: PtyAdapter;
     private readonly snapshots: SnapshotStore | null;
+    private readonly agents: AgentStore | null;
     private readonly env: Record<string, string | undefined>;
     private readonly sessions = new Map<string, Session>();
     private readonly sinks = new Map<string, SessionSink>();
+    private readonly tokens = new Map<string, string>();
     // Ids whose kill is in flight: the exit that follows removes the session instead of parking it.
     private readonly killing = new Set<string>();
+    hookUrl: string | null;
 
     constructor(options: SessionManagerOptions) {
         this.adapter = options.adapter;
         this.snapshots = options.snapshots ?? null;
+        this.agents = options.agents ?? null;
         this.env = options.env ?? process.env;
+        this.hookUrl = options.hookUrl ?? null;
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
@@ -67,12 +81,15 @@ export class SessionManager {
         }
 
         let restoredScreen: string | undefined;
+        let restoredAgent: AgentInfo | undefined;
         if (existing) {
             // The previous shell of this id ended on its own; its last screen is worth as much as a disk snapshot.
             restoredScreen = await existing.serializeScreen();
+            restoredAgent = existing.agent ?? undefined;
             this.remove(existing);
-        } else if (this.snapshots) {
-            restoredScreen = (await this.snapshots.read(options.sessionId)) ?? undefined;
+        } else {
+            restoredScreen = (await this.snapshots?.read(options.sessionId)) ?? undefined;
+            restoredAgent = (await this.agents?.read(options.sessionId)) ?? undefined;
         }
 
         const shell = options.shell ?? defaultShell(this.env);
@@ -83,11 +100,55 @@ export class SessionManager {
             cwd: options.cwd ?? this.env.HOME ?? homedir(),
             cols: options.cols,
             rows: options.rows,
-            restoredScreen
+            command: options.command,
+            restoredScreen,
+            restoredAgent
         });
         this.sessions.set(session.id, session);
+        this.tokens.set(session.hookToken, session.id);
         this.broadcastListChanged();
         return this.info(session);
+    }
+
+    /* A hook POST from a CLI inside one of the shells; the token says which one. */
+    async applyHook(kind: AgentKind, token: string, body: unknown): Promise<HookResult> {
+        const sessionId = this.tokens.get(token);
+        const session = sessionId === undefined ? undefined : this.sessions.get(sessionId);
+        if (!session) {
+            return 'unknown-token';
+        }
+        const outcome = normalizeHook(body);
+        if (!outcome) {
+            return 'ignored';
+        }
+        const agent: AgentInfo | null =
+            outcome.status === null
+                ? null
+                : {
+                      kind,
+                      agentSessionId: outcome.agentSessionId,
+                      transcriptPath: outcome.transcriptPath ?? session.agent?.transcriptPath ?? null,
+                      status: outcome.status,
+                      live: true,
+                      updatedAt: Date.now()
+                  };
+        await this.setAgent(session, agent);
+        return 'applied';
+    }
+
+    /* Types the CLI's resume command into the shell of a session whose agent is known but not running. */
+    resumeAgent(sessionId: string): void {
+        const session = this.require(sessionId);
+        if (session.exited) {
+            throw new SessionError('session-exited', `Session ${sessionId} has ended`);
+        }
+        if (!session.agent) {
+            throw new SessionError('agent-not-found', `Session ${sessionId} has no agent to resume`);
+        }
+        if (session.agent.live) {
+            throw new SessionError('agent-live', `The agent in ${sessionId} is still running`);
+        }
+        session.write(`${resumeCommand(session.agent.kind, session.agent.agentSessionId)}\n`);
     }
 
     get(sessionId: string): Session | undefined {
@@ -141,9 +202,8 @@ export class SessionManager {
 
     async kill(sessionId: string): Promise<void> {
         const session = this.require(sessionId);
-        if (this.snapshots) {
-            await this.snapshots.delete(sessionId);
-        }
+        await this.snapshots?.delete(sessionId);
+        await this.agents?.delete(sessionId);
         if (session.exited) {
             this.remove(session);
             this.broadcastListChanged();
@@ -170,7 +230,17 @@ export class SessionManager {
         }
     }
 
-    private spawn(options: { id: string; shell: string; args: string[]; cwd: string; cols: number; rows: number; restoredScreen?: string }): Session {
+    private spawn(options: {
+        id: string;
+        shell: string;
+        args: string[];
+        cwd: string;
+        cols: number;
+        rows: number;
+        command?: string;
+        restoredScreen?: string;
+        restoredAgent?: AgentInfo;
+    }): Session {
         const env: Record<string, string> = {};
         for (const [key, value] of Object.entries(this.env)) {
             if (value !== undefined) {
@@ -180,11 +250,18 @@ export class SessionManager {
         env.TERM = 'xterm-256color';
         env.COLORTERM = 'truecolor';
         env.RUIMTE_SESSION_ID = options.id;
+        const hookToken = randomBytes(24).toString('base64url');
+        if (this.hookUrl) {
+            env.RUIMTE_HOOK_URL = this.hookUrl;
+            env.RUIMTE_HOOK_TOKEN = hookToken;
+        }
 
+        let session: Session;
         try {
-            return new Session({
+            session = new Session({
                 ...options,
                 env,
+                hookToken,
                 adapter: this.adapter,
                 deliver: (clientId, data) => this.emit(clientId, { event: 'session.output', payload: { sessionId: options.id, data } }),
                 onExit: (exitCode) => this.handleExit(options.id, exitCode)
@@ -192,6 +269,7 @@ export class SessionManager {
         } catch (e) {
             throw new SessionError('spawn-failed', e instanceof Error ? e.message : `Could not start ${options.shell}`);
         }
+        return session;
     }
 
     private handleExit(sessionId: string, exitCode: number): void {
@@ -204,12 +282,32 @@ export class SessionManager {
         }
         if (this.killing.delete(sessionId)) {
             this.remove(session);
+        } else if (session.agent?.live) {
+            // The CLI never said goodbye, so it went down with the shell; its session may still resume.
+            void this.setAgent(session, { ...session.agent, status: 'error', live: false, updatedAt: Date.now() });
         }
         this.broadcastListChanged();
     }
 
+    private async setAgent(session: Session, agent: AgentInfo | null): Promise<void> {
+        session.agent = agent;
+        for (const sink of this.sinks.values()) {
+            sink({ event: 'session.status', payload: { sessionId: session.id, agent } });
+        }
+        try {
+            if (agent) {
+                await this.agents?.write(session.id, agent);
+            } else {
+                await this.agents?.delete(session.id);
+            }
+        } catch (e) {
+            console.error(`Agent record for ${session.id} failed`, e);
+        }
+    }
+
     private remove(session: Session): void {
         this.sessions.delete(session.id);
+        this.tokens.delete(session.hookToken);
         session.dispose();
     }
 
@@ -231,7 +329,8 @@ export class SessionManager {
             createdAt: session.createdAt,
             attached: session.attachedCount,
             exited: session.exited,
-            ...(session.exitCode !== null ? { exitCode: session.exitCode } : {})
+            ...(session.exitCode !== null ? { exitCode: session.exitCode } : {}),
+            agent: session.agent
         };
     }
 

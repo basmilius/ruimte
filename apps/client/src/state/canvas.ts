@@ -14,17 +14,32 @@ import {
 } from '@/canvas/math';
 import { demoEdges, demoNodes, demoTexts } from '@/data/demo';
 
+import type { AgentStatus } from '@ruimte/contracts';
+
+export type { AgentStatus } from '@ruimte/contracts';
+
 export type NodeKind = 'terminal' | 'chat' | 'browser';
-export type AgentStatus = 'running' | 'needs-you' | 'idle' | 'error';
 
 export interface CanvasNode extends Rect {
     id: string;
     kind: NodeKind;
     title: string;
+    /* Only for kinds without a daemon-side status (browser); terminals and chats report their own. */
     status?: AgentStatus;
     accent?: string;
-    /* Terminal only: where its shell starts. Absent means the daemon's home directory. */
+    /* Terminal and chat: where the shell or the agent starts. Absent means the daemon's home directory. */
     cwd?: string;
+    /* Terminal only: typed into the shell as its first line. */
+    command?: string;
+    /* Chat only: the agent session to continue. */
+    resume?: string;
+}
+
+export interface AddNodeOptions {
+    title?: string;
+    cwd?: string;
+    command?: string;
+    resume?: string;
 }
 
 export interface TextElement extends Point {
@@ -93,7 +108,7 @@ interface CanvasState {
     setNodeAccent(id: string, accent: string | null): void;
     renameNode(id: string, title: string): void;
     duplicateNode(id: string): void;
-    addNode(kind: NodeKind, at: Point): string;
+    addNode(kind: NodeKind, at: Point, options?: AddNodeOptions): string;
     addText(at: Point): string;
     updateText(id: string, text: string): void;
     setEditingText(id: string | null): void;
@@ -275,17 +290,19 @@ export const useCanvas = create<CanvasState>((set, get) => ({
         }
         set({ order: [...order.filter((n) => n !== id), id] });
     },
-    addNode(kind, at) {
+    addNode(kind, at, options = {}) {
         const id = nextId(kind);
         const size = NODE_SIZE[kind];
         const node: CanvasNode = {
             id,
             kind,
-            title: TITLES[kind],
+            title: options.title ?? TITLES[kind],
             x: snapToGrid(at.x - size.w / 2),
             y: snapToGrid(at.y - size.h / 2),
             ...size,
-            status: kind === 'chat' ? 'idle' : undefined
+            cwd: options.cwd,
+            command: options.command,
+            resume: options.resume
         };
         set((s) => ({ nodes: { ...s.nodes, [id]: node }, order: [...s.order, id], selection: [id], mode: { kind: 'canvas' } }));
         return id;

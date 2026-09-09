@@ -12,7 +12,8 @@
   "dependencies": {
     "@ruimte/contracts": "workspace:*",
     "@xterm/addon-serialize": "^0.14.0",
-    "@xterm/headless": "^6.0.0"
+    "@xterm/headless": "^6.0.0",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@types/bun": "^1.4.0",

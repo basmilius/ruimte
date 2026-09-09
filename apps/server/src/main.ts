@@ -1,8 +1,14 @@
 import type { ServerWebSocket } from 'bun';
 import type { ServerFrame } from '@ruimte/contracts';
 import pkg from '../package.json' with { type: 'json' };
+import { AgentStore } from './agents/agent-store.ts';
+import { HOOKS_PATH, handleHookRequest } from './agents/hook-receiver.ts';
+import { defaultHookPaths, installHooks } from './agents/install.ts';
+import { ChatManager } from './chat/chat-manager.ts';
+import { ChatStore } from './chat/chat-store.ts';
 import { parseServerArgs } from './config.ts';
 import { Dispatcher, sendEvent, type ClientConnection } from './dispatcher.ts';
+import { registerChatHandlers } from './handlers/chat.ts';
 import { registerServerHandlers } from './handlers/server.ts';
 import { registerSessionHandlers } from './handlers/session.ts';
 import { BunPtyAdapter } from './pty/bun-pty.ts';
@@ -13,12 +19,26 @@ const config = parseServerArgs(process.argv.slice(2));
 const version = pkg.version;
 
 const snapshots = new SnapshotStore(config.home);
-const manager = new SessionManager({ adapter: new BunPtyAdapter(), snapshots });
+const manager = new SessionManager({ adapter: new BunPtyAdapter(), snapshots, agents: new AgentStore(config.home) });
 const snapshotSchedule = scheduleSnapshots(manager, snapshots);
+const chats = new ChatManager({ store: new ChatStore(config.home) });
 
 const dispatcher = new Dispatcher();
 registerServerHandlers(dispatcher, { version, home: config.home });
 registerSessionHandlers(dispatcher, manager);
+registerChatHandlers(dispatcher, chats);
+
+if (config.installHooks) {
+    for (const [kind, path] of Object.entries(defaultHookPaths())) {
+        installHooks(path, kind as 'claude' | 'codex')
+            .then((result) => {
+                if (result === 'written') {
+                    console.log(`Installed ${kind} status hooks in ${path}${kind === 'codex' ? ' (trust them once with /hooks in Codex)' : ''}`);
+                }
+            })
+            .catch((e) => console.error(`Could not install ${kind} hooks`, e));
+    }
+}
 
 interface ConnectionState {
     client: ClientConnection;
@@ -48,6 +68,10 @@ const server = Bun.serve({
             return new Response('Expected a WebSocket upgrade', { status: 426 });
         }
 
+        if (url.pathname.startsWith(`${HOOKS_PATH}/`)) {
+            return handleHookRequest(request, url.pathname, manager);
+        }
+
         return new Response('Not found', { status: 404 });
     },
     websocket: {
@@ -58,8 +82,16 @@ const server = Bun.serve({
                     ws.send(JSON.stringify(frame));
                 }
             };
-            const unsubscribe = manager.subscribe(client.id, ({ event, payload }) => sendEvent(client, event, payload));
-            connections.set(ws, { client, unsubscribe });
+            const sink = ({ event, payload }: Parameters<Parameters<typeof manager.subscribe>[1]>[0]): void => sendEvent(client, event, payload);
+            const unsubscribeSessions = manager.subscribe(client.id, sink);
+            const unsubscribeChats = chats.subscribe(client.id, sink);
+            connections.set(ws, {
+                client,
+                unsubscribe() {
+                    unsubscribeSessions();
+                    unsubscribeChats();
+                }
+            });
         },
         message(ws, message) {
             const state = connections.get(ws);
@@ -76,10 +108,14 @@ const server = Bun.serve({
             connections.delete(ws);
             // The sessions keep running; only this client's view of them goes.
             manager.detachAll(state.client.id);
+            chats.detachAll(state.client.id);
             state.unsubscribe();
         }
     }
 });
+
+// Hooks always POST to loopback, whatever interface the socket listens on.
+manager.hookUrl = `http://127.0.0.1:${server.port}${HOOKS_PATH}`;
 
 let shuttingDown = false;
 const shutdown = async (signal: string): Promise<void> => {
@@ -91,6 +127,7 @@ const shutdown = async (signal: string): Promise<void> => {
     snapshotSchedule.stop();
     try {
         await snapshotSchedule.flush();
+        await chats.shutdown();
     } catch (e) {
         console.error('Snapshot on shutdown failed', e);
     }

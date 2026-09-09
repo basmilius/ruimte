@@ -112,3 +112,27 @@ describe('type guards', () => {
         expect(isEventType('constructor')).toBe(false);
     });
 });
+
+describe('agent and chat', () => {
+    const agent = { kind: 'claude', agentSessionId: 'abc', transcriptPath: null, status: 'running', live: true, updatedAt: 1 };
+
+    test('a session may carry an agent, and session.status carries one or null', () => {
+        expect(SessionInfoSchema.safeParse({ ...info, agent }).success).toBe(true);
+        expect(EVENT_SCHEMAS['session.status'].safeParse({ sessionId: 'node-1', agent }).success).toBe(true);
+        expect(EVENT_SCHEMAS['session.status'].safeParse({ sessionId: 'node-1', agent: null }).success).toBe(true);
+        expect(EVENT_SCHEMAS['session.status'].safeParse({ sessionId: 'node-1', agent: { ...agent, status: 'busy' } }).success).toBe(false);
+    });
+
+    test('chat events are one of item, delta or info', () => {
+        const item = { id: 'i1', createdAt: 1, kind: 'user', text: 'hi' };
+        expect(EVENT_SCHEMAS['chat.event'].safeParse({ chatId: 'c1', event: { type: 'item', item } }).success).toBe(true);
+        expect(EVENT_SCHEMAS['chat.event'].safeParse({ chatId: 'c1', event: { type: 'delta', itemId: 'i1', text: 'x' } }).success).toBe(true);
+        expect(EVENT_SCHEMAS['chat.event'].safeParse({ chatId: 'c1', event: { type: 'item', item: { ...item, kind: 'ghost' } } }).success).toBe(false);
+    });
+
+    test('chat.approve only takes allow or deny', () => {
+        const schema = REQUEST_SCHEMAS['chat.approve'].payload;
+        expect(schema.safeParse({ chatId: 'c1', requestId: 'r1', decision: 'allow' }).success).toBe(true);
+        expect(schema.safeParse({ chatId: 'c1', requestId: 'r1', decision: 'maybe' }).success).toBe(false);
+    });
+});

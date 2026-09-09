@@ -19,6 +19,7 @@ One WebSocket. JSON frames validated with zod on both ends.
 - Request from client: `{ id: string, type: string, payload }`. Reply from server: `{ id, ok: true, result }` or `{ id, ok: false, error: { code, message } }`.
 - Event from server (no `id`): `{ type: 'event', event: string, payload }`.
 - Terminal output travels as `{ event: 'session.output', payload: { sessionId, data } }` where `data` is a UTF-8 string, coalesced per animation frame on the server.
+- Agent status travels as `session.status` (`agent: AgentInfo | null`), chat threads as `chat.event` (`item` upsert, `delta`, `info`). The daemon also serves `POST /hooks/<kind>` for the CLIs' hooks, bearer token per session.
 
 ## Terminal sessions (the daemon)
 
@@ -28,7 +29,8 @@ One WebSocket. JSON frames validated with zod on both ends.
 - Output is buffered per attached client and flushed every 16 ms, on detach and on exit. `Session.attach` registers the client in the same tick the serialize resolves, so a byte is either in the screen or in the stream, never both.
 - Scrollback snapshot to `$RUIMTE_HOME/sessions/<id>.txt` (default `~/.ruimte`) every 30 s and on SIGINT/SIGTERM; written temp-file plus atomic rename, file name via `encodeURIComponent(id)`.
 - A shell that ends on its own leaves the session listed as `exited` (last screen still attachable). `session.kill` removes the session after its `session.exit` event and deletes the snapshot. `session.create` on an exited or snapshotted id starts a fresh shell with the old screen above a `[session restored, previous shell ended]` line.
-- `ClientConnection.id` is the per-socket client id; `main.ts` subscribes each socket to the `SessionManager` and calls `detachAll` when it closes. See `apps/server/README.md` for flags and the on-disk layout.
+- `ClientConnection.id` is the per-socket client id; `main.ts` subscribes each socket to the `SessionManager` and the `ChatManager` and calls `detachAll` on both when it closes. See `apps/server/README.md` for flags, hooks, chats and the on-disk layout.
+- Agent status comes from the CLIs' hooks only (`apps/server/src/agents`), never from parsing output. A chat node is the CLI's stream-json protocol (`apps/server/src/chat`), no SDK.
 
 ## Conventions
 

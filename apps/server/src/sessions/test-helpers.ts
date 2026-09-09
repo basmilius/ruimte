@@ -1,6 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { AgentStore } from '../agents/agent-store.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
 import { SessionManager, type SessionEvent, type SessionSink } from './manager.ts';
 import { SnapshotStore } from './snapshot-store.ts';
@@ -32,6 +33,12 @@ export class Recorder {
             .join('');
     }
 
+    statusesOf(sessionId: string): Array<string | null> {
+        return this.events
+            .filter((event) => event.event === 'session.status' && event.payload.sessionId === sessionId)
+            .map((event) => (event.event === 'session.status' ? (event.payload.agent?.status ?? null) : null));
+    }
+
     exitOf(sessionId: string): number | undefined {
         for (const event of this.events) {
             if (event.event === 'session.exit' && event.payload.sessionId === sessionId) {
@@ -51,6 +58,7 @@ export class Recorder {
 export interface Harness {
     manager: SessionManager;
     snapshots: SnapshotStore;
+    agents: AgentStore;
     home: string;
     cleanup(): Promise<void>;
 }
@@ -62,14 +70,18 @@ export const SH_ARGS: string[] = [];
 export const makeHarness = async (): Promise<Harness> => {
     const home = await mkdtemp(join(tmpdir(), 'ruimte-test-'));
     const snapshots = new SnapshotStore(home);
+    const agents = new AgentStore(home);
     const manager = new SessionManager({
         adapter: new BunPtyAdapter(),
         snapshots,
-        env: { PATH: process.env.PATH, HOME: home, PS1: '$ ' }
+        agents,
+        env: { PATH: process.env.PATH, HOME: home, PS1: '$ ' },
+        hookUrl: 'http://127.0.0.1:1/hooks'
     });
     return {
         manager,
         snapshots,
+        agents,
         home,
         async cleanup() {
             manager.killAll();

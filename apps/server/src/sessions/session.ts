@@ -1,5 +1,6 @@
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { Terminal } from '@xterm/headless';
+import type { AgentInfo } from '@ruimte/contracts';
 import type { PtyAdapter, PtyProcess } from '../pty/pty.ts';
 
 export const SCROLLBACK_LINES = 10_000;
@@ -25,6 +26,11 @@ export interface SessionOptions {
     adapter: PtyAdapter;
     // Screen text of a previous life of this id; shown above the fresh shell with the restored marker.
     restoredScreen?: string;
+    // The agent a previous life of this id ran; offered for resume, never started on its own.
+    restoredAgent?: AgentInfo;
+    // First line typed into the shell, so a node can open straight into a program.
+    command?: string;
+    hookToken: string;
     deliver(clientId: string, data: string): void;
     onExit(exitCode: number): void;
 }
@@ -37,6 +43,9 @@ export class Session {
     cols: number;
     rows: number;
     exitCode: number | null = null;
+    // What a hook POST must carry to speak for this session; only the shell's environment knows it.
+    readonly hookToken: string;
+    agent: AgentInfo | null;
     private readonly terminal: Terminal;
     private readonly serializer: SerializeAddon;
     private readonly pty: PtyProcess;
@@ -56,6 +65,8 @@ export class Session {
         this.createdAt = Date.now();
         this.deliver = options.deliver;
         this.onExit = options.onExit;
+        this.hookToken = options.hookToken;
+        this.agent = options.restoredAgent ? { ...options.restoredAgent, live: false } : null;
 
         this.terminal = new Terminal({ cols: options.cols, rows: options.rows, scrollback: SCROLLBACK_LINES, allowProposedApi: true });
         this.serializer = new SerializeAddon();
@@ -75,6 +86,10 @@ export class Session {
         this.pid = this.pty.pid;
         this.pty.onData((bytes) => this.receive(bytes));
         this.pty.onExit((exitCode) => this.handleExit(exitCode));
+        if (options.command) {
+            // The line waits in the tty until the shell reads input, however long its profile takes.
+            this.pty.write(`${options.command}\n`);
+        }
     }
 
     get exited(): boolean {

@@ -5,6 +5,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { activeZoomPreset, toWorld, ZOOM_PRESETS } from '@/canvas/math';
 import { useCanvas, type Locks, type NodeKind } from '@/state/canvas';
 import { useTheme } from '@/state/theme';
+import { StatusSummary } from '@/shell/StatusSummary';
 import { Tooltip } from '@/ui/Tooltip';
 
 const LOCK_ROWS: { key: keyof Locks; label: string; hint: string }[] = [
@@ -14,7 +15,13 @@ const LOCK_ROWS: { key: keyof Locks; label: string; hint: string }[] = [
     { key: 'resize', label: 'Resize nodes', hint: 'Handles are hidden' }
 ];
 
-const AGENTS = ['Claude Code', 'Codex', 'Gemini', 'Copilot'];
+// Claude Code has a chat node; the others open a terminal with the CLI already started.
+const AGENTS: Array<{ label: string; kind: NodeKind; command?: string }> = [
+    { label: 'Claude Code', kind: 'chat' },
+    { label: 'Codex', kind: 'terminal', command: 'codex' },
+    { label: 'Gemini', kind: 'terminal', command: 'gemini' },
+    { label: 'Copilot', kind: 'terminal', command: 'copilot' }
+];
 
 const centerWorld = () => {
     const s = useCanvas.getState();
@@ -53,11 +60,8 @@ export function Dock() {
     const zoomPct = Math.round(zoom * 100);
     const preset = activeZoomPreset(zoom);
 
-    const add = (kind: NodeKind, title?: string) => {
-        const id = useCanvas.getState().addNode(kind, centerWorld());
-        if (title) {
-            useCanvas.getState().renameNode(id, title);
-        }
+    const add = (kind: NodeKind, options?: { title?: string; command?: string }) => {
+        useCanvas.getState().addNode(kind, centerWorld(), options);
     };
 
     return (
@@ -75,6 +79,7 @@ export function Dock() {
                     </div>
                 </Tooltip>
                 <span className="h-5 w-px bg-border" />
+                <StatusSummary />
 
                 <Menu.Root>
                     <Tooltip label="Add">
@@ -93,8 +98,14 @@ export function Dock() {
                                 </Menu.Item>
                                 <Submenu label="Agent" icon={<Bot size={14} />}>
                                     {AGENTS.map((agent) => (
-                                        <Menu.Item key={agent} className="menu-item" onClick={() => add('chat', agent)}>
-                                            <Bot size={14} className="text-text-faint" /> {agent}
+                                        <Menu.Item
+                                            key={agent.label}
+                                            className="menu-item"
+                                            onClick={() =>
+                                                add(agent.kind, agent.kind === 'terminal' ? { title: agent.label, command: agent.command } : undefined)
+                                            }
+                                        >
+                                            <Bot size={14} className="text-text-faint" /> {agent.label}
                                         </Menu.Item>
                                     ))}
                                 </Submenu>

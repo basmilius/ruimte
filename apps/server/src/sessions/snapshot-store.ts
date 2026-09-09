@@ -1,5 +1,6 @@
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { isNotFound, writeAtomic } from '../fs.ts';
 
 export const SNAPSHOT_INTERVAL_MS = 30_000;
 
@@ -16,11 +17,7 @@ export class SnapshotStore {
 
     async write(sessionId: string, screen: string): Promise<void> {
         await mkdir(this.dir, { recursive: true, mode: 0o700 });
-        const target = join(this.dir, fileName(sessionId));
-        // A crash between the two steps leaves a stray temp file, never a half-written snapshot.
-        const temp = `${target}.${process.pid}.tmp`;
-        await writeFile(temp, screen, { mode: 0o600 });
-        await rename(temp, target);
+        await writeAtomic(join(this.dir, fileName(sessionId)), screen);
     }
 
     async read(sessionId: string): Promise<string | null> {
@@ -38,8 +35,6 @@ export class SnapshotStore {
         await rm(join(this.dir, fileName(sessionId)), { force: true });
     }
 }
-
-const isNotFound = (e: unknown): boolean => typeof e === 'object' && e !== null && 'code' in e && e.code === 'ENOENT';
 
 export interface SnapshotSource {
     snapshotAll(): Promise<Array<{ sessionId: string; screen: string }>>;

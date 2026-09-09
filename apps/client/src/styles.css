@@ -224,6 +224,10 @@ body {
     *, *::before, *::after { transition: none !important; animation: none !important; }
 }
 
+/* A diff inside a chat tool block; the library paints its own colors inside a shadow root. */
+.chat-diff { font-size: 11.5px; --diffs-font-family: var(--font-mono); }
+.chat-diff + .chat-diff { border-top: 1px solid var(--border); }
+
 /* Icon buttons that belong together sit 1px apart; groups keep the wider gap of their container. */
 .btn-group { display: inline-flex; align-items: center; gap: 1px; }
 .menu-item[data-disabled] { opacity: .45; }

@@ -46,4 +46,11 @@ export const registerSessionHandlers = (dispatcher: Dispatcher, manager: Session
     );
 
     dispatcher.register('session.list', () => ({ sessions: manager.list() }));
+
+    dispatcher.register('agent.resume', (payload) =>
+        translate(() => {
+            manager.resumeAgent(payload.sessionId);
+            return {};
+        })
+    );
 };
