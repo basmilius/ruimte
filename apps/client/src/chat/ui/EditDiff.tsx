@@ -3,11 +3,7 @@ import { MultiFileDiff } from '@pierre/diffs/react';
 import { useTheme } from '@/state/theme';
 import { DIFF_THEME } from '@/chat/ui/diff-theme';
 
-export interface FileChange {
-    path: string;
-    before: string;
-    after: string;
-}
+import type { FileChange } from '@/chat/logic/tools';
 
 /* One hunk of a file edit, highlighted in a worker. The header is ours, so the library's is off. */
 export default function EditDiff({ change }: { change: FileChange }) {

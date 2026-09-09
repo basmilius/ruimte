@@ -124,15 +124,25 @@ describe('agent and chat', () => {
     });
 
     test('chat events are one of item, delta or info', () => {
-        const item = { id: 'i1', createdAt: 1, kind: 'user', text: 'hi' };
+        const item = { id: 'i1', createdAt: 1, turnId: null, kind: 'user', text: 'hi' };
         expect(EVENT_SCHEMAS['chat.event'].safeParse({ chatId: 'c1', event: { type: 'item', item } }).success).toBe(true);
         expect(EVENT_SCHEMAS['chat.event'].safeParse({ chatId: 'c1', event: { type: 'delta', itemId: 'i1', text: 'x' } }).success).toBe(true);
         expect(EVENT_SCHEMAS['chat.event'].safeParse({ chatId: 'c1', event: { type: 'item', item: { ...item, kind: 'ghost' } } }).success).toBe(false);
     });
 
-    test('chat.approve only takes allow or deny', () => {
+    test('chat.approve only takes allow, allow-always or deny', () => {
         const schema = REQUEST_SCHEMAS['chat.approve'].payload;
         expect(schema.safeParse({ chatId: 'c1', requestId: 'r1', decision: 'allow' }).success).toBe(true);
+        expect(schema.safeParse({ chatId: 'c1', requestId: 'r1', decision: 'allow-always' }).success).toBe(true);
         expect(schema.safeParse({ chatId: 'c1', requestId: 'r1', decision: 'maybe' }).success).toBe(false);
+    });
+
+    test('a model selection carries free-form options and a runtime mode is one of four', () => {
+        const schema = REQUEST_SCHEMAS['chat.configure'].payload;
+        expect(
+            schema.safeParse({ chatId: 'c1', selection: { model: 'claude-opus-5', options: { effort: 'high', contextWindow: '1m' } }, runtimeMode: 'auto' })
+                .success
+        ).toBe(true);
+        expect(schema.safeParse({ chatId: 'c1', runtimeMode: 'yolo' }).success).toBe(false);
     });
 });

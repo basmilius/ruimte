@@ -1,10 +1,11 @@
 import { homedir } from 'node:os';
-import type { ChatCreatePayload, ChatEvent, ChatInfo, ChatItem } from '@ruimte/contracts';
+import type { ChatConfigurePayload, ChatCreatePayload, ChatEvent, ChatInfo, ChatItem } from '@ruimte/contracts';
+import type { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionSink } from '../sessions/manager.ts';
 import { ChatSession } from './chat-session.ts';
 import type { ChatStore } from './chat-store.ts';
 
-export type ChatErrorCode = 'chat-not-found' | 'chat-busy' | 'approval-not-found';
+export type ChatErrorCode = 'chat-not-found' | 'chat-busy' | 'request-not-found' | 'provider-unsupported';
 
 export class ChatError extends Error {
     readonly code: ChatErrorCode;
@@ -17,6 +18,7 @@ export class ChatError extends Error {
 }
 
 export interface ChatManagerOptions {
+    providers: ProviderRegistry;
     store?: ChatStore;
     env?: Record<string, string | undefined>;
     // The CLI to run; a test points this at a script that speaks the same protocol.
@@ -24,6 +26,7 @@ export interface ChatManagerOptions {
 }
 
 export class ChatManager {
+    private readonly providers: ProviderRegistry;
     private readonly store: ChatStore | null;
     private readonly env: Record<string, string>;
     private readonly command: string[];
@@ -31,7 +34,8 @@ export class ChatManager {
     private readonly sinks = new Map<string, SessionSink>();
     private readonly attached = new Map<string, Set<string>>();
 
-    constructor(options: ChatManagerOptions = {}) {
+    constructor(options: ChatManagerOptions) {
+        this.providers = options.providers;
         this.store = options.store ?? null;
         this.command = options.command ?? ['claude'];
         this.env = {};
@@ -58,17 +62,28 @@ export class ChatManager {
         if (existing) {
             return existing.info;
         }
+        if (payload.provider && payload.provider !== 'claude') {
+            throw new ChatError('provider-unsupported', `${payload.provider} has no chat backend yet`);
+        }
+        const catalog = this.providers.claude;
         const stored = await this.store?.read(payload.chatId);
+        const selection = catalog.normalize(stored?.info.selection ?? payload.selection);
         const info: ChatInfo = stored?.info
-            ? { ...stored.info, running: false, status: 'idle' }
+            ? { ...stored.info, selection, running: false, status: 'idle', activeTurnId: null }
             : {
                   chatId: payload.chatId,
+                  provider: 'claude',
                   cwd: payload.cwd ?? this.env.HOME ?? homedir(),
                   agentSessionId: payload.resume ?? null,
                   model: null,
+                  selection,
+                  runtimeMode: payload.runtimeMode ?? 'full-access',
+                  interactionMode: payload.interactionMode ?? 'default',
                   status: 'idle',
                   running: false,
-                  usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
+                  activeTurnId: null,
+                  slashCommands: [],
+                  usage: { contextTokens: 0, contextWindow: catalog.contextWindowFor(selection), costUsd: 0, turns: 0 },
                   createdAt: Date.now()
               };
         const items = stored?.items.map(settle) ?? [];
@@ -77,12 +92,16 @@ export class ChatManager {
             items,
             command: this.command,
             env: this.env,
-            model: payload.model,
+            catalog,
             emit: (event) => this.emit(payload.chatId, event),
             persist: () => this.persist(payload.chatId)
         });
         this.chats.set(session.id, session);
         return session.info;
+    }
+
+    configure(payload: ChatConfigurePayload): ChatInfo {
+        return this.require(payload.chatId).configure(payload);
     }
 
     attach(chatId: string, clientId: string): { info: ChatInfo; items: ChatItem[] } {
@@ -107,16 +126,34 @@ export class ChatManager {
     }
 
     send(chatId: string, text: string): void {
-        this.require(chatId).send(text);
+        const session = this.require(chatId);
+        if (session.info.activeTurnId) {
+            throw new ChatError('chat-busy', `Chat ${chatId} is still working on the previous message`);
+        }
+        session.send(text);
+    }
+
+    compact(chatId: string): void {
+        const session = this.require(chatId);
+        if (session.info.activeTurnId) {
+            throw new ChatError('chat-busy', `Chat ${chatId} is still working on the previous message`);
+        }
+        session.compact();
     }
 
     cancel(chatId: string): void {
         this.require(chatId).cancel();
     }
 
-    approve(chatId: string, requestId: string, decision: 'allow' | 'deny', message?: string): void {
+    approve(chatId: string, requestId: string, decision: 'allow' | 'allow-always' | 'deny', message?: string): void {
         if (!this.require(chatId).approve(requestId, decision, message)) {
-            throw new ChatError('approval-not-found', `Nothing waits for approval ${requestId}`);
+            throw new ChatError('request-not-found', `Nothing waits for approval ${requestId}`);
+        }
+    }
+
+    answer(chatId: string, requestId: string, answers: Record<string, string>): void {
+        if (!this.require(chatId).answer(requestId, answers)) {
+            throw new ChatError('request-not-found', `No question waits under ${requestId}`);
         }
     }
 
@@ -184,8 +221,14 @@ const settle = (item: ChatItem): ChatItem => {
     if (item.kind === 'approval' && item.decision === 'pending') {
         return { ...item, decision: 'cancelled' };
     }
+    if (item.kind === 'question' && item.state === 'pending') {
+        return { ...item, state: 'cancelled' };
+    }
     if (item.kind === 'tool' && item.state === 'running') {
         return { ...item, state: 'error' };
+    }
+    if (item.kind === 'turn' && item.state === 'running') {
+        return { ...item, state: 'error', endedAt: item.endedAt ?? item.createdAt };
     }
     return item;
 };

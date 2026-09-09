@@ -1,20 +1,9 @@
 import type { Subprocess } from 'bun';
-import type { ChatEvent, ChatInfo, ChatItem } from '@ruimte/contracts';
+import type { ChatEvent, ChatInfo, ChatItem, InteractionMode, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type { ModelCatalog } from '../providers/catalog.ts';
+import { claudeArgs, promptPrefix } from '../providers/claude.ts';
 import { ClaudeStreamReducer, type ReducerOutput } from './claude-stream.ts';
 import { ChatThread } from './thread.ts';
-
-// Base arguments for a chat process; the session adds `--resume` and `--model`.
-export const CLAUDE_CHAT_ARGS = [
-    '-p',
-    '--output-format',
-    'stream-json',
-    '--input-format',
-    'stream-json',
-    '--verbose',
-    '--include-partial-messages',
-    '--permission-prompt-tool',
-    'stdio'
-];
 
 // After stdin closed, a CLI that is still around is not going to say more.
 const EXIT_GRACE_MS = 3000;
@@ -25,30 +14,34 @@ export interface ChatSessionOptions {
     // The executable and leading arguments; a test points this at a fake CLI.
     command: string[];
     env: Record<string, string>;
-    model?: string;
+    catalog: ModelCatalog;
     emit(event: ChatEvent): void;
     persist(): void;
 }
 
-interface PendingApproval {
-    toolUseId: string | null;
-}
+type Pending =
+    { type: 'approval'; toolUseId: string | null; input: unknown; suggestions: unknown[] } | { type: 'question'; toolUseId: string | null; input: unknown };
 
 type ChatProcess = Subprocess<'pipe', 'pipe', 'pipe'>;
+
+const newId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 /*
  * One chat: the thread, the reducer that fills it and, once the first message goes out, the
  * CLI process. The process stays alive between turns; a dead one is started again with
- * `--resume` on the next send, which is also how a chat survives a daemon restart.
+ * `--resume` on the next send, which is also how a chat survives a daemon restart and how a
+ * changed model or mode takes effect.
  */
 export class ChatSession {
     readonly thread: ChatThread;
     private readonly reducer: ClaudeStreamReducer;
     private readonly options: ChatSessionOptions;
-    private readonly pending = new Map<string, PendingApproval>();
+    private readonly pending = new Map<string, Pending>();
     private process: ChatProcess | null = null;
     private stdinClosed = false;
     private exitTimer: ReturnType<typeof setTimeout> | null = null;
+    // Set by configure: the running process has the old flags, the next send starts a new one.
+    private restartPending = false;
 
     constructor(options: ChatSessionOptions) {
         this.options = options;
@@ -68,37 +61,109 @@ export class ChatSession {
         return this.process !== null;
     }
 
+    /* Model, permission or interaction changes; a turn in flight keeps its process until it ends. */
+    configure(patch: { selection?: ModelSelection; runtimeMode?: RuntimeMode; interactionMode?: InteractionMode }): ChatInfo {
+        const selection = patch.selection ? this.options.catalog.normalize(patch.selection) : this.thread.info.selection;
+        const next: Partial<ChatInfo> = {
+            selection,
+            runtimeMode: patch.runtimeMode ?? this.thread.info.runtimeMode,
+            interactionMode: patch.interactionMode ?? this.thread.info.interactionMode
+        };
+        const changed =
+            JSON.stringify(next.selection) !== JSON.stringify(this.thread.info.selection) ||
+            next.runtimeMode !== this.thread.info.runtimeMode ||
+            next.interactionMode !== this.thread.info.interactionMode;
+        if (!changed) {
+            return this.thread.info;
+        }
+        if (patch.selection) {
+            next.usage = { ...this.thread.info.usage, contextWindow: this.options.catalog.contextWindowFor(selection) };
+        }
+        this.restartPending = this.process !== null;
+        this.apply({ events: [this.thread.patchInfo(next)], actions: [] });
+        this.options.persist();
+        return this.thread.info;
+    }
+
     send(text: string): void {
+        const turnId = newId('turn');
+        const now = Date.now();
         this.apply({
             events: [
-                this.thread.upsert({ id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, kind: 'user', createdAt: Date.now(), text }),
-                this.thread.setStatus('running')
+                this.thread.upsert({ id: turnId, kind: 'turn', createdAt: now, turnId, state: 'running', endedAt: null, costUsd: 0 }),
+                this.thread.upsert({ id: newId('user'), kind: 'user', createdAt: now, turnId, text }),
+                this.thread.patchInfo({ status: 'running', activeTurnId: turnId })
             ],
             actions: []
         });
         this.ensureProcess();
-        this.write({ type: 'user', message: { role: 'user', content: [{ type: 'text', text }] }, parent_tool_use_id: null, session_id: '' });
+        const prompt = `${promptPrefix(this.thread.info.selection)}${text}`;
+        this.write({ type: 'user', message: { role: 'user', content: [{ type: 'text', text: prompt }] }, parent_tool_use_id: null, session_id: '' });
+    }
+
+    /* Asks the CLI to fold its context; it answers like any other turn. */
+    compact(): void {
+        this.send('/compact');
     }
 
     cancel(): void {
-        if (!this.process) {
+        if (!this.process || !this.thread.info.activeTurnId) {
             return;
         }
+        this.reducer.markInterrupted();
         this.write({ type: 'control_request', request_id: `interrupt-${Date.now()}`, request: { subtype: 'interrupt' } });
     }
 
     /* Answers a pending `can_use_tool`; false when nothing waits under that id. */
-    approve(requestId: string, decision: 'allow' | 'deny', message?: string): boolean {
+    approve(requestId: string, decision: 'allow' | 'allow-always' | 'deny', message?: string): boolean {
         const item = this.thread.get(`approval-${requestId}`);
-        if (!this.pending.delete(requestId) || !item || item.kind !== 'approval' || item.decision !== 'pending') {
+        const pending = this.pending.get(requestId);
+        if (!pending || pending.type !== 'approval' || !item || item.kind !== 'approval' || item.decision !== 'pending') {
             return false;
         }
+        this.pending.delete(requestId);
+        const toolUseID = pending.toolUseId ?? undefined;
         const response =
-            decision === 'allow'
-                ? { behavior: 'allow', updatedInput: item.input, toolUseID: item.toolUseId ?? undefined }
-                : { behavior: 'deny', message: message?.trim() || 'The user declined this action', toolUseID: item.toolUseId ?? undefined };
+            decision === 'deny'
+                ? { behavior: 'deny', message: message?.trim() || 'The user declined this action', toolUseID }
+                : {
+                      behavior: 'allow',
+                      updatedInput: pending.input,
+                      toolUseID,
+                      // The CLI's own suggestion of a rule; sending it back is what makes "always" stick.
+                      ...(decision === 'allow-always' && pending.suggestions.length > 0 ? { updatedPermissions: pending.suggestions } : {})
+                  };
         this.write({ type: 'control_response', response: { subtype: 'success', request_id: requestId, response } });
         this.apply({ events: [this.thread.upsert({ ...item, decision }), this.thread.setStatus('running')], actions: [] });
+        return true;
+    }
+
+    /* Answers a pending question; false when nothing waits under that id. */
+    answer(requestId: string, answers: Record<string, string>): boolean {
+        const item = this.thread.get(`question-${requestId}`);
+        const pending = this.pending.get(requestId);
+        if (!pending || pending.type !== 'question' || !item || item.kind !== 'question' || item.state !== 'pending') {
+            return false;
+        }
+        this.pending.delete(requestId);
+        // The CLI keys answers by the question text, the client by the question's index.
+        const byText: Record<string, string> = {};
+        for (const question of item.questions) {
+            const given = answers[question.id];
+            if (given !== undefined) {
+                byText[question.question] = given;
+            }
+        }
+        const input = typeof pending.input === 'object' && pending.input !== null ? pending.input : {};
+        this.write({
+            type: 'control_response',
+            response: {
+                subtype: 'success',
+                request_id: requestId,
+                response: { behavior: 'allow', updatedInput: { ...input, answers: byText }, toolUseID: pending.toolUseId ?? undefined }
+            }
+        });
+        this.apply({ events: [this.thread.upsert({ ...item, answers, state: 'answered' }), this.thread.setStatus('running')], actions: [] });
         return true;
     }
 
@@ -125,20 +190,26 @@ export class ChatSession {
     }
 
     private ensureProcess(): void {
+        if (this.process && this.restartPending) {
+            // Let the old one go quietly; its exit must not be read as the chat ending.
+            const old = this.process;
+            this.process = null;
+            this.closeStdin(old);
+            setTimeout(() => old.kill('SIGTERM'), EXIT_GRACE_MS);
+        }
+        this.restartPending = false;
         if (this.process) {
             return;
         }
-        const args = [...this.options.command, ...CLAUDE_CHAT_ARGS];
-        const resume = this.thread.info.agentSessionId;
-        if (resume) {
-            args.push('--resume', resume);
-        }
-        if (this.options.model) {
-            args.push('--model', this.options.model);
-        }
+        const info = this.thread.info;
+        const args = [
+            ...this.options.command,
+            ...claudeArgs({ selection: info.selection, runtimeMode: info.runtimeMode, interactionMode: info.interactionMode, resume: info.agentSessionId })
+        ];
         this.stdinClosed = false;
+        this.reducer.nextProcess();
         const process: ChatProcess = Bun.spawn(args, {
-            cwd: this.thread.info.cwd,
+            cwd: info.cwd,
             env: this.options.env,
             stdin: 'pipe',
             stdout: 'pipe',
@@ -163,21 +234,21 @@ export class ChatSession {
                 buffered += decoder.decode(value, { stream: true });
                 let newline = buffered.indexOf('\n');
                 while (newline >= 0) {
-                    this.handleLine(buffered.slice(0, newline));
+                    this.handleLine(process, buffered.slice(0, newline));
                     buffered = buffered.slice(newline + 1);
                     newline = buffered.indexOf('\n');
                 }
             }
             if (buffered.trim() !== '') {
-                this.handleLine(buffered);
+                this.handleLine(process, buffered);
             }
         } catch {
             // The process died mid-read; onExit reports it.
         }
     }
 
-    private handleLine(line: string): void {
-        if (line.trim() === '') {
+    private handleLine(process: ChatProcess, line: string): void {
+        if (this.process !== process || line.trim() === '') {
             return;
         }
         let frame: unknown;
@@ -186,20 +257,15 @@ export class ChatSession {
         } catch {
             return;
         }
-        const out = this.reducer.handle(frame);
-        this.apply(out);
-        if (this.isTurnEnd(frame)) {
+        this.apply(this.reducer.handle(frame));
+        if (typeof frame === 'object' && frame !== null && (frame as { type?: unknown }).type === 'result') {
             this.options.persist();
         }
     }
 
-    private isTurnEnd(frame: unknown): boolean {
-        return typeof frame === 'object' && frame !== null && (frame as { type?: unknown }).type === 'result';
-    }
-
     private apply(out: ReducerOutput): void {
         for (const action of out.actions) {
-            this.pending.set(action.requestId, { toolUseId: action.toolUseId });
+            this.pending.set(action.requestId, action);
         }
         for (const event of out.events) {
             this.options.emit(event);
@@ -219,13 +285,18 @@ export class ChatSession {
         }
     }
 
-    private closeStdin(): void {
-        if (this.stdinClosed || !this.process) {
+    private closeStdin(process: ChatProcess | null = this.process): void {
+        if (!process) {
             return;
         }
-        this.stdinClosed = true;
+        if (process === this.process) {
+            if (this.stdinClosed) {
+                return;
+            }
+            this.stdinClosed = true;
+        }
         try {
-            this.process.stdin.end();
+            process.stdin.end();
         } catch {
             // Already closed by the other side.
         }

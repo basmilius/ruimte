@@ -1,15 +1,24 @@
-import type { ChatInfo, ChatItem } from '@ruimte/contracts';
+import type { ChatConfigurePayload, ChatInfo, ChatItem, InteractionMode, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 import type { ChatSink } from '../state/chats';
+import type { ProviderInfo } from '@ruimte/contracts';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 
 export interface ChatOpenOptions {
     cwd?: string;
     /* A CLI session to continue, for a chat opened from a terminal that ran the agent. */
     resume?: string;
+    /* What a fresh chat starts with; an existing chat keeps what it has. */
+    selection?: ModelSelection;
+    runtimeMode?: RuntimeMode;
+    interactionMode?: InteractionMode;
 }
 
 interface Mounted extends ChatOpenOptions {
     attached: boolean;
+}
+
+export interface ProviderSink {
+    setProviders(providers: ProviderInfo[]): void;
 }
 
 const isConnectionError = (e: unknown): boolean => e instanceof TransportError && (e.code === 'not-connected' || e.code === 'disconnected');
@@ -17,20 +26,26 @@ const isConnectionError = (e: unknown): boolean => e instanceof TransportError &
 /*
  * One daemon chat per node id. Like the terminal's session client: a node opens on mount and
  * detaches on unmount, and every mounted chat is attached again when the transport comes back.
+ * The provider list is fetched once per connection and handed to its own store.
  */
 export class ChatClient {
     private readonly transport: Transport;
     private readonly sink: ChatSink;
+    private readonly providers: ProviderSink | null;
     private readonly mounted = new Map<string, Mounted>();
     private readonly unsubscribe: Array<() => void> = [];
 
-    constructor(transport: Transport, sink: ChatSink) {
+    constructor(transport: Transport, sink: ChatSink, providers: ProviderSink | null = null) {
         this.transport = transport;
         this.sink = sink;
+        this.providers = providers;
         this.unsubscribe.push(
             transport.on('chat.event', ({ chatId, event }) => this.sink.apply(chatId, event)),
             transport.subscribeStatus((status) => this.onStatus(status))
         );
+        if (transport.status === 'open') {
+            void this.loadProviders();
+        }
     }
 
     /* Answers false when the transport is not connected; the chat opens once it is. */
@@ -64,18 +79,44 @@ export class ChatClient {
         await this.transport.request('chat.send', { chatId, text });
     }
 
+    async compact(chatId: string): Promise<void> {
+        await this.transport.request('chat.compact', { chatId });
+    }
+
     async cancel(chatId: string): Promise<void> {
         await this.transport.request('chat.cancel', { chatId });
     }
 
-    async approve(chatId: string, requestId: string, decision: 'allow' | 'deny', message?: string): Promise<void> {
+    async configure(payload: ChatConfigurePayload): Promise<ChatInfo> {
+        const info = await this.transport.request('chat.configure', payload);
+        this.sink.apply(payload.chatId, { type: 'info', info });
+        return info;
+    }
+
+    async approve(chatId: string, requestId: string, decision: 'allow' | 'allow-always' | 'deny', message?: string): Promise<void> {
         await this.transport.request('chat.approve', { chatId, requestId, decision, message });
+    }
+
+    async answer(chatId: string, requestId: string, answers: Record<string, string>): Promise<void> {
+        await this.transport.request('chat.answer', { chatId, requestId, answers });
     }
 
     async kill(chatId: string): Promise<void> {
         this.mounted.delete(chatId);
         this.sink.forget(chatId);
         await this.transport.request('chat.kill', { chatId });
+    }
+
+    async loadProviders(): Promise<void> {
+        if (!this.providers) {
+            return;
+        }
+        try {
+            const { providers } = await this.transport.request('provider.list', {});
+            this.providers.setProviders(providers);
+        } catch {
+            // The list comes with the next connection; pickers show what they had.
+        }
     }
 
     isMounted(chatId: string): boolean {
@@ -91,7 +132,14 @@ export class ChatClient {
 
     private async attach(chatId: string): Promise<{ info: ChatInfo; items: ChatItem[] }> {
         const entry = this.mounted.get(chatId);
-        await this.transport.request('chat.create', { chatId, cwd: entry?.cwd, resume: entry?.resume });
+        await this.transport.request('chat.create', {
+            chatId,
+            cwd: entry?.cwd,
+            resume: entry?.resume,
+            selection: entry?.selection,
+            runtimeMode: entry?.runtimeMode,
+            interactionMode: entry?.interactionMode
+        });
         const result = await this.transport.request('chat.attach', { chatId });
         const current = this.mounted.get(chatId);
         if (current) {
@@ -103,6 +151,7 @@ export class ChatClient {
 
     private onStatus(status: TransportStatus): void {
         if (status === 'open') {
+            void this.loadProviders();
             void this.reattachAll();
             return;
         }

@@ -53,9 +53,21 @@ The daemon folds the events into one status per session: `running`, `needs-you` 
 
 The record is also written to `sessions/<id>.agent.json`. When the daemon starts again and the session is restored from its snapshot, the agent comes back with `live: false`; the client answers with `agent.resume`, which types `claude --resume <id>` (or `codex resume <id>`) into the shell.
 
+## Providers and models
+
+`provider.list` answers, per agent CLI, whether it is installed, its version and the models it offers. The Claude catalog is `src/providers/claude-models.json`: a model points at a profile, a profile lists option descriptors (reasoning effort, context window, thinking) with their defaults and the context size per option. Adding a model is a JSON edit; a new profile is only needed for a new combination of options. A `ModelSelection` is `{ model, options }`; the daemon normalizes it (aliases like `opus`, defaults for missing options, unknown options dropped).
+
+Two modes travel with every chat. The runtime mode is the permission policy, one vocabulary for every provider: `supervised`, `auto-accept-edits`, `auto`, `full-access` (the default). The interaction mode is `default` or `plan`. For Claude they become `--permission-mode` (plan wins over the runtime mode), the selection becomes `--model <slug>[1m]` and `--effort`, and `ultrathink` is written into the prompt because the CLI has no flag for it.
+
 ## Chats
 
-A chat node is `claude -p --input-format stream-json --output-format stream-json --permission-prompt-tool stdio`, spawned on the first `chat.send` and kept alive between turns. The daemon folds the stream into thread items (user, assistant, tool, approval, note) and broadcasts every change as a `chat.event` to the attached clients; `chat.attach` answers the current thread, so a reload rebuilds the view. A `can_use_tool` control request becomes an approval item and `needs-you`; `chat.approve` answers it. `chat.cancel` sends an interrupt. The thread is written to `chats/<id>.json` after every turn; a chat whose process ended (or a daemon that restarted) starts the CLI again with `--resume` on the next send.
+A chat node is `claude -p --input-format stream-json --output-format stream-json --permission-prompt-tool stdio`, spawned on the first `chat.send` and kept alive between turns. The daemon folds the stream into thread items (turn, user, assistant, tool, approval, question, note, compaction), every item tagged with its turn, and broadcasts every change as a `chat.event` to the attached clients; `chat.attach` answers the current thread, so a reload rebuilds the view.
+
+- A `can_use_tool` control request becomes an approval item and `needs-you`; `chat.approve` answers it with `allow`, `allow-always` (the CLI's own suggested rule goes back as `updatedPermissions`) or `deny`.
+- An `AskUserQuestion` call becomes a question item instead; `chat.answer` returns the answers keyed by question index, the daemon keys them by question text for the CLI.
+- `chat.configure` changes the selection or a mode. A running process keeps its flags until the turn ends; the next send starts a fresh process with `--resume` and the new flags.
+- `chat.cancel` sends an interrupt and the turn ends as `aborted`. `chat.compact` sends `/compact`.
+- The thread is written to `chats/<id>.json` after every turn; a chat whose process ended (or a daemon that restarted) starts the CLI again with `--resume` on the next send.
 
 ## Smoke test
 
