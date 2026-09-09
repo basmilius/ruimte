@@ -3,6 +3,7 @@ import type { ServerFrame } from '@ruimte/contracts';
 import { Dispatcher, RequestError, sendEvent, type ClientConnection } from './dispatcher.ts';
 
 class FakeSocket implements ClientConnection {
+    readonly id = 'client-1';
     readonly frames: ServerFrame[] = [];
 
     send(frame: ServerFrame): void {
