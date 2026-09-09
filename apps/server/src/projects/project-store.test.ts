@@ -103,14 +103,15 @@ describe('ProjectStore', () => {
         expect(files).toContain(`${opened.summary.projectId}.local.json`);
 
         await store.delete(opened.summary.projectId, true);
-        expect(await store.list()).toEqual([]);
         expect(await readdir(join(home, 'projects'))).toEqual([]);
+        // The registry is empty now, so listing seeds a new default canvas instead of the deleted one.
+        expect((await store.list()).map((project) => project.projectId)).not.toContain(opened.summary.projectId);
     });
 
     test('deleting a folder project without removing files keeps the canvas on disk', async () => {
         const opened = await store.openProject({ folder });
         await store.delete(opened.summary.projectId, false);
-        expect(await store.list()).toEqual([]);
+        expect((await store.list()).map((project) => project.folder)).not.toContain(folder);
         expect(await readFile(documentPathInFolder(folder), 'utf8')).toContain('"version": 1');
     });
 
