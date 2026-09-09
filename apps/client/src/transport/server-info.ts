@@ -6,6 +6,10 @@ const load = (): void => {
         .request('server.hello', {})
         .then((info) => useServer.getState().setInfo({ platform: info.platform, home: info.home }))
         .catch(() => undefined);
+    transport
+        .request('endpoint.info', {})
+        .then((info) => useServer.getState().setEndpoint({ label: info.label, reachability: info.reachability }))
+        .catch(() => undefined);
 };
 
 /* Asks the daemon who it is on every connection; the answer feeds platform-specific labels. */

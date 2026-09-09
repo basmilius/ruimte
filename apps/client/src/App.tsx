@@ -7,11 +7,13 @@ import { SettingsDialog } from '@/shell/SettingsDialog';
 import { ProjectBanner } from '@/shell/ProjectBanner';
 import { Sidebar } from '@/shell/Sidebar';
 import { useProject } from '@/state/project';
+import { useServer } from '@/state/server';
 import { TooltipProvider } from '@/ui/Tooltip';
 
 export function App() {
     const project = useProject((s) => s.current);
     const dirty = useProject((s) => s.dirty);
+    const machine = useServer((s) => (s.reachability && s.reachability !== 'loopback' ? s.label : null));
     return (
         <TooltipProvider>
             <div className="flex h-full w-full bg-bg">
@@ -20,6 +22,12 @@ export function App() {
                     <Canvas />
                     <div className="pointer-events-none absolute left-4 top-3 flex items-center gap-2 text-[12px] text-text-muted">
                         <span className="float pointer-events-auto flex h-8 items-center gap-2 rounded-lg px-3">
+                            {machine && (
+                                <>
+                                    <span className="text-text-muted">{machine}</span>
+                                    <span className="text-text-faint">/</span>
+                                </>
+                            )}
                             <span className="h-2.5 w-2.5 rounded-sm" style={{ background: project?.color ?? 'var(--text-faint)' }} />
                             <span className="font-medium text-text">{project?.name ?? 'No project'}</span>
                             <span className="text-text-faint">/</span>

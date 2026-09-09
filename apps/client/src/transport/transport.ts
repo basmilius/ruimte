@@ -7,6 +7,8 @@ export interface Transport {
     on<E extends EventType>(event: E, handler: (payload: EventMap[E]) => void): () => void;
     readonly status: TransportStatus;
     subscribeStatus(handler: (status: TransportStatus) => void): () => void;
+    /* Reconnects to another daemon. */
+    switchTo?(url: string): void;
 }
 
 // A rejected request always carries a code, so callers can branch without parsing messages.

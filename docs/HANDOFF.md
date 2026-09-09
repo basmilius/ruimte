@@ -100,8 +100,19 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   and chat, over `GET /context` with the session's token. Layouts are named arrangements saved
   from the palette and applied or deleted from there.
 
-Issues #1 to #9 on GitHub describe each phase; #2, #3 and #4 are closed, #1 and #5 to #9 are
-implemented but wait for a review before closing.
+- **Phase 10, remote endpoints and pairing**: `apps/server/src/auth` holds session tokens as
+  hashes, one-time pairing tokens with a ten-minute life, origin and loopback rules
+  (`access.ts`), and a `Relay` seam that does nothing yet. The daemon prints a pairing URL when
+  it listens beyond loopback; `bun src/main.ts pair` mints another through a loopback-only
+  route. The client keeps endpoints in localStorage (`state/endpoints.ts`), pairs from the
+  settings dialog by pasting the link (`endpoint/index.ts`), and switches by emptying the
+  canvas first and pointing the one transport at the other daemon; the project client boots
+  again on the new socket. The header names the machine when it is not loopback. `bun run
+  serve` is the Server Edition. Tested by pairing this client with a second daemon on the LAN
+  address of this machine and switching both ways.
+
+Issues #1 to #10 on GitHub describe each phase; #2, #3 and #4 are closed, #1 and #5 to #10
+are implemented but wait for a review before closing.
 
 Research on showing a live browser page without a `<webview>` (for the web build and remote
 daemons) is in `docs/research/browser-streaming.md`: the recommendation is a headless
@@ -191,8 +202,11 @@ In the order that makes sense, each one an issue on GitHub:
 3. **#9 follow-ups**: a chat should learn about a link made mid-conversation (a note in the
    next turn's prompt), and a terminal agent has no prompt at all, so the CLI's existence must
    come from its hooks or a MOTD line in the shell.
-4. **#10 remote endpoints, pairing and the server build**, then **#11 packaging** (compile the
-   daemon and `ruimte-context` with `bun build --compile`, sign, `ruimte.app`).
+4. **#10 follow-ups**: one endpoint at a time is the model; a project list that spans machines
+   would need a transport per endpoint. `auth.sessions` and `auth.revoke` have no UI yet. TLS is
+   a reverse proxy's job and is only documented.
+5. **#11 packaging** (compile the daemon and `ruimte-context` with `bun build --compile`, sign,
+   `ruimte.app`); needs Apple signing credentials from Bas.
 
 Known gaps to keep in mind: no WebGL context budget (many visible terminals may lose
 contexts), no backpressure for a slow client, the 30-node performance target is unmeasured.

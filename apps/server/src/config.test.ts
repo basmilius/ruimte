@@ -23,6 +23,19 @@ describe('parseServerArgs', () => {
         expect(config.home.endsWith('.ruimte')).toBe(true);
     });
 
+    test('reads the endpoint flags and the pair command', () => {
+        const config = parseServerArgs(
+            ['pair', '--label', 'box', '--allow-origin', 'https://a.example', '--allow-origin', 'https://b.example', '--require-token'],
+            {}
+        );
+        expect(config.command).toBe('pair');
+        expect(config.label).toBe('box');
+        expect(config.allowedOrigins).toEqual(['https://a.example', 'https://b.example']);
+        expect(config.requireToken).toBe(true);
+        expect(parseServerArgs([], { RUIMTE_LABEL: 'named' }).label).toBe('named');
+        expect(() => parseServerArgs(['dance'], {})).toThrow('Unknown command');
+    });
+
     test('rejects a port that is not a number', () => {
         expect(() => parseServerArgs(['--port', 'abc'], {})).toThrow('Invalid --port');
     });

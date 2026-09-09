@@ -4,6 +4,7 @@ import { startNeedsYouNotifications } from '@/shell/notifications';
 import { startSessionLifecycle } from '@/terminal/lifecycle';
 import { startServerInfo } from '@/transport/server-info';
 import { startContextSync } from '@/context/sync';
+import { startEndpointSelection } from '@/endpoint';
 import { desktop } from '@/desktop/bridge';
 import { useTheme } from '@/state/theme';
 import '@/project';
@@ -17,6 +18,7 @@ startSessionLifecycle();
 startNeedsYouNotifications();
 startServerInfo();
 startContextSync();
+startEndpointSelection();
 // The native window controls on Windows and Linux take their colors from the client's theme.
 desktop()?.setTitleBarTheme(useTheme.getState().resolved === 'dark');
 useTheme.subscribe((state, previous) => {

@@ -33,6 +33,7 @@ One WebSocket. JSON frames validated with zod on both ends.
 - `ClientConnection.id` is the per-socket client id; `main.ts` subscribes each socket to the `SessionManager` and the `ChatManager` and calls `detachAll` on both when it closes. See `apps/server/README.md` for flags, hooks, chats and the on-disk layout.
 - Agent status comes from the CLIs' hooks only (`apps/server/src/agents`), never from parsing output. A chat node is the CLI's stream-json protocol (`apps/server/src/chat`), no SDK.
 - A project's canvas is `<folder>/.ruimte/project.json` with a monotonic `rev` (`apps/server/src/projects`); machine state (camera, focus) never goes into that file. The client saves through `project.save` with the rev it loaded and reacts to `project.changed` from the daemon's watcher.
+- A loopback client needs no token; any other client pairs once (`POST /auth/pair`) and sends its session token as `?token=` on the socket (`apps/server/src/auth`). The client keeps one active endpoint at a time (`apps/client/src/state/endpoints.ts`).
 - Edges into an agent node become readable context: the client sends `context.set`, the daemon serves `GET /context` with the session's token, and `apps/server/bin/ruimte-context` (on every session's PATH) is how an agent reads it. Worktrees live under `$RUIMTE_HOME/worktrees` (`apps/server/src/git`).
 
 ## Conventions

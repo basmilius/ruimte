@@ -10,9 +10,16 @@ import {
     type ServerFrame
 } from '@ruimte/contracts';
 
+export interface ClientAccess {
+    reachability: 'loopback' | 'lan' | 'tunnel' | 'public';
+    // The paired session behind the socket; null for a loopback client, which needs none.
+    sessionId: string | null;
+}
+
 export interface ClientConnection {
     // Unique per socket for the life of the daemon, so a handler can attach a session to exactly this client.
     readonly id: string;
+    readonly access?: ClientAccess;
     send(frame: ServerFrame): void;
 }
 
