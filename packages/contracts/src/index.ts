@@ -1,4 +1,15 @@
 import { z } from 'zod';
+import { AgentResumePayloadSchema, SessionStatusEventSchema } from './agent.ts';
+import {
+    ChatApprovePayloadSchema,
+    ChatAttachResultSchema,
+    ChatCreatePayloadSchema,
+    ChatEventEnvelopeSchema,
+    ChatInfoSchema,
+    ChatListResultSchema,
+    ChatSendPayloadSchema,
+    ChatTargetPayloadSchema
+} from './chat.ts';
 import { ServerHelloPayloadSchema, ServerHelloResultSchema } from './server.ts';
 import {
     SessionAttachPayloadSchema,
@@ -13,7 +24,10 @@ import {
     SessionWritePayloadSchema
 } from './session.ts';
 
+export * from './agent.ts';
+export * from './chat.ts';
 export * from './envelope.ts';
+export * from './ids.ts';
 export * from './server.ts';
 export * from './session.ts';
 
@@ -29,7 +43,16 @@ export const REQUEST_SCHEMAS = {
     'session.write': { payload: SessionWritePayloadSchema, result: EmptySchema },
     'session.resize': { payload: SessionResizePayloadSchema, result: EmptySchema },
     'session.kill': { payload: SessionTargetPayloadSchema, result: EmptySchema },
-    'session.list': { payload: EmptySchema, result: SessionListResultSchema }
+    'session.list': { payload: EmptySchema, result: SessionListResultSchema },
+    'agent.resume': { payload: AgentResumePayloadSchema, result: EmptySchema },
+    'chat.create': { payload: ChatCreatePayloadSchema, result: ChatInfoSchema },
+    'chat.attach': { payload: ChatTargetPayloadSchema, result: ChatAttachResultSchema },
+    'chat.detach': { payload: ChatTargetPayloadSchema, result: EmptySchema },
+    'chat.send': { payload: ChatSendPayloadSchema, result: EmptySchema },
+    'chat.cancel': { payload: ChatTargetPayloadSchema, result: EmptySchema },
+    'chat.approve': { payload: ChatApprovePayloadSchema, result: EmptySchema },
+    'chat.kill': { payload: ChatTargetPayloadSchema, result: EmptySchema },
+    'chat.list': { payload: EmptySchema, result: ChatListResultSchema }
 } as const satisfies Record<string, { payload: z.ZodType; result: z.ZodType }>;
 
 export type RequestType = keyof typeof REQUEST_SCHEMAS;
@@ -44,7 +67,9 @@ export type RequestMap = {
 export const EVENT_SCHEMAS = {
     'session.output': SessionOutputEventSchema,
     'session.exit': SessionExitEventSchema,
-    'session.list-changed': EmptySchema
+    'session.status': SessionStatusEventSchema,
+    'session.list-changed': EmptySchema,
+    'chat.event': ChatEventEnvelopeSchema
 } as const satisfies Record<string, z.ZodType>;
 
 export type EventType = keyof typeof EVENT_SCHEMAS;

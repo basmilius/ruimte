@@ -1,8 +1,6 @@
 import { z } from 'zod';
-
-// The client picks the id (its node id), so the only rule is that it is not empty.
-export const SessionIdSchema = z.string().min(1);
-export type SessionId = z.infer<typeof SessionIdSchema>;
+import { AgentInfoSchema } from './agent.ts';
+import { SessionIdSchema } from './ids.ts';
 
 const cols = z.number().int().positive();
 const rows = z.number().int().positive();
@@ -17,7 +15,9 @@ export const SessionInfoSchema = z.object({
     attached: z.number().int().nonnegative(),
     exited: z.boolean(),
     // Only present once the shell has ended; a signal death is reported shell-style as 128 plus the signal number.
-    exitCode: z.number().int().optional()
+    exitCode: z.number().int().optional(),
+    // The agent CLI last seen in this shell, if any.
+    agent: AgentInfoSchema.nullable().optional()
 });
 export type SessionInfo = z.infer<typeof SessionInfoSchema>;
 
@@ -26,7 +26,9 @@ export const SessionCreatePayloadSchema = z.object({
     cwd: z.string().optional(),
     cols,
     rows,
-    shell: z.string().optional()
+    shell: z.string().optional(),
+    // Typed into the fresh shell as its first line, so a node can open straight into a program.
+    command: z.string().optional()
 });
 export type SessionCreatePayload = z.infer<typeof SessionCreatePayloadSchema>;
 

@@ -3,7 +3,8 @@ import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Check, ChevronRight, Copy, Globe, Maximize2, MessageSquare, Palette, Pencil, Terminal, Trash2, X } from 'lucide-react';
 import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
-import { useNodeStatus } from '@/state/sessions';
+import { useChats, useNodeStatus } from '@/state/chats';
+import { useSessions } from '@/state/sessions';
 import { NODE_ACCENTS } from '@/canvas/accents';
 import { Tooltip } from '@/ui/Tooltip';
 import { useHeldWhileVisible, useNodeInViewport } from '@/canvas/culling';
@@ -94,6 +95,9 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const live = useHeldWhileVisible(inViewport);
     const [renaming, setRenaming] = useState(false);
     const status = useNodeStatus(node);
+    const agent = useSessions((s) => s.byNodeId[id]?.agent);
+    const chatSession = useChats((s) => s.byNodeId[id]?.info.agentSessionId);
+    const chatCwd = useChats((s) => s.byNodeId[id]?.info.cwd);
 
     if (!node) {
         return null;
@@ -104,6 +108,18 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
         const s = useCanvas.getState();
         s.select([id]);
         s.deleteSelected();
+    };
+    // The same CLI session can continue in the other kind of node, next to this one.
+    const beside = { x: node.x + node.w + 40 + 260, y: node.y + node.h / 2 };
+    const openInChat = (): void => {
+        if (agent?.kind === 'claude') {
+            useCanvas.getState().addNode('chat', beside, { title: node.title, cwd: node.cwd, resume: agent.agentSessionId });
+        }
+    };
+    const openInTerminal = (): void => {
+        if (chatSession) {
+            useCanvas.getState().addNode('terminal', beside, { title: node.title, cwd: chatCwd, command: `claude --resume ${chatSession}` });
+        }
     };
 
     return (
@@ -176,6 +192,16 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().goToNode(id)}>
                             <Maximize2 size={14} /> Zoom to node
                         </ContextMenu.Item>
+                        {node.kind === 'terminal' && agent?.kind === 'claude' && (
+                            <ContextMenu.Item className="menu-item" onClick={openInChat}>
+                                <MessageSquare size={14} /> Open in chat
+                            </ContextMenu.Item>
+                        )}
+                        {node.kind === 'chat' && chatSession && (
+                            <ContextMenu.Item className="menu-item" onClick={openInTerminal}>
+                                <Terminal size={14} /> Open in terminal
+                            </ContextMenu.Item>
+                        )}
                         <ContextMenu.SubmenuRoot>
                             <ContextMenu.SubmenuTrigger className="menu-item">
                                 <Palette size={14} /> Color

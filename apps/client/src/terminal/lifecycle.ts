@@ -1,8 +1,9 @@
+import { chatClient } from '@/chat';
 import { useCanvas } from '@/state/canvas';
 import { sessionClient } from '@/terminal';
 import { forgetScreen } from '@/terminal/registry';
 
-/* Ends the daemon session of every terminal node that leaves the store, so the store itself never talks to the transport. */
+/* Ends the daemon session of every terminal or chat node that leaves the store, so the store itself never talks to the transport. */
 export const startSessionLifecycle = (): (() => void) => {
     let previous = useCanvas.getState().nodes;
     return useCanvas.subscribe((s) => {
@@ -11,9 +12,14 @@ export const startSessionLifecycle = (): (() => void) => {
         }
         const current = s.nodes;
         for (const [id, node] of Object.entries(previous)) {
-            if (node.kind === 'terminal' && !(id in current)) {
+            if (id in current) {
+                continue;
+            }
+            if (node.kind === 'terminal') {
                 forgetScreen(id);
                 sessionClient.kill(id).catch(() => undefined);
+            } else if (node.kind === 'chat') {
+                chatClient.kill(id).catch(() => undefined);
             }
         }
         previous = current;

@@ -24,8 +24,23 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   reconnect, viewport culling with a static plate after 10 s offscreen, exit bar with Restart,
   session status in the sidebar, a Playwright e2e in `apps/client/e2e`.
 
-Issues #1 to #4 on GitHub describe each phase; #2, #3 and #4 are closed, #1 stays open for
-its remaining checklist.
+- **Phase 5, agent status via hooks**: the daemon installs command hooks for Claude Code and
+  Codex at startup (`--no-hooks` to skip), receives them on `POST /hooks/<kind>` with a
+  per-session bearer token from the shell's environment, and folds them into `running`,
+  `needs-you`, `idle`, `error`. `session.status` events feed the sidebar, node header and the
+  dock's status summary; an OS notification fires for needs-you when the window is not
+  focused. Agent records live in `sessions/<id>.agent.json`; after a daemon restart the client
+  calls `agent.resume`, which types `claude --resume <id>` into the restored shell.
+- **Phase 6, chat node**: `claude -p` on the stream-json protocol, spawned by the daemon on
+  the first message and kept alive between turns (`apps/server/src/chat`). Thread items go
+  over `chat.event`; `chat.attach` answers the whole thread so a reload rebuilds it; threads
+  persist in `chats/<id>.json`. Permission requests are approval cards, file edits are inline
+  diffs with `@pierre/diffs` in a worker pool (lazy-loaded), the thread is virtualized with
+  `@tanstack/react-virtual`. "Open in chat" on a terminal with a Claude agent and "Open in
+  terminal" on a chat continue the same CLI session in the other kind of node.
+
+Issues #1 to #6 on GitHub describe each phase; #2, #3 and #4 are closed, #1 stays open for
+its remaining checklist, #5 and #6 are implemented but wait for a review before closing.
 
 ## Decisions that are not in the code
 
@@ -41,6 +56,14 @@ its remaining checklist.
   later "send Escape to the app" toggle is the planned fix.
 - Formatting is prettier (`.prettierrc`: single quotes, width 160, 4 spaces). Run
   `bun run format` before a commit.
+- Status hooks are `command` hooks with curl, not Claude Code's `http` hooks: the http kind
+  cannot read the daemon's port from the environment and reports an error whenever Ruimte is
+  not running. The command hook is a no-op without `RUIMTE_HOOK_URL`.
+- A chat process is not started when the node mounts, only on the first message, so a canvas
+  full of chat nodes costs nothing until used.
+- Assistant text is rendered as plain text with preserved whitespace; no markdown renderer yet.
+- The Codex chat backend (app-server protocol) is not built; only the Codex hooks are. The
+  Agent submenu opens Codex, Gemini and Copilot as terminals with the CLI typed in.
 
 ## Gotchas already paid for
 
@@ -54,6 +77,13 @@ its remaining checklist.
 - Tailwind's `dark:` variant follows `data-theme`, not the OS (`@custom-variant` in
   `styles.css`).
 - `bun test` would pick up the Playwright spec; `bunfig.toml` excludes `e2e/`.
+- The stream-json `assistant` frames arrive one content block at a time under the same
+  message id, and their block index does not match the streaming index. Text items are keyed
+  by message id plus the ordinal of the text block (`claude-stream.ts`).
+- `@pierre/diffs` marks itself side-effect free, so `import '@pierre/diffs/worker/worker.js'`
+  in a worker entry is tree-shaken to nothing. The pool uses Vite's `?worker` import instead.
+- `bun --watch` restarts the daemon on every file change and the daemon installs hooks at
+  startup, so editing the server while `bun dev` runs also rewrites the hook settings (idempotent).
 
 ## Next
 
@@ -61,8 +91,8 @@ In the order that makes sense, each one an issue on GitHub:
 
 1. **#1 remaining checklist**: command palette (Cmd+K), group node, rename in the sidebar,
    settings dialog with only theme, font and accent, keyboard-only pass.
-2. **#5 agent status via hooks** and **#6 chat node** can run in parallel; they touch
-   different code. #6 needs `@pierre/diffs` for inline diffs.
+2. **#5 and #6 follow-ups**: markdown in assistant text, a Codex chat backend, a "send
+   Escape to the app" toggle, tool output streaming (`tool_progress`), and cost in the footer.
 3. **#7 Electron shell and browser node**, **#8 projects and persistence**, then #9 to #11.
 
 Known gaps to keep in mind: no WebGL context budget (many visible terminals may lose

@@ -7,6 +7,11 @@ describe('parseServerArgs', () => {
         expect(config.host).toBe(DEFAULT_HOST);
         expect(config.port).toBe(DEFAULT_PORT);
         expect(config.home).toBe('/tmp/ruimte-home');
+        expect(config.installHooks).toBe(true);
+    });
+
+    test('--no-hooks skips the installers', () => {
+        expect(parseServerArgs(['--no-hooks'], {}).installHooks).toBe(false);
     });
 
     test('reads --host and --port', () => {

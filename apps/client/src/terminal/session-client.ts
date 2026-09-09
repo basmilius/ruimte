@@ -1,4 +1,4 @@
-import type { SessionAttachResult } from '@ruimte/contracts';
+import type { SessionAttachResult, SessionInfo } from '@ruimte/contracts';
 import type { SessionSink } from '../state/sessions';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 
@@ -6,8 +6,13 @@ export type OutputHandler = (data: string) => void;
 export type ExitHandler = (exitCode: number) => void;
 export type ScreenHandler = (result: SessionAttachResult) => void;
 
-interface Mounted {
-    cwd: string | undefined;
+export interface OpenOptions {
+    cwd?: string;
+    /* Typed into the shell as its first line when the session is created. */
+    command?: string;
+}
+
+interface Mounted extends OpenOptions {
     cols: number;
     rows: number;
     /* False between a lost connection (or a failed attach) and the next successful attach. */
@@ -28,7 +33,9 @@ export class SessionClient {
     private readonly transport: Transport;
     private readonly sink: SessionSink;
     private readonly mounted = new Map<string, Mounted>();
-    private readonly cwds = new Map<string, string | undefined>();
+    private readonly opens = new Map<string, OpenOptions>();
+    // Cold resumes already typed this page life; a CLI that is not installed must not be retyped on every attach.
+    private readonly resumed = new Set<string>();
     private readonly outputHandlers = new Map<string, Set<OutputHandler>>();
     private readonly exitHandlers = new Map<string, Set<ExitHandler>>();
     private readonly screenHandlers = new Map<string, Set<ScreenHandler>>();
@@ -43,15 +50,17 @@ export class SessionClient {
                 this.sink.setExited(sessionId, exitCode);
                 this.fanOut(this.exitHandlers, sessionId, exitCode);
             }),
+            transport.on('session.status', ({ sessionId, agent }) => this.sink.setAgent(sessionId, agent)),
             transport.subscribeStatus((status) => this.onStatus(status))
         );
     }
 
-    async ensure(nodeId: string, cwd: string | undefined, cols: number, rows: number): Promise<void> {
-        this.cwds.set(nodeId, cwd);
+    async ensure(nodeId: string, options: OpenOptions, cols: number, rows: number): Promise<void> {
+        this.opens.set(nodeId, options);
         try {
-            await this.transport.request('session.create', { sessionId: nodeId, cwd, cols, rows });
+            const info = await this.transport.request('session.create', { sessionId: nodeId, cwd: options.cwd, command: options.command, cols, rows });
             this.sink.setExited(nodeId, undefined);
+            this.sink.setAgent(nodeId, info.agent ?? null);
         } catch (e) {
             // The shell of a previous mount (or a previous tab) is still running; that is the whole point.
             if (!(e instanceof TransportError && e.code === 'session-exists')) {
@@ -65,10 +74,10 @@ export class SessionClient {
      * transport is not connected; the session stays registered and `onScreen` fires once the
      * reconnect has attached it.
      */
-    async open(nodeId: string, cwd: string | undefined, cols: number, rows: number): Promise<SessionAttachResult | null> {
-        this.mounted.set(nodeId, { cwd, cols, rows, attached: false });
+    async open(nodeId: string, options: OpenOptions, cols: number, rows: number): Promise<SessionAttachResult | null> {
+        this.mounted.set(nodeId, { ...options, cols, rows, attached: false });
         try {
-            await this.ensure(nodeId, cwd, cols, rows);
+            await this.ensure(nodeId, options, cols, rows);
             return await this.attach(nodeId, cols, rows);
         } catch (e) {
             if (isConnectionError(e)) {
@@ -80,7 +89,7 @@ export class SessionClient {
 
     async attach(nodeId: string, cols: number, rows: number): Promise<SessionAttachResult> {
         // Registered before the request, so a socket that drops mid-flight still brings this node back.
-        this.mounted.set(nodeId, { cwd: this.cwds.get(nodeId), cols, rows, attached: false });
+        this.mounted.set(nodeId, { ...this.opens.get(nodeId), cols, rows, attached: false });
         try {
             const result = await this.transport.request('session.attach', { sessionId: nodeId, cols, rows });
             const entry = this.mounted.get(nodeId);
@@ -88,8 +97,15 @@ export class SessionClient {
                 entry.attached = true;
                 this.sink.setAttached(nodeId, true);
             }
+            const info = await this.infoOf(nodeId);
             if (result.exited) {
-                this.sink.setExited(nodeId, await this.exitCodeOf(nodeId));
+                this.sink.setExited(nodeId, info?.exitCode ?? 0);
+            }
+            this.sink.setAgent(nodeId, info?.agent ?? null);
+            if (info?.agent && !info.agent.live && !result.exited && !this.resumed.has(nodeId)) {
+                // The daemon came back with a record of the agent that ran here; pick it up where it left off.
+                this.resumed.add(nodeId);
+                void this.resumeAgent(nodeId);
             }
             return result;
         } catch (e) {
@@ -129,9 +145,18 @@ export class SessionClient {
 
     async kill(nodeId: string): Promise<void> {
         this.mounted.delete(nodeId);
-        this.cwds.delete(nodeId);
+        this.opens.delete(nodeId);
+        this.resumed.delete(nodeId);
         this.sink.forget(nodeId);
         await this.transport.request('session.kill', { sessionId: nodeId });
+    }
+
+    async resumeAgent(nodeId: string): Promise<void> {
+        try {
+            await this.transport.request('agent.resume', { sessionId: nodeId });
+        } catch {
+            // Nothing to resume, or the shell is gone; the status stays as the daemon reported it.
+        }
     }
 
     onOutput(nodeId: string, handler: OutputHandler): () => void {
@@ -200,7 +225,7 @@ export class SessionClient {
                 continue;
             }
             try {
-                await this.ensure(nodeId, entry.cwd, entry.cols, entry.rows);
+                await this.ensure(nodeId, { cwd: entry.cwd, command: entry.command }, entry.cols, entry.rows);
                 if (!this.mounted.has(nodeId)) {
                     continue;
                 }
@@ -212,13 +237,13 @@ export class SessionClient {
         }
     }
 
-    // The attach reply says only that the shell ended; the code is on the list entry.
-    private async exitCodeOf(nodeId: string): Promise<number> {
+    // The attach reply says only that the shell ended; the exit code and the agent are on the list entry.
+    private async infoOf(nodeId: string): Promise<SessionInfo | null> {
         try {
             const { sessions } = await this.transport.request('session.list', {});
-            return sessions.find((session) => session.sessionId === nodeId)?.exitCode ?? 0;
+            return sessions.find((session) => session.sessionId === nodeId) ?? null;
         } catch {
-            return 0;
+            return null;
         }
     }
 }
