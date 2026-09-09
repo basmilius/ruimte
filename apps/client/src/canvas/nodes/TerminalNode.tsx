@@ -7,6 +7,7 @@ import { Terminal } from '@xterm/xterm';
 import { RotateCw } from 'lucide-react';
 import { useCanvas } from '@/state/canvas';
 import { useSessions } from '@/state/sessions';
+import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 import { sessionClient } from '@/terminal';
 import { lastScreenOf, registerTerminal } from '@/terminal/registry';
@@ -78,6 +79,7 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
     const status = useTransportStatus();
     const exited = useSessions((s) => s.byNodeId[id]?.exited);
     const resolvedTheme = useTheme((t) => t.resolved);
+    const settingsVersion = useSettings((s) => s.version);
 
     useEffect(() => {
         const host = hostRef.current;
@@ -189,8 +191,9 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
         const term = termRef.current;
         if (term) {
             term.options.theme = readTerminalTheme();
+            term.options.fontFamily = readTerminalFont();
         }
-    }, [resolvedTheme, generation]);
+    }, [resolvedTheme, settingsVersion, generation]);
 
     const rebuild = (): void => {
         setFailure(null);

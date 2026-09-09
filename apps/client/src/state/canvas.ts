@@ -18,13 +18,13 @@ import type { AgentStatus } from '@ruimte/contracts';
 
 export type { AgentStatus } from '@ruimte/contracts';
 
-export type NodeKind = 'terminal' | 'chat' | 'browser';
+export type NodeKind = 'terminal' | 'chat' | 'browser' | 'group';
 
 export interface CanvasNode extends Rect {
     id: string;
     kind: NodeKind;
     title: string;
-    /* Only for kinds without a daemon-side status (browser); terminals and chats report their own. */
+    /* Only for kinds without a daemon-side status (browser); terminals, chats and groups have none. */
     status?: AgentStatus;
     accent?: string;
     /* Terminal and chat: where the shell or the agent starts. Absent means the daemon's home directory. */
@@ -109,6 +109,8 @@ interface CanvasState {
     renameNode(id: string, title: string): void;
     duplicateNode(id: string): void;
     addNode(kind: NodeKind, at: Point, options?: AddNodeOptions): string;
+    /* Wraps the selected nodes in a group; answers null when nothing is selected. */
+    groupSelection(): string | null;
     addText(at: Point): string;
     updateText(id: string, text: string): void;
     setEditingText(id: string | null): void;
@@ -120,13 +122,45 @@ interface CanvasState {
 const NODE_SIZE: Record<NodeKind, { w: number; h: number }> = {
     terminal: { w: 560, h: 360 },
     chat: { w: 480, h: 520 },
-    browser: { w: 720, h: 480 }
+    browser: { w: 720, h: 480 },
+    group: { w: 800, h: 600 }
 };
 
 const TITLES: Record<NodeKind, string> = {
     terminal: 'Terminal',
     chat: 'New chat',
-    browser: 'Browser'
+    browser: 'Browser',
+    group: 'Group'
+};
+
+// Room a group keeps around the nodes it was made for.
+const GROUP_PADDING = 32;
+const GROUP_HEADER = 40;
+
+const center = (rect: Rect): Point => ({ x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 });
+
+const contains = (rect: Rect, point: Point): boolean => point.x >= rect.x && point.x <= rect.x + rect.w && point.y >= rect.y && point.y <= rect.y + rect.h;
+
+/* A group carries whatever sits inside it: nodes and texts whose center is within its frame. */
+export const carriedByGroups = (nodes: Record<string, CanvasNode>, texts: Record<string, TextElement>, selection: string[]): Set<string> => {
+    const carried = new Set<string>();
+    for (const id of selection) {
+        const group = nodes[id];
+        if (!group || group.kind !== 'group') {
+            continue;
+        }
+        for (const node of Object.values(nodes)) {
+            if (node.id !== group.id && node.kind !== 'group' && !selection.includes(node.id) && contains(group, center(node))) {
+                carried.add(node.id);
+            }
+        }
+        for (const text of Object.values(texts)) {
+            if (!selection.includes(text.id) && contains(group, text)) {
+                carried.add(text.id);
+            }
+        }
+    }
+    return carried;
 };
 
 let counter = 100;
@@ -236,7 +270,7 @@ export const useCanvas = create<CanvasState>((set, get) => ({
         }
         const nextNodes = { ...nodes };
         const nextTexts = { ...texts };
-        for (const id of selection) {
+        for (const id of [...selection, ...carriedByGroups(nodes, texts, selection)]) {
             if (nextNodes[id]) {
                 nextNodes[id] = { ...nextNodes[id], x: nextNodes[id].x + dx, y: nextNodes[id].y + dy };
             } else if (nextTexts[id]) {
@@ -249,7 +283,7 @@ export const useCanvas = create<CanvasState>((set, get) => ({
         const { nodes, texts, selection } = get();
         const nextNodes = { ...nodes };
         const nextTexts = { ...texts };
-        for (const id of selection) {
+        for (const id of [...selection, ...carriedByGroups(nodes, texts, selection)]) {
             if (nextNodes[id]) {
                 nextNodes[id] = { ...nextNodes[id], x: snapToGrid(nextNodes[id].x), y: snapToGrid(nextNodes[id].y) };
             } else if (nextTexts[id]) {
@@ -305,6 +339,26 @@ export const useCanvas = create<CanvasState>((set, get) => ({
             resume: options.resume
         };
         set((s) => ({ nodes: { ...s.nodes, [id]: node }, order: [...s.order, id], selection: [id], mode: { kind: 'canvas' } }));
+        return id;
+    },
+    groupSelection() {
+        const { nodes, selection } = get();
+        const members = selection.map((id) => nodes[id]).filter((node): node is CanvasNode => Boolean(node) && node!.kind !== 'group');
+        const bounds = unionRect(members);
+        if (!bounds) {
+            return null;
+        }
+        const id = nextId('group');
+        const group: CanvasNode = {
+            id,
+            kind: 'group',
+            title: TITLES.group,
+            x: snapToGrid(bounds.x - GROUP_PADDING),
+            y: snapToGrid(bounds.y - GROUP_PADDING - GROUP_HEADER),
+            w: snapToGrid(bounds.w + GROUP_PADDING * 2),
+            h: snapToGrid(bounds.h + GROUP_PADDING * 2 + GROUP_HEADER)
+        };
+        set((s) => ({ nodes: { ...s.nodes, [id]: group }, order: [...s.order, id], selection: [id], mode: { kind: 'canvas' } }));
         return id;
     },
     addText(at) {

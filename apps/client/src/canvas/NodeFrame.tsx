@@ -1,7 +1,7 @@
 import { memo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Check, ChevronRight, Copy, Globe, Maximize2, MessageSquare, Palette, Pencil, Terminal, Trash2, X } from 'lucide-react';
+import { Check, ChevronRight, Copy, Globe, LayoutGrid, Maximize2, MessageSquare, Palette, Pencil, Terminal, Trash2, X } from 'lucide-react';
 import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
 import { useChats, useNodeStatus } from '@/state/chats';
 import { useSessions } from '@/state/sessions';
@@ -15,7 +15,8 @@ import { BrowserNode } from '@/canvas/nodes/BrowserNode';
 const ICONS: Record<NodeKind, ReactNode> = {
     terminal: <Terminal size={14} strokeWidth={1.75} />,
     chat: <MessageSquare size={14} strokeWidth={1.75} />,
-    browser: <Globe size={14} strokeWidth={1.75} />
+    browser: <Globe size={14} strokeWidth={1.75} />,
+    group: <LayoutGrid size={14} strokeWidth={1.75} />
 };
 
 const STATUS_LABEL: Record<AgentStatus, string> = {
@@ -104,6 +105,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     }
 
     const accent = NODE_ACCENTS.find((a) => a.id === node.accent)?.color;
+    const isGroup = node.kind === 'group';
     const remove = (): void => {
         const s = useCanvas.getState();
         s.select([id]);
@@ -128,17 +130,38 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                 render={<div />}
                 data-node-id={id}
                 className={clsx(
-                    'absolute flex flex-col overflow-hidden rounded-xl border bg-surface shadow-node',
-                    focused ? 'node-focused border-transparent' : selected ? 'node-selected border-transparent' : 'border-border'
+                    'absolute flex flex-col overflow-hidden rounded-xl border focus-visible:outline-none',
+                    isGroup ? 'node-group' : 'bg-surface shadow-node',
+                    focused
+                        ? 'node-focused border-transparent'
+                        : selected
+                          ? 'node-selected border-transparent'
+                          : isGroup
+                            ? 'border-border-strong'
+                            : 'border-border'
                 )}
                 style={{
                     left: node.x,
                     top: node.y,
                     width: node.w,
-                    height: node.h
+                    height: node.h,
+                    ...(isGroup && accent ? { '--group-accent': accent } : {})
+                }}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                    // Tab reaches the frame; Enter steps into it, so a node is usable without a pointer.
+                    if (e.key === 'Enter' && e.target === e.currentTarget && !isGroup) {
+                        e.preventDefault();
+                        useCanvas.getState().enterNode(id);
+                    }
                 }}
             >
-                <header className="flex h-[37px] shrink-0 items-center gap-2 border-b border-border bg-surface-raised pl-2.5 pr-1 text-text-muted">
+                <header
+                    className={clsx(
+                        'flex h-[37px] shrink-0 items-center gap-2 pl-2.5 pr-1 text-text-muted',
+                        isGroup ? 'bg-transparent' : 'border-b border-border bg-surface-raised'
+                    )}
+                >
                     {accent && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: accent }} />}
                     <span className="shrink-0 text-text-muted">{ICONS[node.kind]}</span>
                     <span className="flex min-w-0 grow items-center" onDoubleClick={() => setRenaming(true)}>
@@ -163,12 +186,17 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         </Tooltip>
                     </div>
                 </header>
-                <div data-node-body className={clsx('relative min-h-0 grow', !focused && 'cursor-default')}>
-                    {node.kind === 'terminal' && (live ? <TerminalNode id={id} focused={focused} /> : <TerminalPlate id={id} />)}
-                    {node.kind === 'chat' && <ChatNode id={id} focused={focused} />}
-                    {node.kind === 'browser' && <BrowserNode id={id} focused={focused} />}
-                    {!focused && <div className="absolute inset-0" aria-hidden="true" />}
-                </div>
+                {isGroup ? (
+                    // No body attribute: a press anywhere on the frame drags it, together with what it holds.
+                    <div className="grow" />
+                ) : (
+                    <div data-node-body className={clsx('relative min-h-0 grow', !focused && 'cursor-default')}>
+                        {node.kind === 'terminal' && (live ? <TerminalNode id={id} focused={focused} /> : <TerminalPlate id={id} />)}
+                        {node.kind === 'chat' && <ChatNode id={id} focused={focused} />}
+                        {node.kind === 'browser' && <BrowserNode id={id} focused={focused} />}
+                        {!focused && <div className="absolute inset-0" aria-hidden="true" />}
+                    </div>
+                )}
                 {resizable &&
                     selected &&
                     !focused &&

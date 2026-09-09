@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { GRID, intersects, snapToGrid, toWorld, type Point, type Rect } from '@/canvas/math';
-import { useCanvas } from '@/state/canvas';
+import { useCanvas, type NodeKind } from '@/state/canvas';
+import { useUi } from '@/state/ui';
+import { addNodeAtCenter } from '@/shell/commands';
 import { EdgeLayer } from '@/canvas/EdgeLayer';
 import { NodeFrame } from '@/canvas/NodeFrame';
 import { TextElementView } from '@/canvas/TextElementView';
@@ -20,6 +22,9 @@ type Gesture =
 
 const ZOOM_SETTLE_MS = 160;
 const MIN_NODE = { w: 240, h: 160 };
+
+// Option plus a letter adds a node; a bare letter would fight every text field on the canvas.
+const ADD_KEYS: Record<string, NodeKind> = { KeyT: 'terminal', KeyC: 'chat', KeyB: 'browser', KeyG: 'group' };
 
 const isTypingTarget = (el: EventTarget | null): boolean => {
     if (!(el instanceof HTMLElement)) {
@@ -70,6 +75,12 @@ export function Canvas() {
         }))
     );
     const textIds = useMemo(() => Object.keys(texts), [texts]);
+    // Groups paint under everything else, whatever their place in the stacking order.
+    const nodes = useCanvas((s) => s.nodes);
+    const renderOrder = useMemo(
+        () => [...order.filter((id) => nodes[id]?.kind === 'group'), ...order.filter((id) => nodes[id]?.kind !== 'group')],
+        [order, nodes]
+    );
 
     useLayoutEffect(() => {
         const el = rootRef.current;
@@ -182,11 +193,28 @@ export function Canvas() {
                 (document.activeElement as HTMLElement | null)?.blur();
                 return;
             }
+            const mod = e.metaKey || e.ctrlKey;
+            // App-wide chords work from anywhere, a focused node or text field included.
+            if (mod && e.key === 'k') {
+                e.preventDefault();
+                useUi.getState().setPaletteOpen(!useUi.getState().paletteOpen);
+                return;
+            }
+            if (mod && e.key === ',') {
+                e.preventDefault();
+                useUi.getState().setSettingsOpen(true);
+                return;
+            }
             if (isTypingTarget(e.target) || s.mode.kind === 'node') {
                 return;
             }
-            const mod = e.metaKey || e.ctrlKey;
-            if (mod && e.code === 'Digit0') {
+            if (e.altKey && !mod && ADD_KEYS[e.code]) {
+                e.preventDefault();
+                addNodeAtCenter(ADD_KEYS[e.code]!);
+            } else if (mod && e.key === 'g') {
+                e.preventDefault();
+                s.groupSelection();
+            } else if (mod && e.code === 'Digit0') {
                 e.preventDefault();
                 s.zoomTo(1);
             } else if (e.shiftKey && e.code === 'Digit1') {
@@ -417,12 +445,15 @@ export function Canvas() {
                     h: Math.abs(b.y - a.y)
                 };
                 if (g.additive) {
-                    s.select(
-                        Object.values(s.nodes)
+                    const hits = [
+                        ...Object.values(s.nodes)
                             .filter((n) => intersects(n, rect))
                             .map((n) => n.id),
-                        true
-                    );
+                        ...Object.values(s.texts)
+                            .filter((t) => intersects({ x: t.x, y: t.y, w: t.size * 8, h: t.size * 1.4 }, rect))
+                            .map((t) => t.id)
+                    ];
+                    s.select(hits, true);
                 } else {
                     s.selectInRect(rect);
                 }
@@ -475,7 +506,7 @@ export function Canvas() {
                 {textIds.map((id) => (
                     <TextElementView key={id} id={id} />
                 ))}
-                {order.map((id) => (
+                {renderOrder.map((id) => (
                     <NodeFrame key={id} id={id} />
                 ))}
             </div>
