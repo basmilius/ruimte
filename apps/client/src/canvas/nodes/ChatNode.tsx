@@ -6,6 +6,7 @@ import { Composer } from '@/chat/ui/Composer';
 import { Timeline } from '@/chat/ui/Timeline';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
+import { useProject } from '@/state/project';
 import { useTransportStatus } from '@/transport/status';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -27,7 +28,7 @@ export function ChatNode({ id, focused }: { id: string; focused: boolean }) {
         const preferences = readChatPreferences();
         chatClient
             .open(id, {
-                cwd: node?.cwd,
+                cwd: node?.cwd ?? useProject.getState().current?.folder ?? undefined,
                 resume: node?.resume,
                 selection: preferences.selection ?? undefined,
                 runtimeMode: preferences.runtimeMode,

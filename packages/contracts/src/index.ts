@@ -13,6 +13,17 @@ import {
     ChatTargetPayloadSchema
 } from './chat.ts';
 import { ProviderListResultSchema } from './model.ts';
+import {
+    ProjectChangedEventSchema,
+    ProjectDeletePayloadSchema,
+    ProjectListResultSchema,
+    ProjectOpenPayloadSchema,
+    ProjectOpenResultSchema,
+    ProjectSaveLocalPayloadSchema,
+    ProjectSavePayloadSchema,
+    ProjectSaveResultSchema,
+    ProjectTargetPayloadSchema
+} from './project.ts';
 import { ServerHelloPayloadSchema, ServerHelloResultSchema } from './server.ts';
 import {
     SessionAttachPayloadSchema,
@@ -32,6 +43,7 @@ export * from './chat.ts';
 export * from './envelope.ts';
 export * from './ids.ts';
 export * from './model.ts';
+export * from './project.ts';
 export * from './server.ts';
 export * from './session.ts';
 
@@ -59,6 +71,12 @@ export const REQUEST_SCHEMAS = {
     'chat.configure': { payload: ChatConfigurePayloadSchema, result: ChatInfoSchema },
     'chat.compact': { payload: ChatTargetPayloadSchema, result: EmptySchema },
     'provider.list': { payload: EmptySchema, result: ProviderListResultSchema },
+    'project.list': { payload: EmptySchema, result: ProjectListResultSchema },
+    'project.open': { payload: ProjectOpenPayloadSchema, result: ProjectOpenResultSchema },
+    'project.save': { payload: ProjectSavePayloadSchema, result: ProjectSaveResultSchema },
+    'project.save-local': { payload: ProjectSaveLocalPayloadSchema, result: EmptySchema },
+    'project.close': { payload: ProjectTargetPayloadSchema, result: EmptySchema },
+    'project.delete': { payload: ProjectDeletePayloadSchema, result: EmptySchema },
     'chat.kill': { payload: ChatTargetPayloadSchema, result: EmptySchema },
     'chat.list': { payload: EmptySchema, result: ChatListResultSchema }
 } as const satisfies Record<string, { payload: z.ZodType; result: z.ZodType }>;
@@ -77,7 +95,8 @@ export const EVENT_SCHEMAS = {
     'session.exit': SessionExitEventSchema,
     'session.status': SessionStatusEventSchema,
     'session.list-changed': EmptySchema,
-    'chat.event': ChatEventEnvelopeSchema
+    'chat.event': ChatEventEnvelopeSchema,
+    'project.changed': ProjectChangedEventSchema
 } as const satisfies Record<string, z.ZodType>;
 
 export type EventType = keyof typeof EVENT_SCHEMAS;

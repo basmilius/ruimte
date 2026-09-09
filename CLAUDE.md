@@ -31,6 +31,7 @@ One WebSocket. JSON frames validated with zod on both ends.
 - A shell that ends on its own leaves the session listed as `exited` (last screen still attachable). `session.kill` removes the session after its `session.exit` event and deletes the snapshot. `session.create` on an exited or snapshotted id starts a fresh shell with the old screen above a `[session restored, previous shell ended]` line.
 - `ClientConnection.id` is the per-socket client id; `main.ts` subscribes each socket to the `SessionManager` and the `ChatManager` and calls `detachAll` on both when it closes. See `apps/server/README.md` for flags, hooks, chats and the on-disk layout.
 - Agent status comes from the CLIs' hooks only (`apps/server/src/agents`), never from parsing output. A chat node is the CLI's stream-json protocol (`apps/server/src/chat`), no SDK.
+- A project's canvas is `<folder>/.ruimte/project.json` with a monotonic `rev` (`apps/server/src/projects`); machine state (camera, focus) never goes into that file. The client saves through `project.save` with the rev it loaded and reacts to `project.changed` from the daemon's watcher.
 
 ## Conventions
 

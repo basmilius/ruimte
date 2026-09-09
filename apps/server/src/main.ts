@@ -9,8 +9,10 @@ import { ChatStore } from './chat/chat-store.ts';
 import { parseServerArgs } from './config.ts';
 import { Dispatcher, sendEvent, type ClientConnection } from './dispatcher.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
+import { registerProjectHandlers } from './handlers/project.ts';
 import { registerServerHandlers } from './handlers/server.ts';
 import { registerSessionHandlers } from './handlers/session.ts';
+import { ProjectStore } from './projects/project-store.ts';
 import { ProviderRegistry } from './providers/registry.ts';
 import { BunPtyAdapter } from './pty/bun-pty.ts';
 import { SessionManager } from './sessions/manager.ts';
@@ -24,11 +26,13 @@ const manager = new SessionManager({ adapter: new BunPtyAdapter(), snapshots, ag
 const snapshotSchedule = scheduleSnapshots(manager, snapshots);
 const providers = new ProviderRegistry();
 const chats = new ChatManager({ providers, store: new ChatStore(config.home) });
+const projects = new ProjectStore(config.home);
 
 const dispatcher = new Dispatcher();
 registerServerHandlers(dispatcher, { version, home: config.home });
 registerSessionHandlers(dispatcher, manager);
 registerChatHandlers(dispatcher, chats, providers);
+registerProjectHandlers(dispatcher, projects);
 
 if (config.installHooks) {
     for (const [kind, path] of Object.entries(defaultHookPaths())) {
@@ -87,11 +91,13 @@ const server = Bun.serve({
             const sink = ({ event, payload }: Parameters<Parameters<typeof manager.subscribe>[1]>[0]): void => sendEvent(client, event, payload);
             const unsubscribeSessions = manager.subscribe(client.id, sink);
             const unsubscribeChats = chats.subscribe(client.id, sink);
+            const unsubscribeProjects = projects.subscribe(client.id, sink);
             connections.set(ws, {
                 client,
                 unsubscribe() {
                     unsubscribeSessions();
                     unsubscribeChats();
+                    unsubscribeProjects();
                 }
             });
         },
@@ -134,6 +140,7 @@ const shutdown = async (signal: string): Promise<void> => {
         console.error('Snapshot on shutdown failed', e);
     }
     manager.killAll();
+    projects.closeAll();
     server.stop(true);
     process.exit(0);
 };

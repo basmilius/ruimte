@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { ChevronDown, Globe, LayoutGrid, MessageSquare, Plus, Search, Settings, Terminal } from 'lucide-react';
+import { Globe, LayoutGrid, MessageSquare, Plus, Search, Settings, Terminal } from 'lucide-react';
 import clsx from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
-import { demoProjects } from '@/data/demo';
 import { useCanvas, type AgentStatus, type CanvasNode } from '@/state/canvas';
 import { useChats, useNodeStatus } from '@/state/chats';
 import { nodeStatus, useSessions } from '@/state/sessions';
@@ -11,6 +10,7 @@ import { addNodeAtCenter } from '@/shell/commands';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { Tooltip } from '@/ui/Tooltip';
 import { ConnectionDot } from '@/shell/ConnectionDot';
+import { ProjectMenu } from '@/shell/ProjectMenu';
 
 const KIND_ICON = {
     terminal: Terminal,
@@ -83,7 +83,6 @@ export function Sidebar() {
     const nodes = useCanvas(useShallow((s) => s.order.map((id) => s.nodes[id]).filter((node) => node.kind !== 'group')));
     const sessions = useSessions((s) => s.byNodeId);
     const chats = useChats((s) => s.byNodeId);
-    const active = demoProjects.find((p) => p.active) ?? demoProjects[0];
 
     return (
         <aside className="flex h-full w-[248px] shrink-0 flex-col border-r border-border bg-surface">
@@ -99,12 +98,7 @@ export function Sidebar() {
             </div>
 
             <div className="px-2">
-                <button className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface-raised px-2.5 py-2 text-left hover:bg-surface-sunken">
-                    <span className="h-3 w-3 rounded-sm" style={{ background: active.color }} />
-                    <span className="truncate text-[13px] font-medium text-text">{active.name}</span>
-                    <span className="grow" />
-                    <ChevronDown size={14} className="text-text-muted" />
-                </button>
+                <ProjectMenu />
             </div>
 
             <div className="mt-4 min-h-0 grow overflow-auto px-2">

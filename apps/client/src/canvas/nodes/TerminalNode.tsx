@@ -7,6 +7,7 @@ import { Terminal } from '@xterm/xterm';
 import { RotateCw } from 'lucide-react';
 import { useCanvas } from '@/state/canvas';
 import { useSessions } from '@/state/sessions';
+import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 import { sessionClient } from '@/terminal';
@@ -120,8 +121,10 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
         });
 
         const node = useCanvas.getState().nodes[id];
+        // A node without its own directory starts in the project folder, like a terminal opened from the repo.
+        const cwd = node?.cwd ?? useProject.getState().current?.folder ?? undefined;
         sessionClient
-            .open(id, { cwd: node?.cwd, command: node?.command }, term.cols, term.rows)
+            .open(id, { cwd, command: node?.command }, term.cols, term.rows)
             .then((result) => {
                 if (!cancelled && result) {
                     term.write(result.screen);

@@ -56,8 +56,18 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   keyboard focus ring. Text elements join box selection with Shift. No minimap: the sidebar
   and the palette cover jumping around; decide again once real projects have many nodes.
 
-Issues #1 to #6 on GitHub describe each phase; #2, #3 and #4 are closed, #1, #5 and #6 are
-implemented but wait for a review before closing.
+- **Phase 8, projects and persistence**: `apps/server/src/projects` owns the registry
+  (`projects.json`), the canvas files and a directory watcher per open project. The client
+  (`apps/client/src/project`) saves edits 400 ms after the last one against the rev it loaded,
+  the camera a second after it stops moving into the machine-local file, and shows a banner
+  with "Take the file" or "Keep mine" when the file changed under unsaved edits. The sidebar's
+  project menu opens folders by path (no native dialog until Electron), creates canvases
+  without a folder, closes (sessions keep running) and deletes with a confirm. Undo and redo
+  (Cmd+Z, Cmd+Shift+Z) cover placement, adding and deleting; the history resets when another
+  project loads. Node ids are random now, since they end up in a shared file.
+
+Issues #1 to #8 on GitHub describe each phase; #2, #3 and #4 are closed, #1, #5, #6 and #8
+are implemented but wait for a review before closing, #7 is next.
 
 ## Decisions that are not in the code
 
@@ -78,6 +88,11 @@ implemented but wait for a review before closing.
   not running. The command hook is a no-op without `RUIMTE_HOOK_URL`.
 - A chat process is not started when the node mounts, only on the first message, so a canvas
   full of chat nodes costs nothing until used.
+- The demo canvas is gone. A fresh install boots into an empty "Untitled canvas" project; the
+  last opened project id lives in localStorage.
+- Terminal and chat nodes without their own directory start in the project folder.
+- Switching or closing a project swaps the canvas with `loading` set, which the session
+  lifecycle reads as "not a delete": nothing is killed. Deleting a node still kills its session.
 - New chats start in full access, as in T3 Code; the composer remembers the last model and
   modes in localStorage. A supervised chat is one click away in the mode picker.
 - A model or mode change restarts the CLI process with `--resume` on the next send instead of
@@ -119,8 +134,8 @@ In the order that makes sense, each one an issue on GitHub:
    `@file` mentions in the composer, a "send Escape to the app" toggle, tool output streaming
    (`tool_progress`), and per-turn checkpoints so the changed-files card can show real diffs
    against the working tree instead of the edit's before and after.
-2. **#8 projects and persistence** (the daemon side is testable without a window), then
-   **#7 Electron shell and browser node**, then #9 to #11.
+2. **#7 Electron shell and browser node**, which also brings a native folder picker for the
+   project menu, then #9 to #11.
 
 Known gaps to keep in mind: no WebGL context budget (many visible terminals may lose
 contexts), no backpressure for a slow client, the 30-node performance target is unmeasured.
