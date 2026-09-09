@@ -5,23 +5,24 @@ import {
     ChevronRight,
     Globe,
     LayoutGrid,
+    LayoutTemplate,
     Lock,
     LockOpen,
     Maximize,
     MessageSquare,
     Minus,
-    Moon,
     Plus,
+    Save,
     Scan,
-    Sun,
     Terminal,
-    Type
+    Type,
+    X
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
 import { activeZoomPreset, toWorld, ZOOM_PRESETS } from '@/canvas/math';
 import { useCanvas, type Locks, type NodeKind } from '@/state/canvas';
-import { useTheme } from '@/state/theme';
+import { useUi } from '@/state/ui';
 import { StatusSummary } from '@/shell/StatusSummary';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -62,16 +63,16 @@ function Submenu({ label, icon, children }: { label: string; icon: React.ReactNo
 }
 
 export function Dock() {
-    const { zoom, mode, locks, focusedTitle, hasSelection } = useCanvas(
+    const { zoom, mode, locks, focusedTitle, hasSelection, layouts } = useCanvas(
         useShallow((s) => ({
             zoom: s.camera.zoom,
             mode: s.mode.kind,
             locks: s.locks,
             focusedTitle: s.mode.kind === 'node' ? s.nodes[s.mode.nodeId]?.title : null,
-            hasSelection: s.selection.length > 0
+            hasSelection: s.selection.length > 0,
+            layouts: s.layouts
         }))
     );
-    const resolved = useTheme((t) => t.resolved);
     const anyLocked = Object.values(locks).some(Boolean);
     const allLocked = Object.values(locks).every(Boolean);
     const zoomPct = Math.round(zoom * 100);
@@ -242,11 +243,44 @@ export function Dock() {
                         </Menu.Portal>
                     </Menu.Root>
 
-                    <Tooltip label="Toggle theme">
-                        <button className="icon-btn" onClick={() => useTheme.getState().toggle()}>
-                            {resolved === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-                        </button>
-                    </Tooltip>
+                    <Menu.Root>
+                        <Tooltip label="Layouts">
+                            <Menu.Trigger className="icon-btn">
+                                <LayoutTemplate size={15} />
+                            </Menu.Trigger>
+                        </Tooltip>
+                        <Menu.Portal>
+                            <Menu.Positioner className="z-50" side="top" sideOffset={10} align="end">
+                                <Menu.Popup className="menu-popup min-w-48">
+                                    <div className="menu-label">Saved layouts</div>
+                                    {layouts.length === 0 && <div className="px-2.5 pb-1.5 text-[11px] text-text-faint">Nothing saved yet.</div>}
+                                    {layouts.map((layout) => (
+                                        <Menu.Item key={layout.name} className="menu-item group" onClick={() => useCanvas.getState().applyLayout(layout.name)}>
+                                            <LayoutTemplate size={14} className="text-text-faint" />
+                                            <span className="truncate">{layout.name}</span>
+                                            <Tooltip label="Delete">
+                                                <span
+                                                    role="button"
+                                                    className="ml-auto grid h-5 w-5 place-items-center rounded text-text-faint opacity-0 hover:bg-surface-sunken hover:text-text group-hover:opacity-100 group-data-[highlighted]:opacity-100"
+                                                    onClick={(e) => {
+                                                        // The row applies; only the corner deletes.
+                                                        e.stopPropagation();
+                                                        useCanvas.getState().deleteLayout(layout.name);
+                                                    }}
+                                                >
+                                                    <X size={12} />
+                                                </span>
+                                            </Tooltip>
+                                        </Menu.Item>
+                                    ))}
+                                    <Menu.Separator className="menu-separator" />
+                                    <Menu.Item className="menu-item" onClick={() => useUi.getState().setLayoutDialogOpen(true)}>
+                                        <Save size={14} /> Save current layout
+                                    </Menu.Item>
+                                </Menu.Popup>
+                            </Menu.Positioner>
+                        </Menu.Portal>
+                    </Menu.Root>
                 </div>
             </div>
         </div>
