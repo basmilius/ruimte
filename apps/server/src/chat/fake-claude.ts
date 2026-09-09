@@ -1,7 +1,8 @@
 /*
  * Stands in for `claude -p --input-format stream-json` in tests: speaks the same frames, needs no
- * network. `tool: <cmd>` asks for permission first, `ask: <question>` asks the person a question,
- * `compact` reports a compaction, `slow` waits for an interrupt, `crash` dies. The init frame
+ * network. `tool: <cmd>` asks for permission first, `run: <cmd>` runs without asking and reports
+ * progress the way the real CLI does, `ask: <question>` asks the person a question, `compact`
+ * reports a compaction, `slow` waits for an interrupt, `crash` dies. The init frame
  * carries the argument list as `argv`, so a test can see which flags a session started with.
  */
 const args = process.argv.slice(2);
@@ -96,6 +97,53 @@ const handleUser = (text: string): void => {
                 tool_use_id: 'toolu_q'
             }
         });
+        return;
+    }
+    if (text.startsWith('run:')) {
+        const command = text.slice(4).trim();
+        const id = `msg_${++messageCounter}`;
+        out({
+            type: 'assistant',
+            message: { id, model, role: 'assistant', content: [{ type: 'tool_use', id: 'toolu_run', name: 'Bash', input: { command } }], usage },
+            session_id: sessionId
+        });
+        // The frames the real CLI emits around a long Bash call, in its order and shape.
+        out({
+            type: 'system',
+            subtype: 'task_started',
+            task_id: 'task-1',
+            tool_use_id: 'toolu_run',
+            description: `Run ${command}`,
+            is_backgrounded: false,
+            task_type: 'local_bash',
+            session_id: sessionId
+        });
+        out({
+            type: 'tool_progress',
+            tool_use_id: 'toolu_run',
+            tool_name: 'Bash',
+            parent_tool_use_id: null,
+            elapsed_time_seconds: 30,
+            task_id: 'task-1',
+            session_id: sessionId
+        });
+        out({
+            type: 'system',
+            subtype: 'task_notification',
+            task_id: 'task-1',
+            tool_use_id: 'toolu_run',
+            status: 'completed',
+            output_file: '',
+            summary: `Run ${command}`,
+            session_id: sessionId
+        });
+        out({
+            type: 'user',
+            message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_run', content: `ran: ${command}`, is_error: false }] },
+            session_id: sessionId
+        });
+        assistantText('done');
+        result();
         return;
     }
     if (text.startsWith('tool:')) {

@@ -43,13 +43,19 @@ export class ChatThread {
         return { type: 'item', item };
     }
 
+    /* Streams text into an assistant item, or partial output into a tool call that is still running. */
     appendText(itemId: string, text: string): ChatEvent | null {
         const item = this.items.get(itemId);
-        if (!item || item.kind !== 'assistant') {
-            return null;
+        if (item?.kind === 'assistant') {
+            this.items.set(itemId, { ...item, text: item.text + text });
+            return { type: 'delta', itemId, text };
         }
-        this.items.set(itemId, { ...item, text: item.text + text });
-        return { type: 'delta', itemId, text };
+        if (item?.kind === 'tool' && item.state === 'running') {
+            const progress = item.progress ?? { startedAt: null, description: null, output: null };
+            this.items.set(itemId, { ...item, progress: { ...progress, output: (progress.output ?? '') + text } });
+            return { type: 'delta', itemId, text };
+        }
+        return null;
     }
 
     patchInfo(patch: Partial<ChatInfo>): ChatEvent {

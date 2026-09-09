@@ -1,4 +1,4 @@
-import type { ChatEvent, ChatItem, ChatQuestion } from '@ruimte/contracts';
+import type { ChatEvent, ChatItem, ChatQuestion, ChatToolItem, ChatToolProgress } from '@ruimte/contracts';
 import type { ChatThread } from './thread.ts';
 
 /*
@@ -117,6 +117,9 @@ export class ClaudeStreamReducer {
             case 'control_cancel_request':
                 this.cancelRequest(str(frame.request_id), out);
                 break;
+            case 'tool_progress':
+                this.handleToolProgress(frame, out);
+                break;
             default:
                 break;
         }
@@ -156,6 +159,12 @@ export class ClaudeStreamReducer {
                     running: true
                 })
             );
+        } else if (frame.subtype === 'task_started') {
+            // A Bash call or a subagent became a task; its description is the CLI's own words for the work.
+            const description = str(frame.description);
+            if (description) {
+                this.patchProgress(str(frame.tool_use_id), { description }, out);
+            }
         } else if (frame.subtype === 'compact_boundary') {
             const meta = isRecord(frame.compact_metadata) ? frame.compact_metadata : {};
             const preTokens = num(meta.pre_tokens);
@@ -264,6 +273,27 @@ export class ClaudeStreamReducer {
         }
     }
 
+    /*
+     * `tool_progress` carries how long the call has run (once per 30 s for a Bash under the CLI's
+     * remote gate, or a heartbeat for a slow MCP tool); the start is kept so the client can count on.
+     */
+    private handleToolProgress(frame: Frame, out: ReducerOutput): void {
+        const elapsed = frame.elapsed_time_seconds;
+        if (typeof elapsed !== 'number' || !Number.isFinite(elapsed) || elapsed < 0) {
+            return;
+        }
+        this.patchProgress(str(frame.tool_use_id), { startedAt: this.now() - Math.round(elapsed * 1000) }, out);
+    }
+
+    private patchProgress(toolUseId: string | null, patch: Partial<ChatToolProgress>, out: ReducerOutput): void {
+        const tool = toolUseId ? this.thread.get(toolUseId) : undefined;
+        if (!tool || tool.kind !== 'tool' || tool.state !== 'running') {
+            return;
+        }
+        const progress: ChatToolProgress = { startedAt: null, description: null, output: null, ...tool.progress, ...patch };
+        out.events.push(this.thread.upsert({ ...tool, progress }));
+    }
+
     private handleUser(frame: Frame, out: ReducerOutput): void {
         const message = isRecord(frame.message) ? frame.message : {};
         const content = Array.isArray(message.content) ? message.content : [];
@@ -276,7 +306,10 @@ export class ClaudeStreamReducer {
             if (!tool || tool.kind !== 'tool') {
                 continue;
             }
-            out.events.push(this.thread.upsert({ ...tool, output: resultText(block.content), state: block.is_error === true ? 'error' : 'done' }));
+            // The result supersedes whatever progress said; a settled call carries none.
+            const settled: ChatToolItem = { ...tool, output: resultText(block.content), state: block.is_error === true ? 'error' : 'done' };
+            delete settled.progress;
+            out.events.push(this.thread.upsert(settled));
         }
     }
 

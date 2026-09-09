@@ -33,10 +33,17 @@ const applyEvent = (state: ChatState, event: ChatEvent): ChatState => {
         }
         case 'delta': {
             const item = state.items[event.itemId];
-            if (!item || item.kind !== 'assistant') {
-                return state;
+            if (item?.kind === 'assistant') {
+                return { ...state, items: { ...state.items, [event.itemId]: { ...item, text: item.text + event.text } } };
             }
-            return { ...state, items: { ...state.items, [event.itemId]: { ...item, text: item.text + event.text } } };
+            if (item?.kind === 'tool' && item.state === 'running') {
+                const progress = item.progress ?? { startedAt: null, description: null, output: null };
+                return {
+                    ...state,
+                    items: { ...state.items, [event.itemId]: { ...item, progress: { ...progress, output: (progress.output ?? '') + event.text } } }
+                };
+            }
+            return state;
         }
         case 'info':
             return { ...state, info: event.info };

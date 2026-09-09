@@ -140,6 +140,21 @@ describe('ChatManager', () => {
         expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['done, remembered']);
     });
 
+    test('a running tool carries the progress the CLI reports until its result arrives', async () => {
+        await manager.create({ chatId: 'chat-2b', cwd: home });
+        manager.attach('chat-2b', 'c1');
+        const before = Date.now();
+        manager.send('chat-2b', 'run: sleep 30');
+        await waitFor(idle, 'the turn to end');
+
+        const running = recorder.events.filter((event) => event.type === 'item' && event.item.kind === 'tool' && event.item.state === 'running');
+        const withProgress = running.map((event) => (event.type === 'item' && event.item.kind === 'tool' ? event.item.progress : undefined)).filter(Boolean);
+        expect(withProgress.at(-1)).toMatchObject({ description: 'Run sleep 30', output: null });
+        expect(withProgress.at(-1)!.startedAt).toBeLessThanOrEqual(before - 30_000 + 5_000);
+        expect(recorder.ofKind('tool')[0]).toMatchObject({ toolUseId: 'toolu_run', state: 'done', output: 'ran: sleep 30' });
+        expect(recorder.ofKind('tool')[0]).not.toHaveProperty('progress');
+    });
+
     test('denying answers the CLI and the tool ends in error', async () => {
         await manager.create({ chatId: 'chat-3', cwd: home });
         manager.attach('chat-3', 'c1');
