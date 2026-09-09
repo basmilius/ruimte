@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
 import { demoProjects } from '@/data/demo';
 import { useCanvas, type AgentStatus, type CanvasNode } from '@/state/canvas';
+import { nodeStatus, useNodeStatus, useSessions } from '@/state/sessions';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { ConnectionDot } from '@/shell/ConnectionDot';
 
@@ -21,6 +22,7 @@ const GROUPS: { status: AgentStatus | 'none'; label: string }[] = [
 
 function SessionRow({ node }: { node: CanvasNode }) {
     const selected = useCanvas((s) => s.selection.includes(node.id));
+    const status = useNodeStatus(node);
     const Icon = KIND_ICON[node.kind];
     return (
         <button
@@ -33,13 +35,14 @@ function SessionRow({ node }: { node: CanvasNode }) {
             <Icon size={14} strokeWidth={1.75} className="shrink-0" />
             <span className="truncate">{node.title}</span>
             <span className="grow" />
-            {node.status && <StatusDot status={node.status} />}
+            {status && <StatusDot status={status} />}
         </button>
     );
 }
 
 export function Sidebar() {
     const nodes = useCanvas(useShallow((s) => s.order.map((id) => s.nodes[id])));
+    const sessions = useSessions((s) => s.byNodeId);
     const active = demoProjects.find((p) => p.active) ?? demoProjects[0];
 
     return (
@@ -62,7 +65,10 @@ export function Sidebar() {
 
             <div className="mt-4 min-h-0 grow overflow-auto px-2">
                 {GROUPS.map((group) => {
-                    const rows = nodes.filter((n) => (group.status === 'none' ? !n.status : n.status === group.status));
+                    const rows = nodes.filter((n) => {
+                        const status = nodeStatus(n, sessions);
+                        return group.status === 'none' ? !status : status === group.status;
+                    });
                     if (rows.length === 0) {
                         return null;
                     }

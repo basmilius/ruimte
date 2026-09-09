@@ -23,6 +23,8 @@ export interface CanvasNode extends Rect {
     title: string;
     status?: AgentStatus;
     accent?: string;
+    /* Terminal only: where its shell starts. Absent means the daemon's home directory. */
+    cwd?: string;
 }
 
 export interface TextElement extends Point {
