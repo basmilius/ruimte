@@ -9,5 +9,15 @@ export default defineConfig({
         alias: {
             '@': fileURLToPath(new URL('./src', import.meta.url))
         }
+    },
+    server: {
+        proxy: {
+            // The client always talks to its own origin; in dev that origin is Vite, which
+            // forwards the socket to the daemon so no port or CORS setup leaks into the client.
+            '/ws': {
+                target: 'ws://localhost:4210',
+                ws: true
+            }
+        }
     }
 });

@@ -3,30 +3,18 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "bun run --filter './apps/*' dev",
+    "dev:client": "bun run --cwd apps/client dev",
+    "dev:server": "bun run --cwd apps/server dev",
+    "build": "bun run --cwd apps/client build",
+    "check": "bun run --filter '*' typecheck && oxlint",
     "lint": "oxlint",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@base-ui-components/react": "^1.0.0-rc.0",
-    "clsx": "^2.1.1",
-    "lucide-react": "^1.43.0",
-    "motion": "^13.2.0",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "zustand": "^5.0.15"
+    "test": "bun test"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.3",
-    "@types/node": "^24.13.3",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.7",
-    "@vitejs/plugin-react": "^6.1.0",
     "oxlint": "^1.79.0",
-    "tailwindcss": "^4.3.3",
-    "typescript": "~6.0.2",
-    "vite": "^8.2.2"
+    "typescript": "~6.0.2"
   }
 }

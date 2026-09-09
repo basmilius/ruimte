@@ -395,6 +395,9 @@ export function Canvas() {
             style={{
                 backgroundSize: `${gridStep}px ${gridStep}px`,
                 backgroundPosition: `${camera.x}px ${camera.y}px`,
+                // Space is tracked in a ref because a held key must not re-render the canvas; the cursor
+                // catches up on the next render, which the pointer move that follows always triggers.
+                // oxlint-disable-next-line react/refs
                 cursor: activeGesture === 'pan' ? 'grabbing' : locks.pan ? undefined : spaceRef.current ? 'grab' : undefined
             }}
             data-mode={mode.kind}
