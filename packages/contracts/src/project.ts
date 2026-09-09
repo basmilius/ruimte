@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AgentKindSchema } from './agent.ts';
 
 export const ProjectIdSchema = z.string().min(1);
 export type ProjectId = z.infer<typeof ProjectIdSchema>;
@@ -23,6 +24,8 @@ export const ProjectNodeSchema = z.object({
     escapeToApp: z.boolean().optional(),
     // Chat only: the agent session to continue.
     resume: z.string().optional(),
+    // Chat only: which agent CLI answers; absent means Claude Code.
+    provider: AgentKindSchema.optional(),
     // Browser only: the page it shows.
     url: z.string().optional(),
     // Group only: folded to its header, with the nodes it held out of sight until it opens again.

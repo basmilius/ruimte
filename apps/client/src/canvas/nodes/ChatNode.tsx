@@ -28,6 +28,7 @@ export function ChatNode({ id, focused }: { id: string; focused: boolean }) {
         const preferences = readChatPreferences();
         chatClient
             .open(id, {
+                provider: node?.provider,
                 cwd: node?.cwd ?? useProject.getState().current?.folder ?? undefined,
                 resume: node?.resume,
                 selection: preferences.selection ?? undefined,
