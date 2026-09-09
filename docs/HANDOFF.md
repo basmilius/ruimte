@@ -88,15 +88,19 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   `initial`, controls `no-drag`), the inset is only applied outside fullscreen (the shell sends
   `window:fullscreen`), and the overlay colors follow the client's theme over IPC.
 
-- **Phase 9, in progress**: groups nest (a group inside a group carries its members along),
-  collapse to their header with the members hidden and remembered (`memberIds`), and show
-  their worktree branch. Edges are drawn from a port on a selected node or text to a terminal
-  or chat node (only agent nodes can be targets), hover shows a delete button, a double-click
-  on the label edits it, clicking an edge selects it for Delete. Layouts are named
-  arrangements saved from the palette ("Save layout as") and applied or deleted from there.
-  Worktree binding and context links are next.
+- **Phase 9, groups, worktrees, context links and layouts**: groups nest (a group inside a
+  group carries its members along), collapse to their header with the members hidden and
+  remembered (`memberIds`), and bind to a git worktree from their context menu
+  (`apps/server/src/git/worktrees.ts` makes it under the app data dir); a node made inside such
+  a group starts in that checkout. Edges are drawn from a port on a selected node or text to a
+  terminal or chat node (only agent nodes can be targets), hover shows a delete button, a
+  double-click on the label edits it, clicking an edge selects it for Delete. The client
+  derives from the edges what each agent may read and tells the daemon (`context.set`); the
+  agent reads it with `ruimte-context`, a bun script the daemon puts on the PATH of every shell
+  and chat, over `GET /context` with the session's token. Layouts are named arrangements saved
+  from the palette and applied or deleted from there.
 
-Issues #1 to #8 on GitHub describe each phase; #2, #3 and #4 are closed, #1 and #5 to #8 are
+Issues #1 to #9 on GitHub describe each phase; #2, #3 and #4 are closed, #1 and #5 to #9 are
 implemented but wait for a review before closing.
 
 Research on showing a live browser page without a `<webview>` (for the web build and remote
@@ -168,6 +172,10 @@ started; it fits after #10, when a remote daemon makes it worth its weight.
   process uses a plain `require('electron')` for that reason.
 - Bun does not run Electron's install script unless it is in `trustedDependencies` (root
   `package.json`); without it `node_modules/electron/dist` is missing and nothing starts.
+- `ruimte-context` runs through `#!/usr/bin/env bun`, so a shell without bun on its PATH cannot
+  use it; phase 11 compiles it with the daemon.
+- The CLI is only mentioned in a chat's system prompt when the chat has links at the moment its
+  process starts; a link made later is visible to `ruimte-context` but the agent is not told.
 
 ## Next
 
@@ -180,8 +188,11 @@ In the order that makes sense, each one an issue on GitHub:
 2. **#7 follow-ups**: a webview keeps the canvas's z-order only by being above everything, so
    a node dragged over a browser node slides under its page; the traffic-light inset is fixed,
    not measured; no Windows or Linux run yet.
-3. **#9 groups, worktrees, context links and layouts**, **#10 remote endpoints**, **#11
-   packaging** (compile the daemon with `bun build --compile`, sign, `ruimte.app`).
+3. **#9 follow-ups**: a chat should learn about a link made mid-conversation (a note in the
+   next turn's prompt), and a terminal agent has no prompt at all, so the CLI's existence must
+   come from its hooks or a MOTD line in the shell.
+4. **#10 remote endpoints, pairing and the server build**, then **#11 packaging** (compile the
+   daemon and `ruimte-context` with `bun build --compile`, sign, `ruimte.app`).
 
 Known gaps to keep in mind: no WebGL context budget (many visible terminals may lose
 contexts), no backpressure for a slow client, the 30-node performance target is unmeasured.

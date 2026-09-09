@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { homedir } from 'node:os';
 import type { ChatConfigurePayload, ChatCreatePayload, ChatEvent, ChatInfo, ChatItem } from '@ruimte/contracts';
 import type { ProviderRegistry } from '../providers/registry.ts';
@@ -23,6 +24,11 @@ export interface ChatManagerOptions {
     env?: Record<string, string | undefined>;
     // The CLI to run; a test points this at a script that speaks the same protocol.
     command?: string[];
+    // Where an agent reads its linked context, and whether it has any.
+    contextUrl?: string;
+    hasContext?: (chatId: string) => boolean;
+    // Put in front of PATH, so `ruimte-context` is there for the CLI's shell.
+    binDir?: string;
 }
 
 export class ChatManager {
@@ -33,11 +39,16 @@ export class ChatManager {
     private readonly chats = new Map<string, ChatSession>();
     private readonly sinks = new Map<string, SessionSink>();
     private readonly attached = new Map<string, Set<string>>();
+    private readonly tokens = new Map<string, string>();
+    private readonly contextUrl: string | null;
+    private readonly hasContext: (chatId: string) => boolean;
 
     constructor(options: ChatManagerOptions) {
         this.providers = options.providers;
         this.store = options.store ?? null;
         this.command = options.command ?? ['claude'];
+        this.contextUrl = options.contextUrl ?? null;
+        this.hasContext = options.hasContext ?? (() => false);
         this.env = {};
         for (const [key, value] of Object.entries(options.env ?? process.env)) {
             // The hook variables belong to terminal sessions; a chat reports through its own stream.
@@ -45,6 +56,14 @@ export class ChatManager {
                 this.env[key] = value;
             }
         }
+        if (options.binDir) {
+            this.env.PATH = this.env.PATH ? `${options.binDir}:${this.env.PATH}` : options.binDir;
+        }
+    }
+
+    /* The chat a context token belongs to. */
+    chatIdForToken(token: string): string | null {
+        return this.tokens.get(token) ?? null;
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
@@ -87,12 +106,15 @@ export class ChatManager {
                   createdAt: Date.now()
               };
         const items = stored?.items.map(settle) ?? [];
+        const token = randomBytes(24).toString('base64url');
+        this.tokens.set(token, payload.chatId);
         const session = new ChatSession({
             info,
             items,
             command: this.command,
-            env: this.env,
+            env: this.contextUrl ? { ...this.env, RUIMTE_CONTEXT_URL: this.contextUrl, RUIMTE_CONTEXT_TOKEN: token } : this.env,
             catalog,
+            hasContext: () => this.hasContext(payload.chatId),
             emit: (event) => this.emit(payload.chatId, event),
             persist: () => this.persist(payload.chatId)
         });
@@ -162,6 +184,11 @@ export class ChatManager {
         session.dispose();
         this.chats.delete(chatId);
         this.attached.delete(chatId);
+        for (const [token, id] of this.tokens) {
+            if (id === chatId) {
+                this.tokens.delete(token);
+            }
+        }
         await this.store?.delete(chatId);
     }
 

@@ -80,6 +80,14 @@ A chat node is `claude -p --input-format stream-json --output-format stream-json
 - `chat.cancel` sends an interrupt and the turn ends as `aborted`. `chat.compact` sends `/compact`.
 - The thread is written to `chats/<id>.json` after every turn; a chat whose process ended (or a daemon that restarted) starts the CLI again with `--resume` on the next send.
 
+## Worktrees
+
+`git.worktree-add { repo, branch }` answers the worktree for a branch of the repository, making it under `$RUIMTE_HOME/worktrees/<repo>-<hash>/<branch>` when it does not exist (a branch that does not exist yet is created from HEAD). `git.worktree-list` and `git.worktree-remove` do what they say. The repository itself is never touched beyond what `git worktree` records.
+
+## Context links
+
+An edge on the canvas into a terminal or chat node lets that agent read the source. The client tells the daemon what each agent node may read (`context.set`, a text element with its content, a terminal or chat by id); the daemon reads terminals and chats live when asked. Every shell and chat gets `RUIMTE_CONTEXT_URL` (`http://127.0.0.1:<port>/context`), a bearer token (`RUIMTE_HOOK_TOKEN` in a shell, `RUIMTE_CONTEXT_TOKEN` in a chat) and `apps/server/bin` in front of its PATH, where `ruimte-context` lists the linked sources and `ruimte-context read <id>` prints one. A chat that has links is told about the CLI in its system prompt when its process starts.
+
 ## Smoke test
 
 With a daemon running:

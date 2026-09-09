@@ -1,0 +1,46 @@
+#!/usr/bin/env bun
+/*
+ * Reads what the person linked to this agent on the canvas. Ruimte puts this on the PATH of
+ * every terminal and chat it starts, with the address and the token in the environment.
+ *
+ *   ruimte-context            lists the linked sources
+ *   ruimte-context read <id>  prints one of them
+ */
+const url = process.env.RUIMTE_CONTEXT_URL;
+const token = process.env.RUIMTE_CONTEXT_TOKEN ?? process.env.RUIMTE_HOOK_TOKEN;
+
+if (!url || !token) {
+    console.error('Not inside a Ruimte session: RUIMTE_CONTEXT_URL and a token are missing.');
+    process.exit(2);
+}
+
+const [command = 'list', id] = process.argv.slice(2);
+const headers = { authorization: `Bearer ${token}` };
+
+const fail = (message: string): never => {
+    console.error(message);
+    process.exit(1);
+};
+
+if (command === 'list') {
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+        fail(`The daemon answered ${response.status}`);
+    }
+    const { sources } = (await response.json()) as { sources: Array<{ id: string; kind: string; title: string }> };
+    if (sources.length === 0) {
+        console.log('Nothing is linked to this session.');
+    }
+    for (const source of sources) {
+        console.log(`${source.id}\t${source.kind}\t${source.title}`);
+    }
+} else if (command === 'read' && id) {
+    const response = await fetch(`${url}/${encodeURIComponent(id)}`, { headers });
+    if (!response.ok) {
+        fail(response.status === 404 ? `No linked source ${id}` : `The daemon answered ${response.status}`);
+    }
+    process.stdout.write(await response.text());
+    process.stdout.write('\n');
+} else {
+    fail('Usage: ruimte-context [list | read <id>]');
+}
