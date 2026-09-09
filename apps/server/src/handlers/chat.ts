@@ -1,5 +1,6 @@
 import { RequestError, type Dispatcher } from '../dispatcher.ts';
 import { ChatError, type ChatManager } from '../chat/chat-manager.ts';
+import type { ProviderRegistry } from '../providers/registry.ts';
 
 const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
     Promise.resolve()
@@ -11,8 +12,12 @@ const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
             throw e;
         });
 
-export const registerChatHandlers = (dispatcher: Dispatcher, manager: ChatManager): void => {
+export const registerChatHandlers = (dispatcher: Dispatcher, manager: ChatManager, providers: ProviderRegistry): void => {
+    dispatcher.register('provider.list', async () => ({ providers: await providers.list() }));
+
     dispatcher.register('chat.create', (payload) => translate(() => manager.create(payload)));
+
+    dispatcher.register('chat.configure', (payload) => translate(() => manager.configure(payload)));
 
     dispatcher.register('chat.attach', (payload, client) => translate(() => manager.attach(payload.chatId, client.id)));
 
@@ -30,6 +35,13 @@ export const registerChatHandlers = (dispatcher: Dispatcher, manager: ChatManage
         })
     );
 
+    dispatcher.register('chat.compact', (payload) =>
+        translate(() => {
+            manager.compact(payload.chatId);
+            return {};
+        })
+    );
+
     dispatcher.register('chat.cancel', (payload) =>
         translate(() => {
             manager.cancel(payload.chatId);
@@ -40,6 +52,13 @@ export const registerChatHandlers = (dispatcher: Dispatcher, manager: ChatManage
     dispatcher.register('chat.approve', (payload) =>
         translate(() => {
             manager.approve(payload.chatId, payload.requestId, payload.decision, payload.message);
+            return {};
+        })
+    );
+
+    dispatcher.register('chat.answer', (payload) =>
+        translate(() => {
+            manager.answer(payload.chatId, payload.requestId, payload.answers);
             return {};
         })
     );

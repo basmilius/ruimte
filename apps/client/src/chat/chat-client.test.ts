@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatEvent, ChatInfo, ChatItem, EventMap, EventType, RequestMap, RequestType } from '@ruimte/contracts';
+import type { ChatEvent, ChatInfo, ChatItem, EventMap, EventType, ProviderInfo, RequestMap, RequestType } from '@ruimte/contracts';
 import type { ChatSink } from '../state/chats';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 import { ChatClient } from './chat-client';
@@ -8,11 +8,17 @@ type Call = { type: RequestType; payload: unknown };
 
 const info = (chatId: string): ChatInfo => ({
     chatId,
+    provider: 'claude',
     cwd: '/',
     agentSessionId: null,
     model: null,
+    selection: { model: 'claude-sonnet-5', options: {} },
+    runtimeMode: 'full-access',
+    interactionMode: 'default',
     status: 'idle',
     running: false,
+    activeTurnId: null,
+    slashCommands: [],
     usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
     createdAt: 0
 });
@@ -35,6 +41,12 @@ class FakeTransport implements Transport {
                 return Promise.resolve(info(chatId) as RequestMap[T]['result']);
             case 'chat.attach':
                 return Promise.resolve({ info: info(chatId), items: this.items } as RequestMap[T]['result']);
+            case 'chat.configure':
+                return Promise.resolve({ ...info(chatId), runtimeMode: 'auto' } as RequestMap[T]['result']);
+            case 'provider.list':
+                return Promise.resolve({
+                    providers: [{ kind: 'claude', name: 'Claude Code', installed: true, version: '1', models: [], defaultModel: null }]
+                } as RequestMap[T]['result']);
             default:
                 return Promise.resolve({} as RequestMap[T]['result']);
         }
@@ -100,16 +112,24 @@ const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 
 const setup = () => {
     const transport = new FakeTransport();
     const sink = new FakeSink();
-    const client = new ChatClient(transport, sink);
-    return { transport, sink, client };
+    const providers: ProviderInfo[][] = [];
+    const client = new ChatClient(transport, sink, { setProviders: (list) => providers.push(list) });
+    return { transport, sink, client, providers };
 };
 
 describe('ChatClient', () => {
     test('open creates with cwd and resume, attaches and resets the store with the thread', async () => {
         const { transport, sink, client } = setup();
-        transport.items = [{ id: 'u1', kind: 'user', createdAt: 1, text: 'hi' }];
-        expect(await client.open('c', { cwd: '/tmp', resume: 'abc' })).toBe(true);
-        expect(transport.of('chat.create')[0]?.payload).toEqual({ chatId: 'c', cwd: '/tmp', resume: 'abc' });
+        transport.items = [{ id: 'u1', kind: 'user', createdAt: 1, turnId: null, text: 'hi' }];
+        expect(await client.open('c', { cwd: '/tmp', resume: 'abc', runtimeMode: 'auto' })).toBe(true);
+        expect(transport.of('chat.create')[0]?.payload).toEqual({
+            chatId: 'c',
+            cwd: '/tmp',
+            resume: 'abc',
+            selection: undefined,
+            runtimeMode: 'auto',
+            interactionMode: undefined
+        });
         expect(transport.of('chat.attach')[0]?.payload).toEqual({ chatId: 'c' });
         expect(sink.resets).toEqual([{ chatId: 'c', items: transport.items }]);
     });
@@ -145,18 +165,41 @@ describe('ChatClient', () => {
         expect(sink.resets.map((r) => r.chatId)).toEqual(['a']);
     });
 
-    test('send, cancel, approve and kill map to their requests', async () => {
+    test('send, cancel, approve, answer, compact and kill map to their requests', async () => {
         const { transport, sink, client } = setup();
         await client.open('a', {});
         await client.send('a', 'hello');
         await client.cancel('a');
         await client.approve('a', 'r1', 'deny', 'no');
+        await client.answer('a', 'r2', { '0': 'Blue' });
+        await client.compact('a');
         await client.kill('a');
         expect(transport.of('chat.send')[0]?.payload).toEqual({ chatId: 'a', text: 'hello' });
         expect(transport.of('chat.cancel')).toHaveLength(1);
         expect(transport.of('chat.approve')[0]?.payload).toEqual({ chatId: 'a', requestId: 'r1', decision: 'deny', message: 'no' });
+        expect(transport.of('chat.answer')[0]?.payload).toEqual({ chatId: 'a', requestId: 'r2', answers: { '0': 'Blue' } });
+        expect(transport.of('chat.compact')).toHaveLength(1);
         expect(transport.of('chat.kill')).toHaveLength(1);
         expect(sink.forgotten).toEqual(['a']);
         expect(client.isMounted('a')).toBe(false);
+    });
+
+    test('configure feeds the answered info straight into the store', async () => {
+        const { sink, client } = setup();
+        await client.open('a', {});
+        const info = await client.configure({ chatId: 'a', runtimeMode: 'auto' });
+        expect(info.runtimeMode).toBe('auto');
+        expect(sink.events.at(-1)).toEqual({ chatId: 'a', event: { type: 'info', info } });
+    });
+
+    test('the provider list is loaded on construction and again on every reconnect', async () => {
+        const { transport, providers } = setup();
+        await flush();
+        expect(providers).toHaveLength(1);
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        await flush();
+        expect(providers).toHaveLength(2);
+        expect(providers[1]?.[0]?.kind).toBe('claude');
     });
 });

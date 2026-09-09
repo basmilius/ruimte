@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { AgentStatusSchema } from './agent.ts';
+import { AgentKindSchema, AgentStatusSchema } from './agent.ts';
+import { InteractionModeSchema, ModelSelectionSchema, RuntimeModeSchema } from './model.ts';
 
 // The client picks the id (its node id), like a terminal session.
 export const ChatIdSchema = z.string().min(1);
@@ -16,13 +17,21 @@ export type ChatUsage = z.infer<typeof ChatUsageSchema>;
 
 export const ChatInfoSchema = z.object({
     chatId: ChatIdSchema,
+    provider: AgentKindSchema,
     cwd: z.string(),
     // Set once the CLI announced itself; what a terminal node needs for `--resume`.
     agentSessionId: z.string().nullable(),
+    // The model the CLI reported, which can differ from the selection (aliases, reroutes).
     model: z.string().nullable(),
+    selection: ModelSelectionSchema,
+    runtimeMode: RuntimeModeSchema,
+    interactionMode: InteractionModeSchema,
     status: AgentStatusSchema,
     // Whether the CLI process is alive right now. A dead one is started again with `--resume` on the next send.
     running: z.boolean(),
+    // The turn in flight, if any; items carry the same id so the client can fold work per turn.
+    activeTurnId: z.string().nullable(),
+    slashCommands: z.array(z.string()),
     usage: ChatUsageSchema,
     createdAt: z.number()
 });
@@ -30,7 +39,8 @@ export type ChatInfo = z.infer<typeof ChatInfoSchema>;
 
 const base = {
     id: z.string().min(1),
-    createdAt: z.number()
+    createdAt: z.number(),
+    turnId: z.string().nullable()
 };
 
 export const ChatUserItemSchema = z.object({ ...base, kind: z.literal('user'), text: z.string() });
@@ -52,10 +62,12 @@ export const ChatToolItemSchema = z.object({
     name: z.string(),
     input: z.unknown(),
     output: z.string().nullable(),
-    state: ChatToolStateSchema
+    state: ChatToolStateSchema,
+    // Set for a tool call made by a subagent, with the id of the Task call that spawned it.
+    parentToolUseId: z.string().nullable()
 });
 
-export const ChatApprovalDecisionSchema = z.enum(['pending', 'allow', 'deny', 'cancelled']);
+export const ChatApprovalDecisionSchema = z.enum(['pending', 'allow', 'allow-always', 'deny', 'cancelled']);
 export type ChatApprovalDecision = z.infer<typeof ChatApprovalDecisionSchema>;
 
 export const ChatApprovalItemSchema = z.object({
@@ -66,14 +78,49 @@ export const ChatApprovalItemSchema = z.object({
     toolName: z.string(),
     input: z.unknown(),
     description: z.string().nullable(),
+    // Whether the CLI offered a rule that would let this pass next time.
+    canAllowAlways: z.boolean(),
     decision: ChatApprovalDecisionSchema
+});
+
+export const ChatQuestionSchema = z.object({
+    id: z.string(),
+    header: z.string(),
+    question: z.string(),
+    choices: z.array(z.object({ label: z.string(), description: z.string() })),
+    multiSelect: z.boolean()
+});
+export type ChatQuestion = z.infer<typeof ChatQuestionSchema>;
+
+export const ChatQuestionItemSchema = z.object({
+    ...base,
+    kind: z.literal('question'),
+    requestId: z.string(),
+    questions: z.array(ChatQuestionSchema).min(1),
+    // Keyed by question id; null while the person has not answered.
+    answers: z.record(z.string(), z.string()).nullable(),
+    state: z.enum(['pending', 'answered', 'cancelled'])
+});
+
+export const ChatTurnItemSchema = z.object({
+    ...base,
+    kind: z.literal('turn'),
+    state: z.enum(['running', 'done', 'aborted', 'error']),
+    endedAt: z.number().nullable(),
+    costUsd: z.number().nonnegative()
 });
 
 export const ChatNoteItemSchema = z.object({
     ...base,
     kind: z.literal('note'),
-    level: z.enum(['info', 'error']),
+    level: z.enum(['info', 'warning', 'error']),
     text: z.string()
+});
+
+export const ChatCompactionItemSchema = z.object({
+    ...base,
+    kind: z.literal('compaction'),
+    preTokens: z.number().int().nonnegative().nullable()
 });
 
 export const ChatItemSchema = z.discriminatedUnion('kind', [
@@ -81,14 +128,20 @@ export const ChatItemSchema = z.discriminatedUnion('kind', [
     ChatAssistantItemSchema,
     ChatToolItemSchema,
     ChatApprovalItemSchema,
-    ChatNoteItemSchema
+    ChatQuestionItemSchema,
+    ChatTurnItemSchema,
+    ChatNoteItemSchema,
+    ChatCompactionItemSchema
 ]);
 export type ChatItem = z.infer<typeof ChatItemSchema>;
 export type ChatUserItem = z.infer<typeof ChatUserItemSchema>;
 export type ChatAssistantItem = z.infer<typeof ChatAssistantItemSchema>;
 export type ChatToolItem = z.infer<typeof ChatToolItemSchema>;
 export type ChatApprovalItem = z.infer<typeof ChatApprovalItemSchema>;
+export type ChatQuestionItem = z.infer<typeof ChatQuestionItemSchema>;
+export type ChatTurnItem = z.infer<typeof ChatTurnItemSchema>;
 export type ChatNoteItem = z.infer<typeof ChatNoteItemSchema>;
+export type ChatCompactionItem = z.infer<typeof ChatCompactionItemSchema>;
 
 // Every change to a thread is one of these; `item` is an upsert by id so a client can rebuild
 // its view from any prefix of the stream after `chat.attach` handed it the current state.
@@ -107,12 +160,23 @@ export type ChatEventEnvelope = z.infer<typeof ChatEventEnvelopeSchema>;
 
 export const ChatCreatePayloadSchema = z.object({
     chatId: ChatIdSchema,
+    provider: AgentKindSchema.optional(),
     cwd: z.string().optional(),
     // A CLI session to continue, for a chat opened from a terminal that ran the agent.
     resume: z.string().optional(),
-    model: z.string().optional()
+    selection: ModelSelectionSchema.optional(),
+    runtimeMode: RuntimeModeSchema.optional(),
+    interactionMode: InteractionModeSchema.optional()
 });
 export type ChatCreatePayload = z.infer<typeof ChatCreatePayloadSchema>;
+
+export const ChatConfigurePayloadSchema = z.object({
+    chatId: ChatIdSchema,
+    selection: ModelSelectionSchema.optional(),
+    runtimeMode: RuntimeModeSchema.optional(),
+    interactionMode: InteractionModeSchema.optional()
+});
+export type ChatConfigurePayload = z.infer<typeof ChatConfigurePayloadSchema>;
 
 export const ChatTargetPayloadSchema = z.object({ chatId: ChatIdSchema });
 export type ChatTargetPayload = z.infer<typeof ChatTargetPayloadSchema>;
@@ -132,10 +196,17 @@ export type ChatSendPayload = z.infer<typeof ChatSendPayloadSchema>;
 export const ChatApprovePayloadSchema = z.object({
     chatId: ChatIdSchema,
     requestId: z.string().min(1),
-    decision: z.enum(['allow', 'deny']),
+    decision: z.enum(['allow', 'allow-always', 'deny']),
     message: z.string().optional()
 });
 export type ChatApprovePayload = z.infer<typeof ChatApprovePayloadSchema>;
+
+export const ChatAnswerPayloadSchema = z.object({
+    chatId: ChatIdSchema,
+    requestId: z.string().min(1),
+    answers: z.record(z.string(), z.string())
+});
+export type ChatAnswerPayload = z.infer<typeof ChatAnswerPayloadSchema>;
 
 export const ChatListResultSchema = z.object({
     chats: z.array(ChatInfoSchema)

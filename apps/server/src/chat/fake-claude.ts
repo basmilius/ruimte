@@ -1,6 +1,8 @@
 /*
  * Stands in for `claude -p --input-format stream-json` in tests: speaks the same frames, needs no
- * network. `tool: <cmd>` asks for permission first, `slow` waits for an interrupt, `crash` dies.
+ * network. `tool: <cmd>` asks for permission first, `ask: <question>` asks the person a question,
+ * `compact` reports a compaction, `slow` waits for an interrupt, `crash` dies. The init frame
+ * carries the argument list as `argv`, so a test can see which flags a session started with.
  */
 const args = process.argv.slice(2);
 const resumeAt = args.indexOf('--resume');
@@ -51,6 +53,7 @@ const result = (): void => {
 };
 
 let pendingApproval: { command: string } | null = null;
+let pendingQuestion: string | null = null;
 let slow = false;
 
 const handleUser = (text: string): void => {
@@ -60,6 +63,39 @@ const handleUser = (text: string): void => {
     if (text === 'slow') {
         slow = true;
         out({ type: 'stream_event', event: { type: 'message_start', message: { id: `msg_${++messageCounter}`, model } }, session_id: sessionId });
+        return;
+    }
+    if (text === 'compact') {
+        out({ type: 'system', subtype: 'compact_boundary', compact_metadata: { trigger: 'manual', pre_tokens: 5000 }, session_id: sessionId });
+        assistantText('compacted');
+        result();
+        return;
+    }
+    if (text.startsWith('ask:')) {
+        const question = text.slice(4).trim();
+        pendingQuestion = question;
+        out({
+            type: 'control_request',
+            request_id: 'req-q',
+            request: {
+                subtype: 'can_use_tool',
+                tool_name: 'AskUserQuestion',
+                input: {
+                    questions: [
+                        {
+                            question,
+                            header: 'Choice',
+                            options: [
+                                { label: 'Red', description: 'Warm' },
+                                { label: 'Blue', description: 'Cool' }
+                            ],
+                            multiSelect: false
+                        }
+                    ]
+                },
+                tool_use_id: 'toolu_q'
+            }
+        });
         return;
     }
     if (text.startsWith('tool:')) {
@@ -74,7 +110,16 @@ const handleUser = (text: string): void => {
         out({
             type: 'control_request',
             request_id: 'req-1',
-            request: { subtype: 'can_use_tool', tool_name: 'Bash', input: { command }, tool_use_id: 'toolu_1', description: 'Run a command' }
+            request: {
+                subtype: 'can_use_tool',
+                tool_name: 'Bash',
+                input: { command },
+                tool_use_id: 'toolu_1',
+                description: 'Run a command',
+                permission_suggestions: [
+                    { type: 'addRules', rules: [{ toolName: 'Bash', ruleContent: `${command}:*` }], behavior: 'allow', destination: 'session' }
+                ]
+            }
         });
         return;
     }
@@ -83,19 +128,27 @@ const handleUser = (text: string): void => {
 };
 
 const handleControlResponse = (response: Record<string, unknown>): void => {
-    const inner = response.response as { behavior?: string } | undefined;
+    const inner = response.response as { behavior?: string; updatedInput?: { answers?: Record<string, string> }; updatedPermissions?: unknown[] } | undefined;
+    if (pendingQuestion) {
+        const answer = inner?.updatedInput?.answers?.[pendingQuestion] ?? 'no answer';
+        pendingQuestion = null;
+        assistantText(`you chose ${answer}`);
+        result();
+        return;
+    }
     const approval = pendingApproval;
     pendingApproval = null;
     if (!approval) {
         return;
     }
     if (inner?.behavior === 'allow') {
+        const always = Array.isArray(inner.updatedPermissions) && inner.updatedPermissions.length > 0;
         out({
             type: 'user',
             message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: `ran: ${approval.command}`, is_error: false }] },
             session_id: sessionId
         });
-        assistantText('done');
+        assistantText(always ? 'done, remembered' : 'done');
     } else {
         out({
             type: 'user',
@@ -107,7 +160,7 @@ const handleControlResponse = (response: Record<string, unknown>): void => {
     result();
 };
 
-out({ type: 'system', subtype: 'init', session_id: sessionId, model, cwd: process.cwd(), tools: ['Bash'] });
+out({ type: 'system', subtype: 'init', session_id: sessionId, model, cwd: process.cwd(), tools: ['Bash'], slash_commands: ['compact', 'review'], argv: args });
 
 const decoder = new TextDecoder();
 let buffered = '';

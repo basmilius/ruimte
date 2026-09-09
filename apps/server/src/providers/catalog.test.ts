@@ -1,0 +1,63 @@
+import { describe, expect, test } from 'bun:test';
+import { ModelCatalog } from './catalog.ts';
+import { claudeArgs, promptPrefix } from './claude.ts';
+
+const catalog = new ModelCatalog();
+
+describe('ModelCatalog', () => {
+    test('lists models with their options and one default', () => {
+        const models = catalog.list();
+        expect(models.filter((model) => model.isDefault).map((model) => model.slug)).toEqual(['claude-sonnet-5']);
+        expect(models.find((model) => model.slug === 'claude-fable-5-1')?.options.map((option) => option.id)).toEqual(['effort', 'contextWindow']);
+        expect(models.find((model) => model.slug === 'claude-haiku-4-5')?.options[0]).toMatchObject({ type: 'boolean', defaultValue: true });
+    });
+
+    test('normalize resolves aliases, fills defaults and drops unknown options', () => {
+        expect(catalog.normalize({ model: 'opus', options: { effort: 'max', bogus: 'x' } })).toEqual({
+            model: 'claude-opus-5',
+            options: { effort: 'max', contextWindow: '1m' }
+        });
+        expect(catalog.normalize({ model: 'nope' }).model).toBe('claude-sonnet-5');
+        expect(catalog.normalize(undefined)).toEqual({ model: 'claude-sonnet-5', options: { effort: 'high', contextWindow: '200k' } });
+        expect(catalog.normalize({ model: 'sonnet', options: { effort: 'wrong' } }).options.effort).toBe('high');
+    });
+
+    test('context window follows the option or the fixed size', () => {
+        expect(catalog.contextWindowFor(catalog.normalize({ model: 'sonnet' }))).toBe(200000);
+        expect(catalog.contextWindowFor(catalog.normalize({ model: 'sonnet', options: { contextWindow: '1m' } }))).toBe(1000000);
+        expect(catalog.contextWindowFor(catalog.normalize({ model: 'haiku' }))).toBe(200000);
+    });
+});
+
+describe('claudeArgs', () => {
+    test('maps the selection and the modes to flags', () => {
+        const args = claudeArgs({
+            selection: { model: 'claude-opus-5', options: { effort: 'xhigh', contextWindow: '1m' } },
+            runtimeMode: 'full-access',
+            interactionMode: 'default',
+            resume: 'abc'
+        });
+        expect(args.slice(args.indexOf('--model'))).toEqual([
+            '--model',
+            'claude-opus-5[1m]',
+            '--effort',
+            'xhigh',
+            '--permission-mode',
+            'bypassPermissions',
+            '--allow-dangerously-skip-permissions',
+            '--resume',
+            'abc'
+        ]);
+    });
+
+    test('supervised has no permission flag, plan mode wins, ultrathink goes into the prompt', () => {
+        const selection = { model: 'claude-sonnet-5', options: { effort: 'ultrathink', contextWindow: '200k' } };
+        const supervised = claudeArgs({ selection, runtimeMode: 'supervised', interactionMode: 'default', resume: null });
+        expect(supervised).not.toContain('--permission-mode');
+        expect(supervised).not.toContain('--effort');
+        const plan = claudeArgs({ selection, runtimeMode: 'auto', interactionMode: 'plan', resume: null });
+        expect(plan[plan.indexOf('--permission-mode') + 1]).toBe('plan');
+        expect(promptPrefix(selection)).toBe('ultrathink\n\n');
+        expect(promptPrefix({ model: 'x', options: { effort: 'high' } })).toBe('');
+    });
+});

@@ -11,6 +11,7 @@ import { Dispatcher, sendEvent, type ClientConnection } from './dispatcher.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
 import { registerServerHandlers } from './handlers/server.ts';
 import { registerSessionHandlers } from './handlers/session.ts';
+import { ProviderRegistry } from './providers/registry.ts';
 import { BunPtyAdapter } from './pty/bun-pty.ts';
 import { SessionManager } from './sessions/manager.ts';
 import { SnapshotStore, scheduleSnapshots } from './sessions/snapshot-store.ts';
@@ -21,12 +22,13 @@ const version = pkg.version;
 const snapshots = new SnapshotStore(config.home);
 const manager = new SessionManager({ adapter: new BunPtyAdapter(), snapshots, agents: new AgentStore(config.home) });
 const snapshotSchedule = scheduleSnapshots(manager, snapshots);
-const chats = new ChatManager({ store: new ChatStore(config.home) });
+const providers = new ProviderRegistry();
+const chats = new ChatManager({ providers, store: new ChatStore(config.home) });
 
 const dispatcher = new Dispatcher();
 registerServerHandlers(dispatcher, { version, home: config.home });
 registerSessionHandlers(dispatcher, manager);
-registerChatHandlers(dispatcher, chats);
+registerChatHandlers(dispatcher, chats, providers);
 
 if (config.installHooks) {
     for (const [kind, path] of Object.entries(defaultHookPaths())) {

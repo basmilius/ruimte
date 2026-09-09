@@ -34,10 +34,17 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
 - **Phase 6, chat node**: `claude -p` on the stream-json protocol, spawned by the daemon on
   the first message and kept alive between turns (`apps/server/src/chat`). Thread items go
   over `chat.event`; `chat.attach` answers the whole thread so a reload rebuilds it; threads
-  persist in `chats/<id>.json`. Permission requests are approval cards, file edits are inline
-  diffs with `@pierre/diffs` in a worker pool (lazy-loaded), the thread is virtualized with
-  `@tanstack/react-virtual`. "Open in chat" on a terminal with a Claude agent and "Open in
+  persist in `chats/<id>.json`. "Open in chat" on a terminal with a Claude agent and "Open in
   terminal" on a chat continue the same CLI session in the other kind of node.
+- **Phase 6b, the chat** (designed and written from scratch):
+  a model catalog with generic option descriptors (`apps/server/src/providers`), one runtime
+  mode vocabulary (`supervised`, `auto-accept-edits`, `auto`, `full-access`) plus plan or
+  build, turns as items so a settled turn folds behind "Worked for 12s", runs of tool calls
+  folded into "Read 4 files", a changed-files card per turn with the diffs behind it, markdown
+  with shiki, and a floating glass composer: model picker, option picker, mode picker, plan
+  toggle, context ring with compact, slash menu, prompt recall with the arrow keys, drafts in
+  localStorage. Pending approvals and questions dock on top of the composer, never in the
+  transcript; only their outcome stays as a line.
 
 Issues #1 to #6 on GitHub describe each phase; #2, #3 and #4 are closed, #1 stays open for
 its remaining checklist, #5 and #6 are implemented but wait for a review before closing.
@@ -61,9 +68,15 @@ its remaining checklist, #5 and #6 are implemented but wait for a review before 
   not running. The command hook is a no-op without `RUIMTE_HOOK_URL`.
 - A chat process is not started when the node mounts, only on the first message, so a canvas
   full of chat nodes costs nothing until used.
-- Assistant text is rendered as plain text with preserved whitespace; no markdown renderer yet.
+- New chats start in full access; the composer remembers the last model and
+  modes in localStorage. A supervised chat is one click away in the mode picker.
+- A model or mode change restarts the CLI process with `--resume` on the next send instead of
+  using the control protocol's `set_model`; one path, and the resumed session keeps everything.
+- Fast mode is not offered: the installed CLI has no flag for it, only the `/fast` command.
 - The Codex chat backend (app-server protocol) is not built; only the Codex hooks are. The
   Agent submenu opens Codex, Gemini and Copilot as terminals with the CLI typed in.
+- No attachments, `@file` mentions or `$skills` in the composer yet; those need an upload path
+  and a file index on the daemon.
 
 ## Gotchas already paid for
 
@@ -79,7 +92,10 @@ its remaining checklist, #5 and #6 are implemented but wait for a review before 
 - `bun test` would pick up the Playwright spec; `bunfig.toml` excludes `e2e/`.
 - The stream-json `assistant` frames arrive one content block at a time under the same
   message id, and their block index does not match the streaming index. Text items are keyed
-  by message id plus the ordinal of the text block (`claude-stream.ts`).
+  by process generation, message id and the ordinal of the text block (`claude-stream.ts`);
+  the generation is there because a resumed process numbers its messages from the start again.
+- `AskUserQuestion` arrives as a `can_use_tool` request; the answer is an allow with
+  `updatedInput.answers` keyed by the question text, not by an id.
 - `@pierre/diffs` marks itself side-effect free, so `import '@pierre/diffs/worker/worker.js'`
   in a worker entry is tree-shaken to nothing. The pool uses Vite's `?worker` import instead.
 - `bun --watch` restarts the daemon on every file change and the daemon installs hooks at
@@ -91,8 +107,10 @@ In the order that makes sense, each one an issue on GitHub:
 
 1. **#1 remaining checklist**: command palette (Cmd+K), group node, rename in the sidebar,
    settings dialog with only theme, font and accent, keyboard-only pass.
-2. **#5 and #6 follow-ups**: markdown in assistant text, a Codex chat backend, a "send
-   Escape to the app" toggle, tool output streaming (`tool_progress`), and cost in the footer.
+2. **#5 and #6 follow-ups**: a Codex chat backend on the app-server protocol, attachments and
+   `@file` mentions in the composer, a "send Escape to the app" toggle, tool output streaming
+   (`tool_progress`), and per-turn checkpoints so the changed-files card can show real diffs
+   against the working tree instead of the edit's before and after.
 3. **#7 Electron shell and browser node**, **#8 projects and persistence**, then #9 to #11.
 
 Known gaps to keep in mind: no WebGL context budget (many visible terminals may lose

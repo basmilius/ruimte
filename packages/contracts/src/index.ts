@@ -1,8 +1,10 @@
 import { z } from 'zod';
 import { AgentResumePayloadSchema, SessionStatusEventSchema } from './agent.ts';
 import {
+    ChatAnswerPayloadSchema,
     ChatApprovePayloadSchema,
     ChatAttachResultSchema,
+    ChatConfigurePayloadSchema,
     ChatCreatePayloadSchema,
     ChatEventEnvelopeSchema,
     ChatInfoSchema,
@@ -10,6 +12,7 @@ import {
     ChatSendPayloadSchema,
     ChatTargetPayloadSchema
 } from './chat.ts';
+import { ProviderListResultSchema } from './model.ts';
 import { ServerHelloPayloadSchema, ServerHelloResultSchema } from './server.ts';
 import {
     SessionAttachPayloadSchema,
@@ -28,6 +31,7 @@ export * from './agent.ts';
 export * from './chat.ts';
 export * from './envelope.ts';
 export * from './ids.ts';
+export * from './model.ts';
 export * from './server.ts';
 export * from './session.ts';
 
@@ -51,6 +55,10 @@ export const REQUEST_SCHEMAS = {
     'chat.send': { payload: ChatSendPayloadSchema, result: EmptySchema },
     'chat.cancel': { payload: ChatTargetPayloadSchema, result: EmptySchema },
     'chat.approve': { payload: ChatApprovePayloadSchema, result: EmptySchema },
+    'chat.answer': { payload: ChatAnswerPayloadSchema, result: EmptySchema },
+    'chat.configure': { payload: ChatConfigurePayloadSchema, result: ChatInfoSchema },
+    'chat.compact': { payload: ChatTargetPayloadSchema, result: EmptySchema },
+    'provider.list': { payload: EmptySchema, result: ProviderListResultSchema },
     'chat.kill': { payload: ChatTargetPayloadSchema, result: EmptySchema },
     'chat.list': { payload: EmptySchema, result: ChatListResultSchema }
 } as const satisfies Record<string, { payload: z.ZodType; result: z.ZodType }>;

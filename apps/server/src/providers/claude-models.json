@@ -1,0 +1,75 @@
+{
+  "defaultModel": "claude-sonnet-5",
+  "profiles": {
+    "frontier": {
+      "options": [
+        {
+          "id": "effort",
+          "label": "Reasoning",
+          "type": "select",
+          "defaultChoice": "high",
+          "choices": [
+            { "id": "low", "label": "Low" },
+            { "id": "medium", "label": "Medium" },
+            { "id": "high", "label": "High" },
+            { "id": "xhigh", "label": "Extra high" },
+            { "id": "max", "label": "Max" },
+            { "id": "ultrathink", "label": "Ultrathink", "description": "Asks for the longest thinking in the prompt itself" }
+          ]
+        },
+        {
+          "id": "contextWindow",
+          "label": "Context window",
+          "type": "select",
+          "defaultChoice": "1m",
+          "choices": [
+            { "id": "200k", "label": "200k" },
+            { "id": "1m", "label": "1M" }
+          ]
+        }
+      ],
+      "contextWindowTokens": { "200k": 200000, "1m": 1000000 }
+    },
+    "sonnet": {
+      "options": [
+        {
+          "id": "effort",
+          "label": "Reasoning",
+          "type": "select",
+          "defaultChoice": "high",
+          "choices": [
+            { "id": "low", "label": "Low" },
+            { "id": "medium", "label": "Medium" },
+            { "id": "high", "label": "High" },
+            { "id": "xhigh", "label": "Extra high" },
+            { "id": "max", "label": "Max" },
+            { "id": "ultrathink", "label": "Ultrathink", "description": "Asks for the longest thinking in the prompt itself" }
+          ]
+        },
+        {
+          "id": "contextWindow",
+          "label": "Context window",
+          "type": "select",
+          "defaultChoice": "200k",
+          "choices": [
+            { "id": "200k", "label": "200k" },
+            { "id": "1m", "label": "1M" }
+          ]
+        }
+      ],
+      "contextWindowTokens": { "200k": 200000, "1m": 1000000 }
+    },
+    "haiku": {
+      "options": [{ "id": "thinking", "label": "Thinking", "type": "boolean", "defaultValue": true }],
+      "contextWindowTokens": { "*": 200000 }
+    }
+  },
+  "models": [
+    { "slug": "claude-fable-5-1", "name": "Claude Fable 5.1", "badge": "new", "profile": "frontier", "aliases": ["fable"] },
+    { "slug": "claude-opus-5", "name": "Claude Opus 5", "profile": "frontier", "aliases": ["opus"] },
+    { "slug": "claude-sonnet-5", "name": "Claude Sonnet 5", "profile": "sonnet", "aliases": ["sonnet"] },
+    { "slug": "claude-haiku-4-5", "name": "Claude Haiku 4.5", "profile": "haiku", "aliases": ["haiku"] },
+    { "slug": "claude-opus-4-6", "name": "Claude Opus 4.6", "profile": "frontier", "legacy": true },
+    { "slug": "claude-sonnet-4-6", "name": "Claude Sonnet 4.6", "profile": "sonnet", "legacy": true }
+  ]
+}
