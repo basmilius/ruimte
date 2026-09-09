@@ -11,9 +11,11 @@ import { parseServerArgs } from './config.ts';
 import { Dispatcher, sendEvent, type ClientConnection } from './dispatcher.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
 import { registerFsHandlers } from './handlers/fs.ts';
+import { registerGitHandlers } from './handlers/git.ts';
 import { registerProjectHandlers } from './handlers/project.ts';
 import { registerServerHandlers } from './handlers/server.ts';
 import { registerSessionHandlers } from './handlers/session.ts';
+import { Worktrees } from './git/worktrees.ts';
 import { ProjectStore } from './projects/project-store.ts';
 import { ProviderRegistry } from './providers/registry.ts';
 import { BunPtyAdapter } from './pty/bun-pty.ts';
@@ -36,6 +38,7 @@ registerSessionHandlers(dispatcher, manager);
 registerChatHandlers(dispatcher, chats, providers);
 registerProjectHandlers(dispatcher, projects);
 registerFsHandlers(dispatcher);
+registerGitHandlers(dispatcher, new Worktrees(config.home));
 
 if (config.installHooks) {
     for (const [kind, path] of Object.entries(defaultHookPaths())) {

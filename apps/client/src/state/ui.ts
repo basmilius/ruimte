@@ -6,6 +6,9 @@ interface UiStore {
     paletteSeed: string;
     settingsOpen: boolean;
     layoutDialogOpen: boolean;
+    /* The group a worktree is being bound to, while its dialog is up. */
+    worktreeDialogFor: string | null;
+    setWorktreeDialogFor(groupId: string | null): void;
     openPalette(seed?: string): void;
     setLayoutDialogOpen(open: boolean): void;
     setPaletteOpen(open: boolean): void;
@@ -18,6 +21,10 @@ export const useUi = create<UiStore>((set) => ({
     paletteSeed: '',
     settingsOpen: false,
     layoutDialogOpen: false,
+    worktreeDialogFor: null,
+    setWorktreeDialogFor(groupId) {
+        set({ worktreeDialogFor: groupId });
+    },
     setLayoutDialogOpen(open) {
         set({ layoutDialogOpen: open });
     },
