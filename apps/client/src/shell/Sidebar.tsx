@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { demoProjects } from '@/data/demo';
 import { useCanvas, type AgentStatus, type CanvasNode } from '@/state/canvas';
 import { StatusDot } from '@/canvas/NodeFrame';
+import { ConnectionDot } from '@/shell/ConnectionDot';
 
 const KIND_ICON = {
     terminal: Terminal,
@@ -82,6 +83,7 @@ export function Sidebar() {
                 <button className="flex h-8 grow items-center gap-2 rounded-md px-2 text-[13px] text-text-muted hover:bg-surface-sunken hover:text-text">
                     <Plus size={15} /> New session
                 </button>
+                <ConnectionDot />
                 <button className="icon-btn" title="Settings"><Settings size={15} /></button>
             </div>
         </aside>
