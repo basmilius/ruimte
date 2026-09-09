@@ -146,7 +146,7 @@ export function Sidebar() {
                 </button>
                 <ConnectionDot />
                 <Tooltip label="Settings" kbd="⌘,">
-                    <button className="icon-btn" onClick={() => useUi.getState().setSettingsOpen(true)}>
+                    <button className="icon-btn" onClick={() => useUi.getState().setSettings({ open: true })}>
                         <Settings size={15} />
                     </button>
                 </Tooltip>

@@ -12,10 +12,14 @@ export const MONO_FONTS = [
 
 export type MonoFontId = (typeof MONO_FONTS)[number]['id'];
 
+export const FONT_SIZE_RANGE = { min: 10, max: 20, step: 0.5 } as const;
+
 export interface Settings {
     /* One of the node accents, or null for the theme's own accent. */
     accent: string | null;
     font: MonoFontId;
+    /* Terminal font size in px; every terminal refits when it changes. */
+    fontSize: number;
 }
 
 interface SettingsStore extends Settings {
@@ -24,14 +28,20 @@ interface SettingsStore extends Settings {
     update(patch: Partial<Settings>): void;
 }
 
-const DEFAULTS: Settings = { accent: null, font: 'system' };
+export const DEFAULT_SETTINGS: Settings = { accent: null, font: 'system', fontSize: 12.5 };
+
+const clampFontSize = (value: unknown): number => {
+    const size = typeof value === 'number' && Number.isFinite(value) ? value : DEFAULT_SETTINGS.fontSize;
+    return Math.min(FONT_SIZE_RANGE.max, Math.max(FONT_SIZE_RANGE.min, size));
+};
 
 const read = (): Settings => {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Settings>) } : DEFAULTS;
+        const stored = raw ? (JSON.parse(raw) as Partial<Settings>) : {};
+        return { ...DEFAULT_SETTINGS, ...stored, fontSize: clampFontSize(stored.fontSize) };
     } catch {
-        return DEFAULTS;
+        return DEFAULT_SETTINGS;
     }
 };
 
@@ -63,7 +73,9 @@ export const useSettings = create<SettingsStore>((set, get) => {
         ...initial,
         version: 0,
         update(patch) {
-            const next: Settings = { accent: get().accent, font: get().font, ...patch };
+            const { accent, font, fontSize } = get();
+            const next: Settings = { accent, font, fontSize, ...patch };
+            next.fontSize = clampFontSize(next.fontSize);
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
             } catch {
