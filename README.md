@@ -23,4 +23,6 @@ bun install
 bun dev
 ```
 
-`bun run build` typechecks and builds. Phase 1 is a browser-only UI prototype; see the issues for the phases that follow.
+`bun dev` starts the daemon on `localhost:4210` and the Vite client, which proxies `/ws` to it. `bun run dev:client` and `bun run dev:server` start one side. `bun run check` typechecks every package and lints, `bun run build` builds the client, `bun test` runs the tests of all packages.
+
+The repo is a Bun workspace: `apps/client` (React UI), `apps/server` (the daemon) and `packages/contracts` (zod 4 schemas for the wire, the only place a message shape is defined). Phase 1 was a browser-only UI prototype; see the issues for the phases that follow.
