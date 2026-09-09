@@ -4,7 +4,7 @@ import { AgentKindSchema } from './agent.ts';
 export const ProjectIdSchema = z.string().min(1);
 export type ProjectId = z.infer<typeof ProjectIdSchema>;
 
-export const NodeKindSchema = z.enum(['terminal', 'chat', 'browser', 'group']);
+export const NodeKindSchema = z.enum(['terminal', 'chat', 'browser', 'group', 'note']);
 export type NodeKind = z.infer<typeof NodeKindSchema>;
 
 export const ProjectNodeSchema = z.object({
@@ -33,7 +33,10 @@ export const ProjectNodeSchema = z.object({
     memberIds: z.array(z.string()).optional(),
     expandedHeight: z.number().positive().optional(),
     // Group only: the git worktree every node made inside it starts in.
-    worktree: z.object({ path: z.string(), branch: z.string() }).optional()
+    worktree: z.object({ path: z.string(), branch: z.string() }).optional(),
+    // Note only: its markdown and one of the note colors; without a color it takes the default.
+    body: z.string().optional(),
+    color: z.string().optional()
 });
 export type ProjectNode = z.infer<typeof ProjectNodeSchema>;
 
@@ -46,7 +49,7 @@ export const ProjectTextSchema = z.object({
 });
 export type ProjectText = z.infer<typeof ProjectTextSchema>;
 
-// An edge from a text, terminal or chat into an agent's node: the agent may read the source.
+// A line between two things on the canvas. Into an agent's node it also means the agent may read the source.
 export const ProjectEdgeSchema = z.object({
     id: z.string().min(1),
     from: z.string().min(1),

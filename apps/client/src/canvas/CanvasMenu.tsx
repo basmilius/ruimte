@@ -1,5 +1,5 @@
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Globe, LayoutGrid, Maximize, MessageSquare, Scan, Settings, SquareDashedMousePointer, Terminal, Type } from 'lucide-react';
+import { Globe, LayoutGrid, Maximize, MessageSquare, Scan, Settings, SquareDashedMousePointer, StickyNote, Terminal, Type } from 'lucide-react';
 import type { Point } from '@/canvas/math';
 import { useCanvas, type NodeKind } from '@/state/canvas';
 import { useUi } from '@/state/ui';
@@ -26,6 +26,9 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => add('group')}>
                         <LayoutGrid size={14} /> Group <kbd>⌥G</kbd>
+                    </ContextMenu.Item>
+                    <ContextMenu.Item className="menu-item" onClick={() => add('note')}>
+                        <StickyNote size={14} /> Note <kbd>⌥N</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().addText(at())}>
                         <Type size={14} /> Text <kbd>dbl-click</kbd>

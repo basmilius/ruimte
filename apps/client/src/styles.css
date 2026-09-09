@@ -51,6 +51,11 @@
     --term-ansi-bright-magenta: #c026d3;
     --term-ansi-bright-cyan: #0891b2;
     --term-ansi-bright-white: #e4e4e7;
+    --note-yellow: #fff3bf;
+    --note-green: #dcf5e3;
+    --note-blue: #dbe9ff;
+    --note-pink: #fde2ea;
+    --note-gray: #ececef;
 }
 
 [data-theme="dark"] {
@@ -100,6 +105,11 @@
     --term-ansi-bright-magenta: #d8b4fe;
     --term-ansi-bright-cyan: #a5f3fc;
     --term-ansi-bright-white: #f4f4f5;
+    --note-yellow: #3b3416;
+    --note-green: #173a25;
+    --note-blue: #182f4b;
+    --note-pink: #43212c;
+    --note-gray: #26262d;
 }
 
 @theme inline {
@@ -127,6 +137,11 @@
     --color-term-blue: var(--term-blue);
     --color-term-yellow: var(--term-yellow);
     --color-term-red: var(--term-red);
+    --color-note-yellow: var(--note-yellow);
+    --color-note-green: var(--note-green);
+    --color-note-blue: var(--note-blue);
+    --color-note-pink: var(--note-pink);
+    --color-note-gray: var(--note-gray);
     --shadow-node: var(--shadow-node);
     --shadow-float: var(--shadow-float);
     --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
@@ -227,6 +242,9 @@ body {
 /* The link handle on a selected node; it only shows when there is something to drag from. */
 .node-port { box-shadow: 0 0 0 2px var(--surface); }
 .node-port:hover { background: var(--accent); }
+
+/* A note is its color all over; the header divider is a shade of the text, so it fits every note color. */
+.node-note header { border-color: color-mix(in srgb, var(--text) 12%, transparent); }
 
 /* Keyboard focus is visible on every control; pointer focus stays quiet. */
 .icon-btn:focus-visible, .menu-item:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }

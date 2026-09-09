@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Globe, LayoutGrid, MessageSquare, Plus, Search, Settings, Terminal } from 'lucide-react';
+import { Globe, LayoutGrid, MessageSquare, Plus, Search, Settings, StickyNote, Terminal } from 'lucide-react';
 import clsx from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
 import { useCanvas, type AgentStatus, type CanvasNode } from '@/state/canvas';
@@ -20,7 +20,8 @@ const KIND_ICON = {
     terminal: Terminal,
     chat: MessageSquare,
     browser: Globe,
-    group: LayoutGrid
+    group: LayoutGrid,
+    note: StickyNote
 } as const;
 
 const GROUPS: { status: AgentStatus | 'none'; label: string }[] = [
@@ -87,8 +88,8 @@ function SessionRow({ node }: { node: CanvasNode }) {
 }
 
 export function Sidebar() {
-    // Groups are frames, not sessions; the list is about what runs.
-    const nodes = useCanvas(useShallow((s) => s.order.map((id) => s.nodes[id]).filter((node) => node.kind !== 'group')));
+    // Groups are frames and notes are paper, not sessions; the list is about what runs.
+    const nodes = useCanvas(useShallow((s) => s.order.map((id) => s.nodes[id]).filter((node) => node.kind !== 'group' && node.kind !== 'note')));
     const sessions = useSessions((s) => s.byNodeId);
     const chats = useChats((s) => s.byNodeId);
     const fullscreen = useDesktopFullscreen();

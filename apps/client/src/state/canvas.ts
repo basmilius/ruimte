@@ -43,10 +43,14 @@ export interface Edge {
     label?: string;
 }
 
-/* An edge being drawn: from a node or text to wherever the pointer is, in world units. */
+/*
+ * An edge being drawn: from a node or text to wherever the pointer is, in world units. Started from
+ * a port it lives as long as the drag; started from a menu (`aiming`) it waits for a click on a target.
+ */
 export interface LinkDraft {
     from: string;
     to: Point;
+    aiming?: boolean;
 }
 
 // A collapsed group is its header only.
@@ -125,7 +129,7 @@ interface CanvasState {
     setNodeAccent(id: string, accent: string | null): void;
     renameNode(id: string, title: string): void;
     /* Changes what a node carries (its page, its folder) without touching its placement. */
-    updateNode(id: string, patch: Partial<Pick<CanvasNode, 'url' | 'cwd' | 'command' | 'resume' | 'escapeToApp'>>): void;
+    updateNode(id: string, patch: Partial<Pick<CanvasNode, 'url' | 'cwd' | 'command' | 'resume' | 'escapeToApp' | 'body' | 'color'>>): void;
     duplicateNode(id: string): void;
     addNode(kind: NodeKind, at: Point, options?: AddNodeOptions): string;
     /* Wraps the selected nodes in a group; answers null when nothing is selected. */
@@ -139,11 +143,13 @@ interface CanvasState {
 
     toggleGroupCollapse(id: string): void;
     setGroupWorktree(id: string, worktree: { path: string; branch: string } | null): void;
-    /* Edges: only an agent node (terminal or chat) can be the target. */
+    /* Edges: any node or text to any other. Into an agent node (terminal or chat) the edge also makes the source readable. */
     addEdge(from: string, to: string): string | null;
     removeEdge(id: string): void;
     setEdgeLabel(id: string, label: string): void;
     setLinkDraft(draft: LinkDraft | null): void;
+    /* "Connect to..." from a menu: the line follows the pointer until a click lands on a target. */
+    startLink(from: string): void;
     saveLayout(name: string): void;
     applyLayout(name: string): void;
     deleteLayout(name: string): void;
@@ -159,15 +165,20 @@ const NODE_SIZE: Record<NodeKind, { w: number; h: number }> = {
     terminal: { w: 560, h: 360 },
     chat: { w: 480, h: 520 },
     browser: { w: 720, h: 480 },
-    group: { w: 800, h: 600 }
+    group: { w: 800, h: 600 },
+    note: { w: 320, h: 240 }
 };
 
 const TITLES: Record<NodeKind, string> = {
     terminal: 'Terminal',
     chat: 'New chat',
     browser: 'Browser',
-    group: 'Group'
+    group: 'Group',
+    note: 'Note'
 };
+
+/* The kinds an agent lives in; an edge into one of these is readable context. */
+export const isAgentKind = (kind: NodeKind): boolean => kind === 'terminal' || kind === 'chat';
 
 // Room a group keeps around the nodes it was made for.
 const GROUP_PADDING = 32;
@@ -525,16 +536,30 @@ export const useCanvas = create<CanvasState>((set, get) => ({
     },
     addEdge(from, to) {
         const s = get();
-        const target = s.nodes[to];
-        if (from === to || !target || (target.kind !== 'chat' && target.kind !== 'terminal') || !(s.nodes[from] || s.texts[from])) {
+        const exists = (id: string): boolean => Boolean(s.nodes[id] || s.texts[id]);
+        if (from === to || !exists(from) || !exists(to)) {
             return null;
         }
-        if (s.edges.some((edge) => edge.from === from && edge.to === to)) {
+        // One line per pair, whichever way it was drawn.
+        if (s.edges.some((edge) => (edge.from === from && edge.to === to) || (edge.from === to && edge.to === from))) {
             return null;
         }
         const id = nextId('edge');
-        set({ edges: [...s.edges, { id, from, to, label: 'context' }], ...remember(s) });
+        const target = s.nodes[to];
+        // Only a line into an agent carries meaning, so only that one gets a label by default.
+        const label = target && isAgentKind(target.kind) ? 'context' : undefined;
+        set({ edges: [...s.edges, { id, from, to, label }], linkDraft: null, ...remember(s) });
         return id;
+    },
+    startLink(from) {
+        const s = get();
+        const node = s.nodes[from];
+        const text = s.texts[from];
+        if (!node && !text) {
+            return;
+        }
+        const to = node ? center(node) : { x: text!.x, y: text!.y };
+        set({ linkDraft: { from, to, aiming: true }, selection: [from], mode: { kind: 'canvas' } });
     },
     removeEdge(id) {
         set((s) => ({ edges: s.edges.filter((edge) => edge.id !== id), selection: s.selection.filter((selected) => selected !== id), ...remember(s) }));
