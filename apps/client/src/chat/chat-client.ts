@@ -1,4 +1,4 @@
-import type { ChatConfigurePayload, ChatInfo, ChatItem, InteractionMode, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type { ChatAttachment, ChatConfigurePayload, ChatInfo, ChatItem, FsSearchResult, InteractionMode, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 import type { ChatSink } from '../state/chats';
 import type { ProviderInfo } from '@ruimte/contracts';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
@@ -11,6 +11,12 @@ export interface ChatOpenOptions {
     selection?: ModelSelection;
     runtimeMode?: RuntimeMode;
     interactionMode?: InteractionMode;
+}
+
+export interface ChatSendExtras {
+    /* Paths picked with `@`; they also sit in the text, this is what the timeline highlights. */
+    mentions?: string[];
+    attachments?: ChatAttachment[];
 }
 
 interface Mounted extends ChatOpenOptions {
@@ -75,8 +81,13 @@ export class ChatClient {
         }
     }
 
-    async send(chatId: string, text: string): Promise<void> {
-        await this.transport.request('chat.send', { chatId, text });
+    async send(chatId: string, text: string, extras: ChatSendExtras = {}): Promise<void> {
+        await this.transport.request('chat.send', { chatId, text, mentions: extras.mentions, attachments: extras.attachments });
+    }
+
+    /* Files under `cwd` that fuzzy-match `query`, for the composer's mention picker. */
+    async searchFiles(cwd: string, query: string, limit = 8): Promise<FsSearchResult> {
+        return this.transport.request('fs.search', { cwd, query, limit });
     }
 
     async compact(chatId: string): Promise<void> {
