@@ -6,11 +6,13 @@ export function BrowserNode({ focused }: { id: string; focused: boolean }) {
     const [url, setUrl] = useState('https://ruimte.app');
     return (
         <div className="flex h-full flex-col bg-surface">
-            <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border bg-surface-raised px-2">
-                <button className="icon-btn h-7 w-7" title="Back"><ArrowLeft size={14} /></button>
-                <button className="icon-btn h-7 w-7" title="Forward"><ArrowRight size={14} /></button>
-                <button className="icon-btn h-7 w-7" title="Reload"><RotateCw size={13} /></button>
-                <div className="ml-1 flex h-7 grow items-center gap-2 rounded-md bg-surface-sunken px-2.5 text-[12px] text-text-muted">
+            <div className="flex h-[37px] shrink-0 items-center gap-2 border-b border-border bg-surface-raised px-1">
+                <div className="btn-group">
+                    <button className="icon-btn h-7 w-7" title="Back"><ArrowLeft size={14} /></button>
+                    <button className="icon-btn h-7 w-7" title="Forward"><ArrowRight size={14} /></button>
+                    <button className="icon-btn h-7 w-7" title="Reload"><RotateCw size={13} /></button>
+                </div>
+                <div className="mr-1 flex h-7 grow items-center gap-2 rounded-md bg-surface-sunken px-2.5 text-[12px] text-text-muted">
                     <Lock size={11} />
                     <input
                         className="grow bg-transparent text-text outline-none"

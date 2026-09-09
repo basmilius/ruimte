@@ -224,9 +224,7 @@ body {
     *, *::before, *::after { transition: none !important; animation: none !important; }
 }
 
-/* While something is being moved or resized the grid it snaps to comes forward. */
-.canvas-grid[data-gesture="move"], .canvas-grid[data-gesture="resize"] {
-    background-image: radial-gradient(circle, color-mix(in srgb, var(--accent) 45%, var(--canvas-dot)) 1.5px, transparent 1.5px);
-}
+/* Icon buttons that belong together sit 1px apart; groups keep the wider gap of their container. */
+.btn-group { display: inline-flex; align-items: center; gap: 1px; }
 .menu-item[data-disabled] { opacity: .45; }
 .menu-item[data-popup-open] { background: var(--surface-sunken); }

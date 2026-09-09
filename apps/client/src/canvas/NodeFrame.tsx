@@ -117,7 +117,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                 )}
                 style={{ left: node.x, top: node.y, width: node.w, height: node.h }}
             >
-                <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border bg-surface-raised px-2.5 text-text-muted">
+                <header className="flex h-[37px] shrink-0 items-center gap-2 border-b border-border bg-surface-raised pl-2.5 pr-1 text-text-muted">
                     {accent && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: accent }} />}
                     <span className="shrink-0 text-text-muted">{ICONS[node.kind]}</span>
                     <span className="flex min-w-0 grow items-center" onDoubleClick={() => setRenaming(true)}>
@@ -129,12 +129,14 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                             {STATUS_LABEL[status]}
                         </span>
                     )}
-                    <button className="icon-btn h-7 w-7 shrink-0" title="Zoom to node" onClick={() => useCanvas.getState().goToNode(id)}>
-                        <Maximize2 size={13} strokeWidth={1.75} />
-                    </button>
-                    <button className="icon-btn h-7 w-7 shrink-0" title="Close" onClick={remove}>
-                        <X size={14} strokeWidth={1.75} />
-                    </button>
+                    <div className="btn-group shrink-0">
+                        <button className="icon-btn h-7 w-7" title="Zoom to node" onClick={() => useCanvas.getState().goToNode(id)}>
+                            <Maximize2 size={13} strokeWidth={1.75} />
+                        </button>
+                        <button className="icon-btn h-7 w-7" title="Close" onClick={remove}>
+                            <X size={14} strokeWidth={1.75} />
+                        </button>
+                    </div>
                 </header>
                 <div data-node-body className={clsx('relative min-h-0 grow', !focused && 'cursor-default')}>
                     {node.kind === 'terminal' && (live ? <TerminalNode id={id} focused={focused} /> : <TerminalPlate id={id} />)}
