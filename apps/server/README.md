@@ -16,6 +16,11 @@ bun run --cwd apps/server dev              # same, restarts on file changes
 | `--port` | `4210` | Port for `/ws`, `/health` and `/hooks`. |
 | `--no-hooks` | off | Do not write the status hooks into the CLIs' settings files at startup. |
 | `--serve <dir>` | off | Serve a built client from `dir` next to the socket; unknown paths fall back to its `index.html`. |
+| `--label <name>` | hostname | What the daemon calls itself towards clients (`RUIMTE_LABEL` works too). |
+| `--allow-origin <origin>` | none | Extra browser origins allowed on the socket, on top of loopback and the daemon's own. Repeatable. |
+| `--require-token` | off | Refuse even loopback clients without a paired token. |
+
+`bun src/main.ts pair` asks the daemon running on this machine for a fresh pairing URL and prints it; tokens never travel as arguments.
 
 `GET /health` answers `{ ok: true, version }`. `POST /hooks/<claude|codex>` takes a hook payload from an agent CLI (see below). Everything else goes over `/ws` using the frames in `packages/contracts`.
 
@@ -79,6 +84,14 @@ A chat node is `claude -p --input-format stream-json --output-format stream-json
 - `chat.configure` changes the selection or a mode. A running process keeps its flags until the turn ends; the next send starts a fresh process with `--resume` and the new flags.
 - `chat.cancel` sends an interrupt and the turn ends as `aborted`. `chat.compact` sends `/compact`.
 - The thread is written to `chats/<id>.json` after every turn; a chat whose process ended (or a daemon that restarted) starts the CLI again with `--resume` on the next send.
+
+## Remote clients and pairing
+
+A client on the same machine (a loopback address) needs nothing. Any other client needs a session token, sent as `?token=` on the socket URL because a browser cannot set a header on a WebSocket. Tokens come from pairing: the daemon prints `http://<host>:<port>/pair#<token>` when it listens beyond loopback (and on `bun src/main.ts pair`), the client posts that one-time token to `POST /auth/pair` with a label for itself and gets a long-lived session token back. Pairing tokens die after one use or ten minutes; session tokens are stored as hashes in `$RUIMTE_HOME/auth.json`, listed with `auth.sessions` and cut off with `auth.revoke`. `endpoint.info` tells a client the daemon's label, platform and how far away it is.
+
+A browser sends its page's origin with the upgrade; the daemon accepts its own origin, any loopback origin (the desktop app, the dev server) and what `--allow-origin` adds, and refuses the rest. Serving over the network in the clear means anyone on the path can read the tokens: put a reverse proxy with TLS in front (nginx, Caddy) that forwards `/ws` as a WebSocket and hands the daemon the `Host` and `Origin` headers, and pair with the proxy's `https://` address. The `Relay` seam (`src/auth/relay.ts`) is where a rendezvous service for daemons behind NAT would go; the default does nothing.
+
+`bun run serve` at the root builds the client and starts the daemon on every interface serving it, which is the Server Edition: open `http://<machine>:4210/` from any browser on the network and pair.
 
 ## Worktrees
 

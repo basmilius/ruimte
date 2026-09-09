@@ -29,7 +29,7 @@ export class WebSocketTransport implements Transport {
     private attempts = 0;
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     private disposed = false;
-    private readonly url: string;
+    private url: string;
 
     constructor(url: string) {
         this.url = url;
@@ -38,6 +38,30 @@ export class WebSocketTransport implements Transport {
 
     get status(): TransportStatus {
         return this.currentStatus;
+    }
+
+    get address(): string {
+        return this.url;
+    }
+
+    /* Points the transport at another daemon; the socket closes and comes back on the new address. */
+    switchTo(url: string): void {
+        if (url === this.url) {
+            return;
+        }
+        this.url = url;
+        this.attempts = 0;
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
+        }
+        const socket = this.socket;
+        if (socket) {
+            // Closing runs the normal close path, which reconnects on the address set above.
+            socket.close();
+        } else {
+            this.connect();
+        }
     }
 
     subscribeStatus(handler: (status: TransportStatus) => void): () => void {
