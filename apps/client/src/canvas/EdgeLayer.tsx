@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import clsx from 'clsx';
-import { useCanvas } from '@/state/canvas';
+import { isAgentKind, useCanvas } from '@/state/canvas';
 import type { Point, Rect } from '@/canvas/math';
 
 /* Anchor on the facing sides, so an edge takes the short way round. */
@@ -103,6 +103,10 @@ export function EdgeLayer() {
                 const d = curve(p);
                 const mid = { x: (p.ax + p.bx) / 2, y: (p.ay + p.by) / 2 };
                 const active = hovered === edge.id || selection.includes(edge.id);
+                // Into an agent the line carries context and shows it in the accent; anywhere else it is a plain line.
+                const target = nodes[edge.to];
+                const context = target !== undefined && isAgentKind(target.kind);
+                const stroke = context ? 'var(--accent)' : active ? 'var(--text-muted)' : 'var(--border-strong)';
                 return (
                     <g
                         key={edge.id}
@@ -110,7 +114,7 @@ export function EdgeLayer() {
                         onPointerEnter={() => setHovered(edge.id)}
                         onPointerLeave={() => setHovered((h) => (h === edge.id ? null : h))}
                     >
-                        {/* A wide invisible stroke gives the thin line something to hover and click. */}
+                        {/* A wide invisible stroke gives the thin line something to hover and click; a double-click names it. */}
                         <path
                             d={d}
                             fill="none"
@@ -121,16 +125,20 @@ export function EdgeLayer() {
                                 e.stopPropagation();
                                 useCanvas.getState().select([edge.id], e.shiftKey);
                             }}
+                            onDoubleClick={(e) => {
+                                e.stopPropagation();
+                                setEditing(edge.id);
+                            }}
                         />
                         <path
                             d={d}
                             fill="none"
-                            stroke="var(--accent)"
+                            stroke={stroke}
                             strokeWidth={active ? 2.5 : 2}
-                            strokeOpacity={active ? 0.95 : 0.55}
-                            strokeDasharray="6 6"
+                            strokeOpacity={context ? (active ? 0.95 : 0.55) : 1}
+                            strokeDasharray={context ? '6 6' : undefined}
                         />
-                        <circle cx={p.bx} cy={p.by} r="4" fill="var(--accent)" />
+                        <circle cx={p.bx} cy={p.by} r="4" fill={stroke} />
                         <EdgeLabel id={edge.id} label={edge.label} at={mid} editing={editing === edge.id} onEdit={(on) => setEditing(on ? edge.id : null)} />
                         {active && editing !== edge.id && (
                             <g

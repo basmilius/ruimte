@@ -28,7 +28,7 @@ const ZOOM_SETTLE_MS = 160;
 const MIN_NODE = { w: 240, h: 160 };
 
 // Option plus a letter adds a node; a bare letter would fight every text field on the canvas.
-const ADD_KEYS: Record<string, NodeKind> = { KeyT: 'terminal', KeyC: 'chat', KeyB: 'browser', KeyG: 'group' };
+const ADD_KEYS: Record<string, NodeKind> = { KeyT: 'terminal', KeyC: 'chat', KeyB: 'browser', KeyG: 'group', KeyN: 'note' };
 
 const isTypingTarget = (el: EventTarget | null): boolean => {
     if (!(el instanceof HTMLElement)) {
@@ -71,13 +71,14 @@ export function Canvas() {
     // Where the last right-click landed, in world units, so the menu's "add here" knows where.
     const menuPoint = useRef<Point>({ x: 0, y: 0 });
 
-    const { camera, order, texts, mode, locks } = useCanvas(
+    const { camera, order, texts, mode, locks, aiming } = useCanvas(
         useShallow((s) => ({
             camera: s.camera,
             order: s.order,
             texts: s.texts,
             mode: s.mode,
-            locks: s.locks
+            locks: s.locks,
+            aiming: s.linkDraft?.aiming === true
         }))
     );
     const textIds = useMemo(() => Object.keys(texts), [texts]);
@@ -189,7 +190,9 @@ export function Canvas() {
                 return;
             }
             if (e.key === 'Escape') {
-                if (s.editingTextId) {
+                if (s.linkDraft?.aiming) {
+                    s.setLinkDraft(null);
+                } else if (s.editingTextId) {
                     s.setEditingText(null);
                 } else if (s.mode.kind === 'node') {
                     s.exitNode();
@@ -295,6 +298,17 @@ export function Canvas() {
             return;
         }
         if (e.button !== 0) {
+            return;
+        }
+
+        // "Connect to..." is waiting for this click; on empty canvas it is a cancel.
+        if (s.linkDraft?.aiming) {
+            e.preventDefault();
+            const targetId = nodeId ?? textId;
+            if (targetId) {
+                s.addEdge(s.linkDraft.from, targetId);
+            }
+            s.setLinkDraft(null);
             return;
         }
 
@@ -408,11 +422,14 @@ export function Canvas() {
 
     const onPointerMove = (e: ReactPointerEvent): void => {
         const g = gestureRef.current;
-        if (!g) {
-            return;
-        }
         const s = useCanvas.getState();
         const point = screenPoint(e);
+        if (!g) {
+            if (s.linkDraft?.aiming) {
+                s.setLinkDraft({ ...s.linkDraft, to: toWorld(s.camera, point) });
+            }
+            return;
+        }
         switch (g.kind) {
             case 'pan':
                 s.panBy(point.x - g.last.x, point.y - g.last.y);
@@ -497,7 +514,7 @@ export function Canvas() {
             s.setLinkDraft(null);
             // The pointer is captured, so the target is whatever the canvas shows under it.
             const under = document.elementFromPoint(e.clientX, e.clientY);
-            const targetId = under?.closest<HTMLElement>('[data-node-id]')?.dataset.nodeId;
+            const targetId = under?.closest<HTMLElement>('[data-node-id]')?.dataset.nodeId ?? under?.closest<HTMLElement>('[data-text-id]')?.dataset.textId;
             if (targetId) {
                 s.addEdge(g.from, targetId);
             }
@@ -527,7 +544,7 @@ export function Canvas() {
                     // Space is tracked in a ref because a held key must not re-render the canvas; the cursor
                     // catches up on the next render, which the pointer move that follows always triggers.
                     // oxlint-disable-next-line react/refs
-                    cursor: activeGesture === 'pan' ? 'grabbing' : locks.pan ? undefined : spaceRef.current ? 'grab' : undefined
+                    cursor: aiming ? 'crosshair' : activeGesture === 'pan' ? 'grabbing' : locks.pan ? undefined : spaceRef.current ? 'grab' : undefined
                 }}
                 data-mode={mode.kind}
                 data-gesture={activeGesture ?? undefined}

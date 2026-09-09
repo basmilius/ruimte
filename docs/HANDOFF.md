@@ -171,6 +171,45 @@ started; it fits after #10, when a remote daemon makes it worth its weight.
   for ruimte.app, published to GitHub Pages by `site.yml`. No telemetry, nothing phones home
   except the update check against the release feed.
 
+- **Phase 12, notes and connections**: a `note` node (Option+N, the dock's Add menu, the
+  canvas menu, the palette) is a sticky: markdown rendered with the chat's `Markdown`
+  component, a textarea while the node has focus (click the body, Escape leaves), one of five
+  colors from its context menu (`--note-*` tokens in `styles.css`, both themes,
+  `canvas/note-colors.ts`), `body` and `color` in `project.json`. Linked into an agent it is a
+  text source with its title and body (`context/sources.ts`), so `ruimte-context read <id>`
+  prints it; a browser node linked in hands over its address the same way. Edges connect any
+  node or text to any other now (`addEdge`), one line per pair whichever way it was drawn; the
+  port shows on every selected node, groups included, and a drop on a text works too. A line
+  into a terminal or chat is still the context edge (accent, dashed, labeled `context` by
+  default); any other line is plain (solid, border color), unlabeled until a double-click on
+  the line names it. "Connect to..." in a node's context menu starts the same draft from that
+  node and waits for a click on a target (`linkDraft.aiming`, crosshair, Escape or a click on
+  empty canvas cancels). `ProjectEdge` is unchanged.
+
+## Feature decisions
+
+Features worth weighing for the
+canvas, against Ruimte, one verdict each.
+
+| Feature | Ruimte | Verdict |
+| --- | --- | --- |
+| Terminal node, agent CLIs as terminals | Terminal node, chat nodes for Claude and Codex, Agent submenu for the rest | Done |
+| Sticky note (7 colors, markdown, title, agent reads it over a link) | Note node (5 colors, markdown, title, text source over an edge) | Done, phase 12 |
+| Context links (agent to agent, sticky to terminal, drag from handles, delete by double-click) | Edges from any node or text to any other; into an agent they are context, "Connect to..." in the menu | Done, phase 12 |
+| Group frame with a bound worktree | Group node with collapse, nesting and a worktree | Done |
+| Browser node (navigable Chromium) and Web node (one page, fits content) | Browser node in the desktop app | Done; the fit-to-content web node is a browser node with a size, skip |
+| Editor node (Monaco, image and PDF preview, Cmd+S) | None | Later: an agent's edits already show as diffs in the chat; a file viewer is worth it once the daemon has an upload and file index (the composer's `@` picker is the start) |
+| Diff node (HEAD vs index vs worktree per file) | Changed-files card with diffs per turn | Later: per-turn checkpoints against the working tree are on the #5 list; a standalone diff node comes with them |
+| Files node (folder listing pinned to one directory) | Folder browsing in the palette | Skip: the palette browses; a directory pane on the canvas invites a file manager, which is not the product |
+| Subagent node (live card per Claude subagent from hooks) | Subagent tool calls fold into the chat's work rows | Later, only if hooks carry enough: a card per subagent on the canvas is a status view, and the chat's folded rows already show it |
+| Loop node and Trigger node (cron and schedule into a terminal) | None | Skip: scheduling belongs to the agent's own tools or the OS; a canvas is not a scheduler |
+| Video node (local or remote file) | None | Skip: a browser node plays a file URL |
+| Image and PDF preview (inside the editor node) | None | Later, with the editor node |
+| Dino minigame | None | Skip |
+| Kanban board (separate view, session cards in columns) | None | Skip, a decision in this file: no kanban, ever |
+| Spawn team (agents wired to their opener) | None | Later: fits once the Codex backend exists; the edges and worktrees it needs are there |
+| Remote pairing and relay | Endpoints with pairing, tokens and origin checks | Done, relay is a seam |
+
 ## Decisions that are not in the code
 
 - No kanban view, ever. Bas dislikes that workflow.
@@ -187,6 +226,13 @@ started; it fits after #10, when a remote daemon makes it worth its weight.
   the Start menu, so a Windows build needs another always-works chord.
 - Formatting is prettier (`.prettierrc`: single quotes, width 160, 4 spaces). Run
   `bun run format` before a commit.
+- A line between two non-agent nodes means nothing to the daemon; it is a drawing. Only the
+  client's `context/sources.ts` decides what an edge means, from the target's kind, so the
+  daemon never learns about plain lines and `ContextSource` needs no new kinds: a note travels
+  as `text` with its title and body. Notes are not in the sidebar; that list is about what
+  runs.
+- "Connect to..." is a click mode, not a drag: the draft follows the pointer without a button
+  held, because a menu item cannot hand over a pointer capture. Escape and empty canvas cancel.
 - Status hooks are `command` hooks with curl, not Claude Code's `http` hooks: the http kind
   cannot read the daemon's port from the environment and reports an error whenever Ruimte is
   not running. The command hook is a no-op without `RUIMTE_HOOK_URL`.
@@ -320,7 +366,10 @@ In the order that makes sense, each one an issue on GitHub:
    canvas font size for chat and text elements if anyone asks for it.
 5. **#10 follow-ups**: one endpoint at a time is the model; a project list that spans machines
    would need a transport per endpoint. TLS is a reverse proxy's job and is only documented.
-6. **#11 follow-ups**: put the Apple secrets in the repository and tag `v0.1.0` to get the
+6. **Phase 12 follow-ups**: a color or an arrowhead per plain line if drawings ask for it
+   (`ProjectEdge` is ready for an additive field); a note's title as the first heading of its
+   body instead of a separate rename; an editor node and a diff node from the parity list.
+7. **#11 follow-ups**: put the Apple secrets in the repository and tag `v0.1.0` to get the
    first signed, notarized build (the local `bun run dist` already signs with the Developer ID
    in the keychain); enable Pages with source "GitHub Actions" and point ruimte.app at it; the
    30-second video for the landing page; Windows (the daemon on Bun's Windows PTY or Node with

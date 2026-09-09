@@ -110,7 +110,7 @@ A browser sends its page's origin with the upgrade; the daemon accepts its own o
 
 ## Context links
 
-An edge on the canvas into a terminal or chat node lets that agent read the source. The client tells the daemon what each agent node may read (`context.set`, a text element with its content, a terminal or chat by id); the daemon reads terminals and chats live when asked. Every shell and chat gets `RUIMTE_CONTEXT_URL` (`http://127.0.0.1:<port>/context`), a bearer token (`RUIMTE_HOOK_TOKEN` in a shell, `RUIMTE_CONTEXT_TOKEN` in a chat) and the directory of `ruimte-context` in front of its PATH (`apps/server/bin` in a checkout, the app's `bin` resource when packaged), where `ruimte-context` lists the linked sources and `ruimte-context read <id>` prints one.
+An edge on the canvas into a terminal or chat node lets that agent read the source. The client tells the daemon what each agent node may read (`context.set`: a text element or a note with its content, a browser node as its address, a terminal or chat by id); the daemon reads terminals and chats live when asked. An edge between two other nodes is a drawing the client keeps to itself; the daemon never hears about it. Every shell and chat gets `RUIMTE_CONTEXT_URL` (`http://127.0.0.1:<port>/context`), a bearer token (`RUIMTE_HOOK_TOKEN` in a shell, `RUIMTE_CONTEXT_TOKEN` in a chat) and the directory of `ruimte-context` in front of its PATH (`apps/server/bin` in a checkout, the app's `bin` resource when packaged), where `ruimte-context` lists the linked sources and `ruimte-context read <id>` prints one.
 
 How an agent hears that the CLI exists depends on where it runs:
 

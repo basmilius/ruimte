@@ -8,6 +8,7 @@ import {
     ExternalLink,
     GitBranch,
     Keyboard,
+    Link2,
     Maximize2,
     MessageSquare,
     Palette,
@@ -16,6 +17,7 @@ import {
     Trash2
 } from 'lucide-react';
 import { NODE_ACCENTS } from '@/canvas/accents';
+import { DEFAULT_NOTE_COLOR, NOTE_COLORS } from '@/canvas/note-colors';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useProject } from '@/state/project';
@@ -72,6 +74,10 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().goToNode(id)}>
                         <Maximize2 size={14} /> Zoom to node
                     </ContextMenu.Item>
+                    <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().startLink(id)}>
+                        <Link2 size={14} /> Connect to...
+                        <span className="ml-auto text-[11px] text-text-faint">Then click a node</span>
+                    </ContextMenu.Item>
                     {node.kind === 'group' && (
                         <>
                             <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().toggleGroupCollapse(id)}>
@@ -112,6 +118,30 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                         >
                             <ExternalLink size={14} /> Reveal in {fileManagerName(platform)}
                         </ContextMenu.Item>
+                    )}
+                    {node.kind === 'note' && (
+                        <ContextMenu.SubmenuRoot>
+                            <ContextMenu.SubmenuTrigger className="menu-item">
+                                <Palette size={14} /> Note color
+                                <ChevronRight size={14} className="ml-auto text-text-faint" />
+                            </ContextMenu.SubmenuTrigger>
+                            <ContextMenu.Portal>
+                                <ContextMenu.Positioner className="z-50" sideOffset={4} alignOffset={-4}>
+                                    <ContextMenu.Popup className="menu-popup min-w-40">
+                                        {NOTE_COLORS.map((color) => (
+                                            <ContextMenu.Item
+                                                key={color.id}
+                                                className="menu-item"
+                                                onClick={() => useCanvas.getState().updateNode(id, { color: color.id })}
+                                            >
+                                                <span className={`h-3 w-3 rounded-full border border-border-strong ${color.className}`} /> {color.label}
+                                                {(node.color ?? DEFAULT_NOTE_COLOR) === color.id && <Check size={13} className="ml-auto" />}
+                                            </ContextMenu.Item>
+                                        ))}
+                                    </ContextMenu.Popup>
+                                </ContextMenu.Positioner>
+                            </ContextMenu.Portal>
+                        </ContextMenu.SubmenuRoot>
                     )}
                     <ContextMenu.SubmenuRoot>
                         <ContextMenu.SubmenuTrigger className="menu-item">

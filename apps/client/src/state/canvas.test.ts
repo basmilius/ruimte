@@ -37,3 +37,59 @@ describe('groups', () => {
         expect(after[groupId!]).toMatchObject({ x: group.x + 16, y: group.y + 8 });
     });
 });
+
+describe('edges', () => {
+    const seed = (): void => {
+        useCanvas.setState({
+            nodes: {
+                shell: node('shell', 0, 0),
+                page: node('page', 400, 0, 'browser'),
+                memo: node('memo', 0, 400, 'note'),
+                frame: node('frame', 400, 400, 'group')
+            },
+            texts: { t1: { id: 't1', x: 800, y: 0, text: 'hello', size: 18 } },
+            order: ['shell', 'page', 'memo', 'frame'],
+            edges: [],
+            selection: [],
+            linkDraft: null
+        });
+    };
+
+    test('any node or text connects to any other, and only a line into an agent is labeled context', () => {
+        seed();
+        const s = useCanvas.getState();
+        expect(s.addEdge('page', 'memo')).not.toBeNull();
+        expect(s.addEdge('memo', 'frame')).not.toBeNull();
+        expect(s.addEdge('frame', 't1')).not.toBeNull();
+        expect(s.addEdge('t1', 'shell')).not.toBeNull();
+        expect(useCanvas.getState().edges.map((edge) => edge.label)).toEqual([undefined, undefined, undefined, 'context']);
+    });
+
+    test('a pair gets one line whichever way it is drawn, and nothing connects to itself or to a stranger', () => {
+        seed();
+        const s = useCanvas.getState();
+        expect(s.addEdge('page', 'memo')).not.toBeNull();
+        expect(s.addEdge('memo', 'page')).toBeNull();
+        expect(s.addEdge('page', 'page')).toBeNull();
+        expect(s.addEdge('page', 'missing')).toBeNull();
+        expect(useCanvas.getState().edges).toHaveLength(1);
+    });
+
+    test('"Connect to..." aims a draft from the node until a target is added', () => {
+        seed();
+        useCanvas.getState().startLink('page');
+        expect(useCanvas.getState().linkDraft).toMatchObject({ from: 'page', aiming: true, to: { x: 500, y: 50 } });
+        useCanvas.getState().addEdge('page', 'shell');
+        expect(useCanvas.getState().linkDraft).toBeNull();
+    });
+});
+
+describe('notes', () => {
+    test('a note starts empty with the default title and keeps its body and color through updateNode', () => {
+        useCanvas.setState({ nodes: {}, texts: {}, order: [], edges: [], selection: [] });
+        const id = useCanvas.getState().addNode('note', { x: 0, y: 0 });
+        expect(useCanvas.getState().nodes[id]).toMatchObject({ kind: 'note', title: 'Note' });
+        useCanvas.getState().updateNode(id, { body: '# Hello', color: 'blue' });
+        expect(useCanvas.getState().exportContent().nodes[0]).toMatchObject({ id, body: '# Hello', color: 'blue' });
+    });
+});
