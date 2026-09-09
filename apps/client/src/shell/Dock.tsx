@@ -21,17 +21,11 @@ import {
 import clsx from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
 import { activeZoomPreset, toWorld, ZOOM_PRESETS } from '@/canvas/math';
-import { useCanvas, type Locks, type NodeKind } from '@/state/canvas';
+import { LOCK_ROWS } from '@/canvas/locks';
+import { useCanvas, type NodeKind } from '@/state/canvas';
 import { useUi } from '@/state/ui';
 import { StatusSummary } from '@/shell/StatusSummary';
 import { Tooltip } from '@/ui/Tooltip';
-
-const LOCK_ROWS: { key: keyof Locks; label: string; hint: string }[] = [
-    { key: 'pan', label: 'Pan', hint: 'The map stops sliding' },
-    { key: 'zoom', label: 'Zoom', hint: 'Wheel and pinch are ignored' },
-    { key: 'move', label: 'Move nodes', hint: 'Nodes stay where they are' },
-    { key: 'resize', label: 'Resize nodes', hint: 'Handles are hidden' }
-];
 
 // Claude Code has a chat node; the others open a terminal with the CLI already started.
 const AGENTS: Array<{ label: string; kind: NodeKind; command?: string }> = [

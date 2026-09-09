@@ -2,6 +2,7 @@ import { Menu } from '@base-ui-components/react/menu';
 import clsx from 'clsx';
 import { Check, ChevronDown, Shield, SlidersHorizontal } from 'lucide-react';
 import type { InteractionMode, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import { RUNTIME_MODES } from '@/chat/runtime-modes';
 
 const triggerClass =
     'flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-[12px] text-text-muted hover:bg-surface-sunken hover:text-text data-[popup-open]:bg-surface-sunken data-[popup-open]:text-text';
@@ -125,13 +126,6 @@ export function OptionsPicker({
         </Menu.Root>
     );
 }
-
-const RUNTIME_MODES: Array<{ id: RuntimeMode; label: string; hint: string }> = [
-    { id: 'supervised', label: 'Supervised', hint: 'Asks before commands and file changes' },
-    { id: 'auto-accept-edits', label: 'Auto-accept edits', hint: 'File edits go through, commands still ask' },
-    { id: 'auto', label: 'Auto', hint: 'The agent reviews routine actions itself' },
-    { id: 'full-access', label: 'Full access', hint: 'No approval prompts at all' }
-];
 
 /* When the agent has to ask, from ask-for-everything to never. */
 export function ModePicker({ runtimeMode, onChange }: { runtimeMode: RuntimeMode; onChange(mode: RuntimeMode): void }) {

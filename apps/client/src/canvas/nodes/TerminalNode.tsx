@@ -15,7 +15,6 @@ import { lastScreenOf, registerTerminal } from '@/terminal/registry';
 import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
 import { useTransportStatus } from '@/transport/status';
 
-const FONT_SIZE = 12.5;
 const RESIZE_DEBOUNCE_MS = 50;
 /* ESC CR: what agent CLIs read as "newline, do not submit". Harmless in a plain shell. */
 const SHIFT_ENTER = '\x1b\r';
@@ -36,7 +35,7 @@ const createTerminal = (): Terminal =>
     new Terminal({
         theme: readTerminalTheme(),
         fontFamily: readTerminalFont(),
-        fontSize: FONT_SIZE,
+        fontSize: useSettings.getState().fontSize,
         cursorBlink: true,
         scrollback: 5000,
         macOptionIsMeta: true
@@ -74,6 +73,7 @@ export function TerminalPlate({ id }: { id: string }) {
 export function TerminalNode({ id, focused }: { id: string; focused: boolean }) {
     const hostRef = useRef<HTMLDivElement>(null);
     const termRef = useRef<Terminal | null>(null);
+    const fitRef = useRef<FitAddon | null>(null);
     /* Bumped by Restart: the whole terminal is rebuilt around a fresh session. */
     const [generation, setGeneration] = useState(0);
     const [failure, setFailure] = useState<string | null>(null);
@@ -95,6 +95,7 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
         loadRenderer(term);
         fit.fit();
         termRef.current = term;
+        fitRef.current = fit;
 
         term.attachCustomKeyEventHandler((e) => {
             if (e.key === 'Escape') {
@@ -180,6 +181,7 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
             void sessionClient.detach(id);
             term.dispose();
             termRef.current = null;
+            fitRef.current = null;
         };
     }, [id, generation]);
 
@@ -197,11 +199,19 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
 
     useEffect(() => {
         const term = termRef.current;
-        if (term) {
-            term.options.theme = readTerminalTheme();
-            term.options.fontFamily = readTerminalFont();
+        if (!term) {
+            return;
         }
-    }, [resolvedTheme, settingsVersion, generation]);
+        term.options.theme = readTerminalTheme();
+        term.options.fontFamily = readTerminalFont();
+        term.options.fontSize = useSettings.getState().fontSize;
+        // A new glyph size changes how many cells fit; the observer only fires on a host resize.
+        const { cols, rows } = term;
+        fitRef.current?.fit();
+        if (term.cols !== cols || term.rows !== rows) {
+            sessionClient.resize(id, term.cols, term.rows);
+        }
+    }, [id, resolvedTheme, settingsVersion, generation]);
 
     const rebuild = (): void => {
         setFailure(null);

@@ -212,10 +212,11 @@ export function Canvas() {
             }
             if (mod && e.key === ',') {
                 e.preventDefault();
-                useUi.getState().setSettingsOpen(true);
+                useUi.getState().setSettings({ open: true });
                 return;
             }
-            if (isTypingTarget(e.target) || s.mode.kind === 'node') {
+            // A dialog owns the keyboard while it is up; Backspace there must not delete nodes.
+            if (isTypingTarget(e.target) || s.mode.kind === 'node' || useUi.getState().settings.open) {
                 return;
             }
             if (e.altKey && !mod && ADD_KEYS[e.code]) {

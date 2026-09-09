@@ -61,6 +61,13 @@ export const appCommands = (): Command[] => {
         { id: 'zoom-reset', label: 'Zoom to 100%', shortcut: '⌘0', run: () => useCanvas.getState().zoomTo(1) },
         { id: 'lock', label: anyLocked ? 'Unlock everything' : 'Lock everything', run: () => useCanvas.getState().setAllLocks(!anyLocked) },
         { id: 'theme', label: 'Toggle light and dark', run: () => useTheme.getState().toggle() },
-        { id: 'settings', label: 'Settings', shortcut: '⌘,', run: () => useUi.getState().setSettingsOpen(true) }
+        { id: 'settings', label: 'Settings', shortcut: '⌘,', run: () => useUi.getState().setSettings({ open: true }) },
+        { id: 'settings-keyboard', label: 'Keyboard shortcuts', run: () => useUi.getState().setSettings({ open: true, section: 'keyboard' }) },
+        {
+            id: 'settings-machines',
+            label: 'Machines',
+            hint: 'Pair with a daemon elsewhere',
+            run: () => useUi.getState().setSettings({ open: true, section: 'machines' })
+        }
     ];
 };
