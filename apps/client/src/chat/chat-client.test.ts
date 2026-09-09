@@ -124,6 +124,7 @@ describe('ChatClient', () => {
         expect(await client.open('c', { cwd: '/tmp', resume: 'abc', runtimeMode: 'auto' })).toBe(true);
         expect(transport.of('chat.create')[0]?.payload).toEqual({
             chatId: 'c',
+            provider: undefined,
             cwd: '/tmp',
             resume: 'abc',
             selection: undefined,

@@ -2,6 +2,7 @@ import { Menu } from '@base-ui-components/react/menu';
 import { Bot, Check, ChevronRight, Globe, Lock, LockOpen, Maximize, MessageSquare, Minus, Moon, Plus, Scan, Sun, Terminal, Type } from 'lucide-react';
 import clsx from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
+import type { AgentKind } from '@ruimte/contracts';
 import { activeZoomPreset, toWorld, ZOOM_PRESETS } from '@/canvas/math';
 import { useCanvas, type Locks, type NodeKind } from '@/state/canvas';
 import { useTheme } from '@/state/theme';
@@ -15,10 +16,10 @@ const LOCK_ROWS: { key: keyof Locks; label: string; hint: string }[] = [
     { key: 'resize', label: 'Resize nodes', hint: 'Handles are hidden' }
 ];
 
-// Claude Code has a chat node; the others open a terminal with the CLI already started.
-const AGENTS: Array<{ label: string; kind: NodeKind; command?: string }> = [
+// Claude Code and Codex have a chat backend; the others open a terminal with the CLI already started.
+const AGENTS: Array<{ label: string; kind: NodeKind; command?: string; provider?: AgentKind }> = [
     { label: 'Claude Code', kind: 'chat' },
-    { label: 'Codex', kind: 'terminal', command: 'codex' },
+    { label: 'Codex', kind: 'chat', provider: 'codex' },
     { label: 'Gemini', kind: 'terminal', command: 'gemini' },
     { label: 'Copilot', kind: 'terminal', command: 'copilot' }
 ];
@@ -60,7 +61,7 @@ export function Dock() {
     const zoomPct = Math.round(zoom * 100);
     const preset = activeZoomPreset(zoom);
 
-    const add = (kind: NodeKind, options?: { title?: string; command?: string }) => {
+    const add = (kind: NodeKind, options?: { title?: string; command?: string; provider?: AgentKind }) => {
         useCanvas.getState().addNode(kind, centerWorld(), options);
     };
 
@@ -102,7 +103,14 @@ export function Dock() {
                                             key={agent.label}
                                             className="menu-item"
                                             onClick={() =>
-                                                add(agent.kind, agent.kind === 'terminal' ? { title: agent.label, command: agent.command } : undefined)
+                                                add(
+                                                    agent.kind,
+                                                    agent.provider
+                                                        ? { title: agent.label, provider: agent.provider }
+                                                        : agent.kind === 'terminal'
+                                                          ? { title: agent.label, command: agent.command }
+                                                          : undefined
+                                                )
                                             }
                                         >
                                             <Bot size={14} className="text-text-faint" /> {agent.label}

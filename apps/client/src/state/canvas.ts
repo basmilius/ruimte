@@ -14,7 +14,7 @@ import {
 } from '@/canvas/math';
 import { demoEdges, demoNodes, demoTexts } from '@/data/demo';
 
-import type { AgentStatus } from '@ruimte/contracts';
+import type { AgentKind, AgentStatus } from '@ruimte/contracts';
 
 export type { AgentStatus } from '@ruimte/contracts';
 
@@ -33,6 +33,8 @@ export interface CanvasNode extends Rect {
     command?: string;
     /* Chat only: the agent session to continue. */
     resume?: string;
+    /* Chat only: which agent CLI answers; absent means Claude Code. */
+    provider?: AgentKind;
 }
 
 export interface AddNodeOptions {
@@ -40,6 +42,7 @@ export interface AddNodeOptions {
     cwd?: string;
     command?: string;
     resume?: string;
+    provider?: AgentKind;
 }
 
 export interface TextElement extends Point {
@@ -302,7 +305,8 @@ export const useCanvas = create<CanvasState>((set, get) => ({
             ...size,
             cwd: options.cwd,
             command: options.command,
-            resume: options.resume
+            resume: options.resume,
+            provider: options.provider
         };
         set((s) => ({ nodes: { ...s.nodes, [id]: node }, order: [...s.order, id], selection: [id], mode: { kind: 'canvas' } }));
         return id;
