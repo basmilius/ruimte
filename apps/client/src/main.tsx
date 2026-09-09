@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from '@/App';
 import { startNeedsYouNotifications } from '@/shell/notifications';
 import { startSessionLifecycle } from '@/terminal/lifecycle';
+import { startServerInfo } from '@/transport/server-info';
 import '@/project';
 import { exposeTerminalTestHooks } from '@/terminal/registry';
 import '@/state/theme';
@@ -11,6 +12,7 @@ import '@/styles.css';
 
 startSessionLifecycle();
 startNeedsYouNotifications();
+startServerInfo();
 if (import.meta.env.DEV) {
     exposeTerminalTestHooks();
 }

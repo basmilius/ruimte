@@ -197,7 +197,11 @@ export function Canvas() {
             // App-wide chords work from anywhere, a focused node or text field included.
             if (mod && e.key === 'k') {
                 e.preventDefault();
-                useUi.getState().setPaletteOpen(!useUi.getState().paletteOpen);
+                if (useUi.getState().paletteOpen) {
+                    useUi.getState().setPaletteOpen(false);
+                } else {
+                    useUi.getState().openPalette();
+                }
                 return;
             }
             if (mod && e.key === ',') {

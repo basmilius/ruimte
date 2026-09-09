@@ -60,9 +60,13 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   (`projects.json`), the canvas files and a directory watcher per open project. The client
   (`apps/client/src/project`) saves edits 400 ms after the last one against the rev it loaded,
   the camera a second after it stops moving into the machine-local file, and shows a banner
-  with "Take the file" or "Keep mine" when the file changed under unsaved edits. The sidebar's
-  project menu opens folders by path (no native dialog until Electron), creates canvases
-  without a folder, closes (sessions keep running) and deletes with a confirm. Undo and redo
+  with "Take the file" or "Keep mine" when the file changed under unsaved edits. Folders are
+  picked the way T3 Code does it: type a path in the command palette (`/`, `~/`, `./`) and it
+  lists the daemon's directories (`fs.browse`), Enter steps in, Cmd+Enter opens the typed path
+  as a project; the native dialog comes with Electron as an extra. "Open in Finder" (label from
+  the daemon's platform: Finder, Explorer, Files) sits in the project menu, the palette and a
+  node's context menu, through `fs.reveal`. The project menu also creates canvases without a
+  folder, closes (sessions keep running) and deletes with a confirm. Undo and redo
   (Cmd+Z, Cmd+Shift+Z) cover placement, adding and deleting; the history resets when another
   project loads. Node ids are random now, since they end up in a shared file.
 

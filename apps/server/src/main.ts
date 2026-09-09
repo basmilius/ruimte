@@ -9,6 +9,7 @@ import { ChatStore } from './chat/chat-store.ts';
 import { parseServerArgs } from './config.ts';
 import { Dispatcher, sendEvent, type ClientConnection } from './dispatcher.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
+import { registerFsHandlers } from './handlers/fs.ts';
 import { registerProjectHandlers } from './handlers/project.ts';
 import { registerServerHandlers } from './handlers/server.ts';
 import { registerSessionHandlers } from './handlers/session.ts';
@@ -33,6 +34,7 @@ registerServerHandlers(dispatcher, { version, home: config.home });
 registerSessionHandlers(dispatcher, manager);
 registerChatHandlers(dispatcher, chats, providers);
 registerProjectHandlers(dispatcher, projects);
+registerFsHandlers(dispatcher);
 
 if (config.installHooks) {
     for (const [kind, path] of Object.entries(defaultHookPaths())) {

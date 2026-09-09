@@ -2,11 +2,14 @@ import { useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, ChevronDown, FolderOpen, Plus, Trash2, X } from 'lucide-react';
+import { Check, ChevronDown, ExternalLink, FolderOpen, Plus, Trash2, X } from 'lucide-react';
 import { projectClient } from '@/project';
 import { useProject } from '@/state/project';
+import { fileManagerName, useServer } from '@/state/server';
+import { useUi } from '@/state/ui';
+import { transport } from '@/transport';
 
-type DialogKind = { kind: 'folder' } | { kind: 'new' } | { kind: 'delete'; projectId: string; name: string; folder: string | null } | null;
+type DialogKind = { kind: 'new' } | { kind: 'delete'; projectId: string; name: string; folder: string | null } | null;
 
 const fieldClass =
     'h-9 w-full rounded-lg border border-border bg-surface px-2.5 text-[13px] text-text outline-none placeholder:text-text-faint focus:border-accent';
@@ -16,6 +19,7 @@ const buttonClass = 'inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-[
 export function ProjectMenu() {
     const projects = useProject((s) => s.projects);
     const current = useProject((s) => s.current);
+    const platform = useServer((s) => s.platform);
     const [dialog, setDialog] = useState<DialogKind>(null);
     const [value, setValue] = useState('');
     const [busy, setBusy] = useState(false);
@@ -44,9 +48,7 @@ export function ProjectMenu() {
         if (!dialog) {
             return;
         }
-        if (dialog.kind === 'folder' && value.trim()) {
-            void run(() => projectClient.openFolder(value.trim()));
-        } else if (dialog.kind === 'new') {
+        if (dialog.kind === 'new') {
             void run(() => projectClient.createProject(value.trim() || 'Untitled canvas'));
         }
     };
@@ -83,12 +85,20 @@ export function ProjectMenu() {
                             <Menu.Item className="menu-item" onClick={() => openDialog({ kind: 'new' })}>
                                 <Plus size={14} /> New canvas
                             </Menu.Item>
-                            <Menu.Item className="menu-item" onClick={() => openDialog({ kind: 'folder' })}>
+                            <Menu.Item className="menu-item" onClick={() => useUi.getState().openPalette('~/')}>
                                 <FolderOpen size={14} /> Open folder
                             </Menu.Item>
                             {current && (
                                 <>
                                     <Menu.Separator className="menu-separator" />
+                                    {current.folder && (
+                                        <Menu.Item
+                                            className="menu-item"
+                                            onClick={() => void transport.request('fs.reveal', { path: current.folder! }).catch(() => undefined)}
+                                        >
+                                            <ExternalLink size={14} /> Open in {fileManagerName(platform)}
+                                        </Menu.Item>
+                                    )}
                                     <Menu.Item className="menu-item" onClick={() => void projectClient.closeProject()}>
                                         <X size={14} /> Close project
                                         <span className="ml-auto text-[11px] text-text-faint">Sessions keep running</span>
@@ -110,27 +120,6 @@ export function ProjectMenu() {
                 <Dialog.Portal>
                     <Dialog.Backdrop className="dialog-backdrop" />
                     <Dialog.Popup className="dialog-popup top-[24vh] w-[420px] p-5">
-                        {dialog?.kind === 'folder' && (
-                            <>
-                                <Dialog.Title className="text-[15px] font-semibold text-text">Open a folder</Dialog.Title>
-                                <p className="mt-1 text-[12px] text-text-muted">
-                                    The canvas lives in the folder's .ruimte directory and travels with the repository.
-                                </p>
-                                <input
-                                    autoFocus
-                                    className={clsx(fieldClass, 'mt-3 font-mono')}
-                                    placeholder="/path/to/project"
-                                    value={value}
-                                    onChange={(e) => setValue(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        e.stopPropagation();
-                                        if (e.key === 'Enter') {
-                                            submit();
-                                        }
-                                    }}
-                                />
-                            </>
-                        )}
                         {dialog?.kind === 'new' && (
                             <>
                                 <Dialog.Title className="text-[15px] font-semibold text-text">New canvas</Dialog.Title>
@@ -176,12 +165,8 @@ export function ProjectMenu() {
                                     <Trash2 size={13} /> Delete
                                 </button>
                             ) : (
-                                <button
-                                    className={clsx(buttonClass, 'bg-accent text-accent-text disabled:opacity-50')}
-                                    disabled={busy || (dialog?.kind === 'folder' && !value.trim())}
-                                    onClick={submit}
-                                >
-                                    {dialog?.kind === 'folder' ? 'Open' : 'Create'}
+                                <button className={clsx(buttonClass, 'bg-accent text-accent-text disabled:opacity-50')} disabled={busy} onClick={submit}>
+                                    Create
                                 </button>
                             )}
                         </div>
