@@ -1,14 +1,11 @@
 import { memo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Check, ChevronRight, Copy, ExternalLink, Globe, LayoutGrid, Maximize2, MessageSquare, Palette, Pencil, Terminal, Trash2, X } from 'lucide-react';
+import { Globe, LayoutGrid, Maximize2, MessageSquare, Terminal, X } from 'lucide-react';
 import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
-import { useChats, useNodeStatus } from '@/state/chats';
-import { useProject } from '@/state/project';
-import { fileManagerName, useServer } from '@/state/server';
-import { useSessions } from '@/state/sessions';
-import { transport } from '@/transport';
+import { useNodeStatus } from '@/state/chats';
 import { NODE_ACCENTS } from '@/canvas/accents';
+import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { Tooltip } from '@/ui/Tooltip';
 import { useHeldWhileVisible, useNodeInViewport } from '@/canvas/culling';
 import { TerminalNode, TerminalPlate } from '@/canvas/nodes/TerminalNode';
@@ -99,11 +96,6 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const live = useHeldWhileVisible(inViewport);
     const [renaming, setRenaming] = useState(false);
     const status = useNodeStatus(node);
-    const agent = useSessions((s) => s.byNodeId[id]?.agent);
-    const chatSession = useChats((s) => s.byNodeId[id]?.info.agentSessionId);
-    const chatCwd = useChats((s) => s.byNodeId[id]?.info.cwd);
-    const platform = useServer((s) => s.platform);
-    const projectFolder = useProject((s) => s.current?.folder ?? null);
 
     if (!node) {
         return null;
@@ -116,21 +108,6 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
         s.select([id]);
         s.deleteSelected();
     };
-    // The same CLI session can continue in the other kind of node, next to this one.
-    const beside = { x: node.x + node.w + 40 + 260, y: node.y + node.h / 2 };
-    const openInChat = (): void => {
-        if (agent?.kind === 'claude') {
-            useCanvas.getState().addNode('chat', beside, { title: node.title, cwd: node.cwd, resume: agent.agentSessionId });
-        }
-    };
-    // The folder the node works in: its own, or the project's when it has none.
-    const workingFolder = node.kind === 'terminal' || node.kind === 'chat' ? (node.cwd ?? chatCwd ?? projectFolder) : null;
-    const openInTerminal = (): void => {
-        if (chatSession) {
-            useCanvas.getState().addNode('terminal', beside, { title: node.title, cwd: chatCwd, command: `claude --resume ${chatSession}` });
-        }
-    };
-
     return (
         <ContextMenu.Root>
             <ContextMenu.Trigger
@@ -155,6 +132,8 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     ...(isGroup && accent ? { '--group-accent': accent } : {})
                 }}
                 tabIndex={0}
+                // The node's own menu answers the right-click; the canvas must not open its menu as well.
+                onContextMenu={(e) => e.stopPropagation()}
                 onKeyDown={(e) => {
                     // Tab reaches the frame; Enter steps into it, so a node is usable without a pointer.
                     if (e.key === 'Enter' && e.target === e.currentTarget && !isGroup) {
@@ -215,72 +194,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                 )}
             </ContextMenu.Trigger>
 
-            <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-50">
-                    <ContextMenu.Popup className="menu-popup">
-                        <ContextMenu.Item className="menu-item" onClick={() => setRenaming(true)}>
-                            <Pencil size={14} /> Rename <kbd>dbl-click</kbd>
-                        </ContextMenu.Item>
-                        <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().duplicateNode(id)}>
-                            <Copy size={14} /> Duplicate
-                        </ContextMenu.Item>
-                        <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().goToNode(id)}>
-                            <Maximize2 size={14} /> Zoom to node
-                        </ContextMenu.Item>
-                        {node.kind === 'terminal' && agent?.kind === 'claude' && (
-                            <ContextMenu.Item className="menu-item" onClick={openInChat}>
-                                <MessageSquare size={14} /> Open in chat
-                            </ContextMenu.Item>
-                        )}
-                        {node.kind === 'chat' && chatSession && (
-                            <ContextMenu.Item className="menu-item" onClick={openInTerminal}>
-                                <Terminal size={14} /> Open in terminal
-                            </ContextMenu.Item>
-                        )}
-                        {workingFolder && (
-                            <ContextMenu.Item
-                                className="menu-item"
-                                onClick={() => void transport.request('fs.reveal', { path: workingFolder }).catch(() => undefined)}
-                            >
-                                <ExternalLink size={14} /> Reveal in {fileManagerName(platform)}
-                            </ContextMenu.Item>
-                        )}
-                        <ContextMenu.SubmenuRoot>
-                            <ContextMenu.SubmenuTrigger className="menu-item">
-                                <Palette size={14} /> Color
-                                <ChevronRight size={14} className="ml-auto text-text-faint" />
-                            </ContextMenu.SubmenuTrigger>
-                            <ContextMenu.Portal>
-                                <ContextMenu.Positioner className="z-50" sideOffset={4} alignOffset={-4}>
-                                    <ContextMenu.Popup className="menu-popup min-w-40">
-                                        <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().setNodeAccent(id, null)}>
-                                            <span className="h-3 w-3 rounded-full border border-border-strong" /> None
-                                            {!node.accent && <Check size={13} className="ml-auto" />}
-                                        </ContextMenu.Item>
-                                        <ContextMenu.Separator className="menu-separator" />
-                                        {NODE_ACCENTS.map((a) => (
-                                            <ContextMenu.Item key={a.id} className="menu-item" onClick={() => useCanvas.getState().setNodeAccent(id, a.id)}>
-                                                <span
-                                                    className="h-3 w-3 rounded-full"
-                                                    style={{
-                                                        background: a.color
-                                                    }}
-                                                />{' '}
-                                                {a.label}
-                                                {node.accent === a.id && <Check size={13} className="ml-auto" />}
-                                            </ContextMenu.Item>
-                                        ))}
-                                    </ContextMenu.Popup>
-                                </ContextMenu.Positioner>
-                            </ContextMenu.Portal>
-                        </ContextMenu.SubmenuRoot>
-                        <ContextMenu.Separator className="menu-separator" />
-                        <ContextMenu.Item className="menu-item text-status-error" onClick={remove}>
-                            <Trash2 size={14} /> Delete <kbd>⌫</kbd>
-                        </ContextMenu.Item>
-                    </ContextMenu.Popup>
-                </ContextMenu.Positioner>
-            </ContextMenu.Portal>
+            <NodeMenuPopup id={id} onRename={() => setRenaming(true)} />
         </ContextMenu.Root>
     );
 });

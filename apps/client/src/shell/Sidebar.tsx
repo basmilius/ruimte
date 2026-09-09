@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Globe, LayoutGrid, MessageSquare, Plus, Search, Settings, Terminal } from 'lucide-react';
 import clsx from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
@@ -8,6 +9,7 @@ import { nodeStatus, useSessions } from '@/state/sessions';
 import { useUi } from '@/state/ui';
 import { addNodeAtCenter } from '@/shell/commands';
 import { StatusDot } from '@/canvas/NodeFrame';
+import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { Tooltip } from '@/ui/Tooltip';
 import { ConnectionDot } from '@/shell/ConnectionDot';
 import { ProjectMenu } from '@/shell/ProjectMenu';
@@ -62,19 +64,23 @@ function SessionRow({ node }: { node: CanvasNode }) {
         );
     }
     return (
-        <button
-            className={clsx(
-                'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition-colors',
-                selected ? 'bg-accent-soft text-text' : 'text-text-muted hover:bg-surface-sunken hover:text-text'
-            )}
-            onClick={() => useCanvas.getState().goToNode(node.id)}
-            onDoubleClick={() => setRenaming(true)}
-        >
-            <Icon size={14} strokeWidth={1.75} className="shrink-0" />
-            <span className="truncate">{node.title}</span>
-            <span className="grow" />
-            {status && <StatusDot status={status} />}
-        </button>
+        <ContextMenu.Root>
+            <ContextMenu.Trigger
+                render={<button />}
+                className={clsx(
+                    'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition-colors',
+                    selected ? 'bg-accent-soft text-text' : 'text-text-muted hover:bg-surface-sunken hover:text-text'
+                )}
+                onClick={() => useCanvas.getState().goToNode(node.id)}
+                onDoubleClick={() => setRenaming(true)}
+            >
+                <Icon size={14} strokeWidth={1.75} className="shrink-0" />
+                <span className="truncate">{node.title}</span>
+                <span className="grow" />
+                {status && <StatusDot status={status} />}
+            </ContextMenu.Trigger>
+            <NodeMenuPopup id={node.id} onRename={() => setRenaming(true)} />
+        </ContextMenu.Root>
     );
 }
 

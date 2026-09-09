@@ -1,9 +1,11 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useShallow } from 'zustand/react/shallow';
 import { GRID, intersects, snapToGrid, toWorld, type Point, type Rect } from '@/canvas/math';
 import { useCanvas, type NodeKind } from '@/state/canvas';
 import { useUi } from '@/state/ui';
 import { addNodeAtCenter } from '@/shell/commands';
+import { CanvasMenuPopup } from '@/canvas/CanvasMenu';
 import { EdgeLayer } from '@/canvas/EdgeLayer';
 import { NodeFrame } from '@/canvas/NodeFrame';
 import { TextElementView } from '@/canvas/TextElementView';
@@ -64,6 +66,8 @@ export function Canvas() {
     const zoomMoved = useRef(false);
     const [box, setBox] = useState<Rect | null>(null);
     const [activeGesture, setActiveGesture] = useState<Gesture['kind'] | null>(null);
+    // Where the last right-click landed, in world units, so the menu's "add here" knows where.
+    const menuPoint = useRef<Point>({ x: 0, y: 0 });
 
     const { camera, order, texts, mode, locks } = useCanvas(
         useShallow((s) => ({
@@ -489,50 +493,58 @@ export function Canvas() {
     const gridStep = GRID * 3 * camera.zoom;
 
     return (
-        <div
-            ref={rootRef}
-            className="canvas-grid relative h-full w-full overflow-hidden touch-none"
-            style={{
-                backgroundSize: `${gridStep}px ${gridStep}px`,
-                backgroundPosition: `${camera.x}px ${camera.y}px`,
-                // Space is tracked in a ref because a held key must not re-render the canvas; the cursor
-                // catches up on the next render, which the pointer move that follows always triggers.
-                // oxlint-disable-next-line react/refs
-                cursor: activeGesture === 'pan' ? 'grabbing' : locks.pan ? undefined : spaceRef.current ? 'grab' : undefined
-            }}
-            data-mode={mode.kind}
-            data-gesture={activeGesture ?? undefined}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
-            onDoubleClick={onDoubleClick}
-        >
-            <div
-                className="absolute left-0 top-0 origin-top-left"
+        <ContextMenu.Root>
+            <ContextMenu.Trigger
+                render={<div />}
+                ref={rootRef}
+                className="canvas-grid relative h-full w-full overflow-hidden touch-none"
                 style={{
-                    transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`
+                    backgroundSize: `${gridStep}px ${gridStep}px`,
+                    backgroundPosition: `${camera.x}px ${camera.y}px`,
+                    // Space is tracked in a ref because a held key must not re-render the canvas; the cursor
+                    // catches up on the next render, which the pointer move that follows always triggers.
+                    // oxlint-disable-next-line react/refs
+                    cursor: activeGesture === 'pan' ? 'grabbing' : locks.pan ? undefined : spaceRef.current ? 'grab' : undefined
+                }}
+                data-mode={mode.kind}
+                data-gesture={activeGesture ?? undefined}
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerCancel={onPointerUp}
+                onDoubleClick={onDoubleClick}
+                onContextMenu={(e) => {
+                    const s = useCanvas.getState();
+                    menuPoint.current = toWorld(s.camera, screenPoint(e));
                 }}
             >
-                <EdgeLayer />
-                {textIds.map((id) => (
-                    <TextElementView key={id} id={id} />
-                ))}
-                {renderOrder.map((id) => (
-                    <NodeFrame key={id} id={id} />
-                ))}
-            </div>
-            {box && (
                 <div
-                    className="pointer-events-none absolute rounded-sm border border-accent bg-accent/10"
+                    className="absolute left-0 top-0 origin-top-left"
                     style={{
-                        left: box.x,
-                        top: box.y,
-                        width: box.w,
-                        height: box.h
+                        transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`
                     }}
-                />
-            )}
-        </div>
+                >
+                    <EdgeLayer />
+                    {textIds.map((id) => (
+                        <TextElementView key={id} id={id} />
+                    ))}
+                    {renderOrder.map((id) => (
+                        <NodeFrame key={id} id={id} />
+                    ))}
+                </div>
+                {box && (
+                    <div
+                        className="pointer-events-none absolute rounded-sm border border-accent bg-accent/10"
+                        style={{
+                            left: box.x,
+                            top: box.y,
+                            width: box.w,
+                            height: box.h
+                        }}
+                    />
+                )}
+            </ContextMenu.Trigger>
+            <CanvasMenuPopup at={() => menuPoint.current} />
+        </ContextMenu.Root>
     );
 }
