@@ -1,196 +1,68 @@
-import { useState } from 'react';
-import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { Check, Link2, Server, Trash2, X } from 'lucide-react';
-import { activateEndpoint, pairEndpoint } from '@/endpoint';
-import { useEndpoints, LOCAL_ENDPOINT_ID } from '@/state/endpoints';
-import { NODE_ACCENTS } from '@/canvas/accents';
-import { MONO_FONTS, useSettings } from '@/state/settings';
-import { useTheme, type Theme } from '@/state/theme';
-import { useUi } from '@/state/ui';
-import { Tooltip } from '@/ui/Tooltip';
+import { Tabs } from '@base-ui-components/react/tabs';
+import { X } from 'lucide-react';
+import { SettingsNav } from '@/shell/settings/SettingsNav';
+import { AboutPane } from '@/shell/settings/panes/AboutPane';
+import { AgentsPane } from '@/shell/settings/panes/AgentsPane';
+import { AppearancePane } from '@/shell/settings/panes/AppearancePane';
+import { CanvasPane } from '@/shell/settings/panes/CanvasPane';
+import { KeyboardPane } from '@/shell/settings/panes/KeyboardPane';
+import { MachinesPane } from '@/shell/settings/panes/MachinesPane';
+import { SETTINGS_SECTIONS } from '@/shell/settings/sections';
+import { useUi, type SettingsSectionId } from '@/state/ui';
 
-const THEMES: Array<{ id: Theme; label: string }> = [
-    { id: 'system', label: 'System' },
-    { id: 'light', label: 'Light' },
-    { id: 'dark', label: 'Dark' }
-];
+const PANES: Record<SettingsSectionId, () => React.JSX.Element> = {
+    appearance: AppearancePane,
+    canvas: CanvasPane,
+    agents: AgentsPane,
+    machines: MachinesPane,
+    keyboard: KeyboardPane,
+    about: AboutPane
+};
 
-function Segmented<T extends string>({ value, options, onChange }: { value: T; options: Array<{ id: T; label: string }>; onChange(id: T): void }) {
-    return (
-        <div className="flex h-8 items-center rounded-lg bg-surface-sunken p-0.5 text-[12px] font-medium" role="radiogroup">
-            {options.map((option) => (
-                <button
-                    key={option.id}
-                    role="radio"
-                    aria-checked={value === option.id}
-                    className={clsx(
-                        'h-7 rounded-md px-3 transition-colors',
-                        value === option.id ? 'bg-surface-raised text-text shadow-sm' : 'text-text-muted hover:text-text'
-                    )}
-                    onClick={() => onChange(option.id)}
-                >
-                    {option.label}
-                </button>
-            ))}
-        </div>
-    );
-}
-
-/* The daemons this client knows, and the way to add one from a pairing link. */
-function EndpointsSection() {
-    const endpoints = useEndpoints((s) => s.endpoints);
-    const activeId = useEndpoints((s) => s.activeId);
-    const [link, setLink] = useState('');
-    const [busy, setBusy] = useState(false);
-    const [failure, setFailure] = useState<string | null>(null);
-
-    const pair = async (): Promise<void> => {
-        setBusy(true);
-        setFailure(null);
-        try {
-            const endpoint = await pairEndpoint(link);
-            setLink('');
-            await activateEndpoint(endpoint.id);
-        } catch (e) {
-            setFailure(e instanceof Error ? e.message : 'Pairing failed');
-        } finally {
-            setBusy(false);
-        }
-    };
-
-    return (
-        <div className="flex flex-col gap-2">
-            <div className="text-[13px] text-text">Machines</div>
-            {endpoints.map((endpoint) => (
-                <div
-                    key={endpoint.id}
-                    className={clsx(
-                        'flex items-center gap-2 rounded-lg border px-2.5 py-2',
-                        endpoint.id === activeId ? 'border-accent bg-accent-soft' : 'border-border'
-                    )}
-                >
-                    <Server size={14} className="shrink-0 text-text-muted" />
-                    <button className="flex min-w-0 grow flex-col text-left" onClick={() => void activateEndpoint(endpoint.id)}>
-                        <span className="truncate text-[13px] text-text">{endpoint.label}</span>
-                        <span className="truncate font-mono text-[11px] text-text-faint">
-                            {endpoint.id === LOCAL_ENDPOINT_ID ? 'loopback' : endpoint.httpBaseUrl}
-                        </span>
-                    </button>
-                    {endpoint.id === activeId && <Check size={13} className="shrink-0 text-accent" />}
-                    {endpoint.id !== LOCAL_ENDPOINT_ID && (
-                        <button className="icon-btn h-6 w-6" aria-label="Forget this machine" onClick={() => useEndpoints.getState().remove(endpoint.id)}>
-                            <Trash2 size={12} />
-                        </button>
-                    )}
-                </div>
-            ))}
-            <div className="flex items-center gap-2">
-                <input
-                    className="h-8 min-w-0 grow rounded-lg border border-border bg-surface px-2.5 font-mono text-[12px] text-text outline-none placeholder:text-text-faint focus:border-accent"
-                    placeholder="http://machine:4210/pair#token"
-                    value={link}
-                    spellCheck={false}
-                    onChange={(e) => setLink(e.target.value)}
-                    onKeyDown={(e) => {
-                        e.stopPropagation();
-                        if (e.key === 'Enter' && link.trim()) {
-                            void pair();
-                        }
-                    }}
-                />
-                <button
-                    className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 text-[12px] font-medium text-accent-text disabled:opacity-50"
-                    disabled={busy || !link.trim()}
-                    onClick={() => void pair()}
-                >
-                    <Link2 size={13} /> Pair
-                </button>
-            </div>
-            <p className="text-[11px] text-text-faint">Run `bun src/main.ts pair` next to a daemon on another machine and paste the link it prints.</p>
-            {failure && <p className="text-[12px] text-status-error">{failure}</p>}
-        </div>
-    );
-}
-
-/* Theme, font and accent, and the machines the client can talk to. Everything else is a default on purpose. */
+/* Sections on the left, one pane on the right. Opens on the section the caller asked for, or the last one. */
 export function SettingsDialog() {
-    const open = useUi((s) => s.settingsOpen);
-    const setOpen = useUi((s) => s.setSettingsOpen);
-    const theme = useTheme((t) => t.theme);
-    const setTheme = useTheme((t) => t.setTheme);
-    const accent = useSettings((s) => s.accent);
-    const font = useSettings((s) => s.font);
-    const update = useSettings((s) => s.update);
+    const open = useUi((s) => s.settings.open);
+    const section = useUi((s) => s.settings.section);
+    const setSettings = useUi((s) => s.setSettings);
+    const meta = SETTINGS_SECTIONS.find((entry) => entry.id === section) ?? SETTINGS_SECTIONS[0]!;
 
     return (
-        <Dialog.Root open={open} onOpenChange={setOpen}>
+        <Dialog.Root open={open} onOpenChange={(next) => setSettings({ open: next })}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className="dialog-popup top-[16vh] w-[460px] p-5">
-                    <div className="flex items-center">
-                        <Dialog.Title className="text-[15px] font-semibold text-text">Settings</Dialog.Title>
-                        <span className="grow" />
-                        <Dialog.Close className="icon-btn h-7 w-7" aria-label="Close">
-                            <X size={14} />
-                        </Dialog.Close>
-                    </div>
-                    <div className="mt-4 flex flex-col gap-4">
-                        <label className="flex items-center justify-between gap-4 text-[13px] text-text">
-                            Theme
-                            <Segmented value={theme} options={THEMES} onChange={setTheme} />
-                        </label>
-                        <label className="flex items-center justify-between gap-4 text-[13px] text-text">
-                            Terminal font
-                            <select
-                                className="h-8 rounded-lg border border-border bg-surface-raised px-2 text-[12px] text-text outline-none focus-visible:ring-1 focus-visible:ring-accent"
-                                value={font}
-                                onChange={(e) => update({ font: e.target.value as typeof font })}
-                            >
-                                {MONO_FONTS.map((entry) => (
-                                    <option key={entry.id} value={entry.id}>
-                                        {entry.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-                        <div className="flex items-center justify-between gap-4 text-[13px] text-text">
-                            Accent
-                            <div className="flex items-center gap-1.5" role="radiogroup">
-                                <Tooltip label="Theme default">
-                                    <button
-                                        role="radio"
-                                        aria-checked={accent === null}
-                                        className={clsx(
-                                            'grid h-6 w-6 place-items-center rounded-full border border-border-strong',
-                                            accent === null && 'ring-2 ring-accent ring-offset-2 ring-offset-surface-raised'
-                                        )}
-                                        onClick={() => update({ accent: null })}
-                                    >
-                                        {accent === null && <Check size={12} />}
-                                    </button>
-                                </Tooltip>
-                                {NODE_ACCENTS.map((entry) => (
-                                    <Tooltip key={entry.id} label={entry.label}>
-                                        <button
-                                            role="radio"
-                                            aria-checked={accent === entry.id}
-                                            className={clsx(
-                                                'grid h-6 w-6 place-items-center rounded-full text-accent-text',
-                                                accent === entry.id && 'ring-2 ring-accent ring-offset-2 ring-offset-surface-raised'
-                                            )}
-                                            style={{ background: entry.color }}
-                                            onClick={() => update({ accent: entry.id })}
-                                        >
-                                            {accent === entry.id && <Check size={12} strokeWidth={3} />}
-                                        </button>
-                                    </Tooltip>
-                                ))}
-                            </div>
+                <Dialog.Popup className="dialog-popup top-[10vh] flex h-[min(600px,80vh)] w-[820px]">
+                    <Tabs.Root
+                        value={section}
+                        onValueChange={(value) => setSettings({ section: value as SettingsSectionId })}
+                        orientation="vertical"
+                        className="flex min-h-0 grow"
+                    >
+                        <div className="flex w-48 shrink-0 flex-col gap-3 border-r border-border bg-surface p-3">
+                            <Dialog.Title className="px-2.5 pt-1 text-[15px] font-semibold text-text">Settings</Dialog.Title>
+                            <SettingsNav />
                         </div>
-                        <div className="h-px bg-border" />
-                        <EndpointsSection />
-                    </div>
+                        {SETTINGS_SECTIONS.map((entry) => {
+                            const Pane = PANES[entry.id];
+                            return (
+                                <Tabs.Panel key={entry.id} value={entry.id} keepMounted={false} className="flex min-h-0 min-w-0 grow flex-col outline-none">
+                                    <div className="flex items-start gap-4 px-6 pt-5 pb-4">
+                                        <div className="min-w-0 grow">
+                                            <h2 className="text-[15px] font-semibold text-text">{entry.label}</h2>
+                                            <p className="mt-0.5 text-[12px] text-text-muted">{entry.description}</p>
+                                        </div>
+                                        <Dialog.Close className="icon-btn h-7 w-7" aria-label="Close">
+                                            <X size={14} />
+                                        </Dialog.Close>
+                                    </div>
+                                    <div className="flex min-h-0 grow flex-col gap-5 overflow-y-auto px-6 pb-6">
+                                        <Pane />
+                                    </div>
+                                </Tabs.Panel>
+                            );
+                        })}
+                    </Tabs.Root>
+                    <Dialog.Description className="sr-only">{meta.description}</Dialog.Description>
                 </Dialog.Popup>
             </Dialog.Portal>
         </Dialog.Root>

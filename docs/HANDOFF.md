@@ -50,11 +50,27 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   action), Option+T/C/B/G add nodes, Cmd+G wraps the selection in a group, Cmd+, opens
   settings. A group node is a dashed frame under its nodes that drags whatever sits inside it
   (`carriedByGroups` in `state/canvas.ts`), groups always paint below other nodes and stay out
-  of the sidebar. Rename by double-click in the node header and in the sidebar. Settings
-  dialog with theme, terminal font and accent only (`state/settings.ts`, tokens set on the
-  root). Node frames are focusable, Enter steps into one, every control has a visible
-  keyboard focus ring. Text elements join box selection with Shift. No minimap: the sidebar
-  and the palette cover jumping around; decide again once real projects have many nodes.
+  of the sidebar. Rename by double-click in the node header and in the sidebar. Node frames
+  are focusable, Enter steps into one, every control has a visible keyboard focus ring. Text
+  elements join box selection with Shift. No minimap: the sidebar and the palette cover
+  jumping around; decide again once real projects have many nodes.
+
+- **Settings, the way T3 Code lays them out** (studied, then written from scratch): one
+  dialog with a section list on the left (Base UI Tabs, arrow keys move, `activateOnFocus`)
+  and a pane on the right, built from `SettingsSection` (a titled card) and `SettingsRow`
+  (label and description left, control right) in `apps/client/src/shell/settings/`.
+  Sections: Appearance (theme, accent, terminal font and font size; the size lives in
+  `state/settings.ts` and every terminal refits on change), Canvas (zoom presets, locks and
+  layouts, all acting on the open canvas, nothing stored), Agents (the remembered defaults for
+  a new chat from `chat/preferences.ts`, now a zustand store the composer and the dialog
+  share, plus the providers the daemon found), Machines (a thin frame around
+  `EndpointsSection`), Keyboard (a searchable read-only list: commands with a chord from
+  `commands.ts` plus the canvas chords `Canvas.tsx` binds by hand, mirrored in
+  `settings/shortcuts.ts`), About (version from `server.hello`, the machine, links).
+  `useUi.setSettings({ open, section })` opens it on a section; the palette has "Keyboard
+  shortcuts" and "Machines" entries that do. Canvas chords are off while the dialog is up, so
+  Backspace in it cannot delete nodes. `RUIMTE_DAEMON` points the Vite proxy at another
+  daemon for a second dev setup.
 
 - **Phase 8, projects and persistence**: `apps/server/src/projects` owns the registry
   (`projects.json`), the canvas files and a directory watcher per open project. The client
@@ -140,7 +156,7 @@ started; it fits after #10, when a remote daemon makes it worth its weight.
 
 - No kanban view, ever. Bas dislikes that workflow.
 - No bare single-letter shortcuts. Every chord needs a modifier and becomes remappable in a
-  later settings phase.
+  later settings phase; until then the Keyboard section only lists them.
 - Never highlight the canvas grid in the accent color. The dots stay neutral in every state.
 - Icon buttons get equal padding on every side. Buttons that belong together sit in a
   `.btn-group` with 1px gaps; groups keep the wider gap of their container.
@@ -229,10 +245,13 @@ In the order that makes sense, each one an issue on GitHub:
 3. **#9 follow-ups**: a chat should learn about a link made mid-conversation (a note in the
    next turn's prompt), and a terminal agent has no prompt at all, so the CLI's existence must
    come from its hooks or a MOTD line in the shell.
-4. **#10 follow-ups**: one endpoint at a time is the model; a project list that spans machines
+4. **Settings follow-ups**: remappable chords (the Keyboard pane is the natural home), a
+   "restore defaults" action once there is more than a handful of stored values, and the
+   canvas font size for chat and text elements if anyone asks for it.
+5. **#10 follow-ups**: one endpoint at a time is the model; a project list that spans machines
    would need a transport per endpoint. `auth.sessions` and `auth.revoke` have no UI yet. TLS is
    a reverse proxy's job and is only documented.
-5. **#11 follow-ups**: put the Apple secrets in the repository and tag `v0.1.0` to get the
+6. **#11 follow-ups**: put the Apple secrets in the repository and tag `v0.1.0` to get the
    first signed, notarized build (the local `bun run dist` already signs with the Developer ID
    in the keychain); enable Pages with source "GitHub Actions" and point ruimte.app at it; the
    30-second video for the landing page; Windows (the daemon on Bun's Windows PTY or Node with

@@ -4,16 +4,18 @@ interface ServerStore {
     /* The daemon's platform (`darwin`, `win32`, `linux`); null until the first hello. */
     platform: string | null;
     home: string | null;
+    version: string | null;
     /* How the daemon names itself and how far away it is, from `endpoint.info`. */
     label: string | null;
     reachability: 'loopback' | 'lan' | 'tunnel' | 'public' | null;
-    setInfo(info: { platform: string; home: string }): void;
+    setInfo(info: { platform: string; home: string; version: string }): void;
     setEndpoint(info: { label: string; reachability: 'loopback' | 'lan' | 'tunnel' | 'public' }): void;
 }
 
 export const useServer = create<ServerStore>((set) => ({
     platform: null,
     home: null,
+    version: null,
     label: null,
     reachability: null,
     setInfo(info) {
