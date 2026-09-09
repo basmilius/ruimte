@@ -5,6 +5,7 @@ import { demoProjects } from '@/data/demo';
 import { useCanvas, type AgentStatus, type CanvasNode } from '@/state/canvas';
 import { nodeStatus, useNodeStatus, useSessions } from '@/state/sessions';
 import { StatusDot } from '@/canvas/NodeFrame';
+import { Tooltip } from '@/ui/Tooltip';
 import { ConnectionDot } from '@/shell/ConnectionDot';
 
 const KIND_ICON = {
@@ -51,7 +52,11 @@ export function Sidebar() {
                 <span className="grid h-6 w-6 place-items-center rounded-md bg-accent text-[12px] font-semibold text-accent-text">R</span>
                 <span className="text-[14px] font-semibold tracking-tight text-text">Ruimte</span>
                 <span className="grow" />
-                <button className="icon-btn h-7 w-7" title="Search"><Search size={15} /></button>
+                <Tooltip label="Search">
+                    <button className="icon-btn h-7 w-7">
+                        <Search size={15} />
+                    </button>
+                </Tooltip>
             </div>
 
             <div className="px-2">
@@ -79,7 +84,9 @@ export function Sidebar() {
                                 {group.label}
                                 <span className="ml-auto tabular-nums">{rows.length}</span>
                             </div>
-                            {rows.map((n) => <SessionRow key={n.id} node={n} />)}
+                            {rows.map((n) => (
+                                <SessionRow key={n.id} node={n} />
+                            ))}
                         </div>
                     );
                 })}
@@ -90,7 +97,11 @@ export function Sidebar() {
                     <Plus size={15} /> New session
                 </button>
                 <ConnectionDot />
-                <button className="icon-btn" title="Settings"><Settings size={15} /></button>
+                <Tooltip label="Settings">
+                    <button className="icon-btn">
+                        <Settings size={15} />
+                    </button>
+                </Tooltip>
             </div>
         </aside>
     );

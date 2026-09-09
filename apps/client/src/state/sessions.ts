@@ -56,5 +56,4 @@ export const sessionStatus = (state: SessionState | undefined): AgentStatus | un
 export const nodeStatus = (node: CanvasNode, sessions: Record<string, SessionState>): AgentStatus | undefined =>
     node.kind === 'terminal' ? sessionStatus(sessions[node.id]) : node.status;
 
-export const useNodeStatus = (node: CanvasNode): AgentStatus | undefined =>
-    useSessions((s) => nodeStatus(node, s.byNodeId));
+export const useNodeStatus = (node: CanvasNode): AgentStatus | undefined => useSessions((s) => nodeStatus(node, s.byNodeId));

@@ -1,4 +1,13 @@
-import { EVENT_SCHEMAS, REQUEST_SCHEMAS, isEventType, parseServerFrame, type EventMap, type EventType, type RequestMap, type RequestType } from '@ruimte/contracts';
+import {
+    EVENT_SCHEMAS,
+    REQUEST_SCHEMAS,
+    isEventType,
+    parseServerFrame,
+    type EventMap,
+    type EventType,
+    type RequestMap,
+    type RequestType
+} from '@ruimte/contracts';
 import { TransportError, type Transport, type TransportStatus } from './transport';
 
 const RECONNECT_MIN_MS = 500;

@@ -5,6 +5,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { activeZoomPreset, toWorld, ZOOM_PRESETS } from '@/canvas/math';
 import { useCanvas, type Locks, type NodeKind } from '@/state/canvas';
 import { useTheme } from '@/state/theme';
+import { Tooltip } from '@/ui/Tooltip';
 
 const LOCK_ROWS: { key: keyof Locks; label: string; hint: string }[] = [
     { key: 'pan', label: 'Pan', hint: 'The map stops sliding' },
@@ -37,13 +38,15 @@ function Submenu({ label, icon, children }: { label: string; icon: React.ReactNo
 }
 
 export function Dock() {
-    const { zoom, mode, locks, focusedTitle, hasSelection } = useCanvas(useShallow((s) => ({
-        zoom: s.camera.zoom,
-        mode: s.mode.kind,
-        locks: s.locks,
-        focusedTitle: s.mode.kind === 'node' ? s.nodes[s.mode.nodeId]?.title : null,
-        hasSelection: s.selection.length > 0
-    })));
+    const { zoom, mode, locks, focusedTitle, hasSelection } = useCanvas(
+        useShallow((s) => ({
+            zoom: s.camera.zoom,
+            mode: s.mode.kind,
+            locks: s.locks,
+            focusedTitle: s.mode.kind === 'node' ? s.nodes[s.mode.nodeId]?.title : null,
+            hasSelection: s.selection.length > 0
+        }))
+    );
     const resolved = useTheme((t) => t.resolved);
     const anyLocked = Object.values(locks).some(Boolean);
     const allLocked = Object.values(locks).every(Boolean);
@@ -60,27 +63,34 @@ export function Dock() {
     return (
         <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
             <div className="float pointer-events-auto flex items-center gap-2 rounded-xl p-1">
-                <div
-                    className={clsx(
-                        'flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12px] font-medium',
-                        mode === 'node' ? 'bg-accent-soft text-accent' : 'text-text-muted'
-                    )}
-                    title={mode === 'node' ? 'Keyboard goes to this node. Escape returns to the canvas.' : 'Keyboard goes to the canvas'}
-                >
-                    <span className={clsx('h-1.5 w-1.5 rounded-full', mode === 'node' ? 'bg-accent' : 'bg-text-faint')} />
-                    {mode === 'node' ? <span className="max-w-40 truncate">{focusedTitle}</span> : 'Canvas'}
-                </div>
+                <Tooltip label={mode === 'node' ? 'Keyboard goes to this node. Escape returns to the canvas.' : 'Keyboard goes to the canvas'}>
+                    <div
+                        className={clsx(
+                            'flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12px] font-medium',
+                            mode === 'node' ? 'bg-accent-soft text-accent' : 'text-text-muted'
+                        )}
+                    >
+                        <span className={clsx('h-1.5 w-1.5 rounded-full', mode === 'node' ? 'bg-accent' : 'bg-text-faint')} />
+                        {mode === 'node' ? <span className="max-w-40 truncate">{focusedTitle}</span> : 'Canvas'}
+                    </div>
+                </Tooltip>
                 <span className="h-5 w-px bg-border" />
 
                 <Menu.Root>
-                    <Menu.Trigger className="icon-btn" title="Add">
-                        <Plus size={17} />
-                    </Menu.Trigger>
+                    <Tooltip label="Add">
+                        <Menu.Trigger className="icon-btn">
+                            <Plus size={17} />
+                        </Menu.Trigger>
+                    </Tooltip>
                     <Menu.Portal>
                         <Menu.Positioner className="z-50" side="top" sideOffset={10} align="start">
                             <Menu.Popup className="menu-popup">
-                                <Menu.Item className="menu-item" onClick={() => add('terminal')}><Terminal size={14} /> Terminal</Menu.Item>
-                                <Menu.Item className="menu-item" onClick={() => add('chat')}><MessageSquare size={14} /> Chat</Menu.Item>
+                                <Menu.Item className="menu-item" onClick={() => add('terminal')}>
+                                    <Terminal size={14} /> Terminal
+                                </Menu.Item>
+                                <Menu.Item className="menu-item" onClick={() => add('chat')}>
+                                    <MessageSquare size={14} /> Chat
+                                </Menu.Item>
                                 <Submenu label="Agent" icon={<Bot size={14} />}>
                                     {AGENTS.map((agent) => (
                                         <Menu.Item key={agent} className="menu-item" onClick={() => add('chat', agent)}>
@@ -88,9 +98,13 @@ export function Dock() {
                                         </Menu.Item>
                                     ))}
                                 </Submenu>
-                                <Menu.Item className="menu-item" onClick={() => add('browser')}><Globe size={14} /> Browser</Menu.Item>
+                                <Menu.Item className="menu-item" onClick={() => add('browser')}>
+                                    <Globe size={14} /> Browser
+                                </Menu.Item>
                                 <Menu.Separator className="menu-separator" />
-                                <Menu.Item className="menu-item" onClick={() => useCanvas.getState().addText(centerWorld())}><Type size={14} /> Text <kbd>dbl-click</kbd></Menu.Item>
+                                <Menu.Item className="menu-item" onClick={() => useCanvas.getState().addText(centerWorld())}>
+                                    <Type size={14} /> Text <kbd>dbl-click</kbd>
+                                </Menu.Item>
                             </Menu.Popup>
                         </Menu.Positioner>
                     </Menu.Portal>
@@ -98,15 +112,17 @@ export function Dock() {
 
                 <span className="h-5 w-px bg-border" />
                 <div className="btn-group">
-                    <button className="icon-btn" title="Zoom out" onClick={() => useCanvas.getState().zoomTo(Math.round(zoom * 100 - 10) / 100)}><Minus size={15} /></button>
-
+                    <Tooltip label="Zoom out">
+                        <button className="icon-btn" onClick={() => useCanvas.getState().zoomTo(Math.round(zoom * 100 - 10) / 100)}>
+                            <Minus size={15} />
+                        </button>
+                    </Tooltip>
                     <Menu.Root>
-                        <Menu.Trigger
-                            className="h-8 min-w-14 rounded-lg px-1 text-[12px] tabular-nums text-text-muted hover:bg-surface-sunken hover:text-text data-[popup-open]:bg-surface-sunken data-[popup-open]:text-text"
-                            title="Zoom presets"
-                        >
-                            {zoomPct}%
-                        </Menu.Trigger>
+                        <Tooltip label="Zoom presets">
+                            <Menu.Trigger className="h-8 min-w-14 rounded-lg px-1 text-[12px] tabular-nums text-text-muted hover:bg-surface-sunken hover:text-text data-[popup-open]:bg-surface-sunken data-[popup-open]:text-text">
+                                {zoomPct}%
+                            </Menu.Trigger>
+                        </Tooltip>
                         <Menu.Portal>
                             <Menu.Positioner className="z-50" side="top" sideOffset={10} align="center">
                                 <Menu.Popup className="menu-popup min-w-44">
@@ -114,7 +130,9 @@ export function Dock() {
                                         {ZOOM_PRESETS.map((pct) => (
                                             <Menu.RadioItem key={pct} value={pct} className="menu-item">
                                                 <span className="grid h-4 w-4 place-items-center">
-                                                    <Menu.RadioItemIndicator><Check size={13} strokeWidth={2.5} /></Menu.RadioItemIndicator>
+                                                    <Menu.RadioItemIndicator>
+                                                        <Check size={13} strokeWidth={2.5} />
+                                                    </Menu.RadioItemIndicator>
                                                 </span>
                                                 <span className="tabular-nums">{pct}%</span>
                                                 {pct === 100 && <kbd>⌘0</kbd>}
@@ -123,34 +141,58 @@ export function Dock() {
                                     </Menu.RadioGroup>
                                     <Menu.Separator className="menu-separator" />
                                     <Menu.Item className="menu-item" onClick={() => useCanvas.getState().fitAll()}>
-                                        <span className="grid h-4 w-4 place-items-center"><Maximize size={13} /></span> Zoom to fit <kbd>⇧1</kbd>
+                                        <span className="grid h-4 w-4 place-items-center">
+                                            <Maximize size={13} />
+                                        </span>{' '}
+                                        Zoom to fit <kbd>⇧1</kbd>
                                     </Menu.Item>
                                     <Menu.Item className="menu-item" disabled={!hasSelection} onClick={() => useCanvas.getState().zoomToSelection()}>
-                                        <span className="grid h-4 w-4 place-items-center"><Scan size={13} /></span> Zoom to selection <kbd>⇧2</kbd>
+                                        <span className="grid h-4 w-4 place-items-center">
+                                            <Scan size={13} />
+                                        </span>{' '}
+                                        Zoom to selection <kbd>⇧2</kbd>
                                     </Menu.Item>
                                 </Menu.Popup>
                             </Menu.Positioner>
                         </Menu.Portal>
                     </Menu.Root>
 
-                    <button className="icon-btn" title="Zoom in" onClick={() => useCanvas.getState().zoomTo(Math.round(zoom * 100 + 10) / 100)}><Plus size={15} /></button>
-                    <button className="icon-btn" title="Fit everything (Shift+1)" onClick={() => useCanvas.getState().fitAll()}><Maximize size={15} /></button>
+                    <Tooltip label="Zoom in">
+                        <button className="icon-btn" onClick={() => useCanvas.getState().zoomTo(Math.round(zoom * 100 + 10) / 100)}>
+                            <Plus size={15} />
+                        </button>
+                    </Tooltip>
+                    <Tooltip label="Fit everything" kbd="Shift+1">
+                        <button className="icon-btn" onClick={() => useCanvas.getState().fitAll()}>
+                            <Maximize size={15} />
+                        </button>
+                    </Tooltip>
                 </div>
                 <span className="h-5 w-px bg-border" />
 
                 <div className="btn-group">
                     <Menu.Root>
-                        <Menu.Trigger className="icon-btn" data-active={anyLocked} title="Lock">
-                            {anyLocked ? <Lock size={15} /> : <LockOpen size={15} />}
-                        </Menu.Trigger>
+                        <Tooltip label="Lock">
+                            <Menu.Trigger className="icon-btn" data-active={anyLocked}>
+                                {anyLocked ? <Lock size={15} /> : <LockOpen size={15} />}
+                            </Menu.Trigger>
+                        </Tooltip>
                         <Menu.Portal>
                             <Menu.Positioner className="z-50" side="top" sideOffset={10} align="end">
                                 <Menu.Popup className="menu-popup">
                                     <div className="menu-label">Refuse gestures</div>
                                     {LOCK_ROWS.map((row) => (
-                                        <Menu.CheckboxItem key={row.key} className="menu-item" checked={locks[row.key]} onCheckedChange={() => useCanvas.getState().toggleLock(row.key)} closeOnClick={false}>
+                                        <Menu.CheckboxItem
+                                            key={row.key}
+                                            className="menu-item"
+                                            checked={locks[row.key]}
+                                            onCheckedChange={() => useCanvas.getState().toggleLock(row.key)}
+                                            closeOnClick={false}
+                                        >
                                             <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
-                                                <Menu.CheckboxItemIndicator><Check size={12} strokeWidth={2.5} /></Menu.CheckboxItemIndicator>
+                                                <Menu.CheckboxItemIndicator>
+                                                    <Check size={12} strokeWidth={2.5} />
+                                                </Menu.CheckboxItemIndicator>
                                             </span>
                                             <span>
                                                 <span className="block">{row.label}</span>

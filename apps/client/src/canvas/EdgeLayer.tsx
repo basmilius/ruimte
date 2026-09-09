@@ -3,15 +3,29 @@ import type { Rect } from '@/canvas/math';
 
 /* Anchor on the facing sides, so an edge takes the short way round. */
 const anchors = (a: Rect, b: Rect): { ax: number; ay: number; bx: number; by: number; horizontal: boolean } => {
-    const acx = a.x + a.w / 2, acy = a.y + a.h / 2;
-    const bcx = b.x + b.w / 2, bcy = b.y + b.h / 2;
+    const acx = a.x + a.w / 2,
+        acy = a.y + a.h / 2;
+    const bcx = b.x + b.w / 2,
+        bcy = b.y + b.h / 2;
     const horizontal = Math.abs(bcx - acx) >= Math.abs(bcy - acy);
     if (horizontal) {
         const right = bcx >= acx;
-        return { ax: right ? a.x + a.w : a.x, ay: acy, bx: right ? b.x : b.x + b.w, by: bcy, horizontal };
+        return {
+            ax: right ? a.x + a.w : a.x,
+            ay: acy,
+            bx: right ? b.x : b.x + b.w,
+            by: bcy,
+            horizontal
+        };
     }
     const below = bcy >= acy;
-    return { ax: acx, ay: below ? a.y + a.h : a.y, bx: bcx, by: below ? b.y : b.y + b.h, horizontal };
+    return {
+        ax: acx,
+        ay: below ? a.y + a.h : a.y,
+        bx: bcx,
+        by: below ? b.y : b.y + b.h,
+        horizontal
+    };
 };
 
 export function EdgeLayer() {
@@ -29,7 +43,8 @@ export function EdgeLayer() {
                 const d = p.horizontal
                     ? `M ${p.ax} ${p.ay} C ${(p.ax + p.bx) / 2} ${p.ay}, ${(p.ax + p.bx) / 2} ${p.by}, ${p.bx} ${p.by}`
                     : `M ${p.ax} ${p.ay} C ${p.ax} ${(p.ay + p.by) / 2}, ${p.bx} ${(p.ay + p.by) / 2}, ${p.bx} ${p.by}`;
-                const mx = (p.ax + p.bx) / 2, my = (p.ay + p.by) / 2;
+                const mx = (p.ax + p.bx) / 2,
+                    my = (p.ay + p.by) / 2;
                 return (
                     <g key={edge.id}>
                         <path d={d} fill="none" stroke="var(--accent)" strokeWidth="2" strokeOpacity="0.55" strokeDasharray="6 6" />
@@ -37,7 +52,9 @@ export function EdgeLayer() {
                         {edge.label && (
                             <g transform={`translate(${mx}, ${my})`}>
                                 <rect x="-30" y="-11" width="60" height="22" rx="11" fill="var(--surface-raised)" stroke="var(--border)" />
-                                <text textAnchor="middle" dominantBaseline="middle" fontSize="11" fill="var(--text-muted)" fontFamily="var(--font-sans)">{edge.label}</text>
+                                <text textAnchor="middle" dominantBaseline="middle" fontSize="11" fill="var(--text-muted)" fontFamily="var(--font-sans)">
+                                    {edge.label}
+                                </text>
                             </g>
                         )}
                     </g>

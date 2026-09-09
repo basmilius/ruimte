@@ -10,7 +10,13 @@ type Gesture =
     | { kind: 'pan'; last: Point }
     | { kind: 'box'; origin: Point; current: Point; additive: boolean }
     | { kind: 'move'; start: Point; applied: Point; moved: boolean }
-    | { kind: 'resize'; nodeId: string; edge: string; start: Point; rect: Rect };
+    | {
+          kind: 'resize';
+          nodeId: string;
+          edge: string;
+          start: Point;
+          rect: Rect;
+      };
 
 const ZOOM_SETTLE_MS = 160;
 const MIN_NODE = { w: 240, h: 160 };
@@ -54,13 +60,15 @@ export function Canvas() {
     const [box, setBox] = useState<Rect | null>(null);
     const [activeGesture, setActiveGesture] = useState<Gesture['kind'] | null>(null);
 
-    const { camera, order, texts, mode, locks } = useCanvas(useShallow((s) => ({
-        camera: s.camera,
-        order: s.order,
-        texts: s.texts,
-        mode: s.mode,
-        locks: s.locks
-    })));
+    const { camera, order, texts, mode, locks } = useCanvas(
+        useShallow((s) => ({
+            camera: s.camera,
+            order: s.order,
+            texts: s.texts,
+            mode: s.mode,
+            locks: s.locks
+        }))
+    );
     const textIds = useMemo(() => Object.keys(texts), [texts]);
 
     useLayoutEffect(() => {
@@ -69,7 +77,10 @@ export function Canvas() {
             return;
         }
         const observer = new ResizeObserver(([entry]) => {
-            useCanvas.getState().setViewport({ w: entry.contentRect.width, h: entry.contentRect.height });
+            useCanvas.getState().setViewport({
+                w: entry.contentRect.width,
+                h: entry.contentRect.height
+            });
         });
         observer.observe(el);
         return () => observer.disconnect();
@@ -107,7 +118,10 @@ export function Canvas() {
             }
             e.preventDefault();
             const rect = el.getBoundingClientRect();
-            const anchor = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            const anchor = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
             if (isZoom) {
                 if (s.locks.zoom) {
                     return;
@@ -242,7 +256,16 @@ export function Canvas() {
         if (resizeEdge && nodeId && !s.locks.resize) {
             e.preventDefault();
             s.setResizing(nodeId);
-            startGesture({ kind: 'resize', nodeId, edge: resizeEdge, start: point, rect: { ...s.nodes[nodeId] } }, e);
+            startGesture(
+                {
+                    kind: 'resize',
+                    nodeId,
+                    edge: resizeEdge,
+                    start: point,
+                    rect: { ...s.nodes[nodeId] }
+                },
+                e
+            );
             return;
         }
 
@@ -270,7 +293,15 @@ export function Canvas() {
             if (target.closest('button')) {
                 return;
             }
-            startGesture({ kind: 'move', start: point, applied: { x: 0, y: 0 }, moved: false }, e);
+            startGesture(
+                {
+                    kind: 'move',
+                    start: point,
+                    applied: { x: 0, y: 0 },
+                    moved: false
+                },
+                e
+            );
             return;
         }
 
@@ -287,7 +318,15 @@ export function Canvas() {
             if (s.mode.kind === 'node') {
                 s.exitNode();
             }
-            startGesture({ kind: 'move', start: point, applied: { x: 0, y: 0 }, moved: false }, e);
+            startGesture(
+                {
+                    kind: 'move',
+                    start: point,
+                    applied: { x: 0, y: 0 },
+                    moved: false
+                },
+                e
+            );
             return;
         }
 
@@ -301,7 +340,15 @@ export function Canvas() {
         if (!e.shiftKey) {
             s.clearSelection();
         }
-        startGesture({ kind: 'box', origin: point, current: point, additive: e.shiftKey }, e);
+        startGesture(
+            {
+                kind: 'box',
+                origin: point,
+                current: point,
+                additive: e.shiftKey
+            },
+            e
+        );
     };
 
     const onPointerMove = (e: ReactPointerEvent): void => {
@@ -363,9 +410,19 @@ export function Canvas() {
             if (Math.abs(g.current.x - g.origin.x) > 3 || Math.abs(g.current.y - g.origin.y) > 3) {
                 const a = toWorld(s.camera, g.origin);
                 const b = toWorld(s.camera, g.current);
-                const rect = { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(b.x - a.x), h: Math.abs(b.y - a.y) };
+                const rect = {
+                    x: Math.min(a.x, b.x),
+                    y: Math.min(a.y, b.y),
+                    w: Math.abs(b.x - a.x),
+                    h: Math.abs(b.y - a.y)
+                };
                 if (g.additive) {
-                    s.select(Object.values(s.nodes).filter((n) => intersects(n, rect)).map((n) => n.id), true);
+                    s.select(
+                        Object.values(s.nodes)
+                            .filter((n) => intersects(n, rect))
+                            .map((n) => n.id),
+                        true
+                    );
                 } else {
                     s.selectInRect(rect);
                 }
@@ -410,16 +467,27 @@ export function Canvas() {
         >
             <div
                 className="absolute left-0 top-0 origin-top-left"
-                style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})` }}
+                style={{
+                    transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`
+                }}
             >
                 <EdgeLayer />
-                {textIds.map((id) => <TextElementView key={id} id={id} />)}
-                {order.map((id) => <NodeFrame key={id} id={id} />)}
+                {textIds.map((id) => (
+                    <TextElementView key={id} id={id} />
+                ))}
+                {order.map((id) => (
+                    <NodeFrame key={id} id={id} />
+                ))}
             </div>
             {box && (
                 <div
                     className="pointer-events-none absolute rounded-sm border border-accent bg-accent/10"
-                    style={{ left: box.x, top: box.y, width: box.w, height: box.h }}
+                    style={{
+                        left: box.x,
+                        top: box.y,
+                        width: box.w,
+                        height: box.h
+                    }}
                 />
             )}
         </div>
