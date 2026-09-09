@@ -12,27 +12,14 @@ import {
     type Point,
     type Rect
 } from '@/canvas/math';
-import { demoEdges, demoNodes, demoTexts } from '@/data/demo';
 
-import type { AgentStatus } from '@ruimte/contracts';
+import type { AgentStatus, NodeKind, ProjectContent, ProjectDocument, ProjectLocal, ProjectNode } from '@ruimte/contracts';
 
-export type { AgentStatus } from '@ruimte/contracts';
+export type { AgentStatus, NodeKind } from '@ruimte/contracts';
 
-export type NodeKind = 'terminal' | 'chat' | 'browser' | 'group';
-
-export interface CanvasNode extends Rect {
-    id: string;
-    kind: NodeKind;
-    title: string;
-    /* Only for kinds without a daemon-side status (browser); terminals, chats and groups have none. */
+/* A node as stored in the project file, plus a status for kinds without a daemon-side one (browser). */
+export interface CanvasNode extends ProjectNode {
     status?: AgentStatus;
-    accent?: string;
-    /* Terminal and chat: where the shell or the agent starts. Absent means the daemon's home directory. */
-    cwd?: string;
-    /* Terminal only: typed into the shell as its first line. */
-    command?: string;
-    /* Chat only: the agent session to continue. */
-    resume?: string;
 }
 
 export interface AddNodeOptions {
@@ -65,6 +52,16 @@ export interface Locks {
 
 export type Mode = { kind: 'canvas' } | { kind: 'node'; nodeId: string };
 
+/* What undo and redo restore: the placement of everything, never the camera or the selection. */
+interface Snapshot {
+    nodes: Record<string, CanvasNode>;
+    order: string[];
+    texts: Record<string, TextElement>;
+    edges: Edge[];
+}
+
+const HISTORY_LIMIT = 100;
+
 interface Viewport {
     w: number;
     h: number;
@@ -83,6 +80,10 @@ interface CanvasState {
     locks: Locks;
     /* Node currently under a resize handle, so it can show its size. Transient. */
     resizing: string | null;
+    /* True for the one update that swaps in another project's content, so nobody reads it as edits. */
+    loading: boolean;
+    past: Snapshot[];
+    future: Snapshot[];
 
     setViewport(viewport: Viewport): void;
     setCamera(camera: Camera): void;
@@ -100,7 +101,8 @@ interface CanvasState {
     enterNode(id: string): void;
     exitNode(): void;
 
-    moveSelected(dx: number, dy: number): void;
+    /* `first` marks the first step of a drag, the moment worth remembering for undo. */
+    moveSelected(dx: number, dy: number, first?: boolean): void;
     settleMove(): void;
     resizeNode(id: string, rect: Rect): void;
     setResizing(id: string | null): void;
@@ -117,6 +119,12 @@ interface CanvasState {
     deleteSelected(): void;
     toggleLock(key: keyof Locks): void;
     setAllLocks(locked: boolean): void;
+
+    /* Replaces the whole canvas with a project's content; the camera comes from the machine-local state. */
+    loadDocument(document: ProjectDocument | null, local: ProjectLocal | null): void;
+    exportContent(): Pick<ProjectContent, 'nodes' | 'texts' | 'edges'>;
+    undo(): void;
+    redo(): void;
 }
 
 const NODE_SIZE: Record<NodeKind, { w: number; h: number }> = {
@@ -163,21 +171,34 @@ export const carriedByGroups = (nodes: Record<string, CanvasNode>, texts: Record
     return carried;
 };
 
-let counter = 100;
-const nextId = (prefix: string): string => `${prefix}-${++counter}`;
+// Ids double as daemon session ids and end up in a shared file, so they must not repeat across machines.
+const nextId = (prefix: string): string => `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+
+const snapshotOf = (s: Pick<CanvasState, 'nodes' | 'order' | 'texts' | 'edges'>): Snapshot => ({
+    nodes: s.nodes,
+    order: s.order,
+    texts: s.texts,
+    edges: s.edges
+});
+
+/* Remembers the placement before a change; called by every action that changes it. */
+const remember = (s: CanvasState): Pick<CanvasState, 'past' | 'future'> => ({ past: [...s.past.slice(-(HISTORY_LIMIT - 1)), snapshotOf(s)], future: [] });
 
 export const useCanvas = create<CanvasState>((set, get) => ({
     camera: { x: 0, y: 0, zoom: 1 },
     viewport: { w: 0, h: 0 },
-    nodes: Object.fromEntries(demoNodes.map((n) => [n.id, n])),
-    order: demoNodes.map((n) => n.id),
-    texts: Object.fromEntries(demoTexts.map((t) => [t.id, t])),
-    edges: demoEdges,
+    nodes: {},
+    order: [],
+    texts: {},
+    edges: [],
     selection: [],
     mode: { kind: 'canvas' },
     editingTextId: null,
     locks: { pan: false, zoom: false, move: false, resize: false },
     resizing: null,
+    loading: false,
+    past: [],
+    future: [],
 
     setViewport(viewport) {
         set({ viewport });
@@ -263,8 +284,9 @@ export const useCanvas = create<CanvasState>((set, get) => ({
         set({ mode: { kind: 'canvas' } });
     },
 
-    moveSelected(dx, dy) {
-        const { nodes, texts, selection, locks } = get();
+    moveSelected(dx, dy, first = false) {
+        const s = get();
+        const { nodes, texts, selection, locks } = s;
         if (locks.move) {
             return;
         }
@@ -277,7 +299,7 @@ export const useCanvas = create<CanvasState>((set, get) => ({
                 nextTexts[id] = { ...nextTexts[id], x: nextTexts[id].x + dx, y: nextTexts[id].y + dy };
             }
         }
-        set({ nodes: nextNodes, texts: nextTexts });
+        set({ nodes: nextNodes, texts: nextTexts, ...(first ? remember(s) : {}) });
     },
     settleMove() {
         const { nodes, texts, selection } = get();
@@ -300,7 +322,8 @@ export const useCanvas = create<CanvasState>((set, get) => ({
         set({ nodes: { ...nodes, [id]: { ...nodes[id], ...rect } } });
     },
     setResizing(id) {
-        set({ resizing: id });
+        // The handle goes down before the first resize, so this is where the old size is remembered.
+        set((s) => (id !== null && s.resizing === null ? { resizing: id, ...remember(s) } : { resizing: id }));
     },
     setNodeAccent(id, accent) {
         set((s) => (s.nodes[id] ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], accent: accent ?? undefined } } } : {}));
@@ -314,8 +337,9 @@ export const useCanvas = create<CanvasState>((set, get) => ({
             return;
         }
         const copyId = nextId(source.kind);
-        const copy: CanvasNode = { ...source, id: copyId, x: source.x + 32, y: source.y + 32 };
-        set((s) => ({ nodes: { ...s.nodes, [copyId]: copy }, order: [...s.order, copyId], selection: [copyId], mode: { kind: 'canvas' } }));
+        // A copy is a new node: a fresh session, never the original's agent session.
+        const copy: CanvasNode = { ...source, id: copyId, x: source.x + 32, y: source.y + 32, resume: undefined };
+        set((s) => ({ nodes: { ...s.nodes, [copyId]: copy }, order: [...s.order, copyId], selection: [copyId], mode: { kind: 'canvas' }, ...remember(s) }));
     },
     bringToFront(id) {
         const { order } = get();
@@ -338,7 +362,7 @@ export const useCanvas = create<CanvasState>((set, get) => ({
             command: options.command,
             resume: options.resume
         };
-        set((s) => ({ nodes: { ...s.nodes, [id]: node }, order: [...s.order, id], selection: [id], mode: { kind: 'canvas' } }));
+        set((s) => ({ nodes: { ...s.nodes, [id]: node }, order: [...s.order, id], selection: [id], mode: { kind: 'canvas' }, ...remember(s) }));
         return id;
     },
     groupSelection() {
@@ -358,13 +382,13 @@ export const useCanvas = create<CanvasState>((set, get) => ({
             w: snapToGrid(bounds.w + GROUP_PADDING * 2),
             h: snapToGrid(bounds.h + GROUP_PADDING * 2 + GROUP_HEADER)
         };
-        set((s) => ({ nodes: { ...s.nodes, [id]: group }, order: [...s.order, id], selection: [id], mode: { kind: 'canvas' } }));
+        set((s) => ({ nodes: { ...s.nodes, [id]: group }, order: [...s.order, id], selection: [id], mode: { kind: 'canvas' }, ...remember(s) }));
         return id;
     },
     addText(at) {
         const id = nextId('text');
         const text: TextElement = { id, x: snapToGrid(at.x), y: snapToGrid(at.y), text: '', size: 18 };
-        set((s) => ({ texts: { ...s.texts, [id]: text }, selection: [id], editingTextId: id, mode: { kind: 'canvas' } }));
+        set((s) => ({ texts: { ...s.texts, [id]: text }, selection: [id], editingTextId: id, mode: { kind: 'canvas' }, ...remember(s) }));
         return id;
     },
     updateText(id, text) {
@@ -391,7 +415,8 @@ export const useCanvas = create<CanvasState>((set, get) => ({
             order: order.filter((id) => !gone.has(id)),
             edges: edges.filter((e) => !gone.has(e.from) && !gone.has(e.to)),
             selection: [],
-            mode: { kind: 'canvas' }
+            mode: { kind: 'canvas' },
+            ...remember(get())
         });
     },
     toggleLock(key) {
@@ -399,6 +424,53 @@ export const useCanvas = create<CanvasState>((set, get) => ({
     },
     setAllLocks(locked) {
         set({ locks: { pan: locked, zoom: locked, move: locked, resize: locked } });
+    },
+
+    loadDocument(document, local) {
+        const nodes = document ? Object.fromEntries(document.nodes.map((node) => [node.id, node])) : {};
+        const texts = document ? Object.fromEntries(document.texts.map((text) => [text.id, text])) : {};
+        set({
+            loading: true,
+            nodes,
+            order: document ? document.nodes.map((node) => node.id) : [],
+            texts,
+            edges: document?.edges ?? [],
+            selection: [],
+            mode: { kind: 'canvas' },
+            editingTextId: null,
+            resizing: null,
+            past: [],
+            future: [],
+            ...(local?.camera ? { camera: local.camera } : {})
+        });
+        set({ loading: false });
+        if (!local?.camera) {
+            get().fitAll();
+        }
+    },
+    exportContent() {
+        const { nodes, order, texts, edges } = get();
+        return {
+            nodes: order.map((id) => nodes[id]!).map(({ status: _status, ...node }) => node),
+            texts: Object.values(texts),
+            edges
+        };
+    },
+    undo() {
+        const s = get();
+        const previous = s.past[s.past.length - 1];
+        if (!previous) {
+            return;
+        }
+        set({ ...previous, past: s.past.slice(0, -1), future: [snapshotOf(s), ...s.future], selection: [], mode: { kind: 'canvas' } });
+    },
+    redo() {
+        const s = get();
+        const next = s.future[0];
+        if (!next) {
+            return;
+        }
+        set({ ...next, past: [...s.past, snapshotOf(s)], future: s.future.slice(1), selection: [], mode: { kind: 'canvas' } });
     }
 }));
 

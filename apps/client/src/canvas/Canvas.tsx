@@ -211,6 +211,13 @@ export function Canvas() {
             if (e.altKey && !mod && ADD_KEYS[e.code]) {
                 e.preventDefault();
                 addNodeAtCenter(ADD_KEYS[e.code]!);
+            } else if (mod && e.key === 'z') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    s.redo();
+                } else {
+                    s.undo();
+                }
             } else if (mod && e.key === 'g') {
                 e.preventDefault();
                 s.groupSelection();
@@ -400,12 +407,13 @@ export function Canvas() {
                 const dx = wanted.x - g.applied.x;
                 const dy = wanted.y - g.applied.y;
                 if (dx !== 0 || dy !== 0) {
-                    if (!g.moved) {
+                    const first = !g.moved;
+                    if (first) {
                         g.moved = true;
                         setActiveGesture('move');
                     }
                     g.applied = wanted;
-                    s.moveSelected(dx, dy);
+                    s.moveSelected(dx, dy, first);
                 }
                 break;
             }

@@ -11,6 +11,11 @@ export const startSessionLifecycle = (): (() => void) => {
             return;
         }
         const current = s.nodes;
+        // Another project swapping in is not the person closing nodes; those sessions keep running.
+        if (s.loading) {
+            previous = current;
+            return;
+        }
         for (const [id, node] of Object.entries(previous)) {
             if (id in current) {
                 continue;
