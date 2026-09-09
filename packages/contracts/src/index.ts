@@ -14,7 +14,7 @@ import {
 } from './chat.ts';
 import { FsBrowsePayloadSchema, FsBrowseResultSchema, FsRevealPayloadSchema, FsSearchPayloadSchema, FsSearchResultSchema } from './fs.ts';
 import { WorktreeAddPayloadSchema, WorktreeAddResultSchema, WorktreeListPayloadSchema, WorktreeListResultSchema, WorktreeRemovePayloadSchema } from './git.ts';
-import { AuthRevokePayloadSchema, AuthSessionsResultSchema, EndpointInfoSchema } from './auth.ts';
+import { AuthRevokePayloadSchema, AuthSessionsResultSchema, EndpointInfoSchema, PairingTokenResultSchema } from './auth.ts';
 import { ContextSetPayloadSchema } from './context.ts';
 import { ProviderListResultSchema } from './model.ts';
 import {
@@ -95,6 +95,7 @@ export const REQUEST_SCHEMAS = {
     'endpoint.info': { payload: EmptySchema, result: EndpointInfoSchema },
     'auth.sessions': { payload: EmptySchema, result: AuthSessionsResultSchema },
     'auth.revoke': { payload: AuthRevokePayloadSchema, result: EmptySchema },
+    'auth.pairingToken': { payload: EmptySchema, result: PairingTokenResultSchema },
     'chat.kill': { payload: ChatTargetPayloadSchema, result: EmptySchema },
     'chat.list': { payload: EmptySchema, result: ChatListResultSchema }
 } as const satisfies Record<string, { payload: z.ZodType; result: z.ZodType }>;

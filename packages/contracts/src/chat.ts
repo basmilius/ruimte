@@ -79,6 +79,17 @@ export const ChatAssistantItemSchema = z.object({
 export const ChatToolStateSchema = z.enum(['running', 'done', 'error']);
 export type ChatToolState = z.infer<typeof ChatToolStateSchema>;
 
+// What is known about a tool call while it runs; absent until the CLI reports something.
+export const ChatToolProgressSchema = z.object({
+    // Derived from the CLI's `elapsed_time_seconds`, so the client can count on from here; null when only the description came.
+    startedAt: z.number().nullable(),
+    // What the CLI says the call is doing (Claude Code's `task_started` frame), when it said so.
+    description: z.string().nullable(),
+    // Output seen so far, for a provider that streams it; the tool's `output` replaces it when the call settles.
+    output: z.string().nullable()
+});
+export type ChatToolProgress = z.infer<typeof ChatToolProgressSchema>;
+
 export const ChatToolItemSchema = z.object({
     ...base,
     kind: z.literal('tool'),
@@ -88,7 +99,8 @@ export const ChatToolItemSchema = z.object({
     output: z.string().nullable(),
     state: ChatToolStateSchema,
     // Set for a tool call made by a subagent, with the id of the Task call that spawned it.
-    parentToolUseId: z.string().nullable()
+    parentToolUseId: z.string().nullable(),
+    progress: ChatToolProgressSchema.optional()
 });
 
 export const ChatApprovalDecisionSchema = z.enum(['pending', 'allow', 'allow-always', 'deny', 'cancelled']);
@@ -169,6 +181,7 @@ export type ChatCompactionItem = z.infer<typeof ChatCompactionItemSchema>;
 
 // Every change to a thread is one of these; `item` is an upsert by id so a client can rebuild
 // its view from any prefix of the stream after `chat.attach` handed it the current state.
+// A `delta` appends to an assistant item's text or to a running tool item's partial output.
 export const ChatEventSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal('item'), item: ChatItemSchema }),
     z.object({ type: z.literal('delta'), itemId: z.string(), text: z.string() }),
