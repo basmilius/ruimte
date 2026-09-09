@@ -14,6 +14,7 @@ import {
     Plus,
     Save,
     Scan,
+    StickyNote,
     Terminal,
     Type,
     X
@@ -134,6 +135,9 @@ export function Dock() {
                                 </Menu.Item>
                                 <Menu.Item className="menu-item" onClick={() => add('group')}>
                                     <LayoutGrid size={14} /> Group <kbd>⌥G</kbd>
+                                </Menu.Item>
+                                <Menu.Item className="menu-item" onClick={() => add('note')}>
+                                    <StickyNote size={14} /> Note <kbd>⌥N</kbd>
                                 </Menu.Item>
                                 <Menu.Separator className="menu-separator" />
                                 <Menu.Item className="menu-item" onClick={() => useCanvas.getState().addText(centerWorld())}>

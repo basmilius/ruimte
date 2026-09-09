@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { CornerLeftUp, Folder, FolderCheck, FolderPlus, Globe, LayoutGrid, MessageSquare, Search, Terminal, Zap } from 'lucide-react';
+import { CornerLeftUp, Folder, FolderCheck, FolderPlus, Globe, LayoutGrid, MessageSquare, Search, StickyNote, Terminal, Zap } from 'lucide-react';
 import type { FsBrowseEntry } from '@ruimte/contracts';
 import { projectClient } from '@/project';
 import { appCommands, type Command } from '@/shell/commands';
@@ -15,7 +15,8 @@ const KIND_ICON: Record<NodeKind, React.ReactNode> = {
     terminal: <Terminal size={14} />,
     chat: <MessageSquare size={14} />,
     browser: <Globe size={14} />,
-    group: <LayoutGrid size={14} />
+    group: <LayoutGrid size={14} />,
+    note: <StickyNote size={14} />
 };
 
 // Typing a path turns the palette into a folder browser; anything else searches nodes and actions.

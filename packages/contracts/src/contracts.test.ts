@@ -160,3 +160,20 @@ describe('agent and chat', () => {
         expect(schema.safeParse({ chatId: 'c1', runtimeMode: 'yolo' }).success).toBe(false);
     });
 });
+
+describe('project', () => {
+    test('a note node carries its body and color, and an edge may connect any two ids without a label', () => {
+        const content = {
+            name: 'p',
+            color: 'violet',
+            nodes: [{ id: 'n1', kind: 'note', title: 'Plan', x: 0, y: 0, w: 320, h: 240, body: '# Plan', color: 'blue' }],
+            texts: [],
+            edges: [{ id: 'e1', from: 'n1', to: 'b1' }]
+        };
+        const { payload } = REQUEST_SCHEMAS['project.save'];
+        expect(payload.safeParse({ projectId: 'p1', baseRev: 0, content }).success).toBe(true);
+        expect(payload.safeParse({ projectId: 'p1', baseRev: 0, content: { ...content, nodes: [{ ...content.nodes[0], kind: 'sticky' }] } }).success).toBe(
+            false
+        );
+    });
+});
