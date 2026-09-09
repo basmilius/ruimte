@@ -45,6 +45,14 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   toggle, context ring with compact, slash menu, prompt recall with the arrow keys, drafts in
   localStorage. Pending approvals and questions dock on top of the composer, never in the
   transcript; only their outcome stays as a line.
+- **Phase 6c, Codex chat backend**: a chat node with `provider: 'codex'` runs `codex app-server`
+  (JSON-RPC over stdio, `apps/server/src/chat/codex-*.ts`). Approvals for commands and file
+  changes, both kinds of Codex question (blocking `request_user_input` and the async one that
+  arrives as an agent message), interrupt, compact, model and effort, the runtime modes as
+  approval policy plus sandbox, restart with `thread/resume`. The Codex catalog is
+  `apps/server/src/providers/codex-models.json`, `fake-codex.ts` stands in for the CLI in
+  tests. The Agent submenu opens Codex as a chat; "Open in chat" and "Open in terminal" work for
+  both CLIs.
 
 Issues #1 to #6 on GitHub describe each phase; #2, #3 and #4 are closed, #1 stays open for
 its remaining checklist, #5 and #6 are implemented but wait for a review before closing.
@@ -73,8 +81,17 @@ its remaining checklist, #5 and #6 are implemented but wait for a review before 
 - A model or mode change restarts the CLI process with `--resume` on the next send instead of
   using the control protocol's `set_model`; one path, and the resumed session keeps everything.
 - Fast mode is not offered: the installed CLI has no flag for it, only the `/fast` command.
-- The Codex chat backend (app-server protocol) is not built; only the Codex hooks are. The
-  Agent submenu opens Codex, Gemini and Copilot as terminals with the CLI typed in.
+- `CodexChatSession` is a second class with the same surface as `ChatSession` instead of one
+  session over a backend interface: the Claude session had three other changes landing on it at
+  the same time, so it was left alone. Folding both onto one `ChatBackend` (spawn, reduce,
+  answer) is the refactor to do once the parallel work is in.
+- Codex runtime modes: `supervised` = `untrusted` + `read-only`, `auto-accept-edits` =
+  `untrusted` + `workspace-write`, `auto` = `on-request` + `workspace-write`, `full-access` =
+  `never` + `danger-full-access`. Plan mode is a read-only sandbox plus an instruction in the
+  prompt, because app-server 0.153 reports the collaboration mode but never takes it. Not
+  mapped: cost (Codex reports none), the deny reason, slash commands, permission-profile
+  requests and MCP elicitations (refused with a JSON-RPC error). Gemini and Copilot still open
+  as terminals with the CLI typed in.
 - No attachments, `@file` mentions or `$skills` in the composer yet; those need an upload path
   and a file index on the daemon.
 
@@ -100,6 +117,17 @@ its remaining checklist, #5 and #6 are implemented but wait for a review before 
   in a worker entry is tree-shaken to nothing. The pool uses Vite's `?worker` import instead.
 - `bun --watch` restarts the daemon on every file change and the daemon installs hooks at
   startup, so editing the server while `bun dev` runs also rewrites the hook settings (idempotent).
+- The app-server frames have no `jsonrpc` field: `{ id, method, params }` out, `{ id, result }`
+  or `{ id, error }` back, `{ method, params }` for notifications, and the server's own requests
+  (approvals, questions) arrive with an `id` that starts at 0 for every process. Approval item
+  ids therefore carry the process generation (`<generation>-<rpcId>`); Codex item ids are
+  globally unique and are used as they are.
+- Codex asks questions two ways. The blocking one is a server request
+  (`item/tool/requestUserInput`); the async one is an `agentMessage` with `questions` and
+  `delivery: "async"`, after which Codex polls with `sleep` items until a `turn/steer` arrives.
+  Both are question items; the session answers the first by id and steers for the second.
+- The decisions the real binary takes differ from its `availableDecisions` hint: `decline` is
+  accepted even when the hint lists only `accept`, the amendment and `cancel`.
 
 ## Next
 
@@ -107,10 +135,11 @@ In the order that makes sense, each one an issue on GitHub:
 
 1. **#1 remaining checklist**: command palette (Cmd+K), group node, rename in the sidebar,
    settings dialog with only theme, font and accent, keyboard-only pass.
-2. **#5 and #6 follow-ups**: a Codex chat backend on the app-server protocol, attachments and
-   `@file` mentions in the composer, a "send Escape to the app" toggle, tool output streaming
-   (`tool_progress`), and per-turn checkpoints so the changed-files card can show real diffs
-   against the working tree instead of the edit's before and after.
+2. **#5 and #6 follow-ups**: attachments and `@file` mentions in the composer, a "send Escape
+   to the app" toggle, tool output streaming (`tool_progress`, and Codex's
+   `item/commandExecution/outputDelta`), per-turn checkpoints so the changed-files card can show
+   real diffs against the working tree instead of the edit's before and after, and the Codex
+   `fileChange` diffs (unified, not before/after) in that same card.
 3. **#7 Electron shell and browser node**, **#8 projects and persistence**, then #9 to #11.
 
 Known gaps to keep in mind: no WebGL context budget (many visible terminals may lose
