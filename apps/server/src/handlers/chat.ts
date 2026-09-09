@@ -36,7 +36,7 @@ export const registerChatHandlers = (dispatcher: Dispatcher, manager: ChatManage
 
     dispatcher.register('chat.send', (payload) =>
         translate(() => {
-            manager.send(payload.chatId, payload.text);
+            manager.send(payload.chatId, payload.text, { mentions: payload.mentions, attachments: payload.attachments });
             return {};
         })
     );

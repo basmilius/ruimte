@@ -12,7 +12,7 @@ import {
     ChatSendPayloadSchema,
     ChatTargetPayloadSchema
 } from './chat.ts';
-import { FsBrowsePayloadSchema, FsBrowseResultSchema, FsRevealPayloadSchema } from './fs.ts';
+import { FsBrowsePayloadSchema, FsBrowseResultSchema, FsRevealPayloadSchema, FsSearchPayloadSchema, FsSearchResultSchema } from './fs.ts';
 import { WorktreeAddPayloadSchema, WorktreeAddResultSchema, WorktreeListPayloadSchema, WorktreeListResultSchema, WorktreeRemovePayloadSchema } from './git.ts';
 import { AuthRevokePayloadSchema, AuthSessionsResultSchema, EndpointInfoSchema } from './auth.ts';
 import { ContextSetPayloadSchema } from './context.ts';
@@ -87,6 +87,7 @@ export const REQUEST_SCHEMAS = {
     'project.delete': { payload: ProjectDeletePayloadSchema, result: EmptySchema },
     'fs.browse': { payload: FsBrowsePayloadSchema, result: FsBrowseResultSchema },
     'fs.reveal': { payload: FsRevealPayloadSchema, result: EmptySchema },
+    'fs.search': { payload: FsSearchPayloadSchema, result: FsSearchResultSchema },
     'git.worktree-add': { payload: WorktreeAddPayloadSchema, result: WorktreeAddResultSchema },
     'git.worktree-list': { payload: WorktreeListPayloadSchema, result: WorktreeListResultSchema },
     'git.worktree-remove': { payload: WorktreeRemovePayloadSchema, result: EmptySchema },

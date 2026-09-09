@@ -1,6 +1,7 @@
 import { RequestError, type Dispatcher } from '../dispatcher.ts';
 import { BrowseError, browseDirectories } from '../fs/browse.ts';
 import { RevealError, revealInFileManager } from '../fs/reveal.ts';
+import { searchFiles } from '../fs/search.ts';
 
 const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
     Promise.resolve()
@@ -14,6 +15,8 @@ const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
 
 export const registerFsHandlers = (dispatcher: Dispatcher): void => {
     dispatcher.register('fs.browse', (payload) => translate(() => browseDirectories(payload.partialPath, payload.cwd)));
+
+    dispatcher.register('fs.search', (payload) => searchFiles(payload.cwd, payload.query, payload.limit));
 
     dispatcher.register('fs.reveal', (payload) =>
         translate(async () => {

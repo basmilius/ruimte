@@ -1,9 +1,10 @@
 import type { Subprocess } from 'bun';
-import type { ChatEvent, ChatInfo, ChatItem, ContextSource, InteractionMode, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type { ChatAttachment, ChatEvent, ChatInfo, ChatItem, ContextSource, InteractionMode, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 import { contextChangeNote } from '../context/context-note.ts';
 import type { ModelCatalog } from '../providers/catalog.ts';
 import { claudeArgs, promptPrefix } from '../providers/claude.ts';
 import { ClaudeStreamReducer, type ReducerOutput } from './claude-stream.ts';
+import { buildUserMessage } from './input.ts';
 import { ChatThread } from './thread.ts';
 
 // After stdin closed, a CLI that is still around is not going to say more.
@@ -27,6 +28,11 @@ export interface ChatSessionOptions {
 // What a linked agent is told once, so it knows the CLI exists without being nagged every turn.
 export const CONTEXT_PROMPT =
     'The person linked context to this chat on their canvas. Run `ruimte-context` to list it and `ruimte-context read <id>` to read one item, whenever it could help.';
+
+export interface ChatSendExtras {
+    mentions?: string[];
+    attachments?: ChatAttachment[];
+}
 
 type Pending =
     { type: 'approval'; toolUseId: string | null; input: unknown; suggestions: unknown[] } | { type: 'question'; toolUseId: string | null; input: unknown };
@@ -96,22 +102,25 @@ export class ChatSession {
         return this.thread.info;
     }
 
-    send(text: string): void {
+    send(text: string, extras: ChatSendExtras = {}): void {
         const turnId = newId('turn');
         const now = Date.now();
         const note = this.contextNote(text);
+        const mentions = extras.mentions?.length ? extras.mentions : undefined;
+        const attachments = extras.attachments?.length ? extras.attachments : undefined;
         this.apply({
             events: [
                 this.thread.upsert({ id: turnId, kind: 'turn', createdAt: now, turnId, state: 'running', endedAt: null, costUsd: 0 }),
                 ...(note === null ? [] : [this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'info', text: note })]),
-                this.thread.upsert({ id: newId('user'), kind: 'user', createdAt: now, turnId, text }),
+                this.thread.upsert({ id: newId('user'), kind: 'user', createdAt: now, turnId, text, mentions, attachments }),
                 this.thread.patchInfo({ status: 'running', activeTurnId: turnId })
             ],
             actions: []
         });
         this.ensureProcess();
-        const prompt = `${promptPrefix(this.thread.info.selection)}${note === null ? '' : `${note}\n\n`}${text}`;
-        this.write({ type: 'user', message: { role: 'user', content: [{ type: 'text', text: prompt }] }, parent_tool_use_id: null, session_id: '' });
+        // The prefix is what the CLI must see first (ultrathink), then the link note, then what was typed.
+        const prefix = `${promptPrefix(this.thread.info.selection)}${note === null ? '' : `${note}\n\n`}`;
+        this.write(buildUserMessage({ text, attachments, prefix }));
     }
 
     /* A link made or removed between turns; the agent hears about it once, in front of the next prompt. */

@@ -3,7 +3,7 @@ import { homedir } from 'node:os';
 import type { ChatConfigurePayload, ChatCreatePayload, ChatEvent, ChatInfo, ChatItem, ContextSource } from '@ruimte/contracts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionSink } from '../sessions/manager.ts';
-import { ChatSession } from './chat-session.ts';
+import { ChatSession, type ChatSendExtras } from './chat-session.ts';
 import type { ChatStore } from './chat-store.ts';
 
 export type ChatErrorCode = 'chat-not-found' | 'chat-busy' | 'request-not-found' | 'provider-unsupported';
@@ -152,12 +152,12 @@ export class ChatManager {
         }
     }
 
-    send(chatId: string, text: string): void {
+    send(chatId: string, text: string, extras: ChatSendExtras = {}): void {
         const session = this.require(chatId);
         if (session.info.activeTurnId) {
             throw new ChatError('chat-busy', `Chat ${chatId} is still working on the previous message`);
         }
-        session.send(text);
+        session.send(text, extras);
     }
 
     compact(chatId: string): void {

@@ -276,6 +276,18 @@ body {
 .chat-composer:focus-within { border-color: var(--accent); }
 .chat-dock { border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--status-needs-you) 6%, transparent); }
 
+.chat-composer-drop { border-color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 60%, var(--surface-raised)); }
+
+/* An `@file` mention drawn as a chip inside running text; no horizontal padding so the chip layer keeps the textarea's wrapping. */
+.mention-chip {
+    border-radius: 4px;
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 1px var(--accent-soft);
+    color: var(--accent);
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+}
+
 /* A folded user prompt fades out at the bottom instead of cutting a line in half. */
 .chat-fold {
     max-height: 9.5em;

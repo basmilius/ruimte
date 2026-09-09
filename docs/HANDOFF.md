@@ -44,7 +44,9 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   with shiki, and a floating glass composer: model picker, option picker, mode picker, plan
   toggle, context ring with compact, slash menu, prompt recall with the arrow keys, drafts in
   localStorage. Pending approvals and questions dock on top of the composer, never in the
-  transcript; only their outcome stays as a line.
+  transcript; only their outcome stays as a line. `@` opens a file picker over the chat's
+  folder (chips in the text and in the timeline), and images pasted or dropped into the
+  composer go along as attachments; drafts keep both.
 
 - **Phase 1, remaining checklist**: command palette on Cmd+K (jump to a node, every app
   action), Option+T/C/B/G add nodes, Cmd+G wraps the selection in a group, Cmd+, opens
@@ -169,8 +171,16 @@ started; it fits after #10, when a remote daemon makes it worth its weight.
 - Fast mode is not offered: the installed CLI has no flag for it, only the `/fast` command.
 - The Codex chat backend (app-server protocol) is not built; only the Codex hooks are. The
   Agent submenu opens Codex, Gemini and Copilot as terminals with the CLI typed in.
-- No attachments, `@file` mentions or `$skills` in the composer yet; those need an upload path
-  and a file index on the daemon.
+- `@file` mentions are plain `@path` text in the prompt, because that is what the Claude CLI
+  expands itself (checked with `claude -p` 2.1.266); the chosen paths travel next to the text
+  as `mentions` only so the timeline can draw them as chips. The picker searches through
+  `fs.search`: `git ls-files` (tracked plus untracked, minus .gitignore) inside a repo, a
+  bounded walk elsewhere, ranked by a small fuzzy score on the daemon.
+- Image attachments go over the wire as base64 in `chat.send` (5 MB and 8 per message, the
+  API's own limits) and become `image` content blocks in the CLI's stream-json `user` frame,
+  the Anthropic API shape passed through as is. The user item keeps the full data, so the
+  thread file and `chat.attach` grow with every image; move them to files under the app data
+  dir when that starts to hurt. No `$skills` in the composer yet.
 
 ## Gotchas already paid for
 
@@ -230,10 +240,10 @@ started; it fits after #10, when a remote daemon makes it worth its weight.
 
 In the order that makes sense, each one an issue on GitHub:
 
-1. **#5 and #6 follow-ups**: a Codex chat backend on the app-server protocol, attachments and
-   `@file` mentions in the composer, tool output streaming (`tool_progress`), and per-turn
-   checkpoints so the changed-files card can show real diffs against the working tree instead
-   of the edit's before and after. The "send Escape to the app" toggle is done.
+1. **#5 and #6 follow-ups**: a Codex chat backend on the app-server protocol, tool output
+   streaming (`tool_progress`), and per-turn checkpoints so the changed-files card can show
+   real diffs against the working tree instead of the edit's before and after. Mentions,
+   attachments and the "send Escape to the app" toggle are done.
 2. **#7 follow-ups**: a webview keeps the canvas's z-order only by being above everything, so
    a node dragged over a browser node slides under its page; the traffic-light inset is fixed,
    not measured; no Windows or Linux run yet.

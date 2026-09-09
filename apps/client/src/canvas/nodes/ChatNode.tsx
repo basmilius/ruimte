@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { RotateCw } from 'lucide-react';
-import { chatClient } from '@/chat';
+import { chatClient, type ChatSendExtras } from '@/chat';
 import { readChatPreferences } from '@/chat/preferences';
 import { Composer } from '@/chat/ui/Composer';
 import { Timeline } from '@/chat/ui/Timeline';
@@ -45,13 +45,13 @@ export function ChatNode({ id, focused }: { id: string; focused: boolean }) {
         };
     }, [id, generation]);
 
-    const send = (text: string): void => {
+    const send = (text: string, extras: ChatSendExtras): void => {
         const node = useCanvas.getState().nodes[id];
-        if (node && node.title === DEFAULT_TITLE) {
-            const title = text.replace(/\s+/g, ' ').trim();
+        const title = text.replace(/\s+/g, ' ').trim();
+        if (node && node.title === DEFAULT_TITLE && title) {
             useCanvas.getState().renameNode(id, title.length > TITLE_LIMIT ? `${title.slice(0, TITLE_LIMIT - 1)}…` : title);
         }
-        chatClient.send(id, text).catch((e: unknown) => setFailure(e instanceof Error ? e.message : 'The message could not be sent'));
+        chatClient.send(id, text, extras).catch((e: unknown) => setFailure(e instanceof Error ? e.message : 'The message could not be sent'));
     };
 
     return (

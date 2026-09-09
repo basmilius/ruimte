@@ -90,6 +90,8 @@ A chat node is `claude -p --input-format stream-json --output-format stream-json
 - `chat.configure` changes the selection or a mode. A running process keeps its flags until the turn ends; the next send starts a fresh process with `--resume` and the new flags.
 - `chat.cancel` sends an interrupt and the turn ends as `aborted`. `chat.compact` sends `/compact`.
 - The thread is written to `chats/<id>.json` after every turn; a chat whose process ended (or a daemon that restarted) starts the CLI again with `--resume` on the next send.
+- `chat.send` takes optional `attachments` (base64 PNG, JPEG, GIF or WebP, at most 5 MB each and 8 per message) and `mentions` (paths the person picked with `@`). Attachments become `image` content blocks next to the text in the CLI's `user` frame; mentions stay `@path` in the text, which the CLI expands itself, and are stored on the user item so a client can draw them as chips.
+- `fs.search` answers the composer's `@` picker: a fuzzy search over the files under a folder, through `git ls-files` (tracked and untracked, minus `.gitignore`) inside a repo and a bounded walk (20k files, depth 12, no dot folders or `node_modules`) elsewhere. The file list is cached for ten seconds per folder.
 
 ## Remote clients and pairing
 
