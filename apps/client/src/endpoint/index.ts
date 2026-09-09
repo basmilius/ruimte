@@ -1,7 +1,7 @@
-import type { EndpointInfo } from '@ruimte/contracts';
+import type { AuthSession, EndpointInfo } from '@ruimte/contracts';
 import { projectClient } from '@/project';
 import { useCanvas } from '@/state/canvas';
-import { activeEndpoint, parsePairingUrl, socketUrlFor, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { LOCAL_ENDPOINT_ID, activeEndpoint, parsePairingUrl, socketUrlFor, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProject } from '@/state/project';
 import { transport } from '@/transport';
 
@@ -46,6 +46,23 @@ export const activateEndpoint = async (id: string): Promise<void> => {
     useProject.getState().setProjects([]);
     useEndpoints.getState().setActive(id);
     transport.switchTo?.(socketUrlFor(activeEndpoint()));
+};
+
+/* The clients paired with the daemon this client talks to right now. */
+export const listPairedClients = async (): Promise<AuthSession[]> => (await transport.request('auth.sessions', {})).sessions;
+
+/* A fresh one-time pairing link from the active daemon; it only answers a client on its own machine. */
+export const requestPairingUrl = async (): Promise<string> => (await transport.request('auth.pairingToken', {})).url;
+
+/* Takes a paired client's access away. Revoking this client's own session forgets the endpoint and goes home to the loopback daemon. */
+export const revokePairedClient = async (session: AuthSession): Promise<void> => {
+    await transport.request('auth.revoke', { id: session.id });
+    if (!session.current) {
+        return;
+    }
+    const revoked = activeEndpoint();
+    await activateEndpoint(LOCAL_ENDPOINT_ID);
+    useEndpoints.getState().remove(revoked.id);
 };
 
 /* What the daemon lists this client as: the browser on this machine. */

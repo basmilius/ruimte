@@ -73,7 +73,18 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerSessionHandlers(dispatcher, manager);
     registerChatHandlers(dispatcher, chats, providers, context);
     registerProjectHandlers(dispatcher, projects);
-    registerAuthHandlers(dispatcher, auth, { label: config.label, version: VERSION });
+    registerAuthHandlers(dispatcher, auth, {
+        label: config.label,
+        version: VERSION,
+        pairingUrl: () => pairingUrl(config.host, server.port ?? config.port, auth.issuePairingToken()),
+        disconnect: (sessionId) => {
+            for (const ws of connections.keys()) {
+                if (ws.data.sessionId === sessionId) {
+                    ws.close(4001, 'Access revoked');
+                }
+            }
+        }
+    });
     registerFsHandlers(dispatcher);
     registerGitHandlers(dispatcher, new Worktrees(config.home));
 

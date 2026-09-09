@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { ChevronRight, FileDiff, X } from 'lucide-react';
 import type { ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
-import { fileChanges, toolSummary } from '@/chat/logic/tools';
+import { fileChanges, formatElapsed, liveOutput, toolStartedAt, toolSummary } from '@/chat/logic/tools';
 import { toolIcon } from '@/chat/ui/icons';
 
 // The diff renderer carries shiki; it only loads once a thread shows a file change.
@@ -20,6 +20,7 @@ function ToggleLine({
     onToggle,
     failed,
     live,
+    trailing,
     className
 }: {
     icon: React.ReactNode;
@@ -29,6 +30,7 @@ function ToggleLine({
     onToggle(): void;
     failed?: boolean;
     live?: boolean;
+    trailing?: React.ReactNode;
     className?: string;
 }) {
     return (
@@ -44,6 +46,7 @@ function ToggleLine({
             <span className={clsx('shrink-0', live && 'chat-live-text')}>{label}</span>
             {detail && <span className="min-w-0 truncate font-mono text-text-faint">{detail}</span>}
             <span className="grow" />
+            {trailing}
             {failed && <X size={12} className="shrink-0" />}
             <ChevronRight size={12} className={clsx('shrink-0 text-text-faint transition-transform', open && 'rotate-90')} />
         </button>
@@ -97,19 +100,43 @@ export function WorkRow({ tool, nested }: { tool: ChatToolItem; nested?: boolean
     );
 }
 
+/* "running for 12s" next to a live call; like WorkingRow, the timer writes the text itself. */
+function RunningFor({ startedAt }: { startedAt: number }) {
+    const ref = useRef<HTMLSpanElement>(null);
+    useEffect(() => {
+        const tick = (): void => {
+            if (ref.current) {
+                ref.current.textContent = `running for ${formatElapsed(Date.now() - startedAt)}`;
+            }
+        };
+        tick();
+        const timer = window.setInterval(tick, 1000);
+        return () => window.clearInterval(timer);
+    }, [startedAt]);
+    return <span ref={ref} className="shrink-0 text-[11.5px] text-text-faint tabular-nums" />;
+}
+
+/* A call still running: its timer on the line, and for a provider that streams output, the last lines under it. */
 export function WorkLiveRow({ tool }: { tool: ChatToolItem }) {
     const [open, setOpen] = useState(false);
+    const tail = liveOutput(tool);
     return (
         <div className="pb-0.5">
             <ToggleLine
                 icon={toolIcon(tool.name)}
                 label={tool.name}
-                detail={toolSummary(tool.name, tool.input)}
+                detail={toolSummary(tool.name, tool.input) || tool.progress?.description || ''}
                 open={open}
                 onToggle={() => setOpen((o) => !o)}
+                trailing={<RunningFor startedAt={toolStartedAt(tool)} />}
                 live
             />
             {open && <ToolBody tool={tool} />}
+            {tail !== null && !open && (
+                <pre className="mb-1 ml-8 max-h-48 overflow-auto rounded-md border border-border bg-surface-raised px-3 py-2 font-mono text-[11.5px] leading-[1.6] whitespace-pre-wrap text-term-fg select-text">
+                    {tail}
+                </pre>
+            )}
         </div>
     );
 }

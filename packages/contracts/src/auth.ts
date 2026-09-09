@@ -48,3 +48,9 @@ export const AuthRevokePayloadSchema = z.object({
     id: z.string().min(1)
 });
 export type AuthRevokePayload = z.infer<typeof AuthRevokePayloadSchema>;
+
+// `auth.pairingToken`: a fresh pairing URL, minted for the client on the daemon's own machine.
+export const PairingTokenResultSchema = z.object({
+    url: z.string().min(1)
+});
+export type PairingTokenResult = z.infer<typeof PairingTokenResultSchema>;
