@@ -46,8 +46,18 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   localStorage. Pending approvals and questions dock on top of the composer, never in the
   transcript; only their outcome stays as a line.
 
-Issues #1 to #6 on GitHub describe each phase; #2, #3 and #4 are closed, #1 stays open for
-its remaining checklist, #5 and #6 are implemented but wait for a review before closing.
+- **Phase 1, remaining checklist**: command palette on Cmd+K (jump to a node, every app
+  action), Option+T/C/B/G add nodes, Cmd+G wraps the selection in a group, Cmd+, opens
+  settings. A group node is a dashed frame under its nodes that drags whatever sits inside it
+  (`carriedByGroups` in `state/canvas.ts`), groups always paint below other nodes and stay out
+  of the sidebar. Rename by double-click in the node header and in the sidebar. Settings
+  dialog with theme, terminal font and accent only (`state/settings.ts`, tokens set on the
+  root). Node frames are focusable, Enter steps into one, every control has a visible
+  keyboard focus ring. Text elements join box selection with Shift. No minimap: the sidebar
+  and the palette cover jumping around; decide again once real projects have many nodes.
+
+Issues #1 to #6 on GitHub describe each phase; #2, #3 and #4 are closed, #1, #5 and #6 are
+implemented but wait for a review before closing.
 
 ## Decisions that are not in the code
 
@@ -105,13 +115,12 @@ its remaining checklist, #5 and #6 are implemented but wait for a review before 
 
 In the order that makes sense, each one an issue on GitHub:
 
-1. **#1 remaining checklist**: command palette (Cmd+K), group node, rename in the sidebar,
-   settings dialog with only theme, font and accent, keyboard-only pass.
-2. **#5 and #6 follow-ups**: a Codex chat backend on the app-server protocol, attachments and
+1. **#5 and #6 follow-ups**: a Codex chat backend on the app-server protocol, attachments and
    `@file` mentions in the composer, a "send Escape to the app" toggle, tool output streaming
    (`tool_progress`), and per-turn checkpoints so the changed-files card can show real diffs
    against the working tree instead of the edit's before and after.
-3. **#7 Electron shell and browser node**, **#8 projects and persistence**, then #9 to #11.
+2. **#8 projects and persistence** (the daemon side is testable without a window), then
+   **#7 Electron shell and browser node**, then #9 to #11.
 
 Known gaps to keep in mind: no WebGL context budget (many visible terminals may lose
 contexts), no backpressure for a slow client, the 30-node performance target is unmeasured.

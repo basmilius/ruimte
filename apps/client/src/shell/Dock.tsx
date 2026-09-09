@@ -1,5 +1,22 @@
 import { Menu } from '@base-ui-components/react/menu';
-import { Bot, Check, ChevronRight, Globe, Lock, LockOpen, Maximize, MessageSquare, Minus, Moon, Plus, Scan, Sun, Terminal, Type } from 'lucide-react';
+import {
+    Bot,
+    Check,
+    ChevronRight,
+    Globe,
+    LayoutGrid,
+    Lock,
+    LockOpen,
+    Maximize,
+    MessageSquare,
+    Minus,
+    Moon,
+    Plus,
+    Scan,
+    Sun,
+    Terminal,
+    Type
+} from 'lucide-react';
 import clsx from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
 import { activeZoomPreset, toWorld, ZOOM_PRESETS } from '@/canvas/math';
@@ -91,10 +108,10 @@ export function Dock() {
                         <Menu.Positioner className="z-50" side="top" sideOffset={10} align="start">
                             <Menu.Popup className="menu-popup">
                                 <Menu.Item className="menu-item" onClick={() => add('terminal')}>
-                                    <Terminal size={14} /> Terminal
+                                    <Terminal size={14} /> Terminal <kbd>⌥T</kbd>
                                 </Menu.Item>
                                 <Menu.Item className="menu-item" onClick={() => add('chat')}>
-                                    <MessageSquare size={14} /> Chat
+                                    <MessageSquare size={14} /> Chat <kbd>⌥C</kbd>
                                 </Menu.Item>
                                 <Submenu label="Agent" icon={<Bot size={14} />}>
                                     {AGENTS.map((agent) => (
@@ -110,7 +127,10 @@ export function Dock() {
                                     ))}
                                 </Submenu>
                                 <Menu.Item className="menu-item" onClick={() => add('browser')}>
-                                    <Globe size={14} /> Browser
+                                    <Globe size={14} /> Browser <kbd>⌥B</kbd>
+                                </Menu.Item>
+                                <Menu.Item className="menu-item" onClick={() => add('group')}>
+                                    <LayoutGrid size={14} /> Group <kbd>⌥G</kbd>
                                 </Menu.Item>
                                 <Menu.Separator className="menu-separator" />
                                 <Menu.Item className="menu-item" onClick={() => useCanvas.getState().addText(centerWorld())}>
@@ -222,9 +242,11 @@ export function Dock() {
                         </Menu.Portal>
                     </Menu.Root>
 
-                    <button className="icon-btn" title="Toggle theme" onClick={() => useTheme.getState().toggle()}>
-                        {resolved === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-                    </button>
+                    <Tooltip label="Toggle theme">
+                        <button className="icon-btn" onClick={() => useTheme.getState().toggle()}>
+                            {resolved === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+                        </button>
+                    </Tooltip>
                 </div>
             </div>
         </div>

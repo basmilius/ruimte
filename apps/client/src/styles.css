@@ -214,6 +214,37 @@ body {
 
 .node-focused { outline: 2px solid var(--accent); outline-offset: 0; }
 .node-selected { outline: 2px solid var(--selection); outline-offset: 0; }
+[data-node-id]:focus-visible:not(.node-focused):not(.node-selected) { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* A group is a frame under its nodes: a faint tint of its accent, never a surface of its own. */
+.node-group {
+    --group-accent: var(--text-faint);
+    background: color-mix(in srgb, var(--group-accent) 7%, transparent);
+    border-style: dashed;
+}
+.node-group:hover { background: color-mix(in srgb, var(--group-accent) 10%, transparent); }
+
+/* Keyboard focus is visible on every control; pointer focus stays quiet. */
+.icon-btn:focus-visible, .menu-item:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.menu-item:focus-visible { outline-offset: -2px; }
+
+.dialog-backdrop { position: fixed; inset: 0; z-index: 80; background: color-mix(in srgb, var(--bg) 55%, transparent); }
+.dialog-backdrop[data-starting-style], .dialog-backdrop[data-ending-style] { opacity: 0; }
+.dialog-popup {
+    position: fixed;
+    left: 50%;
+    z-index: 90;
+    transform: translateX(-50%);
+    max-width: calc(100vw - 32px);
+    border-radius: 14px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-float);
+    outline: none;
+    overflow: hidden;
+    transition: opacity 120ms ease, scale 120ms ease;
+}
+.dialog-popup[data-starting-style], .dialog-popup[data-ending-style] { opacity: 0; scale: 0.97; }
 
 /* xterm paints into a fixed-size box; the box fills the node body and the body sets the size. */
 .term-host { position: absolute; inset: 0; padding: 6px 0 0 8px; }

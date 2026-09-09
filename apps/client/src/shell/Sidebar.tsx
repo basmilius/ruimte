@@ -1,10 +1,13 @@
-import { ChevronDown, Globe, MessageSquare, Plus, Search, Settings, Terminal } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronDown, Globe, LayoutGrid, MessageSquare, Plus, Search, Settings, Terminal } from 'lucide-react';
 import clsx from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
 import { demoProjects } from '@/data/demo';
 import { useCanvas, type AgentStatus, type CanvasNode } from '@/state/canvas';
 import { useChats, useNodeStatus } from '@/state/chats';
 import { nodeStatus, useSessions } from '@/state/sessions';
+import { useUi } from '@/state/ui';
+import { addNodeAtCenter } from '@/shell/commands';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { Tooltip } from '@/ui/Tooltip';
 import { ConnectionDot } from '@/shell/ConnectionDot';
@@ -12,7 +15,8 @@ import { ConnectionDot } from '@/shell/ConnectionDot';
 const KIND_ICON = {
     terminal: Terminal,
     chat: MessageSquare,
-    browser: Globe
+    browser: Globe,
+    group: LayoutGrid
 } as const;
 
 const GROUPS: { status: AgentStatus | 'none'; label: string }[] = [
@@ -25,7 +29,38 @@ const GROUPS: { status: AgentStatus | 'none'; label: string }[] = [
 function SessionRow({ node }: { node: CanvasNode }) {
     const selected = useCanvas((s) => s.selection.includes(node.id));
     const status = useNodeStatus(node);
+    const [renaming, setRenaming] = useState(false);
     const Icon = KIND_ICON[node.kind];
+    if (renaming) {
+        return (
+            <div className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-[13px]">
+                <Icon size={14} strokeWidth={1.75} className="shrink-0 text-text-muted" />
+                <input
+                    autoFocus
+                    defaultValue={node.title}
+                    className="min-w-0 grow rounded bg-surface-sunken px-1.5 py-0.5 text-[13px] text-text outline-none ring-1 ring-accent"
+                    onFocus={(e) => e.currentTarget.select()}
+                    onBlur={(e) => {
+                        const next = e.currentTarget.value.trim();
+                        if (next) {
+                            useCanvas.getState().renameNode(node.id, next);
+                        }
+                        setRenaming(false);
+                    }}
+                    onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === 'Enter') {
+                            e.currentTarget.blur();
+                        }
+                        if (e.key === 'Escape') {
+                            e.currentTarget.value = node.title;
+                            e.currentTarget.blur();
+                        }
+                    }}
+                />
+            </div>
+        );
+    }
     return (
         <button
             className={clsx(
@@ -33,6 +68,7 @@ function SessionRow({ node }: { node: CanvasNode }) {
                 selected ? 'bg-accent-soft text-text' : 'text-text-muted hover:bg-surface-sunken hover:text-text'
             )}
             onClick={() => useCanvas.getState().goToNode(node.id)}
+            onDoubleClick={() => setRenaming(true)}
         >
             <Icon size={14} strokeWidth={1.75} className="shrink-0" />
             <span className="truncate">{node.title}</span>
@@ -43,7 +79,8 @@ function SessionRow({ node }: { node: CanvasNode }) {
 }
 
 export function Sidebar() {
-    const nodes = useCanvas(useShallow((s) => s.order.map((id) => s.nodes[id])));
+    // Groups are frames, not sessions; the list is about what runs.
+    const nodes = useCanvas(useShallow((s) => s.order.map((id) => s.nodes[id]).filter((node) => node.kind !== 'group')));
     const sessions = useSessions((s) => s.byNodeId);
     const chats = useChats((s) => s.byNodeId);
     const active = demoProjects.find((p) => p.active) ?? demoProjects[0];
@@ -54,8 +91,8 @@ export function Sidebar() {
                 <span className="grid h-6 w-6 place-items-center rounded-md bg-accent text-[12px] font-semibold text-accent-text">R</span>
                 <span className="text-[14px] font-semibold tracking-tight text-text">Ruimte</span>
                 <span className="grow" />
-                <Tooltip label="Search">
-                    <button className="icon-btn h-7 w-7">
+                <Tooltip label="Search" kbd="⌘K">
+                    <button className="icon-btn h-7 w-7" onClick={() => useUi.getState().setPaletteOpen(true)}>
                         <Search size={15} />
                     </button>
                 </Tooltip>
@@ -95,12 +132,15 @@ export function Sidebar() {
             </div>
 
             <div className="flex items-center gap-1 border-t border-border p-2">
-                <button className="flex h-8 grow items-center gap-2 rounded-md px-2 text-[13px] text-text-muted hover:bg-surface-sunken hover:text-text">
+                <button
+                    className="flex h-8 grow items-center gap-2 rounded-md px-2 text-[13px] text-text-muted hover:bg-surface-sunken hover:text-text"
+                    onClick={() => addNodeAtCenter('terminal')}
+                >
                     <Plus size={15} /> New session
                 </button>
                 <ConnectionDot />
-                <Tooltip label="Settings">
-                    <button className="icon-btn">
+                <Tooltip label="Settings" kbd="⌘,">
+                    <button className="icon-btn" onClick={() => useUi.getState().setSettingsOpen(true)}>
                         <Settings size={15} />
                     </button>
                 </Tooltip>
