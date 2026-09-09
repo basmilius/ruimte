@@ -416,6 +416,10 @@ export const useCanvas = create<CanvasState>((set, get) => ({
     addNode(kind, at, options = {}) {
         const id = nextId(kind);
         const size = NODE_SIZE[kind];
+        // Made inside a group that is bound to a worktree, a node starts in that checkout.
+        const host = Object.values(get().nodes)
+            .filter((node) => node.kind === 'group' && node.worktree && contains(node, at))
+            .sort((a, b) => a.w * a.h - b.w * b.h)[0];
         const node: CanvasNode = {
             id,
             kind,
@@ -423,7 +427,7 @@ export const useCanvas = create<CanvasState>((set, get) => ({
             x: snapToGrid(at.x - size.w / 2),
             y: snapToGrid(at.y - size.h / 2),
             ...size,
-            cwd: options.cwd,
+            cwd: options.cwd ?? host?.worktree?.path,
             command: options.command,
             resume: options.resume
         };

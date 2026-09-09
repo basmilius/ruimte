@@ -6,6 +6,7 @@ import {
     ChevronsUpDown,
     Copy,
     ExternalLink,
+    GitBranch,
     Maximize2,
     MessageSquare,
     Palette,
@@ -19,6 +20,7 @@ import { useChats } from '@/state/chats';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useSessions } from '@/state/sessions';
+import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
 
 /* The context menu of one node, the same from its frame and from its row in the sidebar. */
@@ -52,7 +54,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
         }
     };
     // The folder the node works in: its own, or the project's when it has none.
-    const workingFolder = node.kind === 'terminal' || node.kind === 'chat' ? (node.cwd ?? chatCwd ?? projectFolder) : null;
+    const workingFolder = node.kind === 'terminal' || node.kind === 'chat' ? (node.cwd ?? chatCwd ?? projectFolder) : (node.worktree?.path ?? null);
 
     return (
         <ContextMenu.Portal>
@@ -68,9 +70,21 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                         <Maximize2 size={14} /> Zoom to node
                     </ContextMenu.Item>
                     {node.kind === 'group' && (
-                        <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().toggleGroupCollapse(id)}>
-                            {node.collapsed ? <ChevronsUpDown size={14} /> : <ChevronsDownUp size={14} />} {node.collapsed ? 'Expand' : 'Collapse'}
-                        </ContextMenu.Item>
+                        <>
+                            <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().toggleGroupCollapse(id)}>
+                                {node.collapsed ? <ChevronsUpDown size={14} /> : <ChevronsDownUp size={14} />} {node.collapsed ? 'Expand' : 'Collapse'}
+                            </ContextMenu.Item>
+                            {node.worktree ? (
+                                <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().setGroupWorktree(id, null)}>
+                                    <GitBranch size={14} /> Unbind worktree
+                                    <span className="ml-auto text-[11px] text-text-faint">Checkout stays</span>
+                                </ContextMenu.Item>
+                            ) : (
+                                <ContextMenu.Item className="menu-item" onClick={() => useUi.getState().setWorktreeDialogFor(id)}>
+                                    <GitBranch size={14} /> Bind to worktree
+                                </ContextMenu.Item>
+                            )}
+                        </>
                     )}
                     {node.kind === 'terminal' && agent?.kind === 'claude' && (
                         <ContextMenu.Item className="menu-item" onClick={openInChat}>
