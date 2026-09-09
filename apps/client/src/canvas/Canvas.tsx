@@ -15,6 +15,7 @@ type Gesture =
     | { kind: 'pan'; last: Point }
     | { kind: 'box'; origin: Point; current: Point; additive: boolean }
     | { kind: 'move'; start: Point; applied: Point; moved: boolean }
+    | { kind: 'link'; from: string }
     | {
           kind: 'resize';
           nodeId: string;
@@ -296,6 +297,15 @@ export function Canvas() {
             return;
         }
 
+        const port = target.closest<HTMLElement>('[data-port]')?.dataset.port;
+        if (port) {
+            e.preventDefault();
+            e.stopPropagation();
+            s.setLinkDraft({ from: port, to: toWorld(s.camera, point) });
+            startGesture({ kind: 'link', from: port }, e);
+            return;
+        }
+
         const resizeEdge = target.closest<HTMLElement>('[data-resize]')?.dataset.resize;
         if (resizeEdge && nodeId && !s.locks.resize) {
             e.preventDefault();
@@ -438,6 +448,9 @@ export function Canvas() {
             case 'resize':
                 s.resizeNode(g.nodeId, resizedRect(g.rect, g.edge, (point.x - g.start.x) / s.camera.zoom, (point.y - g.start.y) / s.camera.zoom));
                 break;
+            case 'link':
+                s.setLinkDraft({ from: g.from, to: toWorld(s.camera, point) });
+                break;
         }
     };
 
@@ -479,6 +492,14 @@ export function Canvas() {
             s.settleMove();
         } else if (g.kind === 'resize') {
             s.setResizing(null);
+        } else if (g.kind === 'link') {
+            s.setLinkDraft(null);
+            // The pointer is captured, so the target is whatever the canvas shows under it.
+            const under = document.elementFromPoint(e.clientX, e.clientY);
+            const targetId = under?.closest<HTMLElement>('[data-node-id]')?.dataset.nodeId;
+            if (targetId) {
+                s.addEdge(g.from, targetId);
+            }
         }
     };
 

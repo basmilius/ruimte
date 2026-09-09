@@ -42,6 +42,8 @@ export interface TerminalTestHooks {
     /* What a browser node's page reports, for the desktop smoke test. */
     browserState(nodeId: string): unknown;
     browserNavigate(nodeId: string, url: string): void;
+    /* The canvas store itself, for driving the app from a test. */
+    canvas(): ReturnType<typeof useCanvas.getState>;
 }
 
 declare global {
@@ -69,6 +71,9 @@ export const exposeTerminalTestHooks = (): void => {
         },
         browserNavigate(nodeId, url) {
             browserRegistry.navigate(nodeId, url);
+        },
+        canvas() {
+            return useCanvas.getState();
         }
     };
 };

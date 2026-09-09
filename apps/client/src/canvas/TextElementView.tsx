@@ -6,6 +6,7 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
     const text = useCanvas((s) => s.texts[id]);
     const selected = useCanvas((s) => s.selection.includes(id));
     const editing = useCanvas((s) => s.editingTextId === id);
+    const hidden = useCanvas((s) => s.hidden.has(id));
     const ref = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -19,7 +20,7 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
         }
     }, [editing]);
 
-    if (!text) {
+    if (!text || hidden) {
         return null;
     }
 
@@ -62,6 +63,13 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
             }}
         >
             {text.text}
+            {selected && !editing && (
+                <span
+                    data-port={id}
+                    contentEditable={false}
+                    className="node-port absolute -right-3 top-1/2 h-4 w-4 -translate-y-1/2 cursor-crosshair rounded-full border-2 border-accent bg-surface"
+                />
+            )}
         </div>
     );
 });

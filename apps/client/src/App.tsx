@@ -1,5 +1,6 @@
 import { Canvas } from '@/canvas/Canvas';
 import { CommandPalette } from '@/shell/CommandPalette';
+import { LayoutDialog } from '@/shell/LayoutDialog';
 import { Dock } from '@/shell/Dock';
 import { SettingsDialog } from '@/shell/SettingsDialog';
 import { ProjectBanner } from '@/shell/ProjectBanner';
@@ -31,6 +32,7 @@ export function App() {
             </div>
             <CommandPalette />
             <SettingsDialog />
+            <LayoutDialog />
         </TooltipProvider>
     );
 }

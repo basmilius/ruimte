@@ -1,5 +1,18 @@
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Check, ChevronRight, Copy, ExternalLink, Maximize2, MessageSquare, Palette, Pencil, Terminal, Trash2 } from 'lucide-react';
+import {
+    Check,
+    ChevronRight,
+    ChevronsDownUp,
+    ChevronsUpDown,
+    Copy,
+    ExternalLink,
+    Maximize2,
+    MessageSquare,
+    Palette,
+    Pencil,
+    Terminal,
+    Trash2
+} from 'lucide-react';
 import { NODE_ACCENTS } from '@/canvas/accents';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
@@ -54,6 +67,11 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().goToNode(id)}>
                         <Maximize2 size={14} /> Zoom to node
                     </ContextMenu.Item>
+                    {node.kind === 'group' && (
+                        <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().toggleGroupCollapse(id)}>
+                            {node.collapsed ? <ChevronsUpDown size={14} /> : <ChevronsDownUp size={14} />} {node.collapsed ? 'Expand' : 'Collapse'}
+                        </ContextMenu.Item>
+                    )}
                     {node.kind === 'terminal' && agent?.kind === 'claude' && (
                         <ContextMenu.Item className="menu-item" onClick={openInChat}>
                             <MessageSquare size={14} /> Open in chat

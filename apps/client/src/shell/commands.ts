@@ -51,6 +51,11 @@ export const appCommands = (): Command[] => {
             run: () => void useCanvas.getState().groupSelection()
         },
         { id: 'add-text', label: 'New text', run: () => void useCanvas.getState().addText(centerWorld()) },
+        { id: 'layout-save', label: 'Save layout as', hint: 'Remember where everything sits', run: () => useUi.getState().setLayoutDialogOpen(true) },
+        ...canvas.layouts.flatMap((layout) => [
+            { id: `layout-apply-${layout.name}`, label: `Apply layout: ${layout.name}`, run: () => useCanvas.getState().applyLayout(layout.name) },
+            { id: `layout-delete-${layout.name}`, label: `Delete layout: ${layout.name}`, run: () => useCanvas.getState().deleteLayout(layout.name) }
+        ]),
         { id: 'fit', label: 'Zoom to fit', shortcut: '⇧1', run: () => useCanvas.getState().fitAll() },
         { id: 'zoom-selection', label: 'Zoom to selection', shortcut: '⇧2', run: () => useCanvas.getState().zoomToSelection() },
         { id: 'zoom-reset', label: 'Zoom to 100%', shortcut: '⌘0', run: () => useCanvas.getState().zoomTo(1) },

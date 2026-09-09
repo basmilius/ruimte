@@ -36,7 +36,8 @@ const content = (name = 'repo'): ProjectContent => ({
     color: '#123456',
     nodes: [{ id: 'n1', kind: 'terminal', title: 'shell', x: 0, y: 0, w: 560, h: 360, cwd: join(folder, 'apps', 'server') }],
     texts: [],
-    edges: []
+    edges: [],
+    layouts: []
 });
 
 describe('ProjectStore', () => {
@@ -143,7 +144,8 @@ describe('portable paths', () => {
                     { id: 'd', kind: 'chat', title: '', x: 0, y: 0, w: 1, h: 1 }
                 ],
                 texts: [],
-                edges: []
+                edges: [],
+                layouts: []
             },
             '/repo'
         );

@@ -1,7 +1,7 @@
 import { memo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Globe, LayoutGrid, Maximize2, MessageSquare, Terminal, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, GitBranch, Globe, LayoutGrid, Maximize2, MessageSquare, Terminal, X } from 'lucide-react';
 import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
 import { NODE_ACCENTS } from '@/canvas/accents';
@@ -96,13 +96,15 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const live = useHeldWhileVisible(inViewport);
     const [renaming, setRenaming] = useState(false);
     const status = useNodeStatus(node);
+    const hidden = useCanvas((s) => s.hidden.has(id));
 
-    if (!node) {
+    if (!node || hidden) {
         return null;
     }
 
     const accent = NODE_ACCENTS.find((a) => a.id === node.accent)?.color;
     const isGroup = node.kind === 'group';
+    const collapsed = isGroup && node.collapsed === true;
     const remove = (): void => {
         const s = useCanvas.getState();
         s.select([id]);
@@ -148,11 +150,30 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         isGroup ? 'bg-transparent' : 'border-b border-border bg-surface-raised'
                     )}
                 >
+                    {isGroup && (
+                        <Tooltip label={collapsed ? 'Expand' : 'Collapse'}>
+                            <button className="icon-btn -ml-1 h-6 w-6" onClick={() => useCanvas.getState().toggleGroupCollapse(id)}>
+                                {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                            </button>
+                        </Tooltip>
+                    )}
                     {accent && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: accent }} />}
                     <span className="shrink-0 text-text-muted">{ICONS[node.kind]}</span>
                     <span className="flex min-w-0 grow items-center" onDoubleClick={() => setRenaming(true)}>
                         <Title id={id} title={node.title} editing={renaming} onDone={() => setRenaming(false)} />
                     </span>
+                    {collapsed && (
+                        <span className="shrink-0 rounded-full bg-surface-sunken px-2 py-0.5 text-[11px] tabular-nums text-text-muted">
+                            {node.memberIds?.length ?? 0} inside
+                        </span>
+                    )}
+                    {isGroup && node.worktree && (
+                        <Tooltip label={node.worktree.path}>
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 font-mono text-[11px] text-text-muted">
+                                <GitBranch size={11} /> {node.worktree.branch}
+                            </span>
+                        </Tooltip>
+                    )}
                     {status && !renaming && (
                         <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-surface-sunken px-2 py-0.5 text-[11px] text-text-muted">
                             <StatusDot status={status} />
@@ -186,7 +207,16 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                 {resizable &&
                     selected &&
                     !focused &&
+                    !collapsed &&
                     RESIZE_EDGES.map((edge) => <div key={edge} data-resize={edge} className={clsx('absolute z-10', EDGE_STYLE[edge])} />)}
+                {!isGroup && (selected || focused) && (
+                    <Tooltip label="Drag to link this node into an agent" side="right">
+                        <div
+                            data-port={id}
+                            className="node-port absolute -right-2 top-1/2 z-20 h-4 w-4 -translate-y-1/2 cursor-crosshair rounded-full border-2 border-accent bg-surface"
+                        />
+                    </Tooltip>
+                )}
                 {resizing && (
                     <div className="pointer-events-none absolute bottom-2 right-2 rounded-md bg-accent px-2 py-0.5 font-mono text-[11px] tabular-nums text-accent-text shadow-float">
                         {node.w} × {node.h}

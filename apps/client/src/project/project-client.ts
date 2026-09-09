@@ -15,7 +15,7 @@ export interface CanvasAccess {
         mode: { kind: 'canvas' } | { kind: 'node'; nodeId: string };
         loading: boolean;
         loadDocument(document: ProjectDocument | null, local: ProjectLocal | null): void;
-        exportContent(): Pick<ProjectContent, 'nodes' | 'texts' | 'edges'>;
+        exportContent(): Pick<ProjectContent, 'nodes' | 'texts' | 'edges' | 'layouts'>;
     };
     subscribe: StoreApi<CanvasAccess extends { getState(): infer S } ? S : never>['subscribe'];
 }
