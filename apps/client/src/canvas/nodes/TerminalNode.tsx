@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Tooltip } from '@/ui/Tooltip';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { WebglAddon } from '@xterm/addon-webgl';
@@ -63,7 +64,9 @@ export function TerminalPlate({ id }: { id: string }) {
             ref.current.textContent = lastScreenOf(id).join('\n');
         }
     }, [id]);
-    return <div ref={ref} className="term-host overflow-hidden whitespace-pre bg-term-bg font-mono text-[12.5px] leading-[1.2] text-term-dim" aria-hidden="true" />;
+    return (
+        <div ref={ref} className="term-host overflow-hidden whitespace-pre bg-term-bg font-mono text-[12.5px] leading-[1.2] text-term-dim" aria-hidden="true" />
+    );
 }
 
 export function TerminalNode({ id, focused }: { id: string; focused: boolean }) {
@@ -115,7 +118,8 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
         });
 
         const cwd = useCanvas.getState().nodes[id]?.cwd;
-        sessionClient.open(id, cwd, term.cols, term.rows)
+        sessionClient
+            .open(id, cwd, term.cols, term.rows)
             .then((result) => {
                 if (!cancelled && result) {
                     term.write(result.screen);
@@ -208,7 +212,9 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
             {status !== 'open' && (
                 <div className="pointer-events-none absolute inset-x-3 top-3 z-10 rounded-lg border border-border bg-surface-raised/90 px-3 py-2 text-[12px] text-text-muted">
                     {status === 'closed' ? (
-                        <>Not connected to the Ruimte server. Run <code className="font-mono text-text">bun run dev:server</code>.</>
+                        <>
+                            Not connected to the Ruimte server. Run <code className="font-mono text-text">bun run dev:server</code>.
+                        </>
                     ) : (
                         'Connecting to the Ruimte server'
                     )}
@@ -217,9 +223,11 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
             {failure && (
                 <div className="absolute inset-x-3 top-3 z-10 flex items-center gap-3 rounded-lg border border-border bg-surface-raised/90 px-3 py-2 text-[12px] text-status-error">
                     <span className="grow">{failure}</span>
-                    <button className="icon-btn h-7 w-7 shrink-0" title="Try again" onClick={rebuild}>
-                        <RotateCw size={13} />
-                    </button>
+                    <Tooltip label="Try again">
+                        <button className="icon-btn h-7 w-7 shrink-0" onClick={rebuild}>
+                            <RotateCw size={13} />
+                        </button>
+                    </Tooltip>
                 </div>
             )}
             {exited !== undefined && (

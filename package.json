@@ -3,7 +3,10 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "bun run --filter './apps/*' dev",
     "dev:client": "bun run --cwd apps/client dev",
@@ -11,10 +14,13 @@
     "build": "bun run --cwd apps/client build",
     "check": "bun run --filter '*' typecheck && oxlint",
     "lint": "oxlint",
-    "test": "bun test"
+    "test": "bun test",
+    "format": "prettier --write \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\"",
+    "format:check": "prettier --check \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\""
   },
   "devDependencies": {
     "oxlint": "^1.79.0",
+    "prettier": "^3.9.6",
     "typescript": "~6.0.2"
   }
 }

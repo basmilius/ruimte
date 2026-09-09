@@ -27,12 +27,31 @@ class FakeTransport implements Transport {
                     return Promise.reject(new TransportError('session-exists', 'exists'));
                 }
                 this.existing.add(id);
-                return Promise.resolve({ sessionId: id, cwd: '/', pid: 1, cols: 80, rows: 24, createdAt: 0, attached: 0, exited: false } as RequestMap[T]['result']);
+                return Promise.resolve({
+                    sessionId: id,
+                    cwd: '/',
+                    pid: 1,
+                    cols: 80,
+                    rows: 24,
+                    createdAt: 0,
+                    attached: 0,
+                    exited: false
+                } as RequestMap[T]['result']);
             case 'session.attach':
                 return Promise.resolve({ screen: this.screen, cols: 80, rows: 24, exited: this.exited.has(id) } as RequestMap[T]['result']);
             case 'session.list':
                 return Promise.resolve({
-                    sessions: [...this.exited].map(([sessionId, exitCode]) => ({ sessionId, cwd: '/', pid: 1, cols: 80, rows: 24, createdAt: 0, attached: 0, exited: true, exitCode }))
+                    sessions: [...this.exited].map(([sessionId, exitCode]) => ({
+                        sessionId,
+                        cwd: '/',
+                        pid: 1,
+                        cols: 80,
+                        rows: 24,
+                        createdAt: 0,
+                        attached: 0,
+                        exited: true,
+                        exitCode
+                    }))
                 } as RequestMap[T]['result']);
             default:
                 return Promise.resolve({} as RequestMap[T]['result']);

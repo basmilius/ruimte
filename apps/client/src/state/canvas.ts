@@ -158,10 +158,7 @@ export const useCanvas = create<CanvasState>((set, get) => ({
     },
     fitAll() {
         const { nodes, texts, viewport } = get();
-        const rects: Rect[] = [
-            ...Object.values(nodes),
-            ...Object.values(texts).map((t) => ({ x: t.x, y: t.y, w: t.size * 12, h: t.size * 1.4 }))
-        ];
+        const rects: Rect[] = [...Object.values(nodes), ...Object.values(texts).map((t) => ({ x: t.x, y: t.y, w: t.size * 12, h: t.size * 1.4 }))];
         const bounds = unionRect(rects);
         if (bounds && viewport.w > 0) {
             set({ camera: cameraToFit(bounds, viewport) });
@@ -200,8 +197,12 @@ export const useCanvas = create<CanvasState>((set, get) => ({
     selectInRect(rect) {
         const { nodes, texts } = get();
         const hits = [
-            ...Object.values(nodes).filter((n) => intersects(n, rect)).map((n) => n.id),
-            ...Object.values(texts).filter((t) => intersects({ x: t.x, y: t.y, w: t.size * 8, h: t.size * 1.4 }, rect)).map((t) => t.id)
+            ...Object.values(nodes)
+                .filter((n) => intersects(n, rect))
+                .map((n) => n.id),
+            ...Object.values(texts)
+                .filter((t) => intersects({ x: t.x, y: t.y, w: t.size * 8, h: t.size * 1.4 }, rect))
+                .map((t) => t.id)
         ];
         set({ selection: hits });
     },

@@ -47,7 +47,10 @@ export const unionRect = (rects: Rect[]): Rect | null => {
     if (rects.length === 0) {
         return null;
     }
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
     for (const r of rects) {
         minX = Math.min(minX, r.x);
         minY = Math.min(minY, r.y);
@@ -57,15 +60,10 @@ export const unionRect = (rects: Rect[]): Rect | null => {
     return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
 };
 
-export const intersects = (a: Rect, b: Rect): boolean =>
-    a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+export const intersects = (a: Rect, b: Rect): boolean => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
 export const cameraToFit = (bounds: Rect, viewport: { w: number; h: number }, padding = 96, maxZoom = 1): Camera => {
-    const zoom = clampZoom(Math.min(
-        (viewport.w - padding * 2) / bounds.w,
-        (viewport.h - padding * 2) / bounds.h,
-        maxZoom
-    ));
+    const zoom = clampZoom(Math.min((viewport.w - padding * 2) / bounds.w, (viewport.h - padding * 2) / bounds.h, maxZoom));
     return {
         zoom,
         x: (viewport.w - bounds.w * zoom) / 2 - bounds.x * zoom,
@@ -82,5 +80,4 @@ export const cameraCenteredOn = (rect: Rect, viewport: { w: number; h: number },
 export const ZOOM_PRESETS = [25, 50, 75, 100, 150, 200] as const;
 
 /* Compared on the rounded percent the readout shows, so 0.999 still ticks 100%. */
-export const activeZoomPreset = (zoom: number): number | null =>
-    ZOOM_PRESETS.find((p) => p === Math.round(zoom * 100)) ?? null;
+export const activeZoomPreset = (zoom: number): number | null => ZOOM_PRESETS.find((p) => p === Math.round(zoom * 100)) ?? null;

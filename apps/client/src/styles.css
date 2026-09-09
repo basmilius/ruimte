@@ -228,3 +228,35 @@ body {
 .btn-group { display: inline-flex; align-items: center; gap: 1px; }
 .menu-item[data-disabled] { opacity: .45; }
 .menu-item[data-popup-open] { background: var(--surface-sunken); }
+
+/* Tooltips. The positioner animates its position, so a tooltip slides to the next button
+   instead of blinking; the popup fades and scales from its anchor side. */
+.tooltip-positioner {
+    z-index: 70;
+    pointer-events: none;
+    transition: top 150ms ease, left 150ms ease, right 150ms ease, bottom 150ms ease;
+}
+.tooltip-positioner[data-instant] { transition: none; }
+.tooltip-popup {
+    display: flex;
+    border-radius: 7px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-float);
+    color: var(--text);
+    font-size: 12px;
+    line-height: 1.3;
+    transform-origin: var(--transform-origin);
+    transition: opacity 120ms ease, scale 120ms ease;
+}
+.tooltip-popup[data-starting-style], .tooltip-popup[data-ending-style] { opacity: 0; scale: 0.98; }
+.tooltip-popup[data-instant] { transition: none; }
+.tooltip-viewport { display: flex; align-items: center; gap: 8px; padding: 5px 9px; white-space: nowrap; }
+.tooltip-kbd {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--surface-sunken);
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    font-size: 11px;
+}

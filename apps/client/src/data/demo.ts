@@ -12,9 +12,7 @@ export const demoTexts: TextElement[] = [
     { id: 'text-2', x: 1300, y: 100, text: 'Landing page, eerste opzet', size: 18 }
 ];
 
-export const demoEdges: Edge[] = [
-    { id: 'edge-1', from: 'term-1', to: 'chat-1', label: 'context' }
-];
+export const demoEdges: Edge[] = [{ id: 'edge-1', from: 'term-1', to: 'chat-1', label: 'context' }];
 
 export interface Project {
     id: string;

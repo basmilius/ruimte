@@ -5,6 +5,7 @@ import { Check, ChevronRight, Copy, Globe, Maximize2, MessageSquare, Palette, Pe
 import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
 import { useNodeStatus } from '@/state/sessions';
 import { NODE_ACCENTS } from '@/canvas/accents';
+import { Tooltip } from '@/ui/Tooltip';
 import { useHeldWhileVisible, useNodeInViewport } from '@/canvas/culling';
 import { TerminalNode, TerminalPlate } from '@/canvas/nodes/TerminalNode';
 import { ChatNode } from '@/canvas/nodes/ChatNode';
@@ -45,10 +46,9 @@ const EDGE_STYLE: Record<(typeof RESIZE_EDGES)[number], string> = {
 
 export function StatusDot({ status, className }: { status: AgentStatus; className?: string }) {
     return (
-        <span
-            className={clsx('inline-block h-2 w-2 rounded-full', STATUS_CLASS[status], status === 'running' && 'animate-pulse', className)}
-            title={STATUS_LABEL[status]}
-        />
+        <Tooltip label={STATUS_LABEL[status]}>
+            <span className={clsx('inline-block h-2 w-2 rounded-full', STATUS_CLASS[status], status === 'running' && 'animate-pulse', className)} />
+        </Tooltip>
     );
 }
 
@@ -115,7 +115,12 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     'absolute flex flex-col overflow-hidden rounded-xl border bg-surface shadow-node',
                     focused ? 'node-focused border-transparent' : selected ? 'node-selected border-transparent' : 'border-border'
                 )}
-                style={{ left: node.x, top: node.y, width: node.w, height: node.h }}
+                style={{
+                    left: node.x,
+                    top: node.y,
+                    width: node.w,
+                    height: node.h
+                }}
             >
                 <header className="flex h-[37px] shrink-0 items-center gap-2 border-b border-border bg-surface-raised pl-2.5 pr-1 text-text-muted">
                     {accent && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: accent }} />}
@@ -130,12 +135,16 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         </span>
                     )}
                     <div className="btn-group shrink-0">
-                        <button className="icon-btn h-7 w-7" title="Zoom to node" onClick={() => useCanvas.getState().goToNode(id)}>
-                            <Maximize2 size={13} strokeWidth={1.75} />
-                        </button>
-                        <button className="icon-btn h-7 w-7" title="Close" onClick={remove}>
-                            <X size={14} strokeWidth={1.75} />
-                        </button>
+                        <Tooltip label="Zoom to node">
+                            <button className="icon-btn h-7 w-7" onClick={() => useCanvas.getState().goToNode(id)}>
+                                <Maximize2 size={13} strokeWidth={1.75} />
+                            </button>
+                        </Tooltip>
+                        <Tooltip label="Close">
+                            <button className="icon-btn h-7 w-7" onClick={remove}>
+                                <X size={14} strokeWidth={1.75} />
+                            </button>
+                        </Tooltip>
                     </div>
                 </header>
                 <div data-node-body className={clsx('relative min-h-0 grow', !focused && 'cursor-default')}>
@@ -144,9 +153,10 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     {node.kind === 'browser' && <BrowserNode id={id} focused={focused} />}
                     {!focused && <div className="absolute inset-0" aria-hidden="true" />}
                 </div>
-                {resizable && selected && !focused && RESIZE_EDGES.map((edge) => (
-                    <div key={edge} data-resize={edge} className={clsx('absolute z-10', EDGE_STYLE[edge])} />
-                ))}
+                {resizable &&
+                    selected &&
+                    !focused &&
+                    RESIZE_EDGES.map((edge) => <div key={edge} data-resize={edge} className={clsx('absolute z-10', EDGE_STYLE[edge])} />)}
                 {resizing && (
                     <div className="pointer-events-none absolute bottom-2 right-2 rounded-md bg-accent px-2 py-0.5 font-mono text-[11px] tabular-nums text-accent-text shadow-float">
                         {node.w} × {node.h}
@@ -157,9 +167,15 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
             <ContextMenu.Portal>
                 <ContextMenu.Positioner className="z-50">
                     <ContextMenu.Popup className="menu-popup">
-                        <ContextMenu.Item className="menu-item" onClick={() => setRenaming(true)}><Pencil size={14} /> Rename <kbd>dbl-click</kbd></ContextMenu.Item>
-                        <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().duplicateNode(id)}><Copy size={14} /> Duplicate</ContextMenu.Item>
-                        <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().goToNode(id)}><Maximize2 size={14} /> Zoom to node</ContextMenu.Item>
+                        <ContextMenu.Item className="menu-item" onClick={() => setRenaming(true)}>
+                            <Pencil size={14} /> Rename <kbd>dbl-click</kbd>
+                        </ContextMenu.Item>
+                        <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().duplicateNode(id)}>
+                            <Copy size={14} /> Duplicate
+                        </ContextMenu.Item>
+                        <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().goToNode(id)}>
+                            <Maximize2 size={14} /> Zoom to node
+                        </ContextMenu.Item>
                         <ContextMenu.SubmenuRoot>
                             <ContextMenu.SubmenuTrigger className="menu-item">
                                 <Palette size={14} /> Color
@@ -175,7 +191,13 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                                         <ContextMenu.Separator className="menu-separator" />
                                         {NODE_ACCENTS.map((a) => (
                                             <ContextMenu.Item key={a.id} className="menu-item" onClick={() => useCanvas.getState().setNodeAccent(id, a.id)}>
-                                                <span className="h-3 w-3 rounded-full" style={{ background: a.color }} /> {a.label}
+                                                <span
+                                                    className="h-3 w-3 rounded-full"
+                                                    style={{
+                                                        background: a.color
+                                                    }}
+                                                />{' '}
+                                                {a.label}
                                                 {node.accent === a.id && <Check size={13} className="ml-auto" />}
                                             </ContextMenu.Item>
                                         ))}
@@ -184,7 +206,9 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                             </ContextMenu.Portal>
                         </ContextMenu.SubmenuRoot>
                         <ContextMenu.Separator className="menu-separator" />
-                        <ContextMenu.Item className="menu-item text-status-error" onClick={remove}><Trash2 size={14} /> Delete <kbd>⌫</kbd></ContextMenu.Item>
+                        <ContextMenu.Item className="menu-item text-status-error" onClick={remove}>
+                            <Trash2 size={14} /> Delete <kbd>⌫</kbd>
+                        </ContextMenu.Item>
                     </ContextMenu.Popup>
                 </ContextMenu.Positioner>
             </ContextMenu.Portal>

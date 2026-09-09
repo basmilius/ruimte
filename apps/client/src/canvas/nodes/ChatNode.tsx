@@ -1,13 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUp, ChevronRight, FileCode2, Wrench } from 'lucide-react';
 import clsx from 'clsx';
+import { Tooltip } from '@/ui/Tooltip';
 
 type Message =
     | { id: string; role: 'user'; text: string }
-    | { id: string; role: 'assistant'; text: string; tool?: { name: string; detail: string; diff?: string[] } };
+    | {
+          id: string;
+          role: 'assistant';
+          text: string;
+          tool?: { name: string; detail: string; diff?: string[] };
+      };
 
 const DEMO: Message[] = [
-    { id: 'm1', role: 'user', text: 'The terminal keeps losing focus when I Cmd+Tab back into the app. Can you make focus explicit state instead of pointer-driven?' },
+    {
+        id: 'm1',
+        role: 'user',
+        text: 'The terminal keeps losing focus when I Cmd+Tab back into the app. Can you make focus explicit state instead of pointer-driven?'
+    },
     {
         id: 'm2',
         role: 'assistant',
@@ -23,7 +33,11 @@ const DEMO: Message[] = [
             ]
         }
     },
-    { id: 'm3', role: 'assistant', text: 'Should the Escape key also clear the selection, or only leave node mode? I left it as a two-step so a stray Escape never drops a selection you were about to move.' }
+    {
+        id: 'm3',
+        role: 'assistant',
+        text: 'Should the Escape key also clear the selection, or only leave node mode? I left it as a two-step so a stray Escape never drops a selection you were about to move.'
+    }
 ];
 
 export function ChatNode({ focused }: { id: string; focused: boolean }) {
@@ -58,14 +72,21 @@ export function ChatNode({ focused }: { id: string; focused: boolean }) {
                 {messages.map((m) => (
                     <div key={m.id} className={clsx('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
                         {m.role === 'user' ? (
-                            <div className="max-w-[85%] rounded-2xl rounded-br-md bg-accent-soft px-3.5 py-2 text-[13px] leading-relaxed text-text">{m.text}</div>
+                            <div className="max-w-[85%] rounded-2xl rounded-br-md bg-accent-soft px-3.5 py-2 text-[13px] leading-relaxed text-text">
+                                {m.text}
+                            </div>
                         ) : (
                             <div className="max-w-[92%] space-y-2 text-[13px] leading-relaxed text-text">
                                 {m.tool && (
                                     <div className="overflow-hidden rounded-lg border border-border bg-surface-raised">
                                         <button
                                             className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-text-muted hover:bg-surface-sunken"
-                                            onClick={() => setOpen((o) => ({ ...o, [m.id]: !o[m.id] }))}
+                                            onClick={() =>
+                                                setOpen((o) => ({
+                                                    ...o,
+                                                    [m.id]: !o[m.id]
+                                                }))
+                                            }
                                         >
                                             <ChevronRight size={13} className={clsx('transition-transform', open[m.id] && 'rotate-90')} />
                                             <Wrench size={13} />
@@ -76,7 +97,18 @@ export function ChatNode({ focused }: { id: string; focused: boolean }) {
                                         {open[m.id] && m.tool.diff && (
                                             <pre className="border-t border-border bg-term-bg px-3 py-2 font-mono text-[11.5px] leading-[1.6]">
                                                 {m.tool.diff.map((l, i) => (
-                                                    <div key={i} className={clsx(l.startsWith('+') ? 'bg-status-idle/10 text-term-green' : l.startsWith('-') ? 'bg-status-error/10 text-term-red' : 'text-term-fg')}>{l}</div>
+                                                    <div
+                                                        key={i}
+                                                        className={clsx(
+                                                            l.startsWith('+')
+                                                                ? 'bg-status-idle/10 text-term-green'
+                                                                : l.startsWith('-')
+                                                                  ? 'bg-status-error/10 text-term-red'
+                                                                  : 'text-term-fg'
+                                                        )}
+                                                    >
+                                                        {l}
+                                                    </div>
                                                 ))}
                                             </pre>
                                         )}
@@ -89,7 +121,12 @@ export function ChatNode({ focused }: { id: string; focused: boolean }) {
                 ))}
             </div>
             <div className="shrink-0 border-t border-border p-3">
-                <div className={clsx('flex items-end gap-2 rounded-xl border bg-surface-raised px-3 py-2 transition-colors', focused ? 'border-accent' : 'border-border')}>
+                <div
+                    className={clsx(
+                        'flex items-end gap-2 rounded-xl border bg-surface-raised px-3 py-2 transition-colors',
+                        focused ? 'border-accent' : 'border-border'
+                    )}
+                >
                     <textarea
                         ref={inputRef}
                         rows={1}
@@ -108,9 +145,15 @@ export function ChatNode({ focused }: { id: string; focused: boolean }) {
                             }
                         }}
                     />
-                    <button className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-text disabled:opacity-40" disabled={!draft.trim()} onClick={send} title="Send">
-                        <ArrowUp size={15} strokeWidth={2} />
-                    </button>
+                    <Tooltip label="Send" kbd="↵">
+                        <button
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-text disabled:opacity-40"
+                            disabled={!draft.trim()}
+                            onClick={send}
+                        >
+                            <ArrowUp size={15} strokeWidth={2} />
+                        </button>
+                    </Tooltip>
                 </div>
                 <div className="mt-2 flex items-center gap-2 px-1 text-[11px] text-text-faint">
                     <span>Claude Code</span>

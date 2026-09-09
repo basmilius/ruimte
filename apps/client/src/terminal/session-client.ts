@@ -14,8 +14,7 @@ interface Mounted {
     attached: boolean;
 }
 
-const isConnectionError = (e: unknown): boolean =>
-    e instanceof TransportError && (e.code === 'not-connected' || e.code === 'disconnected');
+const isConnectionError = (e: unknown): boolean => e instanceof TransportError && (e.code === 'not-connected' || e.code === 'disconnected');
 
 /**
  * One daemon session per node id, on top of the transport.
