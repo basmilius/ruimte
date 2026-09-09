@@ -41,6 +41,10 @@ export interface SessionManagerOptions {
     env?: Record<string, string | undefined>;
     // Where the CLIs' hooks POST to; without it no hook variables reach the shell.
     hookUrl?: string;
+    // Where an agent reads its linked context; the hook token doubles as its bearer.
+    contextUrl?: string;
+    // Put in front of PATH, so `ruimte-context` is there for every shell.
+    binDir?: string;
 }
 
 export type HookResult = 'applied' | 'ignored' | 'unknown-token';
@@ -56,6 +60,8 @@ export class SessionManager {
     // Ids whose kill is in flight: the exit that follows removes the session instead of parking it.
     private readonly killing = new Set<string>();
     hookUrl: string | null;
+    contextUrl: string | null;
+    private readonly binDir: string | null;
 
     constructor(options: SessionManagerOptions) {
         this.adapter = options.adapter;
@@ -63,6 +69,13 @@ export class SessionManager {
         this.agents = options.agents ?? null;
         this.env = options.env ?? process.env;
         this.hookUrl = options.hookUrl ?? null;
+        this.contextUrl = options.contextUrl ?? null;
+        this.binDir = options.binDir ?? null;
+    }
+
+    /* The session a hook or context token belongs to. */
+    sessionIdForToken(token: string): string | null {
+        return this.tokens.get(token) ?? null;
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
@@ -254,6 +267,12 @@ export class SessionManager {
         if (this.hookUrl) {
             env.RUIMTE_HOOK_URL = this.hookUrl;
             env.RUIMTE_HOOK_TOKEN = hookToken;
+        }
+        if (this.contextUrl) {
+            env.RUIMTE_CONTEXT_URL = this.contextUrl;
+        }
+        if (this.binDir) {
+            env.PATH = env.PATH ? `${this.binDir}:${env.PATH}` : this.binDir;
         }
 
         let session: Session;

@@ -1,5 +1,6 @@
 import { RequestError, type Dispatcher } from '../dispatcher.ts';
 import { ChatError, type ChatManager } from '../chat/chat-manager.ts';
+import type { ContextStore } from '../context/context-store.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 
 const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
@@ -12,8 +13,13 @@ const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
             throw e;
         });
 
-export const registerChatHandlers = (dispatcher: Dispatcher, manager: ChatManager, providers: ProviderRegistry): void => {
+export const registerChatHandlers = (dispatcher: Dispatcher, manager: ChatManager, providers: ProviderRegistry, context: ContextStore): void => {
     dispatcher.register('provider.list', async () => ({ providers: await providers.list() }));
+
+    dispatcher.register('context.set', (payload) => {
+        context.set(payload.targetId, payload.sources);
+        return {};
+    });
 
     dispatcher.register('chat.create', (payload) => translate(() => manager.create(payload)));
 

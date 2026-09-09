@@ -15,9 +15,15 @@ export interface ChatSessionOptions {
     command: string[];
     env: Record<string, string>;
     catalog: ModelCatalog;
+    // Whether the person linked something to this chat; the CLI is told where to look when so.
+    hasContext(): boolean;
     emit(event: ChatEvent): void;
     persist(): void;
 }
+
+// What a linked agent is told once, so it knows the CLI exists without being nagged every turn.
+export const CONTEXT_PROMPT =
+    'The person linked context to this chat on their canvas. Run `ruimte-context` to list it and `ruimte-context read <id>` to read one item, whenever it could help.';
 
 type Pending =
     { type: 'approval'; toolUseId: string | null; input: unknown; suggestions: unknown[] } | { type: 'question'; toolUseId: string | null; input: unknown };

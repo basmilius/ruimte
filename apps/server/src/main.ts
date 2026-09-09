@@ -1,4 +1,4 @@
-import { join, normalize } from 'node:path';
+import { join, normalize, resolve } from 'node:path';
 import type { ServerWebSocket } from 'bun';
 import type { ServerFrame } from '@ruimte/contracts';
 import pkg from '../package.json' with { type: 'json' };
@@ -6,6 +6,7 @@ import { AgentStore } from './agents/agent-store.ts';
 import { HOOKS_PATH, handleHookRequest } from './agents/hook-receiver.ts';
 import { defaultHookPaths, installHooks } from './agents/install.ts';
 import { ChatManager } from './chat/chat-manager.ts';
+import { CONTEXT_PATH, ContextStore } from './context/context-store.ts';
 import { ChatStore } from './chat/chat-store.ts';
 import { parseServerArgs } from './config.ts';
 import { Dispatcher, sendEvent, type ClientConnection } from './dispatcher.ts';
@@ -25,17 +26,26 @@ import { SnapshotStore, scheduleSnapshots } from './sessions/snapshot-store.ts';
 const config = parseServerArgs(process.argv.slice(2));
 const version = pkg.version;
 
+// `ruimte-context` lives next to the daemon's source; it goes on the PATH of every shell and chat.
+const binDir = resolve(import.meta.dir, '..', 'bin');
+const contextUrl = `http://127.0.0.1:${config.port}${CONTEXT_PATH}`;
+
 const snapshots = new SnapshotStore(config.home);
-const manager = new SessionManager({ adapter: new BunPtyAdapter(), snapshots, agents: new AgentStore(config.home) });
+const manager = new SessionManager({ adapter: new BunPtyAdapter(), snapshots, agents: new AgentStore(config.home), contextUrl, binDir });
 const snapshotSchedule = scheduleSnapshots(manager, snapshots);
 const providers = new ProviderRegistry();
-const chats = new ChatManager({ providers, store: new ChatStore(config.home) });
+const context: ContextStore = new ContextStore({
+    terminalText: (sessionId) => manager.get(sessionId)?.plainText() ?? Promise.resolve(null),
+    chatItems: (chatId) => chats.get(chatId)?.thread.list() ?? null,
+    targetForToken: (token) => manager.sessionIdForToken(token) ?? chats.chatIdForToken(token)
+});
+const chats: ChatManager = new ChatManager({ providers, store: new ChatStore(config.home), contextUrl, binDir, hasContext: (chatId) => context.has(chatId) });
 const projects = new ProjectStore(config.home);
 
 const dispatcher = new Dispatcher();
 registerServerHandlers(dispatcher, { version, home: config.home });
 registerSessionHandlers(dispatcher, manager);
-registerChatHandlers(dispatcher, chats, providers);
+registerChatHandlers(dispatcher, chats, providers, context);
 registerProjectHandlers(dispatcher, projects);
 registerFsHandlers(dispatcher);
 registerGitHandlers(dispatcher, new Worktrees(config.home));
@@ -82,6 +92,10 @@ const server = Bun.serve({
 
         if (url.pathname.startsWith(`${HOOKS_PATH}/`)) {
             return handleHookRequest(request, url.pathname, manager);
+        }
+
+        if (url.pathname === CONTEXT_PATH || url.pathname.startsWith(`${CONTEXT_PATH}/`)) {
+            return context.handle(request, url.pathname);
         }
 
         if (config.serve) {
@@ -132,8 +146,9 @@ const server = Bun.serve({
     }
 });
 
-// Hooks always POST to loopback, whatever interface the socket listens on.
+// Hooks and context always go over loopback, whatever interface the socket listens on.
 manager.hookUrl = `http://127.0.0.1:${server.port}${HOOKS_PATH}`;
+manager.contextUrl = `http://127.0.0.1:${server.port}${CONTEXT_PATH}`;
 
 /* The built client from one directory; anything that is not a file falls back to the app shell. */
 const serveClient = async (dir: string, pathname: string): Promise<Response> => {

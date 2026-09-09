@@ -115,6 +115,20 @@ export class Session {
         return this.serializer.serialize({ scrollback: SCROLLBACK_LINES });
     }
 
+    /* The screen and scrollback as text, for an agent that was linked to this session. */
+    async plainText(): Promise<string> {
+        await new Promise<void>((resolve) => this.terminal.write('', resolve));
+        const buffer = this.terminal.buffer.active;
+        const lines: string[] = [];
+        for (let i = 0; i < buffer.length; i++) {
+            lines.push(buffer.getLine(i)?.translateToString(true) ?? '');
+        }
+        while (lines.length > 0 && lines[lines.length - 1] === '') {
+            lines.pop();
+        }
+        return lines.join('\n');
+    }
+
     async attach(clientId: string, cols: number, rows: number): Promise<string> {
         this.resize(cols, rows);
         const screen = await this.serializeScreen();
