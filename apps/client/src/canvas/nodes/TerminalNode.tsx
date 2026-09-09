@@ -8,7 +8,7 @@ import { useCanvas } from '@/state/canvas';
 import { useSessions } from '@/state/sessions';
 import { useTheme } from '@/state/theme';
 import { sessionClient } from '@/terminal';
-import { registerTerminal } from '@/terminal/registry';
+import { lastScreenOf, registerTerminal } from '@/terminal/registry';
 import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
 import { useTransportStatus } from '@/transport/status';
 
@@ -52,6 +52,19 @@ const loadRenderer = (term: Terminal): void => {
         // The DOM renderer is already active; WebGL was only ever an upgrade.
     }
 };
+
+/* What the placeholder for an offscreen terminal shows: the text of its last screen. */
+export function TerminalPlate({ id }: { id: string }) {
+    const ref = useRef<HTMLDivElement>(null);
+    // Filled from a passive effect, not during render: the live node captures its screen in its own
+    // passive cleanup, which React runs earlier in the same flush.
+    useEffect(() => {
+        if (ref.current) {
+            ref.current.textContent = lastScreenOf(id).join('\n');
+        }
+    }, [id]);
+    return <div ref={ref} className="term-host overflow-hidden whitespace-pre bg-term-bg font-mono text-[12.5px] leading-[1.2] text-term-dim" aria-hidden="true" />;
+}
 
 export function TerminalNode({ id, focused }: { id: string; focused: boolean }) {
     const hostRef = useRef<HTMLDivElement>(null);

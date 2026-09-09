@@ -5,7 +5,8 @@ import { Check, ChevronRight, Copy, Globe, Maximize2, MessageSquare, Palette, Pe
 import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
 import { useNodeStatus } from '@/state/sessions';
 import { NODE_ACCENTS } from '@/canvas/accents';
-import { TerminalNode } from '@/canvas/nodes/TerminalNode';
+import { useHeldWhileVisible, useNodeInViewport } from '@/canvas/culling';
+import { TerminalNode, TerminalPlate } from '@/canvas/nodes/TerminalNode';
 import { ChatNode } from '@/canvas/nodes/ChatNode';
 import { BrowserNode } from '@/canvas/nodes/BrowserNode';
 
@@ -89,6 +90,8 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const focused = useCanvas((s) => isNodeFocused(s.mode, id));
     const resizable = useCanvas((s) => !s.locks.resize);
     const resizing = useCanvas((s) => s.resizing === id);
+    const inViewport = useNodeInViewport(id);
+    const live = useHeldWhileVisible(inViewport);
     const [renaming, setRenaming] = useState(false);
     const status = useNodeStatus(node);
 
@@ -134,7 +137,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     </button>
                 </header>
                 <div data-node-body className={clsx('relative min-h-0 grow', !focused && 'cursor-default')}>
-                    {node.kind === 'terminal' && <TerminalNode id={id} focused={focused} />}
+                    {node.kind === 'terminal' && (live ? <TerminalNode id={id} focused={focused} /> : <TerminalPlate id={id} />)}
                     {node.kind === 'chat' && <ChatNode id={id} focused={focused} />}
                     {node.kind === 'browser' && <BrowserNode id={id} focused={focused} />}
                     {!focused && <div className="absolute inset-0" aria-hidden="true" />}
