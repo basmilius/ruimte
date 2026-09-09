@@ -98,6 +98,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const agent = useSessions((s) => s.byNodeId[id]?.agent);
     const chatSession = useChats((s) => s.byNodeId[id]?.info.agentSessionId);
     const chatCwd = useChats((s) => s.byNodeId[id]?.info.cwd);
+    const chatProvider = useChats((s) => s.byNodeId[id]?.info.provider);
 
     if (!node) {
         return null;
@@ -112,13 +113,14 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     // The same CLI session can continue in the other kind of node, next to this one.
     const beside = { x: node.x + node.w + 40 + 260, y: node.y + node.h / 2 };
     const openInChat = (): void => {
-        if (agent?.kind === 'claude') {
-            useCanvas.getState().addNode('chat', beside, { title: node.title, cwd: node.cwd, resume: agent.agentSessionId });
+        if (agent) {
+            useCanvas.getState().addNode('chat', beside, { title: node.title, cwd: node.cwd, resume: agent.agentSessionId, provider: agent.kind });
         }
     };
     const openInTerminal = (): void => {
         if (chatSession) {
-            useCanvas.getState().addNode('terminal', beside, { title: node.title, cwd: chatCwd, command: `claude --resume ${chatSession}` });
+            const command = chatProvider === 'codex' ? `codex resume ${chatSession}` : `claude --resume ${chatSession}`;
+            useCanvas.getState().addNode('terminal', beside, { title: node.title, cwd: chatCwd, command });
         }
     };
 
@@ -192,7 +194,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().goToNode(id)}>
                             <Maximize2 size={14} /> Zoom to node
                         </ContextMenu.Item>
-                        {node.kind === 'terminal' && agent?.kind === 'claude' && (
+                        {node.kind === 'terminal' && agent && (
                             <ContextMenu.Item className="menu-item" onClick={openInChat}>
                                 <MessageSquare size={14} /> Open in chat
                             </ContextMenu.Item>

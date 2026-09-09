@@ -1,9 +1,11 @@
-import type { ChatConfigurePayload, ChatInfo, ChatItem, InteractionMode, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type { AgentKind, ChatConfigurePayload, ChatInfo, ChatItem, InteractionMode, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 import type { ChatSink } from '../state/chats';
 import type { ProviderInfo } from '@ruimte/contracts';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 
 export interface ChatOpenOptions {
+    /* Which agent CLI answers; a chat that exists on the daemon keeps its own. */
+    provider?: AgentKind;
     cwd?: string;
     /* A CLI session to continue, for a chat opened from a terminal that ran the agent. */
     resume?: string;
@@ -134,6 +136,7 @@ export class ChatClient {
         const entry = this.mounted.get(chatId);
         await this.transport.request('chat.create', {
             chatId,
+            provider: entry?.provider,
             cwd: entry?.cwd,
             resume: entry?.resume,
             selection: entry?.selection,
