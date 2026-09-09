@@ -8,7 +8,7 @@ Bun workspaces (`bun install` at the root):
 
 - `apps/client`: the React UI (Vite). Never imports Node or Bun APIs. Talks to the server only through the `Transport` interface.
 - `apps/server`: the daemon (Bun runtime). Owns sessions, PTYs and persistence. Serves the WebSocket API on `localhost:4210` by default (`--host`, `--port`), and a built client with `--serve`.
-- `apps/desktop`: the Electron shell. One window, the client inside it, the daemon next to it. Only window chrome, native dialogs and guest devtools cross IPC (`src/preload.ts` mirrors `apps/client/src/desktop/bridge.ts`). Start it with `bun run dev:desktop` while `bun dev` runs.
+- `apps/desktop`: the Electron shell. One window, the client inside it, the daemon next to it. Only window chrome, native dialogs and guest devtools cross IPC (`src/preload.ts` mirrors `apps/client/src/desktop/bridge.ts`). Start it with `bun run dev:desktop` while `bun dev` runs. A packaged app (`bun run dist`, `electron-builder.yml`) carries the compiled daemon (`apps/server/scripts/compile.ts`) and the built client as resources.
 - `packages/contracts`: zod 4 schemas for every message on the wire, plus the TypeScript types derived from them. Both apps import from here; nothing else may define a wire shape. `REQUEST_SCHEMAS` and `EVENT_SCHEMAS` are the tables both sides derive `RequestMap` and `EventMap` from.
 
 Shared config at the root: `tsconfig.base.json` (every package extends it), `.oxlintrc.json`, `.editorconfig`, `bun.lock`. `bun run check` runs `typecheck` in every workspace and then oxlint. In dev the Vite server proxies `/ws` to the daemon, so the client always connects to its own origin.
@@ -34,7 +34,7 @@ One WebSocket. JSON frames validated with zod on both ends.
 - Agent status comes from the CLIs' hooks only (`apps/server/src/agents`), never from parsing output. A chat node is the CLI's stream-json protocol (`apps/server/src/chat`), no SDK.
 - A project's canvas is `<folder>/.ruimte/project.json` with a monotonic `rev` (`apps/server/src/projects`); machine state (camera, focus) never goes into that file. The client saves through `project.save` with the rev it loaded and reacts to `project.changed` from the daemon's watcher.
 - A loopback client needs no token; any other client pairs once (`POST /auth/pair`) and sends its session token as `?token=` on the socket (`apps/server/src/auth`). The client keeps one active endpoint at a time (`apps/client/src/state/endpoints.ts`).
-- Edges into an agent node become readable context: the client sends `context.set`, the daemon serves `GET /context` with the session's token, and `apps/server/bin/ruimte-context` (on every session's PATH) is how an agent reads it. Worktrees live under `$RUIMTE_HOME/worktrees` (`apps/server/src/git`).
+- Edges into an agent node become readable context: the client sends `context.set`, the daemon serves `GET /context` with the session's token, and `ruimte-context` (a script on every session's PATH that runs `ruimte context`) is how an agent reads it. Worktrees live under `$RUIMTE_HOME/worktrees` (`apps/server/src/git`).
 
 ## Conventions
 

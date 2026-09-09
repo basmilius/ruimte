@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Worktrees } from './worktrees.ts';
@@ -21,7 +21,8 @@ const git = async (args: string[]): Promise<void> => {
 };
 
 beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), 'ruimte-git-'));
+    // Git reports real paths, and the temp dir sits behind a symlink on macOS (/var to /private/var).
+    root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-git-')));
     repo = join(root, 'repo');
     await mkdir(repo);
     await git(['init', '-q', '-b', 'main']);

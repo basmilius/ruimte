@@ -16,8 +16,10 @@ export interface ServerConfig {
     allowedOrigins: string[];
     // Refuse even loopback clients without a token.
     requireToken: boolean;
-    // `pair`: ask the running daemon for a pairing URL and print it.
-    command: 'serve' | 'pair';
+    // `pair` asks the running daemon for a pairing URL; `context` is the agent-side CLI (`ruimte-context`).
+    command: 'serve' | 'pair' | 'context';
+    // What follows the command, for `context`.
+    args: string[];
 }
 
 export const DEFAULT_HOST = '127.0.0.1';
@@ -39,7 +41,7 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
         allowPositionals: true
     });
     const command = positionals[0] ?? 'serve';
-    if (command !== 'serve' && command !== 'pair') {
+    if (command !== 'serve' && command !== 'pair' && command !== 'context') {
         throw new Error(`Unknown command: ${command}`);
     }
 
@@ -57,6 +59,7 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
         label: values.label ?? env.RUIMTE_LABEL ?? hostname(),
         allowedOrigins: values['allow-origin'],
         requireToken: values['require-token'],
-        command
+        command,
+        args: positionals.slice(1)
     };
 };

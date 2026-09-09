@@ -1,0 +1,58 @@
+# Packaging for the desktop shell. The daemon is a Bun executable compiled by `apps/server/scripts/compile.ts`
+# and rides along as a resource, outside the asar, next to the built client it serves.
+appId: app.ruimte.desktop
+productName: Ruimte
+copyright: Copyright © 2026 Bas Milius
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**
+  - package.json
+extraResources:
+  - from: ../client/dist
+    to: client
+  - from: ../server/dist/${os}-${arch}
+    to: bin
+asar: true
+afterPack: build/after-pack.cjs
+npmRebuild: false
+# Nothing in dist/ needs node_modules; the main bundle inlines electron-updater.
+nodeGypRebuild: false
+publish:
+  provider: github
+  owner: basmilius
+  repo: ruimte
+mac:
+  category: public.app-category.developer-tools
+  # The arch comes from the command line (`--arm64 --x64`), never from here, so a daemon is compiled for each one on purpose.
+  target: [dmg, zip]
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  # Set to true by the release workflow once Apple credentials are in the secrets.
+  notarize: false
+dmg:
+  contents:
+    - x: 140
+      y: 200
+    - x: 420
+      y: 200
+      type: link
+      path: /Applications
+linux:
+  category: Development
+  maintainer: Bas Milius <basmilius@hotmail.com>
+  target: [AppImage, deb]
+deb:
+  depends:
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils
+    - libatspi2.0-0
+    - libuuid1
+    - libsecret-1-0

@@ -34,6 +34,7 @@ describe('parseServerArgs', () => {
         expect(config.requireToken).toBe(true);
         expect(parseServerArgs([], { RUIMTE_LABEL: 'named' }).label).toBe('named');
         expect(() => parseServerArgs(['dance'], {})).toThrow('Unknown command');
+        expect(parseServerArgs(['context', 'read', 'abc'], {})).toMatchObject({ command: 'context', args: ['read', 'abc'] });
     });
 
     test('rejects a port that is not a number', () => {

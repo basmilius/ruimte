@@ -75,13 +75,13 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   dialog, open external, guest devtools). `bun run dev:desktop` opens the window against the
   Vite dev server while `bun dev` runs; without `RUIMTE_DEV_URL` the shell spawns the daemon
   from the repo through bun with `--serve apps/client/dist`, so one origin serves client and
-  socket (packaging the daemon is phase 11). Browser nodes are `<webview>` elements owned by
+  socket (a packaged app runs the compiled daemon from its resources, phase 11). Browser nodes are `<webview>` elements owned by
   `apps/client/src/browser/registry.ts` and positioned by `WebviewLayer` over the canvas in world
   space; they are created once and never re-parented, and a project switch only hides them, so
   a form keeps what was typed. The layer passes pointer events to a page only while its node is
   focused and no canvas gesture is running. Inspect opens the guest's devtools in a window of
-  ours that stays above a fullscreen app. `electron-updater` is wired for a packaged build with
-  `RUIMTE_UPDATE_URL`; unsigned builds skip it. `bun run --cwd apps/desktop smoke` boots the
+  ours that stays above a fullscreen app. `electron-updater` reads the feed electron-builder
+  writes into a packaged app; a checkout skips it. `bun run --cwd apps/desktop smoke` boots the
   shell, adds a browser node through the keyboard and waits for its page to load. The title
   bar is `hiddenInset` with the traffic lights at (16, 18) on macOS and a native
   controls overlay elsewhere, the sidebar's top strip is the drag region (children reset to
@@ -119,6 +119,22 @@ daemons) is in `docs/research/browser-streaming.md`: the recommendation is a hea
 Chromium owned by the daemon with CDP `Page.startScreencast` JPEG frames over our socket and
 input back through CDP, behind a `BrowserBackend` seam next to the webview registry. Not
 started; it fits after #10, when a remote daemon makes it worth its weight.
+
+- **Phase 11, packaging and releases**: `apps/server/scripts/compile.ts` turns the daemon into
+  one Bun executable per platform (`dist/<os>-<arch>/ruimte`, folder names are electron-builder's
+  macros) with the `ruimte-context` shell script next to it; `ruimte pair` and `ruimte context`
+  are subcommands of that binary, so `src/main.ts` is a dispatcher and the daemon lives in
+  `src/daemon.ts`. The desktop app (`apps/desktop/electron-builder.yml`) puts that folder and the
+  built client in its resources outside the asar, spawns `bin/ruimte --serve client` from there
+  when packaged, asks the login shell for its PATH once (an app from the Dock has none), and logs
+  the daemon to the app's log directory. `bun run dist` at the root builds everything for this
+  machine; `.github/workflows/release.yml` builds macOS (arm64 and x64) and Linux (AppImage and
+  deb, both arches) on a `v*` tag, stamps the tag's version into the app and the daemon, and
+  uploads a draft GitHub release with the update manifests. Signing and notarization run when the
+  secrets exist (`CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`,
+  `APPLE_TEAM_ID`); without them the build is unsigned and says so. `site/` is the landing page
+  for ruimte.app, published to GitHub Pages by `site.yml`. No telemetry, nothing phones home
+  except the update check against the release feed.
 
 ## Decisions that are not in the code
 
@@ -183,8 +199,19 @@ started; it fits after #10, when a remote daemon makes it worth its weight.
   process uses a plain `require('electron')` for that reason.
 - Bun does not run Electron's install script unless it is in `trustedDependencies` (root
   `package.json`); without it `node_modules/electron/dist` is missing and nothing starts.
-- `ruimte-context` runs through `#!/usr/bin/env bun`, so a shell without bun on its PATH cannot
-  use it; phase 11 compiles it with the daemon.
+- `ruimte-context` is a shell script: next to a compiled `ruimte` it runs `ruimte context`,
+  in a checkout it runs the source through bun, so a checkout still needs bun on the PATH.
+- Bun 1.4 leaves a `bun build --compile` executable with an invalid code signature on macOS; the
+  kernel kills it at launch (exit 137, even for hello world). The compile script re-signs it
+  ad hoc, and electron-builder signs it again with the real identity.
+- electron-builder copies `extraResources` from a folder that does not exist without a word;
+  `build/after-pack.cjs` fails the build when the daemon or the client is missing. The arch
+  is a command-line flag for the same reason: a daemon is compiled per arch on purpose.
+- Electron names its log and user-data folders after `package.json`'s `name` unless
+  `productName` is set, which gave `~/Library/Logs/@ruimte/desktop`.
+- The update feed is the GitHub release of a private repository, which electron-updater cannot
+  read without a token; the repository goes public with the first release, or the feed moves to
+  ruimte.app (`publish.provider: generic`).
 - The CLI is only mentioned in a chat's system prompt when the chat has links at the moment its
   process starts; a link made later is visible to `ruimte-context` but the agent is not told.
 
@@ -205,8 +232,12 @@ In the order that makes sense, each one an issue on GitHub:
 4. **#10 follow-ups**: one endpoint at a time is the model; a project list that spans machines
    would need a transport per endpoint. `auth.sessions` and `auth.revoke` have no UI yet. TLS is
    a reverse proxy's job and is only documented.
-5. **#11 packaging** (compile the daemon and `ruimte-context` with `bun build --compile`, sign,
-   `ruimte.app`); needs Apple signing credentials from Bas.
+5. **#11 follow-ups**: put the Apple secrets in the repository and tag `v0.1.0` to get the
+   first signed, notarized build (the local `bun run dist` already signs with the Developer ID
+   in the keychain); enable Pages with source "GitHub Actions" and point ruimte.app at it; the
+   30-second video for the landing page; Windows (the daemon on Bun's Windows PTY or Node with
+   node-pty); an app icon that is more than a placeholder; the daemon as a background service
+   so closing the app keeps sessions alive.
 
 Known gaps to keep in mind: no WebGL context budget (many visible terminals may lose
 contexts), no backpressure for a slow client, the 30-node performance target is unmeasured.
