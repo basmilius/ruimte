@@ -224,6 +224,10 @@ body {
 }
 .node-group:hover { background: color-mix(in srgb, var(--group-accent) 10%, transparent); }
 
+/* The link handle on a selected node; it only shows when there is something to drag from. */
+.node-port { box-shadow: 0 0 0 2px var(--surface); }
+.node-port:hover { background: var(--accent); }
+
 /* Keyboard focus is visible on every control; pointer focus stays quiet. */
 .icon-btn:focus-visible, .menu-item:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .menu-item:focus-visible { outline-offset: -2px; }

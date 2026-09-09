@@ -22,7 +22,8 @@ const document = (rev: number, nodes: ProjectDocument['nodes'] = []): ProjectDoc
     color: '#000',
     nodes,
     texts: [],
-    edges: []
+    edges: [],
+    layouts: []
 });
 
 class FakeTransport implements Transport {

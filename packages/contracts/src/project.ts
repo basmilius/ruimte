@@ -22,7 +22,13 @@ export const ProjectNodeSchema = z.object({
     // Chat only: the agent session to continue.
     resume: z.string().optional(),
     // Browser only: the page it shows.
-    url: z.string().optional()
+    url: z.string().optional(),
+    // Group only: folded to its header, with the nodes it held out of sight until it opens again.
+    collapsed: z.boolean().optional(),
+    memberIds: z.array(z.string()).optional(),
+    expandedHeight: z.number().positive().optional(),
+    // Group only: the git worktree every node made inside it starts in.
+    worktree: z.object({ path: z.string(), branch: z.string() }).optional()
 });
 export type ProjectNode = z.infer<typeof ProjectNodeSchema>;
 
@@ -35,6 +41,7 @@ export const ProjectTextSchema = z.object({
 });
 export type ProjectText = z.infer<typeof ProjectTextSchema>;
 
+// An edge from a text, terminal or chat into an agent's node: the agent may read the source.
 export const ProjectEdgeSchema = z.object({
     id: z.string().min(1),
     from: z.string().min(1),
@@ -43,6 +50,14 @@ export const ProjectEdgeSchema = z.object({
 });
 export type ProjectEdge = z.infer<typeof ProjectEdgeSchema>;
 
+// A named arrangement: where every node and text sat when it was saved.
+export const ProjectLayoutSchema = z.object({
+    name: z.string().min(1),
+    nodes: z.record(z.string(), z.object({ x: z.number(), y: z.number(), w: z.number().positive(), h: z.number().positive() })),
+    texts: z.record(z.string(), z.object({ x: z.number(), y: z.number() }))
+});
+export type ProjectLayout = z.infer<typeof ProjectLayoutSchema>;
+
 // What the person edits; the daemon wraps it with the version and the rev.
 export const ProjectContentSchema = z.object({
     name: z.string().min(1),
@@ -50,7 +65,8 @@ export const ProjectContentSchema = z.object({
     // In stacking order, back to front.
     nodes: z.array(ProjectNodeSchema),
     texts: z.array(ProjectTextSchema),
-    edges: z.array(ProjectEdgeSchema)
+    edges: z.array(ProjectEdgeSchema),
+    layouts: z.array(ProjectLayoutSchema).default([])
 });
 export type ProjectContent = z.infer<typeof ProjectContentSchema>;
 

@@ -88,8 +88,22 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   `initial`, controls `no-drag`), the inset is only applied outside fullscreen (the shell sends
   `window:fullscreen`), and the overlay colors follow the client's theme over IPC.
 
+- **Phase 9, in progress**: groups nest (a group inside a group carries its members along),
+  collapse to their header with the members hidden and remembered (`memberIds`), and show
+  their worktree branch. Edges are drawn from a port on a selected node or text to a terminal
+  or chat node (only agent nodes can be targets), hover shows a delete button, a double-click
+  on the label edits it, clicking an edge selects it for Delete. Layouts are named
+  arrangements saved from the palette ("Save layout as") and applied or deleted from there.
+  Worktree binding and context links are next.
+
 Issues #1 to #8 on GitHub describe each phase; #2, #3 and #4 are closed, #1 and #5 to #8 are
 implemented but wait for a review before closing.
+
+Research on showing a live browser page without a `<webview>` (for the web build and remote
+daemons) is in `docs/research/browser-streaming.md`: the recommendation is a headless
+Chromium owned by the daemon with CDP `Page.startScreencast` JPEG frames over our socket and
+input back through CDP, behind a `BrowserBackend` seam next to the webview registry. Not
+started; it fits after #10, when a remote daemon makes it worth its weight.
 
 ## Decisions that are not in the code
 

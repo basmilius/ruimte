@@ -146,7 +146,7 @@ export class ProjectStore {
         } else if (payload.projectId && entry.folder) {
             throw new ProjectError('project-missing', `The canvas of ${entry.name} is gone from ${entry.folder}`);
         } else {
-            document = { version: 1, rev: 0, name: entry.name, color: entry.color, nodes: [], texts: [], edges: [] };
+            document = { version: 1, rev: 0, name: entry.name, color: entry.color, nodes: [], texts: [], edges: [], layouts: [] };
             text = await writeDocument(path, document);
         }
 

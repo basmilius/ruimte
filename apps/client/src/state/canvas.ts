@@ -13,7 +13,7 @@ import {
     type Rect
 } from '@/canvas/math';
 
-import type { AgentStatus, NodeKind, ProjectContent, ProjectDocument, ProjectLocal, ProjectNode } from '@ruimte/contracts';
+import type { AgentStatus, NodeKind, ProjectContent, ProjectDocument, ProjectLayout, ProjectLocal, ProjectNode } from '@ruimte/contracts';
 
 export type { AgentStatus, NodeKind } from '@ruimte/contracts';
 
@@ -42,6 +42,15 @@ export interface Edge {
     label?: string;
 }
 
+/* An edge being drawn: from a node or text to wherever the pointer is, in world units. */
+export interface LinkDraft {
+    from: string;
+    to: Point;
+}
+
+// A collapsed group is its header only.
+export const GROUP_HEADER_PX = 37;
+
 /* Which gestures the canvas refuses. Commands (dock buttons, shortcuts) always work. */
 export interface Locks {
     pan: boolean;
@@ -58,6 +67,7 @@ interface Snapshot {
     order: string[];
     texts: Record<string, TextElement>;
     edges: Edge[];
+    layouts: ProjectLayout[];
 }
 
 const HISTORY_LIMIT = 100;
@@ -74,6 +84,10 @@ interface CanvasState {
     order: string[];
     texts: Record<string, TextElement>;
     edges: Edge[];
+    layouts: ProjectLayout[];
+    linkDraft: LinkDraft | null;
+    /* Node ids inside a collapsed group; they keep running, they are just not drawn. */
+    hidden: Set<string>;
     selection: string[];
     mode: Mode;
     editingTextId: string | null;
@@ -122,9 +136,20 @@ interface CanvasState {
     toggleLock(key: keyof Locks): void;
     setAllLocks(locked: boolean): void;
 
+    toggleGroupCollapse(id: string): void;
+    setGroupWorktree(id: string, worktree: { path: string; branch: string } | null): void;
+    /* Edges: only an agent node (terminal or chat) can be the target. */
+    addEdge(from: string, to: string): string | null;
+    removeEdge(id: string): void;
+    setEdgeLabel(id: string, label: string): void;
+    setLinkDraft(draft: LinkDraft | null): void;
+    saveLayout(name: string): void;
+    applyLayout(name: string): void;
+    deleteLayout(name: string): void;
+
     /* Replaces the whole canvas with a project's content; the camera comes from the machine-local state. */
     loadDocument(document: ProjectDocument | null, local: ProjectLocal | null): void;
-    exportContent(): Pick<ProjectContent, 'nodes' | 'texts' | 'edges'>;
+    exportContent(): Pick<ProjectContent, 'nodes' | 'texts' | 'edges' | 'layouts'>;
     undo(): void;
     redo(): void;
 }
@@ -151,36 +176,68 @@ const center = (rect: Rect): Point => ({ x: rect.x + rect.w / 2, y: rect.y + rec
 
 const contains = (rect: Rect, point: Point): boolean => point.x >= rect.x && point.x <= rect.x + rect.w && point.y >= rect.y && point.y <= rect.y + rect.h;
 
-/* A group carries whatever sits inside it: nodes and texts whose center is within its frame. */
+/* What one group holds: its remembered members when collapsed, else whatever has its center inside the frame. */
+export const membersOf = (group: CanvasNode, nodes: Record<string, CanvasNode>, texts: Record<string, TextElement>): string[] => {
+    if (group.collapsed) {
+        return group.memberIds ?? [];
+    }
+    const members: string[] = [];
+    for (const node of Object.values(nodes)) {
+        if (node.id !== group.id && contains(group, center(node))) {
+            members.push(node.id);
+        }
+    }
+    for (const text of Object.values(texts)) {
+        if (contains(group, text)) {
+            members.push(text.id);
+        }
+    }
+    return members;
+};
+
+/* A group carries what sits inside it, and a group inside it carries its own members in turn. */
 export const carriedByGroups = (nodes: Record<string, CanvasNode>, texts: Record<string, TextElement>, selection: string[]): Set<string> => {
     const carried = new Set<string>();
-    for (const id of selection) {
-        const group = nodes[id];
+    const visit = (groupId: string): void => {
+        const group = nodes[groupId];
         if (!group || group.kind !== 'group') {
-            continue;
+            return;
         }
-        for (const node of Object.values(nodes)) {
-            if (node.id !== group.id && node.kind !== 'group' && !selection.includes(node.id) && contains(group, center(node))) {
-                carried.add(node.id);
+        for (const id of membersOf(group, nodes, texts)) {
+            if (selection.includes(id) || carried.has(id)) {
+                continue;
             }
+            carried.add(id);
+            visit(id);
         }
-        for (const text of Object.values(texts)) {
-            if (!selection.includes(text.id) && contains(group, text)) {
-                carried.add(text.id);
+    };
+    for (const id of selection) {
+        visit(id);
+    }
+    return carried;
+};
+
+const hiddenIn = (nodes: Record<string, CanvasNode>): Set<string> => {
+    const hidden = new Set<string>();
+    for (const node of Object.values(nodes)) {
+        if (node.kind === 'group' && node.collapsed) {
+            for (const id of node.memberIds ?? []) {
+                hidden.add(id);
             }
         }
     }
-    return carried;
+    return hidden;
 };
 
 // Ids double as daemon session ids and end up in a shared file, so they must not repeat across machines.
 const nextId = (prefix: string): string => `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 
-const snapshotOf = (s: Pick<CanvasState, 'nodes' | 'order' | 'texts' | 'edges'>): Snapshot => ({
+const snapshotOf = (s: Pick<CanvasState, 'nodes' | 'order' | 'texts' | 'edges' | 'layouts'>): Snapshot => ({
     nodes: s.nodes,
     order: s.order,
     texts: s.texts,
-    edges: s.edges
+    edges: s.edges,
+    layouts: s.layouts
 });
 
 /* Remembers the placement before a change; called by every action that changes it. */
@@ -193,6 +250,9 @@ export const useCanvas = create<CanvasState>((set, get) => ({
     order: [],
     texts: {},
     edges: [],
+    layouts: [],
+    linkDraft: null,
+    hidden: new Set(),
     selection: [],
     mode: { kind: 'canvas' },
     editingTextId: null,
@@ -408,6 +468,15 @@ export const useCanvas = create<CanvasState>((set, get) => ({
             return;
         }
         const gone = new Set(selection);
+        // A collapsed group takes what it hid along; nothing should linger unseen.
+        for (const id of selection) {
+            const node = nodes[id];
+            if (node?.kind === 'group' && node.collapsed) {
+                for (const member of node.memberIds ?? []) {
+                    gone.add(member);
+                }
+            }
+        }
         const nextNodes = { ...nodes };
         const nextTexts = { ...texts };
         for (const id of gone) {
@@ -417,8 +486,9 @@ export const useCanvas = create<CanvasState>((set, get) => ({
         set({
             nodes: nextNodes,
             texts: nextTexts,
+            hidden: hiddenIn(nextNodes),
             order: order.filter((id) => !gone.has(id)),
-            edges: edges.filter((e) => !gone.has(e.from) && !gone.has(e.to)),
+            edges: edges.filter((e) => !gone.has(e.id) && !gone.has(e.from) && !gone.has(e.to)),
             selection: [],
             mode: { kind: 'canvas' },
             ...remember(get())
@@ -431,6 +501,78 @@ export const useCanvas = create<CanvasState>((set, get) => ({
         set({ locks: { pan: locked, zoom: locked, move: locked, resize: locked } });
     },
 
+    toggleGroupCollapse(id) {
+        const s = get();
+        const group = s.nodes[id];
+        if (!group || group.kind !== 'group') {
+            return;
+        }
+        const next: CanvasNode = group.collapsed
+            ? { ...group, collapsed: false, memberIds: undefined, h: group.expandedHeight ?? group.h, expandedHeight: undefined }
+            : { ...group, collapsed: true, memberIds: membersOf(group, s.nodes, s.texts), expandedHeight: group.h, h: GROUP_HEADER_PX };
+        const nodes = { ...s.nodes, [id]: next };
+        const hidden = hiddenIn(nodes);
+        set({ nodes, hidden, selection: s.selection.filter((selected) => !hidden.has(selected)), ...remember(s) });
+    },
+    setGroupWorktree(id, worktree) {
+        set((s) => (s.nodes[id]?.kind === 'group' ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], worktree: worktree ?? undefined } } } : {}));
+    },
+    addEdge(from, to) {
+        const s = get();
+        const target = s.nodes[to];
+        if (from === to || !target || (target.kind !== 'chat' && target.kind !== 'terminal') || !(s.nodes[from] || s.texts[from])) {
+            return null;
+        }
+        if (s.edges.some((edge) => edge.from === from && edge.to === to)) {
+            return null;
+        }
+        const id = nextId('edge');
+        set({ edges: [...s.edges, { id, from, to, label: 'context' }], ...remember(s) });
+        return id;
+    },
+    removeEdge(id) {
+        set((s) => ({ edges: s.edges.filter((edge) => edge.id !== id), selection: s.selection.filter((selected) => selected !== id), ...remember(s) }));
+    },
+    setEdgeLabel(id, label) {
+        set((s) => ({ edges: s.edges.map((edge) => (edge.id === id ? { ...edge, label: label.trim() || undefined } : edge)) }));
+    },
+    setLinkDraft(draft) {
+        set({ linkDraft: draft });
+    },
+    saveLayout(name) {
+        const s = get();
+        const layout: ProjectLayout = {
+            name,
+            nodes: Object.fromEntries(Object.values(s.nodes).map((node) => [node.id, { x: node.x, y: node.y, w: node.w, h: node.h }])),
+            texts: Object.fromEntries(Object.values(s.texts).map((text) => [text.id, { x: text.x, y: text.y }]))
+        };
+        set({ layouts: [...s.layouts.filter((entry) => entry.name !== name), layout] });
+    },
+    applyLayout(name) {
+        const s = get();
+        const layout = s.layouts.find((entry) => entry.name === name);
+        if (!layout) {
+            return;
+        }
+        // Nodes the layout never saw stay where they are; nothing is added or removed.
+        const nodes = { ...s.nodes };
+        for (const [id, rect] of Object.entries(layout.nodes)) {
+            if (nodes[id]) {
+                nodes[id] = { ...nodes[id], ...rect };
+            }
+        }
+        const texts = { ...s.texts };
+        for (const [id, point] of Object.entries(layout.texts)) {
+            if (texts[id]) {
+                texts[id] = { ...texts[id], ...point };
+            }
+        }
+        set({ nodes, texts, ...remember(s) });
+    },
+    deleteLayout(name) {
+        set((s) => ({ layouts: s.layouts.filter((entry) => entry.name !== name) }));
+    },
+
     loadDocument(document, local) {
         const nodes = document ? Object.fromEntries(document.nodes.map((node) => [node.id, node])) : {};
         const texts = document ? Object.fromEntries(document.texts.map((text) => [text.id, text])) : {};
@@ -440,6 +582,9 @@ export const useCanvas = create<CanvasState>((set, get) => ({
             order: document ? document.nodes.map((node) => node.id) : [],
             texts,
             edges: document?.edges ?? [],
+            layouts: document?.layouts ?? [],
+            linkDraft: null,
+            hidden: hiddenIn(nodes),
             selection: [],
             mode: { kind: 'canvas' },
             editingTextId: null,
@@ -454,11 +599,12 @@ export const useCanvas = create<CanvasState>((set, get) => ({
         }
     },
     exportContent() {
-        const { nodes, order, texts, edges } = get();
+        const { nodes, order, texts, edges, layouts } = get();
         return {
             nodes: order.map((id) => nodes[id]!).map(({ status: _status, ...node }) => node),
             texts: Object.values(texts),
-            edges
+            edges,
+            layouts
         };
     },
     undo() {
@@ -467,7 +613,14 @@ export const useCanvas = create<CanvasState>((set, get) => ({
         if (!previous) {
             return;
         }
-        set({ ...previous, past: s.past.slice(0, -1), future: [snapshotOf(s), ...s.future], selection: [], mode: { kind: 'canvas' } });
+        set({
+            ...previous,
+            hidden: hiddenIn(previous.nodes),
+            past: s.past.slice(0, -1),
+            future: [snapshotOf(s), ...s.future],
+            selection: [],
+            mode: { kind: 'canvas' }
+        });
     },
     redo() {
         const s = get();
@@ -475,7 +628,7 @@ export const useCanvas = create<CanvasState>((set, get) => ({
         if (!next) {
             return;
         }
-        set({ ...next, past: [...s.past, snapshotOf(s)], future: s.future.slice(1), selection: [], mode: { kind: 'canvas' } });
+        set({ ...next, hidden: hiddenIn(next.nodes), past: [...s.past, snapshotOf(s)], future: s.future.slice(1), selection: [], mode: { kind: 'canvas' } });
     }
 }));
 
