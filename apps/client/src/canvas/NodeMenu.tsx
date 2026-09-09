@@ -30,6 +30,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
     const agent = useSessions((s) => s.byNodeId[id]?.agent);
     const chatSession = useChats((s) => s.byNodeId[id]?.info.agentSessionId);
     const chatCwd = useChats((s) => s.byNodeId[id]?.info.cwd);
+    const chatProvider = useChats((s) => s.byNodeId[id]?.info.provider);
     const platform = useServer((s) => s.platform);
     const projectFolder = useProject((s) => s.current?.folder ?? null);
 
@@ -46,12 +47,13 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
     const beside = { x: node.x + node.w + 40 + 260, y: node.y + node.h / 2 };
     const openInChat = (): void => {
         if (agent?.kind === 'claude') {
-            useCanvas.getState().addNode('chat', beside, { title: node.title, cwd: node.cwd, resume: agent.agentSessionId });
+            useCanvas.getState().addNode('chat', beside, { title: node.title, cwd: node.cwd, resume: agent.agentSessionId, provider: agent.kind });
         }
     };
     const openInTerminal = (): void => {
         if (chatSession) {
-            useCanvas.getState().addNode('terminal', beside, { title: node.title, cwd: chatCwd, command: `claude --resume ${chatSession}` });
+            const command = chatProvider === 'codex' ? `codex resume ${chatSession}` : `claude --resume ${chatSession}`;
+            useCanvas.getState().addNode('terminal', beside, { title: node.title, cwd: chatCwd, command });
         }
     };
     // The folder the node works in: its own, or the project's when it has none.

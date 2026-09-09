@@ -51,6 +51,14 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   the item's own timestamp) and, for a provider that streams partial output, the last lines
   under it; the reducer folds `tool_progress` and `task_started` into an optional `progress`
   on the tool item and `fake-claude.ts` emits both on `run: <cmd>`.
+- **Phase 6c, Codex chat backend**: a chat node with `provider: 'codex'` runs `codex app-server`
+  (JSON-RPC over stdio, `apps/server/src/chat/codex-*.ts`). Approvals for commands and file
+  changes, both kinds of Codex question (blocking `request_user_input` and the async one that
+  arrives as an agent message), interrupt, compact, model and effort, the runtime modes as
+  approval policy plus sandbox, restart with `thread/resume`. The Codex catalog is
+  `apps/server/src/providers/codex-models.json`, `fake-codex.ts` stands in for the CLI in
+  tests. The Agent submenu opens Codex as a chat; "Open in chat" and "Open in terminal" work for
+  both CLIs.
 
 - **Phase 1, remaining checklist**: command palette on Cmd+K (jump to a node, every app
   action), Option+T/C/B/G add nodes, Cmd+G wraps the selection in a group, Cmd+, opens
@@ -201,8 +209,6 @@ started; it fits after #10, when a remote daemon makes it worth its weight.
   behavior (headers to Anthropic, temp dir checks). The live timer therefore counts on the
   client, and partial output is plumbing for a provider that has it (Codex streams command
   output).
-- The Codex chat backend (app-server protocol) is not built; only the Codex hooks are. The
-  Agent submenu opens Codex, Gemini and Copilot as terminals with the CLI typed in.
 - `@file` mentions are plain `@path` text in the prompt, because that is what the Claude CLI
   expands itself (checked with `claude -p` 2.1.266); the chosen paths travel next to the text
   as `mentions` only so the timeline can draw them as chips. The picker searches through
@@ -213,6 +219,17 @@ started; it fits after #10, when a remote daemon makes it worth its weight.
   the Anthropic API shape passed through as is. The user item keeps the full data, so the
   thread file and `chat.attach` grow with every image; move them to files under the app data
   dir when that starts to hurt. No `$skills` in the composer yet.
+- `CodexChatSession` is a second class with the same surface as `ChatSession` instead of one
+  session over a backend interface: the Claude session had three other changes landing on it at
+  the same time, so it was left alone. Folding both onto one `ChatBackend` (spawn, reduce,
+  answer) is the refactor to do once the parallel work is in.
+- Codex runtime modes: `supervised` = `untrusted` + `read-only`, `auto-accept-edits` =
+  `untrusted` + `workspace-write`, `auto` = `on-request` + `workspace-write`, `full-access` =
+  `never` + `danger-full-access`. Plan mode is a read-only sandbox plus an instruction in the
+  prompt, because app-server 0.153 reports the collaboration mode but never takes it. Not
+  mapped: cost (Codex reports none), the deny reason, slash commands, permission-profile
+  requests and MCP elicitations (refused with a JSON-RPC error). Gemini and Copilot still open
+  as terminals with the CLI typed in.
 
 ## Gotchas already paid for
 
@@ -267,15 +284,28 @@ started; it fits after #10, when a remote daemon makes it worth its weight.
   shell's line depends on `context.set` reaching the daemon before `session.create`; on a
   fresh project load the client's sync (300 ms settle) can lose that race, so the chip and the
   hooks are the ones to rely on.
+- The app-server frames have no `jsonrpc` field: `{ id, method, params }` out, `{ id, result }`
+  or `{ id, error }` back, `{ method, params }` for notifications, and the server's own requests
+  (approvals, questions) arrive with an `id` that starts at 0 for every process. Approval item
+  ids therefore carry the process generation (`<generation>-<rpcId>`); Codex item ids are
+  globally unique and are used as they are.
+- Codex asks questions two ways. The blocking one is a server request
+  (`item/tool/requestUserInput`); the async one is an `agentMessage` with `questions` and
+  `delivery: "async"`, after which Codex polls with `sleep` items until a `turn/steer` arrives.
+  Both are question items; the session answers the first by id and steers for the second.
+- The decisions the real binary takes differ from its `availableDecisions` hint: `decline` is
+  accepted even when the hint lists only `accept`, the amendment and `cancel`.
 
 ## Next
 
 In the order that makes sense, each one an issue on GitHub:
 
-1. **#5 and #6 follow-ups**: a Codex chat backend on the app-server protocol, real partial
-   tool output once a provider streams it (the thread, the contract and the live row already
-   take a `delta` on a tool item), and per-turn checkpoints so the changed-files card can show
-   real diffs against the working tree instead of the edit's before and after. Mentions,
+1. **#5 and #6 follow-ups**: real partial tool output once a provider streams it (the thread,
+   the contract and the live row already take a `delta` on a tool item; Codex has
+   `item/commandExecution/outputDelta`), per-turn checkpoints so the changed-files card can
+   show real diffs against the working tree instead of the edit's before and after, the Codex
+   `fileChange` diffs (unified, not before/after) in that same card, and folding
+   `CodexChatSession` and `ChatSession` onto one `ChatBackend`. The Codex backend, mentions,
    attachments and the "send Escape to the app" toggle are done.
 2. **#7 follow-ups**: a webview keeps the canvas's z-order only by being above everything, so
    a node dragged over a browser node slides under its page; the traffic-light inset is fixed,
