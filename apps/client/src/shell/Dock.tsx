@@ -59,10 +59,10 @@ export function Dock() {
 
     return (
         <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
-            <div className="float pointer-events-auto flex items-center gap-1 rounded-xl p-1">
+            <div className="float pointer-events-auto flex items-center gap-2 rounded-xl p-1">
                 <div
                     className={clsx(
-                        'mr-1 flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12px] font-medium',
+                        'flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12px] font-medium',
                         mode === 'node' ? 'bg-accent-soft text-accent' : 'text-text-muted'
                     )}
                     title={mode === 'node' ? 'Keyboard goes to this node. Escape returns to the canvas.' : 'Keyboard goes to the canvas'}
@@ -97,78 +97,82 @@ export function Dock() {
                 </Menu.Root>
 
                 <span className="h-5 w-px bg-border" />
-                <button className="icon-btn" title="Zoom out" onClick={() => useCanvas.getState().zoomTo(Math.round(zoom * 100 - 10) / 100)}><Minus size={15} /></button>
+                <div className="btn-group">
+                    <button className="icon-btn" title="Zoom out" onClick={() => useCanvas.getState().zoomTo(Math.round(zoom * 100 - 10) / 100)}><Minus size={15} /></button>
 
-                <Menu.Root>
-                    <Menu.Trigger
-                        className="h-8 min-w-14 rounded-lg px-1 text-[12px] tabular-nums text-text-muted hover:bg-surface-sunken hover:text-text data-[popup-open]:bg-surface-sunken data-[popup-open]:text-text"
-                        title="Zoom presets"
-                    >
-                        {zoomPct}%
-                    </Menu.Trigger>
-                    <Menu.Portal>
-                        <Menu.Positioner className="z-50" side="top" sideOffset={10} align="center">
-                            <Menu.Popup className="menu-popup min-w-44">
-                                <Menu.RadioGroup value={preset} onValueChange={(value: number) => useCanvas.getState().zoomTo(value / 100)}>
-                                    {ZOOM_PRESETS.map((pct) => (
-                                        <Menu.RadioItem key={pct} value={pct} className="menu-item">
-                                            <span className="grid h-4 w-4 place-items-center">
-                                                <Menu.RadioItemIndicator><Check size={13} strokeWidth={2.5} /></Menu.RadioItemIndicator>
-                                            </span>
-                                            <span className="tabular-nums">{pct}%</span>
-                                            {pct === 100 && <kbd>⌘0</kbd>}
-                                        </Menu.RadioItem>
-                                    ))}
-                                </Menu.RadioGroup>
-                                <Menu.Separator className="menu-separator" />
-                                <Menu.Item className="menu-item" onClick={() => useCanvas.getState().fitAll()}>
-                                    <span className="grid h-4 w-4 place-items-center"><Maximize size={13} /></span> Zoom to fit <kbd>⇧1</kbd>
-                                </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={!hasSelection} onClick={() => useCanvas.getState().zoomToSelection()}>
-                                    <span className="grid h-4 w-4 place-items-center"><Scan size={13} /></span> Zoom to selection <kbd>⇧2</kbd>
-                                </Menu.Item>
-                            </Menu.Popup>
-                        </Menu.Positioner>
-                    </Menu.Portal>
-                </Menu.Root>
+                    <Menu.Root>
+                        <Menu.Trigger
+                            className="h-8 min-w-14 rounded-lg px-1 text-[12px] tabular-nums text-text-muted hover:bg-surface-sunken hover:text-text data-[popup-open]:bg-surface-sunken data-[popup-open]:text-text"
+                            title="Zoom presets"
+                        >
+                            {zoomPct}%
+                        </Menu.Trigger>
+                        <Menu.Portal>
+                            <Menu.Positioner className="z-50" side="top" sideOffset={10} align="center">
+                                <Menu.Popup className="menu-popup min-w-44">
+                                    <Menu.RadioGroup value={preset} onValueChange={(value: number) => useCanvas.getState().zoomTo(value / 100)}>
+                                        {ZOOM_PRESETS.map((pct) => (
+                                            <Menu.RadioItem key={pct} value={pct} className="menu-item">
+                                                <span className="grid h-4 w-4 place-items-center">
+                                                    <Menu.RadioItemIndicator><Check size={13} strokeWidth={2.5} /></Menu.RadioItemIndicator>
+                                                </span>
+                                                <span className="tabular-nums">{pct}%</span>
+                                                {pct === 100 && <kbd>⌘0</kbd>}
+                                            </Menu.RadioItem>
+                                        ))}
+                                    </Menu.RadioGroup>
+                                    <Menu.Separator className="menu-separator" />
+                                    <Menu.Item className="menu-item" onClick={() => useCanvas.getState().fitAll()}>
+                                        <span className="grid h-4 w-4 place-items-center"><Maximize size={13} /></span> Zoom to fit <kbd>⇧1</kbd>
+                                    </Menu.Item>
+                                    <Menu.Item className="menu-item" disabled={!hasSelection} onClick={() => useCanvas.getState().zoomToSelection()}>
+                                        <span className="grid h-4 w-4 place-items-center"><Scan size={13} /></span> Zoom to selection <kbd>⇧2</kbd>
+                                    </Menu.Item>
+                                </Menu.Popup>
+                            </Menu.Positioner>
+                        </Menu.Portal>
+                    </Menu.Root>
 
-                <button className="icon-btn" title="Zoom in" onClick={() => useCanvas.getState().zoomTo(Math.round(zoom * 100 + 10) / 100)}><Plus size={15} /></button>
-                <button className="icon-btn" title="Fit everything (Shift+1)" onClick={() => useCanvas.getState().fitAll()}><Maximize size={15} /></button>
+                    <button className="icon-btn" title="Zoom in" onClick={() => useCanvas.getState().zoomTo(Math.round(zoom * 100 + 10) / 100)}><Plus size={15} /></button>
+                    <button className="icon-btn" title="Fit everything (Shift+1)" onClick={() => useCanvas.getState().fitAll()}><Maximize size={15} /></button>
+                </div>
                 <span className="h-5 w-px bg-border" />
 
-                <Menu.Root>
-                    <Menu.Trigger className="icon-btn" data-active={anyLocked} title="Lock">
-                        {anyLocked ? <Lock size={15} /> : <LockOpen size={15} />}
-                    </Menu.Trigger>
-                    <Menu.Portal>
-                        <Menu.Positioner className="z-50" side="top" sideOffset={10} align="end">
-                            <Menu.Popup className="menu-popup">
-                                <div className="menu-label">Refuse gestures</div>
-                                {LOCK_ROWS.map((row) => (
-                                    <Menu.CheckboxItem key={row.key} className="menu-item" checked={locks[row.key]} onCheckedChange={() => useCanvas.getState().toggleLock(row.key)} closeOnClick={false}>
-                                        <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
-                                            <Menu.CheckboxItemIndicator><Check size={12} strokeWidth={2.5} /></Menu.CheckboxItemIndicator>
-                                        </span>
-                                        <span>
-                                            <span className="block">{row.label}</span>
-                                            <span className="block text-[11px] text-text-faint">{row.hint}</span>
-                                        </span>
-                                    </Menu.CheckboxItem>
-                                ))}
-                                <Menu.Separator className="menu-separator" />
-                                <Menu.Item className="menu-item" onClick={() => useCanvas.getState().setAllLocks(!allLocked)}>
-                                    {allLocked ? <LockOpen size={14} /> : <Lock size={14} />}
-                                    {allLocked ? 'Unlock everything' : 'Lock everything'}
-                                </Menu.Item>
-                                <div className="px-2.5 pb-1.5 pt-1 text-[11px] text-text-faint">Buttons and shortcuts still work while locked.</div>
-                            </Menu.Popup>
-                        </Menu.Positioner>
-                    </Menu.Portal>
-                </Menu.Root>
+                <div className="btn-group">
+                    <Menu.Root>
+                        <Menu.Trigger className="icon-btn" data-active={anyLocked} title="Lock">
+                            {anyLocked ? <Lock size={15} /> : <LockOpen size={15} />}
+                        </Menu.Trigger>
+                        <Menu.Portal>
+                            <Menu.Positioner className="z-50" side="top" sideOffset={10} align="end">
+                                <Menu.Popup className="menu-popup">
+                                    <div className="menu-label">Refuse gestures</div>
+                                    {LOCK_ROWS.map((row) => (
+                                        <Menu.CheckboxItem key={row.key} className="menu-item" checked={locks[row.key]} onCheckedChange={() => useCanvas.getState().toggleLock(row.key)} closeOnClick={false}>
+                                            <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
+                                                <Menu.CheckboxItemIndicator><Check size={12} strokeWidth={2.5} /></Menu.CheckboxItemIndicator>
+                                            </span>
+                                            <span>
+                                                <span className="block">{row.label}</span>
+                                                <span className="block text-[11px] text-text-faint">{row.hint}</span>
+                                            </span>
+                                        </Menu.CheckboxItem>
+                                    ))}
+                                    <Menu.Separator className="menu-separator" />
+                                    <Menu.Item className="menu-item" onClick={() => useCanvas.getState().setAllLocks(!allLocked)}>
+                                        {allLocked ? <LockOpen size={14} /> : <Lock size={14} />}
+                                        {allLocked ? 'Unlock everything' : 'Lock everything'}
+                                    </Menu.Item>
+                                    <div className="px-2.5 pb-1.5 pt-1 text-[11px] text-text-faint">Buttons and shortcuts still work while locked.</div>
+                                </Menu.Popup>
+                            </Menu.Positioner>
+                        </Menu.Portal>
+                    </Menu.Root>
 
-                <button className="icon-btn" title="Toggle theme" onClick={() => useTheme.getState().toggle()}>
-                    {resolved === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-                </button>
+                    <button className="icon-btn" title="Toggle theme" onClick={() => useTheme.getState().toggle()}>
+                        {resolved === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+                    </button>
+                </div>
             </div>
         </div>
     );
