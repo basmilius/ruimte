@@ -3,7 +3,7 @@ import { Dialog } from '@base-ui-components/react/dialog';
 import { useCanvas } from '@/state/canvas';
 import { useUi } from '@/state/ui';
 
-/* Names an arrangement of the canvas so it can be brought back later from the palette. */
+/* Names an arrangement of the canvas so it can be brought back later from the dock or the palette. */
 export function LayoutDialog() {
     const open = useUi((s) => s.layoutDialogOpen);
     const setOpen = useUi((s) => s.setLayoutDialogOpen);
