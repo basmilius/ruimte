@@ -44,7 +44,11 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   with shiki, and a floating glass composer: model picker, option picker, mode picker, plan
   toggle, context ring with compact, slash menu, prompt recall with the arrow keys, drafts in
   localStorage. Pending approvals and questions dock on top of the composer, never in the
-  transcript; only their outcome stays as a line.
+  transcript; only their outcome stays as a line. A running tool shows "running for 12s"
+  on its line (the timer counts from the CLI's `tool_progress` start when one came, else from
+  the item's own timestamp) and, for a provider that streams partial output, the last lines
+  under it; the reducer folds `tool_progress` and `task_started` into an optional `progress`
+  on the tool item and `fake-claude.ts` emits both on `run: <cmd>`.
 
 - **Phase 1, remaining checklist**: command palette on Cmd+K (jump to a node, every app
   action), Option+T/C/B/G add nodes, Cmd+G wraps the selection in a group, Cmd+, opens
@@ -107,8 +111,13 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   route. The client keeps endpoints in localStorage (`state/endpoints.ts`), pairs from the
   settings dialog by pasting the link (`endpoint/index.ts`), and switches by emptying the
   canvas first and pointing the one transport at the other daemon; the project client boots
-  again on the new socket. The header names the machine when it is not loopback. `bun run
-  serve` is the Server Edition. Tested by pairing this client with a second daemon on the LAN
+  again on the new socket. The header names the machine when it is not loopback. The
+  settings dialog lists the clients paired with the active daemon (`auth.sessions`) with a
+  revoke per row behind a confirm; revoking the client's own session forgets the endpoint and
+  goes back to the loopback daemon. On a loopback daemon "Show pairing link" asks
+  `auth.pairingToken` (loopback only, the socket twin of `POST /auth/pairing-token`) and
+  shows the URL with a copy button, plus a hint when the daemon only listens on loopback.
+  `bun run serve` is the Server Edition. Tested by pairing this client with a second daemon on the LAN
   address of this machine and switching both ways.
 
 Issues #1 to #10 on GitHub describe each phase; #2, #3 and #4 are closed, #1 and #5 to #10
@@ -165,6 +174,13 @@ started; it fits after #10, when a remote daemon makes it worth its weight.
 - A model or mode change restarts the CLI process with `--resume` on the next send instead of
   using the control protocol's `set_model`; one path, and the resumed session keeps everything.
 - Fast mode is not offered: the installed CLI has no flag for it, only the `/fast` command.
+- Claude Code 2.1.266 emits `tool_progress` (`tool_use_id`, `tool_name`, `parent_tool_use_id`,
+  `elapsed_time_seconds`, `task_id`, `heartbeat`) for a local Bash only when
+  `CLAUDE_CODE_REMOTE` or `CLAUDE_CODE_CONTAINER_ID` is set, throttled to one per 30 s, and
+  it never streams partial Bash output. Neither variable is set on purpose: both change other
+  behavior (headers to Anthropic, temp dir checks). The live timer therefore counts on the
+  client, and partial output is plumbing for a provider that has it (Codex streams command
+  output).
 - The Codex chat backend (app-server protocol) is not built; only the Codex hooks are. The
   Agent submenu opens Codex, Gemini and Copilot as terminals with the CLI typed in.
 - No attachments, `@file` mentions or `$skills` in the composer yet; those need an upload path
@@ -220,8 +236,9 @@ started; it fits after #10, when a remote daemon makes it worth its weight.
 In the order that makes sense, each one an issue on GitHub:
 
 1. **#5 and #6 follow-ups**: a Codex chat backend on the app-server protocol, attachments and
-   `@file` mentions in the composer, a "send Escape to the app" toggle, tool output streaming
-   (`tool_progress`), and per-turn checkpoints so the changed-files card can show real diffs
+   `@file` mentions in the composer, a "send Escape to the app" toggle, real partial tool output once a
+   provider streams it (the thread, the contract and the live row already take a `delta` on a
+   tool item), and per-turn checkpoints so the changed-files card can show real diffs
    against the working tree instead of the edit's before and after.
 2. **#7 follow-ups**: a webview keeps the canvas's z-order only by being above everything, so
    a node dragged over a browser node slides under its page; the traffic-light inset is fixed,
@@ -230,8 +247,7 @@ In the order that makes sense, each one an issue on GitHub:
    next turn's prompt), and a terminal agent has no prompt at all, so the CLI's existence must
    come from its hooks or a MOTD line in the shell.
 4. **#10 follow-ups**: one endpoint at a time is the model; a project list that spans machines
-   would need a transport per endpoint. `auth.sessions` and `auth.revoke` have no UI yet. TLS is
-   a reverse proxy's job and is only documented.
+   would need a transport per endpoint. TLS is a reverse proxy's job and is only documented.
 5. **#11 follow-ups**: put the Apple secrets in the repository and tag `v0.1.0` to get the
    first signed, notarized build (the local `bun run dist` already signs with the Developer ID
    in the keychain); enable Pages with source "GitHub Actions" and point ruimte.app at it; the
