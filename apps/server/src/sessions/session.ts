@@ -30,6 +30,8 @@ export interface SessionOptions {
     restoredAgent?: AgentInfo;
     // First line typed into the shell, so a node can open straight into a program.
     command?: string;
+    // Shown dimmed above the first prompt, for what the shell cannot tell on its own (the linked context).
+    motd?: string;
     hookToken: string;
     deliver(clientId: string, data: string): void;
     onExit(exitCode: number): void;
@@ -73,6 +75,10 @@ export class Session {
         this.terminal.loadAddon(this.serializer);
         if (options.restoredScreen !== undefined) {
             this.terminal.write(options.restoredScreen + RESTORED_MARKER);
+        }
+        if (options.motd) {
+            // Written to the screen only, never to the PTY: the shell has not read a byte yet and must not.
+            this.terminal.write(`\x1b[2m${options.motd}\x1b[0m\r\n`);
         }
 
         this.pty = options.adapter.spawn({

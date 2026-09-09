@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { homedir } from 'node:os';
-import type { ChatConfigurePayload, ChatCreatePayload, ChatEvent, ChatInfo, ChatItem } from '@ruimte/contracts';
+import type { ChatConfigurePayload, ChatCreatePayload, ChatEvent, ChatInfo, ChatItem, ContextSource } from '@ruimte/contracts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionSink } from '../sessions/manager.ts';
 import { ChatSession } from './chat-session.ts';
@@ -27,6 +27,8 @@ export interface ChatManagerOptions {
     // Where an agent reads its linked context, and whether it has any.
     contextUrl?: string;
     hasContext?: (chatId: string) => boolean;
+    // The sources themselves, so a chat can tell its agent what came and went between turns.
+    contextSources?: (chatId: string) => ContextSource[];
     // Put in front of PATH, so `ruimte-context` is there for the CLI's shell.
     binDir?: string;
 }
@@ -42,6 +44,7 @@ export class ChatManager {
     private readonly tokens = new Map<string, string>();
     private readonly contextUrl: string | null;
     private readonly hasContext: (chatId: string) => boolean;
+    private readonly contextSources: (chatId: string) => ContextSource[];
 
     constructor(options: ChatManagerOptions) {
         this.providers = options.providers;
@@ -49,6 +52,7 @@ export class ChatManager {
         this.command = options.command ?? ['claude'];
         this.contextUrl = options.contextUrl ?? null;
         this.hasContext = options.hasContext ?? (() => false);
+        this.contextSources = options.contextSources ?? (() => []);
         this.env = {};
         for (const [key, value] of Object.entries(options.env ?? process.env)) {
             // The hook variables belong to terminal sessions; a chat reports through its own stream.
@@ -115,6 +119,7 @@ export class ChatManager {
             env: this.contextUrl ? { ...this.env, RUIMTE_CONTEXT_URL: this.contextUrl, RUIMTE_CONTEXT_TOKEN: token } : this.env,
             catalog,
             hasContext: () => this.hasContext(payload.chatId),
+            contextSources: () => this.contextSources(payload.chatId),
             emit: (event) => this.emit(payload.chatId, event),
             persist: () => this.persist(payload.chatId)
         });

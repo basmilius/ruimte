@@ -38,6 +38,23 @@ describe('SessionManager', () => {
         expect(recorder.output).toBe(outputBefore);
     });
 
+    test('a session with links at its start shows the context line above the first prompt; one without stays quiet', async () => {
+        await harness.cleanup();
+        harness = await makeHarness({ contextFor: (sessionId) => (sessionId === 'linked' ? [{ id: 'text-1', kind: 'text', title: 'Sprint goals' }] : []) });
+        await create('linked');
+        await create('plain');
+        const linked = await harness.manager.attach('linked', 'c1', 80, 24);
+        const plain = await harness.manager.attach('plain', 'c1', 80, 24);
+        expect(linked.screen).toContain('Ruimte: linked context is available with ruimte-context (list, read <id>): "Sprint goals" (text).');
+        expect(plain.screen).not.toContain('ruimte-context');
+        // The line is on the screen only; the shell never received it as input.
+        harness.manager.write('linked', 'echo o""k\n');
+        const recorder = new Recorder();
+        harness.manager.subscribe('c1', recorder.sink());
+        await waitFor(() => recorder.output.includes('ok'), 'the echo');
+        expect(recorder.output).not.toContain('command not found');
+    });
+
     test('a second client sees the screen the first produced, and both get new output', async () => {
         const first = new Recorder();
         const second = new Recorder();

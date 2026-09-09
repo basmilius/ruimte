@@ -98,10 +98,15 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
 
         term.attachCustomKeyEventHandler((e) => {
             if (e.key === 'Escape') {
-                // Escape always returns to the canvas, so a full-screen program (vim, less) never
-                // receives it. That trade keeps "Escape leaves node mode" absolute; a later phase can
-                // add a per-node "send Escape to the app" toggle for the programs that need it.
-                return false;
+                // Escape returns to the canvas unless the node asked to pass it on (vim, less). Cmd or
+                // Ctrl with it always leaves, so a toggled node can never trap the keyboard. The state
+                // is read per key, so flipping the toggle does not rebuild the terminal.
+                const toApp = useCanvas.getState().nodes[id]?.escapeToApp === true && !e.metaKey && !e.ctrlKey;
+                if (toApp) {
+                    // The canvas listens on window; a swallowed Escape must not reach it.
+                    e.stopPropagation();
+                }
+                return toApp;
             }
             if (e.type === 'keydown' && e.key === 'Enter' && e.shiftKey) {
                 e.preventDefault();

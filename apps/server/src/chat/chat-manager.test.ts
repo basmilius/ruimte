@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ChatEvent, ChatInfo, ChatItem } from '@ruimte/contracts';
+import type { ChatEvent, ChatInfo, ChatItem, ContextSource } from '@ruimte/contracts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { waitFor, waitForAsync } from '../sessions/test-helpers.ts';
@@ -241,6 +241,34 @@ describe('ChatManager', () => {
         manager.send('chat-k', 'compact');
         await waitFor(idle, 'the turn to end');
         expect(recorder.ofKind('compaction')[0]).toMatchObject({ preTokens: 5000 });
+    });
+
+    test('a link made between turns is put in front of the next prompt, once, as a note', async () => {
+        let sources: ContextSource[] = [];
+        await manager.shutdown();
+        manager = new ChatManager({ providers, store, command: FAKE, env: { PATH: process.env.PATH, HOME: home }, contextSources: () => sources });
+        manager.subscribe('c1', recorder.sink());
+        await manager.create({ chatId: 'chat-ctx', cwd: home });
+        manager.attach('chat-ctx', 'c1');
+
+        manager.send('chat-ctx', 'first');
+        await waitFor(idle, 'the first turn');
+        sources = [{ id: 'term-1', kind: 'terminal', title: 'dev server' }];
+        manager.send('chat-ctx', 'second');
+        await waitFor(() => recorder.ofKind('assistant').length === 2, 'the second turn');
+        manager.send('chat-ctx', 'third');
+        await waitFor(() => recorder.ofKind('assistant').length === 3, 'the third turn');
+
+        const notes = recorder.ofKind('note');
+        expect(notes).toHaveLength(1);
+        expect(notes[0]).toMatchObject({ level: 'info', turnId: recorder.ofKind('turn')[1]?.turnId });
+        expect(notes[0]?.text).toContain('Added: "dev server" (terminal)');
+        // The fake echoes its prompt, so the reply shows what the CLI was given.
+        const replies = recorder.ofKind('assistant').map((item) => item.text);
+        expect(replies[0]).toBe('echo: first');
+        expect(replies[1]).toBe(`echo: ${notes[0]?.text}\n\nsecond`);
+        expect(replies[2]).toBe('echo: third');
+        expect(recorder.ofKind('user').map((item) => item.text)).toEqual(['first', 'second', 'third']);
     });
 
     test('a CLI that dies mid-turn leaves an error note and the chat can go on', async () => {

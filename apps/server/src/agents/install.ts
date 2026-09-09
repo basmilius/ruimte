@@ -15,9 +15,12 @@ const HOOK_TIMEOUT_S = 5;
 /*
  * Outside Ruimte the variables are unset and the hook only drains stdin, so the same settings
  * file serves a plain terminal too. `exit 0` keeps a failed POST from ever blocking the CLI.
+ * The response body goes to stdout on purpose: on a prompt hook the daemon answers with the
+ * session's context hint, which Claude Code reads from there. `-f` keeps an error page from
+ * being printed too, since the CLI would take that text as context as well.
  */
 export const hookCommand = (kind: AgentKind): string =>
-    `if [ -n "$RUIMTE_HOOK_URL" ]; then curl -s -m 3 -o /dev/null -X POST "$RUIMTE_HOOK_URL/${kind}" -H "Authorization: Bearer $RUIMTE_HOOK_TOKEN" -H "Content-Type: application/json" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0`;
+    `if [ -n "$RUIMTE_HOOK_URL" ]; then curl -sf -m 3 -X POST "$RUIMTE_HOOK_URL/${kind}" -H "Authorization: Bearer $RUIMTE_HOOK_TOKEN" -H "Content-Type: application/json" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0`;
 
 interface HookEntry {
     type: 'command';

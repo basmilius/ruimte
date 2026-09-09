@@ -1,5 +1,6 @@
 import type { Subprocess } from 'bun';
-import type { ChatEvent, ChatInfo, ChatItem, InteractionMode, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type { ChatEvent, ChatInfo, ChatItem, ContextSource, InteractionMode, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import { contextChangeNote } from '../context/context-note.ts';
 import type { ModelCatalog } from '../providers/catalog.ts';
 import { claudeArgs, promptPrefix } from '../providers/claude.ts';
 import { ClaudeStreamReducer, type ReducerOutput } from './claude-stream.ts';
@@ -17,6 +18,8 @@ export interface ChatSessionOptions {
     catalog: ModelCatalog;
     // Whether the person linked something to this chat; the CLI is told where to look when so.
     hasContext(): boolean;
+    // The links as they are now; a change between two turns is put in front of the next prompt.
+    contextSources?(): ContextSource[];
     emit(event: ChatEvent): void;
     persist(): void;
 }
@@ -48,6 +51,8 @@ export class ChatSession {
     private exitTimer: ReturnType<typeof setTimeout> | null = null;
     // Set by configure: the running process has the old flags, the next send starts a new one.
     private restartPending = false;
+    // The links at the previous turn; null until the first turn, whose process hears about them in its system prompt.
+    private lastSources: ContextSource[] | null = null;
 
     constructor(options: ChatSessionOptions) {
         this.options = options;
@@ -94,17 +99,31 @@ export class ChatSession {
     send(text: string): void {
         const turnId = newId('turn');
         const now = Date.now();
+        const note = this.contextNote(text);
         this.apply({
             events: [
                 this.thread.upsert({ id: turnId, kind: 'turn', createdAt: now, turnId, state: 'running', endedAt: null, costUsd: 0 }),
+                ...(note === null ? [] : [this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'info', text: note })]),
                 this.thread.upsert({ id: newId('user'), kind: 'user', createdAt: now, turnId, text }),
                 this.thread.patchInfo({ status: 'running', activeTurnId: turnId })
             ],
             actions: []
         });
         this.ensureProcess();
-        const prompt = `${promptPrefix(this.thread.info.selection)}${text}`;
+        const prompt = `${promptPrefix(this.thread.info.selection)}${note === null ? '' : `${note}\n\n`}${text}`;
         this.write({ type: 'user', message: { role: 'user', content: [{ type: 'text', text: prompt }] }, parent_tool_use_id: null, session_id: '' });
+    }
+
+    /* A link made or removed between turns; the agent hears about it once, in front of the next prompt. */
+    private contextNote(text: string): string | null {
+        // A slash command must stay the first thing the CLI reads; the change waits for a real prompt.
+        if (text.startsWith('/')) {
+            return null;
+        }
+        const current = this.options.contextSources?.() ?? [];
+        const previous = this.lastSources;
+        this.lastSources = current;
+        return previous === null ? null : contextChangeNote(previous, current);
     }
 
     /* Asks the CLI to fold its context; it answers like any other turn. */
@@ -212,6 +231,9 @@ export class ChatSession {
             ...this.options.command,
             ...claudeArgs({ selection: info.selection, runtimeMode: info.runtimeMode, interactionMode: info.interactionMode, resume: info.agentSessionId })
         ];
+        if (this.options.hasContext()) {
+            args.push('--append-system-prompt', CONTEXT_PROMPT);
+        }
         this.stdinClosed = false;
         this.reducer.nextProcess();
         const process: ChatProcess = Bun.spawn(args, {

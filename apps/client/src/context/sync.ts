@@ -7,6 +7,10 @@ const SETTLE_MS = 300;
 // A text's first line is its name in the list an agent sees.
 const titleOf = (text: string): string => text.split('\n')[0]?.trim().slice(0, 60) || 'Text';
 
+/* Whether anything on the canvas is linked into this node; the same rule `contextSources` applies, as one boolean for a header. */
+export const useHasContextLinks = (id: string): boolean =>
+    useCanvas((s) => s.edges.some((edge) => edge.to === id && (s.texts[edge.from] !== undefined || s.nodes[edge.from] !== undefined)));
+
 /* What every agent node may read, derived from the edges into it. */
 export const contextSources = (): Map<string, ContextSource[]> => {
     const { edges, nodes, texts } = useCanvas.getState();

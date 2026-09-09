@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AgentStore } from '../agents/agent-store.ts';
 import { BunPtyAdapter } from '../pty/bun-pty.ts';
-import { SessionManager, type SessionEvent, type SessionSink } from './manager.ts';
+import { SessionManager, type SessionEvent, type SessionManagerOptions, type SessionSink } from './manager.ts';
 import { SnapshotStore } from './snapshot-store.ts';
 
 export const DEFAULT_TIMEOUT_MS = 5000;
@@ -67,7 +67,7 @@ export interface Harness {
 export const SH = '/bin/sh';
 export const SH_ARGS: string[] = [];
 
-export const makeHarness = async (): Promise<Harness> => {
+export const makeHarness = async (extra: Partial<SessionManagerOptions> = {}): Promise<Harness> => {
     const home = await mkdtemp(join(tmpdir(), 'ruimte-test-'));
     const snapshots = new SnapshotStore(home);
     const agents = new AgentStore(home);
@@ -76,7 +76,8 @@ export const makeHarness = async (): Promise<Harness> => {
         snapshots,
         agents,
         env: { PATH: process.env.PATH, HOME: home, PS1: '$ ' },
-        hookUrl: 'http://127.0.0.1:1/hooks'
+        hookUrl: 'http://127.0.0.1:1/hooks',
+        ...extra
     });
     return {
         manager,
