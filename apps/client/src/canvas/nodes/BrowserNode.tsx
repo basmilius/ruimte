@@ -6,8 +6,7 @@ import { desktop, isDesktop } from '@/desktop/bridge';
 import { useCanvas } from '@/state/canvas';
 import { Tooltip } from '@/ui/Tooltip';
 
-// A fresh node opens empty with the address bar ready; a page that does not exist yet would only show an error.
-const DEFAULT_URL = 'about:blank';
+const DEFAULT_URL = 'https://bas.dev';
 
 /*
  * The toolbar of a browser node. The page itself lives in the webview layer over the canvas,
@@ -79,7 +78,7 @@ export function BrowserNode({ id, focused }: { id: string; focused: boolean }) {
                     <input
                         className="grow bg-transparent font-mono text-[12px] text-text outline-none placeholder:text-text-faint"
                         placeholder="Enter an address"
-                        value={url === 'about:blank' && draft === null ? '' : url}
+                        value={url}
                         spellCheck={false}
                         tabIndex={focused ? 0 : -1}
                         onChange={(e) => setDraft(e.target.value)}

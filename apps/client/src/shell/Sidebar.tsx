@@ -13,7 +13,8 @@ import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { Tooltip } from '@/ui/Tooltip';
 import { ConnectionDot } from '@/shell/ConnectionDot';
 import { ProjectMenu } from '@/shell/ProjectMenu';
-import { hasTrafficLights } from '@/desktop/bridge';
+import { TRAFFIC_LIGHTS_INSET_PX, hasTrafficLights } from '@/desktop/bridge';
+import { useDesktopFullscreen } from '@/desktop/useFullscreen';
 
 const KIND_ICON = {
     terminal: Terminal,
@@ -90,10 +91,14 @@ export function Sidebar() {
     const nodes = useCanvas(useShallow((s) => s.order.map((id) => s.nodes[id]).filter((node) => node.kind !== 'group')));
     const sessions = useSessions((s) => s.byNodeId);
     const chats = useChats((s) => s.byNodeId);
+    const fullscreen = useDesktopFullscreen();
 
     return (
         <aside className="flex h-full w-[248px] shrink-0 flex-col border-r border-border bg-surface">
-            <div className={clsx('app-drag flex h-12 items-center gap-2 px-3', hasTrafficLights() && 'pl-[76px]')}>
+            <div
+                className="app-drag flex h-12 items-center gap-2 px-3"
+                style={hasTrafficLights() && !fullscreen ? { paddingLeft: TRAFFIC_LIGHTS_INSET_PX } : undefined}
+            >
                 <span className="grid h-6 w-6 place-items-center rounded-md bg-accent text-[12px] font-semibold text-accent-text">R</span>
                 <span className="text-[14px] font-semibold tracking-tight text-text">Ruimte</span>
                 <span className="grow" />
