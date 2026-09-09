@@ -19,6 +19,8 @@ export const ProjectNodeSchema = z.object({
     cwd: z.string().optional(),
     // Terminal only: typed into the shell as its first line.
     command: z.string().optional(),
+    // Terminal only: Escape goes to the program in the shell instead of leaving node mode.
+    escapeToApp: z.boolean().optional(),
     // Chat only: the agent session to continue.
     resume: z.string().optional(),
     // Browser only: the page it shows.
