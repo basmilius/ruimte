@@ -43,7 +43,31 @@ const base = {
     turnId: z.string().nullable()
 };
 
-export const ChatUserItemSchema = z.object({ ...base, kind: z.literal('user'), text: z.string() });
+// What the Anthropic API takes as an image block; the CLI passes the block through as is.
+export const ChatAttachmentMediaTypeSchema = z.enum(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
+export type ChatAttachmentMediaType = z.infer<typeof ChatAttachmentMediaTypeSchema>;
+
+// The API refuses an image over 5 MB; the count keeps one message from carrying a whole folder.
+export const CHAT_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
+export const CHAT_ATTACHMENTS_MAX_COUNT = 8;
+const MAX_BASE64_LENGTH = Math.ceil(CHAT_ATTACHMENT_MAX_BYTES / 3) * 4;
+
+export const ChatAttachmentSchema = z.object({
+    name: z.string().min(1).max(255),
+    mediaType: ChatAttachmentMediaTypeSchema,
+    // Base64 without a data-URL prefix.
+    data: z.string().min(1).max(MAX_BASE64_LENGTH)
+});
+export type ChatAttachment = z.infer<typeof ChatAttachmentSchema>;
+
+export const ChatUserItemSchema = z.object({
+    ...base,
+    kind: z.literal('user'),
+    text: z.string(),
+    // Files the person picked with `@`; the paths also sit in the text, this is what the row highlights.
+    mentions: z.array(z.string()).optional(),
+    attachments: z.array(ChatAttachmentSchema).optional()
+});
 
 export const ChatAssistantItemSchema = z.object({
     ...base,
@@ -187,10 +211,14 @@ export const ChatAttachResultSchema = z.object({
 });
 export type ChatAttachResult = z.infer<typeof ChatAttachResultSchema>;
 
-export const ChatSendPayloadSchema = z.object({
-    chatId: ChatIdSchema,
-    text: z.string().min(1)
-});
+export const ChatSendPayloadSchema = z
+    .object({
+        chatId: ChatIdSchema,
+        text: z.string(),
+        mentions: z.array(z.string().min(1)).max(64).optional(),
+        attachments: z.array(ChatAttachmentSchema).max(CHAT_ATTACHMENTS_MAX_COUNT).optional()
+    })
+    .refine((payload) => payload.text.trim() !== '' || (payload.attachments?.length ?? 0) > 0, { message: 'A message needs text or an attachment' });
 export type ChatSendPayload = z.infer<typeof ChatSendPayloadSchema>;
 
 export const ChatApprovePayloadSchema = z.object({

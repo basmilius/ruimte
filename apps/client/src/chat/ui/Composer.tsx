@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { ArrowUp, Square } from 'lucide-react';
+import { ArrowUp, FileText, Square, X } from 'lucide-react';
 import type { ChatApprovalItem, ChatInfo, ChatQuestionItem, InteractionMode, ModelInfo, RuntimeMode } from '@ruimte/contracts';
-import { chatClient } from '@/chat';
-import { readDraft, writeDraft } from '@/chat/drafts';
+import { chatClient, type ChatSendExtras } from '@/chat';
+import { attachmentUrl, checkAttachmentLimits, imageFilesOf, readAttachments } from '@/chat/attachments';
+import { EMPTY_DRAFT, isEmptyDraft, readDraft, writeDraft, type ChatDraft } from '@/chat/drafts';
+import { findMentionQuery, insertMention, presentMentions, tokenizeMentions, type MentionQuery } from '@/chat/mentions';
 import { rememberChatPreferences } from '@/chat/preferences';
 import { ContextMeter } from '@/chat/ui/ContextMeter';
 import { ApprovalDock, QuestionDock } from '@/chat/ui/PendingDock';
@@ -13,6 +15,8 @@ import { useProviders } from '@/state/providers';
 import { Tooltip } from '@/ui/Tooltip';
 
 const MAX_ROWS_PX = 200;
+const SEARCH_DEBOUNCE_MS = 80;
+const NOTICE_MS = 4000;
 
 // Commands the composer handles itself; the CLI's own ones are sent through as text.
 const LOCAL_COMMANDS = [
@@ -21,12 +25,15 @@ const LOCAL_COMMANDS = [
     { name: 'compact', hint: 'Fold the context' }
 ];
 
+// The textarea and the chip layer behind it must wrap identically, so they share every metric.
+const INPUT_CLASS = 'w-full whitespace-pre-wrap break-words px-3.5 pb-1 pt-3 text-[13px] leading-relaxed';
+
 interface ComposerProps {
     chatId: string;
     info: ChatInfo;
     focused: boolean;
     disabled: boolean;
-    onSend(text: string): void;
+    onSend(text: string, extras: ChatSendExtras): void;
 }
 
 const usePendingRequests = (chatId: string) => {
@@ -47,16 +54,27 @@ const usePendingRequests = (chatId: string) => {
     }, [items, order]);
 };
 
+const splitPath = (path: string): { name: string; dir: string } => {
+    const slash = path.lastIndexOf('/');
+    return slash < 0 ? { name: path, dir: '' } : { name: path.slice(slash + 1), dir: path.slice(0, slash) };
+};
+
 /*
  * The floating card at the bottom of a chat: what the agent is waiting on docks above it, the
  * prompt sits in the middle, and the footer holds the model, its options, the permission mode,
- * plan or build, the context meter and the send or stop button.
+ * plan or build, the context meter and the send or stop button. `/` opens the command menu,
+ * `@` a file picker over the chat's folder; images arrive by paste or drop.
  */
 export function Composer({ chatId, info, focused, disabled, onSend }: ComposerProps) {
-    const [draft, setDraft] = useState(() => readDraft(chatId));
+    const [draft, setDraft] = useState<ChatDraft>(() => readDraft(chatId));
     const [historyIndex, setHistoryIndex] = useState<number | null>(null);
     const [menuIndex, setMenuIndex] = useState(0);
+    const [mention, setMention] = useState<MentionQuery | null>(null);
+    const [searched, setSearched] = useState<string[]>([]);
+    const [notice, setNotice] = useState<string | null>(null);
+    const [dragging, setDragging] = useState(false);
     const inputRef = useRef<HTMLTextAreaElement>(null);
+    const backdropRef = useRef<HTMLDivElement>(null);
     const providers = useProviders((s) => s.providers);
     const { approvals, question } = usePendingRequests(chatId);
     const order = useChats((s) => s.byNodeId[chatId]?.order);
@@ -66,6 +84,7 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
     const models: ModelInfo[] = provider?.models ?? [];
     const model = models.find((entry) => entry.slug === info.selection.model);
     const busy = info.activeTurnId !== null;
+    const text = draft.text;
 
     useEffect(() => {
         if (focused) {
@@ -79,24 +98,55 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
             el.style.height = 'auto';
             el.style.height = `${Math.min(MAX_ROWS_PX, el.scrollHeight)}px`;
         }
-    }, [draft]);
+    }, [text, draft.attachments.length]);
 
     useEffect(() => {
         writeDraft(chatId, draft);
     }, [chatId, draft]);
 
+    useEffect(() => {
+        if (!notice) {
+            return;
+        }
+        const timer = setTimeout(() => setNotice(null), NOTICE_MS);
+        return () => clearTimeout(timer);
+    }, [notice]);
+
+    // Every keystroke inside an `@word` searches again; a slow answer must not overwrite a newer one.
+    useEffect(() => {
+        if (mention === null) {
+            return;
+        }
+        let stale = false;
+        const timer = setTimeout(() => {
+            chatClient
+                .searchFiles(info.cwd, mention.query)
+                .then((result) => {
+                    if (!stale) {
+                        setSearched(result.files);
+                        setMenuIndex(0);
+                    }
+                })
+                .catch(() => undefined);
+        }, SEARCH_DEBOUNCE_MS);
+        return () => {
+            stale = true;
+            clearTimeout(timer);
+        };
+    }, [info.cwd, mention]);
+
     const history = useMemo(() => {
-        const texts: string[] = [];
+        const prompts: Array<{ text: string; mentions: string[] }> = [];
         for (const id of order ?? []) {
             const item = items?.[id];
             if (item?.kind === 'user') {
-                texts.push(item.text);
+                prompts.push({ text: item.text, mentions: item.mentions ?? [] });
             }
         }
-        return texts;
+        return prompts;
     }, [order, items]);
 
-    const commandQuery = draft.startsWith('/') && !draft.includes('\n') ? draft.slice(1).trim().toLowerCase() : null;
+    const commandQuery = text.startsWith('/') && !text.includes('\n') ? text.slice(1).trim().toLowerCase() : null;
     const commands = useMemo(() => {
         if (commandQuery === null) {
             return [];
@@ -107,6 +157,16 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
             .map((name) => ({ name, hint: 'Claude Code command', local: false }));
         return [...own, ...cli].filter((command) => command.name.startsWith(commandQuery)).slice(0, 8);
     }, [commandQuery, info.slashCommands]);
+
+    const commandMenuOpen = commandQuery !== null && commands.length > 0;
+    const mentionMenuOpen = !commandMenuOpen && mention !== null;
+    // Results belong to the query that asked for them; a closed picker shows none while the next answer is on its way.
+    const files = mention === null ? [] : searched;
+    const segments = useMemo(() => tokenizeMentions(text, draft.mentions), [text, draft.mentions]);
+
+    const setText = (next: string, mentions = draft.mentions): void => {
+        setDraft((current) => ({ ...current, text: next, mentions }));
+    };
 
     const configure = (patch: { selection?: ChatInfo['selection']; runtimeMode?: RuntimeMode; interactionMode?: InteractionMode }): void => {
         rememberChatPreferences(patch);
@@ -129,23 +189,68 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
         }
     };
 
+    const trackMention = (el: HTMLTextAreaElement): void => {
+        const next = el.selectionStart === el.selectionEnd ? findMentionQuery(el.value, el.selectionStart) : null;
+        setMention((current) => (current?.start === next?.start && current?.query === next?.query ? current : next));
+    };
+
+    const chooseMention = (path: string): void => {
+        if (!mention) {
+            return;
+        }
+        const result = insertMention(text, mention, path);
+        setText(result.text, draft.mentions.includes(path) ? draft.mentions : [...draft.mentions, path]);
+        setMention(null);
+        const el = inputRef.current;
+        if (el) {
+            requestAnimationFrame(() => {
+                el.focus();
+                el.setSelectionRange(result.caret, result.caret);
+            });
+        }
+    };
+
+    const addFiles = (incoming: File[]): void => {
+        if (incoming.length === 0) {
+            return;
+        }
+        const checked = checkAttachmentLimits(
+            draft.attachments.length,
+            incoming.map((file) => ({ name: file.name, mediaType: file.type, bytes: file.size, file }))
+        );
+        if (checked.rejected[0]) {
+            setNotice(`${checked.rejected[0].name || 'Image'}: ${checked.rejected[0].reason}`);
+        }
+        if (checked.accepted.length === 0) {
+            return;
+        }
+        readAttachments(checked.accepted.map((entry) => entry.file))
+            .then((attachments) => setDraft((current) => ({ ...current, attachments: [...current.attachments, ...attachments] })))
+            .catch(() => setNotice('The image could not be read'));
+    };
+
+    const removeAttachment = (index: number): void => {
+        setDraft((current) => ({ ...current, attachments: current.attachments.filter((_, i) => i !== index) }));
+    };
+
     const submit = (): void => {
-        const text = draft.trim();
-        if (!text || disabled || busy) {
+        const trimmed = text.trim();
+        if (isEmptyDraft(draft) || disabled || busy) {
             return;
         }
         const chosen = commands[menuIndex];
         if (commandQuery !== null && chosen?.local && runCommand(chosen.name)) {
-            setDraft('');
+            setDraft(EMPTY_DRAFT);
             return;
         }
         if (commandQuery !== null && chosen && !chosen.local) {
-            onSend(`/${chosen.name}`);
-            setDraft('');
+            onSend(`/${chosen.name}`, {});
+            setDraft(EMPTY_DRAFT);
             return;
         }
-        onSend(text);
-        setDraft('');
+        onSend(trimmed, { mentions: presentMentions(trimmed, draft.mentions), attachments: draft.attachments });
+        setDraft(EMPTY_DRAFT);
+        setMention(null);
         setHistoryIndex(null);
     };
 
@@ -156,14 +261,14 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
         const next = historyIndex === null ? (direction === -1 ? history.length - 1 : null) : historyIndex + direction;
         if (next === null || next >= history.length) {
             setHistoryIndex(null);
-            setDraft('');
+            setText('');
             return true;
         }
         if (next < 0) {
             return true;
         }
         setHistoryIndex(next);
-        setDraft(history[next]!);
+        setText(history[next]!.text, history[next]!.mentions);
         return true;
     };
 
@@ -173,7 +278,7 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
         }
         e.stopPropagation();
         const el = e.currentTarget;
-        if (commandQuery !== null && commands.length > 0) {
+        if (commandMenuOpen) {
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 setMenuIndex((i) => (i + 1) % commands.length);
@@ -186,7 +291,24 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
             }
             if (e.key === 'Tab') {
                 e.preventDefault();
-                setDraft(`/${commands[menuIndex]!.name} `);
+                setText(`/${commands[menuIndex]!.name} `);
+                return;
+            }
+        }
+        if (mentionMenuOpen && files.length > 0) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setMenuIndex((i) => (i + 1) % files.length);
+                return;
+            }
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setMenuIndex((i) => (i - 1 + files.length) % files.length);
+                return;
+            }
+            if (e.key === 'Tab' || e.key === 'Enter') {
+                e.preventDefault();
+                chooseMention(files[menuIndex] ?? files[0]!);
                 return;
             }
         }
@@ -196,10 +318,10 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
             return;
         }
         // The arrows recall earlier prompts only from an empty box or an unedited recall, on its first or last line.
-        const recalled = historyIndex !== null && draft === history[historyIndex];
-        const atStart = el.selectionStart === 0 && !draft.slice(0, el.selectionStart).includes('\n');
-        const atEnd = el.selectionEnd === draft.length && !draft.slice(el.selectionEnd).includes('\n');
-        if (e.key === 'ArrowUp' && (draft === '' || (recalled && atStart)) && recall(-1)) {
+        const recalled = historyIndex !== null && text === history[historyIndex]?.text;
+        const atStart = el.selectionStart === 0 && !text.slice(0, el.selectionStart).includes('\n');
+        const atEnd = el.selectionEnd === text.length && !text.slice(el.selectionEnd).includes('\n');
+        if (e.key === 'ArrowUp' && (text === '' || (recalled && atStart)) && recall(-1)) {
             e.preventDefault();
         } else if (e.key === 'ArrowDown' && recalled && atEnd && recall(1)) {
             e.preventDefault();
@@ -209,15 +331,36 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
     const placeholder = disabled
         ? 'Not connected to the Ruimte server'
         : info.interactionMode === 'plan'
-          ? 'Describe what to plan, or / for commands'
-          : 'Ask anything, or / for commands';
+          ? 'Describe what to plan, / for commands, @ for files'
+          : 'Ask anything, / for commands, @ for files';
 
     return (
         <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10">
-            <div className="chat-composer pointer-events-auto flex flex-col">
+            <div
+                className={clsx('chat-composer pointer-events-auto flex flex-col', dragging && 'chat-composer-drop')}
+                onDragOver={(e) => {
+                    if (imageFilesOf(e.dataTransfer).length > 0 || e.dataTransfer.types.includes('Files')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDragging(true);
+                    }
+                }}
+                onDragLeave={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                        setDragging(false);
+                    }
+                }}
+                onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDragging(false);
+                    addFiles(imageFilesOf(e.dataTransfer));
+                    inputRef.current?.focus();
+                }}
+            >
                 {question && <QuestionDock chatId={chatId} item={question} />}
                 {!question && approvals[0] && <ApprovalDock chatId={chatId} item={approvals[0]} index={0} total={approvals.length} />}
-                {commandQuery !== null && commands.length > 0 && (
+                {commandMenuOpen && (
                     <div className="border-b border-border px-1.5 py-1.5">
                         {commands.map((command, index) => (
                             <button
@@ -229,7 +372,7 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
                                 onMouseEnter={() => setMenuIndex(index)}
                                 onClick={() => {
                                     setMenuIndex(index);
-                                    setDraft(`/${command.name}`);
+                                    setText(`/${command.name}`);
                                     inputRef.current?.focus();
                                 }}
                             >
@@ -239,23 +382,99 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
                         ))}
                     </div>
                 )}
-                <textarea
-                    ref={inputRef}
-                    rows={1}
-                    placeholder={placeholder}
-                    className="w-full resize-none bg-transparent px-3.5 pb-1 pt-3 text-[13px] leading-relaxed text-text outline-none placeholder:text-text-faint"
-                    value={draft}
-                    disabled={disabled}
-                    tabIndex={focused ? 0 : -1}
-                    onChange={(e) => {
-                        setDraft(e.target.value);
-                        setMenuIndex(0);
-                        if (historyIndex !== null && e.target.value !== history[historyIndex]) {
-                            setHistoryIndex(null);
-                        }
-                    }}
-                    onKeyDown={onKeyDown}
-                />
+                {mentionMenuOpen && (
+                    <div className="border-b border-border px-1.5 py-1.5">
+                        {files.length === 0 && (
+                            <div className="px-2 py-1 text-[12px] text-text-faint">{mention.query ? 'No files match' : 'Type to search files'}</div>
+                        )}
+                        {files.map((path, index) => {
+                            const { name, dir } = splitPath(path);
+                            return (
+                                <button
+                                    key={path}
+                                    className={clsx(
+                                        'flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-[12px]',
+                                        index === menuIndex ? 'bg-surface-sunken text-text' : 'text-text-muted'
+                                    )}
+                                    onMouseEnter={() => setMenuIndex(index)}
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => chooseMention(path)}
+                                >
+                                    <FileText size={12} className="shrink-0 text-text-faint" />
+                                    <span className="truncate font-mono text-text">{name}</span>
+                                    {dir && <span className="min-w-0 truncate text-text-faint">{dir}</span>}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+                {draft.attachments.length > 0 && (
+                    <div className="flex flex-wrap gap-2 px-3 pt-3">
+                        {draft.attachments.map((attachment, index) => (
+                            <div key={`${attachment.name}-${index}`} className="group/thumb relative">
+                                <img src={attachmentUrl(attachment)} alt={attachment.name} className="h-14 w-14 rounded-lg border border-border object-cover" />
+                                <Tooltip label={`Remove ${attachment.name}`}>
+                                    <button
+                                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-surface-raised text-text-muted opacity-0 transition-opacity hover:text-text group-hover/thumb:opacity-100 focus-visible:opacity-100"
+                                        onClick={() => removeAttachment(index)}
+                                    >
+                                        <X size={11} />
+                                    </button>
+                                </Tooltip>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                <div className="relative">
+                    <div ref={backdropRef} aria-hidden className={clsx(INPUT_CLASS, 'pointer-events-none absolute inset-0 overflow-hidden text-text')}>
+                        {segments.map((segment, index) =>
+                            segment.kind === 'mention' ? (
+                                <span key={index} className="mention-chip">
+                                    @{segment.path}
+                                </span>
+                            ) : (
+                                <span key={index}>{segment.text}</span>
+                            )
+                        )}
+                        {text.endsWith('\n') && <br />}
+                    </div>
+                    <textarea
+                        ref={inputRef}
+                        rows={1}
+                        placeholder={placeholder}
+                        className={clsx(
+                            INPUT_CLASS,
+                            'relative resize-none bg-transparent text-transparent caret-text outline-none placeholder:text-text-faint'
+                        )}
+                        value={text}
+                        disabled={disabled}
+                        tabIndex={focused ? 0 : -1}
+                        onChange={(e) => {
+                            setText(e.target.value);
+                            setMenuIndex(0);
+                            trackMention(e.target);
+                            if (historyIndex !== null && e.target.value !== history[historyIndex]?.text) {
+                                setHistoryIndex(null);
+                            }
+                        }}
+                        onSelect={(e) => trackMention(e.currentTarget)}
+                        onBlur={() => setMention(null)}
+                        onScroll={(e) => {
+                            if (backdropRef.current) {
+                                backdropRef.current.scrollTop = e.currentTarget.scrollTop;
+                            }
+                        }}
+                        onPaste={(e) => {
+                            const images = imageFilesOf(e.clipboardData);
+                            if (images.length > 0) {
+                                e.preventDefault();
+                                addFiles(images);
+                            }
+                        }}
+                        onKeyDown={onKeyDown}
+                    />
+                </div>
+                {notice && <div className="px-3.5 pb-1 text-[11px] text-status-error">{notice}</div>}
                 <div className="flex items-center gap-1 px-2 pb-2">
                     <ModelPicker models={models} selection={info.selection} onChange={(slug) => configure({ selection: { model: slug, options: {} } })} />
                     <OptionsPicker
@@ -280,7 +499,7 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
                         <Tooltip label="Send" kbd="↵">
                             <button
                                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-accent-text disabled:opacity-40"
-                                disabled={!draft.trim() || disabled}
+                                disabled={isEmptyDraft(draft) || disabled}
                                 onClick={submit}
                             >
                                 <ArrowUp size={15} strokeWidth={2.25} />
