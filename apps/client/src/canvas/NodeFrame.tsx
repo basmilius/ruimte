@@ -1,10 +1,13 @@
 import { memo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Check, ChevronRight, Copy, Globe, LayoutGrid, Maximize2, MessageSquare, Palette, Pencil, Terminal, Trash2, X } from 'lucide-react';
+import { Check, ChevronRight, Copy, ExternalLink, Globe, LayoutGrid, Maximize2, MessageSquare, Palette, Pencil, Terminal, Trash2, X } from 'lucide-react';
 import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
 import { useChats, useNodeStatus } from '@/state/chats';
+import { useProject } from '@/state/project';
+import { fileManagerName, useServer } from '@/state/server';
 import { useSessions } from '@/state/sessions';
+import { transport } from '@/transport';
 import { NODE_ACCENTS } from '@/canvas/accents';
 import { Tooltip } from '@/ui/Tooltip';
 import { useHeldWhileVisible, useNodeInViewport } from '@/canvas/culling';
@@ -99,6 +102,8 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const agent = useSessions((s) => s.byNodeId[id]?.agent);
     const chatSession = useChats((s) => s.byNodeId[id]?.info.agentSessionId);
     const chatCwd = useChats((s) => s.byNodeId[id]?.info.cwd);
+    const platform = useServer((s) => s.platform);
+    const projectFolder = useProject((s) => s.current?.folder ?? null);
 
     if (!node) {
         return null;
@@ -118,6 +123,8 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
             useCanvas.getState().addNode('chat', beside, { title: node.title, cwd: node.cwd, resume: agent.agentSessionId });
         }
     };
+    // The folder the node works in: its own, or the project's when it has none.
+    const workingFolder = node.kind === 'terminal' || node.kind === 'chat' ? (node.cwd ?? chatCwd ?? projectFolder) : null;
     const openInTerminal = (): void => {
         if (chatSession) {
             useCanvas.getState().addNode('terminal', beside, { title: node.title, cwd: chatCwd, command: `claude --resume ${chatSession}` });
@@ -228,6 +235,14 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         {node.kind === 'chat' && chatSession && (
                             <ContextMenu.Item className="menu-item" onClick={openInTerminal}>
                                 <Terminal size={14} /> Open in terminal
+                            </ContextMenu.Item>
+                        )}
+                        {workingFolder && (
+                            <ContextMenu.Item
+                                className="menu-item"
+                                onClick={() => void transport.request('fs.reveal', { path: workingFolder }).catch(() => undefined)}
+                            >
+                                <ExternalLink size={14} /> Reveal in {fileManagerName(platform)}
                             </ContextMenu.Item>
                         )}
                         <ContextMenu.SubmenuRoot>

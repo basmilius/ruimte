@@ -1,7 +1,10 @@
 import { toWorld } from '@/canvas/math';
 import { useCanvas, type NodeKind } from '@/state/canvas';
+import { useProject } from '@/state/project';
+import { fileManagerName, useServer } from '@/state/server';
 import { useTheme } from '@/state/theme';
 import { useUi } from '@/state/ui';
+import { transport } from '@/transport';
 
 export interface Command {
     id: string;
@@ -24,7 +27,18 @@ export const addNodeAtCenter = (kind: NodeKind, options?: { title?: string; comm
 export const appCommands = (): Command[] => {
     const canvas = useCanvas.getState();
     const anyLocked = Object.values(canvas.locks).some(Boolean);
+    const folder = useProject.getState().current?.folder ?? null;
     return [
+        { id: 'open-folder', label: 'Open a folder as a project', hint: 'Type a path', run: () => useUi.getState().openPalette('~/') },
+        ...(folder
+            ? [
+                  {
+                      id: 'reveal',
+                      label: `Open project in ${fileManagerName(useServer.getState().platform)}`,
+                      run: () => void transport.request('fs.reveal', { path: folder }).catch(() => undefined)
+                  }
+              ]
+            : []),
         { id: 'add-terminal', label: 'New terminal', shortcut: '⌥T', run: () => void addNodeAtCenter('terminal') },
         { id: 'add-chat', label: 'New chat', shortcut: '⌥C', run: () => void addNodeAtCenter('chat') },
         { id: 'add-browser', label: 'New browser', shortcut: '⌥B', run: () => void addNodeAtCenter('browser') },
