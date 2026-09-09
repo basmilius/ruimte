@@ -2,6 +2,8 @@ import { useState } from 'react';
 import clsx from 'clsx';
 import { AlertCircle, Check, ChevronDown, Copy, Info, MessageCircleQuestion, Minimize2, TriangleAlert, X } from 'lucide-react';
 import type { ChatApprovalItem, ChatAssistantItem, ChatQuestionItem, ChatUserItem } from '@ruimte/contracts';
+import { attachmentUrl } from '@/chat/attachments';
+import { tokenizeMentions } from '@/chat/mentions';
 import { Markdown } from '@/chat/ui/Markdown';
 import { toolSummary } from '@/chat/logic/tools';
 import { Tooltip } from '@/ui/Tooltip';
@@ -17,16 +19,42 @@ const copy = (text: string): void => {
 export function UserRow({ item }: { item: ChatUserItem }) {
     const [open, setOpen] = useState(false);
     const long = item.text.split('\n').length > USER_FOLD_LINES || item.text.length > USER_FOLD_CHARS;
+    const segments = tokenizeMentions(item.text, item.mentions ?? []);
+    const attachments = item.attachments ?? [];
     return (
         <div className="group/user flex flex-col items-end pb-4">
-            <div className="relative max-w-[80%] rounded-2xl bg-accent-soft px-3.5 py-2.5 text-[13px] leading-relaxed text-text select-text">
-                <div className={clsx('whitespace-pre-wrap', long && !open && 'chat-fold')}>{item.text}</div>
-                {long && (
-                    <button className="mt-1 flex items-center gap-1 text-[11px] text-text-muted hover:text-text" onClick={() => setOpen((o) => !o)}>
-                        <ChevronDown size={12} className={clsx('transition-transform', open && 'rotate-180')} /> {open ? 'Show less' : 'Show all'}
-                    </button>
-                )}
-            </div>
+            {attachments.length > 0 && (
+                <div className="mb-1.5 flex max-w-[80%] flex-wrap justify-end gap-1.5">
+                    {attachments.map((attachment, index) => (
+                        <img
+                            key={`${attachment.name}-${index}`}
+                            src={attachmentUrl(attachment)}
+                            alt={attachment.name}
+                            className="max-h-32 max-w-48 rounded-lg border border-border object-cover"
+                        />
+                    ))}
+                </div>
+            )}
+            {item.text !== '' && (
+                <div className="relative max-w-[80%] rounded-2xl bg-accent-soft px-3.5 py-2.5 text-[13px] leading-relaxed text-text select-text">
+                    <div className={clsx('whitespace-pre-wrap', long && !open && 'chat-fold')}>
+                        {segments.map((segment, index) =>
+                            segment.kind === 'mention' ? (
+                                <span key={index} className="mention-chip">
+                                    @{segment.path}
+                                </span>
+                            ) : (
+                                <span key={index}>{segment.text}</span>
+                            )
+                        )}
+                    </div>
+                    {long && (
+                        <button className="mt-1 flex items-center gap-1 text-[11px] text-text-muted hover:text-text" onClick={() => setOpen((o) => !o)}>
+                            <ChevronDown size={12} className={clsx('transition-transform', open && 'rotate-180')} /> {open ? 'Show less' : 'Show all'}
+                        </button>
+                    )}
+                </div>
+            )}
             <div className="mt-1 flex h-5 items-center gap-1 pr-1 opacity-0 transition-opacity group-hover/user:opacity-100">
                 <Tooltip label="Copy">
                     <button className="icon-btn h-5 w-5 rounded" onClick={() => copy(item.text)}>

@@ -27,3 +27,21 @@ export const FsRevealPayloadSchema = z.object({
     path: z.string().min(1)
 });
 export type FsRevealPayload = z.infer<typeof FsRevealPayloadSchema>;
+
+export const FS_SEARCH_MAX_RESULTS = 200;
+
+// A fuzzy search over the files under a directory, for `@file` mentions in a chat.
+export const FsSearchPayloadSchema = z.object({
+    cwd: z.string().min(1),
+    query: z.string().max(256),
+    limit: z.number().int().positive().max(FS_SEARCH_MAX_RESULTS).optional()
+});
+export type FsSearchPayload = z.infer<typeof FsSearchPayloadSchema>;
+
+export const FsSearchResultSchema = z.object({
+    // Paths relative to `cwd`, best match first.
+    files: z.array(z.string()),
+    // Whether the walk stopped before seeing every file, so a miss is not proof of absence.
+    truncated: z.boolean()
+});
+export type FsSearchResult = z.infer<typeof FsSearchResultSchema>;

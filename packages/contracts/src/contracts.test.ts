@@ -61,6 +61,20 @@ describe('server', () => {
     });
 });
 
+describe('chat.send', () => {
+    test('needs text or an attachment, and bounds what an attachment can be', () => {
+        const { payload } = REQUEST_SCHEMAS['chat.send'];
+        const png = { name: 'a.png', mediaType: 'image/png', data: 'AAAA' };
+        expect(payload.safeParse({ chatId: 'c1', text: 'hi' }).success).toBe(true);
+        expect(payload.safeParse({ chatId: 'c1', text: '', attachments: [png] }).success).toBe(true);
+        expect(payload.safeParse({ chatId: 'c1', text: 'see', mentions: ['src/a.ts'], attachments: [png] }).success).toBe(true);
+        expect(payload.safeParse({ chatId: 'c1', text: '  ' }).success).toBe(false);
+        expect(payload.safeParse({ chatId: 'c1', text: 'x', attachments: [{ ...png, mediaType: 'image/svg+xml' }] }).success).toBe(false);
+        expect(payload.safeParse({ chatId: 'c1', text: 'x', attachments: [{ ...png, data: '' }] }).success).toBe(false);
+        expect(payload.safeParse({ chatId: 'c1', text: 'x', attachments: Array.from({ length: 9 }, () => png) }).success).toBe(false);
+    });
+});
+
 describe('session requests', () => {
     test('session.create requires the id and a size, the rest is optional', () => {
         const { payload } = REQUEST_SCHEMAS['session.create'];
