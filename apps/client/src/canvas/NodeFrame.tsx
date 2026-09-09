@@ -1,7 +1,7 @@
 import { memo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { ChevronDown, ChevronRight, GitBranch, Globe, Keyboard, LayoutGrid, Link2, Maximize2, MessageSquare, Terminal, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, GitBranch, Globe, Keyboard, LayoutGrid, Link2, Maximize2, MessageSquare, StickyNote, Terminal, X } from 'lucide-react';
 import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
 import { useHasContextLinks } from '@/context/sync';
@@ -12,12 +12,15 @@ import { useHeldWhileVisible, useNodeInViewport } from '@/canvas/culling';
 import { TerminalNode, TerminalPlate } from '@/canvas/nodes/TerminalNode';
 import { ChatNode } from '@/canvas/nodes/ChatNode';
 import { BrowserNode } from '@/canvas/nodes/BrowserNode';
+import { NoteNode } from '@/canvas/nodes/NoteNode';
+import { noteColorClass } from '@/canvas/note-colors';
 
 const ICONS: Record<NodeKind, ReactNode> = {
     terminal: <Terminal size={14} strokeWidth={1.75} />,
     chat: <MessageSquare size={14} strokeWidth={1.75} />,
     browser: <Globe size={14} strokeWidth={1.75} />,
-    group: <LayoutGrid size={14} strokeWidth={1.75} />
+    group: <LayoutGrid size={14} strokeWidth={1.75} />,
+    note: <StickyNote size={14} strokeWidth={1.75} />
 };
 
 const STATUS_LABEL: Record<AgentStatus, string> = {
@@ -106,6 +109,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
 
     const accent = NODE_ACCENTS.find((a) => a.id === node.accent)?.color;
     const isGroup = node.kind === 'group';
+    const isNote = node.kind === 'note';
     const collapsed = isGroup && node.collapsed === true;
     const remove = (): void => {
         const s = useCanvas.getState();
@@ -119,7 +123,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                 data-node-id={id}
                 className={clsx(
                     'absolute flex flex-col overflow-hidden rounded-xl border focus-visible:outline-none',
-                    isGroup ? 'node-group' : 'bg-surface shadow-node',
+                    isGroup ? 'node-group' : isNote ? clsx('node-note shadow-node', noteColorClass(node.color)) : 'bg-surface shadow-node',
                     focused
                         ? 'node-focused border-transparent'
                         : selected
@@ -149,7 +153,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                 <header
                     className={clsx(
                         'flex h-[37px] shrink-0 items-center gap-2 pl-2.5 pr-1 text-text-muted',
-                        isGroup ? 'bg-transparent' : 'border-b border-border bg-surface-raised'
+                        isGroup ? 'bg-transparent' : isNote ? 'border-b bg-transparent' : 'border-b border-border bg-surface-raised'
                     )}
                 >
                     {isGroup && (
@@ -220,6 +224,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         {node.kind === 'terminal' && (live ? <TerminalNode id={id} focused={focused} /> : <TerminalPlate id={id} />)}
                         {node.kind === 'chat' && <ChatNode id={id} focused={focused} />}
                         {node.kind === 'browser' && <BrowserNode id={id} focused={focused} />}
+                        {node.kind === 'note' && <NoteNode id={id} focused={focused} />}
                         {!focused && <div className="absolute inset-0" aria-hidden="true" />}
                     </div>
                 )}
@@ -228,8 +233,8 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     !focused &&
                     !collapsed &&
                     RESIZE_EDGES.map((edge) => <div key={edge} data-resize={edge} className={clsx('absolute z-10', EDGE_STYLE[edge])} />)}
-                {!isGroup && (selected || focused) && (
-                    <Tooltip label="Drag to link this node into an agent" side="right">
+                {(selected || focused) && (
+                    <Tooltip label="Drag to connect to another node" side="right">
                         <div
                             data-port={id}
                             className="node-port absolute -right-2 top-1/2 z-20 h-4 w-4 -translate-y-1/2 cursor-crosshair rounded-full border-2 border-accent bg-surface"

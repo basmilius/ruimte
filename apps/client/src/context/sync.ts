@@ -1,38 +1,17 @@
 import type { ContextSource } from '@ruimte/contracts';
+import { deriveContextSources } from '@/context/sources';
 import { useCanvas } from '@/state/canvas';
 import { transport } from '@/transport';
 
 const SETTLE_MS = 300;
 
-// A text's first line is its name in the list an agent sees.
-const titleOf = (text: string): string => text.split('\n')[0]?.trim().slice(0, 60) || 'Text';
+/* Whether this node has readable context linked into it, as one boolean for a header; the same rule `contextSources` applies. */
+export const useHasContextLinks = (id: string): boolean => useCanvas((s) => (deriveContextSources(s.nodes, s.texts, s.edges).get(id)?.length ?? 0) > 0);
 
-/* Whether anything on the canvas is linked into this node; the same rule `contextSources` applies, as one boolean for a header. */
-export const useHasContextLinks = (id: string): boolean =>
-    useCanvas((s) => s.edges.some((edge) => edge.to === id && (s.texts[edge.from] !== undefined || s.nodes[edge.from] !== undefined)));
-
-/* What every agent node may read, derived from the edges into it. */
+/* What every agent node may read right now, derived from the edges into it. */
 export const contextSources = (): Map<string, ContextSource[]> => {
     const { edges, nodes, texts } = useCanvas.getState();
-    const byTarget = new Map<string, ContextSource[]>();
-    for (const edge of edges) {
-        const target = nodes[edge.to];
-        if (!target || (target.kind !== 'terminal' && target.kind !== 'chat')) {
-            continue;
-        }
-        const node = nodes[edge.from];
-        const text = texts[edge.from];
-        let source: ContextSource | null = null;
-        if (text) {
-            source = { id: text.id, kind: 'text', title: titleOf(text.text), text: text.text };
-        } else if (node && (node.kind === 'terminal' || node.kind === 'chat')) {
-            source = { id: node.id, kind: node.kind, title: node.title };
-        }
-        if (source) {
-            byTarget.set(edge.to, [...(byTarget.get(edge.to) ?? []), source]);
-        }
-    }
-    return byTarget;
+    return deriveContextSources(nodes, texts, edges);
 };
 
 /*
