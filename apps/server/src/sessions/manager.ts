@@ -1,8 +1,9 @@
 import { randomBytes } from 'node:crypto';
 import { homedir } from 'node:os';
-import type { AgentInfo, AgentKind, EventMap, EventType, SessionInfo } from '@ruimte/contracts';
+import type { AgentInfo, AgentKind, ContextSource, EventMap, EventType, SessionInfo } from '@ruimte/contracts';
 import type { AgentStore } from '../agents/agent-store.ts';
 import { normalizeHook, resumeCommand } from '../agents/hooks.ts';
+import { contextHint } from '../context/context-note.ts';
 import { defaultShell, defaultShellArgs, type PtyAdapter } from '../pty/pty.ts';
 import { Session } from './session.ts';
 import type { SnapshotStore } from './snapshot-store.ts';
@@ -45,6 +46,8 @@ export interface SessionManagerOptions {
     contextUrl?: string;
     // Put in front of PATH, so `ruimte-context` is there for every shell.
     binDir?: string;
+    // What a session may read the moment it starts; a shell with links gets one line about the CLI above its first prompt.
+    contextFor?: (sessionId: string) => ContextSource[];
 }
 
 export type HookResult = 'applied' | 'ignored' | 'unknown-token';
@@ -62,6 +65,7 @@ export class SessionManager {
     hookUrl: string | null;
     contextUrl: string | null;
     private readonly binDir: string | null;
+    private readonly contextFor: (sessionId: string) => ContextSource[];
 
     constructor(options: SessionManagerOptions) {
         this.adapter = options.adapter;
@@ -71,6 +75,7 @@ export class SessionManager {
         this.hookUrl = options.hookUrl ?? null;
         this.contextUrl = options.contextUrl ?? null;
         this.binDir = options.binDir ?? null;
+        this.contextFor = options.contextFor ?? (() => []);
     }
 
     /* The session a hook or context token belongs to. */
@@ -281,6 +286,7 @@ export class SessionManager {
                 ...options,
                 env,
                 hookToken,
+                motd: contextHint(this.contextFor(options.id)) ?? undefined,
                 adapter: this.adapter,
                 deliver: (clientId, data) => this.emit(clientId, { event: 'session.output', payload: { sessionId: options.id, data } }),
                 onExit: (exitCode) => this.handleExit(options.id, exitCode)

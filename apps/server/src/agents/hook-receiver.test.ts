@@ -35,6 +35,30 @@ describe('handleHookRequest', () => {
         expect((await handleHookRequest(post('/hooks/codex', 'nope', 'x'), '/hooks/codex', target('applied'))).status).toBe(400);
     });
 
+    test('answers a Claude prompt hook with the context hint as additionalContext', async () => {
+        const hint = (token: string) => (token === 'tok' ? 'Ruimte: linked context is available' : null);
+        const body = '{"hook_event_name":"UserPromptSubmit","session_id":"s"}';
+        const response = await handleHookRequest(post('/hooks/claude', body, 'tok'), '/hooks/claude', target('applied'), hint);
+        expect(response.status).toBe(200);
+        expect(await response.json()).toEqual({
+            hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: 'Ruimte: linked context is available' }
+        });
+        const start = await handleHookRequest(post('/hooks/claude', '{"hook_event_name":"SessionStart"}', 'tok'), '/hooks/claude', target('applied'), hint);
+        expect(((await start.json()) as { hookSpecificOutput: { hookEventName: string } }).hookSpecificOutput.hookEventName).toBe('SessionStart');
+    });
+
+    test('stays empty without links, on other events, and for Codex', async () => {
+        const hint = () => 'hint';
+        const none = () => null;
+        const prompt = '{"hook_event_name":"UserPromptSubmit"}';
+        expect((await handleHookRequest(post('/hooks/claude', prompt, 'tok'), '/hooks/claude', target('applied'), none)).status).toBe(204);
+        expect((await handleHookRequest(post('/hooks/claude', prompt, 'tok'), '/hooks/claude', target('applied'))).status).toBe(204);
+        expect((await handleHookRequest(post('/hooks/claude', '{"hook_event_name":"Stop"}', 'tok'), '/hooks/claude', target('applied'), hint)).status).toBe(
+            204
+        );
+        expect((await handleHookRequest(post('/hooks/codex', prompt, 'tok'), '/hooks/codex', target('applied'), hint)).status).toBe(204);
+    });
+
     test('only POST', async () => {
         const response = await handleHookRequest(new Request('http://127.0.0.1/hooks/claude'), '/hooks/claude', target('applied'));
         expect(response.status).toBe(405);

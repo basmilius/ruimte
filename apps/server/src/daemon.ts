@@ -9,6 +9,7 @@ import { NoRelay, type Relay } from './auth/relay.ts';
 import { HOOKS_PATH, handleHookRequest } from './agents/hook-receiver.ts';
 import { defaultHookPaths, installHooks } from './agents/install.ts';
 import { ChatManager } from './chat/chat-manager.ts';
+import { contextHint } from './context/context-note.ts';
 import { CONTEXT_PATH, ContextStore } from './context/context-store.ts';
 import { ChatStore } from './chat/chat-store.ts';
 import type { ServerConfig } from './config.ts';
@@ -42,7 +43,14 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const access = { allowedOrigins: config.allowedOrigins, requireToken: config.requireToken };
 
     const snapshots = new SnapshotStore(config.home);
-    const manager = new SessionManager({ adapter: new BunPtyAdapter(), snapshots, agents: new AgentStore(config.home), contextUrl, binDir });
+    const manager = new SessionManager({
+        adapter: new BunPtyAdapter(),
+        snapshots,
+        agents: new AgentStore(config.home),
+        contextUrl,
+        binDir,
+        contextFor: (sessionId) => context.list(sessionId)
+    });
     const snapshotSchedule = scheduleSnapshots(manager, snapshots);
     const providers = new ProviderRegistry();
     const context: ContextStore = new ContextStore({
@@ -55,7 +63,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         store: new ChatStore(config.home),
         contextUrl,
         binDir,
-        hasContext: (chatId) => context.has(chatId)
+        hasContext: (chatId) => context.has(chatId),
+        contextSources: (chatId) => context.list(chatId)
     });
     const projects = new ProjectStore(config.home);
 
@@ -150,7 +159,10 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }
 
             if (url.pathname.startsWith(`${HOOKS_PATH}/`)) {
-                return handleHookRequest(request, url.pathname, manager);
+                return handleHookRequest(request, url.pathname, manager, (token) => {
+                    const sessionId = manager.sessionIdForToken(token);
+                    return sessionId ? contextHint(context.list(sessionId)) : null;
+                });
             }
 
             if (url.pathname === CONTEXT_PATH || url.pathname.startsWith(`${CONTEXT_PATH}/`)) {
