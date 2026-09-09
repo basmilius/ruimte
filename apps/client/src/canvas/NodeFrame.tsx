@@ -122,7 +122,8 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                 render={<div />}
                 data-node-id={id}
                 className={clsx(
-                    'absolute flex flex-col overflow-hidden rounded-xl border focus-visible:outline-none',
+                    // isolate: xterm's layers carry z-indexes; without a stacking context they would paint over a node added later.
+                    'absolute isolate flex flex-col overflow-hidden rounded-xl border focus-visible:outline-none',
                     isGroup ? 'node-group' : isNote ? clsx('node-note shadow-node', noteColorClass(node.color)) : 'bg-surface shadow-node',
                     focused
                         ? 'node-focused border-transparent'
