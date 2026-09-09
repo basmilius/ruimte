@@ -73,6 +73,35 @@ describe('ClaudeStreamReducer', () => {
         expect(thread.get('toolu_1')?.turnId).toBe('turn-1');
     });
 
+    test('progress frames give a running tool its start and description, and the result drops them', () => {
+        const { thread, reducer } = setup();
+        reducer.handle({
+            type: 'assistant',
+            message: { id: 'msg_4', content: [{ type: 'tool_use', id: 'toolu_2', name: 'Bash', input: { command: 'sleep 40' } }], usage }
+        });
+        expect(
+            reducer.handle({ type: 'system', subtype: 'task_started', tool_use_id: 'toolu_2', description: 'Wait a while', task_type: 'local_bash' }).events
+        ).toHaveLength(1);
+        expect(thread.get('toolu_2')).toMatchObject({ progress: { startedAt: null, description: 'Wait a while', output: null } });
+
+        // The reducer's clock reads 2 on this frame; 30 s of elapsed time puts the start before the thread began.
+        reducer.handle({ type: 'tool_progress', tool_use_id: 'toolu_2', tool_name: 'Bash', parent_tool_use_id: null, elapsed_time_seconds: 30, task_id: 't' });
+        expect(thread.get('toolu_2')).toMatchObject({ progress: { startedAt: 2 - 30_000, description: 'Wait a while' } });
+
+        expect(thread.appendText('toolu_2', 'line1\n')).toEqual({ type: 'delta', itemId: 'toolu_2', text: 'line1\n' });
+        expect(thread.appendText('toolu_2', 'line2')).not.toBeNull();
+        expect(thread.get('toolu_2')).toMatchObject({ progress: { output: 'line1\nline2' } });
+
+        // Frames for an unknown or already settled call, and a heartbeat without a usable number, change nothing.
+        expect(reducer.handle({ type: 'tool_progress', tool_use_id: 'toolu_nope', elapsed_time_seconds: 1 }).events).toEqual([]);
+        expect(reducer.handle({ type: 'tool_progress', tool_use_id: 'toolu_2', elapsed_time_seconds: 'soon' }).events).toEqual([]);
+
+        reducer.handle({ type: 'user', message: { role: 'user', content: [{ tool_use_id: 'toolu_2', type: 'tool_result', content: 'ok' }] } });
+        expect(thread.get('toolu_2')).toMatchObject({ state: 'done', output: 'ok' });
+        expect(thread.get('toolu_2')).not.toHaveProperty('progress');
+        expect(thread.appendText('toolu_2', 'late')).toBeNull();
+    });
+
     test('a permission request becomes a pending approval and needs-you, and a cancel closes it', () => {
         const { thread, reducer } = setup();
         const out = reducer.handle({

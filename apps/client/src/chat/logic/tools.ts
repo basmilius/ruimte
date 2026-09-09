@@ -1,3 +1,5 @@
+import type { ChatToolItem } from '@ruimte/contracts';
+
 export interface FileChange {
     path: string;
     before: string;
@@ -59,3 +61,29 @@ export const fileChanges = (name: string, input: unknown): FileChange[] => {
 };
 
 export const isFileChange = (name: string): boolean => name === 'Edit' || name === 'Write' || name === 'MultiEdit';
+
+/* When a running call started: what the CLI reported, or the moment the call appeared. */
+export const toolStartedAt = (tool: ChatToolItem): number => tool.progress?.startedAt ?? tool.createdAt;
+
+// Partial output is a tail: what the command says now matters more than what it said first.
+const LIVE_OUTPUT_LINES = 12;
+
+/* The last lines of a running call's output, or null when the provider streams none. */
+export const liveOutput = (tool: ChatToolItem): string | null => {
+    const output = tool.progress?.output;
+    if (!output) {
+        return null;
+    }
+    const lines = output.replace(/\n$/, '').split('\n');
+    return lines.slice(-LIVE_OUTPUT_LINES).join('\n');
+};
+
+/* "12s", "2m 5s": how long a call has been running, for the live row. */
+export const formatElapsed = (ms: number): string => {
+    const seconds = Math.max(0, Math.floor(ms / 1000));
+    if (seconds < 60) {
+        return `${seconds}s`;
+    }
+    const rest = seconds % 60;
+    return rest === 0 ? `${Math.floor(seconds / 60)}m` : `${Math.floor(seconds / 60)}m ${rest}s`;
+};
