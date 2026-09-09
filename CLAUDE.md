@@ -23,9 +23,12 @@ One WebSocket. JSON frames validated with zod on both ends.
 ## Terminal sessions (the daemon)
 
 - A session is keyed by an id the CLIENT chooses (the node id), so a node reattaches to its own session after a reload.
-- PTY via `Bun.spawn({ terminal: { cols, rows } })`. No node-pty, no tmux.
+- PTY via `Bun.spawn({ terminal: { cols, rows } })` behind the `PtyAdapter` interface (`apps/server/src/pty`). No node-pty, no tmux.
 - Every session runs `@xterm/headless` with `@xterm/addon-serialize` in the daemon. `session.attach` answers with the serialized screen, then streams raw output. A client never replays history itself.
-- Scrollback snapshot to `$RUIMTE_HOME/sessions/<id>.txt` (default `~/.ruimte`) on a timer and on shutdown; written temp-file plus atomic rename.
+- Output is buffered per attached client and flushed every 16 ms, on detach and on exit. `Session.attach` registers the client in the same tick the serialize resolves, so a byte is either in the screen or in the stream, never both.
+- Scrollback snapshot to `$RUIMTE_HOME/sessions/<id>.txt` (default `~/.ruimte`) every 30 s and on SIGINT/SIGTERM; written temp-file plus atomic rename, file name via `encodeURIComponent(id)`.
+- A shell that ends on its own leaves the session listed as `exited` (last screen still attachable). `session.kill` removes the session after its `session.exit` event and deletes the snapshot. `session.create` on an exited or snapshotted id starts a fresh shell with the old screen above a `[session restored, previous shell ended]` line.
+- `ClientConnection.id` is the per-socket client id; `main.ts` subscribes each socket to the `SessionManager` and calls `detachAll` when it closes. See `apps/server/README.md` for flags and the on-disk layout.
 
 ## Conventions
 
