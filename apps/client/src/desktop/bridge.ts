@@ -4,6 +4,9 @@ export interface DesktopBridge {
     pickFolder(initialPath?: string): Promise<string | null>;
     openExternal(url: string): Promise<void>;
     openGuestDevTools(webContentsId: number): void;
+    isFullscreen(): Promise<boolean>;
+    onFullscreen(listener: (fullscreen: boolean) => void): () => void;
+    setTitleBarTheme(dark: boolean): void;
 }
 
 declare global {
@@ -18,3 +21,6 @@ export const isDesktop = (): boolean => desktop() !== null;
 
 /* True when the window chrome leaves room for the traffic lights, which only macOS does. */
 export const hasTrafficLights = (): boolean => desktop()?.platform === 'darwin';
+
+// Where macOS puts the traffic lights (see the shell), plus the gap the sidebar keeps after them.
+export const TRAFFIC_LIGHTS_INSET_PX = 76;

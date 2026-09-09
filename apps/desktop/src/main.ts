@@ -64,6 +64,16 @@ const waitForDaemon = async (): Promise<void> => {
     throw new Error('The daemon did not come up');
 };
 
+// The strip the client reserves at the top of the sidebar, which the overlay controls share on Windows and Linux.
+const TITLEBAR_HEIGHT = 48;
+const OVERLAY_COLORS = { dark: { color: '#1b1b1f', symbolColor: '#ececf1' }, light: { color: '#ffffff', symbolColor: '#18181b' } };
+
+/* The client draws its own chrome. macOS keeps the traffic lights, inset into the sidebar; elsewhere the window controls overlay the strip. */
+const titleBarOptions = (dark: boolean): Electron.BrowserWindowConstructorOptions =>
+    process.platform === 'darwin'
+        ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 16, y: 18 } }
+        : { titleBarStyle: 'hidden', titleBarOverlay: { height: TITLEBAR_HEIGHT, ...OVERLAY_COLORS[dark ? 'dark' : 'light'] } };
+
 const createWindow = (): Electron.BrowserWindow => {
     const window = new BrowserWindow({
         width: 1440,
@@ -71,8 +81,7 @@ const createWindow = (): Electron.BrowserWindow => {
         minWidth: 800,
         minHeight: 500,
         show: false,
-        // The client draws its own chrome; only macOS keeps the traffic lights, inset into the sidebar.
-        ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: { x: 14, y: 16 } } : {}),
+        ...titleBarOptions(true),
         backgroundColor: '#131316',
         webPreferences: {
             preload: join(here, 'preload.cjs'),
@@ -85,6 +94,9 @@ const createWindow = (): Electron.BrowserWindow => {
     window.on('closed', () => {
         mainWindow = null;
     });
+    // In fullscreen macOS hides the traffic lights, so the client can take the room back.
+    window.on('enter-full-screen', () => window.webContents.send('window:fullscreen', true));
+    window.on('leave-full-screen', () => window.webContents.send('window:fullscreen', false));
     // Links a page opens in a new window go to the system browser, never to another Electron window.
     window.webContents.setWindowOpenHandler(({ url }) => {
         void shell.openExternal(url);
@@ -142,6 +154,15 @@ ipcMain.handle('shell:open-external', async (_event, url: string) => {
 });
 
 ipcMain.on('devtools:guest', (_event, id: number) => guestDevTools(id));
+
+ipcMain.handle('window:is-fullscreen', () => mainWindow?.isFullScreen() ?? false);
+
+ipcMain.on('window:theme', (_event, dark: boolean) => {
+    // The overlay controls are native; they follow the client's theme by hand.
+    if (process.platform !== 'darwin' && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.setTitleBarOverlay({ height: TITLEBAR_HEIGHT, ...OVERLAY_COLORS[dark ? 'dark' : 'light'] });
+    }
+});
 
 const setupUpdates = async (): Promise<void> => {
     // Unsigned builds cannot verify an update, so this only runs for a packaged, configured app.

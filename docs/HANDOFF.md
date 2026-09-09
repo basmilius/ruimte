@@ -82,7 +82,11 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   focused and no canvas gesture is running. Inspect opens the guest's devtools in a window of
   ours that stays above a fullscreen app. `electron-updater` is wired for a packaged build with
   `RUIMTE_UPDATE_URL`; unsigned builds skip it. `bun run --cwd apps/desktop smoke` boots the
-  shell, adds a browser node through the keyboard and waits for its page to load.
+  shell, adds a browser node through the keyboard and waits for its page to load. The title
+  bar follows T3 Code: `hiddenInset` with the traffic lights at (16, 18) on macOS and a native
+  controls overlay elsewhere, the sidebar's top strip is the drag region (children reset to
+  `initial`, controls `no-drag`), the inset is only applied outside fullscreen (the shell sends
+  `window:fullscreen`), and the overlay colors follow the client's theme over IPC.
 
 Issues #1 to #8 on GitHub describe each phase; #2, #3 and #4 are closed, #1 and #5 to #8 are
 implemented but wait for a review before closing.
