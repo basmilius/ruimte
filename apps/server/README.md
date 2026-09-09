@@ -67,7 +67,9 @@ Every 30 seconds, and on `SIGINT`/`SIGTERM`, the daemon writes each session's sc
 
 ## Agent status via hooks
 
-Every shell gets `RUIMTE_HOOK_URL` (`http://127.0.0.1:<port>/hooks`) and a per-session `RUIMTE_HOOK_TOKEN`. At startup the daemon puts one command hook per lifecycle event into `~/.claude/settings.json` and `~/.codex/hooks.json` (idempotent merge; hooks of other tools stay). The hook POSTs its stdin to `$RUIMTE_HOOK_URL/<kind>` with the token as bearer, and does nothing outside Ruimte. Codex asks you to trust the new hooks once (`/hooks`).
+Every shell gets `RUIMTE_HOOK_URL` (`http://127.0.0.1:<port>/hooks`) and a per-session `RUIMTE_HOOK_TOKEN`. At startup the daemon puts one command hook per lifecycle event into `~/.claude/settings.json` and `~/.codex/hooks.json` (idempotent merge; hooks of other tools stay). The hook POSTs its stdin to `$RUIMTE_HOOK_URL/<kind>` with the token as bearer and prints the reply, and does nothing outside Ruimte. Codex asks you to trust the new hooks once (`/hooks`).
+
+The reply is empty except on Claude Code's `SessionStart` and `UserPromptSubmit`: when the session has linked context, the daemon answers `{ "hookSpecificOutput": { "hookEventName": ..., "additionalContext": "Ruimte: linked context is available with ruimte-context ..." } }`, which the CLI folds into the turn. That is how a Claude agent inside a terminal, which has no system prompt of ours, learns about `ruimte-context`. The curl runs with `-f`, so an error page never ends up as context.
 
 The daemon folds the events into one status per session: `running`, `needs-you` (permission prompt, `AskUserQuestion`, elicitation), `idle` (turn ended) or `error` (the shell died under a live agent). Every client gets it as a `session.status` event with the CLI's session id and transcript path, and `session.list` carries the same `agent` field.
 
@@ -103,7 +105,12 @@ A browser sends its page's origin with the upgrade; the daemon accepts its own o
 
 ## Context links
 
-An edge on the canvas into a terminal or chat node lets that agent read the source. The client tells the daemon what each agent node may read (`context.set`, a text element with its content, a terminal or chat by id); the daemon reads terminals and chats live when asked. Every shell and chat gets `RUIMTE_CONTEXT_URL` (`http://127.0.0.1:<port>/context`), a bearer token (`RUIMTE_HOOK_TOKEN` in a shell, `RUIMTE_CONTEXT_TOKEN` in a chat) and the directory of `ruimte-context` in front of its PATH (`apps/server/bin` in a checkout, the app's `bin` resource when packaged), where `ruimte-context` lists the linked sources and `ruimte-context read <id>` prints one. A chat that has links is told about the CLI in its system prompt when its process starts.
+An edge on the canvas into a terminal or chat node lets that agent read the source. The client tells the daemon what each agent node may read (`context.set`, a text element with its content, a terminal or chat by id); the daemon reads terminals and chats live when asked. Every shell and chat gets `RUIMTE_CONTEXT_URL` (`http://127.0.0.1:<port>/context`), a bearer token (`RUIMTE_HOOK_TOKEN` in a shell, `RUIMTE_CONTEXT_TOKEN` in a chat) and the directory of `ruimte-context` in front of its PATH (`apps/server/bin` in a checkout, the app's `bin` resource when packaged), where `ruimte-context` lists the linked sources and `ruimte-context read <id>` prints one.
+
+How an agent hears that the CLI exists depends on where it runs:
+
+- A chat that has links when its process starts gets one sentence in its system prompt (`--append-system-prompt`). When the set of links changes between two turns (added or removed, matched by id), the daemon puts a note in front of the next prompt naming what came and went (`src/context/context-note.ts`, `contextChangeNote`) and shows it in the thread as an info note. A slash command is sent untouched; the note waits for the next real prompt.
+- A shell that has links the moment it is created shows one dimmed line above its first prompt (`contextHint`), written to the screen only, never to the PTY. A link made while the shell runs is not announced there; the terminal node's header shows a "context" chip instead, and a Claude Code agent inside the shell hears it through its prompt hooks (above).
 
 ## Smoke test
 
