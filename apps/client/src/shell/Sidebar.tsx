@@ -13,6 +13,7 @@ import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { Tooltip } from '@/ui/Tooltip';
 import { ConnectionDot } from '@/shell/ConnectionDot';
 import { ProjectMenu } from '@/shell/ProjectMenu';
+import { hasTrafficLights } from '@/desktop/bridge';
 
 const KIND_ICON = {
     terminal: Terminal,
@@ -92,7 +93,7 @@ export function Sidebar() {
 
     return (
         <aside className="flex h-full w-[248px] shrink-0 flex-col border-r border-border bg-surface">
-            <div className="flex h-12 items-center gap-2 px-3">
+            <div className={clsx('app-drag flex h-12 items-center gap-2 px-3', hasTrafficLights() && 'pl-[76px]')}>
                 <span className="grid h-6 w-6 place-items-center rounded-md bg-accent text-[12px] font-semibold text-accent-text">R</span>
                 <span className="text-[14px] font-semibold tracking-tight text-text">Ruimte</span>
                 <span className="grow" />

@@ -1,3 +1,4 @@
+import { join, normalize } from 'node:path';
 import type { ServerWebSocket } from 'bun';
 import type { ServerFrame } from '@ruimte/contracts';
 import pkg from '../package.json' with { type: 'json' };
@@ -80,6 +81,10 @@ const server = Bun.serve({
             return handleHookRequest(request, url.pathname, manager);
         }
 
+        if (config.serve) {
+            return serveClient(config.serve, url.pathname);
+        }
+
         return new Response('Not found', { status: 404 });
     },
     websocket: {
@@ -126,6 +131,16 @@ const server = Bun.serve({
 
 // Hooks always POST to loopback, whatever interface the socket listens on.
 manager.hookUrl = `http://127.0.0.1:${server.port}${HOOKS_PATH}`;
+
+/* The built client from one directory; anything that is not a file falls back to the app shell. */
+const serveClient = async (dir: string, pathname: string): Promise<Response> => {
+    const relative = normalize(decodeURIComponent(pathname)).replace(/^(\.\.[/\\])+/, '');
+    const file = Bun.file(join(dir, relative === '/' ? 'index.html' : relative));
+    if (await file.exists()) {
+        return new Response(file);
+    }
+    return new Response(Bun.file(join(dir, 'index.html')));
+};
 
 let shuttingDown = false;
 const shutdown = async (signal: string): Promise<void> => {

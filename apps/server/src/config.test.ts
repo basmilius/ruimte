@@ -10,8 +10,10 @@ describe('parseServerArgs', () => {
         expect(config.installHooks).toBe(true);
     });
 
-    test('--no-hooks skips the installers', () => {
+    test('--no-hooks skips the installers and --serve names a client build', () => {
         expect(parseServerArgs(['--no-hooks'], {}).installHooks).toBe(false);
+        expect(parseServerArgs([], {}).serve).toBeNull();
+        expect(parseServerArgs(['--serve', '/tmp/dist'], {}).serve).toBe('/tmp/dist');
     });
 
     test('reads --host and --port', () => {

@@ -9,6 +9,7 @@ import { CanvasMenuPopup } from '@/canvas/CanvasMenu';
 import { EdgeLayer } from '@/canvas/EdgeLayer';
 import { NodeFrame } from '@/canvas/NodeFrame';
 import { TextElementView } from '@/canvas/TextElementView';
+import { WebviewLayer } from '@/canvas/WebviewLayer';
 
 type Gesture =
     | { kind: 'pan'; last: Point }
@@ -531,6 +532,7 @@ export function Canvas() {
                     {renderOrder.map((id) => (
                         <NodeFrame key={id} id={id} />
                     ))}
+                    <WebviewLayer shield={activeGesture !== null} />
                 </div>
                 {box && (
                     <div

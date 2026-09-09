@@ -314,6 +314,10 @@ body {
 .chat-code pre { margin: 0; padding: 0.6rem 0.75rem; background: transparent !important; font-family: var(--font-mono); font-size: 11.5px; line-height: 1.6; }
 .chat-code code { font-family: inherit; }
 
+/* In the desktop app the sidebar's top strip drags the window; its buttons must not. */
+.app-drag { -webkit-app-region: drag; }
+.app-no-drag, .app-drag button { -webkit-app-region: no-drag; }
+
 /* Icon buttons that belong together sit 1px apart; groups keep the wider gap of their container. */
 .btn-group { display: inline-flex; align-items: center; gap: 1px; }
 .menu-item[data-disabled] { opacity: .45; }

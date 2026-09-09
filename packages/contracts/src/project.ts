@@ -20,7 +20,9 @@ export const ProjectNodeSchema = z.object({
     // Terminal only: typed into the shell as its first line.
     command: z.string().optional(),
     // Chat only: the agent session to continue.
-    resume: z.string().optional()
+    resume: z.string().optional(),
+    // Browser only: the page it shows.
+    url: z.string().optional()
 });
 export type ProjectNode = z.infer<typeof ProjectNodeSchema>;
 

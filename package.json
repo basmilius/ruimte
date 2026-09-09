@@ -11,16 +11,20 @@
     "dev": "bun run --filter './apps/*' dev",
     "dev:client": "bun run --cwd apps/client dev",
     "dev:server": "bun run --cwd apps/server dev",
-    "build": "bun run --cwd apps/client build",
+    "build": "bun run --cwd apps/client build && bun run --cwd apps/desktop build",
     "check": "bun run --filter '*' typecheck && oxlint",
     "lint": "oxlint",
     "test": "bun test",
     "format": "prettier --write \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\"",
-    "format:check": "prettier --check \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\""
+    "format:check": "prettier --check \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\"",
+    "dev:desktop": "bun run --cwd apps/desktop dev"
   },
   "devDependencies": {
     "oxlint": "^1.79.0",
     "prettier": "^3.9.6",
     "typescript": "~6.0.2"
-  }
+  },
+  "trustedDependencies": [
+    "electron"
+  ]
 }

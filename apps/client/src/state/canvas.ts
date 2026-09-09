@@ -109,6 +109,8 @@ interface CanvasState {
     bringToFront(id: string): void;
     setNodeAccent(id: string, accent: string | null): void;
     renameNode(id: string, title: string): void;
+    /* Changes what a node carries (its page, its folder) without touching its placement. */
+    updateNode(id: string, patch: Partial<Pick<CanvasNode, 'url' | 'cwd' | 'command' | 'resume'>>): void;
     duplicateNode(id: string): void;
     addNode(kind: NodeKind, at: Point, options?: AddNodeOptions): string;
     /* Wraps the selected nodes in a group; answers null when nothing is selected. */
@@ -330,6 +332,9 @@ export const useCanvas = create<CanvasState>((set, get) => ({
     },
     renameNode(id, title) {
         set((s) => (s.nodes[id] ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], title } } } : {}));
+    },
+    updateNode(id, patch) {
+        set((s) => (s.nodes[id] ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], ...patch } } } : {}));
     },
     duplicateNode(id) {
         const source = get().nodes[id];

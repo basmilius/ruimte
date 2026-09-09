@@ -1,4 +1,6 @@
 import type { Terminal } from '@xterm/xterm';
+import { browserRegistry, useBrowser } from '@/browser/registry';
+import { useCanvas } from '@/state/canvas';
 
 /* Live xterm instances by node id, and the last screen of the ones that were unmounted. */
 const live = new Map<string, Terminal>();
@@ -35,6 +37,11 @@ export const forgetScreen = (nodeId: string): void => {
 export interface TerminalTestHooks {
     terminalText(nodeId: string): string | null;
     terminalSize(nodeId: string): { cols: number; rows: number } | null;
+    /* Node ids on the canvas, in stacking order. */
+    nodeIds(): string[];
+    /* What a browser node's page reports, for the desktop smoke test. */
+    browserState(nodeId: string): unknown;
+    browserNavigate(nodeId: string, url: string): void;
 }
 
 declare global {
@@ -53,6 +60,15 @@ export const exposeTerminalTestHooks = (): void => {
         terminalSize(nodeId) {
             const term = live.get(nodeId);
             return term ? { cols: term.cols, rows: term.rows } : null;
+        },
+        nodeIds() {
+            return useCanvas.getState().order;
+        },
+        browserState(nodeId) {
+            return useBrowser.getState().byNodeId[nodeId] ?? null;
+        },
+        browserNavigate(nodeId, url) {
+            browserRegistry.navigate(nodeId, url);
         }
     };
 };

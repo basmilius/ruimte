@@ -8,6 +8,8 @@ export interface ServerConfig {
     home: string;
     // Whether to put the status hooks into the CLIs' settings files at startup.
     installHooks: boolean;
+    // A built client to serve next to the socket, so one origin covers both.
+    serve: string | null;
 }
 
 export const DEFAULT_HOST = '127.0.0.1';
@@ -19,7 +21,8 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
         options: {
             host: { type: 'string', default: DEFAULT_HOST },
             port: { type: 'string', default: String(DEFAULT_PORT) },
-            'no-hooks': { type: 'boolean', default: false }
+            'no-hooks': { type: 'boolean', default: false },
+            serve: { type: 'string' }
         },
         strict: true
     });
@@ -33,6 +36,7 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
         host: values.host,
         port,
         home: env.RUIMTE_HOME ?? join(homedir(), '.ruimte'),
-        installHooks: !values['no-hooks']
+        installHooks: !values['no-hooks'],
+        serve: values.serve ?? null
     };
 };

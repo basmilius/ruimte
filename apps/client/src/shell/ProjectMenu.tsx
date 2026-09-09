@@ -8,6 +8,7 @@ import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
+import { desktop } from '@/desktop/bridge';
 
 type DialogKind = { kind: 'new' } | { kind: 'delete'; projectId: string; name: string; folder: string | null } | null;
 
@@ -41,6 +42,19 @@ export function ProjectMenu() {
             setFailure(e instanceof Error ? e.message : 'That did not work');
         } finally {
             setBusy(false);
+        }
+    };
+
+    // The desktop app has a real dialog; a browser tab types the path in the palette instead.
+    const openFolder = async (): Promise<void> => {
+        const bridge = desktop();
+        if (!bridge) {
+            useUi.getState().openPalette('~/');
+            return;
+        }
+        const folder = await bridge.pickFolder(current?.folder ?? undefined);
+        if (folder) {
+            await projectClient.openFolder(folder).catch(() => undefined);
         }
     };
 
@@ -85,7 +99,7 @@ export function ProjectMenu() {
                             <Menu.Item className="menu-item" onClick={() => openDialog({ kind: 'new' })}>
                                 <Plus size={14} /> New canvas
                             </Menu.Item>
-                            <Menu.Item className="menu-item" onClick={() => useUi.getState().openPalette('~/')}>
+                            <Menu.Item className="menu-item" onClick={() => void openFolder()}>
                                 <FolderOpen size={14} /> Open folder
                             </Menu.Item>
                             {current && (

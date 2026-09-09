@@ -1,3 +1,4 @@
+import { browserRegistry } from '@/browser/registry';
 import { chatClient } from '@/chat';
 import { useCanvas } from '@/state/canvas';
 import { sessionClient } from '@/terminal';
@@ -25,6 +26,8 @@ export const startSessionLifecycle = (): (() => void) => {
                 sessionClient.kill(id).catch(() => undefined);
             } else if (node.kind === 'chat') {
                 chatClient.kill(id).catch(() => undefined);
+            } else if (node.kind === 'browser') {
+                browserRegistry.destroy(id);
             }
         }
         previous = current;
