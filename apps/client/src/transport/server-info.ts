@@ -4,7 +4,7 @@ import { transport } from '@/transport';
 const load = (): void => {
     transport
         .request('server.hello', {})
-        .then((info) => useServer.getState().setInfo({ platform: info.platform, home: info.home }))
+        .then((info) => useServer.getState().setInfo({ platform: info.platform, home: info.home, version: info.version }))
         .catch(() => undefined);
     transport
         .request('endpoint.info', {})

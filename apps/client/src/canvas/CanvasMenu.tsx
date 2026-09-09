@@ -47,7 +47,7 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                         <Maximize size={14} /> Zoom to fit <kbd>⇧1</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Separator className="menu-separator" />
-                    <ContextMenu.Item className="menu-item" onClick={() => useUi.getState().setSettingsOpen(true)}>
+                    <ContextMenu.Item className="menu-item" onClick={() => useUi.getState().setSettings({ open: true })}>
                         <Settings size={14} /> Settings <kbd>⌘,</kbd>
                     </ContextMenu.Item>
                 </ContextMenu.Popup>
