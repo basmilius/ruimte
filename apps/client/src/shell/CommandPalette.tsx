@@ -9,6 +9,7 @@ import { useCanvas, type NodeKind } from '@/state/canvas';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
+import { desktop } from '@/desktop/bridge';
 
 const KIND_ICON: Record<NodeKind, React.ReactNode> = {
     terminal: <Terminal size={14} />,
@@ -251,6 +252,18 @@ export function CommandPalette() {
                                 </span>
                             )}
                             <span className="grow" />
+                            {desktop() && (
+                                <button
+                                    className="inline-flex h-7 items-center rounded-md px-2.5 text-[12px] font-medium text-text-muted hover:bg-surface-sunken hover:text-text"
+                                    onClick={() =>
+                                        void desktop()
+                                            ?.pickFolder(browse?.parentPath)
+                                            .then((picked) => (picked ? submitPath(picked) : undefined))
+                                    }
+                                >
+                                    Browse…
+                                </button>
+                            )}
                             <button
                                 className="inline-flex h-7 items-center gap-1.5 rounded-md bg-accent px-2.5 text-[12px] font-medium text-accent-text disabled:opacity-50"
                                 disabled={busy || query.trim() === ''}

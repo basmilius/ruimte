@@ -70,8 +70,22 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   (Cmd+Z, Cmd+Shift+Z) cover placement, adding and deleting; the history resets when another
   project loads. Node ids are random now, since they end up in a shared file.
 
-Issues #1 to #8 on GitHub describe each phase; #2, #3 and #4 are closed, #1, #5, #6 and #8
-are implemented but wait for a review before closing, #7 is next.
+- **Phase 7, Electron shell and browser node**: `apps/desktop` is a small main process
+  (`src/main.ts`) plus a preload that exposes `window.ruimteDesktop` (platform, native folder
+  dialog, open external, guest devtools). `bun run dev:desktop` opens the window against the
+  Vite dev server while `bun dev` runs; without `RUIMTE_DEV_URL` the shell spawns the daemon
+  from the repo through bun with `--serve apps/client/dist`, so one origin serves client and
+  socket (packaging the daemon is phase 11). Browser nodes are `<webview>` elements owned by
+  `apps/client/src/browser/registry.ts` and positioned by `WebviewLayer` over the canvas in world
+  space; they are created once and never re-parented, and a project switch only hides them, so
+  a form keeps what was typed. The layer passes pointer events to a page only while its node is
+  focused and no canvas gesture is running. Inspect opens the guest's devtools in a window of
+  ours that stays above a fullscreen app. `electron-updater` is wired for a packaged build with
+  `RUIMTE_UPDATE_URL`; unsigned builds skip it. `bun run --cwd apps/desktop smoke` boots the
+  shell, adds a browser node through the keyboard and waits for its page to load.
+
+Issues #1 to #8 on GitHub describe each phase; #2, #3 and #4 are closed, #1 and #5 to #8 are
+implemented but wait for a review before closing.
 
 ## Decisions that are not in the code
 
@@ -129,6 +143,13 @@ are implemented but wait for a review before closing, #7 is next.
   in a worker entry is tree-shaken to nothing. The pool uses Vite's `?worker` import instead.
 - `bun --watch` restarts the daemon on every file change and the daemon installs hooks at
   startup, so editing the server while `bun dev` runs also rewrites the hook settings (idempotent).
+- A terminal inside another Electron app (an IDE, an agent shell) exports
+  `ELECTRON_RUN_AS_NODE`, which turns `electron .` into plain Node where `require('electron')`
+  is a path string. `apps/desktop/scripts/launch.ts` clears it before spawning Electron.
+- Bun's CommonJS interop copies enumerable keys, and electron's exports are getters; the main
+  process uses a plain `require('electron')` for that reason.
+- Bun does not run Electron's install script unless it is in `trustedDependencies` (root
+  `package.json`); without it `node_modules/electron/dist` is missing and nothing starts.
 
 ## Next
 
@@ -138,8 +159,11 @@ In the order that makes sense, each one an issue on GitHub:
    `@file` mentions in the composer, a "send Escape to the app" toggle, tool output streaming
    (`tool_progress`), and per-turn checkpoints so the changed-files card can show real diffs
    against the working tree instead of the edit's before and after.
-2. **#7 Electron shell and browser node**, which also brings a native folder picker for the
-   project menu, then #9 to #11.
+2. **#7 follow-ups**: a webview keeps the canvas's z-order only by being above everything, so
+   a node dragged over a browser node slides under its page; the traffic-light inset is fixed,
+   not measured; no Windows or Linux run yet.
+3. **#9 groups, worktrees, context links and layouts**, **#10 remote endpoints**, **#11
+   packaging** (compile the daemon with `bun build --compile`, sign, `ruimte.app`).
 
 Known gaps to keep in mind: no WebGL context budget (many visible terminals may lose
 contexts), no backpressure for a slow client, the 30-node performance target is unmeasured.

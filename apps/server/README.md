@@ -15,6 +15,7 @@ bun run --cwd apps/server dev              # same, restarts on file changes
 | `--host` | `127.0.0.1` | Interface to listen on. |
 | `--port` | `4210` | Port for `/ws`, `/health` and `/hooks`. |
 | `--no-hooks` | off | Do not write the status hooks into the CLIs' settings files at startup. |
+| `--serve <dir>` | off | Serve a built client from `dir` next to the socket; unknown paths fall back to its `index.html`. |
 
 `GET /health` answers `{ ok: true, version }`. `POST /hooks/<claude|codex>` takes a hook payload from an agent CLI (see below). Everything else goes over `/ws` using the frames in `packages/contracts`.
 

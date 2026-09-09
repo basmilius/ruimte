@@ -1,0 +1,23 @@
+{
+  "name": "@ruimte/desktop",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build:main": "bun build src/main.ts --target=node --format=cjs --external electron --external electron-updater --outfile dist/main.cjs && bun build src/preload.ts --target=node --format=cjs --external electron --outfile dist/preload.cjs",
+    "dev": "bun run build:main && RUIMTE_DEV_URL=http://localhost:5173 bun scripts/launch.ts",
+    "smoke": "bun run build:main && RUIMTE_DEV_URL=http://localhost:5173 RUIMTE_SMOKE=1 bun scripts/launch.ts",
+    "build": "bun run build:main",
+    "typecheck": "tsc --noEmit",
+    "start": "bun run build:main && bun scripts/launch.ts"
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "electron": "^44.3.0",
+    "typescript": "~6.0.2"
+  }
+}

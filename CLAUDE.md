@@ -7,7 +7,8 @@ Terminals, agents and browsers on one infinite canvas. Read `README.md` for the 
 Bun workspaces (`bun install` at the root):
 
 - `apps/client`: the React UI (Vite). Never imports Node or Bun APIs. Talks to the server only through the `Transport` interface.
-- `apps/server`: the daemon (Bun runtime). Owns sessions, PTYs and persistence. Serves the WebSocket API on `localhost:4210` by default (`--host`, `--port`).
+- `apps/server`: the daemon (Bun runtime). Owns sessions, PTYs and persistence. Serves the WebSocket API on `localhost:4210` by default (`--host`, `--port`), and a built client with `--serve`.
+- `apps/desktop`: the Electron shell. One window, the client inside it, the daemon next to it. Only window chrome, native dialogs and guest devtools cross IPC (`src/preload.ts` mirrors `apps/client/src/desktop/bridge.ts`). Start it with `bun run dev:desktop` while `bun dev` runs.
 - `packages/contracts`: zod 4 schemas for every message on the wire, plus the TypeScript types derived from them. Both apps import from here; nothing else may define a wire shape. `REQUEST_SCHEMAS` and `EVENT_SCHEMAS` are the tables both sides derive `RequestMap` and `EventMap` from.
 
 Shared config at the root: `tsconfig.base.json` (every package extends it), `.oxlintrc.json`, `.editorconfig`, `bun.lock`. `bun run check` runs `typecheck` in every workspace and then oxlint. In dev the Vite server proxies `/ws` to the daemon, so the client always connects to its own origin.
