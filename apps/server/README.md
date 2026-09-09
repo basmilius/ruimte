@@ -55,9 +55,11 @@ The record is also written to `sessions/<id>.agent.json`. When the daemon starts
 
 ## Providers and models
 
-`provider.list` answers, per agent CLI, whether it is installed, its version and the models it offers. The Claude catalog is `src/providers/claude-models.json`: a model points at a profile, a profile lists option descriptors (reasoning effort, context window, thinking) with their defaults and the context size per option. Adding a model is a JSON edit; a new profile is only needed for a new combination of options. A `ModelSelection` is `{ model, options }`; the daemon normalizes it (aliases like `opus`, defaults for missing options, unknown options dropped).
+`provider.list` answers, per agent CLI, whether it is installed, its version and the models it offers. The catalogs are `src/providers/claude-models.json` and `src/providers/codex-models.json`: a model points at a profile, a profile lists option descriptors (reasoning effort, context window, thinking) with their defaults and the context size per option. Adding a model is a JSON edit; a new profile is only needed for a new combination of options. The Codex catalog mirrors what `codex app-server` answers on `model/list` for 0.153 (six models, each with its own reasoning ladder and default); the context windows were measured per model through `thread/tokenUsage/updated`. A `ModelSelection` is `{ model, options }`; the daemon normalizes it (aliases like `opus` or `astra`, defaults for missing options, unknown options dropped).
 
 Two modes travel with every chat. The runtime mode is the permission policy, one vocabulary for every provider: `supervised`, `auto-accept-edits`, `auto`, `full-access` (the default). The interaction mode is `default` or `plan`. For Claude they become `--permission-mode` (plan wins over the runtime mode), the selection becomes `--model <slug>[1m]` and `--effort`, and `ultrathink` is written into the prompt because the CLI has no flag for it.
+
+For Codex (`src/providers/codex.ts`) the runtime mode becomes an approval policy plus a sandbox on `thread/start`: `supervised` is `untrusted` in a `read-only` sandbox, `auto-accept-edits` is `untrusted` in `workspace-write` (edits inside the workspace pass the sandbox, commands still ask unless Codex knows them as safe; the CLI has no "ask for commands, not for edits" policy), `auto` is `on-request` in `workspace-write` (Codex's own default) and `full-access` is `never` in `danger-full-access`. The reasoning effort travels as `effort` on every `turn/start`. Plan mode does not exist on the app-server protocol of 0.153 (the collaboration mode is only reported, never taken), so it is a `read-only` sandbox plus an instruction at the top of the prompt. The `approvals_reviewer` from `~/.codex/config.toml` is left alone; with `auto_review` some approvals never reach the person.
 
 ## Chats
 
@@ -68,6 +70,17 @@ A chat node is `claude -p --input-format stream-json --output-format stream-json
 - `chat.configure` changes the selection or a mode. A running process keeps its flags until the turn ends; the next send starts a fresh process with `--resume` and the new flags.
 - `chat.cancel` sends an interrupt and the turn ends as `aborted`. `chat.compact` sends `/compact`.
 - The thread is written to `chats/<id>.json` after every turn; a chat whose process ended (or a daemon that restarted) starts the CLI again with `--resume` on the next send.
+
+A Codex chat (`provider: 'codex'` on `chat.create`) is `codex app-server`, JSON-RPC over stdio (`src/chat/codex-transport.ts`, `codex-session.ts`, `codex-stream.ts`). The first send spawns it and handshakes: `initialize`, `initialized`, then `thread/start` with cwd, model, approval policy and sandbox, or `thread/resume` with the stored thread id (a thread Codex no longer has falls back to a fresh one with a warning on the thread). Every message is a `turn/start`; the notifications fold into the same thread items, so the client does not know the difference:
+
+- `agentMessage` items stream through `item/agentMessage/delta` into assistant items; `plan` items are assistant text too. Reasoning items are not shown.
+- `commandExecution` is a `Bash` tool item (the `/bin/zsh -lc` wrapper stripped, `aggregatedOutput` as output), `fileChange` an `ApplyPatch` tool item with the unified diffs as output, `mcpToolCall` and `dynamicToolCall` tool items under their own names, `contextCompaction` a compaction marker.
+- `item/commandExecution/requestApproval` and `item/fileChange/requestApproval` are approval items. `allow` answers `accept`, `allow-always` the execpolicy amendment Codex proposed (or `acceptForSession`), `deny` answers `decline`; Codex takes no reason with a decline, so `message` stays on the daemon. `serverRequest/resolved` cancels an approval that Codex withdrew.
+- `item/tool/requestUserInput` (blocking) is a question item answered by Codex's own question ids. An agent message that carries `questions` (Codex asking without blocking, it polls with `sleep` until the person answers) is a question item too; `chat.answer` sends the chosen labels with `turn/steer` into the running turn.
+- `chat.cancel` is `turn/interrupt` (the turn ends `interrupted`, shown as aborted), `chat.compact` is `thread/compact/start`, which Codex runs as a turn of its own.
+- Usage comes from `thread/tokenUsage/updated` (`last.totalTokens` as the context in use, `modelContextWindow` as the window). Codex reports no cost, so `costUsd` stays zero and the turn fold only shows the duration. Slash commands stay empty.
+- `item/permissions/requestApproval`, MCP elicitations and any other server request the daemon does not understand are refused with a JSON-RPC error, so Codex never waits on an answer that will not come.
+- The thread id is what a terminal resumes with `codex resume <id>`, and "Open in chat" on a terminal that ran Codex opens a chat on the same thread.
 
 ## Smoke test
 

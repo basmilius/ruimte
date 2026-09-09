@@ -1,0 +1,103 @@
+{
+  "defaultModel": "gpt-6-astra",
+  "profiles": {
+    "ultra": {
+      "options": [
+        {
+          "id": "effort",
+          "label": "Reasoning",
+          "type": "select",
+          "defaultChoice": "medium",
+          "choices": [
+            { "id": "low", "label": "Low", "description": "Fast responses with lighter reasoning" },
+            { "id": "medium", "label": "Medium", "description": "Balances speed and reasoning depth for everyday tasks" },
+            { "id": "high", "label": "High", "description": "Greater reasoning depth for complex problems" },
+            { "id": "xhigh", "label": "Extra high", "description": "Extra high reasoning depth for complex problems" },
+            { "id": "max", "label": "Max", "description": "Maximum reasoning depth for the hardest problems" },
+            { "id": "ultra", "label": "Ultra", "description": "Maximum reasoning with automatic task delegation" }
+          ]
+        }
+      ],
+      "contextWindowTokens": { "*": 258400 }
+    },
+    "ultra-low": {
+      "options": [
+        {
+          "id": "effort",
+          "label": "Reasoning",
+          "type": "select",
+          "defaultChoice": "low",
+          "choices": [
+            { "id": "low", "label": "Low", "description": "Fast responses with lighter reasoning" },
+            { "id": "medium", "label": "Medium", "description": "Balances speed and reasoning depth for everyday tasks" },
+            { "id": "high", "label": "High", "description": "Greater reasoning depth for complex problems" },
+            { "id": "xhigh", "label": "Extra high", "description": "Extra high reasoning depth for complex problems" },
+            { "id": "max", "label": "Max", "description": "Maximum reasoning depth for the hardest problems" },
+            { "id": "ultra", "label": "Ultra", "description": "Maximum reasoning with automatic task delegation" }
+          ]
+        }
+      ],
+      "contextWindowTokens": { "*": 258400 }
+    },
+    "max": {
+      "options": [
+        {
+          "id": "effort",
+          "label": "Reasoning",
+          "type": "select",
+          "defaultChoice": "medium",
+          "choices": [
+            { "id": "low", "label": "Low", "description": "Fast responses with lighter reasoning" },
+            { "id": "medium", "label": "Medium", "description": "Balances speed and reasoning depth for everyday tasks" },
+            { "id": "high", "label": "High", "description": "Greater reasoning depth for complex problems" },
+            { "id": "xhigh", "label": "Extra high", "description": "Extra high reasoning depth for complex problems" },
+            { "id": "max", "label": "Max", "description": "Maximum reasoning depth for the hardest problems" }
+          ]
+        }
+      ],
+      "contextWindowTokens": { "*": 258400 }
+    },
+    "xhigh": {
+      "options": [
+        {
+          "id": "effort",
+          "label": "Reasoning",
+          "type": "select",
+          "defaultChoice": "medium",
+          "choices": [
+            { "id": "low", "label": "Low", "description": "Fast responses with lighter reasoning" },
+            { "id": "medium", "label": "Medium", "description": "Balances speed and reasoning depth for everyday tasks" },
+            { "id": "high", "label": "High", "description": "Greater reasoning depth for complex problems" },
+            { "id": "xhigh", "label": "Extra high", "description": "Extra high reasoning depth for complex problems" }
+          ]
+        }
+      ],
+      "contextWindowTokens": { "*": 258400 }
+    },
+    "spark": {
+      "options": [
+        {
+          "id": "effort",
+          "label": "Reasoning",
+          "type": "select",
+          "defaultChoice": "high",
+          "choices": [
+            { "id": "low", "label": "Low", "description": "Fast responses with lighter reasoning" },
+            { "id": "medium", "label": "Medium", "description": "Balances speed and reasoning depth for everyday tasks" },
+            { "id": "high", "label": "High", "description": "Greater reasoning depth for complex problems" },
+            { "id": "xhigh", "label": "Extra high", "description": "Extra high reasoning depth for complex problems" }
+          ]
+        }
+      ],
+      "contextWindowTokens": { "*": 121600 }
+    }
+  },
+  "models": [
+    { "slug": "gpt-6-astra", "name": "GPT-6 Astra", "badge": "new", "profile": "ultra", "aliases": ["astra", "gpt-6"] },
+    { "slug": "gpt-5.6-sol", "name": "GPT-5.6 Sol", "profile": "ultra-low", "aliases": ["sol"] },
+    { "slug": "gpt-5.6-terra", "name": "GPT-5.6 Terra", "profile": "ultra", "aliases": ["terra"] },
+    { "slug": "gpt-5.6-luna", "name": "GPT-5.6 Luna", "profile": "max", "aliases": ["luna"] },
+    { "slug": "gpt-5.5", "name": "GPT-5.5", "profile": "xhigh", "legacy": true },
+    { "slug": "gpt-5.3-codex-spark", "name": "GPT-5.3 Codex Spark", "profile": "spark", "aliases": ["spark"], "legacy": true }
+  ]
+}

@@ -1,6 +1,7 @@
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
 import { ModelCatalog } from './catalog.ts';
 import { detectCli, type CliDetection } from './claude.ts';
+import codexManifest from './codex-models.json' with { type: 'json' };
 
 // How long a "is it installed" answer stays good; an install mid-session shows up on the next check.
 const DETECTION_TTL_MS = 60_000;
@@ -8,6 +9,7 @@ const DETECTION_TTL_MS = 60_000;
 /* What the daemon knows about each agent CLI: whether it is there and which models it offers. */
 export class ProviderRegistry {
     readonly claude = new ModelCatalog();
+    readonly codex = new ModelCatalog(codexManifest as never);
     private readonly commands: Record<AgentKind, string>;
     private readonly cache = new Map<AgentKind, { at: number; detection: CliDetection }>();
     private readonly detect: (command: string) => Promise<CliDetection>;
@@ -21,9 +23,12 @@ export class ProviderRegistry {
         const [claude, codex] = await Promise.all([this.detection('claude'), this.detection('codex')]);
         return [
             { kind: 'claude', name: 'Claude Code', ...claude, models: this.claude.list(), defaultModel: this.claude.defaultModel },
-            // Codex has hooks but no chat backend yet; it shows up so the person knows it was seen.
-            { kind: 'codex', name: 'Codex', ...codex, models: [], defaultModel: null }
+            { kind: 'codex', name: 'Codex', ...codex, models: this.codex.list(), defaultModel: this.codex.defaultModel }
         ];
+    }
+
+    catalogFor(kind: AgentKind): ModelCatalog {
+        return kind === 'codex' ? this.codex : this.claude;
     }
 
     private async detection(kind: AgentKind): Promise<CliDetection> {
