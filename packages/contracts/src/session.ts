@@ -15,7 +15,9 @@ export const SessionInfoSchema = z.object({
     rows,
     createdAt: z.number(),
     attached: z.number().int().nonnegative(),
-    exited: z.boolean()
+    exited: z.boolean(),
+    // Only present once the shell has ended; a signal death is reported shell-style as 128 plus the signal number.
+    exitCode: z.number().int().optional()
 });
 export type SessionInfo = z.infer<typeof SessionInfoSchema>;
 
