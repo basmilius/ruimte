@@ -4,7 +4,7 @@ import { carriedByGroups, useCanvas, type CanvasNode } from './canvas';
 const node = (id: string, x: number, y: number, kind: CanvasNode['kind'] = 'terminal'): CanvasNode => ({ id, kind, title: id, x, y, w: 200, h: 100 });
 
 describe('groups', () => {
-    test('a group carries the nodes and texts inside it, never the selected ones or other groups', () => {
+    test('a group carries the nodes, texts and nested groups inside it, never the selected ones', () => {
         const nodes = {
             g: node('g', 0, 0, 'group'),
             inside: node('inside', 10, 10),
@@ -15,7 +15,7 @@ describe('groups', () => {
         nodes.g.w = 400;
         nodes.g.h = 400;
         const texts = { t1: { id: 't1', x: 50, y: 50, text: 'in', size: 18 }, t2: { id: 't2', x: 900, y: 900, text: 'out', size: 18 } };
-        expect([...carriedByGroups(nodes, texts, ['g', 'picked'])].sort()).toEqual(['inside', 't1']);
+        expect([...carriedByGroups(nodes, texts, ['g', 'picked'])].sort()).toEqual(['inside', 'other', 't1']);
         expect(carriedByGroups(nodes, texts, ['inside']).size).toBe(0);
     });
 
