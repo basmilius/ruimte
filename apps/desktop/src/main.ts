@@ -1,5 +1,5 @@
-import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
+import { existsSync, mkdirSync, openSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
@@ -24,19 +24,72 @@ let daemon: ChildProcess | null = null;
 let mainWindow: Electron.BrowserWindow | null = null;
 const devtoolsWindows = new Map<number, Electron.BrowserWindow>();
 
-/* Until the daemon is compiled into the app (phase 11), it runs from the repo through bun. */
+/*
+ * An app opened from the Dock or a launcher inherits a bare PATH, not the one the person's shell
+ * builds in its rc files, and the daemon finds `claude` and friends through PATH. Asking the login
+ * shell once is what every packaged Electron app does.
+ */
+const loginShellPath = (): string | null => {
+    if (process.platform === 'win32' || !process.env.SHELL) {
+        return null;
+    }
+    const marker = '__RUIMTE_PATH__';
+    const result = spawnSync(process.env.SHELL, ['-ilc', `printf '${marker}%s${marker}' "$PATH"`], {
+        encoding: 'utf8',
+        timeout: 5000,
+        stdio: ['ignore', 'pipe', 'ignore']
+    });
+    const match = result.stdout?.match(new RegExp(`${marker}(.*?)${marker}`, 's'));
+    return match?.[1] || null;
+};
+
+/* Where the daemon and the client it serves are: compiled into the app's resources, or the repo when run from a checkout. */
+const daemonCommand = (): { command: string; args: string[] } | null => {
+    if (app.isPackaged) {
+        const bin = join(process.resourcesPath, 'bin');
+        return {
+            command: join(bin, process.platform === 'win32' ? 'ruimte.exe' : 'ruimte'),
+            args: ['--port', String(port), '--serve', join(process.resourcesPath, 'client')]
+        };
+    }
+    const entry = join(repoRoot, 'apps', 'server', 'src', 'main.ts');
+    if (!existsSync(entry)) {
+        return null;
+    }
+    return { command: 'bun', args: [entry, '--port', String(port), '--serve', join(repoRoot, 'apps', 'client', 'dist')] };
+};
+
 const startDaemon = (): void => {
     if (devUrl) {
         return;
     }
-    const clientDist = join(repoRoot, 'apps', 'client', 'dist');
-    const entry = join(repoRoot, 'apps', 'server', 'src', 'main.ts');
-    if (!existsSync(entry)) {
-        dialog.showErrorBox('Ruimte', `The daemon is missing at ${entry}. Run the desktop app from the repository for now.`);
+    const target = daemonCommand();
+    if (!target) {
+        dialog.showErrorBox('Ruimte', 'The daemon is missing. Run the desktop app from the repository or install a release.');
         app.quit();
         return;
     }
-    daemon = spawn('bun', [entry, '--port', String(port), '--serve', clientDist], { stdio: 'inherit', env: process.env });
+    const env = { ...process.env };
+    if (app.isPackaged) {
+        const path = loginShellPath();
+        if (path) {
+            env.PATH = path;
+            process.env.PATH = path;
+        }
+    }
+    // A packaged app has no terminal; the daemon's output goes to the app's log directory instead.
+    let stdio: 'inherit' | ['ignore', number, number] = 'inherit';
+    if (app.isPackaged) {
+        const logs = app.getPath('logs');
+        mkdirSync(logs, { recursive: true });
+        const log = openSync(join(logs, 'daemon.log'), 'a');
+        stdio = ['ignore', log, log];
+    }
+    daemon = spawn(target.command, target.args, { stdio, env });
+    daemon.on('error', (e) => {
+        dialog.showErrorBox('Ruimte', `The daemon could not start: ${e.message}`);
+        app.quit();
+    });
     daemon.on('exit', (code) => {
         daemon = null;
         if (!app.isPackaged && code !== 0 && code !== null) {
@@ -165,13 +218,12 @@ ipcMain.on('window:theme', (_event, dark: boolean) => {
 });
 
 const setupUpdates = async (): Promise<void> => {
-    // Unsigned builds cannot verify an update, so this only runs for a packaged, configured app.
-    if (!app.isPackaged || !process.env.RUIMTE_UPDATE_URL) {
+    // The feed comes from app-update.yml that electron-builder writes into the bundle (GitHub releases); a checkout has none.
+    if (!app.isPackaged) {
         return;
     }
     try {
         const { autoUpdater } = require('electron-updater') as typeof import('electron-updater');
-        autoUpdater.setFeedURL({ provider: 'generic', url: process.env.RUIMTE_UPDATE_URL });
         autoUpdater.autoDownload = true;
         autoUpdater.on('update-downloaded', () => {
             void dialog
@@ -184,6 +236,7 @@ const setupUpdates = async (): Promise<void> => {
         });
         await autoUpdater.checkForUpdates();
     } catch (e) {
+        // An unsigned build, no network or no release yet: the app stays as it is.
         console.error('Update check failed', e);
     }
 };
@@ -193,6 +246,11 @@ const runSmoke = async (window: Electron.BrowserWindow): Promise<void> => {
     console.log('smoke: window loaded');
     window.webContents.on('preload-error', (_event, path, error) => console.log(`smoke: preload error in ${path}: ${error.message}`));
     console.log(`smoke: bridge is ${await window.webContents.executeJavaScript('typeof window.ruimteDesktop')}`);
+    if ((await window.webContents.executeJavaScript('typeof window.ruimte')) === 'undefined') {
+        // A production client has no test hooks; that the daemon served it and the bridge is there is the whole test.
+        console.log('smoke: production client, no test hooks to drive a browser node');
+        return;
+    }
     window.webContents.on('console-message', (event) => {
         if (event.level === 'error') {
             console.log(`smoke: renderer error: ${event.message.slice(0, 200)}`);

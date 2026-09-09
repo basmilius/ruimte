@@ -18,7 +18,8 @@
     "format": "prettier --write \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\"",
     "format:check": "prettier --check \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\"",
     "dev:desktop": "bun run --cwd apps/desktop dev",
-    "serve": "bun run --cwd apps/client build && bun run --cwd apps/server start -- --host 0.0.0.0 --serve ../client/dist"
+    "serve": "bun run --cwd apps/client build && bun run --cwd apps/server start -- --host 0.0.0.0 --serve ../client/dist",
+    "dist": "bun run --cwd apps/client build && bun run --cwd apps/server compile && bun run --cwd apps/desktop pack"
   },
   "devDependencies": {
     "oxlint": "^1.79.0",
