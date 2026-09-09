@@ -11,6 +11,8 @@ import {
 } from '@ruimte/contracts';
 
 export interface ClientConnection {
+    // Unique per socket for the life of the daemon, so a handler can attach a session to exactly this client.
+    readonly id: string;
     send(frame: ServerFrame): void;
 }
 
