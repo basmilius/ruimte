@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Check, ChevronRight, Copy, Globe, Maximize2, MessageSquare, Palette, Pencil, Terminal, Trash2, X } from 'lucide-react';
 import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
+import { useNodeStatus } from '@/state/sessions';
 import { NODE_ACCENTS } from '@/canvas/accents';
 import { TerminalNode } from '@/canvas/nodes/TerminalNode';
 import { ChatNode } from '@/canvas/nodes/ChatNode';
@@ -89,6 +90,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const resizable = useCanvas((s) => !s.locks.resize);
     const resizing = useCanvas((s) => s.resizing === id);
     const [renaming, setRenaming] = useState(false);
+    const status = useNodeStatus(node);
 
     if (!node) {
         return null;
@@ -118,10 +120,10 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     <span className="flex min-w-0 grow items-center" onDoubleClick={() => setRenaming(true)}>
                         <Title id={id} title={node.title} editing={renaming} onDone={() => setRenaming(false)} />
                     </span>
-                    {node.status && !renaming && (
+                    {status && !renaming && (
                         <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-surface-sunken px-2 py-0.5 text-[11px] text-text-muted">
-                            <StatusDot status={node.status} />
-                            {STATUS_LABEL[node.status]}
+                            <StatusDot status={status} />
+                            {STATUS_LABEL[status]}
                         </span>
                     )}
                     <button className="icon-btn h-7 w-7 shrink-0" title="Zoom to node" onClick={() => useCanvas.getState().goToNode(id)}>

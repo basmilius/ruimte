@@ -1,79 +1,225 @@
 import { useEffect, useRef, useState } from 'react';
-import clsx from 'clsx';
+import { FitAddon } from '@xterm/addon-fit';
+import { WebLinksAddon } from '@xterm/addon-web-links';
+import { WebglAddon } from '@xterm/addon-webgl';
+import { Terminal } from '@xterm/xterm';
+import { RotateCw } from 'lucide-react';
+import { useCanvas } from '@/state/canvas';
+import { useSessions } from '@/state/sessions';
+import { useTheme } from '@/state/theme';
+import { sessionClient } from '@/terminal';
+import { registerTerminal } from '@/terminal/registry';
+import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
+import { useTransportStatus } from '@/transport/status';
 
-interface Line {
-    text: string;
-    tone?: 'dim' | 'green' | 'blue' | 'yellow' | 'red';
-}
+const FONT_SIZE = 12.5;
+const RESIZE_DEBOUNCE_MS = 50;
+/* ESC CR: what agent CLIs read as "newline, do not submit". Harmless in a plain shell. */
+const SHIFT_ENTER = '\x1b\r';
 
-const DEMO: Line[] = [
-    { text: '$ bun dev', tone: 'dim' },
-    { text: '' },
-    { text: '  VITE v8.2.2  ready in 212 ms', tone: 'green' },
-    { text: '' },
-    { text: '  ➜  Local:   http://localhost:5173/', tone: 'blue' },
-    { text: '  ➜  Network: use --host to expose', tone: 'dim' },
-    { text: '' },
-    { text: '12:41:07 [vite] hmr update /src/canvas/Canvas.tsx', tone: 'dim' },
-    { text: '12:41:22 [vite] hmr update /src/styles.css', tone: 'dim' },
-    { text: '12:42:03 [vite] hmr update /src/canvas/NodeFrame.tsx', tone: 'dim' },
-    { text: '12:42:18 warning: unused export StatusDot', tone: 'yellow' }
-];
+let webgl2Available: boolean | null = null;
 
-const TONE: Record<NonNullable<Line['tone']>, string> = {
-    dim: 'text-term-dim',
-    green: 'text-term-green',
-    blue: 'text-term-blue',
-    yellow: 'text-term-yellow',
-    red: 'text-term-red'
+/* Probed once for the page; the probe context is released so it does not count against the browser's cap. */
+const hasWebgl2 = (): boolean => {
+    if (webgl2Available === null) {
+        const context = document.createElement('canvas').getContext('webgl2');
+        webgl2Available = context !== null;
+        context?.getExtension('WEBGL_lose_context')?.loseContext();
+    }
+    return webgl2Available;
 };
 
-/* Placeholder for the real terminal. It only has to feel like one: monospace, a cursor, typed input. */
-export function TerminalNode({ focused }: { id: string; focused: boolean }) {
-    const [lines, setLines] = useState<Line[]>(DEMO);
-    const [input, setInput] = useState('');
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
+const createTerminal = (): Terminal =>
+    new Terminal({
+        theme: readTerminalTheme(),
+        fontFamily: readTerminalFont(),
+        fontSize: FONT_SIZE,
+        cursorBlink: true,
+        scrollback: 5000,
+        macOptionIsMeta: true
+    });
+
+const loadRenderer = (term: Terminal): void => {
+    if (!hasWebgl2()) {
+        return;
+    }
+    try {
+        const webgl = new WebglAddon();
+        // Once the GPU drops the context xterm's DOM renderer takes over; nothing to re-acquire.
+        webgl.onContextLoss(() => webgl.dispose());
+        term.loadAddon(webgl);
+    } catch {
+        // The DOM renderer is already active; WebGL was only ever an upgrade.
+    }
+};
+
+export function TerminalNode({ id, focused }: { id: string; focused: boolean }) {
+    const hostRef = useRef<HTMLDivElement>(null);
+    const termRef = useRef<Terminal | null>(null);
+    /* Bumped by Restart: the whole terminal is rebuilt around a fresh session. */
+    const [generation, setGeneration] = useState(0);
+    const [failure, setFailure] = useState<string | null>(null);
+    const status = useTransportStatus();
+    const exited = useSessions((s) => s.byNodeId[id]?.exited);
+    const resolvedTheme = useTheme((t) => t.resolved);
 
     useEffect(() => {
-        if (focused) {
-            inputRef.current?.focus();
+        const host = hostRef.current;
+        if (!host) {
+            return;
         }
-    }, [focused]);
+        const term = createTerminal();
+        const fit = new FitAddon();
+        term.loadAddon(fit);
+        term.loadAddon(new WebLinksAddon());
+        term.open(host);
+        loadRenderer(term);
+        fit.fit();
+        termRef.current = term;
+
+        term.attachCustomKeyEventHandler((e) => {
+            if (e.key === 'Escape') {
+                // Escape always returns to the canvas, so a full-screen program (vim, less) never
+                // receives it. That trade keeps "Escape leaves node mode" absolute; a later phase can
+                // add a per-node "send Escape to the app" toggle for the programs that need it.
+                return false;
+            }
+            if (e.type === 'keydown' && e.key === 'Enter' && e.shiftKey) {
+                e.preventDefault();
+                sessionClient.write(id, SHIFT_ENTER);
+                return false;
+            }
+            return true;
+        });
+        term.onData((data) => sessionClient.write(id, data));
+
+        let cancelled = false;
+        const unregister = registerTerminal(id, term);
+        const offOutput = sessionClient.onOutput(id, (data) => term.write(data));
+        const offScreen = sessionClient.onScreen(id, ({ screen }) => {
+            term.reset();
+            term.write(screen);
+        });
+
+        const cwd = useCanvas.getState().nodes[id]?.cwd;
+        sessionClient.open(id, cwd, term.cols, term.rows)
+            .then((result) => {
+                if (!cancelled && result) {
+                    term.write(result.screen);
+                }
+            })
+            .catch((e: unknown) => {
+                if (!cancelled) {
+                    setFailure(e instanceof Error ? e.message : 'The session could not be started');
+                }
+            });
+
+        // The host is sized in world units, so a camera zoom (a CSS transform on an ancestor)
+        // never reaches this observer: only a real node resize changes cols and rows.
+        let timer: number | null = null;
+        const observer = new ResizeObserver(() => {
+            if (timer !== null) {
+                window.clearTimeout(timer);
+            }
+            timer = window.setTimeout(() => {
+                timer = null;
+                const { cols, rows } = term;
+                fit.fit();
+                if (term.cols !== cols || term.rows !== rows) {
+                    sessionClient.resize(id, term.cols, term.rows);
+                }
+            }, RESIZE_DEBOUNCE_MS);
+        });
+        observer.observe(host);
+
+        // Selecting copies; the platform's paste shortcut lands in xterm's own textarea.
+        const copySelection = (): void => {
+            if (term.hasSelection()) {
+                void navigator.clipboard?.writeText(term.getSelection()).catch(() => undefined);
+            }
+        };
+        host.addEventListener('pointerup', copySelection);
+
+        return () => {
+            cancelled = true;
+            if (timer !== null) {
+                window.clearTimeout(timer);
+            }
+            observer.disconnect();
+            host.removeEventListener('pointerup', copySelection);
+            offOutput();
+            offScreen();
+            unregister();
+            void sessionClient.detach(id);
+            term.dispose();
+            termRef.current = null;
+        };
+    }, [id, generation]);
 
     useEffect(() => {
-        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-    }, [lines.length]);
+        const term = termRef.current;
+        if (!term) {
+            return;
+        }
+        if (focused) {
+            term.focus();
+        } else {
+            term.blur();
+        }
+    }, [focused, generation]);
 
-    const submit = (): void => {
-        const cmd = input.trim();
-        setLines((prev) => [...prev, { text: `$ ${cmd}`, tone: 'dim' }, ...(cmd ? [{ text: `ruimte: command not found: ${cmd}`, tone: 'red' as const }] : [])]);
-        setInput('');
+    useEffect(() => {
+        const term = termRef.current;
+        if (term) {
+            term.options.theme = readTerminalTheme();
+        }
+    }, [resolvedTheme, generation]);
+
+    const rebuild = (): void => {
+        setFailure(null);
+        setGeneration((g) => g + 1);
+    };
+
+    const restart = async (): Promise<void> => {
+        try {
+            await sessionClient.kill(id);
+        } catch {
+            // Already gone on the daemon; creating it again is all that matters.
+        }
+        rebuild();
     };
 
     return (
-        <div ref={scrollRef} className="h-full overflow-auto bg-term-bg p-3 font-mono text-[12.5px] leading-[1.5] text-term-fg select-text">
-            {lines.map((line, i) => (
-                <div key={i} className={clsx('whitespace-pre', line.tone && TONE[line.tone])}>{line.text || ' '}</div>
-            ))}
-            <div className="flex whitespace-pre">
-                <span className="text-term-dim">$ </span>
-                <input
-                    ref={inputRef}
-                    className="grow bg-transparent outline-none"
-                    value={input}
-                    tabIndex={focused ? 0 : -1}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                            submit();
-                        }
-                        if (e.key !== 'Escape') {
-                            e.stopPropagation();
-                        }
-                    }}
-                />
-            </div>
+        <div className="absolute inset-0 bg-term-bg">
+            <div ref={hostRef} className="term-host" />
+            {status !== 'open' && (
+                <div className="pointer-events-none absolute inset-x-3 top-3 z-10 rounded-lg border border-border bg-surface-raised/90 px-3 py-2 text-[12px] text-text-muted">
+                    {status === 'closed' ? (
+                        <>Not connected to the Ruimte server. Run <code className="font-mono text-text">bun run dev:server</code>.</>
+                    ) : (
+                        'Connecting to the Ruimte server'
+                    )}
+                </div>
+            )}
+            {failure && (
+                <div className="absolute inset-x-3 top-3 z-10 flex items-center gap-3 rounded-lg border border-border bg-surface-raised/90 px-3 py-2 text-[12px] text-status-error">
+                    <span className="grow">{failure}</span>
+                    <button className="icon-btn h-7 w-7 shrink-0" title="Try again" onClick={rebuild}>
+                        <RotateCw size={13} />
+                    </button>
+                </div>
+            )}
+            {exited !== undefined && (
+                <div className="absolute inset-x-0 bottom-0 z-10 flex items-center gap-3 border-t border-border bg-surface-raised/90 px-3 py-1.5 font-mono text-[12px] text-term-dim">
+                    <span className="grow">[process exited with code {exited}]</span>
+                    <button
+                        className="inline-flex h-6 items-center gap-1.5 rounded-md bg-surface-sunken px-2 font-sans text-[11px] font-medium text-text hover:bg-border"
+                        onClick={() => void restart()}
+                    >
+                        <RotateCw size={12} /> Restart
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
