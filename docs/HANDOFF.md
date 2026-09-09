@@ -146,8 +146,10 @@ started; it fits after #10, when a remote daemon makes it worth its weight.
   `.btn-group` with 1px gaps; groups keep the wider gap of their container.
 - Tooltips are the `Tooltip` component in `src/ui/Tooltip.tsx`, never a `title` attribute.
   One `TooltipProvider` at the app root gives the shared 150 ms delay.
-- Escape always leaves node mode, so it never reaches a fullscreen program in a terminal. A
-  later "send Escape to the app" toggle is the planned fix.
+- Escape leaves node mode unless a terminal node has "Send Escape to the app" on (its context
+  menu; `escapeToApp` in `project.json`, an "Esc" chip in the header). Cmd+Escape and
+  Ctrl+Escape always leave, so a node can never trap the keyboard. On Windows Ctrl+Escape is
+  the Start menu, so a Windows build needs another always-works chord.
 - Formatting is prettier (`.prettierrc`: single quotes, width 160, 4 spaces). Run
   `bun run format` before a commit.
 - Status hooks are `command` hooks with curl, not Claude Code's `http` hooks: the http kind
@@ -212,23 +214,34 @@ started; it fits after #10, when a remote daemon makes it worth its weight.
 - The update feed is the GitHub release of a private repository, which electron-updater cannot
   read without a token; the repository goes public with the first release, or the feed moves to
   ruimte.app (`publish.provider: generic`).
-- The CLI is only mentioned in a chat's system prompt when the chat has links at the moment its
-  process starts; a link made later is visible to `ruimte-context` but the agent is not told.
+- How an agent learns that `ruimte-context` exists (`apps/server/src/context/context-note.ts`):
+  a chat gets a sentence in its system prompt when it has links at process start and a note in
+  front of the next prompt when the set changed between turns (also shown as an info note in
+  the thread); a shell that has links when it is created gets one dimmed line above its first
+  prompt (on the screen only, never typed into the PTY); a Claude Code agent inside a shell
+  gets the hint as `additionalContext` from its `SessionStart` and `UserPromptSubmit` hooks,
+  which is why the hook command prints curl's reply now. A link made while a shell is already
+  running is only visible as the "context" chip in the node header and to the hooks. The
+  shell's line depends on `context.set` reaching the daemon before `session.create`; on a
+  fresh project load the client's sync (300 ms settle) can lose that race, so the chip and the
+  hooks are the ones to rely on.
 
 ## Next
 
 In the order that makes sense, each one an issue on GitHub:
 
 1. **#5 and #6 follow-ups**: a Codex chat backend on the app-server protocol, attachments and
-   `@file` mentions in the composer, a "send Escape to the app" toggle, tool output streaming
-   (`tool_progress`), and per-turn checkpoints so the changed-files card can show real diffs
-   against the working tree instead of the edit's before and after.
+   `@file` mentions in the composer, tool output streaming (`tool_progress`), and per-turn
+   checkpoints so the changed-files card can show real diffs against the working tree instead
+   of the edit's before and after. The "send Escape to the app" toggle is done.
 2. **#7 follow-ups**: a webview keeps the canvas's z-order only by being above everything, so
    a node dragged over a browser node slides under its page; the traffic-light inset is fixed,
    not measured; no Windows or Linux run yet.
-3. **#9 follow-ups**: a chat should learn about a link made mid-conversation (a note in the
-   next turn's prompt), and a terminal agent has no prompt at all, so the CLI's existence must
-   come from its hooks or a MOTD line in the shell.
+3. **#9 follow-ups**: the mid-conversation note, the shell's first-prompt line and the hook
+   answer are done (see the gotcha above). Left: Codex inside a terminal gets no hint, since
+   its hook output contract is not verified; and a link made while a shell already runs could
+   be announced at the next shell prompt without typing into the PTY (a `precmd`/`PROMPT_COMMAND`
+   probe of a daemon-owned flag file), which was judged too invasive for now.
 4. **#10 follow-ups**: one endpoint at a time is the model; a project list that spans machines
    would need a transport per endpoint. `auth.sessions` and `auth.revoke` have no UI yet. TLS is
    a reverse proxy's job and is only documented.

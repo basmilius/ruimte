@@ -7,6 +7,19 @@ import { HOOK_MARKER, hookCommand, installHooks, mergeHooks } from './install.ts
 
 const other = { type: 'command', command: 'echo other' };
 
+describe('hookCommand', () => {
+    test('posts to the kind, prints the daemon reply and nothing else, and never fails the CLI', () => {
+        const command = hookCommand('claude');
+        expect(command).toContain('"$RUIMTE_HOOK_URL/claude"');
+        expect(command).toContain('Bearer $RUIMTE_HOOK_TOKEN');
+        // The reply body is the hook's stdout, so a 200 with additionalContext reaches Claude Code; -f keeps error pages out of it.
+        expect(command).toContain('curl -sf ');
+        expect(command).not.toContain('-o /dev/null');
+        expect(command.endsWith('; exit 0')).toBe(true);
+        expect(hookCommand('codex')).toContain('"$RUIMTE_HOOK_URL/codex"');
+    });
+});
+
 describe('mergeHooks', () => {
     test('adds one hook per event to an empty config', () => {
         const { config, changed } = mergeHooks({}, 'claude');

@@ -1,9 +1,10 @@
 import { memo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { ChevronDown, ChevronRight, GitBranch, Globe, LayoutGrid, Maximize2, MessageSquare, Terminal, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, GitBranch, Globe, Keyboard, LayoutGrid, Link2, Maximize2, MessageSquare, Terminal, X } from 'lucide-react';
 import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
+import { useHasContextLinks } from '@/context/sync';
 import { NODE_ACCENTS } from '@/canvas/accents';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { Tooltip } from '@/ui/Tooltip';
@@ -96,6 +97,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const live = useHeldWhileVisible(inViewport);
     const [renaming, setRenaming] = useState(false);
     const status = useNodeStatus(node);
+    const hasContext = useHasContextLinks(id);
     const hidden = useCanvas((s) => s.hidden.has(id));
 
     if (!node || hidden) {
@@ -172,6 +174,23 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                             <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 font-mono text-[11px] text-text-muted">
                                 <GitBranch size={11} /> {node.worktree.branch}
                             </span>
+                        </Tooltip>
+                    )}
+                    {node.kind === 'terminal' && hasContext && !renaming && (
+                        <Tooltip label="Linked context. The agent in this terminal reads it with ruimte-context (list, read <id>).">
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 text-[11px] text-text-muted">
+                                <Link2 size={11} /> context
+                            </span>
+                        </Tooltip>
+                    )}
+                    {node.kind === 'terminal' && node.escapeToApp && !renaming && (
+                        <Tooltip label="Escape goes to the program in this terminal; click to turn off. Leave the node with" kbd="⌘Esc / ⌃Esc">
+                            <button
+                                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 text-[11px] text-text-muted hover:text-text"
+                                onClick={() => useCanvas.getState().updateNode(id, { escapeToApp: false })}
+                            >
+                                <Keyboard size={11} /> Esc
+                            </button>
                         </Tooltip>
                     )}
                     {status && !renaming && (

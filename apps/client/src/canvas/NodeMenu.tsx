@@ -7,6 +7,7 @@ import {
     Copy,
     ExternalLink,
     GitBranch,
+    Keyboard,
     Maximize2,
     MessageSquare,
     Palette,
@@ -85,6 +86,12 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                                 </ContextMenu.Item>
                             )}
                         </>
+                    )}
+                    {node.kind === 'terminal' && (
+                        <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().updateNode(id, { escapeToApp: !node.escapeToApp })}>
+                            <Keyboard size={14} /> Send Escape to the app
+                            {node.escapeToApp ? <Check size={13} className="ml-auto" /> : <kbd>⌘Esc leaves</kbd>}
+                        </ContextMenu.Item>
                     )}
                     {node.kind === 'terminal' && agent?.kind === 'claude' && (
                         <ContextMenu.Item className="menu-item" onClick={openInChat}>
