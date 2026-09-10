@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { Recorder, SH, SH_ARGS, makeHarness, waitFor, type Harness } from './test-helpers.ts';
+import { Recorder, SH, SH_ARGS, makeHarness, waitFor, waitForAsync, type Harness } from './test-helpers.ts';
 
 let harness: Harness;
 
@@ -70,11 +70,11 @@ describe('agent status via hooks', () => {
     });
 
     test('a command given at create runs as the first line', async () => {
-        const recorder = new Recorder();
-        harness.manager.subscribe('c1', recorder.sink());
         await create('s4', 'echo fir""st-line');
-        await harness.manager.attach('s4', 'c1', 80, 24);
-        await waitFor(() => recorder.output.includes('first-line'), 'command output');
+        const session = harness.manager.get('s4')!;
+        // The screen, not the stream: a shell that prints before the client attaches puts its output
+        // in the serialized screen, and no session.output event ever carries it.
+        await waitForAsync(async () => (await session.plainText()).includes('first-line'), 'command output');
     });
 
     test('kill drops the agent record with the snapshot', async () => {
