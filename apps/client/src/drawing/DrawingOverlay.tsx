@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { LINE_HEIGHT, RESIZE_HANDLES, boundsOfElements, handlePoint, type Rect } from '@ruimte/drawing';
+import { LINE_HEIGHT, NOTE_PADDING, RESIZE_HANDLES, boundsOfElements, handlePoint, writingFrameOf, type Rect, type WrittenElement } from '@ruimte/drawing';
 import { fitTextBox } from '@/drawing/paint';
 import { readFontStacks } from '@/drawing/palette';
-import { useDrawing } from '@/state/drawing';
+import { isWritten, useDrawing } from '@/state/drawing';
 
 /* The squares on a selection box, in screen pixels whatever the zoom is. */
 const HANDLE = 8;
@@ -90,7 +90,7 @@ export function DrawingOverlay({ marquee }: { marquee: Rect | null }) {
             {marquee && (
                 <div className="absolute border border-accent bg-accent/10" style={{ left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h }} />
             )}
-            {editing?.kind === 'text' && <TextEditor element={editing} camera={camera} />}
+            {editing && isWritten(editing) && <TextEditor element={editing} camera={camera} />}
         </div>
     );
 }
@@ -98,12 +98,16 @@ export function DrawingOverlay({ marquee }: { marquee: Rect | null }) {
 /* The narrowest an empty editor gets, so the caret has a box to sit in. */
 const EDITOR_MIN_WIDTH = 40;
 
-type TextElement = Extract<ReturnType<typeof useDrawing.getState>['elements'][number], { kind: 'text' }>;
-
-/* The text of one element while it is being typed. It commits on blur, as a text on the canvas does. */
-function TextEditor({ element, camera }: { element: TextElement; camera: Camera }) {
+/*
+ * The text of one element while it is being typed, on the very spot the painter would write it. It
+ * commits on blur, as a text on the canvas does. A note grows under the words as they are typed,
+ * so the paper is never too small for what it says.
+ */
+function TextEditor({ element, camera }: { element: WrittenElement; camera: Camera }) {
     const ref = useRef<HTMLTextAreaElement>(null);
     const [box, setBox] = useState(() => fitTextBox(element));
+    const note = element.kind === 'note';
+    const frame = writingFrameOf(element);
 
     useEffect(() => {
         ref.current?.focus();
@@ -115,12 +119,20 @@ function TextEditor({ element, camera }: { element: TextElement; camera: Camera 
         const state = useDrawing.getState();
         if (value !== element.text) {
             state.updateText(element.id, value);
-            if (value.trim() !== '') {
+            if (note || value.trim() !== '') {
                 // The box follows the glyphs, so a hit test and a selection frame the text itself.
                 state.updateElement(element.id, fitTextBox(element, value), false);
             }
         }
         state.setEditingText(null);
+    };
+
+    const grow = (value: string): void => {
+        const fitted = fitTextBox(element, value);
+        setBox(fitted);
+        if (note && fitted.h !== element.h) {
+            useDrawing.getState().updateElement(element.id, fitted, false);
+        }
     };
 
     return (
@@ -130,20 +142,20 @@ function TextEditor({ element, camera }: { element: TextElement; camera: Camera 
             spellCheck={false}
             className="pointer-events-auto absolute resize-none overflow-hidden border-none bg-transparent p-0 text-draw-ink outline-none"
             style={{
-                ...toScreen(camera, element.x, element.y),
-                width: Math.max(box.w, EDITOR_MIN_WIDTH) * camera.zoom,
-                height: Math.max(box.h, element.size) * camera.zoom,
+                ...toScreen(camera, element.x + frame.x, element.y + frame.y),
+                width: (note ? frame.w : Math.max(box.w, EDITOR_MIN_WIDTH)) * camera.zoom,
+                height: Math.max(note ? element.h - NOTE_PADDING * 2 : box.h, element.size) * camera.zoom,
                 fontFamily: readFontStacks()[element.font ?? 'hand'],
                 fontSize: element.size * camera.zoom,
                 lineHeight: LINE_HEIGHT,
                 color: `var(--draw-${element.stroke})`,
                 textAlign: element.align ?? 'left',
-                // A sized box wraps as the painter does; a free one grows with the longest line.
-                whiteSpace: element.sized ? 'pre-wrap' : 'pre',
-                overflowWrap: element.sized ? 'anywhere' : 'normal'
+                // A note and a sized box wrap as the painter does; a free text grows with its longest line.
+                whiteSpace: note || element.sized ? 'pre-wrap' : 'pre',
+                overflowWrap: note || element.sized ? 'anywhere' : 'normal'
             }}
             onBlur={commit}
-            onInput={(e) => setBox(fitTextBox(element, e.currentTarget.value))}
+            onInput={(e) => grow(e.currentTarget.value)}
             // The letters are tools out here; inside the editor they are letters.
             onKeyDown={(e) => {
                 e.stopPropagation();

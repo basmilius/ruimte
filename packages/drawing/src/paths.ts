@@ -3,6 +3,7 @@ import { getStroke } from 'perfect-freehand';
 import { RoughGenerator } from 'roughjs/bin/generator';
 import type { Options } from 'roughjs/bin/core';
 import { arrowHead, arrowHeadSize, type Point } from './geometry.ts';
+import { NOTE_RADIUS } from './text.ts';
 
 /*
  * What a painter has to do with one path. The colors are not in here: a drawing names palette
@@ -92,6 +93,14 @@ const linesToPath = (segments: readonly [Point, Point][]): string => segments.ma
 export const pathsOfElement = (element: DrawingElement): ElementPath[] => {
     if (element.kind === 'text') {
         return [];
+    }
+    // A note is a sheet of paper, not a drawn shape: no wobble, and an edge of its own paper color.
+    if (element.kind === 'note') {
+        const d = roundedRectPath(element.w, element.h, NOTE_RADIUS);
+        return [
+            { d, role: 'fill', strokeWidth: 0, dash: null },
+            { d, role: 'stroke', strokeWidth: element.strokeWidth, dash: null }
+        ];
     }
     const options = optionsOf(element);
     const dash = dashOf(element);

@@ -16,6 +16,7 @@ import {
     Plus,
     Scan,
     Square,
+    StickyNote,
     Type,
     Undo2,
     Redo2,
@@ -50,6 +51,7 @@ const TOOLS: ToolRow[] = [
     { tool: 'line', label: 'Line', kbd: 'L', icon: Minus },
     { tool: 'freehand', label: 'Draw', kbd: 'P', icon: Pencil },
     { tool: 'text', label: 'Text', kbd: 'T', icon: Type },
+    { tool: 'note', label: 'Sticky note', kbd: 'N', icon: StickyNote },
     { tool: 'eraser', label: 'Eraser', kbd: 'E', icon: Eraser }
 ];
 
@@ -165,6 +167,9 @@ export function DrawingDock() {
                                     <Menu.Separator className={MENU_SEPARATOR} />
                                     <div className={MENU_LABEL}>Fill</div>
                                     <Swatches value={style.fillColor} onPick={(fillColor) => set({ fillColor })} />
+                                    <Menu.Separator className={MENU_SEPARATOR} />
+                                    <div className={MENU_LABEL}>Sticky note</div>
+                                    <Swatches value={style.noteColor} onPick={(noteColor) => set({ noteColor })} paper />
                                 </Menu.Popup>
                             </Menu.Positioner>
                         </Menu.Portal>
@@ -365,7 +370,7 @@ export function DrawingDock() {
 }
 
 /* The ten palette names as circles; the file keeps the name, the theme keeps the value. */
-function Swatches({ value, onPick }: { value: DrawingColor; onPick: (color: DrawingColor) => void }) {
+function Swatches({ value, onPick, paper = false }: { value: DrawingColor; onPick: (color: DrawingColor) => void; paper?: boolean }) {
     return (
         <div className="flex gap-1 px-2 py-1.5">
             {DRAWING_COLORS.map((color) => (
@@ -373,7 +378,7 @@ function Swatches({ value, onPick }: { value: DrawingColor; onPick: (color: Draw
                     <button
                         className={`${SWATCH} ${color === value ? 'ring-2 ring-accent ring-offset-1 ring-offset-surface-raised' : ''}`}
                         aria-label={color}
-                        style={{ background: `var(--draw-${color})` }}
+                        style={{ background: `var(--draw${paper ? '-paper' : ''}-${color})` }}
                         onClick={() => onPick(color)}
                     />
                 </Tooltip>

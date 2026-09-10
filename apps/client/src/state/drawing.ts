@@ -17,7 +17,7 @@ import { fitTextBox } from '@/drawing/paint';
 import { nextId } from '@/state/canvas';
 
 /* Every tool in the dock, in the order the dock lists them. */
-export type DrawingTool = 'select' | 'hand' | 'rect' | 'diamond' | 'ellipse' | 'arrow' | 'line' | 'freehand' | 'text' | 'eraser';
+export type DrawingTool = 'select' | 'hand' | 'rect' | 'diamond' | 'ellipse' | 'arrow' | 'line' | 'freehand' | 'text' | 'note' | 'eraser';
 
 /* The tools that make an element by dragging; after one the tool goes back to select unless locked. */
 export const isShapeTool = (tool: DrawingTool): boolean => tool !== 'select' && tool !== 'hand' && tool !== 'eraser';
@@ -34,6 +34,8 @@ export interface DrawingStyle {
     /* Text size in whole pixels, world units like everything else. */
     textSize: number;
     align: DrawingAlign;
+    /* The paper of a sticky note, which is its own choice: a note is never filled like a shape. */
+    noteColor: DrawingColor;
 }
 
 export const DEFAULT_STYLE: DrawingStyle = {
@@ -45,7 +47,8 @@ export const DEFAULT_STYLE: DrawingStyle = {
     roughness: 1,
     font: 'hand',
     textSize: 20,
-    align: 'left'
+    align: 'left',
+    noteColor: 'yellow'
 };
 
 export const HISTORY_LIMIT = 100;
@@ -173,11 +176,15 @@ export const styleOfElement = (element: DrawingElement): Partial<DrawingStyle> =
     stroke: element.stroke,
     strokeWidth: element.strokeWidth,
     ...(element.strokeStyle ? { strokeStyle: element.strokeStyle } : {}),
-    ...(element.fill ? { fill: element.fill } : {}),
-    ...(element.fillColor ? { fillColor: element.fillColor } : {}),
+    ...(element.kind === 'note'
+        ? { noteColor: element.fillColor ?? DEFAULT_STYLE.noteColor }
+        : { ...(element.fill ? { fill: element.fill } : {}), ...(element.fillColor ? { fillColor: element.fillColor } : {}) }),
     roughness: element.roughness ?? 1,
-    ...(element.kind === 'text' ? { font: element.font ?? 'hand', textSize: element.size, align: element.align ?? 'left' } : {})
+    ...(isWritten(element) ? { font: element.font ?? 'hand', textSize: element.size, align: element.align ?? 'left' } : {})
 });
+
+/* An element that carries its own words: a written line, or the note it is written on. */
+export const isWritten = (element: DrawingElement): element is DrawingElement & { kind: 'text' | 'note' } => element.kind === 'text' || element.kind === 'note';
 
 /* What a style choice writes onto an element: only the field that was chosen, so picking an
    alignment leaves a color the dock happens to show alone. */
@@ -187,11 +194,16 @@ const withStyle = (element: DrawingElement, patch: Partial<DrawingStyle>): Drawi
         ...(patch.stroke !== undefined ? { stroke: patch.stroke } : {}),
         ...(patch.strokeWidth !== undefined ? { strokeWidth: patch.strokeWidth } : {}),
         ...(patch.strokeStyle !== undefined ? { strokeStyle: patch.strokeStyle } : {}),
-        ...(patch.fill !== undefined ? { fill: patch.fill } : {}),
-        ...(patch.fillColor !== undefined ? { fillColor: patch.fillColor } : {}),
+        // The paper of a note is picked in the note's own row, never in the fill of a shape.
+        ...(element.kind === 'note'
+            ? { ...(patch.noteColor !== undefined ? { fillColor: patch.noteColor } : {}) }
+            : {
+                  ...(patch.fill !== undefined ? { fill: patch.fill } : {}),
+                  ...(patch.fillColor !== undefined ? { fillColor: patch.fillColor } : {})
+              }),
         ...(patch.roughness !== undefined ? { roughness: patch.roughness } : {})
     };
-    if (next.kind !== 'text') {
+    if (!isWritten(next)) {
         return next;
     }
     const text = {
@@ -508,15 +520,16 @@ export const useDrawing = create<DrawingState>((set, get) => ({
     updateText(id, text) {
         const state = get();
         const element = state.elements.find((candidate) => candidate.id === id);
-        if (!element || element.kind !== 'text' || element.text === text) {
+        if (!element || !isWritten(element) || element.text === text) {
             return;
         }
-        // An empty text is nothing at all, so it takes itself off the drawing.
-        const elements =
-            text.trim() === ''
-                ? state.elements.filter((candidate) => candidate.id !== id)
-                : state.elements.map((candidate) => (candidate.id === id ? { ...candidate, text } : candidate));
-        set({ selection: text.trim() === '' ? [] : state.selection, ...changed(state, elements) });
+        // An empty text is nothing at all, so it takes itself off the drawing. An empty note is
+        // still a sheet of paper: it stays, and waits for what is written on it later.
+        const gone = text.trim() === '' && element.kind === 'text';
+        const elements = gone
+            ? state.elements.filter((candidate) => candidate.id !== id)
+            : state.elements.map((candidate) => (candidate.id === id ? { ...candidate, text } : candidate));
+        set({ selection: gone ? [] : state.selection, ...changed(state, elements) });
     },
 
     beginErase() {

@@ -124,7 +124,9 @@ export const hitsElement = (element: DrawingElement, point: Point, tolerance: nu
     const rect = boundsOf(element);
     const reach = Math.max(tolerance, element.strokeWidth);
     switch (element.kind) {
+        // Both are their own sheet: anywhere on it is on them.
         case 'text':
+        case 'note':
             return insideRect(local, rect);
         case 'rect': {
             const corners = [

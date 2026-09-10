@@ -7,7 +7,7 @@ const ROW_TOLERANCE = 24;
 /* How far from an arrow's end a label may sit and still be what the arrow points at. */
 const LABEL_REACH = 48;
 
-const labelOf = (element: DrawingElement): string | null => (element.kind === 'text' ? element.text.trim() || null : null);
+const labelOf = (element: DrawingElement): string | null => (element.kind === 'text' || element.kind === 'note' ? element.text.trim() || null : null);
 
 /* A shape says what it is by the text inside it, which is how a box on a diagram is named. */
 const labelInside = (element: DrawingElement, elements: readonly DrawingElement[]): string | null => {
@@ -50,9 +50,9 @@ const labelAt = (point: Point, elements: readonly DrawingElement[], arrowId: str
  */
 export const readingOrder = (elements: readonly DrawingElement[]): string[] => {
     const texts = elements
-        .filter((element) => element.kind === 'text' && element.text.trim() !== '')
+        .filter((element) => labelOf(element) !== null)
         .sort((left, right) => (Math.abs(left.y - right.y) <= ROW_TOLERANCE ? left.x - right.x : left.y - right.y))
-        .map((element) => (element.kind === 'text' ? element.text.trim() : ''));
+        .map((element) => labelOf(element)!);
 
     const arrows: string[] = [];
     for (const element of elements) {

@@ -1,10 +1,13 @@
-import type { DrawingElement } from '@ruimte/contracts';
+import { DRAWING_TEXT_SIZE_MAX, DRAWING_TEXT_SIZE_MIN, type DrawingElement } from '@ruimte/contracts';
 import type { Point, Rect } from '@ruimte/drawing';
 import { snapToGrid } from '@/canvas/math';
 import type { DrawingStyle, DrawingTool } from '@/state/drawing';
 
 /* A click without a drag still makes a shape, in the size a shape usually starts at. */
 export const DEFAULT_SHAPE = { w: 160, h: 96 };
+
+/* The same for a sticky note, which starts as a square sheet the way a pad of them does. */
+export const DEFAULT_NOTE = { w: 180, h: 180 };
 
 /* Under this many world units a drag is a click, whatever the hand did. */
 export const DRAG_THRESHOLD = 3;
@@ -57,10 +60,30 @@ export const shapeElement = (tool: DrawingTool, rect: Rect, style: DrawingStyle,
             return { kind: 'diamond', ...base };
         case 'ellipse':
             return { kind: 'ellipse', ...base };
+        case 'note':
+            return noteElement(rect, style, id, seed);
         default:
             return null;
     }
 };
+
+/* A sheet of paper with nothing on it yet: the paper is the note's own color, never the shape fill. */
+export const noteElement = (rect: Rect, style: DrawingStyle, id: string, seed: number): DrawingElement => ({
+    kind: 'note',
+    id,
+    seed,
+    ...rect,
+    stroke: style.stroke,
+    strokeWidth: style.strokeWidth,
+    strokeStyle: style.strokeStyle,
+    roughness: style.roughness,
+    fill: 'solid',
+    fillColor: style.noteColor,
+    text: '',
+    size: style.textSize,
+    font: style.font,
+    align: style.align
+});
 
 /* A line between two points, with a head at the end when the arrow tool drew it. */
 export const lineElement = (tool: 'line' | 'arrow', from: Point, to: Point, style: DrawingStyle, id: string, seed: number): DrawingElement => ({
@@ -95,6 +118,13 @@ export const textElement = (at: Point, style: DrawingStyle, id: string, seed: nu
     size: style.textSize,
     font: style.font
 });
+
+/*
+ * What the words on a note come to when the paper is dragged by a corner: they keep their share of
+ * it, so a note pulled twice as wide reads the same, only bigger.
+ */
+export const scaledTextSize = (size: number, factor: number): number =>
+    Math.min(DRAWING_TEXT_SIZE_MAX, Math.max(DRAWING_TEXT_SIZE_MIN, Math.round(size * factor)));
 
 /* Points rounded to a tenth of a unit and moved into the element's own frame, once a stroke ends. */
 export const settleStroke = (element: DrawingElement & { kind: 'freehand' }): DrawingElement => {

@@ -10,6 +10,22 @@ export const DEFAULT_FONT_STACKS: Record<DrawingFont, string> = {
     mono: 'ui-monospace, SFMono-Regular, Menlo, monospace'
 };
 
+/* An element whose own text is what it says: a written line, or the note it is written on. */
+export type WrittenElement = DrawingElement & { kind: 'text' | 'note' };
+
+/* How much paper a note keeps free around its text, on every side. */
+export const NOTE_PADDING = 16;
+
+/* The corners of a sheet of paper, which are never quite square. */
+export const NOTE_RADIUS = 8;
+
+/*
+ * Where the glyphs of an element sit inside it: a note writes within its padding, a text is its
+ * own box. Everything that lays out or measures a text goes through this, so both stay in step.
+ */
+export const writingFrameOf = (element: WrittenElement): { x: number; y: number; w: number } =>
+    element.kind === 'note' ? { x: NOTE_PADDING, y: NOTE_PADDING, w: Math.max(1, element.w - NOTE_PADDING * 2) } : { x: 0, y: 0, w: element.w };
+
 export const textLines = (text: string): string[] => text.split('\n');
 
 /* The width of one line in world units, in the font the caller has. */
@@ -60,9 +76,16 @@ const wrapParagraph = (paragraph: string, maxWidth: number, measure: MeasureLine
 export const wrapLines = (text: string, maxWidth: number, measure: MeasureLine): string[] =>
     textLines(text).flatMap((paragraph) => wrapParagraph(paragraph, maxWidth, measure));
 
-/* The lines a text element is set on: broken at its box once that box is the person's, else as typed. */
-export const linesOf = (element: DrawingElement & { kind: 'text' }, measure: MeasureLine): string[] =>
-    element.sized ? wrapLines(element.text, element.w, measure) : textLines(element.text);
+/*
+ * The lines an element is set on: a note always breaks at its paper, a text once its box is the
+ * person's, and otherwise the text stands as it was typed.
+ */
+export const linesOf = (element: WrittenElement, measure: MeasureLine): string[] => {
+    if (element.kind === 'note') {
+        return wrapLines(element.text, writingFrameOf(element).w, measure);
+    }
+    return element.sized ? wrapLines(element.text, element.w, measure) : textLines(element.text);
+};
 
 /* Absent means hand: a drawing is written by hand unless it says otherwise. */
 export const fontOf = (font: DrawingFont | undefined): DrawingFont => font ?? 'hand';

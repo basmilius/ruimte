@@ -103,6 +103,30 @@
     --draw-blue: #2563eb;
     --draw-purple: #7c3aed;
     --draw-pink: #db2777;
+    /* The paper a sticky note is written on: the same ten names, pale enough to read ink off.
+       Where a note color already exists for the canvas, a drawing uses that very sheet. */
+    --draw-paper-ink: #f4f4f6;
+    --draw-paper-muted: var(--note-gray);
+    --draw-paper-accent: #e2e5fd;
+    --draw-paper-red: #fddfdf;
+    --draw-paper-orange: #fde9d0;
+    --draw-paper-yellow: var(--note-yellow);
+    --draw-paper-green: var(--note-green);
+    --draw-paper-blue: var(--note-blue);
+    --draw-paper-purple: #eadffb;
+    --draw-paper-pink: var(--note-pink);
+    /* The edge of that sheet: the same paper, a step deeper into its own color. Defined once,
+       because both halves of the mix are theme tokens and follow the theme along. */
+    --draw-edge-ink: color-mix(in oklab, var(--draw-paper-ink) 80%, var(--draw-ink));
+    --draw-edge-muted: color-mix(in oklab, var(--draw-paper-muted) 80%, var(--draw-muted));
+    --draw-edge-accent: color-mix(in oklab, var(--draw-paper-accent) 80%, var(--draw-accent));
+    --draw-edge-red: color-mix(in oklab, var(--draw-paper-red) 80%, var(--draw-red));
+    --draw-edge-orange: color-mix(in oklab, var(--draw-paper-orange) 80%, var(--draw-orange));
+    --draw-edge-yellow: color-mix(in oklab, var(--draw-paper-yellow) 80%, var(--draw-yellow));
+    --draw-edge-green: color-mix(in oklab, var(--draw-paper-green) 80%, var(--draw-green));
+    --draw-edge-blue: color-mix(in oklab, var(--draw-paper-blue) 80%, var(--draw-blue));
+    --draw-edge-purple: color-mix(in oklab, var(--draw-paper-purple) 80%, var(--draw-purple));
+    --draw-edge-pink: color-mix(in oklab, var(--draw-paper-pink) 80%, var(--draw-pink));
     /* The file type palette of the `@pierre/trees` icon set, its own values. A file icon is the one
        thing in the interface that is not tinted by the theme: TypeScript is blue and Vue is green
        wherever the file shows up, which is what makes a row readable before the name is. The tree
@@ -194,6 +218,16 @@
     --draw-blue: #79b8ff;
     --draw-purple: #c39bff;
     --draw-pink: #ff8ac2;
+    --draw-paper-ink: #2a2a31;
+    --draw-paper-muted: var(--note-gray);
+    --draw-paper-accent: #262a55;
+    --draw-paper-red: #402021;
+    --draw-paper-orange: #402c17;
+    --draw-paper-yellow: var(--note-yellow);
+    --draw-paper-green: var(--note-green);
+    --draw-paper-blue: var(--note-blue);
+    --draw-paper-purple: #2e2148;
+    --draw-paper-pink: var(--note-pink);
     --file-icon-gray: #adadb1;
     --file-icon-red: #ff6762;
     --file-icon-vermilion: #d5512f;

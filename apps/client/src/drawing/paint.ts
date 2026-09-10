@@ -1,12 +1,28 @@
 import type { DrawingElement, DrawingFont } from '@ruimte/contracts';
-import { LINE_HEIGHT, fontOf, linesOf, pathsOfElement, type ElementPath, type MeasureLine } from '@ruimte/drawing';
-import { readFontStacks, type DrawingPalette } from '@/drawing/palette';
+import {
+    LINE_HEIGHT,
+    NOTE_PADDING,
+    fontOf,
+    linesOf,
+    pathsOfElement,
+    writingFrameOf,
+    type ElementPath,
+    type MeasureLine,
+    type WrittenElement
+} from '@ruimte/drawing';
+import { readEdge, readFontStacks, readPaper, readPalette, type DrawingPalette } from '@/drawing/palette';
 
 export interface PaintOptions {
     palette: DrawingPalette;
+    /* The sheets a note may be written on; without them a note is painted on its stroke color. */
+    paper?: DrawingPalette;
+    /* The edge of those sheets, which is the paper a step deeper into its own color. */
+    edge?: DrawingPalette;
     fonts: Record<DrawingFont, string>;
     /* Elements the eraser is over: they fade before the drag lets go of them. */
     fading?: ReadonlySet<string>;
+    /* The element whose words are in the editor above: its paper is painted, its text is not. */
+    writing?: string | null;
 }
 
 /* How faint an element goes while the eraser is on it. */
@@ -55,8 +71,7 @@ const pathsOf = (element: DrawingElement): CachedPaths['paths'] => {
 /* Frees what a drawing left behind; called when another one is loaded. */
 export const clearPathCache = (): void => cache.clear();
 
-export const fontOfElement = (element: DrawingElement & { kind: 'text' }, fonts: Record<DrawingFont, string>): string =>
-    `${element.size}px ${fonts[fontOf(element.font)]}`;
+export const fontOfElement = (element: WrittenElement, fonts: Record<DrawingFont, string>): string => `${element.size}px ${fonts[fontOf(element.font)]}`;
 
 let scratch: CanvasRenderingContext2D | null = null;
 
@@ -69,13 +84,13 @@ const scratchContext = (): CanvasRenderingContext2D | null => {
 };
 
 /* The box a text needs, measured off screen: what a text element takes as its width and height. */
-export const textSize = (element: DrawingElement & { kind: 'text' }, fonts: Record<DrawingFont, string>): { w: number; h: number } => {
+export const textSize = (element: WrittenElement, fonts: Record<DrawingFont, string>): { w: number; h: number } => {
     const ctx = scratchContext();
     return ctx ? measureText(ctx, element, fonts) : { w: element.w, h: element.h };
 };
 
 /* A line measure in the element's font, for wrapping the way the screen paints it; null without a DOM. */
-export const measureLineIn = (element: DrawingElement & { kind: 'text' }, fonts: Record<DrawingFont, string>): MeasureLine | null => {
+export const measureLineIn = (element: WrittenElement, fonts: Record<DrawingFont, string>): MeasureLine | null => {
     const ctx = scratchContext();
     if (!ctx) {
         return null;
@@ -84,15 +99,10 @@ export const measureLineIn = (element: DrawingElement & { kind: 'text' }, fonts:
     return (line) => ctx.measureText(line).width;
 };
 
-const linesOn = (ctx: CanvasRenderingContext2D, element: DrawingElement & { kind: 'text' }): string[] =>
-    linesOf(element, (line) => ctx.measureText(line).width);
+const linesOn = (ctx: CanvasRenderingContext2D, element: WrittenElement): string[] => linesOf(element, (line) => ctx.measureText(line).width);
 
 /* The box a text needs for the size it is set in; the caller decides what to do with it. */
-export const measureText = (
-    ctx: CanvasRenderingContext2D,
-    element: DrawingElement & { kind: 'text' },
-    fonts: Record<DrawingFont, string>
-): { w: number; h: number } => {
+export const measureText = (ctx: CanvasRenderingContext2D, element: WrittenElement, fonts: Record<DrawingFont, string>): { w: number; h: number } => {
     ctx.save();
     ctx.font = fontOfElement(element, fonts);
     const lines = linesOn(ctx, element);
@@ -106,22 +116,27 @@ export const measureText = (
  * from then on that width, with the height the wrapped lines come to. Without a DOM (the store's
  * tests) the box stays as it is.
  */
-export const fitTextBox = (element: DrawingElement & { kind: 'text' }, text = element.text): { w: number; h: number } => {
+export const fitTextBox = (element: WrittenElement, text = element.text): { w: number; h: number } => {
     if (typeof document === 'undefined') {
         return { w: element.w, h: element.h };
     }
     const fitted = textSize({ ...element, text }, readFontStacks());
+    if (element.kind === 'note') {
+        // A note keeps the paper it was given and grows downwards for what does not fit on it.
+        return { w: element.w, h: Math.max(element.h, fitted.h + NOTE_PADDING * 2) };
+    }
     return element.sized ? { w: element.w, h: fitted.h } : fitted;
 };
 
-const paintText = (ctx: CanvasRenderingContext2D, element: DrawingElement & { kind: 'text' }, options: PaintOptions): void => {
+const paintText = (ctx: CanvasRenderingContext2D, element: WrittenElement, options: PaintOptions): void => {
     ctx.font = fontOfElement(element, options.fonts);
     ctx.fillStyle = options.palette[element.stroke];
     ctx.textAlign = element.align === 'center' ? 'center' : element.align === 'right' ? 'right' : 'left';
     ctx.textBaseline = 'alphabetic';
-    const dx = element.align === 'center' ? element.w / 2 : element.align === 'right' ? element.w : 0;
+    const frame = writingFrameOf(element);
+    const dx = frame.x + (element.align === 'center' ? frame.w / 2 : element.align === 'right' ? frame.w : 0);
     for (const [index, line] of linesOn(ctx, element).entries()) {
-        ctx.fillText(line, dx, (index + 0.8) * element.size * LINE_HEIGHT);
+        ctx.fillText(line, dx, frame.y + (index + 0.8) * element.size * LINE_HEIGHT);
     }
 };
 
@@ -134,20 +149,28 @@ export const paintElement = (ctx: CanvasRenderingContext2D, element: DrawingElem
         ctx.rotate(element.angle);
         ctx.translate(-element.w / 2, -element.h / 2);
     }
+    // What is being typed lives in the editor above, so painting it here would show it twice.
+    const written = options.writing === element.id;
     if (element.kind === 'text') {
-        paintText(ctx, element, options);
+        if (!written) {
+            paintText(ctx, element, options);
+        }
         ctx.restore();
         return;
     }
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
+    // A note is filled with its paper and edged with that paper's own darker shade, never with ink.
+    const note = element.kind === 'note';
+    const fills = note ? (options.paper ?? options.palette) : options.palette;
+    const edges = note ? (options.edge ?? options.palette) : options.palette;
     for (const path of pathsOf(element)) {
         if (path.role === 'ink') {
             ctx.fillStyle = options.palette[element.stroke];
             ctx.fill(path.path);
             continue;
         }
-        const color = path.role === 'fill' ? options.palette[element.fillColor ?? element.stroke] : options.palette[element.stroke];
+        const color = path.role === 'fill' ? fills[element.fillColor ?? element.stroke] : edges[note ? (element.fillColor ?? element.stroke) : element.stroke];
         // A hachure fill arrives as a bundle of thin lines, so it is stroked rather than filled.
         if (path.role === 'fill' && element.fill !== 'hachure') {
             ctx.fillStyle = color;
@@ -159,6 +182,9 @@ export const paintElement = (ctx: CanvasRenderingContext2D, element: DrawingElem
         ctx.setLineDash(path.dash ?? []);
         ctx.stroke(path.path);
         ctx.setLineDash([]);
+    }
+    if (element.kind === 'note' && !written) {
+        paintText(ctx, element, options);
     }
     ctx.restore();
 };
@@ -173,6 +199,14 @@ export const paintElements = (ctx: CanvasRenderingContext2D, elements: readonly 
  * Puts the camera on a context: world units in, device pixels out, so every element paints in the
  * coordinates it is stored in.
  */
+/* What the painter needs from the theme right now, for a caller that has no reason to know more. */
+export const paintOptions = (): Pick<PaintOptions, 'palette' | 'paper' | 'edge' | 'fonts'> => ({
+    palette: readPalette(),
+    paper: readPaper(),
+    edge: readEdge(),
+    fonts: readFontStacks()
+});
+
 export const applyCamera = (ctx: CanvasRenderingContext2D, camera: { x: number; y: number; zoom: number }, dpr: number): void => {
     ctx.setTransform(camera.zoom * dpr, 0, 0, camera.zoom * dpr, camera.x * dpr, camera.y * dpr);
 };

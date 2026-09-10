@@ -86,6 +86,48 @@ describe('paths', () => {
     });
 });
 
+const note = (id: string, value: string, x = 0, y = 0): DrawingElement => ({
+    kind: 'note',
+    id,
+    x,
+    y,
+    w: 180,
+    h: 180,
+    ...base,
+    fill: 'solid',
+    fillColor: 'yellow',
+    text: value,
+    size: 20
+});
+
+describe('a sticky note', () => {
+    test('it is paper with an edge, drawn without any wobble', () => {
+        const paths = pathsOfElement(note('n', 'buy milk'));
+        expect(paths.map((path) => path.role)).toEqual(['fill', 'stroke']);
+        expect(paths[0]!.d).toBe(paths[1]!.d);
+    });
+
+    test('the paper and its edge come from their own palettes, never from the drawing colors', () => {
+        const svg = toSvg([note('n', 'buy milk')], {
+            palette,
+            paper: { ...palette, yellow: 'var(paper-yellow)' },
+            edge: { ...palette, yellow: 'var(edge-yellow)' }
+        });
+        expect(svg).toContain('fill="var(paper-yellow)"');
+        expect(svg).toContain('stroke="var(edge-yellow)"');
+        expect(svg).toContain('buy milk');
+    });
+
+    test('its words start inside the padding, not at the corner of the paper', () => {
+        const svg = toSvg([note('n', 'hi')], { palette });
+        expect(svg).toContain('<tspan x="16" y="36"');
+    });
+
+    test('a note reads as what it says', () => {
+        expect(readingOrder([note('n', 'buy milk', 0, 0)])).toEqual(['buy milk']);
+    });
+});
+
 describe('toSvg', () => {
     const svg = toSvg([rect('a'), text('t', 'hello & <you>', 20, 20)], { palette, background: '#fff' });
 
