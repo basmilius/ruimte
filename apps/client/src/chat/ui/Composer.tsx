@@ -81,7 +81,7 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
     const items = useChats((s) => s.byNodeId[chatId]?.items);
 
     const provider = providers.find((entry) => entry.kind === info.provider);
-    // Until the daemon answered, take the CLI for a full one; a capability it lacks says so itself.
+    // Absent until the daemon answered `provider.list`, so only an explicit false hides anything.
     const capabilities = provider?.capabilities;
     const models: ModelInfo[] = provider?.models ?? [];
     const model = models.find((entry) => entry.slug === info.selection.model);
