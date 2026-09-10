@@ -15,7 +15,7 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
     };
     return (
         <ContextMenu.Portal>
-            <ContextMenu.Positioner className="z-50">
+            <ContextMenu.Positioner className="popup-layer">
                 <ContextMenu.Popup className="menu-popup">
                     <div className="menu-label">Add here</div>
                     <ContextMenu.Item className="menu-item" onClick={() => add('terminal')}>
@@ -35,7 +35,7 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                         <Icon icon={StickyNote} size={14} /> Note <kbd>⌥N</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().addText(at())}>
-                        <Icon icon={Type} size={14} /> Text <kbd>dbl-click</kbd>
+                        <Icon icon={Type} size={14} /> Text <span className="menu-hint">dbl-click</span>
                     </ContextMenu.Item>
                     <ContextMenu.Separator className="menu-separator" />
                     <ContextMenu.Item className="menu-item" disabled={!hasSelection} onClick={() => useCanvas.getState().groupSelection()}>

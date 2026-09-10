@@ -18,7 +18,7 @@ function Submenu({ label, icon, children }: { label: string; icon: ReactNode; ch
                 <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
             </Menu.SubmenuTrigger>
             <Menu.Portal>
-                <Menu.Positioner className="z-50" sideOffset={4} alignOffset={-4}>
+                <Menu.Positioner className="popup-layer" sideOffset={4} alignOffset={-4}>
                     <Menu.Popup className="menu-popup min-w-48">{children}</Menu.Popup>
                 </Menu.Positioner>
             </Menu.Portal>
@@ -51,9 +51,7 @@ function AgentRows({ target, onPick }: { target: AgentTarget; onPick(target: Age
                 <Menu.Item key={provider.kind} className="menu-item" disabled={!provider.installed} onClick={() => onPick(target, provider)}>
                     <AgentIcon kind={provider.kind} />
                     {provider.name}
-                    <span className="ml-auto pl-3 text-xs text-text-faint">
-                        {!provider.installed ? 'Not installed' : target === 'terminal' ? modeLabel : null}
-                    </span>
+                    <span className="menu-hint">{!provider.installed ? 'Not installed' : target === 'terminal' ? modeLabel : null}</span>
                 </Menu.Item>
             ))}
         </>
