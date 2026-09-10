@@ -27,6 +27,9 @@
     --surface: #ffffff;
     --surface-raised: #ffffff;
     --surface-sunken: #ececef;
+    /* The pressed step of a toggle. It cannot be `--surface-raised`, which equals `--surface` in the
+       light theme, and it has to sit a shade past `--surface-sunken` so pressed outranks hover. */
+    --surface-active: #dcdce2;
     --border: #e2e2e6;
     --border-strong: #c9c9d0;
     --text: #18181b;
@@ -83,6 +86,7 @@
     --surface: #1b1b1f;
     --surface-raised: #222227;
     --surface-sunken: #0f0f12;
+    --surface-active: #34343d;
     --border: #2a2a31;
     --border-strong: #3a3a43;
     --text: #ececf1;
@@ -164,6 +168,7 @@
     --color-surface: var(--surface);
     --color-surface-raised: var(--surface-raised);
     --color-surface-sunken: var(--surface-sunken);
+    --color-surface-active: var(--surface-active);
     --color-border: var(--border);
     --color-border-strong: var(--border-strong);
     --color-text: var(--text);
@@ -255,7 +260,9 @@ body {
     }
     .icon-btn:hover { background: var(--surface-sunken); color: var(--text); }
     .icon-btn:active { scale: 0.96; }
-    .icon-btn[data-active="true"] { background: var(--accent-soft); color: var(--accent); }
+    /* Pressed, not important: a toggle that is on reads as a filled gray key. The accent stays for
+       the focus ring, the primary button, canvas selection and agent status. */
+    .icon-btn[data-active="true"], .icon-btn[aria-pressed="true"] { background: var(--surface-active); color: var(--text); }
 
     /* Every text input in the app. One height, one border and one focus ring, so a field in a
        dialog, in settings and next to a chat answer cannot drift apart. */
