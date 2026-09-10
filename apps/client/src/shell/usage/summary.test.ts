@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { UsageBucket, UsageSummaryResult, UsageTotals } from '@ruimte/contracts';
-import { formatTokens, formatUsd } from './format.ts';
+import { displayModel, formatTokens, formatUsd, shortPath } from './format.ts';
 import { deriveUsage, enumerateSlots, labelEveryFor } from './summary.ts';
 
 const totals = (patch: Partial<UsageTotals> = {}): UsageTotals => ({
@@ -114,5 +114,22 @@ describe('the formatters', () => {
         expect(formatUsd(142.181)).toBe('$142.18');
         expect(formatUsd(0)).toBe('$0.00');
         expect(formatUsd(0.0004)).toBe('$0.0004');
+    });
+});
+
+describe('a model name', () => {
+    test('drops the vendor and the date and puts the version back together', () => {
+        expect(displayModel('claude-opus-4-5')).toBe('Claude Opus 4.5');
+        expect(displayModel('anthropic/claude-fable-5-1')).toBe('Claude Fable 5.1');
+        expect(displayModel('claude-haiku-4-5-20251001')).toBe('Claude Haiku 4.5');
+        expect(displayModel('gpt-5.6-sol')).toBe('GPT 5.6 Sol');
+        expect(displayModel('claude-opus-5')).toBe('Claude Opus 5');
+    });
+});
+
+describe('a folder under a project row', () => {
+    test('keeps the tail that tells two checkouts apart', () => {
+        expect(shortPath('/Users/bas/Development/Projects/ruimte')).toBe('…/Development/Projects/ruimte');
+        expect(shortPath('/work/repo')).toBe('/work/repo');
     });
 });

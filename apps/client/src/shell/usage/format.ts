@@ -70,3 +70,29 @@ const CLOCK = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-dig
 export const formatClock = (at: number): string => CLOCK.format(new Date(at));
 
 export const formatDate = (at: number): string => SHORT_DAY.format(new Date(at));
+
+/*
+ * A model id as a person reads it: without its vendor prefix and its date, and with the version
+ * number put back together (`claude-opus-4-5` is one 4.5, not a 4 and a 5). The raw id stays as the
+ * tooltip, because that is what a price table and a bug report are keyed on.
+ */
+export const displayModel = (model: string): string => {
+    const bare = model.slice(model.lastIndexOf('/') + 1).replace(/-\d{6,8}$/, '');
+    const words: string[] = [];
+    for (const word of bare.split('-')) {
+        const previous = words.at(-1);
+        if (previous !== undefined && /^\d+$/.test(word) && /\d$/.test(previous)) {
+            words[words.length - 1] = `${previous}.${word}`;
+            continue;
+        }
+        words.push(word);
+    }
+    return words.map((word) => (word === 'gpt' ? 'GPT' : word.charAt(0).toUpperCase() + word.slice(1))).join(' ');
+};
+
+/* A path under a row that already carries the name: enough of the tail to tell two checkouts of the
+   same repository apart, without the home directory nobody needs to read again. */
+export const shortPath = (path: string): string => {
+    const parts = path.split('/').filter(Boolean);
+    return parts.length <= 3 ? path : `…/${parts.slice(-3).join('/')}`;
+};

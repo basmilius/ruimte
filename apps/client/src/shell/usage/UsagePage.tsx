@@ -11,6 +11,7 @@ import { Icon } from '@/ui/Icon';
 import { isInFloatingLayer } from '@/ui/floating';
 import { formatClock, formatCount, formatDate, formatTokens, formatUsd } from '@/shell/usage/format';
 import { deriveUsage, labelEveryFor } from '@/shell/usage/summary';
+import { UsageBreakdown } from '@/shell/usage/UsageBreakdown';
 import { UsageChart } from '@/shell/usage/UsageChart';
 import { UsageSummary } from '@/shell/usage/UsageSummary';
 import { UsageTiles } from '@/shell/usage/UsageTiles';
@@ -169,6 +170,7 @@ export function UsagePage() {
                             <UsageChart slots={derived.slots} providers={derived.active} format={value} labelEvery={labelEveryFor(derived.slots.length)} />
                         </div>
                         <UsageTiles totals={derived.totals} cacheSavingsUsd={derived.cacheSavingsUsd} />
+                        <UsageBreakdown summary={shown} metric={metric} />
                     </>
                 )}
             </div>
