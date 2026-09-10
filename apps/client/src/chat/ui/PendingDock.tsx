@@ -63,7 +63,7 @@ export function ApprovalDock({ chatId, item, index, total }: { chatId: string; i
                             ))}
                         </Suspense>
                     ) : (
-                        <pre className="whitespace-pre-wrap px-3 py-2 font-mono text-[11.5px] leading-[1.6] text-term-fg select-text">
+                        <pre className="whitespace-pre-wrap px-3 py-2 font-mono text-[12px] leading-[1.6] text-term-fg select-text">
                             {command || JSON.stringify(item.input, null, 2)}
                         </pre>
                     )}
@@ -127,7 +127,7 @@ export function QuestionDock({ chatId, item }: { chatId: string; item: ChatQuest
                     <button
                         key={choice.label}
                         className={clsx(
-                            'flex items-start gap-2 rounded-md border px-2.5 py-1.5 text-left text-[12.5px] hover:bg-surface-sunken',
+                            'flex items-start gap-2 rounded-md border px-2.5 py-1.5 text-left text-[12px] hover:bg-surface-sunken',
                             selected.has(choice.label) ? 'border-accent bg-accent-soft' : 'border-border'
                         )}
                         onClick={() => pick(choice.label)}
@@ -137,7 +137,7 @@ export function QuestionDock({ chatId, item }: { chatId: string; item: ChatQuest
                     </button>
                 ))}
                 <input
-                    className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-[12.5px] text-text outline-none placeholder:text-text-faint focus:border-accent"
+                    className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-[12px] text-text outline-none placeholder:text-text-faint focus:border-accent"
                     placeholder="Or write your own answer"
                     value={custom}
                     onChange={(e) => setCustom(e.target.value)}

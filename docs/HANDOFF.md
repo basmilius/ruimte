@@ -253,6 +253,9 @@ canvas, against Ruimte, one verdict each.
 - Every icon is a Hugeicons free icon drawn by the `Icon` component in `src/ui/Icon.tsx`
   (`@hugeicons/react` plus `@hugeicons/core-free-icons`). The stroke weight lives there, so a
   call site only picks the icon and its pixel size.
+- No fractional pixels. Type sizes, paddings and stroke widths are whole numbers; a `rem` value
+  has to land on a whole pixel at the 16px root, and an `em` at the size it inherits. Ratios
+  (line height, opacity, letter spacing) are not lengths and stay as they are.
 - Tooltips are the `Tooltip` component in `src/ui/Tooltip.tsx`, never a `title` attribute.
   One `TooltipProvider` at the app root gives the shared 150 ms delay.
 - Escape leaves node mode unless a terminal node has "Send Escape to the app" on (its context

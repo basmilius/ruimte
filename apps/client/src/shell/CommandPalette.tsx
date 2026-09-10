@@ -255,7 +255,7 @@ export function CommandPalette() {
                                         onClick={() => run(entry)}
                                     >
                                         <span className="shrink-0 text-text-faint">{entry.icon}</span>
-                                        <span className={clsx('min-w-0 truncate', browsing && 'font-mono text-[12.5px]')}>{entry.label}</span>
+                                        <span className={clsx('min-w-0 truncate', browsing && 'font-mono text-[12px]')}>{entry.label}</span>
                                         {entry.hint && <span className="text-[11px] text-text-faint">{entry.hint}</span>}
                                         <span className="grow" />
                                         {entry.shortcut && <kbd className="tooltip-kbd">{entry.shortcut}</kbd>}
