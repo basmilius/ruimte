@@ -15,11 +15,13 @@ import { MENTION_DRAG_TYPE } from '@/chat/mentions';
 import {
     LOADING_NAME,
     absoluteOf,
+    ancestorDirsOf,
     buildTreeInput,
     compareRows,
     isDirectoryPath,
     mergeExpanded,
     newlyExpanded,
+    relativeTo,
     treePathOf,
     type EntryCache
 } from '@/shell/panels/files-tree';
@@ -76,6 +78,8 @@ export function FilesPanel() {
     const reachability = useServer((s) => s.reachability);
     const machine = useServer((s) => s.label);
     const showHidden = useSettings((s) => s.filesShowHidden);
+    /* Which file the preview has up; a diff tab points at the same file and counts as well. */
+    const activeFile = useFiles((s) => s.tabs.find((tab) => tab.key === s.active)?.path ?? null);
     const tabLimit = useSettings((s) => s.filesTabLimit);
 
     /* The listings carry the folder they belong to, so a project switch drops them without an
@@ -87,6 +91,8 @@ export function FilesPanel() {
     const expandedRef = useRef<ReadonlySet<string>>(new Set());
     const directoriesRef = useRef<ReadonlySet<string>>(new Set());
     const selectionRef = useRef<readonly string[]>([]);
+    /* The file the tree last followed the preview to, so a click of the person's own is never undone. */
+    const revealedRef = useRef<string | null>(null);
     const menuPathRef = useRef<string | null>(null);
     const cache = listed.folder === folder ? listed.byDir : EMPTY_CACHE;
 
@@ -216,6 +222,32 @@ export function FilesPanel() {
             }
         });
     }, [folder, load, model]);
+
+    /*
+     * The tree follows the preview: the file of the active tab is the selected row. It runs on a tab
+     * change and on the listings that a reveal asks for, never on a selection the person makes here,
+     * and it scrolls only far enough to bring the row into view.
+     */
+    useEffect(() => {
+        if (!folder || searching || activeFile === null || revealedRef.current === activeFile) {
+            return;
+        }
+        const treePath = relativeTo(folder, activeFile);
+        for (const dir of ancestorDirsOf(treePath)) {
+            directoryHandle(model, dir)?.expand();
+        }
+        // The row is only there once the directories on the way to it have been listed.
+        if (model.getItem(treePath) === null) {
+            return;
+        }
+        revealedRef.current = activeFile;
+        // The tree selects per item, so what was selected has to let go first.
+        for (const selected of model.getSelectedPaths()) {
+            model.getItem(selected)?.deselect();
+        }
+        model.getItem(treePath)?.select();
+        model.scrollToPath(treePath, { offset: 'nearest' });
+    }, [activeFile, cache, folder, model, searching]);
 
     useEffect(() => {
         if (!folder || !searching) {

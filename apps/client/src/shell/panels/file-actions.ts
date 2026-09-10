@@ -1,6 +1,8 @@
 import { createContext, useContext } from 'react';
 
 export interface FileActions {
+    /* Which tab this is, the key `state/files.ts` names it by. */
+    key: string;
     /* Absolute on the daemon's machine. */
     path: string;
     name: string;

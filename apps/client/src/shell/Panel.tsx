@@ -4,10 +4,10 @@ import { X } from 'lucide-react';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { PANELS } from '@/shell/panels';
 import { FilesPanel } from '@/shell/panels/FilesPanel';
+import { GitPanel } from '@/shell/panels/GitPanel';
 import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useUi, type PanelKind } from '@/state/ui';
-import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -18,15 +18,8 @@ const MIN_CANVAS_WIDTH = 360;
 // How long the open and close motion takes; the same number as `.panel-shell` in `styles.css`.
 const TRANSITION_MS = 200;
 
-function PanelBody({ kind, label }: { kind: PanelKind; label: string }) {
-    if (kind === 'files') {
-        return <FilesPanel />;
-    }
-    return (
-        <div className="grid grow place-items-center">
-            <EmptyState>The {label.toLowerCase()} panel is next: it has nothing to show yet.</EmptyState>
-        </div>
-    );
+function PanelBody({ kind }: { kind: PanelKind }) {
+    return kind === 'files' ? <FilesPanel /> : <GitPanel />;
 }
 
 /* The surface right of the canvas, spanning the whole main column so its header lines up with the
@@ -103,7 +96,7 @@ export function Panel() {
                             </button>
                         </Tooltip>
                     </header>
-                    <PanelBody kind={panel.kind} label={label} />
+                    <PanelBody kind={panel.kind} />
                 </div>
             )}
         </aside>

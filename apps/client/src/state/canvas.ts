@@ -203,7 +203,7 @@ const center = (rect: Rect): Point => ({ x: rect.x + rect.w / 2, y: rect.y + rec
 const contains = (rect: Rect, point: Point): boolean => point.x >= rect.x && point.x <= rect.x + rect.w && point.y >= rect.y && point.y <= rect.y + rect.h;
 
 /* What one group holds: its remembered members when collapsed, else whatever has its center inside the frame. */
-const membersOf = (group: CanvasNode, nodes: Record<string, CanvasNode>, texts: Record<string, TextElement>): string[] => {
+export const membersOf = (group: CanvasNode, nodes: Record<string, CanvasNode>, texts: Record<string, TextElement>): string[] => {
     if (group.collapsed) {
         return group.memberIds ?? [];
     }

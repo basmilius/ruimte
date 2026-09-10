@@ -674,6 +674,8 @@ body {
         line-height: var(--text-xs--line-height);
         color: inherit;
     }
+    /* A diff tab carries the mark that says so next to the name, which needs the room. */
+    .files-tab[data-view="diff"] .files-tab-open { max-width: 200px; }
     /* A tab that is not pinned is a preview: the same italic an editor uses, and a double-click ends it. */
     .files-tab:not([data-pinned="true"]) .files-tab-name { font-style: italic; }
     .files-tab-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -694,6 +696,60 @@ body {
         color: var(--text-faint);
     }
     .files-tab-close:hover { background: var(--surface-raised); color: var(--text); }
+
+    /* The git panel's list: a header per group, then a row per changed file. */
+    .git-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 28px;
+        padding: 0 8px 0 12px;
+        font-size: var(--text-xs);
+        line-height: var(--text-xs--line-height);
+    }
+    .git-row {
+        display: flex;
+        align-items: center;
+        height: 28px;
+        padding-right: 4px;
+        color: var(--text-muted);
+    }
+    .git-row:hover { background: var(--surface-sunken); color: var(--text); }
+    /* The change the preview has open reads as the selected row, the way a tree marks one. */
+    .git-row[data-selected] { background: var(--surface-active); color: var(--text); }
+    .git-row-open {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: 1;
+        min-width: 0;
+        height: 28px;
+        padding: 0 4px 0 12px;
+        font-size: var(--text-xs);
+        line-height: var(--text-xs--line-height);
+        color: inherit;
+    }
+    .git-row-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+    .git-row-dir { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-faint); }
+    /* The three trailing cells are fixed and right-aligned, so the letters and the counts of every
+       row line up under each other however long the name before them is. */
+    .git-row-code {
+        width: 16px;
+        flex-shrink: 0;
+        text-align: right;
+        font-family: var(--font-mono);
+        color: var(--text-faint);
+    }
+    .git-row-count {
+        width: 32px;
+        flex-shrink: 0;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+    /* The buttons are the row's own, so they only show while the pointer is on it or one has focus. */
+    .git-row-actions { visibility: hidden; }
+    .git-row:hover .git-row-actions,
+    .git-row:focus-within .git-row-actions { visibility: visible; }
 
     /* The viewer's own row under the panel's header, for whatever the open file can be switched between. */
     .file-toolbar {
@@ -727,6 +783,14 @@ body {
     /* A file of code, drawn a chunk at a time. Every state of a chunk (reserved, plain, highlighted)
        draws the same line box, so nothing below it shifts while shiki catches up. The line number is
        a counter each chunk starts at its own offset, which is what keeps the chunks independent. */
+    /* The diff draws its rows on a surface of its own, which is white or black unless the page says
+       otherwise. Naming both sides the same token puts it on the app's code surface in either theme,
+       and the container carries it too, so a diff shorter than the panel still fills it. */
+    .file-diff {
+        background: var(--term-bg);
+        --diffs-light-bg: var(--term-bg);
+        --diffs-dark-bg: var(--term-bg);
+    }
     .file-code { background: var(--term-bg); }
     .file-code pre {
         margin: 0;

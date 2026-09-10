@@ -3,6 +3,7 @@ import type { FsEntry } from '@ruimte/contracts';
 import {
     LOADING_NAME,
     absoluteOf,
+    ancestorDirsOf,
     buildTreeInput,
     compareRows,
     dirnameOf,
@@ -43,6 +44,14 @@ describe('paths', () => {
         expect(treePathOf(ROOT, entry('/repo/README.md'))).toBe('README.md');
         expect(isDirectoryPath('src/')).toBe(true);
         expect(isDirectoryPath('src/index.ts')).toBe(false);
+    });
+});
+
+describe('ancestorDirsOf', () => {
+    test('names every directory on the way to a row, outermost first', () => {
+        expect(ancestorDirsOf('src/state/git.ts')).toEqual(['src/', 'src/state/']);
+        expect(ancestorDirsOf('src/state/')).toEqual(['src/']);
+        expect(ancestorDirsOf('readme.md')).toEqual([]);
     });
 });
 
