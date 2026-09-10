@@ -427,8 +427,10 @@ body {
     .term-host .xterm .xterm-viewport { background-color: transparent !important; }
 
     /* A resize drag has to follow the pointer; the width transition that opens and closes the panel
-       would make it lag a frame behind, so the drag turns it off for as long as it runs. */
-    .panel-shell[data-resizing] { transition: none; }
+       would make it lag a frame behind, so the drag turns it off for as long as it runs. A width a
+       project brings on load is off for the same reason: only a person's own toggle slides. */
+    .panel-shell[data-resizing],
+    .panel-shell[data-instant] { transition: none; }
 
     /* A 2px line that says "something is on its way" without knowing how far along it is: a bar of
        a third of the width sweeping across. Used under the toolbar and under a browser's address. */

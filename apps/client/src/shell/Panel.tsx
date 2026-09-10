@@ -5,6 +5,7 @@ import { hasOverlayControls } from '@/desktop/bridge';
 import { PANELS } from '@/shell/panels';
 import { FilesPanel } from '@/shell/panels/FilesPanel';
 import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
+import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useUi, type PanelKind } from '@/state/ui';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
@@ -39,6 +40,12 @@ export function Panel() {
     const stored = useUi((s) => s.panelWidth);
     /* Closed and done animating. Until then the contents stay mounted, so a close plays out. */
     const [settled, setSettled] = useState(!panel.open);
+    const instant = useInstantWidth();
+    /* A width that lands without a transition fires no `transitionend`, so the motion it would have
+       ended is over in the same commit that starts it. */
+    if (instant && settled !== !panel.open) {
+        setSettled(!panel.open);
+    }
     const present = panel.open || !settled;
     const ref = useRef<HTMLElement>(null);
     const bounds = { min: MIN_WIDTH, max: () => window.innerWidth - MIN_CANVAS_WIDTH };
@@ -68,6 +75,7 @@ export function Panel() {
         <aside
             ref={ref}
             inert={!panel.open}
+            data-instant={instant ? '' : undefined}
             className="panel-shell flex h-full shrink-0 justify-end overflow-hidden transition-[width] duration-200 ease-out"
             style={{ width: panel.open ? width : 0 }}
             onTransitionEnd={(event) => {
