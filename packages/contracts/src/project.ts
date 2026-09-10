@@ -9,10 +9,18 @@ export type ProjectId = z.infer<typeof ProjectIdSchema>;
 export const NodeKindSchema = z.enum(['terminal', 'chat', 'browser', 'group', 'note']);
 export type NodeKind = z.infer<typeof NodeKindSchema>;
 
+// Where the title of a node came from: the session named itself from its first prompt, or a person
+// typed it. The title follows the session until someone sets it.
+export const NodeTitleSourceSchema = z.enum(['auto', 'user']);
+export type NodeTitleSource = z.infer<typeof NodeTitleSourceSchema>;
+
 export const ProjectNodeSchema = z.object({
     id: z.string().min(1),
     kind: NodeKindSchema,
     title: z.string(),
+    // Who named the node. Absent on a node nobody named yet, which is the only state in which its
+    // session may still name it.
+    titleSource: NodeTitleSourceSchema.optional(),
     x: z.number(),
     y: z.number(),
     w: z.number().positive(),
@@ -143,26 +151,104 @@ export type ProjectIcon = z.infer<typeof ProjectIconSchema>;
 export const ProjectNameSourceSchema = z.enum(['chosen', 'folder']);
 export type ProjectNameSource = z.infer<typeof ProjectNameSourceSchema>;
 
-// What the person edits; the daemon wraps it with the version and the rev.
-export const ProjectContentSchema = z.object({
+// The one canvas a version-1 file held becomes this view, on every machine that migrates it.
+export const MAIN_VIEW_ID = 'main';
+export const MAIN_VIEW_NAME = 'Canvas';
+
+const ViewBaseSchema = z.object({
+    id: z.string().min(1),
     name: z.string().min(1),
-    color: z.string(),
-    // Absent means "show what the folder declares"; a file written before this existed parses fine.
-    icon: ProjectIconChoiceSchema.optional(),
+    // Who named the view, the rule a node follows: absent or 'auto' means the page it hosts may
+    // still name it, 'user' means a person did and nothing renames it again.
+    titleSource: NodeTitleSourceSchema.optional()
+});
+
+/*
+ * A standalone view hosts one node without a place on a canvas, so it carries what a node carries
+ * minus its frame. Its id is the session id, the same rule a node follows, which is why moving a
+ * node between a canvas and a view of its own never restarts anything.
+ */
+export const StandaloneNodeSchema = ProjectNodeSchema.pick({
+    cwd: true,
+    command: true,
+    resume: true,
+    provider: true,
+    providerFixed: true,
+    runtimeMode: true,
+    accent: true
+});
+export type StandaloneNode = z.infer<typeof StandaloneNodeSchema>;
+
+export const ProjectCanvasViewSchema = ViewBaseSchema.extend({
+    kind: z.literal('canvas'),
     // In stacking order, back to front.
     nodes: z.array(ProjectNodeSchema),
     texts: z.array(ProjectTextSchema),
     edges: z.array(ProjectEdgeSchema),
     layouts: z.array(ProjectLayoutSchema).default([])
 });
+export type ProjectCanvasView = z.infer<typeof ProjectCanvasViewSchema>;
+
+/*
+ * A line between rows in the sidebar. It rides in the view list because the order of the file is the
+ * order of the list, but it holds nothing, never opens and takes no node: only the rows around it
+ * read differently for it being there. Its label is optional, since a bare line groups just as well.
+ */
+export const ProjectSeparatorViewSchema = z.object({
+    kind: z.literal('separator'),
+    id: z.string().min(1),
+    name: z.string().min(1).optional()
+});
+export type ProjectSeparatorView = z.infer<typeof ProjectSeparatorViewSchema>;
+
+export const ProjectViewSchema = z.discriminatedUnion('kind', [
+    ProjectCanvasViewSchema,
+    ViewBaseSchema.extend({ kind: z.literal('chat'), node: StandaloneNodeSchema }),
+    ViewBaseSchema.extend({ kind: z.literal('terminal'), node: StandaloneNodeSchema }),
+    ViewBaseSchema.extend({ kind: z.literal('browser'), url: z.string() }),
+    ProjectSeparatorViewSchema
+]);
+export type ProjectView = z.infer<typeof ProjectViewSchema>;
+export type ProjectViewKind = ProjectView['kind'];
+
+export const isCanvasView = (view: ProjectView): view is ProjectCanvasView => view.kind === 'canvas';
+
+export const isSeparatorView = (view: ProjectView): view is ProjectSeparatorView => view.kind === 'separator';
+
+/* The views a person can put on screen; a separator is a line in the list, not a place to go. */
+export const isOpenableView = (view: ProjectView): boolean => view.kind !== 'separator';
+
+// What the person edits; the daemon wraps it with the version and the rev.
+export const ProjectContentSchema = z.object({
+    name: z.string().min(1),
+    color: z.string(),
+    // Absent means "show what the folder declares"; a file written before this existed parses fine.
+    icon: ProjectIconChoiceSchema.optional(),
+    // In sidebar order. Never empty: deleting the last view leaves an empty canvas behind.
+    views: z.array(ProjectViewSchema).min(1)
+});
 export type ProjectContent = z.infer<typeof ProjectContentSchema>;
 
 export const ProjectDocumentSchema = ProjectContentSchema.extend({
-    version: z.literal(1),
+    version: z.literal(2),
     // Goes up by one on every write; a save that names an older rev is a conflict.
     rev: z.number().int().nonnegative()
 });
 export type ProjectDocument = z.infer<typeof ProjectDocumentSchema>;
+
+/* What a version-1 file holds: one project is one canvas. Read, migrated, never written again. */
+export const ProjectDocumentV1Schema = z.object({
+    version: z.literal(1),
+    rev: z.number().int().nonnegative(),
+    name: z.string().min(1),
+    color: z.string(),
+    icon: ProjectIconChoiceSchema.optional(),
+    nodes: z.array(ProjectNodeSchema),
+    texts: z.array(ProjectTextSchema),
+    edges: z.array(ProjectEdgeSchema),
+    layouts: z.array(ProjectLayoutSchema).default([])
+});
+export type ProjectDocumentV1 = z.infer<typeof ProjectDocumentV1Schema>;
 
 // The surfaces beside the canvas that can be up; the toolbar has a button per kind.
 export const ProjectPanelKindSchema = z.enum(['files', 'git']);
@@ -204,6 +290,10 @@ export const ProjectPanelsSchema = z.object({
     activeTab: z.string().nullable().optional(),
     // What the file tree had open, the way the tree names a directory: relative, POSIX, trailing slash.
     expandedDirs: z.array(z.string()).optional(),
+    // The canvases the sidebar has folded open. Absent means the list has never been folded by hand.
+    sidebarExpanded: z.array(z.string()).optional(),
+    // The last favicon of every browser node, by node id, so a reload draws it before the page loads.
+    favicons: z.record(z.string(), z.string()).optional(),
     // The git panel's own state: the scope a diff tab opens in and the folders its list has folded up.
     git: z
         .object({
@@ -217,13 +307,35 @@ export const ProjectPanelsSchema = z.object({
 });
 export type ProjectPanels = z.infer<typeof ProjectPanelsSchema>;
 
-// Per machine, never in the shared file: where the camera was, what had focus, how the panels stood.
+export const CameraSchema = z.object({ x: z.number(), y: z.number(), zoom: z.number().positive() });
+export type Camera = z.infer<typeof CameraSchema>;
+
+// Where one view stood when it was last on screen. Per machine, like everything around it.
+export const ProjectViewLocalSchema = z.object({
+    camera: CameraSchema.nullable(),
+    focusedNodeId: z.string().nullable()
+});
+export type ProjectViewLocal = z.infer<typeof ProjectViewLocalSchema>;
+
+/*
+ * Per machine, never in the shared file: which view was open, where its camera was and what had
+ * focus, and how the panels stood. The panels are per project, not per view: they are about the
+ * folder, so they stay put while you switch views.
+ */
 export const ProjectLocalSchema = z.object({
-    camera: z.object({ x: z.number(), y: z.number(), zoom: z.number().positive() }).nullable(),
-    focusedNodeId: z.string().nullable(),
+    activeViewId: z.string().nullable(),
+    views: z.record(z.string(), ProjectViewLocalSchema),
     panels: ProjectPanelsSchema.optional()
 });
 export type ProjectLocal = z.infer<typeof ProjectLocalSchema>;
+
+/* What a version-1 local file holds: one camera and one focus, for the one canvas there was. */
+export const ProjectLocalV1Schema = z.object({
+    camera: CameraSchema.nullable(),
+    focusedNodeId: z.string().nullable(),
+    panels: ProjectPanelsSchema.optional()
+});
+export type ProjectLocalV1 = z.infer<typeof ProjectLocalV1Schema>;
 
 export const ProjectSummarySchema = z.object({
     projectId: ProjectIdSchema,

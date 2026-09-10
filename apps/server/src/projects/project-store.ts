@@ -3,8 +3,11 @@ import { watch, type FSWatcher } from 'node:fs';
 import { mkdir, readFile, rm, stat } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import {
+    EMPTY_LOCAL,
+    MAIN_VIEW_ID,
+    MAIN_VIEW_NAME,
     ProjectIconChoiceSchema,
-    ProjectLocalSchema,
+    migrateLocal,
     type ProjectContent,
     type ProjectDocument,
     type ProjectIcon,
@@ -13,7 +16,8 @@ import {
     type ProjectOpenPayload,
     type ProjectOpenResult,
     type ProjectSetIconPayload,
-    type ProjectSummary
+    type ProjectSummary,
+    type ProjectView
 } from '@ruimte/contracts';
 import { z } from 'zod';
 import { isNotFound, writeAtomic } from '../fs.ts';
@@ -32,7 +36,7 @@ import {
 } from './project-files.ts';
 import { IdentityCache, readIdeaName, sniffMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
 
-type ProjectErrorCode = 'project-not-found' | 'project-missing' | 'rev-conflict' | 'folder-not-found' | 'bad-icon';
+type ProjectErrorCode = 'project-not-found' | 'project-missing' | 'project-invalid' | 'rev-conflict' | 'folder-not-found' | 'bad-icon';
 
 export class ProjectError extends Error {
     readonly code: ProjectErrorCode;
@@ -64,7 +68,9 @@ const WATCH_SETTLE_MS = 150;
 const isIconFile = (filename: string): boolean => filename.startsWith('icon.');
 
 const DEFAULT_COLOR = '#7c74ff';
-const EMPTY_LOCAL: ProjectLocal = { camera: null, focusedNodeId: null };
+
+/* What a project starts with: one canvas, under the id every migrated version-1 file gets too. */
+const firstView = (): ProjectView => ({ kind: 'canvas', id: MAIN_VIEW_ID, name: MAIN_VIEW_NAME, nodes: [], texts: [], edges: [], layouts: [] });
 
 const newId = (): string => randomBytes(6).toString('base64url');
 
@@ -110,7 +116,7 @@ export class ProjectStore {
         await this.locked(async () => {
             // A daemon that knows no canvas makes one, so every client boots into the same project.
             if ((await this.loadRegistry()).length === 0) {
-                await this.openUnlocked({ name: 'Untitled canvas' });
+                await this.openUnlocked({ name: 'Untitled project' });
             }
         });
         const entries = await this.loadRegistry();
@@ -169,7 +175,7 @@ export class ProjectStore {
         } else {
             entry = {
                 projectId: newId(),
-                name: payload.name ?? 'Untitled canvas',
+                name: payload.name ?? 'Untitled project',
                 color: payload.color ?? DEFAULT_COLOR,
                 folder: null,
                 lastOpenedAt: Date.now()
@@ -178,6 +184,9 @@ export class ProjectStore {
 
         const path = this.documentPath(entry);
         let outcome = await readDocument(path);
+        if (outcome.kind === 'invalid') {
+            throw new ProjectError('project-invalid', outcome.message);
+        }
         if (outcome.kind === 'corrupt') {
             console.warn(`Set aside a canvas that would not parse: ${outcome.setAside}`);
             outcome = { kind: 'missing' };
@@ -194,7 +203,7 @@ export class ProjectStore {
             if (firstOpen && entry.folder && !payload.name) {
                 entry = { ...entry, name: (await readIdeaName(entry.folder)) ?? entry.name };
             }
-            document = { version: 1, rev: 0, name: entry.name, color: entry.color, nodes: [], texts: [], edges: [], layouts: [] };
+            document = { version: 2, rev: 0, name: entry.name, color: entry.color, views: [firstView()] };
             text = await writeDocument(path, document);
         }
 
@@ -226,7 +235,7 @@ export class ProjectStore {
         if (baseRev !== state.rev) {
             throw new ProjectError('rev-conflict', `The canvas is at rev ${state.rev}, the save was based on ${baseRev}`);
         }
-        const document: ProjectDocument = { version: 1, rev: state.rev + 1, ...toPortable(content, state.entry.folder) };
+        const document: ProjectDocument = { version: 2, rev: state.rev + 1, ...toPortable(content, state.entry.folder) };
         state.lastText = await writeDocument(this.documentPath(state.entry), document);
         state.rev = document.rev;
         const icon = content.icon ?? null;
@@ -353,8 +362,7 @@ export class ProjectStore {
 
     private async readLocal(projectId: string): Promise<ProjectLocal> {
         try {
-            const parsed = ProjectLocalSchema.safeParse(JSON.parse(await readFile(this.localPath(projectId), 'utf8')));
-            return parsed.success ? parsed.data : EMPTY_LOCAL;
+            return migrateLocal(JSON.parse(await readFile(this.localPath(projectId), 'utf8')));
         } catch {
             return EMPTY_LOCAL;
         }
@@ -403,11 +411,16 @@ export class ProjectStore {
         if (text === state.lastText) {
             return;
         }
-        const document = parseDocument(text);
-        if (!document) {
+        const parsed = parseDocument(text);
+        if (parsed.kind === 'invalid') {
+            console.warn(`An outside edit to ${path} was ignored: ${parsed.message}`);
+            return;
+        }
+        if (parsed.kind !== 'ok') {
             // Half-written by someone else; the event that follows the finished write reads it whole.
             return;
         }
+        const { document } = parsed;
         state.lastText = text;
         state.rev = document.rev;
         state.entry = { ...state.entry, name: document.name, color: document.color, icon: document.icon ?? null };

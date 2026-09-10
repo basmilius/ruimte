@@ -7,11 +7,17 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
     pickFolder: (initialPath?: string): Promise<string | null> => ipcRenderer.invoke('dialog:pick-folder', initialPath),
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
     openGuestDevTools: (webContentsId: number): void => ipcRenderer.send('devtools:guest', webContentsId),
+    onBrowserContextMenu: (listener: (params: unknown) => void): (() => void) => {
+        const handler = (_event: unknown, params: unknown): void => listener(params);
+        ipcRenderer.on('browser:context-menu', handler);
+        return () => ipcRenderer.removeListener('browser:context-menu', handler);
+    },
+    browserContextAction: (action: unknown): void => ipcRenderer.send('browser:context-action', action),
     isFullscreen: (): Promise<boolean> => ipcRenderer.invoke('window:is-fullscreen'),
     onFullscreen: (listener: (fullscreen: boolean) => void): (() => void) => {
         const handler = (_event: unknown, fullscreen: boolean): void => listener(fullscreen);
         ipcRenderer.on('window:fullscreen', handler);
         return () => ipcRenderer.removeListener('window:fullscreen', handler);
     },
-    setTitleBarTheme: (dark: boolean): void => ipcRenderer.send('window:theme', dark)
+    setTheme: (theme: { resolved: 'light' | 'dark'; followsSystem: boolean; background: string }): void => ipcRenderer.send('window:theme', theme)
 });

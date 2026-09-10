@@ -312,7 +312,7 @@ export class SessionManager {
             this.remove(session);
         } else if (session.agent?.live) {
             // The CLI never said goodbye, so it went down with the shell; its session may still resume.
-            void this.setAgent(session, { ...session.agent, status: 'error', live: false, updatedAt: Date.now() });
+            void this.setAgent(session, { ...session.agent, status: 'exited', live: false, updatedAt: Date.now() });
         }
         this.broadcastListChanged();
     }

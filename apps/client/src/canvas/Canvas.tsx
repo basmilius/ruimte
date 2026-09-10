@@ -2,16 +2,18 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEven
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Plus } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
+import { isCanvasView } from '@ruimte/contracts';
 import { GRID, intersects, snapToGrid, toWorld, type Point, type Rect } from '@/canvas/math';
 import { useCanvas, type NodeKind } from '@/state/canvas';
 import { useUi } from '@/state/ui';
 import { isApplePlatform } from '@/desktop/bridge';
+import { newCanvasView, showView, stepView, viewAtIndex } from '@/project/views';
+import { activeViewOf, useDocument } from '@/state/document';
 import { addNodeAtCenter } from '@/shell/commands';
 import { CanvasMenuPopup } from '@/canvas/CanvasMenu';
 import { EdgeLayer } from '@/canvas/EdgeLayer';
 import { NodeFrame } from '@/canvas/NodeFrame';
 import { TextElementView } from '@/canvas/TextElementView';
-import { WebviewLayer } from '@/canvas/WebviewLayer';
 import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
 import { isInFloatingLayer } from '@/ui/floating';
@@ -35,6 +37,12 @@ const MIN_NODE = { w: 240, h: 160 };
 
 // Option plus a letter adds a node; a bare letter would fight every text field on the canvas.
 const ADD_KEYS: Record<string, NodeKind> = { KeyT: 'terminal', KeyC: 'chat', KeyB: 'browser', KeyG: 'group', KeyN: 'note' };
+
+/* The canvas keeps its own keys to itself while a view of its own is on screen over it. */
+const onStandaloneView = (): boolean => {
+    const view = activeViewOf(useDocument.getState());
+    return view !== null && !isCanvasView(view);
+};
 
 const isTypingTarget = (el: EventTarget | null): boolean => {
     if (!(el instanceof HTMLElement)) {
@@ -94,6 +102,11 @@ export function Canvas() {
         () => [...order.filter((id) => nodes[id]?.kind === 'group'), ...order.filter((id) => nodes[id]?.kind !== 'group')],
         [order, nodes]
     );
+
+    // The pages park outside this transform and may not swallow the pointer mid-gesture.
+    useEffect(() => {
+        useCanvas.getState().setGesturing(activeGesture !== null);
+    }, [activeGesture]);
 
     useLayoutEffect(() => {
         const el = rootRef.current;
@@ -200,6 +213,10 @@ export function Canvas() {
                 if (isInFloatingLayer(e.target)) {
                     return;
                 }
+                // The view host answers Escape for a view of its own; there is no canvas to return to.
+                if (onStandaloneView()) {
+                    return;
+                }
                 if (s.linkDraft?.aiming) {
                     s.setLinkDraft(null);
                 } else if (s.editingTextId) {
@@ -228,6 +245,25 @@ export function Canvas() {
                 useUi.getState().setSettings({ open: true });
                 return;
             }
+            // The views answer from anywhere, a focused node included: they are how you leave one.
+            if (mod && !e.altKey && !e.shiftKey && /^Digit[1-9]$/.test(e.code)) {
+                e.preventDefault();
+                const view = viewAtIndex(Number(e.code.slice(-1)));
+                if (view) {
+                    showView(view.id);
+                }
+                return;
+            }
+            if (mod && e.shiftKey && (e.code === 'BracketLeft' || e.code === 'BracketRight')) {
+                e.preventDefault();
+                stepView(e.code === 'BracketRight' ? 1 : -1);
+                return;
+            }
+            if (mod && !e.altKey && !e.shiftKey && e.code === 'KeyT') {
+                e.preventDefault();
+                newCanvasView();
+                return;
+            }
             // Option+B on macOS is a dead key, so the chord reads the physical key, not the character.
             if (mod && e.altKey && e.code === 'KeyB') {
                 e.preventDefault();
@@ -240,8 +276,9 @@ export function Canvas() {
                 useUi.getState().toggleSidebar();
                 return;
             }
-            // A dialog owns the keyboard while it is up; Backspace there must not delete nodes.
-            if (isTypingTarget(e.target) || s.mode.kind === 'node' || useUi.getState().settings.open) {
+            // A dialog owns the keyboard while it is up; Backspace there must not delete nodes. Nor may
+            // a key reach the canvas that is parked behind a view of its own.
+            if (isTypingTarget(e.target) || s.mode.kind === 'node' || useUi.getState().settings.open || onStandaloneView()) {
                 return;
             }
             if (e.altKey && !mod && ADD_KEYS[e.code]) {
@@ -598,7 +635,6 @@ export function Canvas() {
                     {renderOrder.map((id) => (
                         <NodeFrame key={id} id={id} />
                     ))}
-                    <WebviewLayer shield={activeGesture !== null} />
                 </div>
                 {renderOrder.length === 0 && textIds.length === 0 && (
                     <div className="pointer-events-none absolute inset-0 grid place-items-center">

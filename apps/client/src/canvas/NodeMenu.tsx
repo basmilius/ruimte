@@ -6,17 +6,24 @@ import {
     ChevronsUpDown,
     Copy,
     ExternalLink,
+    Frame,
     GitBranch,
     Link2,
     Maximize2,
     MessageSquare,
     Palette,
     Pencil,
+    Sparkles,
     Terminal,
     Trash
 } from 'lucide-react';
+import type { ProviderInfo } from '@ruimte/contracts';
+import { ChatAgentSubmenu } from '@/agents/AgentMenus';
+import { addAgentNode } from '@/agents/nodes';
+import { askOpenAsView, canOpenAsView } from '@/project/views';
 import { NODE_ACCENTS } from '@/canvas/accents';
 import { DEFAULT_NOTE_COLOR, NOTE_COLORS } from '@/canvas/note-colors';
+import { EMPTY_DRAFT, writeDraft } from '@/chat/drafts';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useProject } from '@/state/project';
@@ -64,6 +71,19 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
         if (chatSession && chatProvider) {
             useCanvas.getState().addNode('terminal', beside, { title: node.title, cwd: chatCwd, provider: chatProvider, resume: chatSession });
         }
+    };
+    /*
+     * A note becomes the opening prompt of a chat beside it. The prompt is only seeded, never sent:
+     * the person reads it once more and presses Enter. The edge keeps the note readable to the agent
+     * through `ruimte-context`, so a note edited later still reaches it.
+     */
+    const startAgentFromNote = (provider: ProviderInfo): void => {
+        const chatId = addAgentNode('chat', provider, beside);
+        const body = node.body?.trim();
+        if (body) {
+            writeDraft(chatId, { ...EMPTY_DRAFT, text: body });
+        }
+        useCanvas.getState().addEdge(id, chatId);
     };
     // The folder the node works in: its own, or the project's when it has none.
     const workingFolder = node.kind === 'terminal' || node.kind === 'chat' ? (node.cwd ?? chatCwd ?? projectFolder) : (node.worktree?.path ?? null);
@@ -113,6 +133,12 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                             <Icon icon={Terminal} size={14} /> Open in terminal
                         </ContextMenu.Item>
                     )}
+                    {canOpenAsView(node.kind) && (
+                        <ContextMenu.Item className="menu-item" onClick={() => askOpenAsView(id)}>
+                            <Icon icon={Frame} size={14} /> Open as view
+                            <span className={MENU_HINT}>Keeps its session</span>
+                        </ContextMenu.Item>
+                    )}
                     {workingFolder && (
                         <ContextMenu.Item
                             className="menu-item"
@@ -122,28 +148,31 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                         </ContextMenu.Item>
                     )}
                     {node.kind === 'note' && (
-                        <ContextMenu.SubmenuRoot>
-                            <ContextMenu.SubmenuTrigger className="menu-item">
-                                <Icon icon={Palette} size={14} /> Note color
-                                <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
-                            </ContextMenu.SubmenuTrigger>
-                            <ContextMenu.Portal>
-                                <ContextMenu.Positioner className="z-[var(--z-popup)]" sideOffset={4} alignOffset={-4}>
-                                    <ContextMenu.Popup className="menu-popup min-w-40">
-                                        {NOTE_COLORS.map((color) => (
-                                            <ContextMenu.Item
-                                                key={color.id}
-                                                className="menu-item"
-                                                onClick={() => useCanvas.getState().updateNode(id, { color: color.id })}
-                                            >
-                                                <span className={`h-3 w-3 rounded-full border border-border-strong ${color.className}`} /> {color.label}
-                                                {(node.color ?? DEFAULT_NOTE_COLOR) === color.id && <Icon icon={Check} size={14} className="ml-auto" />}
-                                            </ContextMenu.Item>
-                                        ))}
-                                    </ContextMenu.Popup>
-                                </ContextMenu.Positioner>
-                            </ContextMenu.Portal>
-                        </ContextMenu.SubmenuRoot>
+                        <>
+                            <ChatAgentSubmenu label="Start agent from note" icon={<Icon icon={Sparkles} size={14} />} onPick={startAgentFromNote} />
+                            <ContextMenu.SubmenuRoot>
+                                <ContextMenu.SubmenuTrigger className="menu-item">
+                                    <Icon icon={Palette} size={14} /> Note color
+                                    <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
+                                </ContextMenu.SubmenuTrigger>
+                                <ContextMenu.Portal>
+                                    <ContextMenu.Positioner className="z-[var(--z-popup)]" sideOffset={4} alignOffset={-4}>
+                                        <ContextMenu.Popup className="menu-popup min-w-40">
+                                            {NOTE_COLORS.map((color) => (
+                                                <ContextMenu.Item
+                                                    key={color.id}
+                                                    className="menu-item"
+                                                    onClick={() => useCanvas.getState().updateNode(id, { color: color.id })}
+                                                >
+                                                    <span className={`h-3 w-3 rounded-full border border-border-strong ${color.className}`} /> {color.label}
+                                                    {(node.color ?? DEFAULT_NOTE_COLOR) === color.id && <Icon icon={Check} size={14} className="ml-auto" />}
+                                                </ContextMenu.Item>
+                                            ))}
+                                        </ContextMenu.Popup>
+                                    </ContextMenu.Positioner>
+                                </ContextMenu.Portal>
+                            </ContextMenu.SubmenuRoot>
+                        </>
                     )}
                     <ContextMenu.SubmenuRoot>
                         <ContextMenu.SubmenuTrigger className="menu-item">

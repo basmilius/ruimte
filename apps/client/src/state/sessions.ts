@@ -21,6 +21,8 @@ export interface SessionSink {
 
 interface SessionsStore extends SessionSink {
     byNodeId: Record<string, SessionState>;
+    /* Drops every row. The sessions keep running on the daemon; this client is done looking at them. */
+    clear(): void;
 }
 
 export const useSessions = create<SessionsStore>((set) => ({
@@ -47,6 +49,9 @@ export const useSessions = create<SessionsStore>((set) => ({
             delete next[nodeId];
             return { byNodeId: next };
         });
+    },
+    clear() {
+        set({ byNodeId: {} });
     }
 }));
 
@@ -58,14 +63,21 @@ const sessionStatus = (state: SessionState | undefined): AgentStatus | undefined
     if (state.agent?.live) {
         return state.agent.status;
     }
+    // The daemon marks the record when the CLI went down with the shell, and it outlives the shell.
+    if (state.agent?.status === 'exited') {
+        return 'exited';
+    }
     if (state.exited !== undefined) {
         return 'error';
     }
     return state.attached ? 'running' : undefined;
 };
 
+/* What a node needs to have a status: geometry says nothing about whether something is running. */
+export type StatusOf = Pick<CanvasNode, 'id' | 'kind' | 'status'>;
+
 /* A terminal's status comes from its session, a chat's from its thread; anything else still carries it on the node. */
-export const nodeStatus = (node: CanvasNode, sessions: Record<string, SessionState>, chats: ChatsById): AgentStatus | undefined => {
+export const nodeStatus = (node: StatusOf, sessions: Record<string, SessionState>, chats: ChatsById): AgentStatus | undefined => {
     if (node.kind === 'terminal') {
         return sessionStatus(sessions[node.id]);
     }

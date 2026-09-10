@@ -1,11 +1,11 @@
-import type { ProjectContent, ProjectDocument, ProjectIconChoice, ProjectLocal, ProjectSummary } from '@ruimte/contracts';
+import type { ProjectContent, ProjectDocument, ProjectIconChoice, ProjectLocal, ProjectSummary, ProjectView } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 import type { PanelsPort } from './panels-port';
 
 const LAST_PROJECT_KEY = 'ruimte.lastProject';
 
-/* The slice of the canvas store the client reads and writes; the real store has more. */
+/* The slice of the canvas store the client reads; the real store has more. */
 interface CanvasAccess {
     getState(): {
         nodes: Record<string, unknown>;
@@ -15,10 +15,22 @@ interface CanvasAccess {
         camera: { x: number; y: number; zoom: number };
         mode: { kind: 'canvas' } | { kind: 'node'; nodeId: string };
         loading: boolean;
-        loadDocument(document: ProjectDocument | null, local: ProjectLocal | null): void;
-        exportContent(): Pick<ProjectContent, 'nodes' | 'texts' | 'edges' | 'layouts'>;
     };
     subscribe: StoreApi<CanvasAccess extends { getState(): infer S } ? S : never>['subscribe'];
+}
+
+/* The slice of the document store the client reads and writes; the real store has more. */
+interface DocumentAccess {
+    getState(): {
+        views: ProjectView[];
+        activeViewId: string | null;
+        edits: number;
+        loading: boolean;
+        load(document: ProjectDocument | null, local: ProjectLocal | null): void;
+        exportViews(): ProjectView[];
+        exportLocal(): Pick<ProjectLocal, 'activeViewId' | 'views'>;
+    };
+    subscribe: StoreApi<DocumentAccess extends { getState(): infer S } ? S : never>['subscribe'];
 }
 
 export interface ProjectSink {
@@ -57,7 +69,7 @@ const isConnectionError = (e: unknown): boolean => e instanceof TransportError &
  */
 export class ProjectClient {
     private readonly transport: Transport;
-    private readonly canvas: CanvasAccess;
+    private readonly documents: DocumentAccess;
     private readonly panels: PanelsPort;
     private readonly sink: ProjectSink;
     private readonly storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null;
@@ -69,9 +81,16 @@ export class ProjectClient {
     private saving: Promise<void> | null = null;
     private booted = false;
 
-    constructor(transport: Transport, canvas: CanvasAccess, panels: PanelsPort, sink: ProjectSink, options: ProjectClientOptions = {}) {
+    constructor(
+        transport: Transport,
+        canvas: CanvasAccess,
+        documents: DocumentAccess,
+        panels: PanelsPort,
+        sink: ProjectSink,
+        options: ProjectClientOptions = {}
+    ) {
         this.transport = transport;
-        this.canvas = canvas;
+        this.documents = documents;
         this.panels = panels;
         this.sink = sink;
         this.storage = options.storage ?? (typeof localStorage === 'undefined' ? null : localStorage);
@@ -82,6 +101,7 @@ export class ProjectClient {
             transport.on('project.summary', ({ summary }) => this.applySummary(summary)),
             transport.subscribeStatus((status) => this.onStatus(status)),
             canvas.subscribe((state, previous) => this.onCanvas(state, previous)),
+            documents.subscribe((state, previous) => this.onDocument(state, previous)),
             panels.subscribe(() => this.scheduleLocal())
         );
         if (transport.status === 'open') {
@@ -116,7 +136,7 @@ export class ProjectClient {
             await this.transport.request('project.close', { projectId: current.projectId }).catch(() => undefined);
         }
         this.storage?.removeItem(LAST_PROJECT_KEY);
-        this.canvas.getState().loadDocument(null, null);
+        this.documents.getState().load(null, null);
         this.panels.load(null, undefined);
         this.sink.setCurrent(null, 0);
     }
@@ -187,7 +207,7 @@ export class ProjectClient {
         }
         this.sink.setConflict(null);
         if (choice === 'theirs') {
-            this.canvas.getState().loadDocument(conflict, { camera: this.canvas.getState().camera, focusedNodeId: null });
+            this.documents.getState().load(conflict, this.localOfScreen());
             this.sink.setChosenIcon(conflict.icon ?? null);
             this.sink.setCurrent({ ...current, name: conflict.name, color: conflict.color, icon: conflict.icon ?? current.icon }, conflict.rev);
             return;
@@ -248,7 +268,7 @@ export class ProjectClient {
                 await this.transport.request('project.close', { projectId: previous.projectId }).catch(() => undefined);
             }
             const result = await this.transport.request('project.open', payload);
-            this.canvas.getState().loadDocument(result.document, result.local);
+            this.documents.getState().load(result.document, result.local);
             // In the same tick as the canvas, so the panels never paint the project that just left.
             this.panels.load(result.summary.projectId, result.local.panels);
             this.sink.setChosenIcon(result.document.icon ?? null);
@@ -269,6 +289,23 @@ export class ProjectClient {
             this.scheduleSave();
         }
         if (state.camera !== previous.camera || state.mode !== previous.mode) {
+            this.scheduleLocal();
+        }
+    }
+
+    /*
+     * Views coming and going are edits; switching between them is not, which is why the store counts
+     * the first kind. The view that is open and where its camera stood belong to this machine.
+     */
+    private onDocument(state: ReturnType<DocumentAccess['getState']>, previous: ReturnType<DocumentAccess['getState']>): void {
+        if (state.loading || previous.loading || !this.sink.getState().current) {
+            return;
+        }
+        if (state.edits !== previous.edits) {
+            this.sink.setDirty(true);
+            this.scheduleSave();
+        }
+        if (state.activeViewId !== previous.activeViewId) {
             this.scheduleLocal();
         }
     }
@@ -308,9 +345,12 @@ export class ProjectClient {
         if (!current) {
             return;
         }
-        const { camera, mode } = this.canvas.getState();
-        const local: ProjectLocal = { camera, focusedNodeId: mode.kind === 'node' ? mode.nodeId : null, panels: this.panels.export() };
-        void this.transport.request('project.save-local', { projectId: current.projectId, local }).catch(() => undefined);
+        void this.transport.request('project.save-local', { projectId: current.projectId, local: this.localOfScreen() }).catch(() => undefined);
+    }
+
+    /* What this machine would remember about the project right now: the panels, and every view's camera. */
+    private localOfScreen(): ProjectLocal {
+        return { ...this.documents.getState().exportLocal(), panels: this.panels.export() };
     }
 
     private save(): Promise<void> {
@@ -326,7 +366,7 @@ export class ProjectClient {
             name: current.name,
             color: current.color,
             ...(chosenIcon ? { icon: chosenIcon } : {}),
-            ...this.canvas.getState().exportContent()
+            views: this.documents.getState().exportViews()
         };
         this.sink.setDirty(false);
         this.saving = this.transport
@@ -360,7 +400,7 @@ export class ProjectClient {
             this.sink.setConflict(document);
             return;
         }
-        this.canvas.getState().loadDocument(document, { camera: this.canvas.getState().camera, focusedNodeId: null });
+        this.documents.getState().load(document, this.localOfScreen());
         this.sink.setChosenIcon(document.icon ?? null);
         this.sink.setCurrent({ ...current, name: document.name, color: document.color, icon: document.icon ?? current.icon }, document.rev);
     }

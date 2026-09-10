@@ -1,0 +1,140 @@
+import { useState } from 'react';
+import { Dialog } from '@base-ui-components/react/dialog';
+import { Trash } from 'lucide-react';
+import { viewIsBusy } from '@/project/views';
+import { useCanvas } from '@/state/canvas';
+import { resetTitle } from '@/nodes/node-host';
+import { useDocument } from '@/state/document';
+import { useUi } from '@/state/ui';
+import { Button } from '@/ui/Button';
+import { Icon } from '@/ui/Icon';
+
+/* Renaming, deleting, promoting and a new page: everything a view asks before it happens. */
+export function ViewDialogs() {
+    const dialog = useUi((s) => s.viewDialog);
+    const setDialog = useUi((s) => s.setViewDialog);
+    const viewId = dialog && 'viewId' in dialog ? dialog.viewId : null;
+    const view = useDocument((s) => s.views.find((each) => each.id === viewId) ?? null);
+    const nodeTitle = useCanvas((s) => (dialog?.kind === 'promote' ? (s.nodes[dialog.nodeId]?.title ?? null) : null));
+    const [value, setValue] = useState('');
+    const [seen, setSeen] = useState<ViewDialogSeen>(null);
+
+    // The field starts from what the dialog opened on, not from a render somewhere after that.
+    const opening = dialog?.kind === 'rename' ? dialog.viewId : dialog?.kind === 'new-browser' ? 'new-browser' : null;
+    if (opening !== null && seen !== opening) {
+        setSeen(opening);
+        setValue(dialog?.kind === 'rename' ? (view?.name ?? '') : '');
+    }
+
+    const close = (): void => setDialog(null);
+
+    const submit = (): void => {
+        const trimmed = value.trim();
+        if (dialog?.kind === 'rename' && view) {
+            // An empty field is not a name: the view goes back to the one its own source gives it.
+            if (trimmed) {
+                useDocument.getState().renameView(view.id, trimmed);
+            } else {
+                resetTitle(view.id);
+            }
+        }
+        if (dialog?.kind === 'new-browser' && trimmed) {
+            useDocument.getState().addStandaloneView({ kind: 'browser', name: trimmed, url: trimmed });
+        }
+        close();
+    };
+
+    const open = dialog !== null && (viewId === null || view !== null) && (dialog.kind !== 'promote' || nodeTitle !== null);
+
+    return (
+        <Dialog.Root open={open} onOpenChange={(next) => !next && close()}>
+            <Dialog.Portal>
+                <Dialog.Backdrop className="dialog-backdrop" />
+                <Dialog.Popup className="dialog-popup top-[24vh] w-[420px] p-5">
+                    {dialog?.kind === 'rename' && (
+                        <>
+                            <Dialog.Title className="text-base font-semibold text-text">Rename view</Dialog.Title>
+                            <p className="mt-1 text-xs text-text-muted">The name goes into the project file, so everyone with the folder sees it.</p>
+                        </>
+                    )}
+                    {dialog?.kind === 'new-browser' && (
+                        <>
+                            <Dialog.Title className="text-base font-semibold text-text">New browser view</Dialog.Title>
+                            <p className="mt-1 text-xs text-text-muted">The page fills the whole column. A bare host gets https in front of it.</p>
+                        </>
+                    )}
+                    {(dialog?.kind === 'rename' || dialog?.kind === 'new-browser') && (
+                        <input
+                            autoFocus
+                            className="field mt-3"
+                            aria-label={dialog.kind === 'rename' ? 'View name' : 'Address'}
+                            placeholder={dialog.kind === 'rename' ? 'Name' : 'localhost:5173'}
+                            value={value}
+                            onChange={(e) => setValue(e.target.value)}
+                            onKeyDown={(e) => {
+                                e.stopPropagation();
+                                if (e.key === 'Enter') {
+                                    submit();
+                                }
+                            }}
+                        />
+                    )}
+                    {dialog?.kind === 'delete' && (
+                        <>
+                            <Dialog.Title className="text-base font-semibold text-text">Delete {view?.name}?</Dialog.Title>
+                            <p className="mt-1 text-xs text-text-muted">
+                                {view && viewIsBusy(view)
+                                    ? 'Something in this view is still running. Deleting it ends those sessions.'
+                                    : 'The view and everything on it are gone from the project.'}
+                            </p>
+                        </>
+                    )}
+                    {dialog?.kind === 'promote' && (
+                        <>
+                            <Dialog.Title className="text-base font-semibold text-text">Open {nodeTitle} as a view?</Dialog.Title>
+                            <p className="mt-1 text-xs text-text-muted">
+                                The session keeps running under the same id. The lines drawn to this node stay on the canvas and are lost, because an edge
+                                belongs to one canvas.
+                            </p>
+                        </>
+                    )}
+                    <div className="mt-4 flex items-center justify-end gap-2">
+                        <Button onClick={close}>Cancel</Button>
+                        {dialog?.kind === 'delete' && (
+                            <Button
+                                variant="danger"
+                                onClick={() => {
+                                    if (view) {
+                                        useDocument.getState().deleteView(view.id);
+                                    }
+                                    close();
+                                }}
+                            >
+                                <Icon icon={Trash} size={12} /> Delete
+                            </Button>
+                        )}
+                        {dialog?.kind === 'promote' && (
+                            <Button
+                                variant="primary"
+                                onClick={() => {
+                                    useDocument.getState().openAsView(dialog.nodeId);
+                                    close();
+                                }}
+                            >
+                                Open as view
+                            </Button>
+                        )}
+                        {(dialog?.kind === 'rename' || dialog?.kind === 'new-browser') && (
+                            <Button variant="primary" disabled={!value.trim()} onClick={submit}>
+                                {dialog.kind === 'rename' ? 'Rename' : 'Open'}
+                            </Button>
+                        )}
+                    </div>
+                </Dialog.Popup>
+            </Dialog.Portal>
+        </Dialog.Root>
+    );
+}
+
+/* Which dialog the field was filled for: a view id, or the one dialog that has no view yet. */
+type ViewDialogSeen = string | null;

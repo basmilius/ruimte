@@ -93,10 +93,20 @@ interface SettingsState {
     section: SettingsSectionId;
 }
 
+export type ViewDialog =
+    | { kind: 'rename' | 'delete'; viewId: string }
+    /* Promoting a node that has lines drawn into it: those lines do not survive the move. */
+    | { kind: 'promote'; nodeId: string }
+    | { kind: 'new-browser' }
+    | null;
+
 interface UiStore {
     paletteOpen: boolean;
     /* Whether the session list is in view; it survives a reload, like everything else on the canvas. */
     sidebarOpen: boolean;
+    /* Which canvases the sidebar has folded open, per project, or null until the list seeds itself.
+       It rides the project's machine-local file with the panels (`project/panels-port.ts`). */
+    sidebarExpanded: string[] | null;
     /* Text the palette opens with; a path puts it straight into folder browsing. */
     paletteSeed: string;
     settings: SettingsState;
@@ -112,7 +122,10 @@ interface UiStore {
     layoutDialogOpen: boolean;
     /* The group a worktree is being bound to, while its dialog is up. */
     worktreeDialogFor: string | null;
+    /* What a view is being asked about, from the sidebar, the breadcrumb or the palette alike. */
+    viewDialog: ViewDialog;
     setWorktreeDialogFor(groupId: string | null): void;
+    setViewDialog(dialog: ViewDialog): void;
     setSidebarOpen(open: boolean): void;
     toggleSidebar(): void;
     openPalette(seed?: string): void;
@@ -127,6 +140,7 @@ interface UiStore {
     setPreviewWidth(width: number): void;
     /* Puts a project's panels on screen in one go, when it opens; they land without sliding. */
     setPanels(state: PanelDefaults): void;
+    setSidebarExpanded(ids: string[] | null): void;
 }
 
 /* Which app-level dialog is up; nothing here belongs to a node. The panels do belong to a project:
@@ -135,6 +149,7 @@ export const useUi = create<UiStore>((set, get) => ({
     paletteOpen: false,
     paletteSeed: '',
     sidebarOpen: readSidebarOpen(),
+    sidebarExpanded: null,
     settings: { open: false, section: 'appearance' },
     /* Closed until a project says otherwise: the panels belong to a project and there is none
        yet, so the first paint of a reload cannot flash open a panel the project has closed. */
@@ -145,8 +160,12 @@ export const useUi = create<UiStore>((set, get) => ({
     panelsRestoring: true,
     layoutDialogOpen: false,
     worktreeDialogFor: null,
+    viewDialog: null,
     setWorktreeDialogFor(groupId) {
         set({ worktreeDialogFor: groupId });
+    },
+    setViewDialog(dialog) {
+        set({ viewDialog: dialog });
     },
     setSidebarOpen(open) {
         persistSidebarOpen(open);
@@ -189,6 +208,9 @@ export const useUi = create<UiStore>((set, get) => ({
     },
     setPreviewWidth(width) {
         set({ previewWidth: width, panelsRestoring: false });
+    },
+    setSidebarExpanded(ids) {
+        set({ sidebarExpanded: ids });
     },
     setPanels(state) {
         /* One update, so a panel and the width it opens at reach the DOM together: two would put a

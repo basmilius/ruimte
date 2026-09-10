@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ProjectContent, ProjectDocument } from '@ruimte/contracts';
+import type { ProjectCanvasView, ProjectContent, ProjectDocument } from '@ruimte/contracts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { waitFor } from '../sessions/test-helpers.ts';
 import { documentPathInFolder, fromPortable, toPortable } from './project-files.ts';
@@ -38,29 +38,40 @@ const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0
 const content = (name = 'repo'): ProjectContent => ({
     name,
     color: '#123456',
-    nodes: [{ id: 'n1', kind: 'terminal', title: 'shell', x: 0, y: 0, w: 560, h: 360, cwd: join(folder, 'apps', 'server') }],
-    texts: [],
-    edges: [],
-    layouts: []
+    views: [
+        {
+            kind: 'canvas',
+            id: 'main',
+            name: 'Canvas',
+            nodes: [{ id: 'n1', kind: 'terminal', title: 'shell', x: 0, y: 0, w: 560, h: 360, cwd: join(folder, 'apps', 'server') }],
+            texts: [],
+            edges: [],
+            layouts: []
+        }
+    ]
 });
+
+/* Every test here works on projects whose views are canvases; this is the cast that says so. */
+const canvas = (document: Pick<ProjectContent, 'views'>, at = 0): ProjectCanvasView => document.views[at] as ProjectCanvasView;
 
 describe('ProjectStore', () => {
     test('opening a folder creates the canvas file, lists it, and saves with a rising rev', async () => {
         const opened = await store.openProject({ folder });
         expect(opened.summary).toMatchObject({ name: 'repo', folder, available: true });
-        expect(opened.document).toMatchObject({ version: 1, rev: 0, nodes: [] });
-        expect(opened.local).toEqual({ camera: null, focusedNodeId: null });
+        expect(opened.document).toMatchObject({ version: 2, rev: 0 });
+        expect(canvas(opened.document)).toMatchObject({ id: 'main', name: 'Canvas', nodes: [] });
+        expect(opened.local).toEqual({ activeViewId: null, views: {} });
 
         expect(await store.save(opened.summary.projectId, 0, content())).toBe(1);
         expect(await store.save(opened.summary.projectId, 1, content('renamed'))).toBe(2);
         const onDisk = JSON.parse(await readFile(documentPathInFolder(folder), 'utf8')) as ProjectDocument;
         expect(onDisk.rev).toBe(2);
         // Relative on disk, absolute once read back.
-        expect(onDisk.nodes[0]?.cwd).toBe('./apps/server');
+        expect(canvas(onDisk).nodes[0]?.cwd).toBe('./apps/server');
         expect((await store.list())[0]).toMatchObject({ name: 'renamed', available: true });
 
         const again = await store.openProject({ projectId: opened.summary.projectId });
-        expect(again.document.nodes[0]?.cwd).toBe(join(folder, 'apps', 'server'));
+        expect(canvas(again.document).nodes[0]?.cwd).toBe(join(folder, 'apps', 'server'));
     });
 
     test('a save based on an older rev is refused', async () => {
@@ -109,11 +120,12 @@ describe('ProjectStore', () => {
             activeTab: '/scratch/notes.md',
             expandedDirs: ['src/']
         };
-        await store.saveLocal(opened.summary.projectId, { camera: { x: 1, y: 2, zoom: 0.5 }, focusedNodeId: 'n1', panels });
+        const local = { activeViewId: 'main', views: { main: { camera: { x: 1, y: 2, zoom: 0.5 }, focusedNodeId: 'n1' } }, panels };
+        await store.saveLocal(opened.summary.projectId, local);
         const again = await store.openProject({ projectId: opened.summary.projectId });
-        expect(again.local).toEqual({ camera: { x: 1, y: 2, zoom: 0.5 }, focusedNodeId: 'n1', panels });
+        expect(again.local).toEqual(local);
         // A local file from before the panels lived in it still opens, on the defaults.
-        await store.saveLocal(opened.summary.projectId, { camera: null, focusedNodeId: null });
+        await store.saveLocal(opened.summary.projectId, { activeViewId: null, views: {} });
         expect((await store.openProject({ projectId: opened.summary.projectId })).local.panels).toBeUndefined();
         const files = await readdir(join(home, 'projects'));
         expect(files).toContain(`${opened.summary.projectId}.local.json`);
@@ -128,12 +140,12 @@ describe('ProjectStore', () => {
         const opened = await store.openProject({ folder });
         await store.delete(opened.summary.projectId, false);
         expect((await store.list()).map((project) => project.folder)).not.toContain(folder);
-        expect(await readFile(documentPathInFolder(folder), 'utf8')).toContain('"version": 1');
+        expect(await readFile(documentPathInFolder(folder), 'utf8')).toContain('"version": 2');
     });
 
     test('an empty daemon lists one default canvas, and two opens at once both end up registered', async () => {
         const listed = await store.list();
-        expect(listed.map((project) => project.name)).toEqual(['Untitled canvas']);
+        expect(listed.map((project) => project.name)).toEqual(['Untitled project']);
         const [a, b] = await Promise.all([store.openProject({ name: 'a' }), store.openProject({ name: 'b' })]);
         expect((await store.list()).map((project) => project.projectId).sort()).toEqual(
             [listed[0]!.projectId, a.summary.projectId, b.summary.projectId].sort()
@@ -198,6 +210,93 @@ describe('ProjectStore', () => {
         expect((await store.list())[0]).toMatchObject({ name: 'Chosen by hand' });
     });
 
+    test('a version-1 file opens as one canvas view and is written back as version 2', async () => {
+        await mkdir(join(folder, '.ruimte'));
+        const legacy = {
+            version: 1,
+            rev: 11,
+            name: 'ruimte',
+            color: '#7c74ff',
+            nodes: [{ id: 'terminal-1', kind: 'terminal', title: 'Terminal', x: -584, y: -592, w: 560, h: 360, cwd: join(folder, 'apps') }],
+            texts: [],
+            edges: [],
+            layouts: []
+        };
+        await writeFile(documentPathInFolder(folder), `${JSON.stringify(legacy, null, 2)}\n`);
+
+        const opened = await store.openProject({ folder });
+        expect(opened.document).toMatchObject({ version: 2, rev: 11, name: 'ruimte' });
+        expect(opened.document.views).toHaveLength(1);
+        expect(canvas(opened.document)).toMatchObject({ id: 'main', name: 'Canvas' });
+        expect(canvas(opened.document).nodes[0]?.cwd).toBe(join(folder, 'apps'));
+        // A project that is only read stays readable for an older build; the first save moves it on.
+        expect(await readFile(documentPathInFolder(folder), 'utf8')).toContain('"version": 1');
+
+        await store.save(opened.summary.projectId, 11, { ...content(), views: opened.document.views });
+        const onDisk = JSON.parse(await readFile(documentPathInFolder(folder), 'utf8')) as ProjectDocument;
+        expect(onDisk).toMatchObject({ version: 2, rev: 12 });
+        expect(canvas(onDisk).nodes[0]?.cwd).toBe('./apps');
+    });
+
+    test('a file with the same id in two views is refused with a message that names it', async () => {
+        await mkdir(join(folder, '.ruimte'));
+        const twice = {
+            version: 2,
+            rev: 1,
+            name: 'repo',
+            color: '#123456',
+            views: [
+                {
+                    kind: 'canvas',
+                    id: 'main',
+                    name: 'Canvas',
+                    nodes: [{ id: 'n1', kind: 'terminal', title: 'a', x: 0, y: 0, w: 1, h: 1 }],
+                    texts: [],
+                    edges: []
+                },
+                {
+                    kind: 'canvas',
+                    id: 'other',
+                    name: 'Other',
+                    nodes: [{ id: 'n1', kind: 'terminal', title: 'b', x: 0, y: 0, w: 1, h: 1 }],
+                    texts: [],
+                    edges: []
+                }
+            ]
+        };
+        await writeFile(documentPathInFolder(folder), JSON.stringify(twice));
+        await expect(store.openProject({ folder })).rejects.toMatchObject({ code: 'project-invalid', message: expect.stringContaining('"n1"') });
+        // Refused, not set aside: only a person can say which of the two was meant.
+        expect(await readdir(join(folder, '.ruimte'))).toEqual(['project.json']);
+    });
+
+    test('an edge that points into another view is dropped on the way in', async () => {
+        await mkdir(join(folder, '.ruimte'));
+        const crossing = {
+            version: 2,
+            rev: 1,
+            name: 'repo',
+            color: '#123456',
+            views: [
+                {
+                    kind: 'canvas',
+                    id: 'main',
+                    name: 'Canvas',
+                    nodes: [{ id: 'n1', kind: 'terminal', title: 'a', x: 0, y: 0, w: 1, h: 1 }],
+                    texts: [],
+                    edges: [
+                        { id: 'e1', from: 'n1', to: 'far' },
+                        { id: 'e2', from: 'n1', to: 'n1' }
+                    ]
+                },
+                { kind: 'canvas', id: 'other', name: 'Other', nodes: [{ id: 'far', kind: 'chat', title: 'b', x: 0, y: 0, w: 1, h: 1 }], texts: [], edges: [] }
+            ]
+        };
+        await writeFile(documentPathInFolder(folder), JSON.stringify(crossing));
+        const opened = await store.openProject({ folder });
+        expect(canvas(opened.document).edges.map((edge) => edge.id)).toEqual(['e2']);
+    });
+
     test('a folder that is gone and an unknown id are refused', async () => {
         await expect(store.openProject({ folder: join(root, 'nope') })).rejects.toMatchObject({ code: 'folder-not-found' });
         await expect(store.openProject({ projectId: 'nope' })).rejects.toMatchObject({ code: 'project-not-found' });
@@ -210,19 +309,31 @@ describe('portable paths', () => {
             {
                 name: 'x',
                 color: '',
-                nodes: [
-                    { id: 'a', kind: 'terminal', title: '', x: 0, y: 0, w: 1, h: 1, cwd: '/repo/apps' },
-                    { id: 'b', kind: 'terminal', title: '', x: 0, y: 0, w: 1, h: 1, cwd: '/repo' },
-                    { id: 'c', kind: 'terminal', title: '', x: 0, y: 0, w: 1, h: 1, cwd: '/elsewhere' },
-                    { id: 'd', kind: 'chat', title: '', x: 0, y: 0, w: 1, h: 1 }
-                ],
-                texts: [],
-                edges: [],
-                layouts: []
+                views: [
+                    {
+                        kind: 'canvas',
+                        id: 'main',
+                        name: 'Canvas',
+                        nodes: [
+                            { id: 'a', kind: 'terminal', title: '', x: 0, y: 0, w: 1, h: 1, cwd: '/repo/apps' },
+                            { id: 'b', kind: 'terminal', title: '', x: 0, y: 0, w: 1, h: 1, cwd: '/repo' },
+                            { id: 'c', kind: 'terminal', title: '', x: 0, y: 0, w: 1, h: 1, cwd: '/elsewhere' },
+                            { id: 'd', kind: 'chat', title: '', x: 0, y: 0, w: 1, h: 1 }
+                        ],
+                        texts: [],
+                        edges: [],
+                        layouts: []
+                    },
+                    { kind: 'terminal', id: 'e', name: 'deploy', node: { cwd: '/repo/apps/server' } }
+                ]
             },
             '/repo'
         );
-        expect(portable.nodes.map((node) => node.cwd)).toEqual(['./apps', '.', '/elsewhere', undefined]);
-        expect(fromPortable(portable, '/repo').nodes.map((node) => node.cwd)).toEqual(['/repo/apps', '/repo', '/elsewhere', undefined]);
+        expect(canvas(portable).nodes.map((node) => node.cwd)).toEqual(['./apps', '.', '/elsewhere', undefined]);
+        // A standalone view carries a folder too, and travels the same way.
+        expect(portable.views[1]).toMatchObject({ node: { cwd: './apps/server' } });
+        const back = fromPortable(portable, '/repo');
+        expect(canvas(back).nodes.map((node) => node.cwd)).toEqual(['/repo/apps', '/repo', '/elsewhere', undefined]);
+        expect(back.views[1]).toMatchObject({ node: { cwd: '/repo/apps/server' } });
     });
 });

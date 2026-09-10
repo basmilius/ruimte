@@ -1,6 +1,7 @@
-import type { ContextSource } from '@ruimte/contracts';
+import { isCanvasView, type ContextSource } from '@ruimte/contracts';
 import { deriveContextSources } from '@/context/sources';
 import { useCanvas } from '@/state/canvas';
+import { useDocument } from '@/state/document';
 import { transport } from '@/transport';
 
 const SETTLE_MS = 300;
@@ -8,10 +9,29 @@ const SETTLE_MS = 300;
 /* Whether this node has readable context linked into it, as one boolean for a header; the same rule `contextSources` applies. */
 export const useHasContextLinks = (id: string): boolean => useCanvas((s) => (deriveContextSources(s.nodes, s.texts, s.edges).get(id)?.length ?? 0) > 0);
 
-/* What every agent node may read right now, derived from the edges into it. */
+const byId = <T extends { id: string }>(items: T[]): Record<string, T> => Object.fromEntries(items.map((item) => [item.id, item]));
+
+/*
+ * What every agent node of the project may read right now, over every view: an agent on a canvas
+ * that is not on screen keeps the lines drawn into it, so switching views may not clear its context.
+ */
 export const contextSources = (): Map<string, ContextSource[]> => {
-    const { edges, nodes, texts } = useCanvas.getState();
-    return deriveContextSources(nodes, texts, edges);
+    const merged = new Map<string, ContextSource[]>();
+    const canvas = useCanvas.getState();
+    const { views } = useDocument.getState();
+    for (const view of views) {
+        if (!isCanvasView(view)) {
+            continue;
+        }
+        const derived =
+            view.id === canvas.viewId
+                ? deriveContextSources(canvas.nodes, canvas.texts, canvas.edges)
+                : deriveContextSources(byId(view.nodes), byId(view.texts), view.edges);
+        for (const [targetId, sources] of derived) {
+            merged.set(targetId, sources);
+        }
+    }
+    return merged;
 };
 
 /*
@@ -59,6 +79,11 @@ export const startContextSync = (): (() => void) => {
             schedule();
         }
     });
+    const offDocument = useDocument.subscribe((state, previous) => {
+        if (state.views !== previous.views || state.activeViewId !== previous.activeViewId) {
+            schedule();
+        }
+    });
     const offStatus = transport.subscribeStatus((status) => {
         if (status === 'open') {
             sent = new Map();
@@ -70,6 +95,7 @@ export const startContextSync = (): (() => void) => {
     }
     return () => {
         offCanvas();
+        offDocument();
         offStatus();
         if (timer) {
             clearTimeout(timer);

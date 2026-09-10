@@ -45,7 +45,7 @@ describe('agent status via hooks', () => {
         expect(await harness.agents.read('s1')).toBeNull();
     });
 
-    test('a shell that dies under a live agent leaves an error status, and a new life offers a cold resume', async () => {
+    test('a shell that dies under a live agent leaves an exited status, and a new life offers a cold resume', async () => {
         const recorder = new Recorder();
         harness.manager.subscribe('c1', recorder.sink());
         const info = await create('s2');
@@ -56,7 +56,10 @@ describe('agent status via hooks', () => {
 
         harness.manager.write('s2', 'exit 3\n');
         await waitFor(() => recorder.exitOf('s2') !== undefined, 'exit');
-        expect(harness.manager.list()[0]?.agent).toMatchObject({ status: 'error', live: false });
+        expect(harness.manager.list()[0]?.agent).toMatchObject({ status: 'exited', live: false });
+        expect(recorder.statusesOf('s2')).toEqual(['running', 'exited']);
+        // The record outlives the shell: without it there is no id left to resume with.
+        expect(await harness.agents.read('s2')).toMatchObject({ agentSessionId: 'claude-1', status: 'exited', live: false });
         expect(info.pid).toBeGreaterThan(0);
 
         await create('s2');

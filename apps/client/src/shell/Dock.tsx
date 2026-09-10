@@ -18,14 +18,15 @@ import {
     X
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
+import { isCanvasView } from '@ruimte/contracts';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentNode } from '@/agents/nodes';
 import { activeZoomPreset, toWorld, ZOOM_PRESETS } from '@/canvas/math';
 import { LOCK_ROWS } from '@/canvas/locks';
 import { useCanvas, type NodeKind } from '@/state/canvas';
+import { activeViewOf, useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
-import { isApplePlatform } from '@/desktop/bridge';
-import { leaveNodeChordLabel } from '@/terminal/keymap';
+import { ModeChip } from '@/shell/ModeChip';
 import { StatusSummary } from '@/shell/StatusSummary';
 import { BTN_GROUP, FLOAT, MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
@@ -37,14 +38,20 @@ const centerWorld = () => {
     return toWorld(s.camera, { x: s.viewport.w / 2, y: s.viewport.h / 2 });
 };
 
+/*
+ * The canvas's own controls: zoom, locks, layouts and the plus that adds a node. A view of its own
+ * has no canvas under it, so the dock stays away there; its counters are the sidebar's "Needs you"
+ * section, and the way out of a body is Escape, the chord a terminal uses, or its row in the list.
+ */
 export function Dock() {
-    const { zoom, mode, locks, focusedTitle, focusedKind, hasSelection, layouts } = useCanvas(
+    const onCanvas = useDocument((s) => {
+        const view = activeViewOf(s);
+        return view === null || isCanvasView(view);
+    });
+    const { zoom, locks, hasSelection, layouts } = useCanvas(
         useShallow((s) => ({
             zoom: s.camera.zoom,
-            mode: s.mode.kind,
             locks: s.locks,
-            focusedTitle: s.mode.kind === 'node' ? s.nodes[s.mode.nodeId]?.title : null,
-            focusedKind: s.mode.kind === 'node' ? s.nodes[s.mode.nodeId]?.kind : null,
             hasSelection: s.selection.length > 0,
             layouts: s.layouts
         }))
@@ -58,38 +65,13 @@ export function Dock() {
         useCanvas.getState().addNode(kind, centerWorld());
     };
 
+    if (!onCanvas) {
+        return null;
+    }
     return (
         <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
             <div className={`${FLOAT} pointer-events-auto flex items-center gap-2 rounded-xl p-1`}>
-                {/* In node mode the chip is the pointer's way out; on the canvas there is nothing to
-                    leave, so it stays a label. A terminal hands Escape to the program it runs, which
-                    is why the way out is a chord there and plain Escape everywhere else. */}
-                <Tooltip
-                    label={
-                        mode !== 'node'
-                            ? 'Keyboard goes to the canvas'
-                            : focusedKind === 'terminal'
-                              ? 'Keyboard goes to this terminal, Escape included. Click to return to the canvas.'
-                              : 'Keyboard goes to this node. Click to return to the canvas.'
-                    }
-                    kbd={mode === 'node' ? (focusedKind === 'terminal' ? leaveNodeChordLabel(isApplePlatform()) : 'Esc') : undefined}
-                >
-                    {mode === 'node' ? (
-                        <button
-                            className="flex h-8 items-center gap-1.5 rounded-lg bg-accent-soft px-2.5 text-xs font-medium text-accent"
-                            aria-label={`Leave ${focusedTitle ?? 'this node'} and return to the canvas`}
-                            onClick={() => useCanvas.getState().exitNode()}
-                        >
-                            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                            <span className="max-w-40 truncate">{focusedTitle}</span>
-                        </button>
-                    ) : (
-                        <div className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-text-muted">
-                            <span className="h-1.5 w-1.5 rounded-full bg-text-faint" />
-                            Canvas
-                        </div>
-                    )}
-                </Tooltip>
+                <ModeChip />
                 <Separator />
                 <StatusSummary />
 
@@ -136,7 +118,7 @@ export function Dock() {
                     </Tooltip>
                     <Menu.Root>
                         <Tooltip label="Zoom presets">
-                            <Menu.Trigger className="h-8 min-w-14 rounded-lg px-1 text-xs tabular-nums text-text-muted hover:bg-surface-sunken hover:text-text data-[popup-open]:bg-surface-sunken data-[popup-open]:text-text">
+                            <Menu.Trigger className="h-8 min-w-14 rounded-lg px-1 text-xs tabular-nums text-text-muted hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active data-[popup-open]:text-text">
                                 {zoomPct}%
                             </Menu.Trigger>
                         </Tooltip>
@@ -246,7 +228,7 @@ export function Dock() {
                                             <Tooltip label="Delete" name>
                                                 <span
                                                     role="button"
-                                                    className="ml-auto grid h-5 w-5 place-items-center rounded text-text-faint opacity-0 hover:bg-surface-sunken hover:text-text group-hover:opacity-100 group-data-[highlighted]:opacity-100"
+                                                    className="ml-auto grid h-5 w-5 place-items-center rounded text-text-faint opacity-0 hover:bg-surface-hover hover:text-text group-hover:opacity-100 group-data-[highlighted]:opacity-100"
                                                     onClick={(e) => {
                                                         // The row applies; only the corner deletes.
                                                         e.stopPropagation();

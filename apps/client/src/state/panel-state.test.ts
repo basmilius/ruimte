@@ -12,7 +12,9 @@ const defaults: PanelsState = {
     expandedDirs: [],
     gitScope: 'worktree',
     gitCollapsedDirs: [],
-    gitLogHeight: 200
+    gitLogHeight: 200,
+    sidebarExpanded: null,
+    favicons: {}
 };
 
 const full: PanelsState = {
@@ -35,7 +37,9 @@ const full: PanelsState = {
     expandedDirs: ['src/', 'src/state/'],
     gitScope: 'base',
     gitCollapsedDirs: ['src', 'src/state'],
-    gitLogHeight: 260
+    gitLogHeight: 260,
+    sidebarExpanded: ['main', 'notes'],
+    favicons: { 'browser-1': 'https://bas.dev/favicon.ico' }
 };
 
 describe('panels in the machine-local file', () => {
@@ -78,9 +82,16 @@ describe('panels in the machine-local file', () => {
         expect(parsed.gitScope).toBe('worktree');
     });
 
+    test('a list nobody has folded stays out of the file, and so does an empty set of favicons', () => {
+        expect(serializePanels(defaults)).not.toHaveProperty('sidebarExpanded');
+        expect(serializePanels(defaults)).not.toHaveProperty('favicons');
+        expect(parsePanels({ sidebarExpanded: ['main'] }, defaults).sidebarExpanded).toEqual(['main']);
+        expect(parsePanels({ favicons: { a: 'https://bas.dev/favicon.ico' } }, defaults).favicons).toEqual({ a: 'https://bas.dev/favicon.ico' });
+    });
+
     test('the daemon takes what is serialized, and a file from before the panels still parses', () => {
-        const local = { camera: null, focusedNodeId: null, panels: serializePanels(full) };
+        const local = { activeViewId: 'main', views: {}, panels: serializePanels(full) };
         expect(ProjectLocalSchema.parse(local)).toEqual(local);
-        expect(ProjectLocalSchema.parse({ camera: null, focusedNodeId: 'n1' }).panels).toBeUndefined();
+        expect(ProjectLocalSchema.parse({ activeViewId: null, views: {} }).panels).toBeUndefined();
     });
 });

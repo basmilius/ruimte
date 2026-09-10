@@ -65,7 +65,7 @@ export function ProjectMenu() {
             return;
         }
         if (dialog.kind === 'new') {
-            void run(() => projectClient.createProject(value.trim() || 'Untitled canvas'));
+            void run(() => projectClient.createProject(value.trim() || 'Untitled project'));
         }
         if (dialog.kind === 'rename' && value.trim() !== '') {
             void run(() => projectClient.rename(value.trim()));
@@ -75,7 +75,7 @@ export function ProjectMenu() {
     return (
         <>
             <Menu.Root>
-                <Menu.Trigger className="flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-left hover:bg-surface-sunken data-[popup-open]:bg-surface-sunken">
+                <Menu.Trigger className="flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-left hover:bg-surface-hover data-[popup-open]:bg-surface-active">
                     {current ? (
                         <ProjectGlyph projectId={current.projectId} icon={current.icon} color={current.color} />
                     ) : (
@@ -113,7 +113,7 @@ export function ProjectMenu() {
                             ))}
                             {projects.length > 0 && <Menu.Separator className={MENU_SEPARATOR} />}
                             <Menu.Item className="menu-item" onClick={() => openDialog({ kind: 'new' })}>
-                                <Icon icon={Plus} size={14} /> New canvas
+                                <Icon icon={Plus} size={14} /> New project
                             </Menu.Item>
                             <Menu.Item className="menu-item" onClick={() => void openFolder()}>
                                 <Icon icon={FolderOpen} size={14} /> Open folder
@@ -159,14 +159,14 @@ export function ProjectMenu() {
                     <Dialog.Popup className="dialog-popup top-[24vh] w-[420px] p-5">
                         {dialog?.kind === 'new' && (
                             <>
-                                <Dialog.Title className="text-base font-semibold text-text">New canvas</Dialog.Title>
+                                <Dialog.Title className="text-base font-semibold text-text">New project</Dialog.Title>
                                 <p className="mt-1 text-xs text-text-muted">
-                                    Stored with the app, not in a folder. Open a folder instead to share it through git.
+                                    One canvas view to start with, stored with the app rather than in a folder. Open a folder instead to share it through git.
                                 </p>
                                 <input
                                     autoFocus
                                     className="field mt-3"
-                                    aria-label="Canvas name"
+                                    aria-label="Project name"
                                     placeholder="Name"
                                     value={value}
                                     onChange={(e) => setValue(e.target.value)}

@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
-import { Canvas } from '@/canvas/Canvas';
+import { WebviewParking } from '@/browser/WebviewParking';
 import { CommandPalette } from '@/shell/CommandPalette';
 import { LayoutDialog } from '@/shell/LayoutDialog';
+import { ViewDialogs } from '@/shell/ViewDialogs';
+import { ViewHost } from '@/shell/ViewHost';
 import { WorktreeDialog } from '@/shell/WorktreeDialog';
 import { Dock } from '@/shell/Dock';
 import { SettingsDialog } from '@/shell/SettingsDialog';
@@ -30,7 +32,8 @@ export function App() {
                     <div className="flex min-w-0 grow flex-col">
                         <Toolbar />
                         <div className="relative min-h-0 grow">
-                            <Canvas />
+                            <ViewHost />
+                            <WebviewParking />
                             <ProjectBanner />
                             <Dock />
                         </div>
@@ -42,6 +45,7 @@ export function App() {
             <CommandPalette />
             <SettingsDialog />
             <LayoutDialog />
+            <ViewDialogs />
             <WorktreeDialog />
             <Toasts />
         </TooltipProvider>

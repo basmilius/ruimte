@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { ContextMenu } from '@base-ui-components/react/context-menu';
 import clsx from 'clsx';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { Terminal } from '@xterm/xterm';
-import { RotateCw } from 'lucide-react';
-import { useCanvas } from '@/state/canvas';
+import { ClipboardPaste, Copy, Play, RotateCw, Scan } from 'lucide-react';
 import { useSessions } from '@/state/sessions';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
@@ -16,8 +16,11 @@ import { lastScreenOf, registerTerminal } from '@/terminal/registry';
 import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
 import { webglBudget } from '@/terminal/webgl-budget';
 import { useTransportStatus } from '@/transport/status';
-import { NodeNotice } from '@/canvas/nodes/NodeNotice';
+import { NodeNotice } from '@/nodes/NodeNotice';
+import { closeHost, readNodeHost, updateHost } from '@/nodes/node-host';
 import { Button } from '@/ui/Button';
+import { MENU_SEPARATOR } from '@/ui/classes';
+import { copyText, readClipboardText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
 
 const RESIZE_DEBOUNCE_MS = 50;
@@ -47,15 +50,19 @@ export function TerminalPlate({ id }: { id: string }) {
     return <div ref={ref} className="term-host overflow-hidden whitespace-pre bg-term-bg font-mono text-code leading-[1.2] text-term-dim" aria-hidden="true" />;
 }
 
-export function TerminalNode({ id, focused }: { id: string; focused: boolean }) {
+/* The body of a terminal, the same on a canvas inside a frame and filling a view of its own. */
+export function TerminalBody({ id, focused }: { id: string; focused: boolean }) {
     const hostRef = useRef<HTMLDivElement>(null);
     const termRef = useRef<Terminal | null>(null);
     const fitRef = useRef<FitAddon | null>(null);
     /* Bumped by Restart: the whole terminal is rebuilt around a fresh session. */
     const [generation, setGeneration] = useState(0);
     const [failure, setFailure] = useState<string | null>(null);
+    // Whether the terminal had a selection when its menu opened, which is what Copy goes on.
+    const [selected, setSelected] = useState(false);
     const status = useTransportStatus();
     const exited = useSessions((s) => s.byNodeId[id]?.exited);
+    const agentRecord = useSessions((s) => s.byNodeId[id]?.agent);
     const resolvedTheme = useTheme((t) => t.resolved);
     const settingsVersion = useSettings((s) => s.version);
 
@@ -126,13 +133,13 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
             term.write(screen);
         });
 
-        const node = useCanvas.getState().nodes[id];
-        // A node without its own directory starts in the project folder, like a terminal opened from the repo.
-        const cwd = node?.cwd ?? useProject.getState().current?.folder ?? undefined;
-        // An agent node says which CLI and how; the daemon turns that into the line the shell gets.
-        const agent = node?.provider ? { kind: node.provider, runtimeMode: node.runtimeMode, resume: node.resume } : undefined;
+        const spec = readNodeHost(id);
+        // A terminal without its own directory starts in the project folder, like one opened from the repo.
+        const cwd = spec?.cwd ?? useProject.getState().current?.folder ?? undefined;
+        // An agent says which CLI and how; the daemon turns that into the line the shell gets.
+        const agent = spec?.provider ? { kind: spec.provider, runtimeMode: spec.runtimeMode, resume: spec.resume } : undefined;
         sessionClient
-            .open(id, { cwd, command: node?.command, agent }, term.cols, term.rows)
+            .open(id, { cwd, command: spec?.command, agent }, term.cols, term.rows)
             .then((result) => {
                 if (!cancelled && result) {
                     term.write(result.screen);
@@ -219,11 +226,10 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
         setGeneration((g) => g + 1);
     };
 
-    const close = (): void => {
-        const canvas = useCanvas.getState();
-        canvas.select([id]);
-        canvas.deleteSelected();
-    };
+    // The shell is gone but the CLI's session is not: the daemon kept the id its own resume takes.
+    const resumable = exited !== undefined && agentRecord?.status === 'exited';
+
+    const close = (): void => closeHost(id);
 
     const restart = async (): Promise<void> => {
         try {
@@ -234,37 +240,84 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
         rebuild();
     };
 
+    /*
+     * The CLI went down with the shell without its hooks reporting an end. Its session id is the one
+     * thing worth keeping: on the node it survives a reload, and the daemon turns it into the CLI's
+     * own resume line when the fresh shell starts.
+     */
+    const resume = async (): Promise<void> => {
+        if (agentRecord) {
+            updateHost(id, { resume: agentRecord.agentSessionId });
+        }
+        await restart();
+    };
+
+    /* xterm keeps its selection to itself, so the rows ask the terminal instead of the document. */
+    const paste = async (): Promise<void> => {
+        const text = await readClipboardText();
+        if (text !== '') {
+            termRef.current?.paste(text);
+        }
+    };
+
     return (
-        <div className="absolute inset-0 bg-term-bg">
-            <div ref={hostRef} className="term-host" />
-            {status !== 'open' && (
-                <NodeNotice>
-                    {status === 'closed' ? (
-                        <>
-                            Not connected to the Ruimte server. Run <code className="font-mono text-text">bun run dev:server</code>.
-                        </>
-                    ) : (
-                        'Connecting to the Ruimte server'
-                    )}
-                </NodeNotice>
-            )}
-            {failure && (
-                <NodeNotice tone="error" onRetry={rebuild}>
-                    {failure}
-                </NodeNotice>
-            )}
-            {exited !== undefined && (
-                <div className="absolute inset-x-0 bottom-0 z-10 flex items-center gap-2 border-t border-border bg-surface-raised/90 px-3 py-1.5 font-mono text-xs text-term-dim">
-                    {/* A shell that ended on its own reads as a footnote; a non-zero code is news. */}
-                    <span className={clsx('grow', exited !== 0 && 'text-status-error')}>[process exited with code {exited}]</span>
-                    <Button size="sm" variant="secondary" onClick={() => void restart()}>
-                        <Icon icon={RotateCw} size={12} /> Restart
-                    </Button>
-                    <Button size="sm" onClick={close}>
-                        Close node
-                    </Button>
-                </div>
-            )}
-        </div>
+        <ContextMenu.Root onOpenChange={(open) => setSelected(open && (termRef.current?.hasSelection() ?? false))}>
+            <ContextMenu.Trigger className="absolute inset-0 bg-term-bg">
+                <div ref={hostRef} className="term-host" />
+                {status !== 'open' && (
+                    <NodeNotice>
+                        {status === 'closed' ? (
+                            <>
+                                Not connected to the Ruimte server. Run <code className="font-mono text-text">bun run dev:server</code>.
+                            </>
+                        ) : (
+                            'Connecting to the Ruimte server'
+                        )}
+                    </NodeNotice>
+                )}
+                {failure && (
+                    <NodeNotice tone="error" onRetry={rebuild}>
+                        {failure}
+                    </NodeNotice>
+                )}
+                {exited !== undefined && (
+                    <div className="absolute inset-x-0 bottom-0 z-10 flex items-center gap-2 border-t border-border bg-surface-raised/90 px-3 py-1.5 font-mono text-xs text-term-dim">
+                        {/* A shell that ended on its own reads as a footnote; a non-zero code is news. */}
+                        {resumable ? (
+                            <span className="grow">[session ended]</span>
+                        ) : (
+                            <span className={clsx('grow', exited !== 0 && 'text-status-error')}>[process exited with code {exited}]</span>
+                        )}
+                        {resumable && (
+                            <Button size="sm" onClick={() => void resume()}>
+                                <Icon icon={Play} size={12} /> Resume
+                            </Button>
+                        )}
+                        <Button size="sm" variant="secondary" onClick={() => void restart()}>
+                            <Icon icon={RotateCw} size={12} /> Restart
+                        </Button>
+                        <Button size="sm" onClick={close}>
+                            Close
+                        </Button>
+                    </div>
+                )}
+            </ContextMenu.Trigger>
+            <ContextMenu.Portal>
+                <ContextMenu.Positioner className="z-[var(--z-popup)]">
+                    <ContextMenu.Popup className="menu-popup">
+                        <ContextMenu.Item className="menu-item" disabled={!selected} onClick={() => copyText(termRef.current?.getSelection() ?? '')}>
+                            <Icon icon={Copy} size={14} /> Copy
+                        </ContextMenu.Item>
+                        <ContextMenu.Item className="menu-item" onClick={() => void paste()}>
+                            <Icon icon={ClipboardPaste} size={14} /> Paste
+                        </ContextMenu.Item>
+                        <ContextMenu.Separator className={MENU_SEPARATOR} />
+                        <ContextMenu.Item className="menu-item" onClick={() => termRef.current?.selectAll()}>
+                            <Icon icon={Scan} size={14} /> Select all
+                        </ContextMenu.Item>
+                    </ContextMenu.Popup>
+                </ContextMenu.Positioner>
+            </ContextMenu.Portal>
+        </ContextMenu.Root>
     );
 }

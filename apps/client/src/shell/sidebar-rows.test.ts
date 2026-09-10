@@ -1,38 +1,94 @@
 import { describe, expect, test } from 'bun:test';
-import type { AgentStatus } from '@/state/canvas';
-import { groupRows, rowAfterArrow, rowOrder } from './sidebar-rows';
+import type { AgentStatus } from '@ruimte/contracts';
+import { buildSidebar, heaviestStatus, rowAfterArrow, rowOrder, type SidebarNode, type SidebarView } from './sidebar-rows';
 
-interface Row {
-    id: string;
-    status: AgentStatus | null;
-}
+const node = (id: string, status: AgentStatus | null = null): SidebarNode => ({ id, title: id, kind: 'terminal', provider: null, status, draft: false });
 
-const rows: Row[] = [
-    { id: 'idle-1', status: 'idle' },
-    { id: 'plain', status: null },
-    { id: 'waiting', status: 'needs-you' },
-    { id: 'busy', status: 'running' },
-    { id: 'idle-2', status: 'idle' }
-];
+const view = (id: string, nodes: SidebarNode[] = []): SidebarView => ({ id, name: id, kind: 'canvas', provider: null, nodes, self: null });
 
-const statusOf = (row: Row): AgentStatus | null => row.status;
+const separator = (id: string): SidebarView => ({ id, name: '', kind: 'separator', provider: null, nodes: [], self: null });
 
-describe('groupRows', () => {
-    test('groups by status, most urgent first, and drops the empty groups', () => {
-        const groups = groupRows(rows, statusOf);
-        expect(groups.map((group) => group.status)).toEqual(['needs-you', 'running', 'idle', 'none']);
-        expect(groups[2]!.rows.map((row) => row.id)).toEqual(['idle-1', 'idle-2']);
+const standalone = (id: string, status: AgentStatus | null = null): SidebarView => ({
+    id,
+    name: id,
+    kind: 'chat',
+    provider: null,
+    nodes: [],
+    self: { id, title: id, kind: 'chat', provider: null, status, draft: true }
+});
+
+const backend = view('backend', [node('shell'), node('claude', 'needs-you'), node('docs', 'running')]);
+const frontend = view('frontend', [node('composer', 'idle')]);
+
+const build = (views: SidebarView[], activeViewId: string | null, expanded: string[]) => buildSidebar({ views, activeViewId, expandedIds: new Set(expanded) });
+
+describe('buildSidebar', () => {
+    test('the views come in project order, with the nodes of the canvas that is open under it', () => {
+        const [needs, list] = build([backend, frontend], 'backend', ['backend']);
+        expect(needs!.label).toBe('Needs you');
+        expect(list!.rows.map((row) => row.rowId)).toEqual(['view:backend', 'node:backend:shell', 'node:backend:claude', 'node:backend:docs', 'view:frontend']);
     });
 
-    test('leaves out a group nothing sits in', () => {
-        const groups = groupRows([{ id: 'only', status: 'running' }], statusOf);
-        expect(groups.map((group) => group.label)).toEqual(['Running']);
+    test('an agent that waits shows up top with the view it lives in named', () => {
+        const [needs] = build([frontend, backend], 'frontend', ['frontend']);
+        expect(needs!.rows).toHaveLength(1);
+        expect(needs!.rows[0]).toMatchObject({ rowId: 'needs:claude', viewName: 'backend' });
+    });
+
+    test('the section disappears when nothing waits', () => {
+        const sections = build([frontend], 'frontend', ['frontend']);
+        expect(sections.map((section) => section.id)).toEqual(['views']);
+    });
+
+    test('a folded canvas keeps its count and the heaviest status of what it holds', () => {
+        const [, list] = build([backend, frontend], 'frontend', ['frontend']);
+        expect(list!.rows[0]).toMatchObject({ rowId: 'view:backend', expanded: false, expandable: true, count: 3, status: 'needs-you' });
+        expect(list!.rows[0]).toMatchObject({ active: false });
+        expect(list!.rows[1]).toMatchObject({ rowId: 'view:frontend', active: true, expanded: true });
+    });
+
+    test('an empty canvas has nothing to unfold', () => {
+        const [list] = build([view('empty')], 'empty', ['empty']);
+        expect(list!.rows[0]).toMatchObject({ expandable: false, expanded: false, count: 0, status: null });
+    });
+
+    test('a separator is a row with nothing behind it, and never the current one', () => {
+        const [list] = build([separator('gap'), frontend], 'frontend', ['frontend']);
+        expect(list!.rows[0]).toMatchObject({ rowId: 'view:gap', index: 0, active: false, expandable: false, count: 0, status: null, draft: false });
+        expect(list!.rows[1]).toMatchObject({ rowId: 'view:frontend', index: 1, active: true });
+    });
+
+    test('every view row knows where it sits in the project list', () => {
+        const [, list] = build([backend, separator('gap'), frontend], 'backend', ['backend']);
+        const views = list!.rows.filter((row) => row.type === 'view');
+        expect(views.map((row) => row.index)).toEqual([0, 1, 2]);
+    });
+
+    test('a view that is one node carries that node on its own row and never unfolds', () => {
+        const [needs, list] = build([standalone('auth', 'needs-you'), frontend], 'frontend', ['frontend']);
+        expect(needs!.rows[0]).toMatchObject({ rowId: 'needs:auth', viewName: 'auth' });
+        expect(list!.rows[0]).toMatchObject({ rowId: 'view:auth', expandable: false, count: 0, status: 'needs-you', draft: true });
+    });
+});
+
+describe('heaviestStatus', () => {
+    test('what waits beats what failed, what failed beats what runs', () => {
+        expect(heaviestStatus([node('a', 'running'), node('b', 'needs-you'), node('c', 'error')])).toBe('needs-you');
+        expect(heaviestStatus([node('a', 'running'), node('b', 'error')])).toBe('error');
+        expect(heaviestStatus([node('a', 'idle'), node('b', null)])).toBe('idle');
+        expect(heaviestStatus([node('a')])).toBeNull();
     });
 });
 
 describe('rowOrder', () => {
-    test('reads the groups top to bottom', () => {
-        expect(rowOrder(groupRows(rows, statusOf))).toEqual(['waiting', 'busy', 'idle-1', 'idle-2', 'plain']);
+    test('reads the sections top to bottom, the waiting rows first', () => {
+        expect(rowOrder(build([backend], 'backend', ['backend']))).toEqual([
+            'needs:claude',
+            'view:backend',
+            'node:backend:shell',
+            'node:backend:claude',
+            'node:backend:docs'
+        ]);
     });
 });
 

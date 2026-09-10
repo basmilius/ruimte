@@ -1,7 +1,9 @@
-import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
-import { addAgentNode, type AgentTarget } from '@/agents/nodes';
+import { isCanvasView, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
+import { addAgentNode, addAgentView, type AgentTarget } from '@/agents/nodes';
 import { toWorld } from '@/canvas/math';
+import { askDeleteView, askOpenAsView, askRenameView, canOpenAsView, newCanvasView, newSeparatorView, newTerminalView, putOnCanvas } from '@/project/views';
 import { useCanvas, type AddNodeOptions, type NodeKind } from '@/state/canvas';
+import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useProviders } from '@/state/providers';
 import { fileManagerName, useServer } from '@/state/server';
@@ -34,20 +36,55 @@ export const addNodeAtCenter = (kind: NodeKind, options?: AddNodeOptions): strin
 const agentCommands = (target: AgentTarget, providers: ProviderInfo[]): Command[] =>
     providers
         .filter((provider) => provider.capabilities[target])
-        .map((provider) => ({
-            id: `agent-${target}-${provider.kind}`,
-            label: `New ${provider.name} ${target}`,
-            hint: provider.installed ? undefined : 'Not installed',
-            agent: provider.kind,
-            run: () =>
-                provider.installed ? void addAgentNode(target, provider, centerWorld()) : useUi.getState().setSettings({ open: true, section: 'agents' })
+        .flatMap((provider) => {
+            const missing = (): void => useUi.getState().setSettings({ open: true, section: 'agents' });
+            return [
+                {
+                    id: `agent-${target}-${provider.kind}`,
+                    label: `New ${provider.name} ${target}`,
+                    hint: provider.installed ? undefined : 'Not installed',
+                    agent: provider.kind,
+                    run: () => (provider.installed ? void addAgentNode(target, provider, centerWorld()) : missing())
+                },
+                {
+                    id: `agent-view-${target}-${provider.kind}`,
+                    label: `New ${provider.name} ${target} view`,
+                    hint: provider.installed ? 'Without a canvas' : 'Not installed',
+                    agent: provider.kind,
+                    run: () => (provider.installed ? void addAgentView(target, provider) : missing())
+                }
+            ];
+        });
+
+/*
+ * Moving a node to another view is one command per target: the palette has no second step, and a
+ * project rarely has enough views for that to grow long.
+ */
+const moveNodeCommands = (): Command[] => {
+    const { selection, nodes } = useCanvas.getState();
+    const node = selection.length === 1 ? nodes[selection[0]!] : undefined;
+    if (!node || node.kind === 'group') {
+        return [];
+    }
+    const { views, activeViewId } = useDocument.getState();
+    return views
+        .filter((view) => isCanvasView(view) && view.id !== activeViewId)
+        .map((view) => ({
+            id: `view-move-${view.id}`,
+            label: `Move node to ${view.name}`,
+            hint: node.title,
+            run: () => useDocument.getState().moveNodeToView(node.id, view.id)
         }));
+};
 
 /* Everything the palette can do besides jumping to a node. One list, so the dock and the keys agree. */
 export const appCommands = (): Command[] => {
     const canvas = useCanvas.getState();
     const anyLocked = Object.values(canvas.locks).some(Boolean);
     const folder = useProject.getState().current?.folder ?? null;
+    const { activeViewId, views } = useDocument.getState();
+    const activeView = views.find((view) => view.id === activeViewId) ?? null;
+    const selected = canvas.selection.length === 1 ? canvas.nodes[canvas.selection[0]!] : undefined;
     return [
         { id: 'open-folder', label: 'Open a folder as a project', hint: 'Type a path', run: () => useUi.getState().openPalette('~/') },
         ...(folder
@@ -59,6 +96,27 @@ export const appCommands = (): Command[] => {
                   }
               ]
             : []),
+        { id: 'view-new', label: 'New canvas view', shortcut: '⌘T', run: () => void newCanvasView() },
+        ...(activeViewId
+            ? [
+                  { id: 'view-rename', label: 'Rename view', run: () => askRenameView(activeViewId) },
+                  { id: 'view-delete', label: 'Delete view', run: () => askDeleteView(activeViewId) }
+              ]
+            : []),
+        { id: 'view-new-terminal', label: 'New terminal view', run: () => void newTerminalView() },
+        { id: 'view-new-separator', label: 'New separator', run: () => void newSeparatorView() },
+        {
+            id: 'view-new-browser',
+            label: 'New browser view',
+            run: () => useUi.getState().setViewDialog({ kind: 'new-browser' })
+        },
+        ...(selected && canOpenAsView(selected.kind)
+            ? [{ id: 'view-promote', label: 'Open as view', hint: selected.title, run: () => askOpenAsView(selected.id) }]
+            : []),
+        ...(activeView && !isCanvasView(activeView)
+            ? [{ id: 'view-demote', label: 'Put on canvas', hint: activeView.name, run: () => void putOnCanvas(activeView.id) }]
+            : []),
+        ...moveNodeCommands(),
         { id: 'add-terminal', label: 'New terminal', shortcut: '⌥T', run: () => void addNodeAtCenter('terminal') },
         { id: 'add-chat', label: 'New chat', shortcut: '⌥C', run: () => void addNodeAtCenter('chat') },
         ...agentCommands('chat', useProviders.getState().providers),
