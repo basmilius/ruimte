@@ -63,3 +63,65 @@ export const toplevel = async (cwd: string): Promise<string> => {
     }
     return top;
 };
+
+export interface StreamOptions {
+    env?: Record<string, string>;
+    /* Every line git wrote, stdout and stderr both, trimmed and never empty. */
+    onLine?(line: string): void;
+    /* The process itself, so a caller that has to cancel can kill it. */
+    onSpawn?(kill: () => void): void;
+}
+
+/*
+ * Git writes its progress to stderr, one carriage return at a time, so the reader splits on both
+ * line endings and hands every line on while the command runs. Everything it wrote is answered as
+ * well: a failure is only readable with its whole output, not with the last line of it.
+ */
+const pump = async (stream: ReadableStream<Uint8Array>, onLine: (line: string) => void): Promise<string> => {
+    const decoder = new TextDecoder();
+    let pending = '';
+    let whole = '';
+    for await (const chunk of stream) {
+        const text = decoder.decode(chunk, { stream: true });
+        whole += text;
+        pending += text;
+        const lines = pending.split(/\r\n|\r|\n/);
+        pending = lines.pop() ?? '';
+        for (const line of lines) {
+            if (line.trim() !== '') {
+                onLine(line.trim());
+            }
+        }
+    }
+    if (pending.trim() !== '') {
+        onLine(pending.trim());
+    }
+    return whole;
+};
+
+/*
+ * One git call whose output is read while it runs, for the actions the panel takes: a push over a
+ * slow link says where it is long before it is over. No shell anywhere, the arguments are a list.
+ * `GIT_TERMINAL_PROMPT` keeps a credential prompt from stalling the daemon on a socket nobody can
+ * type into, and `LC_ALL` keeps the words a summary reads for the ones git writes in C.
+ */
+export const streamCommand = async (command: string, args: string[], cwd: string, options: StreamOptions = {}): Promise<GitResult> => {
+    const onLine = options.onLine ?? ((): void => undefined);
+    let proc;
+    try {
+        proc = Bun.spawn([command, ...args], {
+            cwd,
+            env: { ...process.env, GIT_TERMINAL_PROMPT: '0', LC_ALL: 'C', ...options.env },
+            stdin: 'ignore',
+            stdout: 'pipe',
+            stderr: 'pipe'
+        });
+    } catch {
+        return { code: 128, stdout: '', stderr: `${command} could not be started` };
+    }
+    options.onSpawn?.(() => proc.kill());
+    const [stdout, stderr, code] = await Promise.all([pump(proc.stdout, onLine), pump(proc.stderr, onLine), proc.exited]);
+    return { code, stdout, stderr };
+};
+
+export const streamGit = (args: string[], cwd: string, options: StreamOptions = {}): Promise<GitResult> => streamCommand('git', args, cwd, options);

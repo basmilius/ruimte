@@ -54,6 +54,21 @@ export class ProviderRegistry {
         return this.providers.find((provider) => provider.kind === kind) ?? providerFor(kind);
     }
 
+    /*
+     * The CLI that answers a single prompt here: the one asked for when it is installed, else the
+     * first installed provider that can, in the order the catalog lists them. Null on a machine
+     * with none, which is what hides the button that would ask.
+     */
+    async oneShotProvider(preferred?: AgentKind): Promise<ChatProvider | null> {
+        const order = preferred ? [this.get(preferred), ...this.providers] : this.providers;
+        for (const provider of order) {
+            if (provider.oneShotArgs && (await this.detection(provider)).installed) {
+                return provider;
+            }
+        }
+        return null;
+    }
+
     catalogFor(kind: AgentKind): ModelCatalog {
         return this.get(kind).catalog;
     }
