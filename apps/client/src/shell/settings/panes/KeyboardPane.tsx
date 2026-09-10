@@ -38,7 +38,7 @@ export function KeyboardPane() {
                     </button>
                 )}
             </div>
-            {visible.length === 0 && <p className="px-1 text-xs text-text-muted">Nothing matches "{query.trim()}".</p>}
+            {visible.length === 0 && <p className="text-xs text-text-muted">Nothing matches "{query.trim()}".</p>}
             {visible.map((group) => (
                 <SettingsSection key={group.title} title={group.title}>
                     {group.shortcuts.map((shortcut, index) => (
@@ -46,7 +46,7 @@ export function KeyboardPane() {
                     ))}
                 </SettingsSection>
             ))}
-            <p className="px-1 text-xs text-text-faint">On Windows and Linux, ⌘ is Ctrl and ⌥ is Alt.</p>
+            <p className="text-xs text-text-faint">On Windows and Linux, ⌘ is Ctrl and ⌥ is Alt.</p>
         </>
     );
 }

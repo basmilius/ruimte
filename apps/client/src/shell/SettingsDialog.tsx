@@ -48,7 +48,7 @@ export function SettingsDialog() {
                         className="flex min-h-0 grow"
                     >
                         <div className="flex w-48 shrink-0 flex-col gap-3 border-r border-border bg-surface p-3">
-                            <Dialog.Title className="px-2.5 pt-1 text-base font-semibold text-text">Settings</Dialog.Title>
+                            <Dialog.Title className="px-2.5 pt-2 text-base font-semibold text-text">Settings</Dialog.Title>
                             <SettingsNav />
                         </div>
                         {/* The header sits outside the panels: inside one it remounts on every section
