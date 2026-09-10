@@ -24,6 +24,8 @@ import { activeZoomPreset, toWorld, ZOOM_PRESETS } from '@/canvas/math';
 import { LOCK_ROWS } from '@/canvas/locks';
 import { useCanvas, type NodeKind } from '@/state/canvas';
 import { useUi } from '@/state/ui';
+import { isApplePlatform } from '@/desktop/bridge';
+import { leaveNodeChordLabel } from '@/terminal/keymap';
 import { StatusSummary } from '@/shell/StatusSummary';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
@@ -34,12 +36,13 @@ const centerWorld = () => {
 };
 
 export function Dock() {
-    const { zoom, mode, locks, focusedTitle, hasSelection, layouts } = useCanvas(
+    const { zoom, mode, locks, focusedTitle, focusedKind, hasSelection, layouts } = useCanvas(
         useShallow((s) => ({
             zoom: s.camera.zoom,
             mode: s.mode.kind,
             locks: s.locks,
             focusedTitle: s.mode.kind === 'node' ? s.nodes[s.mode.nodeId]?.title : null,
+            focusedKind: s.mode.kind === 'node' ? s.nodes[s.mode.nodeId]?.kind : null,
             hasSelection: s.selection.length > 0,
             layouts: s.layouts
         }))
@@ -56,11 +59,18 @@ export function Dock() {
     return (
         <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
             <div className="float pointer-events-auto flex items-center gap-2 rounded-xl p-1">
-                {/* In node mode the chip is the pointer's way out, the same thing Escape does; on the
-                    canvas there is nothing to leave, so it stays a label. */}
+                {/* In node mode the chip is the pointer's way out; on the canvas there is nothing to
+                    leave, so it stays a label. A terminal hands Escape to the program it runs, which
+                    is why the way out is a chord there and plain Escape everywhere else. */}
                 <Tooltip
-                    label={mode === 'node' ? 'Keyboard goes to this node. Click to return to the canvas.' : 'Keyboard goes to the canvas'}
-                    kbd={mode === 'node' ? 'Esc' : undefined}
+                    label={
+                        mode !== 'node'
+                            ? 'Keyboard goes to the canvas'
+                            : focusedKind === 'terminal'
+                              ? 'Keyboard goes to this terminal, Escape included. Click to return to the canvas.'
+                              : 'Keyboard goes to this node. Click to return to the canvas.'
+                    }
+                    kbd={mode === 'node' ? (focusedKind === 'terminal' ? leaveNodeChordLabel(isApplePlatform()) : 'Esc') : undefined}
                 >
                     {mode === 'node' ? (
                         <button

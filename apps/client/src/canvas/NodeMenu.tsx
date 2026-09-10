@@ -106,7 +106,11 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                     {node.kind === 'terminal' && (
                         <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().updateNode(id, { escapeToApp: !node.escapeToApp })}>
                             <Icon icon={Keyboard} size={14} /> Send Escape to the app
-                            {node.escapeToApp ? <Icon icon={Check} size={14} className="ml-auto" /> : <span className="menu-hint">⌘Esc leaves</span>}
+                            {node.escapeToApp ? (
+                                <Icon icon={Check} size={14} className="ml-auto" />
+                            ) : (
+                                <span className="menu-hint">Escape goes there anyway</span>
+                            )}
                         </ContextMenu.Item>
                     )}
                     {node.kind === 'terminal' && canOpenInChat && (

@@ -6,6 +6,8 @@ import { AgentIcon } from '@/agents/AgentIcon';
 import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
 import { useHasContextLinks } from '@/context/sync';
+import { isApplePlatform } from '@/desktop/bridge';
+import { leaveNodeChordLabel } from '@/terminal/keymap';
 import { NODE_ACCENTS } from '@/canvas/accents';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { Pill } from '@/ui/Pill';
@@ -191,7 +193,9 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         </Tooltip>
                     )}
                     {node.kind === 'terminal' && node.escapeToApp && !renaming && (
-                        <Tooltip label="Escape goes to the program in this terminal; click to turn off. Leave the node with" kbd="⌘Esc / ⌃Esc">
+                        <Tooltip
+                            label={`Escape reaches the program in every terminal now, so this chip is a leftover: click to clear it. Leaving the node is ${leaveNodeChordLabel(isApplePlatform())}.`}
+                        >
                             <Pill icon={<Icon icon={Keyboard} size={12} />} onClick={() => useCanvas.getState().updateNode(id, { escapeToApp: false })}>
                                 Esc
                             </Pill>
