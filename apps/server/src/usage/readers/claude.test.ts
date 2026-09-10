@@ -44,8 +44,14 @@ describe('the Claude reader', () => {
     });
 
     test('reads a field that is missing or nonsense as zero', () => {
-        const record = parseClaudeLine(line({ usage: { input_tokens: -4, output_tokens: 'lots' } }));
-        expect(record?.totals).toEqual({ calls: 1, input: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, output: 0, reasoning: 0 });
+        const record = parseClaudeLine(line({ usage: { input_tokens: -4, output_tokens: 'lots', cache_read_input_tokens: 12 } }));
+        expect(record?.totals).toEqual({ calls: 1, input: 0, cacheRead: 12, cacheWrite: 0, cacheWrite1h: 0, output: 0, reasoning: 0 });
+    });
+
+    test('a line that never reached the API is not a call', () => {
+        // What Claude Code writes for an interruption or an error it answered itself.
+        expect(parseClaudeLine(line({ usage: usage(), model: '<synthetic>' }))).toBeNull();
+        expect(parseClaudeLine(line({ usage: { input_tokens: 0, output_tokens: 0 } }))).toBeNull();
     });
 
     test('folds the copies of one message into the largest value per field', () => {

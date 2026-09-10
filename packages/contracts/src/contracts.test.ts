@@ -380,6 +380,7 @@ describe('usage', () => {
         sessions: 2,
         scan: { at: 1_700_000_000_000, files: 1149, changedFiles: 3, durationMs: 84, running: false, failed: false },
         pricing: { source: 'litellm', fetchedAt: 1_700_000_000_000, models: 812 },
+        rate: { currency: 'EUR', rate: 0.857, date: '2026-09-10', fetchedAt: 1_700_000_000_000 },
         roots: [{ provider: 'claude', path: '/home/bas/.claude/projects', status: 'ok', message: null }]
     };
 
@@ -395,6 +396,9 @@ describe('usage', () => {
         expect(result.safeParse({ ...summary, models: [{ ...summary.models[0], costUsd: null, priceBasis: 'unknown', pricedAs: null }] }).success).toBe(true);
         expect(result.safeParse({ ...summary, buckets: [{ ...summary.buckets[0], provider: 'gemini' }] }).success).toBe(false);
         expect(result.safeParse({ ...summary, buckets: [{ ...summary.buckets[0], totals: { ...totals, output: -1 } }] }).success).toBe(false);
+        // A page without a rate shows dollars; a rate of zero would divide an amount away.
+        expect(result.safeParse({ ...summary, rate: null }).success).toBe(true);
+        expect(result.safeParse({ ...summary, rate: { ...summary.rate, rate: 0 } }).success).toBe(false);
     });
 
     test('a scan tells the page what to ask for next', () => {
