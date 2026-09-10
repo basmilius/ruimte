@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import type { ChatCheckpointDiff, ChatCheckpointFile } from '@ruimte/contracts';
+import { git } from './run.ts';
 
 // Beyond these a diff stops being something a person reads, and the chat file stops being small.
 const MAX_FILES = 100;
@@ -13,17 +14,6 @@ export interface CheckpointService {
     take(cwd: string): Promise<string | null>;
     diff(cwd: string, tree: string): Promise<ChatCheckpointDiff | null>;
 }
-
-const git = async (args: string[], cwd: string, env?: Record<string, string>): Promise<string | null> => {
-    const proc = Bun.spawn(['git', ...args], {
-        cwd,
-        env: env ? { ...process.env, ...env } : undefined,
-        stdout: 'pipe',
-        stderr: 'pipe'
-    });
-    const [stdout, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
-    return code === 0 ? stdout : null;
-};
 
 // One index per repository, and one turn at a time in it: two chats in the same folder would
 // otherwise fight over the lock file git writes next to it.

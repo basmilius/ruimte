@@ -18,6 +18,7 @@ import { Dispatcher, sendEvent, type ClientAccess, type ClientConnection } from 
 import { VERSION } from './version.ts';
 import { registerAuthHandlers } from './handlers/auth.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
+import { FolderWatcher } from './fs/watch.ts';
 import { registerFsHandlers } from './handlers/fs.ts';
 import { registerGitHandlers } from './handlers/git.ts';
 import { registerProjectHandlers } from './handlers/project.ts';
@@ -71,6 +72,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         contextSources: (chatId) => context.list(chatId)
     });
     const projects = new ProjectStore(config.home);
+    const folders = new FolderWatcher();
 
     const dispatcher = new Dispatcher();
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home });
@@ -89,7 +91,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }
         }
     });
-    registerFsHandlers(dispatcher);
+    registerFsHandlers(dispatcher, folders);
     registerGitHandlers(dispatcher, new Worktrees(config.home));
 
     if (config.installHooks) {
@@ -218,6 +220,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 const unsubscribeSessions = manager.subscribe(client.id, sink);
                 const unsubscribeChats = chats.subscribe(client.id, sink);
                 const unsubscribeProjects = projects.subscribe(client.id, sink);
+                const unsubscribeFolders = folders.subscribe(client.id, sink);
                 connections.set(ws, {
                     client,
                     gate,
@@ -225,6 +228,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                         unsubscribeSessions();
                         unsubscribeChats();
                         unsubscribeProjects();
+                        unsubscribeFolders();
                     }
                 });
             },
@@ -248,6 +252,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 // The sessions keep running; only this client's view of them goes.
                 manager.detachAll(state.client.id);
                 chats.detachAll(state.client.id);
+                folders.detachAll(state.client.id);
                 state.unsubscribe();
             }
         }
