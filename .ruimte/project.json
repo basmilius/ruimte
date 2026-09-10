@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "rev": 11,
+  "name": "ruimte",
+  "color": "#7c74ff",
+  "nodes": [
+    {
+      "id": "browser-8x6vy84f",
+      "kind": "browser",
+      "title": "Browser",
+      "x": -568,
+      "y": -88,
+      "w": 720,
+      "h": 480
+    },
+    {
+      "id": "terminal-gepojlyc",
+      "kind": "terminal",
+      "title": "Terminal",
+      "x": -584,
+      "y": -592,
+      "w": 560,
+      "h": 360
+    },
+    {
+      "id": "chat-heglurhw",
+      "kind": "chat",
+      "title": "Claude Code",
+      "x": -1560,
+      "y": -600,
+      "w": 896,
+      "h": 808,
+      "provider": "claude",
+      "providerFixed": true
+    }
+  ],
+  "texts": [],
+  "edges": [],
+  "layouts": []
+}
