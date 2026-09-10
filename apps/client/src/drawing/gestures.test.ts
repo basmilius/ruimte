@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { DrawingElementSchema } from '@ruimte/contracts';
 import { DEFAULT_STYLE } from '@/state/drawing';
 import { constrainAngle, lineElement, settleStroke, shapeElement, shapeRect, snapPoint, textElement } from './gestures';
 
@@ -78,5 +79,25 @@ describe('settling a stroke', () => {
         ]);
         expect(settled.w).toBeCloseTo(15.06, 2);
         expect(settled.h).toBe(40);
+    });
+
+    test('a stroke drawn with a mouse survives the trip over the wire', () => {
+        const settled = settleStroke({
+            kind: 'freehand',
+            id: 'el-1',
+            seed: 1,
+            x: 0,
+            y: 0,
+            w: 0,
+            h: 0,
+            stroke: 'ink',
+            strokeWidth: 2,
+            points: [
+                [0, 0],
+                [4, 8]
+            ]
+        });
+        // JSON writes an absent pressure as null, which is not a number the schema takes.
+        expect(DrawingElementSchema.safeParse(JSON.parse(JSON.stringify(settled))).success).toBe(true);
     });
 });

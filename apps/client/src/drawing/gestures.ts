@@ -109,6 +109,11 @@ export const settleStroke = (element: DrawingElement & { kind: 'freehand' }): Dr
         y: element.y + top,
         w: Math.max(...xs) - left,
         h: Math.max(...ys) - top,
-        points: element.points.map(([x, y, pressure]) => [round(x - left), round(y - top), pressure] as [number, number, number?])
+        // A mouse leaves no pressure, and an undefined third number is a null once the point is
+        // JSON on the wire, which is not a number the schema will take.
+        points: element.points.map(
+            ([x, y, pressure]) =>
+                (pressure === undefined ? [round(x - left), round(y - top)] : [round(x - left), round(y - top), pressure]) as [number, number, number?]
+        )
     };
 };
