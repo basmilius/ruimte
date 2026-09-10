@@ -28,6 +28,9 @@ import {
     ProjectSaveLocalPayloadSchema,
     ProjectSavePayloadSchema,
     ProjectSaveResultSchema,
+    ProjectSetIconPayloadSchema,
+    ProjectSummaryEventSchema,
+    ProjectSummaryResultSchema,
     ProjectTargetPayloadSchema
 } from './project.ts';
 import { ServerHelloPayloadSchema, ServerHelloResultSchema } from './server.ts';
@@ -87,6 +90,7 @@ export const REQUEST_SCHEMAS = {
     'project.save': { payload: ProjectSavePayloadSchema, result: ProjectSaveResultSchema },
     'project.save-local': { payload: ProjectSaveLocalPayloadSchema, result: EmptySchema },
     'project.close': { payload: ProjectTargetPayloadSchema, result: EmptySchema },
+    'project.setIcon': { payload: ProjectSetIconPayloadSchema, result: ProjectSummaryResultSchema },
     'project.delete': { payload: ProjectDeletePayloadSchema, result: EmptySchema },
     'fs.browse': { payload: FsBrowsePayloadSchema, result: FsBrowseResultSchema },
     'fs.reveal': { payload: FsRevealPayloadSchema, result: EmptySchema },
@@ -118,7 +122,8 @@ export const EVENT_SCHEMAS = {
     'session.status': SessionStatusEventSchema,
     'session.list-changed': EmptySchema,
     'chat.event': ChatEventEnvelopeSchema,
-    'project.changed': ProjectChangedEventSchema
+    'project.changed': ProjectChangedEventSchema,
+    'project.summary': ProjectSummaryEventSchema
 } as const satisfies Record<string, z.ZodType>;
 
 export type EventType = keyof typeof EVENT_SCHEMAS;

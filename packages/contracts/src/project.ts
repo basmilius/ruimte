@@ -69,10 +69,86 @@ export const ProjectLayoutSchema = z.object({
 });
 export type ProjectLayout = z.infer<typeof ProjectLayoutSchema>;
 
+// The Lucide icons a project may pick from. Closed on purpose: the client maps a name to a
+// component, so a name it does not know would render nothing at all.
+export const PROJECT_ICON_NAMES = [
+    'box',
+    'boxes',
+    'package',
+    'layers',
+    'code',
+    'terminal',
+    'cpu',
+    'database',
+    'server',
+    'cloud',
+    'globe',
+    'rocket',
+    'zap',
+    'flame',
+    'sparkles',
+    'star',
+    'heart',
+    'flag',
+    'bookmark',
+    'folder',
+    'file-text',
+    'book',
+    'puzzle',
+    'palette',
+    'brush',
+    'camera',
+    'music',
+    'video',
+    'gamepad-2',
+    'bot',
+    'brain',
+    'beaker',
+    'wrench',
+    'hammer',
+    'shield',
+    'key',
+    'compass',
+    'map',
+    'leaf',
+    'coffee'
+] as const;
+
+// An emoji is a few code points at most; the cap keeps a pasted paragraph out of the file.
+export const PROJECT_ICON_EMOJI_MAX = 16;
+
+// What a person picked, in the shared file next to the name. An image is never a blob here:
+// it is a file at `.ruimte/icon.<ext>`, which the derived chain finds on its own.
+export const ProjectIconChoiceSchema = z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('emoji'), value: z.string().min(1).max(PROJECT_ICON_EMOJI_MAX) }),
+    z.object({ kind: z.literal('lucide'), value: z.enum(PROJECT_ICON_NAMES) })
+]);
+export type ProjectIconChoice = z.infer<typeof ProjectIconChoiceSchema>;
+
+/*
+ * What the client renders: the choice, or what the daemon derived from the folder. An image
+ * carries the path it was found at and a version that changes with the file, so the bytes come
+ * from `GET /projects/<id>/icon?v=<version>` and the browser cache can hold them forever.
+ */
+export const ProjectIconSchema = z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('emoji'), value: z.string() }),
+    z.object({ kind: z.literal('lucide'), value: z.enum(PROJECT_ICON_NAMES) }),
+    z.object({ kind: z.literal('image'), value: z.string(), version: z.string() }),
+    z.object({ kind: z.literal('initial'), value: z.string() })
+]);
+export type ProjectIcon = z.infer<typeof ProjectIconSchema>;
+
+// Where the name on screen came from: a person typed it, it is the folder's own name, or
+// `.idea/.name` declared it.
+export const ProjectNameSourceSchema = z.enum(['chosen', 'folder', 'idea']);
+export type ProjectNameSource = z.infer<typeof ProjectNameSourceSchema>;
+
 // What the person edits; the daemon wraps it with the version and the rev.
 export const ProjectContentSchema = z.object({
     name: z.string().min(1),
     color: z.string(),
+    // Absent means "show what the folder declares"; a file written before this existed parses fine.
+    icon: ProjectIconChoiceSchema.optional(),
     // In stacking order, back to front.
     nodes: z.array(ProjectNodeSchema),
     texts: z.array(ProjectTextSchema),
@@ -103,7 +179,10 @@ export const ProjectSummarySchema = z.object({
     folder: z.string().nullable(),
     lastOpenedAt: z.number(),
     // False when a folder project's file has gone missing since it was last seen.
-    available: z.boolean()
+    available: z.boolean(),
+    // The choice from the file, or what the folder declares, or the initial on the project color.
+    icon: ProjectIconSchema,
+    nameSource: ProjectNameSourceSchema
 });
 export type ProjectSummary = z.infer<typeof ProjectSummarySchema>;
 
@@ -163,3 +242,25 @@ export const ProjectChangedEventSchema = z.object({
     document: ProjectDocumentSchema
 });
 export type ProjectChangedEvent = z.infer<typeof ProjectChangedEventSchema>;
+
+// Writes or removes `.ruimte/icon.<ext>`; a null image deletes what is there. The bytes are
+// base64 because a JSON frame carries no binary, and the daemon checks them against its own cap.
+export const ProjectSetIconPayloadSchema = z.object({
+    projectId: ProjectIdSchema,
+    image: z
+        .object({
+            mime: z.string().min(1),
+            base64: z.string()
+        })
+        .nullable()
+});
+export type ProjectSetIconPayload = z.infer<typeof ProjectSetIconPayloadSchema>;
+
+export const ProjectSummaryResultSchema = z.object({
+    summary: ProjectSummarySchema
+});
+export type ProjectSummaryResult = z.infer<typeof ProjectSummaryResultSchema>;
+
+// The name, color, icon or availability of a project changed; too small to ship a document for.
+export const ProjectSummaryEventSchema = ProjectSummaryResultSchema;
+export type ProjectSummaryEvent = z.infer<typeof ProjectSummaryEventSchema>;

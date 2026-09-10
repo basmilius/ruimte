@@ -4,6 +4,8 @@ import {
     EventSchema,
     REQUEST_SCHEMAS,
     ReplySchema,
+    ProjectDocumentSchema,
+    ProjectSummarySchema,
     RequestSchema,
     ServerFrameSchema,
     SessionInfoSchema,
@@ -175,5 +177,39 @@ describe('project', () => {
         expect(payload.safeParse({ projectId: 'p1', baseRev: 0, content: { ...content, nodes: [{ ...content.nodes[0], kind: 'sticky' }] } }).success).toBe(
             false
         );
+    });
+
+    test('a canvas file written before icons parses, with and without one', () => {
+        const before = { version: 1, rev: 4, name: 'p', color: 'violet', nodes: [], texts: [], edges: [] };
+        const parsed = ProjectDocumentSchema.safeParse(before);
+        expect(parsed.success).toBe(true);
+        expect(parsed.success && parsed.data.icon).toBeUndefined();
+        expect(parsed.success && parsed.data.layouts).toEqual([]);
+
+        expect(ProjectDocumentSchema.safeParse({ ...before, icon: { kind: 'emoji', value: '\u{1f680}' } }).success).toBe(true);
+        expect(ProjectDocumentSchema.safeParse({ ...before, icon: { kind: 'lucide', value: 'rocket' } }).success).toBe(true);
+        // Only the closed list, and never an image blob in the shared file.
+        expect(ProjectDocumentSchema.safeParse({ ...before, icon: { kind: 'lucide', value: 'unicorn' } }).success).toBe(false);
+        expect(ProjectDocumentSchema.safeParse({ ...before, icon: { kind: 'image', value: 'data:image/png;base64,AA' } }).success).toBe(false);
+        expect(ProjectDocumentSchema.safeParse({ ...before, icon: { kind: 'emoji', value: 'x'.repeat(17) } }).success).toBe(false);
+    });
+
+    test('a summary carries the resolved icon and where the name came from', () => {
+        const summary = { projectId: 'p1', name: 'Ruimte', color: '#7c74ff', folder: '/repo', lastOpenedAt: 1, available: true };
+        expect(ProjectSummarySchema.safeParse({ ...summary, icon: { kind: 'initial', value: 'R' }, nameSource: 'folder' }).success).toBe(true);
+        expect(
+            ProjectSummarySchema.safeParse({ ...summary, icon: { kind: 'image', value: '.idea/icon.svg', version: '17-42' }, nameSource: 'idea' }).success
+        ).toBe(true);
+        // An image icon without a version would make an uncacheable URL.
+        expect(ProjectSummarySchema.safeParse({ ...summary, icon: { kind: 'image', value: '.idea/icon.svg' }, nameSource: 'idea' }).success).toBe(false);
+        expect(ProjectSummarySchema.safeParse({ ...summary, icon: { kind: 'initial', value: 'R' }, nameSource: 'guessed' }).success).toBe(false);
+        expect(ProjectSummarySchema.safeParse(summary).success).toBe(false);
+    });
+
+    test('project.setIcon takes bytes or a null image and answers with the summary', () => {
+        const { payload } = REQUEST_SCHEMAS['project.setIcon'];
+        expect(payload.safeParse({ projectId: 'p1', image: null }).success).toBe(true);
+        expect(payload.safeParse({ projectId: 'p1', image: { mime: 'image/png', base64: 'AAAA' } }).success).toBe(true);
+        expect(payload.safeParse({ projectId: 'p1' }).success).toBe(false);
     });
 });
