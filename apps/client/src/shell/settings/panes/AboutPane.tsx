@@ -5,6 +5,7 @@ import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Badge, buttonClass } from '@/shell/settings/controls';
 import { useServer } from '@/state/server';
 import { useTransportStatus } from '@/transport/status';
+import { BrandSymbol } from '@/ui/Brand';
 import { Icon } from '@/ui/Icon';
 
 const REACHABILITY_LABELS = {
@@ -37,7 +38,12 @@ export function AboutPane() {
                 <SettingsRow
                     label="Version"
                     description="As the daemon reports it; the client is built from the same tag."
-                    control={version ? <Badge tone="accent">{version}</Badge> : <Badge tone="muted">{status === 'open' ? 'Unknown' : 'Not connected'}</Badge>}
+                    control={
+                        <>
+                            <BrandSymbol size={16} />
+                            {version ? <Badge tone="accent">{version}</Badge> : <Badge tone="muted">{status === 'open' ? 'Unknown' : 'Not connected'}</Badge>}
+                        </>
+                    }
                 />
                 <SettingsRow
                     label="Machine"
