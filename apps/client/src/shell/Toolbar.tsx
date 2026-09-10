@@ -29,6 +29,7 @@ export function Toolbar() {
     const switching = useProject((s) => s.switching);
     const machine = useServer((s) => (s.reachability && s.reachability !== 'loopback' ? s.label : null));
     const panel = useUi((s) => s.panel);
+    const previewOpen = useUi((s) => s.preview.open);
     const sidebarOpen = useUi((s) => s.sidebarOpen);
     const inset = useTrafficLightInset();
 
@@ -58,9 +59,10 @@ export function Toolbar() {
             <ConnectionDot />
             <PanelControls />
             <ToolbarSeparator />
-            {/* The palette keeps the toolbar's right end in both panel states, so the search icon is
-                where the window controls are on Windows and Linux and the inset moves onto it. */}
-            <div className={clsx('btn-group', !panel.open && hasOverlayControls() && 'toolbar-overlay-inset')}>
+            {/* The palette keeps the toolbar's right end, so with no panel beside it the search icon
+                is what sits under the window controls on Windows and Linux and the inset lands here.
+                An open panel reaches the window's edge instead and its header takes the inset over. */}
+            <div className={clsx('btn-group', !panel.open && !previewOpen && hasOverlayControls() && 'toolbar-overlay-inset')}>
                 <Tooltip label="Search" kbd="⌘K" name>
                     <button className="icon-btn" onClick={() => useUi.getState().setPaletteOpen(true)}>
                         <Icon icon={Search} size={16} />

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import clsx from 'clsx';
 import { X } from 'lucide-react';
+import { hasOverlayControls } from '@/desktop/bridge';
 import { FileTabs } from '@/shell/panels/FileTabs';
 import { FileViewer } from '@/shell/panels/FileViewer';
 import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
@@ -29,6 +31,7 @@ const halfOfCanvas = (): number => {
    width, so its contents do not reflow while it slides in or out. */
 export function PreviewPanel() {
     const open = useUi((s) => s.preview.open);
+    const panelOpen = useUi((s) => s.panel.open);
     const stored = useUi((s) => s.previewWidth);
     /* Closed and done animating. Until then the contents stay mounted, so a close plays out. */
     const [settled, setSettled] = useState(!open);
@@ -99,7 +102,14 @@ export function PreviewPanel() {
             {present && (
                 <div className="relative flex h-full shrink-0 flex-col border-l border-border bg-surface" style={{ width }} onKeyDown={onKeyDown}>
                     {open && <div className="absolute inset-y-0 left-0 z-10 w-2 cursor-col-resize" onPointerDown={startResize} />}
-                    <header className="app-drag flex h-12 shrink-0 items-center gap-2 border-b border-border pr-3 pl-2">
+                    {/* The Files or Git panel sits right of this one, so the preview only takes the
+                        window controls' inset when it is the rightmost column on its own. */}
+                    <header
+                        className={clsx(
+                            'app-drag flex h-12 shrink-0 items-center gap-2 border-b border-border pr-3 pl-2',
+                            open && !panelOpen && hasOverlayControls() && 'toolbar-overlay-inset'
+                        )}
+                    >
                         <FileTabs />
                         <Tooltip label="Close preview" name>
                             <button className="icon-btn" onClick={() => useUi.getState().setPreviewOpen(false)}>
