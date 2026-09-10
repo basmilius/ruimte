@@ -43,6 +43,7 @@ import {
     SessionListResultSchema,
     SessionOutputEventSchema,
     SessionResizePayloadSchema,
+    SessionResyncEventSchema,
     SessionTargetPayloadSchema,
     SessionWritePayloadSchema
 } from './session.ts';
@@ -118,6 +119,7 @@ export type RequestMap = {
 
 export const EVENT_SCHEMAS = {
     'session.output': SessionOutputEventSchema,
+    'session.resync': SessionResyncEventSchema,
     'session.exit': SessionExitEventSchema,
     'session.status': SessionStatusEventSchema,
     'session.list-changed': EmptySchema,

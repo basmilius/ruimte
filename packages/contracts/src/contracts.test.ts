@@ -117,6 +117,8 @@ describe('session events', () => {
         expect(EVENT_SCHEMAS['session.exit'].safeParse({ sessionId: 'n1', exitCode: 0 }).success).toBe(true);
         expect(EVENT_SCHEMAS['session.exit'].safeParse({ sessionId: 'n1' }).success).toBe(false);
         expect(EVENT_SCHEMAS['session.list-changed'].safeParse({}).success).toBe(true);
+        expect(EVENT_SCHEMAS['session.resync'].safeParse({ sessionId: 'n1', screen: 'hi' }).success).toBe(true);
+        expect(EVENT_SCHEMAS['session.resync'].safeParse({ sessionId: 'n1' }).success).toBe(false);
     });
 });
 
