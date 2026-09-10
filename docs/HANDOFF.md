@@ -93,7 +93,8 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   real diffs now: a turn takes a checkpoint of the chat's folder when it starts (a git tree written
   through an index of ours under `$RUIMTE_HOME/checkpoints`, so the person's index and stashes stay
   untouched, `apps/server/src/git/checkpoints.ts`), and when the turn settles the daemon puts the
-  diff of the working tree against that tree on the turn item. The card prefers that diff, then the
+  diff of the working tree against that tree on the turn item; `diffTrees` (`apps/server/src/git/diff.ts`)
+  is where that comparison and its caps live, shared with the git panel's own diffs. The card prefers that diff, then the
   provider's own `changes`, then the edit's before and after; `chat.turnDiff` answers a turn whose
   diff has not arrived, which is also how a client asks while a turn runs.
 - **Phase 6c, Codex chat backend and one session for every CLI**: a chat node with
@@ -180,8 +181,7 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   (**Phase 8** below); the old `ruimte.panel`, `ruimte.preview`, `ruimte.panel.width` and
   `ruimte.preview.width` keys are read once as what a project that has none of its own starts from
   and are never written again. Cmd+Alt+B toggles the Files or Git panel that was open last; the
-  palette has "Toggle preview panel", "Toggle files panel" and "Toggle git panel". The Git panel is
-  still the placeholder.
+  palette has "Toggle preview panel", "Toggle files panel" and "Toggle git panel".
 
 - **Files panel**: `shell/panels/FilesPanel.tsx`, the tree on `@pierre/trees` (pinned to
   `1.0.0-beta.6`), which renders itself with Preact inside a shadow root and takes the app's
@@ -224,6 +224,28 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   re-lists only the directories the client has loaded. The panel is the tree and nothing else: the
   preview stands next to it and stays where it is when the tree closes.
 
+- **Git panel**: `shell/panels/GitPanel.tsx`, the status of one checkout and nothing else. Which
+  checkout is a pure rule (`state/git-target.ts`, tested): a selected group with a worktree, or a
+  selected node inside one, puts the panel on that worktree, everything else on the project folder,
+  the same rule that decides where a node made inside such a group starts. The header is that
+  target as a chip, the branch, ahead and behind, and a refresh. `git.status` groups the changed
+  files as Conflicted, Staged, Changes and Untracked, and a file that is staged and changed again
+  since is in two of them with the counts of its own side in each. A group is a tree of the folders
+  its files sit in (`shell/panels/git-tree.ts`, pure and tested: directories first, a chain nothing
+  branches in is one row, a collapse takes its subtree with it); the `gitTree` setting in Settings >
+  Git lists them flat instead, and the folded folders travel with the project's local file. Every
+  row ends in the same three cells, right-aligned and fixed, so the status letter and the `+n -n`
+  line up down the list, with the stage and discard buttons after them on hover. Discarding is
+  stash-backed: the paths go into a stash named `ruimte-discard-<timestamp>` first, which is also
+  what resets the working tree, and the panel says so with the name to `git stash pop`. While the
+  panel is open the daemon watches the repository (`git.watch`) and pushes a `git.status` event per
+  burst; a repository it gives up on says `live: false` and the panel refreshes on focus instead.
+  Clicking a change opens its diff in the preview: one diff tab, the way a review pane works, whose
+  path and scope follow the next change unless it is pinned. That tab is the row the panel marks as
+  selected, and the Files panel does the same the other way around: the file of the active preview
+  tab is the selected row there, revealed by expanding its parents and scrolled only if it is out
+  of view.
+
 - **Preview panel**: `shell/PreviewPanel.tsx` is a panel of its own between the canvas and the
   Files or Git panel, so the row reads sidebar, canvas, preview, panel. Its header is the same 48px
   drag region, with `shell/panels/FileTabs.tsx` in it and a close button; `shell/panels/FileViewer.tsx`
@@ -232,7 +254,11 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   for a future dirty mark, unpinned tabs in italic the way a preview tab reads. `state/files.ts`
   holds them (tested pure helpers): past `filesTabLimit` the oldest unpinned tab closes, never the
   active one, double-click pins, and the tabs travel with the project's machine-local file, so a
-  reload keeps them, another canvas starts with its own and nobody else sees them. The store owns
+  reload keeps them, another canvas starts with its own and nobody else sees them. A tab is keyed
+  by its `key`, not its path, because a file and its diff are two tabs of one path: a diff tab
+  carries a `view { kind: 'diff', cwd, scope, staged }`, wears the scope as a pill in the strip and
+  is drawn by `shell/panels/DiffFile.tsx` over `UnifiedDiff`, with the wrap toggle and the scope
+  switch in the same toolbar every renderer uses. The store owns
   the panel with them: the first open file brings the preview up and the last close takes it away.
   Opening it takes half of what the canvas had (`floor(width / 2)`, at most 720, at least 360)
   every time, until a drag of its left edge gives the project a width of its own, which outranks
@@ -304,7 +330,8 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   terminal refits on a change of its own), Canvas (zoom presets, locks and
   layouts, all acting on the open canvas, nothing stored), Files (`filesTabLimit`, how many files
   the viewer keeps open, 1 to 20 and 5 by default, and `filesShowHidden`, the same value the
-  panel's eye button writes), Agents (the remembered defaults for
+  panel's eye button writes), Git (`gitTree`, whether the status list groups its files by folder
+  or lists them flat), Agents (the remembered defaults for
   a new chat from `chat/preferences.ts`, now a zustand store the composer and the dialog
   share: one model row per provider with that model's knobs under it, the permissions a chat
   starts in and the mode a terminal agent starts in, plus the providers the daemon found),
@@ -824,8 +851,9 @@ canvas, against Ruimte, one verdict each.
 4. **A third chat provider** (Gemini, Copilot or opencode) as the proof that the backend seam
    holds: a provider value, a backend and a protocol mapper, plus one literal in `AgentKind`.
    Hooks for Gemini and Copilot are a day per CLI on top.
-5. **Files and Git panels**: both render "Nothing here yet." A tree needs `fs.list` and
-   `fs.read`, a status view needs `git.status` and `git.diff` (phase 17).
+5. **The rest of the git panel** (phase 17, part 2): commit, push and a PR through `gh` as one
+   stacked action with its progress as a toast, the branch chip with a ref picker, pull when
+   behind, and a commit message written by the chat CLI when the field is left empty.
 6. **Settings**: remappable chords (the Keyboard pane lists them read-only), a "restore
    defaults" action, a canvas font size for chat and text elements.
 7. **Smaller ones**: a link made while a shell already runs is only visible in the header and
