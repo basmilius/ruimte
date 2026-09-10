@@ -1,6 +1,7 @@
 import type {
     AgentKind,
     ChatAttachment,
+    ChatCheckpointDiff,
     ChatConfigurePayload,
     ChatInfo,
     ChatItem,
@@ -108,6 +109,12 @@ export class ChatClient {
 
     async cancel(chatId: string): Promise<void> {
         await this.transport.request('chat.cancel', { chatId });
+    }
+
+    /* What a turn changed against its checkpoint, for a card whose turn carries no diff yet. */
+    async turnDiff(chatId: string, turnId: string): Promise<ChatCheckpointDiff | null> {
+        const { diff } = await this.transport.request('chat.turnDiff', { chatId, turnId });
+        return diff;
     }
 
     async configure(payload: ChatConfigurePayload): Promise<ChatInfo> {

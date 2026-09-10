@@ -1,7 +1,8 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { ChevronRight, FileDiff, X } from 'lucide-react';
-import type { ChatFileChange, ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
+import type { ChatCheckpointDiff, ChatCheckpointFile, ChatFileChange, ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
+import { chatClient } from '@/chat';
 import { fileChanges, formatElapsed, liveOutput, toolStartedAt, toolSummary, unifiedChanges, type FileChange } from '@/chat/logic/tools';
 import { toolIcon } from '@/chat/ui/icons';
 
@@ -176,9 +177,104 @@ export function TurnFoldRow({ turn, label, expanded, onToggle }: { turn: ChatTur
     );
 }
 
-/* The files a settled turn changed, as a card; each file opens its diff in place. */
-export function ChangedFilesRow({ tools }: { tools: ChatToolItem[] }) {
+const omittedLabel = (reason: 'binary' | 'too-large'): string => (reason === 'binary' ? 'Binary file, no diff' : 'Too large to show');
+
+/* One file of a turn's checkpoint diff: its patch, or the reason there is none. */
+function CheckpointFileBody({ file }: { file: ChatCheckpointFile }) {
+    if (file.omitted) {
+        return <div className="px-3 py-2 text-[12px] text-text-faint">{omittedLabel(file.omitted)}</div>;
+    }
+    return (
+        <Suspense fallback={<div className="px-3 py-2 text-[12px] text-text-faint">Loading diff</div>}>
+            <UnifiedDiff change={file} />
+        </Suspense>
+    );
+}
+
+/*
+ * The files a settled turn changed, as a card; each file opens its diff in place. The daemon's
+ * checkpoint diff comes first (the working tree against the tree the turn started from), then the
+ * unified diffs the CLI reported, then the before and after of its own edits. A turn that has a
+ * checkpoint but no stored diff asks the daemon for one, which is also how a running turn gets it.
+ */
+export function ChangedFilesRow({
+    tools,
+    diff,
+    checkpoint,
+    chatId,
+    turnId
+}: {
+    tools: ChatToolItem[];
+    diff: ChatCheckpointDiff | null;
+    checkpoint: boolean;
+    chatId: string;
+    turnId: string;
+}) {
     const [open, setOpen] = useState<Record<string, boolean>>({});
+    const [fetched, setFetched] = useState<ChatCheckpointDiff | null>(null);
+    useEffect(() => {
+        if (diff !== null || !checkpoint) {
+            return;
+        }
+        let alive = true;
+        void chatClient
+            .turnDiff(chatId, turnId)
+            .then((answer) => {
+                if (alive) {
+                    setFetched(answer);
+                }
+            })
+            .catch(() => undefined);
+        return () => {
+            alive = false;
+        };
+    }, [chatId, turnId, diff, checkpoint]);
+    const checkpointDiff = diff ?? fetched;
+    if (checkpointDiff !== null && checkpointDiff.files.length > 0) {
+        return (
+            <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface-raised">
+                <div className="flex items-center gap-2 px-3 py-2 text-[12px] text-text-muted">
+                    <FileDiff size={13} />
+                    <span className="font-medium text-text">
+                        {checkpointDiff.files.length} changed file{checkpointDiff.files.length === 1 ? '' : 's'}
+                    </span>
+                    {checkpointDiff.truncated && <span className="text-text-faint">and more, truncated</span>}
+                </div>
+                {checkpointDiff.files.map((file) => (
+                    <div key={file.path} className="border-t border-border">
+                        <button
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12px] text-text-muted hover:bg-surface-sunken"
+                            onClick={() => setOpen((o) => ({ ...o, [file.path]: !o[file.path] }))}
+                        >
+                            <ChevronRight size={12} className={clsx('shrink-0 text-text-faint transition-transform', open[file.path] && 'rotate-90')} />
+                            <span className="min-w-0 truncate font-mono text-text">{file.path}</span>
+                            <span className="grow" />
+                            <span className="text-term-green tabular-nums">+{file.added}</span>
+                            <span className="text-term-red tabular-nums">-{file.deleted}</span>
+                        </button>
+                        {open[file.path] && (
+                            <div className="border-t border-border">
+                                <CheckpointFileBody file={file} />
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
+        );
+    }
+    return <ProviderChangedFiles tools={tools} open={open} setOpen={setOpen} />;
+}
+
+/* The fallback card, built from what the CLI itself reported about its edits. */
+function ProviderChangedFiles({
+    tools,
+    open,
+    setOpen
+}: {
+    tools: ChatToolItem[];
+    open: Record<string, boolean>;
+    setOpen: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+}) {
     const byPath = new Map<string, { edits: FileChange[]; patches: ChatFileChange[] }>();
     const entryFor = (path: string) => {
         const existing = byPath.get(path);
