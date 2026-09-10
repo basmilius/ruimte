@@ -250,6 +250,9 @@ canvas, against Ruimte, one verdict each.
 - Never highlight the canvas grid in the accent color. The dots stay neutral in every state.
 - Icon buttons get equal padding on every side. Buttons that belong together sit in a
   `.btn-group` with 1px gaps; groups keep the wider gap of their container.
+- Every icon is a Hugeicons free icon drawn by the `Icon` component in `src/ui/Icon.tsx`
+  (`@hugeicons/react` plus `@hugeicons/core-free-icons`). The stroke weight lives there, so a
+  call site only picks the icon and its pixel size.
 - Tooltips are the `Tooltip` component in `src/ui/Tooltip.tsx`, never a `title` attribute.
   One `TooltipProvider` at the app root gives the shared 150 ms delay.
 - Escape leaves node mode unless a terminal node has "Send Escape to the app" on (its context

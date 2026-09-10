@@ -1,6 +1,7 @@
 import type { AgentKind } from '@ruimte/contracts';
-import { Bot } from 'lucide-react';
+import { BotIcon } from '@hugeicons/core-free-icons';
 import { siClaude, siGithubcopilot, siGooglegemini } from 'simple-icons';
+import { Icon } from '@/ui/Icon';
 
 // The brand marks from simple-icons (CC0), one path each. Drawn in `currentColor`, so a mark takes
 // the color of the row or header it sits in and no color leaves the semantic tokens.
@@ -16,7 +17,7 @@ const MARKS: Partial<Record<AgentKind, { title: string; path: string }>> = {
 export function AgentIcon({ kind, size = 14, className }: { kind: AgentKind; size?: number; className?: string }) {
     const mark = MARKS[kind];
     if (!mark) {
-        return <Bot size={size} strokeWidth={1.75} className={className} />;
+        return <Icon icon={BotIcon} size={size} className={className} />;
     }
     return (
         <svg role="img" aria-label={mark.title} viewBox="0 0 24 24" width={size} height={size} fill="currentColor" className={className}>

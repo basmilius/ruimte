@@ -1,21 +1,21 @@
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import {
-    Check,
-    ChevronRight,
-    ChevronsDownUp,
-    ChevronsUpDown,
-    Copy,
-    ExternalLink,
-    GitBranch,
-    Keyboard,
-    Link2,
-    Maximize2,
-    MessageSquare,
-    Palette,
-    Pencil,
-    Terminal,
-    Trash2
-} from 'lucide-react';
+    ArrowExpandDiagonal01Icon,
+    CheckIcon,
+    ChevronRightIcon,
+    CopyIcon,
+    ExternalLinkIcon,
+    GitBranchIcon,
+    KeyboardIcon,
+    Link02Icon,
+    MessageSquareIcon,
+    PaletteIcon,
+    PencilIcon,
+    TerminalIcon,
+    TrashIcon,
+    UnfoldLessIcon,
+    UnfoldMoreIcon
+} from '@hugeicons/core-free-icons';
 import { NODE_ACCENTS } from '@/canvas/accents';
 import { DEFAULT_NOTE_COLOR, NOTE_COLORS } from '@/canvas/note-colors';
 import { useCanvas } from '@/state/canvas';
@@ -26,6 +26,7 @@ import { fileManagerName, useServer } from '@/state/server';
 import { useSessions } from '@/state/sessions';
 import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
+import { Icon } from '@/ui/Icon';
 
 /* The context menu of one node, the same from its frame and from its row in the sidebar. */
 export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }) {
@@ -70,49 +71,50 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
             <ContextMenu.Positioner className="z-50">
                 <ContextMenu.Popup className="menu-popup">
                     <ContextMenu.Item className="menu-item" onClick={onRename}>
-                        <Pencil size={14} /> Rename <kbd>dbl-click</kbd>
+                        <Icon icon={PencilIcon} size={14} /> Rename <kbd>dbl-click</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().duplicateNode(id)}>
-                        <Copy size={14} /> Duplicate
+                        <Icon icon={CopyIcon} size={14} /> Duplicate
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().goToNode(id)}>
-                        <Maximize2 size={14} /> Zoom to node
+                        <Icon icon={ArrowExpandDiagonal01Icon} size={14} /> Zoom to node
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().startLink(id)}>
-                        <Link2 size={14} /> Connect to...
+                        <Icon icon={Link02Icon} size={14} /> Connect to...
                         <span className="ml-auto text-[11px] text-text-faint">Then click a node</span>
                     </ContextMenu.Item>
                     {node.kind === 'group' && (
                         <>
                             <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().toggleGroupCollapse(id)}>
-                                {node.collapsed ? <ChevronsUpDown size={14} /> : <ChevronsDownUp size={14} />} {node.collapsed ? 'Expand' : 'Collapse'}
+                                {node.collapsed ? <Icon icon={UnfoldMoreIcon} size={14} /> : <Icon icon={UnfoldLessIcon} size={14} />}{' '}
+                                {node.collapsed ? 'Expand' : 'Collapse'}
                             </ContextMenu.Item>
                             {node.worktree ? (
                                 <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().setGroupWorktree(id, null)}>
-                                    <GitBranch size={14} /> Unbind worktree
+                                    <Icon icon={GitBranchIcon} size={14} /> Unbind worktree
                                     <span className="ml-auto text-[11px] text-text-faint">Checkout stays</span>
                                 </ContextMenu.Item>
                             ) : (
                                 <ContextMenu.Item className="menu-item" onClick={() => useUi.getState().setWorktreeDialogFor(id)}>
-                                    <GitBranch size={14} /> Bind to worktree
+                                    <Icon icon={GitBranchIcon} size={14} /> Bind to worktree
                                 </ContextMenu.Item>
                             )}
                         </>
                     )}
                     {node.kind === 'terminal' && (
                         <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().updateNode(id, { escapeToApp: !node.escapeToApp })}>
-                            <Keyboard size={14} /> Send Escape to the app
-                            {node.escapeToApp ? <Check size={13} className="ml-auto" /> : <kbd>⌘Esc leaves</kbd>}
+                            <Icon icon={KeyboardIcon} size={14} /> Send Escape to the app
+                            {node.escapeToApp ? <Icon icon={CheckIcon} size={13} className="ml-auto" /> : <kbd>⌘Esc leaves</kbd>}
                         </ContextMenu.Item>
                     )}
                     {node.kind === 'terminal' && canOpenInChat && (
                         <ContextMenu.Item className="menu-item" onClick={openInChat}>
-                            <MessageSquare size={14} /> Open in chat
+                            <Icon icon={MessageSquareIcon} size={14} /> Open in chat
                         </ContextMenu.Item>
                     )}
                     {node.kind === 'chat' && chatSession && (
                         <ContextMenu.Item className="menu-item" onClick={openInTerminal}>
-                            <Terminal size={14} /> Open in terminal
+                            <Icon icon={TerminalIcon} size={14} /> Open in terminal
                         </ContextMenu.Item>
                     )}
                     {workingFolder && (
@@ -120,14 +122,14 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                             className="menu-item"
                             onClick={() => void transport.request('fs.reveal', { path: workingFolder }).catch(() => undefined)}
                         >
-                            <ExternalLink size={14} /> Reveal in {fileManagerName(platform)}
+                            <Icon icon={ExternalLinkIcon} size={14} /> Reveal in {fileManagerName(platform)}
                         </ContextMenu.Item>
                     )}
                     {node.kind === 'note' && (
                         <ContextMenu.SubmenuRoot>
                             <ContextMenu.SubmenuTrigger className="menu-item">
-                                <Palette size={14} /> Note color
-                                <ChevronRight size={14} className="ml-auto text-text-faint" />
+                                <Icon icon={PaletteIcon} size={14} /> Note color
+                                <Icon icon={ChevronRightIcon} size={14} className="ml-auto text-text-faint" />
                             </ContextMenu.SubmenuTrigger>
                             <ContextMenu.Portal>
                                 <ContextMenu.Positioner className="z-50" sideOffset={4} alignOffset={-4}>
@@ -139,7 +141,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                                                 onClick={() => useCanvas.getState().updateNode(id, { color: color.id })}
                                             >
                                                 <span className={`h-3 w-3 rounded-full border border-border-strong ${color.className}`} /> {color.label}
-                                                {(node.color ?? DEFAULT_NOTE_COLOR) === color.id && <Check size={13} className="ml-auto" />}
+                                                {(node.color ?? DEFAULT_NOTE_COLOR) === color.id && <Icon icon={CheckIcon} size={13} className="ml-auto" />}
                                             </ContextMenu.Item>
                                         ))}
                                     </ContextMenu.Popup>
@@ -149,21 +151,21 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                     )}
                     <ContextMenu.SubmenuRoot>
                         <ContextMenu.SubmenuTrigger className="menu-item">
-                            <Palette size={14} /> Color
-                            <ChevronRight size={14} className="ml-auto text-text-faint" />
+                            <Icon icon={PaletteIcon} size={14} /> Color
+                            <Icon icon={ChevronRightIcon} size={14} className="ml-auto text-text-faint" />
                         </ContextMenu.SubmenuTrigger>
                         <ContextMenu.Portal>
                             <ContextMenu.Positioner className="z-50" sideOffset={4} alignOffset={-4}>
                                 <ContextMenu.Popup className="menu-popup min-w-40">
                                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().setNodeAccent(id, null)}>
                                         <span className="h-3 w-3 rounded-full border border-border-strong" /> None
-                                        {!node.accent && <Check size={13} className="ml-auto" />}
+                                        {!node.accent && <Icon icon={CheckIcon} size={13} className="ml-auto" />}
                                     </ContextMenu.Item>
                                     <ContextMenu.Separator className="menu-separator" />
                                     {NODE_ACCENTS.map((a) => (
                                         <ContextMenu.Item key={a.id} className="menu-item" onClick={() => useCanvas.getState().setNodeAccent(id, a.id)}>
                                             <span className="h-3 w-3 rounded-full" style={{ background: a.color }} /> {a.label}
-                                            {node.accent === a.id && <Check size={13} className="ml-auto" />}
+                                            {node.accent === a.id && <Icon icon={CheckIcon} size={13} className="ml-auto" />}
                                         </ContextMenu.Item>
                                     ))}
                                 </ContextMenu.Popup>
@@ -172,7 +174,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                     </ContextMenu.SubmenuRoot>
                     <ContextMenu.Separator className="menu-separator" />
                     <ContextMenu.Item className="menu-item text-status-error" onClick={remove}>
-                        <Trash2 size={14} /> Delete <kbd>⌫</kbd>
+                        <Icon icon={TrashIcon} size={14} /> Delete <kbd>⌫</kbd>
                     </ContextMenu.Item>
                 </ContextMenu.Popup>
             </ContextMenu.Positioner>

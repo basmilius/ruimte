@@ -1,7 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { CornerLeftUp, Folder, FolderCheck, FolderPlus, Globe, LayoutGrid, MessageSquare, Search, StickyNote, Terminal, Zap } from 'lucide-react';
+import {
+    CornerLeftUpIcon,
+    Folder01Icon,
+    FolderCheckIcon,
+    FolderPlusIcon,
+    GlobeIcon,
+    LayoutGridIcon,
+    MessageSquareIcon,
+    Search01Icon,
+    StickyNote03Icon,
+    TerminalIcon,
+    ZapIcon
+} from '@hugeicons/core-free-icons';
 import type { FsBrowseEntry } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { projectClient } from '@/project';
@@ -11,13 +23,14 @@ import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
 import { desktop } from '@/desktop/bridge';
+import { Icon } from '@/ui/Icon';
 
 const KIND_ICON: Record<NodeKind, React.ReactNode> = {
-    terminal: <Terminal size={14} />,
-    chat: <MessageSquare size={14} />,
-    browser: <Globe size={14} />,
-    group: <LayoutGrid size={14} />,
-    note: <StickyNote size={14} />
+    terminal: <Icon icon={TerminalIcon} size={14} />,
+    chat: <Icon icon={MessageSquareIcon} size={14} />,
+    browser: <Icon icon={GlobeIcon} size={14} />,
+    group: <Icon icon={LayoutGridIcon} size={14} />,
+    note: <Icon icon={StickyNote03Icon} size={14} />
 };
 
 // Typing a path turns the palette into a folder browser; anything else searches nodes and actions.
@@ -128,7 +141,7 @@ export function CommandPalette() {
                     id: 'browse-up',
                     label: '..',
                     hint: 'Up one folder',
-                    icon: <CornerLeftUp size={14} />,
+                    icon: <Icon icon={CornerLeftUpIcon} size={14} />,
                     section: 'Folders',
                     run: () => setQuery(up)
                 });
@@ -138,7 +151,7 @@ export function CommandPalette() {
                     id: `dir-${entry.fullPath}`,
                     label: entry.name,
                     hint: entry.hasCanvas ? 'Has a canvas' : undefined,
-                    icon: entry.hasCanvas ? <FolderCheck size={14} /> : <Folder size={14} />,
+                    icon: entry.hasCanvas ? <Icon icon={FolderCheckIcon} size={14} /> : <Icon icon={Folder01Icon} size={14} />,
                     section: 'Folders',
                     run: () => setQuery(`${entry.fullPath}/`)
                 });
@@ -158,7 +171,7 @@ export function CommandPalette() {
             }));
         const actions: Entry[] = appCommands().map((command) => ({
             ...command,
-            icon: command.agent ? <AgentIcon kind={command.agent} /> : <Zap size={14} />,
+            icon: command.agent ? <AgentIcon kind={command.agent} /> : <Icon icon={ZapIcon} size={14} />,
             section: 'Actions'
         }));
         return [...jumps, ...actions].filter((entry) => query === '' || matches(query, `${entry.label} ${entry.hint ?? ''}`));
@@ -186,7 +199,11 @@ export function CommandPalette() {
                 <Dialog.Backdrop className="dialog-backdrop" />
                 <Dialog.Popup className="dialog-popup top-[18vh] w-[560px]" initialFocus={inputRef}>
                     <div className="flex items-center gap-2 border-b border-border px-3">
-                        {browsing ? <FolderPlus size={15} className="shrink-0 text-accent" /> : <Search size={15} className="shrink-0 text-text-faint" />}
+                        {browsing ? (
+                            <Icon icon={FolderPlusIcon} size={15} className="shrink-0 text-accent" />
+                        ) : (
+                            <Icon icon={Search01Icon} size={15} className="shrink-0 text-text-faint" />
+                        )}
                         <input
                             ref={inputRef}
                             className={clsx(
@@ -275,7 +292,7 @@ export function CommandPalette() {
                                 disabled={busy || query.trim() === ''}
                                 onClick={() => void submitPath(query)}
                             >
-                                <FolderPlus size={13} /> Open as project
+                                <Icon icon={FolderPlusIcon} size={13} /> Open as project
                             </button>
                         </div>
                     )}

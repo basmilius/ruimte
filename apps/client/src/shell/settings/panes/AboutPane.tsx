@@ -1,10 +1,11 @@
-import { ExternalLink } from 'lucide-react';
+import { ExternalLinkIcon } from '@hugeicons/core-free-icons';
 import { isDesktop } from '@/desktop/bridge';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Badge, buttonClass } from '@/shell/settings/controls';
 import { useServer } from '@/state/server';
 import { useTransportStatus } from '@/transport/status';
+import { Icon } from '@/ui/Icon';
 
 const REACHABILITY_LABELS = {
     loopback: 'On this machine',
@@ -58,7 +59,7 @@ export function AboutPane() {
                         description={link.description}
                         control={
                             <a className={buttonClass} href={link.href} target="_blank" rel="noreferrer">
-                                Open <ExternalLink size={12} />
+                                Open <Icon icon={ExternalLinkIcon} size={12} />
                             </a>
                         }
                     />

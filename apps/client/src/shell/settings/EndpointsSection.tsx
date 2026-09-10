@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { Check, Copy, Link2, Server, Trash2 } from 'lucide-react';
+import { CheckIcon, CopyIcon, Link02Icon, ServerIcon, TrashIcon } from '@hugeicons/core-free-icons';
 import type { AuthSession } from '@ruimte/contracts';
 import { activateEndpoint, listPairedClients, pairEndpoint, requestPairingUrl, revokePairedClient } from '@/endpoint';
 import { useEndpoints, LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { useServer } from '@/state/server';
 import { transport } from '@/transport';
 import { Tooltip } from '@/ui/Tooltip';
+import { Icon } from '@/ui/Icon';
 
 const buttonClass = 'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3 text-[12px] font-medium disabled:opacity-50';
 
@@ -116,7 +117,7 @@ function PairedClients() {
                         disabled={busy}
                         onClick={() => void showLink()}
                     >
-                        <Link2 size={12} /> Show pairing link
+                        <Icon icon={Link02Icon} size={12} /> Show pairing link
                     </button>
                 )}
             </div>
@@ -126,7 +127,7 @@ function PairedClients() {
                         <code className="min-w-0 grow truncate font-mono text-[11.5px] text-text select-text">{link}</code>
                         <Tooltip label={copied ? 'Copied' : 'Copy link'}>
                             <button className="icon-btn h-6 w-6 shrink-0" aria-label="Copy pairing link" onClick={copyLink}>
-                                {copied ? <Check size={12} /> : <Copy size={12} />}
+                                {copied ? <Icon icon={CheckIcon} size={12} /> : <Icon icon={CopyIcon} size={12} />}
                             </button>
                         </Tooltip>
                     </div>
@@ -151,7 +152,7 @@ function PairedClients() {
                     </div>
                     <Tooltip label="Revoke access">
                         <button className="icon-btn h-6 w-6 shrink-0" aria-label={`Revoke ${session.label}`} onClick={() => setTarget(session)}>
-                            <Trash2 size={12} />
+                            <Icon icon={TrashIcon} size={12} />
                         </button>
                     </Tooltip>
                 </div>
@@ -172,7 +173,7 @@ function PairedClients() {
                                 Cancel
                             </button>
                             <button className={clsx(buttonClass, 'bg-status-error text-accent-text')} disabled={busy} onClick={() => void revoke()}>
-                                <Trash2 size={13} /> Revoke
+                                <Icon icon={TrashIcon} size={13} /> Revoke
                             </button>
                         </div>
                     </Dialog.Popup>
@@ -214,18 +215,18 @@ export function EndpointsSection() {
                         endpoint.id === activeId ? 'border-accent bg-accent-soft' : 'border-border'
                     )}
                 >
-                    <Server size={14} className="shrink-0 text-text-muted" />
+                    <Icon icon={ServerIcon} size={14} className="shrink-0 text-text-muted" />
                     <button className="flex min-w-0 grow flex-col text-left" onClick={() => void activateEndpoint(endpoint.id)}>
                         <span className="truncate text-[13px] text-text">{endpoint.label}</span>
                         <span className="truncate font-mono text-[11px] text-text-faint">
                             {endpoint.id === LOCAL_ENDPOINT_ID ? 'loopback' : endpoint.httpBaseUrl}
                         </span>
                     </button>
-                    {endpoint.id === activeId && <Check size={13} className="shrink-0 text-accent" />}
+                    {endpoint.id === activeId && <Icon icon={CheckIcon} size={13} className="shrink-0 text-accent" />}
                     {endpoint.id !== LOCAL_ENDPOINT_ID && (
                         <Tooltip label="Forget this machine">
                             <button className="icon-btn h-6 w-6" aria-label="Forget this machine" onClick={() => useEndpoints.getState().remove(endpoint.id)}>
-                                <Trash2 size={12} />
+                                <Icon icon={TrashIcon} size={12} />
                             </button>
                         </Tooltip>
                     )}
@@ -247,7 +248,7 @@ export function EndpointsSection() {
                     }}
                 />
                 <button className={clsx(buttonClass, 'bg-accent text-accent-text')} disabled={busy || !link.trim()} onClick={() => void pair()}>
-                    <Link2 size={13} /> Pair
+                    <Icon icon={Link02Icon} size={13} /> Pair
                 </button>
             </div>
             <p className="text-[11px] text-text-faint">Paste the link from "Show pairing link" or from `ruimte pair` on the other machine.</p>

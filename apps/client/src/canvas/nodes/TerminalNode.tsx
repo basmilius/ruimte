@@ -4,7 +4,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { Terminal } from '@xterm/xterm';
-import { RotateCw } from 'lucide-react';
+import { RotateCwIcon } from '@hugeicons/core-free-icons';
 import { useCanvas } from '@/state/canvas';
 import { useSessions } from '@/state/sessions';
 import { useProject } from '@/state/project';
@@ -14,6 +14,7 @@ import { sessionClient } from '@/terminal';
 import { lastScreenOf, registerTerminal } from '@/terminal/registry';
 import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
 import { useTransportStatus } from '@/transport/status';
+import { Icon } from '@/ui/Icon';
 
 const RESIZE_DEBOUNCE_MS = 50;
 /* ESC CR: what agent CLIs read as "newline, do not submit". Harmless in a plain shell. */
@@ -248,7 +249,7 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
                     <span className="grow">{failure}</span>
                     <Tooltip label="Try again">
                         <button className="icon-btn h-7 w-7 shrink-0" onClick={rebuild}>
-                            <RotateCw size={13} />
+                            <Icon icon={RotateCwIcon} size={13} />
                         </button>
                     </Tooltip>
                 </div>
@@ -260,7 +261,7 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
                         className="inline-flex h-6 items-center gap-1.5 rounded-md bg-surface-sunken px-2 font-sans text-[11px] font-medium text-text hover:bg-border"
                         onClick={() => void restart()}
                     >
-                        <RotateCw size={12} /> Restart
+                        <Icon icon={RotateCwIcon} size={12} /> Restart
                     </button>
                 </div>
             )}

@@ -1,10 +1,22 @@
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Globe, LayoutGrid, Maximize, MessageSquare, Scan, Settings, SquareDashedMousePointer, StickyNote, Terminal, Type } from 'lucide-react';
+import {
+    ArrowExpandIcon,
+    GlobeIcon,
+    LayoutGridIcon,
+    MessageSquareIcon,
+    ScanIcon,
+    Settings01Icon,
+    SquareDashedMousePointerIcon,
+    StickyNote03Icon,
+    TerminalIcon,
+    TypeIcon
+} from '@hugeicons/core-free-icons';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentNode } from '@/agents/nodes';
 import type { Point } from '@/canvas/math';
 import { useCanvas, type NodeKind } from '@/state/canvas';
 import { useUi } from '@/state/ui';
+import { Icon } from '@/ui/Icon';
 
 /* The menu for a right-click on empty canvas; everything it adds lands where the click was. */
 export function CanvasMenuPopup({ at }: { at: () => Point }) {
@@ -18,27 +30,27 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                 <ContextMenu.Popup className="menu-popup">
                     <div className="menu-label">Add here</div>
                     <ContextMenu.Item className="menu-item" onClick={() => add('terminal')}>
-                        <Terminal size={14} /> Terminal <kbd>⌥T</kbd>
+                        <Icon icon={TerminalIcon} size={14} /> Terminal <kbd>⌥T</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => add('chat')}>
-                        <MessageSquare size={14} /> Chat <kbd>⌥C</kbd>
+                        <Icon icon={MessageSquareIcon} size={14} /> Chat <kbd>⌥C</kbd>
                     </ContextMenu.Item>
                     <AgentSubmenus onPick={(target, provider) => addAgentNode(target, provider, at())} />
                     <ContextMenu.Item className="menu-item" onClick={() => add('browser')}>
-                        <Globe size={14} /> Browser <kbd>⌥B</kbd>
+                        <Icon icon={GlobeIcon} size={14} /> Browser <kbd>⌥B</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => add('group')}>
-                        <LayoutGrid size={14} /> Group <kbd>⌥G</kbd>
+                        <Icon icon={LayoutGridIcon} size={14} /> Group <kbd>⌥G</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => add('note')}>
-                        <StickyNote size={14} /> Note <kbd>⌥N</kbd>
+                        <Icon icon={StickyNote03Icon} size={14} /> Note <kbd>⌥N</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().addText(at())}>
-                        <Type size={14} /> Text <kbd>dbl-click</kbd>
+                        <Icon icon={TypeIcon} size={14} /> Text <kbd>dbl-click</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Separator className="menu-separator" />
                     <ContextMenu.Item className="menu-item" disabled={!hasSelection} onClick={() => useCanvas.getState().groupSelection()}>
-                        <SquareDashedMousePointer size={14} /> Group selection <kbd>⌘G</kbd>
+                        <Icon icon={SquareDashedMousePointerIcon} size={14} /> Group selection <kbd>⌘G</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Item
                         className="menu-item"
@@ -47,14 +59,14 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                             s.select([...s.order, ...Object.keys(s.texts)]);
                         }}
                     >
-                        <Scan size={14} /> Select all <kbd>⌘A</kbd>
+                        <Icon icon={ScanIcon} size={14} /> Select all <kbd>⌘A</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().fitAll()}>
-                        <Maximize size={14} /> Zoom to fit <kbd>⇧1</kbd>
+                        <Icon icon={ArrowExpandIcon} size={14} /> Zoom to fit <kbd>⇧1</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Separator className="menu-separator" />
                     <ContextMenu.Item className="menu-item" onClick={() => useUi.getState().setSettings({ open: true })}>
-                        <Settings size={14} /> Settings <kbd>⌘,</kbd>
+                        <Icon icon={Settings01Icon} size={14} /> Settings <kbd>⌘,</kbd>
                     </ContextMenu.Item>
                 </ContextMenu.Popup>
             </ContextMenu.Positioner>
