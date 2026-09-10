@@ -1,10 +1,13 @@
 import { mkdir, readFile, rename, rm } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import {
+    duplicateElementIdIn,
     duplicateIdIn,
     isCanvasView,
     migrateDocument,
+    migrateDrawing,
     withoutCrossViewEdges,
+    type DrawingDocument,
     type ProjectContent,
     type ProjectDocument,
     type ProjectNode,
@@ -14,6 +17,9 @@ import { isNotFound, writeAtomic } from '../fs.ts';
 
 export const PROJECT_DIR = '.ruimte';
 export const PROJECT_FILE = 'project.json';
+// One file per drawing view, in a directory of their own: `.ruimte` is read by people and by git,
+// and its top level stays the two files the daemon documents.
+export const DRAWINGS_DIR = 'drawings';
 
 /*
  * `unreadable` is broken JSON or a shape no version of ours ever wrote; `invalid` is a file that
@@ -128,6 +134,94 @@ export const fromPortable = <T extends ProjectContent>(content: T, folder: strin
 };
 
 export const documentPathInFolder = (folder: string): string => join(folder, PROJECT_DIR, PROJECT_FILE);
+
+export const drawingsDirOf = (documentPath: string): string => join(dirname(documentPath), DRAWINGS_DIR);
+
+/* The view id, never its name: a rename must not move a file, and two machines must agree. */
+export const drawingPathIn = (dir: string, viewId: string): string => join(dir, `${encodeURIComponent(viewId)}.json`);
+
+/* The view a drawing file belongs to, or null for a name that is not one of ours. */
+export const drawingViewIdOf = (filename: string): string | null => {
+    if (!filename.endsWith('.json')) {
+        return null;
+    }
+    try {
+        const id = decodeURIComponent(filename.slice(0, -'.json'.length));
+        return id === '' ? null : id;
+    } catch {
+        return null;
+    }
+};
+
+/*
+ * The top level indented, every element on one line. `JSON.stringify(document, null, 2)` would put
+ * every point of every stroke on a line of its own, and a git diff of that says nothing.
+ */
+export const serializeDrawing = (document: DrawingDocument): string => {
+    const elements = document.elements.map((element) => `    ${JSON.stringify(element)}`).join(',\n');
+    const list = elements === '' ? '[]' : `[\n${elements}\n  ]`;
+    return `{\n  "version": ${document.version},\n  "rev": ${document.rev},\n  "elements": ${list}\n}\n`;
+};
+
+export type DrawingParse = { kind: 'ok'; document: DrawingDocument } | { kind: 'unreadable' } | { kind: 'invalid'; message: string };
+
+export const parseDrawing = (text: string): DrawingParse => {
+    let value: unknown;
+    try {
+        value = JSON.parse(text);
+    } catch {
+        return { kind: 'unreadable' };
+    }
+    const document = migrateDrawing(value);
+    if (!document) {
+        // JSON that is not a drawing at all: a person's file under our name, so it stays where it is.
+        return { kind: 'invalid', message: 'This file is not a drawing of this version' };
+    }
+    const duplicate = duplicateElementIdIn(document.elements);
+    if (duplicate) {
+        return { kind: 'invalid', message: `Two elements in this drawing share the id "${duplicate}"; every element needs one of its own` };
+    }
+    return { kind: 'ok', document };
+};
+
+type DrawingReadOutcome =
+    | { kind: 'ok'; document: DrawingDocument; text: string }
+    | { kind: 'missing' }
+    | { kind: 'corrupt'; setAside: string }
+    | { kind: 'invalid'; message: string };
+
+/*
+ * Reads a drawing file. Broken JSON is moved next to itself with a timestamp, the rule the project
+ * file follows, so a crash or a bad merge never costs the drawing and never gets written over.
+ */
+export const readDrawing = async (path: string): Promise<DrawingReadOutcome> => {
+    let text: string;
+    try {
+        text = await readFile(path, 'utf8');
+    } catch (e) {
+        if (isNotFound(e)) {
+            return { kind: 'missing' };
+        }
+        throw e;
+    }
+    const parsed = parseDrawing(text);
+    if (parsed.kind === 'ok') {
+        return { kind: 'ok', document: parsed.document, text };
+    }
+    if (parsed.kind === 'invalid') {
+        return parsed;
+    }
+    const setAside = `${path}.corrupt-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+    await rename(path, setAside);
+    return { kind: 'corrupt', setAside };
+};
+
+export const writeDrawing = async (path: string, document: DrawingDocument): Promise<string> => {
+    await mkdir(dirname(path), { recursive: true });
+    const text = serializeDrawing(document);
+    await writeAtomic(path, text, 0o644);
+    return text;
+};
 
 // What an uploaded icon may be, and what it is called on disk. An `.ico` is a favicon, not
 // something a person picks in a file dialog, so it is read but never written.
