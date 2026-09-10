@@ -1,3 +1,4 @@
+import { create } from 'zustand';
 import type { ChatAttachmentUpload } from '@ruimte/contracts';
 
 const STORAGE_KEY = 'ruimte.chat.drafts';
@@ -34,6 +35,22 @@ const store = (drafts: Record<string, DraftRecord>): boolean => {
 
 export const isEmptyDraft = (draft: ChatDraft): boolean => draft.text.trim() === '' && draft.attachments.length === 0;
 
+/*
+ * Which chats hold an unsent prompt, for the dot on their row in the sidebar. The drafts themselves
+ * stay in storage: a node that is not on screen has no composer, and this is all anyone else needs.
+ */
+export const useDrafts = create<{ ids: string[] }>(() => ({ ids: Object.keys(readAll()) }));
+
+export const useHasDraft = (chatId: string): boolean => useDrafts((s) => s.ids.includes(chatId));
+
+const trackDraft = (chatId: string, held: boolean): void => {
+    const { ids } = useDrafts.getState();
+    if (ids.includes(chatId) === held) {
+        return;
+    }
+    useDrafts.setState({ ids: held ? [...ids, chatId] : ids.filter((id) => id !== chatId) });
+};
+
 /* An unsent prompt per chat node, kept across reloads so a half-written message is never lost. */
 export const readDraft = (chatId: string): ChatDraft => {
     const record = readAll()[chatId];
@@ -42,6 +59,7 @@ export const readDraft = (chatId: string): ChatDraft => {
 
 export const writeDraft = (chatId: string, draft: ChatDraft): void => {
     const drafts = readAll();
+    trackDraft(chatId, !isEmptyDraft(draft));
     if (isEmptyDraft(draft)) {
         delete drafts[chatId];
         store(drafts);

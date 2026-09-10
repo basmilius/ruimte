@@ -1,6 +1,7 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { deriveTimelineRows, type TimelineRow } from '@/chat/logic/timeline';
+import { registerTimeline } from '@/chat/timeline-scroll';
 import { AgentTurnRow, ApprovalHistoryRow, AssistantRow, CompactionRow, NoteRow, QuestionHistoryRow, ThinkingRow, UserRow } from '@/chat/ui/rows/MessageRows';
 import { SubagentRow } from '@/chat/ui/rows/SubagentRow';
 import { ChangedFilesRow, TurnFoldRow, WorkGroupRow, WorkLiveRow, WorkRow, WorkingRow } from '@/chat/ui/rows/WorkRows';
@@ -83,6 +84,12 @@ export function Timeline({ chatId }: { chatId: string }) {
         );
     }, [order, items, expandedGroups, expandedTurns, expandedSubagents, activeTurnId]);
 
+    const empty = rows.length === 0;
+
+    // The composer pages through the thread with PageUp and PageDown; this is the element it moves.
+    // An empty thread draws no scroller at all, so the first row is what puts one there to register.
+    useEffect(() => registerTimeline(chatId, scrollRef.current), [chatId, empty]);
+
     const lastAssistantId = useMemo(() => {
         for (let i = rows.length - 1; i >= 0; i--) {
             const row = rows[i]!;
@@ -139,7 +146,7 @@ export function Timeline({ chatId }: { chatId: string }) {
         virtualizer.scrollToIndex(index, { align: 'start' });
     };
 
-    if (rows.length === 0) {
+    if (empty) {
         return (
             <div className="flex min-h-0 grow items-center justify-center">
                 <EmptyState icon={info ? <AgentIcon kind={info.provider} /> : undefined}>
