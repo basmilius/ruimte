@@ -16,6 +16,9 @@ export interface BackendLaunch {
     interactionMode: InteractionMode;
     // The CLI's own session or thread id to continue, if the chat has one.
     resume: string | null;
+    // How often this chat started a CLI; a protocol that numbers its own requests from zero
+    // needs it to keep the ids of one process apart from those of the one before.
+    generation: number;
     // Whether the person linked context to this chat; the backend decides how to tell the CLI.
     hasContext: boolean;
 }
@@ -39,7 +42,7 @@ export type BackendEvent =
     | { type: 'session'; agentSessionId: string | null; model: string | null; slashCommands?: string[] }
     | { type: 'text.delta'; ref: string; text: string }
     | { type: 'text.done'; ref: string; text: string }
-    | { type: 'tool.started'; ref: string; name: string; input: unknown; parentRef: string | null }
+    | { type: 'tool.started'; ref: string; name: string; input: unknown; parentRef: string | null; changes?: ChatFileChange[] }
     | { type: 'tool.progress'; ref: string; startedAt: number | null; description: string | null }
     | { type: 'tool.output'; ref: string; text: string }
     | { type: 'tool.done'; ref: string; output: string | null; state: 'done' | 'error'; changes?: ChatFileChange[] }

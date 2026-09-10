@@ -121,9 +121,11 @@ export class ChatSession {
     }
 
     cancel(): void {
-        if (this.backend && this.thread.info.activeTurnId) {
-            this.backend.interrupt();
+        if (!this.backend || this.thread.info.activeTurnId === null) {
+            return;
         }
+        // Through the same queue as the turn, so a stop can never overtake the message it stops.
+        this.run((backend) => backend.interrupt());
     }
 
     /* Answers a pending approval; false when nothing waits under that id. */
@@ -193,7 +195,7 @@ export class ChatSession {
                     work(backend);
                 }
             })
-            .catch((error: unknown) => this.fail(reason(error)));
+            .catch((error: unknown) => this.receive(this.generation, { type: 'failed', message: reason(error) }));
     }
 
     private ensureBackend(): Promise<ChatBackend> {
@@ -218,6 +220,7 @@ export class ChatSession {
             runtimeMode: info.runtimeMode,
             interactionMode: info.interactionMode,
             resume: info.agentSessionId,
+            generation,
             hasContext: this.options.hasContext()
         };
         const made: { backend: ChatBackend | null } = { backend: null };
@@ -235,27 +238,33 @@ export class ChatSession {
         const backend = made.backend;
         this.backend = backend;
         this.emit([this.thread.patchInfo({ running: true })]);
-        this.starting = backend.start().then(() => backend);
+        this.starting = backend
+            .start()
+            .then(() => backend)
+            .catch((error: unknown) => {
+                // A CLI that will not start leaves nothing to talk to; the next send tries again.
+                if (this.backend === backend) {
+                    this.backend = null;
+                    this.starting = null;
+                }
+                throw error;
+            });
         return this.starting;
     }
 
     private receive(generation: number, event: BackendEvent): void {
+        // A request that failed after the turn already ended has nothing left to report.
+        if (event.type === 'failed' && this.thread.info.activeTurnId === null) {
+            return;
+        }
         if (event.type === 'exit') {
             this.backend = null;
             this.starting = null;
         }
         this.emit(this.projector.project(generation, event));
-        if (event.type === 'turn.done' || event.type === 'exit') {
+        if (event.type === 'turn.done' || event.type === 'exit' || event.type === 'failed') {
             this.options.persist();
         }
-    }
-
-    private fail(message: string): void {
-        if (this.thread.info.activeTurnId === null) {
-            return;
-        }
-        this.emit(this.projector.project(this.generation, { type: 'failed', message }));
-        this.options.persist();
     }
 
     private emit(events: ChatEvent[]): void {
