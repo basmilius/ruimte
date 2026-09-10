@@ -391,8 +391,8 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                     inputRef.current?.focus();
                 }}
             >
-                {question && <QuestionDock chatId={chatId} item={question} />}
-                {!question && approvals[0] && <ApprovalDock chatId={chatId} item={approvals[0]} index={0} total={approvals.length} />}
+                {question && <QuestionDock chatId={chatId} item={question} focused={focused} />}
+                {!question && approvals[0] && <ApprovalDock chatId={chatId} item={approvals[0]} index={0} total={approvals.length} focused={focused} />}
                 {commandMenuOpen && (
                     <div className="border-b border-border px-1.5 py-1.5">
                         {commands.map((command, index) => (
@@ -530,7 +530,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                     <span className="grow" />
                     <ContextMeter usage={info.usage} disabled={busy || disabled} onCompact={() => void chatClient.compact(chatId).catch(() => undefined)} />
                     {busy ? (
-                        <Tooltip label="Stop">
+                        <Tooltip label="Stop" name>
                             <button
                                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-status-error text-accent-text"
                                 onClick={() => void chatClient.cancel(chatId).catch(() => undefined)}
@@ -539,7 +539,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                             </button>
                         </Tooltip>
                     ) : (
-                        <Tooltip label="Send" kbd="↵">
+                        <Tooltip label="Send" kbd="↵" name>
                             <button
                                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-accent-text disabled:opacity-40"
                                 disabled={isEmptyDraft(draft) || disabled}

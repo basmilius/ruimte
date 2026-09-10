@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import clsx from 'clsx';
+import { useEffect, useState } from 'react';
 import { isAgentKind, useCanvas } from '@/state/canvas';
 import type { Point, Rect } from '@/canvas/math';
 
@@ -69,13 +68,16 @@ function EdgeLabel({ id, label, at, editing, onEdit }: { id: string; label: stri
     if (!label) {
         return null;
     }
+    /* HTML, not `<text>` in a fixed 64 by 24 pill: the pill then grows with the label and with the
+       interface font size, which an SVG rect of hard numbers cannot do. */
     return (
-        <g transform={`translate(${at.x}, ${at.y})`} className="cursor-text" onDoubleClick={(e) => (e.stopPropagation(), onEdit(true))}>
-            <rect x="-32" y="-12" width="64" height="24" rx="12" fill="var(--surface-raised)" stroke="var(--border)" />
-            <text textAnchor="middle" dominantBaseline="middle" className="text-xs" fill="var(--text-muted)" fontFamily="var(--font-sans)">
-                {label}
-            </text>
-        </g>
+        <foreignObject x={at.x - 100} y={at.y - 16} width="200" height="32" style={{ overflow: 'visible' }}>
+            <div className="flex h-8 items-center justify-center" onDoubleClick={(e) => (e.stopPropagation(), onEdit(true))}>
+                <span className="pointer-events-auto cursor-text rounded-full border border-border bg-surface-raised px-2.5 py-0.5 text-xs whitespace-nowrap text-text-muted">
+                    {label}
+                </span>
+            </div>
+        </foreignObject>
     );
 }
 
@@ -88,6 +90,28 @@ export function EdgeLayer() {
     const draft = useCanvas((s) => s.linkDraft);
     const [hovered, setHovered] = useState<string | null>(null);
     const [editing, setEditing] = useState<string | null>(null);
+
+    // A selected edge answers Enter the way a selected node does: it opens what you can edit on it.
+    const single = selection.length === 1 ? selection[0]! : null;
+    const selectedEdge = single !== null && edges.some((edge) => edge.id === single) ? single : null;
+    useEffect(() => {
+        if (selectedEdge === null) {
+            return;
+        }
+        const onKeyDown = (e: KeyboardEvent): void => {
+            const target = e.target;
+            if (
+                e.key !== 'Enter' ||
+                (target instanceof HTMLElement && (target.isContentEditable || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'))
+            ) {
+                return;
+            }
+            e.preventDefault();
+            setEditing(selectedEdge);
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [selectedEdge]);
 
     const rectOf = (id: string): Rect | null => (hidden.has(id) ? null : nodes[id] ? nodes[id] : texts[id] ? textRect(texts[id]) : null);
 
@@ -108,12 +132,7 @@ export function EdgeLayer() {
                 const context = target !== undefined && isAgentKind(target.kind);
                 const stroke = context ? 'var(--accent)' : active ? 'var(--text-muted)' : 'var(--border-strong)';
                 return (
-                    <g
-                        key={edge.id}
-                        className={clsx(active && 'edge-active')}
-                        onPointerEnter={() => setHovered(edge.id)}
-                        onPointerLeave={() => setHovered((h) => (h === edge.id ? null : h))}
-                    >
+                    <g key={edge.id} onPointerEnter={() => setHovered(edge.id)} onPointerLeave={() => setHovered((h) => (h === edge.id ? null : h))}>
                         {/* A wide invisible stroke gives the thin line something to hover and click; a double-click names it. */}
                         <path
                             d={d}
