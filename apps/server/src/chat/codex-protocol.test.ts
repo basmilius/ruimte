@@ -259,3 +259,30 @@ describe('unwrapCommand', () => {
         expect(unwrapCommand('python3 script.py')).toBe('python3 script.py');
     });
 });
+
+describe('reasoning', () => {
+    test('summary and text deltas stream as thinking, with a break between summary parts', () => {
+        const protocol = new CodexProtocol(1);
+        expect(protocol.handle({ method: 'item/reasoning/summaryTextDelta', params: { itemId: 'r1', delta: 'weighing' } })).toEqual([
+            { type: 'thinking.delta', ref: 'r1', text: 'weighing' }
+        ]);
+        expect(protocol.handle({ method: 'item/reasoning/summaryPartAdded', params: { itemId: 'r1', summaryIndex: 1 } })).toEqual([
+            { type: 'thinking.delta', ref: 'r1', text: '\n\n' }
+        ]);
+        // The first part needs no break in front of it.
+        expect(protocol.handle({ method: 'item/reasoning/summaryPartAdded', params: { itemId: 'r1', summaryIndex: 0 } })).toEqual([]);
+        expect(protocol.handle({ method: 'item/reasoning/textDelta', params: { itemId: 'r1', delta: 'the details' } })).toEqual([
+            { type: 'thinking.delta', ref: 'r1', text: 'the details' }
+        ]);
+    });
+
+    test('a completed reasoning item carries the whole thing, for a client that missed the deltas', () => {
+        const protocol = new CodexProtocol(1);
+        expect(
+            protocol.handle({ method: 'item/completed', params: { item: { type: 'reasoning', id: 'r1', summary: ['first', ''], content: ['second'] } } })
+        ).toEqual([{ type: 'thinking.done', ref: 'r1', text: 'first\n\nsecond' }]);
+        // Nothing to say while it is still running, and nothing to say about an empty one.
+        expect(protocol.handle({ method: 'item/started', params: { item: { type: 'reasoning', id: 'r2', summary: [], content: [] } } })).toEqual([]);
+        expect(protocol.handle({ method: 'item/completed', params: { item: { type: 'reasoning', id: 'r2', summary: [], content: [] } } })).toEqual([]);
+    });
+});

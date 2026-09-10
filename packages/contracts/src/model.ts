@@ -70,6 +70,8 @@ export const ProviderCapabilitiesSchema = z.object({
     compaction: z.enum(['native', 'prompt', 'none']),
     reportsCost: z.boolean(),
     reportsContextWindow: z.boolean(),
+    // Whether the CLI hands over what the model thought before it answered.
+    reportsThinking: z.boolean(),
     slashCommands: z.boolean()
 });
 export type ProviderCapabilities = z.infer<typeof ProviderCapabilitiesSchema>;

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import clsx from 'clsx';
 import {
     Bot,
+    Brain,
     Check,
     ChevronDown,
     CircleAlert,
@@ -16,10 +17,11 @@ import {
     Zap,
     type LucideIcon
 } from 'lucide-react';
-import type { ChatApprovalItem, ChatAssistantItem, ChatQuestionItem, ChatUserItem } from '@ruimte/contracts';
+import type { ChatApprovalItem, ChatAssistantItem, ChatQuestionItem, ChatThinkingItem, ChatUserItem } from '@ruimte/contracts';
 import { attachmentUrl, formatBytes, isImageAttachment } from '@/chat/attachments';
 import { tokenizeChips } from '@/chat/mentions';
 import { Markdown } from '@/chat/ui/Markdown';
+import { formatDuration } from '@/chat/logic/timeline';
 import { toolSummary } from '@/chat/logic/tools';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
@@ -120,6 +122,33 @@ export function AssistantRow({ item, last }: { item: ChatAssistantItem; last: bo
                         </button>
                     </Tooltip>
                 </div>
+            )}
+        </div>
+    );
+}
+
+/*
+ * What the model thought before it answered. It shimmers while it streams and folds itself away
+ * once the answer starts, because the thought is worth a glance and rarely worth reading twice.
+ */
+export function ThinkingRow({ item }: { item: ChatThinkingItem }) {
+    const [open, setOpen] = useState(false);
+    const shown = open || item.streaming;
+    return (
+        <div className="px-1 pb-2">
+            <button className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text" disabled={item.streaming} onClick={() => setOpen((o) => !o)}>
+                <Icon icon={Brain} size={12} />
+                {item.streaming ? (
+                    <span className="chat-live-text">Thinking...</span>
+                ) : (
+                    <>
+                        <span>Thought for {formatDuration((item.endedAt ?? item.createdAt) - item.createdAt)}</span>
+                        <Icon icon={ChevronDown} size={12} className={clsx('transition-transform', open && 'rotate-180')} />
+                    </>
+                )}
+            </button>
+            {shown && item.text !== '' && (
+                <div className="mt-1 border-l border-border pl-2.5 text-xs leading-normal whitespace-pre-wrap text-text-faint select-text">{item.text}</div>
             )}
         </div>
     );

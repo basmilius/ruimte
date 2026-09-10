@@ -66,6 +66,7 @@ export const CLAUDE_CAPABILITIES: ProviderCapabilities = {
     compaction: 'prompt',
     reportsCost: true,
     reportsContextWindow: true,
+    reportsThinking: true,
     slashCommands: true
 };
 

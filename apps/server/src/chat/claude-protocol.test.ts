@@ -11,7 +11,9 @@ describe('ClaudeProtocol', () => {
         ]);
 
         protocol.handle({ type: 'stream_event', event: { type: 'message_start', message: { id: 'msg_1' } } });
-        expect(protocol.handle({ type: 'stream_event', event: { type: 'content_block_start', index: 0, content_block: { type: 'thinking' } } })).toEqual([]);
+        expect(protocol.handle({ type: 'stream_event', event: { type: 'content_block_start', index: 0, content_block: { type: 'thinking' } } })).toEqual([
+            { type: 'thinking.delta', ref: 'msg_1:k0', text: '' }
+        ]);
         expect(protocol.handle({ type: 'stream_event', event: { type: 'content_block_start', index: 1, content_block: { type: 'text', text: '' } } })).toEqual([
             { type: 'text.delta', ref: 'msg_1:t0', text: '' }
         ]);

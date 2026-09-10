@@ -41,6 +41,7 @@ export const CODEX_CAPABILITIES: ProviderCapabilities = {
     compaction: 'native',
     reportsCost: false,
     reportsContextWindow: true,
+    reportsThinking: true,
     slashCommands: false
 };
 

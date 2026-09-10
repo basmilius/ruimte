@@ -18,6 +18,7 @@ const TERMINAL_ONLY_CAPABILITIES: ProviderCapabilities = {
     compaction: 'none',
     reportsCost: false,
     reportsContextWindow: false,
+    reportsThinking: false,
     slashCommands: false
 };
 

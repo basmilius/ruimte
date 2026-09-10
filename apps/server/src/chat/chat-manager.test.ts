@@ -126,7 +126,7 @@ describe('ChatManager', () => {
             usage: { turns: 1, costUsd: 0.01, contextWindow: 200000, contextTokens: 1110 }
         });
         expect(recorder.info?.agentSessionId?.startsWith('fake-')).toBe(true);
-        expect(manager.attach('chat-1', 'c2').items.map((item) => item.kind)).toEqual(['turn', 'user', 'assistant']);
+        expect(manager.attach('chat-1', 'c2').items.map((item) => item.kind)).toEqual(['turn', 'user', 'thinking', 'assistant']);
     });
 
     test('a permission request becomes an approval card, and allowing always sends the suggested rule', async () => {
@@ -252,7 +252,7 @@ describe('ChatManager', () => {
         again.subscribe('c9', other.sink());
         const info = await again.create({ chatId: 'chat-5' });
         expect(info).toMatchObject({ agentSessionId: sessionId, running: false, status: 'idle', usage: { turns: 1 } });
-        expect(again.attach('chat-5', 'c9').items.map((item) => item.kind)).toEqual(['turn', 'user', 'assistant']);
+        expect(again.attach('chat-5', 'c9').items.map((item) => item.kind)).toEqual(['turn', 'user', 'thinking', 'assistant']);
 
         again.send('chat-5', 'second');
         await waitFor(() => other.info?.status === 'idle' && other.info.running, 'the second turn');

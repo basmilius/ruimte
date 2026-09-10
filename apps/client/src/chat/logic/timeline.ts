@@ -4,6 +4,7 @@ import type {
     ChatCheckpointDiff,
     ChatItem,
     ChatQuestionItem,
+    ChatThinkingItem,
     ChatToolItem,
     ChatTurnItem,
     ChatUserItem
@@ -19,6 +20,7 @@ export type TimelineRow =
     | { kind: 'user'; id: string; item: ChatUserItem }
     | { kind: 'turn-start'; id: string; turn: ChatTurnItem; label: string }
     | { kind: 'assistant'; id: string; item: ChatAssistantItem }
+    | { kind: 'thinking'; id: string; item: ChatThinkingItem }
     | { kind: 'work'; id: string; tool: ChatToolItem }
     | { kind: 'work-group'; id: string; tools: ChatToolItem[]; summary: string; expanded: boolean }
     | { kind: 'work-live'; id: string; tool: ChatToolItem }
@@ -71,7 +73,7 @@ export const summarizeGroup = (tools: ChatToolItem[]): string => {
     return plural(tools.length, 'tool call');
 };
 
-const formatDuration = (ms: number): string => {
+export const formatDuration = (ms: number): string => {
     const seconds = Math.max(1, Math.round(ms / 1000));
     if (seconds < 60) {
         return `${seconds}s`;
@@ -146,6 +148,9 @@ const rowsForItems = (items: ChatItem[], options: TimelineOptions): TimelineRow[
                 if (item.text !== '' || item.streaming) {
                     rows.push({ kind: 'assistant', id: item.id, item });
                 }
+                break;
+            case 'thinking':
+                rows.push({ kind: 'thinking', id: item.id, item });
                 break;
             case 'approval':
                 // A pending one sits on the composer; only its outcome belongs in the transcript.

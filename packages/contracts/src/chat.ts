@@ -119,6 +119,17 @@ export const ChatAssistantItemSchema = z.object({
     streaming: z.boolean()
 });
 
+// One stretch of the model thinking out loud before it answers: Claude's thinking blocks, Codex's
+// reasoning summaries. Consecutive blocks are one item, so the timeline has one row per stretch.
+export const ChatThinkingItemSchema = z.object({
+    ...base,
+    kind: z.literal('thinking'),
+    text: z.string(),
+    streaming: z.boolean(),
+    // When the stretch ended, so the row can say how long it took; null while it is still running.
+    endedAt: z.number().nullable()
+});
+
 export const ChatToolStateSchema = z.enum(['running', 'done', 'error']);
 export type ChatToolState = z.infer<typeof ChatToolStateSchema>;
 
@@ -242,6 +253,7 @@ export const ChatCompactionItemSchema = z.object({
 export const ChatItemSchema = z.discriminatedUnion('kind', [
     ChatUserItemSchema,
     ChatAssistantItemSchema,
+    ChatThinkingItemSchema,
     ChatToolItemSchema,
     ChatApprovalItemSchema,
     ChatQuestionItemSchema,
@@ -252,6 +264,7 @@ export const ChatItemSchema = z.discriminatedUnion('kind', [
 export type ChatItem = z.infer<typeof ChatItemSchema>;
 export type ChatUserItem = z.infer<typeof ChatUserItemSchema>;
 export type ChatAssistantItem = z.infer<typeof ChatAssistantItemSchema>;
+export type ChatThinkingItem = z.infer<typeof ChatThinkingItemSchema>;
 export type ChatToolItem = z.infer<typeof ChatToolItemSchema>;
 export type ChatApprovalItem = z.infer<typeof ChatApprovalItemSchema>;
 export type ChatQuestionItem = z.infer<typeof ChatQuestionItemSchema>;

@@ -56,9 +56,11 @@ export class ClaudeProtocol {
     private readonly pending = new Map<string, Pending>();
     private streamMessageId: string | null = null;
     private streamTextCount = 0;
+    private streamThinkingCount = 0;
     // Stream block index to the ref of the text block collecting its deltas.
     private readonly streamBlocks = new Map<number, string>();
     private readonly frameTextCount = new Map<string, number>();
+    private readonly frameThinkingCount = new Map<string, number>();
     // What the CLI called its model, which is the key its result frame reports usage under.
     private model: string | null = null;
 
@@ -194,21 +196,35 @@ export class ClaudeProtocol {
             const message = isRecord(event.message) ? event.message : {};
             this.streamMessageId = str(message.id);
             this.streamTextCount = 0;
+            this.streamThinkingCount = 0;
             this.streamBlocks.clear();
             return;
         }
         const index = num(event.index);
-        if (event.type === 'content_block_start' && isRecord(event.content_block) && event.content_block.type === 'text' && this.streamMessageId) {
-            const ref = this.textRef(this.streamMessageId, this.streamTextCount++);
-            this.streamBlocks.set(index, ref);
-            events.push({ type: 'text.delta', ref, text: str(event.content_block.text) ?? '' });
-            return;
+        if (event.type === 'content_block_start' && isRecord(event.content_block) && this.streamMessageId) {
+            if (event.content_block.type === 'text') {
+                const ref = this.textRef(this.streamMessageId, this.streamTextCount++);
+                this.streamBlocks.set(index, ref);
+                events.push({ type: 'text.delta', ref, text: str(event.content_block.text) ?? '' });
+                return;
+            }
+            if (event.content_block.type === 'thinking') {
+                const ref = this.thinkingRef(this.streamMessageId, this.streamThinkingCount++);
+                this.streamBlocks.set(index, ref);
+                events.push({ type: 'thinking.delta', ref, text: str(event.content_block.thinking) ?? '' });
+                return;
+            }
         }
-        if (event.type === 'content_block_delta' && isRecord(event.delta) && event.delta.type === 'text_delta') {
+        if (event.type === 'content_block_delta' && isRecord(event.delta)) {
             const ref = this.streamBlocks.get(index);
-            const text = str(event.delta.text);
-            if (ref && text) {
+            const text = str(event.delta.text) ?? str(event.delta.thinking);
+            if (!ref || !text) {
+                return;
+            }
+            if (event.delta.type === 'text_delta') {
                 events.push({ type: 'text.delta', ref, text });
+            } else if (event.delta.type === 'thinking_delta') {
+                events.push({ type: 'thinking.delta', ref, text });
             }
         }
     }
@@ -226,6 +242,10 @@ export class ClaudeProtocol {
                 const ordinal = this.frameTextCount.get(messageId) ?? 0;
                 this.frameTextCount.set(messageId, ordinal + 1);
                 events.push({ type: 'text.done', ref: this.textRef(messageId, ordinal), text: str(block.text) ?? '' });
+            } else if (block.type === 'thinking' && !parentRef) {
+                const ordinal = this.frameThinkingCount.get(messageId) ?? 0;
+                this.frameThinkingCount.set(messageId, ordinal + 1);
+                events.push({ type: 'thinking.done', ref: this.thinkingRef(messageId, ordinal), text: str(block.thinking) ?? '' });
             } else if (block.type === 'tool_use') {
                 events.push({
                     type: 'tool.started',
@@ -321,5 +341,9 @@ export class ClaudeProtocol {
 
     private textRef(messageId: string, ordinal: number): string {
         return `${messageId}:t${ordinal}`;
+    }
+
+    private thinkingRef(messageId: string, ordinal: number): string {
+        return `${messageId}:k${ordinal}`;
     }
 }

@@ -43,10 +43,10 @@ export class ChatThread {
         return { type: 'item', item };
     }
 
-    /* Streams text into an assistant item, or partial output into a tool call that is still running. */
+    /* Streams text into an assistant or thinking item, or partial output into a tool call that is still running. */
     appendText(itemId: string, text: string): ChatEvent | null {
         const item = this.items.get(itemId);
-        if (item?.kind === 'assistant') {
+        if (item?.kind === 'assistant' || item?.kind === 'thinking') {
             this.items.set(itemId, { ...item, text: item.text + text });
             return { type: 'delta', itemId, text };
         }
