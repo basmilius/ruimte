@@ -28,6 +28,7 @@ import { registerProjectHandlers } from './handlers/project.ts';
 import { registerServerHandlers } from './handlers/server.ts';
 import { registerSessionHandlers } from './handlers/session.ts';
 import { Checkpoints } from './git/checkpoints.ts';
+import { GitStatusWatcher } from './git/status-watcher.ts';
 import { Worktrees } from './git/worktrees.ts';
 import { handleProjectRequest, PROJECTS_PATH } from './projects/icon-route.ts';
 import { ProjectStore } from './projects/project-store.ts';
@@ -89,6 +90,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     });
     const projects = new ProjectStore(config.home);
     const folders = new FolderWatcher();
+    const statuses = new GitStatusWatcher();
 
     const dispatcher = new Dispatcher();
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home });
@@ -108,7 +110,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         }
     });
     registerFsHandlers(dispatcher, folders);
-    registerGitHandlers(dispatcher, new Worktrees(config.home));
+    registerGitHandlers(dispatcher, new Worktrees(config.home), statuses);
 
     if (config.installHooks) {
         // Only the CLIs the daemon has a normalizer for are listed; the others run without status.
@@ -245,6 +247,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 const unsubscribeChats = chats.subscribe(client.id, sink);
                 const unsubscribeProjects = projects.subscribe(client.id, sink);
                 const unsubscribeFolders = folders.subscribe(client.id, sink);
+                const unsubscribeStatuses = statuses.subscribe(client.id, sink);
                 connections.set(ws, {
                     client,
                     gate,
@@ -253,6 +256,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                         unsubscribeChats();
                         unsubscribeProjects();
                         unsubscribeFolders();
+                        unsubscribeStatuses();
                     }
                 });
             },
@@ -277,6 +281,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 manager.detachAll(state.client.id);
                 chats.detachAll(state.client.id);
                 folders.detachAll(state.client.id);
+                statuses.detachAll(state.client.id);
                 state.unsubscribe();
             }
         }
