@@ -1,8 +1,9 @@
 import { z } from 'zod';
 import { SessionIdSchema } from './ids.ts';
 
-// The CLIs whose hooks the daemon understands. Others join as one more entry plus one normalizer.
-export const AgentKindSchema = z.enum(['claude', 'codex']);
+// The agent CLIs Ruimte knows. Whether one has a chat backend or a hook normalizer is a capability
+// on its provider, not a second list: a CLI without hooks still opens as a terminal agent.
+export const AgentKindSchema = z.enum(['claude', 'codex', 'gemini', 'copilot']);
 export type AgentKind = z.infer<typeof AgentKindSchema>;
 
 export const AgentStatusSchema = z.enum(['running', 'needs-you', 'idle', 'error']);
