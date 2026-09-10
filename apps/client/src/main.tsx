@@ -11,6 +11,7 @@ import '@/project';
 import { exposeTerminalTestHooks } from '@/terminal/registry';
 import '@/state/theme';
 import '@/state/settings';
+import '@fontsource-variable/geist';
 import '@xterm/xterm/css/xterm.css';
 import '@/styles.css';
 

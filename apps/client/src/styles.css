@@ -186,6 +186,8 @@
     --shadow-node: var(--shadow-node);
     --shadow-float: var(--shadow-float);
     --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+    /* Geist carries the wordmark only; the interface keeps the system font. */
+    --font-brand: "Geist Variable", -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
     --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
 }
 
