@@ -50,10 +50,10 @@ already do most of the diff work.
   Then one stacked `git.action` for commit, push and PR through `gh`, the message written by the
   chat CLI when left empty, progress as a toast, acting on the folder or a selected group's worktree.
   Pull when behind from the branch chip.
-- Files: done except the reading. `fs.list`, `fs.watch` and `fs.changed` are on the wire, the tree
-  (`@pierre/trees`), the filter over `fs.search`, the drag onto a chat node as a mention and the
-  tabbed viewer are in. What is left is a bounded `fs.read` with a binary check and the renderers
-  behind it: shiki, markdown and images. No file manager.
+- Files: done. `fs.list`, `fs.watch` and `fs.changed` are on the wire, the tree (`@pierre/trees`),
+  the filter over `fs.search`, the drag onto a chat node as a mention and the tabbed viewer are in,
+  and so is the reading: a bounded `fs.read` with a binary sniff, an image route next to it, and the
+  renderers behind them (shiki, markdown, images). No file manager.
 - Open in editor: an editor probe and preference, `fs.open` with `path:line`, used from menus, diff
   rows and paths in terminal output.
 

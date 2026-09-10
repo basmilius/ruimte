@@ -171,7 +171,12 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   `1.0.0-beta.6`), which renders itself with Preact inside a shadow root and takes the app's
   tokens through the `--trees-*-override` variables on its host (`.files-tree` in `styles.css`).
   The model is a flat list of paths relative to the project folder, POSIX, a directory with a
-  trailing slash. Directories load one at a time: `fs.list` on the folder, and a directory nobody
+  trailing slash. The library sorts that flat list itself, and a directory is only in it when it is
+  empty or unloaded: `src/index.ts` is the only row that says `src` exists. So `compareRows` walks
+  the two paths segment by segment and lets the first segment they differ on decide, a directory
+  before a file, case-insensitively. Comparing the last segment alone put `src/index.ts` wherever
+  `index.ts` happened to fall, which is how directories ended up mixed in among the files.
+  Directories load one at a time: `fs.list` on the folder, and a directory nobody
   has opened yet carries one hidden placeholder row so its chevron is there. The library reports
   an expansion nowhere, so the panel subscribes to the model and diffs `isExpanded()` over the
   directories it knows; a directory that just opened and has never been listed is the one the
@@ -197,9 +202,32 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   `sessionStorage` per project, so a reload keeps them and another canvas starts empty. The split
   is resizable, tree width in `ruimte.files.tree` (default 280, min 200); the first open file
   widens the panel to make room for the viewer and the last close hands the width back, unless the
-  person dragged the panel's own edge in between. Drawing a file is the next step: the body is an
-  `EmptyState` naming the file behind a `FileRenderer` registry (`shell/panels/renderers.tsx`), so
-  shiki, markdown and images drop in without the viewer changing, once `fs.read` exists.
+  person dragged the panel's own edge in between.
+
+- **Drawing a file**: the viewer reads the active tab through `useFileRead`
+  (`shell/panels/use-file-read.ts`) and hands the result to `renderFile`
+  (`shell/panels/renderers.tsx`): the name picks a renderer for a text file, what the read found
+  picks everything else. `FileBody` owns the one loading state and the one error state (with "Try
+  again"), so a renderer only ever sees a file that is there, and the body is keyed on the path so
+  a tab switch starts a read of its own. An `fs.changed` under the file's own folder re-reads it in
+  place: the state stays `ready` while the new read is on its way, nothing unmounts and the scroll
+  position lives through a save.
+  Markdown (`.md`, `.mdx`, `.markdown`) is the chat's own `Markdown` component with a Preview and
+  Source switch in the viewer's toolbar; Source is the code view, and both share one toolbar so the
+  switch does not move when it is used. Code is shiki through a dynamic import of the full bundle
+  (`shell/panels/highlight.ts`), not the chat's web one, because a folder holds Go and TOML as
+  readily as TypeScript; the language comes from the daemon and falls back to plain text.
+  A file is cut into blocks of 400 lines, each of which reserves its height (20 px a line), draws
+  nothing until it comes within 600 px of the viewport, then plain text, then the highlighted
+  version, so a 2 MB file paints at once and never blocks. Line numbers are a CSS counter each
+  block starts at its own offset, which is what keeps the blocks independent; a shiki transformer
+  drops the newline it puts between line spans, so the lines can be blocks. Wrap is an icon button
+  in the toolbar, per viewer session, nothing stored.
+  Images (PNG, JPEG, GIF, WebP, SVG) are an `<img>` on `GET /fs/file` (`shell/panels/file-url.ts`,
+  the endpoint's token the way the project icon carries it), on a plain sunken surface with a Fit
+  and 1:1 switch and a footer with the dimensions, the size and the mime. Everything else, a PDF or
+  a text file past 2 MB, is an `EmptyState` naming the size with a "Reveal in Finder" button
+  (`shell/panels/UnsupportedFile.tsx`).
 
 - **Settings** (written from scratch): one
   dialog with a section list on the left (Base UI Tabs, arrow keys move, `activateOnFocus`)
