@@ -1,14 +1,9 @@
 import { createHash } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import type { ChatCheckpointDiff, ChatCheckpointFile } from '@ruimte/contracts';
+import type { ChatCheckpointDiff } from '@ruimte/contracts';
+import { diffTrees } from './diff.ts';
 import { git } from './run.ts';
-
-// Beyond these a diff stops being something a person reads, and the chat file stops being small.
-const MAX_FILES = 100;
-const MAX_FILE_LINES = 2000;
-const MAX_FILE_BYTES = 128 * 1024;
-const MAX_TOTAL_BYTES = 512 * 1024;
 
 export interface CheckpointService {
     take(cwd: string): Promise<string | null>;
@@ -26,11 +21,6 @@ const serialize = <T>(key: string, work: () => Promise<T>): Promise<T> => {
         next.catch(() => undefined)
     );
     return next;
-};
-
-const countedLines = (numstat: string): number => {
-    const added = Number.parseInt(numstat, 10);
-    return Number.isNaN(added) ? 0 : added;
 };
 
 /*
@@ -80,39 +70,7 @@ export class Checkpoints implements CheckpointService {
         if (now === null) {
             return null;
         }
-        const numstat = await git(['diff', '--numstat', '-z', '--no-renames', tree, now], top);
-        const status = await git(['diff', '--name-status', '-z', '--no-renames', tree, now], top);
-        if (numstat === null || status === null) {
-            return null;
-        }
-        const kinds = kindsByPath(status);
-        const counts = parseNumstat(numstat);
-        const files: ChatCheckpointFile[] = [];
-        let budget = MAX_TOTAL_BYTES;
-        for (const count of counts.slice(0, MAX_FILES)) {
-            const file: ChatCheckpointFile = {
-                path: count.path,
-                kind: kinds.get(count.path) ?? 'update',
-                added: count.added,
-                deleted: count.deleted,
-                diff: ''
-            };
-            if (count.binary) {
-                file.omitted = 'binary';
-            } else if (count.added + count.deleted > MAX_FILE_LINES) {
-                file.omitted = 'too-large';
-            } else {
-                const body = await git(['diff', '--no-color', '--no-ext-diff', tree, now, '--', `:(literal)${count.path}`], top);
-                if (body === null || body.length > MAX_FILE_BYTES || body.length > budget) {
-                    file.omitted = 'too-large';
-                } else {
-                    file.diff = body;
-                    budget -= body.length;
-                }
-            }
-            files.push(file);
-        }
-        return { files, truncated: counts.length > files.length };
+        return await diffTrees(top, tree, now);
     }
 
     private async toplevel(cwd: string): Promise<string | null> {
@@ -129,38 +87,3 @@ export class Checkpoints implements CheckpointService {
         return join(this.root, `${basename(top)}-${createHash('sha1').update(top).digest('hex').slice(0, 8)}.index`);
     }
 }
-
-interface Numstat {
-    path: string;
-    added: number;
-    deleted: number;
-    binary: boolean;
-}
-
-// `--numstat -z` writes `<added>\t<deleted>\t<path>` per file, NUL terminated; a binary file counts `-`.
-const parseNumstat = (output: string): Numstat[] => {
-    const entries: Numstat[] = [];
-    for (const record of output.split('\0')) {
-        if (record === '') {
-            continue;
-        }
-        const [added = '', deleted = '', ...rest] = record.split('\t');
-        const path = rest.join('\t');
-        if (path === '') {
-            continue;
-        }
-        entries.push({ path, added: countedLines(added), deleted: countedLines(deleted), binary: added === '-' });
-    }
-    return entries;
-};
-
-// `--name-status -z` alternates a status letter and the path it belongs to.
-const kindsByPath = (output: string): Map<string, ChatCheckpointFile['kind']> => {
-    const kinds = new Map<string, ChatCheckpointFile['kind']>();
-    const fields = output.split('\0').filter((field) => field !== '');
-    for (let i = 0; i + 1 < fields.length; i += 2) {
-        const letter = fields[i]![0];
-        kinds.set(fields[i + 1]!, letter === 'A' ? 'add' : letter === 'D' ? 'delete' : 'update');
-    }
-    return kinds;
-};

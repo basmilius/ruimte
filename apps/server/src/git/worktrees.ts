@@ -2,27 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
 import type { Worktree } from '@ruimte/contracts';
-
-type GitErrorCode = 'not-a-repo' | 'git-failed' | 'worktree-not-found';
-
-export class GitError extends Error {
-    readonly code: GitErrorCode;
-
-    constructor(code: GitErrorCode, message: string) {
-        super(message);
-        this.name = 'GitError';
-        this.code = code;
-    }
-}
-
-const run = async (args: string[], cwd: string): Promise<string> => {
-    const proc = Bun.spawn(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe' });
-    const [stdout, stderr, code] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
-    if (code !== 0) {
-        throw new GitError('git-failed', stderr.trim() || `git ${args[0]} failed`);
-    }
-    return stdout;
-};
+import { GitError, gitOrThrow as run, toplevel } from './run.ts';
 
 // Branch names carry slashes; the folder name must not.
 const safeName = (branch: string): string => branch.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'branch';
@@ -81,10 +61,6 @@ export class Worktrees {
     }
 
     private async toplevel(repo: string): Promise<string> {
-        try {
-            return (await run(['rev-parse', '--show-toplevel'], repo)).trim();
-        } catch {
-            throw new GitError('not-a-repo', `${repo} is not inside a git repository`);
-        }
+        return await toplevel(repo);
     }
 }
