@@ -6,6 +6,7 @@ import { startServerInfo } from '@/transport/server-info';
 import { startContextSync } from '@/context/sync';
 import { startEndpointSelection } from '@/endpoint';
 import { desktop } from '@/desktop/bridge';
+import { startInputModality } from '@/ui/modality';
 import { useTheme } from '@/state/theme';
 import '@/project';
 import { exposeTerminalTestHooks } from '@/terminal/registry';
@@ -20,6 +21,7 @@ startNeedsYouNotifications();
 startServerInfo();
 startContextSync();
 startEndpointSelection();
+startInputModality();
 // The native window controls on Windows and Linux take their colors from the client's theme.
 desktop()?.setTitleBarTheme(useTheme.getState().resolved === 'dark');
 useTheme.subscribe((state, previous) => {
