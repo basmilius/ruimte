@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
+import { Menu } from '@base-ui-components/react/menu';
 import clsx from 'clsx';
-import { ArrowDown, ArrowUp, ChevronRight, Folder, GitBranch, Minus, Plus, RefreshCw, Trash2 } from 'lucide-react';
-import type { GitFile, GitFileState, GitStatus } from '@ruimte/contracts';
+import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronRight, Folder, GitBranch, Minus, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import type { GitFile, GitFileState, GitStatus, Worktree } from '@ruimte/contracts';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { activeDiffPath, buildGitRows, type GitTreeRow } from '@/shell/panels/git-tree';
 import { useCanvas } from '@/state/canvas';
 import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
-import { gitTarget } from '@/state/git-target';
+import { gitTarget, gitTargets, type GitTarget } from '@/state/git-target';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { transport } from '@/transport';
@@ -16,7 +17,6 @@ import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
 import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
-import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
 
 // How long the line about the stash a discard wrote stays up.
@@ -51,8 +51,14 @@ export function GitPanel() {
     const tree = useSettings((s) => s.gitTree);
     const collapsedDirs = useGit((s) => s.collapsedDirs);
     const tabLimit = useSettings((s) => s.filesTabLimit);
-    const target = useMemo(() => gitTarget(nodes, selection, folder), [nodes, selection, folder]);
+    const derived = useMemo(() => gitTarget(nodes, selection, folder), [nodes, selection, folder]);
+    /* A checkout picked by hand outranks the selection, until the selection points somewhere else
+       of its own: `from` is the target it was picked over, so a click on the canvas takes over again. */
+    const [picked, setPicked] = useState<{ target: GitTarget; from: string | null } | null>(null);
+    const target = picked !== null && picked.from === derived.cwd ? picked.target : derived;
     const cwd = target.cwd;
+    const [worktrees, setWorktrees] = useState<readonly Worktree[]>([]);
+    const targets = useMemo(() => gitTargets(nodes, worktrees, folder), [nodes, worktrees, folder]);
 
     /* What was read, and which checkout it was read from: a target that just changed shows nothing
        until its own status lands, without an effect that empties the state first. */
@@ -168,9 +174,19 @@ export function GitPanel() {
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border px-2">
-                <Pill icon={<Icon icon={target.kind === 'worktree' ? GitBranch : Folder} size={12} />} mono={target.kind === 'worktree'}>
-                    {target.label}
-                </Pill>
+                <TargetMenu
+                    target={target}
+                    targets={targets}
+                    onOpen={() => {
+                        if (folder !== null) {
+                            void transport
+                                .request('git.worktree-list', { repo: folder })
+                                .then((answer) => setWorktrees(answer.worktrees))
+                                .catch(() => setWorktrees([]));
+                        }
+                    }}
+                    onPick={(next) => setPicked({ target: next, from: derived.cwd })}
+                />
                 {status?.repo && target.kind === 'project' && status.branch !== null && (
                     <span className="truncate font-mono text-xs text-text-muted">{status.branch}</span>
                 )}
@@ -230,6 +246,54 @@ export function GitPanel() {
                 </Dialog.Portal>
             </Dialog.Root>
         </div>
+    );
+}
+
+/*
+ * Which checkout the panel is on, and the ones it could be on instead: the project folder and every
+ * worktree the daemon knows of it, with the group that binds one named beside it. Picking one keeps
+ * the panel there while the canvas selection stays where it is.
+ */
+function TargetMenu({
+    target,
+    targets,
+    onOpen,
+    onPick
+}: {
+    target: GitTarget;
+    targets: readonly GitTarget[];
+    onOpen(): void;
+    onPick(target: GitTarget): void;
+}) {
+    return (
+        <Menu.Root onOpenChange={(open) => open && onOpen()}>
+            <Menu.Trigger
+                className="inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 text-xs text-text-muted hover:text-text"
+                aria-label="Which checkout this panel is on"
+            >
+                <Icon icon={target.kind === 'worktree' ? GitBranch : Folder} size={12} />
+                <span className={clsx('max-w-40 truncate', target.kind === 'worktree' && 'font-mono')}>{target.label}</span>
+                <Icon icon={ChevronDown} size={12} />
+            </Menu.Trigger>
+            <Menu.Portal>
+                <Menu.Positioner className="popup-layer" side="bottom" align="start" sideOffset={6}>
+                    <Menu.Popup className="menu-popup">
+                        {targets.map((entry) => (
+                            <Menu.Item key={entry.cwd ?? entry.label} className="menu-item" onClick={() => onPick(entry)}>
+                                <Icon icon={entry.cwd === target.cwd ? Check : entry.kind === 'worktree' ? GitBranch : Folder} size={14} />
+                                <span className="truncate">{entry.label}</span>
+                                {entry.group !== undefined && <span className="text-text-faint">{entry.group}</span>}
+                            </Menu.Item>
+                        ))}
+                        {targets.length === 0 && (
+                            <Menu.Item className="menu-item" disabled>
+                                No checkout to point at
+                            </Menu.Item>
+                        )}
+                    </Menu.Popup>
+                </Menu.Positioner>
+            </Menu.Portal>
+        </Menu.Root>
     );
 }
 

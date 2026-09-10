@@ -43,7 +43,10 @@ export const registerGitHandlers = (dispatcher: Dispatcher, worktrees: Worktrees
     });
 
     dispatcher.register('git.diff', (payload) =>
-        translate(async () => diffFile(payload.cwd, payload.path, payload.scope, payload.staged ?? false, await mergeBaseOf(payload.cwd)))
+        translate(async () => {
+            const options = { scope: payload.scope, staged: payload.staged ?? false, ignoreWhitespace: payload.ignoreWhitespace ?? false };
+            return await diffFile(payload.cwd, payload.path, options, await mergeBaseOf(payload.cwd));
+        })
     );
 
     dispatcher.register('git.stage', (payload) =>

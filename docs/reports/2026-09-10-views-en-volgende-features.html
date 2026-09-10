@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Views per project en de volgende features</title>
+<style>
+:root {
+  color-scheme: light;
+  --accent: #3f38b5;
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --image-outline: rgb(0 0 0 / 10%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; white-space: nowrap; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 15px; }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); stroke-width: 1.5; }
+.diagram .node.plain { fill: var(--paper); }
+.diagram .edge { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow { fill: var(--accent); }
+.diagram .muted { fill: var(--muted); font-size: 13px; }
+.plot { min-width: 520px; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; line-height: 1.5; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide, .plot { min-width: 0; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#samenvatting">Naar de samenvatting</a>
+<header>
+  <p class="eyebrow">Ruimte / Ontwerpverkenning / 10 september 2026</p>
+  <h1>Views per project en de volgende features</h1>
+  <p class="intro">Een project wordt een map met een lijst views. Een view is een canvas, een chat, een terminal of een browser. Een losse view is een node zonder positie, met dezelfde id als zijn sessie, dus een node van het canvas naar de sidebar tillen kost geen herstart. Daarnaast liggen er uit nodeterm en T3 Code zeven kleine features klaar die samen minder dan een week kosten.</p>
+  <p class="status">Voorstel, nog niet besloten</p>
+  <p class="caption">Bron: Ruimte op commit <code>8b7c11d</code> (main, 10 september 2026), de nodeterm-fork op <code>323931ea</code> (9 september), T3 Code op <code>d29c56a</code> (10 september). Gedrag gelezen, nooit code overgenomen. De git-panelsessie (worker) loopt parallel en is hier buiten beschouwing gelaten.</p>
+  <nav aria-label="Inhoud">
+    <a href="#samenvatting">Samenvatting</a>
+    <a href="#nu">Waar we staan</a>
+    <a href="#model">Views: het model</a>
+    <a href="#interface">Views: de interface</a>
+    <a href="#implementatie">Views: de stappen</a>
+    <a href="#nodeterm">Uit nodeterm</a>
+    <a href="#t3code">Uit T3 Code</a>
+    <a href="#niet">Wat we niet doen</a>
+    <a href="#volgorde">Volgorde</a>
+    <a href="#vragen">Open vragen</a>
+  </nav>
+</header>
+<main>
+
+<section id="samenvatting" class="recommendation">
+  <h2>Samenvatting</h2>
+  <p>Vandaag is een project hetzelfde als een canvas. De canvasstore is een singleton, de sidebar toont de nodes van dat ene canvas, en het woord "Canvas" in de breadcrumb is een vaste string. Het voorstel breekt dat op in drie besluiten.</p>
+  <ul>
+    <li><strong>Eén bestand, versie 2.</strong> <code>project.json</code> houdt naam, kleur en icoon en krijgt een lijst <code>views</code>. Een canvasview draagt nodes, texts, edges en layouts, precies wat het project nu draagt. Een migratie van versie 1 wikkelt de bestaande inhoud in één canvasview met de vaste id <code>main</code>, zodat twee machines die hetzelfde gecommitte bestand openen op dezelfde id uitkomen.</li>
+    <li><strong>Een losse view is een node zonder positie.</strong> Een chat-, terminal- of browserview is dezelfde <code>ProjectNode</code> minus x, y, w en h. De id is de sessie-id, net als bij een node, dus "Open as view" en "Put on canvas" verplaatsen alleen waar iets gehost wordt. De daemon merkt er niets van.</li>
+    <li><strong>De sidebar wordt de lijst met views.</strong> Boven de lijst blijft een sectie "Needs you" die over het hele project kijkt. Het actieve canvas klapt uit naar zijn agentnodes. Cmd+1 tot en met Cmd+9 wisselen van view.</li>
+  </ul>
+  <div class="stats">
+    <div><strong>5-8</strong><span>dagen voor views, in twee leveringen</span></div>
+    <div><strong>1</strong><span>bestand per project, ongewijzigde watcher en rev</span></div>
+    <div><strong>7</strong><span>kleine features uit de concurrentie, samen onder een week</span></div>
+  </div>
+  <p>Van de concurrentie zijn dit de aanraders, in volgorde van waarde per uur: een notitie tot agentsessie maken, een weggevallen CLI-sessie herkennen en hervatten, de titel van een node uit de eerste prompt, projectscripts in <code>project.json</code>, prompt-terughalen met pijl omhoog, "Recently closed" met heropenen op Cmd+Shift+T, en settle en snooze voor views. Nodeterm heeft geen meerdere canvassen per project. Het lost dat op met tabs per project en een kanbanbord. T3 Code heeft geen canvas maar wel precies de sidebar die Ruimte voor views nodig heeft.</p>
+</section>
+
+<section id="nu">
+  <h2>Waar we staan</h2>
+  <p>De feiten uit de code die het ontwerp bepalen. Regelnummers zijn van commit <code>8b7c11d</code>.</p>
+  <div class="table" role="region" aria-label="Huidige koppelingen tussen project en canvas" tabindex="0">
+    <table class="wide">
+      <caption>Wat vandaag aanneemt dat een project één canvas is</caption>
+      <thead><tr><th scope="col">Onderdeel</th><th scope="col">Nu</th><th scope="col">Gevolg voor views</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Schema</th><td><code>ProjectContent</code> is naam, kleur, icoon plus <code>nodes</code>, <code>texts</code>, <code>edges</code>, <code>layouts</code> (<code>packages/contracts/src/project.ts:146</code>). Eén <code>rev</code> per bestand.</td><td>De inhoud verhuist naar een view. Rev en conflictbanner blijven per project.</td></tr>
+        <tr><th scope="row">Machine-lokaal</th><td><code>&lt;id&gt;.local.json</code> met één camera, één <code>focusedNodeId</code> en de panelen (<code>project.ts:196</code>).</td><td>Camera en focus worden per view; panelen en previewtabs blijven per project, want die gaan over de map.</td></tr>
+        <tr><th scope="row">Client-state</th><td><code>useCanvas</code> is de enige canvasstore en draagt document en machinestaat samen (<code>state/canvas.ts:99</code>). <code>useProject</code> kent alleen metadata.</td><td>Er komt een documentstore met alle views; <code>useCanvas</code> wordt de editor van de actieve canvasview.</td></tr>
+        <tr><th scope="row">Sidebar</th><td>Lijst van de nodes van het canvas, zonder groepen en notities, gegroepeerd op status (<code>shell/Sidebar.tsx:124</code>, <code>sidebar-rows.ts:4</code>).</td><td>Wordt een boom van views met de nodes van het actieve canvas eronder.</td></tr>
+        <tr><th scope="row">Sessies</th><td>Node-id is sessie-id is chat-id (<code>canvas.ts:259</code>). De daemon kent geen project; sessies en chats staan in één platte map.</td><td>Een losse view krijgt dezelfde id-regel. Promoveren en degraderen raakt de daemon niet.</td></tr>
+        <tr><th scope="row">Levenscyclus</th><td><code>terminal/lifecycle.ts</code> doodt de sessie van elke node die uit <code>useCanvas.nodes</code> verdwijnt, behalve als <code>loading</code> staat.</td><td>Een viewwissel zou alles doden. De levende set moet uit het hele document komen, niet uit de gemonteerde canvas.</td></tr>
+        <tr><th scope="row">Webviews</th><td>Browsernodes staan als <code>&lt;webview&gt;</code> in wereldcoördinaten binnen de canvastransformatie (<code>canvas/WebviewLayer.tsx:27</code>); elementen leven globaal per node-id.</td><td>Een verborgen view moet zijn webviews levend parkeren, met <code>visibility: hidden</code>, nooit unmounten.</td></tr>
+        <tr><th scope="row">Breadcrumb</th><td><code>machine / ProjectMenu / "Canvas"</code>, de laatste een vaste string (<code>shell/Toolbar.tsx:46</code>).</td><td>Het derde segment wordt de viewnaam met een wisselmenu.</td></tr>
+        <tr><th scope="row">Sneltoetsen</th><td>Geen Cmd+1..9 en geen camerahistorie; PLAN fase 20 reserveert Cmd+1..9 voor nodes.</td><td>Voorstel: Cmd+1..9 voor views, nodes krijgen Cmd+pijl uit dezelfde fase.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Wat er al is en wat views goedkoper maakt: de daemon houdt meerdere projecten tegelijk open (<code>project-store.ts:71</code>), een projectwissel laat sessies draaien, het node-id is al willekeurig omdat het in een gedeeld bestand belandt, en layouts (<code>ProjectLayout</code>) zijn het dichtstbijzijnde bestaande begrip: benoemde opstellingen van hetzelfde canvas, die alleen posities verplaatsen en nooit nodes verdelen.</p>
+</section>
+
+<section id="model">
+  <h2>Views: het model</h2>
+  <h3>Drie vormen afgewogen</h3>
+  <div class="table" role="region" aria-label="Afweging van drie opslagvormen" tabindex="0">
+    <table>
+      <thead><tr><th scope="col">Vorm</th><th scope="col">Voor</th><th scope="col">Tegen</th><th scope="col">Oordeel</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">A. Views inline in <code>project.json</code></th><td>Watcher, rev, conflictbanner en save-pad blijven zoals ze zijn. Eén diff in git per project. Migratie is een omhulling.</td><td>Elke save schrijft alle views. Dat gebeurt nu ook al met alle nodes. Bij tientallen views van honderden nodes wordt het bestand een paar honderd KB.</td><td><span class="badge confirmed">Aanbevolen</span></td></tr>
+        <tr><th scope="row">B. Een bestand per view onder <code>.ruimte/views/</code></th><td>Rev en conflict per view, kleinere writes.</td><td>Watcher per bestand, een index die uit de pas kan lopen met de bestanden, twee migraties, meer plekken waar een externe editor het mis kan hebben.</td><td>Later, alleen als A meetbaar traag wordt</td></tr>
+        <tr><th scope="row">C. Views als filter over één nodeset (tags)</th><td>Geen migratie, een node kan in twee views staan.</td><td>Een node met één positie in twee views is een positie te weinig, edges over viewgrenzen betekenen niets, en "waar is deze node" heeft geen antwoord. Dit is nodeterm's kanban zonder kolommen.</td><td><span class="badge danger">Niet doen</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Het schema, versie 2</h3>
+  <pre><code>// packages/contracts/src/project.ts, nieuw
+const ViewBaseSchema = z.object({
+    id: z.string().min(1),
+    name: z.string().min(1)
+});
+
+export const ProjectViewSchema = z.discriminatedUnion('kind', [
+    ViewBaseSchema.extend({
+        kind: z.literal('canvas'),
+        nodes: z.array(ProjectNodeSchema),
+        texts: z.array(ProjectTextSchema),
+        edges: z.array(ProjectEdgeSchema),
+        layouts: z.array(ProjectLayoutSchema).default([])
+    }),
+    // Een losse chat, terminal of browser is een node zonder plek op een canvas. De id is de sessie-id, zoals bij een node.
+    ViewBaseSchema.extend({ kind: z.literal('chat'), node: StandaloneNodeSchema }),
+    ViewBaseSchema.extend({ kind: z.literal('terminal'), node: StandaloneNodeSchema }),
+    ViewBaseSchema.extend({ kind: z.literal('browser'), url: z.string() })
+]);
+
+// ProjectNodeSchema zonder id, kind, title, x, y, w, h en zonder de groep- en notitievelden.
+const StandaloneNodeSchema = ProjectNodeSchema.pick({
+    cwd: true, command: true, resume: true, provider: true, providerFixed: true, runtimeMode: true, accent: true
+});
+
+export const ProjectContentSchema = z.object({
+    name: z.string().min(1),
+    color: z.string(),
+    icon: ProjectIconChoiceSchema.optional(),
+    // In sidebarvolgorde. Nooit leeg: wie de laatste view verwijdert krijgt een leeg canvas terug.
+    views: z.array(ProjectViewSchema).min(1)
+});
+
+export const ProjectDocumentSchema = ProjectContentSchema.extend({
+    version: z.literal(2),
+    rev: z.number().int().nonnegative()
+});
+
+// Machine-lokaal: welke view open stond en per view de camera en de focus.
+export const ProjectLocalSchema = z.object({
+    activeViewId: z.string().nullable(),
+    views: z.record(z.string(), z.object({
+        camera: CameraSchema.nullable(),
+        focusedNodeId: z.string().nullable()
+    })),
+    panels: ProjectPanelsSchema.optional()
+});</code></pre>
+  <p>Twee invarianten die de daemon bij het parsen afdwingt. Alle view-ids en alle node-ids over alle views heen zijn uniek binnen het project, omdat ze samen de sleutels van de globale sessiemap van de daemon zijn. En een edge verwijst altijd naar twee dingen in dezelfde canvasview. Een edge over een viewgrens wordt bij het lezen weggegooid.</p>
+
+  <h3>Migratie</h3>
+  <p>De daemon leest versie 1 en 2 en schrijft alleen versie 2. Versie 1 wordt bij het lezen <code>{ views: [{ kind: 'canvas', id: 'main', name: 'Canvas', nodes, texts, edges, layouts }] }</code>. De vaste id <code>main</code> is bewust: het bestand kan gecommit zijn, en twee machines die het onafhankelijk migreren moeten op dezelfde id uitkomen, anders levert de tweede save een spookview op. Het lokale bestand migreert net zo: de oude camera en focus komen onder <code>views.main</code>, <code>activeViewId</code> wordt <code>main</code>. De eerste save na het openen schrijft versie 2 terug, dus een project dat alleen gelezen wordt blijft leesbaar voor een oudere build.</p>
+  <p class="note">Nodeterm heeft precies deze afweging al gemaakt en gekozen voor tabs per project met één canvas per project. T3 Code heeft geen canvas. Geen van beide heeft dus een voorbeeld voor "meerdere canvassen per map"; het ontwerp hierboven is van ons.</p>
+
+  <h3>Wat een losse view betekent voor de agent</h3>
+  <p>Een chatview heeft geen edges, dus <code>ruimte-context</code> geeft leeg terug, zoals bij een node zonder lijnen. "Put on canvas" zet de node terug met dezelfde id, en vanaf dat moment werken lijnen weer. "Open as view" laat de edges van de node vallen. Dat verdient een bevestiging als er lijnen zijn, en anders niets. De canvasverbs van fase 18 (<code>list</code>, <code>open</code>, <code>note</code>, <code>link</code>, <code>group</code>) krijgen een viewargument, met de view van de aanroepende sessie als standaard.</p>
+</section>
+
+<section id="interface">
+  <h2>Views: de interface</h2>
+  <div class="split">
+    <div>
+      <h3>De sidebar</h3>
+      <pre><code>NEEDS YOU
+  ●  Claude: auth                  Backend
+
+VIEWS
+  ▾ ⌗ Backend                      ● 2
+       ▣ api shell
+       ✦ Claude: auth              ●
+       ◎ localhost:5173
+  ▸ ⌗ Frontend                     ○
+    ✦ Refactor composer            ·
+    ▣ deploy
+    ◎ Docs: xterm
+
+[ + New view ▾ ]                   [ ⚙ ]</code></pre>
+      <p class="caption">⌗ canvas, ✦ chat, ▣ terminal, ◎ browser. Het bolletje is de status, de punt een onverzonden concept. Lucide: <code>Frame</code>, <code>MessageSquare</code>, <code>Terminal</code>, <code>Globe</code>.</p>
+    </div>
+    <div>
+      <h3>Wat een rij doet</h3>
+      <ul>
+        <li>Klik wisselt van view; op een node in het actieve canvas gaat de camera ernaartoe, zoals nu. Een node in een ander canvas wisselt eerst van view en gaat dan naar de node.</li>
+        <li>Een canvasrij toont het zwaarste status van zijn nodes en een teller. Alleen het actieve canvas staat uitgeklapt; een ander canvas klapt uit op de pijl.</li>
+        <li>Dubbelklik en F2 hernoemen, zoals nu bij nodes. Slepen herschikt. De volgorde staat in het bestand en is dus gedeeld.</li>
+        <li>Contextmenu: Rename, Duplicate (alleen canvas), Put on canvas of Open as view, Delete. Delete met een draaiende sessie vraagt een bevestiging, zoals een node.</li>
+        <li>"Needs you" verschijnt alleen als er iets is en verdwijnt daarna. De statusgroepering "running" en "idle" van nu vervalt: de volgorde is de volgorde van het project, en de dock houdt de tellers.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Een losse chat of terminal op het scherm</h3>
+  <p>De hoofdkolom toont een <code>ViewHost</code> dat op de soort van de actieve view schakelt: het canvas, of het lichaam van een chat-, terminal- of browsernode zonder frame. De body's van <code>ChatNode</code> en <code>TerminalNode</code> zitten nu in <code>NodeFrame</code>; die krijgen een frameloze variant, met de header van de node als de toolbar-breadcrumb. De composer draagt al provider, model en modus, dus een chatview mist niets. Een terminalview mist de cwd-chip en de moduschip uit de header. Die gaan in de toolbar naast de viewnaam.</p>
+  <p>Focus blijft expliciet. Een losse view zet bij het wisselen de focus in zijn body, alsof je Enter op een node drukt. Cmd+Escape (terminal) of Escape (chat) verlaat de body naar de sidebarrij van die view, want er is geen canvas om naar terug te vallen. De moduschip in de dock zegt "Chat" of "Terminal" in plaats van "Node".</p>
+  <p>Een browserview is dezelfde <code>&lt;webview&gt;</code> als een browsernode, maar niet in wereldcoördinaten: het viewhost plaatst hem schermvullend in de hoofdkolom, met de navigatiebalk van de node (terug, vooruit, adres, herladen) in de toolbar. Het element blijft, net als bij een node, eigendom van de registry op node-id, dus een pagina die je naar het canvas terugzet houdt zijn sessie en scrollpositie. Net als browsernodes werkt een browserview alleen in de desktop-app; in de browserclient toont de view de bestaande "alleen in de desktop-app"-melding.</p>
+  <p>Eén view tegelijk, nooit een gesplitst scherm. Twee dingen naast elkaar is wat het canvas is.</p>
+
+  <h3>Toolbar, palette, dock en sneltoetsen</h3>
+  <ul>
+    <li><strong>Breadcrumb</strong> wordt <code>machine / Project / View</code>. Het viewsegment is een menu met de views en "New view"; het vervangt het vaste woord "Canvas".</li>
+    <li><strong>Palette</strong>: "Jump to" spant alle views, met de viewnaam als hint bij een node uit een ander canvas. Nieuwe sectie "Views". Acties: New canvas view, New chat view, New terminal view, New browser view, Rename view, Delete view, Move node to view, Open as view, Put on canvas.</li>
+    <li><strong>Dock</strong>: de statustellers gaan over het hele project. Klik op "Needs you" springt naar de eerste node die aandacht vraagt, ook in een andere view.</li>
+    <li><strong>Sneltoetsen</strong>: Cmd+1..9 de n-de view, Cmd+Shift+[ en Cmd+Shift+] vorige en volgende view, Cmd+T de "New view"-keuze. Fase 20 houdt Cmd+pijl voor gerichte focus, Cmd+Shift+Enter voor maximaliseren en Cmd+[ en Cmd+] voor camerahistorie. Elk chord heeft een modifier, zoals afgesproken.</li>
+    <li><strong>Projectmenu</strong>: "New canvas" heet voortaan "New project". Een nieuw project begint met één canvasview "Canvas".</li>
+    <li><strong>Panelen</strong>: Files, Git en de preview blijven per project. Ze gaan over de map, niet over een view, en ze blijven staan als je van view wisselt.</li>
+  </ul>
+
+  <figure class="panel">
+    <div class="table" role="region" aria-label="Diagram van de hosting van een node" tabindex="0">
+      <svg class="diagram plot" viewBox="0 0 760 210" role="img" aria-labelledby="host-title host-desc">
+        <title id="host-title">Een node en zijn sessie bij promoveren en degraderen</title>
+        <desc id="host-desc">Links een chatnode op een canvasview, rechts dezelfde node als losse chatview. Beide wijzen naar één sessie op de daemon met dezelfde id. Open as view en Put on canvas verplaatsen alleen de hosting.</desc>
+        <defs><marker id="host-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0 0 L8 4 L0 8 Z"/></marker></defs>
+        <rect class="node" x="20" y="30" width="250" height="90" rx="12"/>
+        <text x="145" y="62" text-anchor="middle">Canvasview "Backend"</text>
+        <text x="145" y="92" text-anchor="middle" class="muted">node chat-7f2a op x, y, w, h</text>
+        <rect class="node" x="490" y="30" width="250" height="90" rx="12"/>
+        <text x="615" y="62" text-anchor="middle">Chatview "Auth"</text>
+        <text x="615" y="92" text-anchor="middle" class="muted">node chat-7f2a zonder positie</text>
+        <path class="edge" d="M270 60 H482" marker-end="url(#host-arrow)"/>
+        <path class="edge" d="M490 95 H278" marker-end="url(#host-arrow)"/>
+        <text x="380" y="50" text-anchor="middle" class="muted">Open as view</text>
+        <text x="380" y="118" text-anchor="middle" class="muted">Put on canvas</text>
+        <rect class="node plain" x="255" y="150" width="250" height="44" rx="10"/>
+        <text x="380" y="178" text-anchor="middle">daemon: sessie chat-7f2a</text>
+        <path class="edge" d="M145 120 V172 H247" marker-end="url(#host-arrow)"/>
+        <path class="edge" d="M615 120 V172 H513" marker-end="url(#host-arrow)"/>
+      </svg>
+    </div>
+    <figcaption>Links en rechts is dezelfde node. Alleen de plek waar de client hem tekent verandert. De sessie op de daemon merkt niets, want de id blijft.</figcaption>
+  </figure>
+</section>
+
+<section id="implementatie">
+  <h2>Views: de stappen</h2>
+  <p>Twee leveringen. A geeft meerdere canvassen per project en de nieuwe sidebar. B voegt de losse chat en terminal toe. A alleen is al bruikbaar en verandert de daemon nauwelijks. Groottes zijn schattingen.</p>
+  <ol class="steps">
+    <li class="step"><div>
+      <h3>Contracts versie 2 en de migratie (halve dag)</h3>
+      <p><code>ProjectViewSchema</code>, <code>ProjectContentSchema</code> met <code>views</code>, <code>ProjectLocalSchema</code> per view, een <code>migrateDocument</code> en <code>migrateLocal</code> met tests op een versie-1-bestand uit de repo.</p>
+      <p>Klaar als een versie-1-bestand na lezen precies één canvasview <code>main</code> oplevert en de tweede lezing van het geschreven bestand identiek is.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Daemon: lezen, migreren, schrijven (halve dag)</h3>
+      <p><code>project-files.ts</code> migreert bij het lezen, <code>toPortable</code> en <code>fromPortable</code> lopen over alle views. <code>project.changed</code>, de watcher en <code>rev</code> blijven ongewijzigd. Bij het parsen: unieke ids over alle views, edges binnen één view.</p>
+      <p>Klaar als de bestaande project-store-tests slagen op versie 2 en een bestand met een dubbele node-id met een leesbare fout wordt geweigerd.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Client: documentstore en de canvas als editor (1 tot 2 dagen)</h3>
+      <p>Een nieuwe store <code>useDocument</code> met alle views en <code>activeViewId</code>. <code>useCanvas.loadDocument</code> laadt één canvasview; een viewwissel schrijft de actieve canvasview terug in het document en laadt de volgende. Undo reset per wissel, zoals bij een projectwissel. <code>project-client.ts</code> bewaakt dirty en autosave op het document in plaats van op de canvasstore, en schrijft per view camera en focus in het lokale bestand.</p>
+      <p>Klaar als je met twee canvassen kunt wisselen zonder dat een node beweegt, de camera per view terugkomt na een reload en de conflictbanner nog steeds werkt.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Levenscyclus uit het document (halve dag)</h3>
+      <p><code>terminal/lifecycle.ts</code> leidt de levende set af uit alle views van het document: elke node op elk canvas plus elke losse view. Een sessie sterft als zijn id uit het document verdwijnt, niet als hij van het scherm gaat. De <code>loading</code>-uitzondering blijft voor een projectwissel. Meteen oplossen: <code>useSessions.byNodeId</code> en <code>useChats.byNodeId</code> worden bij een projectwissel leeggemaakt, want die houden nu stale rijen vast.</p>
+      <p>Klaar als een viewwissel geen enkele <code>session.kill</code> stuurt en het verwijderen van een view de sessies van al zijn nodes beëindigt.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Sidebar als boom (1 dag)</h3>
+      <p><code>sidebar-rows.ts</code> wordt een pure module die uit het document een rijlijst bouwt: "Needs you" over het project, dan views in volgorde, met de nodes van het uitgeklapte canvas. Roving tabindex, F2, aria-current en het contextmenu blijven. Slepen herschikt views en schrijft de volgorde in het document.</p>
+      <p>Klaar als de bestaande sidebar-tests op de nieuwe module slagen en een agent die aandacht vraagt in een ander canvas bovenaan verschijnt.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Webviews parkeren (halve dag)</h3>
+      <p>Een <code>WebviewParking</code>-laag buiten de canvastransformatie houdt de elementen van browsernodes uit verborgen views vast met <code>visibility: hidden</code>; de registry adopteert ze terug zodra hun view mount. Het WebGL-budget blijft zoals het is: alleen gemonteerde terminals doen mee.</p>
+      <p>Klaar als een pagina in een browsernode zijn scrollpositie en ingelogde staat houdt over een viewwissel heen.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Breadcrumb, commando's, sneltoetsen, palette (halve dag)</h3>
+      <p>Het viewsegment als menu, de nieuwe entries in <code>commands.ts</code>, Cmd+1..9, Cmd+Shift+[ en ], Cmd+T, de sectie "Views" in de palette en "Jump to" over alle views. Het shortcuts-overzicht in Settings groeit mee.</p>
+      <p>Klaar als elke actie via de palette en via zijn chord hetzelfde doet en de dock-tellers over het project gaan. Hiermee is levering A rond.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>ViewHost met frameloze chat, terminal en browser (1 tot 2 dagen)</h3>
+      <p>De body's van <code>ChatNode</code>, <code>TerminalNode</code> en <code>BrowserNode</code> uit <code>NodeFrame</code> lichten tot een <code>ChatBody</code>, <code>TerminalBody</code> en <code>BrowserBody</code> die het frame en het viewhost delen. De toolbar toont voor een terminalview de cwd- en moduschip en voor een browserview de navigatiebalk. De webview van een browserview staat buiten de canvastransformatie, in de hoofdkolom; de parkeerlaag uit stap 6 geeft hem af en neemt hem terug. Focus en Escape zoals hierboven beschreven.</p>
+      <p>Klaar als een chatview een gesprek kan voeren met attachments, mentions en skills, een terminalview Claude Code kan draaien met werkende hooks, en een browserview zijn pagina houdt over een wissel naar een ander canvas en terug.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Open as view en Put on canvas (halve dag)</h3>
+      <p>Twee documentmutaties die een node (chat, terminal of browser) tussen een canvasview en een losse view verplaatsen met behoud van id. De geplaatste node komt in het midden van de camera van het doelcanvas. Edges vallen bij promoveren weg na bevestiging.</p>
+      <p>Klaar als een draaiende chat heen en terug kan zonder dat het proces herstart. Hiermee is levering B rond.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Documentatie</h3>
+      <p>HANDOFF: de view als begrip, de invarianten, de migratie. PLAN: een fase voor views. README: het principe "One canvas, many kinds of things on it" verdient een zin over views (zie open vragen). CLAUDE.md van het project: de regel over <code>project.json</code>.</p>
+    </div></li>
+  </ol>
+</section>
+
+<section id="nodeterm">
+  <h2>Ideeën uit nodeterm</h2>
+  <p>Nodeterm heeft één canvas per project en zet projecten in tabs. Wat het boven de node heeft zijn benoemde layouts (die Ruimte al heeft), de kanbanweergave (bewust overgeslagen), een omni-bord over projecten en groepframes met een worktree. Sinds augustus beweegt het richting teams, scheduling en een tracker. Dat is de lijst die Ruimte overslaat. Wat overblijft, gerangschikt op waarde voor iemand die alleen werkt met meerdere agents tegelijk. Wat Ruimte al heeft (layouts, stash, attachments, de contextmeter op chats) staat er niet in.</p>
+  <div class="table" role="region" aria-label="Features uit nodeterm" tabindex="0">
+    <table class="wide">
+      <thead><tr><th scope="col">Feature</th><th scope="col">Wat het doet</th><th scope="col">Hoe het in Ruimte past</th><th scope="col">Grootte</th><th scope="col">Oordeel</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Notitie tot agentsessie</th><td>De body van een notitie wordt de eerste prompt van een nieuwe chatnode, met een edge terug naar de notitie.</td><td>Notities, chatnodes en edges bestaan. Een menurij en een <code>chat.create</code> met een gezaaide prompt.</td><td>Uren</td><td><span class="badge confirmed">Doen</span></td></tr>
+        <tr><th scope="row">Weggevallen sessie herkennen</th><td>Als de CLI sterft zonder het te melden, zegt de node dat en biedt hij een hervatting met één klik, in plaats van een badge die eeuwig op "running" staat.</td><td>De hooks hebben dezelfde blinde vlek. De daemon ziet het PTY-proces eindigen en zet de agentstatus op <code>exited</code>; de node toont "Resume".</td><td>Halve dag</td><td><span class="badge confirmed">Doen</span></td></tr>
+        <tr><th scope="row">Recently closed</th><td>Een gesloten node houdt een verwijzing naar zijn transcript; Cmd+Shift+T heropent de laatst gesloten node of view.</td><td>Machine-lokaal, in <code>.local.json</code>: een lijst van gesloten views en nodes met hun <code>resume</code>-id. Past precies bij views. Alleen een pointer, nooit een kopie.</td><td>1 dag</td><td><span class="badge confirmed">Doen, met views</span></td></tr>
+        <tr><th scope="row">Naam van de CLI overnemen</th><td>De nodetitel volgt de naam die de agent zelf aan de sessie gaf. Een handmatige hernoeming gaat terug als <code>/rename</code>.</td><td>Samen met T3's autotitel: één regel "de titel volgt de sessie tot iemand hem zelf zet".</td><td>Halve dag</td><td><span class="badge confirmed">Doen</span></td></tr>
+        <tr><th scope="row">Idle agents in bulk herstarten, model wisselen op een draaiende node</th><td>Na een limietreset of een modelwissel acht agents met de hand herstarten is de belasting die dit weghaalt.</td><td>Twee palette-acties op de ene launch-funnel die de daemon al heeft.</td><td>Uren</td><td><span class="badge info">Misschien</span></td></tr>
+        <tr><th scope="row">Geheugenpaneel per sessie</th><td>Een RAM-pil en een paneel met elk proces boom en zijn geheugen. Nodeterm mat gemiddeld 335 MB per Claude-proces, 31 GB bij 95 sessies.</td><td>De daemon bezit elke sessie, dus een <code>session.memory</code>-request en een rij in Settings. Automatisch slapen is een apart en zwaarder verhaal.</td><td>1 dag</td><td><span class="badge info">Later</span></td></tr>
+        <tr><th scope="row">Contextmeter voor terminalagents</th><td>Vulgraad van het contextvenster, gelezen uit het transcript van de CLI zelf, met een formule per CLI.</td><td>Chats hebben <code>ContextMeter</code> al. Voor terminalagents zeggen hooks niets over vulling; per CLI een lezer.</td><td>1 dag per CLI</td><td><span class="badge info">Later</span></td></tr>
+        <tr><th scope="row">Gesprek overdragen aan een andere CLI</th><td>"Continue in Codex": de doel-CLI opent als nieuwe node ernaast en gaat verder vanuit het transcript van de bron.</td><td>De goedkope vorm is een nieuwe node met een context-edge naar de oude, zodat de agent het via <code>ruimte-context</code> leest. Broer van "branch a conversation" uit fase 21.</td><td>1 tot 2 dagen</td><td><span class="badge info">Later, fase 21</span></td></tr>
+        <tr><th scope="row">Browsernode die een agent kan bedienen</th><td>Klikken, typen en de console lezen van een browsernode waar de agent een edge naar heeft.</td><td>Past bij "een edge naar een agent is context", maar het is een protocol op zich.</td><td>Dagen</td><td><span class="badge info">Later</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>Wat nodeterm slecht doet en wat we daarvan meenemen</h3>
+  <ul>
+    <li><strong>Toestemming voor de agentconfig.</strong> Nodeterm schrijft bij het opstarten in globale instructiebestanden van agents zonder te vragen. Er kwam een uninstall-script voor. Ruimte's daemon installeert hooks bij het starten (<code>--no-hooks</code>): zeg één keer wat er is geschreven en bied verwijderen aan.</li>
+    <li><strong>Notificatieruis.</strong> Elke subagent die terugmeldt liet de chime afgaan. Fase 18: één chime per node per beurt, nooit per event.</li>
+    <li><strong>Focus die de muis volgt.</strong> Een hover van 600 ms focust de terminal en mouseleave blurt hem. Op twee schermen is de focus al weg voor je Cmd+Tab drukt. Ruimte's expliciete focus is het antwoord. Wel: onthoud de laatst gefocuste node over het activeren van het venster heen.</li>
+    <li><strong>De camera die uit zichzelf beweegt.</strong> Canvasverbs van een agent op de achtergrond trokken de view weg. "Een agent beweegt de camera nooit" hoort in de eerste commit van fase 18, niet in een fix.</li>
+    <li><strong>Gegevensverlies bij meerdere schrijvers.</strong> Een SSH-spiegel bracht 16 verwijderde nodes terug omdat een write-ack als bewijs over de inhoud gold, en een conflictbalk die autosave pauzeerde bleef daardoor staan. Voor onze rev en watcher: een conflictbanner mag het opslaan nooit stoppen, en het binden van een map op een bestaand projectbestand van iemand anders weigeren.</li>
+    <li><strong>Prompts door een PTY.</strong> Afkappen op 1024 bytes en toch verzenden, bracketed-paste-markers als tekst. Bevestigt het besluit om agent-naar-agent-berichten door de PTY over te slaan.</li>
+  </ul>
+</section>
+
+<section id="t3code">
+  <h2>Ideeën uit T3 Code</h2>
+  <p>T3 Code kent geen canvas. Zijn model is omgeving, project, thread, beurt. De sidebar is één inbox van threads over alle projecten met een projectfilter, in vier secties: Pinned, Active, Snoozed, Settled. Slepen tussen secties is de actie, de volgorde staat op de server, en activiteit herschikt nooit de lijst. Dat laatste is een regel die Ruimte's viewlijst overneemt. Vijftien releases in drie maanden gaan over meer providers, remote en mobiel, de PR-workflow in de app en, in versie 0.0.39, ruim honderd performance-PR's. Van die vier lijnen slaat Ruimte er drie bewust over; de vierde komt vanzelf.</p>
+  <div class="table" role="region" aria-label="Features uit T3 Code" tabindex="0">
+    <table class="wide">
+      <thead><tr><th scope="col">Feature</th><th scope="col">Wat het doet</th><th scope="col">Hoe het in Ruimte past</th><th scope="col">Grootte</th><th scope="col">Oordeel</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Projectscripts</th><td>Benoemde commando's met een icoon in een ingecheckt bestand: uitvoeren opent een terminal, <code>runOnWorktreeCreate</code> bootstrapt een nieuwe worktree, <code>previewUrl</code> opent een browser ernaast.</td><td>In <code>project.json</code> (gedeeld) als <code>scripts</code>. Eén gebaar zet een canvas neer, en het slaat poortdetectie uit fase 19 omdat je de poort zelf hebt opgegeven.</td><td>1 dag</td><td><span class="badge confirmed">Doen</span></td></tr>
+        <tr><th scope="row">Automatische titel</th><td>De CLI schrijft de threadtitel uit de eerste prompt, met een nieuwe titel als het onderwerp drijft.</td><td>De chatbackend bestaat; de titel volgt de eerste prompt tot iemand hem zelf zet. Twaalf nodes "Claude" zijn onbruikbaar in een sidebar met views.</td><td>Halve dag</td><td><span class="badge confirmed">Doen</span></td></tr>
+        <tr><th scope="row">Prompt terughalen</th><td>Pijl omhoog in een lege composer loopt door de verzonden prompts van die chat.</td><td>Puur clientstate naast de draftstore. De stash op Cmd+S bestaat al. Dit is de andere helft.</td><td>Uren</td><td><span class="badge confirmed">Doen</span></td></tr>
+        <tr><th scope="row">Settle en snooze</th><td>Klaar werk verlaat de lijst zonder verwijderd te worden; snooze parkeert tot een tijdstip en wekt eerder bij een fout. Automatisch settlen na N dagen stilte, geblokkeerd door open vragen of goedkeuringen.</td><td>Een status op de view in het document plus een timer op de daemon. De ontbrekende helft van een viewlijst voor wie na een maand twintig canvassen heeft. Geen kanban: geen kolommen, geen kaarten, alleen een gevouwen sectie "Settled".</td><td>1 dag</td><td><span class="badge confirmed">Doen, na views</span></td></tr>
+        <tr><th scope="row">Fetch en auto-pull van main</th><td>Periodiek <code>git fetch</code> en een fast-forward-only pull, overgeslagen bij een vuile checkout of een andere branch; nieuwe worktrees starten van origin.</td><td>Voedt ahead en behind van het git-paneel en voorkomt worktrees van een oude main.</td><td>Halve dag</td><td><span class="badge confirmed">Doen, na het git-paneel</span></td></tr>
+        <tr><th scope="row">Diff-badge na een beurt</th><td>Als een beurt klaar is opent het diffpaneel zichzelf voor die thread.</td><td>Op een canvas beter als een badge op de node die je aanklikt; het paneel openen zou de focus stelen.</td><td>Uren</td><td><span class="badge confirmed">Doen, na het git-paneel</span></td></tr>
+        <tr><th scope="row">Compacteren vanuit de meter</th><td>Een <code>/compact</code>-knop op de contextmeter en een drempel voor automatisch compacteren.</td><td><code>ContextMeter</code> bestaat; de knop en de drempel erbij.</td><td>Uren</td><td><span class="badge info">Misschien</span></td></tr>
+        <tr><th scope="row">Updatecontrole van de CLI's</th><td>De daemon peilt geïnstalleerde versies, de sidebar toont een pil, Settings biedt "Update now".</td><td><code>providers/detect.ts</code> vraagt de versie al. Kost weinig en voorkomt een verouderde CLI waar alles aan hangt.</td><td>Halve dag</td><td><span class="badge info">Misschien</span></td></tr>
+        <tr><th scope="row">Bestanden op een sidebarrij slepen</th><td>De view opent met de bestanden als attachment in zijn composer.</td><td>Maakt de viewlijst een dropdoel. Klein, na views.</td><td>Uren</td><td><span class="badge info">Later</span></td></tr>
+        <tr><th scope="row">Meerdere accounts per CLI</th><td>Per provider meerdere instanties met eigen home en label, verdeeld over sessies.</td><td>Vier agents tegelijk is waar één abonnement tegen zijn limiet loopt. Server-first, één contractuitbreiding.</td><td>2 dagen</td><td><span class="badge info">Later</span></td></tr>
+        <tr><th scope="row">Stroombewust achtergrondwerk</th><td>Polling pauzeert op accu, low-power, vergrendeld of thermisch belast.</td><td>Relevant zodra fase 17 en 19 git en <code>lsof</code> pollen.</td><td>Halve dag</td><td><span class="badge info">Later</span></td></tr>
+        <tr><th scope="row">SnapShot</th><td>Een globale sneltoets legt het gefocuste venster en zijn accessibility-boom vast als attachment.</td><td>Een permissieproject op drie platformen.</td><td>Dagen</td><td><span class="badge danger">Niet</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>Wat T3 Code slecht doet en wat we daarvan meenemen</h3>
+  <ul>
+    <li><strong>Performance is de vaste klacht.</strong> Een issue met 28 stemmen zegt dat dezelfde taak 20 minuten duurt tegen 3,5 in kale Codex. Lange threads maken de UI traag en replay bij heropenen is kwadratisch. T3 begrenst nu terminalhistorie in bytes en houdt maar drie sidebarrijen live. Fase 16 richt hier al op. De viewlijst maakt het urgenter, want elke rij met een live status is een abonnement.</li>
+    <li><strong>Vastzittende status.</strong> "Working..." nadat de CLI klaar is, en een thread die na een interrupt op running blijft. Status uit hooks is de goede keuze. Een settle-timeout als vangnet erbij hoort samen met de weggevallen-sessie-detectie hierboven.</li>
+    <li><strong>Harde timeouts die een heel paneel laten falen.</strong> Een scan van 15 seconden doodt het bestandenpaneel zonder deelresultaat. Stream deelresultaten. Het git-paneel van fase 17 streamt de status al.</li>
+    <li><strong>PATH uit een GUI-start.</strong> T3 hydrateert PATH uit de loginshell omdat een app uit de dock die niet meekrijgt. Ruimte doet dat nog niet. Voor de gepakte desktop-app van fase 25 is dit nodig.</li>
+    <li><strong>Een gecachte branchchip</strong> die achterbleef nadat de sessie van worktree wisselde. Afleiden, nooit cachen.</li>
+    <li><strong>Twee sidebars.</strong> De oude staat achter een vlag. Eén vorm kiezen en de oude weghalen.</li>
+  </ul>
+</section>
+
+<section id="niet">
+  <h2>Wat we niet doen</h2>
+  <ul>
+    <li><strong>Geen inbox over alle projecten</strong>, zoals T3 Code. Ruimte houdt één project tegelijk open: de daemon watcht per open project, Files, Git en de preview zijn per map, en één transport wijst naar één endpoint. De sidebar toont de views van het open project. Projectwisselen blijft in de breadcrumb en de palette.</li>
+    <li><strong>Geen tabstrip in de toolbar.</strong> De band van 48 pixels is vol, en de sidebar is al de wisselaar. Nodeterm's tabs zijn projecten, niet views.</li>
+    <li><strong>Geen gesplitst scherm</strong> met twee views naast elkaar. Twee dingen naast elkaar is het canvas.</li>
+    <li><strong>Geen node in twee views.</strong> Een positie per node, edges binnen één view.</li>
+    <li><strong>Geen kanban, ook niet als "Settled" een kolom lijkt.</strong> Settle is een gevouwen sectie onderaan de lijst, zonder kaarten en zonder slepen tussen statussen.</li>
+    <li>Ongewijzigd uit PLAN: geen scheduler, geen minimap, geen teamfuncties, geen PR-client, geen mobiel.</li>
+  </ul>
+</section>
+
+<section id="volgorde">
+  <h2>Voorstel voor de volgorde</h2>
+  <p>Views horen vóór fase 18, want de canvasverbs voor agents hebben een view als doel nodig en het is duurder ze later een argument te geven. Het git-paneel van de worker loopt door; views raken de panelen niet.</p>
+  <ol>
+    <li><strong>Fase 17b, Views A</strong>: stappen 1 tot en met 7. Meerdere canvassen, de nieuwe sidebar, sneltoetsen. Drie tot vier dagen.</li>
+    <li><strong>Kleine winsten</strong>, tussendoor of ernaast: notitie tot agent, weggevallen sessie, autotitel plus CLI-naam, prompt terughalen. Samen anderhalve dag, elk apart commitbaar.</li>
+    <li><strong>Fase 17c, Views B</strong>: stappen 8 en 9, de losse chat, terminal en browser. Twee dagen.</li>
+    <li><strong>Na views</strong>: Recently closed met Cmd+Shift+T, settle en snooze, projectscripts. Drie dagen.</li>
+    <li><strong>Na het git-paneel</strong>: fetch en auto-pull, de diff-badge op een klare node. Een dag.</li>
+    <li>Fase 18 en verder zoals in PLAN, met de viewargumenten op de verbs en de lessen uit nodeterm (camera, chime, toestemming voor hooks) als regels in de eerste commit.</li>
+  </ol>
+</section>
+
+<section id="vragen">
+  <h2>Open vragen voor Bas</h2>
+  <ol>
+    <li><strong>Het principe in de README.</strong> "One canvas, many kinds of things on it" klopt straks per view, niet per project. Voorstel: "One canvas per view, many kinds of things on it. A view is also a chat, a terminal or a browser on its own." Akkoord met die verschuiving?</li>
+    <li><strong>Cmd+1..9 voor views</strong> in plaats van voor nodes, zoals fase 20 nu zegt. Nodes krijgen dan alleen Cmd+pijl en Tab.</li>
+    <li><strong>De statusgroepering in de sidebar</strong> vervalt ten gunste van projectvolgorde plus een "Needs you"-sectie bovenaan. Of moet "Running" ook een eigen sectie houden?</li>
+    <li><strong>Settle en snooze</strong>: gewenst, of voelt het als kanban?</li>
+    <li><strong>Losse views in het gedeelde bestand.</strong> Een chatview staat in <code>project.json</code> en gaat dus mee in git, net als een chatnode nu. De thread zelf blijft onder <code>~/.ruimte/chats</code>. Dat is consistent met nu; bevestigen dat dat de bedoeling blijft.</li>
+    <li><strong>Levering B meteen of later.</strong> A is op zichzelf bruikbaar; B is het deel dat de app een "T3-modus" geeft. Samen in één fase, of B pas na de kleine winsten?</li>
+  </ol>
+</section>
+
+</main>
+<footer>
+  <p>De codefeiten zijn gelezen uit de repo op commit 8b7c11d en met regelnummers genoemd. De observaties over nodeterm en T3 Code komen uit hun broncode, documentatie, changelogs en issues, gelezen voor gedrag, en zijn niet door het draaien van die apps geverifieerd. De groottes zijn schattingen zonder implementatie. Niets in dit rapport is gebouwd of besloten.</p>
+</footer>
+</body>
+</html>

@@ -31,6 +31,10 @@ export interface Settings {
     filesShowHidden: boolean;
     /* Whether the git panel groups its changed files by folder instead of listing them flat. */
     gitTree: boolean;
+    /* Whether a diff draws the two sides next to each other or one patch under the other. */
+    diffLayout: 'stacked' | 'split';
+    /* Whether a diff counts and shows changes that are whitespace alone. */
+    diffWhitespace: boolean;
 }
 
 interface SettingsStore extends Settings {
@@ -46,7 +50,9 @@ const DEFAULT_SETTINGS: Settings = {
     interfaceFontSize: 16,
     filesTabLimit: 5,
     filesShowHidden: false,
-    gitTree: true
+    gitTree: true,
+    diffLayout: 'stacked',
+    diffWhitespace: true
 };
 
 // Rounded as well as clamped: the stepper used to move in halves, so a browser can still hand back
@@ -101,8 +107,19 @@ export const useSettings = create<SettingsStore>((set, get) => {
         ...initial,
         version: 0,
         update(patch) {
-            const { accent, font, fontSize, interfaceFontSize, filesTabLimit, filesShowHidden, gitTree } = get();
-            const next: Settings = { accent, font, fontSize, interfaceFontSize, filesTabLimit, filesShowHidden, gitTree, ...patch };
+            const { accent, font, fontSize, interfaceFontSize, filesTabLimit, filesShowHidden, gitTree, diffLayout, diffWhitespace } = get();
+            const next: Settings = {
+                accent,
+                font,
+                fontSize,
+                interfaceFontSize,
+                filesTabLimit,
+                filesShowHidden,
+                gitTree,
+                diffLayout,
+                diffWhitespace,
+                ...patch
+            };
             next.fontSize = clampSize(next.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize);
             next.interfaceFontSize = clampSize(next.interfaceFontSize, INTERFACE_FONT_SIZE_RANGE, DEFAULT_SETTINGS.interfaceFontSize);
             next.filesTabLimit = clampSize(next.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit);

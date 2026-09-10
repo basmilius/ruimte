@@ -8,7 +8,10 @@ interface GitStore {
     scope: GitDiffScope;
     /* The folders the list has folded up, by their path from the repository root. */
     collapsedDirs: string[];
+    /* What the diff of a tab holds, keyed by that tab, so the strip can say it without reading again. */
+    counts: Record<string, { added: number; deleted: number }>;
     setScope(scope: GitDiffScope): void;
+    setCounts(key: string, counts: { added: number; deleted: number }): void;
     setCollapsedDirs(dirs: string[]): void;
     toggleDir(path: string): void;
 }
@@ -20,8 +23,12 @@ interface GitStore {
 export const useGit = create<GitStore>((set, get) => ({
     scope: DEFAULT_SCOPE,
     collapsedDirs: [],
+    counts: {},
     setScope(scope) {
         set({ scope });
+    },
+    setCounts(key, counts) {
+        set({ counts: { ...get().counts, [key]: counts } });
     },
     setCollapsedDirs(dirs) {
         set({ collapsedDirs: dirs });

@@ -101,7 +101,9 @@ export const GitDiffPayloadSchema = z.object({
     path: z.string().min(1),
     scope: GitDiffScopeSchema,
     // Worktree scope only: the index against HEAD instead of the working tree against the index.
-    staged: z.boolean().optional()
+    staged: z.boolean().optional(),
+    // Leaves changes that are whitespace alone out of the diff, counts included.
+    ignoreWhitespace: z.boolean().optional()
 });
 export type GitDiffPayload = z.infer<typeof GitDiffPayloadSchema>;
 
