@@ -39,15 +39,19 @@ class FakeTransport implements Transport {
     document: DrawingDocument = { version: 1, rev: 5, elements: [rect('a')] };
     /* Set to refuse the next save the way the daemon refuses a stale rev. */
     conflictOnSave = false;
+    /* A restarted daemon: it knows no rev for the drawing until it is opened again. */
+    forgotten = false;
     private readonly eventHandlers = new Map<string, Set<(payload: unknown) => void>>();
+    private readonly statusHandlers = new Set<(status: TransportStatus) => void>();
 
     request<T extends RequestType>(type: T, payload: RequestMap[T]['payload']): Promise<RequestMap[T]['result']> {
         this.calls.push({ type, payload });
         if (type === 'drawing.open') {
+            this.forgotten = false;
             return Promise.resolve({ document: this.document } as RequestMap[T]['result']);
         }
         if (type === 'drawing.save') {
-            if (this.conflictOnSave) {
+            if (this.conflictOnSave || this.forgotten) {
                 return Promise.reject(new TransportError('rev-conflict', 'stale'));
             }
             const { baseRev } = payload as { baseRev: number };
@@ -68,8 +72,19 @@ class FakeTransport implements Transport {
         };
     }
 
-    subscribeStatus(): () => void {
-        return () => undefined;
+    subscribeStatus(handler: (status: TransportStatus) => void): () => void {
+        this.statusHandlers.add(handler);
+        return () => {
+            this.statusHandlers.delete(handler);
+        };
+    }
+
+    /* The socket dropping and coming back, which is what a restarted daemon looks like from here. */
+    reconnect(): void {
+        for (const handler of this.statusHandlers) {
+            handler('closed');
+            handler('open');
+        }
     }
 
     emit<E extends EventType>(event: E, payload: EventMap[E]): void {
@@ -124,6 +139,25 @@ describe('DrawingClient', () => {
         expect(useDrawing.getState().elements.map((element) => element.id)).toEqual(['a']);
         expect(useDrawing.getState().rev).toBe(5);
         expect(useDrawing.getState().camera).toEqual({ x: 3, y: 4, zoom: 2 });
+    });
+
+    test('a page that gets the views before the project still opens the drawing', async () => {
+        // What a reload does: the client is up, the document store fills, the project lands last.
+        client.dispose();
+        useDrawing.getState().unload();
+        useProject.getState().setCurrent(null, 0);
+        useDocument.getState().load(null, null);
+        transport = new FakeTransport();
+        client = new DrawingClient(transport, useDrawing, useDocument, useProject, { saveDelayMs: 1, window: null, document: null });
+
+        useProject.getState().setSwitching(true);
+        useDocument.getState().load(project(), { activeViewId: 'view-1', views: {} });
+        useProject.getState().setCurrent(summary, 1);
+        useProject.getState().setSwitching(false);
+        await tick();
+
+        expect(transport.of('drawing.open')).toHaveLength(1);
+        expect(useDrawing.getState().elements.map((element) => element.id)).toEqual(['a']);
     });
 
     test('an edit saves after the pause, against the rev it was loaded on', async () => {
@@ -201,6 +235,35 @@ describe('DrawingClient', () => {
         expect(transport.of('drawing.save')).toHaveLength(0);
         // The neighbor takes over, which is another drawing, so the store holds that one now.
         expect(useDrawing.getState().viewId).toBe('view-2');
+    });
+
+    test('a daemon that forgot the drawing gets it again, and the work that was waiting lands', async () => {
+        useDocument.getState().setActiveView('view-1');
+        await tick();
+        useDrawing.getState().addElement(rect('b', 200));
+        await tick(20);
+        expect(useDrawing.getState().rev).toBe(6);
+
+        transport.document = { version: 1, rev: 6, elements: [rect('a'), rect('b', 200)] };
+        transport.forgotten = true;
+        transport.reconnect();
+        useDrawing.getState().addElement(rect('c', 400));
+        await tick(30);
+
+        expect(transport.of('drawing.open')).toHaveLength(2);
+        expect(useDrawing.getState().dirty).toBe(false);
+        expect(useDrawing.getState().rev).toBe(7);
+        const written = transport.of('drawing.save').at(-1)?.payload as { content: { elements: DrawingElement[] } };
+        expect(written.content.elements.map((element) => element.id)).toEqual(['a', 'b', 'c']);
+    });
+
+    test('the project being read again after a reconnect opens the drawing on the daemon', async () => {
+        useDocument.getState().setActiveView('view-1');
+        await tick();
+        transport.reconnect();
+        useDocument.getState().load(project(), { activeViewId: 'view-1', views: {} });
+        await tick(20);
+        expect(transport.of('drawing.open')).toHaveLength(2);
     });
 
     test('copying a view flushes both files first and asks the daemon for the copy', async () => {

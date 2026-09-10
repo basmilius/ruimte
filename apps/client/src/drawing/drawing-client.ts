@@ -1,6 +1,6 @@
 import { isDrawingView, type DrawingDocument, type ProjectLocal, type ProjectSummary, type ProjectView, type ProjectViewLocal } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
-import { TransportError, type Transport } from '@/transport/transport';
+import { TransportError, type Transport, type TransportStatus } from '@/transport/transport';
 import type { useDrawing } from '@/state/drawing';
 
 type DrawingStore = StoreApi<ReturnType<typeof useDrawing.getState>>;
@@ -18,7 +18,8 @@ interface DocumentAccess {
 }
 
 interface ProjectAccess {
-    getState(): { current: ProjectSummary | null };
+    getState(): { current: ProjectSummary | null; switching: boolean };
+    subscribe: StoreApi<ProjectAccess extends { getState(): infer S } ? S : never>['subscribe'];
 }
 
 interface DrawingClientOptions {
@@ -52,6 +53,10 @@ export class DrawingClient {
     private open: { projectId: string; viewId: string } | null = null;
     /* Rises on every open, so a document that arrives late never lands on the drawing after it. */
     private generation = 0;
+    /* The socket went away, so the daemon may have forgotten this drawing while it was gone. */
+    private reconnecting = false;
+    /* The rev a refused save was already tried again on, so a refusal never turns into a circle. */
+    private retriedRev: number | null = null;
 
     constructor(transport: Transport, drawing: DrawingStore, documents: DocumentAccess, projects: ProjectAccess, options: DrawingClientOptions = {}) {
         this.transport = transport;
@@ -62,7 +67,9 @@ export class DrawingClient {
         this.flushProject = options.flushProject ?? (() => Promise.resolve());
         this.unsubscribe.push(
             transport.on('drawing.changed', ({ projectId, viewId, document }) => this.onChanged(projectId, viewId, document)),
+            transport.subscribeStatus((status) => this.onStatus(status)),
             documents.subscribe((state, previous) => this.onDocument(state, previous)),
+            projects.subscribe((state, previous) => this.onProject(state, previous)),
             drawing.subscribe((state, previous) => this.onDrawing(state, previous))
         );
         const host = options.window === undefined ? (typeof window === 'undefined' ? null : window) : options.window;
@@ -134,7 +141,67 @@ export class DrawingClient {
         const gone = this.open !== null && !state.views.some((view) => view.id === this.open!.viewId && isDrawingView(view));
         if (state.activeViewId !== previous.activeViewId || gone) {
             void this.sync(gone);
+            return;
         }
+        // The project was read again after the socket came back, so the daemon is ready to be
+        // asked about this drawing: a restarted daemon knows no rev for it until it is opened.
+        if (this.reconnecting && this.open && state.views !== previous.views) {
+            this.reconnecting = false;
+            void this.reopen();
+        }
+    }
+
+    /*
+     * A project arriving is what a reload looks like from here: the document store already holds
+     * the view, so nothing else would ever ask for its drawing.
+     */
+    private onProject(state: ReturnType<ProjectAccess['getState']>, previous: ReturnType<ProjectAccess['getState']>): void {
+        if (state.current?.projectId !== previous.current?.projectId || state.switching !== previous.switching) {
+            void this.sync();
+        }
+    }
+
+    private onStatus(status: TransportStatus): void {
+        if (status !== 'open') {
+            this.reconnecting = true;
+        }
+    }
+
+    /*
+     * Asks the daemon for this drawing again and picks up where the two sides differ: the same rev
+     * means the screen is still the file and only the daemon had forgotten, a newer one is a
+     * conflict while there is unsaved work and otherwise simply what the drawing is now.
+     */
+    private async reopen(): Promise<void> {
+        const open = this.open;
+        if (!open) {
+            return;
+        }
+        const generation = this.generation;
+        let document: DrawingDocument;
+        try {
+            ({ document } = await this.transport.request('drawing.open', open));
+        } catch (e) {
+            this.report(e, 'The drawing could not be opened');
+            return;
+        }
+        if (generation !== this.generation || this.open !== open) {
+            return;
+        }
+        const state = this.drawing.getState();
+        if (document.rev === state.rev) {
+            // The file is where the screen thinks it is, so the daemon only had to be told again.
+            if (state.dirty && this.retriedRev !== document.rev) {
+                this.retriedRev = document.rev;
+                await this.save();
+            }
+            return;
+        }
+        if (state.dirty || this.saving) {
+            state.setConflict(document);
+            return;
+        }
+        state.applyDocument(document);
     }
 
     private onDrawing(state: ReturnType<DrawingStore['getState']>, previous: ReturnType<DrawingStore['getState']>): void {
@@ -152,10 +219,16 @@ export class DrawingClient {
      * project, in which case nothing may be written: the save would resurrect the file as an orphan.
      */
     private async sync(dropped = false): Promise<void> {
+        const { current, switching } = this.projects.getState();
+        // Between projects the views on screen and the project they belong to are not the same yet.
+        if (switching) {
+            return;
+        }
         const { views, activeViewId, viewLocal } = this.documents.getState();
+        const projectId = current?.projectId ?? null;
         const active = views.find((view) => view.id === activeViewId) ?? null;
         const wanted = active && isDrawingView(active) ? active.id : null;
-        if (this.open && this.open.viewId === wanted) {
+        if (this.open && this.open.viewId === wanted && this.open.projectId === projectId) {
             return;
         }
         if (this.open) {
@@ -170,11 +243,7 @@ export class DrawingClient {
             this.drawing.getState().unload();
             void this.transport.request('drawing.close', leaving).catch(() => undefined);
         }
-        if (!wanted) {
-            return;
-        }
-        const projectId = this.projects.getState().current?.projectId;
-        if (!projectId) {
+        if (!wanted || !projectId) {
             return;
         }
         const generation = ++this.generation;
@@ -222,22 +291,29 @@ export class DrawingClient {
             return Promise.resolve();
         }
         state.setDirty(false);
+        let stale = false;
         this.saving = this.transport
             .request('drawing.save', { ...open, baseRev: state.rev, content: state.exportContent() })
             .then((result) => {
+                this.retriedRev = null;
                 this.drawing.getState().setRev(result.rev);
                 this.drawing.getState().setError(null);
             })
             .catch((e: unknown) => {
                 this.drawing.getState().setDirty(true);
                 if (e instanceof TransportError && e.code === 'rev-conflict') {
-                    // The watcher's event carries the newer document; nothing to do until it arrives.
+                    // Our own write never reaches the watcher, so the newer document has to be asked
+                    // for: without this a daemon that forgot the drawing leaves the work unsaved.
+                    stale = true;
                     return;
                 }
                 this.report(e, 'The drawing could not be saved');
             })
             .finally(() => {
                 this.saving = null;
+                if (stale) {
+                    void this.reopen();
+                }
             });
         return this.saving;
     }
