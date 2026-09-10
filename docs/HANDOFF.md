@@ -128,7 +128,12 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
 - **Settings** (written from scratch): one
   dialog with a section list on the left (Base UI Tabs, arrow keys move, `activateOnFocus`)
   and a pane on the right, built from `SettingsSection` (a titled card) and `SettingsRow`
-  (label and description left, control right) in `apps/client/src/shell/settings/`.
+  (label and description left, control right) in `apps/client/src/shell/settings/`. The controls
+  are `settings/controls.tsx` (`Segmented`, `Toggle`, `Stepper`, `Badge`) plus `ui/Select.tsx`,
+  one Base UI `Select` in the `.menu-popup` style the menus use, with a description, an icon and
+  groups per item. It is the only dropdown of its kind: the composer's `ModePicker` uses it too,
+  there is no native `<select>` left, and the model picker, the options menu and the dock menus
+  stay the custom popups they are.
   Sections: Appearance (theme, accent, interface font size, terminal font and font size; the
   sizes live in `state/settings.ts`, the interface one sets the root font size and every
   terminal refits on a change of its own), Canvas (zoom presets, locks and

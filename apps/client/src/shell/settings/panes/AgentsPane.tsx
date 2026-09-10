@@ -10,10 +10,14 @@ import {
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Badge, SelectControl, Toggle } from '@/shell/settings/controls';
+import { Badge, Toggle } from '@/shell/settings/controls';
 import { useProviders } from '@/state/providers';
+import { Select, type SelectItem } from '@/ui/Select';
 
 const PROVIDER_DEFAULT = '';
+
+/* Both mode rows offer the same choices, and each one explains itself in the popup. */
+const runtimeModeItems: SelectItem<RuntimeMode>[] = RUNTIME_MODES.map((mode) => ({ value: mode.id, label: mode.label, description: mode.hint }));
 
 /* What a provider offers, in one sentence: where it can be opened and whether its hooks report status. */
 const providerAbilities = (provider: ProviderInfo): string => {
@@ -33,19 +37,14 @@ function ModelOptionRows({ provider, model, options }: { provider: AgentKind; mo
                     <SettingsRow
                         key={option.id}
                         label={option.label}
-                        description={option.choices.find((choice) => choice.id === (options[option.id] ?? option.defaultChoice))?.description}
                         control={
-                            <SelectControl
+                            <Select
                                 value={String(options[option.id] ?? option.defaultChoice)}
                                 label={option.label}
-                                onChange={(value) => setOption(option.id, value)}
-                            >
-                                {option.choices.map((choice) => (
-                                    <option key={choice.id} value={choice.id}>
-                                        {choice.label}
-                                    </option>
-                                ))}
-                            </SelectControl>
+                                align="end"
+                                items={option.choices.map((choice) => ({ value: choice.id, label: choice.label, description: choice.description }))}
+                                onValueChange={(value) => setOption(option.id, value)}
+                            />
                         }
                     />
                 ) : (
@@ -70,23 +69,20 @@ function ProviderModelRows({ provider, preferences }: { provider: ProviderInfo; 
                 label={provider.name}
                 description="Provider default follows the CLI's own choice."
                 control={
-                    <SelectControl
+                    <Select
                         value={model?.slug ?? PROVIDER_DEFAULT}
                         label={`Default model for ${provider.name}`}
-                        onChange={(value) =>
+                        align="end"
+                        items={[
+                            { value: PROVIDER_DEFAULT, label: 'Provider default' },
+                            ...provider.models.map((entry) => ({ value: entry.slug, label: `${entry.name}${entry.legacy ? ' (legacy)' : ''}` }))
+                        ]}
+                        onValueChange={(value) =>
                             value === PROVIDER_DEFAULT
                                 ? forgetChatSelection(provider.kind)
                                 : rememberChatSelection(provider.kind, { model: value, options: {} })
                         }
-                    >
-                        <option value={PROVIDER_DEFAULT}>Provider default</option>
-                        {provider.models.map((entry) => (
-                            <option key={entry.slug} value={entry.slug}>
-                                {entry.name}
-                                {entry.legacy ? ' (legacy)' : ''}
-                            </option>
-                        ))}
-                    </SelectControl>
+                    />
                 }
             />
             {model && <ModelOptionRows provider={provider.kind} model={model} options={selection?.options ?? {}} />}
@@ -99,7 +95,6 @@ export function AgentsPane() {
     const loaded = useProviders((s) => s.loaded);
     const preferences = useChatPreferences();
     const withModels = providers.filter((provider) => provider.models.length > 0);
-    const runtime = RUNTIME_MODES.find((mode) => mode.id === preferences.runtimeMode);
 
     return (
         <>
@@ -118,36 +113,27 @@ export function AgentsPane() {
                 ))}
                 <SettingsRow
                     label="Permissions"
-                    description={runtime?.hint}
                     control={
-                        <SelectControl
+                        <Select
                             value={preferences.runtimeMode}
                             label="Permissions"
-                            onChange={(value) => rememberChatPreferences({ runtimeMode: value as RuntimeMode })}
-                        >
-                            {RUNTIME_MODES.map((mode) => (
-                                <option key={mode.id} value={mode.id}>
-                                    {mode.label}
-                                </option>
-                            ))}
-                        </SelectControl>
+                            align="end"
+                            items={runtimeModeItems}
+                            onValueChange={(value) => rememberChatPreferences({ runtimeMode: value })}
+                        />
                     }
                 />
                 <SettingsRow
                     label="Terminal agents start in"
                     description="An agent opened as a terminal node starts its CLI in this mode."
                     control={
-                        <SelectControl
+                        <Select
                             value={preferences.terminalRuntimeMode}
                             label="Terminal agents start in"
-                            onChange={(value) => rememberChatPreferences({ terminalRuntimeMode: value as RuntimeMode })}
-                        >
-                            {RUNTIME_MODES.map((mode) => (
-                                <option key={mode.id} value={mode.id}>
-                                    {mode.label}
-                                </option>
-                            ))}
-                        </SelectControl>
+                            align="end"
+                            items={runtimeModeItems}
+                            onValueChange={(value) => rememberChatPreferences({ terminalRuntimeMode: value })}
+                        />
                     }
                 />
             </SettingsSection>

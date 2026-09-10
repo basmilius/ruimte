@@ -3,9 +3,10 @@ import { Check } from 'lucide-react';
 import { NODE_ACCENTS } from '@/canvas/accents';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Segmented, SelectControl, Stepper } from '@/shell/settings/controls';
-import { FONT_SIZE_RANGE, INTERFACE_FONT_SIZE_RANGE, MONO_FONTS, useSettings, type MonoFontId } from '@/state/settings';
+import { Segmented, Stepper } from '@/shell/settings/controls';
+import { FONT_SIZE_RANGE, INTERFACE_FONT_SIZE_RANGE, MONO_FONTS, useSettings } from '@/state/settings';
 import { useTheme, type Theme } from '@/state/theme';
+import { Select } from '@/ui/Select';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 
@@ -94,13 +95,13 @@ export function AppearancePane() {
                     label="Font"
                     description="A font that is not installed falls back to the system one."
                     control={
-                        <SelectControl value={font} label="Terminal font" onChange={(value) => update({ font: value as MonoFontId })}>
-                            {MONO_FONTS.map((entry) => (
-                                <option key={entry.id} value={entry.id}>
-                                    {entry.label}
-                                </option>
-                            ))}
-                        </SelectControl>
+                        <Select
+                            value={font}
+                            label="Terminal font"
+                            align="end"
+                            items={MONO_FONTS.map((entry) => ({ value: entry.id, label: entry.label }))}
+                            onValueChange={(value) => update({ font: value })}
+                        />
                     }
                 />
                 <SettingsRow

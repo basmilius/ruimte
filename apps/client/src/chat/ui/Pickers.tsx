@@ -6,6 +6,7 @@ import { Check, ChevronDown, ChevronRight, Search, Shield, SlidersHorizontal } f
 import type { AgentKind, ModelInfo, ModelSelection, ProviderInfo, RuntimeMode } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
+import { Select, type SelectItem } from '@/ui/Select';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 
@@ -301,22 +302,25 @@ export function OptionsPicker({
     );
 }
 
-/* When the agent has to ask, from ask-for-everything to never. */
+const MODE_ITEMS: SelectItem<RuntimeMode>[] = RUNTIME_MODES.map((mode) => ({
+    value: mode.id,
+    label: mode.label,
+    description: mode.hint,
+    icon: <Icon icon={Shield} size={12} />
+}));
+
+/* When the agent has to ask, from ask-for-everything to never. Full access is tinted, because it
+   is the one setting where the composer should keep reminding you what it agreed to. */
 export function ModePicker({ runtimeMode, onChange }: { runtimeMode: RuntimeMode; onChange(mode: RuntimeMode): void }) {
-    const current = RUNTIME_MODES.find((mode) => mode.id === runtimeMode) ?? RUNTIME_MODES[3]!;
     return (
-        <Menu.Root>
-            <Menu.Trigger className={clsx(triggerClass, runtimeMode === 'full-access' && 'text-status-needs-you hover:text-status-needs-you')}>
-                <Icon icon={Shield} size={12} />
-                <span>{current.label}</span>
-            </Menu.Trigger>
-            <Popup minWidth="min-w-60">
-                <Menu.RadioGroup value={runtimeMode} onValueChange={(value: string) => onChange(value as RuntimeMode)}>
-                    {RUNTIME_MODES.map((mode) => (
-                        <RadioRow key={mode.id} value={mode.id} label={mode.label} hint={mode.hint} />
-                    ))}
-                </Menu.RadioGroup>
-            </Popup>
-        </Menu.Root>
+        <Select
+            value={runtimeMode}
+            label="Permissions"
+            size="sm"
+            variant="ghost"
+            items={MODE_ITEMS}
+            className={clsx(runtimeMode === 'full-access' && 'text-status-needs-you hover:text-status-needs-you')}
+            onValueChange={onChange}
+        />
     );
 }
