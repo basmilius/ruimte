@@ -67,6 +67,15 @@ function Row({ row, chatId, lastAssistantId, toggleGroup, toggleTurn, toggleSuba
 /* Extra room under the last row so the floating composer never covers it. */
 const COMPOSER_CLEARANCE_PX = 168;
 
+/*
+ * A turn runs in two rhythms. The tool lines are a list and read as one when they sit tight
+ * against each other; prose and cards are blocks and need room around them. Where the two meet,
+ * the block gap marks the seam, so an answer never looks glued to the call above it.
+ */
+const BLOCK_KINDS = new Set<TimelineRow['kind']>(['assistant', 'thinking', 'changed-files', 'compaction']);
+
+const isBlock = (row: TimelineRow): boolean => BLOCK_KINDS.has(row.kind);
+
 export function Timeline({ chatId }: { chatId: string }) {
     const order = useChats((s) => s.byNodeId[chatId]?.order);
     const items = useChats((s) => s.byNodeId[chatId]?.items);
@@ -179,6 +188,9 @@ export function Timeline({ chatId }: { chatId: string }) {
                         // wider one; the rows inside a turn keep their own tight rhythm. The gap is
                         // padding on the measured element, so the virtualizer counts it in the height.
                         const question = row.kind === 'user';
+                        const previous = virtualRow.index > 0 ? rows[virtualRow.index - 1]! : null;
+                        // A question already carries the turn gap, and the row after one the answer gap.
+                        const seam = !question && previous !== null && previous.kind !== 'user' && isBlock(row) !== isBlock(previous);
                         return (
                             <div
                                 key={row.id}
@@ -188,7 +200,8 @@ export function Timeline({ chatId }: { chatId: string }) {
                                 className={clsx(
                                     'absolute left-0 top-0 w-full',
                                     question && 'pb-[var(--chat-answer-gap)]',
-                                    question && virtualRow.index > 0 && 'pt-[var(--chat-turn-gap)]'
+                                    question && virtualRow.index > 0 && 'pt-[var(--chat-turn-gap)]',
+                                    seam && 'pt-[var(--chat-block-gap)]'
                                 )}
                                 style={{ transform: `translateY(${virtualRow.start}px)` }}
                             >
