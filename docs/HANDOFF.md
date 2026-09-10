@@ -84,7 +84,9 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   work for both CLIs.
 
 - **Phase 1, remaining checklist**: command palette on Cmd+K (jump to a node, every app
-  action), Option+T/C/B/G add nodes, Cmd+G wraps the selection in a group, Cmd+, opens
+  action; the last five commands come back under "Recent" on an empty query,
+  `shell/palette-recents.ts` in localStorage, and the field is a real combobox over the option
+  list), Option+T/C/B/G add nodes, Cmd+G wraps the selection in a group, Cmd+, opens
   settings. A group node is a dashed frame under its nodes that drags whatever sits inside it
   (`carriedByGroups` in `state/canvas.ts`), groups always paint below other nodes and stay out
   of the sidebar. Rename by double-click in the node header and in the sidebar. Node frames
@@ -104,7 +106,12 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   `ConnectionDot` moved to the toolbar, so the connection stays readable while the list is gone.
   Cmd+B toggles it from the app-wide chord block in `Canvas.tsx`, so it works from inside a node;
   off macOS Ctrl+B belongs to readline and tmux, so there it only fires outside node mode. The
-  palette has "Toggle sidebar".
+  palette has "Toggle sidebar". The rows are 32px, grouped by status through
+  `shell/sidebar-rows.ts` (a pure list module with its own tests), and they carry a roving
+  tabindex: Tab reaches one row, Up and Down walk the list in reading order without wrapping,
+  F2 renames and the selected row is `aria-current`. The footer button says "New terminal",
+  which is what it opens; agents and chats are one plus away in the dock. An empty list says so
+  instead of showing nothing.
 
 - **Toolbar and panel slot**: `apps/client/src/shell/Toolbar.tsx` is a 48px bar at the top of
   the canvas column, next to the sidebar's strip, `bg-surface` with a bottom border and the drag
@@ -307,6 +314,21 @@ canvas, against Ruimte, one verdict each.
 - Never highlight the canvas grid in the accent color. The dots stay neutral in every state.
 - Icon buttons get equal padding on every side. Buttons that belong together sit in a
   `.btn-group` with 1px gaps; groups keep the wider gap of their container.
+- The shared components in `src/ui/` are `Icon`, `Brand`, `Tooltip`, `Select`, `Button`
+  (primary, secondary, ghost, danger; 28 and 32 pixels), `Pill` (the rounded label in a node
+  header) and `EmptyState` (icon, one sentence, one action). A node's own "connecting" or
+  "failed" card is `canvas/nodes/NodeNotice.tsx`. Every text input is `.field` in `styles.css`,
+  one height and one focus ring; `.section-label` is the uppercase label outside a popup and
+  `.menu-hint` the trailing hint inside one, with `<kbd>` left for chords only.
+- The class rules in `styles.css` live in Tailwind's `components` layer. An unlayered rule beats
+  every utility of the same specificity, so `icon-btn h-7 w-7` silently stayed 32 pixels and
+  `menu-popup min-w-48` kept the wider default; inside the layer a call site's utility wins,
+  which is what the heights in the code already claimed.
+- What floats over what is four numbers in `styles.css`: dialog backdrop 80, dialog 90,
+  `.popup-layer` 100 (every menu, select and popover positioner, so one opened inside a dialog
+  is not swallowed by it), tooltip 110.
+- An icon-only button gets its accessible name from its tooltip: `<Tooltip label="Close node"
+  name>` puts the same string on `aria-label`, so the two can never drift apart.
 - Every icon is a Lucide icon drawn by the `Icon` component in `src/ui/Icon.tsx`
   (`lucide-react`). The pixel box, the 1.75 stroke weight and the optical alignment live there, so
   a call site only picks the icon and its pixel size. An icon inline with 12px text is 12px, next
