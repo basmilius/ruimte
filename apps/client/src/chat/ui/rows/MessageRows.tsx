@@ -1,22 +1,6 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import clsx from 'clsx';
-import {
-    Bot,
-    Brain,
-    Check,
-    ChevronDown,
-    CircleAlert,
-    Copy,
-    FileText,
-    Info,
-    MessageCircleQuestionMark,
-    Minimize2,
-    Paperclip,
-    TriangleAlert,
-    X,
-    Zap,
-    type LucideIcon
-} from 'lucide-react';
+import { Bot, Brain, Check, ChevronDown, CircleAlert, Copy, Info, MessageCircleQuestionMark, Minimize2, Paperclip, TriangleAlert, X, Zap } from 'lucide-react';
 import type { ChatApprovalItem, ChatAssistantItem, ChatQuestionItem, ChatThinkingItem, ChatUserItem } from '@ruimte/contracts';
 import { attachmentUrl, formatBytes, isImageAttachment } from '@/chat/attachments';
 import { tokenizeChips } from '@/chat/mentions';
@@ -24,6 +8,7 @@ import { Markdown } from '@/chat/ui/Markdown';
 import { formatDuration } from '@/chat/logic/timeline';
 import { toolSummary } from '@/chat/logic/tools';
 import { Tooltip } from '@/ui/Tooltip';
+import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
 
 // A long prompt folds so the answer stays in view; the reader can open it.
@@ -34,11 +19,11 @@ const copy = (text: string): void => {
     void navigator.clipboard?.writeText(text).catch(() => undefined);
 };
 
-/* A picked file or skill in a sent message: the icon stands in for the sigil the text still carries. */
-function Chip({ icon, label, skill = false }: { icon: LucideIcon; label: string; skill?: boolean }) {
+/* A picked file or skill in a sent message: the glyph stands in for the sigil the text still carries. */
+function Chip({ glyph, label, skill = false }: { glyph: ReactNode; label: string; skill?: boolean }) {
     return (
         <span className={clsx('chat-chip', skill ? 'skill-chip' : 'mention-chip')}>
-            <Icon icon={icon} size={14} className="shrink-0 opacity-85" />
+            {glyph}
             <span className="truncate">{label}</span>
         </span>
     );
@@ -82,10 +67,10 @@ export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }
                     <div className={clsx('whitespace-pre-wrap', long && !open && 'chat-fold')}>
                         {segments.map((segment, index) => {
                             if (segment.kind === 'mention') {
-                                return <Chip key={index} icon={FileText} label={segment.path} />;
+                                return <Chip key={index} glyph={<FileIcon path={segment.path} size={14} />} label={segment.path} />;
                             }
                             if (segment.kind === 'skill') {
-                                return <Chip key={index} icon={Zap} label={segment.name} skill />;
+                                return <Chip key={index} glyph={<Icon icon={Zap} size={14} className="shrink-0 opacity-85" />} label={segment.name} skill />;
                             }
                             return <span key={index}>{segment.text}</span>;
                         })}

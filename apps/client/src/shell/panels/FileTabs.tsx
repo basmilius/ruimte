@@ -1,8 +1,8 @@
 import { useEffect, useRef, type WheelEvent as ReactWheelEvent } from 'react';
 import { X } from 'lucide-react';
-import { fileGlyph } from '@/shell/panels/file-glyph';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useFiles } from '@/state/files';
+import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -38,7 +38,7 @@ export function FileTabs() {
                             onClick={() => useFiles.getState().activate(tab.path)}
                             onDoubleClick={() => useFiles.getState().setPinned(tab.path, !tab.pinned)}
                         >
-                            <Icon icon={fileGlyph(label)} size={12} />
+                            <FileIcon path={tab.path} size={14} />
                             <span className="files-tab-name">{label}</span>
                             <span className="files-tab-dot" data-dirty={tab.dirty} />
                         </button>

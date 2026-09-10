@@ -29,6 +29,7 @@ import { fileManagerName, useServer } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { transport } from '@/transport';
 import { EmptyState } from '@/ui/EmptyState';
+import { FILE_TREE_ICONS } from '@/ui/file-icon';
 import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
@@ -95,7 +96,7 @@ export function FilesPanel() {
         density: 'compact',
         dragAndDrop: { canDrag: () => true, canDrop: () => false },
         flattenEmptyDirectories: false,
-        icons: { set: 'standard', colored: false },
+        icons: FILE_TREE_ICONS,
         initialExpansion: 'closed',
         onSelectionChange: (paths) => {
             selectionRef.current = paths;
@@ -112,7 +113,7 @@ export function FilesPanel() {
         composition: { contextMenu: { enabled: false } },
         density: 'compact',
         dragAndDrop: { canDrag: () => true, canDrop: () => false },
-        icons: { set: 'standard', colored: false },
+        icons: FILE_TREE_ICONS,
         initialExpansion: 'open',
         onSelectionChange: (paths) => {
             selectionRef.current = paths;
@@ -343,7 +344,9 @@ export function FilesPanel() {
             <ContextMenu.Root>
                 <ContextMenu.Trigger
                     render={<div />}
-                    className="min-h-0 grow overflow-hidden"
+                    /* The padding is on the frame, not the scroller, so the first row keeps its
+                       distance from the filter bar instead of sliding under it. */
+                    className="min-h-0 grow overflow-hidden pt-2"
                     onContextMenu={(event) => {
                         menuPathRef.current = rowPathOf(event);
                         if (menuPathRef.current) {
