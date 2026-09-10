@@ -30,6 +30,7 @@ import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { transport } from '@/transport';
+import { BTN_GROUP } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { FILE_TREE_ICONS } from '@/ui/file-icon';
 import { Icon } from '@/ui/Icon';
@@ -346,7 +347,7 @@ export function FilesPanel() {
                         }}
                     />
                 </span>
-                <div className="btn-group">
+                <div className={BTN_GROUP}>
                     <Tooltip label={showHidden ? 'Hide hidden files' : 'Show hidden files'} name>
                         <button
                             className="icon-btn h-6 w-6"
@@ -396,7 +397,7 @@ export function FilesPanel() {
                     />
                 </ContextMenu.Trigger>
                 <ContextMenu.Portal>
-                    <ContextMenu.Positioner className="popup-layer">
+                    <ContextMenu.Positioner className="z-[var(--z-popup)]">
                         <ContextMenu.Popup className="menu-popup">
                             <ContextMenu.Item className="menu-item" onClick={onMenuPath((_absolute, treePath) => openPath(treePath))}>
                                 <Icon icon={FolderOpen} size={14} /> Open

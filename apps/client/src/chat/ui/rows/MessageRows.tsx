@@ -4,6 +4,7 @@ import { Bot, Brain, Check, ChevronDown, CircleAlert, Copy, Info, MessageCircleQ
 import type { ChatApprovalItem, ChatAssistantItem, ChatQuestionItem, ChatThinkingItem, ChatUserItem } from '@ruimte/contracts';
 import { attachmentUrl, formatBytes, isImageAttachment } from '@/chat/attachments';
 import { tokenizeChips } from '@/chat/mentions';
+import { CHIP_IN_MESSAGE, MENTION_TONE, SKILL_TONE } from '@/chat/ui/chips';
 import { ImageThumb } from '@/chat/ui/ImageView';
 import { Markdown } from '@/chat/ui/Markdown';
 import { formatDuration } from '@/chat/logic/timeline';
@@ -16,6 +17,10 @@ import { Icon } from '@/ui/Icon';
 const USER_FOLD_LINES = 8;
 const USER_FOLD_CHARS = 600;
 
+/* A folded user prompt fades out at the bottom instead of cutting a line in half. */
+const FOLD =
+    'max-h-[10em] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent)] [-webkit-mask-image:linear-gradient(to_bottom,black_70%,transparent)]';
+
 const copy = (text: string): void => {
     void navigator.clipboard?.writeText(text).catch(() => undefined);
 };
@@ -23,7 +28,7 @@ const copy = (text: string): void => {
 /* A picked file or skill in a sent message: the glyph stands in for the sigil the text still carries. */
 function Chip({ glyph, label, skill = false }: { glyph: ReactNode; label: string; skill?: boolean }) {
     return (
-        <span className={clsx('chat-chip', skill ? 'skill-chip' : 'mention-chip')}>
+        <span className={clsx(CHIP_IN_MESSAGE, skill ? SKILL_TONE : MENTION_TONE)}>
             {glyph}
             <span className="truncate">{label}</span>
         </span>
@@ -65,7 +70,7 @@ export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }
             )}
             {item.text !== '' && (
                 <div className="relative max-w-[80%] rounded-2xl bg-surface-active px-3.5 py-2.5 text-sm leading-normal text-text select-text">
-                    <div className={clsx('whitespace-pre-wrap', long && !open && 'chat-fold')}>
+                    <div className={clsx('whitespace-pre-wrap', long && !open && FOLD)}>
                         {segments.map((segment, index) => {
                             if (segment.kind === 'mention') {
                                 return <Chip key={index} glyph={<FileIcon path={segment.path} size={14} />} label={segment.path} />;

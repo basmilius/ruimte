@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, ChevronsDownUp, ChevronsUpDown, Folder, GitPullRequ
 import type { GitActionKind, GitCapabilitiesResult, GitCommit, GitFile, GitRef, GitStash, GitStatus, Worktree } from '@ruimte/contracts';
 import { desktop } from '@/desktop/bridge';
 import { BranchMenu } from '@/shell/panels/BranchMenu';
+import { FILE_TOOLBAR } from '@/shell/panels/classes';
 import { CommitBox } from '@/shell/panels/CommitBox';
 import { CommitLog } from '@/shell/panels/CommitLog';
 import { basenameOf } from '@/shell/panels/files-tree';
@@ -23,6 +24,7 @@ import { useUi } from '@/state/ui';
 import { useToasts } from '@/state/toasts';
 import { transport } from '@/transport';
 import { Button } from '@/ui/Button';
+import { BTN_GROUP, MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
@@ -337,9 +339,9 @@ export function GitPanel() {
                 <Separator />
             </PanelHeaderSlot>
             {status?.repo && (
-                <div className="file-toolbar">
+                <div className={FILE_TOOLBAR}>
                     {tree && status.files.length > 0 && (
-                        <span className="btn-group">
+                        <span className={BTN_GROUP}>
                             <Tooltip label="Expand all folders" name>
                                 <button className="icon-btn h-7 w-7" onClick={() => useGit.getState().setCollapsedDirs([])}>
                                     <Icon icon={ChevronsUpDown} size={14} />
@@ -403,7 +405,10 @@ export function GitPanel() {
                 )}
                 {status?.repo && (
                     <>
-                        <div className="git-split" onPointerDown={startLogResize} />
+                        <div
+                            className="-mb-px h-[5px] shrink-0 cursor-row-resize border-b border-border hover:border-border-strong"
+                            onPointerDown={startLogResize}
+                        />
                         <div className="flex shrink-0 flex-col" style={{ height: logHeight }}>
                             <CommitLog cwd={cwd} revision={revision} reading={readingCommit} onOpen={openCommit} />
                         </div>
@@ -600,7 +605,7 @@ function ActionsMenu({ busy, canPullRequest, stashes, onOpen, onAction, onDialog
                 </Menu.Trigger>
             </Tooltip>
             <Menu.Portal>
-                <Menu.Positioner className="popup-layer" side="bottom" align="end" sideOffset={6}>
+                <Menu.Positioner className="z-[var(--z-popup)]" side="bottom" align="end" sideOffset={6}>
                     <Menu.Popup className="menu-popup">
                         <Menu.Item className="menu-item" onClick={() => onAction('pull')}>
                             Pull
@@ -610,16 +615,16 @@ function ActionsMenu({ busy, canPullRequest, stashes, onOpen, onAction, onDialog
                         </Menu.Item>
                         <Menu.Item className="menu-item" onClick={() => onAction('sync')}>
                             Sync
-                            <span className="menu-hint">pull, then push</span>
+                            <span className={MENU_HINT}>pull, then push</span>
                         </Menu.Item>
-                        <Menu.Separator className="menu-separator" />
+                        <Menu.Separator className={MENU_SEPARATOR} />
                         <Menu.Item className="menu-item" onClick={() => onAction('fetch')}>
                             Fetch
                         </Menu.Item>
                         <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'force-push' })}>
                             Force Push
                         </Menu.Item>
-                        <Menu.Separator className="menu-separator" />
+                        <Menu.Separator className={MENU_SEPARATOR} />
                         <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'pick-branch', action: 'merge' })}>
                             Merge Branch...
                         </Menu.Item>
@@ -632,7 +637,7 @@ function ActionsMenu({ busy, canPullRequest, stashes, onOpen, onAction, onDialog
                         <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'pick-branch', action: 'delete-branch' })}>
                             Delete Branch...
                         </Menu.Item>
-                        <Menu.Separator className="menu-separator" />
+                        <Menu.Separator className={MENU_SEPARATOR} />
                         <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'stash' })}>
                             Stash Changes...
                         </Menu.Item>
@@ -642,11 +647,11 @@ function ActionsMenu({ busy, canPullRequest, stashes, onOpen, onAction, onDialog
                             onClick={() => (stashes.length > 1 ? onDialog({ kind: 'pick-stash' }) : onAction('stash-pop'))}
                         >
                             Pop Stash
-                            {stashes.length > 1 && <span className="menu-hint">{stashes.length}</span>}
+                            {stashes.length > 1 && <span className={MENU_HINT}>{stashes.length}</span>}
                         </Menu.Item>
                         {canPullRequest && (
                             <>
-                                <Menu.Separator className="menu-separator" />
+                                <Menu.Separator className={MENU_SEPARATOR} />
                                 <Menu.Item className="menu-item" onClick={onPullRequest}>
                                     <Icon icon={GitPullRequest} size={14} />
                                     Create pull request...

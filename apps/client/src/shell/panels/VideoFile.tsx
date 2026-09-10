@@ -54,7 +54,7 @@ export function VideoFile({ path, name, read }: { path: string; name: string; re
                     />
                 )}
             </div>
-            <div className="file-footer select-text">
+            <div className="flex h-7 shrink-0 items-center gap-3 border-t border-border px-2 text-xs text-text-muted select-text">
                 {size !== null && size.width > 0 && (
                     <span>
                         {size.width} x {size.height}

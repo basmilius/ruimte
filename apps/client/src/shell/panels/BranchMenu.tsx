@@ -5,6 +5,7 @@ import { Check, ChevronDown, GitBranch, Plus, Search } from 'lucide-react';
 import type { GitRef } from '@ruimte/contracts';
 import { basenameOf } from '@/shell/panels/files-tree';
 import type { GitTarget } from '@/state/git-target';
+import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -78,9 +79,9 @@ export function BranchMenu({ target, targets, branch, detached, refs, loading, o
                 </Menu.Trigger>
             </Tooltip>
             <Menu.Portal>
-                <Menu.Positioner className="popup-layer" side="bottom" align="start" sideOffset={6}>
+                <Menu.Positioner className="z-[var(--z-popup)]" side="bottom" align="start" sideOffset={6}>
                     <Menu.Popup className="menu-popup max-h-96 w-80 overflow-y-auto">
-                        <div className="menu-label">Checkout</div>
+                        <div className={MENU_LABEL}>Checkout</div>
                         <Menu.RadioGroup
                             value={target.cwd ?? ''}
                             onValueChange={(value: string) => {
@@ -98,7 +99,7 @@ export function BranchMenu({ target, targets, branch, detached, refs, loading, o
                                         </Menu.RadioItemIndicator>
                                     </span>
                                     <span className="truncate">{entry.label}</span>
-                                    {entry.group !== undefined && <span className="menu-hint truncate">{entry.group}</span>}
+                                    {entry.group !== undefined && <span className={`${MENU_HINT} truncate`}>{entry.group}</span>}
                                 </Menu.RadioItem>
                             ))}
                             {targets.length === 0 && (
@@ -107,8 +108,8 @@ export function BranchMenu({ target, targets, branch, detached, refs, loading, o
                                 </Menu.Item>
                             )}
                         </Menu.RadioGroup>
-                        <Menu.Separator className="menu-separator" />
-                        <div className="menu-label">Branches</div>
+                        <Menu.Separator className={MENU_SEPARATOR} />
+                        <div className={MENU_LABEL}>Branches</div>
                         <Menu.Item className="menu-item" onClick={onCreate}>
                             <Icon icon={Plus} size={14} />
                             Create branch...
@@ -158,8 +159,8 @@ export function BranchMenu({ target, targets, branch, detached, refs, loading, o
                                         </Menu.RadioItemIndicator>
                                     </span>
                                     <span className="truncate font-mono text-xs">{ref.name}</span>
-                                    {ref.isDefault && <span className="menu-hint">default</span>}
-                                    {ref.worktree !== undefined && <span className="menu-hint truncate">in another worktree</span>}
+                                    {ref.isDefault && <span className={MENU_HINT}>default</span>}
+                                    {ref.worktree !== undefined && <span className={`${MENU_HINT} truncate`}>in another worktree</span>}
                                 </Menu.RadioItem>
                             ))}
                         </Menu.RadioGroup>

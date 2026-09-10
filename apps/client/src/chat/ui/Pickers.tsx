@@ -7,6 +7,7 @@ import type { AgentKind, ModelInfo, ModelSelection, ProviderInfo, RuntimeMode } 
 import { AgentIcon } from '@/agents/AgentIcon';
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
 import { forgetStashed, useStash, type StashedPrompt } from '@/chat/stash';
+import { MENU_LABEL, MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
 import { Select, type SelectItem } from '@/ui/Select';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
@@ -17,7 +18,7 @@ const triggerClass =
 function Popup({ children, minWidth }: { children: React.ReactNode; minWidth?: string }) {
     return (
         <Menu.Portal>
-            <Menu.Positioner className="popup-layer" side="top" sideOffset={8} align="start">
+            <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={8} align="start">
                 <Menu.Popup className={clsx('menu-popup', minWidth)}>{children}</Menu.Popup>
             </Menu.Positioner>
         </Menu.Portal>
@@ -143,7 +144,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                 </Popover.Trigger>
             </Tooltip>
             <Popover.Portal>
-                <Popover.Positioner className="popup-layer" side="top" sideOffset={8} align="start">
+                <Popover.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={8} align="start">
                     <Popover.Popup className="picker-popup" initialFocus={inputRef}>
                         <div className="flex items-center gap-2 border-b border-border px-2.5">
                             <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />
@@ -191,7 +192,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                                 return (
                                     <div key={`${entry.provider.kind}/${entry.model.slug}`}>
                                         {first && (
-                                            <div className="menu-label flex items-center gap-1.5">
+                                            <div className={`${MENU_LABEL} flex items-center gap-1.5`}>
                                                 <AgentIcon kind={entry.provider.kind} size={12} />
                                                 {entry.provider.name}
                                             </div>
@@ -260,8 +261,8 @@ export function OptionsPicker({
             <Popup minWidth="min-w-52">
                 {model.options.map((option, index) => (
                     <div key={option.id}>
-                        {index > 0 && <Menu.Separator className="menu-separator" />}
-                        <div className="menu-label">{option.label}</div>
+                        {index > 0 && <Menu.Separator className={MENU_SEPARATOR} />}
+                        <div className={MENU_LABEL}>{option.label}</div>
                         {option.type === 'select' ? (
                             <Menu.RadioGroup
                                 value={String(selection.options[option.id] ?? option.defaultChoice)}
@@ -319,9 +320,9 @@ export function StashPicker({ onRestore }: { onRestore(prompt: StashedPrompt): v
                 </Popover.Trigger>
             </Tooltip>
             <Popover.Portal>
-                <Popover.Positioner className="popup-layer" side="top" sideOffset={8} align="start">
+                <Popover.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={8} align="start">
                     <Popover.Popup className="picker-popup w-80">
-                        <div className="section-label px-3 pt-2">Stashed prompts</div>
+                        <div className={`${SECTION_LABEL} px-3 pt-2`}>Stashed prompts</div>
                         <div className="max-h-72 overflow-auto p-1">
                             {prompts.map((prompt) => (
                                 <div key={prompt.id} className="group/stash flex items-start gap-1">

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { LoaderCircle, Sparkles } from 'lucide-react';
 import type { GitCapabilitiesResult, GitStatus } from '@ruimte/contracts';
+import { COMMIT_MESSAGE } from '@/shell/panels/classes';
 import { splitMessage } from '@/shell/panels/git-actions';
 import { nextActionId } from '@/shell/panels/use-git-actions';
 import { useGit } from '@/state/git';
@@ -67,7 +68,7 @@ export function CommitBox({ cwd, status, capabilities, busy, onCommit }: CommitB
     return (
         <div className="flex shrink-0 flex-col gap-2 border-t border-border p-2">
             <textarea
-                className="commit-message"
+                className={COMMIT_MESSAGE}
                 rows={3}
                 spellCheck={false}
                 placeholder="Summary, then an empty line and the why."

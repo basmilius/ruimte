@@ -6,6 +6,7 @@ import { chatClient } from '@/chat';
 import { approvalChanges, fileChanges, toolSummary } from '@/chat/logic/tools';
 import { toolIcon } from '@/chat/ui/icons';
 import { Button } from '@/ui/Button';
+import { TOOLTIP_KBD } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 
 const EditDiff = lazy(() => import('@/chat/ui/EditDiff'));
@@ -52,7 +53,7 @@ export function ApprovalDock({
     return (
         <div
             ref={ref}
-            className="chat-dock outline-none"
+            className="border-b border-border bg-[color-mix(in_srgb,var(--status-needs-you)_6%,transparent)] outline-none"
             role="group"
             aria-label={`${item.toolName} wants permission`}
             tabIndex={-1}
@@ -81,7 +82,7 @@ export function ApprovalDock({
                 <span className="grow" />
                 {more > 0 && <span className="shrink-0 tabular-nums text-text-faint">{more} more</span>}
                 <Button size="sm" onClick={() => decide('deny')}>
-                    <Icon icon={X} size={12} /> Decline <kbd className="tooltip-kbd">esc</kbd>
+                    <Icon icon={X} size={12} /> Decline <kbd className={TOOLTIP_KBD}>esc</kbd>
                 </Button>
                 {item.canAllowAlways && (
                     <Button size="sm" className="text-text hover:bg-surface-sunken" onClick={() => decide('allow-always')}>
@@ -89,7 +90,7 @@ export function ApprovalDock({
                     </Button>
                 )}
                 <Button size="sm" variant="primary" onClick={() => decide('allow')}>
-                    <Icon icon={Check} size={12} /> Approve <kbd className="tooltip-kbd">↵</kbd>
+                    <Icon icon={Check} size={12} /> Approve <kbd className={TOOLTIP_KBD}>↵</kbd>
                 </Button>
             </div>
             {item.description && <p className="px-3 pb-2 text-xs text-text-muted">{item.description}</p>}
@@ -199,7 +200,7 @@ export function QuestionDock({ chatId, item, more, focused }: { chatId: string; 
     return (
         <div
             ref={ref}
-            className="chat-dock outline-none"
+            className="border-b border-border bg-[color-mix(in_srgb,var(--status-needs-you)_6%,transparent)] outline-none"
             role="group"
             aria-label={question.header || 'Question'}
             tabIndex={-1}
@@ -274,7 +275,7 @@ export function QuestionDock({ chatId, item, more, focused }: { chatId: string; 
                 <span className="grow" />
                 <Button size="sm" variant="primary" disabled={!canCommit} onClick={commit}>
                     {last ? 'Submit' : 'Next'} {last ? <Icon icon={Check} size={12} /> : <Icon icon={ChevronRight} size={12} />}
-                    <kbd className="tooltip-kbd">↵</kbd>
+                    <kbd className={TOOLTIP_KBD}>↵</kbd>
                 </Button>
             </div>
         </div>

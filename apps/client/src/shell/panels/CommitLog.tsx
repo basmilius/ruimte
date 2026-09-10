@@ -1,15 +1,21 @@
 import { useEffect, useState } from 'react';
 import { GitCommitHorizontal } from 'lucide-react';
 import type { GitCommit } from '@ruimte/contracts';
+import { GIT_GROUP } from '@/shell/panels/classes';
 import { groupCommits, relativeTime } from '@/shell/panels/commit-log';
 import { transport } from '@/transport';
 import { Button } from '@/ui/Button';
+import { SECTION_LABEL } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
 
 // One screen of rows at a time; the button at the end asks for the next.
 const PAGE = 30;
+
+/* A commit row is its own open button: the row's states with the columns of a row that opens. */
+const LOG_ROW =
+    'group flex h-7 w-full min-w-0 items-center gap-1.5 pr-1 pl-3 text-xs text-inherit hover:bg-surface-sunken hover:text-text data-[selected]:bg-surface-active data-[selected]:text-text';
 
 interface CommitLogProps {
     cwd: string;
@@ -92,19 +98,19 @@ export function CommitLog({ cwd, revision, reading, onOpen }: CommitLogProps) {
         <div className="min-h-0 grow overflow-y-auto py-1">
             {groupCommits(commits, now).map((section) => (
                 <section key={section.label}>
-                    <header className="git-group">
-                        <span className="section-label">{section.label}</span>
+                    <header className={GIT_GROUP}>
+                        <span className={SECTION_LABEL}>{section.label}</span>
                     </header>
                     {section.commits.map((commit) => (
                         <button
                             key={commit.hash}
-                            className="git-row git-row-open w-full"
+                            className={LOG_ROW}
                             aria-current={commit.hash === reading}
                             data-selected={commit.hash === reading || undefined}
                             onClick={() => onOpen(commit)}
                         >
-                            <span className="git-row-hash">{commit.shortHash}</span>
-                            <span className="git-row-name">{commit.subject}</span>
+                            <span className="shrink-0 font-mono text-text-faint">{commit.shortHash}</span>
+                            <span className="truncate text-text">{commit.subject}</span>
                             {commit.refs.map((ref) => (
                                 <Pill key={ref} mono className="shrink-0 py-0">
                                     {ref}

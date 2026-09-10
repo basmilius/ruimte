@@ -5,6 +5,7 @@ import { ImageOff, Minus, Plus, RotateCcw, X } from 'lucide-react';
 import { isImageMime, type FsReadResult } from '@ruimte/contracts';
 import { fileBytesUrl } from '@/shell/panels/file-url';
 import { transport } from '@/transport';
+import { BTN_GROUP } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 
@@ -70,7 +71,7 @@ function Lightbox({ src, alt, open, onOpenChange }: { src: string; alt: string; 
                         <span className="min-w-0 truncate text-xs text-text-muted">{alt}</span>
                         <span className="grow" />
                         <span className="tabular-nums text-xs text-text-faint">{Math.round(view.scale * 100)}%</span>
-                        <span className="btn-group">
+                        <span className={BTN_GROUP}>
                             <Tooltip label="Zoom out" name>
                                 <button className="icon-btn h-7 w-7 rounded" disabled={view.scale <= MIN_SCALE} onClick={() => zoomButton(1 / BUTTON_STEP)}>
                                     <Icon icon={Minus} size={16} />

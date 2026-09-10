@@ -2,7 +2,9 @@ import { useState, type ReactNode } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
 import clsx from 'clsx';
 import { Search } from 'lucide-react';
+import { COMMIT_MESSAGE } from '@/shell/panels/classes';
 import { Button } from '@/ui/Button';
+import { MENU_HINT, SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 
 interface PromptProps {
@@ -53,7 +55,7 @@ export function GitPrompt({ open, title, description, field, area, confirmLabel,
                     {description !== undefined && <p className="mt-1 text-xs text-text-muted">{description}</p>}
                     {field !== undefined && (
                         <label className="mt-4 flex flex-col gap-1.5">
-                            <span className="section-label">{field.label}</span>
+                            <span className={SECTION_LABEL}>{field.label}</span>
                             <input
                                 autoFocus
                                 className="field font-mono"
@@ -72,9 +74,9 @@ export function GitPrompt({ open, title, description, field, area, confirmLabel,
                     )}
                     {area !== undefined && (
                         <label className="mt-3 flex flex-col gap-1.5">
-                            <span className="section-label">{area.label}</span>
+                            <span className={SECTION_LABEL}>{area.label}</span>
                             <textarea
-                                className="commit-message"
+                                className={COMMIT_MESSAGE}
                                 rows={5}
                                 spellCheck={false}
                                 placeholder={area.placeholder}
@@ -160,7 +162,7 @@ export function GitChoice({ open, title, description, choices, filterFrom = 10, 
                                 onClick={() => onPick(choice.value)}
                             >
                                 <span className="truncate font-mono text-xs">{choice.label}</span>
-                                {choice.hint !== undefined && <span className="menu-hint truncate">{choice.hint}</span>}
+                                {choice.hint !== undefined && <span className={`${MENU_HINT} truncate`}>{choice.hint}</span>}
                             </button>
                         ))}
                     </div>

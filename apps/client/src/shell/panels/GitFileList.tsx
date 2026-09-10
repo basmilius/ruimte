@@ -2,9 +2,11 @@ import { useMemo } from 'react';
 import clsx from 'clsx';
 import { ChevronRight, GitBranch, Minus, Plus, Trash2 } from 'lucide-react';
 import type { GitFile, GitFileState, GitStatus } from '@ruimte/contracts';
+import { GIT_GROUP, GIT_ROW, GIT_ROW_ACTIONS, GIT_ROW_OPEN } from '@/shell/panels/classes';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { buildGitRows, type GitTreeRow } from '@/shell/panels/git-tree';
 import { useGit } from '@/state/git';
+import { BTN_GROUP, SECTION_LABEL } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
@@ -78,8 +80,8 @@ export function GitFileList({ status, tree, collapsed, reading, busy, onOpen, on
                 const rows: GitTreeRow[] = tree ? buildGitRows(files, folded) : files.map((file) => ({ kind: 'file', file, depth: 0 }));
                 return (
                     <section key={group.state}>
-                        <header className="git-group">
-                            <span className="section-label">{group.label}</span>
+                        <header className={GIT_GROUP}>
+                            <span className={SECTION_LABEL}>{group.label}</span>
                             <span className="tabular-nums text-text-faint">{files.length}</span>
                             <span className="grow" />
                             {group.state !== 'conflicted' && (
@@ -117,20 +119,20 @@ export function GitFileList({ status, tree, collapsed, reading, busy, onOpen, on
 
 function GitDirectoryRow({ row, collapsed }: { row: Extract<GitTreeRow, { kind: 'directory' }>; collapsed: boolean }) {
     return (
-        <div className="git-row">
+        <div className={GIT_ROW}>
             <button
-                className="git-row-open"
+                className={GIT_ROW_OPEN}
                 aria-expanded={!collapsed}
                 style={{ paddingLeft: 12 + row.depth * INDENT }}
                 onClick={() => useGit.getState().toggleDir(row.path)}
             >
                 <Icon icon={ChevronRight} size={12} className={clsx('shrink-0 text-text-faint transition-transform', !collapsed && 'rotate-90')} />
-                <span className="git-row-name">{row.label}</span>
+                <span className="truncate text-text">{row.label}</span>
                 <span className="tabular-nums text-text-faint">{row.count}</span>
                 <span className="grow" />
             </button>
             {/* The columns of a file row end here too, so a directory never shifts them. */}
-            <span className="git-row-actions btn-group" />
+            <span className={`${GIT_ROW_ACTIONS} ${BTN_GROUP}`} />
         </div>
     );
 }
@@ -160,17 +162,17 @@ function GitFileRow({
     const staged = file.state === 'staged';
     const conflicted = file.state === 'conflicted';
     return (
-        <div className="git-row" data-selected={selected || undefined}>
-            <button className="git-row-open" aria-current={selected} style={{ paddingLeft: 12 + depth * INDENT }} onClick={onOpen}>
+        <div className={GIT_ROW} data-selected={selected || undefined}>
+            <button className={GIT_ROW_OPEN} aria-current={selected} style={{ paddingLeft: 12 + depth * INDENT }} onClick={onOpen}>
                 <FileIcon path={file.path} size={14} />
-                <span className="git-row-name">{basenameOf(file.path)}</span>
-                {showPath && dir !== '' && <span className="git-row-dir">{dir}</span>}
+                <span className="truncate text-text">{basenameOf(file.path)}</span>
+                {showPath && dir !== '' && <span className="truncate text-text-faint">{dir}</span>}
                 <span className="grow" />
-                <span className="git-row-code">{file.status}</span>
-                <span className="git-row-count text-term-green">{file.added > 0 ? `+${file.added}` : ''}</span>
-                <span className="git-row-count text-term-red">{file.deleted > 0 ? `-${file.deleted}` : ''}</span>
+                <span className="w-4 shrink-0 text-right font-mono text-text-faint">{file.status}</span>
+                <span className="w-8 shrink-0 text-right tabular-nums text-term-green">{file.added > 0 ? `+${file.added}` : ''}</span>
+                <span className="w-8 shrink-0 text-right tabular-nums text-term-red">{file.deleted > 0 ? `-${file.deleted}` : ''}</span>
             </button>
-            <span className="git-row-actions btn-group">
+            <span className={`${GIT_ROW_ACTIONS} ${BTN_GROUP}`}>
                 <Tooltip label={staged ? 'Unstage' : conflicted ? 'Stage as resolved' : 'Stage'} name>
                     <button className="icon-btn h-6 w-6" disabled={busy} onClick={onStage}>
                         <Icon icon={staged ? Minus : Plus} size={12} />
