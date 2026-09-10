@@ -172,6 +172,20 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   folder, closes (sessions keep running) and deletes with a confirm. Undo and redo
   (Cmd+Z, Cmd+Shift+Z) cover placement, adding and deleting; the history resets when another
   project loads. Node ids are random now, since they end up in a shared file.
+  A project has an identity: `name` and an optional `icon` (an emoji or one of 40 Lucide names)
+  in the canvas file, and everything else read from the folder. Without a chosen icon the daemon
+  walks `.ruimte/icon.*`, `.idea/icon.*`, `.vscode/icon.*`, the usual favicon paths and the
+  `<link rel="icon">` of a root `index.html`, jailed inside the folder, typed by magic bytes,
+  capped at 256 KB, and falls back to the first letter on the project color; a name that was
+  never typed comes from `.idea/.name`. Bytes travel over `GET /projects/<id>/icon?v=<version>`
+  (the same access rules as the socket, `nosniff`, a `default-src 'none'` policy for SVG), never
+  as a data URL on the wire. `ProjectGlyph` draws it in the breadcrumb, the project menu and the
+  palette's project rows, `document.title` becomes `<name> - Ruimte` (which is the Electron
+  window title too), and the project menu renames and sets the icon: an emoji, the Lucide grid,
+  an image that `project.setIcon` writes to `.ruimte/icon.<ext>`, or the folder's own again.
+  Derived answers are cached for five minutes per folder and re-read on `project.open`; the
+  watcher covers `.ruimte/icon.*` and ships a `project.summary` event, so an icon dropped in by
+  hand shows up while the app is open.
 
 - **Phase 7, Electron shell and browser node**: `apps/desktop` is a small main process
   (`src/main.ts`) plus a preload that exposes `window.ruimteDesktop` (platform, native folder
@@ -386,6 +400,10 @@ canvas, against Ruimte, one verdict each.
   (`apps/client/src/terminal/keymap.ts`) is the whole mapping; the key handler writes the bytes
   itself and returns false, so xterm adds nothing and the chord never reaches the canvas. Other
   platforms keep their own conventions.
+- An image icon is a file in the folder, never a blob in `project.json`: every save rewrites
+  that file and every `project.changed` ships it, so 256 KB of base64 would ride along each time.
+  A derived name or icon is never written back either, so the folder stays the one place that
+  decides and a person can change it from outside the app.
 - Formatting is prettier (`.prettierrc`: single quotes, width 160, 4 spaces). Run
   `bun run format` before a commit.
 - A line between two non-agent nodes means nothing to the daemon; it is a drawing. Only the
