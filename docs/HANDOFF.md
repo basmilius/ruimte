@@ -176,8 +176,10 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   in the canvas file, and everything else read from the folder. Without a chosen icon the daemon
   walks `.ruimte/icon.*`, `.idea/icon.*`, `.vscode/icon.*`, the usual favicon paths and the
   `<link rel="icon">` of a root `index.html`, jailed inside the folder, typed by magic bytes,
-  capped at 256 KB, and falls back to the first letter on the project color; a name that was
-  never typed comes from `.idea/.name`. Bytes travel over `GET /projects/<id>/icon?v=<version>`
+  capped at 256 KB, and falls back to the first letter on the project color. The name is seeded
+  once: a folder that gets its first canvas takes what `.idea/.name` declares, and from then on
+  the name lives in `project.json`, where only "Rename project" changes it, so an editor renaming
+  its own project never renames ours. Bytes travel over `GET /projects/<id>/icon?v=<version>`
   (the same access rules as the socket, `nosniff`, a `default-src 'none'` policy for SVG), never
   as a data URL on the wire. `ProjectGlyph` draws it in the breadcrumb, the project menu and the
   palette's project rows, `document.title` becomes `<name> - Ruimte` (which is the Electron

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { deriveIdentity, faviconHref, sniffMime, IdentityCache, ICON_MAX_BYTES } from './project-identity.ts';
+import { deriveIdentity, faviconHref, readIdeaName, sniffMime, IdentityCache, ICON_MAX_BYTES } from './project-identity.ts';
 
 let root: string;
 let folder: string;
@@ -107,20 +107,27 @@ describe('deriveIdentity', () => {
         expect((await deriveIdentity(folder)).icon?.from).toBe('public/brand.svg');
     });
 
-    test('reads the name from .idea/.name and cleans it up', async () => {
-        await put('.idea/.name', '\n\n  Ruimte Canvas \t\n second line\n');
-        expect((await deriveIdentity(folder)).name).toBe('Ruimte Canvas');
-
-        await put('.idea/.name', `${'x'.repeat(200)}\n`);
-        expect((await deriveIdentity(folder)).name).toHaveLength(64);
-
-        await put('.idea/.name', Buffer.alloc(8 * 1024, 0x41));
-        expect((await deriveIdentity(folder)).name).toBeNull();
-    });
-
     test('a folder that cannot be read is unresolved, which is not the same as empty', async () => {
         const derived = await deriveIdentity(join(root, 'gone'));
-        expect(derived).toEqual({ icon: null, name: null, unresolved: true });
+        expect(derived).toEqual({ icon: null, unresolved: true });
+    });
+});
+
+describe('readIdeaName', () => {
+    test('reads the name from .idea/.name and cleans it up', async () => {
+        await put('.idea/.name', '\n\n  Ruimte Canvas \t\n second line\n');
+        expect(await readIdeaName(folder)).toBe('Ruimte Canvas');
+
+        await put('.idea/.name', `${'x'.repeat(200)}\n`);
+        expect(await readIdeaName(folder)).toHaveLength(64);
+
+        await put('.idea/.name', Buffer.alloc(8 * 1024, 0x41));
+        expect(await readIdeaName(folder)).toBeNull();
+    });
+
+    test('a folder without the file declares nothing', async () => {
+        expect(await readIdeaName(folder)).toBeNull();
+        expect(await readIdeaName(join(root, 'gone'))).toBeNull();
     });
 });
 

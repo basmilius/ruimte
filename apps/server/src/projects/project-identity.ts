@@ -70,13 +70,11 @@ export interface DerivedIcon {
 
 export interface DerivedIdentity {
     icon: DerivedIcon | null;
-    // The first line of `.idea/.name`, or null when the folder does not declare one.
-    name: string | null;
     // The folder itself could not be read (unmounted, no permission); nothing was ruled out.
     unresolved: boolean;
 }
 
-const EMPTY: DerivedIdentity = { icon: null, name: null, unresolved: false };
+const EMPTY: DerivedIdentity = { icon: null, unresolved: false };
 
 const startsWith = (bytes: Uint8Array, signature: number[], offset = 0): boolean => signature.every((byte, index) => bytes[offset + index] === byte);
 
@@ -242,7 +240,12 @@ const iconFromHtml = async (folder: string): Promise<DerivedIcon | null> => {
     return null;
 };
 
-const readIdeaName = async (folder: string): Promise<string | null> => {
+/*
+ * The name `.idea/.name` declares, or null when the folder declares none. Asked once, when a
+ * folder gets its first canvas; after that the name lives in `project.json` and this file is
+ * never read again, so an editor renaming its own project never renames ours.
+ */
+export const readIdeaName = async (folder: string): Promise<string | null> => {
     const file = await jailedFile(folder, IDEA_NAME_FILE);
     if (!file || file.size === 0 || file.size > NAME_MAX_BYTES) {
         return null;
@@ -267,8 +270,8 @@ const readIdeaName = async (folder: string): Promise<string | null> => {
 };
 
 /*
- * What a folder says about itself: an icon file and a name, both optional. Nothing is written
- * back and nothing is remembered on disk, so a folder stays the source of truth for both.
+ * What a folder says about itself: an icon file, if it has one. Nothing is written back and
+ * nothing is remembered on disk, so a folder stays the source of truth for its icon.
  */
 export const deriveIdentity = async (folder: string): Promise<DerivedIdentity> => {
     try {
@@ -277,15 +280,15 @@ export const deriveIdentity = async (folder: string): Promise<DerivedIdentity> =
         }
     } catch {
         // The folder could not be read at all; that is not the same as "declares nothing".
-        return { icon: null, name: null, unresolved: true };
+        return { icon: null, unresolved: true };
     }
     for (const candidate of ICON_CANDIDATES) {
         const light = await readImage(folder, candidate);
         if (light) {
-            return { icon: await toDerived(folder, candidate, light), name: await readIdeaName(folder), unresolved: false };
+            return { icon: await toDerived(folder, candidate, light), unresolved: false };
         }
     }
-    return { icon: await iconFromHtml(folder), name: await readIdeaName(folder), unresolved: false };
+    return { icon: await iconFromHtml(folder), unresolved: false };
 };
 
 /* Keeps a folder's answer for a few minutes; a folder that could not be read is asked again. */

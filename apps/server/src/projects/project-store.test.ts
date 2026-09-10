@@ -163,13 +163,28 @@ describe('ProjectStore', () => {
         expect((await store.list())[0]!.icon).toEqual({ kind: 'lucide', value: 'rocket' });
     });
 
-    test('a fresh canvas takes the name .idea/.name declares', async () => {
+    test('a first open seeds the name from .idea/.name and writes it into the canvas', async () => {
         await mkdir(join(folder, '.idea'), { recursive: true });
         await writeFile(join(folder, '.idea', '.name'), 'Ruimte Daemon\n');
         const opened = await store.openProject({ folder });
         expect(opened.summary.name).toBe('Ruimte Daemon');
-        expect(opened.summary.nameSource).toBe('idea');
+        expect(opened.summary.nameSource).toBe('chosen');
         expect(opened.document.name).toBe('Ruimte Daemon');
+        const onDisk = JSON.parse(await readFile(documentPathInFolder(folder), 'utf8')) as ProjectDocument;
+        expect(onDisk.name).toBe('Ruimte Daemon');
+    });
+
+    test('.idea/.name is never read again once the canvas exists', async () => {
+        await mkdir(join(folder, '.idea'), { recursive: true });
+        await writeFile(join(folder, '.idea', '.name'), 'Ruimte Daemon\n');
+        const opened = await store.openProject({ folder });
+        await store.save(opened.summary.projectId, 0, content('Chosen by hand'));
+
+        await writeFile(join(folder, '.idea', '.name'), 'Renamed In The IDE\n');
+        const reopened = await store.openProject({ folder });
+        expect(reopened.summary.name).toBe('Chosen by hand');
+        expect(reopened.document.name).toBe('Chosen by hand');
+        expect((await store.list())[0]).toMatchObject({ name: 'Chosen by hand' });
     });
 
     test('a folder that is gone and an unknown id are refused', async () => {
