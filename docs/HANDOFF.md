@@ -623,7 +623,15 @@ canvas, against Ruimte, one verdict each.
   using the control protocol's `set_model`; one path, and the resumed session keeps everything.
 - `interactionMode` and `ProviderCapabilities.planMode` are off the wire (phase 15). A stored
   chat written before that keeps parsing: zod strips what the schema no longer knows.
-- Fast mode is not offered: the installed CLI has no flag for it, only the `/fast` command.
+- Fast mode is offered on the models that have it. `--settings '{"fastMode":true}'` is both the
+  switch and the opt-in the CLI asks for: without it the init frame answers `fast_mode_state: off`
+  with `fast_mode_disabled_reason: sdk_opt_in_required`, with it the reason is gone, and on
+  2.1.267 only Claude Opus 5 answers `fast_mode_state: on` (Sonnet 5, Fable 5.1, Haiku 4.5 and
+  Opus 4.6 all stay off). So the boolean descriptor sits on Opus 5 alone, in a profile of its own;
+  move it as soon as another model answers on. Codex's counterpart is the priority service tier,
+  which `model/list` reports per model as `serviceTiers: [{ id: 'priority', name: 'Fast' }]` for
+  everything except Codex Spark; it goes out as `serviceTier` on `thread/start` and `turn/start`.
+  Both are ordinary option descriptors, so they are remembered per provider with the model.
 - Claude Code 2.1.266 emits `tool_progress` (`tool_use_id`, `tool_name`, `parent_tool_use_id`,
   `elapsed_time_seconds`, `task_id`, `heartbeat`) for a local Bash only when
   `CLAUDE_CODE_REMOTE` or `CLAUDE_CODE_CONTAINER_ID` is set, throttled to one per 30 s, and
@@ -678,6 +686,27 @@ canvas, against Ruimte, one verdict each.
   `thread/resume` keeps everything.
 - Codex chats hear about linked context too: the app-server has no system prompt, so the
   `ruimte-context` sentence goes in front of the first prompt instead of on a flag.
+- The composer guards a long prompt: past 100k characters a counter appears, past 120k the send
+  is refused, which is the size where a turn gets slower than the answer is worth. Commands only
+  the CLI's own terminal can run (`/clear`, `/login`, `/theme`, `/doctor`, ...) are filtered out of
+  the slash menu even though the init frame lists them (`chat/guards.ts`); `/clear` is in that list
+  for a reason of its own, since it would empty the CLI's context while the thread still shows
+  every item. PageUp and PageDown page the thread from the composer, through a scroller the
+  timeline registers per chat (`chat/timeline-scroll.ts`), and a chat node with an unsent draft
+  gets a dot on its sidebar row (`useHasDraft` in `chat/drafts.ts`, the store next to the
+  localStorage the composer already wrote).
+- Cmd+S in the composer stashes the draft and clears the box; on an empty box the same key takes
+  the newest one back. The shelf is one list for the whole app in localStorage, twenty entries
+  deep, because a stashed prompt usually moves to another node on the canvas. A stashed entry
+  keeps the text, the mentions, the skills and what the files were called; the bytes are not kept,
+  so the row says so and the files are not restored.
+- An image attachment and an image an agent read open large in a dialog with zoom and pan
+  (`chat/ui/ImageView.tsx`): the wheel zooms around the pointer, dragging pans, Escape closes. A
+  `Read` of a path with an image suffix asks `fs.read` what the file is and draws it under the row;
+  the bytes come from `GET /fs/file` like every other image the client draws.
+- Codex has a `@` picker too. It has no mention part in its protocol, so the path travels as text
+  in the prompt, which is all the model needs to open the file with its own tools. A bare `@` lists
+  what is in the folder instead of waiting for a query.
 - An async Codex question carries `async` on its item, which is what lets the dock offer Dismiss:
   `chat.dismiss { chatId, itemId }` settles it as `dismissed` and tells the CLI nothing, because it
   asked beside its turn and goes on either way. A blocking question and an approval refuse the call.

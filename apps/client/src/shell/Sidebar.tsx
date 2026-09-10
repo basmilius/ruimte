@@ -3,6 +3,7 @@ import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Globe, LayoutGrid, MessageSquare, Plus, Settings, StickyNote, Terminal } from 'lucide-react';
 import clsx from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
+import { useHasDraft } from '@/chat/drafts';
 import { useCanvas, type CanvasNode } from '@/state/canvas';
 import { useChats, useNodeStatus } from '@/state/chats';
 import { nodeStatus, useSessions } from '@/state/sessions';
@@ -45,6 +46,7 @@ interface SessionRowProps {
 function SessionRow({ node, tabbable, onFocus, onArrow }: SessionRowProps) {
     const selected = useCanvas((s) => s.selection.includes(node.id));
     const status = useNodeStatus(node);
+    const draft = useHasDraft(node.id) && node.kind === 'chat';
     const [renaming, setRenaming] = useState(false);
     const kindIcon = KIND_ICON[node.kind];
     if (renaming) {
@@ -105,6 +107,11 @@ function SessionRow({ node, tabbable, onFocus, onArrow }: SessionRowProps) {
                 <Icon icon={kindIcon} size={14} className="shrink-0" />
                 <span className="truncate">{node.title}</span>
                 <span className="grow" />
+                {draft && (
+                    <Tooltip label="Unsent draft">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-faint" />
+                    </Tooltip>
+                )}
                 {status && <StatusDot status={status} plain />}
             </ContextMenu.Trigger>
             <NodeMenuPopup id={node.id} onRename={() => setRenaming(true)} />

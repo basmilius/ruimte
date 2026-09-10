@@ -16,8 +16,10 @@ import {
     tokenizeChips,
     type MentionQuery
 } from '@/chat/mentions';
+import { PROMPT_MAX_CHARS, promptGuard, usableSlashCommands } from '@/chat/guards';
 import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferences';
 import { stashDraft, useStash, type StashedPrompt } from '@/chat/stash';
+import { pageTimeline } from '@/chat/timeline-scroll';
 import { ContextMeter } from '@/chat/ui/ContextMeter';
 import { ApprovalDock, QuestionDock } from '@/chat/ui/PendingDock';
 import { ModelPicker, ModePicker, OptionsPicker, StashPicker } from '@/chat/ui/Pickers';
@@ -216,7 +218,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
         }
         const known = new Set(skills.map((skill) => skill.name));
         const own = LOCAL_COMMANDS.map((command) => ({ ...command, local: true, skill: false }));
-        const cli = info.slashCommands
+        const cli = usableSlashCommands(info.slashCommands)
             .filter((name) => !LOCAL_COMMANDS.some((command) => command.name === name))
             .map((name) => ({ name, hint: known.has(name) ? 'Skill' : `${provider?.name ?? 'CLI'} command`, local: false, skill: known.has(name) }));
         return [...own, ...cli].filter((command) => command.name.startsWith(commandQuery)).slice(0, 8);
@@ -236,6 +238,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
     // Results belong to the query that asked for them; a closed picker shows none while the next answer is on its way.
     const files = mention === null ? [] : searched;
     const segments = useMemo(() => tokenizeChips(text, draft.mentions, draft.skills), [text, draft.mentions, draft.skills]);
+    const guard = promptGuard(text);
 
     const setText = (next: string, mentions = draft.mentions, chosen = draft.skills): void => {
         setDraft((current) => ({ ...current, text: next, mentions, skills: chosen }));
@@ -359,7 +362,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
 
     const submit = (): void => {
         const trimmed = text.trim();
-        if (isEmptyDraft(draft) || disabled) {
+        if (isEmptyDraft(draft) || disabled || guard.tooLong) {
             return;
         }
         const chosen = commands[menuIndex];
@@ -434,6 +437,13 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
         }
         e.stopPropagation();
         const el = e.currentTarget;
+        if (e.key === 'PageUp' || e.key === 'PageDown') {
+            // Reading back through a long answer should not mean leaving the box you are typing in.
+            if (pageTimeline(chatId, e.key === 'PageUp' ? -1 : 1)) {
+                e.preventDefault();
+            }
+            return;
+        }
         if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
             e.preventDefault();
             toggleStash();
@@ -737,6 +747,12 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                     />
                 </div>
                 {notice && <div className="px-3.5 pb-1 text-xs text-status-error">{notice}</div>}
+                {guard.visible && (
+                    <div className={clsx('px-3.5 pb-1 text-right text-xs tabular-nums', guard.tooLong ? 'text-status-error' : 'text-text-faint')}>
+                        {guard.count.toLocaleString('en-US')} / {PROMPT_MAX_CHARS.toLocaleString('en-US')}
+                        {guard.tooLong && ' characters, too long to send'}
+                    </div>
+                )}
                 <div className="flex items-center gap-1 px-2 pb-2">
                     <ModelPicker
                         providers={pickable}
@@ -770,7 +786,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                         <Tooltip label={busy ? 'Queue' : 'Send'} kbd="↵" name>
                             <button
                                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-accent-text disabled:opacity-40"
-                                disabled={isEmptyDraft(draft) || disabled}
+                                disabled={isEmptyDraft(draft) || disabled || guard.tooLong}
                                 onClick={submit}
                             >
                                 <Icon icon={ArrowUp} size={16} />
