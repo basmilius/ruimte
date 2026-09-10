@@ -1,6 +1,6 @@
 import type { DrawingElement, DrawingFont } from '@ruimte/contracts';
-import { LINE_HEIGHT, fontOf, pathsOfElement, textLines, type ElementPath } from '@ruimte/drawing';
-import type { DrawingPalette } from '@/drawing/palette';
+import { LINE_HEIGHT, fontOf, linesOf, pathsOfElement, type ElementPath, type MeasureLine } from '@ruimte/drawing';
+import { readFontStacks, type DrawingPalette } from '@/drawing/palette';
 
 export interface PaintOptions {
     palette: DrawingPalette;
@@ -60,11 +60,32 @@ export const fontOfElement = (element: DrawingElement & { kind: 'text' }, fonts:
 
 let scratch: CanvasRenderingContext2D | null = null;
 
+const scratchContext = (): CanvasRenderingContext2D | null => {
+    if (typeof document === 'undefined') {
+        return null;
+    }
+    scratch ??= document.createElement('canvas').getContext('2d');
+    return scratch;
+};
+
 /* The box a text needs, measured off screen: what a text element takes as its width and height. */
 export const textSize = (element: DrawingElement & { kind: 'text' }, fonts: Record<DrawingFont, string>): { w: number; h: number } => {
-    scratch ??= document.createElement('canvas').getContext('2d');
-    return scratch ? measureText(scratch, element, fonts) : { w: element.w, h: element.h };
+    const ctx = scratchContext();
+    return ctx ? measureText(ctx, element, fonts) : { w: element.w, h: element.h };
 };
+
+/* A line measure in the element's font, for wrapping the way the screen paints it; null without a DOM. */
+export const measureLineIn = (element: DrawingElement & { kind: 'text' }, fonts: Record<DrawingFont, string>): MeasureLine | null => {
+    const ctx = scratchContext();
+    if (!ctx) {
+        return null;
+    }
+    ctx.font = fontOfElement(element, fonts);
+    return (line) => ctx.measureText(line).width;
+};
+
+const linesOn = (ctx: CanvasRenderingContext2D, element: DrawingElement & { kind: 'text' }): string[] =>
+    linesOf(element, (line) => ctx.measureText(line).width);
 
 /* The box a text needs for the size it is set in; the caller decides what to do with it. */
 export const measureText = (
@@ -74,10 +95,26 @@ export const measureText = (
 ): { w: number; h: number } => {
     ctx.save();
     ctx.font = fontOfElement(element, fonts);
-    const lines = textLines(element.text);
+    const lines = linesOn(ctx, element);
     const w = Math.max(1, ...lines.map((line) => ctx.measureText(line).width));
     ctx.restore();
     return { w: Math.ceil(w), h: Math.ceil(lines.length * element.size * LINE_HEIGHT) };
+};
+
+/*
+ * The box a text takes for what it says: the glyphs' own box until the person dragged one, and
+ * from then on that box, which only grows when the lines no longer fit. Without a DOM (the
+ * store's tests) the box stays as it is.
+ */
+export const fitTextBox = (element: DrawingElement & { kind: 'text' }, text = element.text): { w: number; h: number } => {
+    if (typeof document === 'undefined') {
+        return { w: element.w, h: element.h };
+    }
+    const fitted = textSize({ ...element, text }, readFontStacks());
+    if (!element.sized) {
+        return fitted;
+    }
+    return { w: Math.max(element.w, fitted.w), h: Math.max(element.h, fitted.h) };
 };
 
 const paintText = (ctx: CanvasRenderingContext2D, element: DrawingElement & { kind: 'text' }, options: PaintOptions): void => {
@@ -86,7 +123,7 @@ const paintText = (ctx: CanvasRenderingContext2D, element: DrawingElement & { ki
     ctx.textAlign = element.align === 'center' ? 'center' : element.align === 'right' ? 'right' : 'left';
     ctx.textBaseline = 'alphabetic';
     const dx = element.align === 'center' ? element.w / 2 : element.align === 'right' ? element.w : 0;
-    for (const [index, line] of textLines(element.text).entries()) {
+    for (const [index, line] of linesOn(ctx, element).entries()) {
         ctx.fillText(line, dx, (index + 0.8) * element.size * LINE_HEIGHT);
     }
 };

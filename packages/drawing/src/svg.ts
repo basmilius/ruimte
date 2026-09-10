@@ -1,7 +1,7 @@
 import type { DrawingColor, DrawingElement, DrawingFont } from '@ruimte/contracts';
 import { boundsOfElements, centerOf, boundsOf, type Rect } from './geometry.ts';
 import { pathsOfElement } from './paths.ts';
-import { DEFAULT_FONT_STACKS, LINE_HEIGHT, fontOf, textLines } from './text.ts';
+import { DEFAULT_FONT_STACKS, LINE_HEIGHT, approximateMeasure, fontOf, linesOf, type MeasureLine } from './text.ts';
 
 export interface SvgOptions {
     /* What every palette name is in the theme this export is made in. */
@@ -11,6 +11,8 @@ export interface SvgOptions {
     /* World units around the drawing, so nothing touches the edge. */
     margin?: number;
     fonts?: Partial<Record<DrawingFont, string>>;
+    /* How wide a line is in the given text, for wrapping a sized text; without it a glyph is estimated. */
+    measure?: (element: DrawingElement & { kind: 'text' }) => MeasureLine;
 }
 
 export const DEFAULT_SVG_MARGIN = 32;
@@ -47,7 +49,8 @@ const textSvg = (element: DrawingElement & { kind: 'text' }, options: SvgOptions
     const family = options.fonts?.[fontOf(element.font)] ?? DEFAULT_FONT_STACKS[fontOf(element.font)];
     const anchor = element.align === 'center' ? 'middle' : element.align === 'right' ? 'end' : 'start';
     const dx = element.align === 'center' ? element.w / 2 : element.align === 'right' ? element.w : 0;
-    const lines = textLines(element.text)
+    const measure = options.measure?.(element) ?? approximateMeasure(element.size, element.font);
+    const lines = linesOf(element, measure)
         .map((line, index) => `<tspan x="${round(dx)}" y="${round((index + 0.8) * element.size * LINE_HEIGHT)}">${escapeXml(line)}</tspan>`)
         .join('');
     return `<text font-family="${escapeXml(family)}" font-size="${element.size}" fill="${options.palette[element.stroke]}" text-anchor="${anchor}">${lines}</text>`;

@@ -5,6 +5,7 @@ import type {
     DrawingDocument,
     DrawingElement,
     DrawingFill,
+    DrawingAlign,
     DrawingFont,
     DrawingRoughness,
     DrawingStrokeStyle,
@@ -12,6 +13,7 @@ import type {
     ProjectViewLocal
 } from '@ruimte/contracts';
 import { cameraToFit, clampZoom, intersects, snapZoom, unionRect, zoomAround, type Camera, type Point, type Rect } from '@/canvas/math';
+import { fitTextBox } from '@/drawing/paint';
 import { nextId } from '@/state/canvas';
 
 /* Every tool in the dock, in the order the dock lists them. */
@@ -31,6 +33,7 @@ export interface DrawingStyle {
     font: DrawingFont;
     /* Text size in whole pixels, world units like everything else. */
     textSize: number;
+    align: DrawingAlign;
 }
 
 export const DEFAULT_STYLE: DrawingStyle = {
@@ -41,7 +44,8 @@ export const DEFAULT_STYLE: DrawingStyle = {
     fillColor: 'blue',
     roughness: 1,
     font: 'hand',
-    textSize: 20
+    textSize: 20,
+    align: 'left'
 };
 
 export const HISTORY_LIMIT = 100;
@@ -172,7 +176,7 @@ export const styleOfElement = (element: DrawingElement): Partial<DrawingStyle> =
     ...(element.fill ? { fill: element.fill } : {}),
     ...(element.fillColor ? { fillColor: element.fillColor } : {}),
     roughness: element.roughness ?? 1,
-    ...(element.kind === 'text' ? { font: element.font ?? 'hand', textSize: element.size } : {})
+    ...(element.kind === 'text' ? { font: element.font ?? 'hand', textSize: element.size, align: element.align ?? 'left' } : {})
 });
 
 /* What a style choice writes onto an element it is applied to; a text also takes the font and size. */
@@ -189,12 +193,15 @@ const withStyle = (element: DrawingElement, style: DrawingStyle, patch: Partial<
     if (next.kind !== 'text') {
         return next;
     }
-    return {
+    const text = {
         ...next,
         font: style.font,
+        align: style.align,
         // A resized text keeps its box; only the size chosen by hand changes the glyphs.
         size: patch.textSize === undefined ? next.size : style.textSize
     };
+    // New glyphs need a new box, or the text would spill out of the frame that selects it.
+    return patch.textSize === undefined && patch.font === undefined ? text : { ...text, ...fitTextBox(text) };
 };
 
 /*

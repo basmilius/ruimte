@@ -86,6 +86,12 @@ const FONTS: Array<{ value: DrawingStyle['font']; label: string }> = [
 
 const TEXT_SIZES = [16, 20, 28, 36];
 
+const ALIGNMENTS: Array<{ value: DrawingStyle['align']; label: string }> = [
+    { value: 'left', label: 'Left' },
+    { value: 'center', label: 'Center' },
+    { value: 'right', label: 'Right' }
+];
+
 const SWATCH = 'h-5 w-5 rounded-full border border-border-strong';
 
 /* One row of a menu that picks a value, with the tick where every other menu keeps it. */
@@ -216,6 +222,11 @@ export function DrawingDock() {
                                     <Menu.RadioGroup value={style.textSize} onValueChange={(value: number) => set({ textSize: value })}>
                                         {TEXT_SIZES.map((size) => (
                                             <RadioRow key={size} label={`${size} px`} value={size} />
+                                        ))}
+                                    </Menu.RadioGroup>
+                                    <Menu.RadioGroup value={style.align} onValueChange={(value: DrawingStyle['align']) => set({ align: value })}>
+                                        {ALIGNMENTS.map((row) => (
+                                            <RadioRow key={row.value} label={row.label} value={row.value} />
                                         ))}
                                     </Menu.RadioGroup>
                                     {anyLocked && (

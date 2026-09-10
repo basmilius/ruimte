@@ -229,6 +229,10 @@ export const scaleElement = (element: DrawingElement, from: Rect, to: Rect): Dra
     if (placed.kind === 'freehand') {
         return { ...placed, points: placed.points.map(([x, y, pressure]) => [x * scaleX, y * scaleY, pressure] as [number, number, number?]) };
     }
+    if (placed.kind === 'text') {
+        // From here on the box is the person's, so typing no longer refits it.
+        return { ...placed, sized: true };
+    }
     return placed;
 };
 

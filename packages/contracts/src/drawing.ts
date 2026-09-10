@@ -74,7 +74,9 @@ export const DrawingElementSchema = z.discriminatedUnion('kind', [
         size: z.number().int().min(DRAWING_TEXT_SIZE_MIN).max(DRAWING_TEXT_SIZE_MAX),
         // Absent means 'hand', the default a drawing is written in.
         font: DrawingFontSchema.optional(),
-        align: DrawingAlignSchema.optional()
+        align: DrawingAlignSchema.optional(),
+        // Set once the box was dragged by hand; absent means the box follows the glyphs.
+        sized: z.boolean().optional()
     })
 ]);
 export type DrawingElement = z.infer<typeof DrawingElementSchema>;
