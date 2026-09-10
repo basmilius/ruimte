@@ -81,6 +81,18 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   elements join box selection with Shift. No minimap: the sidebar and the palette cover
   jumping around; decide again once real projects have many nodes.
 
+- **Toolbar and panel slot**: `apps/client/src/shell/Toolbar.tsx` is a 48px bar at the top of
+  the main column, next to the sidebar's strip, `bg-surface` with a bottom border and the drag
+  region. Left is the breadcrumb: the machine when the daemon is not loopback, the
+  `ProjectMenu` as a ghost button (it left the sidebar), "Canvas" and the unsaved dot; the
+  floating chip over the canvas is gone and `ProjectBanner` now floats under the bar. Right is
+  a `.btn-group` of two toggles, Files and Git, over `useUi.panel` (machine state, never in
+  `project.json`); the palette has "Toggle files panel" and "Toggle git panel", no chords.
+  `shell/Panel.tsx` is the surface they open: an inline split right of the canvas under the
+  toolbar, resizable from its left edge, min 360 and default 540 in localStorage
+  (`ruimte.panel.width`), and for now only a header with the panel's name and a close button.
+  The file browser and the git panel themselves are the next phase.
+
 - **Settings, the way T3 Code lays them out** (studied, then written from scratch): one
   dialog with a section list on the left (Base UI Tabs, arrow keys move, `activateOnFocus`)
   and a pane on the right, built from `SettingsSection` (a titled card) and `SettingsRow`
@@ -126,9 +138,12 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   writes into a packaged app; a checkout skips it. `bun run --cwd apps/desktop smoke` boots the
   shell, adds a browser node through the keyboard and waits for its page to load. The title
   bar follows T3 Code: `hiddenInset` with the traffic lights at (16, 18) on macOS and a native
-  controls overlay elsewhere, the sidebar's top strip is the drag region (children reset to
-  `initial`, controls `no-drag`), the inset is only applied outside fullscreen (the shell sends
-  `window:fullscreen`), and the overlay colors follow the client's theme over IPC.
+  controls overlay elsewhere, the sidebar's top strip and the toolbar next to it are both drag
+  regions and together make one 48px band (children reset to `initial`, controls `no-drag`),
+  the traffic-light inset belongs to the sidebar strip and is only applied outside fullscreen
+  (the shell sends `window:fullscreen`), the toolbar's right region keeps the width of the
+  overlay controls free through `env(titlebar-area-*)` on Windows and Linux, and the overlay
+  colors follow the client's theme over IPC.
 
 - **Phase 9, groups, worktrees, context links and layouts**: groups nest (a group inside a
   group carries its members along), collapse to their header with the members hidden and
