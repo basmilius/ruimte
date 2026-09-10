@@ -99,15 +99,17 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   `prefers-reduced-motion` drops the motion through the global rule in `styles.css`. One
   `SidebarToggle` moves between the sidebar strip and the toolbar: both apply the traffic-light
   inset through `useTrafficLightInset()` (`desktop/useFullscreen.ts`), so the button sits at the
-  same x either way and reads as one control that stays put. The brand mark and the
-  `ConnectionDot` live in the toolbar for the same reason. Cmd+B toggles it from the app-wide
-  chord block in `Canvas.tsx`, so it works from inside a node; off macOS Ctrl+B belongs to
-  readline and tmux, so there it only fires outside node mode. The palette has "Toggle sidebar".
+  same x either way and reads as one control that stays put. The brand mark stays in the strip,
+  centered in what the traffic lights leave of it, and goes with the list; only the
+  `ConnectionDot` moved to the toolbar, so the connection stays readable while the list is gone.
+  Cmd+B toggles it from the app-wide chord block in `Canvas.tsx`, so it works from inside a node;
+  off macOS Ctrl+B belongs to readline and tmux, so there it only fires outside node mode. The
+  palette has "Toggle sidebar".
 
 - **Toolbar and panel slot**: `apps/client/src/shell/Toolbar.tsx` is a 48px bar at the top of
   the canvas column, next to the sidebar's strip, `bg-surface` with a bottom border and the drag
-  region. Left is the brand mark and the breadcrumb: the machine when the daemon is not loopback,
-  the `ProjectMenu` as a ghost button (it left the sidebar), "Canvas" and the unsaved dot; the
+  region. Left is the breadcrumb: the machine when the daemon is not loopback, the
+  `ProjectMenu` as a ghost button (it left the sidebar), "Canvas" and the unsaved dot; the
   floating chip over the canvas is gone and `ProjectBanner` now floats under the bar. Right is
   the `ConnectionDot` and `shell/PanelControls.tsx`, the `.btn-group` of Files and Git over
   `useUi.panel` (machine state, never in `project.json`). `<main>` is a row of the canvas column

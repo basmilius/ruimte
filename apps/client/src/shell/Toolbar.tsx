@@ -9,10 +9,10 @@ import { useServer } from '@/state/server';
 import { useUi } from '@/state/ui';
 
 /* The band above the canvas: which project is open, and the panels that sit next to it. It is as
-   tall as the sidebar's own strip, so the two read as one title bar across the window. The brand
-   mark and the connection dot live here rather than in the sidebar, so they stay in view while the
-   list is hidden; the left padding follows the sidebar's width, which keeps the breadcrumb from
-   jumping when the list slides away. */
+   tall as the sidebar's own strip, so the two read as one title bar across the window. The
+   connection dot lives here rather than in the sidebar, so it stays in view while the list is
+   hidden; the left padding follows the sidebar's width, which keeps the breadcrumb from jumping
+   when the list slides away. */
 export function Toolbar() {
     const dirty = useProject((s) => s.dirty);
     const machine = useServer((s) => (s.reachability && s.reachability !== 'loopback' ? s.label : null));
@@ -27,7 +27,6 @@ export function Toolbar() {
         >
             {!sidebarOpen && <SidebarToggle />}
             <div className="flex min-w-0 grow items-center gap-2">
-                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-accent text-xs font-semibold text-accent-text">R</span>
                 {machine && (
                     <>
                         <span>{machine}</span>
