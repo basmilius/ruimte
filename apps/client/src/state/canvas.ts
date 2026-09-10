@@ -44,6 +44,8 @@ export interface AddNodeOptions {
     providerFixed?: boolean;
     // Terminal agents only: the permission mode the CLI starts in.
     runtimeMode?: RuntimeMode;
+    // Drawings only: the drawing view this node mirrors.
+    viewId?: string;
 }
 
 export interface TextElement extends Point {
@@ -194,7 +196,8 @@ export const NODE_SIZE: Record<NodeKind, { w: number; h: number }> = {
     chat: { w: 480, h: 520 },
     browser: { w: 720, h: 480 },
     group: { w: 800, h: 600 },
-    note: { w: 320, h: 240 }
+    note: { w: 320, h: 240 },
+    drawing: { w: 480, h: 360 }
 };
 
 /* What a node of each kind is called before anything names it. */
@@ -203,6 +206,7 @@ export const DEFAULT_TITLES: Record<NodeKind, string> = {
     chat: 'New chat',
     browser: 'Browser',
     group: 'Group',
+    drawing: 'Drawing',
     note: 'Note'
 };
 
@@ -486,7 +490,8 @@ export const useCanvas = create<CanvasState>((set, get) => ({
             resume: options.resume,
             provider: options.provider,
             providerFixed: options.providerFixed,
-            runtimeMode: options.runtimeMode
+            runtimeMode: options.runtimeMode,
+            viewId: options.viewId
         };
         set((s) => ({ nodes: { ...s.nodes, [id]: node }, order: [...s.order, id], selection: [id], mode: { kind: 'canvas' }, ...remember(s) }));
         return id;

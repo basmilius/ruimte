@@ -1,4 +1,5 @@
 import { isCanvasView, isDrawingView, isOpenableView, isSessionView, MAIN_VIEW_NAME, type NodeKind, type ProjectView } from '@ruimte/contracts';
+import { toWorld } from '@/canvas/math';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useDocument, viewOfNode } from '@/state/document';
@@ -39,6 +40,25 @@ export const newTerminalView = (): string =>
 export const newSeparatorView = (): string => useDocument.getState().addSeparatorView();
 
 export const newDrawingView = (): string => useDocument.getState().addDrawingView(freeName(useDocument.getState().views, 'Drawing'));
+
+/*
+ * Puts a mirror of a drawing view on the canvas that was open last. The drawing itself stays a view
+ * of its own: the node reads the same file and opens the view on a double-click.
+ */
+export const showOnCanvas = (viewId: string): string | null => {
+    const document = useDocument.getState();
+    const view = document.views.find((candidate) => candidate.id === viewId);
+    const canvasViewId = document.lastCanvasViewId ?? document.views.find(isCanvasView)?.id ?? null;
+    if (!view || !isDrawingView(view) || !canvasViewId) {
+        return null;
+    }
+    showView(canvasViewId);
+    const canvas = useCanvas.getState();
+    const center = toWorld(canvas.camera, { x: canvas.viewport.w / 2, y: canvas.viewport.h / 2 });
+    const id = canvas.addNode('drawing', center, { title: view.name, viewId });
+    canvas.goToNode(id);
+    return id;
+};
 
 /* Copies a canvas or a drawing view. A drawing's elements are copied by the daemon, not here. */
 export const duplicateViewOf = (id: string): string | null => {

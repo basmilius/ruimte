@@ -6,7 +6,7 @@ import { RuntimeModeSchema } from './model.ts';
 export const ProjectIdSchema = z.string().min(1);
 export type ProjectId = z.infer<typeof ProjectIdSchema>;
 
-export const NodeKindSchema = z.enum(['terminal', 'chat', 'browser', 'group', 'note']);
+export const NodeKindSchema = z.enum(['terminal', 'chat', 'browser', 'group', 'note', 'drawing']);
 export type NodeKind = z.infer<typeof NodeKindSchema>;
 
 // Where the title of a node came from: the session named itself from its first prompt, or a person
@@ -48,7 +48,9 @@ export const ProjectNodeSchema = z.object({
     worktree: z.object({ path: z.string(), branch: z.string() }).optional(),
     // Note only: its markdown and one of the note colors; without a color it takes the default.
     body: z.string().optional(),
-    color: z.string().optional()
+    color: z.string().optional(),
+    // Drawing only: the drawing view this node mirrors, which lives in the same project.
+    viewId: z.string().optional()
 });
 export type ProjectNode = z.infer<typeof ProjectNodeSchema>;
 

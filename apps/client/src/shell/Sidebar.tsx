@@ -6,7 +6,7 @@ import clsx from 'clsx';
 import { isCanvasView, isSessionView, type AgentKind, type NodeKind, type ProjectViewKind } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { useDrafts } from '@/chat/drafts';
-import { askDeleteView, duplicateViewOf, putOnCanvas, revealNode, showView } from '@/project/views';
+import { askDeleteView, duplicateViewOf, putOnCanvas, revealNode, showOnCanvas, showView } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
@@ -351,6 +351,11 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
                         {view.kind !== 'canvas' && view.kind !== 'drawing' && (
                             <ContextMenu.Item className="menu-item" onClick={() => putOnCanvas(view.id)}>
                                 <Icon icon={Frame} size={14} /> Put on canvas
+                            </ContextMenu.Item>
+                        )}
+                        {view.kind === 'drawing' && (
+                            <ContextMenu.Item className="menu-item" onClick={() => showOnCanvas(view.id)}>
+                                <Icon icon={Frame} size={14} /> Show on canvas
                             </ContextMenu.Item>
                         )}
                         <ContextMenu.Item className="menu-item text-status-error" onClick={onDelete}>

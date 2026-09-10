@@ -1,9 +1,19 @@
 import { Menu } from '@base-ui-components/react/menu';
 import { Check, ChevronDown, Frame, Globe, MessageSquare, Minus, Pencil, PenTool, Terminal, Trash } from 'lucide-react';
-import { isOpenableView, isSessionView, type ProjectViewKind } from '@ruimte/contracts';
+import { isDrawingView, isOpenableView, isSessionView, type ProjectViewKind } from '@ruimte/contracts';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentView } from '@/agents/nodes';
-import { askDeleteView, askRenameView, newCanvasView, newDrawingView, newSeparatorView, newTerminalView, putOnCanvas, showView } from '@/project/views';
+import {
+    askDeleteView,
+    askRenameView,
+    newCanvasView,
+    newDrawingView,
+    newSeparatorView,
+    newTerminalView,
+    putOnCanvas,
+    showOnCanvas,
+    showView
+} from '@/project/views';
 import { useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
@@ -84,6 +94,11 @@ export function ViewMenu() {
                         {isSessionView(active) && (
                             <Menu.Item className="menu-item" onClick={() => putOnCanvas(active.id)}>
                                 <Icon icon={Frame} size={14} /> Put on canvas
+                            </Menu.Item>
+                        )}
+                        {isDrawingView(active) && (
+                            <Menu.Item className="menu-item" onClick={() => showOnCanvas(active.id)}>
+                                <Icon icon={Frame} size={14} /> Show on canvas
                             </Menu.Item>
                         )}
                         <Menu.Item className="menu-item" onClick={() => askRenameView(active.id)}>

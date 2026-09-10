@@ -1,7 +1,7 @@
 import { memo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { ChevronDown, ChevronRight, GitBranch, Globe, LayoutGrid, Link2, Maximize2, MessageSquare, StickyNote, Terminal, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, GitBranch, Globe, LayoutGrid, Link2, Maximize2, MessageSquare, PenTool, StickyNote, Terminal, X } from 'lucide-react';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
@@ -16,6 +16,7 @@ import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
 import { ChatBody } from '@/nodes/ChatBody';
 import { BrowserBody } from '@/nodes/BrowserBody';
 import { NoteNode } from '@/canvas/nodes/NoteNode';
+import { DrawingNode } from '@/canvas/nodes/DrawingNode';
 import { noteColorClass } from '@/canvas/note-colors';
 import { Favicon } from '@/browser/Favicon';
 import { resetTitle } from '@/nodes/node-host';
@@ -26,7 +27,8 @@ const ICONS: Record<NodeKind, ReactNode> = {
     chat: <Icon icon={MessageSquare} size={14} />,
     browser: <Icon icon={Globe} size={14} />,
     group: <Icon icon={LayoutGrid} size={14} />,
-    note: <Icon icon={StickyNote} size={14} />
+    note: <Icon icon={StickyNote} size={14} />,
+    drawing: <Icon icon={PenTool} size={14} />
 };
 
 const STATUS_LABEL: Record<AgentStatus, string> = {
@@ -247,6 +249,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         {node.kind === 'chat' && <ChatBody id={id} focused={focused} />}
                         {node.kind === 'browser' && <BrowserBody id={id} focused={focused} />}
                         {node.kind === 'note' && <NoteNode id={id} focused={focused} />}
+                        {node.kind === 'drawing' && <DrawingNode id={id} />}
                         {!focused && <div className="absolute inset-0" aria-hidden="true" />}
                     </div>
                 )}

@@ -64,8 +64,8 @@ export interface SidebarInput {
     expandedIds: ReadonlySet<string>;
 }
 
-/* Groups and notes are frames and paper, not sessions; the list is about what runs. */
-export const isSessionKind = (kind: NodeKind): boolean => kind !== 'group' && kind !== 'note';
+/* Groups, notes and drawings are frames, paper and files; the list is about what runs. */
+export const isSessionKind = (kind: NodeKind): boolean => kind === 'terminal' || kind === 'chat' || kind === 'browser';
 
 const WEIGHT: Record<AgentStatus, number> = { 'needs-you': 3, error: 2, exited: 2, running: 1, idle: 0 };
 
