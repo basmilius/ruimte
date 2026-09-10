@@ -8,6 +8,12 @@ import { ReadError, languageOf, looksBinary, looksLikeSvg, readFile, sniffMime }
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]);
 const WEBP = Buffer.concat([Buffer.from('RIFF'), Buffer.from([0x20, 0x00, 0x00, 0x00]), Buffer.from('WEBPVP8 ')]);
 
+/* The head of an ISO base media file: a box length, `ftyp`, and the brand that says which flavor. */
+const isoMedia = (brand: string): Buffer => Buffer.concat([Buffer.from([0x00, 0x00, 0x00, 0x20]), Buffer.from('ftyp'), Buffer.from(brand)]);
+
+const ebml = (docType: string): Buffer =>
+    Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.from([0x42, 0x82]), Buffer.from(docType), Buffer.alloc(16)]);
+
 let root: string;
 
 const write = async (name: string, content: string | Buffer): Promise<string> => {
@@ -45,6 +51,18 @@ describe('the binary sniff', () => {
         expect(sniffMime(new TextEncoder().encode('hello'))).toBeNull();
     });
 
+    test('names a video by its container and tells the flavors apart', () => {
+        expect(sniffMime(new Uint8Array(isoMedia('isom')))).toBe('video/mp4');
+        expect(sniffMime(new Uint8Array(isoMedia('mp42')))).toBe('video/mp4');
+        expect(sniffMime(new Uint8Array(isoMedia('M4V ')))).toBe('video/mp4');
+        expect(sniffMime(new Uint8Array(isoMedia('qt  ')))).toBe('video/quicktime');
+        // Sound in the same container is no video, and nothing the file route serves.
+        expect(sniffMime(new Uint8Array(isoMedia('M4A ')))).toBeNull();
+        expect(sniffMime(new Uint8Array(ebml('webm')))).toBe('video/webm');
+        expect(sniffMime(new Uint8Array(ebml('matroska')))).toBe('video/x-matroska');
+        expect(sniffMime(new TextEncoder().encode('OggS\x00\x02'))).toBe('video/ogg');
+    });
+
     test('takes an SVG only when the file opens as one', () => {
         expect(looksLikeSvg(new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"></svg>'))).toBe(true);
         expect(looksLikeSvg(new TextEncoder().encode('<?xml version="1.0"?>\n<svg></svg>'))).toBe(true);
@@ -53,6 +71,11 @@ describe('the binary sniff', () => {
 });
 
 describe('fs.read', () => {
+    test('reads a video as its mime and size, never as bytes over the socket', async () => {
+        const path = await write('clip.mp4', Buffer.concat([isoMedia('isom'), Buffer.alloc(64)]));
+        expect(await readFile(path)).toMatchObject({ kind: 'binary', mime: 'video/mp4', size: 76 });
+    });
+
     test('reads a text file with its size, mtime and language', async () => {
         const path = await write('hello.ts', 'export const hello = 1;\n');
         const result = await readFile(path);
