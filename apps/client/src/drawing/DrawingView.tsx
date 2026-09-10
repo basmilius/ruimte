@@ -14,6 +14,15 @@ import { nextId } from '@/state/canvas';
 import { newSeed, useDrawing } from '@/state/drawing';
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
+import { isInFloatingLayer } from '@/ui/floating';
+
+/*
+ * The dock sits over the surface and its menus portal out to <body>, where React still routes their
+ * events through the surface. A press on either is a button, never the start of a gesture: without
+ * this the marquee below clears the selection and captures the pointer, so the click never lands.
+ */
+const isChrome = (target: EventTarget | null): boolean =>
+    isInFloatingLayer(target) || (target instanceof Element && target.closest('[data-drawing-chrome]') !== null);
 
 /* How far from a line or an outline a click still lands on it, before the zoom is taken out. */
 const HIT_TOLERANCE = 10;
@@ -219,8 +228,7 @@ export function DrawingView({ id }: { id: string }) {
         if (e.button !== 0 && e.button !== 1) {
             return;
         }
-        // The dock sits over the surface; a press on it is a button, never the start of a gesture.
-        if ((e.target as HTMLElement).closest('[data-drawing-chrome]')) {
+        if (isChrome(e.target)) {
             return;
         }
         const state = useDrawing.getState();
@@ -273,6 +281,9 @@ export function DrawingView({ id }: { id: string }) {
         const id = nextId('el');
         const seed = newSeed();
         if (state.tool === 'text') {
+            // The editor takes focus during this press; without this the press's own default
+            // action moves focus back to the surface and the editor commits empty at once.
+            e.preventDefault();
             const element = textElement(from, style, id, seed);
             state.addElement(element);
             state.setEditingText(id);
@@ -441,6 +452,9 @@ export function DrawingView({ id }: { id: string }) {
     };
 
     const onDoubleClick = (e: React.MouseEvent): void => {
+        if (isChrome(e.target)) {
+            return;
+        }
         const state = useDrawing.getState();
         if (state.tool !== 'select') {
             return;

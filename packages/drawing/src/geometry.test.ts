@@ -88,6 +88,25 @@ describe('boxes', () => {
             [200, 100]
         ]);
     });
+
+    test('a text dragged to a new box is marked as sized, so typing keeps that box', () => {
+        const text = {
+            kind: 'text' as const,
+            id: 't',
+            x: 0,
+            y: 0,
+            w: 80,
+            h: 24,
+            stroke: 'ink' as const,
+            strokeWidth: 1 as const,
+            seed: 1,
+            text: 'hi',
+            size: 20
+        };
+        const scaled = scaleElement(text, { x: 0, y: 0, w: 80, h: 24 }, { x: 0, y: 0, w: 160, h: 24 });
+        expect(scaled.kind === 'text' && scaled.sized).toBe(true);
+        expect(scaled.w).toBe(160);
+    });
 });
 
 describe('turning and arrows', () => {

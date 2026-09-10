@@ -1,7 +1,7 @@
 import type { DrawingElement } from '@ruimte/contracts';
-import { DEFAULT_SVG_MARGIN, boundsOfElements, toSvg } from '@ruimte/drawing';
+import { DEFAULT_SVG_MARGIN, approximateMeasure, boundsOfElements, toSvg } from '@ruimte/drawing';
 import { desktop } from '@/desktop/bridge';
-import { paintElements } from '@/drawing/paint';
+import { measureLineIn, paintElements } from '@/drawing/paint';
 import { readCanvasBackground, readFontStacks, readPalette } from '@/drawing/palette';
 import { useDrawing } from '@/state/drawing';
 
@@ -21,7 +21,9 @@ export const exportTargets = (): DrawingElement[] => {
 export const drawingSvg = (elements: readonly DrawingElement[] = exportTargets()): string =>
     toSvg(elements, {
         palette: readPalette(),
-        background: useDrawing.getState().exportBackground ? readCanvasBackground() : null
+        background: useDrawing.getState().exportBackground ? readCanvasBackground() : null,
+        // Wrapped where the screen wraps, so the file shows the lines the person saw.
+        measure: (element) => measureLineIn(element, readFontStacks()) ?? approximateMeasure(element.size, element.font)
     });
 
 /* The same painter the screen uses, on a canvas of its own, at the size the file is written in. */
