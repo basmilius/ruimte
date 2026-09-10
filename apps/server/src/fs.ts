@@ -11,7 +11,7 @@ const isTransient = (e: unknown): boolean =>
 let nextTemp = 0;
 
 // A crash between the two steps leaves a stray temp file, never a half-written file.
-export const writeAtomic = async (target: string, content: string, mode = 0o600): Promise<void> => {
+export const writeAtomic = async (target: string, content: string | Uint8Array, mode = 0o600): Promise<void> => {
     const temp = `${target}.${process.pid}-${nextTemp++}.tmp`;
     await writeFile(temp, content, { mode });
     for (let attempt = 0; ; attempt++) {

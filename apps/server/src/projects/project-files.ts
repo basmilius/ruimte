@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { ProjectDocumentSchema, type ProjectContent, type ProjectDocument } from '@ruimte/contracts';
 import { isNotFound, writeAtomic } from '../fs.ts';
@@ -90,3 +90,32 @@ export const fromPortable = <T extends ProjectContent>(content: T, folder: strin
 };
 
 export const documentPathInFolder = (folder: string): string => join(folder, PROJECT_DIR, PROJECT_FILE);
+
+// What an uploaded icon may be, and what it is called on disk. An `.ico` is a favicon, not
+// something a person picks in a file dialog, so it is read but never written.
+export const ICON_EXTENSION_BY_MIME: Record<string, string> = {
+    'image/svg+xml': 'svg',
+    'image/png': 'png',
+    'image/jpeg': 'jpg',
+    'image/gif': 'gif',
+    'image/webp': 'webp'
+};
+
+const ICON_EXTENSIONS = Object.values(ICON_EXTENSION_BY_MIME).concat('jpeg');
+
+export const iconPathInFolder = (folder: string, extension: string): string => join(folder, PROJECT_DIR, `icon.${extension}`);
+
+/* Only one `.ruimte/icon.*` may exist, or the derivation order would decide which one wins. */
+export const removeIconFiles = async (folder: string): Promise<void> => {
+    for (const extension of ICON_EXTENSIONS) {
+        await rm(iconPathInFolder(folder, extension), { force: true });
+    }
+};
+
+export const writeIconFile = async (folder: string, extension: string, bytes: Uint8Array): Promise<string> => {
+    const path = iconPathInFolder(folder, extension);
+    await mkdir(dirname(path), { recursive: true });
+    await removeIconFiles(folder);
+    await writeAtomic(path, bytes, 0o644);
+    return path;
+};
