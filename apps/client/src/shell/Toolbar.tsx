@@ -38,7 +38,7 @@ export function Toolbar() {
                             data-active={panel.open && panel.kind === entry.kind}
                             onClick={() => useUi.getState().togglePanel(entry.kind)}
                         >
-                            <Icon icon={entry.icon} size={15} />
+                            <Icon icon={entry.icon} size={16} />
                         </button>
                     </Tooltip>
                 ))}

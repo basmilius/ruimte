@@ -26,11 +26,11 @@ import { desktop } from '@/desktop/bridge';
 import { Icon } from '@/ui/Icon';
 
 const KIND_ICON: Record<NodeKind, React.ReactNode> = {
-    terminal: <Icon icon={faTerminal} size={16} />,
-    chat: <Icon icon={faMessage} size={16} />,
-    browser: <Icon icon={faGlobe} size={16} />,
-    group: <Icon icon={faGrid2} size={16} />,
-    note: <Icon icon={faNoteSticky} size={16} />
+    terminal: <Icon icon={faTerminal} size={14} />,
+    chat: <Icon icon={faMessage} size={14} />,
+    browser: <Icon icon={faGlobe} size={14} />,
+    group: <Icon icon={faGrid2} size={14} />,
+    note: <Icon icon={faNoteSticky} size={14} />
 };
 
 // Typing a path turns the palette into a folder browser; anything else searches nodes and actions.
@@ -141,7 +141,7 @@ export function CommandPalette() {
                     id: 'browse-up',
                     label: '..',
                     hint: 'Up one folder',
-                    icon: <Icon icon={faArrowTurnUp} size={16} />,
+                    icon: <Icon icon={faArrowTurnUp} size={14} />,
                     section: 'Folders',
                     run: () => setQuery(up)
                 });
@@ -151,7 +151,7 @@ export function CommandPalette() {
                     id: `dir-${entry.fullPath}`,
                     label: entry.name,
                     hint: entry.hasCanvas ? 'Has a canvas' : undefined,
-                    icon: entry.hasCanvas ? <Icon icon={faFolderCheck} size={16} /> : <Icon icon={faFolder} size={16} />,
+                    icon: entry.hasCanvas ? <Icon icon={faFolderCheck} size={14} /> : <Icon icon={faFolder} size={14} />,
                     section: 'Folders',
                     run: () => setQuery(`${entry.fullPath}/`)
                 });
@@ -171,7 +171,7 @@ export function CommandPalette() {
             }));
         const actions: Entry[] = appCommands().map((command) => ({
             ...command,
-            icon: command.agent ? <AgentIcon kind={command.agent} /> : <Icon icon={faBolt} size={16} />,
+            icon: command.agent ? <AgentIcon kind={command.agent} /> : <Icon icon={faBolt} size={14} />,
             section: 'Actions'
         }));
         return [...jumps, ...actions].filter((entry) => query === '' || matches(query, `${entry.label} ${entry.hint ?? ''}`));
@@ -200,9 +200,9 @@ export function CommandPalette() {
                 <Dialog.Popup className="dialog-popup top-[18vh] w-[560px]" initialFocus={inputRef}>
                     <div className="flex items-center gap-2 border-b border-border px-3">
                         {browsing ? (
-                            <Icon icon={faFolderPlus} size={15} className="shrink-0 text-accent" />
+                            <Icon icon={faFolderPlus} size={14} className="shrink-0 text-accent" />
                         ) : (
-                            <Icon icon={faMagnifyingGlass} size={15} className="shrink-0 text-text-faint" />
+                            <Icon icon={faMagnifyingGlass} size={14} className="shrink-0 text-text-faint" />
                         )}
                         <input
                             ref={inputRef}
@@ -292,7 +292,7 @@ export function CommandPalette() {
                                 disabled={busy || query.trim() === ''}
                                 onClick={() => void submitPath(query)}
                             >
-                                <Icon icon={faFolderPlus} size={16} /> Open as project
+                                <Icon icon={faFolderPlus} size={12} /> Open as project
                             </button>
                         </div>
                     )}

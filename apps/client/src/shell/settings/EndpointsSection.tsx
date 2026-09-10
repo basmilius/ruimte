@@ -126,8 +126,8 @@ function PairedClients() {
                     <div className="flex items-center gap-2">
                         <code className="min-w-0 grow truncate font-mono text-code text-text select-text">{link}</code>
                         <Tooltip label={copied ? 'Copied' : 'Copy link'}>
-                            <button className="icon-btn h-6 w-6 shrink-0" aria-label="Copy pairing link" onClick={copyLink}>
-                                {copied ? <Icon icon={faCheck} size={12} /> : <Icon icon={faCopy} size={12} />}
+                            <button className="icon-btn h-7 w-7 shrink-0" aria-label="Copy pairing link" onClick={copyLink}>
+                                {copied ? <Icon icon={faCheck} size={16} /> : <Icon icon={faCopy} size={16} />}
                             </button>
                         </Tooltip>
                     </div>
@@ -151,8 +151,8 @@ function PairedClients() {
                         </span>
                     </div>
                     <Tooltip label="Revoke access">
-                        <button className="icon-btn h-6 w-6 shrink-0" aria-label={`Revoke ${session.label}`} onClick={() => setTarget(session)}>
-                            <Icon icon={faTrash} size={12} />
+                        <button className="icon-btn h-7 w-7 shrink-0" aria-label={`Revoke ${session.label}`} onClick={() => setTarget(session)}>
+                            <Icon icon={faTrash} size={16} />
                         </button>
                     </Tooltip>
                 </div>
@@ -173,7 +173,7 @@ function PairedClients() {
                                 Cancel
                             </button>
                             <button className={clsx(buttonClass, 'bg-status-error text-accent-text')} disabled={busy} onClick={() => void revoke()}>
-                                <Icon icon={faTrash} size={16} /> Revoke
+                                <Icon icon={faTrash} size={12} /> Revoke
                             </button>
                         </div>
                     </Dialog.Popup>
@@ -215,18 +215,18 @@ export function EndpointsSection() {
                         endpoint.id === activeId ? 'border-accent bg-accent-soft' : 'border-border'
                     )}
                 >
-                    <Icon icon={faServer} size={16} className="shrink-0 text-text-muted" />
+                    <Icon icon={faServer} size={14} className="shrink-0 text-text-muted" />
                     <button className="flex min-w-0 grow flex-col text-left" onClick={() => void activateEndpoint(endpoint.id)}>
                         <span className="truncate text-sm text-text">{endpoint.label}</span>
                         <span className="truncate font-mono text-xs text-text-faint">
                             {endpoint.id === LOCAL_ENDPOINT_ID ? 'loopback' : endpoint.httpBaseUrl}
                         </span>
                     </button>
-                    {endpoint.id === activeId && <Icon icon={faCheck} size={16} className="shrink-0 text-accent" />}
+                    {endpoint.id === activeId && <Icon icon={faCheck} size={14} className="shrink-0 text-accent" />}
                     {endpoint.id !== LOCAL_ENDPOINT_ID && (
                         <Tooltip label="Forget this machine">
-                            <button className="icon-btn h-6 w-6" aria-label="Forget this machine" onClick={() => useEndpoints.getState().remove(endpoint.id)}>
-                                <Icon icon={faTrash} size={12} />
+                            <button className="icon-btn h-7 w-7" aria-label="Forget this machine" onClick={() => useEndpoints.getState().remove(endpoint.id)}>
+                                <Icon icon={faTrash} size={16} />
                             </button>
                         </Tooltip>
                     )}
@@ -248,7 +248,7 @@ export function EndpointsSection() {
                     }}
                 />
                 <button className={clsx(buttonClass, 'bg-accent text-accent-text')} disabled={busy || !link.trim()} onClick={() => void pair()}>
-                    <Icon icon={faLink} size={16} /> Pair
+                    <Icon icon={faLink} size={12} /> Pair
                 </button>
             </div>
             <p className="text-xs text-text-faint">Paste the link from "Show pairing link" or from `ruimte pair` on the other machine.</p>

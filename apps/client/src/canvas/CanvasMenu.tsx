@@ -30,27 +30,27 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                 <ContextMenu.Popup className="menu-popup">
                     <div className="menu-label">Add here</div>
                     <ContextMenu.Item className="menu-item" onClick={() => add('terminal')}>
-                        <Icon icon={faTerminal} size={16} /> Terminal <kbd>⌥T</kbd>
+                        <Icon icon={faTerminal} size={14} /> Terminal <kbd>⌥T</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => add('chat')}>
-                        <Icon icon={faMessage} size={16} /> Chat <kbd>⌥C</kbd>
+                        <Icon icon={faMessage} size={14} /> Chat <kbd>⌥C</kbd>
                     </ContextMenu.Item>
                     <AgentSubmenus onPick={(target, provider) => addAgentNode(target, provider, at())} />
                     <ContextMenu.Item className="menu-item" onClick={() => add('browser')}>
-                        <Icon icon={faGlobe} size={16} /> Browser <kbd>⌥B</kbd>
+                        <Icon icon={faGlobe} size={14} /> Browser <kbd>⌥B</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => add('group')}>
-                        <Icon icon={faGrid2} size={16} /> Group <kbd>⌥G</kbd>
+                        <Icon icon={faGrid2} size={14} /> Group <kbd>⌥G</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => add('note')}>
-                        <Icon icon={faNoteSticky} size={16} /> Note <kbd>⌥N</kbd>
+                        <Icon icon={faNoteSticky} size={14} /> Note <kbd>⌥N</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().addText(at())}>
-                        <Icon icon={faFont} size={16} /> Text <kbd>dbl-click</kbd>
+                        <Icon icon={faFont} size={14} /> Text <kbd>dbl-click</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Separator className="menu-separator" />
                     <ContextMenu.Item className="menu-item" disabled={!hasSelection} onClick={() => useCanvas.getState().groupSelection()}>
-                        <Icon icon={faObjectGroup} size={16} /> Group selection <kbd>⌘G</kbd>
+                        <Icon icon={faObjectGroup} size={14} /> Group selection <kbd>⌘G</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Item
                         className="menu-item"
@@ -59,14 +59,14 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                             s.select([...s.order, ...Object.keys(s.texts)]);
                         }}
                     >
-                        <Icon icon={faCropSimple} size={16} /> Select all <kbd>⌘A</kbd>
+                        <Icon icon={faCropSimple} size={14} /> Select all <kbd>⌘A</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().fitAll()}>
-                        <Icon icon={faExpand} size={16} /> Zoom to fit <kbd>⇧1</kbd>
+                        <Icon icon={faExpand} size={14} /> Zoom to fit <kbd>⇧1</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Separator className="menu-separator" />
                     <ContextMenu.Item className="menu-item" onClick={() => useUi.getState().setSettings({ open: true })}>
-                        <Icon icon={faGear} size={16} /> Settings <kbd>⌘,</kbd>
+                        <Icon icon={faGear} size={14} /> Settings <kbd>⌘,</kbd>
                     </ContextMenu.Item>
                 </ContextMenu.Popup>
             </ContextMenu.Positioner>

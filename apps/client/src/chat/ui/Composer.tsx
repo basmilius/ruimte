@@ -451,7 +451,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                                         className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-surface-raised text-text-muted opacity-0 transition-opacity hover:text-text group-hover/thumb:opacity-100 focus-visible:opacity-100"
                                         onClick={() => removeAttachment(index)}
                                     >
-                                        <Icon icon={faXmark} size={14} />
+                                        <Icon icon={faXmark} size={12} />
                                     </button>
                                 </Tooltip>
                             </div>
@@ -535,7 +535,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-status-error text-accent-text"
                                 onClick={() => void chatClient.cancel(chatId).catch(() => undefined)}
                             >
-                                <Icon icon={faSquare} size={14} />
+                                <Icon icon={faSquare} size={16} />
                             </button>
                         </Tooltip>
                     ) : (
@@ -545,7 +545,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                                 disabled={isEmptyDraft(draft) || disabled}
                                 onClick={submit}
                             >
-                                <Icon icon={faArrowUp} size={15} />
+                                <Icon icon={faArrowUp} size={16} />
                             </button>
                         </Tooltip>
                     )}

@@ -58,7 +58,7 @@ export function WorktreeDialog() {
                 <Dialog.Backdrop className="dialog-backdrop" />
                 <Dialog.Popup className="dialog-popup top-[24vh] w-[420px] p-5">
                     <Dialog.Title className="flex items-center gap-2 text-base font-semibold text-text">
-                        <Icon icon={faCodeBranch} size={15} /> Bind to a worktree
+                        <Icon icon={faCodeBranch} size={16} /> Bind to a worktree
                     </Dialog.Title>
                     {folder ? (
                         <>

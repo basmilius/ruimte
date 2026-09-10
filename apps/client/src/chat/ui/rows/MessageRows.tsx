@@ -97,9 +97,9 @@ export function AssistantRow({ item, last }: { item: ChatAssistantItem; last: bo
 }
 
 const NOTE_ICON = {
-    info: <Icon icon={faCircleInfo} size={16} />,
-    warning: <Icon icon={faTriangleExclamation} size={16} />,
-    error: <Icon icon={faCircleExclamation} size={16} />
+    info: <Icon icon={faCircleInfo} size={12} />,
+    warning: <Icon icon={faTriangleExclamation} size={12} />,
+    error: <Icon icon={faCircleExclamation} size={12} />
 };
 
 export function NoteRow({ level, text }: { level: 'info' | 'warning' | 'error'; text: string }) {
@@ -158,7 +158,7 @@ export function QuestionHistoryRow({ item }: { item: ChatQuestionItem }) {
         <div className="pb-2">
             {item.questions.map((question) => (
                 <div key={question.id} className="flex items-start gap-2 px-1 py-0.5 text-xs text-text-faint">
-                    <Icon icon={faCommentQuestion} size={16} className="mt-0.5 shrink-0" />
+                    <Icon icon={faCommentQuestion} size={12} className="mt-0.5 shrink-0" />
                     <span className="min-w-0">
                         <span className="text-text-muted">{question.question}</span>
                         {item.state === 'answered' && item.answers?.[question.id] !== undefined && (

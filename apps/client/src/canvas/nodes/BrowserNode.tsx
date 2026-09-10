@@ -84,7 +84,7 @@ export function BrowserNode({ id, focused }: { id: string; focused: boolean }) {
                         focused && 'ring-1 ring-border-strong'
                     )}
                 >
-                    {secure && <Icon icon={faLock} size={14} className="shrink-0" />}
+                    {secure && <Icon icon={faLock} size={12} className="shrink-0" />}
                     <input
                         className="grow bg-transparent font-mono text-code text-text outline-none placeholder:text-text-faint"
                         placeholder="Enter an address"
@@ -123,10 +123,10 @@ export function BrowserNode({ id, focused }: { id: string; focused: boolean }) {
             <div className="relative grow bg-surface-sunken">
                 {state?.error && (
                     <div className="absolute inset-x-3 top-3 z-10 flex items-center gap-2 rounded-lg border border-border bg-surface-raised/95 px-3 py-2 text-xs text-status-error">
-                        <Icon icon={faCircleExclamation} size={16} className="shrink-0" />
+                        <Icon icon={faCircleExclamation} size={12} className="shrink-0" />
                         <span className="grow select-text">The page did not load: {state.error}</span>
-                        <button className="icon-btn h-6 w-6" onClick={() => browserRegistry.reload(id, true)}>
-                            <Icon icon={faRotateRight} size={12} />
+                        <button className="icon-btn h-7 w-7 shrink-0" onClick={() => browserRegistry.reload(id, true)}>
+                            <Icon icon={faRotateRight} size={16} />
                         </button>
                     </div>
                 )}
