@@ -1,6 +1,6 @@
 import type { GitDiffScope, ProjectPanels } from '@ruimte/contracts';
 import { tabKey, type FileTab } from '@/state/files';
-import { DEFAULT_SCOPE } from '@/state/git';
+import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE } from '@/state/git';
 import type { PanelDefaults } from '@/state/ui';
 
 /* Everything the surfaces around the canvas remember for one project on this machine. */
@@ -10,6 +10,7 @@ export interface PanelsState extends PanelDefaults {
     expandedDirs: string[];
     gitScope: GitDiffScope;
     gitCollapsedDirs: string[];
+    gitLogHeight: number;
 }
 
 /* A width from the file is a whole positive number of pixels or it is nothing at all. */
@@ -42,7 +43,8 @@ export const parsePanels = (stored: ProjectPanels | undefined, defaults: PanelsS
         active,
         expandedDirs: stored?.expandedDirs ?? [],
         gitScope: stored?.git?.scope ?? DEFAULT_SCOPE,
-        gitCollapsedDirs: stored?.git?.collapsedDirs ?? []
+        gitCollapsedDirs: stored?.git?.collapsedDirs ?? [],
+        gitLogHeight: width(stored?.git?.logHeight, DEFAULT_LOG_HEIGHT) ?? DEFAULT_LOG_HEIGHT
     };
 };
 
@@ -55,5 +57,5 @@ export const serializePanels = (state: PanelsState): ProjectPanels => ({
     tabs: state.tabs.map((tab) => ({ path: tab.path, pinned: tab.pinned, ...(tab.view ? { view: tab.view } : {}) })),
     activeTab: state.active,
     expandedDirs: state.expandedDirs,
-    git: { scope: state.gitScope, collapsedDirs: state.gitCollapsedDirs }
+    git: { scope: state.gitScope, collapsedDirs: state.gitCollapsedDirs, logHeight: Math.round(state.gitLogHeight) }
 });

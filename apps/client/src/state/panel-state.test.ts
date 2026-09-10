@@ -11,7 +11,8 @@ const defaults: PanelsState = {
     active: null,
     expandedDirs: [],
     gitScope: 'worktree',
-    gitCollapsedDirs: []
+    gitCollapsedDirs: [],
+    gitLogHeight: 200
 };
 
 const full: PanelsState = {
@@ -33,7 +34,8 @@ const full: PanelsState = {
     active: 'diff:/repo/src/main.ts',
     expandedDirs: ['src/', 'src/state/'],
     gitScope: 'base',
-    gitCollapsedDirs: ['src', 'src/state']
+    gitCollapsedDirs: ['src', 'src/state'],
+    gitLogHeight: 260
 };
 
 describe('panels in the machine-local file', () => {

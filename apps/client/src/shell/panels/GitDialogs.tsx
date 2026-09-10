@@ -1,0 +1,169 @@
+import { useState, type ReactNode } from 'react';
+import { Dialog } from '@base-ui-components/react/dialog';
+import clsx from 'clsx';
+import { Search } from 'lucide-react';
+import { Button } from '@/ui/Button';
+import { Icon } from '@/ui/Icon';
+
+interface PromptProps {
+    open: boolean;
+    title: string;
+    description?: ReactNode;
+    /* A one line field the answer is typed in; without it the dialog is a confirm and nothing else. */
+    field?: { label: string; initial?: string; placeholder?: string };
+    /* A second, taller field under it, for the body of a pull request. */
+    area?: { label: string; initial?: string; placeholder?: string };
+    confirmLabel: string;
+    danger?: boolean;
+    busy?: boolean;
+    onConfirm(value: string, body: string): void;
+    onClose(): void;
+}
+
+/*
+ * The one dialog every git action asks its question in: a name to type, or a warning to agree with.
+ * They share it so a confirm and a rename read the same and neither grows a layout of its own.
+ */
+export function GitPrompt({ open, title, description, field, area, confirmLabel, danger = false, busy = false, onConfirm, onClose }: PromptProps) {
+    /* The dialog stays mounted between questions, so every opening starts from what it was handed.
+       The token is what it was handed, so a new question resets the fields in the same render that
+       shows it and not in a second one after. */
+    const token = open ? `${field?.initial ?? ''}\u0000${area?.initial ?? ''}` : '';
+    const [draft, setDraft] = useState({ token, value: field?.initial ?? '', body: area?.initial ?? '' });
+    if (draft.token !== token) {
+        setDraft({ token, value: field?.initial ?? '', body: area?.initial ?? '' });
+    }
+    const value = draft.value;
+    const body = draft.body;
+    const setValue = (next: string): void => setDraft({ ...draft, value: next });
+    const setBody = (next: string): void => setDraft({ ...draft, body: next });
+
+    const submit = (): void => {
+        if (!busy && (field === undefined || value.trim() !== '')) {
+            onConfirm(value.trim(), body.trim());
+        }
+    };
+
+    return (
+        <Dialog.Root open={open} onOpenChange={(next) => !next && onClose()}>
+            <Dialog.Portal>
+                <Dialog.Backdrop className="dialog-backdrop" />
+                <Dialog.Popup className="dialog-popup top-[24vh] w-[420px] p-5">
+                    <Dialog.Title className="text-base font-semibold text-text">{title}</Dialog.Title>
+                    {description !== undefined && <p className="mt-1 text-xs text-text-muted">{description}</p>}
+                    {field !== undefined && (
+                        <label className="mt-4 flex flex-col gap-1.5">
+                            <span className="section-label">{field.label}</span>
+                            <input
+                                autoFocus
+                                className="field font-mono"
+                                spellCheck={false}
+                                placeholder={field.placeholder}
+                                value={value}
+                                onChange={(event) => setValue(event.target.value)}
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Enter') {
+                                        event.preventDefault();
+                                        submit();
+                                    }
+                                }}
+                            />
+                        </label>
+                    )}
+                    {area !== undefined && (
+                        <label className="mt-3 flex flex-col gap-1.5">
+                            <span className="section-label">{area.label}</span>
+                            <textarea
+                                className="commit-message"
+                                rows={5}
+                                spellCheck={false}
+                                placeholder={area.placeholder}
+                                value={body}
+                                onChange={(event) => setBody(event.target.value)}
+                            />
+                        </label>
+                    )}
+                    <div className="mt-4 flex items-center justify-end gap-2">
+                        <Button onClick={onClose}>Cancel</Button>
+                        <Button variant={danger ? 'danger' : 'primary'} disabled={busy || (field !== undefined && value.trim() === '')} onClick={submit}>
+                            {confirmLabel}
+                        </Button>
+                    </div>
+                </Dialog.Popup>
+            </Dialog.Portal>
+        </Dialog.Root>
+    );
+}
+
+export interface Choice {
+    value: string;
+    label: string;
+    /* What the row says on its right: where a branch lives, when a stash was made. */
+    hint?: string;
+    disabled?: boolean;
+}
+
+interface ChoiceProps {
+    open: boolean;
+    title: string;
+    description?: ReactNode;
+    choices: readonly Choice[];
+    /* Shown above the list once there are more rows than a person scans at a glance. */
+    filterFrom?: number;
+    empty: string;
+    onPick(value: string): void;
+    onClose(): void;
+}
+
+/* Picking one branch or one stash: the same list the branch menu draws, in a dialog. */
+export function GitChoice({ open, title, description, choices, filterFrom = 10, empty, onPick, onClose }: ChoiceProps) {
+    /* The filter belongs to one opening of the dialog; closing it is what empties the field. */
+    const [filter, setFilter] = useState({ open, query: '' });
+    if (filter.open !== open) {
+        setFilter({ open, query: '' });
+    }
+    const query = filter.query;
+    const setQuery = (next: string): void => setFilter({ open, query: next });
+
+    const needle = query.trim().toLowerCase();
+    const shown = needle === '' ? choices : choices.filter((choice) => choice.label.toLowerCase().includes(needle));
+
+    return (
+        <Dialog.Root open={open} onOpenChange={(next) => !next && onClose()}>
+            <Dialog.Portal>
+                <Dialog.Backdrop className="dialog-backdrop" />
+                <Dialog.Popup className="dialog-popup top-[18vh] w-[420px] p-5">
+                    <Dialog.Title className="text-base font-semibold text-text">{title}</Dialog.Title>
+                    {description !== undefined && <p className="mt-1 text-xs text-text-muted">{description}</p>}
+                    {choices.length > filterFrom && (
+                        <div className="mt-4 flex items-center gap-2 rounded-lg border border-border px-2.5">
+                            <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />
+                            <input
+                                autoFocus
+                                className="h-8 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint"
+                                placeholder="Filter"
+                                spellCheck={false}
+                                value={query}
+                                onChange={(event) => setQuery(event.target.value)}
+                            />
+                        </div>
+                    )}
+                    <div className="mt-3 max-h-72 overflow-y-auto">
+                        {shown.length === 0 && <p className="px-1 py-6 text-center text-xs text-text-faint">{empty}</p>}
+                        {shown.map((choice) => (
+                            <button
+                                key={choice.value}
+                                className={clsx('menu-item w-full text-left', choice.disabled && 'opacity-45')}
+                                disabled={choice.disabled}
+                                onClick={() => onPick(choice.value)}
+                            >
+                                <span className="truncate font-mono text-xs">{choice.label}</span>
+                                {choice.hint !== undefined && <span className="menu-hint truncate">{choice.hint}</span>}
+                            </button>
+                        ))}
+                    </div>
+                </Dialog.Popup>
+            </Dialog.Portal>
+        </Dialog.Root>
+    );
+}

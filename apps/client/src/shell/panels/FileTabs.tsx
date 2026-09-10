@@ -1,5 +1,5 @@
 import { useEffect, useRef, type WheelEvent as ReactWheelEvent } from 'react';
-import { GitCompare, Pin, X } from 'lucide-react';
+import { GitCommitHorizontal, GitCompare, Pin, X } from 'lucide-react';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
@@ -34,18 +34,24 @@ export function FileTabs() {
         <div ref={stripRef} className="files-tab-strip" onWheel={onWheel}>
             {tabs.map((tab) => {
                 // One tab holds every change a person opens, so it is named after that and not after
-                // the file in it; the file's own name is a hover away.
-                const label = tab.view ? 'Changes' : basenameOf(tab.path);
+                // the file in it; the file's own name is a hover away. A whole commit is named after
+                // the commit, since no file in it is the one it is about.
+                const commit = tab.view?.commit;
+                const label = commit !== undefined ? commit.slice(0, 7) : tab.view ? 'Changes' : basenameOf(tab.path);
                 return (
                     <span key={tab.key} className="files-tab" data-active={tab.key === active} data-view={tab.view ? 'diff' : undefined}>
-                        <Tooltip label={tab.view ? basenameOf(tab.path) : tab.path}>
+                        <Tooltip label={commit !== undefined ? `The commit ${commit.slice(0, 7)}` : tab.view ? basenameOf(tab.path) : tab.path}>
                             <button
                                 className="files-tab-open"
                                 aria-current={tab.key === active}
                                 onClick={() => useFiles.getState().activate(tab.key)}
                                 onDoubleClick={() => useFiles.getState().setPinned(tab.key, !tab.pinned)}
                             >
-                                {tab.view ? <Icon icon={GitCompare} size={14} className="shrink-0 text-text-faint" /> : <FileIcon path={tab.path} size={14} />}
+                                {tab.view ? (
+                                    <Icon icon={commit === undefined ? GitCompare : GitCommitHorizontal} size={14} className="shrink-0 text-text-faint" />
+                                ) : (
+                                    <FileIcon path={tab.path} size={14} />
+                                )}
                                 <span className="files-tab-name">{label}</span>
                                 {tab.view && counts[tab.key] !== undefined && (
                                     <span className="shrink-0 tabular-nums">

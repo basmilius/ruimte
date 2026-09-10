@@ -5,7 +5,8 @@ import { useUi } from '@/state/ui';
 export type FileTabView = ProjectFileTabView;
 
 export interface FileTab {
-    /* What names this tab among the others: the path, or `diff:` and the path for a diff tab. */
+    /* What names this tab among the others: the path, `diff:` and the path for a diff tab, or
+       `commit:` and the hash for a whole commit. */
     key: string;
     /* Absolute on the daemon's machine, the same path `fs.reveal` and the viewer take. */
     path: string;
@@ -22,8 +23,17 @@ export interface TabState {
     active: string | null;
 }
 
-/* A file and its diff are two tabs of one path, so the view is part of what names them apart. */
-export const tabKey = (path: string, view?: FileTabView): string => (view ? `diff:${path}` : path);
+/*
+ * A file and its diff are two tabs of one path, so the view is part of what names them apart. A
+ * commit is named after the commit and not after the path, because two commits of one repository
+ * would otherwise be one tab.
+ */
+export const tabKey = (path: string, view?: FileTabView): string => {
+    if (view?.commit !== undefined) {
+        return `commit:${view.commit}`;
+    }
+    return view ? `diff:${path}` : path;
+};
 
 /*
  * A tab per open file, the way a preview tab works in an editor: the oldest unpinned one makes room

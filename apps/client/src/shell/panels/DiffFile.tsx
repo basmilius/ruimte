@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { Columns2, FileDiff, FileWarning, GitBranch, GitCompare, LoaderCircle, Rows2, Space, WrapText } from 'lucide-react';
-import type { GitDiffResult, GitDiffScope } from '@ruimte/contracts';
+import type { GitDiffFile, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
+import { relativeTime } from '@/shell/panels/commit-log';
 import { FileActionsContext } from '@/shell/panels/file-actions';
 import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { relativeTo } from '@/shell/panels/files-tree';
@@ -25,6 +26,14 @@ const omittedLabel = (omitted: GitDiffResult['omitted']): string =>
  * next diff opens in as well.
  */
 export function DiffFile({ tabKey, path, name, view }: { tabKey: string; path: string; name: string; view: FileTabView }) {
+    if (view.commit !== undefined) {
+        return <CommitDiff tabKey={tabKey} cwd={view.cwd} commit={view.commit} />;
+    }
+    return <FileDiffView tabKey={tabKey} path={path} name={name} view={view} />;
+}
+
+/* One changed file, in whichever scope the tab is set to. */
+function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: string; name: string; view: FileTabView }) {
     const layout = useSettings((s) => s.diffLayout);
     const whitespace = useSettings((s) => s.diffWhitespace);
     const [wrap, setWrap] = useState(true);
@@ -150,6 +159,119 @@ function DiffBody({ state, wrap, layout, relative }: { state: DiffState; wrap: b
                     diffStyle={layout === 'split' ? 'split' : 'unified'}
                 />
             </Suspense>
+        </div>
+    );
+}
+
+type CommitState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; diff: GitDiffResult };
+
+/*
+ * A whole commit in one tab: what it says and who wrote it, the files it touched as a list at the
+ * top, and every patch under that. One request answers all of it, so a commit opens as fast as a
+ * single file does and the caps that keep a diff readable are the same ones.
+ */
+function CommitDiff({ tabKey, cwd, commit }: { tabKey: string; cwd: string; commit: string }) {
+    const layout = useSettings((s) => s.diffLayout);
+    const [wrap, setWrap] = useState(true);
+    const [now] = useState(() => Math.floor(Date.now() / 1000));
+    /* Which commit was asked for, so a tab that just changed reads as loading without an effect
+       that has to empty the state first. */
+    const asked = `${cwd}\u0000${commit}`;
+    const [held, setHeld] = useState<{ asked: string; state: CommitState } | null>(null);
+    const state: CommitState = held !== null && held.asked === asked ? held.state : { status: 'loading' };
+
+    useEffect(() => {
+        let alive = true;
+        transport
+            .request('git.diff', { cwd, scope: 'commit', commit })
+            .then((diff) => {
+                if (alive) {
+                    setHeld({ asked, state: { status: 'ready', diff } });
+                    useGit.getState().setCounts(tabKey, { added: diff.added, deleted: diff.deleted });
+                }
+            })
+            .catch((error: unknown) => {
+                if (alive) {
+                    setHeld({ asked, state: { status: 'error', message: error instanceof Error ? error.message : 'The commit could not be read.' } });
+                }
+            });
+        return () => {
+            alive = false;
+        };
+    }, [asked, commit, cwd, tabKey]);
+
+    const meta = state.status === 'ready' ? state.diff.commit : undefined;
+    const files: readonly GitDiffFile[] = state.status === 'ready' ? (state.diff.files ?? []) : [];
+
+    return (
+        <div className="flex min-h-0 min-w-0 grow flex-col">
+            <div className="file-toolbar">
+                <span className="file-toolbar-label truncate font-mono">{meta?.shortHash ?? commit.slice(0, 7)}</span>
+                <span className="grow" />
+                <span className="btn-group">
+                    <FileToolbarToggle
+                        icon={Rows2}
+                        label="One patch, stacked"
+                        active={layout === 'stacked'}
+                        onClick={() => useSettings.getState().update({ diffLayout: 'stacked' })}
+                    />
+                    <FileToolbarToggle
+                        icon={Columns2}
+                        label="Old and new side by side"
+                        active={layout === 'split'}
+                        onClick={() => useSettings.getState().update({ diffLayout: 'split' })}
+                    />
+                </span>
+                <Separator />
+                <FileToolbarToggle icon={WrapText} label={wrap ? 'Stop wrapping long lines' : 'Wrap long lines'} active={wrap} onClick={() => setWrap(!wrap)} />
+            </div>
+            {state.status === 'loading' && (
+                <div className="file-diff grid min-h-0 grow place-items-center">
+                    <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>Reading the commit.</EmptyState>
+                </div>
+            )}
+            {state.status === 'error' && (
+                <div className="file-diff grid min-h-0 grow place-items-center">
+                    <EmptyState icon={<Icon icon={FileWarning} size={20} />}>{state.message}</EmptyState>
+                </div>
+            )}
+            {state.status === 'ready' && (
+                <div className="file-diff min-h-0 grow overflow-auto">
+                    <div className="border-b border-border px-3 py-2">
+                        <p className="text-xs font-medium text-text">{meta?.subject ?? commit}</p>
+                        <p className="mt-1 text-xs text-text-faint">
+                            {meta === undefined ? commit : `${meta.author} · ${relativeTime(meta.at, now)} · ${meta.shortHash}`}
+                        </p>
+                        <ul className="mt-2 flex flex-col gap-0.5">
+                            {files.map((file) => (
+                                <li key={file.path} className="flex items-center gap-2 text-xs">
+                                    <span className="truncate font-mono text-text-muted">{file.path}</span>
+                                    <span className="grow" />
+                                    <span className="shrink-0 tabular-nums text-term-green">{file.added > 0 ? `+${file.added}` : ''}</span>
+                                    <span className="shrink-0 tabular-nums text-term-red">{file.deleted > 0 ? `-${file.deleted}` : ''}</span>
+                                </li>
+                            ))}
+                        </ul>
+                        {state.diff.truncated === true && <p className="mt-2 text-xs text-text-faint">More files changed than this list holds.</p>}
+                    </div>
+                    <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">Loading diff</div>}>
+                        {files.map((file) =>
+                            file.diff === '' ? (
+                                <p key={file.path} className="px-3 py-2 text-xs text-text-faint">
+                                    {file.path}: {omittedLabel(file.omitted)}
+                                </p>
+                            ) : (
+                                <UnifiedDiff
+                                    key={file.path}
+                                    change={{ path: file.path, kind: 'update', diff: file.diff }}
+                                    overflow={wrap ? 'wrap' : 'scroll'}
+                                    diffStyle={layout === 'split' ? 'split' : 'unified'}
+                                />
+                            )
+                        )}
+                    </Suspense>
+                </div>
+            )}
         </div>
     );
 }

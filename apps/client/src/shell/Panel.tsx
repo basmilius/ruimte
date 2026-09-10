@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import { X } from 'lucide-react';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { PANELS } from '@/shell/panels';
+import { PanelHeaderProvider } from '@/shell/PanelHeaderSlot';
 import { FilesPanel } from '@/shell/panels/FilesPanel';
 import { GitPanel } from '@/shell/panels/GitPanel';
 import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
@@ -30,6 +31,9 @@ function PanelBody({ kind }: { kind: PanelKind }) {
    while the panel slides in or out. */
 export function Panel() {
     const panel = useUi((s) => s.panel);
+    /* Where a panel hangs its own header controls; a callback ref, so the portal has an element
+       the first time the panel body renders and not one commit later. */
+    const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
     const stored = useUi((s) => s.panelWidth);
     /* Closed and done animating. Until then the contents stay mounted, so a close plays out. */
     const [settled, setSettled] = useState(!panel.open);
@@ -88,15 +92,18 @@ export function Panel() {
                             panel.open && hasOverlayControls() && 'toolbar-overlay-inset'
                         )}
                     >
-                        <span className="section-label">{label}</span>
-                        <span className="grow" />
+                        <span className="section-label shrink-0">{label}</span>
+                        {/* The panel's own controls, between its name and the close button. */}
+                        <div ref={setHeaderSlot} className="flex min-w-0 grow items-center gap-2" />
                         <Tooltip label={`Close ${label}`} kbd="⌘⌥B" name>
-                            <button className="icon-btn" onClick={() => useUi.getState().setPanel({ open: false })}>
+                            <button className="icon-btn shrink-0" onClick={() => useUi.getState().setPanel({ open: false })}>
                                 <Icon icon={X} size={16} />
                             </button>
                         </Tooltip>
                     </header>
-                    <PanelBody kind={panel.kind} />
+                    <PanelHeaderProvider value={headerSlot}>
+                        <PanelBody kind={panel.kind} />
+                    </PanelHeaderProvider>
                 </div>
             )}
         </aside>
