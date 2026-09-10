@@ -202,21 +202,16 @@ describe('ChatManager with Codex', () => {
         const info = manager.configure({
             chatId: 'chat-c',
             selection: { model: 'sol', options: { effort: 'xhigh' } },
-            runtimeMode: 'supervised',
-            interactionMode: 'plan'
+            runtimeMode: 'supervised'
         });
-        expect(info).toMatchObject({ selection: { model: 'gpt-5.6-sol', options: { effort: 'xhigh' } }, runtimeMode: 'supervised', interactionMode: 'plan' });
+        expect(info).toMatchObject({ selection: { model: 'gpt-5.6-sol', options: { effort: 'xhigh' } }, runtimeMode: 'supervised' });
         expect(manager.configure({ chatId: 'chat-c', runtimeMode: 'supervised' })).toBe(info);
 
         manager.send('chat-c', 'again');
         await waitFor(() => recorder.info?.usage.turns === 2 && idle(), 'second turn');
         expect(recorder.info?.agentSessionId).toBe(threadId ?? null);
         expect(recorder.info?.model).toBe('gpt-5.6-sol untrusted read-only');
-        // Plan mode has no protocol switch, so it rides along in the prompt; the fake echoes the whole prompt.
-        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual([
-            'echo: first (medium)',
-            expect.stringMatching(/^echo: Plan mode: .*again \(xhigh\)$/s)
-        ]);
+        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: first (medium)', 'echo: again (xhigh)']);
     });
 
     test('a thread survives a new manager and the next send resumes the same Codex thread', async () => {

@@ -53,8 +53,8 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   palette carries `providerFixed` on its node and shows a read-only badge instead of the picker.
   After the first message the provider is locked but the models stay switchable: the next send
   restarts the CLI with `--resume` anyway. There is no build or plan toggle: `/plan`, `/build`
-  and `interactionMode` are gone from the client, and plan-style work goes through the prompt
-  until a proposed-plan card earns its own phase. Pending approvals and questions dock on top of the composer, never in the
+  and `interactionMode` are gone, and plan-style work goes through the prompt until a
+  proposed-plan card earns its own phase. Pending approvals and questions dock on top of the composer, never in the
   transcript; only their outcome stays as a line. `@` opens a file picker over the chat's
   folder (chips in the text and in the timeline), and images pasted or dropped into the
   composer go along as attachments; drafts keep both. A running tool shows "running for 12s"
@@ -405,10 +405,8 @@ canvas, against Ruimte, one verdict each.
   of mapped. A supervised chat is one click away in the mode picker.
 - A model or mode change restarts the CLI process with `--resume` on the next send instead of
   using the control protocol's `set_model`; one path, and the resumed session keeps everything.
-- `interactionMode` and `ProviderCapabilities.planMode` stay on the wire although no client
-  sends or reads them: the daemon still resumes a stored thread that was in plan mode, and
-  taking a required field off `ChatInfo` buys nothing. Removal candidates for the next
-  contracts cleanup.
+- `interactionMode` and `ProviderCapabilities.planMode` are off the wire (phase 15). A stored
+  chat written before that keeps parsing: zod strips what the schema no longer knows.
 - Fast mode is not offered: the installed CLI has no flag for it, only the `/fast` command.
 - Claude Code 2.1.266 emits `tool_progress` (`tool_use_id`, `tool_name`, `parent_tool_use_id`,
   `elapsed_time_seconds`, `task_id`, `heartbeat`) for a local Bash only when

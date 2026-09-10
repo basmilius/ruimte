@@ -34,7 +34,6 @@ describe('claudeArgs', () => {
         const args = claudeArgs({
             selection: { model: 'claude-opus-5', options: { effort: 'xhigh', contextWindow: '1m' } },
             runtimeMode: 'full-access',
-            interactionMode: 'default',
             resume: 'abc'
         });
         expect(args.slice(args.indexOf('--model'))).toEqual([
@@ -50,13 +49,11 @@ describe('claudeArgs', () => {
         ]);
     });
 
-    test('supervised has no permission flag, plan mode wins, ultrathink goes into the prompt', () => {
+    test('supervised has no permission flag and ultrathink goes into the prompt', () => {
         const selection = { model: 'claude-sonnet-5', options: { effort: 'ultrathink', contextWindow: '200k' } };
-        const supervised = claudeArgs({ selection, runtimeMode: 'supervised', interactionMode: 'default', resume: null });
+        const supervised = claudeArgs({ selection, runtimeMode: 'supervised', resume: null });
         expect(supervised).not.toContain('--permission-mode');
         expect(supervised).not.toContain('--effort');
-        const plan = claudeArgs({ selection, runtimeMode: 'auto', interactionMode: 'plan', resume: null });
-        expect(plan[plan.indexOf('--permission-mode') + 1]).toBe('plan');
         expect(promptPrefix(selection)).toBe('ultrathink\n\n');
         expect(promptPrefix({ model: 'x', options: { effort: 'high' } })).toBe('');
     });

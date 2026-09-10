@@ -16,7 +16,6 @@ const TERMINAL_ONLY_CAPABILITIES: ProviderCapabilities = {
     allowAlways: false,
     asyncQuestions: false,
     compaction: 'none',
-    planMode: 'none',
     reportsCost: false,
     reportsContextWindow: false,
     slashCommands: false
