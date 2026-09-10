@@ -299,7 +299,7 @@ canvas, against Ruimte, one verdict each.
   with the root, and the terminal has its own `fontSize` setting (default 13) next to it.
 - The interface font size (Settings > Appearance, 12 to 20, whole numbers, default 16) is the
   root `font-size` on `<html>`, written by `state/settings.ts`. Sizes fixed in world
-  coordinates do not follow it: the node header stays `37px` (`GROUP_HEADER_PX`,
+  coordinates do not follow it: the node header stays `39px` (`GROUP_HEADER_PX`,
   `WebviewLayer`), because a header that moved would move every node's contents on the canvas.
 - Tooltips are the `Tooltip` component in `src/ui/Tooltip.tsx`, never a `title` attribute.
   One `TooltipProvider` at the app root gives the shared 150 ms delay.

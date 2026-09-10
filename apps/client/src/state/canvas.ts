@@ -68,7 +68,7 @@ export interface LinkDraft {
 }
 
 // A collapsed group is its header only.
-export const GROUP_HEADER_PX = 37;
+export const GROUP_HEADER_PX = 39;
 
 /* Which gestures the canvas refuses. Commands (dock buttons, shortcuts) always work. */
 export interface Locks {

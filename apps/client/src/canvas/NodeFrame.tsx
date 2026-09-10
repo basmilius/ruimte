@@ -168,7 +168,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
             >
                 <header
                     className={clsx(
-                        'flex h-[37px] shrink-0 items-center gap-2 pl-2.5 pr-1 text-text-muted',
+                        'flex h-[39px] shrink-0 items-center gap-2 pl-2.5 pr-1 text-text-muted',
                         isGroup ? 'bg-transparent' : isNote ? 'border-b bg-transparent' : 'border-b border-border bg-surface-raised'
                     )}
                 >

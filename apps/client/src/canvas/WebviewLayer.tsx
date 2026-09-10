@@ -3,7 +3,7 @@ import { browserRegistry, useBrowser } from '@/browser/registry';
 import { isNodeFocused, useCanvas } from '@/state/canvas';
 
 // The frame's header and the browser toolbar sit above the page.
-const HEADER_PX = 37;
+const HEADER_PX = 39;
 const TOOLBAR_PX = 37;
 
 function WebviewSlot({ nodeId, shield }: { nodeId: string; shield: boolean }) {
