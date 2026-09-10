@@ -1,5 +1,5 @@
 import { Popover } from '@base-ui-components/react/popover';
-import { faCompress } from '@fortawesome/duotone-regular-svg-icons';
+import { faCompress } from '@fortawesome/pro-regular-svg-icons';
 import type { ChatUsage } from '@ruimte/contracts';
 import { Icon } from '@/ui/Icon';
 

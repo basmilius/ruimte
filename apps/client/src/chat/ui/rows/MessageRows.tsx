@@ -10,7 +10,7 @@ import {
     faCopy,
     faTriangleExclamation,
     faXmark
-} from '@fortawesome/duotone-regular-svg-icons';
+} from '@fortawesome/pro-regular-svg-icons';
 import type { ChatApprovalItem, ChatAssistantItem, ChatQuestionItem, ChatUserItem } from '@ruimte/contracts';
 import { attachmentUrl } from '@/chat/attachments';
 import { tokenizeMentions } from '@/chat/mentions';

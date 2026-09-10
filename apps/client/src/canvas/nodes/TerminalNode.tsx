@@ -4,7 +4,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { Terminal } from '@xterm/xterm';
-import { faRotateRight } from '@fortawesome/duotone-regular-svg-icons';
+import { faRotateRight } from '@fortawesome/pro-regular-svg-icons';
 import { useCanvas } from '@/state/canvas';
 import { useSessions } from '@/state/sessions';
 import { useProject } from '@/state/project';

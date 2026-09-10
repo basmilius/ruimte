@@ -1,4 +1,4 @@
-import { faCircleExclamation, faCodeBranch } from '@fortawesome/duotone-regular-svg-icons';
+import { faCircleExclamation, faCodeBranch } from '@fortawesome/pro-regular-svg-icons';
 import { projectClient } from '@/project';
 import { useProject } from '@/state/project';
 import { Icon } from '@/ui/Icon';

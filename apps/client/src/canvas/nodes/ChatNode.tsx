@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
-import { faRotateRight } from '@fortawesome/duotone-regular-svg-icons';
+import { faRotateRight } from '@fortawesome/pro-regular-svg-icons';
 import type { AgentKind, ModelSelection } from '@ruimte/contracts';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { defaultProvider, readChatPreferences, selectionFor } from '@/chat/preferences';

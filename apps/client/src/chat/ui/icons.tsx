@@ -12,7 +12,7 @@ import {
     faRobot,
     faTerminal,
     faWrench
-} from '@fortawesome/duotone-regular-svg-icons';
+} from '@fortawesome/pro-regular-svg-icons';
 import { Icon } from '@/ui/Icon';
 
 const SIZE = 14;

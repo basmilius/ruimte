@@ -10,7 +10,7 @@ import {
     faNoteSticky,
     faObjectGroup,
     faTerminal
-} from '@fortawesome/duotone-regular-svg-icons';
+} from '@fortawesome/pro-regular-svg-icons';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentNode } from '@/agents/nodes';
 import type { Point } from '@/canvas/math';

@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { faChevronRight, faCodeCompare, faXmark } from '@fortawesome/duotone-regular-svg-icons';
+import { faChevronRight, faCodeCompare, faXmark } from '@fortawesome/pro-regular-svg-icons';
 import type { ChatCheckpointDiff, ChatCheckpointFile, ChatFileChange, ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
 import { chatClient } from '@/chat';
 import { fileChanges, formatElapsed, liveOutput, toolStartedAt, toolSummary, unifiedChanges, type FileChange } from '@/chat/logic/tools';

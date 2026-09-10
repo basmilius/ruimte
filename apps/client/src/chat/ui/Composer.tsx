@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { faArrowUp, faFileLines, faSquare, faXmark } from '@fortawesome/duotone-regular-svg-icons';
+import { faArrowUp, faFileLines, faSquare, faXmark } from '@fortawesome/pro-regular-svg-icons';
 import type { AgentKind, ChatApprovalItem, ChatInfo, ChatQuestionItem, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { attachmentUrl, checkAttachmentLimits, imageFilesOf, readAttachments } from '@/chat/attachments';

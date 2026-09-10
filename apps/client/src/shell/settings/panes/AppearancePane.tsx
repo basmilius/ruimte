@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { faCheck } from '@fortawesome/duotone-regular-svg-icons';
+import { faCheck } from '@fortawesome/pro-regular-svg-icons';
 import { NODE_ACCENTS } from '@/canvas/accents';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';

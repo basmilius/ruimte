@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Menu } from '@base-ui-components/react/menu';
-import { faChevronRight, faMessage, faRobot } from '@fortawesome/duotone-regular-svg-icons';
+import { faChevronRight, faMessage, faRobot } from '@fortawesome/pro-regular-svg-icons';
 import type { ProviderInfo } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { AGENT_TARGET_LABEL, type AgentTarget } from '@/agents/nodes';

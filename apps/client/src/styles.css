@@ -198,12 +198,10 @@ body {
     box-shadow: var(--shadow-float);
 }
 
+/* Font Awesome parks its glyphs a fraction below the baseline; the middle of the box next to the
+   middle of the text is what reads as aligned, in inline flow as well as in a flex row. */
 .icon {
-    --fa-primary-color: currentColor;
-    --fa-secondary-color: currentColor;
-    /* The duotone back layer is the same color as the front one, so only opacity separates them;
-       this much reads as a second layer on the light theme without turning to mud on the dark one. */
-    --fa-secondary-opacity: 0.4;
+    vertical-align: middle;
 }
 
 .icon-btn {

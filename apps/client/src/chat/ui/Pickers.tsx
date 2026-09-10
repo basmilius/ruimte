@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Menu } from '@base-ui-components/react/menu';
 import { Popover } from '@base-ui-components/react/popover';
 import clsx from 'clsx';
-import { faCheck, faChevronDown, faChevronRight, faMagnifyingGlass, faShield, faSliders } from '@fortawesome/duotone-regular-svg-icons';
+import { faCheck, faChevronDown, faChevronRight, faMagnifyingGlass, faShield, faSliders } from '@fortawesome/pro-regular-svg-icons';
 import type { AgentKind, ModelInfo, ModelSelection, ProviderInfo, RuntimeMode } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
