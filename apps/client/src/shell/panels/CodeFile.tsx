@@ -119,7 +119,7 @@ export function CodeFile({ read, toolbarExtra }: CodeFileProps) {
 
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
-            <FileToolbar label={language}>
+            <FileToolbar>
                 {toolbarExtra}
                 {toolbarExtra !== undefined && <Separator />}
                 <FileToolbarToggle icon={WrapText} label={wrap ? 'Stop wrapping long lines' : 'Wrap long lines'} active={wrap} onClick={() => setWrap(!wrap)} />

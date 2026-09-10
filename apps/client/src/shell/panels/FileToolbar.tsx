@@ -16,14 +16,13 @@ import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
 
 /*
- * The bar above every file renderer: what the file is on the left, the controls that change how it is
- * drawn on the right. One component for all three renderers, so a control keeps its place when the
- * open file changes type, and the menu at its end is the same everywhere for the same reason.
+ * The bar above every file renderer: the controls that change how the file is drawn, at its right.
+ * One component for all three renderers, so a control keeps its place when the open file changes
+ * type, and the menu at its end is the same everywhere for the same reason.
  */
-export function FileToolbar({ label, children }: { label?: string; children?: ReactNode }) {
+export function FileToolbar({ children }: { children?: ReactNode }) {
     return (
         <div className="file-toolbar">
-            {label !== undefined && <span className="file-toolbar-label">{label}</span>}
             <span className="grow" />
             {children}
             {/* With no controls the menu is the only group there is, and a line would divide nothing. */}
