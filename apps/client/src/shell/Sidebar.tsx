@@ -11,10 +11,16 @@ import { addNodeAtCenter } from '@/shell/commands';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { Tooltip } from '@/ui/Tooltip';
-import { ConnectionDot } from '@/shell/ConnectionDot';
-import { TRAFFIC_LIGHTS_INSET_PX, hasTrafficLights } from '@/desktop/bridge';
-import { useDesktopFullscreen } from '@/desktop/useFullscreen';
+import { SidebarToggle } from '@/shell/SidebarToggle';
+import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { Icon } from '@/ui/Icon';
+
+/* How wide the list is when it is open. The inner column keeps this width while the wrapper
+   animates to zero, so nothing reflows on the way out. */
+export const SIDEBAR_WIDTH_PX = 248;
+
+/* The padding the strip starts with where there are no traffic lights to clear. */
+export const STRIP_PADDING_PX = 12;
 
 const KIND_ICON = {
     terminal: Terminal,
@@ -92,61 +98,64 @@ export function Sidebar() {
     const nodes = useCanvas(useShallow((s) => s.order.map((id) => s.nodes[id]).filter((node) => node.kind !== 'group' && node.kind !== 'note')));
     const sessions = useSessions((s) => s.byNodeId);
     const chats = useChats((s) => s.byNodeId);
-    const fullscreen = useDesktopFullscreen();
+    const open = useUi((s) => s.sidebarOpen);
+    const inset = useTrafficLightInset();
 
     return (
-        <aside className="flex h-full w-[248px] shrink-0 flex-col border-r border-border bg-surface">
-            <div
-                className="app-drag flex h-12 items-center gap-2 px-3"
-                style={hasTrafficLights() && !fullscreen ? { paddingLeft: TRAFFIC_LIGHTS_INSET_PX } : undefined}
-            >
-                <span className="grid h-6 w-6 place-items-center rounded-md bg-accent text-xs font-semibold text-accent-text">R</span>
-                <span className="text-sm font-semibold tracking-tight text-text">Ruimte</span>
-                <span className="grow" />
-                <Tooltip label="Search" kbd="⌘K">
-                    <button className="icon-btn h-7 w-7" onClick={() => useUi.getState().setPaletteOpen(true)}>
-                        <Icon icon={Search} size={16} />
-                    </button>
-                </Tooltip>
-            </div>
+        <aside
+            id="app-sidebar"
+            inert={!open}
+            className="h-full shrink-0 overflow-hidden transition-[width] duration-200 ease-out"
+            style={{ width: open ? SIDEBAR_WIDTH_PX : 0 }}
+        >
+            <div className="flex h-full flex-col border-r border-border bg-surface" style={{ width: SIDEBAR_WIDTH_PX }}>
+                <div className="app-drag flex h-12 items-center gap-2 pr-3" style={{ paddingLeft: inset ?? STRIP_PADDING_PX }}>
+                    <SidebarToggle />
+                    <span className="grow" />
+                    <Tooltip label="Search" kbd="⌘K">
+                        <button className="icon-btn h-7 w-7" onClick={() => useUi.getState().setPaletteOpen(true)}>
+                            <Icon icon={Search} size={16} />
+                        </button>
+                    </Tooltip>
+                </div>
 
-            <div className="mt-2 min-h-0 grow overflow-auto px-2">
-                {GROUPS.map((group) => {
-                    const rows = nodes.filter((n) => {
-                        const status = nodeStatus(n, sessions, chats);
-                        return group.status === 'none' ? !status : status === group.status;
-                    });
-                    if (rows.length === 0) {
-                        return null;
-                    }
-                    return (
-                        <div key={group.status} className="mb-3">
-                            <div className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium uppercase tracking-[.04em] text-text-faint">
-                                {group.status !== 'none' && <StatusDot status={group.status} />}
-                                {group.label}
-                                <span className="ml-auto tabular-nums">{rows.length}</span>
+                <div className="mt-2 min-h-0 grow overflow-auto px-2">
+                    {GROUPS.map((group) => {
+                        const rows = nodes.filter((n) => {
+                            const status = nodeStatus(n, sessions, chats);
+                            return group.status === 'none' ? !status : status === group.status;
+                        });
+                        if (rows.length === 0) {
+                            return null;
+                        }
+                        return (
+                            <div key={group.status} className="mb-3">
+                                <div className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium uppercase tracking-[.04em] text-text-faint">
+                                    {group.status !== 'none' && <StatusDot status={group.status} />}
+                                    {group.label}
+                                    <span className="ml-auto tabular-nums">{rows.length}</span>
+                                </div>
+                                {rows.map((n) => (
+                                    <SessionRow key={n.id} node={n} />
+                                ))}
                             </div>
-                            {rows.map((n) => (
-                                <SessionRow key={n.id} node={n} />
-                            ))}
-                        </div>
-                    );
-                })}
-            </div>
+                        );
+                    })}
+                </div>
 
-            <div className="flex items-center gap-1 border-t border-border p-2">
-                <button
-                    className="flex h-8 grow items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-surface-sunken hover:text-text"
-                    onClick={() => addNodeAtCenter('terminal')}
-                >
-                    <Icon icon={Plus} size={14} /> New session
-                </button>
-                <ConnectionDot />
-                <Tooltip label="Settings" kbd="⌘,">
-                    <button className="icon-btn" onClick={() => useUi.getState().setSettings({ open: true })}>
-                        <Icon icon={Settings} size={16} />
+                <div className="flex items-center gap-1 border-t border-border p-2">
+                    <button
+                        className="flex h-8 grow items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-surface-sunken hover:text-text"
+                        onClick={() => addNodeAtCenter('terminal')}
+                    >
+                        <Icon icon={Plus} size={14} /> New session
                     </button>
-                </Tooltip>
+                    <Tooltip label="Settings" kbd="⌘,">
+                        <button className="icon-btn" onClick={() => useUi.getState().setSettings({ open: true })}>
+                            <Icon icon={Settings} size={16} />
+                        </button>
+                    </Tooltip>
+                </div>
             </div>
         </aside>
     );
