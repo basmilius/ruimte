@@ -51,14 +51,20 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   the item's own timestamp) and, for a provider that streams partial output, the last lines
   under it; the reducer folds `tool_progress` and `task_started` into an optional `progress`
   on the tool item and `fake-claude.ts` emits both on `run: <cmd>`.
-- **Phase 6c, Codex chat backend**: a chat node with `provider: 'codex'` runs `codex app-server`
-  (JSON-RPC over stdio, `apps/server/src/chat/codex-*.ts`). Approvals for commands and file
-  changes, both kinds of Codex question (blocking `request_user_input` and the async one that
-  arrives as an agent message), interrupt, compact, model and effort, the runtime modes as
-  approval policy plus sandbox, restart with `thread/resume`. The Codex catalog is
-  `apps/server/src/providers/codex-models.json`, `fake-codex.ts` stands in for the CLI in
-  tests. The Agent submenu opens Codex as a chat; "Open in chat" and "Open in terminal" work for
-  both CLIs.
+- **Phase 6c, Codex chat backend and one session for every CLI**: a chat node with
+  `provider: 'codex'` runs `codex app-server` (JSON-RPC over stdio). Approvals for commands and
+  file changes, both kinds of Codex question (blocking `request_user_input` and the async one
+  that arrives as an agent message), interrupt, compact, model and effort, the runtime modes as
+  approval policy plus sandbox, restart with `thread/resume`. Both CLIs sit behind one seam now:
+  `ChatSession` owns the thread and the turns for every provider, a `ChatBackend`
+  (`claude-backend.ts`, `codex-backend.ts`) owns one process and its protocol and reports
+  `BackendEvent`s, the frame mapping is pure and tested on its own (`claude-protocol.ts`,
+  `codex-protocol.ts`), and `ThreadProjector` is the only writer of thread items. Each CLI is a
+  `ChatProvider` value (`apps/server/src/providers/*-provider.ts`) with its catalog, its
+  capabilities and its resume template, which the client reads from `provider.list` instead of
+  branching on the kind. `fake-claude.ts` and `fake-codex.ts` stand in for the CLIs in tests.
+  The Agent submenu lists the providers the daemon has; "Open in chat" and "Open in terminal"
+  work for both CLIs.
 
 - **Phase 1, remaining checklist**: command palette on Cmd+K (jump to a node, every app
   action), Option+T/C/B/G add nodes, Cmd+G wraps the selection in a group, Cmd+, opens
@@ -265,10 +271,18 @@ canvas, against Ruimte, one verdict each.
   the Anthropic API shape passed through as is. The user item keeps the full data, so the
   thread file and `chat.attach` grow with every image; move them to files under the app data
   dir when that starts to hurt. No `$skills` in the composer yet.
-- `CodexChatSession` is a second class with the same surface as `ChatSession` instead of one
-  session over a backend interface: the Claude session had three other changes landing on it at
-  the same time, so it was left alone. Folding both onto one `ChatBackend` (spawn, reduce,
-  answer) is the refactor to do once the parallel work is in.
+- A chat item id is the backend's own key for the item with the process generation in front
+  (`1:toolu_x`), so a resumed CLI that numbers its messages from the start cannot overwrite an
+  older item. An approval keeps `approval-<requestId>` as it was, since that id round-trips to
+  the client; Codex's request ids carry the generation themselves, because its JSON-RPC ids
+  start at 0 in every process.
+- A model or mode change restarts the CLI for both providers, even though Codex takes the model
+  per turn. One rule is easier to reason about than a per-provider one, and a restart with
+  `thread/resume` keeps everything.
+- Codex chats hear about linked context too: the app-server has no system prompt, so the
+  `ruimte-context` sentence goes in front of the first prompt instead of on a flag.
+- An async Codex question stays pending until the turn ends; there is no `chat.dismiss` yet,
+  because the composer shows no difference between the two kinds of question.
 - Codex runtime modes: `supervised` = `untrusted` + `read-only`, `auto-accept-edits` =
   `untrusted` + `workspace-write`, `auto` = `on-request` + `workspace-write`, `full-access` =
   `never` + `danger-full-access`. Plan mode is a read-only sandbox plus an instruction in the
@@ -291,8 +305,9 @@ canvas, against Ruimte, one verdict each.
 - `bun test` would pick up the Playwright spec; `bunfig.toml` excludes `e2e/`.
 - The stream-json `assistant` frames arrive one content block at a time under the same
   message id, and their block index does not match the streaming index. Text items are keyed
-  by process generation, message id and the ordinal of the text block (`claude-stream.ts`);
-  the generation is there because a resumed process numbers its messages from the start again.
+  by message id and the ordinal of the text block (`claude-protocol.ts`), and the projector puts
+  the process generation in front, because a resumed process numbers its messages from the start
+  again.
 - `AskUserQuestion` arrives as a `can_use_tool` request; the answer is an allow with
   `updatedInput.answers` keyed by the question text, not by an id.
 - `@pierre/diffs` marks itself side-effect free, so `import '@pierre/diffs/worker/worker.js'`
@@ -346,13 +361,13 @@ canvas, against Ruimte, one verdict each.
 
 In the order that makes sense, each one an issue on GitHub:
 
-1. **#5 and #6 follow-ups**: real partial tool output once a provider streams it (the thread,
-   the contract and the live row already take a `delta` on a tool item; Codex has
-   `item/commandExecution/outputDelta`), per-turn checkpoints so the changed-files card can
-   show real diffs against the working tree instead of the edit's before and after, the Codex
-   `fileChange` diffs (unified, not before/after) in that same card, and folding
-   `CodexChatSession` and `ChatSession` onto one `ChatBackend`. The Codex backend, mentions,
-   attachments and the "send Escape to the app" toggle are done.
+1. **#5 and #6 follow-ups**: per-turn checkpoints so the changed-files card can show real diffs
+   against the working tree instead of the edit's before and after, and a third chat provider
+   (Gemini, Copilot or opencode) as the proof that the backend seam holds: it is a provider
+   value, a backend and a protocol mapper, plus one literal in `AgentKind`. The Codex backend,
+   the fold onto one `ChatSession` with `ChatBackend`s, Codex's streamed command output, its
+   unified diffs in the changed-files card, mentions, attachments and the "send Escape to the
+   app" toggle are done.
 2. **#7 follow-ups**: a webview keeps the canvas's z-order only by being above everything, so
    a node dragged over a browser node slides under its page; the traffic-light inset is fixed,
    not measured; no Windows or Linux run yet.
