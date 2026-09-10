@@ -156,6 +156,13 @@ describe('the selection', () => {
         expect(useDrawing.getState().elements[1]).toMatchObject({ stroke: 'ink' });
         expect(useDrawing.getState().style).toMatchObject({ stroke: 'red', strokeWidth: 4 });
     });
+
+    test('a style choice writes only the chosen field, not the color the dock happens to show', () => {
+        useDrawing.getState().setStyle({ stroke: 'red' });
+        useDrawing.getState().select(['a']);
+        useDrawing.getState().setStyle({ strokeWidth: 4 });
+        expect(useDrawing.getState().elements[0]).toMatchObject({ stroke: 'ink', strokeWidth: 4 });
+    });
 });
 
 describe('text', () => {
