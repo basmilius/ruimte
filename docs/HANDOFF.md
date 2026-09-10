@@ -46,7 +46,17 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   the first message and kept alive between turns (`apps/server/src/chat`). Thread items go
   over `chat.event`; `chat.attach` answers the whole thread so a reload rebuilds it; threads
   persist in `chats/<id>.json`. "Open in chat" on a terminal with a Claude agent and "Open in
-  terminal" on a chat continue the same CLI session in the other kind of node.
+  terminal" on a chat continue the same CLI session in the other kind of node. A turn does not
+  have to start with a message: Claude Code wakes the agent itself when a background sub-agent
+  settles (`task_notification`, a second `init`, an assistant message and a `result`, with no
+  user frame in between), so content that arrives while no turn is open opens one with
+  `origin: 'agent'`, the notification's summary as its label and a checkpoint of its own. The
+  node goes back to running, the timeline shows "Sub-agent finished: <summary>" where a user
+  bubble would be, the fold and the changed-files card work as for any turn, and an OS
+  notification fires when the window is not focused, the same rule as needs-you. A frame with a
+  `parent_tool_use_id` belongs to the sub-agent's own row and never opens a turn; a message sent
+  while such a turn runs settles it as stale instead of being refused as busy. Codex has no unsolicited turn, but its
+  `collabAgentToolCall` items are tool rows now, so an agent it spawns is visible.
 - **Phase 6b, the chat the way T3 Code does it** (studied, then written from scratch):
   a model catalog with generic option descriptors (`apps/server/src/providers`), one runtime
   mode vocabulary (`supervised`, `auto-accept-edits`, `auto`, `full-access`), turns as items
@@ -560,6 +570,12 @@ canvas, against Ruimte, one verdict each.
   in a worker entry is tree-shaken to nothing. The pool uses Vite's `?worker` import instead.
 - `bun --watch` restarts the daemon on every file change and the daemon installs hooks at
   startup, so editing the server while `bun dev` runs also rewrites the hook settings (idempotent).
+- A `bun --watch` reload does run the SIGTERM handler in the same pid, but the module restarts
+  before anything the handler awaits comes back (measured: a 500 ms timer never fired, a real
+  `kill` lets it through). So `shutdown` writes the chats synchronously before its first await
+  (`ChatManager.persistAllSync`), and a chat is written when a turn opens and after every tool
+  call, not only when the turn settles. Without that, editing the server during a turn lost the
+  whole turn and left the CLI process orphaned, still writing files nobody would see.
 - A terminal inside another Electron app (an IDE, an agent shell) exports
   `ELECTRON_RUN_AS_NODE`, which turns `electron .` into plain Node where `require('electron')`
   is a path string. `apps/desktop/scripts/launch.ts` clears it before spawning Electron.
