@@ -22,6 +22,7 @@ One WebSocket. JSON frames validated with zod on both ends.
 - Event from server (no `id`): `{ type: 'event', event: string, payload }`.
 - Terminal output travels as `{ event: 'session.output', payload: { sessionId, data } }` where `data` is a UTF-8 string, coalesced per animation frame on the server.
 - Agent status travels as `session.status` (`agent: AgentInfo | null`), chat threads as `chat.event` (`item` upsert, `delta`, `info`). The daemon also serves `POST /hooks/<kind>` for the CLIs' hooks, bearer token per session.
+- Usage travels as `usage.summary` (buckets per slot, provider and model in the viewer's own time zone, plus the models, projects and provenance the buckets cannot express), `usage.subscribe` / `usage.unsubscribe` (keep scanning while a page is open) and `usage.limits` / `usage.refreshLimits`; the daemon pushes `usage.changed` (only the moment of the scan, so a page asks again for the period it has) and `usage.limitsChanged`. Everything under `apps/server/src/usage`: transcripts read incrementally into `$RUIMTE_HOME/usage/index.json`, priced with the LiteLLM table (24 h, bundled snapshot as the fallback, `--no-price-fetch` to stay on it), and plan windows asked of the CLIs themselves rather than of any endpoint.
 
 ## Terminal sessions (the daemon)
 

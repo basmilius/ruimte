@@ -1093,6 +1093,36 @@ canvas, against Ruimte, one verdict each.
   it, fixed to the CLI you picked, seeds the note's body as the composer's draft (never sent, the
   person presses Enter) and draws the edge from the note into the chat, so the note stays readable
   through `ruimte-context` after it is edited.
+- Usage is a page, not a view. A view lives in `project.json`, a shared file that goes into git, and
+  what both CLIs cost on this machine has nothing to do with a project. It would also add a literal
+  to a zod union the daemon and the migration both read, and give every project a sidebar row for
+  it. So it is `page: 'usage' | null` in the ui store, beside `paletteOpen` and the settings flag,
+  drawn by `ViewHost` over the canvas the way a standalone view is. The settings dialog was the
+  other candidate and is too small for a chart and two tables; what does belong there later is the
+  price override editor. Nothing about the page is persisted: a reload lands on the project's own
+  view. It closes at the top of `showView` (`project/views.ts`) rather than in the store, because
+  every route to a view runs through there and the ui store may not import the document store.
+- The usage index is JSON, not SQLite. It is derived data: 1,400 transcripts cold-scan in 2.2 s and
+  a warm pass is 50 ms, so losing the file costs seconds and nothing else. Records of a transcript
+  Claude Code has since cleaned up do stay in it, which is the one thing a rescan cannot rebuild.
+  `bun:sqlite` is the way out if the file ever grows past a few megabytes (4.9 MB here).
+- Nothing in usage reads a credential. The plan windows come from the CLIs themselves: a probe
+  process is started, asked and ended, and the events of a running turn fill the gaps. Reading the
+  keychain or `~/.codex/auth.json` and calling the vendors' usage endpoints was tried in ai-usage
+  and removed there: a keychain prompt on every token refresh, 429s, and no way to refresh. The
+  LiteLLM fetch is the daemon's first outgoing HTTP request; a snapshot ships with the app so it is
+  optional, and `--no-price-fetch` turns it off entirely.
+- Provider colors are tokens of their own, `--chart-claude` and `--chart-codex` (Apple's system
+  orange and teal, the pair ai-usage uses), with `--chart-gemini` and `--chart-copilot` reserved.
+  They are not the status colors: a bar segment names which CLI did the work, and red, amber and
+  green already mean something else everywhere in this app.
+- The limits look like ai-usage's: the used percentage as a whole number, a bar capped at 100, red
+  from 90% and amber from 70%, and the reset as a clock time ("resets 16:18" today, "resets Tue
+  09:00" otherwise). No countdown that ticks, no hairline for the elapsed share, and no amount on
+  the sidebar button.
+- The chart is 150 lines of SVG rather than a library. Recharts is 7.4 MB unpacked, chart.js 6.2 MB,
+  and the only arithmetic a library would bring is a nice scale of ten lines. It draws in real
+  pixels from a `ResizeObserver` instead of a stretched view box, so a bar lands on whole pixels.
 
 ## Gotchas already paid for
 
