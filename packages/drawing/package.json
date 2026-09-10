@@ -1,0 +1,21 @@
+{
+  "name": "@ruimte/drawing",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ruimte/contracts": "workspace:*",
+    "perfect-freehand": "^1.2.3",
+    "roughjs": "^4.6.6"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.0",
+    "typescript": "~6.0.2"
+  }
+}

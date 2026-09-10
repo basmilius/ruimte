@@ -8,6 +8,9 @@ import { ProjectIdSchema, ProjectSaveResultSchema } from './project.ts';
 export const DrawingColorSchema = z.enum(['ink', 'muted', 'accent', 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink']);
 export type DrawingColor = z.infer<typeof DrawingColorSchema>;
 
+/* In the order the color menu shows them. */
+export const DRAWING_COLORS = DrawingColorSchema.options;
+
 export const DrawingFillSchema = z.enum(['none', 'solid', 'hachure']);
 export type DrawingFill = z.infer<typeof DrawingFillSchema>;
 
