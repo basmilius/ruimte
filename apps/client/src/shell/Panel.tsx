@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import clsx from 'clsx';
 import { X } from 'lucide-react';
+import { hasOverlayControls } from '@/desktop/bridge';
 import { PANELS } from '@/shell/panels';
 import { FilesPanel } from '@/shell/panels/FilesPanel';
 import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
@@ -77,7 +79,14 @@ export function Panel() {
             {present && (
                 <div className="relative flex h-full shrink-0 flex-col border-l border-border bg-surface" style={{ width }}>
                     {panel.open && <div className="absolute inset-y-0 left-0 z-10 w-2 cursor-col-resize" onPointerDown={startResize} />}
-                    <header className="app-drag flex h-12 shrink-0 items-center gap-2 border-b border-border px-3">
+                    {/* An open panel is the rightmost column, so on Windows and Linux the close button
+                        would land under the native window controls; the inset keeps their width free. */}
+                    <header
+                        className={clsx(
+                            'app-drag flex h-12 shrink-0 items-center gap-2 border-b border-border px-3',
+                            panel.open && hasOverlayControls() && 'toolbar-overlay-inset'
+                        )}
+                    >
                         <span className="section-label">{label}</span>
                         <span className="grow" />
                         <Tooltip label={`Close ${label}`} kbd="⌘⌥B" name>
