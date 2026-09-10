@@ -82,6 +82,8 @@ interface DrawingState {
     error: string | null;
     past: DrawingElement[][];
     future: DrawingElement[][];
+    /* Whether an export paints the paper behind the drawing or leaves it transparent. */
+    exportBackground: boolean;
 
     load(viewId: string, document: DrawingDocument, local: ProjectViewLocal | null): void;
     /* Takes the drawing off screen without saving; the client flushes before it calls this. */
@@ -122,6 +124,9 @@ interface DrawingState {
 
     deleteSelected(): void;
     duplicateSelected(): void;
+    /* Elements from the clipboard: they arrive under new ids and seeds, as a duplicate does. */
+    pasteElements(elements: DrawingElement[]): void;
+    setExportBackground(on: boolean): void;
     bringToFront(): void;
     sendToBack(): void;
     toggleLockSelected(): void;
@@ -218,6 +223,7 @@ export const useDrawing = create<DrawingState>((set, get) => ({
     error: null,
     past: [],
     future: [],
+    exportBackground: true,
 
     load(viewId, document, local) {
         set({
@@ -427,6 +433,23 @@ export const useDrawing = create<DrawingState>((set, get) => ({
             return;
         }
         set({ selection: copies.map((element) => element.id), ...changed(state, [...state.elements, ...copies]) });
+    },
+    pasteElements(elements) {
+        if (elements.length === 0) {
+            return;
+        }
+        const state = get();
+        const copies = elements.map((element) => ({
+            ...element,
+            id: nextId('el'),
+            x: element.x + DUPLICATE_OFFSET,
+            y: element.y + DUPLICATE_OFFSET,
+            seed: newSeed()
+        }));
+        set({ selection: copies.map((element) => element.id), ...changed(state, [...state.elements, ...copies]) });
+    },
+    setExportBackground(on) {
+        set({ exportBackground: on });
     },
     bringToFront() {
         const state = get();

@@ -1,5 +1,6 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { existsSync, mkdirSync, openSync, writeFileSync } from 'node:fs';
+import { writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
@@ -397,6 +398,23 @@ ipcMain.handle('dialog:pick-folder', async (_event, initialPath?: string) => {
         ...(initialPath ? { defaultPath: initialPath } : {})
     });
     return result.canceled ? null : (result.filePaths[0] ?? null);
+});
+
+/* Bytes the client made (an exported drawing) go where a native dialog says they go. */
+ipcMain.handle('dialog:save-file', async (_event, suggestedName: string, bytes: Uint8Array, mime: string) => {
+    if (!mainWindow) {
+        return null;
+    }
+    const extension = suggestedName.split('.').pop() ?? '';
+    const result = await dialog.showSaveDialog(mainWindow, {
+        defaultPath: suggestedName,
+        ...(extension ? { filters: [{ name: mime, extensions: [extension] }] } : {})
+    });
+    if (result.canceled || !result.filePath) {
+        return null;
+    }
+    await writeFile(result.filePath, Buffer.from(bytes));
+    return result.filePath;
 });
 
 ipcMain.handle('shell:open-external', async (_event, url: string) => {

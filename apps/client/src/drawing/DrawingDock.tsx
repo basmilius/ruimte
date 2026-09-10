@@ -18,11 +18,15 @@ import {
     Square,
     Type,
     Undo2,
-    Redo2
+    Redo2,
+    Copy,
+    Download,
+    MoreHorizontal
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { DRAWING_COLORS, type DrawingColor } from '@ruimte/contracts';
 import { activeZoomPreset, ZOOM_PRESETS } from '@/canvas/math';
+import { copyDrawingPng, copyDrawingSvg, saveDrawingPng, saveDrawingSvg } from '@/drawing/export';
 import { useDrawing, type DrawingStyle, type DrawingTool } from '@/state/drawing';
 import { BTN_GROUP, FLOAT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
@@ -103,7 +107,7 @@ function RadioRow({ label, value }: { label: string; value: string | number }) {
  * canvas dock returns null on a view of its own, so the two never share the bottom of the screen.
  */
 export function DrawingDock() {
-    const { tool, toolLocked, style, zoom, hasSelection, canUndo, canRedo, anyLocked } = useDrawing(
+    const { tool, toolLocked, style, zoom, hasSelection, canUndo, canRedo, anyLocked, exportBackground, empty } = useDrawing(
         useShallow((s) => ({
             tool: s.tool,
             toolLocked: s.toolLocked,
@@ -112,7 +116,9 @@ export function DrawingDock() {
             hasSelection: s.selection.length > 0,
             canUndo: s.past.length > 0,
             canRedo: s.future.length > 0,
-            anyLocked: s.elements.some((element) => element.locked)
+            anyLocked: s.elements.some((element) => element.locked),
+            exportBackground: s.exportBackground,
+            empty: s.elements.length === 0
         }))
     );
     const set = (patch: Partial<DrawingStyle>): void => useDrawing.getState().setStyle(patch);
@@ -291,6 +297,46 @@ export function DrawingDock() {
                 <Separator />
 
                 <div className={BTN_GROUP}>
+                    <Menu.Root>
+                        <Tooltip label="Export" name>
+                            <Menu.Trigger className="icon-btn">
+                                <Icon icon={MoreHorizontal} size={16} />
+                            </Menu.Trigger>
+                        </Tooltip>
+                        <Menu.Portal>
+                            <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={10} align="end">
+                                <Menu.Popup className="menu-popup min-w-52">
+                                    <div className={MENU_LABEL}>{hasSelection ? 'Export the selection' : 'Export the drawing'}</div>
+                                    <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDrawingPng()}>
+                                        <Icon icon={Copy} size={14} /> Copy as PNG
+                                    </Menu.Item>
+                                    <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDrawingPng()}>
+                                        <Icon icon={Download} size={14} /> Save PNG
+                                    </Menu.Item>
+                                    <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDrawingSvg()}>
+                                        <Icon icon={Copy} size={14} /> Copy as SVG
+                                    </Menu.Item>
+                                    <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDrawingSvg()}>
+                                        <Icon icon={Download} size={14} /> Save SVG
+                                    </Menu.Item>
+                                    <Menu.Separator className={MENU_SEPARATOR} />
+                                    <Menu.CheckboxItem
+                                        className="menu-item"
+                                        checked={exportBackground}
+                                        closeOnClick={false}
+                                        onCheckedChange={(checked) => useDrawing.getState().setExportBackground(checked)}
+                                    >
+                                        <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
+                                            <Menu.CheckboxItemIndicator>
+                                                <Icon icon={Check} size={12} />
+                                            </Menu.CheckboxItemIndicator>
+                                        </span>
+                                        With background
+                                    </Menu.CheckboxItem>
+                                </Menu.Popup>
+                            </Menu.Positioner>
+                        </Menu.Portal>
+                    </Menu.Root>
                     <Tooltip label="Undo" kbd="Cmd+Z" name>
                         <button className="icon-btn" disabled={!canUndo} onClick={() => useDrawing.getState().undo()}>
                             <Icon icon={Undo2} size={16} />
