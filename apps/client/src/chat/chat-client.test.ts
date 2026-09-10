@@ -14,7 +14,6 @@ const info = (chatId: string): ChatInfo => ({
     model: null,
     selection: { model: 'claude-sonnet-5', options: {} },
     runtimeMode: 'full-access',
-    interactionMode: 'default',
     status: 'idle',
     running: false,
     activeTurnId: null,

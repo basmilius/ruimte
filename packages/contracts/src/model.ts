@@ -47,10 +47,6 @@ export type ModelSelection = z.infer<typeof ModelSelectionSchema>;
 export const RuntimeModeSchema = z.enum(['supervised', 'auto-accept-edits', 'auto', 'full-access']);
 export type RuntimeMode = z.infer<typeof RuntimeModeSchema>;
 
-// How the agent approaches the task, separate from what it may touch.
-export const InteractionModeSchema = z.enum(['default', 'plan']);
-export type InteractionMode = z.infer<typeof InteractionModeSchema>;
-
 // What a provider's CLI can do, so a client never offers what it would drop and the daemon
 // never asks for what the protocol has no room for. Read by the composer and the thread rows.
 export const ProviderCapabilitiesSchema = z.object({
@@ -72,8 +68,6 @@ export const ProviderCapabilitiesSchema = z.object({
     asyncQuestions: z.boolean(),
     // Folding the context: a call of its own, a slash command sent as a turn, or nothing.
     compaction: z.enum(['native', 'prompt', 'none']),
-    // Reported by the daemon and read by nothing since the plan toggle went; a removal candidate.
-    planMode: z.enum(['native', 'prompt', 'none']),
     reportsCost: z.boolean(),
     reportsContextWindow: z.boolean(),
     slashCommands: z.boolean()

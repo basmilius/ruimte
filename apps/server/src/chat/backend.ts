@@ -1,4 +1,4 @@
-import type { ChatAttachment, ChatFileChange, ChatQuestion, InteractionMode, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type { ChatAttachment, ChatFileChange, ChatQuestion, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 
 /*
  * The seam between one chat and one CLI. A backend owns a process and the protocol it speaks; it
@@ -13,7 +13,6 @@ export interface BackendLaunch {
     env: Record<string, string>;
     selection: ModelSelection;
     runtimeMode: RuntimeMode;
-    interactionMode: InteractionMode;
     // The CLI's own session or thread id to continue, if the chat has one.
     resume: string | null;
     // How often this chat started a CLI; a protocol that numbers its own requests from zero

@@ -1,14 +1,4 @@
-import type {
-    ChatAttachment,
-    ChatCheckpointDiff,
-    ChatEvent,
-    ChatInfo,
-    ChatItem,
-    ContextSource,
-    InteractionMode,
-    ModelSelection,
-    RuntimeMode
-} from '@ruimte/contracts';
+import type { ChatAttachment, ChatCheckpointDiff, ChatEvent, ChatInfo, ChatItem, ContextSource, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 import { contextChangeNote } from '../context/context-note.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
 import type { ChatProvider } from '../providers/provider.ts';
@@ -83,19 +73,15 @@ export class ChatSession {
         return this.backend?.running === true;
     }
 
-    /* Model, permission or interaction changes; a turn in flight keeps its process until it ends. */
-    configure(patch: { selection?: ModelSelection; runtimeMode?: RuntimeMode; interactionMode?: InteractionMode }): ChatInfo {
+    /* Model and permission changes; a turn in flight keeps its process until it ends. */
+    configure(patch: { selection?: ModelSelection; runtimeMode?: RuntimeMode }): ChatInfo {
         const catalog = this.options.provider.catalog;
         const selection = patch.selection ? catalog.normalize(patch.selection) : this.thread.info.selection;
         const next: Partial<ChatInfo> = {
             selection,
-            runtimeMode: patch.runtimeMode ?? this.thread.info.runtimeMode,
-            interactionMode: patch.interactionMode ?? this.thread.info.interactionMode
+            runtimeMode: patch.runtimeMode ?? this.thread.info.runtimeMode
         };
-        const changed =
-            JSON.stringify(next.selection) !== JSON.stringify(this.thread.info.selection) ||
-            next.runtimeMode !== this.thread.info.runtimeMode ||
-            next.interactionMode !== this.thread.info.interactionMode;
+        const changed = JSON.stringify(next.selection) !== JSON.stringify(this.thread.info.selection) || next.runtimeMode !== this.thread.info.runtimeMode;
         if (!changed) {
             return this.thread.info;
         }
@@ -293,7 +279,6 @@ export class ChatSession {
             env: this.options.env,
             selection: info.selection,
             runtimeMode: info.runtimeMode,
-            interactionMode: info.interactionMode,
             resume: info.agentSessionId,
             generation,
             hasContext: this.options.hasContext()

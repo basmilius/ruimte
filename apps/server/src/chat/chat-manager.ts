@@ -98,7 +98,6 @@ export class ChatManager {
                   model: null,
                   selection,
                   runtimeMode: payload.runtimeMode ?? 'full-access',
-                  interactionMode: payload.interactionMode ?? 'default',
                   status: 'idle',
                   running: false,
                   activeTurnId: null,

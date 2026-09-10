@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { codexPromptPrefix, codexThreadOptions } from './codex.ts';
+import { codexThreadOptions } from './codex.ts';
 import { ProviderRegistry } from './registry.ts';
 
 describe('codex catalog', () => {
@@ -21,15 +21,9 @@ describe('codex catalog', () => {
 
 describe('codexThreadOptions', () => {
     test('maps the runtime modes to an approval policy and a sandbox', () => {
-        expect(codexThreadOptions('supervised', 'default')).toEqual({ approvalPolicy: 'untrusted', sandbox: 'read-only' });
-        expect(codexThreadOptions('auto-accept-edits', 'default')).toEqual({ approvalPolicy: 'untrusted', sandbox: 'workspace-write' });
-        expect(codexThreadOptions('auto', 'default')).toEqual({ approvalPolicy: 'on-request', sandbox: 'workspace-write' });
-        expect(codexThreadOptions('full-access', 'default')).toEqual({ approvalPolicy: 'never', sandbox: 'danger-full-access' });
-    });
-
-    test('plan mode makes the sandbox read-only and asks for a plan in the prompt', () => {
-        expect(codexThreadOptions('full-access', 'plan')).toEqual({ approvalPolicy: 'never', sandbox: 'read-only' });
-        expect(codexPromptPrefix('plan').startsWith('Plan mode:')).toBe(true);
-        expect(codexPromptPrefix('default')).toBe('');
+        expect(codexThreadOptions('supervised')).toEqual({ approvalPolicy: 'untrusted', sandbox: 'read-only' });
+        expect(codexThreadOptions('auto-accept-edits')).toEqual({ approvalPolicy: 'untrusted', sandbox: 'workspace-write' });
+        expect(codexThreadOptions('auto')).toEqual({ approvalPolicy: 'on-request', sandbox: 'workspace-write' });
+        expect(codexThreadOptions('full-access')).toEqual({ approvalPolicy: 'never', sandbox: 'danger-full-access' });
     });
 });

@@ -214,13 +214,11 @@ describe('ChatManager', () => {
         const info = manager.configure({
             chatId: 'chat-c',
             selection: { model: 'opus', options: { effort: 'max' } },
-            runtimeMode: 'supervised',
-            interactionMode: 'plan'
+            runtimeMode: 'supervised'
         });
         expect(info).toMatchObject({
             selection: { model: 'claude-opus-5', options: { effort: 'max', contextWindow: '1m' } },
             runtimeMode: 'supervised',
-            interactionMode: 'plan',
             usage: { contextWindow: 1000000 }
         });
         // Same again is a no-op and does not schedule a restart.

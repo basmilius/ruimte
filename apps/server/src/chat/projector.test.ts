@@ -12,7 +12,6 @@ const info: ChatInfo = {
     model: null,
     selection: { model: 'claude-sonnet-5', options: {} },
     runtimeMode: 'full-access',
-    interactionMode: 'default',
     status: 'running',
     running: true,
     activeTurnId: 'turn-1',

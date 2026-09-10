@@ -1,4 +1,4 @@
-import type { InteractionMode, ModelSelection, ProviderCapabilities, RuntimeMode } from '@ruimte/contracts';
+import type { ModelSelection, ProviderCapabilities, RuntimeMode } from '@ruimte/contracts';
 
 // Base arguments for a chat process; the session adds what the selection and the modes ask for.
 export const CLAUDE_CHAT_ARGS = [
@@ -26,7 +26,6 @@ const PERMISSION_MODE: Record<RuntimeMode, string | null> = {
 export interface ClaudeLaunch {
     selection: ModelSelection;
     runtimeMode: RuntimeMode;
-    interactionMode: InteractionMode;
     resume: string | null;
 }
 
@@ -39,8 +38,7 @@ export const claudeArgs = (launch: ClaudeLaunch): string[] => {
     if (typeof effort === 'string' && FLAG_EFFORTS.has(effort)) {
         args.push('--effort', effort);
     }
-    // Plan mode is a permission mode in the CLI, so it takes the place of the runtime mode.
-    const permissionMode = launch.interactionMode === 'plan' ? 'plan' : PERMISSION_MODE[launch.runtimeMode];
+    const permissionMode = PERMISSION_MODE[launch.runtimeMode];
     if (permissionMode) {
         args.push('--permission-mode', permissionMode);
     }
@@ -66,7 +64,6 @@ export const CLAUDE_CAPABILITIES: ProviderCapabilities = {
     allowAlways: true,
     asyncQuestions: false,
     compaction: 'prompt',
-    planMode: 'native',
     reportsCost: true,
     reportsContextWindow: true,
     slashCommands: true

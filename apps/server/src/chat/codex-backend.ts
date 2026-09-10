@@ -1,5 +1,5 @@
 import { CONTEXT_PROMPT } from '../context/context-note.ts';
-import { codexPromptPrefix, codexThreadOptions } from '../providers/codex.ts';
+import { codexThreadOptions } from '../providers/codex.ts';
 import type { ApprovalDecision, BackendEvent, BackendHost, BackendLaunch, ChatBackend, TurnInput } from './backend.ts';
 import { CodexProtocol } from './codex-protocol.ts';
 import { CodexTransport, type CodexFrame } from './codex-transport.ts';
@@ -17,8 +17,7 @@ const reason = (error: unknown): string => (error instanceof Error ? error.messa
  * One `codex app-server` process on JSON-RPC over stdio. `start` handshakes (initialize, then
  * thread/start or thread/resume) before the first turn goes out, so every later request knows the
  * thread id. Codex has no system prompt flag, so linked context is announced in front of the first
- * prompt instead. The runtime modes are an approval policy plus a sandbox; plan mode rides along in
- * the prompt because app-server 0.153 reports the collaboration mode but never takes it.
+ * prompt instead. The runtime modes are an approval policy plus a sandbox.
  */
 export class CodexBackend implements ChatBackend {
     private readonly launch: BackendLaunch;
@@ -59,7 +58,7 @@ export class CodexBackend implements ChatBackend {
         const params = {
             cwd: this.launch.cwd,
             model: this.launch.selection.model,
-            ...codexThreadOptions(this.launch.runtimeMode, this.launch.interactionMode)
+            ...codexThreadOptions(this.launch.runtimeMode)
         };
         let result: unknown;
         if (this.launch.resume) {
@@ -82,7 +81,7 @@ export class CodexBackend implements ChatBackend {
     }
 
     sendTurn(input: TurnInput): void {
-        const parts = [codexPromptPrefix(this.launch.interactionMode)];
+        const parts: string[] = [];
         if (this.hintPending) {
             this.hintPending = false;
             parts.push(`${CONTEXT_PROMPT}\n\n`);

@@ -1,4 +1,4 @@
-import type { InteractionMode, ProviderCapabilities, RuntimeMode } from '@ruimte/contracts';
+import type { ProviderCapabilities, RuntimeMode } from '@ruimte/contracts';
 
 // The app-server speaks JSON-RPC on stdio; the session adds nothing to the command line.
 export const CODEX_CHAT_ARGS = ['app-server'];
@@ -24,19 +24,7 @@ const THREAD_OPTIONS: Record<RuntimeMode, CodexThreadOptions> = {
     'full-access': { approvalPolicy: 'never', sandbox: 'danger-full-access' }
 };
 
-/*
- * Plan mode is not settable over the app-server protocol of 0.153 (the collaboration mode is only
- * reported, never taken), so it is a read-only sandbox plus the instruction in `codexPromptPrefix`.
- */
-export const codexThreadOptions = (runtimeMode: RuntimeMode, interactionMode: InteractionMode): CodexThreadOptions => {
-    const options = THREAD_OPTIONS[runtimeMode];
-    return interactionMode === 'plan' ? { ...options, sandbox: 'read-only' } : options;
-};
-
-export const codexPromptPrefix = (interactionMode: InteractionMode): string =>
-    interactionMode === 'plan'
-        ? 'Plan mode: do not change files or run commands that change state. Investigate, then answer with a plan for me to approve.\n\n'
-        : '';
+export const codexThreadOptions = (runtimeMode: RuntimeMode): CodexThreadOptions => THREAD_OPTIONS[runtimeMode];
 
 // What the app-server can do, as far as a client has to know.
 export const CODEX_CAPABILITIES: ProviderCapabilities = {
@@ -51,7 +39,6 @@ export const CODEX_CAPABILITIES: ProviderCapabilities = {
     allowAlways: true,
     asyncQuestions: true,
     compaction: 'native',
-    planMode: 'prompt',
     reportsCost: false,
     reportsContextWindow: true,
     slashCommands: false

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { AgentKindSchema, AgentStatusSchema } from './agent.ts';
-import { InteractionModeSchema, ModelSelectionSchema, RuntimeModeSchema } from './model.ts';
+import { ModelSelectionSchema, RuntimeModeSchema } from './model.ts';
 
 // The client picks the id (its node id), like a terminal session.
 export const ChatIdSchema = z.string().min(1);
@@ -25,7 +25,6 @@ export const ChatInfoSchema = z.object({
     model: z.string().nullable(),
     selection: ModelSelectionSchema,
     runtimeMode: RuntimeModeSchema,
-    interactionMode: InteractionModeSchema,
     status: AgentStatusSchema,
     // Whether the CLI process is alive right now. A dead one is started again with `--resume` on the next send.
     running: z.boolean(),
@@ -235,18 +234,14 @@ export const ChatCreatePayloadSchema = z.object({
     // A CLI session to continue, for a chat opened from a terminal that ran the agent.
     resume: z.string().optional(),
     selection: ModelSelectionSchema.optional(),
-    runtimeMode: RuntimeModeSchema.optional(),
-    // The client stopped sending this when the plan toggle went; the daemon still honors it.
-    interactionMode: InteractionModeSchema.optional()
+    runtimeMode: RuntimeModeSchema.optional()
 });
 export type ChatCreatePayload = z.infer<typeof ChatCreatePayloadSchema>;
 
 export const ChatConfigurePayloadSchema = z.object({
     chatId: ChatIdSchema,
     selection: ModelSelectionSchema.optional(),
-    runtimeMode: RuntimeModeSchema.optional(),
-    // As on create: kept for a stored thread that resumes in plan mode, never sent by the client.
-    interactionMode: InteractionModeSchema.optional()
+    runtimeMode: RuntimeModeSchema.optional()
 });
 export type ChatConfigurePayload = z.infer<typeof ChatConfigurePayloadSchema>;
 
