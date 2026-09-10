@@ -1,7 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { CornerLeftUp, Folder, FolderCheck, FolderPlus, Frame, Globe, LayoutGrid, MessageSquare, Minus, Search, StickyNote, Terminal, Zap } from 'lucide-react';
+import {
+    CornerLeftUp,
+    Folder,
+    FolderCheck,
+    FolderPlus,
+    Frame,
+    Globe,
+    LayoutGrid,
+    MessageSquare,
+    Minus,
+    PenTool,
+    Search,
+    StickyNote,
+    Terminal,
+    Zap
+} from 'lucide-react';
 import { isCanvasView, isOpenableView, type FsBrowseEntry, type ProjectViewKind } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { projectClient } from '@/project';
@@ -32,6 +47,7 @@ const VIEW_ICON: Record<ProjectViewKind, React.ReactNode> = {
     chat: KIND_ICON.chat,
     terminal: KIND_ICON.terminal,
     browser: KIND_ICON.browser,
+    drawing: <Icon icon={PenTool} size={14} />,
     separator: <Icon icon={Minus} size={14} />
 };
 

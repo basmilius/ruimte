@@ -4,6 +4,7 @@ import {
     MAIN_VIEW_NAME,
     isCanvasView,
     isOpenableView,
+    isSessionView,
     type NodeTitleSource,
     type ProjectCanvasView,
     type ProjectDocument,
@@ -282,7 +283,7 @@ export const useDocument = create<DocumentState>((set, get) => ({
     updateStandalone(id, patch) {
         set((state) => ({
             views: state.views.map((view) => {
-                if (view.id !== id || isCanvasView(view) || view.kind === 'separator') {
+                if (view.id !== id || !isSessionView(view)) {
                     return view;
                 }
                 if (view.kind === 'browser') {
@@ -345,7 +346,8 @@ export const useDocument = create<DocumentState>((set, get) => ({
         const views = state.exportViews();
         const source = views.find((view) => view.id === viewId);
         const target = views.find((view) => view.id === canvasViewId);
-        if (!source || isCanvasView(source) || source.kind === 'separator' || !target || !isCanvasView(target)) {
+        // A drawing is a file, not a session, so it is mirrored onto a canvas instead of moved there.
+        if (!source || !isSessionView(source) || !target || !isCanvasView(target)) {
             return false;
         }
         const size = NODE_SIZE[source.kind];

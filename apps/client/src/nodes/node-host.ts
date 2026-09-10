@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { isCanvasView, type AgentKind, type NodeKind, type NodeTitleSource, type ProjectView, type RuntimeMode } from '@ruimte/contracts';
+import { isSessionView, type AgentKind, type NodeKind, type NodeTitleSource, type ProjectView, type RuntimeMode } from '@ruimte/contracts';
 import { DEFAULT_TITLES, useCanvas, type CanvasNode } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useProviders } from '@/state/providers';
@@ -42,7 +42,7 @@ const hostOfNode = (node: CanvasNode): NodeHost => ({
 });
 
 const hostOfView = (view: ProjectView): NodeHost | null => {
-    if (isCanvasView(view) || view.kind === 'separator') {
+    if (!isSessionView(view)) {
         return null;
     }
     if (view.kind === 'browser') {

@@ -59,6 +59,14 @@ import {
 } from './git.ts';
 import { AuthRevokePayloadSchema, AuthSessionsResultSchema, EndpointInfoSchema, PairingTokenResultSchema } from './auth.ts';
 import { ContextSetPayloadSchema } from './context.ts';
+import {
+    DrawingChangedEventSchema,
+    DrawingCopyPayloadSchema,
+    DrawingOpenResultSchema,
+    DrawingSavePayloadSchema,
+    DrawingSaveResultSchema,
+    DrawingTargetPayloadSchema
+} from './drawing.ts';
 import { ProviderListResultSchema } from './model.ts';
 import {
     ProjectChangedEventSchema,
@@ -93,6 +101,7 @@ export * from './agent.ts';
 export * from './auth.ts';
 export * from './chat.ts';
 export * from './context.ts';
+export * from './drawing.ts';
 export * from './envelope.ts';
 export * from './fs.ts';
 export * from './git.ts';
@@ -140,6 +149,10 @@ export const REQUEST_SCHEMAS = {
     'project.close': { payload: ProjectTargetPayloadSchema, result: EmptySchema },
     'project.setIcon': { payload: ProjectSetIconPayloadSchema, result: ProjectSummaryResultSchema },
     'project.delete': { payload: ProjectDeletePayloadSchema, result: EmptySchema },
+    'drawing.open': { payload: DrawingTargetPayloadSchema, result: DrawingOpenResultSchema },
+    'drawing.save': { payload: DrawingSavePayloadSchema, result: DrawingSaveResultSchema },
+    'drawing.close': { payload: DrawingTargetPayloadSchema, result: EmptySchema },
+    'drawing.copy': { payload: DrawingCopyPayloadSchema, result: EmptySchema },
     'fs.browse': { payload: FsBrowsePayloadSchema, result: FsBrowseResultSchema },
     'fs.reveal': { payload: FsRevealPayloadSchema, result: EmptySchema },
     'fs.search': { payload: FsSearchPayloadSchema, result: FsSearchResultSchema },
@@ -189,6 +202,7 @@ export const EVENT_SCHEMAS = {
     'chat.event': ChatEventEnvelopeSchema,
     'project.changed': ProjectChangedEventSchema,
     'project.summary': ProjectSummaryEventSchema,
+    'drawing.changed': DrawingChangedEventSchema,
     'fs.changed': FsChangedEventSchema,
     'git.status': GitStatusEventSchema,
     'git.progress': GitProgressEventSchema

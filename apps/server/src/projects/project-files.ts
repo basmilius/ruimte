@@ -93,8 +93,8 @@ const mapViews = (views: ProjectView[], map: (cwd: string) => string): ProjectVi
         if (isCanvasView(view)) {
             return { ...view, nodes: view.nodes.map((node: ProjectNode) => mapCwd(node, map)) };
         }
-        // A browser has no folder and a separator has nothing at all.
-        return view.kind === 'browser' || view.kind === 'separator' ? view : { ...view, node: mapCwd(view.node, map) };
+        // Only a chat and a terminal carry a node; every other view has no folder to map.
+        return view.kind === 'chat' || view.kind === 'terminal' ? { ...view, node: mapCwd(view.node, map) } : view;
     });
 
 /*

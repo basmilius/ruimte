@@ -1,4 +1,4 @@
-import { isCanvasView, type NodeKind } from '@ruimte/contracts';
+import { isSessionView, type NodeKind } from '@ruimte/contracts';
 import { projectNodes } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
@@ -21,7 +21,7 @@ const liveNodes = (): Map<string, NodeKind> => {
         live.set(node.id, node.kind);
     }
     for (const view of useDocument.getState().views) {
-        if (!isCanvasView(view) && view.kind !== 'separator') {
+        if (isSessionView(view)) {
             // A standalone view is one node without a canvas, under the same id as its session.
             live.set(view.id, view.kind);
         }
