@@ -372,10 +372,16 @@ canvas, against Ruimte, one verdict each.
   `WebviewLayer`), because a header that moved would move every node's contents on the canvas.
 - Tooltips are the `Tooltip` component in `src/ui/Tooltip.tsx`, never a `title` attribute.
   One `TooltipProvider` at the app root gives the shared 150 ms delay.
-- Escape leaves node mode unless a terminal node has "Send Escape to the app" on (its context
-  menu; `escapeToApp` in `project.json`, an "Esc" chip in the header). Cmd+Escape and
-  Ctrl+Escape always leave, so a node can never trap the keyboard. On Windows Ctrl+Escape is
-  the Start menu, so a Windows build needs another always-works chord.
+- Escape in a terminal node goes to the program (Claude Code interrupts on it, vim lives on it).
+  Leaving the node is Cmd+Escape on macOS and Ctrl+Shift+Escape elsewhere, plus the dock's mode
+  chip and a click on the canvas; the chord is `isLeaveNodeChord` in
+  `apps/client/src/terminal/keymap.ts`, and the terminal's key handler swallows every other
+  Escape before the canvas listener sees it. Chat, browser and note nodes still leave on plain
+  Escape. Ctrl+Escape is the Windows Start menu and Ctrl+Shift+Escape is its Task Manager, so a
+  Windows build still has no chord the OS leaves alone: the mode chip is the way out there.
+  "Send Escape to the app" (`escapeToApp` in `project.json`, an "Esc" chip in the header) does
+  nothing now that Escape always reaches the program; the field and the toggle stay for canvases
+  that carry it.
 - Formatting is prettier (`.prettierrc`: single quotes, width 160, 4 spaces). Run
   `bun run format` before a commit.
 - A line between two non-agent nodes means nothing to the daemon; it is a drawing. Only the

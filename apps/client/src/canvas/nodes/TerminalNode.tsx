@@ -10,7 +10,9 @@ import { useSessions } from '@/state/sessions';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
+import { isApplePlatform } from '@/desktop/bridge';
 import { sessionClient } from '@/terminal';
+import { isLeaveNodeChord } from '@/terminal/keymap';
 import { lastScreenOf, registerTerminal } from '@/terminal/registry';
 import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
 import { useTransportStatus } from '@/transport/status';
@@ -100,15 +102,14 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
 
         term.attachCustomKeyEventHandler((e) => {
             if (e.key === 'Escape') {
-                // Escape returns to the canvas unless the node asked to pass it on (vim, less). Cmd or
-                // Ctrl with it always leaves, so a toggled node can never trap the keyboard. The state
-                // is read per key, so flipping the toggle does not rebuild the terminal.
-                const toApp = useCanvas.getState().nodes[id]?.escapeToApp === true && !e.metaKey && !e.ctrlKey;
-                if (toApp) {
-                    // The canvas listens on window; a swallowed Escape must not reach it.
-                    e.stopPropagation();
+                // Escape is the program's (an interrupt, a mode change); only the leave chord returns
+                // to the canvas, and it does so by falling through to the window listener unwritten.
+                if (isLeaveNodeChord(e, isApplePlatform())) {
+                    return false;
                 }
-                return toApp;
+                // The canvas listens on window, where any Escape would end node mode.
+                e.stopPropagation();
+                return true;
             }
             if (e.type === 'keydown' && e.key === 'Enter' && e.shiftKey) {
                 e.preventDefault();

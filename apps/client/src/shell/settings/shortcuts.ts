@@ -44,7 +44,8 @@ export const CANVAS_SHORTCUTS: readonly ShortcutGroup[] = [
         shortcuts: [
             { keys: 'Tab', label: 'Move focus to the next node' },
             { keys: '↵', label: 'Step into the focused node' },
-            { keys: 'Esc', label: 'Return from a node to the canvas' }
+            { keys: 'Esc', label: 'Return from a node to the canvas, except from a terminal, which hands Escape to the program it runs' },
+            { keys: '⌘ Esc', label: 'Leave a terminal node (⌃ ⇧ Esc on Windows and Linux)' }
         ]
     }
 ];
