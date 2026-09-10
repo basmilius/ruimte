@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { CornerLeftUp, Folder, FolderCheck, FolderPlus, Globe, LayoutGrid, MessageSquare, Search, StickyNote, Terminal, Zap } from 'lucide-react';
-import type { FsBrowseEntry } from '@ruimte/contracts';
+import { CornerLeftUp, Folder, FolderCheck, FolderPlus, Frame, Globe, LayoutGrid, MessageSquare, Minus, Search, StickyNote, Terminal, Zap } from 'lucide-react';
+import { isCanvasView, isOpenableView, type FsBrowseEntry, type ProjectViewKind } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { projectClient } from '@/project';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
+import { revealNode, showView } from '@/project/views';
 import { appCommands, type Command } from '@/shell/commands';
 import { readRecents, rememberRecent, sortByRecency } from '@/shell/palette-recents';
 import { useCanvas, type NodeKind } from '@/state/canvas';
+import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
@@ -25,6 +27,14 @@ const KIND_ICON: Record<NodeKind, React.ReactNode> = {
     note: <Icon icon={StickyNote} size={14} />
 };
 
+const VIEW_ICON: Record<ProjectViewKind, React.ReactNode> = {
+    canvas: <Icon icon={Frame} size={14} />,
+    chat: KIND_ICON.chat,
+    terminal: KIND_ICON.terminal,
+    browser: KIND_ICON.browser,
+    separator: <Icon icon={Minus} size={14} />
+};
+
 // Typing a path turns the palette into a folder browser; anything else searches nodes and actions.
 const isPathQuery = (query: string): boolean => query.startsWith('/') || query.startsWith('~') || query.startsWith('./') || query.startsWith('../');
 
@@ -32,7 +42,7 @@ const BROWSE_DEBOUNCE_MS = 60;
 
 interface Entry extends Command {
     icon: React.ReactNode;
-    section: 'Recent' | 'Jump to' | 'Projects' | 'Actions' | 'Folders';
+    section: 'Recent' | 'Jump to' | 'Views' | 'Projects' | 'Actions' | 'Folders';
 }
 
 const LIST_ID = 'palette-list';
@@ -61,6 +71,8 @@ export function CommandPalette() {
     const setOpen = useUi((s) => s.setPaletteOpen);
     const nodes = useCanvas((s) => s.nodes);
     const order = useCanvas((s) => s.order);
+    const views = useDocument((s) => s.views);
+    const activeViewId = useDocument((s) => s.activeViewId);
     const folder = useProject((s) => s.current?.folder ?? null);
     const projects = useProject((s) => s.projects);
     const currentProjectId = useProject((s) => s.current?.projectId ?? null);
@@ -156,17 +168,32 @@ export function CommandPalette() {
             }
             return list;
         }
-        const jumps: Entry[] = order
-            .map((id) => nodes[id]!)
-            .filter((node) => node.kind !== 'group')
-            .map((node) => ({
-                id: `node-${node.id}`,
-                label: node.title,
-                hint: node.kind,
-                icon: KIND_ICON[node.kind],
-                section: 'Jump to',
-                run: () => useCanvas.getState().goToNode(node.id)
-            }));
+        // Every view, not only the canvas on screen; a node elsewhere says where it lives.
+        const jumps: Entry[] = views.flatMap((view) => {
+            if (!isCanvasView(view)) {
+                return [];
+            }
+            const here = view.id === activeViewId;
+            const viewNodes = here ? order.map((id) => nodes[id]!) : view.nodes;
+            return viewNodes
+                .filter((node) => node.kind !== 'group')
+                .map((node) => ({
+                    id: `node-${node.id}`,
+                    label: node.title,
+                    hint: here ? node.kind : `${node.kind} in ${view.name}`,
+                    icon: KIND_ICON[node.kind],
+                    section: 'Jump to' as const,
+                    run: () => revealNode(node.id)
+                }));
+        });
+        const viewSwitches: Entry[] = views.filter(isOpenableView).map((view, index) => ({
+            id: `view-${view.id}`,
+            label: view.name ?? '',
+            shortcut: index < 9 ? `⌘${index + 1}` : undefined,
+            icon: VIEW_ICON[view.kind],
+            section: 'Views' as const,
+            run: () => showView(view.id)
+        }));
         const switches: Entry[] = projects
             .filter((project) => project.available && project.projectId !== currentProjectId)
             .map((project) => ({
@@ -189,14 +216,15 @@ export function CommandPalette() {
             return [
                 ...split.recent.map((command) => asEntry(command, 'Recent')),
                 ...jumps,
+                ...viewSwitches,
                 ...switches,
                 ...split.rest.map((command) => asEntry(command, 'Actions'))
             ];
         }
-        return [...jumps, ...switches, ...commands.map((command) => asEntry(command, 'Actions'))].filter((entry) =>
+        return [...jumps, ...viewSwitches, ...switches, ...commands.map((command) => asEntry(command, 'Actions'))].filter((entry) =>
             matches(query, `${entry.label} ${entry.hint ?? ''}`)
         );
-    }, [browsing, browse, nodes, order, query, recents, projects, currentProjectId]);
+    }, [browsing, browse, nodes, order, views, activeViewId, query, recents, projects, currentProjectId]);
 
     // While browsing nothing is highlighted until the arrows say so, so Enter opens what was typed.
     const active = browsing ? (index >= 0 ? entries[index] : undefined) : entries[Math.min(index, entries.length - 1)];
@@ -210,8 +238,8 @@ export function CommandPalette() {
             setIndex(-1);
             return;
         }
-        // Jumping to a node or a project is not a command; only what "Actions" lists comes back.
-        if (entry.section !== 'Jump to' && entry.section !== 'Projects') {
+        // Jumping to a node, a view or a project is not a command; only what "Actions" lists comes back.
+        if (entry.section !== 'Jump to' && entry.section !== 'Views' && entry.section !== 'Projects') {
             setRecents(rememberRecent(entry.id));
         }
         setOpen(false);
@@ -281,10 +309,8 @@ export function CommandPalette() {
                                         id={optionId(i)}
                                         role="option"
                                         aria-selected={entry === active}
-                                        className={clsx(
-                                            'flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm',
-                                            entry === active ? 'bg-surface-sunken text-text' : 'text-text-muted'
-                                        )}
+                                        data-active={entry === active}
+                                        className="cursor-row flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-text-muted"
                                         onMouseEnter={() => setIndex(i)}
                                         onClick={() => run(entry)}
                                     >

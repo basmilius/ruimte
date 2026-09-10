@@ -17,11 +17,11 @@ import type {
     AgentKind,
     AgentStatus,
     NodeKind,
-    ProjectContent,
-    ProjectDocument,
+    NodeTitleSource,
+    ProjectCanvasView,
     ProjectLayout,
-    ProjectLocal,
     ProjectNode,
+    ProjectViewLocal,
     RuntimeMode
 } from '@ruimte/contracts';
 
@@ -34,6 +34,8 @@ export interface CanvasNode extends ProjectNode {
 
 export interface AddNodeOptions {
     title?: string;
+    /* Browsers only: the page it opens on, instead of the default address. */
+    url?: string;
     cwd?: string;
     command?: string;
     resume?: string;
@@ -97,6 +99,12 @@ interface Viewport {
 }
 
 interface CanvasState {
+    /*
+     * The view whose content this store is holding. The document store flips `activeViewId` before
+     * it hands the canvas the next view, so pairing on that id makes the canvas stand in for a view
+     * it does not hold yet; anything asking which nodes the project has must pair on this instead.
+     */
+    viewId: string | null;
     camera: Camera;
     viewport: Viewport;
     nodes: Record<string, CanvasNode>;
@@ -113,6 +121,8 @@ interface CanvasState {
     locks: Locks;
     /* Node currently under a resize handle, so it can show its size. Transient. */
     resizing: string | null;
+    /* A pointer gesture is running (pan, box, move, resize, link), so nothing else may take the pointer. */
+    gesturing: boolean;
     /* True for the one update that swaps in another project's content, so nobody reads it as edits. */
     loading: boolean;
     past: Snapshot[];
@@ -139,9 +149,12 @@ interface CanvasState {
     settleMove(): void;
     resizeNode(id: string, rect: Rect): void;
     setResizing(id: string | null): void;
+    setGesturing(gesturing: boolean): void;
     bringToFront(id: string): void;
     setNodeAccent(id: string, accent: string | null): void;
-    renameNode(id: string, title: string): void;
+    /* A rename is a person's unless the session that named itself says otherwise. */
+    /* A null source unnames the node: nothing named it, so its own source may name it again. */
+    renameNode(id: string, title: string, source?: NodeTitleSource | null): void;
     /* Changes what a node carries (its page, its folder) without touching its placement. */
     updateNode(id: string, patch: Partial<Pick<CanvasNode, 'url' | 'cwd' | 'command' | 'resume' | 'body' | 'color' | 'provider'>>): void;
     duplicateNode(id: string): void;
@@ -168,14 +181,15 @@ interface CanvasState {
     applyLayout(name: string): void;
     deleteLayout(name: string): void;
 
-    /* Replaces the whole canvas with a project's content; the camera comes from the machine-local state. */
-    loadDocument(document: ProjectDocument | null, local: ProjectLocal | null): void;
-    exportContent(): Pick<ProjectContent, 'nodes' | 'texts' | 'edges' | 'layouts'>;
+    /* Replaces the canvas with one view of the project; the camera comes from the machine-local state. */
+    loadView(view: ProjectCanvasView | null, local: ProjectViewLocal | null): void;
+    exportContent(): Pick<ProjectCanvasView, 'nodes' | 'texts' | 'edges' | 'layouts'>;
     undo(): void;
     redo(): void;
 }
 
-const NODE_SIZE: Record<NodeKind, { w: number; h: number }> = {
+/* What a node of each kind starts out as, also when it comes back from a view of its own. */
+export const NODE_SIZE: Record<NodeKind, { w: number; h: number }> = {
     terminal: { w: 560, h: 360 },
     chat: { w: 480, h: 520 },
     browser: { w: 720, h: 480 },
@@ -183,7 +197,8 @@ const NODE_SIZE: Record<NodeKind, { w: number; h: number }> = {
     note: { w: 320, h: 240 }
 };
 
-const TITLES: Record<NodeKind, string> = {
+/* What a node of each kind is called before anything names it. */
+export const DEFAULT_TITLES: Record<NodeKind, string> = {
     terminal: 'Terminal',
     chat: 'New chat',
     browser: 'Browser',
@@ -256,7 +271,7 @@ const hiddenIn = (nodes: Record<string, CanvasNode>): Set<string> => {
 };
 
 // Ids double as daemon session ids and end up in a shared file, so they must not repeat across machines.
-const nextId = (prefix: string): string => `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+export const nextId = (prefix: string): string => `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 
 const snapshotOf = (s: Pick<CanvasState, 'nodes' | 'order' | 'texts' | 'edges' | 'layouts'>): Snapshot => ({
     nodes: s.nodes,
@@ -270,6 +285,7 @@ const snapshotOf = (s: Pick<CanvasState, 'nodes' | 'order' | 'texts' | 'edges' |
 const remember = (s: CanvasState): Pick<CanvasState, 'past' | 'future'> => ({ past: [...s.past.slice(-(HISTORY_LIMIT - 1)), snapshotOf(s)], future: [] });
 
 export const useCanvas = create<CanvasState>((set, get) => ({
+    viewId: null,
     camera: { x: 0, y: 0, zoom: 1 },
     viewport: { w: 0, h: 0 },
     nodes: {},
@@ -284,6 +300,7 @@ export const useCanvas = create<CanvasState>((set, get) => ({
     editingTextId: null,
     locks: { pan: false, zoom: false, move: false, resize: false },
     resizing: null,
+    gesturing: false,
     loading: false,
     past: [],
     future: [],
@@ -413,11 +430,21 @@ export const useCanvas = create<CanvasState>((set, get) => ({
         // The handle goes down before the first resize, so this is where the old size is remembered.
         set((s) => (id !== null && s.resizing === null ? { resizing: id, ...remember(s) } : { resizing: id }));
     },
+    setGesturing(gesturing) {
+        set({ gesturing });
+    },
     setNodeAccent(id, accent) {
         set((s) => (s.nodes[id] ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], accent: accent ?? undefined } } } : {}));
     },
-    renameNode(id, title) {
-        set((s) => (s.nodes[id] ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], title } } } : {}));
+    renameNode(id, title, source = 'user') {
+        set((s) => {
+            const node = s.nodes[id];
+            // A rename that changes nothing claims nothing: the editor closes on a blur either way.
+            if (!node || (node.title === title && (node.titleSource ?? null) === source)) {
+                return {};
+            }
+            return { nodes: { ...s.nodes, [id]: { ...node, title, titleSource: source ?? undefined } } };
+        });
     },
     updateNode(id, patch) {
         set((s) => (s.nodes[id] ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], ...patch } } } : {}));
@@ -449,10 +476,11 @@ export const useCanvas = create<CanvasState>((set, get) => ({
         const node: CanvasNode = {
             id,
             kind,
-            title: options.title ?? TITLES[kind],
+            title: options.title ?? DEFAULT_TITLES[kind],
             x: snapToGrid(at.x - size.w / 2),
             y: snapToGrid(at.y - size.h / 2),
             ...size,
+            url: options.url,
             cwd: options.cwd ?? host?.worktree?.path,
             command: options.command,
             resume: options.resume,
@@ -474,7 +502,7 @@ export const useCanvas = create<CanvasState>((set, get) => ({
         const group: CanvasNode = {
             id,
             kind: 'group',
-            title: TITLES.group,
+            title: DEFAULT_TITLES.group,
             x: snapToGrid(bounds.x - GROUP_PADDING),
             y: snapToGrid(bounds.y - GROUP_PADDING - GROUP_HEADER),
             w: snapToGrid(bounds.w + GROUP_PADDING * 2),
@@ -620,16 +648,17 @@ export const useCanvas = create<CanvasState>((set, get) => ({
         set((s) => ({ layouts: s.layouts.filter((entry) => entry.name !== name) }));
     },
 
-    loadDocument(document, local) {
-        const nodes = document ? Object.fromEntries(document.nodes.map((node) => [node.id, node])) : {};
-        const texts = document ? Object.fromEntries(document.texts.map((text) => [text.id, text])) : {};
+    loadView(view, local) {
+        const nodes = view ? Object.fromEntries(view.nodes.map((node) => [node.id, node])) : {};
+        const texts = view ? Object.fromEntries(view.texts.map((text) => [text.id, text])) : {};
         set({
             loading: true,
+            viewId: view?.id ?? null,
             nodes,
-            order: document ? document.nodes.map((node) => node.id) : [],
+            order: view ? view.nodes.map((node) => node.id) : [],
             texts,
-            edges: document?.edges ?? [],
-            layouts: document?.layouts ?? [],
+            edges: view?.edges ?? [],
+            layouts: view?.layouts ?? [],
             linkDraft: null,
             hidden: hiddenIn(nodes),
             selection: [],

@@ -36,6 +36,16 @@ export const CANVAS_SHORTCUTS: readonly ShortcutGroup[] = [
         ]
     },
     {
+        title: 'Views',
+        shortcuts: [
+            { keys: '⌘ 1', label: 'Go to the first view, up to ⌘ 9 for the ninth' },
+            { keys: '⇧ ⌘ [', label: 'Previous view' },
+            { keys: '⇧ ⌘ ]', label: 'Next view' },
+            { keys: '⌘ T', label: 'New canvas view' },
+            { keys: 'F2', label: 'Rename the view or node the sidebar has focus on' }
+        ]
+    },
+    {
         title: 'Panels',
         shortcuts: [{ keys: '⌘ ⌥ B', label: 'Toggle the panel that was open last' }]
     },

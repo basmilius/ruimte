@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import type { AgentStatus, ChatEvent, ChatInfo, ChatItem } from '@ruimte/contracts';
-import type { CanvasNode } from '@/state/canvas';
-import { nodeStatus, useSessions } from '@/state/sessions';
+import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
 
 interface ChatState {
     info: ChatInfo;
@@ -19,6 +18,8 @@ export interface ChatSink {
 
 interface ChatsStore extends ChatSink {
     byNodeId: ChatsById;
+    /* Drops every thread. The chats keep running on the daemon; this client is done looking at them. */
+    clear(): void;
 }
 
 const applyEvent = (state: ChatState, event: ChatEvent): ChatState => {
@@ -75,11 +76,14 @@ export const useChats = create<ChatsStore>((set) => ({
             delete next[chatId];
             return { byNodeId: next };
         });
+    },
+    clear() {
+        set({ byNodeId: {} });
     }
 }));
 
 /* Status of one node, read from whichever store owns it. Both hooks subscribe, so a change in either re-renders. */
-export const useNodeStatus = (node: CanvasNode): AgentStatus | undefined => {
+export const useNodeStatus = (node: StatusOf): AgentStatus | undefined => {
     const session = useSessions((s) => s.byNodeId[node.id]);
     const chat = useChats((s) => s.byNodeId[node.id]);
     return nodeStatus(node, session ? { [node.id]: session } : {}, chat ? { [node.id]: chat } : {});

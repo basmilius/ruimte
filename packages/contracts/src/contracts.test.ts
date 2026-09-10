@@ -208,26 +208,42 @@ describe('agent and chat', () => {
 
 describe('project', () => {
     test('a note node carries its body and color, and an edge may connect any two ids without a label', () => {
-        const content = {
-            name: 'p',
-            color: 'violet',
+        const view = {
+            kind: 'canvas',
+            id: 'main',
+            name: 'Canvas',
             nodes: [{ id: 'n1', kind: 'note', title: 'Plan', x: 0, y: 0, w: 320, h: 240, body: '# Plan', color: 'blue' }],
             texts: [],
             edges: [{ id: 'e1', from: 'n1', to: 'b1' }]
         };
+        const content = { name: 'p', color: 'violet', views: [view] };
         const { payload } = REQUEST_SCHEMAS['project.save'];
         expect(payload.safeParse({ projectId: 'p1', baseRev: 0, content }).success).toBe(true);
-        expect(payload.safeParse({ projectId: 'p1', baseRev: 0, content: { ...content, nodes: [{ ...content.nodes[0], kind: 'sticky' }] } }).success).toBe(
-            false
-        );
+        expect(
+            payload.safeParse({ projectId: 'p1', baseRev: 0, content: { ...content, views: [{ ...view, nodes: [{ ...view.nodes[0], kind: 'sticky' }] }] } })
+                .success
+        ).toBe(false);
+        // A project always has a view; the last one that goes leaves an empty canvas behind.
+        expect(payload.safeParse({ projectId: 'p1', baseRev: 0, content: { ...content, views: [] } }).success).toBe(false);
     });
 
-    test('a canvas file written before icons parses, with and without one', () => {
-        const before = { version: 1, rev: 4, name: 'p', color: 'violet', nodes: [], texts: [], edges: [] };
+    test('a separator view carries an id and, if a person gave it one, a label', () => {
+        const view = { kind: 'canvas', id: 'main', name: 'Canvas', nodes: [], texts: [], edges: [] };
+        const document = (views: unknown[]) => ProjectDocumentSchema.safeParse({ version: 2, rev: 1, name: 'p', color: 'violet', views });
+        expect(document([view, { kind: 'separator', id: 's1' }]).success).toBe(true);
+        expect(document([view, { kind: 'separator', id: 's1', name: 'Agents' }]).success).toBe(true);
+        // An empty label is not a label: a separator without one is the bare line.
+        expect(document([view, { kind: 'separator', id: 's1', name: '' }]).success).toBe(false);
+        expect(document([view, { kind: 'separator' }]).success).toBe(false);
+    });
+
+    test('a canvas file without an icon parses, and only the two kinds a person picks are allowed', () => {
+        const view = { kind: 'canvas', id: 'main', name: 'Canvas', nodes: [], texts: [], edges: [] };
+        const before = { version: 2, rev: 4, name: 'p', color: 'violet', views: [view] };
         const parsed = ProjectDocumentSchema.safeParse(before);
         expect(parsed.success).toBe(true);
         expect(parsed.success && parsed.data.icon).toBeUndefined();
-        expect(parsed.success && parsed.data.layouts).toEqual([]);
+        expect(parsed.success && parsed.data.views[0]!.kind === 'canvas' && parsed.data.views[0]!.layouts).toEqual([]);
 
         expect(ProjectDocumentSchema.safeParse({ ...before, icon: { kind: 'emoji', value: '\u{1f680}' } }).success).toBe(true);
         expect(ProjectDocumentSchema.safeParse({ ...before, icon: { kind: 'lucide', value: 'rocket' } }).success).toBe(true);

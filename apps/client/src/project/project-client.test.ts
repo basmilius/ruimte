@@ -1,6 +1,17 @@
 import { describe, expect, test } from 'bun:test';
-import type { EventMap, EventType, ProjectDocument, ProjectLocal, ProjectPanels, ProjectSummary, RequestMap, RequestType } from '@ruimte/contracts';
+import type {
+    EventMap,
+    EventType,
+    ProjectCanvasView,
+    ProjectDocument,
+    ProjectLocal,
+    ProjectPanels,
+    ProjectSummary,
+    RequestMap,
+    RequestType
+} from '@ruimte/contracts';
 import { useCanvas } from '../state/canvas';
+import { useDocument } from '../state/document';
 import { useFiles } from '../state/files';
 import { useUi } from '../state/ui';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
@@ -20,21 +31,29 @@ const summary = (projectId: string, folder: string | null = null): ProjectSummar
     nameSource: 'chosen'
 });
 
-const document = (rev: number, nodes: ProjectDocument['nodes'] = []): ProjectDocument => ({
-    version: 1,
-    rev,
-    name: 'p',
-    color: '#000',
+const canvasView = (id: string, nodes: ProjectCanvasView['nodes'] = []): ProjectCanvasView => ({
+    kind: 'canvas',
+    id,
+    name: id,
     nodes,
     texts: [],
     edges: [],
     layouts: []
 });
 
+const document = (rev: number, views: ProjectDocument['views'] = [canvasView('main')]): ProjectDocument => ({
+    version: 2,
+    rev,
+    name: 'p',
+    color: '#000',
+    views
+});
+
 class FakeTransport implements Transport {
     status: TransportStatus = 'open';
     readonly calls: Call[] = [];
     projects: ProjectSummary[] = [summary('p1', '/repo')];
+    views: ProjectDocument['views'] = [canvasView('main')];
     rev = 3;
     panels: ProjectPanels | undefined = undefined;
     private readonly statusHandlers = new Set<(status: TransportStatus) => void>();
@@ -48,8 +67,12 @@ class FakeTransport implements Transport {
             case 'project.open': {
                 const wanted = (payload as { projectId?: string }).projectId;
                 const target = this.projects.find((project) => project.projectId === wanted) ?? summary((payload as { name?: string }).name ?? 'new');
-                const local: ProjectLocal = { camera: { x: 5, y: 6, zoom: 1 }, focusedNodeId: null, panels: this.panels };
-                return Promise.resolve({ summary: target, document: document(this.rev), local } as RequestMap[T]['result']);
+                const local: ProjectLocal = {
+                    activeViewId: 'main',
+                    views: { main: { camera: { x: 5, y: 6, zoom: 1 }, focusedNodeId: null } },
+                    panels: this.panels
+                };
+                return Promise.resolve({ summary: target, document: document(this.rev, this.views), local } as RequestMap[T]['result']);
             }
             case 'project.save': {
                 const { baseRev } = payload as { baseRev: number };
@@ -144,14 +167,14 @@ const makeSink = () => {
 const tick = (ms = 5): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 const setup = () => {
-    useCanvas.getState().loadDocument(null, null);
+    useDocument.getState().load(null, null);
     useUi.setState({ panel: { open: false, kind: 'files' }, preview: { open: false }, panelWidth: null, previewWidth: null });
     useFiles.setState({ projectId: null, tabs: [], active: null, expandedDirs: [] });
     const transport = new FakeTransport();
     const { sink, state } = makeSink();
     const storage = new Map<string, string>();
     const panels = new PanelsPort();
-    const client = new ProjectClient(transport, useCanvas, panels, sink, {
+    const client = new ProjectClient(transport, useCanvas, useDocument, panels, sink, {
         saveDelayMs: 1,
         localDelayMs: 1,
         storage: {
@@ -184,23 +207,47 @@ describe('ProjectClient', () => {
         useCanvas.getState().addNode('terminal', { x: 0, y: 0 });
         expect(state.dirty).toBe(true);
         await tick(10);
-        const save = transport.of('project.save')[0]?.payload as { baseRev: number; content: { nodes: unknown[] } };
+        const save = transport.of('project.save')[0]?.payload as { baseRev: number; content: { views: ProjectCanvasView[] } };
         expect(save.baseRev).toBe(3);
-        expect(save.content.nodes).toHaveLength(1);
+        expect(save.content.views[0]!.nodes).toHaveLength(1);
         expect(state.rev).toBe(4);
         expect(state.dirty).toBe(false);
 
         useCanvas.getState().panBy(10, 10);
         await tick(10);
         expect(transport.of('project.save')).toHaveLength(1);
-        expect(transport.of('project.save-local').at(-1)?.payload).toMatchObject({ projectId: 'p1', local: { camera: { x: 15, y: 16, zoom: 1 } } });
+        expect(transport.of('project.save-local').at(-1)?.payload).toMatchObject({
+            projectId: 'p1',
+            local: { activeViewId: 'main', views: { main: { camera: { x: 15, y: 16, zoom: 1 } } } }
+        });
+        dispose();
+    });
+
+    test('switching views writes no edit, only which view this machine had open', async () => {
+        const { transport, state, dispose } = setup();
+        transport.views = [canvasView('main'), canvasView('second')];
+        await tick();
+        useDocument.getState().setActiveView('second');
+        expect(state.dirty).toBe(false);
+        await tick(10);
+        expect(transport.of('project.save')).toHaveLength(0);
+        expect(transport.of('project.save-local').at(-1)?.payload).toMatchObject({ local: { activeViewId: 'second' } });
+
+        // Adding one is an edit, and the save carries both views.
+        useDocument.getState().addCanvasView('Third');
+        await tick(10);
+        const save = transport.of('project.save').at(-1)?.payload as { content: { views: ProjectCanvasView[] } };
+        expect(save.content.views.map((view) => view.name)).toEqual(['main', 'second', 'Third']);
         dispose();
     });
 
     test('a change from disk replaces a clean canvas, and waits behind a conflict when there are edits', async () => {
         const { transport, state, client, dispose } = setup();
         await tick();
-        transport.emit('project.changed', { projectId: 'p1', document: document(9, [{ id: 'n', kind: 'browser', title: 'b', x: 0, y: 0, w: 10, h: 10 }]) });
+        transport.emit('project.changed', {
+            projectId: 'p1',
+            document: document(9, [canvasView('main', [{ id: 'n', kind: 'browser', title: 'b', x: 0, y: 0, w: 10, h: 10 }])])
+        });
         expect(state.rev).toBe(9);
         expect(useCanvas.getState().order).toEqual(['n']);
         expect(state.conflict).toBeNull();

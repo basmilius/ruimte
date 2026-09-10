@@ -1,4 +1,5 @@
 import { useCanvas } from '@/state/canvas';
+import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { transport } from '@/transport';
 import { PanelsPort } from '@/project/panels-port';
@@ -8,7 +9,7 @@ const actions = useProject.getState();
 
 export const panelsPort = new PanelsPort();
 
-export const projectClient = new ProjectClient(transport, useCanvas, panelsPort, {
+export const projectClient = new ProjectClient(transport, useCanvas, useDocument, panelsPort, {
     setProjects: actions.setProjects,
     setCurrent: actions.setCurrent,
     setRev: actions.setRev,

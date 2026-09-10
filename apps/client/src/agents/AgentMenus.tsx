@@ -59,6 +59,15 @@ function AgentRows({ target, onPick }: { target: AgentTarget; onPick(target: Age
     );
 }
 
+/* The chat CLIs under a label of a menu's own, for a menu that starts a chat from something else. */
+export function ChatAgentSubmenu({ label, icon, onPick }: { label: string; icon: ReactNode; onPick(provider: ProviderInfo): void }) {
+    return (
+        <Submenu label={label} icon={icon}>
+            <AgentRows target="chat" onPick={(_target, provider) => onPick(provider)} />
+        </Submenu>
+    );
+}
+
 /* The two agent submenus, "Agent (Chat)" and "Agent (Terminal)", for every menu that adds nodes. */
 export function AgentSubmenus({ onPick }: { onPick(target: AgentTarget, provider: ProviderInfo): void }) {
     return (

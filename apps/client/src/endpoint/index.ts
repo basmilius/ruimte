@@ -1,6 +1,6 @@
 import type { AuthSession, EndpointInfo } from '@ruimte/contracts';
 import { projectClient } from '@/project';
-import { useCanvas } from '@/state/canvas';
+import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, activeEndpoint, parsePairingUrl, socketUrlFor, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProject } from '@/state/project';
 import { transport } from '@/transport';
@@ -41,7 +41,7 @@ export const activateEndpoint = async (id: string): Promise<void> => {
         return;
     }
     await projectClient.flush();
-    useCanvas.getState().loadDocument(null, null);
+    useDocument.getState().load(null, null);
     useProject.getState().setCurrent(null, 0);
     useProject.getState().setProjects([]);
     useEndpoints.getState().setActive(id);

@@ -5,6 +5,8 @@ import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { ConnectionDot } from '@/shell/ConnectionDot';
 import { PanelControls } from '@/shell/PanelControls';
 import { ProjectMenu } from '@/shell/ProjectMenu';
+import { ViewMenu } from '@/shell/ViewMenu';
+import { useHasViewToolbar, ViewToolbar } from '@/shell/ViewToolbar';
 import { STRIP_PADDING_PX } from '@/shell/Sidebar';
 import { SidebarToggle } from '@/shell/SidebarToggle';
 import { useProject } from '@/state/project';
@@ -27,6 +29,7 @@ export function Toolbar() {
     const panel = useUi((s) => s.panel);
     const previewOpen = useUi((s) => s.preview.open);
     const sidebarOpen = useUi((s) => s.sidebarOpen);
+    const hasViewToolbar = useHasViewToolbar();
     const inset = useTrafficLightInset();
 
     return (
@@ -35,7 +38,9 @@ export function Toolbar() {
             style={sidebarOpen ? undefined : { paddingLeft: inset ?? STRIP_PADDING_PX }}
         >
             {!sidebarOpen && <SidebarToggle />}
-            <div className="flex min-w-0 grow items-center gap-2">
+            {/* With the view putting something in the bar, the slack belongs to that part, so the
+                breadcrumb stops at its own width and the address field of a page can run. */}
+            <div className={clsx('flex min-w-0 items-center gap-2', !hasViewToolbar && 'grow')}>
                 {machine && (
                     <>
                         <span>{machine}</span>
@@ -43,8 +48,13 @@ export function Toolbar() {
                     </>
                 )}
                 <ProjectMenu />
-                <span className="text-text-faint">/</span>
-                <span>Canvas</span>
+                {/* The open sidebar is the view switcher already; the segment comes back with it closed. */}
+                {!sidebarOpen && (
+                    <>
+                        <span className="text-text-faint">/</span>
+                        <ViewMenu />
+                    </>
+                )}
                 {/* A live region, not a decorated span: a reader announces the change instead of
                     passing over a dot it has no reason to visit. */}
                 <span role="status" aria-live="polite" className="flex shrink-0 items-center">
@@ -52,6 +62,11 @@ export function Toolbar() {
                     <span className="sr-only">{dirty ? 'Unsaved changes' : 'Everything saved'}</span>
                 </span>
             </div>
+            {/* A view of its own has no node header, so what that header carried sits here, fenced
+                off from the breadcrumb on one side and the panels on the other. */}
+            {hasViewToolbar && <Separator />}
+            <ViewToolbar />
+            {hasViewToolbar && <Separator />}
             <ConnectionDot />
             <PanelControls />
             <Separator />

@@ -2,6 +2,7 @@ import type { ProviderInfo } from '@ruimte/contracts';
 import type { Point } from '@/canvas/math';
 import { readChatPreferences } from '@/chat/preferences';
 import { useCanvas } from '@/state/canvas';
+import { useDocument } from '@/state/document';
 
 // The two kinds of node an agent CLI can live in; every menu offers a provider under one of them.
 export type AgentTarget = 'chat' | 'terminal';
@@ -22,5 +23,15 @@ export const addAgentNode = (target: AgentTarget, provider: ProviderInfo, at: Po
         title: provider.name,
         provider: provider.kind,
         ...(target === 'terminal' ? { runtimeMode } : { providerFixed: true })
+    });
+};
+
+/* The same agent as a view of its own: no canvas under it, the same session rules on the daemon. */
+export const addAgentView = (target: AgentTarget, provider: ProviderInfo): string => {
+    const runtimeMode = readChatPreferences().terminalRuntimeMode;
+    return useDocument.getState().addStandaloneView({
+        kind: target,
+        name: provider.name,
+        node: { provider: provider.kind, ...(target === 'terminal' ? { runtimeMode } : { providerFixed: true }) }
     });
 };

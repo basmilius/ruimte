@@ -6,7 +6,7 @@ https://ruimte.app
 
 ## Principles
 
-- **One canvas, many kinds of things on it.** Terminal, chat, browser and group nodes, plus free text that is not a node.
+- **One canvas per view, many kinds of things on it.** A view is also a chat, a terminal or a browser on its own. On a canvas: terminal, chat, browser and group nodes, plus free text that is not a node.
 - **Focus and camera are explicit state.** Canvas mode or node mode, never decided by where the pointer happens to be. Nothing in the background moves the view.
 - **Server first.** There is always a backend that owns sessions and talks to the UI over WebSocket. The desktop app embeds it; a remote machine is another endpoint.
 - **Opinionated.** A handful of settings in the UI. Everything else is a default.

@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, openSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
-const { app, BrowserWindow, dialog, ipcMain, Menu, screen, session, shell, webContents } = require('electron') as typeof import('electron');
+const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, screen, session, shell, webContents } = require('electron') as typeof import('electron');
 
 /*
  * The desktop shell: one window, the client inside it, the daemon next to it. Nothing crosses
@@ -130,6 +130,41 @@ const titleBarOptions = (dark: boolean): Electron.BrowserWindowConstructorOption
         ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 12, y: 17 } }
         : { titleBarStyle: 'hidden', titleBarOverlay: { height: TITLEBAR_HEIGHT, ...OVERLAY_COLORS[dark ? 'dark' : 'light'] } };
 
+// The partition every browser node's page lives in; `apps/client/src/browser/registry.ts`.
+const BROWSER_PARTITION = 'persist:ruimte';
+
+/*
+ * The theme the client is in. The client owns it (it may follow the system or not) and reports it,
+ * because the shell needs it three times over: for the native window controls, for the window's own
+ * ground, and for the `prefers-color-scheme` every page inside a webview asks for, which without
+ * this would be the system's answer rather than the app's. The color travels with the message, so
+ * `styles.css` stays the one place the token is written down.
+ */
+interface AppTheme {
+    resolved: 'light' | 'dark';
+    /* True while the app follows the system, which is the one case a page may follow it too. */
+    followsSystem: boolean;
+    /* The value of `--bg` in the theme that is up. */
+    background: string;
+}
+
+const isBrowserGuest = (contents: Electron.WebContents): boolean =>
+    contents.getType() === 'webview' && contents.session === session.fromPartition(BROWSER_PARTITION);
+
+const applyTheme = (theme: AppTheme): void => {
+    // Chromium answers `prefers-color-scheme` from this, so a page follows the app instead of the
+    // system the app happens to run on. 'system' is only right while the app follows it as well.
+    nativeTheme.themeSource = theme.followsSystem ? 'system' : theme.resolved;
+    // The overlay controls are native; they follow the client's theme by hand.
+    if (process.platform !== 'darwin' && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.setTitleBarOverlay({ height: TITLEBAR_HEIGHT, ...OVERLAY_COLORS[theme.resolved] });
+    }
+    // The window's own ground, so a reload and a resize never flash the other theme's color.
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.setBackgroundColor(theme.background);
+    }
+};
+
 // The partition the file preview in the client's panel loads a page into; `apps/client/src/shell/panels/HtmlFile.tsx`.
 const PREVIEW_PARTITION = 'preview';
 
@@ -178,7 +213,8 @@ const createWindow = (): Electron.BrowserWindow => {
     return window;
 };
 
-const guestDevTools = (id: number): void => {
+/* Opens the inspector for a guest page, on the element under `at` when a point comes with it. */
+const guestDevTools = (id: number, at?: { x: number; y: number }): void => {
     const guest = webContents.fromId(id);
     if (!guest || !mainWindow) {
         return;
@@ -186,6 +222,9 @@ const guestDevTools = (id: number): void => {
     const existing = devtoolsWindows.get(id);
     if (existing && !existing.isDestroyed()) {
         existing.focus();
+        if (at) {
+            guest.inspectElement(at.x, at.y);
+        }
         return;
     }
     // A window of our own, kept above everything, so the inspector floats over a fullscreen app.
@@ -193,7 +232,11 @@ const guestDevTools = (id: number): void => {
     window.setAlwaysOnTop(true, 'floating');
     window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     guest.setDevToolsWebContents(window.webContents);
-    guest.openDevTools({ mode: 'detach' });
+    if (at) {
+        guest.inspectElement(at.x, at.y);
+    } else {
+        guest.openDevTools({ mode: 'detach' });
+    }
     window.once('ready-to-show', () => window.show());
     window.on('closed', () => {
         devtoolsWindows.delete(id);
@@ -208,6 +251,142 @@ const guestDevTools = (id: number): void => {
     });
     devtoolsWindows.set(id, window);
 };
+
+/* What the client may ask the shell to do on a guest page. Mirrors `apps/client/src/desktop/bridge.ts`. */
+interface BrowserContextAction {
+    webContentsId: number;
+    action: string;
+    payload?: { url?: string; x?: number; y?: number };
+}
+
+/* At most this many of the spellchecker's guesses get a row, so the menu cannot run off the screen. */
+const SPELLING_SUGGESTIONS = 5;
+
+/* Where a selection goes when someone asks the system browser to look it up, as in the client's menu. */
+const SEARCH_URL = 'https://www.google.com/search?q=';
+
+/* A selection reads in a menu label on one line, short enough to take in at a glance. */
+const menuLabel = (text: string): string => {
+    const line = text.trim().replace(/\s+/g, ' ');
+    return line.length > 24 ? `${line.slice(0, 24)}...` : line;
+};
+
+/*
+ * The menu over an editable field, native on purpose. A text field is the one place where the
+ * platform brings more than we can draw: macOS hangs AutoFill, Writing Tools and Services off an
+ * AppKit menu, and none of that survives a menu the renderer paints. Standard roles are what the
+ * platform recognizes, so every row that has one uses it, and the rows macOS appends itself are
+ * not in the template.
+ */
+const editableGuestMenu = (contents: Electron.WebContents, params: Electron.ContextMenuParams): void => {
+    const template: Electron.MenuItemConstructorOptions[] = [];
+    for (const word of params.dictionarySuggestions.slice(0, SPELLING_SUGGESTIONS)) {
+        template.push({ label: word, click: () => contents.replaceMisspelling(word) });
+    }
+    if (template.length > 0) {
+        template.push({ type: 'separator' });
+    }
+    template.push(
+        { role: 'undo', enabled: params.editFlags.canUndo },
+        { role: 'redo', enabled: params.editFlags.canRedo },
+        { type: 'separator' },
+        { role: 'cut', enabled: params.editFlags.canCut },
+        { role: 'copy', enabled: params.editFlags.canCopy },
+        { role: 'paste', enabled: params.editFlags.canPaste }
+    );
+    // Only a rich field has a style to drop, which is the whole point of the row.
+    if (params.editFlags.canEditRichly) {
+        template.push({ role: 'pasteAndMatchStyle', enabled: params.editFlags.canPaste });
+    }
+    template.push({ role: 'delete', enabled: params.editFlags.canDelete }, { role: 'selectAll', enabled: params.editFlags.canSelectAll });
+    if (process.platform === 'darwin' && params.selectionText !== '') {
+        // Electron has no role for either of these, so they are ours: the dictionary panel is a
+        // call on the guest, and the search is the same URL the client's own menu opens. Share and
+        // Services are not here, because macOS appends both to a menu popped with its frame.
+        template.push(
+            { type: 'separator' },
+            { label: `Look Up "${menuLabel(params.selectionText)}"`, click: () => contents.showDefinitionForSelection() },
+            { label: 'Search with Google', click: () => void shell.openExternal(`${SEARCH_URL}${encodeURIComponent(params.selectionText)}`) }
+        );
+    }
+    template.push({ type: 'separator' }, { label: 'Inspect element', click: () => guestDevTools(contents.id, { x: params.x, y: params.y }) });
+    /*
+     * The frame is the one thing that makes AutoFill appear: without it Electron pops a plain menu
+     * and macOS appends none of its own rows (AutoFill, Writing Tools, Services). It is null once
+     * the frame navigated away or died, and then the menu still opens, just without those rows.
+     * AutoFill here routes to Apple's Passwords app only; Chrome's password manager is not in
+     * Electron. No position: the menu belongs at the cursor, which is where Electron puts it.
+     */
+    Menu.buildFromTemplate(template).popup({ window: mainWindow ?? undefined, ...(params.frame ? { frame: params.frame } : {}) });
+};
+
+/*
+ * A right-click inside a browser node's page. Electron ships no menu for web content (Chromium's own
+ * belongs to the Chrome browser) and a native one reads as another program's, so the client draws
+ * it: the shell says what the click landed on and nothing more. An editable field is the exception
+ * and never leaves the shell, because what the platform adds to a native menu there is worth more
+ * than a menu in the app's own style.
+ */
+const guestContextMenu = (contents: Electron.WebContents, params: Electron.ContextMenuParams): void => {
+    if (params.isEditable) {
+        editableGuestMenu(contents, params);
+        return;
+    }
+    mainWindow?.webContents.send('browser:context-menu', {
+        webContentsId: contents.id,
+        x: params.x,
+        y: params.y,
+        linkURL: params.linkURL,
+        linkText: params.linkText,
+        srcURL: params.srcURL,
+        mediaType: params.mediaType,
+        isEditable: params.isEditable,
+        selectionText: params.selectionText,
+        editFlags: {
+            canCut: params.editFlags.canCut,
+            canCopy: params.editFlags.canCopy,
+            canPaste: params.editFlags.canPaste,
+            canSelectAll: params.editFlags.canSelectAll
+        },
+        pageURL: params.pageURL
+    });
+};
+
+/*
+ * The row the person picked, for the part of it the renderer cannot reach: the guest's own copy, a
+ * download, the inspector and the system browser. The editing rows are not here, because an
+ * editable field never reaches the client. Only a guest of the browser partition takes one, the
+ * same guard the menu itself has.
+ */
+ipcMain.on('browser:context-action', (_event, request: BrowserContextAction) => {
+    const contents = webContents.fromId(request.webContentsId);
+    if (!contents || contents.isDestroyed() || !isBrowserGuest(contents)) {
+        return;
+    }
+    const payload = request.payload ?? {};
+    switch (request.action) {
+        case 'copy':
+            contents.copy();
+            return;
+        case 'copy-image':
+            contents.copyImageAt(payload.x ?? 0, payload.y ?? 0);
+            return;
+        case 'save-image':
+            // Nothing here handles `will-download`, so Electron asks where to put the file itself.
+            if (payload.url) {
+                contents.downloadURL(payload.url);
+            }
+            return;
+        case 'inspect':
+            guestDevTools(contents.id, { x: payload.x ?? 0, y: payload.y ?? 0 });
+            return;
+        case 'open-external':
+            if (payload.url && /^https?:\/\//.test(payload.url)) {
+                void shell.openExternal(payload.url);
+            }
+            return;
+    }
+});
 
 ipcMain.handle('dialog:pick-folder', async (_event, initialPath?: string) => {
     if (!mainWindow) {
@@ -230,12 +409,7 @@ ipcMain.on('devtools:guest', (_event, id: number) => guestDevTools(id));
 
 ipcMain.handle('window:is-fullscreen', () => mainWindow?.isFullScreen() ?? false);
 
-ipcMain.on('window:theme', (_event, dark: boolean) => {
-    // The overlay controls are native; they follow the client's theme by hand.
-    if (process.platform !== 'darwin' && mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.setTitleBarOverlay({ height: TITLEBAR_HEIGHT, ...OVERLAY_COLORS[dark ? 'dark' : 'light'] });
-    }
-});
+ipcMain.on('window:theme', (_event, theme: AppTheme) => applyTheme(theme));
 
 const setupUpdates = async (): Promise<void> => {
     // The feed comes from app-update.yml that electron-builder writes into the bundle (GitHub releases); a checkout has none.
@@ -319,6 +493,17 @@ const runSmoke = async (window: Electron.BrowserWindow): Promise<void> => {
 if (!app.requestSingleInstanceLock()) {
     app.quit();
 } else {
+    /*
+     * Only the pages of browser nodes get a menu. The preview partition is sealed on purpose: it
+     * renders a local file the panel opened, with nowhere to navigate and nothing to inspect.
+     */
+    app.on('web-contents-created', (_event, contents) => {
+        if (!isBrowserGuest(contents)) {
+            return;
+        }
+        contents.on('context-menu', (_e, params) => guestContextMenu(contents, params));
+    });
+
     app.on('second-instance', () => {
         if (mainWindow) {
             if (mainWindow.isMinimized()) {

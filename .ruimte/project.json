@@ -1,40 +1,94 @@
 {
-  "version": 1,
-  "rev": 11,
-  "name": "ruimte",
+  "version": 2,
+  "rev": 195,
+  "name": "Ruimte",
   "color": "#7c74ff",
-  "nodes": [
+  "views": [
     {
-      "id": "browser-8x6vy84f",
+      "id": "main",
+      "name": "Feature: Views",
+      "kind": "canvas",
+      "nodes": [
+        {
+          "id": "terminal-62873g88",
+          "kind": "terminal",
+          "title": "Terminal",
+          "x": -2152,
+          "y": -1344,
+          "w": 944,
+          "h": 632
+        }
+      ],
+      "texts": [],
+      "edges": [],
+      "layouts": []
+    },
+    {
+      "id": "view-kj5769w6",
+      "name": "Feature: Usage",
+      "kind": "canvas",
+      "nodes": [
+        {
+          "id": "terminal-0ed3r0kp",
+          "kind": "terminal",
+          "title": "Claude Code",
+          "x": -1984,
+          "y": -1072,
+          "w": 560,
+          "h": 360,
+          "provider": "claude",
+          "runtimeMode": "full-access"
+        },
+        {
+          "id": "terminal-nzh4pcth",
+          "kind": "terminal",
+          "title": "Claude Code",
+          "x": -1408,
+          "y": -1072,
+          "w": 560,
+          "h": 360,
+          "provider": "claude",
+          "runtimeMode": "full-access"
+        }
+      ],
+      "texts": [],
+      "edges": [],
+      "layouts": []
+    },
+    {
+      "kind": "separator",
+      "id": "separator-gibstc7j"
+    },
+    {
+      "id": "browser-wbcwjs9g",
+      "name": "Tweakers: tech-community, nieuws, reviews en de…",
+      "titleSource": "auto",
       "kind": "browser",
-      "title": "Browser",
-      "x": -568,
-      "y": -88,
-      "w": 720,
-      "h": 480
+      "url": "https://tweakers.net/"
     },
     {
-      "id": "terminal-gepojlyc",
-      "kind": "terminal",
-      "title": "Terminal",
-      "x": -584,
-      "y": -592,
-      "w": 560,
-      "h": 360
+      "kind": "separator",
+      "id": "separator-3fpm4hs6"
     },
     {
-      "id": "chat-heglurhw",
+      "id": "chat-d81bq1v4",
+      "name": "Wat kun je me vertellen over het project waar…",
+      "titleSource": "user",
       "kind": "chat",
-      "title": "Claude Code",
-      "x": -1560,
-      "y": -600,
-      "w": 896,
-      "h": 808,
-      "provider": "claude",
-      "providerFixed": true
+      "node": {
+        "provider": "claude",
+        "providerFixed": true
+      }
+    },
+    {
+      "id": "chat-pbkry64w",
+      "name": "In dit project hebben we browsers en webviews…",
+      "titleSource": "auto",
+      "kind": "chat",
+      "node": {
+        "provider": "claude",
+        "providerFixed": true
+      }
     }
-  ],
-  "texts": [],
-  "edges": [],
-  "layouts": []
+  ]
 }

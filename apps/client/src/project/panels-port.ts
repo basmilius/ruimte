@@ -1,4 +1,5 @@
 import type { ProjectPanels } from '@ruimte/contracts';
+import { faviconsOfProject, useBrowser } from '@/browser/registry';
 import { useFiles } from '@/state/files';
 import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE, useGit } from '@/state/git';
 import { parsePanels, serializePanels, type PanelsState } from '@/state/panel-state';
@@ -11,7 +12,9 @@ const defaults = (): PanelsState => ({
     expandedDirs: [],
     gitScope: DEFAULT_SCOPE,
     gitCollapsedDirs: [],
-    gitLogHeight: DEFAULT_LOG_HEIGHT
+    gitLogHeight: DEFAULT_LOG_HEIGHT,
+    sidebarExpanded: null,
+    favicons: {}
 });
 
 const read = (): PanelsState => {
@@ -27,7 +30,9 @@ const read = (): PanelsState => {
         expandedDirs: files.expandedDirs,
         gitScope: useGit.getState().scope,
         gitCollapsedDirs: useGit.getState().collapsedDirs,
-        gitLogHeight: useGit.getState().logHeight
+        gitLogHeight: useGit.getState().logHeight,
+        sidebarExpanded: ui.sidebarExpanded,
+        favicons: faviconsOfProject(useBrowser.getState().byNodeId)
     };
 };
 
@@ -46,7 +51,7 @@ export class PanelsPort {
 
     constructor() {
         const publish = (): void => this.publish();
-        this.unsubscribe = [useUi.subscribe(publish), useFiles.subscribe(publish), useGit.subscribe(publish)];
+        this.unsubscribe = [useUi.subscribe(publish), useFiles.subscribe(publish), useGit.subscribe(publish), useBrowser.subscribe(publish)];
         this.snapshot = this.stringify();
     }
 
@@ -59,6 +64,8 @@ export class PanelsPort {
             useGit.getState().setScope(state.gitScope);
             useGit.getState().setCollapsedDirs(state.gitCollapsedDirs);
             useGit.getState().setLogHeight(state.gitLogHeight);
+            useUi.getState().setSidebarExpanded(state.sidebarExpanded);
+            useBrowser.getState().loadFavicons(state.favicons);
         } finally {
             this.applying = false;
             this.snapshot = this.stringify();

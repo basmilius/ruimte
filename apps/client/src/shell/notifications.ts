@@ -1,6 +1,6 @@
 import type { ChatTurnItem } from '@ruimte/contracts';
 import { agentTurnLabel } from '@/chat/logic/timeline';
-import { useCanvas } from '@/state/canvas';
+import { projectNodes, revealNode } from '@/project/views';
 import { useChats, type ChatsById } from '@/state/chats';
 import { nodeStatus, useSessions } from '@/state/sessions';
 
@@ -41,18 +41,18 @@ export const startAgentNotifications = (): (() => void) => {
         const notification = new Notification(title, { body, tag });
         notification.onclick = () => {
             window.focus();
-            useCanvas.getState().goToNode(nodeId);
+            revealNode(nodeId);
             notification.close();
         };
         return notification;
     };
 
     const check = (): void => {
-        const { nodes } = useCanvas.getState();
+        const nodes = projectNodes();
         const sessions = useSessions.getState().byNodeId;
         const chats = useChats.getState().byNodeId;
         const current = new Map<string, string | undefined>();
-        for (const node of Object.values(nodes)) {
+        for (const node of nodes) {
             const chat = chats[node.id];
             if (chat) {
                 const turn = settledAgentTurn(chat);

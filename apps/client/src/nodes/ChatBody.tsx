@@ -2,38 +2,37 @@ import { Suspense, lazy, useEffect, useState } from 'react';
 import type { AgentKind, ModelSelection } from '@ruimte/contracts';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { defaultProvider, readChatPreferences, selectionFor } from '@/chat/preferences';
+import { deriveNodeTitle } from '@/chat/title';
 import { Composer } from '@/chat/ui/Composer';
 import { Timeline } from '@/chat/ui/Timeline';
-import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useProject } from '@/state/project';
 import { useTransportStatus } from '@/transport/status';
-import { NodeNotice } from '@/canvas/nodes/NodeNotice';
-
-const TITLE_LIMIT = 48;
-const DEFAULT_TITLE = 'New chat';
+import { NodeNotice } from '@/nodes/NodeNotice';
+import { readNodeHost, renameHost, updateHost, useNodeHost } from '@/nodes/node-host';
 
 // The worker pool and its highlighter load with the first chat node, not with the app.
 const DiffPool = lazy(() => import('@/chat/ui/DiffPool'));
 
-export function ChatNode({ id, focused }: { id: string; focused: boolean }) {
+/* The body of a chat, the same on a canvas inside a frame and filling a view of its own. */
+export function ChatBody({ id, focused }: { id: string; focused: boolean }) {
     const info = useChats((s) => s.byNodeId[id]?.info);
-    const providerFixed = useCanvas((s) => s.nodes[id]?.providerFixed === true);
+    const providerFixed = useNodeHost(id)?.providerFixed === true;
     const status = useTransportStatus();
     const [failure, setFailure] = useState<string | null>(null);
     const [generation, setGeneration] = useState(0);
 
     useEffect(() => {
         let cancelled = false;
-        const node = useCanvas.getState().nodes[id];
+        const host = readNodeHost(id);
         const preferences = readChatPreferences();
         // A node without a provider of its own opens on the CLI whose model was picked last.
-        const provider = node?.provider ?? defaultProvider(preferences) ?? undefined;
+        const provider = host?.provider ?? defaultProvider(preferences) ?? undefined;
         chatClient
             .open(id, {
                 provider,
-                cwd: node?.cwd ?? useProject.getState().current?.folder ?? undefined,
-                resume: node?.resume,
+                cwd: host?.cwd ?? useProject.getState().current?.folder ?? undefined,
+                resume: host?.resume,
                 selection: selectionFor(preferences, provider) ?? undefined,
                 runtimeMode: preferences.runtimeMode
             })
@@ -48,17 +47,19 @@ export function ChatNode({ id, focused }: { id: string; focused: boolean }) {
         };
     }, [id, generation]);
 
-    /* The node remembers the new CLI, so a reload opens the chat on the same one. */
+    /* The chat remembers the new CLI, so a reload opens it on the same one. */
     const retarget = (provider: AgentKind, selection: ModelSelection): void => {
-        useCanvas.getState().updateNode(id, { provider });
+        updateHost(id, { provider });
         chatClient.retarget(id, provider, selection).catch((e: unknown) => setFailure(e instanceof Error ? e.message : 'The provider could not be changed'));
     };
 
     const send = (text: string, extras: ChatSendExtras): void => {
-        const node = useCanvas.getState().nodes[id];
-        const title = text.replace(/\s+/g, ' ').trim();
-        if (node && node.title === DEFAULT_TITLE && title) {
-            useCanvas.getState().renameNode(id, title.length > TITLE_LIMIT ? `${title.slice(0, TITLE_LIMIT - 1)}…` : title);
+        const host = readNodeHost(id);
+        const title = deriveNodeTitle(text);
+        // The prompt that opens a chat names it, once. After that it has a name of its own, and a
+        // rename by a person ends it for good.
+        if (host && !host.titleSource && title) {
+            renameHost(id, title, 'auto');
         }
         chatClient.send(id, text, extras).catch((e: unknown) => setFailure(e instanceof Error ? e.message : 'The message could not be sent'));
     };

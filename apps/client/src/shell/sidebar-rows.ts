@@ -1,32 +1,130 @@
-import type { AgentStatus } from '@/state/canvas';
+import type { AgentKind, AgentStatus, NodeKind, ProjectViewKind } from '@ruimte/contracts';
 
-/* The order the sidebar lists its groups in: what waits for you first, what is done last. */
-const GROUP_ORDER: { status: AgentStatus | 'none'; label: string }[] = [
-    { status: 'needs-you', label: 'Needs you' },
-    { status: 'running', label: 'Running' },
-    { status: 'idle', label: 'Idle' },
-    { status: 'none', label: 'Other' }
-];
-
-export interface SidebarGroup<T> {
-    status: AgentStatus | 'none';
-    label: string;
-    rows: T[];
+export interface SidebarNode {
+    id: string;
+    title: string;
+    kind: NodeKind;
+    /* The CLI behind a chat or an agent terminal, whose mark the row wears instead of the kind's. */
+    provider: AgentKind | null;
+    status: AgentStatus | null;
+    /* A chat with something typed and never sent. */
+    draft: boolean;
 }
 
-/* The rows per group, empty groups left out. The status comes in as a function so this stays a
-   pure list operation: the arrow keys below are tested without a store or a daemon. */
-export const groupRows = <T>(rows: T[], statusOf: (row: T) => AgentStatus | null): SidebarGroup<T>[] =>
-    GROUP_ORDER.map((group) => ({
-        ...group,
-        rows: rows.filter((row) => {
-            const status = statusOf(row);
-            return group.status === 'none' ? status === null : status === group.status;
-        })
-    })).filter((group) => group.rows.length > 0);
+export interface SidebarView {
+    id: string;
+    /* Empty for a separator, which is a bare line with nothing on it. */
+    name: string;
+    kind: ProjectViewKind;
+    /* The CLI a chat or terminal view runs, the way a node carries one. */
+    provider: AgentKind | null;
+    /* What sits on the canvas. A view that is not a canvas lists nothing: it is one node itself. */
+    nodes: SidebarNode[];
+    /* The node a standalone view is, so its row carries the status and the draft dot of that node. */
+    self: SidebarNode | null;
+}
+
+export interface SidebarViewRow {
+    type: 'view';
+    rowId: string;
+    view: SidebarView;
+    /* Where the view sits in the project's list, which is what a drop between two rows writes back. */
+    index: number;
+    active: boolean;
+    expandable: boolean;
+    expanded: boolean;
+    /* The heaviest status of the nodes it holds, so a folded canvas still says something is up. */
+    status: AgentStatus | null;
+    /* A standalone chat with an unsent prompt; a canvas keeps that dot on the node's own row. */
+    draft: boolean;
+    count: number;
+}
+
+export interface SidebarNodeRow {
+    type: 'node';
+    rowId: string;
+    node: SidebarNode;
+    viewId: string;
+    /* Where the node lives, named only on a row that stands outside its own view. */
+    viewName: string | null;
+}
+
+export type SidebarRow = SidebarViewRow | SidebarNodeRow;
+
+export interface SidebarSection {
+    id: 'needs-you' | 'views';
+    label: string;
+    rows: SidebarRow[];
+}
+
+export interface SidebarInput {
+    /* In project order, which is the order of the file, so every machine reads the same list. */
+    views: SidebarView[];
+    activeViewId: string | null;
+    expandedIds: ReadonlySet<string>;
+}
+
+/* Groups and notes are frames and paper, not sessions; the list is about what runs. */
+export const isSessionKind = (kind: NodeKind): boolean => kind !== 'group' && kind !== 'note';
+
+const WEIGHT: Record<AgentStatus, number> = { 'needs-you': 3, error: 2, exited: 2, running: 1, idle: 0 };
+
+export const heaviestStatus = (nodes: readonly SidebarNode[]): AgentStatus | null =>
+    nodes.reduce<AgentStatus | null>((heaviest, node) => {
+        if (!node.status) {
+            return heaviest;
+        }
+        return heaviest === null || WEIGHT[node.status] > WEIGHT[heaviest] ? node.status : heaviest;
+    }, null);
+
+/*
+ * The sidebar as one list of rows: what waits for you across the whole project first, then the
+ * views in the order the file names them, with the nodes of an open canvas under it. The status
+ * grouping of the old flat list is gone: the order is the project's, the dock keeps the counters.
+ */
+export const buildSidebar = ({ views, activeViewId, expandedIds }: SidebarInput): SidebarSection[] => {
+    const sections: SidebarSection[] = [];
+    const waiting: SidebarRow[] = [];
+    for (const view of views) {
+        for (const node of [...view.nodes, ...(view.self ? [view.self] : [])]) {
+            if (node.status === 'needs-you') {
+                waiting.push({ type: 'node', rowId: `needs:${node.id}`, node, viewId: view.id, viewName: view.name });
+            }
+        }
+    }
+    if (waiting.length > 0) {
+        sections.push({ id: 'needs-you', label: 'Needs you', rows: waiting });
+    }
+
+    const rows: SidebarRow[] = [];
+    for (const [index, view] of views.entries()) {
+        const expandable = view.kind === 'canvas' && view.nodes.length > 0;
+        const expanded = expandable && expandedIds.has(view.id);
+        rows.push({
+            type: 'view',
+            rowId: `view:${view.id}`,
+            view,
+            index,
+            active: view.id === activeViewId,
+            expandable,
+            expanded,
+            status: view.self ? view.self.status : heaviestStatus(view.nodes),
+            draft: view.self?.draft ?? false,
+            count: view.nodes.length
+        });
+        if (!expanded) {
+            continue;
+        }
+        for (const node of view.nodes) {
+            rows.push({ type: 'node', rowId: `node:${view.id}:${node.id}`, node, viewId: view.id, viewName: null });
+        }
+    }
+    sections.push({ id: 'views', label: 'Views', rows });
+    return sections;
+};
 
 /* The ids in the order the eye reads them, which is the order Up and Down have to walk. */
-export const rowOrder = <T extends { id: string }>(groups: SidebarGroup<T>[]): string[] => groups.flatMap((group) => group.rows.map((row) => row.id));
+export const rowOrder = (sections: readonly SidebarSection[]): string[] => sections.flatMap((section) => section.rows.map((row) => row.rowId));
 
 /* The row an arrow key lands on. Without a row to move from, Down starts at the top and Up at the
    bottom; at either end it stays put, so a held key never wraps around behind your back. */

@@ -12,11 +12,13 @@ import { BTN_GROUP } from '@/ui/classes';
 import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
 import { useHeldWhileVisible, useNodeInViewport } from '@/canvas/culling';
-import { TerminalNode, TerminalPlate } from '@/canvas/nodes/TerminalNode';
-import { ChatNode } from '@/canvas/nodes/ChatNode';
-import { BrowserNode } from '@/canvas/nodes/BrowserNode';
+import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
+import { ChatBody } from '@/nodes/ChatBody';
+import { BrowserBody } from '@/nodes/BrowserBody';
 import { NoteNode } from '@/canvas/nodes/NoteNode';
 import { noteColorClass } from '@/canvas/note-colors';
+import { Favicon } from '@/browser/Favicon';
+import { resetTitle } from '@/nodes/node-host';
 import { Icon } from '@/ui/Icon';
 
 const ICONS: Record<NodeKind, ReactNode> = {
@@ -31,14 +33,17 @@ const STATUS_LABEL: Record<AgentStatus, string> = {
     running: 'Running',
     'needs-you': 'Needs you',
     idle: 'Idle',
-    error: 'Error'
+    error: 'Error',
+    exited: 'Session ended'
 };
 
 const STATUS_CLASS: Record<AgentStatus, string> = {
     running: 'bg-status-running',
     'needs-you': 'bg-status-needs-you',
     idle: 'bg-status-idle',
-    error: 'bg-status-error'
+    error: 'bg-status-error',
+    // A CLI that is gone is not a failure; it is a session waiting to be picked up again.
+    exited: 'bg-text-faint'
 };
 
 const RESIZE_EDGES = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as const;
@@ -61,7 +66,9 @@ const EDGE_STYLE: Record<(typeof RESIZE_EDGES)[number], string> = {
 /* `plain` drops the tooltip: inside a control that already has a name of its own, a second tooltip
    under the pointer only fights the first one. */
 export function StatusDot({ status, className, plain = false }: { status: AgentStatus; className?: string; plain?: boolean }) {
-    const dot = <span className={clsx('inline-block h-2 w-2 rounded-full', STATUS_CLASS[status], status === 'running' && 'animate-pulse', className)} />;
+    const dot = (
+        <span className={clsx('inline-block h-2 w-2 shrink-0 rounded-full', STATUS_CLASS[status], status === 'running' && 'animate-pulse', className)} />
+    );
     if (plain) {
         return dot;
     }
@@ -81,8 +88,11 @@ function Title({ id, title, editing, onDone }: { id: string; title: string; edit
             onFocus={(e) => e.currentTarget.select()}
             onBlur={(e) => {
                 const next = e.currentTarget.value.trim();
+                // An empty field is not a name: it hands the node back to whatever named it before.
                 if (next) {
                     useCanvas.getState().renameNode(id, next);
+                } else {
+                    resetTitle(id);
                 }
                 onDone();
             }}
@@ -183,7 +193,9 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         </Tooltip>
                     )}
                     {accent && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: accent }} />}
-                    <span className="shrink-0 text-text-muted">{node.provider ? <AgentIcon kind={node.provider} /> : ICONS[node.kind]}</span>
+                    <span className="flex shrink-0 items-center text-text-muted">
+                        {node.provider ? <AgentIcon kind={node.provider} /> : node.kind === 'browser' ? <Favicon id={id} /> : ICONS[node.kind]}
+                    </span>
                     <span className="flex min-w-0 grow items-center" onDoubleClick={() => setRenaming(true)}>
                         <Title id={id} title={node.title} editing={renaming} onDone={() => setRenaming(false)} />
                     </span>
@@ -222,10 +234,18 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     // No body attribute: a press anywhere on the frame drags it, together with what it holds.
                     <div className="grow" />
                 ) : (
-                    <div data-node-body className={clsx('relative min-h-0 grow', !focused && 'cursor-default')}>
-                        {node.kind === 'terminal' && (live ? <TerminalNode id={id} focused={focused} /> : <TerminalPlate id={id} />)}
-                        {node.kind === 'chat' && <ChatNode id={id} focused={focused} />}
-                        {node.kind === 'browser' && <BrowserNode id={id} focused={focused} />}
+                    <div
+                        data-node-body
+                        className={clsx(
+                            'relative min-h-0 grow',
+                            // A thread reads at the node's own 14px, over the 22px a chat gives its prose.
+                            node.kind === 'chat' && '[--text-sm--line-height:22px]',
+                            !focused && 'cursor-default'
+                        )}
+                    >
+                        {node.kind === 'terminal' && (live ? <TerminalBody id={id} focused={focused} /> : <TerminalPlate id={id} />)}
+                        {node.kind === 'chat' && <ChatBody id={id} focused={focused} />}
+                        {node.kind === 'browser' && <BrowserBody id={id} focused={focused} />}
                         {node.kind === 'note' && <NoteNode id={id} focused={focused} />}
                         {!focused && <div className="absolute inset-0" aria-hidden="true" />}
                     </div>

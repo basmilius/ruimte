@@ -99,6 +99,7 @@ export * from './git.ts';
 export * from './ids.ts';
 export * from './model.ts';
 export * from './project.ts';
+export * from './project-migrate.ts';
 export * from './server.ts';
 export * from './session.ts';
 
