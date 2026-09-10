@@ -2,7 +2,7 @@ import { useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Menu } from '@base-ui-components/react/menu';
-import { faArrowUpRightFromSquare, faCheck, faChevronDown, faFolderOpen, faPlus, faTrash, faXmark } from '@fortawesome/duotone-regular-svg-icons';
+import { faArrowUpRightFromSquare, faCheck, faChevronDown, faFolderOpen, faPlus, faTrash, faXmark } from '@fortawesome/pro-regular-svg-icons';
 import { projectClient } from '@/project';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';

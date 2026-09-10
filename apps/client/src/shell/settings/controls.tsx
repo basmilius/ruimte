@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import clsx from 'clsx';
 import { Switch } from '@base-ui-components/react/switch';
-import { faMinus, faPlus } from '@fortawesome/duotone-regular-svg-icons';
+import { faMinus, faPlus } from '@fortawesome/pro-regular-svg-icons';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 

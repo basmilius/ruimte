@@ -16,7 +16,7 @@ import {
     faTableLayout,
     faTerminal,
     faXmark
-} from '@fortawesome/duotone-regular-svg-icons';
+} from '@fortawesome/pro-regular-svg-icons';
 import clsx from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
 import { AgentSubmenus } from '@/agents/AgentMenus';

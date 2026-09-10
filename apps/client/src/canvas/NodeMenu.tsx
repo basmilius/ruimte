@@ -15,7 +15,7 @@ import {
     faTerminal,
     faTrash,
     faUpRightAndDownLeftFromCenter
-} from '@fortawesome/duotone-regular-svg-icons';
+} from '@fortawesome/pro-regular-svg-icons';
 import { NODE_ACCENTS } from '@/canvas/accents';
 import { DEFAULT_NOTE_COLOR, NOTE_COLORS } from '@/canvas/note-colors';
 import { useCanvas } from '@/state/canvas';

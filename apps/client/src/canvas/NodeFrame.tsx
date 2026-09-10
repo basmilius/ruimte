@@ -14,7 +14,7 @@ import {
     faTerminal,
     faUpRightAndDownLeftFromCenter,
     faXmark
-} from '@fortawesome/duotone-regular-svg-icons';
+} from '@fortawesome/pro-regular-svg-icons';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';

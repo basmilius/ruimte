@@ -1,6 +1,6 @@
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Tabs } from '@base-ui-components/react/tabs';
-import { faXmark } from '@fortawesome/duotone-regular-svg-icons';
+import { faXmark } from '@fortawesome/pro-regular-svg-icons';
 import { SettingsNav } from '@/shell/settings/SettingsNav';
 import { AboutPane } from '@/shell/settings/panes/AboutPane';
 import { AgentsPane } from '@/shell/settings/panes/AgentsPane';

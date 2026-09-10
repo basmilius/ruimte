@@ -1,6 +1,6 @@
 import { Suspense, lazy, useState } from 'react';
 import clsx from 'clsx';
-import { faCheck, faChevronLeft, faChevronRight, faCommentQuestion, faXmark } from '@fortawesome/duotone-regular-svg-icons';
+import { faCheck, faChevronLeft, faChevronRight, faCommentQuestion, faXmark } from '@fortawesome/pro-regular-svg-icons';
 import type { ChatApprovalItem, ChatQuestionItem } from '@ruimte/contracts';
 import { chatClient } from '@/chat';
 import { approvalChanges, fileChanges, toolSummary } from '@/chat/logic/tools';

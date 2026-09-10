@@ -1,5 +1,5 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { faXmark } from '@fortawesome/duotone-regular-svg-icons';
+import { faXmark } from '@fortawesome/pro-regular-svg-icons';
 import { PANELS } from '@/shell/panels';
 import { useUi } from '@/state/ui';
 import { Icon } from '@/ui/Icon';

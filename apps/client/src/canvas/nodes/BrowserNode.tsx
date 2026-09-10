@@ -9,7 +9,7 @@ import {
     faCode,
     faLock,
     faRotateRight
-} from '@fortawesome/duotone-regular-svg-icons';
+} from '@fortawesome/pro-regular-svg-icons';
 import { browserRegistry, useBrowser } from '@/browser/registry';
 import { desktop, isDesktop } from '@/desktop/bridge';
 import { useCanvas } from '@/state/canvas';

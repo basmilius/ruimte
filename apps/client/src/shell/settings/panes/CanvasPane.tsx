@@ -1,4 +1,4 @@
-import { faCropSimple, faExpand, faTrash } from '@fortawesome/duotone-regular-svg-icons';
+import { faCropSimple, faExpand, faTrash } from '@fortawesome/pro-regular-svg-icons';
 import { activeZoomPreset, ZOOM_PRESETS } from '@/canvas/math';
 import { LOCK_ROWS } from '@/canvas/locks';
 import { SettingsRow } from '@/shell/settings/SettingsRow';

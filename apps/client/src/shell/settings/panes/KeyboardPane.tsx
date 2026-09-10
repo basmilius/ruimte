@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { faMagnifyingGlass, faXmark } from '@fortawesome/duotone-regular-svg-icons';
+import { faMagnifyingGlass, faXmark } from '@fortawesome/pro-regular-svg-icons';
 import { appCommands } from '@/shell/commands';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';

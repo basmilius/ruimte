@@ -280,11 +280,11 @@ canvas, against Ruimte, one verdict each.
 - Never highlight the canvas grid in the accent color. The dots stay neutral in every state.
 - Icon buttons get equal padding on every side. Buttons that belong together sit in a
   `.btn-group` with 1px gaps; groups keep the wider gap of their container.
-- Every icon is a Font Awesome Pro duotone regular icon drawn by the `Icon` component in
+- Every icon is a Font Awesome Pro regular icon drawn by the `Icon` component in
   `src/ui/Icon.tsx` (`@fortawesome/react-fontawesome` plus
-  `@fortawesome/duotone-regular-svg-icons`). The pixel box and the opacity of the second duotone
-  layer live there, so a call site only picks the icon and its pixel size. Installing needs the
-  Font Awesome Pro registry from the root `.npmrc`, see `apps/client/README.md`.
+  `@fortawesome/pro-regular-svg-icons`). The pixel box and the optical alignment live there, so a
+  call site only picks the icon and its pixel size. Installing needs the Font Awesome Pro registry
+  from the root `.npmrc`, see `apps/client/README.md`.
 - No fractional pixels. Type sizes, paddings and stroke widths are whole numbers; a `rem` value
   has to land on a whole pixel at the 16px root, and an `em` at the size it inherits. Ratios
   (line height, opacity, letter spacing) are not lengths and stay as they are.

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { faGear, faGlobe, faGrid2, faMagnifyingGlass, faMessage, faNoteSticky, faPlus, faTerminal } from '@fortawesome/duotone-regular-svg-icons';
+import { faGear, faGlobe, faGrid2, faMagnifyingGlass, faMessage, faNoteSticky, faPlus, faTerminal } from '@fortawesome/pro-regular-svg-icons';
 import clsx from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
 import { useCanvas, type AgentStatus, type CanvasNode } from '@/state/canvas';

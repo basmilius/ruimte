@@ -13,7 +13,7 @@ import {
     faMessage,
     faNoteSticky,
     faTerminal
-} from '@fortawesome/duotone-regular-svg-icons';
+} from '@fortawesome/pro-regular-svg-icons';
 import type { FsBrowseEntry } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { projectClient } from '@/project';

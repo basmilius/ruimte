@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { faCheck, faCopy, faLink, faServer, faTrash } from '@fortawesome/duotone-regular-svg-icons';
+import { faCheck, faCopy, faLink, faServer, faTrash } from '@fortawesome/pro-regular-svg-icons';
 import type { AuthSession } from '@ruimte/contracts';
 import { activateEndpoint, listPairedClients, pairEndpoint, requestPairingUrl, revokePairedClient } from '@/endpoint';
 import { useEndpoints, LOCAL_ENDPOINT_ID } from '@/state/endpoints';

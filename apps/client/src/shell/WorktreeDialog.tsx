@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { faCodeBranch } from '@fortawesome/duotone-regular-svg-icons';
+import { faCodeBranch } from '@fortawesome/pro-regular-svg-icons';
 import { useCanvas } from '@/state/canvas';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';

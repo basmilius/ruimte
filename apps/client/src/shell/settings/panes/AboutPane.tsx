@@ -1,4 +1,4 @@
-import { faArrowUpRightFromSquare } from '@fortawesome/duotone-regular-svg-icons';
+import { faArrowUpRightFromSquare } from '@fortawesome/pro-regular-svg-icons';
 import { isDesktop } from '@/desktop/bridge';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';

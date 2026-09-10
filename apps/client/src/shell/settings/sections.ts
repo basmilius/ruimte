@@ -1,4 +1,4 @@
-import { faCircleInfo, faGrid2, faKeyboard, faPalette, faRobot, faServer } from '@fortawesome/duotone-regular-svg-icons';
+import { faCircleInfo, faGrid2, faKeyboard, faPalette, faRobot, faServer } from '@fortawesome/pro-regular-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import type { SettingsSectionId } from '@/state/ui';
 

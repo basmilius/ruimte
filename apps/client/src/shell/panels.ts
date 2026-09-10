@@ -1,4 +1,4 @@
-import { faCodeBranch, faFolderTree } from '@fortawesome/duotone-regular-svg-icons';
+import { faCodeBranch, faFolderTree } from '@fortawesome/pro-regular-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import type { PanelKind } from '@/state/ui';
 
