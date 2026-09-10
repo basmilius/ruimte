@@ -149,7 +149,7 @@ export function Sidebar() {
             id="app-sidebar"
             inert={!open}
             data-instant={instant ? '' : undefined}
-            className="panel-shell h-full shrink-0 overflow-hidden transition-[width] duration-200 ease-out"
+            className="panel-shell h-full shrink-0 overflow-hidden"
             style={{ width: open ? SIDEBAR_WIDTH_PX : 0 }}
         >
             <div className="flex h-full flex-col border-r border-border bg-surface" style={{ width: SIDEBAR_WIDTH_PX }}>

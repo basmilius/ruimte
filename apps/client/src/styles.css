@@ -426,9 +426,11 @@ body {
     .term-host .xterm { height: 100%; }
     .term-host .xterm .xterm-viewport { background-color: transparent !important; }
 
-    /* A resize drag has to follow the pointer; the width transition that opens and closes the panel
-       would make it lag a frame behind, so the drag turns it off for as long as it runs. A width a
-       project brings on load is off for the same reason: only a person's own toggle slides. */
+    /* The column slides open and shut. The transition lives here and not in a `transition-[width]`
+       utility, because a utility would sit in a later layer than the two rules that turn it off. A
+       resize drag has to follow the pointer instead of lagging a frame behind it, and a width a
+       project brings on load has to be there at once: only a person's own toggle slides. */
+    .panel-shell { transition: width 200ms cubic-bezier(0, 0, 0.2, 1); }
     .panel-shell[data-resizing],
     .panel-shell[data-instant] { transition: none; }
 
