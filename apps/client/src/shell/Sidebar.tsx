@@ -51,6 +51,7 @@ import { Tooltip } from '@/ui/Tooltip';
 import { SidebarToggle } from '@/shell/SidebarToggle';
 import { NewViewItems } from '@/shell/ViewMenu';
 import { useInstantWidth } from '@/shell/useInstantWidth';
+import { UsageLimitsCard } from '@/shell/usage/UsageLimitsCard';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { Icon } from '@/ui/Icon';
 
@@ -590,11 +591,16 @@ export function Sidebar() {
                             </Menu.Positioner>
                         </Menu.Portal>
                     </Menu.Root>
-                    <Tooltip label="Usage" name>
-                        <button className="icon-btn" data-active={usageOpen || undefined} onClick={() => useUi.getState().togglePage('usage')}>
+                    <UsageLimitsCard>
+                        <button
+                            className="icon-btn"
+                            aria-label="Usage"
+                            data-active={usageOpen || undefined}
+                            onClick={() => useUi.getState().togglePage('usage')}
+                        >
                             <Icon icon={ChartNoAxesColumn} size={16} />
                         </button>
-                    </Tooltip>
+                    </UsageLimitsCard>
                     <Tooltip label="Settings" kbd="⌘," name>
                         <button className="icon-btn" onClick={() => useUi.getState().setSettings({ open: true })}>
                             <Icon icon={Settings} size={16} />
