@@ -24,7 +24,7 @@ export function Segmented<T extends string>({
     label: string;
 }) {
     return (
-        <div className="flex h-8 items-center rounded-lg bg-surface-sunken p-0.5 text-[12px] font-medium" role="radiogroup" aria-label={label}>
+        <div className="flex h-8 items-center rounded-lg bg-surface-sunken p-0.5 text-xs font-medium" role="radiogroup" aria-label={label}>
             {options.map((option) => (
                 <button
                     key={option.id}
@@ -44,7 +44,7 @@ export function Segmented<T extends string>({
 }
 
 export const selectClass =
-    'h-8 max-w-56 rounded-lg border border-border bg-surface-raised px-2 text-[12px] text-text outline-none focus-visible:ring-1 focus-visible:ring-accent';
+    'h-8 max-w-56 rounded-lg border border-border bg-surface-raised px-2 text-xs text-text outline-none focus-visible:ring-1 focus-visible:ring-accent';
 
 export function SelectControl({ value, onChange, label, children }: { value: string; onChange(value: string): void; label: string; children: ReactNode }) {
     return (
@@ -85,19 +85,19 @@ export function Stepper({ value, min, max, step, unit, label, onChange }: Steppe
     };
     return (
         <div className="flex items-center gap-2" role="group" aria-label={label}>
-            <span className="min-w-12 text-right text-[12px] tabular-nums text-text" aria-live="polite">
+            <span className="min-w-12 text-right text-xs tabular-nums text-text" aria-live="polite">
                 {value}
                 {unit}
             </span>
             <div className="btn-group rounded-lg bg-surface-sunken p-0.5">
                 <Tooltip label="Smaller">
                     <button className="icon-btn h-7 w-7" aria-label={`${label}: smaller`} disabled={value <= min} onClick={() => nudge(-1)}>
-                        <Icon icon={faMinus} size={13} />
+                        <Icon icon={faMinus} size={16} />
                     </button>
                 </Tooltip>
                 <Tooltip label="Larger">
                     <button className="icon-btn h-7 w-7" aria-label={`${label}: larger`} disabled={value >= max} onClick={() => nudge(1)}>
-                        <Icon icon={faPlus} size={13} />
+                        <Icon icon={faPlus} size={16} />
                     </button>
                 </Tooltip>
             </div>
@@ -106,7 +106,7 @@ export function Stepper({ value, min, max, step, unit, label, onChange }: Steppe
 }
 
 export function Kbd({ children }: { children: ReactNode }) {
-    return <kbd className="rounded-md border border-border bg-surface-sunken px-1.5 py-0.5 font-sans text-[11px] text-text-muted">{children}</kbd>;
+    return <kbd className="rounded-md border border-border bg-surface-sunken px-1.5 py-0.5 font-sans text-xs text-text-muted">{children}</kbd>;
 }
 
 /* A few keys in a row, `⌘` and `K` for one chord, separated by a thin gap. */
@@ -124,7 +124,7 @@ export function Badge({ tone, children }: { tone: 'idle' | 'muted' | 'accent'; c
     return (
         <span
             className={clsx(
-                'rounded-md px-1.5 py-0.5 text-[11px] font-medium',
+                'rounded-md px-1.5 py-0.5 text-xs font-medium',
                 tone === 'idle' && 'bg-status-idle/15 text-status-idle',
                 tone === 'accent' && 'bg-accent-soft text-accent',
                 tone === 'muted' && 'bg-surface-sunken text-text-muted'
@@ -136,4 +136,4 @@ export function Badge({ tone, children }: { tone: 'idle' | 'muted' | 'accent'; c
 }
 
 export const buttonClass =
-    'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border bg-surface-raised px-3 text-[12px] font-medium text-text hover:bg-surface-sunken disabled:opacity-50 disabled:hover:bg-surface-raised';
+    'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border bg-surface-raised px-3 text-xs font-medium text-text hover:bg-surface-sunken disabled:opacity-50 disabled:hover:bg-surface-raised';

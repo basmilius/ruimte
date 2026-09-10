@@ -10,7 +10,7 @@ import { transport } from '@/transport';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 
-const buttonClass = 'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3 text-[12px] font-medium disabled:opacity-50';
+const buttonClass = 'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3 text-xs font-medium disabled:opacity-50';
 
 const ago = (timestamp: number): string => {
     const seconds = Math.max(0, Math.round((Date.now() - timestamp) / 1000));
@@ -109,7 +109,7 @@ function PairedClients() {
     return (
         <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-                <span className="text-[12px] text-text-muted">Paired clients</span>
+                <span className="text-xs text-text-muted">Paired clients</span>
                 <span className="grow" />
                 {reachability === 'loopback' && (
                     <button
@@ -124,29 +124,29 @@ function PairedClients() {
             {link && (
                 <div className="flex flex-col gap-1.5 rounded-lg border border-border bg-surface-sunken p-2.5">
                     <div className="flex items-center gap-2">
-                        <code className="min-w-0 grow truncate font-mono text-[12px] text-text select-text">{link}</code>
+                        <code className="min-w-0 grow truncate font-mono text-code text-text select-text">{link}</code>
                         <Tooltip label={copied ? 'Copied' : 'Copy link'}>
                             <button className="icon-btn h-6 w-6 shrink-0" aria-label="Copy pairing link" onClick={copyLink}>
                                 {copied ? <Icon icon={faCheck} size={12} /> : <Icon icon={faCopy} size={12} />}
                             </button>
                         </Tooltip>
                     </div>
-                    <p className="text-[11px] text-text-faint">
+                    <p className="text-xs text-text-faint">
                         {onlyLoopback(link)
                             ? 'This daemon only listens on this machine; start it with --host 0.0.0.0 before another machine can use a link.'
                             : 'Paste it in the settings of Ruimte on the other machine. It works once, within ten minutes.'}
                     </p>
                 </div>
             )}
-            {sessions !== null && sessions.length === 0 && <p className="text-[11px] text-text-faint">No other machine is paired with this daemon.</p>}
+            {sessions !== null && sessions.length === 0 && <p className="text-xs text-text-faint">No other machine is paired with this daemon.</p>}
             {sessions?.map((session) => (
                 <div key={session.id} className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-1.5">
                     <div className="flex min-w-0 grow flex-col">
-                        <span className="truncate text-[12px] text-text">
+                        <span className="truncate text-xs text-text">
                             {session.label}
-                            {session.current && <span className="ml-1.5 text-[11px] text-accent">this client</span>}
+                            {session.current && <span className="ml-1.5 text-xs text-accent">this client</span>}
                         </span>
-                        <span className="truncate text-[11px] text-text-faint">
+                        <span className="truncate text-xs text-text-faint">
                             paired {new Date(session.createdAt).toLocaleDateString()}, seen {ago(session.lastSeenAt)}
                         </span>
                     </div>
@@ -157,13 +157,13 @@ function PairedClients() {
                     </Tooltip>
                 </div>
             ))}
-            {failure && <p className="text-[12px] text-status-error">{failure}</p>}
+            {failure && <p className="text-xs text-status-error">{failure}</p>}
             <Dialog.Root open={target !== null} onOpenChange={(open) => (open ? undefined : setTarget(null))}>
                 <Dialog.Portal>
                     <Dialog.Backdrop className="dialog-backdrop" />
                     <Dialog.Popup className="dialog-popup top-[24vh] w-[380px] p-5">
-                        <Dialog.Title className="text-[15px] font-semibold text-text">Revoke {target?.label}?</Dialog.Title>
-                        <p className="mt-1 text-[12px] text-text-muted">
+                        <Dialog.Title className="text-base font-semibold text-text">Revoke {target?.label}?</Dialog.Title>
+                        <p className="mt-1 text-xs text-text-muted">
                             {target?.current
                                 ? 'This is the client you are using. It loses access to this machine and goes back to its own daemon; pair again to return.'
                                 : 'That client loses access to this daemon at its next connection. Pairing again needs a fresh link.'}
@@ -173,7 +173,7 @@ function PairedClients() {
                                 Cancel
                             </button>
                             <button className={clsx(buttonClass, 'bg-status-error text-accent-text')} disabled={busy} onClick={() => void revoke()}>
-                                <Icon icon={faTrash} size={13} /> Revoke
+                                <Icon icon={faTrash} size={16} /> Revoke
                             </button>
                         </div>
                     </Dialog.Popup>
@@ -215,14 +215,14 @@ export function EndpointsSection() {
                         endpoint.id === activeId ? 'border-accent bg-accent-soft' : 'border-border'
                     )}
                 >
-                    <Icon icon={faServer} size={14} className="shrink-0 text-text-muted" />
+                    <Icon icon={faServer} size={16} className="shrink-0 text-text-muted" />
                     <button className="flex min-w-0 grow flex-col text-left" onClick={() => void activateEndpoint(endpoint.id)}>
-                        <span className="truncate text-[13px] text-text">{endpoint.label}</span>
-                        <span className="truncate font-mono text-[11px] text-text-faint">
+                        <span className="truncate text-sm text-text">{endpoint.label}</span>
+                        <span className="truncate font-mono text-xs text-text-faint">
                             {endpoint.id === LOCAL_ENDPOINT_ID ? 'loopback' : endpoint.httpBaseUrl}
                         </span>
                     </button>
-                    {endpoint.id === activeId && <Icon icon={faCheck} size={13} className="shrink-0 text-accent" />}
+                    {endpoint.id === activeId && <Icon icon={faCheck} size={16} className="shrink-0 text-accent" />}
                     {endpoint.id !== LOCAL_ENDPOINT_ID && (
                         <Tooltip label="Forget this machine">
                             <button className="icon-btn h-6 w-6" aria-label="Forget this machine" onClick={() => useEndpoints.getState().remove(endpoint.id)}>
@@ -235,7 +235,7 @@ export function EndpointsSection() {
             <PairedClients key={activeId} />
             <div className="flex items-center gap-2">
                 <input
-                    className="h-8 min-w-0 grow rounded-lg border border-border bg-surface px-2.5 font-mono text-[12px] text-text outline-none placeholder:text-text-faint focus:border-accent"
+                    className="h-8 min-w-0 grow rounded-lg border border-border bg-surface px-2.5 font-mono text-code text-text outline-none placeholder:text-text-faint focus:border-accent"
                     placeholder="http://machine:4210/pair#token"
                     value={link}
                     spellCheck={false}
@@ -248,11 +248,11 @@ export function EndpointsSection() {
                     }}
                 />
                 <button className={clsx(buttonClass, 'bg-accent text-accent-text')} disabled={busy || !link.trim()} onClick={() => void pair()}>
-                    <Icon icon={faLink} size={13} /> Pair
+                    <Icon icon={faLink} size={16} /> Pair
                 </button>
             </div>
-            <p className="text-[11px] text-text-faint">Paste the link from "Show pairing link" or from `ruimte pair` on the other machine.</p>
-            {failure && <p className="text-[12px] text-status-error">{failure}</p>}
+            <p className="text-xs text-text-faint">Paste the link from "Show pairing link" or from `ruimte pair` on the other machine.</p>
+            {failure && <p className="text-xs text-status-error">{failure}</p>}
         </div>
     );
 }

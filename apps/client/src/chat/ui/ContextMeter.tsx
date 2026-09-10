@@ -34,9 +34,9 @@ export function ContextMeter({ usage, disabled, onCompact }: { usage: ChatUsage;
             </Popover.Trigger>
             <Popover.Portal>
                 <Popover.Positioner side="top" sideOffset={8} align="end" className="z-50">
-                    <Popover.Popup className="menu-popup min-w-56 p-3 text-[12px] text-text-muted">
+                    <Popover.Popup className="menu-popup min-w-56 p-3 text-xs text-text-muted">
                         <div className="flex items-baseline justify-between">
-                            <span className="text-[13px] font-medium text-text">{usage.contextWindow ? `${percent}% of context` : 'Context'}</span>
+                            <span className="text-sm font-medium text-text">{usage.contextWindow ? `${percent}% of context` : 'Context'}</span>
                             <span className="tabular-nums">
                                 {formatTokens(usage.contextTokens)}
                                 {usage.contextWindow ? ` / ${formatTokens(usage.contextWindow)}` : ''}
@@ -51,7 +51,7 @@ export function ContextMeter({ usage, disabled, onCompact }: { usage: ChatUsage;
                             <span>${usage.costUsd.toFixed(2)}</span>
                         </div>
                         <button
-                            className="mt-3 flex h-7 w-full items-center justify-center gap-1.5 rounded-md bg-surface-sunken text-[12px] font-medium text-text hover:bg-border disabled:opacity-40"
+                            className="mt-3 flex h-7 w-full items-center justify-center gap-1.5 rounded-md bg-surface-sunken text-xs font-medium text-text hover:bg-border disabled:opacity-40"
                             disabled={disabled || usage.contextTokens === 0}
                             onClick={onCompact}
                         >

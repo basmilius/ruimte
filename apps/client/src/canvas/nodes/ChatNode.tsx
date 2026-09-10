@@ -68,12 +68,12 @@ export function ChatNode({ id, focused }: { id: string; focused: boolean }) {
     return (
         <div className="relative flex h-full flex-col bg-surface">
             {status !== 'open' && (
-                <div className="pointer-events-none absolute inset-x-3 top-3 z-10 rounded-lg border border-border bg-surface-raised/90 px-3 py-2 text-[12px] text-text-muted">
+                <div className="pointer-events-none absolute inset-x-3 top-3 z-10 rounded-lg border border-border bg-surface-raised/90 px-3 py-2 text-xs text-text-muted">
                     {status === 'closed' ? 'Not connected to the Ruimte server.' : 'Connecting to the Ruimte server'}
                 </div>
             )}
             {failure && (
-                <div className="absolute inset-x-3 top-3 z-10 flex items-center gap-3 rounded-lg border border-border bg-surface-raised/90 px-3 py-2 text-[12px] text-status-error">
+                <div className="absolute inset-x-3 top-3 z-10 flex items-center gap-3 rounded-lg border border-border bg-surface-raised/90 px-3 py-2 text-xs text-status-error">
                     <span className="grow">{failure}</span>
                     <Tooltip label="Try again">
                         <button
@@ -83,7 +83,7 @@ export function ChatNode({ id, focused }: { id: string; focused: boolean }) {
                                 setGeneration((g) => g + 1);
                             }}
                         >
-                            <Icon icon={faRotateRight} size={13} />
+                            <Icon icon={faRotateRight} size={16} />
                         </button>
                     </Tooltip>
                 </div>

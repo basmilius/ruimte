@@ -38,12 +38,12 @@ function SessionRow({ node }: { node: CanvasNode }) {
     const kindIcon = KIND_ICON[node.kind];
     if (renaming) {
         return (
-            <div className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-[13px]">
-                <Icon icon={kindIcon} size={14} className="shrink-0 text-text-muted" />
+            <div className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-sm">
+                <Icon icon={kindIcon} size={16} className="shrink-0 text-text-muted" />
                 <input
                     autoFocus
                     defaultValue={node.title}
-                    className="min-w-0 grow rounded bg-surface-sunken px-1.5 py-0.5 text-[13px] text-text outline-none ring-1 ring-accent"
+                    className="min-w-0 grow rounded bg-surface-sunken px-1.5 py-0.5 text-sm text-text outline-none ring-1 ring-accent"
                     onFocus={(e) => e.currentTarget.select()}
                     onBlur={(e) => {
                         const next = e.currentTarget.value.trim();
@@ -71,13 +71,13 @@ function SessionRow({ node }: { node: CanvasNode }) {
             <ContextMenu.Trigger
                 render={<button />}
                 className={clsx(
-                    'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition-colors',
+                    'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors',
                     selected ? 'bg-accent-soft text-text' : 'text-text-muted hover:bg-surface-sunken hover:text-text'
                 )}
                 onClick={() => useCanvas.getState().goToNode(node.id)}
                 onDoubleClick={() => setRenaming(true)}
             >
-                <Icon icon={kindIcon} size={14} className="shrink-0" />
+                <Icon icon={kindIcon} size={16} className="shrink-0" />
                 <span className="truncate">{node.title}</span>
                 <span className="grow" />
                 {status && <StatusDot status={status} />}
@@ -100,8 +100,8 @@ export function Sidebar() {
                 className="app-drag flex h-12 items-center gap-2 px-3"
                 style={hasTrafficLights() && !fullscreen ? { paddingLeft: TRAFFIC_LIGHTS_INSET_PX } : undefined}
             >
-                <span className="grid h-6 w-6 place-items-center rounded-md bg-accent text-[12px] font-semibold text-accent-text">R</span>
-                <span className="text-[14px] font-semibold tracking-tight text-text">Ruimte</span>
+                <span className="grid h-6 w-6 place-items-center rounded-md bg-accent text-xs font-semibold text-accent-text">R</span>
+                <span className="text-sm font-semibold tracking-tight text-text">Ruimte</span>
                 <span className="grow" />
                 <Tooltip label="Search" kbd="⌘K">
                     <button className="icon-btn h-7 w-7" onClick={() => useUi.getState().setPaletteOpen(true)}>
@@ -121,7 +121,7 @@ export function Sidebar() {
                     }
                     return (
                         <div key={group.status} className="mb-3">
-                            <div className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-medium uppercase tracking-[.04em] text-text-faint">
+                            <div className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium uppercase tracking-[.04em] text-text-faint">
                                 {group.status !== 'none' && <StatusDot status={group.status} />}
                                 {group.label}
                                 <span className="ml-auto tabular-nums">{rows.length}</span>
@@ -136,7 +136,7 @@ export function Sidebar() {
 
             <div className="flex items-center gap-1 border-t border-border p-2">
                 <button
-                    className="flex h-8 grow items-center gap-2 rounded-md px-2 text-[13px] text-text-muted hover:bg-surface-sunken hover:text-text"
+                    className="flex h-8 grow items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-surface-sunken hover:text-text"
                     onClick={() => addNodeAtCenter('terminal')}
                 >
                     <Icon icon={faPlus} size={15} /> New session

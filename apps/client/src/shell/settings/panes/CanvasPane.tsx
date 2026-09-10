@@ -41,7 +41,7 @@ export function CanvasPane() {
                         <>
                             <Keys keys="⇧ 1" />
                             <button className={buttonClass} onClick={() => useCanvas.getState().fitAll()}>
-                                <Icon icon={faExpand} size={13} /> Fit
+                                <Icon icon={faExpand} size={16} /> Fit
                             </button>
                         </>
                     }
@@ -53,7 +53,7 @@ export function CanvasPane() {
                         <>
                             <Keys keys="⇧ 2" />
                             <button className={buttonClass} disabled={!hasSelection} onClick={() => useCanvas.getState().zoomToSelection()}>
-                                <Icon icon={faCropSimple} size={13} /> Frame
+                                <Icon icon={faCropSimple} size={16} /> Frame
                             </button>
                         </>
                     }
@@ -103,7 +103,7 @@ export function CanvasPane() {
                                         aria-label={`Delete layout ${layout.name}`}
                                         onClick={() => useCanvas.getState().deleteLayout(layout.name)}
                                     >
-                                        <Icon icon={faTrash} size={13} />
+                                        <Icon icon={faTrash} size={16} />
                                     </button>
                                 </Tooltip>
                             </>

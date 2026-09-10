@@ -66,9 +66,7 @@ export function TerminalPlate({ id }: { id: string }) {
             ref.current.textContent = lastScreenOf(id).join('\n');
         }
     }, [id]);
-    return (
-        <div ref={ref} className="term-host overflow-hidden whitespace-pre bg-term-bg font-mono text-[13px] leading-[1.2] text-term-dim" aria-hidden="true" />
-    );
+    return <div ref={ref} className="term-host overflow-hidden whitespace-pre bg-term-bg font-mono text-code leading-[1.2] text-term-dim" aria-hidden="true" />;
 }
 
 export function TerminalNode({ id, focused }: { id: string; focused: boolean }) {
@@ -234,7 +232,7 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
         <div className="absolute inset-0 bg-term-bg">
             <div ref={hostRef} className="term-host" />
             {status !== 'open' && (
-                <div className="pointer-events-none absolute inset-x-3 top-3 z-10 rounded-lg border border-border bg-surface-raised/90 px-3 py-2 text-[12px] text-text-muted">
+                <div className="pointer-events-none absolute inset-x-3 top-3 z-10 rounded-lg border border-border bg-surface-raised/90 px-3 py-2 text-xs text-text-muted">
                     {status === 'closed' ? (
                         <>
                             Not connected to the Ruimte server. Run <code className="font-mono text-text">bun run dev:server</code>.
@@ -245,20 +243,20 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
                 </div>
             )}
             {failure && (
-                <div className="absolute inset-x-3 top-3 z-10 flex items-center gap-3 rounded-lg border border-border bg-surface-raised/90 px-3 py-2 text-[12px] text-status-error">
+                <div className="absolute inset-x-3 top-3 z-10 flex items-center gap-3 rounded-lg border border-border bg-surface-raised/90 px-3 py-2 text-xs text-status-error">
                     <span className="grow">{failure}</span>
                     <Tooltip label="Try again">
                         <button className="icon-btn h-7 w-7 shrink-0" onClick={rebuild}>
-                            <Icon icon={faRotateRight} size={13} />
+                            <Icon icon={faRotateRight} size={16} />
                         </button>
                     </Tooltip>
                 </div>
             )}
             {exited !== undefined && (
-                <div className="absolute inset-x-0 bottom-0 z-10 flex items-center gap-3 border-t border-border bg-surface-raised/90 px-3 py-1.5 font-mono text-[12px] text-term-dim">
+                <div className="absolute inset-x-0 bottom-0 z-10 flex items-center gap-3 border-t border-border bg-surface-raised/90 px-3 py-1.5 font-mono text-xs text-term-dim">
                     <span className="grow">[process exited with code {exited}]</span>
                     <button
-                        className="inline-flex h-6 items-center gap-1.5 rounded-md bg-surface-sunken px-2 font-sans text-[11px] font-medium text-text hover:bg-border"
+                        className="inline-flex h-7 items-center gap-1.5 rounded-md bg-surface-sunken px-2 font-sans text-xs font-medium text-text hover:bg-border"
                         onClick={() => void restart()}
                     >
                         <Icon icon={faRotateRight} size={12} /> Restart

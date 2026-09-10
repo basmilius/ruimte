@@ -57,17 +57,17 @@ export function WorktreeDialog() {
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
                 <Dialog.Popup className="dialog-popup top-[24vh] w-[420px] p-5">
-                    <Dialog.Title className="flex items-center gap-2 text-[15px] font-semibold text-text">
+                    <Dialog.Title className="flex items-center gap-2 text-base font-semibold text-text">
                         <Icon icon={faCodeBranch} size={15} /> Bind to a worktree
                     </Dialog.Title>
                     {folder ? (
                         <>
-                            <p className="mt-1 text-[12px] text-text-muted">
+                            <p className="mt-1 text-xs text-text-muted">
                                 A checkout of this branch is made next to the app data, and every terminal or chat created inside the group starts in it.
                             </p>
                             <input
                                 autoFocus
-                                className="mt-3 h-9 w-full rounded-lg border border-border bg-surface px-2.5 font-mono text-[13px] text-text outline-none placeholder:text-text-faint focus:border-accent"
+                                className="mt-3 h-9 w-full rounded-lg border border-border bg-surface px-2.5 font-mono text-code text-text outline-none placeholder:text-text-faint focus:border-accent"
                                 placeholder="branch name"
                                 value={value}
                                 spellCheck={false}
@@ -81,18 +81,18 @@ export function WorktreeDialog() {
                             />
                         </>
                     ) : (
-                        <p className="mt-1 text-[12px] text-text-muted">This canvas is not in a folder, so there is no repository to make a worktree of.</p>
+                        <p className="mt-1 text-xs text-text-muted">This canvas is not in a folder, so there is no repository to make a worktree of.</p>
                     )}
-                    {failure && <p className="mt-2 text-[12px] text-status-error">{failure}</p>}
+                    {failure && <p className="mt-2 text-xs text-status-error">{failure}</p>}
                     <div className="mt-4 flex items-center justify-end gap-2">
                         <button
-                            className="inline-flex h-8 items-center rounded-md px-3 text-[12px] font-medium text-text-muted hover:bg-surface-sunken hover:text-text"
+                            className="inline-flex h-8 items-center rounded-md px-3 text-xs font-medium text-text-muted hover:bg-surface-sunken hover:text-text"
                             onClick={() => close(null)}
                         >
                             Cancel
                         </button>
                         <button
-                            className="inline-flex h-8 items-center rounded-md bg-accent px-3 text-[12px] font-medium text-accent-text disabled:opacity-50"
+                            className="inline-flex h-8 items-center rounded-md bg-accent px-3 text-xs font-medium text-accent-text disabled:opacity-50"
                             disabled={busy || !folder || !value.trim()}
                             onClick={() => void submit()}
                         >

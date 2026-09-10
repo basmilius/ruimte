@@ -31,11 +31,11 @@ import { noteColorClass } from '@/canvas/note-colors';
 import { Icon } from '@/ui/Icon';
 
 const ICONS: Record<NodeKind, ReactNode> = {
-    terminal: <Icon icon={faTerminal} size={14} />,
-    chat: <Icon icon={faMessage} size={14} />,
-    browser: <Icon icon={faGlobe} size={14} />,
-    group: <Icon icon={faGrid2} size={14} />,
-    note: <Icon icon={faNoteSticky} size={14} />
+    terminal: <Icon icon={faTerminal} size={16} />,
+    chat: <Icon icon={faMessage} size={16} />,
+    browser: <Icon icon={faGlobe} size={16} />,
+    group: <Icon icon={faGrid2} size={16} />,
+    note: <Icon icon={faNoteSticky} size={16} />
 };
 
 const STATUS_LABEL: Record<AgentStatus, string> = {
@@ -75,13 +75,13 @@ export function StatusDot({ status, className }: { status: AgentStatus; classNam
 
 function Title({ id, title, editing, onDone }: { id: string; title: string; editing: boolean; onDone: () => void }) {
     if (!editing) {
-        return <span className="truncate text-[13px] font-medium text-text">{title}</span>;
+        return <span className="truncate text-sm font-medium text-text">{title}</span>;
     }
     return (
         <input
             autoFocus
             defaultValue={title}
-            className="min-w-0 grow rounded-md bg-surface-sunken px-1.5 py-0.5 text-[13px] font-medium text-text outline-none ring-1 ring-accent"
+            className="min-w-0 grow rounded-md bg-surface-sunken px-1.5 py-0.5 text-sm font-medium text-text outline-none ring-1 ring-accent"
             onPointerDown={(e) => e.stopPropagation()}
             onFocus={(e) => e.currentTarget.select()}
             onBlur={(e) => {
@@ -175,7 +175,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     {isGroup && (
                         <Tooltip label={collapsed ? 'Expand' : 'Collapse'}>
                             <button className="icon-btn -ml-1 h-6 w-6" onClick={() => useCanvas.getState().toggleGroupCollapse(id)}>
-                                {collapsed ? <Icon icon={faChevronRight} size={14} /> : <Icon icon={faChevronDown} size={14} />}
+                                {collapsed ? <Icon icon={faChevronRight} size={16} /> : <Icon icon={faChevronDown} size={16} />}
                             </button>
                         </Tooltip>
                     )}
@@ -185,36 +185,36 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         <Title id={id} title={node.title} editing={renaming} onDone={() => setRenaming(false)} />
                     </span>
                     {collapsed && (
-                        <span className="shrink-0 rounded-full bg-surface-sunken px-2 py-0.5 text-[11px] tabular-nums text-text-muted">
+                        <span className="shrink-0 rounded-full bg-surface-sunken px-2 py-0.5 text-xs tabular-nums text-text-muted">
                             {node.memberIds?.length ?? 0} inside
                         </span>
                     )}
                     {isGroup && node.worktree && (
                         <Tooltip label={node.worktree.path}>
-                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 font-mono text-[11px] text-text-muted">
-                                <Icon icon={faCodeBranch} size={11} /> {node.worktree.branch}
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 font-mono text-xs text-text-muted">
+                                <Icon icon={faCodeBranch} size={14} /> {node.worktree.branch}
                             </span>
                         </Tooltip>
                     )}
                     {node.kind === 'terminal' && hasContext && !renaming && (
                         <Tooltip label="Linked context. The agent in this terminal reads it with ruimte-context (list, read <id>).">
-                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 text-[11px] text-text-muted">
-                                <Icon icon={faLink} size={11} /> context
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 text-xs text-text-muted">
+                                <Icon icon={faLink} size={14} /> context
                             </span>
                         </Tooltip>
                     )}
                     {node.kind === 'terminal' && node.escapeToApp && !renaming && (
                         <Tooltip label="Escape goes to the program in this terminal; click to turn off. Leave the node with" kbd="⌘Esc / ⌃Esc">
                             <button
-                                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 text-[11px] text-text-muted hover:text-text"
+                                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 text-xs text-text-muted hover:text-text"
                                 onClick={() => useCanvas.getState().updateNode(id, { escapeToApp: false })}
                             >
-                                <Icon icon={faKeyboard} size={11} /> Esc
+                                <Icon icon={faKeyboard} size={14} /> Esc
                             </button>
                         </Tooltip>
                     )}
                     {status && !renaming && (
-                        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-surface-sunken px-2 py-0.5 text-[11px] text-text-muted">
+                        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-surface-sunken px-2 py-0.5 text-xs text-text-muted">
                             <StatusDot status={status} />
                             {STATUS_LABEL[status]}
                         </span>
@@ -222,12 +222,12 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     <div className="btn-group shrink-0">
                         <Tooltip label="Zoom to node">
                             <button className="icon-btn h-7 w-7" onClick={() => useCanvas.getState().goToNode(id)}>
-                                <Icon icon={faUpRightAndDownLeftFromCenter} size={13} />
+                                <Icon icon={faUpRightAndDownLeftFromCenter} size={16} />
                             </button>
                         </Tooltip>
                         <Tooltip label="Close">
                             <button className="icon-btn h-7 w-7" onClick={remove}>
-                                <Icon icon={faXmark} size={14} />
+                                <Icon icon={faXmark} size={16} />
                             </button>
                         </Tooltip>
                     </div>
@@ -258,7 +258,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     </Tooltip>
                 )}
                 {resizing && (
-                    <div className="pointer-events-none absolute bottom-2 right-2 rounded-md bg-accent px-2 py-0.5 font-mono text-[11px] tabular-nums text-accent-text shadow-float">
+                    <div className="pointer-events-none absolute bottom-2 right-2 rounded-md bg-accent px-2 py-0.5 font-mono text-xs tabular-nums text-accent-text shadow-float">
                         {node.w} × {node.h}
                     </div>
                 )}

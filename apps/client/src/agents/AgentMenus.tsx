@@ -15,7 +15,7 @@ function Submenu({ label, icon, children }: { label: string; icon: ReactNode; ch
         <Menu.SubmenuRoot>
             <Menu.SubmenuTrigger className="menu-item">
                 {icon} {label}
-                <Icon icon={faChevronRight} size={14} className="ml-auto text-text-faint" />
+                <Icon icon={faChevronRight} size={16} className="ml-auto text-text-faint" />
             </Menu.SubmenuTrigger>
             <Menu.Portal>
                 <Menu.Positioner className="z-50" sideOffset={4} alignOffset={-4}>
@@ -51,7 +51,7 @@ function AgentRows({ target, onPick }: { target: AgentTarget; onPick(target: Age
                 <Menu.Item key={provider.kind} className="menu-item" disabled={!provider.installed} onClick={() => onPick(target, provider)}>
                     <AgentIcon kind={provider.kind} />
                     {provider.name}
-                    <span className="ml-auto pl-3 text-[11px] text-text-faint">
+                    <span className="ml-auto pl-3 text-xs text-text-faint">
                         {!provider.installed ? 'Not installed' : target === 'terminal' ? modeLabel : null}
                     </span>
                 </Menu.Item>
@@ -64,10 +64,10 @@ function AgentRows({ target, onPick }: { target: AgentTarget; onPick(target: Age
 export function AgentSubmenus({ onPick }: { onPick(target: AgentTarget, provider: ProviderInfo): void }) {
     return (
         <>
-            <Submenu label={AGENT_TARGET_LABEL.chat} icon={<Icon icon={faMessage} size={14} />}>
+            <Submenu label={AGENT_TARGET_LABEL.chat} icon={<Icon icon={faMessage} size={16} />}>
                 <AgentRows target="chat" onPick={onPick} />
             </Submenu>
-            <Submenu label={AGENT_TARGET_LABEL.terminal} icon={<Icon icon={faRobot} size={14} />}>
+            <Submenu label={AGENT_TARGET_LABEL.terminal} icon={<Icon icon={faRobot} size={16} />}>
                 <AgentRows target="terminal" onPick={onPick} />
             </Submenu>
         </>
