@@ -337,6 +337,10 @@ body {
     /* Pressed, not important: a toggle that is on reads as a filled gray key. The accent stays for
        the focus ring, the primary button, canvas selection and agent status. */
     .icon-btn[data-active="true"], .icon-btn[aria-pressed="true"] { background: var(--surface-active); color: var(--text); }
+    /* A button with nothing to do says so and stays quiet under the pointer. */
+    .icon-btn:disabled { color: var(--text-faint); cursor: default; }
+    .icon-btn:disabled:hover { background: transparent; color: var(--text-faint); }
+    .icon-btn:disabled:active { scale: 1; }
 
     /* Every text input in the app. One height, one border and one focus ring, so a field in a
        dialog, in settings and next to a chat answer cannot drift apart. */
