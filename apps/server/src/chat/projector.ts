@@ -200,6 +200,7 @@ export class ThreadProjector {
                         turnId: info.activeTurnId,
                         requestId: event.requestId,
                         questions: event.questions,
+                        async: event.async,
                         answers: null,
                         state: 'pending'
                     })

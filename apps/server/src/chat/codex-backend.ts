@@ -177,6 +177,11 @@ export class CodexBackend implements ChatBackend {
         return true;
     }
 
+    /* Codex asks its async question once and waits; forgetting it locally is all a dismissal is. */
+    dismissRequest(requestId: string): boolean {
+        return this.protocol.dismissQuestion(requestId);
+    }
+
     stop(): void {
         const transport = this.transport;
         if (!transport || this.exitTimer !== null) {

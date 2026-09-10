@@ -288,6 +288,16 @@ export class CodexProtocol {
         return { kind: 'respond', rpcId: pending.rpcId, result: { answers: byId } };
     }
 
+    /* Drops an asynchronous question the person walked away from; a blocking one has to be answered. */
+    dismissQuestion(requestId: string): boolean {
+        const pending = this.pending.get(requestId);
+        if (pending?.type !== 'question' || pending.rpcId !== null) {
+            return false;
+        }
+        this.pending.delete(requestId);
+        return true;
+    }
+
     forgetPending(): void {
         this.pending.clear();
     }
@@ -353,7 +363,7 @@ export class CodexProtocol {
                         return;
                     }
                     this.pending.set(ref, { type: 'question', rpcId: null, questionIds: questions.map((question) => question.id) });
-                    events.push({ type: 'question.requested', requestId: ref, questions });
+                    events.push({ type: 'question.requested', requestId: ref, questions, async: true });
                     return;
                 }
                 this.text(ref, str(item.text) ?? '', completed, events);

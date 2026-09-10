@@ -264,6 +264,12 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   daemon runs on this machine, so a non-loopback endpoint shows the source with the line "Preview
   needs the file on this machine"; in a browser tab Preview is inert with the tooltip "Preview needs
   the desktop app", and streaming a page to a browser tab from the daemon is still open.
+  Every renderer's toolbar ends in an overflow menu (`FileMenu` in `shell/panels/FileToolbar.tsx`, so
+  no renderer repeats it): Reveal in the daemon's file manager, Open in a browser node for an HTML
+  file (`addNodeAtCenter('browser')` with the `file://` address), Copy path, Copy relative path
+  (against the project's folder, inert without one), Refresh, Pin or Unpin the tab, Close tab and
+  Close other tabs. The file it acts on comes down from the viewer through `FileActionsContext`
+  (`shell/panels/file-actions.ts`), which also carries the re-read behind Refresh.
   Code is shiki through a dynamic import of the full bundle
   (`shell/panels/highlight.ts`), not the chat's web one, because a folder holds Go and TOML as
   readily as TypeScript; the language comes from the daemon and falls back to plain text.
@@ -651,8 +657,12 @@ canvas, against Ruimte, one verdict each.
   `thread/resume` keeps everything.
 - Codex chats hear about linked context too: the app-server has no system prompt, so the
   `ruimte-context` sentence goes in front of the first prompt instead of on a flag.
-- An async Codex question stays pending until the turn ends; there is no `chat.dismiss` yet,
-  because the composer shows no difference between the two kinds of question.
+- An async Codex question carries `async` on its item, which is what lets the dock offer Dismiss:
+  `chat.dismiss { chatId, itemId }` settles it as `dismissed` and tells the CLI nothing, because it
+  asked beside its turn and goes on either way. A blocking question and an approval refuse the call.
+  The dock also says how many other approvals and questions wait ("2 more"), and a decline can
+  carry a note for the agent where the CLI takes one (`ProviderCapabilities.denyReason`, Claude
+  only); the note travels as the `message` the approval contract always had.
 - Codex runtime modes: `supervised` = `untrusted` + `read-only`, `auto-accept-edits` =
   `untrusted` + `workspace-write`, `auto` = `on-request` + `workspace-write`, `full-access` =
   `never` + `danger-full-access`. Not mapped: cost (Codex reports none), the deny reason, slash commands, permission-profile

@@ -171,6 +171,11 @@ export class ChatClient {
         await this.transport.request('chat.answer', { chatId, requestId, answers });
     }
 
+    /* Leaves an asynchronous question alone; the agent is not told and the item settles as dismissed. */
+    async dismiss(chatId: string, itemId: string): Promise<void> {
+        await this.transport.request('chat.dismiss', { chatId, itemId });
+    }
+
     async kill(chatId: string): Promise<void> {
         this.mounted.delete(chatId);
         this.sink.forget(chatId);

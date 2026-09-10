@@ -19,23 +19,26 @@ const isTypingTarget = (target: EventTarget | null): boolean => target instanceo
 export function ApprovalDock({
     chatId,
     item,
-    index,
-    total,
+    more,
+    denyReason,
     focused
 }: {
     chatId: string;
     item: ChatApprovalItem;
-    index: number;
-    total: number;
+    /* How many other approvals and questions wait behind this one. */
+    more: number;
+    /* Whether this CLI hands a declined tool the reason along with the refusal. */
+    denyReason: boolean;
     focused: boolean;
 }) {
     const [open, setOpen] = useState(false);
+    const [note, setNote] = useState<string | null>(null);
     const patches = approvalChanges(item.input);
     const changes = patches.length > 0 ? [] : fileChanges(item.toolName, item.input);
     const command = item.toolName === 'Bash' ? ((item.input as { command?: string })?.command ?? '') : '';
     const ref = useRef<HTMLDivElement>(null);
-    const decide = (decision: 'allow' | 'allow-always' | 'deny'): void => {
-        void chatClient.approve(chatId, item.requestId, decision).catch(() => undefined);
+    const decide = (decision: 'allow' | 'allow-always' | 'deny', message?: string): void => {
+        void chatClient.approve(chatId, item.requestId, decision, message).catch(() => undefined);
     };
 
     // A request that arrives inside the node you are working in becomes answerable by keyboard on
@@ -76,11 +79,7 @@ export function ApprovalDock({
                     {toolSummary(item.toolName, item.input) || 'wants to run'}
                 </button>
                 <span className="grow" />
-                {total > 1 && (
-                    <span className="tabular-nums text-text-faint">
-                        {index + 1}/{total}
-                    </span>
-                )}
+                {more > 0 && <span className="shrink-0 tabular-nums text-text-faint">{more} more</span>}
                 <Button size="sm" onClick={() => decide('deny')}>
                     <Icon icon={X} size={12} /> Decline <kbd className="tooltip-kbd">esc</kbd>
                 </Button>
@@ -94,6 +93,35 @@ export function ApprovalDock({
                 </Button>
             </div>
             {item.description && <p className="px-3 pb-2 text-xs text-text-muted">{item.description}</p>}
+            {denyReason && note === null && (
+                <button className="px-3 pb-2 text-left text-xs text-text-muted hover:text-text" onClick={() => setNote('')}>
+                    Decline with a note
+                </button>
+            )}
+            {note !== null && (
+                <div className="flex items-center gap-2 px-3 pb-2">
+                    <input
+                        autoFocus
+                        className="field text-xs"
+                        aria-label="Why the agent may not do this"
+                        placeholder="Tell the agent why not, and what to do instead"
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        onKeyDown={(e) => {
+                            e.stopPropagation();
+                            if (e.key === 'Enter') {
+                                decide('deny', note.trim() || undefined);
+                            }
+                            if (e.key === 'Escape') {
+                                setNote(null);
+                            }
+                        }}
+                    />
+                    <Button size="sm" onClick={() => decide('deny', note.trim() || undefined)}>
+                        <Icon icon={X} size={12} /> Decline
+                    </Button>
+                </div>
+            )}
             {(open || changes.length > 0 || patches.length > 0) && (
                 <div className="max-h-64 overflow-auto border-t border-border">
                     {patches.length > 0 ? (
@@ -120,7 +148,7 @@ export function ApprovalDock({
 }
 
 /* The agent's questions, one at a time, with the choices as buttons and room for a written answer. */
-export function QuestionDock({ chatId, item, focused }: { chatId: string; item: ChatQuestionItem; focused: boolean }) {
+export function QuestionDock({ chatId, item, more, focused }: { chatId: string; item: ChatQuestionItem; more: number; focused: boolean }) {
     const [index, setIndex] = useState(0);
     const [answers, setAnswers] = useState<Record<string, string>>({});
     const [custom, setCustom] = useState('');
@@ -199,6 +227,13 @@ export function QuestionDock({ chatId, item, focused }: { chatId: string; item: 
                     <span className="tabular-nums text-text-faint">
                         {index + 1}/{item.questions.length}
                     </span>
+                )}
+                {more > 0 && <span className="shrink-0 tabular-nums text-text-faint">{more} more</span>}
+                {/* Only the agent that keeps working while it waits can be left without an answer. */}
+                {item.async === true && (
+                    <Button size="sm" onClick={() => void chatClient.dismiss(chatId, item.id).catch(() => undefined)}>
+                        <Icon icon={X} size={12} /> Dismiss
+                    </Button>
                 )}
             </div>
             <p className="px-3 pb-2 text-sm leading-normal text-text select-text">{question.question}</p>
