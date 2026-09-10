@@ -125,7 +125,7 @@ export function DrawingDock() {
     const preset = activeZoomPreset(zoom);
 
     return (
-        <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center px-4">
+        <div data-drawing-chrome className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center px-4">
             <div className={`${FLOAT} pointer-events-auto flex flex-wrap items-center justify-center gap-2 rounded-xl p-1`}>
                 <div className={BTN_GROUP}>
                     {TOOLS.map((row) => (
