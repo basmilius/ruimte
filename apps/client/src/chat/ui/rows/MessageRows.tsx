@@ -18,8 +18,7 @@ const USER_FOLD_LINES = 8;
 const USER_FOLD_CHARS = 600;
 
 /* A folded user prompt fades out at the bottom instead of cutting a line in half. */
-const FOLD =
-    'max-h-[10em] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent)] [-webkit-mask-image:linear-gradient(to_bottom,black_70%,transparent)]';
+const FOLD = 'max-h-[10em] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent)]';
 
 const copy = (text: string): void => {
     void navigator.clipboard?.writeText(text).catch(() => undefined);
