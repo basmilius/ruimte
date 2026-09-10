@@ -1,15 +1,6 @@
 import { useState } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import {
-    GlobeIcon,
-    LayoutGridIcon,
-    MessageSquareIcon,
-    PlusIcon,
-    Search01Icon,
-    Settings01Icon,
-    StickyNote03Icon,
-    TerminalIcon
-} from '@hugeicons/core-free-icons';
+import { faGear, faGlobe, faGrid2, faMagnifyingGlass, faMessage, faNoteSticky, faPlus, faTerminal } from '@fortawesome/duotone-regular-svg-icons';
 import clsx from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
 import { useCanvas, type AgentStatus, type CanvasNode } from '@/state/canvas';
@@ -26,11 +17,11 @@ import { useDesktopFullscreen } from '@/desktop/useFullscreen';
 import { Icon } from '@/ui/Icon';
 
 const KIND_ICON = {
-    terminal: TerminalIcon,
-    chat: MessageSquareIcon,
-    browser: GlobeIcon,
-    group: LayoutGridIcon,
-    note: StickyNote03Icon
+    terminal: faTerminal,
+    chat: faMessage,
+    browser: faGlobe,
+    group: faGrid2,
+    note: faNoteSticky
 } as const;
 
 const GROUPS: { status: AgentStatus | 'none'; label: string }[] = [
@@ -114,7 +105,7 @@ export function Sidebar() {
                 <span className="grow" />
                 <Tooltip label="Search" kbd="⌘K">
                     <button className="icon-btn h-7 w-7" onClick={() => useUi.getState().setPaletteOpen(true)}>
-                        <Icon icon={Search01Icon} size={15} />
+                        <Icon icon={faMagnifyingGlass} size={15} />
                     </button>
                 </Tooltip>
             </div>
@@ -148,12 +139,12 @@ export function Sidebar() {
                     className="flex h-8 grow items-center gap-2 rounded-md px-2 text-[13px] text-text-muted hover:bg-surface-sunken hover:text-text"
                     onClick={() => addNodeAtCenter('terminal')}
                 >
-                    <Icon icon={PlusIcon} size={15} /> New session
+                    <Icon icon={faPlus} size={15} /> New session
                 </button>
                 <ConnectionDot />
                 <Tooltip label="Settings" kbd="⌘,">
                     <button className="icon-btn" onClick={() => useUi.getState().setSettings({ open: true })}>
-                        <Icon icon={Settings01Icon} size={15} />
+                        <Icon icon={faGear} size={15} />
                     </button>
                 </Tooltip>
             </div>

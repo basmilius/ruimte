@@ -1,17 +1,18 @@
-import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react';
-
-// The free Hugeicons set is drawn at this weight; every icon in the client renders through this
-// component so the weight is one decision instead of a prop that drifts per call site.
-const STROKE_WIDTH = 1.5;
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import clsx from 'clsx';
 
 interface IconProps {
-    icon: IconSvgElement;
+    icon: IconDefinition;
     size?: number;
     className?: string;
 }
 
-/* One icon from the free Hugeicons set, sized in pixels. Icons here are decorative: the name a
-   screen reader reads sits on the button or the label next to it, so the glyph stays hidden. */
+/* One Font Awesome duotone icon, sized in pixels. Icons here are decorative: the name a screen
+   reader reads sits on the button or the label next to it, so the glyph stays hidden. */
 export function Icon({ icon, size = 16, className }: IconProps) {
-    return <HugeiconsIcon icon={icon} size={size} strokeWidth={STROKE_WIDTH} className={className} aria-hidden />;
+    // Font Awesome sizes itself in em off the surrounding text, which would make one glyph drift
+    // from the next; a pixel box gives every call site the size it asks for. The `icon` class is
+    // where the duotone layers get their opacity.
+    return <FontAwesomeIcon icon={icon} className={clsx('icon', className)} style={{ width: size, height: size }} aria-hidden />;
 }

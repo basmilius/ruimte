@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Search01Icon, XIcon } from '@hugeicons/core-free-icons';
+import { faMagnifyingGlass, faXmark } from '@fortawesome/duotone-regular-svg-icons';
 import { appCommands } from '@/shell/commands';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -16,7 +16,7 @@ export function KeyboardPane() {
     return (
         <>
             <div className="relative">
-                <Icon icon={Search01Icon} size={14} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-text-faint" aria-hidden />
+                <Icon icon={faMagnifyingGlass} size={14} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-text-faint" aria-hidden />
                 <input
                     className="h-9 w-full rounded-lg border border-border bg-surface pr-9 pl-9 text-[13px] text-text outline-none placeholder:text-text-faint focus:border-accent"
                     placeholder="Search shortcuts"
@@ -34,7 +34,7 @@ export function KeyboardPane() {
                 />
                 {query && (
                     <button className="icon-btn absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2" aria-label="Clear search" onClick={() => setQuery('')}>
-                        <Icon icon={XIcon} size={13} />
+                        <Icon icon={faXmark} size={13} />
                     </button>
                 )}
             </div>

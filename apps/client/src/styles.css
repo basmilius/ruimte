@@ -182,6 +182,14 @@ body {
     box-shadow: var(--shadow-float);
 }
 
+.icon {
+    --fa-primary-color: currentColor;
+    --fa-secondary-color: currentColor;
+    /* The duotone back layer is the same color as the front one, so only opacity separates them;
+       this much reads as a second layer on the light theme without turning to mud on the dark one. */
+    --fa-secondary-opacity: 0.4;
+}
+
 .icon-btn {
     display: inline-flex;
     align-items: center;

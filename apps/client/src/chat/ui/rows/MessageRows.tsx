@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import clsx from 'clsx';
 import {
-    AlertCircleIcon,
-    ArrowShrink01Icon,
-    CheckIcon,
-    ChevronDownIcon,
-    CopyIcon,
-    InfoIcon,
-    MessageCircleQuestionMarkIcon,
-    TriangleAlertIcon,
-    XIcon
-} from '@hugeicons/core-free-icons';
+    faCheck,
+    faChevronDown,
+    faCircleExclamation,
+    faCircleInfo,
+    faCommentQuestion,
+    faCompress,
+    faCopy,
+    faTriangleExclamation,
+    faXmark
+} from '@fortawesome/duotone-regular-svg-icons';
 import type { ChatApprovalItem, ChatAssistantItem, ChatQuestionItem, ChatUserItem } from '@ruimte/contracts';
 import { attachmentUrl } from '@/chat/attachments';
 import { tokenizeMentions } from '@/chat/mentions';
@@ -61,7 +61,7 @@ export function UserRow({ item }: { item: ChatUserItem }) {
                     </div>
                     {long && (
                         <button className="mt-1 flex items-center gap-1 text-[11px] text-text-muted hover:text-text" onClick={() => setOpen((o) => !o)}>
-                            <Icon icon={ChevronDownIcon} size={12} className={clsx('transition-transform', open && 'rotate-180')} />{' '}
+                            <Icon icon={faChevronDown} size={12} className={clsx('transition-transform', open && 'rotate-180')} />{' '}
                             {open ? 'Show less' : 'Show all'}
                         </button>
                     )}
@@ -70,7 +70,7 @@ export function UserRow({ item }: { item: ChatUserItem }) {
             <div className="mt-1 flex h-5 items-center gap-1 pr-1 opacity-0 transition-opacity group-hover/user:opacity-100">
                 <Tooltip label="Copy">
                     <button className="icon-btn h-5 w-5 rounded" onClick={() => copy(item.text)}>
-                        <Icon icon={CopyIcon} size={11} />
+                        <Icon icon={faCopy} size={11} />
                     </button>
                 </Tooltip>
             </div>
@@ -87,7 +87,7 @@ export function AssistantRow({ item, last }: { item: ChatAssistantItem; last: bo
                 <div className="mt-1 flex h-5 items-center gap-1 opacity-0 transition-opacity group-hover/assistant:opacity-100">
                     <Tooltip label="Copy">
                         <button className="icon-btn h-5 w-5 rounded" onClick={() => copy(item.text)}>
-                            <Icon icon={CopyIcon} size={11} />
+                            <Icon icon={faCopy} size={11} />
                         </button>
                     </Tooltip>
                 </div>
@@ -97,9 +97,9 @@ export function AssistantRow({ item, last }: { item: ChatAssistantItem; last: bo
 }
 
 const NOTE_ICON = {
-    info: <Icon icon={InfoIcon} size={13} />,
-    warning: <Icon icon={TriangleAlertIcon} size={13} />,
-    error: <Icon icon={AlertCircleIcon} size={13} />
+    info: <Icon icon={faCircleInfo} size={13} />,
+    warning: <Icon icon={faTriangleExclamation} size={13} />,
+    error: <Icon icon={faCircleExclamation} size={13} />
 };
 
 export function NoteRow({ level, text }: { level: 'info' | 'warning' | 'error'; text: string }) {
@@ -122,7 +122,7 @@ export function CompactionRow({ preTokens }: { preTokens: number | null }) {
     return (
         <div className="flex items-center gap-3 pb-3 text-[11px] text-text-faint">
             <span className="h-px grow bg-border" />
-            <Icon icon={ArrowShrink01Icon} size={12} />
+            <Icon icon={faCompress} size={12} />
             <span>Context compacted{preTokens ? ` from ${formatTokens(preTokens)} tokens` : ''}</span>
             <span className="h-px grow bg-border" />
         </div>
@@ -130,10 +130,10 @@ export function CompactionRow({ preTokens }: { preTokens: number | null }) {
 }
 
 const DECISION: Record<Exclude<ChatApprovalItem['decision'], 'pending'>, { label: string; icon: React.ReactNode }> = {
-    allow: { label: 'Allowed', icon: <Icon icon={CheckIcon} size={12} /> },
-    'allow-always': { label: 'Always allowed', icon: <Icon icon={CheckIcon} size={12} /> },
-    deny: { label: 'Declined', icon: <Icon icon={XIcon} size={12} /> },
-    cancelled: { label: 'No longer needed', icon: <Icon icon={XIcon} size={12} /> }
+    allow: { label: 'Allowed', icon: <Icon icon={faCheck} size={12} /> },
+    'allow-always': { label: 'Always allowed', icon: <Icon icon={faCheck} size={12} /> },
+    deny: { label: 'Declined', icon: <Icon icon={faXmark} size={12} /> },
+    cancelled: { label: 'No longer needed', icon: <Icon icon={faXmark} size={12} /> }
 };
 
 /* The outcome of a permission request, one quiet line; the request itself lived on the composer. */
@@ -158,7 +158,7 @@ export function QuestionHistoryRow({ item }: { item: ChatQuestionItem }) {
         <div className="pb-2">
             {item.questions.map((question) => (
                 <div key={question.id} className="flex items-start gap-2 px-1 py-0.5 text-[12px] text-text-faint">
-                    <Icon icon={MessageCircleQuestionMarkIcon} size={13} className="mt-0.5 shrink-0" />
+                    <Icon icon={faCommentQuestion} size={13} className="mt-0.5 shrink-0" />
                     <span className="min-w-0">
                         <span className="text-text-muted">{question.question}</span>
                         {item.state === 'answered' && item.answers?.[question.id] !== undefined && (

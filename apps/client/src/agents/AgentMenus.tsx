@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Menu } from '@base-ui-components/react/menu';
-import { BotIcon, ChevronRightIcon, MessageSquareIcon } from '@hugeicons/core-free-icons';
+import { faChevronRight, faMessage, faRobot } from '@fortawesome/duotone-regular-svg-icons';
 import type { ProviderInfo } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { AGENT_TARGET_LABEL, type AgentTarget } from '@/agents/nodes';
@@ -15,7 +15,7 @@ function Submenu({ label, icon, children }: { label: string; icon: ReactNode; ch
         <Menu.SubmenuRoot>
             <Menu.SubmenuTrigger className="menu-item">
                 {icon} {label}
-                <Icon icon={ChevronRightIcon} size={14} className="ml-auto text-text-faint" />
+                <Icon icon={faChevronRight} size={14} className="ml-auto text-text-faint" />
             </Menu.SubmenuTrigger>
             <Menu.Portal>
                 <Menu.Positioner className="z-50" sideOffset={4} alignOffset={-4}>
@@ -64,10 +64,10 @@ function AgentRows({ target, onPick }: { target: AgentTarget; onPick(target: Age
 export function AgentSubmenus({ onPick }: { onPick(target: AgentTarget, provider: ProviderInfo): void }) {
     return (
         <>
-            <Submenu label={AGENT_TARGET_LABEL.chat} icon={<Icon icon={MessageSquareIcon} size={14} />}>
+            <Submenu label={AGENT_TARGET_LABEL.chat} icon={<Icon icon={faMessage} size={14} />}>
                 <AgentRows target="chat" onPick={onPick} />
             </Submenu>
-            <Submenu label={AGENT_TARGET_LABEL.terminal} icon={<Icon icon={BotIcon} size={14} />}>
+            <Submenu label={AGENT_TARGET_LABEL.terminal} icon={<Icon icon={faRobot} size={14} />}>
                 <AgentRows target="terminal" onPick={onPick} />
             </Submenu>
         </>

@@ -1,4 +1,4 @@
-import { ArrowExpandIcon, ScanIcon, TrashIcon } from '@hugeicons/core-free-icons';
+import { faCropSimple, faExpand, faTrash } from '@fortawesome/duotone-regular-svg-icons';
 import { activeZoomPreset, ZOOM_PRESETS } from '@/canvas/math';
 import { LOCK_ROWS } from '@/canvas/locks';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
@@ -41,7 +41,7 @@ export function CanvasPane() {
                         <>
                             <Keys keys="⇧ 1" />
                             <button className={buttonClass} onClick={() => useCanvas.getState().fitAll()}>
-                                <Icon icon={ArrowExpandIcon} size={13} /> Fit
+                                <Icon icon={faExpand} size={13} /> Fit
                             </button>
                         </>
                     }
@@ -53,7 +53,7 @@ export function CanvasPane() {
                         <>
                             <Keys keys="⇧ 2" />
                             <button className={buttonClass} disabled={!hasSelection} onClick={() => useCanvas.getState().zoomToSelection()}>
-                                <Icon icon={ScanIcon} size={13} /> Frame
+                                <Icon icon={faCropSimple} size={13} /> Frame
                             </button>
                         </>
                     }
@@ -103,7 +103,7 @@ export function CanvasPane() {
                                         aria-label={`Delete layout ${layout.name}`}
                                         onClick={() => useCanvas.getState().deleteLayout(layout.name)}
                                     >
-                                        <Icon icon={TrashIcon} size={13} />
+                                        <Icon icon={faTrash} size={13} />
                                     </button>
                                 </Tooltip>
                             </>

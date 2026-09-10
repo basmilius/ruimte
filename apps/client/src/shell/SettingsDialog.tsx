@@ -1,6 +1,6 @@
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Tabs } from '@base-ui-components/react/tabs';
-import { XIcon } from '@hugeicons/core-free-icons';
+import { faXmark } from '@fortawesome/duotone-regular-svg-icons';
 import { SettingsNav } from '@/shell/settings/SettingsNav';
 import { AboutPane } from '@/shell/settings/panes/AboutPane';
 import { AgentsPane } from '@/shell/settings/panes/AgentsPane';
@@ -53,7 +53,7 @@ export function SettingsDialog() {
                                             <p className="mt-0.5 text-[12px] text-text-muted">{entry.description}</p>
                                         </div>
                                         <Dialog.Close className="icon-btn h-7 w-7" aria-label="Close">
-                                            <Icon icon={XIcon} size={14} />
+                                            <Icon icon={faXmark} size={14} />
                                         </Dialog.Close>
                                     </div>
                                     <div className="flex min-h-0 grow flex-col gap-5 overflow-y-auto px-6 pb-6">

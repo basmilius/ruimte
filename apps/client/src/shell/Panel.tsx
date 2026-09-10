@@ -1,5 +1,5 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { XIcon } from '@hugeicons/core-free-icons';
+import { faXmark } from '@fortawesome/duotone-regular-svg-icons';
 import { PANELS } from '@/shell/panels';
 import { useUi } from '@/state/ui';
 import { Icon } from '@/ui/Icon';
@@ -72,7 +72,7 @@ export function Panel() {
                 <span className="grow" />
                 <Tooltip label="Close">
                     <button className="icon-btn h-7 w-7" aria-label={`Close ${label}`} onClick={() => useUi.getState().setPanel({ open: false })}>
-                        <Icon icon={XIcon} size={15} />
+                        <Icon icon={faXmark} size={15} />
                     </button>
                 </Tooltip>
             </header>

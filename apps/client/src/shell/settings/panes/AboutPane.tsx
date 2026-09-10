@@ -1,4 +1,4 @@
-import { ExternalLinkIcon } from '@hugeicons/core-free-icons';
+import { faArrowUpRightFromSquare } from '@fortawesome/duotone-regular-svg-icons';
 import { isDesktop } from '@/desktop/bridge';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -59,7 +59,7 @@ export function AboutPane() {
                         description={link.description}
                         control={
                             <a className={buttonClass} href={link.href} target="_blank" rel="noreferrer">
-                                Open <Icon icon={ExternalLinkIcon} size={12} />
+                                Open <Icon icon={faArrowUpRightFromSquare} size={12} />
                             </a>
                         }
                     />
