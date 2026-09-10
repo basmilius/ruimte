@@ -382,6 +382,13 @@ canvas, against Ruimte, one verdict each.
   "Send Escape to the app" (`escapeToApp` in `project.json`, an "Esc" chip in the header) does
   nothing now that Escape always reaches the program; the field and the toggle stay for canvases
   that carry it.
+- On macOS a terminal node has the line and word motions a native terminal has and xterm does
+  not: Cmd+Left and Cmd+Right send Home and End in the form the application cursor keys mode
+  asks for (`\x1b[H` / `\x1b[F`, `\x1bOH` / `\x1bOF` under DECCKM), Option+Left and
+  Option+Right send `\x1bb` / `\x1bf`, and Cmd+Backspace sends Ctrl+U. `macMotionSequence`
+  (`apps/client/src/terminal/keymap.ts`) is the whole mapping; the key handler writes the bytes
+  itself and returns false, so xterm adds nothing and the chord never reaches the canvas. Other
+  platforms keep their own conventions.
 - Formatting is prettier (`.prettierrc`: single quotes, width 160, 4 spaces). Run
   `bun run format` before a commit.
 - A line between two non-agent nodes means nothing to the daemon; it is a drawing. Only the

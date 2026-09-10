@@ -47,6 +47,16 @@ export const CANVAS_SHORTCUTS: readonly ShortcutGroup[] = [
             { keys: 'Esc', label: 'Return from a node to the canvas, except from a terminal, which hands Escape to the program it runs' },
             { keys: '⌘ Esc', label: 'Leave a terminal node (⌃ ⇧ Esc on Windows and Linux)' }
         ]
+    },
+    {
+        title: 'Terminal on macOS',
+        shortcuts: [
+            { keys: '⌘ ←', label: 'Move to the beginning of the line' },
+            { keys: '⌘ →', label: 'Move to the end of the line' },
+            { keys: '⌥ ←', label: 'Move back one word' },
+            { keys: '⌥ →', label: 'Move forward one word' },
+            { keys: '⌘ ⌫', label: 'Delete to the beginning of the line' }
+        ]
     }
 ];
 

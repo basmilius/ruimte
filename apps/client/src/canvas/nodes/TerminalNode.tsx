@@ -12,7 +12,7 @@ import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 import { isApplePlatform } from '@/desktop/bridge';
 import { sessionClient } from '@/terminal';
-import { isLeaveNodeChord } from '@/terminal/keymap';
+import { isLeaveNodeChord, macMotionSequence } from '@/terminal/keymap';
 import { lastScreenOf, registerTerminal } from '@/terminal/registry';
 import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
 import { useTransportStatus } from '@/transport/status';
@@ -110,6 +110,16 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
                 // The canvas listens on window, where any Escape would end node mode.
                 e.stopPropagation();
                 return true;
+            }
+            if (e.type === 'keydown' && isApplePlatform()) {
+                const motion = macMotionSequence(e, term.modes.applicationCursorKeysMode);
+                if (motion) {
+                    e.preventDefault();
+                    // A Cmd chord is the canvas's by default; this one belongs to the shell.
+                    e.stopPropagation();
+                    sessionClient.write(id, motion);
+                    return false;
+                }
             }
             if (e.type === 'keydown' && e.key === 'Enter' && e.shiftKey) {
                 e.preventDefault();
