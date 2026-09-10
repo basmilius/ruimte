@@ -40,6 +40,9 @@ export const codexPromptPrefix = (interactionMode: InteractionMode): string =>
 
 // What the app-server can do, as far as a client has to know.
 export const CODEX_CAPABILITIES: ProviderCapabilities = {
+    chat: true,
+    terminal: true,
+    hooks: true,
     streamsToolOutput: true,
     diffs: 'unified',
     attachments: false,

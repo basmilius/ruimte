@@ -46,7 +46,7 @@ export const mergeHooks = (config: unknown, kind: AgentKind): { config: Record<s
     const root: Record<string, unknown> = isRecord(config) ? { ...config } : {};
     const hooks: Record<string, unknown> = isRecord(root.hooks) ? { ...root.hooks } : {};
     const wanted = hookEntry(kind);
-    const wantedEvents = new Set(HOOK_EVENTS[kind]);
+    const wantedEvents = new Set(HOOK_EVENTS[kind] ?? []);
     let changed = false;
 
     const allEvents = new Set([...wantedEvents, ...Object.keys(hooks)]);
@@ -122,8 +122,8 @@ export const installHooks = async (path: string, kind: AgentKind): Promise<Insta
     return 'written';
 };
 
-// Where each CLI reads user-level hooks from.
-export const defaultHookPaths = (env: Record<string, string | undefined> = process.env): Record<AgentKind, string> => {
+// Where each CLI reads user-level hooks from; a CLI whose hooks the daemon cannot read is not listed.
+export const defaultHookPaths = (env: Record<string, string | undefined> = process.env): Partial<Record<AgentKind, string>> => {
     const home = env.HOME ?? homedir();
     return {
         claude: join(env.CLAUDE_CONFIG_DIR ?? join(home, '.claude'), 'settings.json'),

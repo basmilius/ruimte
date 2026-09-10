@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { normalizeHook, resumeCommand } from './hooks.ts';
+import { hasHooks, normalizeHook } from './hooks.ts';
 
 const hook = (event: string, extra: Record<string, unknown> = {}) => ({
     session_id: 'abc',
@@ -40,9 +40,11 @@ describe('normalizeHook', () => {
     });
 });
 
-describe('resumeCommand', () => {
-    test('quotes the id for the shell', () => {
-        expect(resumeCommand('claude', 'abc-123')).toBe("claude --resume 'abc-123'");
-        expect(resumeCommand('codex', "a'b")).toBe("codex resume 'a'\\''b'");
+describe('hasHooks', () => {
+    test('is true for the CLIs with a normalizer and false for the terminal-only ones', () => {
+        expect(hasHooks('claude')).toBe(true);
+        expect(hasHooks('codex')).toBe(true);
+        expect(hasHooks('gemini')).toBe(false);
+        expect(hasHooks('copilot')).toBe(false);
     });
 });

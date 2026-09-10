@@ -1,8 +1,9 @@
 import { randomBytes } from 'node:crypto';
 import { homedir } from 'node:os';
-import type { AgentInfo, AgentKind, ContextSource, EventMap, EventType, SessionInfo } from '@ruimte/contracts';
+import type { AgentInfo, AgentKind, AgentLaunch, ContextSource, EventMap, EventType, SessionInfo } from '@ruimte/contracts';
 import type { AgentStore } from '../agents/agent-store.ts';
-import { normalizeHook, resumeCommand } from '../agents/hooks.ts';
+import { normalizeHook } from '../agents/hooks.ts';
+import { terminalCommand, resumeCommand } from '../providers/launch.ts';
 import { contextHint } from '../context/context-note.ts';
 import { defaultShell, defaultShellArgs, type PtyAdapter } from '../pty/pty.ts';
 import { Session } from './session.ts';
@@ -31,6 +32,8 @@ export interface CreateSessionOptions {
     cwd?: string;
     shell?: string;
     command?: string;
+    // An agent CLI to start instead of a plain command; the daemon builds the line it types.
+    agent?: AgentLaunch;
     // Not on the wire; lets a test skip the login flag so the user's profile stays out of the output.
     args?: string[];
 }
@@ -118,7 +121,7 @@ export class SessionManager {
             cwd: options.cwd ?? this.env.HOME ?? homedir(),
             cols: options.cols,
             rows: options.rows,
-            command: options.command,
+            command: options.command ?? (options.agent ? terminalCommand(options.agent) : undefined),
             restoredScreen,
             restoredAgent
         });

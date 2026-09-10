@@ -55,6 +55,9 @@ export const claudeArgs = (launch: ClaudeLaunch): string[] => {
 
 // What the CLI can do, as far as a client has to know.
 export const CLAUDE_CAPABILITIES: ProviderCapabilities = {
+    chat: true,
+    terminal: true,
+    hooks: true,
     streamsToolOutput: false,
     diffs: 'before-after',
     attachments: true,

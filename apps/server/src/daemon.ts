@@ -1,6 +1,6 @@
 import { dirname, join, normalize, resolve } from 'node:path';
 import type { ServerWebSocket } from 'bun';
-import { PairPayloadSchema, type ServerFrame } from '@ruimte/contracts';
+import { PairPayloadSchema, type AgentKind, type ServerFrame } from '@ruimte/contracts';
 import { AgentStore } from './agents/agent-store.ts';
 import { decideAccess, isLoopbackAddress, reachabilityOf } from './auth/access.ts';
 import { pairingUrl } from './cli/pairing.ts';
@@ -89,8 +89,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerGitHandlers(dispatcher, new Worktrees(config.home));
 
     if (config.installHooks) {
+        // Only the CLIs the daemon has a normalizer for are listed; the others run without status.
         for (const [kind, path] of Object.entries(defaultHookPaths())) {
-            installHooks(path, kind as 'claude' | 'codex')
+            installHooks(path, kind as AgentKind)
                 .then((result) => {
                     if (result === 'written') {
                         console.log(`Installed ${kind} status hooks in ${path}${kind === 'codex' ? ' (trust them once with /hooks in Codex)' : ''}`);

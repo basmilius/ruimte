@@ -31,8 +31,15 @@ describe('handleHookRequest', () => {
     test('rejects a missing token, an unknown token, an unknown agent and a body that is not JSON', async () => {
         expect((await handleHookRequest(post('/hooks/claude', '{}'), '/hooks/claude', target('applied'))).status).toBe(401);
         expect((await handleHookRequest(post('/hooks/claude', '{}', 'x'), '/hooks/claude', target('unknown-token'))).status).toBe(401);
-        expect((await handleHookRequest(post('/hooks/gemini', '{}', 'x'), '/hooks/gemini', target('applied'))).status).toBe(404);
+        expect((await handleHookRequest(post('/hooks/nope', '{}', 'x'), '/hooks/nope', target('applied'))).status).toBe(404);
         expect((await handleHookRequest(post('/hooks/codex', 'nope', 'x'), '/hooks/codex', target('applied'))).status).toBe(400);
+    });
+
+    test('turns away a CLI whose hooks the daemon has no normalizer for', async () => {
+        const gemini = target('applied');
+        expect((await handleHookRequest(post('/hooks/gemini', '{}', 'x'), '/hooks/gemini', gemini)).status).toBe(404);
+        expect((await handleHookRequest(post('/hooks/copilot', '{}', 'x'), '/hooks/copilot', gemini)).status).toBe(404);
+        expect(gemini.calls).toEqual([]);
     });
 
     test('answers a Claude prompt hook with the context hint as additionalContext', async () => {

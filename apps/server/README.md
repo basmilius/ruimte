@@ -26,7 +26,7 @@ bun run --cwd apps/server dev              # same, restarts on file changes
 
 `bun run compile` (`scripts/compile.ts`) builds one executable with `bun build --compile` into `dist/<os>-<arch>/ruimte`, with `ruimte-context` next to it, for this machine or with `--os mac|linux --arch arm64|x64` for another. `RUIMTE_VERSION` stamps a version in; the desktop app packages that folder as its `bin` resource.
 
-`GET /health` answers `{ ok: true, version }`. `POST /hooks/<claude|codex>` takes a hook payload from an agent CLI (see below). Everything else goes over `/ws` using the frames in `packages/contracts`.
+`GET /health` answers `{ ok: true, version }`. `POST /hooks/<claude|codex>` takes a hook payload from an agent CLI (see below); a kind the daemon has no normalizer for (`gemini`, `copilot`) answers 404. Everything else goes over `/ws` using the frames in `packages/contracts`.
 
 ## `RUIMTE_HOME`
 
@@ -60,12 +60,15 @@ A project is a folder; its canvas is `<folder>/.ruimte/project.json`, pretty-pri
 - Every session runs a headless xterm in the daemon (10000 lines of scrollback). `session.attach` answers with the serialized screen, after which raw output streams in `session.output` events, coalesced per 16 ms.
 - Several clients may attach to one session. Attaching with different `cols`/`rows` resizes the session; the last attacher wins.
 - A shell that exits on its own stays in `session.list` as `exited` with its `exitCode` so the last screen can still be read. `session.kill` removes it.
+- `session.create` takes either `command` (a line typed into the fresh shell) or `agent` (`{ kind, runtimeMode?, model?, resume? }`), never both: with `agent` the daemon builds the line itself (`src/providers/launch.ts`) and types that. So every client starts a CLI the same way, and a flag never travels over the wire. `runtimeMode` becomes `--permission-mode` for Claude Code, `--ask-for-approval` plus `--sandbox` for Codex, `--approval-mode` for Gemini and nothing for Copilot; a `resume` fills the provider's resume template instead. A CLI that is not installed ends as `command not found` in the shell, which is why the menus disable a row the daemon did not find.
 
 ## Snapshots
 
 Every 30 seconds, and on `SIGINT`/`SIGTERM`, the daemon writes each session's screen to `sessions/<sessionId>.txt` (temp file, then rename). When the daemon starts again and a client creates a session with an id that has a snapshot, the first attach shows the snapshot, the restored marker and then the fresh shell. `session.kill` deletes the snapshot on purpose: a killed session should not come back.
 
 ## Agent status via hooks
+
+Hooks are per kind: Claude Code and Codex have an event table and a normalizer (`capabilities.hooks: true`), Gemini and GitHub Copilot do not, so they launch in a terminal and show the session's own status (running while attached, error on exit) and nothing more. The installer only visits the kinds with a hook path, and the receiver answers 404 for the others.
 
 Every shell gets `RUIMTE_HOOK_URL` (`http://127.0.0.1:<port>/hooks`) and a per-session `RUIMTE_HOOK_TOKEN`. At startup the daemon puts one command hook per lifecycle event into `~/.claude/settings.json` and `~/.codex/hooks.json` (idempotent merge; hooks of other tools stay). The hook POSTs its stdin to `$RUIMTE_HOOK_URL/<kind>` with the token as bearer and prints the reply, and does nothing outside Ruimte. Codex asks you to trust the new hooks once (`/hooks`).
 
@@ -77,11 +80,11 @@ The record is also written to `sessions/<id>.agent.json`. When the daemon starts
 
 ## Providers and models
 
-Each agent CLI is one `ChatProvider` value (`src/providers/provider.ts`, `claude-provider.ts`, `codex-provider.ts`): its kind and name, its model catalog, what it can do, the command to run, the template a terminal resumes it with (`claude --resume {id}`, `codex resume {id}`) and how to make a backend for a chat. `ProviderRegistry` is the list of them plus the detection cache; nothing else in the daemon branches on which CLI a chat is.
+Each agent CLI is one `ChatProvider` value (`src/providers/provider.ts`, `claude-provider.ts`, `codex-provider.ts`, `terminal-providers.ts`): its kind and name, its model catalog, what it can do, the command to run, the template a terminal resumes it with (`claude --resume {id}`, `codex resume {id}`) and how to make a backend for a chat. `ProviderRegistry` is the list of them plus the detection cache; nothing else in the daemon branches on which CLI a chat is. The catalog is Claude Code, Codex, Gemini and GitHub Copilot, in the order every menu lists them; the last two are terminal only and have no chat backend.
 
 `provider.list` answers, per agent CLI, whether it is installed, its version, the models it offers, its resume template and its capabilities. The catalogs are `src/providers/claude-models.json` and `src/providers/codex-models.json`: a model points at a profile, a profile lists option descriptors (reasoning effort, context window, thinking) with their defaults and the context size per option. Adding a model is a JSON edit; a new profile is only needed for a new combination of options. The Codex catalog mirrors what `codex app-server` answers on `model/list` for 0.153 (six models, each with its own reasoning ladder and default); the context windows were measured per model through `thread/tokenUsage/updated`. A `ModelSelection` is `{ model, options }`; the daemon normalizes it (aliases like `opus` or `astra`, defaults for missing options, unknown options dropped).
 
-The capabilities are the honest list of what a CLI does, so a client never offers what would be dropped: whether it streams partial tool output, how it reports a file change (`unified`, `before-after` or `none`), whether it takes image attachments and `@` mentions, whether a decline carries a reason, whether "always allow" exists, whether it asks questions the person may ignore, how it folds context (`native`, `prompt` or `none`), how plan mode works, whether it reports cost, the context window and slash commands. Claude Code and Codex differ on most of them.
+The capabilities are the honest list of what a CLI does, so a client never offers what would be dropped: whether it can be opened as a chat, as a terminal or both, whether the daemon understands its hooks, whether it streams partial tool output, how it reports a file change (`unified`, `before-after` or `none`), whether it takes image attachments and `@` mentions, whether a decline carries a reason, whether "always allow" exists, whether it asks questions the person may ignore, how it folds context (`native`, `prompt` or `none`), how plan mode works, whether it reports cost, the context window and slash commands. Claude Code and Codex differ on most of them.
 
 Two modes travel with every chat. The runtime mode is the permission policy, one vocabulary for every provider: `supervised`, `auto-accept-edits`, `auto`, `full-access` (the default). The interaction mode is `default` or `plan`. For Claude they become `--permission-mode` (plan wins over the runtime mode), the selection becomes `--model <slug>[1m]` and `--effort`, and `ultrathink` is written into the prompt because the CLI has no flag for it.
 
