@@ -377,6 +377,23 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   (the shell sends `window:fullscreen`), the rightmost element in the band keeps the width of the
   overlay controls free through `env(titlebar-area-*)` on Windows and Linux, and the overlay
   colors follow the client's theme over IPC.
+  The window runs under a content security policy, in two places because two things serve the
+  client: the daemon sends it as a `Content-Security-Policy` header on everything under `--serve`
+  (`CLIENT_CSP` in `apps/server/src/daemon.ts`, which is what a packaged app gets), and the same
+  policy sits as a `<meta http-equiv>` in `apps/client/index.html` for the Vite dev server. It is
+  `default-src 'self'; base-uri 'self'; object-src 'none'; frame-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; media-src 'self' data: blob: http: https:; font-src 'self' data:; connect-src 'self' ws: wss: http: https:; worker-src 'self' blob:`. `'wasm-unsafe-eval'` is
+  there for shiki's oniguruma, `'unsafe-inline'` for styles because Tailwind, shiki and Base UI
+  all set them on the element, and `blob:` under `worker-src` for the diff worker. `connect-src`,
+  `img-src` and `media-src` are broad on purpose: a paired endpoint is any host the person adds
+  (phase 10) and its socket, project icons, attachments and file bytes all come from there, so
+  narrowing them to the loopback daemon would break every remote endpoint. There is no
+  `'unsafe-eval'` and no inline script; the built `index.html` has none, and Vite's dev preamble
+  is injected above the meta tag, so it predates the policy. Without this Electron logged
+  "Insecure Content-Security-Policy" on every start, because a renderer without a policy may
+  `eval`. The `<webview>` guests are not covered by it: a browser node's page brings its own
+  policy, and `frame-src 'none'` does not touch a webview. A webview attribute counts as set the
+  moment it is there, so `allowpopups="false"` was popups turned on; browser nodes carry no
+  `allowpopups` at all and `HtmlFile.tsx` only ever names settings that turn something on.
 
 - **Phase 9, groups, worktrees, context links and layouts**: groups nest (a group inside a
   group carries its members along), collapse to their header with the members hidden and

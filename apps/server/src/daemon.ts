@@ -39,6 +39,17 @@ import { SnapshotStore, scheduleSnapshots } from './sessions/snapshot-store.ts';
 // Inside a `bun build --compile` binary the sources live on a virtual file system, so paths next to the source mean nothing.
 const compiled = import.meta.dir.startsWith('/$bunfs') || import.meta.dir.includes('~BUN');
 
+/*
+ * The policy the served client runs under, the twin of the `<meta http-equiv>` in
+ * `apps/client/index.html` (which is what covers the Vite dev server). Without it an Electron
+ * window has no policy at all, so `eval` and an inline script are free. `connect-src`, `img-src`
+ * and `media-src` are wide because a paired endpoint is any host the person adds and its socket,
+ * images, attachments and file bytes all come from there.
+ */
+const CLIENT_CSP =
+    "default-src 'self'; base-uri 'self'; object-src 'none'; frame-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data: blob: http: https:; media-src 'self' data: blob: http: https:; font-src 'self' data:; connect-src 'self' ws: wss: http: https:; worker-src 'self' blob:";
+
 /* Runs the daemon until a signal ends the process. */
 export const startDaemon = async (config: ServerConfig): Promise<void> => {
     // `ruimte-context` lives next to the binary, or next to the source in dev; it goes on the PATH of every shell and chat.
@@ -279,10 +290,11 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const serveClient = async (dir: string, pathname: string): Promise<Response> => {
         const relative = normalize(decodeURIComponent(pathname)).replace(/^(\.\.[/\\])+/, '');
         const file = Bun.file(join(dir, relative === '/' ? 'index.html' : relative));
+        const headers = { 'content-security-policy': CLIENT_CSP };
         if (await file.exists()) {
-            return new Response(file);
+            return new Response(file, { headers });
         }
-        return new Response(Bun.file(join(dir, 'index.html')));
+        return new Response(Bun.file(join(dir, 'index.html')), { headers });
     };
 
     void relay.publish({ host: config.host, port: server.port ?? config.port });
