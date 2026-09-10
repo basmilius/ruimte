@@ -6,7 +6,6 @@ import type {
     ChatInfo,
     ChatItem,
     FsSearchResult,
-    InteractionMode,
     ModelSelection,
     RuntimeMode
 } from '@ruimte/contracts';
@@ -23,7 +22,6 @@ export interface ChatOpenOptions {
     /* What a fresh chat starts with; an existing chat keeps what it has. */
     selection?: ModelSelection;
     runtimeMode?: RuntimeMode;
-    interactionMode?: InteractionMode;
 }
 
 export interface ChatSendExtras {
@@ -79,6 +77,22 @@ export class ChatClient {
             }
             throw e;
         }
+    }
+
+    /*
+     * Points a chat that has not spoken yet at another CLI. The daemon fixes a chat's provider when
+     * it registers the chat, so the only way over is to drop the empty one and register it again.
+     */
+    async retarget(chatId: string, provider: AgentKind, selection: ModelSelection): Promise<void> {
+        const entry = this.mounted.get(chatId);
+        if (!entry) {
+            return;
+        }
+        const { attached: _attached, ...options } = entry;
+        this.mounted.delete(chatId);
+        await this.transport.request('chat.kill', { chatId });
+        this.sink.forget(chatId);
+        await this.open(chatId, { ...options, provider, selection });
     }
 
     async detach(chatId: string): Promise<void> {
@@ -168,8 +182,7 @@ export class ChatClient {
             cwd: entry?.cwd,
             resume: entry?.resume,
             selection: entry?.selection,
-            runtimeMode: entry?.runtimeMode,
-            interactionMode: entry?.interactionMode
+            runtimeMode: entry?.runtimeMode
         });
         const result = await this.transport.request('chat.attach', { chatId });
         const current = this.mounted.get(chatId);

@@ -38,6 +38,8 @@ export interface AddNodeOptions {
     command?: string;
     resume?: string;
     provider?: AgentKind;
+    /* Chats only: the CLI came from a menu, so the composer offers no other one. */
+    providerFixed?: boolean;
     // Terminal agents only: the permission mode the CLI starts in.
     runtimeMode?: RuntimeMode;
 }
@@ -141,7 +143,7 @@ interface CanvasState {
     setNodeAccent(id: string, accent: string | null): void;
     renameNode(id: string, title: string): void;
     /* Changes what a node carries (its page, its folder) without touching its placement. */
-    updateNode(id: string, patch: Partial<Pick<CanvasNode, 'url' | 'cwd' | 'command' | 'resume' | 'escapeToApp' | 'body' | 'color'>>): void;
+    updateNode(id: string, patch: Partial<Pick<CanvasNode, 'url' | 'cwd' | 'command' | 'resume' | 'escapeToApp' | 'body' | 'color' | 'provider'>>): void;
     duplicateNode(id: string): void;
     addNode(kind: NodeKind, at: Point, options?: AddNodeOptions): string;
     /* Wraps the selected nodes in a group; answers null when nothing is selected. */
@@ -455,6 +457,7 @@ export const useCanvas = create<CanvasState>((set, get) => ({
             command: options.command,
             resume: options.resume,
             provider: options.provider,
+            providerFixed: options.providerFixed,
             runtimeMode: options.runtimeMode
         };
         set((s) => ({ nodes: { ...s.nodes, [id]: node }, order: [...s.order, id], selection: [id], mode: { kind: 'canvas' }, ...remember(s) }));

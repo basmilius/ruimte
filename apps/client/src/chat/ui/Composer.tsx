@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { ArrowUp02Icon, FileTextIcon, SquareIcon, XIcon } from '@hugeicons/core-free-icons';
-import type { ChatApprovalItem, ChatInfo, ChatQuestionItem, InteractionMode, ModelInfo, RuntimeMode } from '@ruimte/contracts';
+import type { AgentKind, ChatApprovalItem, ChatInfo, ChatQuestionItem, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { attachmentUrl, checkAttachmentLimits, imageFilesOf, readAttachments } from '@/chat/attachments';
 import { EMPTY_DRAFT, isEmptyDraft, readDraft, writeDraft, type ChatDraft } from '@/chat/drafts';
 import { findMentionQuery, insertMention, presentMentions, tokenizeMentions, type MentionQuery } from '@/chat/mentions';
-import { rememberChatPreferences } from '@/chat/preferences';
+import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferences';
 import { ContextMeter } from '@/chat/ui/ContextMeter';
 import { ApprovalDock, QuestionDock } from '@/chat/ui/PendingDock';
-import { ModelPicker, ModePicker, OptionsPicker, PlanToggle } from '@/chat/ui/Pickers';
+import { ModelBadge, ModelPicker, ModePicker, OptionsPicker } from '@/chat/ui/Pickers';
 import { useChats } from '@/state/chats';
 import { useProviders } from '@/state/providers';
 import { Tooltip } from '@/ui/Tooltip';
@@ -21,8 +21,7 @@ const NOTICE_MS = 4000;
 
 // Commands the composer handles itself; the CLI's own ones are sent through as text.
 const LOCAL_COMMANDS = [
-    { name: 'plan', hint: 'Switch to plan mode' },
-    { name: 'build', hint: 'Switch back to building' },
+    { name: 'model', hint: 'Switch the model' },
     { name: 'compact', hint: 'Fold the context' }
 ];
 
@@ -34,7 +33,11 @@ interface ComposerProps {
     info: ChatInfo;
     focused: boolean;
     disabled: boolean;
+    /* Opened for one CLI from a menu: the model is the remembered one and there is nothing to pick. */
+    providerFixed: boolean;
     onSend(text: string, extras: ChatSendExtras): void;
+    /* Another provider's model was picked before the first message; the node has to follow. */
+    onRetarget(provider: AgentKind, selection: ModelSelection): void;
 }
 
 const usePendingRequests = (chatId: string) => {
@@ -63,10 +66,10 @@ const splitPath = (path: string): { name: string; dir: string } => {
 /*
  * The floating card at the bottom of a chat: what the agent is waiting on docks above it, the
  * prompt sits in the middle, and the footer holds the model, its options, the permission mode,
- * plan or build, the context meter and the send or stop button. `/` opens the command menu,
- * `@` a file picker over the chat's folder; images arrive by paste or drop.
+ * the context meter and the send or stop button. `/` opens the command menu, `@` a file picker
+ * over the chat's folder; images arrive by paste or drop.
  */
-export function Composer({ chatId, info, focused, disabled, onSend }: ComposerProps) {
+export function Composer({ chatId, info, focused, disabled, providerFixed, onSend, onRetarget }: ComposerProps) {
     const [draft, setDraft] = useState<ChatDraft>(() => readDraft(chatId));
     const [historyIndex, setHistoryIndex] = useState<number | null>(null);
     const [menuIndex, setMenuIndex] = useState(0);
@@ -74,6 +77,7 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
     const [searched, setSearched] = useState<string[]>([]);
     const [notice, setNotice] = useState<string | null>(null);
     const [dragging, setDragging] = useState(false);
+    const [modelPickerOpen, setModelPickerOpen] = useState(false);
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const backdropRef = useRef<HTMLDivElement>(null);
     const providers = useProviders((s) => s.providers);
@@ -88,6 +92,15 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
     const model = models.find((entry) => entry.slug === info.selection.model);
     const busy = info.activeTurnId !== null;
     const text = draft.text;
+    // The CLI announces its session on the first message, so anything before that is still a blank chat.
+    const started = info.agentSessionId !== null || info.usage.turns > 0;
+    /*
+     * A started chat keeps its provider (the CLI holds the thread), but its models stay switchable:
+     * both CLIs take the model on the restart the next send does anyway.
+     */
+    const pickable = started
+        ? providers.filter((entry) => entry.kind === info.provider)
+        : providers.filter((entry) => entry.installed && entry.capabilities.chat);
 
     useEffect(() => {
         if (focused) {
@@ -154,12 +167,12 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
         if (commandQuery === null) {
             return [];
         }
-        const own = LOCAL_COMMANDS.map((command) => ({ ...command, local: true }));
+        const own = LOCAL_COMMANDS.filter((command) => command.name !== 'model' || !providerFixed).map((command) => ({ ...command, local: true }));
         const cli = info.slashCommands
             .filter((name) => !LOCAL_COMMANDS.some((command) => command.name === name))
             .map((name) => ({ name, hint: 'Claude Code command', local: false }));
         return [...own, ...cli].filter((command) => command.name.startsWith(commandQuery)).slice(0, 8);
-    }, [commandQuery, info.slashCommands]);
+    }, [commandQuery, info.slashCommands, providerFixed]);
 
     const commandMenuOpen = commandQuery !== null && commands.length > 0;
     const mentionMenuOpen = !commandMenuOpen && mention !== null;
@@ -171,18 +184,31 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
         setDraft((current) => ({ ...current, text: next, mentions }));
     };
 
-    const configure = (patch: { selection?: ChatInfo['selection']; runtimeMode?: RuntimeMode; interactionMode?: InteractionMode }): void => {
-        rememberChatPreferences(patch);
+    const configure = (patch: { selection?: ModelSelection; runtimeMode?: RuntimeMode }): void => {
+        if (patch.selection) {
+            rememberChatSelection(info.provider, patch.selection);
+        }
+        if (patch.runtimeMode) {
+            rememberChatPreferences({ runtimeMode: patch.runtimeMode });
+        }
         void chatClient.configure({ chatId, ...patch }).catch(() => undefined);
+    };
+
+    /* A model of another CLI re-points the whole chat; one of this CLI's own is a configure. */
+    const chooseModel = (provider: AgentKind, slug: string): void => {
+        const selection: ModelSelection = { model: slug, options: {} };
+        if (provider !== info.provider) {
+            rememberChatSelection(provider, selection);
+            onRetarget(provider, selection);
+            return;
+        }
+        configure({ selection });
     };
 
     const runCommand = (name: string): boolean => {
         switch (name) {
-            case 'plan':
-                configure({ interactionMode: 'plan' });
-                return true;
-            case 'build':
-                configure({ interactionMode: 'default' });
+            case 'model':
+                setModelPickerOpen(true);
                 return true;
             case 'compact':
                 void chatClient.compact(chatId).catch(() => undefined);
@@ -339,11 +365,7 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
         }
     };
 
-    const placeholder = disabled
-        ? 'Not connected to the Ruimte server'
-        : info.interactionMode === 'plan'
-          ? 'Describe what to plan, / for commands, @ for files'
-          : 'Ask anything, / for commands, @ for files';
+    const placeholder = disabled ? 'Not connected to the Ruimte server' : 'Ask anything, / for commands, @ for files';
 
     return (
         <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10">
@@ -487,14 +509,24 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
                 </div>
                 {notice && <div className="px-3.5 pb-1 text-[11px] text-status-error">{notice}</div>}
                 <div className="flex items-center gap-1 px-2 pb-2">
-                    <ModelPicker models={models} selection={info.selection} onChange={(slug) => configure({ selection: { model: slug, options: {} } })} />
+                    {providerFixed ? (
+                        <ModelBadge provider={info.provider} providerName={provider?.name ?? info.provider} model={model?.name ?? info.selection.model} />
+                    ) : (
+                        <ModelPicker
+                            providers={pickable}
+                            provider={info.provider}
+                            selection={info.selection}
+                            open={modelPickerOpen}
+                            onOpenChange={setModelPickerOpen}
+                            onChange={chooseModel}
+                        />
+                    )}
                     <OptionsPicker
                         model={model}
                         selection={info.selection}
                         onChange={(id, value) => configure({ selection: { ...info.selection, options: { ...info.selection.options, [id]: value } } })}
                     />
                     <ModePicker runtimeMode={info.runtimeMode} onChange={(runtimeMode) => configure({ runtimeMode })} />
-                    <PlanToggle interactionMode={info.interactionMode} onChange={(interactionMode) => configure({ interactionMode })} />
                     <span className="grow" />
                     <ContextMeter usage={info.usage} disabled={busy || disabled} onCompact={() => void chatClient.compact(chatId).catch(() => undefined)} />
                     {busy ? (

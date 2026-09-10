@@ -1,8 +1,12 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Menu } from '@base-ui-components/react/menu';
+import { Popover } from '@base-ui-components/react/popover';
 import clsx from 'clsx';
-import { CheckIcon, ChevronDownIcon, Shield01Icon, SlidersHorizontalIcon } from '@hugeicons/core-free-icons';
-import type { InteractionMode, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import { CheckIcon, ChevronDownIcon, ChevronRightIcon, Search01Icon, Shield01Icon, SlidersHorizontalIcon } from '@hugeicons/core-free-icons';
+import type { AgentKind, ModelInfo, ModelSelection, ProviderInfo, RuntimeMode } from '@ruimte/contracts';
+import { AgentIcon } from '@/agents/AgentIcon';
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
+import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 
 const triggerClass =
@@ -37,29 +41,198 @@ function RadioRow({ value, label, hint, badge }: { value: string; label: string;
     );
 }
 
-/* Which model answers: current ones first, legacy ones below a line. */
-export function ModelPicker({ models, selection, onChange }: { models: ModelInfo[]; selection: ModelSelection; onChange(model: string): void }) {
-    const current = models.find((model) => model.slug === selection.model);
-    const live = models.filter((model) => !model.legacy);
-    const legacy = models.filter((model) => model.legacy);
+/* A model row, or the one row that folds the legacy models open. Both take a turn in the arrow keys. */
+type PickerEntry = { kind: 'model'; provider: ProviderInfo; model: ModelInfo } | { kind: 'legacy'; count: number };
+
+const matches = (model: ModelInfo, query: string): boolean => model.name.toLowerCase().includes(query) || model.slug.toLowerCase().includes(query);
+
+interface ModelPickerProps {
+    /* Whose models may be picked: every installed chat CLI before the first message, the chat's own after it. */
+    providers: ProviderInfo[];
+    provider: AgentKind;
+    selection: ModelSelection;
+    /* Controlled, so `/model` in the composer can open the same popup a click on the trigger does. */
+    open: boolean;
+    onOpenChange(open: boolean): void;
+    onChange(provider: AgentKind, model: string): void;
+}
+
+/*
+ * Which model answers: the provider's mark plus the model's short name
+ * as the trigger, a search field over the popup, one group per provider and the legacy models
+ * behind an expander. Before the first message the list carries every installed CLI, so picking
+ * another provider's model is also how a chat picks its provider.
+ */
+export function ModelPicker({ providers, provider, selection, open, onOpenChange, onChange }: ModelPickerProps) {
+    const [query, setQuery] = useState('');
+    const [legacyOpen, setLegacyOpen] = useState(false);
+    const [index, setIndex] = useState(0);
+    const inputRef = useRef<HTMLInputElement>(null);
+    const listRef = useRef<HTMLDivElement>(null);
+
+    const owner = providers.find((entry) => entry.kind === provider);
+    const current = owner?.models.find((model) => model.slug === selection.model);
+    const grouped = providers.length > 1;
+    const trimmed = query.trim().toLowerCase();
+
+    const entries = useMemo((): PickerEntry[] => {
+        const rows = providers.flatMap((entry) => entry.models.map((model) => ({ kind: 'model' as const, provider: entry, model })));
+        if (trimmed !== '') {
+            return rows.filter((row) => matches(row.model, trimmed));
+        }
+        const live = rows.filter((row) => !row.model.legacy);
+        const legacy = rows.filter((row) => row.model.legacy);
+        if (legacy.length === 0) {
+            return live;
+        }
+        return legacyOpen ? [...live, { kind: 'legacy', count: legacy.length }, ...legacy] : [...live, { kind: 'legacy', count: legacy.length }];
+    }, [providers, trimmed, legacyOpen]);
+
+    /* Closing forgets the search, so the next open (a click or `/model`) starts on the whole list. */
+    const setOpen = (next: boolean): void => {
+        if (!next) {
+            setQuery('');
+            setLegacyOpen(false);
+        }
+        setIndex(0);
+        onOpenChange(next);
+    };
+
+    // The list scrolls, so the row the arrows moved to has to come along.
+    useEffect(() => {
+        listRef.current?.querySelector<HTMLElement>('[data-active="true"]')?.scrollIntoView({ block: 'nearest' });
+    }, [index]);
+
+    const choose = (entry: PickerEntry | undefined): void => {
+        if (!entry) {
+            return;
+        }
+        if (entry.kind === 'legacy') {
+            setLegacyOpen(true);
+            inputRef.current?.focus();
+            return;
+        }
+        onChange(entry.provider.kind, entry.model.slug);
+        setOpen(false);
+    };
+
+    const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setIndex((i) => (entries.length === 0 ? 0 : (i + 1) % entries.length));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setIndex((i) => (entries.length === 0 ? 0 : (i - 1 + entries.length) % entries.length));
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            choose(entries[index]);
+        }
+    };
+
     return (
-        <Menu.Root>
-            <Menu.Trigger className={triggerClass}>
-                <span className="max-w-40 truncate">{current?.name ?? selection.model}</span>
-                <Icon icon={ChevronDownIcon} size={12} className="text-text-faint" />
-            </Menu.Trigger>
-            <Popup minWidth="min-w-56">
-                <Menu.RadioGroup value={selection.model} onValueChange={(value: string) => onChange(value)}>
-                    {live.map((model) => (
-                        <RadioRow key={model.slug} value={model.slug} label={model.name} badge={model.badge} />
-                    ))}
-                    {legacy.length > 0 && <Menu.Separator className="menu-separator" />}
-                    {legacy.map((model) => (
-                        <RadioRow key={model.slug} value={model.slug} label={model.name} hint="Legacy" />
-                    ))}
-                </Menu.RadioGroup>
-            </Popup>
-        </Menu.Root>
+        <Popover.Root open={open} onOpenChange={setOpen}>
+            <Tooltip label={owner ? `${owner.name} · ${current?.name ?? selection.model}` : 'Choose model'} kbd="/model">
+                <Popover.Trigger className={triggerClass}>
+                    <AgentIcon kind={provider} size={13} />
+                    <span className="max-w-40 truncate">{current?.name ?? selection.model}</span>
+                    <Icon icon={ChevronDownIcon} size={12} className="text-text-faint" />
+                </Popover.Trigger>
+            </Tooltip>
+            <Popover.Portal>
+                <Popover.Positioner className="z-50" side="top" sideOffset={8} align="start">
+                    <Popover.Popup className="picker-popup" initialFocus={inputRef}>
+                        <div className="flex items-center gap-2 border-b border-border px-2.5">
+                            <Icon icon={Search01Icon} size={13} className="shrink-0 text-text-faint" />
+                            <input
+                                ref={inputRef}
+                                className="h-9 w-full bg-transparent text-[13px] text-text outline-none placeholder:text-text-faint"
+                                placeholder="Search models"
+                                spellCheck={false}
+                                value={query}
+                                onChange={(e) => {
+                                    setQuery(e.target.value);
+                                    setIndex(0);
+                                }}
+                                onKeyDown={onKeyDown}
+                            />
+                        </div>
+                        <div ref={listRef} className="max-h-72 overflow-auto p-1" role="listbox">
+                            {entries.length === 0 && (
+                                <div className="px-3 py-6 text-center text-[12px] text-text-faint">
+                                    {providers.length === 0 ? 'No chat provider installed' : 'No models match'}
+                                </div>
+                            )}
+                            {entries.map((entry, i) => {
+                                if (entry.kind === 'legacy') {
+                                    return (
+                                        <button
+                                            key="legacy"
+                                            data-active={i === index}
+                                            className={clsx(
+                                                'flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[12px]',
+                                                i === index ? 'bg-surface-sunken text-text' : 'text-text-faint'
+                                            )}
+                                            onMouseEnter={() => setIndex(i)}
+                                            onClick={() => choose(entry)}
+                                        >
+                                            <Icon icon={legacyOpen ? ChevronDownIcon : ChevronRightIcon} size={12} />
+                                            Legacy models ({entry.count})
+                                        </button>
+                                    );
+                                }
+                                const previous = entries[i - 1];
+                                const first =
+                                    grouped && (previous === undefined || previous.kind !== 'model' || previous.provider.kind !== entry.provider.kind);
+                                const chosen = entry.provider.kind === provider && entry.model.slug === selection.model;
+                                return (
+                                    <div key={`${entry.provider.kind}/${entry.model.slug}`}>
+                                        {first && (
+                                            <div className="menu-label flex items-center gap-1.5">
+                                                <AgentIcon kind={entry.provider.kind} size={11} />
+                                                {entry.provider.name}
+                                            </div>
+                                        )}
+                                        <button
+                                            role="option"
+                                            aria-selected={chosen}
+                                            data-active={i === index}
+                                            className={clsx(
+                                                'flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px]',
+                                                i === index ? 'bg-surface-sunken text-text' : 'text-text-muted'
+                                            )}
+                                            onMouseEnter={() => setIndex(i)}
+                                            onClick={() => choose(entry)}
+                                        >
+                                            <span className="grid h-4 w-4 shrink-0 place-items-center">{chosen && <Icon icon={CheckIcon} size={13} />}</span>
+                                            <span className="min-w-0 truncate">{entry.model.name}</span>
+                                            {entry.model.badge && (
+                                                <span className="rounded bg-accent-soft px-1 text-[10px] font-medium uppercase text-accent">
+                                                    {entry.model.badge}
+                                                </span>
+                                            )}
+                                            <span className="grow" />
+                                            {entry.model.legacy && <span className="text-[11px] text-text-faint">Legacy</span>}
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </Popover.Popup>
+                </Popover.Positioner>
+            </Popover.Portal>
+        </Popover.Root>
+    );
+}
+
+/* A chat opened for one CLI shows what it runs on; there is nothing to choose, so there is no popup. */
+export function ModelBadge({ provider, providerName, model }: { provider: AgentKind; providerName: string; model: string }) {
+    return (
+        <Tooltip label={`${providerName} · ${model}. This chat was opened for ${providerName}.`}>
+            <span className="flex h-7 shrink-0 cursor-default items-center gap-1 whitespace-nowrap rounded-md px-2 text-[12px] text-text-muted">
+                <AgentIcon kind={provider} size={13} />
+                <span className="max-w-40 truncate">{model}</span>
+            </span>
+        </Tooltip>
     );
 }
 
@@ -145,25 +318,5 @@ export function ModePicker({ runtimeMode, onChange }: { runtimeMode: RuntimeMode
                 </Menu.RadioGroup>
             </Popup>
         </Menu.Root>
-    );
-}
-
-/* Plan or build: whether the agent proposes first or goes straight to work. */
-export function PlanToggle({ interactionMode, onChange }: { interactionMode: InteractionMode; onChange(mode: InteractionMode): void }) {
-    return (
-        <div className="flex h-7 items-center rounded-md bg-surface-sunken p-0.5 text-[11px] font-medium">
-            {(['default', 'plan'] as const).map((mode) => (
-                <button
-                    key={mode}
-                    className={clsx(
-                        'h-6 rounded px-2 transition-colors',
-                        interactionMode === mode ? 'bg-surface-raised text-text shadow-sm' : 'text-text-muted hover:text-text'
-                    )}
-                    onClick={() => onChange(mode)}
-                >
-                    {mode === 'plan' ? 'Plan' : 'Build'}
-                </button>
-            ))}
-        </div>
     );
 }

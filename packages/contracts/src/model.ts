@@ -72,6 +72,7 @@ export const ProviderCapabilitiesSchema = z.object({
     asyncQuestions: z.boolean(),
     // Folding the context: a call of its own, a slash command sent as a turn, or nothing.
     compaction: z.enum(['native', 'prompt', 'none']),
+    // Reported by the daemon and read by nothing since the plan toggle went; a removal candidate.
     planMode: z.enum(['native', 'prompt', 'none']),
     reportsCost: z.boolean(),
     reportsContextWindow: z.boolean(),

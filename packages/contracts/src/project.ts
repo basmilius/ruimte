@@ -27,6 +27,8 @@ export const ProjectNodeSchema = z.object({
     resume: z.string().optional(),
     // Terminal and chat: which agent CLI this node hosts; absent on a chat means Claude Code.
     provider: AgentKindSchema.optional(),
+    // Chat only: the CLI was chosen when the node was made, so the composer offers no other one.
+    providerFixed: z.boolean().optional(),
     // Terminal only: the permission mode its agent was started in, so a reload starts it the same way.
     runtimeMode: RuntimeModeSchema.optional(),
     // Browser only: the page it shows.

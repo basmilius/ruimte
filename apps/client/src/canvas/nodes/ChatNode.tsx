@@ -1,7 +1,8 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { RotateCwIcon } from '@hugeicons/core-free-icons';
+import type { AgentKind, ModelSelection } from '@ruimte/contracts';
 import { chatClient, type ChatSendExtras } from '@/chat';
-import { readChatPreferences } from '@/chat/preferences';
+import { defaultProvider, readChatPreferences, selectionFor } from '@/chat/preferences';
 import { Composer } from '@/chat/ui/Composer';
 import { Timeline } from '@/chat/ui/Timeline';
 import { useCanvas } from '@/state/canvas';
@@ -19,6 +20,7 @@ const DiffPool = lazy(() => import('@/chat/ui/DiffPool'));
 
 export function ChatNode({ id, focused }: { id: string; focused: boolean }) {
     const info = useChats((s) => s.byNodeId[id]?.info);
+    const providerFixed = useCanvas((s) => s.nodes[id]?.providerFixed === true);
     const status = useTransportStatus();
     const [failure, setFailure] = useState<string | null>(null);
     const [generation, setGeneration] = useState(0);
@@ -27,14 +29,15 @@ export function ChatNode({ id, focused }: { id: string; focused: boolean }) {
         let cancelled = false;
         const node = useCanvas.getState().nodes[id];
         const preferences = readChatPreferences();
+        // A node without a provider of its own opens on the CLI whose model was picked last.
+        const provider = node?.provider ?? defaultProvider(preferences) ?? undefined;
         chatClient
             .open(id, {
-                provider: node?.provider,
+                provider,
                 cwd: node?.cwd ?? useProject.getState().current?.folder ?? undefined,
                 resume: node?.resume,
-                selection: preferences.selection ?? undefined,
-                runtimeMode: preferences.runtimeMode,
-                interactionMode: preferences.interactionMode
+                selection: selectionFor(preferences, provider) ?? undefined,
+                runtimeMode: preferences.runtimeMode
             })
             .catch((e: unknown) => {
                 if (!cancelled) {
@@ -46,6 +49,12 @@ export function ChatNode({ id, focused }: { id: string; focused: boolean }) {
             void chatClient.detach(id);
         };
     }, [id, generation]);
+
+    /* The node remembers the new CLI, so a reload opens the chat on the same one. */
+    const retarget = (provider: AgentKind, selection: ModelSelection): void => {
+        useCanvas.getState().updateNode(id, { provider });
+        chatClient.retarget(id, provider, selection).catch((e: unknown) => setFailure(e instanceof Error ? e.message : 'The provider could not be changed'));
+    };
 
     const send = (text: string, extras: ChatSendExtras): void => {
         const node = useCanvas.getState().nodes[id];
@@ -84,7 +93,17 @@ export function ChatNode({ id, focused }: { id: string; focused: boolean }) {
                     <Timeline chatId={id} />
                 </DiffPool>
             </Suspense>
-            {info && <Composer chatId={id} info={info} focused={focused} disabled={status !== 'open'} onSend={send} />}
+            {info && (
+                <Composer
+                    chatId={id}
+                    info={info}
+                    focused={focused}
+                    disabled={status !== 'open'}
+                    providerFixed={providerFixed}
+                    onSend={send}
+                    onRetarget={retarget}
+                />
+            )}
         </div>
     );
 }
