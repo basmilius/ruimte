@@ -32,19 +32,22 @@ function PanelBody({ kind }: { kind: PanelKind }) {
    while the panel slides in or out. */
 export function Panel() {
     const panel = useUi((s) => s.panel);
+    /* A page fills the main column, so the panels beside it step aside without giving up what they
+       hold: the project's own file keeps saying they are open and they come back with the project. */
+    const open = useUi((s) => s.panel.open && s.page === null);
     /* Where a panel hangs its own header controls; a callback ref, so the portal has an element
        the first time the panel body renders and not one commit later. */
     const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
     const stored = useUi((s) => s.panelWidth);
     /* Closed and done animating. Until then the contents stay mounted, so a close plays out. */
-    const [settled, setSettled] = useState(!panel.open);
+    const [settled, setSettled] = useState(!open);
     const instant = useInstantWidth();
     /* A width that lands without a transition fires no `transitionend`, so the motion it would have
        ended is over in the same commit that starts it. */
-    if (instant && settled !== !panel.open) {
-        setSettled(!panel.open);
+    if (instant && settled !== !open) {
+        setSettled(!open);
     }
-    const present = panel.open || !settled;
+    const present = open || !settled;
     const ref = useRef<HTMLElement>(null);
     const bounds = { min: MIN_WIDTH, max: () => window.innerWidth - MIN_CANVAS_WIDTH };
     // The project may have been on a wider window than this one, so its width is clamped on the way in.
@@ -57,7 +60,7 @@ export function Panel() {
     });
 
     useEffect(() => {
-        if (panel.open || settled) {
+        if (open || settled) {
             return;
         }
         // Reduced motion and a hidden tab paint no width change, so no `transitionend` arrives.
@@ -65,32 +68,32 @@ export function Panel() {
         return () => {
             window.clearTimeout(timer);
         };
-    }, [panel.open, settled]);
+    }, [open, settled]);
 
     const label = PANELS.find((entry) => entry.kind === panel.kind)?.label ?? 'Panel';
 
     return (
         <aside
             ref={ref}
-            inert={!panel.open}
+            inert={!open}
             data-instant={instant ? '' : undefined}
             className="panel-shell flex h-full shrink-0 justify-end overflow-hidden"
-            style={{ width: panel.open ? width : 0 }}
+            style={{ width: open ? width : 0 }}
             onTransitionEnd={(event) => {
                 if (event.propertyName === 'width' && event.target === event.currentTarget) {
-                    setSettled(!panel.open);
+                    setSettled(!open);
                 }
             }}
         >
             {present && (
                 <div className="relative flex h-full shrink-0 flex-col border-l border-border bg-surface" style={{ width }}>
-                    {panel.open && <div className="absolute inset-y-0 left-0 z-10 w-2 cursor-col-resize" onPointerDown={startResize} />}
+                    {open && <div className="absolute inset-y-0 left-0 z-10 w-2 cursor-col-resize" onPointerDown={startResize} />}
                     {/* An open panel is the rightmost column, so on Windows and Linux the close button
                         would land under the native window controls; the inset keeps their width free. */}
                     <header
                         className={clsx(
                             'app-drag flex h-12 shrink-0 items-center gap-2 border-b border-border px-3',
-                            panel.open && hasOverlayControls() && 'toolbar-overlay-inset'
+                            open && hasOverlayControls() && 'toolbar-overlay-inset'
                         )}
                     >
                         <span className={`${SECTION_LABEL} shrink-0`}>{label}</span>

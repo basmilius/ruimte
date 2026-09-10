@@ -32,8 +32,9 @@ const halfOfCanvas = (): number => {
    the panel beside it, it stays mounted and animates its width over an inner column of the stored
    width, so its contents do not reflow while it slides in or out. */
 export function PreviewPanel() {
-    const open = useUi((s) => s.preview.open);
-    const panelOpen = useUi((s) => s.panel.open);
+    /* A page takes the main column and the panels step aside; see `Panel`. */
+    const open = useUi((s) => s.preview.open && s.page === null);
+    const panelOpen = useUi((s) => s.panel.open && s.page === null);
     const stored = useUi((s) => s.previewWidth);
     /* Closed and done animating. Until then the contents stay mounted, so a close plays out. */
     const [settled, setSettled] = useState(!open);

@@ -1,5 +1,6 @@
 import type { UsageTotals } from '@ruimte/contracts';
-import { formatTokens, formatUsd, totalTokensOf } from '@/shell/usage/format';
+import { formatTokens, totalTokensOf } from '@/shell/usage/format';
+import { useMoney } from '@/shell/usage/money';
 
 interface UsageTilesProps {
     totals: UsageTotals;
@@ -8,13 +9,14 @@ interface UsageTilesProps {
 
 /* What the period moved, split by the kinds of token that are priced differently. */
 export function UsageTiles({ totals, cacheSavingsUsd }: UsageTilesProps) {
+    const money = useMoney();
     const tiles: { label: string; value: string }[] = [
         { label: 'Processed', value: formatTokens(totalTokensOf(totals)) },
         { label: 'Uncached input', value: formatTokens(totals.input) },
         { label: 'Cached input', value: formatTokens(totals.cacheRead) },
         { label: 'Cache writes', value: formatTokens(totals.cacheWrite) },
         { label: 'Output', value: formatTokens(totals.output) },
-        { label: 'Cache savings', value: formatUsd(cacheSavingsUsd) }
+        { label: 'Cache savings', value: money(cacheSavingsUsd) }
     ];
     return (
         <div className="grid grid-cols-2 gap-2 md:grid-cols-6">

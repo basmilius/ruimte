@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import clsx from 'clsx';
 import { CircleHelp, Folder, Info } from 'lucide-react';
-import type { UsageModel, UsageProject, UsageSummaryResult } from '@ruimte/contracts';
+import type { UsageModel, UsageProject, UsageProvider, UsageSummaryResult } from '@ruimte/contracts';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { Segmented } from '@/shell/settings/controls';
 import { useProject } from '@/state/project';
@@ -8,48 +9,59 @@ import type { UsageMetric } from '@/state/usage';
 import { SECTION_LABEL } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
+import { ProviderLogo } from '@/ui/ProviderLogo';
 import {
     displayModel,
     formatCount,
     formatTokens,
-    formatUsd,
     PROVIDER_COLORS,
     PROVIDER_LABELS,
     shortPath,
+    slotLabel,
     totalTokensOf,
     USAGE_PROVIDERS
 } from '@/shell/usage/format';
+import { useMoney } from '@/shell/usage/money';
+import { deriveDays } from '@/shell/usage/summary';
 
-type Breakdown = 'models' | 'projects';
+type Breakdown = 'models' | 'projects' | 'day';
 
-const TABS: readonly { id: Breakdown; label: string }[] = [
-    { id: 'models', label: 'Models' },
-    { id: 'projects', label: 'Projects' }
-];
-
-/* The row of both tables: the same height and the same hover as a commit row in the git panel. */
+/* The row of every table: the same height and the same hover as a commit row in the git panel. */
 const ROW = 'flex h-8 items-center gap-2 rounded-md px-2 text-xs hover:bg-surface-hover';
 
 const HEAD = 'flex h-6 items-center gap-2 px-2 text-xs text-text-faint';
 
+/* A row is padded so its hover has room around the text, and the table pulls that padding back off
+   again: the first column then starts on the same line as every other section of the page. */
+const TABLE = '-mx-2 flex flex-col';
+
+const TABS: readonly { id: Breakdown; label: string }[] = [
+    { id: 'models', label: 'Models' },
+    { id: 'projects', label: 'Projects' },
+    { id: 'day', label: 'Day' }
+];
+
 /* A share of the biggest row, never under one pixel: a row that did something has to be visible. */
 const barWidth = (value: number, top: number): number => (value <= 0 || top <= 0 ? 0 : Math.max(1, Math.round((value / top) * 100)));
 
-function ProviderDot({ provider }: { provider: UsageModel['provider'] }) {
+function ProviderMark({ provider }: { provider: UsageProvider }) {
     return (
         <Tooltip label={PROVIDER_LABELS[provider]}>
-            <span className="size-2 shrink-0 rounded-full" style={{ background: PROVIDER_COLORS[provider] }} />
+            <span style={{ color: PROVIDER_COLORS[provider] }}>
+                <ProviderLogo provider={provider} />
+            </span>
         </Tooltip>
     );
 }
 
 function ModelRows({ models, metric, total }: { models: readonly UsageModel[]; metric: UsageMetric; total: number }) {
+    const money = useMoney();
     /* On the tokens metric the biggest row is the one that moved the most, not the dearest. */
     const sorted = [...models].sort((a, b) =>
         metric === 'tokens' ? totalTokensOf(b.totals) - totalTokensOf(a.totals) : (b.costUsd ?? -1) - (a.costUsd ?? -1)
     );
     return (
-        <div className="flex flex-col">
+        <div className={TABLE}>
             <div className={HEAD}>
                 <span className="grow">Model</span>
                 <span className="w-16 text-right">Calls</span>
@@ -61,7 +73,7 @@ function ModelRows({ models, metric, total }: { models: readonly UsageModel[]; m
             </div>
             {sorted.map((model) => (
                 <div key={`${model.provider} ${model.model}`} className={ROW}>
-                    <ProviderDot provider={model.provider} />
+                    <ProviderMark provider={model.provider} />
                     <Tooltip label={model.model}>
                         <span className="truncate">{displayModel(model.model)}</span>
                     </Tooltip>
@@ -86,7 +98,7 @@ function ModelRows({ models, metric, total }: { models: readonly UsageModel[]; m
                                 </span>
                             </Tooltip>
                         ) : (
-                            formatUsd(model.costUsd)
+                            money(model.costUsd)
                         )}
                     </span>
                     <span className="w-12 text-right tabular-nums text-text-muted">
@@ -100,32 +112,37 @@ function ModelRows({ models, metric, total }: { models: readonly UsageModel[]; m
 
 function ProjectRows({ projects }: { projects: readonly UsageProject[] }) {
     const summaries = useProject((s) => s.projects);
+    const money = useMoney();
     const top = Math.max(...projects.map((project) => project.costUsd), 0);
     return (
-        <div className="flex flex-col gap-1">
+        <div className={clsx(TABLE, 'gap-1')}>
             {projects.map((project) => {
                 const summary = summaries.find((candidate) => candidate.projectId === project.projectId);
                 return (
-                    <div key={project.folder} className={`${ROW} h-auto py-1.5`}>
-                        {summary ? (
-                            <ProjectGlyph projectId={summary.projectId} icon={summary.icon} color={summary.color} size={16} />
-                        ) : (
-                            <span className="text-text-faint">
-                                <Icon icon={Folder} size={16} />
-                            </span>
-                        )}
+                    /* The glyph sits on the title rather than between the two lines, so a column of
+                       icons lines up with the names beside it and not with the paths under them. */
+                    <div key={project.folder} className={`${ROW} h-auto items-start py-1.5`}>
+                        <span className="mt-px flex">
+                            {summary ? (
+                                <ProjectGlyph projectId={summary.projectId} icon={summary.icon} color={summary.color} size={16} />
+                            ) : (
+                                <span className="text-text-faint">
+                                    <Icon icon={Folder} size={16} />
+                                </span>
+                            )}
+                        </span>
                         <span className="flex min-w-0 grow flex-col">
                             <span className="truncate">{summary?.name ?? project.name}</span>
                             <span className="truncate text-text-faint">{shortPath(project.folder)}</span>
                         </span>
-                        <span className="flex h-[9px] w-32 shrink-0 overflow-hidden rounded-full bg-surface-sunken">
+                        <span className="mt-1 flex h-[9px] w-32 shrink-0 overflow-hidden rounded-full bg-surface-sunken">
                             {USAGE_PROVIDERS.map((provider) => {
                                 const share = project.byProvider[provider];
                                 const width = barWidth(share?.costUsd ?? 0, top);
                                 return width === 0 ? null : <span key={provider} style={{ width: `${width}%`, background: PROVIDER_COLORS[provider] }} />;
                             })}
                         </span>
-                        <span className="w-20 text-right tabular-nums">{formatUsd(project.costUsd)}</span>
+                        <span className="w-20 text-right tabular-nums">{money(project.costUsd)}</span>
                         <span className="w-16 text-right tabular-nums text-text-muted">{formatTokens(totalTokensOf(project.totals))}</span>
                     </div>
                 );
@@ -134,8 +151,50 @@ function ProjectRows({ projects }: { projects: readonly UsageProject[] }) {
     );
 }
 
-/* The same period cut two ways: what was spent on which model, and in which checkout. */
-export function UsageBreakdown({ summary, metric }: { summary: UsageSummaryResult; metric: UsageMetric }) {
+/* The chart written out per calendar day, a column per provider that did anything in the period. */
+function DayRows({ summary, providers }: { summary: UsageSummaryResult; providers: readonly UsageProvider[] }) {
+    const money = useMoney();
+    const rows = deriveDays(summary);
+    if (rows.length === 0) {
+        return <p className="px-2 py-6 text-center text-xs text-text-muted">No activity in this window.</p>;
+    }
+    return (
+        <div className={TABLE}>
+            <div className={HEAD}>
+                <span className="grow">Day</span>
+                {providers.map((provider) => (
+                    <span key={provider} className="w-20 text-right">
+                        {PROVIDER_LABELS[provider]}
+                    </span>
+                ))}
+                <span className="w-20 text-right">Total</span>
+                <span className="w-16 text-right">Tokens</span>
+            </div>
+            {rows.map((row) => (
+                <div key={row.slot} className={ROW}>
+                    <span className="grow truncate">{slotLabel(row.slot)}</span>
+                    {providers.map((provider) => (
+                        <span key={provider} className="w-20 text-right tabular-nums text-text-muted">
+                            {row.costByProvider[provider] === undefined ? '' : money(row.costByProvider[provider]!)}
+                        </span>
+                    ))}
+                    <span className="w-20 text-right tabular-nums">{money(row.costUsd)}</span>
+                    <span className="w-16 text-right tabular-nums text-text-muted">{formatTokens(row.tokens)}</span>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+interface UsageBreakdownProps {
+    summary: UsageSummaryResult;
+    metric: UsageMetric;
+    /* The providers that did anything, in the order the chart stacks them. */
+    providers: readonly UsageProvider[];
+}
+
+/* The same period cut three ways: which model, which checkout, and which day it went on. */
+export function UsageBreakdown({ summary, metric, providers }: UsageBreakdownProps) {
     const [tab, setTab] = useState<Breakdown>('models');
     const total = summary.models.reduce((sum, model) => sum + (model.costUsd ?? 0), 0);
     return (
@@ -146,7 +205,9 @@ export function UsageBreakdown({ summary, metric }: { summary: UsageSummaryResul
                     <Segmented value={tab} options={TABS} onChange={(id) => setTab(id)} label="Breakdown" />
                 </div>
             </div>
-            {tab === 'models' ? <ModelRows models={summary.models} metric={metric} total={total} /> : <ProjectRows projects={summary.projects} />}
+            {tab === 'models' && <ModelRows models={summary.models} metric={metric} total={total} />}
+            {tab === 'projects' && <ProjectRows projects={summary.projects} />}
+            {tab === 'day' && <DayRows summary={summary} providers={providers} />}
         </section>
     );
 }

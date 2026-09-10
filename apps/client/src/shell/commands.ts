@@ -172,7 +172,7 @@ export const appCommands = (): Command[] => {
               ]
             : []),
         { id: 'lock', label: anyLocked ? 'Unlock everything' : 'Lock everything', run: () => useCanvas.getState().setAllLocks(!anyLocked) },
-        { id: 'usage', label: 'Usage', hint: 'Cost, tokens and limits of both CLIs', run: () => useUi.getState().setPage('usage') },
+        { id: 'usage', label: 'Usage', hint: 'Cost, tokens and limits of both CLIs', run: () => useUi.getState().togglePage('usage') },
         { id: 'sidebar', label: 'Toggle sidebar', shortcut: '⌘B', run: () => useUi.getState().toggleSidebar() },
         { id: 'panel-preview', label: 'Toggle preview panel', run: () => useUi.getState().togglePreview() },
         { id: 'panel-files', label: 'Toggle files panel', run: () => useUi.getState().togglePanel('files') },

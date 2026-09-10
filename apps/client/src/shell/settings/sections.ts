@@ -1,4 +1,4 @@
-import { Bot, Folder, GitBranch, Info, Keyboard, LayoutGrid, Palette, PenTool, Server, type LucideIcon } from 'lucide-react';
+import { Bot, ChartNoAxesColumn, Folder, GitBranch, Info, Keyboard, LayoutGrid, Palette, PenTool, Server, type LucideIcon } from 'lucide-react';
 import type { SettingsSectionId } from '@/state/ui';
 
 interface SettingsSectionMeta {
@@ -16,6 +16,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionMeta[] = [
     { id: 'drawing', label: 'Drawing', description: 'How a drawing view behaves while you draw.', icon: PenTool },
     { id: 'files', label: 'Files', description: 'What the Files panel shows and how many files it keeps open.', icon: Folder },
     { id: 'git', label: 'Git', description: 'How the Git panel lists what changed.', icon: GitBranch },
+    { id: 'usage', label: 'Usage', description: 'The money the usage page counts in.', icon: ChartNoAxesColumn },
     { id: 'agents', label: 'Agents', description: 'What a new agent starts with, and which CLIs the daemon found.', icon: Bot },
     { id: 'machines', label: 'Machines', description: 'The daemons this client can talk to.', icon: Server },
     { id: 'keyboard', label: 'Keyboard', description: 'Every shortcut. Remapping comes later.', icon: Keyboard },

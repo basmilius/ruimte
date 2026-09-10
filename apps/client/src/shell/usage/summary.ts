@@ -102,3 +102,32 @@ export const deriveUsage = (summary: UsageSummaryResult, metric: UsageMetric): D
         cacheSavingsUsd
     };
 };
+
+/* One row of the Day table: what each provider cost that day, and what the day moved in all. */
+export interface UsageDay {
+    /* `YYYY-MM-DD`, always a calendar day, whatever resolution the chart above it is drawn at. */
+    slot: string;
+    costByProvider: Partial<Record<UsageProvider, number>>;
+    costUsd: number;
+    tokens: number;
+}
+
+/*
+ * The same buckets the chart draws, written out as a table of calendar days, newest first. Today is
+ * drawn per hour but read per day, so an hour slot is folded onto the date it names. A day nothing
+ * happened in is left out: the chart already shows the gap, and a quiet fortnight would otherwise be
+ * fourteen rows of zeroes between the days worth reading.
+ */
+export const deriveDays = (summary: UsageSummaryResult): UsageDay[] => {
+    const rows = new Map<string, UsageDay>();
+    for (const bucket of summary.buckets) {
+        const day = bucket.slot.slice(0, 10);
+        const row = rows.get(day) ?? { slot: day, costByProvider: {}, costUsd: 0, tokens: 0 };
+        const cost = bucket.costUsd ?? 0;
+        row.costByProvider[bucket.provider] = (row.costByProvider[bucket.provider] ?? 0) + cost;
+        row.costUsd += cost;
+        row.tokens += totalTokensOf(bucket.totals);
+        rows.set(day, row);
+    }
+    return [...rows.values()].sort((a, b) => b.slot.localeCompare(a.slot));
+};

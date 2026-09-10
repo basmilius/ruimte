@@ -1,6 +1,8 @@
 import type { UsageTotals } from '@ruimte/contracts';
 import type { UsageMetric } from '@/state/usage';
-import { formatCount, formatTokens, formatUsd, PROVIDER_COLORS, PROVIDER_LABELS, totalTokensOf } from '@/shell/usage/format';
+import { ProviderLogo } from '@/ui/ProviderLogo';
+import { formatCount, formatTokens, PROVIDER_COLORS, PROVIDER_LABELS, totalTokensOf } from '@/shell/usage/format';
+import { useMoney } from '@/shell/usage/money';
 import type { ProviderTotal } from '@/shell/usage/summary';
 
 interface UsageSummaryProps {
@@ -13,13 +15,14 @@ interface UsageSummaryProps {
 
 /*
  * The number the page is about, with a row per provider under it. Those rows double as the chart's
- * legend, which is why the dot is the same color the bar segment is drawn in.
+ * legend, which is why the mark is the same color the bar segment is drawn in.
  */
 export function UsageSummary({ metric, costUsd, totals, sessions, providers }: UsageSummaryProps) {
+    const money = useMoney();
     return (
         <div className="flex flex-col gap-4">
             <div>
-                <p className="text-4xl font-semibold tabular-nums">{metric === 'cost' ? formatUsd(costUsd) : formatTokens(totalTokensOf(totals))}</p>
+                <p className="text-4xl font-semibold tabular-nums">{metric === 'cost' ? money(costUsd) : formatTokens(totalTokensOf(totals))}</p>
                 {/* A subscription is not billed per call, so the figure says what it is: API rates. */}
                 <p className="mt-1 text-xs text-text-muted">
                     {formatCount(sessions)} {sessions === 1 ? 'session' : 'sessions'} · {formatCount(totals.calls)} calls · at API rates
@@ -28,10 +31,12 @@ export function UsageSummary({ metric, costUsd, totals, sessions, providers }: U
             <div className="flex flex-col gap-2">
                 {providers.map((provider) => (
                     <div key={provider.provider} className="flex items-center gap-2 text-xs">
-                        <span className="size-2 shrink-0 rounded-full" style={{ background: PROVIDER_COLORS[provider.provider] }} />
+                        <span style={{ color: PROVIDER_COLORS[provider.provider] }}>
+                            <ProviderLogo provider={provider.provider} />
+                        </span>
                         <span className="text-text">{PROVIDER_LABELS[provider.provider]}</span>
                         <span className="ml-auto tabular-nums text-text-muted">
-                            {formatUsd(provider.costUsd)} · {formatTokens(totalTokensOf(provider.totals))}
+                            {money(provider.costUsd)} · {formatTokens(totalTokensOf(provider.totals))}
                         </span>
                     </div>
                 ))}
