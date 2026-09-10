@@ -1,11 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { ArrowUp, FileText, Square, X } from 'lucide-react';
-import type { AgentKind, ChatApprovalItem, ChatInfo, ChatQuestionItem, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import { ArrowUp, FileText, Square, X, Zap } from 'lucide-react';
+import type { AgentKind, ChatApprovalItem, ChatInfo, ChatQuestionItem, ChatSkill, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { attachmentUrl, checkAttachmentLimits, imageFilesOf, readAttachments } from '@/chat/attachments';
 import { EMPTY_DRAFT, isEmptyDraft, readDraft, writeDraft, type ChatDraft } from '@/chat/drafts';
-import { MENTION_DRAG_TYPE, findMentionQuery, insertMention, presentMentions, tokenizeMentions, type MentionQuery } from '@/chat/mentions';
+import {
+    MENTION_DRAG_TYPE,
+    findMentionQuery,
+    findSkillQuery,
+    insertMention,
+    insertSkill,
+    presentMentions,
+    presentSkills,
+    tokenizeChips,
+    type MentionQuery
+} from '@/chat/mentions';
 import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferences';
 import { ContextMeter } from '@/chat/ui/ContextMeter';
 import { ApprovalDock, QuestionDock } from '@/chat/ui/PendingDock';
@@ -74,6 +84,8 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
     const [historyIndex, setHistoryIndex] = useState<number | null>(null);
     const [menuIndex, setMenuIndex] = useState(0);
     const [mention, setMention] = useState<MentionQuery | null>(null);
+    const [skillQuery, setSkillQuery] = useState<MentionQuery | null>(null);
+    const [skills, setSkills] = useState<ChatSkill[]>([]);
     const [searched, setSearched] = useState<string[]>([]);
     const [notice, setNotice] = useState<string | null>(null);
     const [dragging, setDragging] = useState(false);
@@ -154,6 +166,22 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
         };
     }, [info.cwd, mention]);
 
+    /* The daemon's skill list, once per chat and again once the CLI announced its own after the first message. */
+    useEffect(() => {
+        let stale = false;
+        chatClient
+            .listSkills(chatId)
+            .then((found) => {
+                if (!stale) {
+                    setSkills(found);
+                }
+            })
+            .catch(() => undefined);
+        return () => {
+            stale = true;
+        };
+    }, [chatId, info.skills]);
+
     const history = useMemo(() => {
         const prompts: Array<{ text: string; mentions: string[] }> = [];
         for (const id of order ?? []) {
@@ -170,21 +198,31 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
         if (commandQuery === null) {
             return [];
         }
-        const own = LOCAL_COMMANDS.map((command) => ({ ...command, local: true }));
+        const known = new Set(skills.map((skill) => skill.name));
+        const own = LOCAL_COMMANDS.map((command) => ({ ...command, local: true, skill: false }));
         const cli = info.slashCommands
             .filter((name) => !LOCAL_COMMANDS.some((command) => command.name === name))
-            .map((name) => ({ name, hint: 'Claude Code command', local: false }));
+            .map((name) => ({ name, hint: known.has(name) ? 'Skill' : `${provider?.name ?? 'CLI'} command`, local: false, skill: known.has(name) }));
         return [...own, ...cli].filter((command) => command.name.startsWith(commandQuery)).slice(0, 8);
-    }, [commandQuery, info.slashCommands]);
+    }, [commandQuery, info.slashCommands, provider?.name, skills]);
+
+    const skillMatches = useMemo(() => {
+        if (skillQuery === null) {
+            return [];
+        }
+        const query = skillQuery.query.toLowerCase();
+        return skills.filter((skill) => skill.name.toLowerCase().includes(query)).slice(0, 8);
+    }, [skillQuery, skills]);
 
     const commandMenuOpen = commandQuery !== null && commands.length > 0;
-    const mentionMenuOpen = !commandMenuOpen && mention !== null;
+    const skillMenuOpen = !commandMenuOpen && skillQuery !== null && skillMatches.length > 0;
+    const mentionMenuOpen = !commandMenuOpen && !skillMenuOpen && mention !== null;
     // Results belong to the query that asked for them; a closed picker shows none while the next answer is on its way.
     const files = mention === null ? [] : searched;
-    const segments = useMemo(() => tokenizeMentions(text, draft.mentions), [text, draft.mentions]);
+    const segments = useMemo(() => tokenizeChips(text, draft.mentions, draft.skills), [text, draft.mentions, draft.skills]);
 
-    const setText = (next: string, mentions = draft.mentions): void => {
-        setDraft((current) => ({ ...current, text: next, mentions }));
+    const setText = (next: string, mentions = draft.mentions, chosen = draft.skills): void => {
+        setDraft((current) => ({ ...current, text: next, mentions, skills: chosen }));
     };
 
     const configure = (patch: { selection?: ModelSelection; runtimeMode?: RuntimeMode }): void => {
@@ -221,13 +259,26 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
         }
     };
 
-    const trackMention = (el: HTMLTextAreaElement): void => {
+    const same = (a: MentionQuery | null, b: MentionQuery | null): boolean => a?.start === b?.start && a?.query === b?.query;
+
+    /* Which picker the caret opens: `@` for a file, `$` for a skill, or neither. */
+    const trackTriggers = (el: HTMLTextAreaElement): void => {
+        const caret = el.selectionStart === el.selectionEnd ? el.selectionStart : null;
+        const skill = caret === null ? null : findSkillQuery(el.value, caret);
+        setSkillQuery((current) => (same(current, skill) ? current : skill));
         // A CLI that does not expand `@path` gets the text as it is, so the picker stays out of the way.
-        if (capabilities?.mentions === false) {
-            return;
+        const next = caret === null || capabilities?.mentions === false ? null : findMentionQuery(el.value, caret);
+        setMention((current) => (same(current, next) ? current : next));
+    };
+
+    const moveCaret = (caret: number): void => {
+        const el = inputRef.current;
+        if (el) {
+            requestAnimationFrame(() => {
+                el.focus();
+                el.setSelectionRange(caret, caret);
+            });
         }
-        const next = el.selectionStart === el.selectionEnd ? findMentionQuery(el.value, el.selectionStart) : null;
-        setMention((current) => (current?.start === next?.start && current?.query === next?.query ? current : next));
     };
 
     const chooseMention = (path: string): void => {
@@ -237,13 +288,18 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
         const result = insertMention(text, mention, path);
         setText(result.text, draft.mentions.includes(path) ? draft.mentions : [...draft.mentions, path]);
         setMention(null);
-        const el = inputRef.current;
-        if (el) {
-            requestAnimationFrame(() => {
-                el.focus();
-                el.setSelectionRange(result.caret, result.caret);
-            });
-        }
+        moveCaret(result.caret);
+    };
+
+    /*
+     * A picked skill becomes a `$name` chip in the text and a name on the send, which is what
+     * dispatches it. The `/` menu lands here too, so both spellings end up on the same path.
+     */
+    const chooseSkill = (name: string): void => {
+        const result = skillQuery ? insertSkill(text, skillQuery, name) : { text: `$${name} `, caret: name.length + 2 };
+        setText(result.text, draft.mentions, draft.skills.includes(name) ? draft.skills : [...draft.skills, name]);
+        setSkillQuery(null);
+        moveCaret(result.caret);
     };
 
     /* Paths dragged in from the Files panel. There is no mention query to insert into, so they land
@@ -295,14 +351,23 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
             setDraft(EMPTY_DRAFT);
             return;
         }
+        if (commandQuery !== null && chosen?.skill) {
+            chooseSkill(chosen.name);
+            return;
+        }
         if (commandQuery !== null && chosen && !chosen.local) {
             onSend(`/${chosen.name}`, {});
             setDraft(EMPTY_DRAFT);
             return;
         }
-        onSend(trimmed, { mentions: presentMentions(trimmed, draft.mentions), attachments: draft.attachments });
+        onSend(trimmed, {
+            mentions: presentMentions(trimmed, draft.mentions),
+            skills: presentSkills(trimmed, draft.skills),
+            attachments: draft.attachments
+        });
         setDraft(EMPTY_DRAFT);
         setMention(null);
+        setSkillQuery(null);
         setHistoryIndex(null);
     };
 
@@ -343,7 +408,29 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
             }
             if (e.key === 'Tab') {
                 e.preventDefault();
-                setText(`/${commands[menuIndex]!.name} `);
+                const chosen = commands[menuIndex]!;
+                if (chosen.skill) {
+                    chooseSkill(chosen.name);
+                } else {
+                    setText(`/${chosen.name} `);
+                }
+                return;
+            }
+        }
+        if (skillMenuOpen) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setMenuIndex((i) => (i + 1) % skillMatches.length);
+                return;
+            }
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setMenuIndex((i) => (i - 1 + skillMatches.length) % skillMatches.length);
+                return;
+            }
+            if (e.key === 'Tab' || e.key === 'Enter') {
+                e.preventDefault();
+                chooseSkill((skillMatches[menuIndex] ?? skillMatches[0]!).name);
                 return;
             }
         }
@@ -380,7 +467,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
         }
     };
 
-    const placeholder = disabled ? 'Not connected to the Ruimte server' : 'Ask anything, / for commands, @ for files';
+    const placeholder = disabled ? 'Not connected to the Ruimte server' : 'Ask anything, / for commands, @ for files, $ for skills';
 
     return (
         <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10">
@@ -419,14 +506,42 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                                     index === menuIndex ? 'bg-surface-sunken text-text' : 'text-text-muted'
                                 )}
                                 onMouseEnter={() => setMenuIndex(index)}
+                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => {
                                     setMenuIndex(index);
+                                    if (command.skill) {
+                                        chooseSkill(command.name);
+                                        return;
+                                    }
                                     setText(`/${command.name}`);
                                     inputRef.current?.focus();
                                 }}
                             >
+                                {command.skill && <Icon icon={Zap} size={12} className="shrink-0 text-skill" />}
                                 <span className="font-mono text-text">/{command.name}</span>
                                 <span className="text-text-faint">{command.hint}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
+                {skillMenuOpen && (
+                    <div className="border-b border-border px-1.5 py-1.5">
+                        {skillMatches.map((skill, index) => (
+                            <button
+                                key={skill.name}
+                                className={clsx(
+                                    'flex w-full items-start gap-2 rounded-md px-2 py-1 text-left text-xs',
+                                    index === menuIndex ? 'bg-surface-sunken text-text' : 'text-text-muted'
+                                )}
+                                onMouseEnter={() => setMenuIndex(index)}
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => chooseSkill(skill.name)}
+                            >
+                                <Icon icon={Zap} size={12} className="mt-0.5 shrink-0 text-skill" />
+                                <span className="flex min-w-0 flex-col">
+                                    <span className="truncate font-mono text-text">${skill.name}</span>
+                                    {skill.description !== '' && <span className="line-clamp-1 text-text-faint">{skill.description}</span>}
+                                </span>
                             </button>
                         ))}
                     </div>
@@ -476,15 +591,23 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                 )}
                 <div className="relative">
                     <div ref={backdropRef} aria-hidden className={clsx(INPUT_CLASS, 'pointer-events-none absolute inset-0 overflow-hidden text-text')}>
-                        {segments.map((segment, index) =>
-                            segment.kind === 'mention' ? (
-                                <span key={index} className="mention-chip">
-                                    @{segment.path}
-                                </span>
-                            ) : (
-                                <span key={index}>{segment.text}</span>
-                            )
-                        )}
+                        {segments.map((segment, index) => {
+                            if (segment.kind === 'mention') {
+                                return (
+                                    <span key={index} className="mention-chip">
+                                        @{segment.path}
+                                    </span>
+                                );
+                            }
+                            if (segment.kind === 'skill') {
+                                return (
+                                    <span key={index} className="skill-chip">
+                                        ${segment.name}
+                                    </span>
+                                );
+                            }
+                            return <span key={index}>{segment.text}</span>;
+                        })}
                         {text.endsWith('\n') && <br />}
                     </div>
                     <textarea
@@ -501,13 +624,16 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                         onChange={(e) => {
                             setText(e.target.value);
                             setMenuIndex(0);
-                            trackMention(e.target);
+                            trackTriggers(e.target);
                             if (historyIndex !== null && e.target.value !== history[historyIndex]?.text) {
                                 setHistoryIndex(null);
                             }
                         }}
-                        onSelect={(e) => trackMention(e.currentTarget)}
-                        onBlur={() => setMention(null)}
+                        onSelect={(e) => trackTriggers(e.currentTarget)}
+                        onBlur={() => {
+                            setMention(null);
+                            setSkillQuery(null);
+                        }}
                         onScroll={(e) => {
                             if (backdropRef.current) {
                                 backdropRef.current.scrollTop = e.currentTarget.scrollTop;

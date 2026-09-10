@@ -12,7 +12,9 @@ import {
     ChatSendPayloadSchema,
     ChatTargetPayloadSchema,
     ChatTurnDiffPayloadSchema,
-    ChatTurnDiffResultSchema
+    ChatTurnDiffResultSchema,
+    SkillsListPayloadSchema,
+    SkillsListResultSchema
 } from './chat.ts';
 import {
     FsBrowsePayloadSchema,
@@ -98,6 +100,7 @@ export const REQUEST_SCHEMAS = {
     'chat.configure': { payload: ChatConfigurePayloadSchema, result: ChatInfoSchema },
     'chat.compact': { payload: ChatTargetPayloadSchema, result: EmptySchema },
     'chat.turnDiff': { payload: ChatTurnDiffPayloadSchema, result: ChatTurnDiffResultSchema },
+    'skills.list': { payload: SkillsListPayloadSchema, result: SkillsListResultSchema },
     'provider.list': { payload: EmptySchema, result: ProviderListResultSchema },
     'project.list': { payload: EmptySchema, result: ProjectListResultSchema },
     'project.open': { payload: ProjectOpenPayloadSchema, result: ProjectOpenResultSchema },

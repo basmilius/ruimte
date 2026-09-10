@@ -159,8 +159,9 @@ export class ClaudeProtocol {
             const commands = Array.isArray(frame.slash_commands)
                 ? frame.slash_commands.filter((command): command is string => typeof command === 'string')
                 : [];
+            const skills = Array.isArray(frame.skills) ? frame.skills.filter((skill): skill is string => typeof skill === 'string') : [];
             this.model = str(frame.model) ?? this.model;
-            events.push({ type: 'session', agentSessionId: str(frame.session_id), model: str(frame.model), slashCommands: commands });
+            events.push({ type: 'session', agentSessionId: str(frame.session_id), model: str(frame.model), slashCommands: commands, skills });
         } else if (frame.subtype === 'task_started' || frame.subtype === 'task_progress') {
             // A Bash call or a subagent became a task; its description is the CLI's own words for the work.
             const ref = str(frame.tool_use_id);

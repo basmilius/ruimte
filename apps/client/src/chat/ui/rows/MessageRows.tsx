@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import clsx from 'clsx';
-import { Bot, Check, ChevronDown, CircleAlert, Copy, Info, MessageCircleQuestionMark, Minimize2, TriangleAlert, X } from 'lucide-react';
+import { Bot, Check, ChevronDown, CircleAlert, Copy, Info, MessageCircleQuestionMark, Minimize2, TriangleAlert, X, Zap } from 'lucide-react';
 import type { ChatApprovalItem, ChatAssistantItem, ChatQuestionItem, ChatUserItem } from '@ruimte/contracts';
 import { attachmentUrl } from '@/chat/attachments';
-import { tokenizeMentions } from '@/chat/mentions';
+import { tokenizeChips } from '@/chat/mentions';
 import { Markdown } from '@/chat/ui/Markdown';
 import { toolSummary } from '@/chat/logic/tools';
 import { Tooltip } from '@/ui/Tooltip';
@@ -20,7 +20,7 @@ const copy = (text: string): void => {
 export function UserRow({ item }: { item: ChatUserItem }) {
     const [open, setOpen] = useState(false);
     const long = item.text.split('\n').length > USER_FOLD_LINES || item.text.length > USER_FOLD_CHARS;
-    const segments = tokenizeMentions(item.text, item.mentions ?? []);
+    const segments = tokenizeChips(item.text, item.mentions ?? [], item.skills ?? []);
     const attachments = item.attachments ?? [];
     return (
         <div className="group/user flex flex-col items-end pb-4">
@@ -39,15 +39,24 @@ export function UserRow({ item }: { item: ChatUserItem }) {
             {item.text !== '' && (
                 <div className="relative max-w-[80%] rounded-2xl bg-surface-active px-3.5 py-2.5 text-sm leading-normal text-text select-text">
                     <div className={clsx('whitespace-pre-wrap', long && !open && 'chat-fold')}>
-                        {segments.map((segment, index) =>
-                            segment.kind === 'mention' ? (
-                                <span key={index} className="mention-chip">
-                                    @{segment.path}
-                                </span>
-                            ) : (
-                                <span key={index}>{segment.text}</span>
-                            )
-                        )}
+                        {segments.map((segment, index) => {
+                            if (segment.kind === 'mention') {
+                                return (
+                                    <span key={index} className="mention-chip">
+                                        @{segment.path}
+                                    </span>
+                                );
+                            }
+                            if (segment.kind === 'skill') {
+                                return (
+                                    <span key={index} className="skill-chip inline-flex items-center gap-1 align-baseline">
+                                        <Icon icon={Zap} size={11} />
+                                        {segment.name}
+                                    </span>
+                                );
+                            }
+                            return <span key={index}>{segment.text}</span>;
+                        })}
                     </div>
                     {long && (
                         <button className="mt-1 flex items-center gap-1 text-xs text-text-muted hover:text-text" onClick={() => setOpen((o) => !o)}>

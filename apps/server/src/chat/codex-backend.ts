@@ -1,3 +1,4 @@
+import type { ChatSkill } from '@ruimte/contracts';
 import { CONTEXT_PROMPT } from '../context/context-note.ts';
 import { codexThreadOptions } from '../providers/codex.ts';
 import type { ApprovalDecision, BackendEvent, BackendHost, BackendLaunch, ChatBackend, TurnInput } from './backend.ts';
@@ -12,6 +13,27 @@ const CLIENT_INFO = { name: 'ruimte', title: 'Ruimte', version: '0.1.0' };
 const textInput = (text: string) => [{ type: 'text', text, text_elements: [] }];
 
 const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error));
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/* The enabled skills of a `skills/list` answer; Codex reports one entry per folder it was asked about. */
+export const parseSkillsList = (result: unknown): ChatSkill[] => {
+    const data = isRecord(result) && Array.isArray(result.data) ? result.data : [];
+    const skills = new Map<string, ChatSkill>();
+    for (const entry of data) {
+        for (const skill of isRecord(entry) && Array.isArray(entry.skills) ? entry.skills : []) {
+            if (!isRecord(skill) || typeof skill.name !== 'string' || skill.enabled === false || skills.has(skill.name)) {
+                continue;
+            }
+            skills.set(skill.name, {
+                name: skill.name,
+                description: typeof skill.description === 'string' ? skill.description : '',
+                source: skill.pluginId ? 'plugin' : skill.scope === 'repo' ? 'project' : 'user'
+            });
+        }
+    }
+    return [...skills.values()].sort((a, b) => a.name.localeCompare(b.name));
+};
 
 /*
  * One `codex app-server` process on JSON-RPC over stdio. `start` handshakes (initialize, then
@@ -101,6 +123,15 @@ export class CodexBackend implements ChatBackend {
 
     compact(): void {
         this.request('thread/compact/start', { threadId: this.threadId });
+    }
+
+    /* Codex keeps its own skill index, so the running app-server is the authority on what it will run. */
+    async listSkills(): Promise<ChatSkill[]> {
+        const transport = this.transport;
+        if (!transport) {
+            return [];
+        }
+        return parseSkillsList(await transport.request('skills/list', { cwds: [this.launch.cwd] }));
     }
 
     interrupt(): void {

@@ -37,10 +37,12 @@ export const registerChatHandlers = (dispatcher: Dispatcher, manager: ChatManage
 
     dispatcher.register('chat.send', (payload) =>
         translate(() => {
-            manager.send(payload.chatId, payload.text, { mentions: payload.mentions, attachments: payload.attachments });
+            manager.send(payload.chatId, payload.text, { mentions: payload.mentions, skills: payload.skills, attachments: payload.attachments });
             return {};
         })
     );
+
+    dispatcher.register('skills.list', (payload) => translate(async () => ({ skills: await manager.skills(payload.chatId) })));
 
     dispatcher.register('chat.compact', (payload) =>
         translate(() => {

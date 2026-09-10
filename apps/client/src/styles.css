@@ -38,6 +38,9 @@
     --accent: #4f46e5;
     --accent-soft: #eef0ff;
     --accent-text: #ffffff;
+    /* Skills read as a second kind of token next to a file mention, so they get their own hue. */
+    --skill: #9333ea;
+    --skill-soft: #f7eeff;
     --brand-front: var(--color-iron-300);
     --brand-back: var(--color-iron-900);
     --canvas-bg: #eeeef1;
@@ -95,6 +98,8 @@
     --accent: #7c74ff;
     --accent-soft: #26244a;
     --accent-text: #ffffff;
+    --skill: #c084fc;
+    --skill-soft: #2f2350;
     /* The symbol's own iron-900 back is darker than the dark surface it sits on, which loses the
        shape; iron-700 keeps the same relation to the surface that iron-900 has in the light theme. */
     --brand-front: var(--color-iron-300);
@@ -177,6 +182,8 @@
     --color-accent: var(--accent);
     --color-accent-soft: var(--accent-soft);
     --color-accent-text: var(--accent-text);
+    --color-skill: var(--skill);
+    --color-skill-soft: var(--skill-soft);
     --color-brand-front: var(--brand-front);
     --color-brand-back: var(--brand-back);
     --color-canvas-bg: var(--canvas-bg);
@@ -429,13 +436,20 @@ body {
     .chat-composer-drop { border-color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 60%, var(--surface-raised)); }
 
     /* An `@file` mention drawn as a chip inside running text; no horizontal padding so the chip layer keeps the textarea's wrapping. */
-    .mention-chip {
+    .mention-chip, .skill-chip {
         border-radius: 4px;
         background: var(--accent-soft);
         box-shadow: 0 0 0 1px var(--accent-soft);
         color: var(--accent);
         box-decoration-break: clone;
         -webkit-box-decoration-break: clone;
+    }
+
+    /* A skill is the same token shape as a file mention, in its own hue. */
+    .skill-chip {
+        background: var(--skill-soft);
+        box-shadow: 0 0 0 1px var(--skill-soft);
+        color: var(--skill);
     }
 
     /* A folded user prompt fades out at the bottom instead of cutting a line in half. */

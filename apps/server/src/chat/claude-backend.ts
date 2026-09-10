@@ -61,12 +61,12 @@ export class ClaudeBackend implements ChatBackend {
     sendTurn(input: TurnInput): void {
         // The prefix is what the CLI must see first (ultrathink), then the note about the links, then what was typed.
         const prefix = `${promptPrefix(this.launch.selection)}${input.preamble === null ? '' : `${input.preamble}\n\n`}`;
-        this.write(buildUserMessage({ text: input.text, attachments: input.attachments, prefix }));
+        this.write(buildUserMessage({ text: input.text, attachments: input.attachments, prefix, skills: input.skills }));
     }
 
     /* Claude Code folds its context through a slash command, so the session sends it as a turn. */
     compact(): void {
-        this.sendTurn({ text: '/compact', preamble: null, attachments: [], mentions: [] });
+        this.sendTurn({ text: '/compact', preamble: null, attachments: [], mentions: [], skills: [] });
     }
 
     interrupt(): void {

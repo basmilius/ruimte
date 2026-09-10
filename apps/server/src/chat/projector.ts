@@ -61,6 +61,7 @@ export class ThreadProjector {
                         agentSessionId: event.agentSessionId ?? info.agentSessionId,
                         model: event.model ?? info.model,
                         slashCommands: event.slashCommands?.length ? event.slashCommands : info.slashCommands,
+                        skills: event.skills?.length ? event.skills : info.skills,
                         running: true
                     })
                 );
