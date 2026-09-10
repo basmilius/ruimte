@@ -1,4 +1,4 @@
-import type { ProjectContent, ProjectDocument, ProjectLocal, ProjectSummary } from '@ruimte/contracts';
+import type { ProjectContent, ProjectDocument, ProjectIconChoice, ProjectLocal, ProjectSummary } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 
@@ -24,11 +24,21 @@ export interface ProjectSink {
     setProjects(projects: ProjectSummary[]): void;
     setCurrent(current: ProjectSummary | null, rev: number): void;
     setRev(rev: number): void;
+    setChosenIcon(chosenIcon: ProjectIconChoice | null): void;
+    /* Replaces what is shown for the current project without touching the save state. */
+    setSummary(summary: ProjectSummary): void;
     setDirty(dirty: boolean): void;
     setConflict(conflict: ProjectDocument | null): void;
     setError(error: string | null): void;
     setSwitching(switching: boolean): void;
-    getState(): { current: ProjectSummary | null; rev: number; dirty: boolean; conflict: ProjectDocument | null };
+    getState(): {
+        projects: ProjectSummary[];
+        current: ProjectSummary | null;
+        rev: number;
+        chosenIcon: ProjectIconChoice | null;
+        dirty: boolean;
+        conflict: ProjectDocument | null;
+    };
 }
 
 interface ProjectClientOptions {
@@ -66,6 +76,7 @@ export class ProjectClient {
         this.localDelayMs = options.localDelayMs ?? 1000;
         this.unsubscribe.push(
             transport.on('project.changed', ({ projectId, document }) => this.onChanged(projectId, document)),
+            transport.on('project.summary', ({ summary }) => this.applySummary(summary)),
             transport.subscribeStatus((status) => this.onStatus(status)),
             canvas.subscribe((state, previous) => this.onCanvas(state, previous))
         );
@@ -122,6 +133,46 @@ export class ProjectClient {
         this.scheduleSave();
     }
 
+    /* An emoji or a Lucide name goes into the shared file; null means "use what the folder declares". */
+    async setChosenIcon(icon: ProjectIconChoice | null): Promise<void> {
+        const current = this.sink.getState().current;
+        if (!current) {
+            return;
+        }
+        this.sink.setChosenIcon(icon);
+        // The choice is what the daemon would resolve too, so the glyph does not wait for a round trip.
+        if (icon) {
+            this.sink.setSummary({ ...current, icon });
+        }
+        this.sink.setDirty(true);
+        await this.flush();
+        if (!icon) {
+            await this.resolveFolderIcon(current.projectId);
+        }
+    }
+
+    /* Writes `<folder>/.ruimte/icon.<ext>` and lets the folder be what the glyph shows. */
+    async uploadIcon(mime: string, base64: string): Promise<void> {
+        const current = this.sink.getState().current;
+        if (!current) {
+            return;
+        }
+        await this.setChosenIcon(null);
+        const { summary } = await this.transport.request('project.setIcon', { projectId: current.projectId, image: { mime, base64 } });
+        this.applySummary(summary);
+    }
+
+    /* Drops the choice and the file the app wrote, so the rest of the folder gets its turn again. */
+    async useFolderIcon(): Promise<void> {
+        const current = this.sink.getState().current;
+        if (!current) {
+            return;
+        }
+        await this.setChosenIcon(null);
+        const { summary } = await this.transport.request('project.setIcon', { projectId: current.projectId, image: null });
+        this.applySummary(summary);
+    }
+
     /* Takes what is on disk, or keeps the screen and writes it over the file's newer rev. */
     async resolveConflict(choice: 'theirs' | 'mine'): Promise<void> {
         const { conflict, current } = this.sink.getState();
@@ -131,7 +182,8 @@ export class ProjectClient {
         this.sink.setConflict(null);
         if (choice === 'theirs') {
             this.canvas.getState().loadDocument(conflict, { camera: this.canvas.getState().camera, focusedNodeId: null });
-            this.sink.setCurrent({ ...current, name: conflict.name, color: conflict.color }, conflict.rev);
+            this.sink.setChosenIcon(conflict.icon ?? null);
+            this.sink.setCurrent({ ...current, name: conflict.name, color: conflict.color, icon: conflict.icon ?? current.icon }, conflict.rev);
             return;
         }
         this.sink.setRev(conflict.rev);
@@ -190,6 +242,7 @@ export class ProjectClient {
             }
             const result = await this.transport.request('project.open', payload);
             this.canvas.getState().loadDocument(result.document, result.local);
+            this.sink.setChosenIcon(result.document.icon ?? null);
             this.sink.setCurrent(result.summary, result.document.rev);
             this.storage?.setItem(LAST_PROJECT_KEY, result.summary.projectId);
             await this.refreshList();
@@ -243,11 +296,16 @@ export class ProjectClient {
             // One write at a time; the edits made meanwhile ride the next one.
             return this.saving.then(() => (this.sink.getState().dirty ? this.save() : undefined));
         }
-        const { current, rev, conflict } = this.sink.getState();
+        const { current, rev, conflict, chosenIcon } = this.sink.getState();
         if (!current || conflict) {
             return Promise.resolve();
         }
-        const content: ProjectContent = { name: current.name, color: current.color, ...this.canvas.getState().exportContent() };
+        const content: ProjectContent = {
+            name: current.name,
+            color: current.color,
+            ...(chosenIcon ? { icon: chosenIcon } : {}),
+            ...this.canvas.getState().exportContent()
+        };
         this.sink.setDirty(false);
         this.saving = this.transport
             .request('project.save', { projectId: current.projectId, baseRev: rev, content })
@@ -281,7 +339,25 @@ export class ProjectClient {
             return;
         }
         this.canvas.getState().loadDocument(document, { camera: this.canvas.getState().camera, focusedNodeId: null });
-        this.sink.setCurrent({ ...current, name: document.name, color: document.color }, document.rev);
+        this.sink.setChosenIcon(document.icon ?? null);
+        this.sink.setCurrent({ ...current, name: document.name, color: document.color, icon: document.icon ?? current.icon }, document.rev);
+    }
+
+    /* The daemon saw a project's icon, name or color change; only the breadcrumb has to follow. */
+    private applySummary(summary: ProjectSummary): void {
+        const { projects, current } = this.sink.getState();
+        this.sink.setProjects(projects.map((project) => (project.projectId === summary.projectId ? summary : project)));
+        if (current?.projectId === summary.projectId) {
+            this.sink.setSummary(summary);
+        }
+    }
+
+    private async resolveFolderIcon(projectId: string): Promise<void> {
+        const projects = await this.refreshList().catch(() => null);
+        const summary = projects?.find((project) => project.projectId === projectId);
+        if (summary) {
+            this.applySummary(summary);
+        }
     }
 
     private onStatus(status: TransportStatus): void {

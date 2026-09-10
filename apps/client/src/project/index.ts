@@ -9,6 +9,8 @@ export const projectClient = new ProjectClient(transport, useCanvas, {
     setProjects: actions.setProjects,
     setCurrent: actions.setCurrent,
     setRev: actions.setRev,
+    setChosenIcon: actions.setChosenIcon,
+    setSummary: actions.setSummary,
     setDirty: actions.setDirty,
     setConflict: actions.setConflict,
     setError: actions.setError,

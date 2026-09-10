@@ -5,6 +5,7 @@ import { CornerLeftUp, Folder, FolderCheck, FolderPlus, Globe, LayoutGrid, Messa
 import type { FsBrowseEntry } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { projectClient } from '@/project';
+import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { appCommands, type Command } from '@/shell/commands';
 import { readRecents, rememberRecent, sortByRecency } from '@/shell/palette-recents';
 import { useCanvas, type NodeKind } from '@/state/canvas';
@@ -30,7 +31,7 @@ const BROWSE_DEBOUNCE_MS = 60;
 
 interface Entry extends Command {
     icon: React.ReactNode;
-    section: 'Recent' | 'Jump to' | 'Actions' | 'Folders';
+    section: 'Recent' | 'Jump to' | 'Projects' | 'Actions' | 'Folders';
 }
 
 const LIST_ID = 'palette-list';
@@ -60,6 +61,8 @@ export function CommandPalette() {
     const nodes = useCanvas((s) => s.nodes);
     const order = useCanvas((s) => s.order);
     const folder = useProject((s) => s.current?.folder ?? null);
+    const projects = useProject((s) => s.projects);
+    const currentProjectId = useProject((s) => s.current?.projectId ?? null);
     const [query, setQuery] = useState('');
     const [index, setIndex] = useState(0);
     const [browse, setBrowse] = useState<{ parentPath: string; entries: FsBrowseEntry[] } | null>(null);
@@ -163,6 +166,16 @@ export function CommandPalette() {
                 section: 'Jump to',
                 run: () => useCanvas.getState().goToNode(node.id)
             }));
+        const switches: Entry[] = projects
+            .filter((project) => project.available && project.projectId !== currentProjectId)
+            .map((project) => ({
+                id: `project-${project.projectId}`,
+                label: project.name,
+                hint: project.folder ?? 'Not in a folder',
+                icon: <ProjectGlyph projectId={project.projectId} icon={project.icon} color={project.color} size={14} />,
+                section: 'Projects',
+                run: () => void projectClient.openProject(project.projectId).catch(() => undefined)
+            }));
         const commands = appCommands();
         const asEntry = (command: Command, section: Entry['section']): Entry => ({
             ...command,
@@ -172,10 +185,17 @@ export function CommandPalette() {
         if (query === '') {
             // An empty palette is the one moment there is room to offer what you reach for most.
             const split = sortByRecency(commands, recents);
-            return [...split.recent.map((command) => asEntry(command, 'Recent')), ...jumps, ...split.rest.map((command) => asEntry(command, 'Actions'))];
+            return [
+                ...split.recent.map((command) => asEntry(command, 'Recent')),
+                ...jumps,
+                ...switches,
+                ...split.rest.map((command) => asEntry(command, 'Actions'))
+            ];
         }
-        return [...jumps, ...commands.map((command) => asEntry(command, 'Actions'))].filter((entry) => matches(query, `${entry.label} ${entry.hint ?? ''}`));
-    }, [browsing, browse, nodes, order, query, recents]);
+        return [...jumps, ...switches, ...commands.map((command) => asEntry(command, 'Actions'))].filter((entry) =>
+            matches(query, `${entry.label} ${entry.hint ?? ''}`)
+        );
+    }, [browsing, browse, nodes, order, query, recents, projects, currentProjectId]);
 
     // While browsing nothing is highlighted until the arrows say so, so Enter opens what was typed.
     const active = browsing ? (index >= 0 ? entries[index] : undefined) : entries[Math.min(index, entries.length - 1)];
@@ -189,8 +209,8 @@ export function CommandPalette() {
             setIndex(-1);
             return;
         }
-        // Jumping to a node is not a command; only what "Actions" lists is worth offering back.
-        if (entry.section !== 'Jump to') {
+        // Jumping to a node or a project is not a command; only what "Actions" lists comes back.
+        if (entry.section !== 'Jump to' && entry.section !== 'Projects') {
             setRecents(rememberRecent(entry.id));
         }
         setOpen(false);

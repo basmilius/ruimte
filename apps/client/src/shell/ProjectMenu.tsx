@@ -2,8 +2,10 @@ import { useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, ChevronDown, ExternalLink, FolderOpen, Plus, Trash, X } from 'lucide-react';
+import { Check, ChevronDown, ExternalLink, FolderOpen, Image, Pencil, Plus, Trash, X } from 'lucide-react';
 import { projectClient } from '@/project';
+import { ProjectGlyph } from '@/project/ProjectGlyph';
+import { ProjectIconDialog } from '@/shell/ProjectIconDialog';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useUi } from '@/state/ui';
@@ -12,7 +14,7 @@ import { desktop } from '@/desktop/bridge';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 
-type DialogKind = { kind: 'new' } | { kind: 'delete'; projectId: string; name: string; folder: string | null } | null;
+type DialogKind = { kind: 'new' } | { kind: 'rename' } | { kind: 'delete'; projectId: string; name: string; folder: string | null } | null;
 
 /* The project segment of the toolbar's breadcrumb: every known canvas, plus the ways to make, open, close and delete one. */
 export function ProjectMenu() {
@@ -23,9 +25,10 @@ export function ProjectMenu() {
     const [value, setValue] = useState('');
     const [busy, setBusy] = useState(false);
     const [failure, setFailure] = useState<string | null>(null);
+    const [iconOpen, setIconOpen] = useState(false);
 
-    const openDialog = (next: DialogKind): void => {
-        setValue('');
+    const openDialog = (next: DialogKind, initial = ''): void => {
+        setValue(initial);
         setFailure(null);
         setDialog(next);
     };
@@ -63,13 +66,20 @@ export function ProjectMenu() {
         if (dialog.kind === 'new') {
             void run(() => projectClient.createProject(value.trim() || 'Untitled canvas'));
         }
+        if (dialog.kind === 'rename' && value.trim() !== '') {
+            void run(() => projectClient.rename(value.trim()));
+        }
     };
 
     return (
         <>
             <Menu.Root>
                 <Menu.Trigger className="flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-left hover:bg-surface-sunken data-[popup-open]:bg-surface-sunken">
-                    <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: current?.color ?? 'var(--text-faint)' }} />
+                    {current ? (
+                        <ProjectGlyph projectId={current.projectId} icon={current.icon} color={current.color} />
+                    ) : (
+                        <span className="h-3 w-3 shrink-0 rounded-sm bg-text-faint" />
+                    )}
                     <span className="truncate text-sm font-medium text-text">{current?.name ?? 'No project'}</span>
                     <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
                 </Menu.Trigger>
@@ -84,7 +94,7 @@ export function ProjectMenu() {
                                     disabled={!project.available}
                                     onClick={() => void projectClient.openProject(project.projectId).catch(() => undefined)}
                                 >
-                                    <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: project.color }} />
+                                    <ProjectGlyph projectId={project.projectId} icon={project.icon} color={project.color} />
                                     <span className="flex min-w-0 flex-col">
                                         <span className="truncate">{project.name}</span>
                                         <span className="truncate text-xs text-text-faint">{project.folder ?? 'Not in a folder'}</span>
@@ -110,6 +120,13 @@ export function ProjectMenu() {
                                             <Icon icon={ExternalLink} size={14} /> Open in {fileManagerName(platform)}
                                         </Menu.Item>
                                     )}
+                                    <Menu.Item className="menu-item" onClick={() => openDialog({ kind: 'rename' }, current.name)}>
+                                        <Icon icon={Pencil} size={14} /> Rename project
+                                    </Menu.Item>
+                                    <Menu.Item className="menu-item" onClick={() => setIconOpen(true)}>
+                                        <Icon icon={Image} size={14} /> Set icon
+                                        {current.nameSource !== 'chosen' && <span className="menu-hint">Name from the folder</span>}
+                                    </Menu.Item>
                                     <Menu.Item className="menu-item" onClick={() => void projectClient.closeProject()}>
                                         <Icon icon={X} size={14} /> Close project
                                         <span className="menu-hint">Sessions keep running</span>
@@ -153,6 +170,26 @@ export function ProjectMenu() {
                                 />
                             </>
                         )}
+                        {dialog?.kind === 'rename' && (
+                            <>
+                                <Dialog.Title className="text-base font-semibold text-text">Rename project</Dialog.Title>
+                                <p className="mt-1 text-xs text-text-muted">The name goes into the canvas file, so everyone with the folder sees it.</p>
+                                <input
+                                    autoFocus
+                                    className="field mt-3"
+                                    aria-label="Project name"
+                                    placeholder="Name"
+                                    value={value}
+                                    onChange={(e) => setValue(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        e.stopPropagation();
+                                        if (e.key === 'Enter') {
+                                            submit();
+                                        }
+                                    }}
+                                />
+                            </>
+                        )}
                         {dialog?.kind === 'delete' && (
                             <>
                                 <Dialog.Title className="text-base font-semibold text-text">Delete {dialog.name}?</Dialog.Title>
@@ -172,13 +209,15 @@ export function ProjectMenu() {
                                 </Button>
                             ) : (
                                 <Button variant="primary" disabled={busy} onClick={submit}>
-                                    Create
+                                    {dialog?.kind === 'rename' ? 'Rename' : 'Create'}
                                 </Button>
                             )}
                         </div>
                     </Dialog.Popup>
                 </Dialog.Portal>
             </Dialog.Root>
+
+            {current && <ProjectIconDialog project={current} open={iconOpen} onOpenChange={setIconOpen} />}
         </>
     );
 }

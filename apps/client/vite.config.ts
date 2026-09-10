@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
+const daemon = process.env.RUIMTE_DAEMON ?? 'ws://localhost:4210';
+
 export default defineConfig({
     plugins: [react(), tailwindcss()],
     resolve: {
@@ -17,8 +19,12 @@ export default defineConfig({
             // `RUIMTE_DAEMON` points a second Vite at a daemon on another port, for a dev setup
             // next to the usual one.
             '/ws': {
-                target: process.env.RUIMTE_DAEMON ?? 'ws://localhost:4210',
+                target: daemon,
                 ws: true
+            },
+            // A project's icon is bytes on the daemon, never a data URL on the wire.
+            '/projects': {
+                target: daemon.replace(/^ws/, 'http')
             }
         }
     }
