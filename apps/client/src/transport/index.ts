@@ -1,7 +1,7 @@
 import type { Transport } from './transport';
 import { WebSocketTransport } from './websocket-transport';
 
-export type { Transport, TransportStatus } from './transport';
+export type { ConnectionState, Transport, TransportStatus } from './transport';
 export { TransportError } from './transport';
 
 // Same origin on purpose: in dev Vite proxies /ws to the daemon, in production whatever

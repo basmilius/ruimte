@@ -124,6 +124,18 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   which is what it opens; agents and chats are one plus away in the dock. An empty list says so
   instead of showing nothing.
 
+- **Connection tooltip**: the `ConnectionDot` says what it is showing. `shell/connection-info.ts`
+  (a pure module with its own tests) writes the four lines: the state (Connected, Reconnecting with
+  the attempt count and a countdown to the next try, Disconnected), the machine (a loopback daemon
+  is "This Mac", a remote one its endpoint label and hostname), the daemon version and the round
+  trip. `transport/ping.ts` measures `server.ping` every 10 s while the socket is open, never while
+  it is not, and once more the moment the tooltip opens; the value lives in a store, so a dash is
+  what "not measured yet" looks like. `PingMonitor` (`transport/ping-monitor.ts`) is the timing on
+  its own, with the transport injected, which is what its tests drive. The reconnect loop's attempt
+  count and next retry come from the transport itself (`ConnectionState`), moved in the same tick as
+  the status they belong to. Over 250 ms the dot keeps its color and gets an amber ring; the color
+  still says connected, reconnecting or gone.
+
 - **Toolbar and panel slot**: `apps/client/src/shell/Toolbar.tsx` is a 48px bar at the top of
   the canvas column, next to the sidebar's strip, `bg-surface` with a bottom border and the drag
   region. Left is the breadcrumb: the machine when the daemon is not loopback, the

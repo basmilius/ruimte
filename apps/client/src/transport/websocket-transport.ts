@@ -8,7 +8,7 @@ import {
     type RequestMap,
     type RequestType
 } from '@ruimte/contracts';
-import { TransportError, type Transport, type TransportStatus } from './transport';
+import { TransportError, type ConnectionState, type Transport, type TransportStatus } from './transport';
 
 const RECONNECT_MIN_MS = 500;
 const RECONNECT_MAX_MS = 10_000;
@@ -21,12 +21,11 @@ interface Pending {
 
 export class WebSocketTransport implements Transport {
     private socket: WebSocket | null = null;
-    private currentStatus: TransportStatus = 'connecting';
+    private currentConnection: ConnectionState = { status: 'connecting', attempts: 0, retryAt: null };
     private readonly statusHandlers = new Set<(status: TransportStatus) => void>();
     private readonly eventHandlers = new Map<EventType, Set<(payload: never) => void>>();
     private readonly pending = new Map<string, Pending>();
     private nextId = 1;
-    private attempts = 0;
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     private disposed = false;
     private url: string;
@@ -37,7 +36,11 @@ export class WebSocketTransport implements Transport {
     }
 
     get status(): TransportStatus {
-        return this.currentStatus;
+        return this.currentConnection.status;
+    }
+
+    get connection(): ConnectionState {
+        return this.currentConnection;
     }
 
     get address(): string {
@@ -50,7 +53,7 @@ export class WebSocketTransport implements Transport {
             return;
         }
         this.url = url;
-        this.attempts = 0;
+        this.setConnection({ attempts: 0, retryAt: null });
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
             this.reconnectTimer = null;
@@ -84,7 +87,7 @@ export class WebSocketTransport implements Transport {
     }
 
     request<T extends RequestType>(type: T, payload: RequestMap[T]['payload']): Promise<RequestMap[T]['result']> {
-        if (this.currentStatus !== 'open' || !this.socket) {
+        if (this.status !== 'open' || !this.socket) {
             return Promise.reject(new TransportError('not-connected', 'The server is not connected'));
         }
         const id = String(this.nextId++);
@@ -105,13 +108,17 @@ export class WebSocketTransport implements Transport {
         this.socket?.close();
     }
 
-    private setStatus(status: TransportStatus): void {
-        if (this.currentStatus === status) {
+    /* Every reconnect field moves in the same tick as the status it belongs to, so a subscriber
+       that hears the status has the attempt count and the countdown that go with it. */
+    private setConnection(next: Partial<ConnectionState>): void {
+        const merged = { ...this.currentConnection, ...next };
+        const changed = this.currentConnection.status !== merged.status;
+        this.currentConnection = merged;
+        if (!changed) {
             return;
         }
-        this.currentStatus = status;
         for (const handler of this.statusHandlers) {
-            handler(status);
+            handler(merged.status);
         }
     }
 
@@ -119,13 +126,12 @@ export class WebSocketTransport implements Transport {
         if (this.disposed) {
             return;
         }
-        this.setStatus('connecting');
+        this.setConnection({ status: 'connecting', retryAt: null });
         const socket = new WebSocket(this.url);
         this.socket = socket;
 
         socket.onopen = () => {
-            this.attempts = 0;
-            this.setStatus('open');
+            this.setConnection({ status: 'open', attempts: 0, retryAt: null });
         };
         socket.onmessage = (message) => {
             this.receive(String(message.data));
@@ -135,9 +141,10 @@ export class WebSocketTransport implements Transport {
                 return;
             }
             this.socket = null;
-            this.setStatus('closed');
-            this.rejectPending('disconnected', 'The connection closed before the server answered');
+            // Scheduling first, so the closed status arrives with the attempt it announces.
             this.scheduleReconnect();
+            this.setConnection({ status: 'closed' });
+            this.rejectPending('disconnected', 'The connection closed before the server answered');
         };
         // The browser fires close right after error, so close owns the state change.
         socket.onerror = () => {};
@@ -147,8 +154,8 @@ export class WebSocketTransport implements Transport {
         if (this.disposed || this.reconnectTimer) {
             return;
         }
-        const delay = Math.min(RECONNECT_MIN_MS * 2 ** this.attempts, RECONNECT_MAX_MS);
-        this.attempts += 1;
+        const delay = Math.min(RECONNECT_MIN_MS * 2 ** this.currentConnection.attempts, RECONNECT_MAX_MS);
+        this.setConnection({ attempts: this.currentConnection.attempts + 1, retryAt: Date.now() + delay });
         this.reconnectTimer = setTimeout(() => {
             this.reconnectTimer = null;
             this.connect();
