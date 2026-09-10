@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatItem } from '@ruimte/contracts';
+import type { ChatItem, DrawingElement } from '@ruimte/contracts';
 import { ContextStore, renderTranscript } from './context-store.ts';
 
 const items: ChatItem[] = [
@@ -19,9 +19,15 @@ const items: ChatItem[] = [
     { id: 'a', kind: 'assistant', createdAt: 3, turnId: 't', text: 'Done.', streaming: false }
 ];
 
+const drawing: DrawingElement[] = [
+    { kind: 'rect', id: 'el-1', x: 0, y: 0, w: 120, h: 60, stroke: 'ink', strokeWidth: 2, seed: 4 },
+    { kind: 'text', id: 'el-2', x: 10, y: 20, w: 80, h: 24, stroke: 'ink', strokeWidth: 1, seed: 5, text: 'Client', size: 20 }
+];
+
 const store = new ContextStore({
     terminalText: async (id) => (id === 'term' ? `${Array.from({ length: 2500 }, (_, i) => `line ${i}`).join('\n')}` : null),
     chatItems: (id) => (id === 'chat' ? items : null),
+    drawingElements: async (id) => (id === 'view-1' ? drawing : null),
     targetForToken: (token) => (token === 'tok' ? 'agent' : null)
 });
 
@@ -72,5 +78,20 @@ describe('renderTranscript', () => {
         expect(text).toContain('> Tool Bash (done): {"command":"ls"}');
         expect(text).toContain('a.ts');
         expect(text.endsWith('Done.')).toBe(true);
+    });
+});
+
+describe('a drawing as context', () => {
+    test('an agent reads the texts first and the picture after them', async () => {
+        store.set('agent', [{ id: 'view-1', kind: 'drawing', title: 'Sketch' }]);
+        const text = await store.read('agent', 'view-1');
+        expect(text).toContain('Client');
+        expect(text?.indexOf('Client')).toBeLessThan(text!.indexOf('## SVG'));
+        expect(text).toContain('<svg xmlns="http://www.w3.org/2000/svg"');
+    });
+
+    test('a drawing whose project is closed reads as nothing at all', async () => {
+        store.set('agent', [{ id: 'gone', kind: 'drawing', title: 'Sketch' }]);
+        expect(await store.read('agent', 'gone')).toBeNull();
     });
 });

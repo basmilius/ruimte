@@ -6,7 +6,7 @@ https://ruimte.app
 
 ## Principles
 
-- **One canvas per view, many kinds of things on it.** A view is also a chat, a terminal or a browser on its own. On a canvas: terminal, chat, browser and group nodes, plus free text that is not a node.
+- **One canvas per view, many kinds of things on it.** A view is also a chat, a terminal, a browser or a drawing on its own. On a canvas: terminal, chat, browser, note, drawing and group nodes, plus free text that is not a node.
 - **Focus and camera are explicit state.** Canvas mode or node mode, never decided by where the pointer happens to be. Nothing in the background moves the view.
 - **Server first.** There is always a backend that owns sessions and talks to the UI over WebSocket. The desktop app embeds it; a remote machine is another endpoint.
 - **Opinionated.** A handful of settings in the UI. Everything else is a default.
@@ -25,7 +25,7 @@ bun dev
 
 `bun dev` starts the daemon on `localhost:4210` and the Vite client, which proxies `/ws` to it. `bun run dev:client` and `bun run dev:server` start one side. `bun run dev:desktop` opens the Electron shell against the running dev server; browser nodes only work there. `bun run check` typechecks every package and lints, `bun run build` builds the client, `bun test` runs the tests of all packages.
 
-The repo is a Bun workspace: `apps/client` (React UI), `apps/server` (the daemon), `apps/desktop` (the Electron shell) and `packages/contracts` (zod 4 schemas for the wire, the only place a message shape is defined). `docs/HANDOFF.md` says how the code got the way it is, `docs/PLAN.md` what comes next.
+The repo is a Bun workspace: `apps/client` (React UI), `apps/server` (the daemon), `apps/desktop` (the Electron shell), `packages/contracts` (zod 4 schemas for the wire, the only place a message shape is defined) and `packages/drawing` (the geometry, the SVG painter and the reading order of a drawing, without a DOM). `docs/HANDOFF.md` says how the code got the way it is, `docs/PLAN.md` what comes next.
 
 ## Release
 

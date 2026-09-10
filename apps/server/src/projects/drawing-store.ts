@@ -1,7 +1,7 @@
 import { watch, type FSWatcher } from 'node:fs';
 import { mkdir, readdir, rm } from 'node:fs/promises';
 import { basename } from 'node:path';
-import { EMPTY_DRAWING, type DrawingContent, type DrawingDocument } from '@ruimte/contracts';
+import { EMPTY_DRAWING, type DrawingContent, type DrawingDocument, type DrawingElement } from '@ruimte/contracts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { drawingPathIn, drawingViewIdOf, drawingsDirOf, readDrawing, writeDrawing } from './project-files.ts';
 import type { ProjectDrawings, ProjectStore } from './project-store.ts';
@@ -101,6 +101,21 @@ export class DrawingStore implements ProjectDrawings {
         const document: DrawingDocument = { version: 1, rev: 0, elements: outcome.document.elements };
         const text = await writeDrawing(drawingPathIn(state.dir, to), document);
         state.open.set(to, { rev: 0, lastText: text });
+    }
+
+    /*
+     * The elements behind a view id, whichever open project holds it, or null when no open project
+     * has such a drawing. The agent context reads through this: it knows the view, not the project.
+     */
+    async elementsOf(viewId: string): Promise<DrawingElement[] | null> {
+        for (const projectId of this.projects.openProjectIds()) {
+            if (!this.projects.isDrawingView(projectId, viewId)) {
+                continue;
+            }
+            const outcome = await readDrawing(drawingPathIn(drawingsDirOf(this.projects.documentPathOf(projectId)), viewId));
+            return outcome.kind === 'ok' ? outcome.document.elements : [];
+        }
+        return null;
     }
 
     close(projectId: string, viewId: string): void {
