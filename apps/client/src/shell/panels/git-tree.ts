@@ -72,6 +72,25 @@ export const buildGitRows = (files: readonly GitFile[], collapsed: ReadonlySet<s
 };
 
 /*
+ * Every folder the groups hold, however deep, as the collapse set names them. It is what "collapse
+ * all" writes and what "expand all" clears, over every group at once: the folders of the list are
+ * one set, so folding it up is one act and not one per group.
+ */
+export const allDirs = (files: readonly GitFile[]): string[] => {
+    const dirs = new Set<string>();
+    for (const file of files) {
+        const parts = file.path.split('/');
+        parts.pop();
+        let prefix = '';
+        for (const part of parts) {
+            prefix = prefix === '' ? part : `${prefix}/${part}`;
+            dirs.add(prefix);
+        }
+    }
+    return [...dirs];
+};
+
+/*
  * Which changed file the preview is showing, as the repository names it, so the list can mark the
  * row a person is reading. A tab that is not a diff, or one of another checkout, marks nothing.
  */

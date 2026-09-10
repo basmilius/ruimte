@@ -1,47 +1,71 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Dialog } from '@base-ui-components/react/dialog';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Menu } from '@base-ui-components/react/menu';
 import clsx from 'clsx';
-import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronRight, Folder, GitBranch, Minus, Plus, RefreshCw, Trash2 } from 'lucide-react';
-import type { GitFile, GitFileState, GitStatus, Worktree } from '@ruimte/contracts';
+import {
+    ArrowDown,
+    ArrowUp,
+    Check,
+    ChevronDown,
+    ChevronsDownUp,
+    ChevronsUpDown,
+    Folder,
+    GitBranch,
+    GitPullRequest,
+    MoreHorizontal,
+    RefreshCw
+} from 'lucide-react';
+import type { GitActionKind, GitCapabilitiesResult, GitCommit, GitFile, GitRef, GitStash, GitStatus, Worktree } from '@ruimte/contracts';
+import { desktop } from '@/desktop/bridge';
+import { BranchMenu } from '@/shell/panels/BranchMenu';
+import { CommitBox } from '@/shell/panels/CommitBox';
+import { CommitLog } from '@/shell/panels/CommitLog';
 import { basenameOf } from '@/shell/panels/files-tree';
-import { activeDiffPath, buildGitRows, type GitTreeRow } from '@/shell/panels/git-tree';
+import { GitChoice, GitPrompt, type Choice } from '@/shell/panels/GitDialogs';
+import { GitFileList } from '@/shell/panels/GitFileList';
+import { isUnmergedRefusal, pushButton } from '@/shell/panels/git-actions';
+import { activeDiffPath, allDirs } from '@/shell/panels/git-tree';
+import { useGitActions } from '@/shell/panels/use-git-actions';
+import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { useCanvas } from '@/state/canvas';
 import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
 import { gitTarget, gitTargets, type GitTarget } from '@/state/git-target';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
+import { useUi } from '@/state/ui';
+import { useToasts } from '@/state/toasts';
 import { transport } from '@/transport';
 import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
-import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
+import { Pill } from '@/ui/Pill';
+import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
 
-// How long the line about the stash a discard wrote stays up.
-const NOTICE_MS = 10000;
+// Under this the header has no room for the counts, and the chips need what there is.
+const PILLS_FROM_WIDTH = 320;
 
-const GROUPS: ReadonlyArray<{ state: GitFileState; label: string }> = [
-    { state: 'conflicted', label: 'Conflicted' },
-    { state: 'staged', label: 'Staged' },
-    { state: 'unstaged', label: 'Changes' },
-    { state: 'untracked', label: 'Untracked' }
-];
+// What the log may be squeezed to, and what has to be left for the list above it.
+const MIN_LOG_HEIGHT = 80;
+const MIN_LIST_HEIGHT = 160;
 
-const dirnameOf = (path: string): string => {
-    const cut = path.lastIndexOf('/');
-    return cut < 0 ? '' : path.slice(0, cut);
-};
-
-/* One row's own path, plus the paths of a whole group for the button in its header. */
-const pathsOf = (files: readonly GitFile[], state: GitFileState): string[] => files.filter((file) => file.state === state).map((file) => file.path);
+type Dialog =
+    | { kind: 'create-branch' }
+    | { kind: 'rename-branch' }
+    | { kind: 'pick-branch'; action: 'merge' | 'rebase' | 'delete-branch' }
+    | { kind: 'confirm-delete'; ref: string; force: boolean }
+    | { kind: 'force-push' }
+    | { kind: 'stash' }
+    | { kind: 'pick-stash' }
+    | { kind: 'switch'; ref: GitRef }
+    | { kind: 'discard'; file: GitFile }
+    | { kind: 'pull-request'; subject: string };
 
 /*
- * What the daemon knows about the checkout the panel is on, grouped the way a person acts on it:
- * conflicts first, then the index, then the working tree, then what git has never seen. A row opens
- * its diff in the preview panel; the buttons on it move the file in and out of the index and, behind
- * a confirm, throw its changes into a stash of their own.
+ * What the daemon knows about the checkout the panel is on: the branch it is on and every branch it
+ * could be on, the changed files grouped the way a person acts on them, the message of the commit
+ * to come, and the history under it. Every action goes through one `git.action` request whose
+ * progress lands in a toast, so a push says where it is and a failure keeps what git wrote.
  */
 export function GitPanel() {
     const nodes = useCanvas((s) => s.nodes);
@@ -50,6 +74,7 @@ export function GitPanel() {
     const scope = useGit((s) => s.scope);
     const tree = useSettings((s) => s.gitTree);
     const collapsedDirs = useGit((s) => s.collapsedDirs);
+    const logHeight = useGit((s) => s.logHeight);
     const tabLimit = useSettings((s) => s.filesTabLimit);
     const derived = useMemo(() => gitTarget(nodes, selection, folder), [nodes, selection, folder]);
     /* A checkout picked by hand outranks the selection, until the selection points somewhere else
@@ -66,11 +91,20 @@ export function GitPanel() {
     const shown = held !== null && held.cwd === cwd ? held : null;
     const status = shown?.status ?? null;
     const failure = shown?.failure ?? null;
+    const [capabilities, setCapabilities] = useState<GitCapabilitiesResult | null>(null);
+    const [refs, setRefs] = useState<readonly GitRef[]>([]);
+    const [stashes, setStashes] = useState<readonly GitStash[]>([]);
+    const [loadingRefs, setLoadingRefs] = useState(false);
     /* The change the preview is showing, so the row a person is reading stands out in the list. */
     const reading = useFiles((s) => activeDiffPath(s, status?.root ?? null));
-    const [notice, setNotice] = useState<string | null>(null);
-    const [confirming, setConfirming] = useState<GitFile | null>(null);
+    const readingCommit = useFiles((s) => s.tabs.find((tab) => tab.key === s.active)?.view?.commit ?? null);
+    const [dialog, setDialog] = useState<Dialog | null>(null);
     const [busy, setBusy] = useState(false);
+    /* Goes up whenever the status moved, which is when the log below it may have moved too. */
+    const [revision, setRevision] = useState(0);
+    const bodyRef = useRef<HTMLDivElement>(null);
+    const roomForPills = (useUi((s) => s.panelWidth) ?? 540) >= PILLS_FROM_WIDTH;
+    const run = useGitActions();
 
     const refresh = useCallback(async (): Promise<void> => {
         if (cwd === null) {
@@ -79,10 +113,29 @@ export function GitPanel() {
         try {
             const answer = await transport.request('git.status', { cwd });
             setHeld({ cwd, status: answer, failure: null });
+            setRevision((count) => count + 1);
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'The status could not be read.';
             setHeld((previous) => ({ cwd, status: previous?.cwd === cwd ? previous.status : null, failure: message }));
         }
+    }, [cwd]);
+
+    const loadRefs = useCallback((): void => {
+        if (cwd === null) {
+            return;
+        }
+        setLoadingRefs(true);
+        transport
+            .request('git.refs', { cwd })
+            .then((answer) => {
+                setRefs(answer.refs);
+                setStashes(answer.stashes);
+            })
+            .catch(() => {
+                setRefs([]);
+                setStashes([]);
+            })
+            .finally(() => setLoadingRefs(false));
     }, [cwd]);
 
     useEffect(() => {
@@ -94,6 +147,10 @@ export function GitPanel() {
             .request('git.watch', { cwd })
             .catch(() => undefined)
             .then(() => refresh());
+        transport
+            .request('git.capabilities', { cwd })
+            .then(setCapabilities)
+            .catch(() => setCapabilities(null));
         return () => {
             void transport.request('git.unwatch', { cwd }).catch(() => undefined);
         };
@@ -103,6 +160,7 @@ export function GitPanel() {
         return transport.on('git.status', (payload) => {
             if (payload.cwd === cwd) {
                 setHeld({ cwd, status: payload.status, failure: null });
+                setRevision((count) => count + 1);
             }
         });
     }, [cwd]);
@@ -117,50 +175,121 @@ export function GitPanel() {
         return () => window.removeEventListener('focus', onFocus);
     }, [refresh, status?.live]);
 
-    useEffect(() => {
-        if (notice === null) {
-            return;
-        }
-        const timer = window.setTimeout(() => setNotice(null), NOTICE_MS);
-        return () => window.clearTimeout(timer);
-    }, [notice]);
-
-    const act = async (work: () => Promise<void>): Promise<void> => {
-        setBusy(true);
-        try {
-            await work();
-            await refresh();
-        } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : 'That did not work.';
-            setHeld((previous) => (previous === null ? previous : { ...previous, failure: message }));
-        } finally {
-            setBusy(false);
-        }
-    };
+    /* Every action of the panel: it runs, it says how it went, and the status is read again after. */
+    const act = useCallback(
+        async (kind: GitActionKind, extra: Record<string, unknown> = {}, done?: Parameters<typeof run>[1]): Promise<boolean> => {
+            if (cwd === null) {
+                return false;
+            }
+            setBusy(true);
+            setDialog(null);
+            try {
+                const outcome = await run({ cwd, kind, ...extra }, done);
+                await refresh();
+                if (outcome.ok) {
+                    return true;
+                }
+                if (kind === 'delete-branch' && typeof extra.ref === 'string' && extra.force !== true && isUnmergedRefusal(outcome.message)) {
+                    setDialog({ kind: 'confirm-delete', ref: extra.ref, force: true });
+                }
+                return false;
+            } finally {
+                setBusy(false);
+            }
+        },
+        [cwd, refresh, run]
+    );
 
     const stage = (paths: string[], staged: boolean): void => {
         if (cwd !== null && paths.length > 0) {
-            void act(async () => {
-                await transport.request('git.stage', { cwd, paths, staged });
-            });
+            setBusy(true);
+            transport
+                .request('git.stage', { cwd, paths, staged })
+                .catch((error: unknown) => {
+                    const message = error instanceof Error ? error.message : 'That did not work.';
+                    useToasts.getState().show({ title: staged ? 'Staging failed' : 'Unstaging failed', description: message, kind: 'error', output: message });
+                })
+                .finally(() => {
+                    setBusy(false);
+                    void refresh();
+                });
         }
     };
 
     const discard = (file: GitFile): void => {
-        setConfirming(null);
+        setDialog(null);
         if (cwd === null) {
             return;
         }
-        void act(async () => {
-            const { stash } = await transport.request('git.discard', { cwd, paths: [file.path] });
-            setNotice(stash === null ? `${file.path} had nothing to discard.` : `${file.path} went into the stash ${stash}. "git stash pop" brings it back.`);
-        });
+        setBusy(true);
+        transport
+            .request('git.discard', { cwd, paths: [file.path] })
+            .then(({ stash }) => {
+                useToasts.getState().show({
+                    title: stash === null ? `${file.path} had nothing to discard` : `${file.path} went into a stash`,
+                    ...(stash === null ? {} : { description: `"git stash pop" brings ${stash} back.` }),
+                    kind: 'success'
+                });
+            })
+            .catch((error: unknown) => {
+                const message = error instanceof Error ? error.message : 'That did not work.';
+                useToasts.getState().show({ title: 'The discard failed', description: message, kind: 'error', output: message });
+            })
+            .finally(() => {
+                setBusy(false);
+                void refresh();
+            });
     };
 
     const openDiff = (file: GitFile): void => {
         if (status?.root) {
             useFiles.getState().open(`${status.root}/${file.path}`, tabLimit, { kind: 'diff', cwd: status.root, scope, staged: file.state === 'staged' });
         }
+    };
+
+    const openCommit = (commit: GitCommit): void => {
+        if (status?.root) {
+            useFiles.getState().open(status.root, tabLimit, { kind: 'diff', cwd: status.root, scope: 'commit', staged: false, commit: commit.hash });
+        }
+    };
+
+    /* A switch that would lose the working tree asks first; a clean tree switches straight away. */
+    const checkout = (ref: GitRef): void => {
+        if ((status?.files.length ?? 0) > 0) {
+            setDialog({ kind: 'switch', ref });
+            return;
+        }
+        void act('checkout', { ref: ref.name });
+    };
+
+    const openPullRequest = (): void => {
+        if (cwd === null) {
+            return;
+        }
+        transport
+            .request('git.log', { cwd, limit: 1 })
+            .then((answer) => setDialog({ kind: 'pull-request', subject: answer.commits[0]?.subject ?? '' }))
+            .catch(() => setDialog({ kind: 'pull-request', subject: '' }));
+    };
+
+    /* Dragging the line between the list and the log; both keep a whole number of pixels. */
+    const startLogResize = (event: React.PointerEvent<HTMLDivElement>): void => {
+        event.preventDefault();
+        const handle = event.currentTarget;
+        handle.setPointerCapture(event.pointerId);
+        const startY = event.clientY;
+        const startHeight = logHeight;
+        const available = (bodyRef.current?.getBoundingClientRect().height ?? 0) - MIN_LIST_HEIGHT;
+        const onMove = (move: PointerEvent): void => {
+            const next = Math.round(startHeight - (move.clientY - startY));
+            useGit.getState().setLogHeight(Math.max(MIN_LOG_HEIGHT, Math.min(Math.max(MIN_LOG_HEIGHT, available), next)));
+        };
+        const onUp = (): void => {
+            handle.removeEventListener('pointermove', onMove);
+            handle.removeEventListener('pointerup', onUp);
+        };
+        handle.addEventListener('pointermove', onMove);
+        handle.addEventListener('pointerup', onUp);
     };
 
     if (cwd === null) {
@@ -171,9 +300,14 @@ export function GitPanel() {
         );
     }
 
+    const push = pushButton(status);
+    const branches = refs.filter((ref) => ref.kind === 'local');
+
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
-            <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border px-2">
+            {/* The chips and the buttons of the panel live in the panel's own header, next to its
+                name; the row under it holds what acts on the list. */}
+            <PanelHeaderSlot>
                 <TargetMenu
                     target={target}
                     targets={targets}
@@ -187,65 +321,356 @@ export function GitPanel() {
                     }}
                     onPick={(next) => setPicked({ target: next, from: derived.cwd })}
                 />
-                {status?.repo && target.kind === 'project' && status.branch !== null && (
-                    <span className="truncate font-mono text-xs text-text-muted">{status.branch}</span>
+                {status?.repo && (
+                    <BranchMenu
+                        branch={status.branch}
+                        detached={status.detached}
+                        refs={refs}
+                        loading={loadingRefs}
+                        onOpen={loadRefs}
+                        onCheckout={checkout}
+                        onCreate={() => setDialog({ kind: 'create-branch' })}
+                    />
                 )}
-                {status?.detached && <span className="text-xs text-text-muted">detached</span>}
-                {status !== null && status.ahead > 0 && (
-                    <span className="flex items-center text-xs tabular-nums text-text-muted">
-                        <Icon icon={ArrowUp} size={12} />
+                {roomForPills && status !== null && status.ahead > 0 && (
+                    <Pill icon={<Icon icon={ArrowUp} size={12} />} className="tabular-nums">
                         {status.ahead}
-                    </span>
+                    </Pill>
                 )}
-                {status !== null && status.behind > 0 && (
-                    <span className="flex items-center text-xs tabular-nums text-text-muted">
-                        <Icon icon={ArrowDown} size={12} />
+                {roomForPills && status !== null && status.behind > 0 && (
+                    <Pill icon={<Icon icon={ArrowDown} size={12} />} className="tabular-nums">
                         {status.behind}
-                    </span>
+                    </Pill>
                 )}
                 <span className="grow" />
-                <Tooltip label="Refresh" name>
-                    <button className="icon-btn h-6 w-6" disabled={busy} onClick={() => void refresh()}>
-                        <Icon icon={RefreshCw} size={12} />
-                    </button>
+                <Tooltip label={push.reason}>
+                    <Button size="sm" variant="primary" disabled={push.disabled || busy} onClick={() => void act(push.kind)}>
+                        {push.label}
+                    </Button>
                 </Tooltip>
-            </div>
-            {failure !== null && <p className="border-b border-border px-3 py-2 text-xs text-status-error">{failure}</p>}
-            {notice !== null && (
-                <p role="status" className="border-b border-border px-3 py-2 text-xs text-text-muted">
-                    {notice}
-                </p>
+                <Separator />
+            </PanelHeaderSlot>
+            {status?.repo && (
+                <div className="file-toolbar">
+                    {tree && status.files.length > 0 && (
+                        <span className="btn-group">
+                            <Tooltip label="Expand all folders" name>
+                                <button className="icon-btn h-7 w-7" onClick={() => useGit.getState().setCollapsedDirs([])}>
+                                    <Icon icon={ChevronsUpDown} size={14} />
+                                </button>
+                            </Tooltip>
+                            <Tooltip label="Collapse all folders" name>
+                                <button className="icon-btn h-7 w-7" onClick={() => useGit.getState().setCollapsedDirs(allDirs(status.files))}>
+                                    <Icon icon={ChevronsDownUp} size={14} />
+                                </button>
+                            </Tooltip>
+                        </span>
+                    )}
+                    <span className="grow" />
+                    <Tooltip label="Refresh" name>
+                        <button className="icon-btn h-7 w-7" disabled={busy} onClick={() => void refresh()}>
+                            <Icon icon={RefreshCw} size={14} />
+                        </button>
+                    </Tooltip>
+                    <Separator />
+                    <ActionsMenu
+                        busy={busy}
+                        canPullRequest={capabilities?.gh === true}
+                        stashes={stashes}
+                        onOpen={loadRefs}
+                        onAction={(kind) => void act(kind)}
+                        onDialog={setDialog}
+                        onPullRequest={openPullRequest}
+                    />
+                </div>
             )}
-            <GitFileList
-                status={status}
-                tree={tree}
-                collapsed={collapsedDirs}
-                reading={reading}
-                busy={busy}
-                onOpen={openDiff}
-                onStage={stage}
-                onDiscard={setConfirming}
-            />
-
-            <Dialog.Root open={confirming !== null} onOpenChange={(open) => !open && setConfirming(null)}>
-                <Dialog.Portal>
-                    <Dialog.Backdrop className="dialog-backdrop" />
-                    <Dialog.Popup className="dialog-popup top-[24vh] w-[420px] p-5">
-                        <Dialog.Title className="text-base font-semibold text-text">Discard {confirming ? basenameOf(confirming.path) : ''}?</Dialog.Title>
-                        <p className="mt-1 text-xs text-text-muted">
-                            The file goes back to what HEAD holds. Nothing is thrown away: the changes go into a stash named after this discard first, and "git
-                            stash pop" is the way back.
-                        </p>
-                        <div className="mt-4 flex items-center justify-end gap-2">
-                            <Button onClick={() => setConfirming(null)}>Cancel</Button>
-                            <Button variant="danger" disabled={busy} onClick={() => confirming && discard(confirming)}>
-                                <Icon icon={Trash2} size={12} /> Discard
-                            </Button>
+            {failure !== null && <p className="border-b border-border px-3 py-2 text-xs text-status-error">{failure}</p>}
+            <div ref={bodyRef} className="flex min-h-0 grow flex-col">
+                <GitFileList
+                    status={status}
+                    tree={tree}
+                    collapsed={collapsedDirs}
+                    reading={reading}
+                    busy={busy}
+                    onOpen={openDiff}
+                    onStage={stage}
+                    onDiscard={(file) => setDialog({ kind: 'discard', file })}
+                />
+                {status?.repo && (
+                    <CommitBox
+                        cwd={cwd}
+                        status={status}
+                        capabilities={capabilities}
+                        busy={busy}
+                        onCommit={(message, options) => {
+                            void act(options.push ? 'commit-push' : 'commit', {
+                                subject: message.subject,
+                                body: message.body,
+                                stageAll: options.stageAll
+                            }).then((ok) => {
+                                if (ok) {
+                                    useGit.getState().setMessage(cwd, '');
+                                }
+                            });
+                        }}
+                    />
+                )}
+                {status?.repo && (
+                    <>
+                        <div className="git-split" onPointerDown={startLogResize} />
+                        <div className="flex shrink-0 flex-col" style={{ height: logHeight }}>
+                            <CommitLog cwd={cwd} revision={revision} reading={readingCommit} onOpen={openCommit} />
                         </div>
-                    </Dialog.Popup>
-                </Dialog.Portal>
-            </Dialog.Root>
+                    </>
+                )}
+            </div>
+
+            <GitPrompt
+                open={dialog?.kind === 'create-branch'}
+                title="Create a branch"
+                description="It starts from where this checkout is now and is checked out right away."
+                field={{ label: 'Name', placeholder: 'feature/what-it-does' }}
+                confirmLabel="Create branch"
+                busy={busy}
+                onConfirm={(name) => void act('create-branch', { name })}
+                onClose={() => setDialog(null)}
+            />
+            <GitPrompt
+                open={dialog?.kind === 'rename-branch'}
+                title="Rename this branch"
+                description="Only this branch moves; a remote that follows it keeps the old name until the next push."
+                field={{ label: 'Name', initial: status?.branch ?? '' }}
+                confirmLabel="Rename branch"
+                busy={busy}
+                onConfirm={(name) => void act('rename-branch', { name })}
+                onClose={() => setDialog(null)}
+            />
+            <GitPrompt
+                open={dialog?.kind === 'stash'}
+                title="Stash the changes"
+                description="Everything changed here goes into a stash, untracked files included, and the working tree goes back to HEAD."
+                field={{ label: 'Message', placeholder: 'Optional' }}
+                confirmLabel="Stash changes"
+                busy={busy}
+                onConfirm={(subject) => void act('stash', { subject })}
+                onClose={() => setDialog(null)}
+            />
+            <GitPrompt
+                open={dialog?.kind === 'force-push'}
+                title="Force push this branch?"
+                description="The remote is overwritten with what this checkout holds. It only goes through when the remote is still where this checkout last saw it, so a push somebody else made in between stops it."
+                confirmLabel="Force push"
+                danger
+                busy={busy}
+                onConfirm={() => void act('force-push')}
+                onClose={() => setDialog(null)}
+            />
+            <GitPrompt
+                open={dialog?.kind === 'switch'}
+                title={dialog?.kind === 'switch' ? `Switch to ${dialog.ref.name}?` : 'Switch branch?'}
+                description="This checkout has changes that are not committed. They can go into a stash first, and `git stash pop` brings them back."
+                confirmLabel="Stash and switch"
+                busy={busy}
+                onConfirm={() => {
+                    if (dialog?.kind === 'switch') {
+                        void act('checkout', { ref: dialog.ref.name, stash: true });
+                    }
+                }}
+                onClose={() => setDialog(null)}
+            />
+            <GitPrompt
+                open={dialog?.kind === 'confirm-delete'}
+                title={dialog?.kind === 'confirm-delete' ? `Delete ${dialog.ref}?` : 'Delete this branch?'}
+                description={
+                    dialog?.kind === 'confirm-delete' && dialog.force
+                        ? 'Git refused: this branch holds commits no other branch has. Deleting it now is the last word on them.'
+                        : 'The branch goes away here; a remote branch of the same name stays where it is.'
+                }
+                confirmLabel={dialog?.kind === 'confirm-delete' && dialog.force ? 'Delete anyway' : 'Delete branch'}
+                danger
+                busy={busy}
+                onConfirm={() => {
+                    if (dialog?.kind === 'confirm-delete') {
+                        void act('delete-branch', { ref: dialog.ref, ...(dialog.force ? { force: true } : {}) });
+                    }
+                }}
+                onClose={() => setDialog(null)}
+            />
+            <GitPrompt
+                open={dialog?.kind === 'discard'}
+                title={dialog?.kind === 'discard' ? `Discard ${basenameOf(dialog.file.path)}?` : 'Discard this file?'}
+                description='The file goes back to what HEAD holds. Nothing is thrown away: the changes go into a stash named after this discard first, and "git stash pop" is the way back.'
+                confirmLabel="Discard"
+                danger
+                busy={busy}
+                onConfirm={() => {
+                    if (dialog?.kind === 'discard') {
+                        discard(dialog.file);
+                    }
+                }}
+                onClose={() => setDialog(null)}
+            />
+            <GitPrompt
+                open={dialog?.kind === 'pull-request'}
+                title="Open a pull request"
+                description="The branch is published first when the remote has never seen it. The pull request opens in your browser once gh has made it."
+                field={{ label: 'Title', initial: dialog?.kind === 'pull-request' ? dialog.subject : '' }}
+                area={{ label: 'Description', placeholder: 'What this changes and why.' }}
+                confirmLabel="Create pull request"
+                busy={busy}
+                onConfirm={(subject, body) =>
+                    void act(
+                        'create-pr',
+                        { subject, body },
+                        {
+                            done: (result) =>
+                                result.url === undefined
+                                    ? undefined
+                                    : {
+                                          label: 'Open',
+                                          run: () => openUrl(result.url ?? '')
+                                      }
+                        }
+                    )
+                }
+                onClose={() => setDialog(null)}
+            />
+            <GitChoice
+                open={dialog?.kind === 'pick-branch'}
+                title={
+                    dialog?.kind === 'pick-branch'
+                        ? dialog.action === 'merge'
+                            ? 'Merge a branch into this one'
+                            : dialog.action === 'rebase'
+                              ? 'Rebase this branch onto'
+                              : 'Delete a branch'
+                        : 'Pick a branch'
+                }
+                choices={pickableBranches(dialog, refs, branches, status)}
+                empty="There is no other branch here."
+                onPick={(name) => {
+                    if (dialog?.kind !== 'pick-branch') {
+                        return;
+                    }
+                    if (dialog.action === 'delete-branch') {
+                        setDialog({ kind: 'confirm-delete', ref: name, force: false });
+                        return;
+                    }
+                    void act(dialog.action, { ref: name });
+                }}
+                onClose={() => setDialog(null)}
+            />
+            <GitChoice
+                open={dialog?.kind === 'pick-stash'}
+                title="Pop a stash"
+                description="The changes come back into the working tree and the stash entry goes away."
+                choices={stashes.map((stash) => ({ value: stash.ref, label: stash.ref, hint: stash.message }))}
+                empty="There is nothing stashed here."
+                onPick={(ref) => void act('stash-pop', { ref })}
+                onClose={() => setDialog(null)}
+            />
         </div>
+    );
+}
+
+/* The branches a pick offers: everything but the one that is out, and only local ones to delete. */
+const pickableBranches = (dialog: Dialog | null, refs: readonly GitRef[], locals: readonly GitRef[], status: GitStatus | null): Choice[] => {
+    if (dialog?.kind !== 'pick-branch') {
+        return [];
+    }
+    const source = dialog.action === 'delete-branch' ? locals : refs;
+    return source
+        .filter((ref) => !ref.current && ref.name !== status?.branch)
+        .map((ref) => ({ value: ref.name, label: ref.name, ...(ref.isDefault ? { hint: 'default' } : {}) }));
+};
+
+/* The pull request opens where every other link does: the system browser, not a node on the canvas. */
+const openUrl = (url: string): void => {
+    const bridge = desktop();
+    if (bridge) {
+        void bridge.openExternal(url);
+    } else {
+        window.open(url, '_blank', 'noreferrer');
+    }
+};
+
+interface ActionsMenuProps {
+    busy: boolean;
+    canPullRequest: boolean;
+    stashes: readonly GitStash[];
+    onOpen(): void;
+    onAction(kind: GitActionKind): void;
+    onDialog(dialog: Dialog): void;
+    onPullRequest(): void;
+}
+
+/* Everything that is not the one button next to it. The order is how often a person reaches for it. */
+function ActionsMenu({ busy, canPullRequest, stashes, onOpen, onAction, onDialog, onPullRequest }: ActionsMenuProps) {
+    return (
+        <Menu.Root onOpenChange={(open) => open && onOpen()}>
+            <Tooltip label="More git actions" name>
+                <Menu.Trigger className="icon-btn h-7 w-7" disabled={busy}>
+                    <Icon icon={MoreHorizontal} size={14} />
+                </Menu.Trigger>
+            </Tooltip>
+            <Menu.Portal>
+                <Menu.Positioner className="popup-layer" side="bottom" align="end" sideOffset={6}>
+                    <Menu.Popup className="menu-popup">
+                        <Menu.Item className="menu-item" onClick={() => onAction('pull')}>
+                            Pull
+                        </Menu.Item>
+                        <Menu.Item className="menu-item" onClick={() => onAction('push')}>
+                            Push
+                        </Menu.Item>
+                        <Menu.Item className="menu-item" onClick={() => onAction('sync')}>
+                            Sync
+                            <span className="menu-hint">pull, then push</span>
+                        </Menu.Item>
+                        <Menu.Separator className="menu-separator" />
+                        <Menu.Item className="menu-item" onClick={() => onAction('fetch')}>
+                            Fetch
+                        </Menu.Item>
+                        <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'force-push' })}>
+                            Force Push
+                        </Menu.Item>
+                        <Menu.Separator className="menu-separator" />
+                        <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'pick-branch', action: 'merge' })}>
+                            Merge Branch...
+                        </Menu.Item>
+                        <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'pick-branch', action: 'rebase' })}>
+                            Rebase onto...
+                        </Menu.Item>
+                        <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'rename-branch' })}>
+                            Rename Branch...
+                        </Menu.Item>
+                        <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'pick-branch', action: 'delete-branch' })}>
+                            Delete Branch...
+                        </Menu.Item>
+                        <Menu.Separator className="menu-separator" />
+                        <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'stash' })}>
+                            Stash Changes...
+                        </Menu.Item>
+                        <Menu.Item
+                            className="menu-item"
+                            disabled={stashes.length === 0}
+                            onClick={() => (stashes.length > 1 ? onDialog({ kind: 'pick-stash' }) : onAction('stash-pop'))}
+                        >
+                            Pop Stash
+                            {stashes.length > 1 && <span className="menu-hint">{stashes.length}</span>}
+                        </Menu.Item>
+                        {canPullRequest && (
+                            <>
+                                <Menu.Separator className="menu-separator" />
+                                <Menu.Item className="menu-item" onClick={onPullRequest}>
+                                    <Icon icon={GitPullRequest} size={14} />
+                                    Create pull request...
+                                </Menu.Item>
+                            </>
+                        )}
+                    </Menu.Popup>
+                </Menu.Positioner>
+            </Menu.Portal>
+        </Menu.Root>
     );
 }
 
@@ -268,12 +693,12 @@ function TargetMenu({
     return (
         <Menu.Root onOpenChange={(open) => open && onOpen()}>
             <Menu.Trigger
-                className="inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 text-xs text-text-muted hover:text-text"
+                className="inline-flex h-6 min-w-0 shrink items-center gap-1 rounded-full bg-surface-sunken px-2 text-xs text-text-muted hover:text-text"
                 aria-label="Which checkout this panel is on"
             >
-                <Icon icon={target.kind === 'worktree' ? GitBranch : Folder} size={12} />
+                <Icon icon={target.kind === 'worktree' ? GitBranch : Folder} size={12} className="shrink-0" />
                 <span className={clsx('max-w-40 truncate', target.kind === 'worktree' && 'font-mono')}>{target.label}</span>
-                <Icon icon={ChevronDown} size={12} />
+                <Icon icon={ChevronDown} size={12} className="shrink-0" />
             </Menu.Trigger>
             <Menu.Portal>
                 <Menu.Positioner className="popup-layer" side="bottom" align="start" sideOffset={6}>
@@ -294,159 +719,5 @@ function TargetMenu({
                 </Menu.Positioner>
             </Menu.Portal>
         </Menu.Root>
-    );
-}
-
-interface ListProps {
-    status: GitStatus | null;
-    /* Whether every group is a tree of the folders its files sit in, the `gitTree` setting. */
-    tree: boolean;
-    collapsed: string[];
-    /* The path of the change the preview has open, which is the row that reads as selected. */
-    reading: string | null;
-    busy: boolean;
-    onOpen(file: GitFile): void;
-    onStage(paths: string[], staged: boolean): void;
-    onDiscard(file: GitFile): void;
-}
-
-function GitFileList({ status, tree, collapsed, reading, busy, onOpen, onStage, onDiscard }: ListProps) {
-    const folded = useMemo(() => new Set(collapsed), [collapsed]);
-
-    if (status === null) {
-        return <div className="grid grow place-items-center" />;
-    }
-    if (!status.repo) {
-        return (
-            <div className="grid grow place-items-center">
-                <EmptyState icon={<Icon icon={GitBranch} size={20} />}>This folder is not a git repository, so there is nothing to compare.</EmptyState>
-            </div>
-        );
-    }
-    if (status.files.length === 0) {
-        return (
-            <div className="grid grow place-items-center">
-                <EmptyState icon={<Icon icon={GitBranch} size={20} />}>Nothing changed here. Every file is what the last commit holds.</EmptyState>
-            </div>
-        );
-    }
-    return (
-        <div className="min-h-0 grow overflow-y-auto py-1">
-            {GROUPS.map((group) => {
-                const files = status.files.filter((file) => file.state === group.state);
-                if (files.length === 0) {
-                    return null;
-                }
-                const staged = group.state === 'staged';
-                const rows: GitTreeRow[] = tree ? buildGitRows(files, folded) : files.map((file) => ({ kind: 'file', file, depth: 0 }));
-                return (
-                    <section key={group.state}>
-                        <header className="git-group">
-                            <span className="section-label">{group.label}</span>
-                            <span className="tabular-nums text-text-faint">{files.length}</span>
-                            <span className="grow" />
-                            {group.state !== 'conflicted' && (
-                                <Tooltip label={staged ? `Unstage everything in ${group.label}` : `Stage everything in ${group.label}`} name>
-                                    <button className="icon-btn h-6 w-6" disabled={busy} onClick={() => onStage(pathsOf(status.files, group.state), !staged)}>
-                                        <Icon icon={staged ? Minus : Plus} size={12} />
-                                    </button>
-                                </Tooltip>
-                            )}
-                        </header>
-                        {rows.map((row) =>
-                            row.kind === 'directory' ? (
-                                <GitDirectoryRow key={`${group.state}:${row.path}/`} row={row} collapsed={folded.has(row.path)} />
-                            ) : (
-                                <GitFileRow
-                                    key={`${group.state}:${row.file.path}`}
-                                    file={row.file}
-                                    depth={row.depth}
-                                    showPath={!tree}
-                                    selected={row.file.path === reading}
-                                    busy={busy}
-                                    onOpen={() => onOpen(row.file)}
-                                    onStage={() => onStage([row.file.path], !staged)}
-                                    onDiscard={() => onDiscard(row.file)}
-                                />
-                            )
-                        )}
-                    </section>
-                );
-            })}
-            {status.truncated && <p className="px-3 py-2 text-xs text-text-faint">More files changed than this list holds.</p>}
-        </div>
-    );
-}
-
-// Every level of the tree is this much further in; the row's own padding is on top of it.
-const INDENT = 12;
-
-function GitDirectoryRow({ row, collapsed }: { row: Extract<GitTreeRow, { kind: 'directory' }>; collapsed: boolean }) {
-    return (
-        <div className="git-row">
-            <button
-                className="git-row-open"
-                aria-expanded={!collapsed}
-                style={{ paddingLeft: 12 + row.depth * INDENT }}
-                onClick={() => useGit.getState().toggleDir(row.path)}
-            >
-                <Icon icon={ChevronRight} size={12} className={clsx('shrink-0 text-text-faint transition-transform', !collapsed && 'rotate-90')} />
-                <span className="git-row-name">{row.label}</span>
-                <span className="text-text-faint tabular-nums">{row.count}</span>
-                <span className="grow" />
-            </button>
-            {/* The columns of a file row end here too, so a directory never shifts them. */}
-            <span className="git-row-actions btn-group" />
-        </div>
-    );
-}
-
-function GitFileRow({
-    file,
-    depth,
-    showPath,
-    selected,
-    busy,
-    onOpen,
-    onStage,
-    onDiscard
-}: {
-    file: GitFile;
-    depth: number;
-    /* The flat list carries the folder next to the name; in a tree the row above says it. */
-    showPath: boolean;
-    /* Whether the preview is showing this file's diff right now. */
-    selected: boolean;
-    busy: boolean;
-    onOpen(): void;
-    onStage(): void;
-    onDiscard(): void;
-}) {
-    const dir = dirnameOf(file.path);
-    const staged = file.state === 'staged';
-    return (
-        <div className="git-row" data-selected={selected || undefined}>
-            <button className="git-row-open" aria-current={selected} style={{ paddingLeft: 12 + depth * INDENT }} onClick={onOpen}>
-                <FileIcon path={file.path} size={14} />
-                <span className="git-row-name">{basenameOf(file.path)}</span>
-                {showPath && dir !== '' && <span className="git-row-dir">{dir}</span>}
-                <span className="grow" />
-                <span className="git-row-code">{file.status}</span>
-                <span className="git-row-count text-term-green">{file.added > 0 ? `+${file.added}` : ''}</span>
-                <span className="git-row-count text-term-red">{file.deleted > 0 ? `-${file.deleted}` : ''}</span>
-            </button>
-            <span className="git-row-actions btn-group">
-                <Tooltip label={staged ? 'Unstage' : 'Stage'} name>
-                    <button className="icon-btn h-6 w-6" disabled={busy} onClick={onStage}>
-                        <Icon icon={staged ? Minus : Plus} size={12} />
-                    </button>
-                </Tooltip>
-                <Tooltip label="Discard" name>
-                    <button className="icon-btn h-6 w-6" disabled={busy} onClick={onDiscard}>
-                        <Icon icon={Trash2} size={12} />
-                    </button>
-                </Tooltip>
-            </span>
-        </div>
     );
 }

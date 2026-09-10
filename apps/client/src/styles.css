@@ -771,6 +771,41 @@ body {
     .git-row:hover .git-row-actions,
     .git-row:focus-within .git-row-actions { visibility: visible; }
 
+    /* The message of the commit to come. The one multiline field in the app, so it carries the
+       field's border and focus ring without its fixed height. */
+    .commit-message {
+        width: 100%;
+        min-height: 64px;
+        padding: 6px 8px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text);
+        font-size: var(--text-xs);
+        line-height: var(--text-xs--line-height);
+        resize: none;
+        outline: none;
+    }
+    .commit-message::placeholder { color: var(--text-faint); }
+    .commit-message:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+    /* The line the commit log hangs from: the border of the split, with a grab area around it. */
+    .git-split {
+        height: 5px;
+        flex-shrink: 0;
+        margin-bottom: -1px;
+        border-bottom: 1px solid var(--border);
+        cursor: row-resize;
+    }
+    .git-split:hover { border-color: var(--border-strong); }
+
+    /* The commit a log row is: the short hash, in the face git writes it in. */
+    .git-row-hash {
+        flex-shrink: 0;
+        font-family: var(--font-mono);
+        color: var(--text-faint);
+    }
+
     /* What a git action is doing, bottom right over everything, one card per action. */
     .toast-host {
         position: fixed;

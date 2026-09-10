@@ -1,10 +1,18 @@
 import type { ProjectPanels } from '@ruimte/contracts';
 import { useFiles } from '@/state/files';
-import { DEFAULT_SCOPE, useGit } from '@/state/git';
+import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE, useGit } from '@/state/git';
 import { parsePanels, serializePanels, type PanelsState } from '@/state/panel-state';
 import { PANEL_DEFAULTS, useUi } from '@/state/ui';
 
-const defaults = (): PanelsState => ({ ...PANEL_DEFAULTS, tabs: [], active: null, expandedDirs: [], gitScope: DEFAULT_SCOPE, gitCollapsedDirs: [] });
+const defaults = (): PanelsState => ({
+    ...PANEL_DEFAULTS,
+    tabs: [],
+    active: null,
+    expandedDirs: [],
+    gitScope: DEFAULT_SCOPE,
+    gitCollapsedDirs: [],
+    gitLogHeight: DEFAULT_LOG_HEIGHT
+});
 
 const read = (): PanelsState => {
     const ui = useUi.getState();
@@ -18,7 +26,8 @@ const read = (): PanelsState => {
         active: files.active,
         expandedDirs: files.expandedDirs,
         gitScope: useGit.getState().scope,
-        gitCollapsedDirs: useGit.getState().collapsedDirs
+        gitCollapsedDirs: useGit.getState().collapsedDirs,
+        gitLogHeight: useGit.getState().logHeight
     };
 };
 
@@ -49,6 +58,7 @@ export class PanelsPort {
             useFiles.getState().load(projectId, { tabs: state.tabs, active: state.active, expandedDirs: state.expandedDirs });
             useGit.getState().setScope(state.gitScope);
             useGit.getState().setCollapsedDirs(state.gitCollapsedDirs);
+            useGit.getState().setLogHeight(state.gitLogHeight);
         } finally {
             this.applying = false;
             this.snapshot = this.stringify();
