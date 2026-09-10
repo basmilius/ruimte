@@ -167,8 +167,11 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   the tab strip and a close button) continue the band the sidebar strip and the toolbar start.
   `PanelControls` stays in the toolbar whether a panel is open or not, so a toggle never moves out
   from under the pointer, and a hairline separates it from the palette group that keeps the
-  toolbar's right end; the panel's own header carries its title and its close button and nothing
-  else. On Windows and Linux the native controls overlay covers that right end, so exactly one
+  toolbar's right end; the panel's own header carries its title, a slot for the panel's own
+  controls (`shell/PanelHeaderSlot.tsx`: the header is above the body, so the panel portals its
+  controls up instead of holding its state in two components; the git panel puts its checkout
+  chip, its branch chip, the ahead and behind pills and its Push button there) and its close
+  button. On Windows and Linux the native controls overlay covers that right end, so exactly one
   element takes `toolbar-overlay-inset`: the Files or Git panel's header while it is open, the
   preview's header while the preview is open on its own, and the palette group when neither is.
   The panel stays mounted and animates its width between 0 and the stored
@@ -224,11 +227,24 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   re-lists only the directories the client has loaded. The panel is the tree and nothing else: the
   preview stands next to it and stays where it is when the tree closes.
 
-- **Git panel**: `shell/panels/GitPanel.tsx`, the status of one checkout and nothing else. Which
+- **Git panel**: `shell/panels/GitPanel.tsx`, one checkout: what changed in it, what is committed
+  in it and everything a person does to it. Which
   checkout is a pure rule (`state/git-target.ts`, tested): a selected group with a worktree, or a
   selected node inside one, puts the panel on that worktree, everything else on the project folder,
-  the same rule that decides where a node made inside such a group starts. The header is that
-  target as a chip, the branch, ahead and behind, and a refresh. `git.status` groups the changed
+  the same rule that decides where a node made inside such a group starts. The panel's controls
+  sit in two rows: the panel header carries the target chip, the branch chip, the ahead and behind
+  pills (the first thing to go when the panel is narrow) and the primary button, which says "Push"
+  or "Publish branch" when the branch has no upstream and is disabled with the reason in its
+  tooltip when there is nothing to push (`shell/panels/git-actions.ts`, pure and tested). The 40px
+  row under it is the same `.file-toolbar` the preview panel uses: Expand all and Collapse all over
+  every folder of every group at once, a refresh, and the overflow menu with Pull, Push, Sync,
+  Fetch, Force Push (`--force-with-lease`, behind a confirm), Merge Branch, Rebase onto, Rename
+  Branch, Delete Branch (a pick, a confirm, and a second confirm when git says the branch is not
+  merged), Stash Changes, Pop Stash (the newest, or a pick when there are several) and Create pull
+  request, which is only there when the daemon reports `gh` (`git.capabilities`). The branch chip
+  is `shell/panels/BranchMenu.tsx`: every branch newest tip first, a search field past ten of them,
+  "Create branch..." on top, a branch another worktree has out disabled with the reason, and a
+  switch with changes in the tree asking first, offering to stash them. `git.status` groups the changed
   files as Conflicted, Staged, Changes and Untracked, and a file that is staged and changed again
   since is in two of them with the counts of its own side in each. The chip is a menu of every
   checkout the panel could be on (the project folder and the worktrees `git.worktree-list` knows,
@@ -240,7 +256,7 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   row ends in the same three cells, right-aligned and fixed, so the status letter and the `+n -n`
   line up down the list, with the stage and discard buttons after them on hover. Discarding is
   stash-backed: the paths go into a stash named `ruimte-discard-<timestamp>` first, which is also
-  what resets the working tree, and the panel says so with the name to `git stash pop`. While the
+  what resets the working tree, and the toast that says so carries the name to `git stash pop`. While the
   panel is open the daemon watches the repository (`git.watch`) and pushes a `git.status` event per
   burst; a repository it gives up on says `live: false` and the panel refreshes on focus instead.
   Clicking a change opens its diff in the preview: one tab named "Changes", the way a review pane
@@ -251,6 +267,32 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   selected, and the Files panel does the same the other way around: the file of the active preview
   tab is the selected row there, revealed by expanding its parents and scrolled only if it is out
   of view.
+  Under the list is the commit box (`shell/panels/CommitBox.tsx`): one field whose first line is
+  the subject and whose rest is the body, Cmd+Enter to commit, "Commit" (which reads "Stage all and
+  commit" when nothing is staged and does exactly that), "Commit & Push", and "Write message",
+  which asks the daemon for a message through the agent CLI on that machine in one-shot mode
+  (`git.suggestMessage`) and is not there at all when `git.capabilities` reports none. A conflicted
+  file has no discard button: staging it or a merge tool is how a conflict ends, and discarding one
+  side of it silently is the way out nobody can name afterwards.
+  Under that again is the commit log (`shell/panels/CommitLog.tsx`), in a split whose height is
+  dragged in whole pixels and travels with the project's local file: `git.log` by the page with
+  "Load more" at the end, grouped by the day it was written on (`shell/panels/commit-log.ts`, pure
+  and tested), each row the short hash, the subject, the refs on it, the author and how long ago.
+  It reads again whenever the status moves, since a commit, a pull and a rebase all move both.
+  Clicking a commit opens it in the preview as a tab of its own, named after the commit: one
+  `git.diff` with `scope: 'commit'` answers the whole commit, and `DiffFile` draws the subject, the
+  author, the file list and then every patch under it.
+  Every action is one `git.action` request (`shell/panels/use-git-actions.ts`): a toast goes up the
+  moment it leaves, follows the `git.progress` phases the daemon streams back, and ends as the
+  summary or as the failure with what git wrote behind a "Copy output" button. The toast's Cancel
+  ends the git that is running (`git.cancel`). A pull request that is opened gets an "Open" button
+  on its toast and goes to the system browser.
+
+- **Toasts**: `state/toasts.ts` and `shell/Toasts.tsx`, bottom right over everything, one card per
+  action: a title, one line of what the command wrote, an action button and, on a failure, "Copy
+  output". A success takes itself away after four seconds; a failure and a running action stay
+  until they are dismissed. Every git action reports through it, which is what took the inline
+  `role="status"` lines out of the git panel. The chat's own notifications stay OS notifications.
 
 - **Preview panel**: `shell/PreviewPanel.tsx` is a panel of its own between the canvas and the
   Files or Git panel, so the row reads sidebar, canvas, preview, panel. Its header is the same 48px
@@ -264,7 +306,9 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   by its `key`, not its path, because a file and its diff are two tabs of one path: a diff tab
   carries a `view { kind: 'diff', cwd, scope, staged }`, reads as "Changes" with the file's name in
   its tooltip and the diff's `+n -n` beside it, and is drawn by `shell/panels/DiffFile.tsx` over
-  `UnifiedDiff`, in the same toolbar every renderer uses. The store owns
+  `UnifiedDiff`, in the same toolbar every renderer uses. A whole commit is a view with a `commit`
+  on it and is keyed by that hash instead of by a path, since no file in it is the one it is about;
+  it reads as the short hash and draws the commit's own header, its file list and every patch. The store owns
   the panel with them: the first open file brings the preview up and the last close takes it away.
   Opening it takes half of what the canvas had (`floor(width / 2)`, at most 720, at least 360)
   every time, until a drag of its left edge gives the project a width of its own, which outranks
