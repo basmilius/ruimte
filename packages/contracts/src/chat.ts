@@ -148,12 +148,35 @@ export const ChatQuestionItemSchema = z.object({
     state: z.enum(['pending', 'answered', 'cancelled'])
 });
 
+// One file of a turn's checkpoint diff: the working tree against the tree the turn started from.
+export const ChatCheckpointFileSchema = z.object({
+    path: z.string(),
+    kind: z.enum(['add', 'update', 'delete']),
+    added: z.number().int().nonnegative(),
+    deleted: z.number().int().nonnegative(),
+    // The unified diff of this file; empty when `omitted` says why there is none.
+    diff: z.string(),
+    omitted: z.enum(['binary', 'too-large']).optional()
+});
+export type ChatCheckpointFile = z.infer<typeof ChatCheckpointFileSchema>;
+
+export const ChatCheckpointDiffSchema = z.object({
+    files: z.array(ChatCheckpointFileSchema),
+    // Set when more files changed than the list carries.
+    truncated: z.boolean()
+});
+export type ChatCheckpointDiff = z.infer<typeof ChatCheckpointDiffSchema>;
+
 export const ChatTurnItemSchema = z.object({
     ...base,
     kind: z.literal('turn'),
     state: z.enum(['running', 'done', 'aborted', 'error']),
     endedAt: z.number().nullable(),
-    costUsd: z.number().nonnegative()
+    costUsd: z.number().nonnegative(),
+    // The git tree of the chat's folder when the turn started; absent outside a repository.
+    checkpoint: z.string().optional(),
+    // What the working tree holds against that checkpoint, taken when the turn settled.
+    checkpointDiff: ChatCheckpointDiffSchema.optional()
 });
 
 export const ChatNoteItemSchema = z.object({
@@ -258,6 +281,16 @@ export const ChatAnswerPayloadSchema = z.object({
     answers: z.record(z.string(), z.string())
 });
 export type ChatAnswerPayload = z.infer<typeof ChatAnswerPayloadSchema>;
+
+export const ChatTurnDiffPayloadSchema = z.object({
+    chatId: ChatIdSchema,
+    turnId: z.string().min(1)
+});
+export type ChatTurnDiffPayload = z.infer<typeof ChatTurnDiffPayloadSchema>;
+
+// Null when the turn has no checkpoint to diff against: no repository, or git could not be read.
+export const ChatTurnDiffResultSchema = z.object({ diff: ChatCheckpointDiffSchema.nullable() });
+export type ChatTurnDiffResult = z.infer<typeof ChatTurnDiffResultSchema>;
 
 export const ChatListResultSchema = z.object({
     chats: z.array(ChatInfoSchema)
