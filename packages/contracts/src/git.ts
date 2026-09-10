@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AgentKindSchema } from './agent.ts';
 
 export const WorktreeSchema = z.object({
     path: z.string(),
@@ -91,15 +92,19 @@ export const GitStatusEventSchema = z.object({
 export type GitStatusEvent = z.infer<typeof GitStatusEventSchema>;
 
 // `worktree` is HEAD (or the index, with `staged`) against the file on disk, `base` is everything
-// this branch holds over the base branch, uncommitted work included.
-export const GitDiffScopeSchema = z.enum(['worktree', 'base']);
+// this branch holds over the base branch, uncommitted work included, and `commit` is one commit
+// against the one before it.
+export const GitDiffScopeSchema = z.enum(['worktree', 'base', 'commit']);
 export type GitDiffScope = z.infer<typeof GitDiffScopeSchema>;
 
 export const GitDiffPayloadSchema = z.object({
     cwd: z.string().min(1),
-    // Relative to the repository root, as `git.status` names it.
-    path: z.string().min(1),
+    // Relative to the repository root, as `git.status` names it. Left out in the `commit` scope the
+    // answer carries every file of the commit instead of one.
+    path: z.string().min(1).optional(),
     scope: GitDiffScopeSchema,
+    // The commit the `commit` scope reads, as any name git resolves.
+    commit: z.string().min(1).optional(),
     // Worktree scope only: the index against HEAD instead of the working tree against the index.
     staged: z.boolean().optional(),
     // Leaves changes that are whitespace alone out of the diff, counts included.
@@ -107,7 +112,7 @@ export const GitDiffPayloadSchema = z.object({
 });
 export type GitDiffPayload = z.infer<typeof GitDiffPayloadSchema>;
 
-export const GitDiffResultSchema = z.object({
+export const GitDiffFileSchema = z.object({
     path: z.string(),
     // The unified diff, empty when `omitted` says why there is none.
     diff: z.string(),
@@ -115,6 +120,30 @@ export const GitDiffResultSchema = z.object({
     deleted: z.number().int().nonnegative(),
     binary: z.boolean(),
     omitted: z.enum(['binary', 'too-large']).optional()
+});
+export type GitDiffFile = z.infer<typeof GitDiffFileSchema>;
+
+// One commit as a log row: what it is, who wrote it and the names pointing at it.
+export const GitCommitSchema = z.object({
+    hash: z.string(),
+    shortHash: z.string(),
+    subject: z.string(),
+    author: z.string(),
+    // Seconds since the epoch, the way git writes an author date.
+    at: z.number().int(),
+    // Branch and tag names on this commit, without their `refs/` prefix.
+    refs: z.array(z.string())
+});
+export type GitCommit = z.infer<typeof GitCommitSchema>;
+
+export const GitDiffResultSchema = GitDiffFileSchema.extend({
+    // A whole commit answers every file it touched here, with `path` left empty; one file answers
+    // itself and leaves this out.
+    files: z.array(GitDiffFileSchema).optional(),
+    // Set when more files changed than `files` carries.
+    truncated: z.boolean().optional(),
+    // What the commit scope was read from, so the tab can name it without asking again.
+    commit: GitCommitSchema.optional()
 });
 export type GitDiffResult = z.infer<typeof GitDiffResultSchema>;
 
@@ -138,3 +167,141 @@ export const GitDiscardResultSchema = z.object({
     stash: z.string().nullable()
 });
 export type GitDiscardResult = z.infer<typeof GitDiscardResultSchema>;
+
+export const GitRefSchema = z.object({
+    // `main` for a local branch, `origin/main` for a remote one, as git itself shortens them.
+    name: z.string(),
+    kind: z.enum(['local', 'remote']),
+    // Whether HEAD is on this branch right now.
+    current: z.boolean(),
+    // The base branch of the repository, so a menu can mark it.
+    isDefault: z.boolean(),
+    // The checkout that has this branch out, when another worktree does; git refuses a second one.
+    worktree: z.string().optional(),
+    // Seconds since the epoch, the commit date its tip carries; the list is newest first.
+    at: z.number().int()
+});
+export type GitRef = z.infer<typeof GitRefSchema>;
+
+export const GitRefsResultSchema = z.object({
+    refs: z.array(GitRefSchema),
+    current: z.string().nullable()
+});
+export type GitRefsResult = z.infer<typeof GitRefsResultSchema>;
+
+export const GitLogPayloadSchema = z.object({
+    cwd: z.string().min(1),
+    limit: z.number().int().positive().max(200).optional(),
+    // What a previous answer handed back; opaque to the client, it names where the next page starts.
+    cursor: z.string().optional()
+});
+export type GitLogPayload = z.infer<typeof GitLogPayloadSchema>;
+
+export const GitLogResultSchema = z.object({
+    commits: z.array(GitCommitSchema),
+    // Null when this page was the last one.
+    cursor: z.string().nullable()
+});
+export type GitLogResult = z.infer<typeof GitLogResultSchema>;
+
+/*
+ * Everything the panel can do to a checkout, as one request. They are one kind and not one request
+ * each because they share a shape: a stream of progress lines while git runs, one summary line when
+ * it is over, and the output of a failure as the error.
+ */
+export const GitActionKindSchema = z.enum([
+    'fetch',
+    'pull',
+    'push',
+    'publish',
+    'force-push',
+    'sync',
+    'checkout',
+    'create-branch',
+    'rename-branch',
+    'delete-branch',
+    'merge',
+    'rebase',
+    'stash',
+    'stash-pop',
+    'commit',
+    'commit-push',
+    'create-pr'
+]);
+export type GitActionKind = z.infer<typeof GitActionKindSchema>;
+
+export const GitActionPayloadSchema = z.object({
+    cwd: z.string().min(1),
+    // The client names its own action, so the progress of one it started is the progress it draws.
+    actionId: z.string().min(1),
+    kind: GitActionKindSchema,
+    // The branch to check out, merge, rebase onto, delete, or branch from; the stash to pop.
+    ref: z.string().min(1).optional(),
+    // The name a branch is created or renamed with.
+    name: z.string().min(1).optional(),
+    // A commit's subject line, a stash's message, a pull request's title.
+    subject: z.string().optional(),
+    // The rest of a commit message or a pull request's body.
+    body: z.string().optional(),
+    // Commit: put every changed file in the index first.
+    stageAll: z.boolean().optional(),
+    // Checkout: park the dirty working tree in a stash first, so the switch is not refused.
+    stash: z.boolean().optional(),
+    // Delete a branch git has not merged yet, which it otherwise refuses.
+    force: z.boolean().optional()
+});
+export type GitActionPayload = z.infer<typeof GitActionPayloadSchema>;
+
+export const GitActionResultSchema = z.object({
+    actionId: z.string(),
+    // One line for the toast: what happened, in the words a person would use.
+    summary: z.string(),
+    // Everything git wrote, so a failure can be copied whole.
+    output: z.string(),
+    // The commit a commit action wrote.
+    commit: z.object({ hash: z.string(), subject: z.string() }).optional(),
+    // The pull request a `create-pr` opened, for the button that opens it.
+    url: z.string().optional()
+});
+export type GitActionResult = z.infer<typeof GitActionResultSchema>;
+
+// Where an action is: the step it is on, `done` when the last one is over, `failed` when git said no.
+export const GitActionPhaseSchema = z.enum(['start', 'fetch', 'stage', 'commit', 'push', 'pull', 'branch', 'stash', 'merge', 'rebase', 'pr', 'done', 'failed']);
+export type GitActionPhase = z.infer<typeof GitActionPhaseSchema>;
+
+export const GitProgressEventSchema = z.object({
+    cwd: z.string(),
+    actionId: z.string(),
+    phase: GitActionPhaseSchema,
+    // One line git wrote, or the empty string for a phase that only says where the action is.
+    line: z.string()
+});
+export type GitProgressEvent = z.infer<typeof GitProgressEventSchema>;
+
+export const GitCancelPayloadSchema = z.object({
+    actionId: z.string().min(1)
+});
+export type GitCancelPayload = z.infer<typeof GitCancelPayloadSchema>;
+
+export const GitCapabilitiesResultSchema = z.object({
+    // Whether `gh` is on the daemon's PATH, which is what opening a pull request needs.
+    gh: z.boolean(),
+    // The CLI that writes a commit message here, or null on a machine without one installed.
+    messageProvider: AgentKindSchema.nullable()
+});
+export type GitCapabilitiesResult = z.infer<typeof GitCapabilitiesResultSchema>;
+
+export const GitSuggestMessagePayloadSchema = z.object({
+    cwd: z.string().min(1),
+    // Names the run, so `git.cancel` can stop it.
+    actionId: z.string().min(1),
+    // Which CLI to ask; without one the daemon takes the first installed provider that can chat.
+    provider: AgentKindSchema.optional()
+});
+export type GitSuggestMessagePayload = z.infer<typeof GitSuggestMessagePayloadSchema>;
+
+export const GitSuggestMessageResultSchema = z.object({
+    subject: z.string(),
+    body: z.string()
+});
+export type GitSuggestMessageResult = z.infer<typeof GitSuggestMessageResultSchema>;

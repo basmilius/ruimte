@@ -33,14 +33,24 @@ import {
     FsWatchPayloadSchema
 } from './fs.ts';
 import {
+    GitActionPayloadSchema,
+    GitActionResultSchema,
+    GitCancelPayloadSchema,
+    GitCapabilitiesResultSchema,
     GitCwdPayloadSchema,
     GitDiffPayloadSchema,
     GitDiffResultSchema,
     GitDiscardPayloadSchema,
     GitDiscardResultSchema,
+    GitLogPayloadSchema,
+    GitLogResultSchema,
+    GitProgressEventSchema,
+    GitRefsResultSchema,
     GitStagePayloadSchema,
     GitStatusEventSchema,
     GitStatusSchema,
+    GitSuggestMessagePayloadSchema,
+    GitSuggestMessageResultSchema,
     WorktreeAddPayloadSchema,
     WorktreeAddResultSchema,
     WorktreeListPayloadSchema,
@@ -145,6 +155,12 @@ export const REQUEST_SCHEMAS = {
     'git.diff': { payload: GitDiffPayloadSchema, result: GitDiffResultSchema },
     'git.stage': { payload: GitStagePayloadSchema, result: EmptySchema },
     'git.discard': { payload: GitDiscardPayloadSchema, result: GitDiscardResultSchema },
+    'git.refs': { payload: GitCwdPayloadSchema, result: GitRefsResultSchema },
+    'git.log': { payload: GitLogPayloadSchema, result: GitLogResultSchema },
+    'git.action': { payload: GitActionPayloadSchema, result: GitActionResultSchema },
+    'git.cancel': { payload: GitCancelPayloadSchema, result: EmptySchema },
+    'git.capabilities': { payload: GitCwdPayloadSchema, result: GitCapabilitiesResultSchema },
+    'git.suggestMessage': { payload: GitSuggestMessagePayloadSchema, result: GitSuggestMessageResultSchema },
     'context.set': { payload: ContextSetPayloadSchema, result: EmptySchema },
     'endpoint.info': { payload: EmptySchema, result: EndpointInfoSchema },
     'auth.sessions': { payload: EmptySchema, result: AuthSessionsResultSchema },
@@ -173,7 +189,8 @@ export const EVENT_SCHEMAS = {
     'project.changed': ProjectChangedEventSchema,
     'project.summary': ProjectSummaryEventSchema,
     'fs.changed': FsChangedEventSchema,
-    'git.status': GitStatusEventSchema
+    'git.status': GitStatusEventSchema,
+    'git.progress': GitProgressEventSchema
 } as const satisfies Record<string, z.ZodType>;
 
 export type EventType = keyof typeof EVENT_SCHEMAS;
