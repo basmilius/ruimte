@@ -79,15 +79,15 @@ export class ChatManager {
         }
         const stored = await this.store?.read(payload.chatId);
         // A thread on disk keeps its provider; the selection it stored only makes sense in that catalog.
-        const provider = stored?.info.provider ?? payload.provider ?? 'claude';
-        const chatProvider = this.providers.get(provider);
-        const catalog = chatProvider.catalog;
+        const kind = stored?.info.provider ?? payload.provider ?? 'claude';
+        const provider = this.providers.get(kind);
+        const catalog = provider.catalog;
         const selection = catalog.normalize(stored?.info.selection ?? payload.selection);
         const info: ChatInfo = stored?.info
             ? { ...stored.info, selection, running: false, status: 'idle', activeTurnId: null }
             : {
                   chatId: payload.chatId,
-                  provider,
+                  provider: kind,
                   cwd: payload.cwd ?? this.env.HOME ?? homedir(),
                   agentSessionId: payload.resume ?? null,
                   model: null,
@@ -107,8 +107,8 @@ export class ChatManager {
         const session = new ChatSession({
             info,
             items,
-            provider: chatProvider,
-            command: this.commands[provider] ?? chatProvider.command,
+            provider,
+            command: this.commands[kind] ?? provider.command,
             env: this.contextUrl ? { ...this.env, RUIMTE_CONTEXT_URL: this.contextUrl, RUIMTE_CONTEXT_TOKEN: token } : this.env,
             hasContext: () => this.hasContext(payload.chatId),
             contextSources: () => this.contextSources(payload.chatId),
