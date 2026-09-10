@@ -12,7 +12,7 @@ export const MONO_FONTS = [
 
 export type MonoFontId = (typeof MONO_FONTS)[number]['id'];
 
-export const FONT_SIZE_RANGE = { min: 10, max: 20, step: 0.5 } as const;
+export const FONT_SIZE_RANGE = { min: 10, max: 20, step: 1 } as const;
 
 export interface Settings {
     /* One of the node accents, or null for the theme's own accent. */
@@ -28,10 +28,12 @@ interface SettingsStore extends Settings {
     update(patch: Partial<Settings>): void;
 }
 
-export const DEFAULT_SETTINGS: Settings = { accent: null, font: 'system', fontSize: 12.5 };
+export const DEFAULT_SETTINGS: Settings = { accent: null, font: 'system', fontSize: 13 };
 
+// Rounded as well as clamped: the stepper used to move in halves, so a browser can still hand back
+// a half pixel from before, and the terminal renders sharpest on a whole one.
 const clampFontSize = (value: unknown): number => {
-    const size = typeof value === 'number' && Number.isFinite(value) ? value : DEFAULT_SETTINGS.fontSize;
+    const size = typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : DEFAULT_SETTINGS.fontSize;
     return Math.min(FONT_SIZE_RANGE.max, Math.max(FONT_SIZE_RANGE.min, size));
 };
 

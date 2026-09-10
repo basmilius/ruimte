@@ -67,7 +67,7 @@ export function TerminalPlate({ id }: { id: string }) {
         }
     }, [id]);
     return (
-        <div ref={ref} className="term-host overflow-hidden whitespace-pre bg-term-bg font-mono text-[12.5px] leading-[1.2] text-term-dim" aria-hidden="true" />
+        <div ref={ref} className="term-host overflow-hidden whitespace-pre bg-term-bg font-mono text-[13px] leading-[1.2] text-term-dim" aria-hidden="true" />
     );
 }
 

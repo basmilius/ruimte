@@ -124,7 +124,7 @@ function PairedClients() {
             {link && (
                 <div className="flex flex-col gap-1.5 rounded-lg border border-border bg-surface-sunken p-2.5">
                     <div className="flex items-center gap-2">
-                        <code className="min-w-0 grow truncate font-mono text-[11.5px] text-text select-text">{link}</code>
+                        <code className="min-w-0 grow truncate font-mono text-[12px] text-text select-text">{link}</code>
                         <Tooltip label={copied ? 'Copied' : 'Copy link'}>
                             <button className="icon-btn h-6 w-6 shrink-0" aria-label="Copy pairing link" onClick={copyLink}>
                                 {copied ? <Icon icon={CheckIcon} size={12} /> : <Icon icon={CopyIcon} size={12} />}
@@ -142,7 +142,7 @@ function PairedClients() {
             {sessions?.map((session) => (
                 <div key={session.id} className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-1.5">
                     <div className="flex min-w-0 grow flex-col">
-                        <span className="truncate text-[12.5px] text-text">
+                        <span className="truncate text-[12px] text-text">
                             {session.label}
                             {session.current && <span className="ml-1.5 text-[11px] text-accent">this client</span>}
                         </span>

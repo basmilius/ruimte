@@ -134,7 +134,7 @@ export function EdgeLayer() {
                             d={d}
                             fill="none"
                             stroke={stroke}
-                            strokeWidth={active ? 2.5 : 2}
+                            strokeWidth={active ? 3 : 2}
                             strokeOpacity={context ? (active ? 0.95 : 0.55) : 1}
                             strokeDasharray={context ? '6 6' : undefined}
                         />
@@ -150,7 +150,7 @@ export function EdgeLayer() {
                                 }}
                             >
                                 <circle r="9" fill="var(--surface-raised)" stroke="var(--border-strong)" />
-                                <path d="M -3 -3 L 3 3 M 3 -3 L -3 3" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" />
+                                <path d="M -3 -3 L 3 3 M 3 -3 L -3 3" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" />
                             </g>
                         )}
                     </g>

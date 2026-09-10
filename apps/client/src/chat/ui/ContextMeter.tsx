@@ -17,13 +17,13 @@ export function ContextMeter({ usage, disabled, onCompact }: { usage: ChatUsage;
         <Popover.Root>
             <Popover.Trigger className="icon-btn h-7 w-7" aria-label={`${percent}% of the context used`}>
                 <svg width="24" height="24" viewBox="0 0 24 24" className={tone}>
-                    <circle cx="12" cy="12" r={RADIUS} fill="none" strokeWidth="2.5" className="stroke-border" />
+                    <circle cx="12" cy="12" r={RADIUS} fill="none" strokeWidth="2" className="stroke-border" />
                     <circle
                         cx="12"
                         cy="12"
                         r={RADIUS}
                         fill="none"
-                        strokeWidth="2.5"
+                        strokeWidth="2"
                         stroke="currentColor"
                         strokeLinecap="round"
                         strokeDasharray={CIRCUMFERENCE}
