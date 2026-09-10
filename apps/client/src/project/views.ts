@@ -6,8 +6,15 @@ import { useDocument, viewOfNode } from '@/state/document';
 import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
 import { useUi } from '@/state/ui';
 
-/* Puts a view on screen. A node that lives on another canvas is reached by switching there first. */
-export const showView = (id: string): void => useDocument.getState().setActiveView(id);
+/*
+ * Puts a view on screen. A node that lives on another canvas is reached by switching there first.
+ * Every route to a view runs through here, which is why closing an app-level page happens here too:
+ * `setActiveView` returns early on the view that is already active, so the close has to come first.
+ */
+export const showView = (id: string): void => {
+    useUi.getState().setPage(null);
+    useDocument.getState().setActiveView(id);
+};
 
 export const revealNode = (nodeId: string): void => {
     const { views, activeViewId } = useDocument.getState();
