@@ -145,6 +145,38 @@ describe('CodexProtocol', () => {
         });
     });
 
+    test('a collab agent call is a tool row, and spawning one reads as a delegation', () => {
+        const protocol = new CodexProtocol(1);
+        const item = {
+            type: 'collabAgentToolCall',
+            id: 'collab_1',
+            tool: 'spawnAgent',
+            prompt: 'Read the docs',
+            model: 'gpt-6-astra',
+            senderThreadId: 't1',
+            receiverThreadIds: ['child-1'],
+            agentsStates: {},
+            status: 'inProgress'
+        };
+        expect(protocol.handle({ method: 'item/started', params: { ...ids, item } })).toEqual([
+            {
+                type: 'tool.started',
+                ref: 'collab_1',
+                name: 'Agent',
+                input: { tool: 'spawnAgent', prompt: 'Read the docs', model: 'gpt-6-astra', threads: ['child-1'] },
+                parentRef: null
+            }
+        ]);
+
+        const done = { ...item, status: 'completed', agentsStates: { 'child-1': { status: 'completed', message: 'the docs are read' } } };
+        expect(protocol.handle({ method: 'item/completed', params: { ...ids, item: done } }).at(-1)).toEqual({
+            type: 'tool.done',
+            ref: 'collab_1',
+            output: 'child-1: completed, the docs are read',
+            state: 'done'
+        });
+    });
+
     test('a request Codex takes back is withdrawn', () => {
         const protocol = new CodexProtocol(1);
         protocol.handle({ method: 'item/fileChange/requestApproval', id: 3, params: { ...ids, itemId: 'patch-1', reason: null } });

@@ -41,6 +41,20 @@ const textOf = (content: unknown): string => {
         .join('\n');
 };
 
+/* What became of every agent a collab call touched, one line each; empty while the call still runs. */
+const collabAgentOutput = (states: unknown): string => {
+    if (!isRecord(states)) {
+        return '';
+    }
+    return Object.entries(states)
+        .map(([thread, state]) => {
+            const status = isRecord(state) ? (str(state.status) ?? 'unknown') : 'unknown';
+            const message = isRecord(state) ? str(state.message) : null;
+            return message ? `${thread}: ${status}, ${message}` : `${thread}: ${status}`;
+        })
+        .join('\n');
+};
+
 /* A blocking `request_user_input` question, as far as the person needs to see it. */
 const parseBlockingQuestions = (questions: unknown): ChatQuestion[] => {
     if (!Array.isArray(questions)) {
@@ -373,6 +387,20 @@ export class CodexProtocol {
             case 'webSearch': {
                 const action = isRecord(item.action) ? item.action : {};
                 this.tool(ref, 'WebSearch', { query: str(item.query) ?? str(action.query) ?? '' }, completed, '', true, events);
+                return;
+            }
+            case 'collabAgentToolCall': {
+                // Codex's own multi-agent calls: spawning one reads as a delegation, the rest as what they are.
+                const tool = str(item.tool) ?? 'collabAgent';
+                this.tool(
+                    ref,
+                    tool === 'spawnAgent' ? 'Agent' : tool,
+                    { tool, prompt: str(item.prompt) ?? undefined, model: str(item.model) ?? undefined, threads: item.receiverThreadIds ?? [] },
+                    completed,
+                    collabAgentOutput(item.agentsStates),
+                    str(item.status) === 'completed',
+                    events
+                );
                 return;
             }
             case 'contextCompaction':
