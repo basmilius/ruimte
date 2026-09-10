@@ -81,6 +81,24 @@
     --note-blue: #dbe9ff;
     --note-pink: #fde2ea;
     --note-gray: #ececef;
+    /* The file type palette of the `@pierre/trees` icon set, its own values. A file icon is the one
+       thing in the interface that is not tinted by the theme: TypeScript is blue and Vue is green
+       wherever the file shows up, which is what makes a row readable before the name is. The tree
+       gets these from the library inside its shadow root; everything drawn next to it reads them
+       here, so both stay the same color. */
+    --file-icon-gray: #84848a;
+    --file-icon-red: #d52c36;
+    --file-icon-vermilion: #ff8c5b;
+    --file-icon-orange: #d47628;
+    --file-icon-yellow: #d5a910;
+    --file-icon-green: #199f43;
+    --file-icon-teal: #17a5af;
+    --file-icon-cyan: #1ca1c7;
+    --file-icon-blue: #1a85d4;
+    --file-icon-indigo: #693acf;
+    --file-icon-purple: #a631be;
+    --file-icon-pink: #d32a61;
+    --file-icon-mauve: #594c5b;
 }
 
 [data-theme="dark"] {
@@ -142,6 +160,19 @@
     --note-blue: #182f4b;
     --note-pink: #43212c;
     --note-gray: #26262d;
+    --file-icon-gray: #adadb1;
+    --file-icon-red: #ff6762;
+    --file-icon-vermilion: #d5512f;
+    --file-icon-orange: #ffa359;
+    --file-icon-yellow: #ffd452;
+    --file-icon-green: #5ecc71;
+    --file-icon-teal: #64d1db;
+    --file-icon-cyan: #68cdf2;
+    --file-icon-blue: #69b1ff;
+    --file-icon-indigo: #9d6afb;
+    --file-icon-purple: #d568ea;
+    --file-icon-pink: #ff678d;
+    --file-icon-mauve: #79697b;
 }
 
 /* Who floats over whom. Whole numbers in one place, so a new popup cannot guess. */
@@ -586,6 +617,24 @@ body {
         --trees-font-family-override: var(--font-sans);
         --trees-font-size-override: 12px;
     }
+
+    /* A file icon outside the tree. The glyph fills with `currentColor`, so the hue the set gives
+       the file type is the element's own color; a type the set leaves uncolored keeps the muted
+       text it would have in the tree. */
+    .file-icon { flex-shrink: 0; vertical-align: middle; fill: currentColor; color: var(--text-muted); }
+    .file-icon[data-hue="gray"] { color: var(--file-icon-gray); }
+    .file-icon[data-hue="red"] { color: var(--file-icon-red); }
+    .file-icon[data-hue="vermilion"] { color: var(--file-icon-vermilion); }
+    .file-icon[data-hue="orange"] { color: var(--file-icon-orange); }
+    .file-icon[data-hue="yellow"] { color: var(--file-icon-yellow); }
+    .file-icon[data-hue="green"] { color: var(--file-icon-green); }
+    .file-icon[data-hue="teal"] { color: var(--file-icon-teal); }
+    .file-icon[data-hue="cyan"] { color: var(--file-icon-cyan); }
+    .file-icon[data-hue="blue"] { color: var(--file-icon-blue); }
+    .file-icon[data-hue="indigo"] { color: var(--file-icon-indigo); }
+    .file-icon[data-hue="purple"] { color: var(--file-icon-purple); }
+    .file-icon[data-hue="pink"] { color: var(--file-icon-pink); }
+    .file-icon[data-hue="mauve"] { color: var(--file-icon-mauve); }
 
     /* The tabs fill the preview panel's header, which is where the band's own border already is. */
     .files-tab-strip {

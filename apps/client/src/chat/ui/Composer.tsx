@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { ArrowUp, Clock, FastForward, FileText, Paperclip, Square, X, Zap } from 'lucide-react';
+import { ArrowUp, Clock, FastForward, Paperclip, Square, X, Zap } from 'lucide-react';
 import type { AgentKind, ChatApprovalItem, ChatInfo, ChatQuestionItem, ChatSkill, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { checkAttachmentLimits, filesOf, formatBytes, isImageAttachment, readAttachments, uploadBytes, uploadPreviewUrl } from '@/chat/attachments';
@@ -23,6 +23,7 @@ import { ModelPicker, ModePicker, OptionsPicker } from '@/chat/ui/Pickers';
 import { useChats } from '@/state/chats';
 import { useProviders } from '@/state/providers';
 import { Tooltip } from '@/ui/Tooltip';
+import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
 
 const MAX_ROWS_PX = 200;
@@ -565,7 +566,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                                     onMouseDown={(e) => e.preventDefault()}
                                     onClick={() => chooseMention(path)}
                                 >
-                                    <Icon icon={FileText} size={12} className="shrink-0 text-text-faint" />
+                                    <FileIcon path={path} size={14} />
                                     <span className="truncate font-mono text-text">{name}</span>
                                     {dir && <span className="min-w-0 truncate text-text-faint">{dir}</span>}
                                 </button>
