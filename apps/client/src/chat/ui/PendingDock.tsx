@@ -1,28 +1,74 @@
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Check, ChevronLeft, ChevronRight, MessageCircleQuestionMark, X } from 'lucide-react';
 import type { ChatApprovalItem, ChatQuestionItem } from '@ruimte/contracts';
 import { chatClient } from '@/chat';
 import { approvalChanges, fileChanges, toolSummary } from '@/chat/logic/tools';
 import { toolIcon } from '@/chat/ui/icons';
+import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 
 const EditDiff = lazy(() => import('@/chat/ui/EditDiff'));
 const UnifiedDiff = lazy(() => import('@/chat/ui/UnifiedDiff'));
 
-const buttonClass = 'inline-flex h-7 items-center gap-1 rounded-md px-2.5 text-xs font-medium';
+/* Enter answers and Escape refuses while the dock has focus. A field inside it types instead: a
+   written answer must be able to hold both keys. */
+const isTypingTarget = (target: EventTarget | null): boolean => target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
 
 /* One permission request, fused to the top of the composer; the buttons answer it in place. */
-export function ApprovalDock({ chatId, item, index, total }: { chatId: string; item: ChatApprovalItem; index: number; total: number }) {
+export function ApprovalDock({
+    chatId,
+    item,
+    index,
+    total,
+    focused
+}: {
+    chatId: string;
+    item: ChatApprovalItem;
+    index: number;
+    total: number;
+    focused: boolean;
+}) {
     const [open, setOpen] = useState(false);
     const patches = approvalChanges(item.input);
     const changes = patches.length > 0 ? [] : fileChanges(item.toolName, item.input);
     const command = item.toolName === 'Bash' ? ((item.input as { command?: string })?.command ?? '') : '';
+    const ref = useRef<HTMLDivElement>(null);
     const decide = (decision: 'allow' | 'allow-always' | 'deny'): void => {
         void chatClient.approve(chatId, item.requestId, decision).catch(() => undefined);
     };
+
+    // A request that arrives inside the node you are working in becomes answerable by keyboard on
+    // the spot. A node you are not in, or a field you are typing in, keeps what it has.
+    useEffect(() => {
+        if (focused && !isTypingTarget(document.activeElement)) {
+            ref.current?.focus({ preventScroll: true });
+        }
+    }, [focused, item.requestId]);
+
     return (
-        <div className="chat-dock">
+        <div
+            ref={ref}
+            className="chat-dock outline-none"
+            role="group"
+            aria-label={`${item.toolName} wants permission`}
+            tabIndex={-1}
+            onKeyDown={(e) => {
+                if (isTypingTarget(e.target)) {
+                    return;
+                }
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    decide('allow');
+                }
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    decide('deny');
+                }
+            }}
+        >
             <div className="flex items-center gap-2 px-3 py-2 text-xs">
                 <span className="grid h-6 w-6 shrink-0 place-items-center text-status-needs-you">{toolIcon(item.toolName)}</span>
                 <span className="font-medium text-text">{item.toolName}</span>
@@ -35,17 +81,17 @@ export function ApprovalDock({ chatId, item, index, total }: { chatId: string; i
                         {index + 1}/{total}
                     </span>
                 )}
-                <button className={clsx(buttonClass, 'text-text-muted hover:bg-surface-sunken hover:text-text')} onClick={() => decide('deny')}>
-                    <Icon icon={X} size={12} /> Decline
-                </button>
+                <Button size="sm" onClick={() => decide('deny')}>
+                    <Icon icon={X} size={12} /> Decline <kbd className="tooltip-kbd">esc</kbd>
+                </Button>
                 {item.canAllowAlways && (
-                    <button className={clsx(buttonClass, 'text-text hover:bg-surface-sunken')} onClick={() => decide('allow-always')}>
+                    <Button size="sm" className="text-text hover:bg-surface-sunken" onClick={() => decide('allow-always')}>
                         Always allow
-                    </button>
+                    </Button>
                 )}
-                <button className={clsx(buttonClass, 'bg-accent text-accent-text')} onClick={() => decide('allow')}>
-                    <Icon icon={Check} size={12} /> Approve
-                </button>
+                <Button size="sm" variant="primary" onClick={() => decide('allow')}>
+                    <Icon icon={Check} size={12} /> Approve <kbd className="tooltip-kbd">↵</kbd>
+                </Button>
             </div>
             {item.description && <p className="px-3 pb-2 text-xs text-text-muted">{item.description}</p>}
             {(open || changes.length > 0 || patches.length > 0) && (
@@ -74,10 +120,11 @@ export function ApprovalDock({ chatId, item, index, total }: { chatId: string; i
 }
 
 /* The agent's questions, one at a time, with the choices as buttons and room for a written answer. */
-export function QuestionDock({ chatId, item }: { chatId: string; item: ChatQuestionItem }) {
+export function QuestionDock({ chatId, item, focused }: { chatId: string; item: ChatQuestionItem; focused: boolean }) {
     const [index, setIndex] = useState(0);
     const [answers, setAnswers] = useState<Record<string, string>>({});
     const [custom, setCustom] = useState('');
+    const ref = useRef<HTMLDivElement>(null);
     const question = item.questions[Math.min(index, item.questions.length - 1)]!;
     const last = index >= item.questions.length - 1;
     const answer = answers[question.id] ?? '';
@@ -108,9 +155,42 @@ export function QuestionDock({ chatId, item }: { chatId: string; item: ChatQuest
         }
     };
 
+    useEffect(() => {
+        if (focused && !isTypingTarget(document.activeElement)) {
+            ref.current?.focus({ preventScroll: true });
+        }
+    }, [focused, item.requestId]);
+
+    /* Escape hands an empty answer back: the agent gets a reply either way, and the dock goes. */
+    const dismiss = (): void => {
+        void chatClient.answer(chatId, item.requestId, { ...answers, [question.id]: answers[question.id] ?? '' }).catch(() => undefined);
+    };
+
     const selected = new Set(answer ? answer.split(', ') : []);
+    const canCommit = custom.trim() !== '' || answer !== '';
     return (
-        <div className="chat-dock">
+        <div
+            ref={ref}
+            className="chat-dock outline-none"
+            role="group"
+            aria-label={question.header || 'Question'}
+            tabIndex={-1}
+            onKeyDown={(e) => {
+                if (isTypingTarget(e.target)) {
+                    return;
+                }
+                if (e.key === 'Enter' && canCommit) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    commit();
+                }
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dismiss();
+                }
+            }}
+        >
             <div className="flex items-center gap-2 px-3 py-2 text-xs">
                 <Icon icon={MessageCircleQuestionMark} size={12} className="shrink-0 text-status-needs-you" />
                 <span className="font-medium text-text">{question.header || 'Question'}</span>
@@ -137,7 +217,8 @@ export function QuestionDock({ chatId, item }: { chatId: string; item: ChatQuest
                     </button>
                 ))}
                 <input
-                    className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs text-text outline-none placeholder:text-text-faint focus:border-accent"
+                    className="field text-xs"
+                    aria-label="Write your own answer"
                     placeholder="Or write your own answer"
                     value={custom}
                     onChange={(e) => setCustom(e.target.value)}
@@ -151,14 +232,15 @@ export function QuestionDock({ chatId, item }: { chatId: string; item: ChatQuest
             </div>
             <div className="flex items-center gap-2 border-t border-border px-3 py-2">
                 {index > 0 && (
-                    <button className={clsx(buttonClass, 'text-text-muted hover:bg-surface-sunken hover:text-text')} onClick={() => setIndex(index - 1)}>
+                    <Button size="sm" onClick={() => setIndex(index - 1)}>
                         <Icon icon={ChevronLeft} size={12} /> Previous
-                    </button>
+                    </Button>
                 )}
                 <span className="grow" />
-                <button className={clsx(buttonClass, 'bg-accent text-accent-text disabled:opacity-40')} disabled={!custom.trim() && !answer} onClick={commit}>
+                <Button size="sm" variant="primary" disabled={!canCommit} onClick={commit}>
                     {last ? 'Submit' : 'Next'} {last ? <Icon icon={Check} size={12} /> : <Icon icon={ChevronRight} size={12} />}
-                </button>
+                    <kbd className="tooltip-kbd">↵</kbd>
+                </Button>
             </div>
         </div>
     );

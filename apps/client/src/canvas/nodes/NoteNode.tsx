@@ -31,9 +31,18 @@ export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
         );
     }
 
-    return (
-        <div className="h-full overflow-auto px-3 py-2.5 select-text">
-            {body.trim() === '' ? <span className="text-sm text-text-faint">Click to write</span> : <Markdown text={body} />}
-        </div>
-    );
+    if (body.trim() === '') {
+        // An empty note has nothing to read, so the first click may as well put the cursor in it.
+        return (
+            <button
+                className="h-full w-full cursor-text px-3 py-2.5 text-left text-sm text-text-faint"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => useCanvas.getState().enterNode(id)}
+            >
+                Click to write
+            </button>
+        );
+    }
+
+    return <div className="h-full overflow-auto px-3 py-2.5 select-text">{<Markdown text={body} />}</div>;
 }
