@@ -19,6 +19,7 @@ bun run --cwd apps/server dev              # same, restarts on file changes
 | `--label <name>` | hostname | What the daemon calls itself towards clients (`RUIMTE_LABEL` works too). |
 | `--allow-origin <origin>` | none | Extra browser origins allowed on the socket, on top of loopback and the daemon's own. Repeatable. |
 | `--require-token` | off | Refuse even loopback clients without a paired token. |
+| `--no-price-fetch` | off | Never ask LiteLLM for the model price table; the snapshot bundled with the app prices everything instead. |
 
 `ruimte pair` (in a checkout: `bun src/main.ts pair`) asks the daemon running on this machine for a fresh pairing URL and prints it; tokens never travel as arguments. `ruimte context` is the agent-side CLI behind the `ruimte-context` script.
 
@@ -50,6 +51,9 @@ $RUIMTE_HOME/
     <chatId>/<id>.<ext>            one file someone attached to a message in that chat
   checkpoints/                     mode 0700
     <repo>-<hash>.index            the private git index a turn's checkpoint is written through
+  usage/                           mode 0700
+    index.json                     every transcript the scanner read, with where it stopped in each
+    prices.json                    the last LiteLLM price table, with when it was fetched
 ```
 
 File names are the id passed through `encodeURIComponent`, so an id can never name a path outside its directory.
@@ -226,6 +230,16 @@ A Codex chat (`provider: 'codex'` on `chat.create`) is `codex app-server`, JSON-
 - Usage comes from `thread/tokenUsage/updated` (`last.totalTokens` as the context in use, `modelContextWindow` as the window). Codex reports no cost, so `costUsd` stays zero and the turn fold only shows the duration. Slash commands stay empty.
 - `item/permissions/requestApproval`, MCP elicitations and any other server request the daemon does not understand are refused with a JSON-RPC error, so Codex never waits on an answer that will not come.
 - The thread id is what a terminal resumes with `codex resume <id>`, and "Open in chat" on a terminal that ran Codex opens a chat on the same thread.
+
+## Usage
+
+`src/usage` answers what both CLIs cost and what is left of their plans. Nothing here calls an API and nothing reads a credential.
+
+The scanner walks `CLAUDE_CONFIG_DIR ?? ~/.claude` plus `/projects` and `CODEX_HOME ?? ~/.codex` plus `/sessions` (the same variables the hooks installer reads) for `*.jsonl`, prefilters every line on the words that can carry counts before it parses one, and remembers each file by size, modification time, byte offset and, for Codex, the parser state (`readers/`): unchanged is skipped without opening the file, grown is read from the offset on top of what is there, anything else is read again from the start. The line at the end of a file that is still being written is parsed but not counted towards the offset, so it is read once when it is finished. Claude repeats one message over several lines and copies finished ones into a resumed transcript, so the largest value per field per `message.id` wins; Codex reports a cumulative total per turn, so a call is the difference with the line before it, falling back to `last_token_usage` when a compaction makes that difference negative, and the burst a forked or spawned thread replays at its start is dropped. The index is at `$RUIMTE_HOME/usage/index.json` as interned tuples: throwing it away costs one cold scan (2.2 s over 1,400 transcripts on an M-series Mac; a warm pass is 50 ms), and a file that Claude Code has since cleaned up keeps its records.
+
+Prices come from LiteLLM's `model_prices_and_context_window.json` with a 24 hour lifetime and a 10 second timeout, kept at `$RUIMTE_HOME/usage/prices.json`, with a snapshot bundled in the repo as the offline fallback (`bun run --cwd apps/server snapshot-prices` refreshes it). A model matches exactly, then without its date suffix, then on the longest family before a dash; a bare family name (`opus`, `gpt`) prices nothing and travels as `costUsd: null`, which every consumer shows as a question mark rather than as free. Missing cache rates default to 10% of input for a read, 125% for a write and twice input for the one hour kind. `usage.summary` scans when the last pass is over a minute old and aggregates in the time zone the request carries; `usage.subscribe` keeps that pass running once a minute while a client has the page open and announces a change with `usage.changed`.
+
+`usage/limits` asks the CLIs what is left of the plan. Claude Code gets a `claude -p` on the stream-json protocol, an `initialize` control request (without it the process waits and answers nothing) and then `get_usage`; Codex gets a `codex app-server`, the usual handshake and `account/rateLimits/read`. Both processes end as soon as they have answered. A pass runs every five minutes, doubles to an hour after a failure and leaves the last good numbers up; a CLI that is not installed is reported as such. In between, the `rate_limit_event` frames of a running Claude turn and the `account/rateLimits/updated` notifications of a Codex one fold onto the same windows by id, keeping the reset and the length the event leaves out. `usage.limits` reads the snapshot, `usage.refreshLimits` forces a pass, `usage.limitsChanged` announces one.
 
 ## Smoke test
 
