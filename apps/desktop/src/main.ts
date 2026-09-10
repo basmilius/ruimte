@@ -1,9 +1,9 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { existsSync, mkdirSync, openSync } from 'node:fs';
+import { existsSync, mkdirSync, openSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
-const { app, BrowserWindow, dialog, ipcMain, Menu, session, shell, webContents } = require('electron') as typeof import('electron');
+const { app, BrowserWindow, dialog, ipcMain, Menu, screen, session, shell, webContents } = require('electron') as typeof import('electron');
 
 /*
  * The desktop shell: one window, the client inside it, the daemon next to it. Nothing crosses
@@ -18,6 +18,8 @@ const repoRoot = resolve(app.getAppPath(), '..', '..');
 // In development `bun dev` already runs the daemon and Vite; the shell just opens the dev URL.
 const devUrl = process.env.RUIMTE_DEV_URL ?? null;
 const smoke = process.env.RUIMTE_SMOKE === '1';
+// Where the smoke run writes the top-left of the window, which is how the title bar is measured instead of guessed.
+const capturePath = process.env.RUIMTE_CAPTURE ?? null;
 const port = Number(process.env.RUIMTE_PORT ?? DEFAULT_PORT);
 
 let daemon: ChildProcess | null = null;
@@ -121,10 +123,11 @@ const waitForDaemon = async (): Promise<void> => {
 const TITLEBAR_HEIGHT = 48;
 const OVERLAY_COLORS = { dark: { color: '#1b1b1f', symbolColor: '#ececf1' }, light: { color: '#ffffff', symbolColor: '#18181b' } };
 
-/* The client draws its own chrome. macOS keeps the traffic lights, inset into the sidebar; elsewhere the window controls overlay the toolbar's right end. */
+/* The client draws its own chrome. macOS keeps the traffic lights, inset into the sidebar; elsewhere the window controls overlay the toolbar's right end.
+   `trafficLightPosition` is the top left of the buttons' frame, which measures 14pt on current macOS, so centering them in the band is (48 - 14) / 2. */
 const titleBarOptions = (dark: boolean): Electron.BrowserWindowConstructorOptions =>
     process.platform === 'darwin'
-        ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 12, y: 18 } }
+        ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 12, y: 17 } }
         : { titleBarStyle: 'hidden', titleBarOverlay: { height: TITLEBAR_HEIGHT, ...OVERLAY_COLORS[dark ? 'dark' : 'light'] } };
 
 // The partition the file preview in the client's panel loads a page into; `apps/client/src/shell/panels/HtmlFile.tsx`.
@@ -258,6 +261,18 @@ const setupUpdates = async (): Promise<void> => {
     }
 };
 
+/*
+ * Writes the left end of the title bar band to a PNG in device pixels, which is how its geometry
+ * gets measured instead of guessed. The traffic lights are native and never show up in a page
+ * capture; only what the client draws next to them does.
+ */
+const captureTitleBar = async (window: Electron.BrowserWindow, target: string): Promise<void> => {
+    const image = await window.webContents.capturePage({ x: 0, y: 0, width: 200, height: TITLEBAR_HEIGHT });
+    const { scaleFactor } = screen.getDisplayMatching(window.getBounds());
+    writeFileSync(target, image.toPNG({ scaleFactor }));
+    console.log(`smoke: wrote ${target} at ${scaleFactor}x`);
+};
+
 /* Adds a browser node through the client's own keyboard path, points it at the dev server and waits for the page. */
 const runSmoke = async (window: Electron.BrowserWindow): Promise<void> => {
     console.log('smoke: window loaded');
@@ -275,6 +290,10 @@ const runSmoke = async (window: Electron.BrowserWindow): Promise<void> => {
     });
     const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
     await wait(1500);
+    if (capturePath) {
+        await captureTitleBar(window, capturePath);
+        return;
+    }
     await window.webContents.executeJavaScript(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', code: 'KeyB', altKey: true, bubbles: true }))`);
     await wait(500);
     const target = devUrl ?? `http://127.0.0.1:${port}/`;
