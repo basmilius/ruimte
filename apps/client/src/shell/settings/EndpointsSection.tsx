@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { faCheck, faCopy, faLink, faServer, faTrash } from '@fortawesome/pro-regular-svg-icons';
+import { Check, Copy, Link2, Server, Trash } from 'lucide-react';
 import type { AuthSession } from '@ruimte/contracts';
 import { activateEndpoint, listPairedClients, pairEndpoint, requestPairingUrl, revokePairedClient } from '@/endpoint';
 import { useEndpoints, LOCAL_ENDPOINT_ID } from '@/state/endpoints';
@@ -117,7 +117,7 @@ function PairedClients() {
                         disabled={busy}
                         onClick={() => void showLink()}
                     >
-                        <Icon icon={faLink} size={12} /> Show pairing link
+                        <Icon icon={Link2} size={12} /> Show pairing link
                     </button>
                 )}
             </div>
@@ -127,7 +127,7 @@ function PairedClients() {
                         <code className="min-w-0 grow truncate font-mono text-code text-text select-text">{link}</code>
                         <Tooltip label={copied ? 'Copied' : 'Copy link'}>
                             <button className="icon-btn h-7 w-7 shrink-0" aria-label="Copy pairing link" onClick={copyLink}>
-                                {copied ? <Icon icon={faCheck} size={16} /> : <Icon icon={faCopy} size={16} />}
+                                {copied ? <Icon icon={Check} size={16} /> : <Icon icon={Copy} size={16} />}
                             </button>
                         </Tooltip>
                     </div>
@@ -152,7 +152,7 @@ function PairedClients() {
                     </div>
                     <Tooltip label="Revoke access">
                         <button className="icon-btn h-7 w-7 shrink-0" aria-label={`Revoke ${session.label}`} onClick={() => setTarget(session)}>
-                            <Icon icon={faTrash} size={16} />
+                            <Icon icon={Trash} size={16} />
                         </button>
                     </Tooltip>
                 </div>
@@ -173,7 +173,7 @@ function PairedClients() {
                                 Cancel
                             </button>
                             <button className={clsx(buttonClass, 'bg-status-error text-accent-text')} disabled={busy} onClick={() => void revoke()}>
-                                <Icon icon={faTrash} size={12} /> Revoke
+                                <Icon icon={Trash} size={12} /> Revoke
                             </button>
                         </div>
                     </Dialog.Popup>
@@ -215,18 +215,18 @@ export function EndpointsSection() {
                         endpoint.id === activeId ? 'border-accent bg-accent-soft' : 'border-border'
                     )}
                 >
-                    <Icon icon={faServer} size={14} className="shrink-0 text-text-muted" />
+                    <Icon icon={Server} size={14} className="shrink-0 text-text-muted" />
                     <button className="flex min-w-0 grow flex-col text-left" onClick={() => void activateEndpoint(endpoint.id)}>
                         <span className="truncate text-sm text-text">{endpoint.label}</span>
                         <span className="truncate font-mono text-xs text-text-faint">
                             {endpoint.id === LOCAL_ENDPOINT_ID ? 'loopback' : endpoint.httpBaseUrl}
                         </span>
                     </button>
-                    {endpoint.id === activeId && <Icon icon={faCheck} size={14} className="shrink-0 text-accent" />}
+                    {endpoint.id === activeId && <Icon icon={Check} size={14} className="shrink-0 text-accent" />}
                     {endpoint.id !== LOCAL_ENDPOINT_ID && (
                         <Tooltip label="Forget this machine">
                             <button className="icon-btn h-7 w-7" aria-label="Forget this machine" onClick={() => useEndpoints.getState().remove(endpoint.id)}>
-                                <Icon icon={faTrash} size={16} />
+                                <Icon icon={Trash} size={16} />
                             </button>
                         </Tooltip>
                     )}
@@ -248,7 +248,7 @@ export function EndpointsSection() {
                     }}
                 />
                 <button className={clsx(buttonClass, 'bg-accent text-accent-text')} disabled={busy || !link.trim()} onClick={() => void pair()}>
-                    <Icon icon={faLink} size={12} /> Pair
+                    <Icon icon={Link2} size={12} /> Pair
                 </button>
             </div>
             <p className="text-xs text-text-faint">Paste the link from "Show pairing link" or from `ruimte pair` on the other machine.</p>

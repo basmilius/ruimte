@@ -1,6 +1,6 @@
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Tabs } from '@base-ui-components/react/tabs';
-import { faXmark } from '@fortawesome/pro-regular-svg-icons';
+import { X } from 'lucide-react';
 import { SettingsNav } from '@/shell/settings/SettingsNav';
 import { AboutPane } from '@/shell/settings/panes/AboutPane';
 import { AgentsPane } from '@/shell/settings/panes/AgentsPane';
@@ -53,7 +53,7 @@ export function SettingsDialog() {
                                             <p className="mt-0.5 text-xs text-text-muted">{entry.description}</p>
                                         </div>
                                         <Dialog.Close className="icon-btn h-7 w-7" aria-label="Close">
-                                            <Icon icon={faXmark} size={16} />
+                                            <Icon icon={X} size={16} />
                                         </Dialog.Close>
                                     </div>
                                     <div className="flex min-h-0 grow flex-col gap-5 overflow-y-auto px-6 pb-6">

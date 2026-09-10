@@ -1,18 +1,5 @@
 import type { ReactNode } from 'react';
-import {
-    faBolt,
-    faEye,
-    faFileCode,
-    faFolderMagnifyingGlass,
-    faGlobe,
-    faHammer,
-    faListCheck,
-    faMagnifyingGlass,
-    faPenToSquare,
-    faRobot,
-    faTerminal,
-    faWrench
-} from '@fortawesome/pro-regular-svg-icons';
+import { Bot, Eye, FileCode, FolderSearch, Globe, Hammer, ListTodo, Search, SquarePen, Terminal, Wrench, Zap } from 'lucide-react';
 import { Icon } from '@/ui/Icon';
 
 const SIZE = 12;
@@ -21,31 +8,31 @@ const SIZE = 12;
 export const toolIcon = (name: string): ReactNode => {
     switch (name) {
         case 'Read':
-            return <Icon icon={faEye} size={SIZE} />;
+            return <Icon icon={Eye} size={SIZE} />;
         case 'Edit':
         case 'Write':
         case 'MultiEdit':
         case 'NotebookEdit':
-            return <Icon icon={faPenToSquare} size={SIZE} />;
+            return <Icon icon={SquarePen} size={SIZE} />;
         case 'Bash':
-            return <Icon icon={faTerminal} size={SIZE} />;
+            return <Icon icon={Terminal} size={SIZE} />;
         case 'Grep':
-            return <Icon icon={faMagnifyingGlass} size={SIZE} />;
+            return <Icon icon={Search} size={SIZE} />;
         case 'Glob':
-            return <Icon icon={faFolderMagnifyingGlass} size={SIZE} />;
+            return <Icon icon={FolderSearch} size={SIZE} />;
         case 'WebFetch':
         case 'WebSearch':
-            return <Icon icon={faGlobe} size={SIZE} />;
+            return <Icon icon={Globe} size={SIZE} />;
         case 'Task':
         case 'Agent':
-            return <Icon icon={faRobot} size={SIZE} />;
+            return <Icon icon={Bot} size={SIZE} />;
         case 'Skill':
-            return <Icon icon={faBolt} size={SIZE} />;
+            return <Icon icon={Zap} size={SIZE} />;
         case 'TodoWrite':
-            return <Icon icon={faListCheck} size={SIZE} />;
+            return <Icon icon={ListTodo} size={SIZE} />;
         default:
-            return name.startsWith('mcp__') ? <Icon icon={faHammer} size={SIZE} /> : <Icon icon={faWrench} size={SIZE} />;
+            return name.startsWith('mcp__') ? <Icon icon={Hammer} size={SIZE} /> : <Icon icon={Wrench} size={SIZE} />;
     }
 };
 
-export const fileIcon = (): ReactNode => <Icon icon={faFileCode} size={SIZE} />;
+export const fileIcon = (): ReactNode => <Icon icon={FileCode} size={SIZE} />;

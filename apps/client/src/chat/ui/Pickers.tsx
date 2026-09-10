@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Menu } from '@base-ui-components/react/menu';
 import { Popover } from '@base-ui-components/react/popover';
 import clsx from 'clsx';
-import { faCheck, faChevronDown, faChevronRight, faMagnifyingGlass, faShield, faSliders } from '@fortawesome/pro-regular-svg-icons';
+import { Check, ChevronDown, ChevronRight, Search, Shield, SlidersHorizontal } from 'lucide-react';
 import type { AgentKind, ModelInfo, ModelSelection, ProviderInfo, RuntimeMode } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
@@ -27,7 +27,7 @@ function RadioRow({ value, label, hint, badge }: { value: string; label: string;
         <Menu.RadioItem value={value} className="menu-item">
             <span className="grid h-4 w-4 place-items-center">
                 <Menu.RadioItemIndicator>
-                    <Icon icon={faCheck} size={14} />
+                    <Icon icon={Check} size={14} />
                 </Menu.RadioItemIndicator>
             </span>
             <span className="flex min-w-0 flex-col">
@@ -135,14 +135,14 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                 <Popover.Trigger className={triggerClass}>
                     <AgentIcon kind={provider} size={12} />
                     <span className="max-w-40 truncate">{current?.name ?? selection.model}</span>
-                    <Icon icon={faChevronDown} size={12} className="text-text-faint" />
+                    <Icon icon={ChevronDown} size={12} className="text-text-faint" />
                 </Popover.Trigger>
             </Tooltip>
             <Popover.Portal>
                 <Popover.Positioner className="z-50" side="top" sideOffset={8} align="start">
                     <Popover.Popup className="picker-popup" initialFocus={inputRef}>
                         <div className="flex items-center gap-2 border-b border-border px-2.5">
-                            <Icon icon={faMagnifyingGlass} size={14} className="shrink-0 text-text-faint" />
+                            <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />
                             <input
                                 ref={inputRef}
                                 className="h-9 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint"
@@ -175,7 +175,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                                             onMouseEnter={() => setIndex(i)}
                                             onClick={() => choose(entry)}
                                         >
-                                            <Icon icon={legacyOpen ? faChevronDown : faChevronRight} size={12} />
+                                            <Icon icon={legacyOpen ? ChevronDown : ChevronRight} size={12} />
                                             Legacy models ({entry.count})
                                         </button>
                                     );
@@ -203,7 +203,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                                             onMouseEnter={() => setIndex(i)}
                                             onClick={() => choose(entry)}
                                         >
-                                            <span className="grid h-4 w-4 shrink-0 place-items-center">{chosen && <Icon icon={faCheck} size={14} />}</span>
+                                            <span className="grid h-4 w-4 shrink-0 place-items-center">{chosen && <Icon icon={Check} size={14} />}</span>
                                             <span className="min-w-0 truncate">{entry.model.name}</span>
                                             {entry.model.badge && (
                                                 <span className="rounded bg-accent-soft px-1 text-xs font-medium uppercase text-accent">
@@ -262,7 +262,7 @@ export function OptionsPicker({
     return (
         <Menu.Root>
             <Menu.Trigger className={triggerClass}>
-                <Icon icon={faSliders} size={12} />
+                <Icon icon={SlidersHorizontal} size={12} />
                 <span className="max-w-48 truncate">{summary || 'Options'}</span>
             </Menu.Trigger>
             <Popup minWidth="min-w-52">
@@ -288,7 +288,7 @@ export function OptionsPicker({
                             >
                                 <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
                                     <Menu.CheckboxItemIndicator>
-                                        <Icon icon={faCheck} size={12} />
+                                        <Icon icon={Check} size={12} />
                                     </Menu.CheckboxItemIndicator>
                                 </span>
                                 {option.label}
@@ -307,7 +307,7 @@ export function ModePicker({ runtimeMode, onChange }: { runtimeMode: RuntimeMode
     return (
         <Menu.Root>
             <Menu.Trigger className={clsx(triggerClass, runtimeMode === 'full-access' && 'text-status-needs-you hover:text-status-needs-you')}>
-                <Icon icon={faShield} size={12} />
+                <Icon icon={Shield} size={12} />
                 <span>{current.label}</span>
             </Menu.Trigger>
             <Popup minWidth="min-w-60">

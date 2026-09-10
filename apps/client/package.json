@@ -11,10 +11,6 @@
   },
   "dependencies": {
     "@base-ui-components/react": "^1.0.0-rc.0",
-    "@fortawesome/fontawesome-svg-core": "^7",
-    "@fortawesome/free-brands-svg-icons": "^7",
-    "@fortawesome/pro-regular-svg-icons": "^7",
-    "@fortawesome/react-fontawesome": "^3",
     "@pierre/diffs": "^1.4.1",
     "@ruimte/contracts": "workspace:*",
     "@tanstack/react-virtual": "^3.14.11",
@@ -23,12 +19,14 @@
     "@xterm/addon-webgl": "^0.19.0",
     "@xterm/xterm": "^6.0.0",
     "clsx": "^2.1.1",
+    "lucide-react": "^1.44.0",
     "motion": "^13.2.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "shiki": "^4.4.3",
+    "simple-icons": "^16.30.0",
     "zustand": "^5.0.15"
   },
   "devDependencies": {

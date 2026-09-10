@@ -1,20 +1,7 @@
 import { memo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import {
-    faChevronDown,
-    faChevronRight,
-    faCodeBranch,
-    faGlobe,
-    faGrid2,
-    faKeyboard,
-    faLink,
-    faMessage,
-    faNoteSticky,
-    faTerminal,
-    faUpRightAndDownLeftFromCenter,
-    faXmark
-} from '@fortawesome/pro-regular-svg-icons';
+import { ChevronDown, ChevronRight, GitBranch, Globe, Keyboard, LayoutGrid, Link2, Maximize2, MessageSquare, StickyNote, Terminal, X } from 'lucide-react';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
@@ -31,11 +18,11 @@ import { noteColorClass } from '@/canvas/note-colors';
 import { Icon } from '@/ui/Icon';
 
 const ICONS: Record<NodeKind, ReactNode> = {
-    terminal: <Icon icon={faTerminal} size={14} />,
-    chat: <Icon icon={faMessage} size={14} />,
-    browser: <Icon icon={faGlobe} size={14} />,
-    group: <Icon icon={faGrid2} size={14} />,
-    note: <Icon icon={faNoteSticky} size={14} />
+    terminal: <Icon icon={Terminal} size={14} />,
+    chat: <Icon icon={MessageSquare} size={14} />,
+    browser: <Icon icon={Globe} size={14} />,
+    group: <Icon icon={LayoutGrid} size={14} />,
+    note: <Icon icon={StickyNote} size={14} />
 };
 
 const STATUS_LABEL: Record<AgentStatus, string> = {
@@ -175,7 +162,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     {isGroup && (
                         <Tooltip label={collapsed ? 'Expand' : 'Collapse'}>
                             <button className="icon-btn -ml-1 h-7 w-7" onClick={() => useCanvas.getState().toggleGroupCollapse(id)}>
-                                {collapsed ? <Icon icon={faChevronRight} size={16} /> : <Icon icon={faChevronDown} size={16} />}
+                                {collapsed ? <Icon icon={ChevronRight} size={16} /> : <Icon icon={ChevronDown} size={16} />}
                             </button>
                         </Tooltip>
                     )}
@@ -192,14 +179,14 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     {isGroup && node.worktree && (
                         <Tooltip label={node.worktree.path}>
                             <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 font-mono text-xs text-text-muted">
-                                <Icon icon={faCodeBranch} size={12} /> {node.worktree.branch}
+                                <Icon icon={GitBranch} size={12} /> {node.worktree.branch}
                             </span>
                         </Tooltip>
                     )}
                     {node.kind === 'terminal' && hasContext && !renaming && (
                         <Tooltip label="Linked context. The agent in this terminal reads it with ruimte-context (list, read <id>).">
                             <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 text-xs text-text-muted">
-                                <Icon icon={faLink} size={12} /> context
+                                <Icon icon={Link2} size={12} /> context
                             </span>
                         </Tooltip>
                     )}
@@ -209,7 +196,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                                 className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 text-xs text-text-muted hover:text-text"
                                 onClick={() => useCanvas.getState().updateNode(id, { escapeToApp: false })}
                             >
-                                <Icon icon={faKeyboard} size={12} /> Esc
+                                <Icon icon={Keyboard} size={12} /> Esc
                             </button>
                         </Tooltip>
                     )}
@@ -222,12 +209,12 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     <div className="btn-group shrink-0">
                         <Tooltip label="Zoom to node">
                             <button className="icon-btn h-7 w-7" onClick={() => useCanvas.getState().goToNode(id)}>
-                                <Icon icon={faUpRightAndDownLeftFromCenter} size={16} />
+                                <Icon icon={Maximize2} size={16} />
                             </button>
                         </Tooltip>
                         <Tooltip label="Close">
                             <button className="icon-btn h-7 w-7" onClick={remove}>
-                                <Icon icon={faXmark} size={16} />
+                                <Icon icon={X} size={16} />
                             </button>
                         </Tooltip>
                     </div>

@@ -1,18 +1,18 @@
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import type { LucideIcon } from 'lucide-react';
 import clsx from 'clsx';
 
+// The whole client draws at this weight: 2 is Lucide's default, but at 12 and 14 pixels next to
+// text of the same size a hair thinner keeps the glyph from outweighing the words beside it.
+const STROKE_WIDTH = 1.75;
+
 interface IconProps {
-    icon: IconDefinition;
+    icon: LucideIcon;
     size?: number;
     className?: string;
 }
 
-/* One Font Awesome regular icon, sized in pixels. Icons here are decorative: the name a screen
-   reader reads sits on the button or the label next to it, so the glyph stays hidden. */
-export function Icon({ icon, size = 16, className }: IconProps) {
-    // Font Awesome sizes itself in em off the surrounding text, which would make one glyph drift
-    // from the next; a pixel box gives every call site the size it asks for. The `icon` class
-    // carries the optical alignment.
-    return <FontAwesomeIcon icon={icon} className={clsx('icon', className)} style={{ width: size, height: size }} aria-hidden />;
+/* One Lucide icon, sized in pixels. Icons here are decorative: the name a screen reader reads
+   sits on the button or the label next to it, so the glyph stays hidden. */
+export function Icon({ icon: Glyph, size = 16, className }: IconProps) {
+    return <Glyph size={size} strokeWidth={STROKE_WIDTH} className={clsx('icon', className)} aria-hidden />;
 }

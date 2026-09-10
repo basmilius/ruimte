@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { faGear, faGlobe, faGrid2, faMagnifyingGlass, faMessage, faNoteSticky, faPlus, faTerminal } from '@fortawesome/pro-regular-svg-icons';
+import { Globe, LayoutGrid, MessageSquare, Plus, Search, Settings, StickyNote, Terminal } from 'lucide-react';
 import clsx from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
 import { useCanvas, type AgentStatus, type CanvasNode } from '@/state/canvas';
@@ -17,11 +17,11 @@ import { useDesktopFullscreen } from '@/desktop/useFullscreen';
 import { Icon } from '@/ui/Icon';
 
 const KIND_ICON = {
-    terminal: faTerminal,
-    chat: faMessage,
-    browser: faGlobe,
-    group: faGrid2,
-    note: faNoteSticky
+    terminal: Terminal,
+    chat: MessageSquare,
+    browser: Globe,
+    group: LayoutGrid,
+    note: StickyNote
 } as const;
 
 const GROUPS: { status: AgentStatus | 'none'; label: string }[] = [
@@ -105,7 +105,7 @@ export function Sidebar() {
                 <span className="grow" />
                 <Tooltip label="Search" kbd="⌘K">
                     <button className="icon-btn h-7 w-7" onClick={() => useUi.getState().setPaletteOpen(true)}>
-                        <Icon icon={faMagnifyingGlass} size={16} />
+                        <Icon icon={Search} size={16} />
                     </button>
                 </Tooltip>
             </div>
@@ -139,12 +139,12 @@ export function Sidebar() {
                     className="flex h-8 grow items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-surface-sunken hover:text-text"
                     onClick={() => addNodeAtCenter('terminal')}
                 >
-                    <Icon icon={faPlus} size={14} /> New session
+                    <Icon icon={Plus} size={14} /> New session
                 </button>
                 <ConnectionDot />
                 <Tooltip label="Settings" kbd="⌘,">
                     <button className="icon-btn" onClick={() => useUi.getState().setSettings({ open: true })}>
-                        <Icon icon={faGear} size={16} />
+                        <Icon icon={Settings} size={16} />
                     </button>
                 </Tooltip>
             </div>

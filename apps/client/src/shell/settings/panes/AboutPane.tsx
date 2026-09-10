@@ -1,4 +1,4 @@
-import { faArrowUpRightFromSquare } from '@fortawesome/pro-regular-svg-icons';
+import { ExternalLink } from 'lucide-react';
 import { isDesktop } from '@/desktop/bridge';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -59,7 +59,7 @@ export function AboutPane() {
                         description={link.description}
                         control={
                             <a className={buttonClass} href={link.href} target="_blank" rel="noreferrer">
-                                Open <Icon icon={faArrowUpRightFromSquare} size={12} />
+                                Open <Icon icon={ExternalLink} size={12} />
                             </a>
                         }
                     />

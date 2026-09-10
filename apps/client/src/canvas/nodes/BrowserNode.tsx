@@ -1,15 +1,6 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
-import {
-    faArrowLeft,
-    faArrowRight,
-    faArrowUpRightFromSquare,
-    faCircleExclamation,
-    faCircleNotch,
-    faCode,
-    faLock,
-    faRotateRight
-} from '@fortawesome/pro-regular-svg-icons';
+import { ArrowLeft, ArrowRight, CircleAlert, Code, ExternalLink, LoaderCircle, Lock, RotateCw } from 'lucide-react';
 import { browserRegistry, useBrowser } from '@/browser/registry';
 import { desktop, isDesktop } from '@/desktop/bridge';
 import { useCanvas } from '@/state/canvas';
@@ -51,7 +42,7 @@ export function BrowserNode({ id, focused }: { id: string; focused: boolean }) {
                 <span>Web pages open inside the desktop app. In a browser tab this node can only hand the address to a new tab.</span>
                 {savedUrl && savedUrl !== DEFAULT_URL && (
                     <a className="inline-flex items-center gap-1 text-accent" href={savedUrl} target="_blank" rel="noreferrer">
-                        <Icon icon={faArrowUpRightFromSquare} size={12} /> {savedUrl}
+                        <Icon icon={ExternalLink} size={12} /> {savedUrl}
                     </a>
                 )}
             </div>
@@ -64,17 +55,17 @@ export function BrowserNode({ id, focused }: { id: string; focused: boolean }) {
                 <div className="btn-group">
                     <Tooltip label="Back">
                         <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!state?.canGoBack} onClick={() => browserRegistry.back(id)}>
-                            <Icon icon={faArrowLeft} size={16} />
+                            <Icon icon={ArrowLeft} size={16} />
                         </button>
                     </Tooltip>
                     <Tooltip label="Forward">
                         <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!state?.canGoForward} onClick={() => browserRegistry.forward(id)}>
-                            <Icon icon={faArrowRight} size={16} />
+                            <Icon icon={ArrowRight} size={16} />
                         </button>
                     </Tooltip>
                     <Tooltip label="Reload" kbd="⇧ skips the cache">
                         <button className="icon-btn h-7 w-7" onClick={(e) => browserRegistry.reload(id, e.shiftKey)}>
-                            {state?.loading ? <Icon icon={faCircleNotch} size={16} className="animate-spin" /> : <Icon icon={faRotateRight} size={16} />}
+                            {state?.loading ? <Icon icon={LoaderCircle} size={16} className="animate-spin" /> : <Icon icon={RotateCw} size={16} />}
                         </button>
                     </Tooltip>
                 </div>
@@ -84,7 +75,7 @@ export function BrowserNode({ id, focused }: { id: string; focused: boolean }) {
                         focused && 'ring-1 ring-border-strong'
                     )}
                 >
-                    {secure && <Icon icon={faLock} size={12} className="shrink-0" />}
+                    {secure && <Icon icon={Lock} size={12} className="shrink-0" />}
                     <input
                         className="grow bg-transparent font-mono text-code text-text outline-none placeholder:text-text-faint"
                         placeholder="Enter an address"
@@ -110,12 +101,12 @@ export function BrowserNode({ id, focused }: { id: string; focused: boolean }) {
                 <div className="btn-group">
                     <Tooltip label="Open in the system browser">
                         <button className="icon-btn h-7 w-7" onClick={() => void desktop()?.openExternal(state?.url ?? url)}>
-                            <Icon icon={faArrowUpRightFromSquare} size={16} />
+                            <Icon icon={ExternalLink} size={16} />
                         </button>
                     </Tooltip>
                     <Tooltip label="Inspect">
                         <button className="icon-btn h-7 w-7" onClick={() => browserRegistry.inspect(id)}>
-                            <Icon icon={faCode} size={16} />
+                            <Icon icon={Code} size={16} />
                         </button>
                     </Tooltip>
                 </div>
@@ -123,10 +114,10 @@ export function BrowserNode({ id, focused }: { id: string; focused: boolean }) {
             <div className="relative grow bg-surface-sunken">
                 {state?.error && (
                     <div className="absolute inset-x-3 top-3 z-10 flex items-center gap-2 rounded-lg border border-border bg-surface-raised/95 px-3 py-2 text-xs text-status-error">
-                        <Icon icon={faCircleExclamation} size={12} className="shrink-0" />
+                        <Icon icon={CircleAlert} size={12} className="shrink-0" />
                         <span className="grow select-text">The page did not load: {state.error}</span>
                         <button className="icon-btn h-7 w-7 shrink-0" onClick={() => browserRegistry.reload(id, true)}>
-                            <Icon icon={faRotateRight} size={16} />
+                            <Icon icon={RotateCw} size={16} />
                         </button>
                     </div>
                 )}

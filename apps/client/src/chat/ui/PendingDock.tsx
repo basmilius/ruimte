@@ -1,6 +1,6 @@
 import { Suspense, lazy, useState } from 'react';
 import clsx from 'clsx';
-import { faCheck, faChevronLeft, faChevronRight, faCommentQuestion, faXmark } from '@fortawesome/pro-regular-svg-icons';
+import { Check, ChevronLeft, ChevronRight, MessageCircleQuestionMark, X } from 'lucide-react';
 import type { ChatApprovalItem, ChatQuestionItem } from '@ruimte/contracts';
 import { chatClient } from '@/chat';
 import { approvalChanges, fileChanges, toolSummary } from '@/chat/logic/tools';
@@ -36,7 +36,7 @@ export function ApprovalDock({ chatId, item, index, total }: { chatId: string; i
                     </span>
                 )}
                 <button className={clsx(buttonClass, 'text-text-muted hover:bg-surface-sunken hover:text-text')} onClick={() => decide('deny')}>
-                    <Icon icon={faXmark} size={12} /> Decline
+                    <Icon icon={X} size={12} /> Decline
                 </button>
                 {item.canAllowAlways && (
                     <button className={clsx(buttonClass, 'text-text hover:bg-surface-sunken')} onClick={() => decide('allow-always')}>
@@ -44,7 +44,7 @@ export function ApprovalDock({ chatId, item, index, total }: { chatId: string; i
                     </button>
                 )}
                 <button className={clsx(buttonClass, 'bg-accent text-accent-text')} onClick={() => decide('allow')}>
-                    <Icon icon={faCheck} size={12} /> Approve
+                    <Icon icon={Check} size={12} /> Approve
                 </button>
             </div>
             {item.description && <p className="px-3 pb-2 text-xs text-text-muted">{item.description}</p>}
@@ -112,7 +112,7 @@ export function QuestionDock({ chatId, item }: { chatId: string; item: ChatQuest
     return (
         <div className="chat-dock">
             <div className="flex items-center gap-2 px-3 py-2 text-xs">
-                <Icon icon={faCommentQuestion} size={12} className="shrink-0 text-status-needs-you" />
+                <Icon icon={MessageCircleQuestionMark} size={12} className="shrink-0 text-status-needs-you" />
                 <span className="font-medium text-text">{question.header || 'Question'}</span>
                 <span className="grow" />
                 {item.questions.length > 1 && (
@@ -152,12 +152,12 @@ export function QuestionDock({ chatId, item }: { chatId: string; item: ChatQuest
             <div className="flex items-center gap-2 border-t border-border px-3 py-2">
                 {index > 0 && (
                     <button className={clsx(buttonClass, 'text-text-muted hover:bg-surface-sunken hover:text-text')} onClick={() => setIndex(index - 1)}>
-                        <Icon icon={faChevronLeft} size={12} /> Previous
+                        <Icon icon={ChevronLeft} size={12} /> Previous
                     </button>
                 )}
                 <span className="grow" />
                 <button className={clsx(buttonClass, 'bg-accent text-accent-text disabled:opacity-40')} disabled={!custom.trim() && !answer} onClick={commit}>
-                    {last ? 'Submit' : 'Next'} {last ? <Icon icon={faCheck} size={12} /> : <Icon icon={faChevronRight} size={12} />}
+                    {last ? 'Submit' : 'Next'} {last ? <Icon icon={Check} size={12} /> : <Icon icon={ChevronRight} size={12} />}
                 </button>
             </div>
         </div>

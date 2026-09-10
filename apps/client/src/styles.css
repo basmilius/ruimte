@@ -198,8 +198,8 @@ body {
     box-shadow: var(--shadow-float);
 }
 
-/* Font Awesome parks its glyphs a fraction below the baseline; the middle of the box next to the
-   middle of the text is what reads as aligned, in inline flow as well as in a flex row. */
+/* An inline svg sits on the text baseline, which drops a square glyph below the words next to it;
+   the middle of the box against the middle of the text is what reads as aligned. */
 .icon {
     vertical-align: middle;
 }

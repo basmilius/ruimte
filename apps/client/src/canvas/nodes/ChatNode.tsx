@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
-import { faRotateRight } from '@fortawesome/pro-regular-svg-icons';
+import { RotateCw } from 'lucide-react';
 import type { AgentKind, ModelSelection } from '@ruimte/contracts';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { defaultProvider, readChatPreferences, selectionFor } from '@/chat/preferences';
@@ -83,7 +83,7 @@ export function ChatNode({ id, focused }: { id: string; focused: boolean }) {
                                 setGeneration((g) => g + 1);
                             }}
                         >
-                            <Icon icon={faRotateRight} size={16} />
+                            <Icon icon={RotateCw} size={16} />
                         </button>
                     </Tooltip>
                 </div>
