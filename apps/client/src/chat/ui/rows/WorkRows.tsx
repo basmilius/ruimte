@@ -1,10 +1,11 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { ChevronRight, FileDiff, X } from 'lucide-react';
+import { ChevronRightIcon, FileDiffIcon, XIcon } from '@hugeicons/core-free-icons';
 import type { ChatCheckpointDiff, ChatCheckpointFile, ChatFileChange, ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
 import { chatClient } from '@/chat';
 import { fileChanges, formatElapsed, liveOutput, toolStartedAt, toolSummary, unifiedChanges, type FileChange } from '@/chat/logic/tools';
 import { toolIcon } from '@/chat/ui/icons';
+import { Icon } from '@/ui/Icon';
 
 // The diff renderers carry shiki; they only load once a thread shows a file change.
 const EditDiff = lazy(() => import('@/chat/ui/EditDiff'));
@@ -49,8 +50,8 @@ function ToggleLine({
             {detail && <span className="min-w-0 truncate font-mono text-text-faint">{detail}</span>}
             <span className="grow" />
             {trailing}
-            {failed && <X size={12} className="shrink-0" />}
-            <ChevronRight size={12} className={clsx('shrink-0 text-text-faint transition-transform', open && 'rotate-90')} />
+            {failed && <Icon icon={XIcon} size={12} className="shrink-0" />}
+            <Icon icon={ChevronRightIcon} size={12} className={clsx('shrink-0 text-text-faint transition-transform', open && 'rotate-90')} />
         </button>
     );
 }
@@ -170,7 +171,7 @@ export function TurnFoldRow({ turn, label, expanded, onToggle }: { turn: ChatTur
                 )}
                 onClick={onToggle}
             >
-                <ChevronRight size={12} className={clsx('transition-transform', expanded && 'rotate-90')} />
+                <Icon icon={ChevronRightIcon} size={12} className={clsx('transition-transform', expanded && 'rotate-90')} />
                 {label}
             </button>
         </div>
@@ -234,7 +235,7 @@ export function ChangedFilesRow({
         return (
             <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface-raised">
                 <div className="flex items-center gap-2 px-3 py-2 text-[12px] text-text-muted">
-                    <FileDiff size={13} />
+                    <Icon icon={FileDiffIcon} size={13} />
                     <span className="font-medium text-text">
                         {checkpointDiff.files.length} changed file{checkpointDiff.files.length === 1 ? '' : 's'}
                     </span>
@@ -246,7 +247,11 @@ export function ChangedFilesRow({
                             className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12px] text-text-muted hover:bg-surface-sunken"
                             onClick={() => setOpen((o) => ({ ...o, [file.path]: !o[file.path] }))}
                         >
-                            <ChevronRight size={12} className={clsx('shrink-0 text-text-faint transition-transform', open[file.path] && 'rotate-90')} />
+                            <Icon
+                                icon={ChevronRightIcon}
+                                size={12}
+                                className={clsx('shrink-0 text-text-faint transition-transform', open[file.path] && 'rotate-90')}
+                            />
                             <span className="min-w-0 truncate font-mono text-text">{file.path}</span>
                             <span className="grow" />
                             <span className="text-term-green tabular-nums">+{file.added}</span>
@@ -300,7 +305,7 @@ function ProviderChangedFiles({
     return (
         <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface-raised">
             <div className="flex items-center gap-2 px-3 py-2 text-[12px] text-text-muted">
-                <FileDiff size={13} />
+                <Icon icon={FileDiffIcon} size={13} />
                 <span className="font-medium text-text">
                     {byPath.size} changed file{byPath.size === 1 ? '' : 's'}
                 </span>
@@ -313,7 +318,11 @@ function ProviderChangedFiles({
                             className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12px] text-text-muted hover:bg-surface-sunken"
                             onClick={() => setOpen((o) => ({ ...o, [path]: !o[path] }))}
                         >
-                            <ChevronRight size={12} className={clsx('shrink-0 text-text-faint transition-transform', open[path] && 'rotate-90')} />
+                            <Icon
+                                icon={ChevronRightIcon}
+                                size={12}
+                                className={clsx('shrink-0 text-text-faint transition-transform', open[path] && 'rotate-90')}
+                            />
                             <span className="min-w-0 truncate font-mono text-text">{path}</span>
                             <span className="grow" />
                             <span className="text-text-faint">

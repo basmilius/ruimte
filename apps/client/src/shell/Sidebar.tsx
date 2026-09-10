@@ -1,6 +1,15 @@
 import { useState } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Globe, LayoutGrid, MessageSquare, Plus, Search, Settings, StickyNote, Terminal } from 'lucide-react';
+import {
+    GlobeIcon,
+    LayoutGridIcon,
+    MessageSquareIcon,
+    PlusIcon,
+    Search01Icon,
+    Settings01Icon,
+    StickyNote03Icon,
+    TerminalIcon
+} from '@hugeicons/core-free-icons';
 import clsx from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
 import { useCanvas, type AgentStatus, type CanvasNode } from '@/state/canvas';
@@ -15,13 +24,14 @@ import { ConnectionDot } from '@/shell/ConnectionDot';
 import { ProjectMenu } from '@/shell/ProjectMenu';
 import { TRAFFIC_LIGHTS_INSET_PX, hasTrafficLights } from '@/desktop/bridge';
 import { useDesktopFullscreen } from '@/desktop/useFullscreen';
+import { Icon } from '@/ui/Icon';
 
 const KIND_ICON = {
-    terminal: Terminal,
-    chat: MessageSquare,
-    browser: Globe,
-    group: LayoutGrid,
-    note: StickyNote
+    terminal: TerminalIcon,
+    chat: MessageSquareIcon,
+    browser: GlobeIcon,
+    group: LayoutGridIcon,
+    note: StickyNote03Icon
 } as const;
 
 const GROUPS: { status: AgentStatus | 'none'; label: string }[] = [
@@ -35,11 +45,11 @@ function SessionRow({ node }: { node: CanvasNode }) {
     const selected = useCanvas((s) => s.selection.includes(node.id));
     const status = useNodeStatus(node);
     const [renaming, setRenaming] = useState(false);
-    const Icon = KIND_ICON[node.kind];
+    const kindIcon = KIND_ICON[node.kind];
     if (renaming) {
         return (
             <div className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-[13px]">
-                <Icon size={14} strokeWidth={1.75} className="shrink-0 text-text-muted" />
+                <Icon icon={kindIcon} size={14} className="shrink-0 text-text-muted" />
                 <input
                     autoFocus
                     defaultValue={node.title}
@@ -77,7 +87,7 @@ function SessionRow({ node }: { node: CanvasNode }) {
                 onClick={() => useCanvas.getState().goToNode(node.id)}
                 onDoubleClick={() => setRenaming(true)}
             >
-                <Icon size={14} strokeWidth={1.75} className="shrink-0" />
+                <Icon icon={kindIcon} size={14} className="shrink-0" />
                 <span className="truncate">{node.title}</span>
                 <span className="grow" />
                 {status && <StatusDot status={status} />}
@@ -105,7 +115,7 @@ export function Sidebar() {
                 <span className="grow" />
                 <Tooltip label="Search" kbd="⌘K">
                     <button className="icon-btn h-7 w-7" onClick={() => useUi.getState().setPaletteOpen(true)}>
-                        <Search size={15} />
+                        <Icon icon={Search01Icon} size={15} />
                     </button>
                 </Tooltip>
             </div>
@@ -143,12 +153,12 @@ export function Sidebar() {
                     className="flex h-8 grow items-center gap-2 rounded-md px-2 text-[13px] text-text-muted hover:bg-surface-sunken hover:text-text"
                     onClick={() => addNodeAtCenter('terminal')}
                 >
-                    <Plus size={15} /> New session
+                    <Icon icon={PlusIcon} size={15} /> New session
                 </button>
                 <ConnectionDot />
                 <Tooltip label="Settings" kbd="⌘,">
                     <button className="icon-btn" onClick={() => useUi.getState().setSettings({ open: true })}>
-                        <Settings size={15} />
+                        <Icon icon={Settings01Icon} size={15} />
                     </button>
                 </Tooltip>
             </div>

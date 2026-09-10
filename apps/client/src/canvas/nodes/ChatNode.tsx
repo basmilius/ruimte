@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
-import { RotateCw } from 'lucide-react';
+import { RotateCwIcon } from '@hugeicons/core-free-icons';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { readChatPreferences } from '@/chat/preferences';
 import { Composer } from '@/chat/ui/Composer';
@@ -9,6 +9,7 @@ import { useChats } from '@/state/chats';
 import { useProject } from '@/state/project';
 import { useTransportStatus } from '@/transport/status';
 import { Tooltip } from '@/ui/Tooltip';
+import { Icon } from '@/ui/Icon';
 
 const TITLE_LIMIT = 48;
 const DEFAULT_TITLE = 'New chat';
@@ -73,7 +74,7 @@ export function ChatNode({ id, focused }: { id: string; focused: boolean }) {
                                 setGeneration((g) => g + 1);
                             }}
                         >
-                            <RotateCw size={13} />
+                            <Icon icon={RotateCwIcon} size={13} />
                         </button>
                     </Tooltip>
                 </div>

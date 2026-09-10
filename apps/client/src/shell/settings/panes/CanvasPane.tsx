@@ -1,4 +1,4 @@
-import { Maximize, Scan, Trash2 } from 'lucide-react';
+import { ArrowExpandIcon, ScanIcon, TrashIcon } from '@hugeicons/core-free-icons';
 import { activeZoomPreset, ZOOM_PRESETS } from '@/canvas/math';
 import { LOCK_ROWS } from '@/canvas/locks';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
@@ -7,6 +7,7 @@ import { Keys, Segmented, Toggle, buttonClass } from '@/shell/settings/controls'
 import { useCanvas } from '@/state/canvas';
 import { useUi } from '@/state/ui';
 import { Tooltip } from '@/ui/Tooltip';
+import { Icon } from '@/ui/Icon';
 
 const PRESET_OPTIONS = ZOOM_PRESETS.map((pct) => ({ id: String(pct), label: `${pct}%` }));
 
@@ -40,7 +41,7 @@ export function CanvasPane() {
                         <>
                             <Keys keys="⇧ 1" />
                             <button className={buttonClass} onClick={() => useCanvas.getState().fitAll()}>
-                                <Maximize size={13} /> Fit
+                                <Icon icon={ArrowExpandIcon} size={13} /> Fit
                             </button>
                         </>
                     }
@@ -52,7 +53,7 @@ export function CanvasPane() {
                         <>
                             <Keys keys="⇧ 2" />
                             <button className={buttonClass} disabled={!hasSelection} onClick={() => useCanvas.getState().zoomToSelection()}>
-                                <Scan size={13} /> Frame
+                                <Icon icon={ScanIcon} size={13} /> Frame
                             </button>
                         </>
                     }
@@ -102,7 +103,7 @@ export function CanvasPane() {
                                         aria-label={`Delete layout ${layout.name}`}
                                         onClick={() => useCanvas.getState().deleteLayout(layout.name)}
                                     >
-                                        <Trash2 size={13} />
+                                        <Icon icon={TrashIcon} size={13} />
                                     </button>
                                 </Tooltip>
                             </>

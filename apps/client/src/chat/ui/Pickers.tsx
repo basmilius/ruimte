@@ -1,8 +1,9 @@
 import { Menu } from '@base-ui-components/react/menu';
 import clsx from 'clsx';
-import { Check, ChevronDown, Shield, SlidersHorizontal } from 'lucide-react';
+import { CheckIcon, ChevronDownIcon, Shield01Icon, SlidersHorizontalIcon } from '@hugeicons/core-free-icons';
 import type { InteractionMode, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
+import { Icon } from '@/ui/Icon';
 
 const triggerClass =
     'flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-[12px] text-text-muted hover:bg-surface-sunken hover:text-text data-[popup-open]:bg-surface-sunken data-[popup-open]:text-text';
@@ -22,7 +23,7 @@ function RadioRow({ value, label, hint, badge }: { value: string; label: string;
         <Menu.RadioItem value={value} className="menu-item">
             <span className="grid h-4 w-4 place-items-center">
                 <Menu.RadioItemIndicator>
-                    <Check size={13} strokeWidth={2.5} />
+                    <Icon icon={CheckIcon} size={13} />
                 </Menu.RadioItemIndicator>
             </span>
             <span className="flex min-w-0 flex-col">
@@ -45,7 +46,7 @@ export function ModelPicker({ models, selection, onChange }: { models: ModelInfo
         <Menu.Root>
             <Menu.Trigger className={triggerClass}>
                 <span className="max-w-40 truncate">{current?.name ?? selection.model}</span>
-                <ChevronDown size={12} className="text-text-faint" />
+                <Icon icon={ChevronDownIcon} size={12} className="text-text-faint" />
             </Menu.Trigger>
             <Popup minWidth="min-w-56">
                 <Menu.RadioGroup value={selection.model} onValueChange={(value: string) => onChange(value)}>
@@ -88,7 +89,7 @@ export function OptionsPicker({
     return (
         <Menu.Root>
             <Menu.Trigger className={triggerClass}>
-                <SlidersHorizontal size={12} />
+                <Icon icon={SlidersHorizontalIcon} size={12} />
                 <span className="max-w-48 truncate">{summary || 'Options'}</span>
             </Menu.Trigger>
             <Popup minWidth="min-w-52">
@@ -114,7 +115,7 @@ export function OptionsPicker({
                             >
                                 <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
                                     <Menu.CheckboxItemIndicator>
-                                        <Check size={12} strokeWidth={2.5} />
+                                        <Icon icon={CheckIcon} size={12} />
                                     </Menu.CheckboxItemIndicator>
                                 </span>
                                 {option.label}
@@ -133,7 +134,7 @@ export function ModePicker({ runtimeMode, onChange }: { runtimeMode: RuntimeMode
     return (
         <Menu.Root>
             <Menu.Trigger className={clsx(triggerClass, runtimeMode === 'full-access' && 'text-status-needs-you hover:text-status-needs-you')}>
-                <Shield size={12} />
+                <Icon icon={Shield01Icon} size={12} />
                 <span>{current.label}</span>
             </Menu.Trigger>
             <Popup minWidth="min-w-60">

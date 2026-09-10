@@ -1,6 +1,6 @@
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Tabs } from '@base-ui-components/react/tabs';
-import { X } from 'lucide-react';
+import { XIcon } from '@hugeicons/core-free-icons';
 import { SettingsNav } from '@/shell/settings/SettingsNav';
 import { AboutPane } from '@/shell/settings/panes/AboutPane';
 import { AgentsPane } from '@/shell/settings/panes/AgentsPane';
@@ -10,6 +10,7 @@ import { KeyboardPane } from '@/shell/settings/panes/KeyboardPane';
 import { MachinesPane } from '@/shell/settings/panes/MachinesPane';
 import { SETTINGS_SECTIONS } from '@/shell/settings/sections';
 import { useUi, type SettingsSectionId } from '@/state/ui';
+import { Icon } from '@/ui/Icon';
 
 const PANES: Record<SettingsSectionId, () => React.JSX.Element> = {
     appearance: AppearancePane,
@@ -52,7 +53,7 @@ export function SettingsDialog() {
                                             <p className="mt-0.5 text-[12px] text-text-muted">{entry.description}</p>
                                         </div>
                                         <Dialog.Close className="icon-btn h-7 w-7" aria-label="Close">
-                                            <X size={14} />
+                                            <Icon icon={XIcon} size={14} />
                                         </Dialog.Close>
                                     </div>
                                     <div className="flex min-h-0 grow flex-col gap-5 overflow-y-auto px-6 pb-6">

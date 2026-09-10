@@ -1,5 +1,19 @@
 import type { ReactNode } from 'react';
-import { Bot, Eye, FileCode2, FolderSearch, Globe, Hammer, ListTodo, Search, SquarePen, Terminal, Wrench, Zap } from 'lucide-react';
+import {
+    BotIcon,
+    EyeIcon,
+    FileCodeIcon,
+    FolderSearchIcon,
+    GlobeIcon,
+    HammerIcon,
+    ListTodoIcon,
+    Search01Icon,
+    SquarePenIcon,
+    TerminalIcon,
+    Wrench01Icon,
+    ZapIcon
+} from '@hugeicons/core-free-icons';
+import { Icon } from '@/ui/Icon';
 
 const SIZE = 14;
 
@@ -7,31 +21,31 @@ const SIZE = 14;
 export const toolIcon = (name: string): ReactNode => {
     switch (name) {
         case 'Read':
-            return <Eye size={SIZE} />;
+            return <Icon icon={EyeIcon} size={SIZE} />;
         case 'Edit':
         case 'Write':
         case 'MultiEdit':
         case 'NotebookEdit':
-            return <SquarePen size={SIZE} />;
+            return <Icon icon={SquarePenIcon} size={SIZE} />;
         case 'Bash':
-            return <Terminal size={SIZE} />;
+            return <Icon icon={TerminalIcon} size={SIZE} />;
         case 'Grep':
-            return <Search size={SIZE} />;
+            return <Icon icon={Search01Icon} size={SIZE} />;
         case 'Glob':
-            return <FolderSearch size={SIZE} />;
+            return <Icon icon={FolderSearchIcon} size={SIZE} />;
         case 'WebFetch':
         case 'WebSearch':
-            return <Globe size={SIZE} />;
+            return <Icon icon={GlobeIcon} size={SIZE} />;
         case 'Task':
         case 'Agent':
-            return <Bot size={SIZE} />;
+            return <Icon icon={BotIcon} size={SIZE} />;
         case 'Skill':
-            return <Zap size={SIZE} />;
+            return <Icon icon={ZapIcon} size={SIZE} />;
         case 'TodoWrite':
-            return <ListTodo size={SIZE} />;
+            return <Icon icon={ListTodoIcon} size={SIZE} />;
         default:
-            return name.startsWith('mcp__') ? <Hammer size={SIZE} /> : <Wrench size={SIZE} />;
+            return name.startsWith('mcp__') ? <Icon icon={HammerIcon} size={SIZE} /> : <Icon icon={Wrench01Icon} size={SIZE} />;
     }
 };
 
-export const fileIcon = (): ReactNode => <FileCode2 size={SIZE} />;
+export const fileIcon = (): ReactNode => <Icon icon={FileCodeIcon} size={SIZE} />;

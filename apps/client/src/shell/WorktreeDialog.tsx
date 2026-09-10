@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { GitBranch } from 'lucide-react';
+import { GitBranchIcon } from '@hugeicons/core-free-icons';
 import { useCanvas } from '@/state/canvas';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
+import { Icon } from '@/ui/Icon';
 
 // A group's title, as a branch name git accepts.
 const branchFromTitle = (title: string): string =>
@@ -57,7 +58,7 @@ export function WorktreeDialog() {
                 <Dialog.Backdrop className="dialog-backdrop" />
                 <Dialog.Popup className="dialog-popup top-[24vh] w-[420px] p-5">
                     <Dialog.Title className="flex items-center gap-2 text-[15px] font-semibold text-text">
-                        <GitBranch size={15} /> Bind to a worktree
+                        <Icon icon={GitBranchIcon} size={15} /> Bind to a worktree
                     </Dialog.Title>
                     {folder ? (
                         <>

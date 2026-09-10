@@ -1,6 +1,7 @@
 import { Popover } from '@base-ui-components/react/popover';
-import { Minimize2 } from 'lucide-react';
+import { ArrowShrink01Icon } from '@hugeicons/core-free-icons';
 import type { ChatUsage } from '@ruimte/contracts';
+import { Icon } from '@/ui/Icon';
 
 const RADIUS = 9;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -54,7 +55,7 @@ export function ContextMeter({ usage, disabled, onCompact }: { usage: ChatUsage;
                             disabled={disabled || usage.contextTokens === 0}
                             onClick={onCompact}
                         >
-                            <Minimize2 size={12} /> Compact context
+                            <Icon icon={ArrowShrink01Icon} size={12} /> Compact context
                         </button>
                     </Popover.Popup>
                 </Popover.Positioner>

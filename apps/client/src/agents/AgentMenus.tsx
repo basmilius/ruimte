@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 import { Menu } from '@base-ui-components/react/menu';
-import { Bot, ChevronRight, MessageSquare } from 'lucide-react';
+import { BotIcon, ChevronRightIcon, MessageSquareIcon } from '@hugeicons/core-free-icons';
 import type { ProviderInfo } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { AGENT_TARGET_LABEL, type AgentTarget } from '@/agents/nodes';
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
 import { useChatPreferences } from '@/chat/preferences';
 import { useProviders } from '@/state/providers';
+import { Icon } from '@/ui/Icon';
 
 /* A nested menu, in the popup of the dock as well as in the canvas's context menu: the parts are the same. */
 function Submenu({ label, icon, children }: { label: string; icon: ReactNode; children: ReactNode }) {
@@ -14,7 +15,7 @@ function Submenu({ label, icon, children }: { label: string; icon: ReactNode; ch
         <Menu.SubmenuRoot>
             <Menu.SubmenuTrigger className="menu-item">
                 {icon} {label}
-                <ChevronRight size={14} className="ml-auto text-text-faint" />
+                <Icon icon={ChevronRightIcon} size={14} className="ml-auto text-text-faint" />
             </Menu.SubmenuTrigger>
             <Menu.Portal>
                 <Menu.Positioner className="z-50" sideOffset={4} alignOffset={-4}>
@@ -63,10 +64,10 @@ function AgentRows({ target, onPick }: { target: AgentTarget; onPick(target: Age
 export function AgentSubmenus({ onPick }: { onPick(target: AgentTarget, provider: ProviderInfo): void }) {
     return (
         <>
-            <Submenu label={AGENT_TARGET_LABEL.chat} icon={<MessageSquare size={14} />}>
+            <Submenu label={AGENT_TARGET_LABEL.chat} icon={<Icon icon={MessageSquareIcon} size={14} />}>
                 <AgentRows target="chat" onPick={onPick} />
             </Submenu>
-            <Submenu label={AGENT_TARGET_LABEL.terminal} icon={<Bot size={14} />}>
+            <Submenu label={AGENT_TARGET_LABEL.terminal} icon={<Icon icon={BotIcon} size={14} />}>
                 <AgentRows target="terminal" onPick={onPick} />
             </Submenu>
         </>

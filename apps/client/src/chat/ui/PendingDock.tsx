@@ -1,10 +1,11 @@
 import { Suspense, lazy, useState } from 'react';
 import clsx from 'clsx';
-import { Check, ChevronLeft, ChevronRight, MessageCircleQuestion, X } from 'lucide-react';
+import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, MessageCircleQuestionMarkIcon, XIcon } from '@hugeicons/core-free-icons';
 import type { ChatApprovalItem, ChatQuestionItem } from '@ruimte/contracts';
 import { chatClient } from '@/chat';
 import { approvalChanges, fileChanges, toolSummary } from '@/chat/logic/tools';
 import { toolIcon } from '@/chat/ui/icons';
+import { Icon } from '@/ui/Icon';
 
 const EditDiff = lazy(() => import('@/chat/ui/EditDiff'));
 const UnifiedDiff = lazy(() => import('@/chat/ui/UnifiedDiff'));
@@ -35,7 +36,7 @@ export function ApprovalDock({ chatId, item, index, total }: { chatId: string; i
                     </span>
                 )}
                 <button className={clsx(buttonClass, 'text-text-muted hover:bg-surface-sunken hover:text-text')} onClick={() => decide('deny')}>
-                    <X size={13} /> Decline
+                    <Icon icon={XIcon} size={13} /> Decline
                 </button>
                 {item.canAllowAlways && (
                     <button className={clsx(buttonClass, 'text-text hover:bg-surface-sunken')} onClick={() => decide('allow-always')}>
@@ -43,7 +44,7 @@ export function ApprovalDock({ chatId, item, index, total }: { chatId: string; i
                     </button>
                 )}
                 <button className={clsx(buttonClass, 'bg-accent text-accent-text')} onClick={() => decide('allow')}>
-                    <Check size={13} /> Approve
+                    <Icon icon={CheckIcon} size={13} /> Approve
                 </button>
             </div>
             {item.description && <p className="px-3 pb-2 text-[12px] text-text-muted">{item.description}</p>}
@@ -111,7 +112,7 @@ export function QuestionDock({ chatId, item }: { chatId: string; item: ChatQuest
     return (
         <div className="chat-dock">
             <div className="flex items-center gap-2 px-3 py-2 text-[12px]">
-                <MessageCircleQuestion size={14} className="shrink-0 text-status-needs-you" />
+                <Icon icon={MessageCircleQuestionMarkIcon} size={14} className="shrink-0 text-status-needs-you" />
                 <span className="font-medium text-text">{question.header || 'Question'}</span>
                 <span className="grow" />
                 {item.questions.length > 1 && (
@@ -151,12 +152,12 @@ export function QuestionDock({ chatId, item }: { chatId: string; item: ChatQuest
             <div className="flex items-center gap-2 border-t border-border px-3 py-2">
                 {index > 0 && (
                     <button className={clsx(buttonClass, 'text-text-muted hover:bg-surface-sunken hover:text-text')} onClick={() => setIndex(index - 1)}>
-                        <ChevronLeft size={13} /> Previous
+                        <Icon icon={ChevronLeftIcon} size={13} /> Previous
                     </button>
                 )}
                 <span className="grow" />
                 <button className={clsx(buttonClass, 'bg-accent text-accent-text disabled:opacity-40')} disabled={!custom.trim() && !answer} onClick={commit}>
-                    {last ? 'Submit' : 'Next'} {last ? <Check size={13} /> : <ChevronRight size={13} />}
+                    {last ? 'Submit' : 'Next'} {last ? <Icon icon={CheckIcon} size={13} /> : <Icon icon={ChevronRightIcon} size={13} />}
                 </button>
             </div>
         </div>

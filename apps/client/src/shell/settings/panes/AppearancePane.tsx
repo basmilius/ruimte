@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { Check } from 'lucide-react';
+import { CheckIcon } from '@hugeicons/core-free-icons';
 import { NODE_ACCENTS } from '@/canvas/accents';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -7,6 +7,7 @@ import { Segmented, SelectControl, Stepper } from '@/shell/settings/controls';
 import { FONT_SIZE_RANGE, MONO_FONTS, useSettings, type MonoFontId } from '@/state/settings';
 import { useTheme, type Theme } from '@/state/theme';
 import { Tooltip } from '@/ui/Tooltip';
+import { Icon } from '@/ui/Icon';
 
 const THEMES: Array<{ id: Theme; label: string }> = [
     { id: 'system', label: 'System' },
@@ -28,7 +29,7 @@ function AccentSwatches() {
                     className={clsx('grid h-6 w-6 place-items-center rounded-full border border-border-strong text-text-muted', accent === null && ring)}
                     onClick={() => update({ accent: null })}
                 >
-                    {accent === null && <Check size={12} />}
+                    {accent === null && <Icon icon={CheckIcon} size={12} />}
                 </button>
             </Tooltip>
             {NODE_ACCENTS.map((entry) => (
@@ -41,7 +42,7 @@ function AccentSwatches() {
                         style={{ background: entry.color }}
                         onClick={() => update({ accent: entry.id })}
                     >
-                        {accent === entry.id && <Check size={12} strokeWidth={3} />}
+                        {accent === entry.id && <Icon icon={CheckIcon} size={12} />}
                     </button>
                 </Tooltip>
             ))}

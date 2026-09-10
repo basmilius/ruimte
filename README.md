@@ -14,7 +14,7 @@ https://ruimte.app
 
 ## Stack
 
-React 19, TypeScript, Vite, Tailwind v4, Base UI, motion, zustand, lucide. Bun for tooling.
+React 19, TypeScript, Vite, Tailwind v4, Base UI, motion, zustand, Hugeicons. Bun for tooling.
 
 ## Develop
 

@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Search, X } from 'lucide-react';
+import { Search01Icon, XIcon } from '@hugeicons/core-free-icons';
 import { appCommands } from '@/shell/commands';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Keys } from '@/shell/settings/controls';
 import { CANVAS_SHORTCUTS, commandShortcuts, filterShortcuts } from '@/shell/settings/shortcuts';
+import { Icon } from '@/ui/Icon';
 
 export function KeyboardPane() {
     const [query, setQuery] = useState('');
@@ -15,7 +16,7 @@ export function KeyboardPane() {
     return (
         <>
             <div className="relative">
-                <Search size={14} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-text-faint" aria-hidden />
+                <Icon icon={Search01Icon} size={14} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-text-faint" aria-hidden />
                 <input
                     className="h-9 w-full rounded-lg border border-border bg-surface pr-9 pl-9 text-[13px] text-text outline-none placeholder:text-text-faint focus:border-accent"
                     placeholder="Search shortcuts"
@@ -33,7 +34,7 @@ export function KeyboardPane() {
                 />
                 {query && (
                     <button className="icon-btn absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2" aria-label="Clear search" onClick={() => setQuery('')}>
-                        <X size={13} />
+                        <Icon icon={XIcon} size={13} />
                     </button>
                 )}
             </div>
