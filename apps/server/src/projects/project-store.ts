@@ -133,6 +133,14 @@ export class ProjectStore {
         };
     }
 
+    /* Every project in the registry, without opening or resolving anything: what a folder is called
+       and which project it is, for whoever has a path in hand and wants the name that goes with it. */
+    async known(): Promise<{ projectId: string; name: string; folder: string }[]> {
+        return (await this.loadRegistry()).flatMap((entry) =>
+            entry.folder === null ? [] : [{ projectId: entry.projectId, name: entry.name, folder: entry.folder }]
+        );
+    }
+
     async list(): Promise<ProjectSummary[]> {
         await this.locked(async () => {
             // A daemon that knows no canvas makes one, so every client boots into the same project.

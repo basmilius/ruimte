@@ -16,6 +16,8 @@ export interface ServerConfig {
     allowedOrigins: string[];
     // Refuse even loopback clients without a token.
     requireToken: boolean;
+    // Whether the daemon may ask LiteLLM for the price table; off leaves it on the bundled snapshot.
+    priceFetch: boolean;
     // `pair` asks the running daemon for a pairing URL; `context` is the agent-side CLI (`ruimte-context`).
     command: 'serve' | 'pair' | 'context';
     // What follows the command, for `context`.
@@ -35,7 +37,8 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
             serve: { type: 'string' },
             label: { type: 'string' },
             'allow-origin': { type: 'string', multiple: true, default: [] },
-            'require-token': { type: 'boolean', default: false }
+            'require-token': { type: 'boolean', default: false },
+            'no-price-fetch': { type: 'boolean', default: false }
         },
         strict: true,
         allowPositionals: true
@@ -59,6 +62,7 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
         label: values.label ?? env.RUIMTE_LABEL ?? hostname(),
         allowedOrigins: values['allow-origin'],
         requireToken: values['require-token'],
+        priceFetch: !values['no-price-fetch'],
         command,
         args: positionals.slice(1)
     };

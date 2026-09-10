@@ -28,6 +28,7 @@ import { registerDrawingHandlers } from './handlers/drawing.ts';
 import { registerProjectHandlers } from './handlers/project.ts';
 import { registerServerHandlers } from './handlers/server.ts';
 import { registerSessionHandlers } from './handlers/session.ts';
+import { registerUsageHandlers } from './handlers/usage.ts';
 import { Checkpoints } from './git/checkpoints.ts';
 import { GitStatusWatcher } from './git/status-watcher.ts';
 import { Worktrees } from './git/worktrees.ts';
@@ -38,6 +39,7 @@ import { ProviderRegistry } from './providers/registry.ts';
 import { BunPtyAdapter } from './pty/bun-pty.ts';
 import { SessionManager } from './sessions/manager.ts';
 import { SnapshotStore, scheduleSnapshots } from './sessions/snapshot-store.ts';
+import { UsageService } from './usage/usage-service.ts';
 
 // Inside a `bun build --compile` binary the sources live on a virtual file system, so paths next to the source mean nothing.
 const compiled = import.meta.dir.startsWith('/$bunfs') || import.meta.dir.includes('~BUN');
@@ -96,6 +98,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     projects.attachDrawings(drawings);
     const folders = new FolderWatcher();
     const statuses = new GitStatusWatcher();
+    const usage = new UsageService({ home: config.home, allowPriceFetch: config.priceFetch, knownProjects: () => projects.known() });
 
     const dispatcher = new Dispatcher();
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home });
@@ -116,6 +119,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         }
     });
     registerFsHandlers(dispatcher, folders);
+    registerUsageHandlers(dispatcher, usage);
     registerGitHandlers(dispatcher, new Worktrees(config.home), statuses, providers);
 
     if (config.installHooks) {
@@ -255,6 +259,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 const unsubscribeDrawings = drawings.subscribe(client.id, sink);
                 const unsubscribeFolders = folders.subscribe(client.id, sink);
                 const unsubscribeStatuses = statuses.subscribe(client.id, sink);
+                const unsubscribeUsage = usage.subscribe(client.id, sink);
                 connections.set(ws, {
                     client,
                     gate,
@@ -265,6 +270,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                         unsubscribeDrawings();
                         unsubscribeFolders();
                         unsubscribeStatuses();
+                        unsubscribeUsage();
                     }
                 });
             },
@@ -326,6 +332,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         shuttingDown = true;
         console.log(`ruimte server received ${signal}, writing snapshots`);
         snapshotSchedule.stop();
+        usage.stop();
         // Before anything is awaited: a `bun --watch` reload restarts the module during the first
         // await, so a turn in flight would otherwise never reach its file.
         chats.persistAllSync();
