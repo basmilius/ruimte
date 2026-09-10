@@ -5,7 +5,7 @@ import type { AgentKind, ChatApprovalItem, ChatInfo, ChatQuestionItem, ModelInfo
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { attachmentUrl, checkAttachmentLimits, imageFilesOf, readAttachments } from '@/chat/attachments';
 import { EMPTY_DRAFT, isEmptyDraft, readDraft, writeDraft, type ChatDraft } from '@/chat/drafts';
-import { findMentionQuery, insertMention, presentMentions, tokenizeMentions, type MentionQuery } from '@/chat/mentions';
+import { MENTION_DRAG_TYPE, findMentionQuery, insertMention, presentMentions, tokenizeMentions, type MentionQuery } from '@/chat/mentions';
 import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferences';
 import { ContextMeter } from '@/chat/ui/ContextMeter';
 import { ApprovalDock, QuestionDock } from '@/chat/ui/PendingDock';
@@ -246,6 +246,18 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
         }
     };
 
+    /* Paths dragged in from the Files panel. There is no mention query to insert into, so they land
+       at the end of the prompt and join the draft's mentions, which is what `chat.send` carries. */
+    const addMentions = (paths: string[]): void => {
+        const fresh = paths.filter((path) => path !== '');
+        if (fresh.length === 0 || capabilities?.mentions === false) {
+            return;
+        }
+        const appended = fresh.map((path) => `@${path}`).join(' ');
+        const before = text.replace(/\s+$/, '');
+        setText(before === '' ? `${appended} ` : `${before} ${appended} `, [...draft.mentions, ...fresh.filter((path) => !draft.mentions.includes(path))]);
+    };
+
     const addFiles = (incoming: File[]): void => {
         if (incoming.length === 0) {
             return;
@@ -375,7 +387,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
             <div
                 className={clsx('chat-composer pointer-events-auto flex flex-col', dragging && 'chat-composer-drop')}
                 onDragOver={(e) => {
-                    if (imageFilesOf(e.dataTransfer).length > 0 || e.dataTransfer.types.includes('Files')) {
+                    if (imageFilesOf(e.dataTransfer).length > 0 || e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes(MENTION_DRAG_TYPE)) {
                         e.preventDefault();
                         e.stopPropagation();
                         setDragging(true);
@@ -390,6 +402,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                     e.preventDefault();
                     e.stopPropagation();
                     setDragging(false);
+                    addMentions(e.dataTransfer.getData(MENTION_DRAG_TYPE).split(' '));
                     addFiles(imageFilesOf(e.dataTransfer));
                     inputRef.current?.focus();
                 }}

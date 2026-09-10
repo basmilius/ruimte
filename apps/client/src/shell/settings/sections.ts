@@ -1,4 +1,4 @@
-import { Bot, Info, Keyboard, LayoutGrid, Palette, Server, type LucideIcon } from 'lucide-react';
+import { Bot, Folder, Info, Keyboard, LayoutGrid, Palette, Server, type LucideIcon } from 'lucide-react';
 import type { SettingsSectionId } from '@/state/ui';
 
 interface SettingsSectionMeta {
@@ -13,6 +13,7 @@ interface SettingsSectionMeta {
 export const SETTINGS_SECTIONS: readonly SettingsSectionMeta[] = [
     { id: 'appearance', label: 'Appearance', description: 'Theme, accent and the terminal font.', icon: Palette },
     { id: 'canvas', label: 'Canvas', description: 'Zoom presets and locks for the canvas you are looking at.', icon: LayoutGrid },
+    { id: 'files', label: 'Files', description: 'What the Files panel shows and how many files it keeps open.', icon: Folder },
     { id: 'agents', label: 'Agents', description: 'What a new agent starts with, and which CLIs the daemon found.', icon: Bot },
     { id: 'machines', label: 'Machines', description: 'The daemons this client can talk to.', icon: Server },
     { id: 'keyboard', label: 'Keyboard', description: 'Every shortcut. Remapping comes later.', icon: Keyboard },
