@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { codexThreadOptions } from './codex.ts';
+import { codexServiceTier, codexThreadOptions } from './codex.ts';
 import { ProviderRegistry } from './registry.ts';
 
 describe('codex catalog', () => {
@@ -11,11 +11,26 @@ describe('codex catalog', () => {
         expect(models.find((model) => model.slug === 'gpt-5.6-sol')?.options[0]).toMatchObject({ id: 'effort', type: 'select', defaultChoice: 'low' });
         expect(codex.normalize({ model: 'astra', options: { effort: 'ultra', contextWindow: '1m' } })).toEqual({
             model: 'gpt-6-astra',
-            options: { effort: 'ultra' }
+            options: { effort: 'ultra', serviceTier: false }
         });
         expect(codex.normalize({ model: 'gpt-5.5', options: { effort: 'ultra' } }).options.effort).toBe('medium');
         expect(codex.contextWindowFor(codex.normalize({ model: 'spark' }))).toBe(121600);
         expect(registry.catalogFor('claude')).not.toBe(codex);
+    });
+});
+
+describe('codexServiceTier', () => {
+    test('is the priority tier when the option is on, and nothing when it is off', () => {
+        expect(codexServiceTier({ model: 'gpt-6-astra', options: { serviceTier: true } })).toBe('priority');
+        expect(codexServiceTier({ model: 'gpt-6-astra', options: { serviceTier: false } })).toBeNull();
+        expect(codexServiceTier({ model: 'gpt-5.3-codex-spark', options: {} })).toBeNull();
+    });
+
+    test('the models the app-server gives a tier carry the option; spark does not', () => {
+        const codex = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.153.4' }) }).catalogFor('codex');
+        const options = (slug: string) => codex.list().find((model) => model.slug === slug)?.options ?? [];
+        expect(options('gpt-6-astra').find((option) => option.id === 'serviceTier')).toMatchObject({ type: 'boolean', defaultValue: false });
+        expect(options('gpt-5.3-codex-spark').some((option) => option.id === 'serviceTier')).toBe(false);
     });
 });
 

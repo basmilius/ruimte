@@ -22,7 +22,9 @@ export const ModelOptionDescriptorSchema = z.discriminatedUnion('type', [
         id: z.string().min(1),
         label: z.string(),
         type: z.literal('boolean'),
-        defaultValue: z.boolean()
+        defaultValue: z.boolean(),
+        // The line under the label in the picker: what turning it on costs or asks for.
+        description: z.string().optional()
     })
 ]);
 export type ModelOptionDescriptor = z.infer<typeof ModelOptionDescriptorSchema>;

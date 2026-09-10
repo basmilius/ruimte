@@ -1,4 +1,4 @@
-import type { ProviderCapabilities, RuntimeMode } from '@ruimte/contracts';
+import type { ModelSelection, ProviderCapabilities, RuntimeMode } from '@ruimte/contracts';
 
 // The app-server speaks JSON-RPC on stdio; the session adds nothing to the command line.
 export const CODEX_CHAT_ARGS = ['app-server'];
@@ -25,6 +25,12 @@ const THREAD_OPTIONS: Record<RuntimeMode, CodexThreadOptions> = {
 };
 
 export const codexThreadOptions = (runtimeMode: RuntimeMode): CodexThreadOptions => THREAD_OPTIONS[runtimeMode];
+
+// What the app-server calls the faster of the two tiers it lists per model; the standard tier is no id at all.
+const CODEX_PRIORITY_TIER = 'priority';
+
+/* The service tier a thread or a turn runs on, or null for the standard one the account defaults to. */
+export const codexServiceTier = (selection: ModelSelection): string | null => (selection.options.serviceTier === true ? CODEX_PRIORITY_TIER : null);
 
 // What the app-server can do, as far as a client has to know.
 export const CODEX_CAPABILITIES: ProviderCapabilities = {

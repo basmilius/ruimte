@@ -272,17 +272,23 @@ export function OptionsPicker({
                             </Menu.RadioGroup>
                         ) : (
                             <Menu.CheckboxItem
-                                className="menu-item"
+                                className={clsx('menu-item', option.description && 'items-start')}
                                 checked={selection.options[option.id] === true}
                                 onCheckedChange={(checked) => onChange(option.id, checked)}
                                 closeOnClick={false}
                             >
-                                <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
-                                    <Menu.CheckboxItemIndicator>
-                                        <Icon icon={Check} size={12} />
-                                    </Menu.CheckboxItemIndicator>
+                                {/* A hint makes the row two lines high; the 20 pixel box keeps the box on the label's line. */}
+                                <span className="grid h-5 w-4 shrink-0 place-items-center">
+                                    <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
+                                        <Menu.CheckboxItemIndicator>
+                                            <Icon icon={Check} size={12} />
+                                        </Menu.CheckboxItemIndicator>
+                                    </span>
                                 </span>
-                                {option.label}
+                                <span className="flex min-w-0 flex-col">
+                                    {option.label}
+                                    {option.description && <span className="text-xs text-text-faint">{option.description}</span>}
+                                </span>
                             </Menu.CheckboxItem>
                         )}
                     </div>

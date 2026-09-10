@@ -12,10 +12,18 @@ describe('ModelCatalog', () => {
         expect(models.find((model) => model.slug === 'claude-haiku-4-5')?.options[0]).toMatchObject({ type: 'boolean', defaultValue: true });
     });
 
+    test('fast mode is an option of the models that offer it, off by default', () => {
+        const options = (slug: string) => catalog.list().find((model) => model.slug === slug)?.options ?? [];
+        expect(options('claude-opus-5').find((option) => option.id === 'fastMode')).toMatchObject({ type: 'boolean', defaultValue: false });
+        expect(options('claude-sonnet-5').some((option) => option.id === 'fastMode')).toBe(false);
+        expect(catalog.normalize({ model: 'opus' }).options.fastMode).toBe(false);
+        expect(catalog.normalize({ model: 'sonnet', options: { fastMode: true } }).options.fastMode).toBeUndefined();
+    });
+
     test('normalize resolves aliases, fills defaults and drops unknown options', () => {
         expect(catalog.normalize({ model: 'opus', options: { effort: 'max', bogus: 'x' } })).toEqual({
             model: 'claude-opus-5',
-            options: { effort: 'max', contextWindow: '1m' }
+            options: { effort: 'max', contextWindow: '1m', fastMode: false }
         });
         expect(catalog.normalize({ model: 'nope' }).model).toBe('claude-sonnet-5');
         expect(catalog.normalize(undefined)).toEqual({ model: 'claude-sonnet-5', options: { effort: 'high', contextWindow: '200k' } });
@@ -47,6 +55,15 @@ describe('claudeArgs', () => {
             '--resume',
             'abc'
         ]);
+    });
+
+    test('fast mode travels as the settings blob the CLI opts in with', () => {
+        const selection = { model: 'claude-opus-5', options: { effort: 'high', contextWindow: '1m', fastMode: true } };
+        const args = claudeArgs({ selection, runtimeMode: 'auto', resume: null });
+        expect(args.slice(args.indexOf('--settings'), args.indexOf('--settings') + 2)).toEqual(['--settings', '{"fastMode":true}']);
+        expect(
+            claudeArgs({ selection: { ...selection, options: { ...selection.options, fastMode: false } }, runtimeMode: 'auto', resume: null })
+        ).not.toContain('--settings');
     });
 
     test('supervised has no permission flag and ultrathink goes into the prompt', () => {
