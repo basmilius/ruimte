@@ -39,7 +39,8 @@ const KIND_ICON: Record<NodeKind, React.ReactNode> = {
     chat: <Icon icon={MessageSquare} size={14} />,
     browser: <Icon icon={Globe} size={14} />,
     group: <Icon icon={LayoutGrid} size={14} />,
-    note: <Icon icon={StickyNote} size={14} />
+    note: <Icon icon={StickyNote} size={14} />,
+    drawing: <Icon icon={PenTool} size={14} />
 };
 
 const VIEW_ICON: Record<ProjectViewKind, React.ReactNode> = {
@@ -47,7 +48,7 @@ const VIEW_ICON: Record<ProjectViewKind, React.ReactNode> = {
     chat: KIND_ICON.chat,
     terminal: KIND_ICON.terminal,
     browser: KIND_ICON.browser,
-    drawing: <Icon icon={PenTool} size={14} />,
+    drawing: KIND_ICON.drawing,
     separator: <Icon icon={Minus} size={14} />
 };
 

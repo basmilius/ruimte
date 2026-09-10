@@ -10,7 +10,8 @@ import {
     newDrawingView,
     newSeparatorView,
     newTerminalView,
-    putOnCanvas
+    putOnCanvas,
+    showOnCanvas
 } from '@/project/views';
 import { copyDrawingPng, copyDrawingSvg, saveDrawingPng, saveDrawingSvg } from '@/drawing/export';
 import { useCanvas, type AddNodeOptions, type NodeKind } from '@/state/canvas';
@@ -161,8 +162,9 @@ export const appCommands = (): Command[] => {
         { id: 'fit', label: 'Zoom to fit', shortcut: '⇧1', run: () => zoomTarget().fitAll() },
         { id: 'zoom-selection', label: 'Zoom to selection', shortcut: '⇧2', run: () => zoomTarget().zoomToSelection() },
         { id: 'zoom-reset', label: 'Zoom to 100%', shortcut: '⌘0', run: () => zoomTarget().zoomTo(1) },
-        ...(drawing
+        ...(drawing && activeView
             ? [
+                  { id: 'drawing-show-on-canvas', label: 'Show the drawing on canvas', run: () => void showOnCanvas(activeView.id) },
                   { id: 'drawing-copy-png', label: 'Copy the drawing as PNG', run: () => void copyDrawingPng() },
                   { id: 'drawing-save-png', label: 'Save the drawing as PNG', run: () => void saveDrawingPng() },
                   { id: 'drawing-copy-svg', label: 'Copy the drawing as SVG', run: () => void copyDrawingSvg() },

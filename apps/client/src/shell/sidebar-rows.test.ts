@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { AgentStatus } from '@ruimte/contracts';
-import { buildSidebar, heaviestStatus, rowAfterArrow, rowOrder, type SidebarNode, type SidebarView } from './sidebar-rows';
+import type { AgentStatus, NodeKind } from '@ruimte/contracts';
+import { buildSidebar, heaviestStatus, isSessionKind, rowAfterArrow, rowOrder, type SidebarNode, type SidebarView } from './sidebar-rows';
 
 const node = (id: string, status: AgentStatus | null = null): SidebarNode => ({ id, title: id, kind: 'terminal', provider: null, status, draft: false });
 
@@ -122,5 +122,14 @@ describe('a drawing row', () => {
         const [list] = build([drawing('sketch')], 'sketch', ['sketch']);
         expect(list!.rows).toHaveLength(1);
         expect(list!.rows[0]).toMatchObject({ type: 'view', expandable: false, expanded: false, status: null, draft: false, count: 0, active: true });
+    });
+});
+
+describe('what counts as a session', () => {
+    test('only a terminal, a chat and a browser run; a drawing is a file like a note is paper', () => {
+        const kinds: NodeKind[] = ['terminal', 'chat', 'browser'];
+        expect(kinds.every(isSessionKind)).toBe(true);
+        const rest: NodeKind[] = ['group', 'note', 'drawing'];
+        expect(rest.some(isSessionKind)).toBe(false);
     });
 });
