@@ -24,6 +24,7 @@ import { FS_FILE_PATH, handleFsFileRequest } from './fs/file-route.ts';
 import { FolderWatcher } from './fs/watch.ts';
 import { registerFsHandlers } from './handlers/fs.ts';
 import { registerGitHandlers } from './handlers/git.ts';
+import { registerDrawingHandlers } from './handlers/drawing.ts';
 import { registerProjectHandlers } from './handlers/project.ts';
 import { registerServerHandlers } from './handlers/server.ts';
 import { registerSessionHandlers } from './handlers/session.ts';
@@ -31,6 +32,7 @@ import { Checkpoints } from './git/checkpoints.ts';
 import { GitStatusWatcher } from './git/status-watcher.ts';
 import { Worktrees } from './git/worktrees.ts';
 import { handleProjectRequest, PROJECTS_PATH } from './projects/icon-route.ts';
+import { DrawingStore } from './projects/drawing-store.ts';
 import { ProjectStore } from './projects/project-store.ts';
 import { ProviderRegistry } from './providers/registry.ts';
 import { BunPtyAdapter } from './pty/bun-pty.ts';
@@ -89,6 +91,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         contextSources: (chatId) => context.list(chatId)
     });
     const projects = new ProjectStore(config.home);
+    const drawings = new DrawingStore(projects);
+    projects.attachDrawings(drawings);
     const folders = new FolderWatcher();
     const statuses = new GitStatusWatcher();
 
@@ -97,6 +101,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerSessionHandlers(dispatcher, manager);
     registerChatHandlers(dispatcher, chats, providers, context);
     registerProjectHandlers(dispatcher, projects);
+    registerDrawingHandlers(dispatcher, drawings);
     registerAuthHandlers(dispatcher, auth, {
         label: config.label,
         version: VERSION,
@@ -246,6 +251,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 const unsubscribeSessions = manager.subscribe(client.id, sink);
                 const unsubscribeChats = chats.subscribe(client.id, sink);
                 const unsubscribeProjects = projects.subscribe(client.id, sink);
+                const unsubscribeDrawings = drawings.subscribe(client.id, sink);
                 const unsubscribeFolders = folders.subscribe(client.id, sink);
                 const unsubscribeStatuses = statuses.subscribe(client.id, sink);
                 connections.set(ws, {
@@ -255,6 +261,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                         unsubscribeSessions();
                         unsubscribeChats();
                         unsubscribeProjects();
+                        unsubscribeDrawings();
                         unsubscribeFolders();
                         unsubscribeStatuses();
                     }
@@ -329,6 +336,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         }
         manager.killAll();
         projects.closeAll();
+        drawings.closeAll();
         await relay.stop();
         server.stop(true);
         process.exit(0);
