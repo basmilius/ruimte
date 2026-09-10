@@ -232,7 +232,9 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   checkout is a pure rule (`state/git-target.ts`, tested): a selected group with a worktree, or a
   selected node inside one, puts the panel on that worktree, everything else on the project folder,
   the same rule that decides where a node made inside such a group starts. The panel's controls
-  sit in two rows: the panel header carries the target chip, the branch chip, the ahead and behind
+  sit in two rows: the panel header carries one chip for the checkout and the branch (they are one
+  question, so they are one chip: the branch name, with the worktree's group in front of it in
+  muted text when the checkout is not the project folder), the ahead and behind
   pills (the first thing to go when the panel is narrow) and the primary button, which says "Push"
   or "Publish branch" when the branch has no upstream and is disabled with the reason in its
   tooltip when there is nothing to push (`shell/panels/git-actions.ts`, pure and tested). The 40px
@@ -242,14 +244,15 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   Branch, Delete Branch (a pick, a confirm, and a second confirm when git says the branch is not
   merged), Stash Changes, Pop Stash (the newest, or a pick when there are several) and Create pull
   request, which is only there when the daemon reports `gh` (`git.capabilities`). The branch chip
-  is `shell/panels/BranchMenu.tsx`: every branch newest tip first, a search field past ten of them,
-  "Create branch..." on top, a branch another worktree has out disabled with the reason, and a
-  switch with changes in the tree asking first, offering to stash them. `git.status` groups the changed
+  is `shell/panels/BranchMenu.tsx`, one menu in two sections: Checkout, which is every checkout the
+  panel could be on (the project folder and the worktrees `git.worktree-list` knows, with the group
+  that binds one named beside it, the current one checked), and Branches, with "Create branch..."
+  on top, every branch newest tip first, a search field past ten of them and a branch another
+  worktree has out disabled with the reason. A switch with changes in the tree asks first and
+  offers to stash them. `git.status` groups the changed
   files as Conflicted, Staged, Changes and Untracked, and a file that is staged and changed again
-  since is in two of them with the counts of its own side in each. The chip is a menu of every
-  checkout the panel could be on (the project folder and the worktrees `git.worktree-list` knows,
-  with the group that binds one named beside it); a pick outranks the selection until the selection
-  points somewhere else of its own. A group is a tree of the folders
+  since is in two of them with the counts of its own side in each. A checkout picked by hand
+  outranks the selection until the selection points somewhere else of its own. A group is a tree of the folders
   its files sit in (`shell/panels/git-tree.ts`, pure and tested: directories first, a chain nothing
   branches in is one row, a collapse takes its subtree with it); the `gitTree` setting in Settings >
   Git lists them flat instead, and the folded folders travel with the project's local file. Every

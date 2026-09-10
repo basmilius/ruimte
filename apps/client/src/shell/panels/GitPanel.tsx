@@ -1,19 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Menu } from '@base-ui-components/react/menu';
-import clsx from 'clsx';
-import {
-    ArrowDown,
-    ArrowUp,
-    Check,
-    ChevronDown,
-    ChevronsDownUp,
-    ChevronsUpDown,
-    Folder,
-    GitBranch,
-    GitPullRequest,
-    MoreHorizontal,
-    RefreshCw
-} from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronsDownUp, ChevronsUpDown, Folder, GitPullRequest, MoreHorizontal, RefreshCw } from 'lucide-react';
 import type { GitActionKind, GitCapabilitiesResult, GitCommit, GitFile, GitRef, GitStash, GitStatus, Worktree } from '@ruimte/contracts';
 import { desktop } from '@/desktop/bridge';
 import { BranchMenu } from '@/shell/panels/BranchMenu';
@@ -253,6 +240,17 @@ export function GitPanel() {
         }
     };
 
+    /* The one chip asks two questions, so opening it reads the branches and the worktrees at once. */
+    const openBranchMenu = (): void => {
+        loadRefs();
+        if (folder !== null) {
+            void transport
+                .request('git.worktree-list', { repo: folder })
+                .then((answer) => setWorktrees(answer.worktrees))
+                .catch(() => setWorktrees([]));
+        }
+    };
+
     /* A switch that would lose the working tree asks first; a clean tree switches straight away. */
     const checkout = (ref: GitRef): void => {
         if ((status?.files.length ?? 0) > 0) {
@@ -308,30 +306,18 @@ export function GitPanel() {
             {/* The chips and the buttons of the panel live in the panel's own header, next to its
                 name; the row under it holds what acts on the list. */}
             <PanelHeaderSlot>
-                <TargetMenu
+                <BranchMenu
                     target={target}
                     targets={targets}
-                    onOpen={() => {
-                        if (folder !== null) {
-                            void transport
-                                .request('git.worktree-list', { repo: folder })
-                                .then((answer) => setWorktrees(answer.worktrees))
-                                .catch(() => setWorktrees([]));
-                        }
-                    }}
-                    onPick={(next) => setPicked({ target: next, from: derived.cwd })}
+                    branch={status?.branch ?? null}
+                    detached={status?.detached ?? false}
+                    refs={refs}
+                    loading={loadingRefs}
+                    onOpen={openBranchMenu}
+                    onPickTarget={(next) => setPicked({ target: next, from: derived.cwd })}
+                    onCheckout={checkout}
+                    onCreate={() => setDialog({ kind: 'create-branch' })}
                 />
-                {status?.repo && (
-                    <BranchMenu
-                        branch={status.branch}
-                        detached={status.detached}
-                        refs={refs}
-                        loading={loadingRefs}
-                        onOpen={loadRefs}
-                        onCheckout={checkout}
-                        onCreate={() => setDialog({ kind: 'create-branch' })}
-                    />
-                )}
                 {roomForPills && status !== null && status.ahead > 0 && (
                     <Pill icon={<Icon icon={ArrowUp} size={12} />} className="tabular-nums">
                         {status.ahead}
@@ -666,54 +652,6 @@ function ActionsMenu({ busy, canPullRequest, stashes, onOpen, onAction, onDialog
                                     Create pull request...
                                 </Menu.Item>
                             </>
-                        )}
-                    </Menu.Popup>
-                </Menu.Positioner>
-            </Menu.Portal>
-        </Menu.Root>
-    );
-}
-
-/*
- * Which checkout the panel is on, and the ones it could be on instead: the project folder and every
- * worktree the daemon knows of it, with the group that binds one named beside it. Picking one keeps
- * the panel there while the canvas selection stays where it is.
- */
-function TargetMenu({
-    target,
-    targets,
-    onOpen,
-    onPick
-}: {
-    target: GitTarget;
-    targets: readonly GitTarget[];
-    onOpen(): void;
-    onPick(target: GitTarget): void;
-}) {
-    return (
-        <Menu.Root onOpenChange={(open) => open && onOpen()}>
-            <Menu.Trigger
-                className="inline-flex h-6 min-w-0 shrink items-center gap-1 rounded-full bg-surface-sunken px-2 text-xs text-text-muted hover:text-text"
-                aria-label="Which checkout this panel is on"
-            >
-                <Icon icon={target.kind === 'worktree' ? GitBranch : Folder} size={12} className="shrink-0" />
-                <span className={clsx('max-w-40 truncate', target.kind === 'worktree' && 'font-mono')}>{target.label}</span>
-                <Icon icon={ChevronDown} size={12} className="shrink-0" />
-            </Menu.Trigger>
-            <Menu.Portal>
-                <Menu.Positioner className="popup-layer" side="bottom" align="start" sideOffset={6}>
-                    <Menu.Popup className="menu-popup">
-                        {targets.map((entry) => (
-                            <Menu.Item key={entry.cwd ?? entry.label} className="menu-item" onClick={() => onPick(entry)}>
-                                <Icon icon={entry.cwd === target.cwd ? Check : entry.kind === 'worktree' ? GitBranch : Folder} size={14} />
-                                <span className="truncate">{entry.label}</span>
-                                {entry.group !== undefined && <span className="text-text-faint">{entry.group}</span>}
-                            </Menu.Item>
-                        ))}
-                        {targets.length === 0 && (
-                            <Menu.Item className="menu-item" disabled>
-                                No checkout to point at
-                            </Menu.Item>
                         )}
                     </Menu.Popup>
                 </Menu.Positioner>
