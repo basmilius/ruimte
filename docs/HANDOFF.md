@@ -55,8 +55,15 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   bubble would be, the fold and the changed-files card work as for any turn, and an OS
   notification fires when the window is not focused, the same rule as needs-you. A frame with a
   `parent_tool_use_id` belongs to the sub-agent's own row and never opens a turn; a message sent
-  while such a turn runs settles it as stale instead of being refused as busy. Codex has no unsolicited turn, but its
-  `collabAgentToolCall` items are tool rows now, so an agent it spawns is visible.
+  while such a turn runs settles it as stale instead of being refused as busy. A delegation is a
+  `subagent` item of its own, keyed by the Agent call's `tool_use_id`: the row says what it is
+  doing, for how long, whether it runs in the background and which tool it reached for last, and
+  opening it shows the sub-agent's own tool calls and text in a bounded scroller with its report
+  behind a "Show result" fold. The sub-agent's items stay top-level thread items with
+  `parentToolUseId` (flat, not nested, so deltas keep working) and the timeline groups them under
+  the row. The wake-up turn's "Sub-agent finished: ..." header is a button that scrolls to that row
+  and opens it (`taskToolUseId` on the turn item). Codex has no unsolicited turn, but its
+  `collabAgentToolCall` items are visible too: `spawnAgent` is a sub-agent row, the rest are tool rows.
 - **Phase 6b, the chat the way T3 Code does it** (studied, then written from scratch):
   a model catalog with generic option descriptors (`apps/server/src/providers`), one runtime
   mode vocabulary (`supervised`, `auto-accept-edits`, `auto`, `full-access`), turns as items
@@ -628,6 +635,14 @@ canvas, against Ruimte, one verdict each.
   again.
 - `AskUserQuestion` arrives as a `can_use_tool` request; the answer is an allow with
   `updatedInput.answers` keyed by the question text, not by an id.
+- A background sub-agent settles twice over: the Agent call is answered at once with "Async agent
+  launched successfully", and what it came to only arrives much later as `task_notification`. Its
+  report is not in that frame (`summary` is a line, the real report goes to the CLI's own internal
+  message), so the projector keeps the last text the sub-agent wrote as the result. A foreground one
+  answers its own call with the report plus an `agentId ... <usage>` footer, which is stripped with a
+  tolerant regex: when the CLI rewords it the row shows a stray line and nothing breaks. Because a
+  background agent outlives the turn that launched it, the end of a turn may not settle its row;
+  only a process that is gone marks it failed.
 - `@pierre/diffs` marks itself side-effect free, so `import '@pierre/diffs/worker/worker.js'`
   in a worker entry is tree-shaken to nothing. The pool uses Vite's `?worker` import instead.
 - `bun --watch` restarts the daemon on every file change and the daemon installs hooks at
