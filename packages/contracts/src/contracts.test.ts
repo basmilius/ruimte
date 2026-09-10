@@ -282,3 +282,47 @@ describe('fs', () => {
         expect(EVENT_SCHEMAS['fs.changed'].safeParse({ root: '/repo' }).success).toBe(false);
     });
 });
+
+describe('git', () => {
+    const status = {
+        repo: true,
+        root: '/repo',
+        branch: 'main',
+        detached: false,
+        upstream: 'origin/main',
+        ahead: 1,
+        behind: 0,
+        base: 'origin/main',
+        mergeBase: 'abc123',
+        files: [{ path: 'src/main.ts', state: 'unstaged', status: 'M', added: 3, deleted: 1, binary: false }],
+        truncated: false,
+        live: true
+    };
+
+    test('a status carries the branch, the counts and the files it grouped', () => {
+        expect(REQUEST_SCHEMAS['git.status'].result.safeParse(status).success).toBe(true);
+        expect(REQUEST_SCHEMAS['git.status'].result.safeParse({ ...status, branch: null, detached: true }).success).toBe(true);
+        expect(REQUEST_SCHEMAS['git.status'].result.safeParse({ ...status, live: undefined }).success).toBe(false);
+        expect(
+            REQUEST_SCHEMAS['git.status'].result.safeParse({
+                ...status,
+                files: [{ path: 'a', state: 'gone', status: 'M', added: 0, deleted: 0, binary: false }]
+            }).success
+        ).toBe(false);
+        expect(EVENT_SCHEMAS['git.status'].safeParse({ cwd: '/repo', status }).success).toBe(true);
+    });
+
+    test('a diff is asked per path in one of the two scopes', () => {
+        const { payload } = REQUEST_SCHEMAS['git.diff'];
+        expect(payload.safeParse({ cwd: '/repo', path: 'src/main.ts', scope: 'worktree', staged: true }).success).toBe(true);
+        expect(payload.safeParse({ cwd: '/repo', path: 'src/main.ts', scope: 'base' }).success).toBe(true);
+        expect(payload.safeParse({ cwd: '/repo', path: 'src/main.ts', scope: 'turn' }).success).toBe(false);
+    });
+
+    test('staging and discarding both need at least one path', () => {
+        expect(REQUEST_SCHEMAS['git.stage'].payload.safeParse({ cwd: '/repo', paths: ['a'], staged: true }).success).toBe(true);
+        expect(REQUEST_SCHEMAS['git.stage'].payload.safeParse({ cwd: '/repo', paths: [], staged: true }).success).toBe(false);
+        expect(REQUEST_SCHEMAS['git.discard'].payload.safeParse({ cwd: '/repo', paths: ['a'] }).success).toBe(true);
+        expect(REQUEST_SCHEMAS['git.discard'].result.safeParse({ stash: null }).success).toBe(true);
+    });
+});
