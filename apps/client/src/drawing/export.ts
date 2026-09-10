@@ -1,8 +1,8 @@
 import type { DrawingElement } from '@ruimte/contracts';
 import { DEFAULT_SVG_MARGIN, approximateMeasure, boundsOfElements, toSvg } from '@ruimte/drawing';
 import { desktop } from '@/desktop/bridge';
-import { measureLineIn, paintElements } from '@/drawing/paint';
-import { readCanvasBackground, readFontStacks, readPalette } from '@/drawing/palette';
+import { measureLineIn, paintElements, paintOptions } from '@/drawing/paint';
+import { readCanvasBackground, readFontStacks, readPaper, readPalette } from '@/drawing/palette';
 import { useDrawing } from '@/state/drawing';
 
 /* A PNG is written at twice the size, so it still reads when it is dropped into a document. */
@@ -21,6 +21,7 @@ export const exportTargets = (): DrawingElement[] => {
 export const drawingSvg = (elements: readonly DrawingElement[] = exportTargets()): string =>
     toSvg(elements, {
         palette: readPalette(),
+        paper: readPaper(),
         background: useDrawing.getState().exportBackground ? readCanvasBackground() : null,
         // Wrapped where the screen wraps, so the file shows the lines the person saw.
         measure: (element) => measureLineIn(element, readFontStacks()) ?? approximateMeasure(element.size, element.font)
@@ -46,7 +47,7 @@ export const drawingPng = async (elements: readonly DrawingElement[] = exportTar
         ctx.fillRect(0, 0, width, height);
     }
     ctx.setTransform(PNG_SCALE, 0, 0, PNG_SCALE, (DEFAULT_SVG_MARGIN - bounds.x) * PNG_SCALE, (DEFAULT_SVG_MARGIN - bounds.y) * PNG_SCALE);
-    paintElements(ctx, elements, { palette: readPalette(), fonts: readFontStacks() });
+    paintElements(ctx, elements, paintOptions());
     return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/png'));
 };
 

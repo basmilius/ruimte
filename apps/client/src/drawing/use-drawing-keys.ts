@@ -28,6 +28,8 @@ const TOOL_KEYS: Record<string, DrawingTool> = {
     '7': 'freehand',
     t: 'text',
     '8': 'text',
+    n: 'note',
+    '9': 'note',
     e: 'eraser',
     '0': 'eraser'
 };

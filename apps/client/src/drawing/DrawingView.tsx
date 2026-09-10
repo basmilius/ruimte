@@ -6,12 +6,23 @@ import { GRID, toWorld } from '@/canvas/math';
 import { DrawingDock } from '@/drawing/DrawingDock';
 import { DrawingOverlay } from '@/drawing/DrawingOverlay';
 import { loadDrawingFont } from '@/drawing/fonts';
-import { DRAG_THRESHOLD, DEFAULT_SHAPE, constrainAngle, lineElement, settleStroke, shapeElement, shapeRect, snapPoint, textElement } from '@/drawing/gestures';
-import { applyCamera, clearPathCache, fitTextBox, paintElements } from '@/drawing/paint';
-import { readFontStacks, readPalette } from '@/drawing/palette';
+import {
+    DRAG_THRESHOLD,
+    DEFAULT_NOTE,
+    DEFAULT_SHAPE,
+    constrainAngle,
+    lineElement,
+    scaledTextSize,
+    settleStroke,
+    shapeElement,
+    shapeRect,
+    snapPoint,
+    textElement
+} from '@/drawing/gestures';
+import { applyCamera, clearPathCache, fitTextBox, paintElements, paintOptions } from '@/drawing/paint';
 import { useDrawingKeys } from '@/drawing/use-drawing-keys';
 import { nextId } from '@/state/canvas';
-import { newSeed, useDrawing } from '@/state/drawing';
+import { isWritten, newSeed, useDrawing } from '@/state/drawing';
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 import { isInFloatingLayer } from '@/ui/floating';
@@ -113,7 +124,7 @@ export function DrawingView({ id }: { id: string }) {
                     canvas.height = height;
                 }
             }
-            const options = { palette: readPalette(), fonts: readFontStacks(), fading: new Set(state.erasing) };
+            const options = { ...paintOptions(), fading: new Set(state.erasing), writing: state.editingTextId };
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.clearRect(0, 0, width, height);
             applyCamera(ctx, state.camera, dpr);
@@ -136,7 +147,8 @@ export function DrawingView({ id }: { id: string }) {
                 state.camera !== previous.camera ||
                 state.viewport !== previous.viewport ||
                 state.draft !== previous.draft ||
-                state.erasing !== previous.erasing
+                state.erasing !== previous.erasing ||
+                state.editingTextId !== previous.editingTextId
             ) {
                 schedule();
             }
@@ -358,11 +370,15 @@ export function DrawingView({ id }: { id: string }) {
             }
             case 'resize': {
                 const to = resizeRect(active.from, active.handle, snapPoint(point, snap), e.shiftKey);
-                // A text is dragged by width; its height is whatever the wrapped lines come to.
+                // A note dragged by a corner scales what it says along with the paper; every other
+                // handle only makes the box wider or taller, and the wrapped lines follow.
+                const corner = active.handle.length === 2;
+                const factor = active.from.w === 0 ? 1 : Math.abs(to.w / active.from.w);
                 const moved = new Map(
                     active.elements.map((element) => {
                         const scaled = scaleElement(element, active.from, to);
-                        return [element.id, scaled.kind === 'text' ? { ...scaled, ...fitTextBox(scaled) } : scaled];
+                        const grown = scaled.kind === 'note' && corner ? { ...scaled, size: scaledTextSize(scaled.size, factor) } : scaled;
+                        return [element.id, isWritten(grown) ? { ...grown, ...fitTextBox(grown) } : grown];
                     })
                 );
                 state.replaceElements(
@@ -451,10 +467,14 @@ export function DrawingView({ id }: { id: string }) {
             return;
         }
         if (tiny) {
-            state.updateDraft(DEFAULT_SHAPE);
+            state.updateDraft(draft.kind === 'note' ? DEFAULT_NOTE : DEFAULT_SHAPE);
         }
-        state.commitDraft();
+        const id = state.commitDraft();
         state.settleTool();
+        // A note is made to be written on, so it comes up with the caret already in it.
+        if (draft.kind === 'note' && id) {
+            state.setEditingText(id);
+        }
     };
 
     const onDoubleClick = (e: React.MouseEvent): void => {
@@ -467,7 +487,7 @@ export function DrawingView({ id }: { id: string }) {
         }
         const point = worldPoint(e);
         const hit = elementAt(state.elements, point, HIT_TOLERANCE / state.camera.zoom);
-        if (hit?.kind === 'text') {
+        if (hit && isWritten(hit)) {
             state.select([hit.id]);
             state.setEditingText(hit.id);
             return;
@@ -517,6 +537,9 @@ const cursorFor = (tool: string, gesture: Gesture['kind'] | null, space: boolean
     }
     if (tool === 'text') {
         return 'text';
+    }
+    if (tool === 'note') {
+        return 'crosshair';
     }
     return tool === 'select' ? 'default' : 'crosshair';
 };

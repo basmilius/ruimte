@@ -77,6 +77,17 @@ export const DrawingElementSchema = z.discriminatedUnion('kind', [
         align: DrawingAlignSchema.optional(),
         // Set once the box was dragged by hand; absent means the box follows the glyphs.
         sized: z.boolean().optional()
+    }),
+    /*
+     * A sticky note: a sheet of paper in `fillColor` with the text written on it. It is one element
+     * rather than a shape with a text on top, so moving the note takes what it says along.
+     */
+    ElementBaseSchema.extend({
+        kind: z.literal('note'),
+        text: z.string(),
+        size: z.number().int().min(DRAWING_TEXT_SIZE_MIN).max(DRAWING_TEXT_SIZE_MAX),
+        font: DrawingFontSchema.optional(),
+        align: DrawingAlignSchema.optional()
     })
 ]);
 export type DrawingElement = z.infer<typeof DrawingElementSchema>;

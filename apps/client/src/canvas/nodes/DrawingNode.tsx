@@ -4,8 +4,7 @@ import { boundsOfElements } from '@ruimte/drawing';
 import { cameraToFit } from '@/canvas/math';
 import { loadDrawingFont } from '@/drawing/fonts';
 import { useDrawingMirror } from '@/drawing/mirror';
-import { applyCamera, paintElements } from '@/drawing/paint';
-import { readFontStacks, readPalette } from '@/drawing/palette';
+import { applyCamera, paintElements, paintOptions } from '@/drawing/paint';
 import { showView } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
 import { useTheme } from '@/state/theme';
@@ -67,7 +66,7 @@ export function DrawingNode({ id }: { id: string }) {
             return;
         }
         applyCamera(ctx, cameraToFit(bounds, size, PADDING), dpr);
-        paintElements(ctx, elements, { palette: readPalette(), fonts: readFontStacks() });
+        paintElements(ctx, elements, paintOptions());
     }, [elements, size, theme, fontReady]);
 
     return (
