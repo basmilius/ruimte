@@ -170,6 +170,10 @@ export const ChatTurnItemSchema = z.object({
     ...base,
     kind: z.literal('turn'),
     state: z.enum(['running', 'done', 'aborted', 'error']),
+    // Who started the turn. Absent means the person did, which is what every turn written before this field was.
+    origin: z.enum(['user', 'agent']).optional(),
+    // What the CLI woke up about (the summary of a background task that settled); only an agent turn has one.
+    label: z.string().optional(),
     endedAt: z.number().nullable(),
     costUsd: z.number().nonnegative(),
     // The git tree of the chat's folder when the turn started; absent outside a repository.

@@ -161,13 +161,22 @@ export class ClaudeProtocol {
                 : [];
             this.model = str(frame.model) ?? this.model;
             events.push({ type: 'session', agentSessionId: str(frame.session_id), model: str(frame.model), slashCommands: commands });
-        } else if (frame.subtype === 'task_started') {
+        } else if (frame.subtype === 'task_started' || frame.subtype === 'task_progress') {
             // A Bash call or a subagent became a task; its description is the CLI's own words for the work.
             const ref = str(frame.tool_use_id);
             const description = str(frame.description);
             if (ref && description) {
                 events.push({ type: 'tool.progress', ref, startedAt: null, description });
             }
+        } else if (frame.subtype === 'task_notification') {
+            // The CLI wakes the main agent itself when a background task settles; this frame is the only
+            // thing that says what it was about, and it arrives before the turn nobody asked for.
+            events.push({
+                type: 'task.done',
+                ref: str(frame.tool_use_id),
+                summary: str(frame.summary),
+                ok: str(frame.status) === 'completed'
+            });
         } else if (frame.subtype === 'compact_boundary') {
             const meta = isRecord(frame.compact_metadata) ? frame.compact_metadata : {};
             const preTokens = num(meta.pre_tokens);

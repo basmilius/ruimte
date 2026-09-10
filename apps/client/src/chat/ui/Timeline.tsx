@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { deriveTimelineRows, type TimelineRow } from '@/chat/logic/timeline';
-import { ApprovalHistoryRow, AssistantRow, CompactionRow, NoteRow, QuestionHistoryRow, UserRow } from '@/chat/ui/rows/MessageRows';
+import { AgentTurnRow, ApprovalHistoryRow, AssistantRow, CompactionRow, NoteRow, QuestionHistoryRow, UserRow } from '@/chat/ui/rows/MessageRows';
 import { ChangedFilesRow, TurnFoldRow, WorkGroupRow, WorkLiveRow, WorkRow, WorkingRow } from '@/chat/ui/rows/WorkRows';
 import { useChats } from '@/state/chats';
 import { AgentIcon } from '@/agents/AgentIcon';
@@ -23,6 +23,8 @@ function Row({ row, chatId, lastAssistantId, toggleGroup, toggleTurn }: RowProps
     switch (row.kind) {
         case 'user':
             return <UserRow item={row.item} />;
+        case 'turn-start':
+            return <AgentTurnRow label={row.label} />;
         case 'assistant':
             return <AssistantRow item={row.item} last={row.id === lastAssistantId} />;
         case 'work':

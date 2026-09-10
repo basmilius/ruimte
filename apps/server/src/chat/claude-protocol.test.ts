@@ -85,6 +85,29 @@ describe('ClaudeProtocol', () => {
         expect(progress?.type === 'tool.progress' && progress.startedAt).toBeLessThanOrEqual(before - 30_000 + 5_000);
         // A heartbeat without a usable number says nothing.
         expect(protocol.handle({ type: 'tool_progress', tool_use_id: 'toolu_2', elapsed_time_seconds: 'soon' })).toEqual([]);
+        // A background subagent reports through task_progress instead.
+        expect(protocol.handle({ type: 'system', subtype: 'task_progress', tool_use_id: 'toolu_3', description: 'Running Sleep for 20 seconds' })).toEqual([
+            { type: 'tool.progress', ref: 'toolu_3', startedAt: null, description: 'Running Sleep for 20 seconds' }
+        ]);
+    });
+
+    test('a task notification carries what the background task came to', () => {
+        const protocol = new ClaudeProtocol();
+        expect(
+            protocol.handle({
+                type: 'system',
+                subtype: 'task_notification',
+                task_id: 'a3838cf8b1de992a3',
+                tool_use_id: 'toolu_agent',
+                status: 'completed',
+                output_file: '/tmp/tasks/a3838cf8b1de992a3.output',
+                summary: 'slept'
+            })
+        ).toEqual([{ type: 'task.done', ref: 'toolu_agent', summary: 'slept', ok: true }]);
+        // A task that ended another way is still the thing that wakes the agent.
+        expect(protocol.handle({ type: 'system', subtype: 'task_notification', task_id: 't', status: 'failed', summary: 'no luck' })).toEqual([
+            { type: 'task.done', ref: null, summary: 'no luck', ok: false }
+        ]);
     });
 
     test('a permission request waits for an answer and its response carries the suggested rule', () => {

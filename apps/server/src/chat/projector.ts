@@ -2,6 +2,25 @@ import type { ChatEvent, ChatItem, ChatToolItem, ChatToolProgress } from '@ruimt
 import type { BackendEvent } from './backend.ts';
 import type { ChatThread } from './thread.ts';
 
+/*
+ * What a turn of the agent's own begins with: content that belongs to the main conversation. A frame
+ * that carries a parent tool call is a subagent talking inside its own row and never opens a turn,
+ * and a note or a usage line is not the agent starting to work.
+ */
+const startsAgentTurn = (event: BackendEvent): boolean => {
+    switch (event.type) {
+        case 'text.delta':
+        case 'text.done':
+        case 'approval.requested':
+        case 'question.requested':
+            return true;
+        case 'tool.started':
+            return event.parentRef === null;
+        default:
+            return false;
+    }
+};
+
 interface ProjectorOptions {
     // How the CLI is named in the notes a stopped process leaves behind.
     providerName: string;
@@ -18,6 +37,8 @@ export class ThreadProjector {
     private readonly thread: ChatThread;
     private readonly providerName: string;
     private readonly now: () => number;
+    // What the last background task said it did; the label of the turn the CLI opens about it.
+    private taskSummary: string | null = null;
 
     constructor(thread: ChatThread, options: ProjectorOptions) {
         this.thread = thread;
@@ -27,6 +48,11 @@ export class ThreadProjector {
 
     project(generation: number, event: BackendEvent): ChatEvent[] {
         const events: ChatEvent[] = [];
+        // The CLI talks outside a turn when it wakes the agent itself: a background task it launched
+        // earlier settled. The work needs a turn of its own, or it lands in the thread unattached.
+        if (this.thread.info.activeTurnId === null && startsAgentTurn(event)) {
+            this.openAgentTurn(events);
+        }
         const info = this.thread.info;
         switch (event.type) {
             case 'session':
@@ -109,6 +135,11 @@ export class ThreadProjector {
             case 'request.withdrawn':
                 this.withdraw(event.requestId, events);
                 break;
+            case 'task.done':
+                // The tool row already settled from its own result; what is left is the summary,
+                // which says what the turn the CLI opens next is about.
+                this.taskSummary = event.summary ?? this.taskSummary;
+                break;
             case 'usage':
                 events.push(
                     this.thread.patchInfo({
@@ -152,6 +183,28 @@ export class ThreadProjector {
                 break;
         }
         return events;
+    }
+
+    /* A turn nobody asked for: no message of the person in front of it, the task's summary as its label. */
+    private openAgentTurn(events: ChatEvent[]): void {
+        const now = this.now();
+        const turnId = `turn-${now}-${Math.random().toString(36).slice(2, 8)}`;
+        const label = this.taskSummary;
+        this.taskSummary = null;
+        events.push(
+            this.thread.upsert({
+                id: turnId,
+                kind: 'turn',
+                createdAt: now,
+                turnId,
+                state: 'running',
+                origin: 'agent',
+                ...(label ? { label } : {}),
+                endedAt: null,
+                costUsd: 0
+            })
+        );
+        events.push(this.thread.patchInfo({ status: 'running', activeTurnId: turnId }));
     }
 
     /* Whatever was open when the turn or the process ended: nobody is going to answer it now. */

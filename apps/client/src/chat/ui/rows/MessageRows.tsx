@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import clsx from 'clsx';
-import { Check, ChevronDown, CircleAlert, Copy, Info, MessageCircleQuestionMark, Minimize2, TriangleAlert, X } from 'lucide-react';
+import { Bot, Check, ChevronDown, CircleAlert, Copy, Info, MessageCircleQuestionMark, Minimize2, TriangleAlert, X } from 'lucide-react';
 import type { ChatApprovalItem, ChatAssistantItem, ChatQuestionItem, ChatUserItem } from '@ruimte/contracts';
 import { attachmentUrl } from '@/chat/attachments';
 import { tokenizeMentions } from '@/chat/mentions';
@@ -102,6 +102,16 @@ export function NoteRow({ level, text }: { level: 'info' | 'warning' | 'error'; 
         >
             {NOTE_ICON[level]}
             <span className="select-text">{text}</span>
+        </div>
+    );
+}
+
+/* The header of a turn the agent started itself, in place of the message of the person that is missing. */
+export function AgentTurnRow({ label }: { label: string }) {
+    return (
+        <div className="flex items-center gap-1.5 pb-2 text-xs text-text-muted">
+            <Icon icon={Bot} size={12} />
+            <span className="select-text">{label}</span>
         </div>
     );
 }

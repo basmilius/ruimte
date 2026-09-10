@@ -58,6 +58,9 @@ export type BackendEvent =
     | { type: 'question.requested'; requestId: string; questions: ChatQuestion[] }
     // The CLI took an approval or a question back; the person no longer has to answer it.
     | { type: 'request.withdrawn'; requestId: string }
+    // A task the CLI runs beside the turn (a background subagent, a backgrounded command) settled.
+    // Its summary is what the CLI says came of it, and what a turn the CLI opens on its own is about.
+    | { type: 'task.done'; ref: string | null; summary: string | null; ok: boolean }
     | { type: 'usage'; contextTokens?: number; contextWindow?: number }
     | { type: 'compaction'; preTokens: number | null }
     | { type: 'model'; model: string }

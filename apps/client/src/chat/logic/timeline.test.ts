@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatItem, ChatToolItem } from '@ruimte/contracts';
-import { deriveTimelineRows, summarizeGroup, turnLabel } from './timeline';
+import type { ChatItem, ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
+import { agentTurnLabel, deriveTimelineRows, summarizeGroup, turnLabel } from './timeline';
 
 const tool = (id: string, name: string, input: unknown, state: ChatToolItem['state'] = 'done', turnId = 't1'): ChatToolItem => ({
     id,
@@ -54,6 +54,29 @@ describe('deriveTimelineRows', () => {
         ];
         const rows = deriveTimelineRows(active, { ...options, activeTurnId: 't2' });
         expect(rows.map((row) => row.kind)).toEqual(['user', 'work', 'work-live', 'assistant', 'working']);
+    });
+
+    test('a turn the agent started itself opens with a header line instead of a user bubble', () => {
+        const turn: ChatTurnItem = {
+            id: 'ta',
+            kind: 'turn',
+            createdAt: 1000,
+            turnId: 'ta',
+            state: 'done',
+            origin: 'agent',
+            label: 'Report written',
+            endedAt: 4000,
+            costUsd: 0
+        };
+        const work = tool('r9', 'Read', { file_path: 'a.ts' }, 'done', 'ta');
+        const items: ChatItem[] = [turn, work, { id: 'a9', kind: 'assistant', createdAt: 3000, turnId: 'ta', text: 'The report is ready.', streaming: false }];
+        const rows = deriveTimelineRows(items, options);
+        expect(rows.map((row) => row.kind)).toEqual(['turn-start', 'turn-fold', 'assistant']);
+        expect(rows[0]).toMatchObject({ label: 'Sub-agent finished: Report written' });
+
+        // While it runs it shows its work and the working row, like any other turn.
+        const running: ChatItem[] = [{ ...turn, state: 'running', endedAt: null }, work];
+        expect(deriveTimelineRows(running, { ...options, activeTurnId: 'ta' }).map((row) => row.kind)).toEqual(['turn-start', 'work', 'working']);
     });
 
     test('pending approvals and questions stay off the transcript, answered ones are history', () => {
@@ -140,5 +163,11 @@ describe('labels', () => {
         expect(turnLabel({ id: 't', kind: 'turn', createdAt: 0, turnId: 't', state: 'aborted', endedAt: 8000, costUsd: 0 })).toBe('You stopped after 8s');
         expect(turnLabel({ id: 't', kind: 'turn', createdAt: 0, turnId: 't', state: 'done', endedAt: 72_000, costUsd: 0 })).toBe('Worked for 1m 12s');
         expect(turnLabel({ id: 't', kind: 'turn', createdAt: 0, turnId: 't', state: 'error', endedAt: 500, costUsd: 0 })).toBe('Failed after 1s');
+    });
+
+    test('agentTurnLabel', () => {
+        const turn = { id: 't', kind: 'turn' as const, createdAt: 0, turnId: 't', state: 'done' as const, endedAt: 1, costUsd: 0 };
+        expect(agentTurnLabel({ ...turn, origin: 'agent', label: 'slept' })).toBe('Sub-agent finished: slept');
+        expect(agentTurnLabel({ ...turn, origin: 'agent' })).toBe('Continued on its own');
     });
 });

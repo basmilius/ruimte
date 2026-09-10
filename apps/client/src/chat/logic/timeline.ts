@@ -17,6 +17,7 @@ import { hasFileChanges, isFileChange } from './tools';
  */
 export type TimelineRow =
     | { kind: 'user'; id: string; item: ChatUserItem }
+    | { kind: 'turn-start'; id: string; turn: ChatTurnItem; label: string }
     | { kind: 'assistant'; id: string; item: ChatAssistantItem }
     | { kind: 'work'; id: string; tool: ChatToolItem }
     | { kind: 'work-group'; id: string; tools: ChatToolItem[]; summary: string; expanded: boolean }
@@ -79,6 +80,12 @@ const formatDuration = (ms: number): string => {
     const rest = seconds % 60;
     return rest === 0 ? `${minutes}m` : `${minutes}m ${rest}s`;
 };
+
+/*
+ * What a turn nobody asked for is about. The CLI wakes the agent when a background subagent settles
+ * and hands over its summary; without one all that is known is that the agent went on by itself.
+ */
+export const agentTurnLabel = (turn: ChatTurnItem): string => (turn.label ? `Sub-agent finished: ${turn.label}` : 'Continued on its own');
 
 export const turnLabel = (turn: ChatTurnItem): string => {
     const duration = formatDuration((turn.endedAt ?? turn.createdAt) - turn.createdAt);
@@ -225,6 +232,10 @@ export const deriveTimelineRows = (items: ChatItem[], options: TimelineOptions):
         const turn = chunk.items.find((item): item is ChatTurnItem => item.kind === 'turn');
         const user = chunk.items.filter((item) => item.kind === 'user');
         const rest = chunk.items.filter((item) => item.kind !== 'user' && item.kind !== 'turn');
+        if (turn?.origin === 'agent') {
+            // The agent started this one itself, so there is no message of the person to show above it.
+            rows.push({ kind: 'turn-start', id: `start-${turnId}`, turn, label: agentTurnLabel(turn) });
+        }
         rows.push(...rowsForItems(user, options));
         const active = turnId === options.activeTurnId || turn?.state === 'running';
         const work = rowsForItems(rest, options);
