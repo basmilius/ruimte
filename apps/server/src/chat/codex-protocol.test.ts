@@ -165,14 +165,24 @@ describe('CodexProtocol', () => {
                 name: 'Agent',
                 input: { tool: 'spawnAgent', prompt: 'Read the docs', model: 'gpt-6-astra', threads: ['child-1'] },
                 parentRef: null
-            }
+            },
+            { type: 'task.started', ref: 'collab_1', description: 'Read the docs', subagentType: null, prompt: 'Read the docs', background: true },
+            { type: 'task.progress', ref: 'collab_1', summary: null, lastTool: null, usage: null }
         ]);
 
         const done = { ...item, status: 'completed', agentsStates: { 'child-1': { status: 'completed', message: 'the docs are read' } } };
         expect(protocol.handle({ method: 'item/completed', params: { ...ids, item: done } }).at(-1)).toEqual({
-            type: 'tool.done',
+            type: 'task.done',
             ref: 'collab_1',
-            output: 'child-1: completed, the docs are read',
+            summary: 'child-1: completed, the docs are read',
+            ok: true
+        });
+
+        // The other collab calls are what they are: ordinary tool rows.
+        const sendInput = { ...item, id: 'collab_2', tool: 'sendInput', status: 'completed' };
+        expect(protocol.handle({ method: 'item/completed', params: { ...ids, item: sendInput } }).at(-1)).toMatchObject({
+            type: 'tool.done',
+            ref: 'collab_2',
             state: 'done'
         });
     });

@@ -418,17 +418,14 @@ export class CodexProtocol {
                 return;
             }
             case 'collabAgentToolCall': {
-                // Codex's own multi-agent calls: spawning one reads as a delegation, the rest as what they are.
+                // Codex's own multi-agent calls: spawning one is a delegation, the rest are what they are.
                 const tool = str(item.tool) ?? 'collabAgent';
-                this.tool(
-                    ref,
-                    tool === 'spawnAgent' ? 'Agent' : tool,
-                    { tool, prompt: str(item.prompt) ?? undefined, model: str(item.model) ?? undefined, threads: item.receiverThreadIds ?? [] },
-                    completed,
-                    collabAgentOutput(item.agentsStates),
-                    str(item.status) === 'completed',
-                    events
-                );
+                const input = { tool, prompt: str(item.prompt) ?? undefined, model: str(item.model) ?? undefined, threads: item.receiverThreadIds ?? [] };
+                if (tool === 'spawnAgent') {
+                    this.spawnedAgent(ref, item, input, events);
+                    return;
+                }
+                this.tool(ref, tool, input, completed, collabAgentOutput(item.agentsStates), str(item.status) === 'completed', events);
                 return;
             }
             case 'contextCompaction':
@@ -458,6 +455,30 @@ export class CodexProtocol {
 
     private text(ref: string, text: string, completed: boolean, events: BackendEvent[]): void {
         events.push(completed ? { type: 'text.done', ref, text } : { type: 'text.delta', ref, text });
+    }
+
+    /*
+     * An agent Codex spawned. It works in a thread of its own, so this row never grows children or a
+     * report: what there is to say about it is the state Codex keeps per agent it touched.
+     */
+    private spawnedAgent(ref: string, item: Frame, input: unknown, events: BackendEvent[]): void {
+        const status = str(item.status);
+        const summary = collabAgentOutput(item.agentsStates);
+        events.push({ type: 'tool.started', ref, name: 'Agent', input, parentRef: null });
+        events.push({
+            type: 'task.started',
+            ref,
+            description: (str(item.prompt) ?? '').split('\n')[0] ?? '',
+            subagentType: null,
+            prompt: str(item.prompt),
+            // A spawned agent never blocks the turn that spawned it.
+            background: true
+        });
+        if (status === 'inProgress' || status === null) {
+            events.push({ type: 'task.progress', ref, summary: summary || null, lastTool: null, usage: null });
+            return;
+        }
+        events.push({ type: 'task.done', ref, summary: summary || null, ok: status === 'completed' });
     }
 
     private tool(
