@@ -1,5 +1,6 @@
 import { isImageMime, type FsReadResult, type FsReadText } from '@ruimte/contracts';
 import { CodeFile } from '@/shell/panels/CodeFile';
+import { HtmlFile } from '@/shell/panels/HtmlFile';
 import { ImageFile } from '@/shell/panels/ImageFile';
 import { MarkdownFile } from '@/shell/panels/MarkdownFile';
 import { UnsupportedFile } from '@/shell/panels/UnsupportedFile';
@@ -19,6 +20,7 @@ export interface TextFileRenderer {
 }
 
 const MARKDOWN_EXTENSIONS = new Set(['md', 'mdx', 'markdown']);
+const HTML_EXTENSIONS = new Set(['html', 'htm']);
 
 const extensionOf = (name: string): string => {
     const dot = name.lastIndexOf('.');
@@ -34,6 +36,11 @@ export const TEXT_RENDERERS: readonly TextFileRenderer[] = [
         id: 'markdown',
         match: (name) => MARKDOWN_EXTENSIONS.has(extensionOf(name)),
         render: (props) => <MarkdownFile name={props.name} read={props.read} />
+    },
+    {
+        id: 'html',
+        match: (name) => HTML_EXTENSIONS.has(extensionOf(name)),
+        render: (props) => <HtmlFile path={props.path} name={props.name} read={props.read} />
     }
 ];
 

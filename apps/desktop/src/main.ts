@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, openSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
-const { app, BrowserWindow, dialog, ipcMain, Menu, shell, webContents } = require('electron') as typeof import('electron');
+const { app, BrowserWindow, dialog, ipcMain, Menu, session, shell, webContents } = require('electron') as typeof import('electron');
 
 /*
  * The desktop shell: one window, the client inside it, the daemon next to it. Nothing crosses
@@ -126,6 +126,23 @@ const titleBarOptions = (dark: boolean): Electron.BrowserWindowConstructorOption
     process.platform === 'darwin'
         ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 12, y: 18 } }
         : { titleBarStyle: 'hidden', titleBarOverlay: { height: TITLEBAR_HEIGHT, ...OVERLAY_COLORS[dark ? 'dark' : 'light'] } };
+
+// The partition the file preview in the client's panel loads a page into; `apps/client/src/shell/panels/HtmlFile.tsx`.
+const PREVIEW_PARTITION = 'preview';
+
+// A scheme the page carries itself, which never leaves the machine.
+const LOCAL_SCHEMES = ['file:', 'data:', 'blob:', 'about:'];
+
+/*
+ * A previewed HTML file is a plain local document: it may pull in the assets beside it and nothing
+ * else. Without this a script in the file could call the daemon, whose routes ask a loopback caller
+ * for no token, and hand what it reads to any host it likes.
+ */
+const sealPreviewSession = (): void => {
+    const preview = session.fromPartition(PREVIEW_PARTITION);
+    preview.webRequest.onBeforeRequest((details, callback) => callback({ cancel: !LOCAL_SCHEMES.some((scheme) => details.url.startsWith(scheme)) }));
+    preview.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
+};
 
 const createWindow = (): Electron.BrowserWindow => {
     const window = new BrowserWindow({
@@ -294,6 +311,7 @@ if (!app.requestSingleInstanceLock()) {
 
     void app.whenReady().then(async () => {
         Menu.setApplicationMenu(Menu.buildFromTemplate([{ role: 'appMenu' }, { role: 'editMenu' }, { role: 'viewMenu' }, { role: 'windowMenu' }]));
+        sealPreviewSession();
         startDaemon();
         try {
             await waitForDaemon();
