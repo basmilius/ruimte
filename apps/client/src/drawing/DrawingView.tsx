@@ -219,6 +219,10 @@ export function DrawingView({ id }: { id: string }) {
         if (e.button !== 0 && e.button !== 1) {
             return;
         }
+        // The dock sits over the surface; a press on it is a button, never the start of a gesture.
+        if ((e.target as HTMLElement).closest('[data-drawing-chrome]')) {
+            return;
+        }
         const state = useDrawing.getState();
         // A text being typed commits by losing focus, which the press it takes does for it.
         if (state.editingTextId !== null) {
