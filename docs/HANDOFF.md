@@ -38,12 +38,23 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   terminal" on a chat continue the same CLI session in the other kind of node.
 - **Phase 6b, the chat** (designed and written from scratch):
   a model catalog with generic option descriptors (`apps/server/src/providers`), one runtime
-  mode vocabulary (`supervised`, `auto-accept-edits`, `auto`, `full-access`) plus plan or
-  build, turns as items so a settled turn folds behind "Worked for 12s", runs of tool calls
+  mode vocabulary (`supervised`, `auto-accept-edits`, `auto`, `full-access`), turns as items
+  so a settled turn folds behind "Worked for 12s", runs of tool calls
   folded into "Read 4 files", a changed-files card per turn with the diffs behind it, markdown
-  with shiki, and a floating glass composer: model picker, option picker, mode picker, plan
-  toggle, context ring with compact, slash menu, prompt recall with the arrow keys, drafts in
-  localStorage. Pending approvals and questions dock on top of the composer, never in the
+  with shiki, and a floating glass composer: model picker, option picker, mode picker,
+  context ring with compact, slash menu, prompt recall with the arrow keys, drafts in
+  localStorage. The model picker shows the provider's mark plus the short model name
+  plus a chevron as the trigger, a search field over the popup, a group per provider with its
+  glyph, the legacy models behind an expander, arrow keys and Enter, and `/model` in the slash
+  menu opens it. A chat without a fixed provider lists the models of every installed chat CLI,
+  and picking another CLI's model before the first message re-points the chat at it
+  (`chatClient.retarget` drops the empty chat and registers it again, since the daemon fixes a
+  chat's provider at `chat.create`). A chat opened from "Agent (Chat)", the canvas menu or the
+  palette carries `providerFixed` on its node and shows a read-only badge instead of the picker.
+  After the first message the provider is locked but the models stay switchable: the next send
+  restarts the CLI with `--resume` anyway. There is no build or plan toggle: `/plan`, `/build`
+  and `interactionMode` are gone from the client, and plan-style work goes through the prompt
+  until a proposed-plan card earns its own phase. Pending approvals and questions dock on top of the composer, never in the
   transcript; only their outcome stays as a line. `@` opens a file picker over the chat's
   folder (chips in the text and in the timeline), and images pasted or dropped into the
   composer go along as attachments; drafts keep both. A running tool shows "running for 12s"
@@ -101,7 +112,9 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   `state/settings.ts` and every terminal refits on change), Canvas (zoom presets, locks and
   layouts, all acting on the open canvas, nothing stored), Agents (the remembered defaults for
   a new chat from `chat/preferences.ts`, now a zustand store the composer and the dialog
-  share, plus the providers the daemon found), Machines (a thin frame around
+  share: one model row per provider with that model's knobs under it, the permissions a chat
+  starts in and the mode a terminal agent starts in, plus the providers the daemon found),
+  Machines (a thin frame around
   `EndpointsSection`), Keyboard (a searchable read-only list: commands with a chord from
   `commands.ts` plus the canvas chords `Canvas.tsx` binds by hand, mirrored in
   `settings/shortcuts.ts`), About (version from `server.hello`, the machine, links).
@@ -223,7 +236,8 @@ started; it fits after #10, when a remote daemon makes it worth its weight.
   (`apps/client/src/agents/AgentMenus.tsx`), in catalog order, a CLI the daemon did not find
   disabled with "Not installed"; the palette has `agent-chat-<kind>` and `agent-terminal-<kind>`
   commands, and a missing CLI opens Settings > Agents instead of failing. No new chords: "Chat"
-  and Option+C still open a Claude Code chat. A terminal agent is launched by the daemon:
+  and Option+C open a chat without a fixed provider, whose picker lists every installed chat
+  CLI; the menu rows and the palette open one that is fixed to the CLI it names. A terminal agent is launched by the daemon:
   `session.create` takes `agent: { kind, runtimeMode?, model?, resume? }` and
   `apps/server/src/providers/launch.ts` builds the line the shell gets, per CLI
   (`--permission-mode`, `--ask-for-approval` plus `--sandbox`, `--approval-mode`, nothing for
@@ -301,10 +315,17 @@ canvas, against Ruimte, one verdict each.
 - Terminal and chat nodes without their own directory start in the project folder.
 - Switching or closing a project swaps the canvas with `loading` set, which the session
   lifecycle reads as "not a delete": nothing is killed. Deleting a node still kills its session.
-- New chats start in full access; the composer remembers the last model and
-  modes in localStorage. A supervised chat is one click away in the mode picker.
+- New chats start in full access; the composer remembers a model per provider
+  (`selectionByProvider` in `chat/preferences.ts`) and the modes in localStorage, with the
+  provider picked last as the default for a chat that names none. A slug only means something
+  inside its own catalog, which is why the older global `selection` is dropped on read instead
+  of mapped. A supervised chat is one click away in the mode picker.
 - A model or mode change restarts the CLI process with `--resume` on the next send instead of
   using the control protocol's `set_model`; one path, and the resumed session keeps everything.
+- `interactionMode` and `ProviderCapabilities.planMode` stay on the wire although no client
+  sends or reads them: the daemon still resumes a stored thread that was in plan mode, and
+  taking a required field off `ChatInfo` buys nothing. Removal candidates for the next
+  contracts cleanup.
 - Fast mode is not offered: the installed CLI has no flag for it, only the `/fast` command.
 - Claude Code 2.1.266 emits `tool_progress` (`tool_use_id`, `tool_name`, `parent_tool_use_id`,
   `elapsed_time_seconds`, `task_id`, `heartbeat`) for a local Bash only when
