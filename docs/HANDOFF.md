@@ -99,7 +99,7 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   `prefers-reduced-motion` drops the motion through the global rule in `styles.css`. One
   `SidebarToggle` moves between the sidebar strip and the toolbar: both apply the traffic-light
   inset through `useTrafficLightInset()` (`desktop/useFullscreen.ts`), so the button sits at the
-  same x either way and reads as one control that stays put. The brand mark stays in the strip,
+  same x either way and reads as one control that stays put. The `Brand` lockup stays in the strip,
   centered in what the traffic lights leave of it, and goes with the list; only the
   `ConnectionDot` moved to the toolbar, so the connection stays readable while the list is gone.
   Cmd+B toggles it from the app-wide chord block in `Canvas.tsx`, so it works from inside a node;
@@ -313,6 +313,23 @@ canvas, against Ruimte, one verdict each.
   to 14px text 14px, and a standalone icon button is 16px in a 28 or 32 pixel square. The agent
   CLIs' brand marks are simple-icons paths in `AgentIcon`; Codex has none, so it takes Lucide's
   `Bot`.
+- The brand is the symbol from `assets/logo.svg` plus the word "Ruimte", drawn together by
+  `src/ui/Brand.tsx` (`BrandSymbol` is the symbol on its own). The symbol is inline SVG, never
+  an `<img>`, so it takes its two fills from `--brand-front` and `--brand-back`. The wordmark is
+  always live text in Geist Semibold, never an outlined path.
+- The brand gray scale is "iron", eleven steps in `styles.css` as `--color-iron-*`. It sits
+  outside `@theme` on purpose, so there is no `bg-iron-*` utility and nothing can reach past the
+  semantic tokens; the interface palette is unchanged and only `--brand-front` and `--brand-back`
+  read from iron. Light is iron-300 on iron-900, the file's own colors. Dark keeps the front at
+  iron-300 and lifts the back to iron-700, because the symbol's iron-900 back is darker than the
+  dark surface it sits on and the shape would disappear.
+- Icons and tiles (the favicon, `site/icon.svg`, `apps/desktop/build/icon.*`) carry fixed brand
+  colors and never follow the theme: the silhouette on an iron-900 tile. The back shape there is
+  the tile's own color, so what those tiles center is the visible silhouette, not the bounding
+  box of both shapes.
+- Geist is in the client for the wordmark only (`@fontsource-variable/geist`, imported once in
+  `main.tsx`, family "Geist Variable" behind `--font-brand`). The interface font stays the system
+  stack; no other text may use `font-brand`.
 - No fractional pixels. Type sizes, paddings and stroke widths are whole numbers; a `rem` value
   has to land on a whole pixel at the 16px root, and an `em` at the size it inherits. Ratios
   (line height, opacity, letter spacing) are not lengths and stay as they are.
