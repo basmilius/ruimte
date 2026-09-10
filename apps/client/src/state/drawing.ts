@@ -179,26 +179,26 @@ export const styleOfElement = (element: DrawingElement): Partial<DrawingStyle> =
     ...(element.kind === 'text' ? { font: element.font ?? 'hand', textSize: element.size, align: element.align ?? 'left' } : {})
 });
 
-/* What a style choice writes onto an element it is applied to; a text also takes the font and size. */
-const withStyle = (element: DrawingElement, style: DrawingStyle, patch: Partial<DrawingStyle>): DrawingElement => {
+/* What a style choice writes onto an element: only the field that was chosen, so picking an
+   alignment leaves a color the dock happens to show alone. */
+const withStyle = (element: DrawingElement, patch: Partial<DrawingStyle>): DrawingElement => {
     const next: DrawingElement = {
         ...element,
-        stroke: style.stroke,
-        strokeWidth: style.strokeWidth,
-        strokeStyle: style.strokeStyle,
-        fill: style.fill,
-        fillColor: style.fillColor,
-        roughness: style.roughness
+        ...(patch.stroke !== undefined ? { stroke: patch.stroke } : {}),
+        ...(patch.strokeWidth !== undefined ? { strokeWidth: patch.strokeWidth } : {}),
+        ...(patch.strokeStyle !== undefined ? { strokeStyle: patch.strokeStyle } : {}),
+        ...(patch.fill !== undefined ? { fill: patch.fill } : {}),
+        ...(patch.fillColor !== undefined ? { fillColor: patch.fillColor } : {}),
+        ...(patch.roughness !== undefined ? { roughness: patch.roughness } : {})
     };
     if (next.kind !== 'text') {
         return next;
     }
     const text = {
         ...next,
-        font: style.font,
-        align: style.align,
-        // A resized text keeps its box; only the size chosen by hand changes the glyphs.
-        size: patch.textSize === undefined ? next.size : style.textSize
+        ...(patch.font !== undefined ? { font: patch.font } : {}),
+        ...(patch.align !== undefined ? { align: patch.align } : {}),
+        ...(patch.textSize !== undefined ? { size: patch.textSize } : {})
     };
     // New glyphs need a new box, or the text would spill out of the frame that selects it.
     return patch.textSize === undefined && patch.font === undefined ? text : { ...text, ...fitTextBox(text) };
@@ -363,7 +363,7 @@ export const useDrawing = create<DrawingState>((set, get) => ({
             set({ style });
             return;
         }
-        const elements = state.elements.map((element) => (selected.has(element.id) && !element.locked ? withStyle(element, style, patch) : element));
+        const elements = state.elements.map((element) => (selected.has(element.id) && !element.locked ? withStyle(element, patch) : element));
         set({ style, ...changed(state, elements) });
     },
     settleTool() {
