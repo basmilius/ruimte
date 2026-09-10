@@ -40,6 +40,12 @@ export const isDirectoryPath = (treePath: string): boolean => treePath.endsWith(
 /* The last segment of a path, whichever separator the daemon's machine uses. */
 export const basenameOf = (path: string): string => path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1);
 
+/* The folder a path sits in, which is what `fs.changed` names when something in it moves. */
+export const dirnameOf = (path: string): string => {
+    const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+    return cut > 0 ? path.slice(0, cut) : path.slice(0, cut + 1);
+};
+
 export const treePathOf = (root: string, entry: FsEntry): string => {
     const relative = relativeTo(root, entry.path);
     return entry.kind === 'directory' ? `${relative}/` : relative;
@@ -84,8 +90,37 @@ export const buildTreeInput = (root: string, cache: EntryCache, showHidden: bool
    diffs what it knows against what the model says and loads the difference. */
 export const newlyExpanded = (before: ReadonlySet<string>, after: ReadonlySet<string>): string[] => [...after].filter((path) => !before.has(path));
 
-/* Directories first, then names the way a person reads numbers, which is the daemon's own order. */
-export const compareRows = (left: { basename: string; isDirectory: boolean }, right: { basename: string; isDirectory: boolean }): number => {
-    const rank = (row: { isDirectory: boolean }): number => (row.isDirectory ? 0 : 1);
-    return rank(left) - rank(right) || left.basename.localeCompare(right.basename, undefined, { numeric: true });
+export interface SortRow {
+    isDirectory: boolean;
+    /* The path split on separators; `src/index.ts` is two segments, the directory `src/` is one. */
+    segments: readonly string[];
+}
+
+/*
+ * Directories first, then names the way a person reads numbers, which is the daemon's own order.
+ *
+ * The tree sorts one flat list of whole paths, and a directory only appears in it when it is empty
+ * or unloaded: `src/index.ts` is the only row that says `src` exists. So the two rows are compared
+ * segment by segment, and the first segment they differ on is the one that decides, a directory
+ * before a file. Comparing the last segment alone would put `src/index.ts` wherever `index.ts`
+ * happens to fall, which is how directories ended up mixed in among the files.
+ */
+export const compareRows = (left: SortRow, right: SortRow): number => {
+    const shared = Math.min(left.segments.length, right.segments.length);
+    for (let i = 0; i < shared; i++) {
+        const leftSegment = left.segments[i]!;
+        const rightSegment = right.segments[i]!;
+        if (leftSegment === rightSegment) {
+            continue;
+        }
+        const leftIsDirectory = left.isDirectory || i < left.segments.length - 1;
+        const rightIsDirectory = right.isDirectory || i < right.segments.length - 1;
+        if (leftIsDirectory !== rightIsDirectory) {
+            return leftIsDirectory ? -1 : 1;
+        }
+        // Case is not a reason to split two names apart; the raw compare only breaks a tie.
+        return leftSegment.localeCompare(rightSegment, undefined, { numeric: true, sensitivity: 'base' }) || leftSegment.localeCompare(rightSegment);
+    }
+    // One path is the head of the other, so the shorter one is the directory the longer one sits in.
+    return left.segments.length - right.segments.length;
 };
