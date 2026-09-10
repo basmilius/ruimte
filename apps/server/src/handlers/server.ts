@@ -11,4 +11,7 @@ export const registerServerHandlers = (dispatcher: Dispatcher, options: ServerHa
         platform: process.platform,
         home: options.home
     }));
+
+    // Nothing to compute: the round trip is the answer, and the client times it.
+    dispatcher.register('server.ping', () => ({ time: Date.now() }));
 };

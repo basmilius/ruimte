@@ -28,6 +28,8 @@ bun run --cwd apps/server dev              # same, restarts on file changes
 
 `GET /health` answers `{ ok: true, version }`. `POST /hooks/<claude|codex>` takes a hook payload from an agent CLI (see below); a kind the daemon has no normalizer for (`gemini`, `copilot`) answers 404. Everything else goes over `/ws` using the frames in `packages/contracts`.
 
+On the socket, `server.hello` answers the daemon's version, platform and home. `server.ping` takes nothing and answers `{ time }`, the daemon's clock in epoch milliseconds; the client times the round trip itself (two machines never share a clock), which is the ping the connection dot shows.
+
 ## `RUIMTE_HOME`
 
 Where the daemon keeps its state. Defaults to `~/.ruimte`. Layout:

@@ -33,7 +33,7 @@ import {
     ProjectSummaryResultSchema,
     ProjectTargetPayloadSchema
 } from './project.ts';
-import { ServerHelloPayloadSchema, ServerHelloResultSchema } from './server.ts';
+import { ServerHelloPayloadSchema, ServerHelloResultSchema, ServerPingPayloadSchema, ServerPingResultSchema } from './server.ts';
 import {
     SessionAttachPayloadSchema,
     SessionAttachResultSchema,
@@ -67,6 +67,7 @@ const EmptySchema = z.object({});
 // Both apps derive their types from this table, so a shape can only change here.
 export const REQUEST_SCHEMAS = {
     'server.hello': { payload: ServerHelloPayloadSchema, result: ServerHelloResultSchema },
+    'server.ping': { payload: ServerPingPayloadSchema, result: ServerPingResultSchema },
     'session.create': { payload: SessionCreatePayloadSchema, result: SessionInfoSchema },
     'session.attach': { payload: SessionAttachPayloadSchema, result: SessionAttachResultSchema },
     'session.detach': { payload: SessionTargetPayloadSchema, result: EmptySchema },
