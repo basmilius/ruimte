@@ -17,9 +17,10 @@ import {
     type MentionQuery
 } from '@/chat/mentions';
 import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferences';
+import { stashDraft, useStash, type StashedPrompt } from '@/chat/stash';
 import { ContextMeter } from '@/chat/ui/ContextMeter';
 import { ApprovalDock, QuestionDock } from '@/chat/ui/PendingDock';
-import { ModelPicker, ModePicker, OptionsPicker } from '@/chat/ui/Pickers';
+import { ModelPicker, ModePicker, OptionsPicker, StashPicker } from '@/chat/ui/Pickers';
 import { useChats } from '@/state/chats';
 import { useProviders } from '@/state/providers';
 import { Tooltip } from '@/ui/Tooltip';
@@ -376,6 +377,29 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
         setHistoryIndex(null);
     };
 
+    /* A stashed prompt comes back as text, mentions and skills; its files were never kept. */
+    const restoreStashed = (prompt: StashedPrompt): void => {
+        setDraft((current) => ({ ...current, text: prompt.text, mentions: [...prompt.mentions], skills: [...prompt.skills] }));
+        setHistoryIndex(null);
+        inputRef.current?.focus();
+    };
+
+    /* Cmd+S puts the draft away and clears the box; on an empty box the same key takes the last one back. */
+    const toggleStash = (): void => {
+        if (isEmptyDraft(draft)) {
+            const newest = useStash.getState().prompts[0];
+            if (newest) {
+                restoreStashed(newest);
+            }
+            return;
+        }
+        if (stashDraft(draft)) {
+            setDraft(EMPTY_DRAFT);
+            setMention(null);
+            setSkillQuery(null);
+        }
+    };
+
     const recall = (direction: -1 | 1): boolean => {
         if (history.length === 0) {
             return false;
@@ -400,6 +424,11 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
         }
         e.stopPropagation();
         const el = e.currentTarget;
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            toggleStash();
+            return;
+        }
         if (commandMenuOpen) {
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
@@ -714,6 +743,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                         onChange={(id, value) => configure({ selection: { ...info.selection, options: { ...info.selection.options, [id]: value } } })}
                     />
                     <ModePicker runtimeMode={info.runtimeMode} onChange={(runtimeMode) => configure({ runtimeMode })} />
+                    <StashPicker onRestore={restoreStashed} />
                     <span className="grow" />
                     <ContextMeter usage={info.usage} disabled={busy || disabled} onCompact={() => void chatClient.compact(chatId).catch(() => undefined)} />
                     {busy && (
