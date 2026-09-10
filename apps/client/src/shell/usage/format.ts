@@ -1,11 +1,14 @@
-import type { UsageProvider, UsageTotals } from '@ruimte/contracts';
+import type { UsageProvider, UsageRate, UsageTotals } from '@ruimte/contracts';
 
-const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
-const SMALL_USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 4 });
-const COUNT = new Intl.NumberFormat('en-US');
+/* Dollars are what a price table is in; euros are what the page can be set to. */
+export type UsageCurrency = 'USD' | 'EUR';
 
-/* Under a cent the two decimals of a currency read as zero, which is the one thing it is not. */
-export const formatUsd = (value: number): string => (value !== 0 && Math.abs(value) < 0.01 ? SMALL_USD.format(value) : USD.format(value));
+/* Every number on this page is read in the region of the machine looking at it, as a bank statement
+   would be: `$5,480.96` in the US, `€ 5.480,96` in the Netherlands. The labels stay English. */
+const numbers = (options: Intl.NumberFormatOptions): Intl.NumberFormat => new Intl.NumberFormat(undefined, options);
+
+const COUNT = numbers({});
+const TOKENS = numbers({ maximumFractionDigits: 1 });
 
 export const formatCount = (value: number): string => COUNT.format(Math.round(value));
 
@@ -13,13 +16,34 @@ export const formatCount = (value: number): string => COUNT.format(Math.round(va
 export const formatTokens = (value: number): string => {
     const rounded = Math.round(value);
     if (rounded >= 1_000_000) {
-        return `${(rounded / 1_000_000).toFixed(rounded >= 10_000_000 ? 0 : 1)}M`;
+        return `${TOKENS.format(rounded >= 10_000_000 ? Math.round(rounded / 1_000_000) : rounded / 1_000_000)}M`;
     }
     if (rounded >= 1_000) {
-        return `${(rounded / 1_000).toFixed(rounded >= 10_000 ? 0 : 1)}K`;
+        return `${TOKENS.format(rounded >= 10_000 ? Math.round(rounded / 1_000) : rounded / 1_000)}K`;
     }
-    return String(rounded);
+    return COUNT.format(rounded);
 };
+
+/*
+ * What a call cost, in the currency the page is set to. Prices are in dollars, so anything else is
+ * that amount at the day's reference rate; without a rate the page stays in dollars rather than
+ * showing a euro sign in front of a dollar amount.
+ */
+export const moneyFormat = (currency: UsageCurrency, rate: UsageRate | null): ((usd: number) => string) => {
+    const converts = currency !== 'USD' && rate !== null && rate.currency === currency;
+    const factor = converts ? rate.rate : 1;
+    const code = converts ? currency : 'USD';
+    const plain = numbers({ style: 'currency', currency: code });
+    // Under a cent the two decimals of a currency read as zero, which is the one thing it is not.
+    const small = numbers({ style: 'currency', currency: code, maximumFractionDigits: 4 });
+    return (usd) => {
+        const value = usd * factor;
+        return value !== 0 && Math.abs(value) < 0.01 ? small.format(value) : plain.format(value);
+    };
+};
+
+/* The dollar amounts of a page that has no summary yet, and of a tooltip that prices nothing. */
+export const formatUsd = moneyFormat('USD', null);
 
 export const PROVIDER_LABELS: Record<UsageProvider, string> = { claude: 'Claude Code', codex: 'Codex' };
 
@@ -42,8 +66,8 @@ export const addTotals = (into: UsageTotals, from: UsageTotals): UsageTotals => 
 
 export const EMPTY_TOTALS: UsageTotals = { calls: 0, input: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, output: 0, reasoning: 0 };
 
-const DAY_LABEL = new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-const SHORT_DAY = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
+const DAY_LABEL = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+const SHORT_DAY = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
 
 /* A slot is `2026-09-10` or `2026-09-10T14`, already in the viewer's own zone, so it is read as
    plain wall clock and never handed to a parser that would shift it back. */
@@ -51,21 +75,26 @@ const dateOfSlot = (slot: string): Date => new Date(Number(slot.slice(0, 4)), Nu
 
 const hourOfSlot = (slot: string): number | null => (slot.length > 10 ? Number(slot.slice(11, 13)) : null);
 
+/* An hour of the day in the region's own clock, so a 24 hour country never reads `2 PM`. */
+const HOUR_LABEL = new Intl.DateTimeFormat(undefined, { hour: 'numeric' });
+
+const atHour = (slot: string, hour: number): Date => {
+    const day = dateOfSlot(slot);
+    day.setHours(hour);
+    return day;
+};
+
 export const slotLabel = (slot: string): string => {
     const hour = hourOfSlot(slot);
-    if (hour === null) {
-        return DAY_LABEL.format(dateOfSlot(slot));
-    }
-    const suffix = hour < 12 ? 'AM' : 'PM';
-    return `${hour % 12 === 0 ? 12 : hour % 12} ${suffix}`;
+    return hour === null ? DAY_LABEL.format(dateOfSlot(slot)) : HOUR_LABEL.format(atHour(slot, hour));
 };
 
 export const slotAxisLabel = (slot: string): string => {
     const hour = hourOfSlot(slot);
-    return hour === null ? SHORT_DAY.format(dateOfSlot(slot)) : `${hour}:00`;
+    return hour === null ? SHORT_DAY.format(dateOfSlot(slot)) : HOUR_LABEL.format(atHour(slot, hour));
 };
 
-const CLOCK = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+const CLOCK = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
 
 export const formatClock = (at: number): string => CLOCK.format(new Date(at));
 

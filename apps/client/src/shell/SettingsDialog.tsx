@@ -11,6 +11,7 @@ import { FilesPane } from '@/shell/settings/panes/FilesPane';
 import { GitPane } from '@/shell/settings/panes/GitPane';
 import { KeyboardPane } from '@/shell/settings/panes/KeyboardPane';
 import { MachinesPane } from '@/shell/settings/panes/MachinesPane';
+import { UsagePane } from '@/shell/settings/panes/UsagePane';
 import { SETTINGS_SECTIONS } from '@/shell/settings/sections';
 import { useUi, type SettingsSectionId } from '@/state/ui';
 import { Icon } from '@/ui/Icon';
@@ -21,6 +22,7 @@ const PANES: Record<SettingsSectionId, () => React.JSX.Element> = {
     drawing: DrawingPane,
     files: FilesPane,
     git: GitPane,
+    usage: UsagePane,
     agents: AgentsPane,
     machines: MachinesPane,
     keyboard: KeyboardPane,

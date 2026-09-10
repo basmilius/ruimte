@@ -9,7 +9,8 @@ import { EmptyState } from '@/ui/EmptyState';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 import { isInFloatingLayer } from '@/ui/floating';
-import { formatClock, formatCount, formatDate, formatTokens, formatUsd } from '@/shell/usage/format';
+import { formatClock, formatCount, formatDate, formatTokens } from '@/shell/usage/format';
+import { useMoney } from '@/shell/usage/money';
 import { deriveUsage, labelEveryFor } from '@/shell/usage/summary';
 import { UsageBreakdown } from '@/shell/usage/UsageBreakdown';
 import { UsageChart } from '@/shell/usage/UsageChart';
@@ -75,6 +76,7 @@ const useSummary = (period: UsagePeriod): (() => void) => {
 
 function Provenance() {
     const summary = useUsage((s) => s.summary);
+    const currency = useUsage((s) => s.currency);
     const failed = useUsage((s) => s.failed);
     if (failed) {
         return <p className="text-xs text-status-error">The daemon could not read the transcripts. These are the numbers of the last scan that worked.</p>;
@@ -86,9 +88,12 @@ function Provenance() {
         summary.pricing.fetchedAt === null
             ? `Prices from the bundled table, ${formatCount(summary.pricing.models)} models`
             : `Prices from LiteLLM, ${formatDate(summary.pricing.fetchedAt)}`;
+    // The rate is named only when it is being used, so a page in dollars says nothing about euros.
+    const rate = currency === 'USD' || summary.rate === null ? null : `${summary.rate.currency} at the ECB rate of ${summary.rate.date}`;
     return (
         <p className="text-xs text-text-muted">
             Scanned {formatClock(summary.scan.at)}, {formatCount(summary.scan.files)} files · {prices}
+            {rate !== null && ` · ${rate}`}
         </p>
     );
 }
@@ -125,10 +130,11 @@ export function UsagePage() {
     const loading = useUsage((s) => s.loading);
     useCloseOnEscape();
     const reload = useSummary(period);
+    const money = useMoney();
 
     const shown = summary !== null && asked === askedKey(windowFor(period)) ? summary : null;
     const derived = shown === null ? null : deriveUsage(shown, metric);
-    const value = metric === 'cost' ? formatUsd : formatTokens;
+    const value = metric === 'cost' ? money : formatTokens;
     const noRoots = shown !== null && shown.roots.every((root) => root.status === 'missing');
 
     return (
@@ -171,7 +177,7 @@ export function UsagePage() {
                             <UsageChart slots={derived.slots} providers={derived.active} format={value} labelEvery={labelEveryFor(derived.slots.length)} />
                         </div>
                         <UsageTiles totals={derived.totals} cacheSavingsUsd={derived.cacheSavingsUsd} />
-                        <UsageBreakdown summary={shown} metric={metric} />
+                        <UsageBreakdown summary={shown} metric={metric} providers={derived.active} />
                         <UsageLimits />
                     </>
                 )}

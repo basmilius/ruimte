@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { UsageBucket, UsageSummaryResult, UsageTotals } from '@ruimte/contracts';
-import { displayModel, formatTokens, formatUsd, shortPath } from './format.ts';
-import { deriveUsage, enumerateSlots, labelEveryFor } from './summary.ts';
+import { displayModel, formatTokens, formatUsd, moneyFormat, shortPath } from './format.ts';
+import { deriveDays, deriveUsage, enumerateSlots, labelEveryFor } from './summary.ts';
 
 const totals = (patch: Partial<UsageTotals> = {}): UsageTotals => ({
     calls: 1,
@@ -36,6 +36,7 @@ const summary = (buckets: UsageBucket[], patch: Partial<UsageSummaryResult> = {}
     sessions: 3,
     scan: { at: 0, files: 0, changedFiles: 0, durationMs: 0, running: false, failed: false },
     pricing: { source: 'litellm', fetchedAt: null, models: 0 },
+    rate: null,
     roots: [],
     ...patch
 });
@@ -102,18 +103,65 @@ describe('the derivation', () => {
     });
 });
 
+describe('the day table', () => {
+    test('folds the providers of a slot together, newest first', () => {
+        const rows = deriveDays(
+            summary([
+                bucket({ slot: '2026-09-08', costUsd: 2 }),
+                bucket({ slot: '2026-09-10', costUsd: 3 }),
+                bucket({ slot: '2026-09-10', provider: 'codex', model: 'gpt-5.6', costUsd: 1 })
+            ])
+        );
+        expect(rows.map((row) => row.slot)).toEqual(['2026-09-10', '2026-09-08']);
+        expect(rows[0]!.costByProvider).toEqual({ claude: 3, codex: 1 });
+        expect(rows[0]!.costUsd).toBe(4);
+        expect(rows[0]!.tokens).toBe(2_180);
+    });
+
+    test('leaves out the days nothing happened in', () => {
+        expect(deriveDays(summary([])).length).toBe(0);
+    });
+
+    test('the hours of today fold onto the one day they belong to', () => {
+        const rows = deriveDays(
+            summary([bucket({ slot: '2026-09-10T09', costUsd: 2 }), bucket({ slot: '2026-09-10T14', costUsd: 3 })], { resolution: 'hour' })
+        );
+        expect(rows).toHaveLength(1);
+        expect(rows[0]!.slot).toBe('2026-09-10');
+        expect(rows[0]!.costUsd).toBe(5);
+    });
+
+    test('an unpriced bucket still puts its tokens on the row', () => {
+        const rows = deriveDays(summary([bucket({ costUsd: null })]));
+        expect(rows[0]!.costUsd).toBe(0);
+        expect(rows[0]!.tokens).toBe(1_090);
+    });
+});
+
+/* The page formats in the region of the machine, so these pin the rules and not one region's commas. */
 describe('the formatters', () => {
     test('a token count reads as a size', () => {
         expect(formatTokens(640)).toBe('640');
         expect(formatTokens(412_000)).toBe('412K');
-        expect(formatTokens(1_240_000)).toBe('1.2M');
+        expect(formatTokens(1_240_000)).toMatch(/^1[.,]2M$/);
         expect(formatTokens(11_900_000)).toBe('12M');
     });
 
     test('an amount under a cent keeps enough decimals to not read as zero', () => {
-        expect(formatUsd(142.181)).toBe('$142.18');
-        expect(formatUsd(0)).toBe('$0.00');
-        expect(formatUsd(0.0004)).toBe('$0.0004');
+        expect(formatUsd(142.181)).toMatch(/142[.,]18$/);
+        expect(formatUsd(0)).toMatch(/0[.,]00$/);
+        expect(formatUsd(0.0004)).toMatch(/0[.,]0004$/);
+    });
+
+    test('euros are the dollar amount at the rate the summary carries', () => {
+        const money = moneyFormat('EUR', { currency: 'EUR', rate: 0.5, date: '2026-09-10', fetchedAt: 0 });
+        expect(money(10)).toMatch(/^€\s?5[.,]00$|5[.,]00\s?€$/);
+    });
+
+    test('without a rate it stays in dollars rather than mislabeling one', () => {
+        const money = moneyFormat('EUR', null);
+        expect(money(10)).toMatch(/10[.,]00/);
+        expect(money(10)).not.toContain('€');
     });
 });
 

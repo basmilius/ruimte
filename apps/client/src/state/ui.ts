@@ -1,7 +1,7 @@
 import type { ProjectPanelKind } from '@ruimte/contracts';
 import { create } from 'zustand';
 
-export type SettingsSectionId = 'appearance' | 'canvas' | 'drawing' | 'files' | 'git' | 'agents' | 'machines' | 'keyboard' | 'about';
+export type SettingsSectionId = 'appearance' | 'canvas' | 'drawing' | 'files' | 'git' | 'usage' | 'agents' | 'machines' | 'keyboard' | 'about';
 
 export type PanelKind = ProjectPanelKind;
 
@@ -130,6 +130,8 @@ interface UiStore {
     /* What a view is being asked about, from the sidebar, the breadcrumb or the palette alike. */
     viewDialog: ViewDialog;
     setPage(page: AppPage | null): void;
+    /* The same page again closes it, which is what the button in the sidebar does. */
+    togglePage(page: AppPage): void;
     setWorktreeDialogFor(groupId: string | null): void;
     setViewDialog(dialog: ViewDialog): void;
     setSidebarOpen(open: boolean): void;
@@ -148,6 +150,10 @@ interface UiStore {
     setPanels(state: PanelDefaults): void;
     setSidebarExpanded(ids: string[] | null): void;
 }
+
+/* Opening a panel is asking for the project back, so it takes the column from whatever page is up.
+   Closing one leaves the page where it is: nothing was asked of the project. */
+const leaves = (opening: boolean, page: AppPage | null): { page: AppPage | null } => ({ page: opening ? null : page });
 
 /* Which app-level dialog is up; nothing here belongs to a node. The panels do belong to a project:
    they are loaded from and saved to its machine-local file by `project/panels-port.ts`. */
@@ -170,6 +176,9 @@ export const useUi = create<UiStore>((set, get) => ({
     viewDialog: null,
     setPage(page) {
         set({ page });
+    },
+    togglePage(page) {
+        set({ page: get().page === page ? null : page });
     },
     setWorktreeDialogFor(groupId) {
         set({ worktreeDialogFor: groupId });
@@ -197,18 +206,20 @@ export const useUi = create<UiStore>((set, get) => ({
         set({ settings: { ...get().settings, ...patch } });
     },
     setPanel(patch) {
-        set({ panel: { ...get().panel, ...patch }, panelsRestoring: false });
+        const panel = { ...get().panel, ...patch };
+        set({ panel, ...leaves(panel.open, get().page), panelsRestoring: false });
     },
     togglePanel(kind) {
-        const panel = get().panel;
+        const was = get().panel;
         /* Without a kind the chord reopens whatever was up last, so the panel has one toggle of its own. */
-        set({ panel: kind ? { open: !(panel.open && panel.kind === kind), kind } : { ...panel, open: !panel.open }, panelsRestoring: false });
+        const panel = kind ? { open: !(was.open && was.kind === kind), kind } : { ...was, open: !was.open };
+        set({ panel, ...leaves(panel.open, get().page), panelsRestoring: false });
     },
     setPreviewOpen(open) {
         if (get().preview.open === open) {
             return;
         }
-        set({ preview: { open }, panelsRestoring: false });
+        set({ preview: { open }, ...leaves(open, get().page), panelsRestoring: false });
     },
     togglePreview() {
         get().setPreviewOpen(!get().preview.open);

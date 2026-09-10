@@ -440,7 +440,8 @@ export function Sidebar() {
             useUi.getState().setSidebarExpanded([activeViewId]);
         }
     }, [expanded, activeViewId]);
-    const sections = buildSidebar({ views: sidebarViews, activeViewId, expandedIds });
+    // A page owns the main column, so no view is showing and no row in the list is the active one.
+    const sections = buildSidebar({ views: sidebarViews, activeViewId: usageOpen ? null : activeViewId, expandedIds });
     const rows = rowOrder(sections);
     const roving = rovingId !== null && rows.includes(rovingId) ? rovingId : (rows[0] ?? null);
 
@@ -590,7 +591,7 @@ export function Sidebar() {
                         </Menu.Portal>
                     </Menu.Root>
                     <Tooltip label="Usage" name>
-                        <button className="icon-btn" data-active={usageOpen || undefined} onClick={() => useUi.getState().setPage('usage')}>
+                        <button className="icon-btn" data-active={usageOpen || undefined} onClick={() => useUi.getState().togglePage('usage')}>
                             <Icon icon={ChartNoAxesColumn} size={16} />
                         </button>
                     </Tooltip>
