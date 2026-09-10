@@ -3,20 +3,36 @@ import { watch, type FSWatcher } from 'node:fs';
 import { mkdir, readFile, rm, stat } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import {
+    ProjectIconChoiceSchema,
     ProjectLocalSchema,
     type ProjectContent,
     type ProjectDocument,
+    type ProjectIcon,
     type ProjectLocal,
+    type ProjectNameSource,
     type ProjectOpenPayload,
     type ProjectOpenResult,
+    type ProjectSetIconPayload,
     type ProjectSummary
 } from '@ruimte/contracts';
 import { z } from 'zod';
 import { isNotFound, writeAtomic } from '../fs.ts';
-import type { SessionSink } from '../sessions/manager.ts';
-import { documentPathInFolder, fromPortable, parseDocument, readDocument, toPortable, writeDocument, PROJECT_FILE } from './project-files.ts';
+import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import {
+    documentPathInFolder,
+    fromPortable,
+    parseDocument,
+    readDocument,
+    removeIconFiles,
+    toPortable,
+    writeDocument,
+    writeIconFile,
+    ICON_EXTENSION_BY_MIME,
+    PROJECT_FILE
+} from './project-files.ts';
+import { IdentityCache, sniffMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
 
-type ProjectErrorCode = 'project-not-found' | 'project-missing' | 'rev-conflict' | 'folder-not-found';
+type ProjectErrorCode = 'project-not-found' | 'project-missing' | 'rev-conflict' | 'folder-not-found' | 'bad-icon';
 
 export class ProjectError extends Error {
     readonly code: ProjectErrorCode;
@@ -33,7 +49,9 @@ const RegistryEntrySchema = z.object({
     name: z.string(),
     color: z.string(),
     folder: z.string().nullable(),
-    lastOpenedAt: z.number()
+    lastOpenedAt: z.number(),
+    // A cache of what the canvas file holds, so `project.list` needs no document read.
+    icon: ProjectIconChoiceSchema.nullish()
 });
 type RegistryEntry = z.infer<typeof RegistryEntrySchema>;
 
@@ -41,6 +59,9 @@ const RegistrySchema = z.object({ projects: z.array(RegistryEntrySchema) });
 
 // Editors and git write in bursts; one event per burst is what the client wants.
 const WATCH_SETTLE_MS = 150;
+
+// The only file in `.ruimte` besides the canvas that the daemon has a use for.
+const isIconFile = (filename: string): boolean => filename.startsWith('icon.');
 
 const DEFAULT_COLOR = '#7c74ff';
 const EMPTY_LOCAL: ProjectLocal = { camera: null, focusedNodeId: null };
@@ -54,6 +75,8 @@ interface OpenProject {
     lastText: string;
     watcher: FSWatcher | null;
     settle: ReturnType<typeof setTimeout> | null;
+    // The burst that is settling touched an icon file, so the folder has to be read again.
+    iconTouched: boolean;
 }
 
 /*
@@ -66,6 +89,7 @@ export class ProjectStore {
     private readonly sinks = new Map<string, SessionSink>();
     private readonly open = new Map<string, OpenProject>();
     private registry: RegistryEntry[] | null = null;
+    private readonly identity = new IdentityCache();
     // Registry changes run one after the other; two clients opening at once must not lose an entry.
     private chain: Promise<unknown> = Promise.resolve();
 
@@ -90,12 +114,28 @@ export class ProjectStore {
             }
         });
         const entries = await this.loadRegistry();
-        return Promise.all(
-            entries.map(async (entry) => ({
-                ...entry,
-                available: entry.folder === null || (await exists(this.documentPath(entry)))
-            }))
-        );
+        return Promise.all(entries.map((entry) => this.summarize(entry)));
+    }
+
+    /*
+     * What the client shows for one project: the name and color from its canvas file, plus the
+     * icon and where the name came from. A chosen icon wins; without one the folder is asked.
+     */
+    private async summarize(entry: RegistryEntry): Promise<ProjectSummary> {
+        const available = entry.folder === null || (await exists(this.documentPath(entry)));
+        const derived = entry.folder ? await this.identity.resolve(entry.folder) : null;
+        const image = derived?.icon ?? null;
+        const icon: ProjectIcon = entry.icon ?? (image ? imageIcon(image) : initialIcon(entry.name));
+        return {
+            projectId: entry.projectId,
+            name: entry.name,
+            color: entry.color,
+            folder: entry.folder,
+            lastOpenedAt: entry.lastOpenedAt,
+            available,
+            icon,
+            nameSource: nameSourceOf(entry.name, entry.folder, derived?.name ?? null)
+        };
     }
 
     openProject(payload: ProjectOpenPayload): Promise<ProjectOpenResult> {
@@ -117,7 +157,7 @@ export class ProjectStore {
             }
             entry = entries.find((candidate) => candidate.folder === folder) ?? {
                 projectId: newId(),
-                name: payload.name ?? basename(folder),
+                name: payload.name ?? (await this.identity.resolve(folder)).name ?? basename(folder),
                 color: payload.color ?? DEFAULT_COLOR,
                 folder,
                 lastOpenedAt: Date.now()
@@ -150,16 +190,20 @@ export class ProjectStore {
             text = await writeDocument(path, document);
         }
 
-        entry = { ...entry, name: document.name, color: document.color, lastOpenedAt: Date.now() };
+        entry = { ...entry, name: document.name, color: document.color, icon: document.icon ?? null, lastOpenedAt: Date.now() };
         await this.saveRegistry([...entries.filter((candidate) => candidate.projectId !== entry!.projectId), entry]);
 
         this.close(entry.projectId);
-        const state: OpenProject = { entry, rev: document.rev, lastText: text, watcher: null, settle: null };
+        const state: OpenProject = { entry, rev: document.rev, lastText: text, watcher: null, settle: null, iconTouched: false };
         this.open.set(entry.projectId, state);
         this.startWatching(state, path);
 
+        // Opening a project is the moment to look at the folder again, whatever the cache holds.
+        if (entry.folder) {
+            this.identity.invalidate(entry.folder);
+        }
         return {
-            summary: { ...entry, available: true },
+            summary: await this.summarize(entry),
             document: fromPortable(document, entry.folder),
             local: await this.readLocal(entry.projectId)
         };
@@ -177,10 +221,12 @@ export class ProjectStore {
         const document: ProjectDocument = { version: 1, rev: state.rev + 1, ...toPortable(content, state.entry.folder) };
         state.lastText = await writeDocument(this.documentPath(state.entry), document);
         state.rev = document.rev;
-        if (content.name !== state.entry.name || content.color !== state.entry.color) {
-            state.entry = { ...state.entry, name: content.name, color: content.color };
+        const icon = content.icon ?? null;
+        if (content.name !== state.entry.name || content.color !== state.entry.color || !sameIcon(icon, state.entry.icon ?? null)) {
+            state.entry = { ...state.entry, name: content.name, color: content.color, icon };
             const entries = await this.loadRegistry();
             await this.saveRegistry(entries.map((entry) => (entry.projectId === projectId ? state.entry : entry)));
+            this.publish(state.entry);
         }
         return document.rev;
     }
@@ -188,6 +234,56 @@ export class ProjectStore {
     async saveLocal(projectId: string, local: ProjectLocal): Promise<void> {
         await mkdir(join(this.home, 'projects'), { recursive: true, mode: 0o700 });
         await writeAtomic(this.localPath(projectId), JSON.stringify(local));
+    }
+
+    /*
+     * Writes or removes `<folder>/.ruimte/icon.<ext>`. The bytes are checked against their own
+     * magic, never the MIME the client claims, so a file that is not an image never lands there.
+     */
+    setIcon(payload: ProjectSetIconPayload): Promise<ProjectSummary> {
+        return this.locked(() => this.setIconUnlocked(payload));
+    }
+
+    private async setIconUnlocked(payload: ProjectSetIconPayload): Promise<ProjectSummary> {
+        const entries = await this.loadRegistry();
+        const entry = entries.find((candidate) => candidate.projectId === payload.projectId);
+        if (!entry) {
+            throw new ProjectError('project-not-found', `No project ${payload.projectId}`);
+        }
+        if (!entry.folder) {
+            throw new ProjectError('bad-icon', 'A canvas without a folder has nowhere to keep an icon');
+        }
+        if (payload.image === null) {
+            await removeIconFiles(entry.folder);
+        } else {
+            const bytes = decodeImage(payload.image.base64);
+            const mime = sniffMime(bytes);
+            const extension = mime ? ICON_EXTENSION_BY_MIME[mime] : undefined;
+            if (!extension) {
+                throw new ProjectError('bad-icon', 'That file is not a PNG, JPEG, GIF, WebP or SVG image');
+            }
+            await writeIconFile(entry.folder, extension, bytes);
+        }
+        this.identity.invalidate(entry.folder);
+        const summary = await this.summarize(entry);
+        this.emit({ event: 'project.summary', payload: { summary } });
+        return summary;
+    }
+
+    /* The file behind `GET /projects/<id>/icon`, or null when the project shows no image. */
+    async iconFile(projectId: string, theme: 'light' | 'dark'): Promise<{ path: string; mime: string } | null> {
+        const entry = (await this.loadRegistry()).find((candidate) => candidate.projectId === projectId);
+        if (!entry?.folder || entry.icon) {
+            return null;
+        }
+        const icon = (await this.identity.resolve(entry.folder)).icon;
+        if (!icon) {
+            return null;
+        }
+        if (theme === 'dark' && icon.darkPath && icon.darkMime) {
+            return { path: icon.darkPath, mime: icon.darkMime };
+        }
+        return { path: icon.lightPath, mime: icon.mime };
     }
 
     close(projectId: string): void {
@@ -260,9 +356,11 @@ export class ProjectStore {
         try {
             // The directory, not the file: an atomic rename replaces the inode a file watcher would hold.
             state.watcher = watch(dirname(path), (_event, filename) => {
-                if (filename && filename !== PROJECT_FILE) {
+                if (filename && filename !== PROJECT_FILE && !isIconFile(filename)) {
                     return;
                 }
+                // A platform that reports no name could have touched either file.
+                state.iconTouched ||= !filename || isIconFile(filename);
                 if (state.settle) {
                     clearTimeout(state.settle);
                 }
@@ -281,6 +379,13 @@ export class ProjectStore {
         if (this.open.get(state.entry.projectId) !== state) {
             return;
         }
+        if (state.iconTouched) {
+            state.iconTouched = false;
+            if (state.entry.folder) {
+                this.identity.invalidate(state.entry.folder);
+                this.publish(state.entry);
+            }
+        }
         let text: string;
         try {
             text = await readFile(path, 'utf8');
@@ -297,10 +402,21 @@ export class ProjectStore {
         }
         state.lastText = text;
         state.rev = document.rev;
-        state.entry = { ...state.entry, name: document.name, color: document.color };
-        const payload = { projectId: state.entry.projectId, document: fromPortable(document, state.entry.folder) };
+        state.entry = { ...state.entry, name: document.name, color: document.color, icon: document.icon ?? null };
+        this.emit({ event: 'project.changed', payload: { projectId: state.entry.projectId, document: fromPortable(document, state.entry.folder) } });
+        this.publish(state.entry);
+    }
+
+    /* Tells every client what a project looks like now; too small a change to ship a document for. */
+    private publish(entry: RegistryEntry): void {
+        void this.summarize(entry)
+            .then((summary) => this.emit({ event: 'project.summary', payload: { summary } }))
+            .catch(() => undefined);
+    }
+
+    private emit(event: SessionEvent): void {
         for (const sink of this.sinks.values()) {
-            sink({ event: 'project.changed', payload });
+            sink(event);
         }
     }
 
@@ -334,6 +450,40 @@ export class ProjectStore {
         await writeAtomic(join(this.home, 'projects.json'), `${JSON.stringify({ projects: entries }, null, 2)}\n`);
     }
 }
+
+const imageIcon = (icon: DerivedIcon): ProjectIcon => ({ kind: 'image', value: icon.from, version: icon.version });
+
+const initialIcon = (name: string): ProjectIcon => ({ kind: 'initial', value: [...name.trim()][0]?.toUpperCase() ?? '?' });
+
+const sameIcon = (left: ProjectIcon | null, right: ProjectIcon | null): boolean =>
+    left === right || (left !== null && right !== null && left.kind === right.kind && left.value === right.value);
+
+/*
+ * A name that still matches what the folder declares is the folder's, not a decision; the client
+ * says so under the icon picker. Renaming to exactly that string reads as the folder's too, which
+ * is the honest answer: there is nothing on disk that says otherwise.
+ */
+const nameSourceOf = (name: string, folder: string | null, ideaName: string | null): ProjectNameSource => {
+    if (!folder) {
+        return 'chosen';
+    }
+    if (ideaName !== null && name === ideaName) {
+        return 'idea';
+    }
+    return name === basename(folder) ? 'folder' : 'chosen';
+};
+
+const decodeImage = (base64: string): Uint8Array => {
+    // Base64 carries three bytes per four characters; the cap is checked before decoding a blob.
+    if (Math.ceil(base64.length / 4) * 3 > ICON_MAX_BYTES) {
+        throw new ProjectError('bad-icon', 'That image is larger than 256 KB');
+    }
+    const bytes = Buffer.from(base64, 'base64');
+    if (bytes.length === 0 || bytes.length > ICON_MAX_BYTES) {
+        throw new ProjectError('bad-icon', 'That image is empty or larger than 256 KB');
+    }
+    return bytes;
+};
 
 const exists = async (path: string): Promise<boolean> => {
     try {

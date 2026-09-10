@@ -24,6 +24,7 @@ import { registerServerHandlers } from './handlers/server.ts';
 import { registerSessionHandlers } from './handlers/session.ts';
 import { Checkpoints } from './git/checkpoints.ts';
 import { Worktrees } from './git/worktrees.ts';
+import { handleProjectRequest, PROJECTS_PATH } from './projects/icon-route.ts';
 import { ProjectStore } from './projects/project-store.ts';
 import { ProviderRegistry } from './providers/registry.ts';
 import { BunPtyAdapter } from './pty/bun-pty.ts';
@@ -170,6 +171,10 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                     return undefined;
                 }
                 return new Response('Expected a WebSocket upgrade', { status: 426 });
+            }
+
+            if (url.pathname.startsWith(`${PROJECTS_PATH}/`)) {
+                return handleProjectRequest(request, url, remote, auth, access, projects);
             }
 
             if (url.pathname.startsWith(`${HOOKS_PATH}/`)) {
