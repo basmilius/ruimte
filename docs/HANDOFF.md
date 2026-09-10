@@ -108,8 +108,9 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   dialog with a section list on the left (Base UI Tabs, arrow keys move, `activateOnFocus`)
   and a pane on the right, built from `SettingsSection` (a titled card) and `SettingsRow`
   (label and description left, control right) in `apps/client/src/shell/settings/`.
-  Sections: Appearance (theme, accent, terminal font and font size; the size lives in
-  `state/settings.ts` and every terminal refits on change), Canvas (zoom presets, locks and
+  Sections: Appearance (theme, accent, interface font size, terminal font and font size; the
+  sizes live in `state/settings.ts`, the interface one sets the root font size and every
+  terminal refits on a change of its own), Canvas (zoom presets, locks and
   layouts, all acting on the open canvas, nothing stored), Agents (the remembered defaults for
   a new chat from `chat/preferences.ts`, now a zustand store the composer and the dialog
   share: one model row per provider with that model's knobs under it, the permissions a chat
@@ -296,6 +297,10 @@ canvas, against Ruimte, one verdict each.
 - Code keeps a size of its own, `--text-code` (13px mono on a 20px line), for code blocks,
   inline code, diffs, tool output and the mono inputs. It is absolute, so it never scales twice
   with the root, and the terminal has its own `fontSize` setting (default 13) next to it.
+- The interface font size (Settings > Appearance, 12 to 20, whole numbers, default 16) is the
+  root `font-size` on `<html>`, written by `state/settings.ts`. Sizes fixed in world
+  coordinates do not follow it: the node header stays `37px` (`GROUP_HEADER_PX`,
+  `WebviewLayer`), because a header that moved would move every node's contents on the canvas.
 - Tooltips are the `Tooltip` component in `src/ui/Tooltip.tsx`, never a `title` attribute.
   One `TooltipProvider` at the app root gives the shared 150 ms delay.
 - Escape leaves node mode unless a terminal node has "Send Escape to the app" on (its context

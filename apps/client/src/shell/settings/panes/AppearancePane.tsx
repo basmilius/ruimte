@@ -4,7 +4,7 @@ import { NODE_ACCENTS } from '@/canvas/accents';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Segmented, SelectControl, Stepper } from '@/shell/settings/controls';
-import { FONT_SIZE_RANGE, MONO_FONTS, useSettings, type MonoFontId } from '@/state/settings';
+import { FONT_SIZE_RANGE, INTERFACE_FONT_SIZE_RANGE, MONO_FONTS, useSettings, type MonoFontId } from '@/state/settings';
 import { useTheme, type Theme } from '@/state/theme';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
@@ -55,6 +55,7 @@ export function AppearancePane() {
     const setTheme = useTheme((t) => t.setTheme);
     const font = useSettings((s) => s.font);
     const fontSize = useSettings((s) => s.fontSize);
+    const interfaceFontSize = useSettings((s) => s.interfaceFontSize);
     const update = useSettings((s) => s.update);
 
     return (
@@ -69,6 +70,23 @@ export function AppearancePane() {
                     label="Accent"
                     description="Selection rings, focus and the terminal cursor. The default is the theme's own."
                     control={<AccentSwatches />}
+                />
+            </SettingsSection>
+            <SettingsSection title="Interface">
+                <SettingsRow
+                    label="Interface font size"
+                    description="Text, rows and spacing everywhere but the terminal and code."
+                    control={
+                        <Stepper
+                            value={interfaceFontSize}
+                            min={INTERFACE_FONT_SIZE_RANGE.min}
+                            max={INTERFACE_FONT_SIZE_RANGE.max}
+                            step={INTERFACE_FONT_SIZE_RANGE.step}
+                            unit=" px"
+                            label="Interface font size"
+                            onChange={(value) => update({ interfaceFontSize: value })}
+                        />
+                    }
                 />
             </SettingsSection>
             <SettingsSection title="Terminal" description="Every terminal node picks these up the moment they change.">
