@@ -53,9 +53,9 @@ export type BackendEvent =
           description: string | null;
           canAllowAlways: boolean;
       }
-    | { type: 'approval.withdrawn'; requestId: string }
     | { type: 'question.requested'; requestId: string; questions: ChatQuestion[] }
-    | { type: 'question.withdrawn'; requestId: string }
+    // The CLI took an approval or a question back; the person no longer has to answer it.
+    | { type: 'request.withdrawn'; requestId: string }
     | { type: 'usage'; contextTokens?: number; contextWindow?: number }
     | { type: 'compaction'; preTokens: number | null }
     | { type: 'model'; model: string }

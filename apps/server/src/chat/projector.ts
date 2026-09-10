@@ -106,8 +106,7 @@ export class ThreadProjector {
                 );
                 events.push(this.thread.setStatus('needs-you'));
                 break;
-            case 'approval.withdrawn':
-            case 'question.withdrawn':
+            case 'request.withdrawn':
                 this.withdraw(event.requestId, events);
                 break;
             case 'usage':

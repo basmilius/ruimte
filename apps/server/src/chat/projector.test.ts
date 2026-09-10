@@ -99,7 +99,7 @@ describe('ThreadProjector', () => {
         expect(thread.get('approval-r1')).toMatchObject({ kind: 'approval', toolUseId: 'toolu_9', toolName: 'Edit', decision: 'pending' });
         expect(thread.info.status).toBe('needs-you');
 
-        project({ type: 'approval.withdrawn', requestId: 'r1' });
+        project({ type: 'request.withdrawn', requestId: 'r1' });
         expect(thread.get('approval-r1')).toMatchObject({ decision: 'cancelled' });
         expect(thread.info.status).toBe('running');
     });
@@ -110,7 +110,7 @@ describe('ThreadProjector', () => {
         project({ type: 'question.requested', requestId: 'q1', questions });
         expect(thread.get('question-q1')).toMatchObject({ kind: 'question', state: 'pending', answers: null, questions });
         expect(thread.info.status).toBe('needs-you');
-        project({ type: 'question.withdrawn', requestId: 'q1' });
+        project({ type: 'request.withdrawn', requestId: 'q1' });
         expect(thread.get('question-q1')).toMatchObject({ state: 'cancelled' });
     });
 

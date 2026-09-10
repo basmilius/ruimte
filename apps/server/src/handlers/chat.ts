@@ -1,5 +1,6 @@
 import { RequestError, type Dispatcher } from '../dispatcher.ts';
-import { ChatError, type ChatManager } from '../chat/chat-manager.ts';
+import type { ChatManager } from '../chat/chat-manager.ts';
+import { ChatError } from '../chat/errors.ts';
 import type { ContextStore } from '../context/context-store.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 
