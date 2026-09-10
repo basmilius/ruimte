@@ -1,23 +1,16 @@
 import { randomBytes } from 'node:crypto';
 import { homedir } from 'node:os';
 import type { AgentKind, ChatConfigurePayload, ChatCreatePayload, ChatEvent, ChatInfo, ChatItem, ContextSource } from '@ruimte/contracts';
-import type { ChatProvider } from '../providers/provider.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionSink } from '../sessions/manager.ts';
 import { ChatSession, type ChatSendExtras } from './chat-session.ts';
 import type { ChatStore } from './chat-store.ts';
 import { ChatError } from './errors.ts';
-import { claudeProvider } from '../providers/claude-provider.ts';
-import { codexProvider } from '../providers/codex-provider.ts';
-
-// The CLI behind each kind of chat; the registry hands out the same values to everything else.
-const PROVIDERS: Record<AgentKind, ChatProvider> = { claude: claudeProvider, codex: codexProvider };
-
 export interface ChatManagerOptions {
     providers: ProviderRegistry;
     store?: ChatStore;
     env?: Record<string, string | undefined>;
-    // The CLIs to run; a test points these at scripts that speak the same protocols.
+    // The CLIs to run, when they are not the ones the providers name; a test points these at fakes.
     command?: string[];
     // Where an agent reads its linked context, and whether it has any.
     contextUrl?: string;
@@ -33,7 +26,7 @@ export class ChatManager {
     private readonly providers: ProviderRegistry;
     private readonly store: ChatStore | null;
     private readonly env: Record<string, string>;
-    private readonly commands: Record<AgentKind, string[]>;
+    private readonly commands: Partial<Record<AgentKind, string[]>>;
     private readonly chats = new Map<string, ChatSession>();
     private readonly sinks = new Map<string, SessionSink>();
     private readonly attached = new Map<string, Set<string>>();
@@ -49,8 +42,8 @@ export class ChatManager {
         this.hasContext = options.hasContext ?? (() => false);
         this.contextSources = options.contextSources ?? (() => []);
         this.commands = {
-            claude: options.command ?? claudeProvider.command,
-            codex: options.codexCommand ?? codexProvider.command
+            ...(options.command ? { claude: options.command } : {}),
+            ...(options.codexCommand ? { codex: options.codexCommand } : {})
         };
         this.env = {};
         for (const [key, value] of Object.entries(options.env ?? process.env)) {
@@ -87,7 +80,8 @@ export class ChatManager {
         const stored = await this.store?.read(payload.chatId);
         // A thread on disk keeps its provider; the selection it stored only makes sense in that catalog.
         const provider = stored?.info.provider ?? payload.provider ?? 'claude';
-        const catalog = this.providers.catalogFor(provider);
+        const chatProvider = this.providers.get(provider);
+        const catalog = chatProvider.catalog;
         const selection = catalog.normalize(stored?.info.selection ?? payload.selection);
         const info: ChatInfo = stored?.info
             ? { ...stored.info, selection, running: false, status: 'idle', activeTurnId: null }
@@ -113,8 +107,8 @@ export class ChatManager {
         const session = new ChatSession({
             info,
             items,
-            provider: PROVIDERS[provider],
-            command: this.commands[provider],
+            provider: chatProvider,
+            command: this.commands[provider] ?? chatProvider.command,
             env: this.contextUrl ? { ...this.env, RUIMTE_CONTEXT_URL: this.contextUrl, RUIMTE_CONTEXT_TOKEN: token } : this.env,
             hasContext: () => this.hasContext(payload.chatId),
             contextSources: () => this.contextSources(payload.chatId),

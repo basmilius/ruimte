@@ -1,61 +1,70 @@
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
-import { ModelCatalog } from './catalog.ts';
-import { CLAUDE_CAPABILITIES, CLAUDE_RESUME_COMMAND } from './claude.ts';
-import { CODEX_CAPABILITIES, CODEX_RESUME_COMMAND } from './codex.ts';
-import { detectCli, type CliDetection } from './detect.ts';
-import codexManifest from './codex-models.json' with { type: 'json' };
+import type { ModelCatalog } from './catalog.ts';
+import { claudeProvider } from './claude-provider.ts';
+import { codexProvider } from './codex-provider.ts';
+import type { CliDetection } from './detect.ts';
+import type { ChatProvider } from './provider.ts';
 
 // How long a "is it installed" answer stays good; an install mid-session shows up on the next check.
 const DETECTION_TTL_MS = 60_000;
 
-/* What the daemon knows about each agent CLI: whether it is there and which models it offers. */
-export class ProviderRegistry {
-    readonly claude = new ModelCatalog();
-    readonly codex = new ModelCatalog(codexManifest as never);
-    private readonly commands: Record<AgentKind, string>;
-    private readonly cache = new Map<AgentKind, { at: number; detection: CliDetection }>();
-    private readonly detect: (command: string) => Promise<CliDetection>;
+// The CLIs the daemon ships with. A new one is one more value here.
+export const BUILT_IN_PROVIDERS: ChatProvider[] = [claudeProvider, codexProvider];
 
-    constructor(options: { commands?: Partial<Record<AgentKind, string>>; detect?: (command: string) => Promise<CliDetection> } = {}) {
-        this.commands = { claude: 'claude', codex: 'codex', ...options.commands };
-        this.detect = options.detect ?? detectCli;
+/* The provider of a kind, for the places that have no registry at hand (the hooks). */
+export const providerFor = (kind: AgentKind): ChatProvider => BUILT_IN_PROVIDERS.find((provider) => provider.kind === kind) ?? claudeProvider;
+
+export interface ProviderRegistryOptions {
+    providers?: ChatProvider[];
+    // The executables to probe, when they are not the ones the providers name.
+    commands?: Partial<Record<AgentKind, string>>;
+    // How to probe; a test answers without spawning anything.
+    detect?: (command: string) => Promise<CliDetection>;
+}
+
+/* What the daemon knows about each agent CLI: whether it is there, what it offers and what it can do. */
+export class ProviderRegistry {
+    private readonly providers: ChatProvider[];
+    private readonly commands: Partial<Record<AgentKind, string>>;
+    private readonly detect: ((command: string) => Promise<CliDetection>) | null;
+    private readonly cache = new Map<AgentKind, { at: number; detection: CliDetection }>();
+
+    constructor(options: ProviderRegistryOptions = {}) {
+        this.providers = options.providers ?? BUILT_IN_PROVIDERS;
+        this.commands = options.commands ?? {};
+        this.detect = options.detect ?? null;
     }
 
     async list(): Promise<ProviderInfo[]> {
-        const [claude, codex] = await Promise.all([this.detection('claude'), this.detection('codex')]);
-        return [
-            {
-                kind: 'claude',
-                name: 'Claude Code',
-                ...claude,
-                models: this.claude.list(),
-                defaultModel: this.claude.defaultModel,
-                capabilities: CLAUDE_CAPABILITIES,
-                resumeCommand: CLAUDE_RESUME_COMMAND
-            },
-            {
-                kind: 'codex',
-                name: 'Codex',
-                ...codex,
-                models: this.codex.list(),
-                defaultModel: this.codex.defaultModel,
-                capabilities: CODEX_CAPABILITIES,
-                resumeCommand: CODEX_RESUME_COMMAND
-            }
-        ];
+        return await Promise.all(
+            this.providers.map(async (provider) => ({
+                kind: provider.kind,
+                name: provider.name,
+                ...(await this.detection(provider)),
+                models: provider.catalog.list(),
+                defaultModel: provider.catalog.defaultModel,
+                capabilities: provider.capabilities,
+                resumeCommand: provider.resumeCommand
+            }))
+        );
+    }
+
+    get(kind: AgentKind): ChatProvider {
+        return this.providers.find((provider) => provider.kind === kind) ?? providerFor(kind);
     }
 
     catalogFor(kind: AgentKind): ModelCatalog {
-        return kind === 'codex' ? this.codex : this.claude;
+        return this.get(kind).catalog;
     }
 
-    private async detection(kind: AgentKind): Promise<CliDetection> {
-        const cached = this.cache.get(kind);
+    private async detection(provider: ChatProvider): Promise<CliDetection> {
+        const cached = this.cache.get(provider.kind);
         if (cached && Date.now() - cached.at < DETECTION_TTL_MS) {
             return cached.detection;
         }
-        const detection = await this.detect(this.commands[kind]);
-        this.cache.set(kind, { at: Date.now(), detection });
+        const command = this.commands[provider.kind] ?? provider.command[0]!;
+        const detection = this.detect ? await this.detect(command) : await provider.detect(command, process.env);
+        this.cache.set(provider.kind, { at: Date.now(), detection });
         return detection;
     }
 }

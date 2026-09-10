@@ -1,4 +1,5 @@
-import type { AgentKind, AgentStatus } from '@ruimte/contracts';
+import { resumeCommandFor, type AgentKind, type AgentStatus } from '@ruimte/contracts';
+import { providerFor } from '../providers/registry.ts';
 
 export interface HookOutcome {
     agentSessionId: string;
@@ -89,8 +90,5 @@ export const normalizeHook = (body: unknown): HookOutcome | null => {
     return { agentSessionId, transcriptPath, status: status === 'gone' ? null : status };
 };
 
-// How each CLI is told to pick its session up again.
-export const resumeCommand = (kind: AgentKind, agentSessionId: string): string => {
-    const quoted = `'${agentSessionId.replaceAll("'", `'\\''`)}'`;
-    return kind === 'claude' ? `claude --resume ${quoted}` : `codex resume ${quoted}`;
-};
+/* How each CLI is told to pick its session up again; the template is the provider's own. */
+export const resumeCommand = (kind: AgentKind, agentSessionId: string): string => resumeCommandFor(providerFor(kind).resumeCommand, agentSessionId);
