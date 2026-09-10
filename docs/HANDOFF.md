@@ -181,6 +181,16 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
 - **Files panel**: `shell/panels/FilesPanel.tsx`, the tree on `@pierre/trees` (pinned to
   `1.0.0-beta.6`), which renders itself with Preact inside a shadow root and takes the app's
   tokens through the `--trees-*-override` variables on its host (`.files-tree` in `styles.css`).
+  The glyphs are the set the library bundles, `complete`, the only one it colors and the only one
+  that carries the brand marks. `ui/file-icon.ts` names it once: the tree takes it as
+  `FILE_TREE_ICONS`, and everything else that shows a file name draws the same glyph through
+  `ui/FileIcon.tsx`, which resolves against the library's own `createFileTreeIconResolver` and puts
+  a copy of its sprite in the document, because the tree keeps its own out of reach inside the
+  shadow root. Those icons carry their file type's color, which is the one place a component may
+  reach past the semantic tokens: the values are the library's, as `--file-icon-*` in `styles.css`,
+  so a tab and a tree row never disagree. The set ships no folder glyph, so a directory keeps the
+  chevron that turns as it opens, and the palette's folder rows stay on Lucide, where `Folder` and
+  `FolderCheck` also say whether a folder already has a canvas.
   The model is a flat list of paths relative to the project folder, POSIX, a directory with a
   trailing slash. The library sorts that flat list itself, and a directory is only in it when it is
   empty or unloaded: `src/index.ts` is the only row that says `src` exists. So `compareRows` walks
@@ -213,7 +223,7 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   Files or Git panel, so the row reads sidebar, canvas, preview, panel. Its header is the same 48px
   drag region, with `shell/panels/FileTabs.tsx` in it and a close button; `shell/panels/FileViewer.tsx`
   is the body underneath, and the renderer's own toolbar (Preview and Source, wrap, Fit and 1:1)
-  sits under that. A tab is a Lucide glyph by extension, the name, a close button and a reserved dot
+  sits under that. A tab is the file's own icon, the name, a close button and a reserved dot
   for a future dirty mark, unpinned tabs in italic the way a preview tab reads. `state/files.ts`
   holds them (tested pure helpers): past `filesTabLimit` the oldest unpinned tab closes, never the
   active one, double-click pins, and the tabs travel with the project's machine-local file, so a
