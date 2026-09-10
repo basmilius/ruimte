@@ -1,3 +1,7 @@
+/* What a row dragged out of the Files panel carries: the paths, space separated, relative to the
+   folder. The composer takes it next to the image files it already accepts. */
+export const MENTION_DRAG_TYPE = 'application/x-ruimte-mention';
+
 export interface MentionQuery {
     // Index of the `@` in the text.
     start: number;

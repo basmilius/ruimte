@@ -527,4 +527,79 @@ body {
         font-family: var(--font-sans);
         font-size: var(--text-xs);
     }
+
+    /* The Files panel. The tree draws itself inside a shadow root that reaches nothing here except
+       the `--trees-*-override` variables on its host, so the panel's tokens travel that way. */
+    .files-tree {
+        display: block;
+        height: 100%;
+        --trees-bg-override: transparent;
+        --trees-bg-muted-override: var(--surface-sunken);
+        --trees-fg-override: var(--text);
+        --trees-fg-muted-override: var(--text-muted);
+        --trees-selected-bg-override: var(--surface-active);
+        --trees-selected-fg-override: var(--text);
+        --trees-border-color-override: var(--border);
+        --trees-accent-override: var(--accent);
+        --trees-focus-ring-color-override: var(--accent);
+        --trees-status-ignored-override: var(--text-faint);
+        --trees-git-ignored-color-override: var(--text-faint);
+        --trees-font-family-override: var(--font-sans);
+        --trees-font-size-override: 12px;
+    }
+
+    .files-tab-strip {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        height: 32px;
+        flex-shrink: 0;
+        padding: 0 4px;
+        border-bottom: 1px solid var(--border);
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+    .files-tab-strip::-webkit-scrollbar { display: none; }
+    .files-tab {
+        display: inline-flex;
+        align-items: center;
+        flex-shrink: 0;
+        height: 24px;
+        padding-right: 2px;
+        border-radius: 6px;
+        color: var(--text-muted);
+    }
+    .files-tab:hover { background: var(--surface-sunken); color: var(--text); }
+    .files-tab[data-active="true"] { background: var(--surface-active); color: var(--text); }
+    .files-tab-open {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 24px;
+        max-width: 160px;
+        padding: 0 4px 0 8px;
+        font-size: var(--text-xs);
+        line-height: var(--text-xs--line-height);
+        color: inherit;
+    }
+    /* A tab that is not pinned is a preview: the same italic an editor uses, and a double-click ends it. */
+    .files-tab:not([data-pinned="true"]) .files-tab-name { font-style: italic; }
+    .files-tab-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .files-tab-dot {
+        width: 6px;
+        height: 6px;
+        flex-shrink: 0;
+        border-radius: 9999px;
+    }
+    .files-tab-dot[data-dirty="true"] { background: var(--text-muted); }
+    .files-tab-close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 5px;
+        color: var(--text-faint);
+    }
+    .files-tab-close:hover { background: var(--surface-raised); color: var(--text); }
 }

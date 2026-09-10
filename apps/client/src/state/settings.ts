@@ -14,6 +14,7 @@ export type MonoFontId = (typeof MONO_FONTS)[number]['id'];
 
 export const FONT_SIZE_RANGE = { min: 10, max: 20, step: 1 } as const;
 export const INTERFACE_FONT_SIZE_RANGE = { min: 12, max: 20, step: 1 } as const;
+export const FILES_TAB_LIMIT_RANGE = { min: 1, max: 20, step: 1 } as const;
 
 export interface Settings {
     /* One of the node accents, or null for the theme's own accent. */
@@ -24,6 +25,10 @@ export interface Settings {
     /* The root font size in px, so the rem-based interface scales with it. Code and the terminal
        keep their own absolute sizes and stay put. */
     interfaceFontSize: number;
+    /* How many files the viewer keeps open before the oldest unpinned tab makes room. */
+    filesTabLimit: number;
+    /* Whether the files tree shows dotfiles; the panel's eye button writes the same value. */
+    filesShowHidden: boolean;
 }
 
 interface SettingsStore extends Settings {
@@ -32,7 +37,7 @@ interface SettingsStore extends Settings {
     update(patch: Partial<Settings>): void;
 }
 
-const DEFAULT_SETTINGS: Settings = { accent: null, font: 'system', fontSize: 13, interfaceFontSize: 16 };
+const DEFAULT_SETTINGS: Settings = { accent: null, font: 'system', fontSize: 13, interfaceFontSize: 16, filesTabLimit: 5, filesShowHidden: false };
 
 // Rounded as well as clamped: the stepper used to move in halves, so a browser can still hand back
 // a half pixel from before, and both text and the terminal render sharpest on a whole one.
@@ -49,7 +54,8 @@ const read = (): Settings => {
             ...DEFAULT_SETTINGS,
             ...stored,
             fontSize: clampSize(stored.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize),
-            interfaceFontSize: clampSize(stored.interfaceFontSize, INTERFACE_FONT_SIZE_RANGE, DEFAULT_SETTINGS.interfaceFontSize)
+            interfaceFontSize: clampSize(stored.interfaceFontSize, INTERFACE_FONT_SIZE_RANGE, DEFAULT_SETTINGS.interfaceFontSize),
+            filesTabLimit: clampSize(stored.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit)
         };
     } catch {
         return DEFAULT_SETTINGS;
@@ -85,10 +91,11 @@ export const useSettings = create<SettingsStore>((set, get) => {
         ...initial,
         version: 0,
         update(patch) {
-            const { accent, font, fontSize, interfaceFontSize } = get();
-            const next: Settings = { accent, font, fontSize, interfaceFontSize, ...patch };
+            const { accent, font, fontSize, interfaceFontSize, filesTabLimit, filesShowHidden } = get();
+            const next: Settings = { accent, font, fontSize, interfaceFontSize, filesTabLimit, filesShowHidden, ...patch };
             next.fontSize = clampSize(next.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize);
             next.interfaceFontSize = clampSize(next.interfaceFontSize, INTERFACE_FONT_SIZE_RANGE, DEFAULT_SETTINGS.interfaceFontSize);
+            next.filesTabLimit = clampSize(next.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit);
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
             } catch {

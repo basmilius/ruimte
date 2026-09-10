@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { useUi } from './ui';
+import { parsePanel, serializePanel, useUi } from './ui';
 
 describe('ui', () => {
     beforeEach(() => {
@@ -29,5 +29,24 @@ describe('ui', () => {
         expect(useUi.getState().panel).toEqual({ open: false, kind: 'git' });
         useUi.getState().togglePanel();
         expect(useUi.getState().panel).toEqual({ open: true, kind: 'git' });
+    });
+
+    // The store reads and writes localStorage, which `bun test` has none of; the round trip is
+    // what the reload depends on, so the two halves are tested on their own.
+    test('the panel that was up survives the round trip through storage', () => {
+        for (const panel of [
+            { open: true, kind: 'files' as const },
+            { open: true, kind: 'git' as const },
+            { open: false, kind: 'git' as const }
+        ]) {
+            expect(parsePanel(serializePanel(panel))).toEqual(panel);
+        }
+    });
+
+    test('nothing stored, or something else entirely, lands on a closed files panel', () => {
+        expect(parsePanel(null)).toEqual({ open: false, kind: 'files' });
+        expect(parsePanel('')).toEqual({ open: false, kind: 'files' });
+        expect(parsePanel('terminal')).toEqual({ open: false, kind: 'files' });
+        expect(parsePanel('closed:terminal')).toEqual({ open: false, kind: 'files' });
     });
 });

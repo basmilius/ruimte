@@ -1,10 +1,13 @@
 import { create } from 'zustand';
 
-export type SettingsSectionId = 'appearance' | 'canvas' | 'agents' | 'machines' | 'keyboard' | 'about';
+export type SettingsSectionId = 'appearance' | 'canvas' | 'files' | 'agents' | 'machines' | 'keyboard' | 'about';
 
 export type PanelKind = 'files' | 'git';
 
+const PANEL_KINDS: readonly PanelKind[] = ['files', 'git'];
+
 const SIDEBAR_STORAGE_KEY = 'ruimte.sidebar';
+const PANEL_STORAGE_KEY = 'ruimte.panel';
 
 const readSidebarOpen = (): boolean => {
     try {
@@ -27,6 +30,37 @@ interface PanelState {
     /* Which panel the surface shows; it survives a close, so the toggle reopens the last one. */
     kind: PanelKind;
 }
+
+const CLOSED_PANEL: PanelState = { open: false, kind: 'files' };
+
+/* The kind on its own for an open panel, `closed:` in front for one that is not, so a reload lands
+   on the panel that was up and the toggle still knows which one it reopens. */
+export const parsePanel = (raw: string | null): PanelState => {
+    if (!raw) {
+        return CLOSED_PANEL;
+    }
+    const open = !raw.startsWith('closed:');
+    const kind = (open ? raw : raw.slice('closed:'.length)) as PanelKind;
+    return PANEL_KINDS.includes(kind) ? { open, kind } : CLOSED_PANEL;
+};
+
+export const serializePanel = (panel: PanelState): string => (panel.open ? panel.kind : `closed:${panel.kind}`);
+
+const readPanel = (): PanelState => {
+    try {
+        return parsePanel(localStorage.getItem(PANEL_STORAGE_KEY));
+    } catch {
+        return CLOSED_PANEL;
+    }
+};
+
+const persistPanel = (panel: PanelState): void => {
+    try {
+        localStorage.setItem(PANEL_STORAGE_KEY, serializePanel(panel));
+    } catch {
+        // Storage that refuses keeps the panel for this session only.
+    }
+};
 
 interface SettingsState {
     open: boolean;
@@ -62,7 +96,7 @@ export const useUi = create<UiStore>((set, get) => ({
     paletteSeed: '',
     sidebarOpen: readSidebarOpen(),
     settings: { open: false, section: 'appearance' },
-    panel: { open: false, kind: 'files' },
+    panel: readPanel(),
     layoutDialogOpen: false,
     worktreeDialogFor: null,
     setWorktreeDialogFor(groupId) {
@@ -88,15 +122,15 @@ export const useUi = create<UiStore>((set, get) => ({
         set({ settings: { ...get().settings, ...patch } });
     },
     setPanel(patch) {
-        set({ panel: { ...get().panel, ...patch } });
+        const next = { ...get().panel, ...patch };
+        persistPanel(next);
+        set({ panel: next });
     },
     togglePanel(kind) {
         const panel = get().panel;
         /* Without a kind the chord reopens whatever was up last, so the panel has one toggle of its own. */
-        if (!kind) {
-            set({ panel: { ...panel, open: !panel.open } });
-            return;
-        }
-        set({ panel: { open: !(panel.open && panel.kind === kind), kind } });
+        const next: PanelState = kind ? { open: !(panel.open && panel.kind === kind), kind } : { ...panel, open: !panel.open };
+        persistPanel(next);
+        set({ panel: next });
     }
 }));

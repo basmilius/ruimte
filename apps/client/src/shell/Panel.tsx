@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { PanelControls } from '@/shell/PanelControls';
 import { PANELS } from '@/shell/panels';
-import { useUi } from '@/state/ui';
+import { FilesPanel } from '@/shell/panels/FilesPanel';
+import { useColumnResize } from '@/shell/useColumnResize';
+import { useFiles } from '@/state/files';
+import { useUi, type PanelKind } from '@/state/ui';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
@@ -15,25 +18,16 @@ const MIN_CANVAS_WIDTH = 360;
 // How long the open and close motion takes; the same number as the class below.
 const TRANSITION_MS = 200;
 
-const clampWidth = (width: number): number => Math.max(MIN_WIDTH, Math.min(width, Math.max(MIN_WIDTH, window.innerWidth - MIN_CANVAS_WIDTH)));
-
-const readWidth = (): number => {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        const stored = raw ? Number.parseInt(raw, 10) : Number.NaN;
-        return Number.isFinite(stored) ? clampWidth(stored) : DEFAULT_WIDTH;
-    } catch {
-        return DEFAULT_WIDTH;
+function PanelBody({ kind, label, width, setWidth }: { kind: PanelKind; label: string; width: number; setWidth(width: number): void }) {
+    if (kind === 'files') {
+        return <FilesPanel panelWidth={width} setPanelWidth={setWidth} />;
     }
-};
-
-const persistWidth = (width: number): void => {
-    try {
-        localStorage.setItem(STORAGE_KEY, String(width));
-    } catch {
-        // Storage that refuses keeps the width for this session only.
-    }
-};
+    return (
+        <div className="grid grow place-items-center">
+            <EmptyState>The {label.toLowerCase()} panel is next: it has nothing to show yet.</EmptyState>
+        </div>
+    );
+}
 
 /* The surface right of the canvas, spanning the whole main column so its header lines up with the
    toolbar and the top band stays unbroken. It is a split, not an overlay, so the canvas keeps a
@@ -43,11 +37,19 @@ const persistWidth = (width: number): void => {
    while the panel slides in or out. */
 export function Panel() {
     const panel = useUi((s) => s.panel);
-    const [width, setWidth] = useState(readWidth);
     /* Closed and done animating. Until then the contents stay mounted, so a close plays out. */
     const [settled, setSettled] = useState(!panel.open);
     const present = panel.open || !settled;
     const ref = useRef<HTMLElement>(null);
+    const { width, setWidth, startResize } = useColumnResize(ref, {
+        storageKey: STORAGE_KEY,
+        defaultWidth: DEFAULT_WIDTH,
+        min: MIN_WIDTH,
+        from: 'right',
+        max: () => window.innerWidth - MIN_CANVAS_WIDTH,
+        // A width the person set themselves outranks the one the viewer would give back.
+        onManualResize: () => useFiles.getState().forgetPanelWidth()
+    });
 
     useEffect(() => {
         if (panel.open || settled) {
@@ -59,29 +61,6 @@ export function Panel() {
             window.clearTimeout(timer);
         };
     }, [panel.open, settled]);
-
-    const startResize = (event: ReactPointerEvent<HTMLDivElement>): void => {
-        event.preventDefault();
-        const handle = event.currentTarget;
-        const aside = ref.current;
-        const right = aside?.getBoundingClientRect().right ?? window.innerWidth;
-        let next = width;
-        aside?.setAttribute('data-resizing', 'true');
-        const onMove = (move: PointerEvent): void => {
-            next = clampWidth(Math.round(right - move.clientX));
-            setWidth(next);
-        };
-        const onUp = (): void => {
-            handle.removeEventListener('pointermove', onMove);
-            handle.removeEventListener('pointerup', onUp);
-            handle.releasePointerCapture(event.pointerId);
-            aside?.removeAttribute('data-resizing');
-            persistWidth(next);
-        };
-        handle.setPointerCapture(event.pointerId);
-        handle.addEventListener('pointermove', onMove);
-        handle.addEventListener('pointerup', onUp);
-    };
 
     const label = PANELS.find((entry) => entry.kind === panel.kind)?.label ?? 'Panel';
 
@@ -110,9 +89,7 @@ export function Panel() {
                         </Tooltip>
                         {panel.open && <PanelControls />}
                     </header>
-                    <div className="grid grow place-items-center">
-                        <EmptyState>The {label.toLowerCase()} panel is next: it has nothing to show yet.</EmptyState>
-                    </div>
+                    <PanelBody kind={panel.kind} label={label} width={width} setWidth={setWidth} />
                 </div>
             )}
         </aside>
