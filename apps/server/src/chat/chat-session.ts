@@ -13,6 +13,7 @@ import type {
 import { contextChangeNote } from '../context/context-note.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
 import type { ChatProvider } from '../providers/provider.ts';
+import type { LimitsUpdate } from '../usage/limits/normalize.ts';
 import type { BackendEvent, BackendLaunch, ChatBackend } from './backend.ts';
 import { ChatError } from './errors.ts';
 import { ThreadProjector } from './projector.ts';
@@ -32,6 +33,8 @@ interface ChatSessionOptions {
     // Git trees per turn, so a settled turn can show what the working tree holds against its start.
     checkpoints?: CheckpointService;
     emit(event: ChatEvent): void;
+    /* What a turn said about the plan it runs on. It belongs to the machine, so it leaves the chat. */
+    onLimits?(update: LimitsUpdate): void;
     persist(): void;
     // A write that may wait a moment: the work of a turn in flight, so a restart loses less than a whole turn.
     persistSoon(): void;
@@ -464,6 +467,10 @@ export class ChatSession {
     }
 
     private receive(generation: number, event: BackendEvent): void {
+        if (event.type === 'limits') {
+            this.options.onLimits?.(event.update);
+            return;
+        }
         // A request that failed after the turn already ended has nothing left to report.
         if (event.type === 'failed' && this.thread.info.activeTurnId === null) {
             return;

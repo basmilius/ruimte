@@ -13,6 +13,7 @@ import { formatClock, formatCount, formatDate, formatTokens, formatUsd } from '@
 import { deriveUsage, labelEveryFor } from '@/shell/usage/summary';
 import { UsageBreakdown } from '@/shell/usage/UsageBreakdown';
 import { UsageChart } from '@/shell/usage/UsageChart';
+import { UsageLimits } from '@/shell/usage/UsageLimits';
 import { UsageSummary } from '@/shell/usage/UsageSummary';
 import { UsageTiles } from '@/shell/usage/UsageTiles';
 
@@ -171,6 +172,7 @@ export function UsagePage() {
                         </div>
                         <UsageTiles totals={derived.totals} cacheSavingsUsd={derived.cacheSavingsUsd} />
                         <UsageBreakdown summary={shown} metric={metric} />
+                        <UsageLimits />
                     </>
                 )}
             </div>

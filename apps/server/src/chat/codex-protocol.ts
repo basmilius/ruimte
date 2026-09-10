@@ -1,4 +1,5 @@
 import type { ChatFileChange, ChatQuestion } from '@ruimte/contracts';
+import { readCodexLimits } from '../usage/limits/normalize.ts';
 import type { ApprovalDecision, BackendEvent } from './backend.ts';
 import type { CodexFrame } from './codex-transport.ts';
 
@@ -241,6 +242,14 @@ export class CodexProtocol {
             case 'error': {
                 const error = isRecord(params.error) ? params.error : {};
                 events.push({ type: 'note', level: params.willRetry === true ? 'warning' : 'error', text: str(error.message) ?? 'Codex reported an error' });
+                break;
+            }
+            case 'account/rateLimits/updated': {
+                // The plan's own numbers, sent beside a token usage tick; the usage monitor keeps them.
+                const reading = readCodexLimits(isRecord(params.rateLimits) ? params.rateLimits : params);
+                if (reading !== null && reading.windows.length > 0) {
+                    events.push({ type: 'limits', update: { kind: 'codex', plan: reading.plan, windows: reading.windows } });
+                }
                 break;
             }
             case 'model/rerouted': {

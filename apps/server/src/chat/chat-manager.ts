@@ -17,6 +17,7 @@ import type { CheckpointService } from '../git/checkpoints.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionSink } from '../sessions/manager.ts';
 import { SkillIndex } from '../skills/skills.ts';
+import type { LimitsUpdate } from '../usage/limits/normalize.ts';
 import type { AttachmentStore } from './attachment-store.ts';
 import { ChatSession, type ChatSendExtras } from './chat-session.ts';
 import type { ChatStore } from './chat-store.ts';
@@ -41,6 +42,8 @@ interface ChatManagerOptions {
     skills?: SkillIndex;
     // Where the files people attach are written.
     attachments: AttachmentStore;
+    // What a running turn says about the plan its CLI runs on; the usage monitor takes it from here.
+    onLimits?: (update: LimitsUpdate) => void;
 }
 
 // Above this the record is big enough that rewriting it on every tool call costs more than it saves.
@@ -53,6 +56,7 @@ export class ChatManager {
     private readonly checkpoints: CheckpointService | null;
     private readonly skillIndex: SkillIndex;
     private readonly attachments: AttachmentStore;
+    private readonly onLimits: ((update: LimitsUpdate) => void) | null;
     private readonly env: Record<string, string>;
     private readonly commands: Partial<Record<AgentKind, string[]>>;
     private readonly chats = new Map<string, ChatSession>();
@@ -74,6 +78,7 @@ export class ChatManager {
         this.checkpoints = options.checkpoints ?? null;
         this.skillIndex = options.skills ?? new SkillIndex();
         this.attachments = options.attachments;
+        this.onLimits = options.onLimits ?? null;
         this.contextUrl = options.contextUrl ?? null;
         this.hasContext = options.hasContext ?? (() => false);
         this.contextSources = options.contextSources ?? (() => []);
@@ -149,6 +154,7 @@ export class ChatManager {
             contextSources: () => this.contextSources(payload.chatId),
             ...(this.checkpoints ? { checkpoints: this.checkpoints } : {}),
             emit: (event: ChatEvent) => this.emit(payload.chatId, event),
+            ...(this.onLimits ? { onLimits: this.onLimits } : {}),
             persist: () => this.persist(payload.chatId),
             persistSoon: () => this.persistSoon(payload.chatId)
         });

@@ -39,6 +39,7 @@ import { ProviderRegistry } from './providers/registry.ts';
 import { BunPtyAdapter } from './pty/bun-pty.ts';
 import { SessionManager } from './sessions/manager.ts';
 import { SnapshotStore, scheduleSnapshots } from './sessions/snapshot-store.ts';
+import { UsageMonitor } from './usage/limits/monitor.ts';
 import { UsageService } from './usage/usage-service.ts';
 
 // Inside a `bun build --compile` binary the sources live on a virtual file system, so paths next to the source mean nothing.
@@ -91,7 +92,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         contextUrl,
         binDir,
         hasContext: (chatId) => context.has(chatId),
-        contextSources: (chatId) => context.list(chatId)
+        contextSources: (chatId) => context.list(chatId),
+        // A turn reports what is left of its plan in passing; that belongs to the machine's numbers.
+        onLimits: (update) => limits.applyLive(update)
     });
     const projects = new ProjectStore(config.home);
     const drawings = new DrawingStore(projects);
@@ -99,6 +102,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const folders = new FolderWatcher();
     const statuses = new GitStatusWatcher();
     const usage = new UsageService({ home: config.home, allowPriceFetch: config.priceFetch, knownProjects: () => projects.known() });
+    const limits = new UsageMonitor({ providers });
 
     const dispatcher = new Dispatcher();
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home });
@@ -119,7 +123,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         }
     });
     registerFsHandlers(dispatcher, folders);
-    registerUsageHandlers(dispatcher, usage);
+    registerUsageHandlers(dispatcher, usage, limits);
     registerGitHandlers(dispatcher, new Worktrees(config.home), statuses, providers);
 
     if (config.installHooks) {
@@ -260,6 +264,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 const unsubscribeFolders = folders.subscribe(client.id, sink);
                 const unsubscribeStatuses = statuses.subscribe(client.id, sink);
                 const unsubscribeUsage = usage.subscribe(client.id, sink);
+                const unsubscribeLimits = limits.subscribe(client.id, sink);
                 connections.set(ws, {
                     client,
                     gate,
@@ -271,6 +276,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                         unsubscribeFolders();
                         unsubscribeStatuses();
                         unsubscribeUsage();
+                        unsubscribeLimits();
                     }
                 });
             },
@@ -300,6 +306,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }
         }
     });
+
+    // The first read runs now, so a page opened straight after a start already has the plan on it.
+    limits.start();
 
     // Hooks and context always go over loopback, whatever interface the socket listens on.
     manager.hookUrl = `http://127.0.0.1:${server.port}${HOOKS_PATH}`;
@@ -333,6 +342,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         console.log(`ruimte server received ${signal}, writing snapshots`);
         snapshotSchedule.stop();
         usage.stop();
+        limits.stop();
         // Before anything is awaited: a `bun --watch` reload restarts the module during the first
         // await, so a turn in flight would otherwise never reach its file.
         chats.persistAllSync();

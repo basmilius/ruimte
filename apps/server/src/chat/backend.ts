@@ -1,4 +1,5 @@
 import type { ChatAttachment, ChatFileChange, ChatQuestion, ChatSkill, ChatSubagentUsage, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type { LimitsUpdate } from '../usage/limits/normalize.ts';
 
 /*
  * The seam between one chat and one CLI. A backend owns a process and the protocol it speaks; it
@@ -73,6 +74,8 @@ export type BackendEvent =
     // Its summary is what the CLI says came of it, and what a turn the CLI opens on its own is about.
     | { type: 'task.done'; ref: string | null; summary: string | null; ok: boolean; usage?: ChatSubagentUsage | null; outputFile?: string | null }
     | { type: 'usage'; contextTokens?: number; contextWindow?: number }
+    // What the CLI said in passing about the plan it runs on; it belongs to the machine, not the chat.
+    | { type: 'limits'; update: LimitsUpdate }
     | { type: 'compaction'; preTokens: number | null }
     | { type: 'model'; model: string }
     | { type: 'note'; level: 'info' | 'warning' | 'error'; text: string }
