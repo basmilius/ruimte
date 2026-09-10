@@ -38,6 +38,11 @@ export const newTerminalView = (): string =>
 
 export const newSeparatorView = (): string => useDocument.getState().addSeparatorView();
 
+export const newDrawingView = (): string => useDocument.getState().addDrawingView(freeName(useDocument.getState().views, 'Drawing'));
+
+/* Copies a canvas or a drawing view. A drawing's elements are copied by the daemon, not here. */
+export const duplicateViewOf = (id: string): string | null => useDocument.getState().duplicateView(id);
+
 /* The nth view, one-based, for Cmd+1 through Cmd+9. Separators are lines, so they are not counted. */
 export const viewAtIndex = (index: number): ProjectView | undefined => useDocument.getState().views.filter(isOpenableView)[index - 1];
 

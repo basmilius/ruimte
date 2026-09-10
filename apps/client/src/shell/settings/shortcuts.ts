@@ -46,6 +46,32 @@ export const CANVAS_SHORTCUTS: readonly ShortcutGroup[] = [
         ]
     },
     {
+        /*
+         * The one place a bare letter is a chord: a drawing has the keyboard the way a terminal has
+         * it, and the tools are the letters every sketching app uses. They never fire while a text
+         * is being edited or a dialog is up.
+         */
+        title: 'Drawing',
+        shortcuts: [
+            { keys: 'V', label: 'Select (1)' },
+            { keys: 'H', label: 'Pan (hand)' },
+            { keys: 'R', label: 'Rectangle (2)' },
+            { keys: 'D', label: 'Diamond (3)' },
+            { keys: 'O', label: 'Ellipse (4)' },
+            { keys: 'A', label: 'Arrow (5)' },
+            { keys: 'L', label: 'Line (6)' },
+            { keys: 'P', label: 'Freehand (7)' },
+            { keys: 'T', label: 'Text (8)' },
+            { keys: 'E', label: 'Eraser (0)' },
+            { keys: 'Q', label: 'Keep the tool after a shape' },
+            { keys: '⇧ ⌘ L', label: 'Lock or unlock the selection' },
+            { keys: '⌘ D', label: 'Duplicate the selection' },
+            { keys: '⌘ ]', label: 'Bring to front' },
+            { keys: '⌘ [', label: 'Send to back' },
+            { keys: '⌘ drag', label: 'Invert the grid snapping setting' }
+        ]
+    },
+    {
         title: 'Panels',
         shortcuts: [{ keys: '⌘ ⌥ B', label: 'Toggle the panel that was open last' }]
     },

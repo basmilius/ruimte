@@ -35,6 +35,8 @@ export interface Settings {
     diffLayout: 'stacked' | 'split';
     /* Whether a diff counts and shows changes that are whitespace alone. */
     diffWhitespace: boolean;
+    /* Whether a drawing snaps to the canvas grid while you draw. Cmd inverts it for one gesture. */
+    drawingSnap: boolean;
 }
 
 interface SettingsStore extends Settings {
@@ -52,7 +54,8 @@ const DEFAULT_SETTINGS: Settings = {
     filesShowHidden: false,
     gitTree: true,
     diffLayout: 'stacked',
-    diffWhitespace: true
+    diffWhitespace: true,
+    drawingSnap: false
 };
 
 // Rounded as well as clamped: the stepper used to move in halves, so a browser can still hand back
@@ -107,7 +110,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
         ...initial,
         version: 0,
         update(patch) {
-            const { accent, font, fontSize, interfaceFontSize, filesTabLimit, filesShowHidden, gitTree, diffLayout, diffWhitespace } = get();
+            const { accent, font, fontSize, interfaceFontSize, filesTabLimit, filesShowHidden, gitTree, diffLayout, diffWhitespace, drawingSnap } = get();
             const next: Settings = {
                 accent,
                 font,
@@ -118,6 +121,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 gitTree,
                 diffLayout,
                 diffWhitespace,
+                drawingSnap,
                 ...patch
             };
             next.fontSize = clampSize(next.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize);

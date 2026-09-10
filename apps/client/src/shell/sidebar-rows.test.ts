@@ -8,6 +8,8 @@ const view = (id: string, nodes: SidebarNode[] = []): SidebarView => ({ id, name
 
 const separator = (id: string): SidebarView => ({ id, name: '', kind: 'separator', provider: null, nodes: [], self: null });
 
+const drawing = (id: string): SidebarView => ({ id, name: id, kind: 'drawing', provider: null, nodes: [], self: null });
+
 const standalone = (id: string, status: AgentStatus | null = null): SidebarView => ({
     id,
     name: id,
@@ -112,5 +114,13 @@ describe('rowAfterArrow', () => {
 
     test('has nowhere to go in an empty list', () => {
         expect(rowAfterArrow([], null, 1)).toBeNull();
+    });
+});
+
+describe('a drawing row', () => {
+    test('it folds open on nothing and carries no status: a drawing is a file, not a session', () => {
+        const [list] = build([drawing('sketch')], 'sketch', ['sketch']);
+        expect(list!.rows).toHaveLength(1);
+        expect(list!.rows[0]).toMatchObject({ type: 'view', expandable: false, expanded: false, status: null, draft: false, count: 0, active: true });
     });
 });
