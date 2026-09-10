@@ -124,6 +124,15 @@ describe('stashing', () => {
         await act({ kind: 'stash-pop' });
         expect((await readStatus(repo)).files).toHaveLength(1);
     });
+
+    test('the stash list names what can be popped', async () => {
+        await write('one.txt', 'changed\n');
+        await act({ kind: 'stash', subject: 'later' });
+        const { stashes } = await listRefs(repo);
+
+        expect(stashes[0]?.ref).toBe('stash@{0}');
+        expect(stashes[0]?.message).toContain('later');
+    });
 });
 
 describe('committing', () => {
