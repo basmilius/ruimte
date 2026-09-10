@@ -37,6 +37,8 @@ export interface Settings {
     diffWhitespace: boolean;
     /* Whether a drawing snaps to the canvas grid while you draw. Cmd inverts it for one gesture. */
     drawingSnap: boolean;
+    /* Whether the dock of a canvas or a drawing waits below the edge until the pointer comes near. */
+    dockAutoHide: boolean;
 }
 
 interface SettingsStore extends Settings {
@@ -55,7 +57,8 @@ const DEFAULT_SETTINGS: Settings = {
     gitTree: true,
     diffLayout: 'stacked',
     diffWhitespace: true,
-    drawingSnap: false
+    drawingSnap: false,
+    dockAutoHide: false
 };
 
 // Rounded as well as clamped: the stepper used to move in halves, so a browser can still hand back
@@ -110,7 +113,19 @@ export const useSettings = create<SettingsStore>((set, get) => {
         ...initial,
         version: 0,
         update(patch) {
-            const { accent, font, fontSize, interfaceFontSize, filesTabLimit, filesShowHidden, gitTree, diffLayout, diffWhitespace, drawingSnap } = get();
+            const {
+                accent,
+                font,
+                fontSize,
+                interfaceFontSize,
+                filesTabLimit,
+                filesShowHidden,
+                gitTree,
+                diffLayout,
+                diffWhitespace,
+                drawingSnap,
+                dockAutoHide
+            } = get();
             const next: Settings = {
                 accent,
                 font,
@@ -122,6 +137,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 diffLayout,
                 diffWhitespace,
                 drawingSnap,
+                dockAutoHide,
                 ...patch
             };
             next.fontSize = clampSize(next.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize);
