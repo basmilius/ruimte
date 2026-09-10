@@ -1,12 +1,16 @@
 {
   "version": 2,
-  "rev": 195,
+  "rev": 223,
   "name": "Ruimte",
   "color": "#7c74ff",
   "views": [
     {
       "id": "main",
       "name": "Feature: Views",
+      "icon": {
+        "kind": "lucide",
+        "value": "layers"
+      },
       "kind": "canvas",
       "nodes": [
         {
@@ -26,13 +30,17 @@
     {
       "id": "view-kj5769w6",
       "name": "Feature: Usage",
+      "icon": {
+        "kind": "lucide",
+        "value": "leaf"
+      },
       "kind": "canvas",
       "nodes": [
         {
-          "id": "terminal-0ed3r0kp",
+          "id": "terminal-nzh4pcth",
           "kind": "terminal",
           "title": "Claude Code",
-          "x": -1984,
+          "x": -1408,
           "y": -1072,
           "w": 560,
           "h": 360,
@@ -40,10 +48,10 @@
           "runtimeMode": "full-access"
         },
         {
-          "id": "terminal-nzh4pcth",
+          "id": "terminal-0ed3r0kp",
           "kind": "terminal",
           "title": "Claude Code",
-          "x": -1408,
+          "x": -1984,
           "y": -1072,
           "w": 560,
           "h": 360,
@@ -89,6 +97,25 @@
         "provider": "claude",
         "providerFixed": true
       }
+    },
+    {
+      "id": "chat-ebbonqyi",
+      "name": "Uitzoekwerk. maak aan het eind met $html-report…",
+      "kind": "chat",
+      "node": {
+        "provider": "claude",
+        "providerFixed": true
+      }
+    },
+    {
+      "kind": "separator",
+      "id": "separator-gafny9em"
+    },
+    {
+      "id": "view-mnech8qu",
+      "name": "Tekening",
+      "titleSource": "user",
+      "kind": "drawing"
     }
   ]
 }
