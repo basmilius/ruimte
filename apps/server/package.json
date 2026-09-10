@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@ruimte/contracts": "workspace:*",
+    "@ruimte/drawing": "workspace:*",
     "@xterm/addon-serialize": "^0.14.0",
     "@xterm/headless": "^6.0.0",
     "zod": "^4.5.4"

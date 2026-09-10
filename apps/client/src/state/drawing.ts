@@ -76,6 +76,8 @@ interface DrawingState {
     /* Counts changes to the elements, which is what the client saves on. */
     edits: number;
     loading: boolean;
+    /* No camera was stored for this drawing, so it still has to be fitted once there is a viewport. */
+    fitPending: boolean;
     conflict: DrawingDocument | null;
     error: string | null;
     past: DrawingElement[][];
@@ -211,6 +213,7 @@ export const useDrawing = create<DrawingState>((set, get) => ({
     dirty: false,
     edits: 0,
     loading: false,
+    fitPending: false,
     conflict: null,
     error: null,
     past: [],
@@ -232,6 +235,7 @@ export const useDrawing = create<DrawingState>((set, get) => ({
             editingTextId: null,
             past: [],
             future: [],
+            fitPending: !local?.camera,
             ...(local?.camera ? { camera: local.camera } : {})
         });
         set({ loading: false });
@@ -289,10 +293,11 @@ export const useDrawing = create<DrawingState>((set, get) => ({
     },
     fitAll() {
         const { elements, viewport } = get();
-        const bounds = boundsOf(elements);
-        if (bounds && viewport.w > 0) {
-            set({ camera: cameraToFit(bounds, viewport) });
+        if (viewport.w === 0) {
+            return;
         }
+        const bounds = boundsOf(elements);
+        set({ fitPending: false, ...(bounds ? { camera: cameraToFit(bounds, viewport) } : {}) });
     },
     zoomToSelection() {
         const { elements, selection, viewport } = get();
