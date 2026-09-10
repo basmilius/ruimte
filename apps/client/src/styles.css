@@ -435,11 +435,20 @@ body {
 
     .chat-composer-drop { border-color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 60%, var(--surface-raised)); }
 
-    /* An `@file` mention drawn as a chip inside running text; no horizontal padding so the chip layer keeps the textarea's wrapping. */
+    /*
+     * An `@file` or `$skill` token drawn as a pill inside running text. In the composer the pill is
+     * painted on a layer behind the textarea, so its horizontal padding is handed straight back as a
+     * negative margin: the advance width stays the text's own and every chip keeps sitting on its
+     * own characters. Vertical padding on an inline box never changes the line height, so that side
+     * needs no compensation, and the ring is inset for the same reason.
+     */
     .mention-chip, .skill-chip {
-        border-radius: 4px;
+        padding: 2px 3px;
+        margin: 0 -3px;
+        border-radius: 5px;
+        font-weight: 500;
         background: var(--accent-soft);
-        box-shadow: 0 0 0 1px var(--accent-soft);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
         color: var(--accent);
         box-decoration-break: clone;
         -webkit-box-decoration-break: clone;
@@ -448,8 +457,24 @@ body {
     /* A skill is the same token shape as a file mention, in its own hue. */
     .skill-chip {
         background: var(--skill-soft);
-        box-shadow: 0 0 0 1px var(--skill-soft);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--skill) 25%, transparent);
         color: var(--skill);
+    }
+
+    /* The same pill in the transcript, where nothing has to line up with a textarea: a real inline
+       box a shade smaller than the text around it, with the icon in place of the sigil. */
+    .chat-chip {
+        display: inline-flex;
+        max-width: 100%;
+        height: 17px;
+        align-items: center;
+        gap: 4px;
+        margin: 0;
+        padding: 0 6px;
+        border-radius: 6px;
+        font-size: 12px;
+        line-height: 1;
+        vertical-align: -2px;
     }
 
     /* A folded user prompt fades out at the bottom instead of cutting a line in half. */
