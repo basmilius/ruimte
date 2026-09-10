@@ -25,8 +25,9 @@ function Popup({ children, minWidth }: { children: React.ReactNode; minWidth?: s
 
 function RadioRow({ value, label, hint, badge }: { value: string; label: string; hint?: string; badge?: string }) {
     return (
-        <Menu.RadioItem value={value} className="menu-item">
-            <span className="grid h-4 w-4 place-items-center">
+        <Menu.RadioItem value={value} className={clsx('menu-item', hint && 'items-start')}>
+            {/* A hint makes the row two lines high; the 20 pixel box keeps the check on the label's line. */}
+            <span className="grid h-5 w-4 shrink-0 place-items-center">
                 <Menu.RadioItemIndicator>
                     <Icon icon={Check} size={14} />
                 </Menu.RadioItemIndicator>

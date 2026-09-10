@@ -45,15 +45,17 @@ const TRIGGER_VARIANT = {
     ghost: 'rounded-md text-text-muted hover:bg-surface-sunken hover:text-text data-[popup-open]:bg-surface-sunken data-[popup-open]:text-text'
 } as const;
 
+/* A description makes the row two lines high; the check and the icon then belong on the label's
+   line box, which the 20 pixel boxes around them give them. */
 function Row<T extends string>({ item }: { item: SelectItem<T> }) {
     return (
-        <BaseSelect.Item className="menu-item" value={item.value} label={item.label} disabled={item.disabled}>
-            <span className="grid h-4 w-4 shrink-0 place-items-center">
+        <BaseSelect.Item className={clsx('menu-item', item.description && 'items-start')} value={item.value} label={item.label} disabled={item.disabled}>
+            <span className="grid h-5 w-4 shrink-0 place-items-center">
                 <BaseSelect.ItemIndicator>
                     <Icon icon={Check} size={14} />
                 </BaseSelect.ItemIndicator>
             </span>
-            {item.icon}
+            {item.icon && <span className="flex h-5 shrink-0 items-center">{item.icon}</span>}
             <span className="flex min-w-0 flex-col">
                 <BaseSelect.ItemText>{item.label}</BaseSelect.ItemText>
                 {item.description && <span className="text-xs text-text-faint">{item.description}</span>}
