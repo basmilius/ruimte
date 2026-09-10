@@ -4,7 +4,7 @@ import type { FsReadText } from '@ruimte/contracts';
 import { Markdown } from '@/chat/ui/Markdown';
 import { CodeFile } from '@/shell/panels/CodeFile';
 import { FileScroll } from '@/shell/panels/FileScroll';
-import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
+import { DisabledWrapToggle, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 
 type MarkdownView = 'preview' | 'source';
 
@@ -26,7 +26,10 @@ export function MarkdownFile({ name, read }: { name: string; read: FsReadText })
     }
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
-            <FileToolbar>{toggle}</FileToolbar>
+            <FileToolbar>
+                {toggle}
+                <DisabledWrapToggle />
+            </FileToolbar>
             <FileScroll className="px-4 py-3">
                 <Markdown text={read.text} />
             </FileScroll>

@@ -234,7 +234,22 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   position lives through a save.
   Markdown (`.md`, `.mdx`, `.markdown`) is the chat's own `Markdown` component with a Preview and
   Source switch in the viewer's toolbar; Source is the code view, and both share one toolbar so the
-  switch does not move when it is used. Code is shiki through a dynamic import of the full bundle
+  switch does not move when it is used.
+  HTML (`.html`, `.htm`) has the same switch (`shell/panels/HtmlFile.tsx`). Preview loads the file as
+  a `file://` URL (`localFileUrl`, every segment percent-encoded, tested) in a `<webview>` of the
+  panel's own, so the stylesheet and the images next to it resolve the way they do from Finder. That
+  webview stays out of the browser registry: it belongs to the tab, is made once, goes with it, stays
+  in the tree while the source is up (switching back keeps the page) and reloads on an `fs.changed`
+  under the file's folder. It runs in the `preview` partition, in memory and apart from the one the
+  browser nodes share, sandboxed and without node integration, and the shell cancels every request
+  out of that partition that is not `file:`, `data:`, `blob:` or `about:` (`sealPreviewSession` in
+  `apps/desktop/src/main.ts`), because the daemon asks a loopback caller for no token and a script in
+  a previewed page must not be able to reach its routes. A thin progress line runs while it loads and
+  a failed load is an `EmptyState` with "Try again". A `file://` path only means something while the
+  daemon runs on this machine, so a non-loopback endpoint shows the source with the line "Preview
+  needs the file on this machine"; in a browser tab Preview is inert with the tooltip "Preview needs
+  the desktop app", and streaming a page to a browser tab from the daemon is still open.
+  Code is shiki through a dynamic import of the full bundle
   (`shell/panels/highlight.ts`), not the chat's web one, because a folder holds Go and TOML as
   readily as TypeScript; the language comes from the daemon and falls back to plain text.
   A file is cut into blocks of 400 lines, each of which reserves its height (20 px a line), draws
@@ -242,7 +257,8 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   version, so a 2 MB file paints at once and never blocks. Line numbers are a CSS counter each
   block starts at its own offset, which is what keeps the blocks independent; a shiki transformer
   drops the newline it puts between line spans, so the lines can be blocks. Wrap is an icon button
-  in the toolbar, per viewer session, nothing stored.
+  in the toolbar, per viewer session, nothing stored; it is drawn in every view and inert outside
+  the source, so the switch next to it never moves.
   Images (PNG, JPEG, GIF, WebP, SVG) are an `<img>` on `GET /fs/file` (`shell/panels/file-url.ts`,
   the endpoint's token the way the project icon carries it), on a plain sunken surface with a Fit
   and 1:1 switch and a footer with the dimensions, the size and the mime. Everything else, a PDF or
