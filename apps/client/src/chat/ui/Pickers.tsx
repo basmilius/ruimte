@@ -16,7 +16,7 @@ const triggerClass =
 function Popup({ children, minWidth }: { children: React.ReactNode; minWidth?: string }) {
     return (
         <Menu.Portal>
-            <Menu.Positioner className="z-50" side="top" sideOffset={8} align="start">
+            <Menu.Positioner className="popup-layer" side="top" sideOffset={8} align="start">
                 <Menu.Popup className={clsx('menu-popup', minWidth)}>{children}</Menu.Popup>
             </Menu.Positioner>
         </Menu.Portal>
@@ -140,7 +140,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                 </Popover.Trigger>
             </Tooltip>
             <Popover.Portal>
-                <Popover.Positioner className="z-50" side="top" sideOffset={8} align="start">
+                <Popover.Positioner className="popup-layer" side="top" sideOffset={8} align="start">
                     <Popover.Popup className="picker-popup" initialFocus={inputRef}>
                         <div className="flex items-center gap-2 border-b border-border px-2.5">
                             <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />

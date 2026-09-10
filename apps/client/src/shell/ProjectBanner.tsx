@@ -1,9 +1,8 @@
 import { CircleAlert, GitBranch } from 'lucide-react';
 import { projectClient } from '@/project';
 import { useProject } from '@/state/project';
+import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
-
-const buttonClass = 'inline-flex h-7 items-center rounded-md px-2.5 text-xs font-medium';
 
 /* Floats at the top of the canvas, under the toolbar, when the file changed under unsaved edits or a save failed. */
 export function ProjectBanner() {
@@ -13,32 +12,26 @@ export function ProjectBanner() {
         return null;
     }
     return (
-        <div className="pointer-events-auto absolute inset-x-0 top-3 z-20 flex justify-center px-4">
+        <div className="pointer-events-auto absolute inset-x-0 top-3 z-20 flex justify-center px-4" role="status" aria-live="polite">
             <div className="float flex max-w-[640px] items-center gap-3 rounded-lg px-3 py-2 text-xs text-text">
                 {conflict ? (
                     <>
                         <Icon icon={GitBranch} size={12} className="shrink-0 text-status-needs-you" />
                         <span className="grow">The canvas changed on disk while you had unsaved edits.</span>
-                        <button
-                            className={`${buttonClass} text-text-muted hover:bg-surface-sunken hover:text-text`}
-                            onClick={() => void projectClient.resolveConflict('theirs')}
-                        >
+                        <Button size="sm" onClick={() => void projectClient.resolveConflict('theirs')}>
                             Take the file
-                        </button>
-                        <button className={`${buttonClass} bg-accent text-accent-text`} onClick={() => void projectClient.resolveConflict('mine')}>
+                        </Button>
+                        <Button size="sm" variant="primary" onClick={() => void projectClient.resolveConflict('mine')}>
                             Keep mine
-                        </button>
+                        </Button>
                     </>
                 ) : (
                     <>
                         <Icon icon={CircleAlert} size={12} className="shrink-0 text-status-error" />
                         <span className="grow">{error}</span>
-                        <button
-                            className={`${buttonClass} text-text-muted hover:bg-surface-sunken hover:text-text`}
-                            onClick={() => useProject.getState().setError(null)}
-                        >
+                        <Button size="sm" onClick={() => useProject.getState().setError(null)}>
                             Dismiss
-                        </button>
+                        </Button>
                     </>
                 )}
             </div>

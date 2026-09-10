@@ -9,13 +9,10 @@ import { fileManagerName, useServer } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
 import { desktop } from '@/desktop/bridge';
+import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 
 type DialogKind = { kind: 'new' } | { kind: 'delete'; projectId: string; name: string; folder: string | null } | null;
-
-const fieldClass =
-    'h-9 w-full rounded-lg border border-border bg-surface px-2.5 text-sm text-text outline-none placeholder:text-text-faint focus:border-accent';
-const buttonClass = 'inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-medium';
 
 /* The project segment of the toolbar's breadcrumb: every known canvas, plus the ways to make, open, close and delete one. */
 export function ProjectMenu() {
@@ -77,7 +74,7 @@ export function ProjectMenu() {
                     <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
                 </Menu.Trigger>
                 <Menu.Portal>
-                    <Menu.Positioner className="z-50" side="bottom" sideOffset={6} align="start">
+                    <Menu.Positioner className="popup-layer" side="bottom" sideOffset={6} align="start">
                         <Menu.Popup className="menu-popup min-w-60">
                             {projects.length > 0 && <div className="menu-label">Projects</div>}
                             {projects.map((project) => (
@@ -115,7 +112,7 @@ export function ProjectMenu() {
                                     )}
                                     <Menu.Item className="menu-item" onClick={() => void projectClient.closeProject()}>
                                         <Icon icon={X} size={14} /> Close project
-                                        <span className="ml-auto text-xs text-text-faint">Sessions keep running</span>
+                                        <span className="menu-hint">Sessions keep running</span>
                                     </Menu.Item>
                                     <Menu.Item
                                         className="menu-item text-status-error"
@@ -142,7 +139,8 @@ export function ProjectMenu() {
                                 </p>
                                 <input
                                     autoFocus
-                                    className={clsx(fieldClass, 'mt-3')}
+                                    className="field mt-3"
+                                    aria-label="Canvas name"
                                     placeholder="Name"
                                     value={value}
                                     onChange={(e) => setValue(e.target.value)}
@@ -167,21 +165,15 @@ export function ProjectMenu() {
                         )}
                         {failure && <p className="mt-2 text-xs text-status-error">{failure}</p>}
                         <div className="mt-4 flex items-center justify-end gap-2">
-                            <button className={clsx(buttonClass, 'text-text-muted hover:bg-surface-sunken hover:text-text')} onClick={() => setDialog(null)}>
-                                Cancel
-                            </button>
+                            <Button onClick={() => setDialog(null)}>Cancel</Button>
                             {dialog?.kind === 'delete' ? (
-                                <button
-                                    className={clsx(buttonClass, 'bg-status-error text-accent-text disabled:opacity-50')}
-                                    disabled={busy}
-                                    onClick={() => void run(() => projectClient.deleteProject(dialog.projectId, true))}
-                                >
+                                <Button variant="danger" disabled={busy} onClick={() => void run(() => projectClient.deleteProject(dialog.projectId, true))}>
                                     <Icon icon={Trash} size={12} /> Delete
-                                </button>
+                                </Button>
                             ) : (
-                                <button className={clsx(buttonClass, 'bg-accent text-accent-text disabled:opacity-50')} disabled={busy} onClick={submit}>
+                                <Button variant="primary" disabled={busy} onClick={submit}>
                                     Create
-                                </button>
+                                </Button>
                             )}
                         </div>
                     </Dialog.Popup>

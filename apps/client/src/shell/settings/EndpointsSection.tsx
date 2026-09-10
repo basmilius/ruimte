@@ -7,10 +7,9 @@ import { activateEndpoint, listPairedClients, pairEndpoint, requestPairingUrl, r
 import { useEndpoints, LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { useServer } from '@/state/server';
 import { transport } from '@/transport';
+import { Button } from '@/ui/Button';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
-
-const buttonClass = 'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3 text-xs font-medium disabled:opacity-50';
 
 const ago = (timestamp: number): string => {
     const seconds = Math.max(0, Math.round((Date.now() - timestamp) / 1000));
@@ -112,21 +111,17 @@ function PairedClients() {
                 <span className="text-xs text-text-muted">Paired clients</span>
                 <span className="grow" />
                 {reachability === 'loopback' && (
-                    <button
-                        className={clsx(buttonClass, 'h-7 border border-border text-text-muted hover:bg-surface-sunken hover:text-text')}
-                        disabled={busy}
-                        onClick={() => void showLink()}
-                    >
+                    <Button size="sm" variant="secondary" disabled={busy} onClick={() => void showLink()}>
                         <Icon icon={Link2} size={12} /> Show pairing link
-                    </button>
+                    </Button>
                 )}
             </div>
             {link && (
                 <div className="flex flex-col gap-1.5 rounded-lg border border-border bg-surface-sunken p-2.5">
                     <div className="flex items-center gap-2">
                         <code className="min-w-0 grow truncate font-mono text-code text-text select-text">{link}</code>
-                        <Tooltip label={copied ? 'Copied' : 'Copy link'}>
-                            <button className="icon-btn h-7 w-7 shrink-0" aria-label="Copy pairing link" onClick={copyLink}>
+                        <Tooltip label={copied ? 'Copied' : 'Copy pairing link'} name>
+                            <button className="icon-btn h-7 w-7 shrink-0" onClick={copyLink}>
                                 {copied ? <Icon icon={Check} size={16} /> : <Icon icon={Copy} size={16} />}
                             </button>
                         </Tooltip>
@@ -169,12 +164,10 @@ function PairedClients() {
                                 : 'That client loses access to this daemon at its next connection. Pairing again needs a fresh link.'}
                         </p>
                         <div className="mt-4 flex items-center justify-end gap-2">
-                            <button className={clsx(buttonClass, 'text-text-muted hover:bg-surface-sunken hover:text-text')} onClick={() => setTarget(null)}>
-                                Cancel
-                            </button>
-                            <button className={clsx(buttonClass, 'bg-status-error text-accent-text')} disabled={busy} onClick={() => void revoke()}>
+                            <Button onClick={() => setTarget(null)}>Cancel</Button>
+                            <Button variant="danger" disabled={busy} onClick={() => void revoke()}>
                                 <Icon icon={Trash} size={12} /> Revoke
-                            </button>
+                            </Button>
                         </div>
                     </Dialog.Popup>
                 </Dialog.Portal>
@@ -207,35 +200,51 @@ export function EndpointsSection() {
 
     return (
         <div className="flex flex-col gap-2">
-            {endpoints.map((endpoint) => (
-                <div
-                    key={endpoint.id}
-                    className={clsx(
-                        'flex items-center gap-2 rounded-lg border px-2.5 py-2',
-                        endpoint.id === activeId ? 'border-accent bg-accent-soft' : 'border-border'
-                    )}
-                >
-                    <Icon icon={Server} size={14} className="shrink-0 text-text-muted" />
-                    <button className="flex min-w-0 grow flex-col text-left" onClick={() => void activateEndpoint(endpoint.id)}>
-                        <span className="truncate text-sm text-text">{endpoint.label}</span>
-                        <span className="truncate font-mono text-xs text-text-faint">
-                            {endpoint.id === LOCAL_ENDPOINT_ID ? 'loopback' : endpoint.httpBaseUrl}
-                        </span>
-                    </button>
-                    {endpoint.id === activeId && <Icon icon={Check} size={14} className="shrink-0 text-accent" />}
-                    {endpoint.id !== LOCAL_ENDPOINT_ID && (
-                        <Tooltip label="Forget this machine">
-                            <button className="icon-btn h-7 w-7" aria-label="Forget this machine" onClick={() => useEndpoints.getState().remove(endpoint.id)}>
-                                <Icon icon={Trash} size={16} />
-                            </button>
-                        </Tooltip>
-                    )}
-                </div>
-            ))}
+            {/* One daemon is active at a time, so the list is a set of radios; forgetting a machine is
+                something else and sits beside the radio, not inside it. */}
+            <div className="flex flex-col gap-2" role="radiogroup" aria-label="Machines this client talks to">
+                {endpoints.map((endpoint) => (
+                    <div
+                        key={endpoint.id}
+                        className={clsx(
+                            'flex items-center gap-2 rounded-lg border px-2.5 py-2',
+                            endpoint.id === activeId ? 'border-accent bg-accent-soft' : 'border-border'
+                        )}
+                    >
+                        <button
+                            role="radio"
+                            aria-checked={endpoint.id === activeId}
+                            className="flex min-w-0 grow items-center gap-2 text-left"
+                            onClick={() => void activateEndpoint(endpoint.id)}
+                        >
+                            <Icon icon={Server} size={14} className="shrink-0 text-text-muted" />
+                            <span className="flex min-w-0 grow flex-col">
+                                <span className="truncate text-sm text-text">{endpoint.label}</span>
+                                <span className="truncate font-mono text-xs text-text-faint">
+                                    {endpoint.id === LOCAL_ENDPOINT_ID ? 'loopback' : endpoint.httpBaseUrl}
+                                </span>
+                            </span>
+                            {endpoint.id === activeId ? (
+                                <Icon icon={Check} size={14} className="shrink-0 text-accent" />
+                            ) : (
+                                <span className="shrink-0 text-xs text-text-muted">Switch</span>
+                            )}
+                        </button>
+                        {endpoint.id !== LOCAL_ENDPOINT_ID && (
+                            <Tooltip label="Forget this machine" name>
+                                <button className="icon-btn h-7 w-7" onClick={() => useEndpoints.getState().remove(endpoint.id)}>
+                                    <Icon icon={Trash} size={16} />
+                                </button>
+                            </Tooltip>
+                        )}
+                    </div>
+                ))}
+            </div>
             <PairedClients key={activeId} />
             <div className="flex items-center gap-2">
                 <input
-                    className="h-8 min-w-0 grow rounded-lg border border-border bg-surface px-2.5 font-mono text-code text-text outline-none placeholder:text-text-faint focus:border-accent"
+                    className="field min-w-0 grow font-mono text-code"
+                    aria-label="Pairing link"
                     placeholder="http://machine:4210/pair#token"
                     value={link}
                     spellCheck={false}
@@ -247,9 +256,9 @@ export function EndpointsSection() {
                         }
                     }}
                 />
-                <button className={clsx(buttonClass, 'bg-accent text-accent-text')} disabled={busy || !link.trim()} onClick={() => void pair()}>
+                <Button variant="primary" disabled={busy || !link.trim()} onClick={() => void pair()}>
                     <Icon icon={Link2} size={12} /> Pair
-                </button>
+                </Button>
             </div>
             <p className="text-xs text-text-faint">Paste the link from "Show pairing link" or from `ruimte pair` on the other machine.</p>
             {failure && <p className="text-xs text-status-error">{failure}</p>}

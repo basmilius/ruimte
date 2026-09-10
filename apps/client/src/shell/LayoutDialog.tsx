@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { useCanvas } from '@/state/canvas';
 import { useUi } from '@/state/ui';
+import { Button } from '@/ui/Button';
 
 /* Names an arrangement of the canvas so it can be brought back later from the dock or the palette. */
 export function LayoutDialog() {
@@ -28,7 +29,8 @@ export function LayoutDialog() {
                     <p className="mt-1 text-xs text-text-muted">Where every node and text sits right now, under a name you can apply later.</p>
                     <input
                         autoFocus
-                        className="mt-3 h-9 w-full rounded-lg border border-border bg-surface px-2.5 text-sm text-text outline-none placeholder:text-text-faint focus:border-accent"
+                        className="field mt-3"
+                        aria-label="Layout name"
                         placeholder="Name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
@@ -40,19 +42,10 @@ export function LayoutDialog() {
                         }}
                     />
                     <div className="mt-4 flex items-center justify-end gap-2">
-                        <button
-                            className="inline-flex h-8 items-center rounded-md px-3 text-xs font-medium text-text-muted hover:bg-surface-sunken hover:text-text"
-                            onClick={() => setOpen(false)}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            className="inline-flex h-8 items-center rounded-md bg-accent px-3 text-xs font-medium text-accent-text disabled:opacity-50"
-                            disabled={!name.trim()}
-                            onClick={submit}
-                        >
+                        <Button onClick={() => setOpen(false)}>Cancel</Button>
+                        <Button variant="primary" disabled={!name.trim()} onClick={submit}>
                             Save
-                        </button>
+                        </Button>
                     </div>
                 </Dialog.Popup>
             </Dialog.Portal>
