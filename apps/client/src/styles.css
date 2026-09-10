@@ -602,4 +602,58 @@ body {
         color: var(--text-faint);
     }
     .files-tab-close:hover { background: var(--surface-raised); color: var(--text); }
+
+    /* The viewer's own row under the tabs, for whatever the open file can be switched between. */
+    .file-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        height: 32px;
+        flex-shrink: 0;
+        padding: 0 8px;
+        border-bottom: 1px solid var(--border);
+    }
+    .file-footer {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        height: 28px;
+        flex-shrink: 0;
+        padding: 0 8px;
+        border-top: 1px solid var(--border);
+        color: var(--text-muted);
+        font-size: var(--text-xs);
+        line-height: var(--text-xs--line-height);
+    }
+
+    /* A file of code, drawn a chunk at a time. Every state of a chunk (reserved, plain, highlighted)
+       draws the same line box, so nothing below it shifts while shiki catches up. The line number is
+       a counter each chunk starts at its own offset, which is what keeps the chunks independent. */
+    .file-code { background: var(--term-bg); }
+    .file-code pre {
+        margin: 0;
+        background: transparent !important;
+        font-family: var(--font-mono);
+        font-size: var(--text-code);
+        line-height: var(--text-code--line-height);
+        white-space: pre;
+    }
+    .file-code code { display: block; font-family: inherit; }
+    .file-code .line {
+        display: block;
+        position: relative;
+        min-height: var(--text-code--line-height);
+        padding: 0 16px 0 64px;
+    }
+    .file-code .line::before {
+        counter-increment: line;
+        content: counter(line);
+        position: absolute;
+        left: 0;
+        width: 48px;
+        text-align: right;
+        color: var(--text-faint);
+        user-select: none;
+    }
+    .file-code[data-wrap="true"] pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 }
