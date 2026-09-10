@@ -159,7 +159,7 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   region. Left is the breadcrumb: the machine when the daemon is not loopback, the
   `ProjectMenu` as a ghost button (it left the sidebar), "Canvas" and the unsaved dot; the
   floating chip over the canvas is gone and `ProjectBanner` now floats under the bar. Right is
-  the `ConnectionDot` and `shell/PanelControls.tsx`, the `.btn-group` of Preview, Files and Git
+  the `ConnectionDot` and `shell/PanelControls.tsx`, the button group of Preview, Files and Git
   over `useUi.panel` and `useUi.preview` (machine state, never in `project.json`). The preview
   toggle is only there while a file is open, because with no tabs there is nothing to show.
   `<main>` is a row of the canvas column, `shell/PreviewPanel.tsx` and `shell/Panel.tsx`, so both
@@ -238,7 +238,7 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   pills (the first thing to go when the panel is narrow) and the primary button, which says "Push"
   or "Publish branch" when the branch has no upstream and is disabled with the reason in its
   tooltip when there is nothing to push (`shell/panels/git-actions.ts`, pure and tested). The 40px
-  row under it is the same `.file-toolbar` the preview panel uses: Expand all and Collapse all over
+  row under it is the same `FILE_TOOLBAR` the preview panel uses: Expand all and Collapse all over
   every folder of every group at once, a refresh, and the overflow menu with Pull, Push, Sync,
   Fetch, Force Push (`--force-with-lease`, behind a confirm), Merge Branch, Rebase onto, Rename
   Branch, Delete Branch (a pick, a confirm, and a second confirm when git says the branch is not
@@ -599,20 +599,31 @@ canvas, against Ruimte, one verdict each.
   later settings phase; until then the Keyboard section only lists them.
 - Never highlight the canvas grid in the accent color. The dots stay neutral in every state.
 - Icon buttons get equal padding on every side. Buttons that belong together sit in a
-  `.btn-group` with 1px gaps; groups keep the wider gap of their container.
+  `BTN_GROUP` with 1px gaps; groups keep the wider gap of their container.
 - The shared components in `src/ui/` are `Icon`, `Brand`, `Tooltip`, `Select`, `Button`
   (primary, secondary, ghost, danger; 28 and 32 pixels), `Pill` (the rounded label in a node
   header) and `EmptyState` (icon, one sentence, one action). A node's own "connecting" or
   "failed" card is `canvas/nodes/NodeNotice.tsx`. Every text input is `.field` in `styles.css`,
-  one height and one focus ring; `.section-label` is the uppercase label outside a popup and
-  `.menu-hint` the trailing hint inside one, with `<kbd>` left for chords only.
-- The class rules in `styles.css` live in Tailwind's `components` layer. An unlayered rule beats
+  one height and one focus ring; `SECTION_LABEL` (`src/ui/classes.ts`) is the uppercase label
+  outside a popup and `MENU_HINT` the trailing hint inside one, with `<kbd>` left for chords only.
+- `styles.css` is the tokens, the themes and the rules a utility cannot write: Base UI's `data-*`
+  states shared by every menu, picker, dialog and tooltip, the `:not()` chain that keeps a node's
+  focus ring behind its focused and selected outlines, the panel shell's `[data-instant]` and
+  `[data-resizing]`, `[data-modality]`, `::selection`, the keyframes, and everything that styles
+  DOM the JSX never sees (xterm, shiki and its line-number counter, the `@pierre/diffs` and
+  `@pierre/trees` variable overrides, the file icon hues, the `<webview>` a preview is drawn in).
+  Every rule that was only a bundle of utilities moved to its call site, or to a class string next
+  to the component that uses it: `src/ui/classes.ts` (the glass card, the button group, the menu
+  and section labels, the chord), `src/shell/panels/classes.ts` (the file toolbar, the git rows,
+  the commit box) and `src/chat/ui/chips.ts` (the mention and skill pills). That took the
+  components layer from 157 rules to 92.
+- What is left in that layer stays in Tailwind's `components` layer. An unlayered rule beats
   every utility of the same specificity, so `icon-btn h-7 w-7` silently stayed 32 pixels and
   `menu-popup min-w-48` kept the wider default; inside the layer a call site's utility wins,
   which is what the heights in the code already claimed.
 - What floats over what is four numbers in `styles.css`: dialog backdrop 80, dialog 90,
-  `.popup-layer` 100 (every menu, select and popover positioner, so one opened inside a dialog
-  is not swallowed by it), tooltip 110.
+  `--z-popup` 100 (`z-[var(--z-popup)]` on every menu, select and popover positioner, so one
+  opened inside a dialog is not swallowed by it), tooltip 110.
 - An icon-only button gets its accessible name from its tooltip: `<Tooltip label="Close node"
   name>` puts the same string on `aria-label`, so the two can never drift apart.
 - Every icon is a Lucide icon drawn by the `Icon` component in `src/ui/Icon.tsx`
