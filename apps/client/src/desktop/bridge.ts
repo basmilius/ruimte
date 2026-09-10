@@ -22,8 +22,9 @@ export const isDesktop = (): boolean => desktop() !== null;
 /* True when the window chrome leaves room for the traffic lights, which only macOS does. */
 export const hasTrafficLights = (): boolean => desktop()?.platform === 'darwin';
 
-// Where macOS puts the traffic lights (see the shell), plus the gap the sidebar keeps after them.
-export const TRAFFIC_LIGHTS_INSET_PX = 76;
+/* The traffic lights end 64px in (12px from the edge, then three 12px buttons 8px apart, see the
+   shell), and the first control starts 20px after that, so the lights read as their own group. */
+export const TRAFFIC_LIGHTS_INSET_PX = 84;
 
 /* True on macOS, in the desktop app and in a browser tab alike. Chords differ there: Ctrl+B is
    readline's backward-char and tmux's prefix, while Cmd+B is free. */

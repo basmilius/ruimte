@@ -124,7 +124,7 @@ const OVERLAY_COLORS = { dark: { color: '#1b1b1f', symbolColor: '#ececf1' }, lig
 /* The client draws its own chrome. macOS keeps the traffic lights, inset into the sidebar; elsewhere the window controls overlay the toolbar's right end. */
 const titleBarOptions = (dark: boolean): Electron.BrowserWindowConstructorOptions =>
     process.platform === 'darwin'
-        ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 16, y: 18 } }
+        ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 12, y: 18 } }
         : { titleBarStyle: 'hidden', titleBarOverlay: { height: TITLEBAR_HEIGHT, ...OVERLAY_COLORS[dark ? 'dark' : 'light'] } };
 
 const createWindow = (): Electron.BrowserWindow => {

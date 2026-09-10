@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Globe, LayoutGrid, MessageSquare, Plus, Search, Settings, StickyNote, Terminal } from 'lucide-react';
+import { Globe, LayoutGrid, MessageSquare, Plus, Settings, StickyNote, Terminal } from 'lucide-react';
 import clsx from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
 import { useCanvas, type CanvasNode } from '@/state/canvas';
@@ -143,19 +143,13 @@ export function Sidebar() {
             style={{ width: open ? SIDEBAR_WIDTH_PX : 0 }}
         >
             <div className="flex h-full flex-col border-r border-border bg-surface" style={{ width: SIDEBAR_WIDTH_PX }}>
-                <div className="app-drag relative flex h-12 items-center gap-2 pr-3" style={{ paddingLeft: inset ?? STRIP_PADDING_PX }}>
+                <div className="app-drag relative flex h-12 items-center pr-3" style={{ paddingLeft: inset ?? STRIP_PADDING_PX }}>
                     <SidebarToggle />
                     {/* The brand centers in what the traffic lights leave of the strip, so the toggle
-                        and the search button beside it cannot pull it off center. */}
+                        beside it cannot pull it off center. */}
                     <span className="pointer-events-none absolute inset-y-0 right-0 grid place-items-center" style={{ left: inset ?? STRIP_PADDING_PX }}>
                         <Brand />
                     </span>
-                    <span className="grow" />
-                    <Tooltip label="Search" kbd="⌘K" name>
-                        <button className="icon-btn h-7 w-7" onClick={() => useUi.getState().setPaletteOpen(true)}>
-                            <Icon icon={Search} size={16} />
-                        </button>
-                    </Tooltip>
                 </div>
 
                 <div ref={listRef} className="mt-2 min-h-0 grow overflow-auto px-2">
