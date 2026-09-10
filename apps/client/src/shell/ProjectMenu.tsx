@@ -90,16 +90,24 @@ export function ProjectMenu() {
                             {projects.map((project) => (
                                 <Menu.Item
                                     key={project.projectId}
-                                    className={clsx('menu-item', !project.available && 'opacity-50')}
+                                    className={clsx('menu-item items-start', !project.available && 'opacity-50')}
                                     disabled={!project.available}
                                     onClick={() => void projectClient.openProject(project.projectId).catch(() => undefined)}
                                 >
-                                    <ProjectGlyph projectId={project.projectId} icon={project.icon} color={project.color} />
+                                    {/* The folder under the name makes this row two lines high, so the 20 pixel boxes
+                                        hold the glyph and the check on the name's line instead of between both lines. */}
+                                    <span className="flex h-5 shrink-0 items-center">
+                                        <ProjectGlyph projectId={project.projectId} icon={project.icon} color={project.color} />
+                                    </span>
                                     <span className="flex min-w-0 flex-col">
                                         <span className="truncate">{project.name}</span>
                                         <span className="truncate text-xs text-text-faint">{project.folder ?? 'Not in a folder'}</span>
                                     </span>
-                                    {project.projectId === current?.projectId && <Icon icon={Check} size={14} className="ml-auto" />}
+                                    {project.projectId === current?.projectId && (
+                                        <span className="ml-auto flex h-5 shrink-0 items-center">
+                                            <Icon icon={Check} size={14} />
+                                        </span>
+                                    )}
                                 </Menu.Item>
                             ))}
                             {projects.length > 0 && <Menu.Separator className="menu-separator" />}

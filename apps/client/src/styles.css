@@ -292,6 +292,9 @@ body {
         padding: 7px 10px;
         border-radius: 6px;
         font-size: var(--text-sm);
+        /* The type scale, not the 1.5 the reset inherits, so a row is a whole number of pixels tall
+           and a glyph next to a two-line label lands on a whole pixel too. */
+        line-height: var(--text-sm--line-height);
         color: var(--text);
         cursor: default;
         outline: none;

@@ -214,21 +214,27 @@ export function EndpointsSection() {
                         <button
                             role="radio"
                             aria-checked={endpoint.id === activeId}
-                            className="flex min-w-0 grow items-center gap-2 text-left"
+                            className="flex min-w-0 grow items-start gap-2 text-left"
                             onClick={() => void activateEndpoint(endpoint.id)}
                         >
-                            <Icon icon={Server} size={14} className="shrink-0 text-text-muted" />
+                            {/* The address under the label makes this row two lines high, so the 20 pixel
+                                boxes hold the icon and the trailing state on the label's line. */}
+                            <span className="flex h-5 shrink-0 items-center">
+                                <Icon icon={Server} size={14} className="text-text-muted" />
+                            </span>
                             <span className="flex min-w-0 grow flex-col">
                                 <span className="truncate text-sm text-text">{endpoint.label}</span>
                                 <span className="truncate font-mono text-xs text-text-faint">
                                     {endpoint.id === LOCAL_ENDPOINT_ID ? 'loopback' : endpoint.httpBaseUrl}
                                 </span>
                             </span>
-                            {endpoint.id === activeId ? (
-                                <Icon icon={Check} size={14} className="shrink-0 text-accent" />
-                            ) : (
-                                <span className="shrink-0 text-xs text-text-muted">Switch</span>
-                            )}
+                            <span className="flex h-5 shrink-0 items-center">
+                                {endpoint.id === activeId ? (
+                                    <Icon icon={Check} size={14} className="text-accent" />
+                                ) : (
+                                    <span className="text-xs text-text-muted">Switch</span>
+                                )}
+                            </span>
                         </button>
                         {endpoint.id !== LOCAL_ENDPOINT_ID && (
                             <Tooltip label="Forget this machine" name>
