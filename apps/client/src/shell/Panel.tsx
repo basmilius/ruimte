@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
-import { PanelControls } from '@/shell/PanelControls';
 import { PANELS } from '@/shell/panels';
 import { FilesPanel } from '@/shell/panels/FilesPanel';
 import { useColumnResize } from '@/shell/useColumnResize';
@@ -84,7 +83,6 @@ export function Panel() {
                                 <Icon icon={X} size={16} />
                             </button>
                         </Tooltip>
-                        {panel.open && <PanelControls />}
                     </header>
                     <PanelBody kind={panel.kind} label={label} />
                 </div>

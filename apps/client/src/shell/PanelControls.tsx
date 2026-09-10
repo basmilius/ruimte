@@ -1,29 +1,20 @@
-import clsx from 'clsx';
 import { FileText } from 'lucide-react';
-import { hasOverlayControls } from '@/desktop/bridge';
 import { PANELS } from '@/shell/panels';
 import { useFiles } from '@/state/files';
 import { useUi } from '@/state/ui';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
-interface PanelControlsProps {
-    /* Whether these toggles are the last group before the window's right edge. In the toolbar the
-       command palette button sits after them, so the inset belongs to that group instead. */
-    atEdge?: boolean;
-}
-
-/* The panel toggles. They belong to whatever strip is rightmost: the toolbar while the panel is
-   closed, the panel's own header once it is open, so the buttons keep the window's right edge and
-   never move on a toggle. That edge is also where Windows and Linux draw their window controls, so
-   the inset travels with them. */
-export function PanelControls({ atEdge = true }: PanelControlsProps) {
+/* The panel toggles. They stay in the toolbar whether a panel is open or not, so a toggle never
+   moves out from under the pointer; the panel's own header carries its title and its close button
+   and nothing that belongs to the toolbar. */
+export function PanelControls() {
     const panel = useUi((s) => s.panel);
     const previewOpen = useUi((s) => s.preview.open);
     const hasTabs = useFiles((s) => s.tabs.length > 0);
 
     return (
-        <div className={clsx('btn-group', atEdge && hasOverlayControls() && 'toolbar-overlay-inset')}>
+        <div className="btn-group">
             {/* No open file means nothing to preview, so the toggle arrives with the first one. */}
             {hasTabs && (
                 <Tooltip label="Preview" name>
