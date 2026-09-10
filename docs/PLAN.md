@@ -63,7 +63,9 @@ Several days. This is where Ruimte earns its name.
 
 - Canvas control for agents: verbs on `ruimte-context` (`list`, `open`, `note`, `link`, `group`,
   `spawn-team`) that the daemon applies to `project.json` so the watcher carries them to the client.
-  No write or close verbs. Spawn team on top: up to eight roles, opened in a group and linked back.
+  Every verb takes a view, defaulting to the view its own session sits in; `list` names the views
+  too. No write or close verbs. Spawn team on top: up to eight roles, opened in a group and linked
+  back.
 - Hook-reply approvals for terminal agents: hold Claude's `PermissionRequest` on the daemon and
   answer it from the node header or the notification.
 - Hooks for Gemini and Copilot (a day per CLI), and the Codex hook contract in a terminal (#12).
@@ -88,7 +90,7 @@ About two days.
 About two days, all machine state.
 
 - Directional focus on Cmd+Arrow, maximize a node on Cmd+Shift+Enter, camera history on Cmd+[ and
-  Cmd+], Cmd+1..9 to focus the nth node.
+  Cmd+]. Cmd+1..9 belongs to the views now, so nodes keep Tab and Cmd+Arrow.
 - Arrange, align and tidy as pure functions with palette entries; palette ranking (exact, prefix,
   substring), `>` for actions, recent nodes on an empty query, settings rows as entries.
 - Images on the canvas from paste or drop, stored under `<folder>/.ruimte/images`; a color or an
