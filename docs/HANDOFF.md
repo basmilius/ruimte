@@ -192,6 +192,26 @@ started; it fits after #10, when a remote daemon makes it worth its weight.
   node and waits for a click on a target (`linkDraft.aiming`, crosshair, Escape or a click on
   empty canvas cancels). `ProjectEdge` is unchanged.
 
+- **Phase 13, one agent catalog for chat and terminal nodes**: the daemon's provider list is
+  the only place an agent CLI is named. It holds Claude Code, Codex, Gemini and GitHub Copilot;
+  `capabilities` says of each one whether it opens as a chat, as a terminal and whether the
+  daemon understands its hooks. Gemini and Copilot are terminal only, so they launch, are
+  titled and iconed, and show the session's own status; the hook receiver answers 404 for a
+  kind without a normalizer and the installer skips it. The dock's plus menu and the canvas
+  menu both show "Agent (Chat)" and "Agent (Terminal)" from one component
+  (`apps/client/src/agents/AgentMenus.tsx`), in catalog order, a CLI the daemon did not find
+  disabled with "Not installed"; the palette has `agent-chat-<kind>` and `agent-terminal-<kind>`
+  commands, and a missing CLI opens Settings > Agents instead of failing. No new chords: "Chat"
+  and Option+C still open a Claude Code chat. A terminal agent is launched by the daemon:
+  `session.create` takes `agent: { kind, runtimeMode?, model?, resume? }` and
+  `apps/server/src/providers/launch.ts` builds the line the shell gets, per CLI
+  (`--permission-mode`, `--ask-for-approval` plus `--sandbox`, `--approval-mode`, nothing for
+  Copilot). "Open in terminal" on a chat sends the CLI and the session id instead of a command
+  line. One setting, "Terminal agents start in" (Settings > Agents, default full access), is
+  saved on the node as `runtimeMode`, so a reload starts the same CLI the same way. The menus,
+  the palette rows and an agent node's header show the CLI's brand mark from `simple-icons`
+  (CC0), monochrome in `currentColor` (`agents/AgentIcon.tsx`).
+
 ## Nodeterm parity
 
 What nodeterm (`~/Development/Projects/forks/nodeterm`, read for behavior only) has on its
@@ -199,7 +219,7 @@ canvas, against Ruimte, one verdict each.
 
 | Nodeterm | Ruimte | Verdict |
 | --- | --- | --- |
-| Terminal node, agent CLIs as terminals | Terminal node, chat nodes for Claude and Codex, Agent submenu for the rest | Done |
+| Terminal node, agent CLIs as terminals | Terminal node, chat nodes for Claude and Codex, and every CLI in the catalog as a terminal agent the daemon launches | Done, phase 13 |
 | Sticky note (7 colors, markdown, title, agent reads it over a link) | Note node (5 colors, markdown, title, text source over an edge) | Done, phase 12 |
 | Context links (agent to agent, sticky to terminal, drag from handles, delete by double-click) | Edges from any node or text to any other; into an agent they are context, "Connect to..." in the menu | Done, phase 12 |
 | Group frame with a bound worktree | Group node with collapse, nesting and a worktree | Done |
@@ -390,6 +410,17 @@ In the order that makes sense, each one an issue on GitHub:
    30-second video for the landing page; Windows (the daemon on Bun's Windows PTY or Node with
    node-pty); an app icon that is more than a placeholder; the daemon as a background service
    so closing the app keeps sessions alive.
+
+8. **Phase 13 follow-ups**: Gemini and Copilot have no hooks yet, so a terminal with one shows
+   no agent status and no "Open in chat"; each is one event table, one config path and one
+   normalizer (`~/.gemini/settings.json` with its own event names, an owned JSON file under
+   `~/.copilot/hooks/`). Codex's CLI takes only `on-request` and `never` on
+   `--ask-for-approval` (0.153), so the three modes that still ask launch a terminal Codex the
+   same way; the chat's `untrusted` has no counterpart on the command line. simple-icons has no
+   OpenAI mark (removed at OpenAI's request), so Codex shows the generic agent glyph. The mode
+   is one global setting; nodeterm also has a per project override, which would be the first
+   preference in `project.json`. A node keeps the title of its catalog entry: no polling of the
+   CLI's own session name.
 
 Known gaps to keep in mind: no WebGL context budget (many visible terminals may lose
 contexts), no backpressure for a slow client, the 30-node performance target is unmeasured.
