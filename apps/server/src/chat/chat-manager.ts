@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { homedir } from 'node:os';
-import type { AgentKind, ChatConfigurePayload, ChatCreatePayload, ChatEvent, ChatInfo, ChatItem, ContextSource } from '@ruimte/contracts';
+import type { AgentKind, ChatCheckpointDiff, ChatConfigurePayload, ChatCreatePayload, ChatEvent, ChatInfo, ChatItem, ContextSource } from '@ruimte/contracts';
+import type { CheckpointService } from '../git/checkpoints.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionSink } from '../sessions/manager.ts';
 import { ChatSession, type ChatSendExtras } from './chat-session.ts';
@@ -9,6 +10,8 @@ import { ChatError } from './errors.ts';
 export interface ChatManagerOptions {
     providers: ProviderRegistry;
     store?: ChatStore;
+    // Takes a git tree per turn; without it a turn has no checkpoint and the card falls back to the CLI's own changes.
+    checkpoints?: CheckpointService;
     env?: Record<string, string | undefined>;
     // The CLIs to run, when they are not the ones the providers name; a test points these at fakes.
     command?: string[];
@@ -25,6 +28,7 @@ export interface ChatManagerOptions {
 export class ChatManager {
     private readonly providers: ProviderRegistry;
     private readonly store: ChatStore | null;
+    private readonly checkpoints: CheckpointService | null;
     private readonly env: Record<string, string>;
     private readonly commands: Partial<Record<AgentKind, string[]>>;
     private readonly chats = new Map<string, ChatSession>();
@@ -38,6 +42,7 @@ export class ChatManager {
     constructor(options: ChatManagerOptions) {
         this.providers = options.providers;
         this.store = options.store ?? null;
+        this.checkpoints = options.checkpoints ?? null;
         this.contextUrl = options.contextUrl ?? null;
         this.hasContext = options.hasContext ?? (() => false);
         this.contextSources = options.contextSources ?? (() => []);
@@ -112,6 +117,7 @@ export class ChatManager {
             env: this.contextUrl ? { ...this.env, RUIMTE_CONTEXT_URL: this.contextUrl, RUIMTE_CONTEXT_TOKEN: token } : this.env,
             hasContext: () => this.hasContext(payload.chatId),
             contextSources: () => this.contextSources(payload.chatId),
+            ...(this.checkpoints ? { checkpoints: this.checkpoints } : {}),
             emit: (event: ChatEvent) => this.emit(payload.chatId, event),
             persist: () => this.persist(payload.chatId)
         });
@@ -162,6 +168,11 @@ export class ChatManager {
 
     cancel(chatId: string): void {
         this.require(chatId).cancel();
+    }
+
+    /* What a turn changed against the tree it started from; null when it has no checkpoint. */
+    turnDiff(chatId: string, turnId: string): Promise<ChatCheckpointDiff | null> {
+        return this.require(chatId).turnDiff(turnId);
     }
 
     approve(chatId: string, requestId: string, decision: 'allow' | 'allow-always' | 'deny', message?: string): void {

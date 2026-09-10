@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatEvent, ChatInfo, ChatItem, ContextSource } from '@ruimte/contracts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { waitFor, waitForAsync } from '../sessions/test-helpers.ts';
+import { Checkpoints } from '../git/checkpoints.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatStore } from './chat-store.ts';
 
@@ -55,7 +56,14 @@ let recorder: ChatRecorder;
 
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
 
-const makeManager = () => new ChatManager({ providers, store, command: FAKE, env: { PATH: process.env.PATH, HOME: home, RUIMTE_HOOK_URL: 'x' } });
+const makeManager = () =>
+    new ChatManager({
+        providers,
+        store,
+        checkpoints: new Checkpoints(home),
+        command: FAKE,
+        env: { PATH: process.env.PATH, HOME: home, RUIMTE_HOOK_URL: 'x' }
+    });
 
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-chat-'));
@@ -297,6 +305,35 @@ describe('ChatManager', () => {
         manager.send('chat-6', 'again');
         await waitFor(idle, 'the next turn');
         expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: again']);
+    });
+
+    test('a turn in a repository carries a checkpoint and the diff of what it changed', async () => {
+        const repo = await mkdtemp(join(tmpdir(), 'ruimte-chat-repo-'));
+        const run = async (args: string[]): Promise<void> => {
+            await Bun.spawn(['git', ...args], { cwd: repo, stdout: 'ignore', stderr: 'ignore' }).exited;
+        };
+        await run(['init', '-q']);
+        await run(['config', 'user.email', 'test@example.com']);
+        await run(['config', 'user.name', 'Test']);
+        await run(['config', 'commit.gpgsign', 'false']);
+        await writeFile(join(repo, 'seed.txt'), 'seed\n');
+        await run(['add', '-A']);
+        await run(['commit', '-q', '-m', 'init']);
+
+        await manager.create({ chatId: 'chat-diff', cwd: repo });
+        manager.attach('chat-diff', 'c1');
+        manager.send('chat-diff', 'write: made.txt hello');
+        await waitFor(idle, 'the turn to end');
+        await waitFor(() => recorder.ofKind('turn')[0]?.checkpointDiff !== undefined, 'the checkpoint diff');
+
+        const turn = recorder.ofKind('turn')[0];
+        expect(turn?.checkpoint).toMatch(/^[0-9a-f]{40}$/);
+        expect(turn?.checkpointDiff?.files).toMatchObject([{ path: 'made.txt', kind: 'add', added: 1, deleted: 0 }]);
+        expect(turn?.checkpointDiff?.files[0]?.diff).toContain('+hello');
+        // The same answer over the request, and a turn without a checkpoint answers null.
+        expect(await manager.turnDiff('chat-diff', turn!.id)).toEqual(turn!.checkpointDiff!);
+        await manager.kill('chat-diff');
+        await rm(repo, { recursive: true, force: true });
     });
 
     test('kill drops the thread and its record', async () => {

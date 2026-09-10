@@ -22,6 +22,7 @@ import { registerGitHandlers } from './handlers/git.ts';
 import { registerProjectHandlers } from './handlers/project.ts';
 import { registerServerHandlers } from './handlers/server.ts';
 import { registerSessionHandlers } from './handlers/session.ts';
+import { Checkpoints } from './git/checkpoints.ts';
 import { Worktrees } from './git/worktrees.ts';
 import { ProjectStore } from './projects/project-store.ts';
 import { ProviderRegistry } from './providers/registry.ts';
@@ -61,6 +62,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const chats: ChatManager = new ChatManager({
         providers,
         store: new ChatStore(config.home),
+        checkpoints: new Checkpoints(config.home),
         contextUrl,
         binDir,
         hasContext: (chatId) => context.has(chatId),

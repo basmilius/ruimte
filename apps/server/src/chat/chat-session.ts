@@ -1,5 +1,16 @@
-import type { ChatAttachment, ChatEvent, ChatInfo, ChatItem, ContextSource, InteractionMode, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type {
+    ChatAttachment,
+    ChatCheckpointDiff,
+    ChatEvent,
+    ChatInfo,
+    ChatItem,
+    ContextSource,
+    InteractionMode,
+    ModelSelection,
+    RuntimeMode
+} from '@ruimte/contracts';
 import { contextChangeNote } from '../context/context-note.ts';
+import type { CheckpointService } from '../git/checkpoints.ts';
 import type { ChatProvider } from '../providers/provider.ts';
 import type { BackendEvent, BackendLaunch, ChatBackend } from './backend.ts';
 import { ChatError } from './errors.ts';
@@ -17,6 +28,8 @@ export interface ChatSessionOptions {
     hasContext(): boolean;
     // The links as they are now; a change between two turns is put in front of the next prompt.
     contextSources?(): ContextSource[];
+    // Git trees per turn, so a settled turn can show what the working tree holds against its start.
+    checkpoints?: CheckpointService;
     emit(event: ChatEvent): void;
     persist(): void;
 }
@@ -49,6 +62,8 @@ export class ChatSession {
     private restartPending = false;
     // The links at the previous turn; null until the first turn, whose backend hears about them at launch.
     private lastSources: ContextSource[] | null = null;
+    // The checkpoint of the turn in flight; everything queued for that turn waits for it.
+    private turnReady: Promise<void> = Promise.resolve();
 
     constructor(options: ChatSessionOptions) {
         this.options = options;
@@ -95,13 +110,15 @@ export class ChatSession {
 
     send(text: string, extras: ChatSendExtras = {}): void {
         const note = this.contextNote(text);
-        this.openTurn(text, note, extras);
+        const turnId = this.openTurn(text, note, extras);
         const input = {
             text,
             preamble: note,
             attachments: extras.attachments ?? [],
             mentions: extras.mentions ?? []
         };
+        // The prompt waits for the checkpoint, so the tree is the folder as it was before the agent edited it.
+        this.turnReady = this.checkpoint(turnId);
         this.run((backend) => backend.sendTurn(input));
     }
 
@@ -117,6 +134,8 @@ export class ChatSession {
         }
         // A native compaction has no message of the person in front of it, only a turn to fold behind.
         this.openTurn(null, null, {});
+        // Folding the context changes no file, so this turn needs no checkpoint.
+        this.turnReady = Promise.resolve();
         this.run((backend) => backend.compact());
     }
 
@@ -159,7 +178,22 @@ export class ChatSession {
         this.starting = null;
     }
 
-    private openTurn(text: string | null, note: string | null, extras: ChatSendExtras): void {
+    /* What a turn changed against its checkpoint: the stored answer, or one taken now while it runs. */
+    async turnDiff(turnId: string): Promise<ChatCheckpointDiff | null> {
+        const turn = this.thread.get(turnId);
+        if (turn?.kind !== 'turn') {
+            throw new ChatError('request-not-found', `No turn ${turnId} in chat ${this.id}`);
+        }
+        if (turn.checkpointDiff) {
+            return turn.checkpointDiff;
+        }
+        if (turn.checkpoint === undefined || !this.options.checkpoints) {
+            return null;
+        }
+        return await this.options.checkpoints.diff(this.thread.info.cwd, turn.checkpoint);
+    }
+
+    private openTurn(text: string | null, note: string | null, extras: ChatSendExtras): string {
         const turnId = newId('turn');
         const now = Date.now();
         const events = [this.thread.upsert({ id: turnId, kind: 'turn', createdAt: now, turnId, state: 'running', endedAt: null, costUsd: 0 })];
@@ -173,6 +207,44 @@ export class ChatSession {
         }
         events.push(this.thread.patchInfo({ status: 'running', activeTurnId: turnId }));
         this.emit(events);
+        return turnId;
+    }
+
+    /* Records the folder's tree on the turn; a folder without git leaves the turn as it is. */
+    private checkpoint(turnId: string): Promise<void> {
+        const checkpoints = this.options.checkpoints;
+        if (!checkpoints) {
+            return Promise.resolve();
+        }
+        return checkpoints
+            .take(this.thread.info.cwd)
+            .then((tree) => {
+                const turn = this.thread.get(turnId);
+                if (tree === null || turn?.kind !== 'turn') {
+                    return;
+                }
+                this.emit([this.thread.upsert({ ...turn, checkpoint: tree })]);
+            })
+            .catch(() => undefined);
+    }
+
+    /* The diff of a turn that just ended, so a reload shows it without asking git again. */
+    private settleCheckpoint(turnId: string): void {
+        const turn = this.thread.get(turnId);
+        if (turn?.kind !== 'turn' || turn.checkpoint === undefined || turn.checkpointDiff || !this.options.checkpoints) {
+            return;
+        }
+        void this.options.checkpoints
+            .diff(this.thread.info.cwd, turn.checkpoint)
+            .then((diff) => {
+                const settled = this.thread.get(turnId);
+                if (diff === null || settled?.kind !== 'turn') {
+                    return;
+                }
+                this.emit([this.thread.upsert({ ...settled, checkpointDiff: diff })]);
+                this.options.persist();
+            })
+            .catch(() => undefined);
     }
 
     /* A link made or removed between turns; the agent hears about it once, in front of the next prompt. */
@@ -189,10 +261,13 @@ export class ChatSession {
 
     /* Runs one turn against the backend; a backend that will not start ends the turn with the reason. */
     private run(work: (backend: ChatBackend) => void): void {
-        void this.ensureBackend()
-            .then((backend) => {
-                if (this.backend === backend) {
-                    work(backend);
+        // The process starts while the checkpoint runs; the work itself waits for both, and a stop
+        // waits for the same promise, so it can never overtake the message it stops.
+        const backend = this.ensureBackend();
+        void Promise.all([backend, this.turnReady])
+            .then(([started]) => {
+                if (this.backend === started) {
+                    work(started);
                 }
             })
             .catch((error: unknown) => this.receive(this.generation, { type: 'failed', message: reason(error) }));
@@ -261,9 +336,13 @@ export class ChatSession {
             this.backend = null;
             this.starting = null;
         }
+        const openTurnId = this.thread.info.activeTurnId;
         this.emit(this.projector.project(generation, event));
         if (event.type === 'turn.done' || event.type === 'exit' || event.type === 'failed') {
             this.options.persist();
+        }
+        if (openTurnId !== null && this.thread.info.activeTurnId === null) {
+            this.settleCheckpoint(openTurnId);
         }
     }
 

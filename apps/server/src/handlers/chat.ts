@@ -49,6 +49,8 @@ export const registerChatHandlers = (dispatcher: Dispatcher, manager: ChatManage
         })
     );
 
+    dispatcher.register('chat.turnDiff', (payload) => translate(async () => ({ diff: await manager.turnDiff(payload.chatId, payload.turnId) })));
+
     dispatcher.register('chat.cancel', (payload) =>
         translate(() => {
             manager.cancel(payload.chatId);
