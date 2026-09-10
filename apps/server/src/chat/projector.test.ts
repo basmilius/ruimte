@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatInfo } from '@ruimte/contracts';
 import type { BackendEvent } from './backend.ts';
-import { ThreadProjector } from './projector.ts';
+import { ThreadProjector, stripAgentFooter } from './projector.ts';
 import { ChatThread } from './thread.ts';
 
 const info: ChatInfo = {
@@ -291,5 +291,150 @@ describe('thinking', () => {
         const { project, openTurn } = idleSetup();
         project({ type: 'thinking.delta', ref: 'm1:k0', text: 'unprompted' });
         expect(openTurn()).toMatchObject({ origin: 'agent', state: 'running' });
+    });
+});
+
+describe('subagents', () => {
+    test('a delegation opens a subagent row and its own work hangs under it', () => {
+        const { thread, project } = setup();
+        project({
+            type: 'tool.started',
+            ref: 'toolu_agent',
+            name: 'Agent',
+            input: { description: 'Find the bug', subagent_type: 'general-purpose', prompt: 'look around' },
+            parentRef: null
+        });
+        expect(thread.get('1:toolu_agent')).toMatchObject({
+            kind: 'subagent',
+            toolUseId: 'toolu_agent',
+            description: 'Find the bug',
+            subagentType: 'general-purpose',
+            prompt: 'look around',
+            background: false,
+            status: 'running',
+            result: null,
+            itemsTruncated: false
+        });
+        // No tool row for the call itself: the subagent row is what says it happened.
+        expect(thread.list().some((item) => item.kind === 'tool')).toBe(false);
+
+        project({ type: 'task.started', ref: 'toolu_agent', description: 'Find the bug', subagentType: 'explorer', prompt: null, background: true });
+        project({
+            type: 'task.progress',
+            ref: 'toolu_agent',
+            summary: 'Running Grep',
+            lastTool: 'Grep',
+            usage: { totalTokens: 10, toolUses: 1, durationMs: 5 }
+        });
+        expect(thread.get('1:toolu_agent')).toMatchObject({
+            background: true,
+            summary: 'Running Grep',
+            lastTool: 'Grep',
+            usage: { totalTokens: 10, toolUses: 1, durationMs: 5 }
+        });
+
+        project(
+            { type: 'tool.started', ref: 'toolu_child', name: 'Grep', input: { pattern: 'x' }, parentRef: 'toolu_agent' },
+            { type: 'tool.done', ref: 'toolu_child', output: 'found', state: 'done' },
+            { type: 'text.done', ref: 'msg_9:t0', text: 'the bug is in a.ts', parentRef: 'toolu_agent' }
+        );
+        const child = thread.get('1:toolu_child');
+        expect(child).toMatchObject({ kind: 'tool', parentToolUseId: 'toolu_agent', state: 'done', turnId: 'turn-1' });
+        expect(thread.get('1:msg_9:t0')).toMatchObject({ kind: 'assistant', parentToolUseId: 'toolu_agent', text: 'the bug is in a.ts' });
+        // The last thing it wrote is the report it ends with, until the call itself says otherwise.
+        expect(thread.get('1:toolu_agent')).toMatchObject({ result: 'the bug is in a.ts' });
+    });
+
+    test('the turn a background subagent outlives keeps it running, and the process taking it down fails it', () => {
+        const { thread, project } = setup();
+        project(
+            { type: 'tool.started', ref: 'toolu_agent', name: 'Agent', input: { run_in_background: true }, parentRef: null },
+            { type: 'tool.done', ref: 'toolu_agent', output: 'Async agent launched successfully. agentId: a1 output_file: /tmp/a1.output', state: 'done' },
+            { type: 'turn.done', state: 'done', costUsd: 0 }
+        );
+        expect(thread.get('1:toolu_agent')).toMatchObject({ status: 'running', background: true, outputFile: '/tmp/a1.output' });
+
+        project({ type: 'exit', exitCode: 0 });
+        expect(thread.get('1:toolu_agent')).toMatchObject({ status: 'failed', finishedAt: expect.any(Number) });
+    });
+
+    test('a foreground call settles its subagent with the report, without the footer the CLI appends', () => {
+        const { thread, project } = setup();
+        const footer =
+            "\n\nagentId: agent_1 (use SendMessage with to: 'agent_1', summary: 'the report' to continue this agent)" +
+            '\n<usage>subagent_tokens: 1500\ntool_uses: 2\nduration_ms: 250</usage>';
+        project(
+            { type: 'tool.started', ref: 'toolu_agent', name: 'Agent', input: { description: 'Read it' }, parentRef: null },
+            { type: 'tool.done', ref: 'toolu_agent', output: `# Report\n\n- one${footer}`, state: 'done' }
+        );
+        expect(thread.get('1:toolu_agent')).toMatchObject({
+            status: 'done',
+            result: '# Report\n\n- one',
+            usage: { totalTokens: 1500, toolUses: 2, durationMs: 250 },
+            finishedAt: expect.any(Number)
+        });
+
+        // A call that failed leaves the row failed, with whatever it did say.
+        const other = setup();
+        other.project(
+            { type: 'tool.started', ref: 'toolu_agent', name: 'Task', input: {}, parentRef: null },
+            { type: 'tool.done', ref: 'toolu_agent', output: 'it went wrong', state: 'error' }
+        );
+        expect(other.thread.get('1:toolu_agent')).toMatchObject({ status: 'failed', result: 'it went wrong' });
+    });
+
+    test('a notification settles a background subagent and names the turn the CLI opens next', () => {
+        const { thread, project } = setup();
+        project(
+            { type: 'tool.started', ref: 'toolu_agent', name: 'Agent', input: { run_in_background: true }, parentRef: null },
+            { type: 'tool.done', ref: 'toolu_agent', output: 'Async agent launched successfully.', state: 'done' },
+            // The turn that launched it ends; the agent goes on working outside a turn.
+            { type: 'turn.done', state: 'done', costUsd: 0 },
+            { type: 'text.done', ref: 'msg_9:t0', text: 'the report', parentRef: 'toolu_agent' },
+            { type: 'task.done', ref: 'toolu_agent', summary: 'read the docs', ok: true, usage: { totalTokens: 20, toolUses: 3, durationMs: 40 } }
+        );
+        expect(thread.get('1:toolu_agent')).toMatchObject({
+            status: 'done',
+            summary: 'read the docs',
+            result: 'the report',
+            usage: { totalTokens: 20, toolUses: 3, durationMs: 40 }
+        });
+
+        // The wake-up turn says what it is about and points at the row it came from.
+        project({ type: 'text.done', ref: 'msg_10:t0', text: 'here is what it found' });
+        const agentTurn = thread.list().find((item) => item.kind === 'turn' && item.origin === 'agent');
+        expect(agentTurn).toMatchObject({ label: 'read the docs', taskToolUseId: 'toolu_agent' });
+
+        // A second notification for the same agent only updates what came of it.
+        project({ type: 'task.done', ref: 'toolu_agent', summary: 'read the docs twice', ok: true });
+        expect(thread.get('1:toolu_agent')).toMatchObject({ status: 'done', summary: 'read the docs twice' });
+    });
+
+    test('a subagent that works past the cap keeps the beginning and says it was cut', () => {
+        const { thread, project } = setup();
+        project({ type: 'tool.started', ref: 'toolu_agent', name: 'Agent', input: {}, parentRef: null });
+        for (let i = 0; i < 205; i++) {
+            project({ type: 'tool.started', ref: `child_${i}`, name: 'Read', input: {}, parentRef: 'toolu_agent' });
+        }
+        const children = thread.list().filter((item) => item.kind === 'tool' && item.parentToolUseId === 'toolu_agent');
+        expect(children).toHaveLength(200);
+        expect(thread.get('1:toolu_agent')).toMatchObject({ itemsTruncated: true });
+    });
+
+    test('a subagent whose text outgrows the cap stops collecting', () => {
+        const { thread, project } = setup();
+        project(
+            { type: 'tool.started', ref: 'toolu_agent', name: 'Agent', input: {}, parentRef: null },
+            { type: 'text.done', ref: 'msg_1:t0', text: 'x'.repeat(70 * 1024), parentRef: 'toolu_agent' },
+            { type: 'tool.started', ref: 'child_late', name: 'Read', input: {}, parentRef: 'toolu_agent' }
+        );
+        expect(thread.get('1:child_late')).toBeUndefined();
+        expect(thread.get('1:toolu_agent')).toMatchObject({ itemsTruncated: true });
+    });
+
+    test('the footer strip survives a CLI that says it a little differently', () => {
+        expect(stripAgentFooter('done\nagentId: a1 (use SendMessage ...)')).toEqual({ text: 'done', usage: null });
+        expect(stripAgentFooter('(Subagent completed but returned no output.)')).toEqual({ text: null, usage: null });
+        expect(stripAgentFooter('kept as it is')).toEqual({ text: 'kept as it is', usage: null });
     });
 });

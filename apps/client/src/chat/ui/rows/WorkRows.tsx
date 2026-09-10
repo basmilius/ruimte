@@ -15,7 +15,7 @@ const OUTPUT_LIMIT = 4000;
 
 const clip = (text: string): string => (text.length > OUTPUT_LIMIT ? `${text.slice(0, OUTPUT_LIMIT)}\n[${text.length - OUTPUT_LIMIT} more characters]` : text);
 
-function ToggleLine({
+export function ToggleLine({
     icon,
     label,
     detail,
@@ -111,7 +111,7 @@ export function WorkRow({ tool, nested }: { tool: ChatToolItem; nested?: boolean
 }
 
 /* "running for 12s" next to a live call; like WorkingRow, the timer writes the text itself. */
-function RunningFor({ startedAt }: { startedAt: number }) {
+export function RunningFor({ startedAt }: { startedAt: number }) {
     const ref = useRef<HTMLSpanElement>(null);
     useEffect(() => {
         const tick = (): void => {

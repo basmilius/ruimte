@@ -58,7 +58,7 @@ describe('ClaudeProtocol', () => {
         expect(failed).toEqual([{ type: 'tool.done', ref: 'toolu_1', output: 'nope', state: 'error' }]);
     });
 
-    test('a subagent tool call keeps the call that spawned it and reports no context of its own', () => {
+    test('a subagent frame keeps the call that spawned it and reports no context of its own', () => {
         const protocol = new ClaudeProtocol();
         expect(
             protocol.handle({
@@ -73,7 +73,76 @@ describe('ClaudeProtocol', () => {
                     usage
                 }
             })
-        ).toEqual([{ type: 'tool.started', ref: 'toolu_5', name: 'Read', input: {}, parentRef: 'toolu_task' }]);
+        ).toEqual([
+            // The subagent's own text is its report, not the thread's answer.
+            { type: 'text.done', ref: 'msg_3:t0', text: 'inner', parentRef: 'toolu_task' },
+            { type: 'tool.started', ref: 'toolu_5', name: 'Read', input: {}, parentRef: 'toolu_task' }
+        ]);
+    });
+
+    test('a delegation reports itself as a task, with what it is and what it spends', () => {
+        const protocol = new ClaudeProtocol();
+        expect(
+            protocol.handle({
+                type: 'assistant',
+                message: {
+                    id: 'msg_4',
+                    content: [
+                        {
+                            type: 'tool_use',
+                            id: 'toolu_agent',
+                            name: 'Agent',
+                            input: { description: 'Run sleep', subagent_type: 'general-purpose', prompt: 'sleep 20', run_in_background: true }
+                        }
+                    ]
+                }
+            })
+        ).toEqual([
+            {
+                type: 'tool.started',
+                ref: 'toolu_agent',
+                name: 'Agent',
+                input: { description: 'Run sleep', subagent_type: 'general-purpose', prompt: 'sleep 20', run_in_background: true },
+                parentRef: null
+            }
+        ]);
+
+        expect(
+            protocol.handle({
+                type: 'system',
+                subtype: 'task_started',
+                task_id: 'a3838cf8b1de992a3',
+                tool_use_id: 'toolu_agent',
+                description: 'Run sleep',
+                subagent_type: 'general-purpose',
+                is_backgrounded: true,
+                spawn_depth: 1,
+                task_type: 'local_agent',
+                prompt: 'sleep 20'
+            })
+        ).toEqual([
+            { type: 'task.started', ref: 'toolu_agent', description: 'Run sleep', subagentType: 'general-purpose', prompt: 'sleep 20', background: true }
+        ]);
+
+        expect(
+            protocol.handle({
+                type: 'system',
+                subtype: 'task_progress',
+                tool_use_id: 'toolu_agent',
+                description: 'Running Sleep for 20 seconds',
+                subagent_type: 'general-purpose',
+                usage: { total_tokens: 15074, tool_uses: 1, duration_ms: 2575 },
+                last_tool_name: 'Bash'
+            })
+        ).toEqual([
+            {
+                type: 'task.progress',
+                ref: 'toolu_agent',
+                summary: 'Running Sleep for 20 seconds',
+                lastTool: 'Bash',
+                usage: { totalTokens: 15074, toolUses: 1, durationMs: 2575 }
+            }
+        ]);
     });
 
     test('progress frames report a description and how long a call has run', () => {
@@ -103,12 +172,22 @@ describe('ClaudeProtocol', () => {
                 tool_use_id: 'toolu_agent',
                 status: 'completed',
                 output_file: '/tmp/tasks/a3838cf8b1de992a3.output',
-                summary: 'slept'
+                summary: 'slept',
+                usage: { total_tokens: 16464, tool_uses: 1, duration_ms: 24235 }
             })
-        ).toEqual([{ type: 'task.done', ref: 'toolu_agent', summary: 'slept', ok: true }]);
+        ).toEqual([
+            {
+                type: 'task.done',
+                ref: 'toolu_agent',
+                summary: 'slept',
+                ok: true,
+                usage: { totalTokens: 16464, toolUses: 1, durationMs: 24235 },
+                outputFile: '/tmp/tasks/a3838cf8b1de992a3.output'
+            }
+        ]);
         // A task that ended another way is still the thing that wakes the agent.
         expect(protocol.handle({ type: 'system', subtype: 'task_notification', task_id: 't', status: 'failed', summary: 'no luck' })).toEqual([
-            { type: 'task.done', ref: null, summary: 'no luck', ok: false }
+            { type: 'task.done', ref: null, summary: 'no luck', ok: false, usage: null, outputFile: null }
         ]);
     });
 

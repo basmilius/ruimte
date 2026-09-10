@@ -174,13 +174,24 @@ export function NoteRow({ level, text }: { level: 'info' | 'warning' | 'error'; 
     );
 }
 
-/* The header of a turn the agent started itself, in place of the message of the person that is missing. */
-export function AgentTurnRow({ label }: { label: string }) {
+/*
+ * The header of a turn the agent started itself, in place of the message of the person that is
+ * missing. When the CLI named the sub-agent it woke up about, the header opens that row.
+ */
+export function AgentTurnRow({ label, onOpen }: { label: string; onOpen?: () => void }) {
+    if (!onOpen) {
+        return (
+            <div className="flex items-center gap-1.5 pb-2 text-xs text-text-muted">
+                <Icon icon={Bot} size={12} />
+                <span className="select-text">{label}</span>
+            </div>
+        );
+    }
     return (
-        <div className="flex items-center gap-1.5 pb-2 text-xs text-text-muted">
+        <button className="flex items-center gap-1.5 pb-2 text-xs text-text-muted hover:text-text" onClick={onOpen}>
             <Icon icon={Bot} size={12} />
-            <span className="select-text">{label}</span>
-        </div>
+            <span>{label}</span>
+        </button>
     );
 }
 

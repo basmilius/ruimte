@@ -365,8 +365,51 @@ describe('ChatManager', () => {
         expect(idle()).toBe(true);
         // The person wrote one message; the second turn has none and carries the agent's own answer.
         expect(recorder.ofKind('user')).toHaveLength(1);
-        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['I will report back', 'the subagent says: report written']);
-        expect(recorder.ofKind('assistant')[1]?.turnId).toBe(agentTurn.id);
+        const answers = recorder.ofKind('assistant').filter((item) => !item.parentToolUseId);
+        expect(answers.map((item) => item.text)).toEqual(['I will report back', 'the subagent says: report written']);
+        expect(answers[1]?.turnId).toBe(agentTurn.id);
+
+        // The subagent has a row of its own: its work, its report and what it spent.
+        const subagent = recorder.ofKind('subagent')[0]!;
+        expect(subagent).toMatchObject({
+            toolUseId: 'toolu_agent',
+            description: 'report written',
+            subagentType: 'general-purpose',
+            background: true,
+            status: 'done',
+            summary: 'report written',
+            result: 'the subagent says: report written',
+            usage: { totalTokens: 1500, toolUses: 2, durationMs: 250 }
+        });
+        expect(agentTurn.taskToolUseId).toBe('toolu_agent');
+        const children = [...recorder.items.values()].filter((item) => item.kind === 'tool' && item.parentToolUseId === 'toolu_agent');
+        expect(children.map((item) => (item.kind === 'tool' ? item.name : ''))).toEqual(['Read', 'Bash']);
+        // A subagent's work belongs to the turn its row sits in, not to the turn that woke the agent.
+        expect(children.every((item) => item.turnId === subagent.turnId)).toBe(true);
+    });
+
+    test('a foreground subagent settles from its own call, without the footer the CLI appends', async () => {
+        await manager.create({ chatId: 'chat-delegate', cwd: home });
+        manager.attach('chat-delegate', 'c1');
+        await manager.send('chat-delegate', 'delegate: read the readme');
+        await waitFor(idle, 'the turn that delegated');
+
+        const subagent = recorder.ofKind('subagent')[0]!;
+        expect(subagent).toMatchObject({
+            toolUseId: 'toolu_delegate',
+            description: 'read the readme',
+            subagentType: 'general-purpose',
+            prompt: 'Do this: read the readme',
+            background: false,
+            status: 'done',
+            result: '# Report\n\n- one\n- two',
+            lastTool: 'Bash',
+            usage: { totalTokens: 1500, toolUses: 2, durationMs: 250 },
+            itemsTruncated: false
+        });
+        expect(recorder.ofKind('tool').filter((item) => item.parentToolUseId === 'toolu_delegate')).toHaveLength(2);
+        // The delegation is a subagent row, so it is not a tool row as well.
+        expect(recorder.ofKind('tool').some((item) => item.name === 'Agent')).toBe(false);
     });
 
     test('the record holds a turn while it is still running', async () => {

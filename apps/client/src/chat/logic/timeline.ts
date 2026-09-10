@@ -4,6 +4,7 @@ import type {
     ChatCheckpointDiff,
     ChatItem,
     ChatQuestionItem,
+    ChatSubagentItem,
     ChatThinkingItem,
     ChatToolItem,
     ChatTurnItem,
@@ -24,6 +25,7 @@ export type TimelineRow =
     | { kind: 'work'; id: string; tool: ChatToolItem }
     | { kind: 'work-group'; id: string; tools: ChatToolItem[]; summary: string; expanded: boolean }
     | { kind: 'work-live'; id: string; tool: ChatToolItem }
+    | { kind: 'subagent'; id: string; item: ChatSubagentItem; children: ChatItem[]; expanded: boolean }
     | { kind: 'approval'; id: string; item: ChatApprovalItem }
     | { kind: 'question'; id: string; item: ChatQuestionItem }
     | { kind: 'note'; id: string; level: 'info' | 'warning' | 'error'; text: string }
@@ -35,6 +37,7 @@ export type TimelineRow =
 interface TimelineOptions {
     expandedGroups: ReadonlySet<string>;
     expandedTurns: ReadonlySet<string>;
+    expandedSubagents: ReadonlySet<string>;
     activeTurnId: string | null;
 }
 
@@ -101,8 +104,26 @@ export const turnLabel = (turn: ChatTurnItem): string => {
     }
 };
 
-// Subagent calls stay inside their Task row; the thread shows the delegation, not its internals.
-const isVisibleTool = (tool: ChatToolItem): boolean => tool.parentToolUseId === null;
+// A subagent's own work belongs to its row, not to the thread; an old record has no row for it.
+const parentOf = (item: ChatItem): string | null => (item.kind === 'tool' || item.kind === 'assistant' ? (item.parentToolUseId ?? null) : null);
+
+/* What each subagent did, keyed by the call that spawned it, in the order it happened. */
+const groupChildren = (items: ChatItem[]): Map<string, ChatItem[]> => {
+    const children = new Map<string, ChatItem[]>();
+    for (const item of items) {
+        const parent = parentOf(item);
+        if (parent === null) {
+            continue;
+        }
+        const bucket = children.get(parent);
+        if (bucket) {
+            bucket.push(item);
+        } else {
+            children.set(parent, [item]);
+        }
+    }
+    return children;
+};
 
 const flushTools = (buffer: ChatToolItem[], rows: TimelineRow[], options: TimelineOptions): void => {
     if (buffer.length === 0) {
@@ -128,19 +149,29 @@ const flushTools = (buffer: ChatToolItem[], rows: TimelineRow[], options: Timeli
     }
 };
 
-/* Rows for a run of items, in order, with tool runs folded. */
-const rowsForItems = (items: ChatItem[], options: TimelineOptions): TimelineRow[] => {
+/* Rows for a run of items, in order, with tool runs folded and a subagent's work under its own row. */
+const rowsForItems = (items: ChatItem[], options: TimelineOptions, children: Map<string, ChatItem[]>): TimelineRow[] => {
     const rows: TimelineRow[] = [];
     const tools: ChatToolItem[] = [];
     for (const item of items) {
+        if (parentOf(item) !== null) {
+            continue;
+        }
         if (item.kind === 'tool') {
-            if (isVisibleTool(item)) {
-                tools.push(item);
-            }
+            tools.push(item);
             continue;
         }
         flushTools(tools, rows, options);
         switch (item.kind) {
+            case 'subagent':
+                rows.push({
+                    kind: 'subagent',
+                    id: item.id,
+                    item,
+                    children: children.get(item.toolUseId) ?? [],
+                    expanded: options.expandedSubagents.has(item.id)
+                });
+                break;
             case 'user':
                 rows.push({ kind: 'user', id: item.id, item });
                 break;
@@ -206,6 +237,7 @@ const lastAssistantRow = (rows: TimelineRow[]): TimelineRow | null => {
 /* The whole thread as rows; items without a turn (older records) are shown as they are. */
 export const deriveTimelineRows = (items: ChatItem[], options: TimelineOptions): TimelineRow[] => {
     const rows: TimelineRow[] = [];
+    const children = groupChildren(items);
     // Items are grouped by turn, in order of first appearance; runs of turnless items keep their place.
     const chunks: Array<{ turnId: string | null; items: ChatItem[] }> = [];
     const byTurn = new Map<string, ChatItem[]>();
@@ -230,7 +262,7 @@ export const deriveTimelineRows = (items: ChatItem[], options: TimelineOptions):
 
     for (const chunk of chunks) {
         if (chunk.turnId === null) {
-            rows.push(...rowsForItems(chunk.items, options));
+            rows.push(...rowsForItems(chunk.items, options, children));
             continue;
         }
         const turnId = chunk.turnId;
@@ -241,9 +273,9 @@ export const deriveTimelineRows = (items: ChatItem[], options: TimelineOptions):
             // The agent started this one itself, so there is no message of the person to show above it.
             rows.push({ kind: 'turn-start', id: `start-${turnId}`, turn, label: agentTurnLabel(turn) });
         }
-        rows.push(...rowsForItems(user, options));
+        rows.push(...rowsForItems(user, options, children));
         const active = turnId === options.activeTurnId || turn?.state === 'running';
-        const work = rowsForItems(rest, options);
+        const work = rowsForItems(rest, options, children);
         if (!turn || active) {
             rows.push(...work);
             if (active) {

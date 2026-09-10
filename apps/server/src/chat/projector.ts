@@ -1,4 +1,4 @@
-import type { ChatEvent, ChatItem, ChatToolItem, ChatToolProgress } from '@ruimte/contracts';
+import type { ChatEvent, ChatItem, ChatSubagentItem, ChatSubagentUsage, ChatToolItem, ChatToolProgress } from '@ruimte/contracts';
 import type { BackendEvent } from './backend.ts';
 import type { ChatThread } from './thread.ts';
 
@@ -9,8 +9,9 @@ import type { ChatThread } from './thread.ts';
  */
 const startsAgentTurn = (event: BackendEvent): boolean => {
     switch (event.type) {
-        case 'text.delta':
         case 'text.done':
+            return !event.parentRef;
+        case 'text.delta':
         case 'thinking.delta':
         case 'thinking.done':
         case 'approval.requested':
@@ -21,6 +22,42 @@ const startsAgentTurn = (event: BackendEvent): boolean => {
         default:
             return false;
     }
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const str = (value: unknown): string | null => (typeof value === 'string' ? value : null);
+
+// The Agent tool is what Claude Code calls a delegation; older builds and other CLIs say Task.
+const isSubagentCall = (event: Extract<BackendEvent, { type: 'tool.started' }>): boolean =>
+    event.parentRef === null && (event.name === 'Agent' || event.name === 'Task');
+
+// What the CLI answers a background launch with; the agent itself only settles much later.
+const LAUNCH_PLACEHOLDER = 'Async agent launched successfully';
+
+// A subagent that works longer than the row can hold: what is kept is the beginning of its work.
+const MAX_SUBAGENT_ITEMS = 200;
+const MAX_SUBAGENT_TEXT = 64 * 1024;
+
+// What the CLI appends to a foreground report, in its own prose. It ends the text, so a tolerant
+// match is enough: when the CLI rewords it, the row shows a stray line and nothing breaks.
+const AGENT_FOOTER = /\n*agentId:[^\n]*(?:\n+<usage>([\s\S]*?)<\/usage>)?\s*$/;
+const NO_OUTPUT = '(Subagent completed but returned no output.)';
+
+const usageField = (text: string, name: string): number => {
+    const match = new RegExp(`${name}:\\s*(\\d+)`).exec(text);
+    return match ? Number(match[1]) : 0;
+};
+
+/* The report a foreground subagent ended with, without the footer the CLI adds, plus what it spent. */
+export const stripAgentFooter = (output: string): { text: string | null; usage: ChatSubagentUsage | null } => {
+    const match = AGENT_FOOTER.exec(output);
+    const text = (match ? output.slice(0, match.index) : output).trim();
+    const block = match?.[1];
+    const usage = block
+        ? { totalTokens: usageField(block, 'subagent_tokens'), toolUses: usageField(block, 'tool_uses'), durationMs: usageField(block, 'duration_ms') }
+        : null;
+    return { text: text === '' || text === NO_OUTPUT ? null : text, usage };
 };
 
 interface ProjectorOptions {
@@ -41,6 +78,10 @@ export class ThreadProjector {
     private readonly now: () => number;
     // What the last background task said it did; the label of the turn the CLI opens about it.
     private taskSummary: string | null = null;
+    // The subagent that turn is about, so its header can point at the row.
+    private taskToolUseId: string | null = null;
+    // Per subagent item: how much of its own work the thread already keeps.
+    private readonly budgets = new Map<string, { items: number; textBytes: number }>();
     // The stretch of thinking still open: its item, and which refs already streamed into it.
     private thinking: { id: string; refs: Set<string>; last: string | null } | null = null;
 
@@ -81,6 +122,10 @@ export class ThreadProjector {
                 this.appendText(this.itemId(generation, event.ref), event.text, events);
                 break;
             case 'text.done': {
+                if (event.parentRef) {
+                    this.appendSubagentText(generation, event.parentRef, event.ref, event.text, events);
+                    break;
+                }
                 this.closeThinking(events);
                 const id = this.itemId(generation, event.ref);
                 const existing = this.thread.get(id);
@@ -97,7 +142,14 @@ export class ThreadProjector {
                 break;
             }
             case 'tool.started':
-                this.closeThinking(events);
+                if (isSubagentCall(event)) {
+                    this.closeThinking(events);
+                    this.startSubagent(generation, event, events);
+                    break;
+                }
+                if (event.parentRef === null) {
+                    this.closeThinking(events);
+                }
                 this.startTool(generation, event, events);
                 break;
             case 'tool.progress':
@@ -110,9 +162,15 @@ export class ThreadProjector {
                 }
                 break;
             }
-            case 'tool.done':
+            case 'tool.done': {
+                const target = this.thread.get(this.itemId(generation, event.ref));
+                if (target?.kind === 'subagent') {
+                    this.settleSubagent(target, event, events);
+                    break;
+                }
                 this.settleTool(generation, event, events);
                 break;
+            }
             case 'approval.requested':
                 this.closeThinking(events);
                 events.push(
@@ -151,10 +209,19 @@ export class ThreadProjector {
             case 'request.withdrawn':
                 this.withdraw(event.requestId, events);
                 break;
+            case 'task.started':
+                this.patchSubagentStart(generation, event, events);
+                break;
+            case 'task.progress':
+                this.patchSubagentProgress(generation, event, events);
+                break;
             case 'task.done':
                 // The tool row already settled from its own result; what is left is the summary,
                 // which says what the turn the CLI opens next is about.
                 this.taskSummary = event.summary ?? this.taskSummary;
+                if (event.ref !== null) {
+                    this.settleBackgroundSubagent(generation, event.ref, event, events);
+                }
                 break;
             case 'usage':
                 events.push(
@@ -190,7 +257,7 @@ export class ThreadProjector {
                 break;
             case 'failed':
                 events.push(this.note('error', event.message));
-                this.settleOpenItems(events);
+                this.settleOpenItems(events, true);
                 this.closeTurn('error', 0, events);
                 events.push(this.thread.patchInfo({ status: 'error', activeTurnId: null }));
                 break;
@@ -206,7 +273,9 @@ export class ThreadProjector {
         const now = this.now();
         const turnId = `turn-${now}-${Math.random().toString(36).slice(2, 8)}`;
         const label = this.taskSummary;
+        const taskToolUseId = this.taskToolUseId;
         this.taskSummary = null;
+        this.taskToolUseId = null;
         events.push(
             this.thread.upsert({
                 id: turnId,
@@ -216,6 +285,7 @@ export class ThreadProjector {
                 state: 'running',
                 origin: 'agent',
                 ...(label ? { label } : {}),
+                ...(taskToolUseId ? { taskToolUseId } : {}),
                 endedAt: null,
                 costUsd: 0
             })
@@ -223,8 +293,12 @@ export class ThreadProjector {
         events.push(this.thread.patchInfo({ status: 'running', activeTurnId: turnId }));
     }
 
-    /* Whatever was open when the turn or the process ended: nobody is going to answer it now. */
-    private settleOpenItems(events: ChatEvent[]): void {
+    /*
+     * Whatever was open when the turn or the process ended: nobody is going to answer it now. A
+     * background subagent is the exception, since it outlives the turn that launched it on purpose;
+     * only a process that is gone takes it down too.
+     */
+    private settleOpenItems(events: ChatEvent[], processGone = false): void {
         this.thinking = null;
         for (const item of this.thread.list()) {
             if (item.kind === 'assistant' && item.streaming) {
@@ -237,6 +311,8 @@ export class ThreadProjector {
                 events.push(this.thread.upsert({ ...item, state: 'cancelled' }));
             } else if (item.kind === 'tool' && item.state === 'running') {
                 events.push(this.thread.upsert({ ...item, state: 'error' }));
+            } else if (item.kind === 'subagent' && item.status === 'running' && (processGone || !item.background)) {
+                events.push(this.thread.upsert({ ...item, status: 'failed', finishedAt: this.now() }));
             }
         }
     }
@@ -312,11 +388,15 @@ export class ThreadProjector {
         const id = this.itemId(generation, event.ref);
         const existing = this.thread.get(id);
         const previous = existing?.kind === 'tool' ? existing : undefined;
+        const parent = event.parentRef === null ? null : this.subagent(generation, event.parentRef);
+        if (parent && !existing && !this.takeChildSlot(parent, 0, events)) {
+            return;
+        }
         const item: ChatToolItem = {
             id,
             kind: 'tool',
             createdAt: existing?.createdAt ?? this.now(),
-            turnId: existing?.turnId ?? this.thread.info.activeTurnId,
+            turnId: existing?.turnId ?? parent?.turnId ?? this.thread.info.activeTurnId,
             toolUseId: event.ref,
             name: event.name,
             input: event.input ?? {},
@@ -339,6 +419,12 @@ export class ThreadProjector {
         if (tool?.kind !== 'tool') {
             return;
         }
+        if (tool.parentToolUseId !== null) {
+            const parent = this.subagent(generation, tool.parentToolUseId);
+            if (parent) {
+                this.budgetFor(parent).textBytes += (event.output ?? '').length;
+            }
+        }
         // The result supersedes whatever progress said; a settled call carries none.
         const settled: ChatToolItem = { ...tool, output: event.output ?? tool.output, state: event.state };
         delete settled.progress;
@@ -360,6 +446,174 @@ export class ThreadProjector {
             output: tool.progress?.output ?? null
         };
         events.push(this.thread.upsert({ ...tool, progress }));
+    }
+
+    private subagent(generation: number, ref: string): ChatSubagentItem | null {
+        const item = this.thread.get(this.itemId(generation, ref));
+        return item?.kind === 'subagent' ? item : null;
+    }
+
+    private budgetFor(parent: ChatSubagentItem): { items: number; textBytes: number } {
+        const budget = this.budgets.get(parent.id) ?? { items: 0, textBytes: 0 };
+        this.budgets.set(parent.id, budget);
+        return budget;
+    }
+
+    /*
+     * Whether a subagent may keep one more piece of its work in the thread. Past the cap the row says
+     * so and stops collecting; a research agent can make hundreds of calls and the thread is a file.
+     */
+    private takeChildSlot(parent: ChatSubagentItem, textBytes: number, events: ChatEvent[]): boolean {
+        const budget = this.budgetFor(parent);
+        if (budget.items >= MAX_SUBAGENT_ITEMS || budget.textBytes >= MAX_SUBAGENT_TEXT) {
+            if (!parent.itemsTruncated) {
+                events.push(this.thread.upsert({ ...parent, itemsTruncated: true }));
+            }
+            return false;
+        }
+        budget.items += 1;
+        budget.textBytes += textBytes;
+        return true;
+    }
+
+    /* A delegation: the row that carries the agent's own work and the report it ends with. */
+    private startSubagent(generation: number, event: Extract<BackendEvent, { type: 'tool.started' }>, events: ChatEvent[]): void {
+        const id = this.itemId(generation, event.ref);
+        const previous = this.subagent(generation, event.ref);
+        const input = isRecord(event.input) ? event.input : {};
+        const now = this.now();
+        const item: ChatSubagentItem = {
+            id,
+            kind: 'subagent',
+            createdAt: previous?.createdAt ?? now,
+            turnId: previous?.turnId ?? this.thread.info.activeTurnId,
+            toolUseId: event.ref,
+            description: previous?.description || str(input.description) || '',
+            subagentType: previous?.subagentType ?? str(input.subagent_type),
+            prompt: previous?.prompt ?? str(input.prompt),
+            background: previous?.background ?? input.run_in_background === true,
+            status: previous?.status ?? 'running',
+            startedAt: previous?.startedAt ?? now,
+            finishedAt: previous?.finishedAt ?? null,
+            summary: previous?.summary ?? null,
+            result: previous?.result ?? null,
+            usage: previous?.usage ?? null,
+            lastTool: previous?.lastTool ?? null,
+            itemsTruncated: previous?.itemsTruncated ?? false,
+            ...(previous?.outputFile ? { outputFile: previous.outputFile } : {})
+        };
+        events.push(this.thread.upsert(item));
+    }
+
+    /* What the CLI itself says about the delegation: which agent it is, and whether it blocks the turn. */
+    private patchSubagentStart(generation: number, event: Extract<BackendEvent, { type: 'task.started' }>, events: ChatEvent[]): void {
+        const existing = this.thread.get(this.itemId(generation, event.ref));
+        if (existing && existing.kind !== 'subagent') {
+            return;
+        }
+        if (!existing) {
+            this.startSubagent(generation, { type: 'tool.started', ref: event.ref, name: 'Agent', input: {}, parentRef: null }, events);
+        }
+        const item = this.subagent(generation, event.ref);
+        if (!item) {
+            return;
+        }
+        events.push(
+            this.thread.upsert({
+                ...item,
+                description: item.description || event.description || '',
+                subagentType: item.subagentType ?? event.subagentType,
+                prompt: item.prompt ?? event.prompt,
+                background: event.background
+            })
+        );
+    }
+
+    private patchSubagentProgress(generation: number, event: Extract<BackendEvent, { type: 'task.progress' }>, events: ChatEvent[]): void {
+        const item = this.subagent(generation, event.ref);
+        if (!item || item.status !== 'running') {
+            return;
+        }
+        events.push(
+            this.thread.upsert({
+                ...item,
+                summary: event.summary ?? item.summary,
+                lastTool: event.lastTool ?? item.lastTool,
+                usage: event.usage ?? item.usage
+            })
+        );
+    }
+
+    /* Text a subagent wrote: part of its row, and the candidate for the report it ends with. */
+    private appendSubagentText(generation: number, parentRef: string, ref: string, text: string, events: ChatEvent[]): void {
+        const parent = this.subagent(generation, parentRef);
+        if (!parent) {
+            return;
+        }
+        const id = this.itemId(generation, ref);
+        const existing = this.thread.get(id);
+        if (!existing && !this.takeChildSlot(parent, text.length, events)) {
+            return;
+        }
+        events.push(
+            this.thread.upsert({
+                id,
+                kind: 'assistant',
+                createdAt: existing?.createdAt ?? this.now(),
+                turnId: parent.turnId,
+                text,
+                streaming: false,
+                parentToolUseId: parentRef
+            })
+        );
+        const open = this.subagent(generation, parentRef);
+        if (open && text.trim() !== '') {
+            events.push(this.thread.upsert({ ...open, result: text }));
+        }
+    }
+
+    /* The Agent call answered: a foreground agent is done, a background one has only been launched. */
+    private settleSubagent(item: ChatSubagentItem, event: Extract<BackendEvent, { type: 'tool.done' }>, events: ChatEvent[]): void {
+        const output = event.output ?? '';
+        if (output.startsWith(LAUNCH_PLACEHOLDER)) {
+            const outputFile = /output_file:\s*(\S+)/.exec(output)?.[1];
+            events.push(this.thread.upsert({ ...item, background: true, ...(outputFile ? { outputFile } : {}) }));
+            return;
+        }
+        const report = stripAgentFooter(output);
+        events.push(
+            this.thread.upsert({
+                ...item,
+                status: event.state === 'error' ? 'failed' : 'done',
+                finishedAt: this.now(),
+                result: report.text ?? item.result,
+                usage: report.usage ?? item.usage
+            })
+        );
+    }
+
+    /* The notification a background agent settles with; its report is the last text it wrote. */
+    private settleBackgroundSubagent(generation: number, ref: string, event: Extract<BackendEvent, { type: 'task.done' }>, events: ChatEvent[]): void {
+        const item = this.subagent(generation, ref);
+        if (!item) {
+            return;
+        }
+        this.taskToolUseId = item.toolUseId;
+        // A resumed agent notifies more than once; one that already settled only learns what came of it.
+        if (item.status !== 'running') {
+            events.push(this.thread.upsert({ ...item, summary: event.summary ?? item.summary }));
+            return;
+        }
+        events.push(
+            this.thread.upsert({
+                ...item,
+                status: event.ok ? 'done' : 'failed',
+                finishedAt: this.now(),
+                summary: event.summary ?? item.summary,
+                usage: event.usage ?? item.usage,
+                ...(event.outputFile ? { outputFile: event.outputFile } : {})
+            })
+        );
     }
 
     private withdraw(requestId: string, events: ChatEvent[]): void {
@@ -392,7 +646,7 @@ export class ThreadProjector {
     }
 
     private finishProcess(exitCode: number | null, events: ChatEvent[]): void {
-        this.settleOpenItems(events);
+        this.settleOpenItems(events, true);
         const busy = this.thread.info.status === 'running' || this.thread.info.status === 'needs-you';
         if (busy || (exitCode !== null && exitCode !== 0)) {
             events.push(this.note('error', exitCode === null ? `${this.providerName} stopped` : `${this.providerName} exited with code ${exitCode}`));
