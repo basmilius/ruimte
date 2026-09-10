@@ -37,6 +37,7 @@ export function FileTabs() {
                 // the file in it; the file's own name is a hover away. A whole commit is named after
                 // the commit, since no file in it is the one it is about.
                 const commit = tab.view?.commit;
+                const count = counts[tab.key];
                 const label = commit !== undefined ? commit.slice(0, 7) : tab.view ? 'Changes' : basenameOf(tab.path);
                 return (
                     <span key={tab.key} className="files-tab" data-active={tab.key === active} data-view={tab.view ? 'diff' : undefined}>
@@ -53,10 +54,12 @@ export function FileTabs() {
                                     <FileIcon path={tab.path} size={14} />
                                 )}
                                 <span className="files-tab-name">{label}</span>
-                                {tab.view && counts[tab.key] !== undefined && (
-                                    <span className="shrink-0 tabular-nums">
-                                        <span className="text-term-green">+{counts[tab.key]!.added}</span>{' '}
-                                        <span className="text-term-red">-{counts[tab.key]!.deleted}</span>
+                                {/* A side that changed nothing has no number: `+0` is noise, and both
+                                    at zero is a diff with nothing in it to count. */}
+                                {tab.view && count !== undefined && (count.added > 0 || count.deleted > 0) && (
+                                    <span className="flex shrink-0 items-center gap-1 tabular-nums">
+                                        {count.added > 0 && <span className="text-term-green">+{count.added}</span>}
+                                        {count.deleted > 0 && <span className="text-term-red">-{count.deleted}</span>}
                                     </span>
                                 )}
                                 <span className="files-tab-dot" data-dirty={tab.dirty} />
