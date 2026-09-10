@@ -2,9 +2,12 @@
  * Stands in for `claude -p --input-format stream-json` in tests: speaks the same frames, needs no
  * network. `tool: <cmd>` asks for permission first, `run: <cmd>` runs without asking and reports
  * progress the way the real CLI does, `ask: <question>` asks the person a question, `compact`
- * reports a compaction, `slow` waits for an interrupt, `crash` dies. The init frame
- * carries the argument list as `argv`, so a test can see which flags a session started with.
+ * reports a compaction, `write: <path> <text>` writes a file and reports it as an edit, `slow`
+ * waits for an interrupt, `crash` dies. The init frame carries the argument list as `argv`, so a
+ * test can see which flags a session started with.
  */
+import { writeFileSync } from 'node:fs';
+
 const args = process.argv.slice(2);
 const resumeAt = args.indexOf('--resume');
 const sessionId = resumeAt >= 0 ? args[resumeAt + 1]! : `fake-${Math.random().toString(36).slice(2, 8)}`;
@@ -97,6 +100,31 @@ const handleUser = (text: string): void => {
                 tool_use_id: 'toolu_q'
             }
         });
+        return;
+    }
+    if (text.startsWith('write:')) {
+        const [path = '', ...rest] = text.slice(6).trim().split(' ');
+        const content = `${rest.join(' ')}\n`;
+        writeFileSync(path, content);
+        const id = `msg_${++messageCounter}`;
+        out({
+            type: 'assistant',
+            message: {
+                id,
+                model,
+                role: 'assistant',
+                content: [{ type: 'tool_use', id: 'toolu_write', name: 'Write', input: { file_path: path, content } }],
+                usage
+            },
+            session_id: sessionId
+        });
+        out({
+            type: 'user',
+            message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_write', content: `wrote ${path}`, is_error: false }] },
+            session_id: sessionId
+        });
+        assistantText('written');
+        result();
         return;
     }
     if (text.startsWith('run:')) {
@@ -240,5 +268,3 @@ for await (const chunk of Bun.stdin.stream()) {
     }
 }
 process.exit(0);
-
-export {};
