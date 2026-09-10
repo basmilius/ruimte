@@ -1,5 +1,6 @@
-import { describe, expect, test } from 'bun:test';
-import { closeTab, openTab, pinTab, type FileTab, type TabState } from './files.ts';
+import { beforeEach, describe, expect, test } from 'bun:test';
+import { closeTab, openTab, pinTab, useFiles, type FileTab, type TabState } from './files.ts';
+import { useUi } from './ui.ts';
 
 const tab = (path: string, pinned = false): FileTab => ({ path, pinned, dirty: false });
 
@@ -45,6 +46,28 @@ describe('closeTab', () => {
     test('a path that is not open changes nothing', () => {
         const before = state(['a'], 'a');
         expect(closeTab(before, 'z')).toBe(before);
+    });
+});
+
+describe('the store and the preview panel', () => {
+    beforeEach(() => {
+        // No project id, so the tabs stay out of storage the test environment does not have.
+        useFiles.setState({ projectId: null, tabs: [], active: null });
+        useUi.setState({ preview: { open: false } });
+    });
+
+    test('opening a file brings the preview up', () => {
+        useFiles.getState().open('a', 5);
+        expect(useUi.getState().preview.open).toBe(true);
+    });
+
+    test('the last tab that closes takes the preview with it', () => {
+        useFiles.getState().open('a', 5);
+        useFiles.getState().open('b', 5);
+        useFiles.getState().close('a');
+        expect(useUi.getState().preview.open).toBe(true);
+        useFiles.getState().close('b');
+        expect(useUi.getState().preview.open).toBe(false);
     });
 });
 

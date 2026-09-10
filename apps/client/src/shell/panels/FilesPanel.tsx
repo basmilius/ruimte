@@ -12,9 +12,7 @@ import type { FileTree as FileTreeModel, FileTreeDirectoryHandle } from '@pierre
 import { FileTree, useFileTree } from '@pierre/trees/react';
 import { ChevronsDownUp, Copy, CornerUpRight, Eye, EyeOff, Folder, FolderOpen, RefreshCw, Search } from 'lucide-react';
 import { MENTION_DRAG_TYPE } from '@/chat/mentions';
-import { FileViewer } from '@/shell/panels/FileViewer';
 import { LOADING_NAME, absoluteOf, buildTreeInput, compareRows, isDirectoryPath, newlyExpanded, treePathOf, type EntryCache } from '@/shell/panels/files-tree';
-import { useColumnResize } from '@/shell/useColumnResize';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
@@ -25,12 +23,6 @@ import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
 
-const TREE_WIDTH_KEY = 'ruimte.files.tree';
-const TREE_DEFAULT_WIDTH = 280;
-const TREE_MIN_WIDTH = 200;
-// What the viewer needs to be worth opening, and the room the panel makes for it.
-const VIEWER_MIN_WIDTH = 320;
-const VIEWER_ROOM = 480;
 const SEARCH_DEBOUNCE_MS = 150;
 const SEARCH_LIMIT = 200;
 
@@ -61,18 +53,13 @@ const rowPathOf = (event: { nativeEvent: Event }): string | null => {
     return null;
 };
 
-interface FilesPanelProps {
-    /* The panel's own width and how to change it: the first open file makes room for the viewer. */
-    panelWidth: number;
-    setPanelWidth(width: number): void;
-}
-
 /*
- * The folder of the open project as a tree, with a viewer beside it. Directories are listed one at a
- * time: the first `fs.list` is the folder itself, and every expand asks for what it opened. The
- * daemon watches the folder while the panel is up, so a file an agent writes shows up on its own.
+ * The folder of the open project as a tree; the file it opens is drawn by the preview panel next to
+ * it. Directories are listed one at a time: the first `fs.list` is the folder itself, and every
+ * expand asks for what it opened. The daemon watches the folder while the panel is up, so a file an
+ * agent writes shows up on its own.
  */
-export function FilesPanel({ panelWidth, setPanelWidth }: FilesPanelProps) {
+export function FilesPanel() {
     const folder = useProject((s) => s.current?.folder ?? null);
     const projectId = useProject((s) => s.current?.projectId ?? null);
     const platform = useServer((s) => s.platform);
@@ -80,7 +67,6 @@ export function FilesPanel({ panelWidth, setPanelWidth }: FilesPanelProps) {
     const machine = useServer((s) => s.label);
     const showHidden = useSettings((s) => s.filesShowHidden);
     const tabLimit = useSettings((s) => s.filesTabLimit);
-    const hasTabs = useFiles((s) => s.tabs.length > 0);
 
     /* The listings carry the folder they belong to, so a project switch drops them without an
        effect that would render twice to empty the tree. */
@@ -92,7 +78,6 @@ export function FilesPanel({ panelWidth, setPanelWidth }: FilesPanelProps) {
     const directoriesRef = useRef<readonly string[]>([]);
     const selectionRef = useRef<readonly string[]>([]);
     const menuPathRef = useRef<string | null>(null);
-    const treeRef = useRef<HTMLDivElement>(null);
     const cache = listed.folder === folder ? listed.byDir : EMPTY_CACHE;
 
     const { model } = useFileTree({
@@ -129,14 +114,6 @@ export function FilesPanel({ panelWidth, setPanelWidth }: FilesPanelProps) {
 
     const searching = query.trim() !== '';
     const activeModel = searching ? searchModel : model;
-
-    const { width: treeWidth, startResize } = useColumnResize(treeRef, {
-        storageKey: TREE_WIDTH_KEY,
-        defaultWidth: TREE_DEFAULT_WIDTH,
-        min: TREE_MIN_WIDTH,
-        from: 'left',
-        max: () => panelWidth - VIEWER_MIN_WIDTH - 1
-    });
 
     const load = useCallback(
         async (dir: string): Promise<void> => {
@@ -245,21 +222,6 @@ export function FilesPanel({ panelWidth, setPanelWidth }: FilesPanelProps) {
         searchModel.resetPaths([...matches]);
     }, [matches, searchModel]);
 
-    /* The viewer needs room the tree cannot give it, so the first open file widens the panel and the
-       last close hands the width back. A drag of the panel's own edge forgets the width it kept. */
-    useEffect(() => {
-        const files = useFiles.getState();
-        if (hasTabs) {
-            if (files.panelWidthBefore === null && panelWidth < treeWidth + VIEWER_MIN_WIDTH + 1) {
-                files.rememberPanelWidth(panelWidth);
-                setPanelWidth(treeWidth + VIEWER_ROOM + 1);
-            }
-        } else if (files.panelWidthBefore !== null) {
-            setPanelWidth(files.panelWidthBefore);
-            files.forgetPanelWidth();
-        }
-    }, [hasTabs, panelWidth, setPanelWidth, treeWidth]);
-
     const openPath = (treePath: string | null): void => {
         if (!folder || !treePath || isDirectoryPath(treePath)) {
             return;
@@ -318,105 +280,97 @@ export function FilesPanel({ panelWidth, setPanelWidth }: FilesPanelProps) {
     }
 
     return (
-        <div className="flex min-h-0 grow">
-            <div ref={treeRef} className="flex min-w-0 flex-col" style={hasTabs ? { width: treeWidth, flexShrink: 0 } : { flexGrow: 1 }}>
-                <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border px-2">
-                    <span className="relative min-w-0 grow">
-                        <Icon icon={Search} size={12} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-text-faint" />
-                        <input
-                            className="field h-6 w-full pl-7 pr-2 text-xs"
-                            placeholder="Filter files"
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Escape' && query !== '') {
-                                    e.stopPropagation();
-                                    setQuery('');
-                                }
-                            }}
-                        />
-                    </span>
-                    <div className="btn-group">
-                        <Tooltip label={showHidden ? 'Hide hidden files' : 'Show hidden files'} name>
-                            <button
-                                className="icon-btn h-6 w-6"
-                                aria-pressed={showHidden}
-                                onClick={() => useSettings.getState().update({ filesShowHidden: !showHidden })}
-                            >
-                                <Icon icon={showHidden ? Eye : EyeOff} size={14} />
-                            </button>
-                        </Tooltip>
-                        <Tooltip label="Collapse all" name>
-                            <button className="icon-btn h-6 w-6" onClick={collapseAll}>
-                                <Icon icon={ChevronsDownUp} size={14} />
-                            </button>
-                        </Tooltip>
-                        <Tooltip label="Refresh" name>
-                            <button className="icon-btn h-6 w-6" onClick={refresh}>
-                                <Icon icon={RefreshCw} size={14} />
-                            </button>
-                        </Tooltip>
-                    </div>
-                </div>
-                {reachability !== null && reachability !== 'loopback' && (
-                    <div className="flex h-7 shrink-0 items-center px-2">
-                        <Pill>{machine ?? 'Remote machine'}</Pill>
-                    </div>
-                )}
-                <ContextMenu.Root>
-                    <ContextMenu.Trigger
-                        render={<div />}
-                        className="min-h-0 grow overflow-hidden"
-                        onContextMenu={(event) => {
-                            menuPathRef.current = rowPathOf(event);
-                            if (menuPathRef.current) {
-                                activeModel.getItem(menuPathRef.current)?.select();
+        <div className="flex min-h-0 min-w-0 grow flex-col">
+            <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border px-2">
+                <span className="relative min-w-0 grow">
+                    <Icon icon={Search} size={12} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-text-faint" />
+                    <input
+                        className="field h-6 w-full pl-7 pr-2 text-xs"
+                        placeholder="Filter files"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Escape' && query !== '') {
+                                e.stopPropagation();
+                                setQuery('');
                             }
                         }}
-                    >
-                        <FileTree
-                            key={searching ? 'search' : 'tree'}
-                            model={activeModel}
-                            className="files-tree"
-                            onDoubleClick={onDoubleClick}
-                            onKeyDown={onKeyDown}
-                            onDragStart={onDragStart}
-                        />
-                    </ContextMenu.Trigger>
-                    <ContextMenu.Portal>
-                        <ContextMenu.Positioner className="popup-layer">
-                            <ContextMenu.Popup className="menu-popup">
-                                <ContextMenu.Item className="menu-item" onClick={onMenuPath((_absolute, treePath) => openPath(treePath))}>
-                                    <Icon icon={FolderOpen} size={14} /> Open
-                                </ContextMenu.Item>
-                                <ContextMenu.Item
-                                    className="menu-item"
-                                    onClick={onMenuPath((absolute) => {
-                                        void transport.request('fs.reveal', { path: absolute }).catch(() => undefined);
-                                    })}
-                                >
-                                    <Icon icon={CornerUpRight} size={14} /> Reveal in {fileManagerName(platform)}
-                                </ContextMenu.Item>
-                                <ContextMenu.Item className="menu-item" onClick={onMenuPath((absolute) => copyText(absolute))}>
-                                    <Icon icon={Copy} size={14} /> Copy path
-                                </ContextMenu.Item>
-                                <ContextMenu.Item
-                                    className="menu-item"
-                                    onClick={onMenuPath((_absolute, treePath) => copyText(isDirectoryPath(treePath) ? treePath.slice(0, -1) : treePath))}
-                                >
-                                    <Icon icon={Copy} size={14} /> Copy relative path
-                                </ContextMenu.Item>
-                            </ContextMenu.Popup>
-                        </ContextMenu.Positioner>
-                    </ContextMenu.Portal>
-                </ContextMenu.Root>
+                    />
+                </span>
+                <div className="btn-group">
+                    <Tooltip label={showHidden ? 'Hide hidden files' : 'Show hidden files'} name>
+                        <button
+                            className="icon-btn h-6 w-6"
+                            aria-pressed={showHidden}
+                            onClick={() => useSettings.getState().update({ filesShowHidden: !showHidden })}
+                        >
+                            <Icon icon={showHidden ? Eye : EyeOff} size={14} />
+                        </button>
+                    </Tooltip>
+                    <Tooltip label="Collapse all" name>
+                        <button className="icon-btn h-6 w-6" onClick={collapseAll}>
+                            <Icon icon={ChevronsDownUp} size={14} />
+                        </button>
+                    </Tooltip>
+                    <Tooltip label="Refresh" name>
+                        <button className="icon-btn h-6 w-6" onClick={refresh}>
+                            <Icon icon={RefreshCw} size={14} />
+                        </button>
+                    </Tooltip>
+                </div>
             </div>
-            {hasTabs && (
-                <div className="relative flex min-w-0 grow border-l border-border">
-                    <div className="absolute inset-y-0 -left-1 z-10 w-2 cursor-col-resize" onPointerDown={startResize} />
-                    <FileViewer />
+            {reachability !== null && reachability !== 'loopback' && (
+                <div className="flex h-7 shrink-0 items-center px-2">
+                    <Pill>{machine ?? 'Remote machine'}</Pill>
                 </div>
             )}
+            <ContextMenu.Root>
+                <ContextMenu.Trigger
+                    render={<div />}
+                    className="min-h-0 grow overflow-hidden"
+                    onContextMenu={(event) => {
+                        menuPathRef.current = rowPathOf(event);
+                        if (menuPathRef.current) {
+                            activeModel.getItem(menuPathRef.current)?.select();
+                        }
+                    }}
+                >
+                    <FileTree
+                        key={searching ? 'search' : 'tree'}
+                        model={activeModel}
+                        className="files-tree"
+                        onDoubleClick={onDoubleClick}
+                        onKeyDown={onKeyDown}
+                        onDragStart={onDragStart}
+                    />
+                </ContextMenu.Trigger>
+                <ContextMenu.Portal>
+                    <ContextMenu.Positioner className="popup-layer">
+                        <ContextMenu.Popup className="menu-popup">
+                            <ContextMenu.Item className="menu-item" onClick={onMenuPath((_absolute, treePath) => openPath(treePath))}>
+                                <Icon icon={FolderOpen} size={14} /> Open
+                            </ContextMenu.Item>
+                            <ContextMenu.Item
+                                className="menu-item"
+                                onClick={onMenuPath((absolute) => {
+                                    void transport.request('fs.reveal', { path: absolute }).catch(() => undefined);
+                                })}
+                            >
+                                <Icon icon={CornerUpRight} size={14} /> Reveal in {fileManagerName(platform)}
+                            </ContextMenu.Item>
+                            <ContextMenu.Item className="menu-item" onClick={onMenuPath((absolute) => copyText(absolute))}>
+                                <Icon icon={Copy} size={14} /> Copy path
+                            </ContextMenu.Item>
+                            <ContextMenu.Item
+                                className="menu-item"
+                                onClick={onMenuPath((_absolute, treePath) => copyText(isDirectoryPath(treePath) ? treePath.slice(0, -1) : treePath))}
+                            >
+                                <Icon icon={Copy} size={14} /> Copy relative path
+                            </ContextMenu.Item>
+                        </ContextMenu.Popup>
+                    </ContextMenu.Positioner>
+                </ContextMenu.Portal>
+            </ContextMenu.Root>
         </div>
     );
 }

@@ -8,6 +8,7 @@ const PANEL_KINDS: readonly PanelKind[] = ['files', 'git'];
 
 const SIDEBAR_STORAGE_KEY = 'ruimte.sidebar';
 const PANEL_STORAGE_KEY = 'ruimte.panel';
+const PREVIEW_STORAGE_KEY = 'ruimte.preview';
 
 const readSidebarOpen = (): boolean => {
     try {
@@ -46,6 +47,15 @@ export const parsePanel = (raw: string | null): PanelState => {
 
 export const serializePanel = (panel: PanelState): string => (panel.open ? panel.kind : `closed:${panel.kind}`);
 
+interface PreviewState {
+    open: boolean;
+}
+
+/* The preview stands next to the panel and is stored next to it, so a reload brings back both. */
+export const parsePreview = (raw: string | null): PreviewState => ({ open: raw === 'open' });
+
+export const serializePreview = (preview: PreviewState): string => (preview.open ? 'open' : 'closed');
+
 const readPanel = (): PanelState => {
     try {
         return parsePanel(localStorage.getItem(PANEL_STORAGE_KEY));
@@ -59,6 +69,22 @@ const persistPanel = (panel: PanelState): void => {
         localStorage.setItem(PANEL_STORAGE_KEY, serializePanel(panel));
     } catch {
         // Storage that refuses keeps the panel for this session only.
+    }
+};
+
+const readPreview = (): PreviewState => {
+    try {
+        return parsePreview(localStorage.getItem(PREVIEW_STORAGE_KEY));
+    } catch {
+        return { open: false };
+    }
+};
+
+const persistPreview = (preview: PreviewState): void => {
+    try {
+        localStorage.setItem(PREVIEW_STORAGE_KEY, serializePreview(preview));
+    } catch {
+        // Storage that refuses keeps the preview for this session only.
     }
 };
 
@@ -76,6 +102,7 @@ interface UiStore {
     paletteSeed: string;
     settings: SettingsState;
     panel: PanelState;
+    preview: PreviewState;
     layoutDialogOpen: boolean;
     /* The group a worktree is being bound to, while its dialog is up. */
     worktreeDialogFor: string | null;
@@ -88,6 +115,8 @@ interface UiStore {
     setSettings(patch: Partial<SettingsState>): void;
     setPanel(patch: Partial<PanelState>): void;
     togglePanel(kind?: PanelKind): void;
+    setPreviewOpen(open: boolean): void;
+    togglePreview(): void;
 }
 
 /* Which app-level dialog is up; nothing here belongs to a project or a node. */
@@ -97,6 +126,7 @@ export const useUi = create<UiStore>((set, get) => ({
     sidebarOpen: readSidebarOpen(),
     settings: { open: false, section: 'appearance' },
     panel: readPanel(),
+    preview: readPreview(),
     layoutDialogOpen: false,
     worktreeDialogFor: null,
     setWorktreeDialogFor(groupId) {
@@ -132,5 +162,15 @@ export const useUi = create<UiStore>((set, get) => ({
         const next: PanelState = kind ? { open: !(panel.open && panel.kind === kind), kind } : { ...panel, open: !panel.open };
         persistPanel(next);
         set({ panel: next });
+    },
+    setPreviewOpen(open) {
+        if (get().preview.open === open) {
+            return;
+        }
+        persistPreview({ open });
+        set({ preview: { open } });
+    },
+    togglePreview() {
+        get().setPreviewOpen(!get().preview.open);
     }
 }));
