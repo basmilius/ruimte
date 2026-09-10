@@ -379,9 +379,6 @@ canvas, against Ruimte, one verdict each.
   Escape before the canvas listener sees it. Chat, browser and note nodes still leave on plain
   Escape. Ctrl+Escape is the Windows Start menu and Ctrl+Shift+Escape is its Task Manager, so a
   Windows build still has no chord the OS leaves alone: the mode chip is the way out there.
-  "Send Escape to the app" (`escapeToApp` in `project.json`, an "Esc" chip in the header) does
-  nothing now that Escape always reaches the program; the field and the toggle stay for canvases
-  that carry it.
 - On macOS a terminal node has the line and word motions a native terminal has and xterm does
   not: Cmd+Left and Cmd+Right send Home and End in the form the application cursor keys mode
   asks for (`\x1b[H` / `\x1b[F`, `\x1bOH` / `\x1bOF` under DECCKM), Option+Left and

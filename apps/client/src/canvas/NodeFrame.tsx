@@ -1,13 +1,11 @@
 import { memo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { ChevronDown, ChevronRight, GitBranch, Globe, Keyboard, LayoutGrid, Link2, Maximize2, MessageSquare, StickyNote, Terminal, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, GitBranch, Globe, LayoutGrid, Link2, Maximize2, MessageSquare, StickyNote, Terminal, X } from 'lucide-react';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
 import { useHasContextLinks } from '@/context/sync';
-import { isApplePlatform } from '@/desktop/bridge';
-import { leaveNodeChordLabel } from '@/terminal/keymap';
 import { NODE_ACCENTS } from '@/canvas/accents';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { Pill } from '@/ui/Pill';
@@ -190,15 +188,6 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     {node.kind === 'terminal' && hasContext && !renaming && (
                         <Tooltip label="Linked context. The agent in this terminal reads it with ruimte-context (list, read <id>).">
                             <Pill icon={<Icon icon={Link2} size={12} />}>context</Pill>
-                        </Tooltip>
-                    )}
-                    {node.kind === 'terminal' && node.escapeToApp && !renaming && (
-                        <Tooltip
-                            label={`Escape reaches the program in every terminal now, so this chip is a leftover: click to clear it. Leaving the node is ${leaveNodeChordLabel(isApplePlatform())}.`}
-                        >
-                            <Pill icon={<Icon icon={Keyboard} size={12} />} onClick={() => useCanvas.getState().updateNode(id, { escapeToApp: false })}>
-                                Esc
-                            </Pill>
                         </Tooltip>
                     )}
                     {status && !renaming && (
