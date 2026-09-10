@@ -128,8 +128,7 @@ describe('ChatClient', () => {
             cwd: '/tmp',
             resume: 'abc',
             selection: undefined,
-            runtimeMode: 'auto',
-            interactionMode: undefined
+            runtimeMode: 'auto'
         });
         expect(transport.of('chat.attach')[0]?.payload).toEqual({ chatId: 'c' });
         expect(sink.resets).toEqual([{ chatId: 'c', items: transport.items }]);

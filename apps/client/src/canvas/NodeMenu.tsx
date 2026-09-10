@@ -54,7 +54,9 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
     const canOpenInChat = agent ? providers.some((entry) => entry.kind === agent.kind && entry.capabilities.chat) : false;
     const openInChat = (): void => {
         if (agent) {
-            useCanvas.getState().addNode('chat', beside, { title: node.title, cwd: node.cwd, resume: agent.agentSessionId, provider: agent.kind });
+            useCanvas
+                .getState()
+                .addNode('chat', beside, { title: node.title, cwd: node.cwd, resume: agent.agentSessionId, provider: agent.kind, providerFixed: true });
         }
     };
     const openInTerminal = (): void => {

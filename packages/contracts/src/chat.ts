@@ -236,6 +236,7 @@ export const ChatCreatePayloadSchema = z.object({
     resume: z.string().optional(),
     selection: ModelSelectionSchema.optional(),
     runtimeMode: RuntimeModeSchema.optional(),
+    // The client stopped sending this when the plan toggle went; the daemon still honors it.
     interactionMode: InteractionModeSchema.optional()
 });
 export type ChatCreatePayload = z.infer<typeof ChatCreatePayloadSchema>;
@@ -244,6 +245,7 @@ export const ChatConfigurePayloadSchema = z.object({
     chatId: ChatIdSchema,
     selection: ModelSelectionSchema.optional(),
     runtimeMode: RuntimeModeSchema.optional(),
+    // As on create: kept for a stored thread that resumes in plan mode, never sent by the client.
     interactionMode: InteractionModeSchema.optional()
 });
 export type ChatConfigurePayload = z.infer<typeof ChatConfigurePayloadSchema>;

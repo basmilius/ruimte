@@ -1,10 +1,17 @@
-import type { InteractionMode, ModelInfo, ProviderInfo, RuntimeMode } from '@ruimte/contracts';
-import { rememberChatPreferences, useChatPreferences } from '@/chat/preferences';
+import type { AgentKind, ModelInfo, ProviderInfo, RuntimeMode } from '@ruimte/contracts';
+import {
+    forgetChatSelection,
+    rememberChatPreferences,
+    rememberChatSelection,
+    selectionFor,
+    useChatPreferences,
+    type ChatPreferences
+} from '@/chat/preferences';
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Badge, Segmented, SelectControl, Toggle } from '@/shell/settings/controls';
-import { findModel, useProviders } from '@/state/providers';
+import { Badge, SelectControl, Toggle } from '@/shell/settings/controls';
+import { useProviders } from '@/state/providers';
 
 const PROVIDER_DEFAULT = '';
 
@@ -14,15 +21,10 @@ const providerAbilities = (provider: ProviderInfo): string => {
     return `${where} ${provider.capabilities.hooks ? 'Reports status through its hooks.' : 'No status beyond the session itself.'}`;
 };
 
-const APPROACHES: Array<{ id: InteractionMode; label: string }> = [
-    { id: 'default', label: 'Build' },
-    { id: 'plan', label: 'Plan' }
-];
-
 /* One row per knob the chosen model exposes; the composer's option picker shows the same descriptors. */
-function ModelOptionRows({ model, options }: { model: ModelInfo; options: Record<string, string | boolean> }) {
+function ModelOptionRows({ provider, model, options }: { provider: AgentKind; model: ModelInfo; options: Record<string, string | boolean> }) {
     const setOption = (id: string, value: string | boolean): void => {
-        rememberChatPreferences({ selection: { model: model.slug, options: { ...options, [id]: value } } });
+        rememberChatSelection(provider, { model: model.slug, options: { ...options, [id]: value } });
     };
     return (
         <>
@@ -58,48 +60,62 @@ function ModelOptionRows({ model, options }: { model: ModelInfo; options: Record
     );
 }
 
+/* The remembered model of one CLI, with the knobs of that model under it. */
+function ProviderModelRows({ provider, preferences }: { provider: ProviderInfo; preferences: ChatPreferences }) {
+    const selection = selectionFor(preferences, provider.kind);
+    const model = provider.models.find((entry) => entry.slug === selection?.model);
+    return (
+        <>
+            <SettingsRow
+                label={provider.name}
+                description="Provider default follows the CLI's own choice."
+                control={
+                    <SelectControl
+                        value={model?.slug ?? PROVIDER_DEFAULT}
+                        label={`Default model for ${provider.name}`}
+                        onChange={(value) =>
+                            value === PROVIDER_DEFAULT
+                                ? forgetChatSelection(provider.kind)
+                                : rememberChatSelection(provider.kind, { model: value, options: {} })
+                        }
+                    >
+                        <option value={PROVIDER_DEFAULT}>Provider default</option>
+                        {provider.models.map((entry) => (
+                            <option key={entry.slug} value={entry.slug}>
+                                {entry.name}
+                                {entry.legacy ? ' (legacy)' : ''}
+                            </option>
+                        ))}
+                    </SelectControl>
+                }
+            />
+            {model && <ModelOptionRows provider={provider.kind} model={model} options={selection?.options ?? {}} />}
+        </>
+    );
+}
+
 export function AgentsPane() {
     const providers = useProviders((s) => s.providers);
     const loaded = useProviders((s) => s.loaded);
     const preferences = useChatPreferences();
     const withModels = providers.filter((provider) => provider.models.length > 0);
-    const selectedSlug = preferences.selection?.model ?? PROVIDER_DEFAULT;
-    const selectedModel = preferences.selection ? findModel(providers, preferences.selection.model) : undefined;
     const runtime = RUNTIME_MODES.find((mode) => mode.id === preferences.runtimeMode);
 
     return (
         <>
-            <SettingsSection title="Defaults for new agents" description="The composer remembers what you pick there too; this is the same default.">
-                <SettingsRow
-                    label="Model"
-                    description={
-                        withModels.length === 0
-                            ? loaded
-                                ? 'No agent CLI with a chat backend was found on the daemon.'
-                                : 'Waiting for the daemon to list its providers.'
-                            : "Provider default follows the CLI's own choice."
-                    }
-                    control={
-                        <SelectControl
-                            value={selectedSlug}
-                            label="Default model"
-                            onChange={(value) => rememberChatPreferences({ selection: value === PROVIDER_DEFAULT ? null : { model: value, options: {} } })}
-                        >
-                            <option value={PROVIDER_DEFAULT}>Provider default</option>
-                            {withModels.map((provider) => (
-                                <optgroup key={provider.kind} label={provider.name}>
-                                    {provider.models.map((model) => (
-                                        <option key={model.slug} value={model.slug}>
-                                            {model.name}
-                                            {model.legacy ? ' (legacy)' : ''}
-                                        </option>
-                                    ))}
-                                </optgroup>
-                            ))}
-                        </SelectControl>
-                    }
-                />
-                {selectedModel && <ModelOptionRows model={selectedModel} options={preferences.selection?.options ?? {}} />}
+            <SettingsSection
+                title="Defaults for new agents"
+                description="One model per CLI, the last one picked. The composer remembers what you pick there too; this is the same default."
+            >
+                {withModels.length === 0 && (
+                    <SettingsRow
+                        muted
+                        label={loaded ? 'No agent CLI with a chat backend was found on the daemon.' : 'Waiting for the daemon to list its providers.'}
+                    />
+                )}
+                {withModels.map((provider) => (
+                    <ProviderModelRows key={provider.kind} provider={provider} preferences={preferences} />
+                ))}
                 <SettingsRow
                     label="Permissions"
                     description={runtime?.hint}
@@ -132,18 +148,6 @@ export function AgentsPane() {
                                 </option>
                             ))}
                         </SelectControl>
-                    }
-                />
-                <SettingsRow
-                    label="Approach"
-                    description="Plan has the agent propose first; Build goes straight to work."
-                    control={
-                        <Segmented
-                            value={preferences.interactionMode}
-                            options={APPROACHES}
-                            label="Approach"
-                            onChange={(value) => rememberChatPreferences({ interactionMode: value })}
-                        />
                     }
                 />
             </SettingsSection>

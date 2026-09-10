@@ -224,6 +224,20 @@ body {
 .menu-separator { height: 1px; margin: 4px 6px; background: var(--border); }
 .menu-label { padding: 6px 10px 2px; font-size: 11px; color: var(--text-faint); letter-spacing: .04em; text-transform: uppercase; }
 
+/* A menu with a search field on top: the field sits flush against the edge, so the padding is the list's. */
+.picker-popup {
+    width: 288px;
+    border-radius: 10px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-float);
+    outline: none;
+    overflow: hidden;
+    transform-origin: var(--transform-origin);
+    transition: opacity 120ms ease, scale 120ms ease;
+}
+.picker-popup[data-starting-style], .picker-popup[data-ending-style] { opacity: 0; scale: 0.96; }
+
 .text-element[contenteditable] { outline: none; cursor: text; user-select: text; }
 .text-element[contenteditable]:empty::before { content: attr(data-placeholder); color: var(--text-faint); }
 
