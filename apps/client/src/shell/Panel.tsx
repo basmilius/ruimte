@@ -4,7 +4,6 @@ import { PanelControls } from '@/shell/PanelControls';
 import { PANELS } from '@/shell/panels';
 import { FilesPanel } from '@/shell/panels/FilesPanel';
 import { useColumnResize } from '@/shell/useColumnResize';
-import { useFiles } from '@/state/files';
 import { useUi, type PanelKind } from '@/state/ui';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
@@ -18,9 +17,9 @@ const MIN_CANVAS_WIDTH = 360;
 // How long the open and close motion takes; the same number as the class below.
 const TRANSITION_MS = 200;
 
-function PanelBody({ kind, label, width, setWidth }: { kind: PanelKind; label: string; width: number; setWidth(width: number): void }) {
+function PanelBody({ kind, label }: { kind: PanelKind; label: string }) {
     if (kind === 'files') {
-        return <FilesPanel panelWidth={width} setPanelWidth={setWidth} />;
+        return <FilesPanel />;
     }
     return (
         <div className="grid grow place-items-center">
@@ -41,14 +40,12 @@ export function Panel() {
     const [settled, setSettled] = useState(!panel.open);
     const present = panel.open || !settled;
     const ref = useRef<HTMLElement>(null);
-    const { width, setWidth, startResize } = useColumnResize(ref, {
+    const { width, startResize } = useColumnResize(ref, {
         storageKey: STORAGE_KEY,
         defaultWidth: DEFAULT_WIDTH,
         min: MIN_WIDTH,
         from: 'right',
-        max: () => window.innerWidth - MIN_CANVAS_WIDTH,
-        // A width the person set themselves outranks the one the viewer would give back.
-        onManualResize: () => useFiles.getState().forgetPanelWidth()
+        max: () => window.innerWidth - MIN_CANVAS_WIDTH
     });
 
     useEffect(() => {
@@ -89,7 +86,7 @@ export function Panel() {
                         </Tooltip>
                         {panel.open && <PanelControls />}
                     </header>
-                    <PanelBody kind={panel.kind} label={label} width={width} setWidth={setWidth} />
+                    <PanelBody kind={panel.kind} label={label} />
                 </div>
             )}
         </aside>

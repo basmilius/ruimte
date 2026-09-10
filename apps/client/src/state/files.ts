@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useUi } from '@/state/ui';
 
 const STORAGE_PREFIX = 'ruimte.files.tabs.';
 
@@ -80,15 +81,11 @@ const persist = (projectId: string | null, state: TabState): void => {
 interface FilesStore extends TabState {
     /* Whose tabs these are; a project that was never opened this session starts empty. */
     projectId: string | null;
-    /* The panel width from before the viewer pushed it wider, so the last close gives it back. */
-    panelWidthBefore: number | null;
     load(projectId: string | null): void;
     open(path: string, limit: number): void;
     close(path: string): void;
     setPinned(path: string, pinned: boolean): void;
     activate(path: string): void;
-    rememberPanelWidth(width: number): void;
-    forgetPanelWidth(): void;
 }
 
 /*
@@ -99,22 +96,27 @@ export const useFiles = create<FilesStore>((set, get) => ({
     projectId: null,
     tabs: [],
     active: null,
-    panelWidthBefore: null,
     load(projectId) {
         if (get().projectId === projectId) {
             return;
         }
-        set({ projectId, panelWidthBefore: null, ...(projectId ? read(projectId) : { tabs: [], active: null }) });
+        set({ projectId, ...(projectId ? read(projectId) : { tabs: [], active: null }) });
     },
+    /* A tab and the panel that draws it are one thing to the person opening a file: the first open
+       brings the preview up and the last close takes it away again. */
     open(path, limit) {
         const next = openTab(get(), path, limit);
         persist(get().projectId, next);
         set(next);
+        useUi.getState().setPreviewOpen(true);
     },
     close(path) {
         const next = closeTab(get(), path);
         persist(get().projectId, next);
         set(next);
+        if (next.tabs.length === 0) {
+            useUi.getState().setPreviewOpen(false);
+        }
     },
     setPinned(path, pinned) {
         const next = pinTab(get(), path, pinned);
@@ -125,11 +127,5 @@ export const useFiles = create<FilesStore>((set, get) => ({
         const next: TabState = { tabs: get().tabs, active: path };
         persist(get().projectId, next);
         set({ active: path });
-    },
-    rememberPanelWidth(width) {
-        set({ panelWidthBefore: width });
-    },
-    forgetPanelWidth() {
-        set({ panelWidthBefore: null });
     }
 }));

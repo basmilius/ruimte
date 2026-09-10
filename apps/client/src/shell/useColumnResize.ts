@@ -1,4 +1,4 @@
-import { useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
 
 interface ColumnResizeOptions {
     storageKey: string;
@@ -9,13 +9,12 @@ interface ColumnResizeOptions {
     from: 'left' | 'right';
     /* Read at drag time, so a window resize between two drags is taken into account. */
     max?(): number;
-    /* A drag the person did themselves, as opposed to a width the app set. */
-    onManualResize?(width: number): void;
 }
 
 interface ColumnResize {
     width: number;
-    /* Sets and stores a width the app chose; a drag goes through `startResize`. */
+    /* A width the app chose, for this session only: storage is what a drag of the person's own
+       writes. The same function across renders, so an effect may depend on it. */
     setWidth(width: number): void;
     startResize(event: ReactPointerEvent<HTMLElement>): void;
 }
@@ -28,6 +27,20 @@ const readWidth = (key: string, fallback: number): number => {
     } catch {
         return fallback;
     }
+};
+
+/* Whether a drag ever wrote a width here, which is what makes it the person's rather than the app's. */
+export const hasStoredWidth = (key: string): boolean => {
+    try {
+        return localStorage.getItem(key) !== null;
+    } catch {
+        return false;
+    }
+};
+
+const clampWidth = (options: ColumnResizeOptions, width: number): number => {
+    const max = Math.max(options.min, options.max?.() ?? Number.MAX_SAFE_INTEGER);
+    return Math.max(options.min, Math.min(Math.round(width), max));
 };
 
 const persistWidth = (key: string, width: number): void => {
@@ -44,17 +57,18 @@ const persistWidth = (key: string, width: number): void => {
  * on the column turns off any width transition for as long as it lasts.
  */
 export const useColumnResize = (ref: RefObject<HTMLElement | null>, options: ColumnResizeOptions): ColumnResize => {
-    const clamp = (width: number): number => {
-        const max = Math.max(options.min, options.max?.() ?? Number.MAX_SAFE_INTEGER);
-        return Math.max(options.min, Math.min(Math.round(width), max));
-    };
-    const [width, setStored] = useState(() => clamp(readWidth(options.storageKey, options.defaultWidth)));
+    /* The options as the last render left them, read when a drag or a set runs; that is what lets
+       `setWidth` be one function for the life of the column. */
+    const latest = useRef(options);
+    useLayoutEffect(() => {
+        latest.current = options;
+    });
 
-    const setWidth = (next: number): void => {
-        const clamped = clamp(next);
-        persistWidth(options.storageKey, clamped);
-        setStored(clamped);
-    };
+    const [width, setStored] = useState(() => clampWidth(options, readWidth(options.storageKey, options.defaultWidth)));
+
+    const setWidth = useCallback((next: number): void => {
+        setStored(clampWidth(latest.current, next));
+    }, []);
 
     const startResize = (event: ReactPointerEvent<HTMLElement>): void => {
         event.preventDefault();
@@ -65,7 +79,7 @@ export const useColumnResize = (ref: RefObject<HTMLElement | null>, options: Col
         let next = width;
         column?.setAttribute('data-resizing', 'true');
         const onMove = (move: PointerEvent): void => {
-            next = clamp(options.from === 'right' ? anchor - move.clientX : move.clientX - anchor);
+            next = clampWidth(options, options.from === 'right' ? anchor - move.clientX : move.clientX - anchor);
             setStored(next);
         };
         const onUp = (): void => {
@@ -74,7 +88,6 @@ export const useColumnResize = (ref: RefObject<HTMLElement | null>, options: Col
             handle.releasePointerCapture(event.pointerId);
             column?.removeAttribute('data-resizing');
             persistWidth(options.storageKey, next);
-            options.onManualResize?.(next);
         };
         handle.setPointerCapture(event.pointerId);
         handle.addEventListener('pointermove', onMove);
