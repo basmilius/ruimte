@@ -8,6 +8,7 @@ import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
 import { useProject } from '@/state/project';
 import { Button } from '@/ui/Button';
+import { SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -84,7 +85,7 @@ export function ProjectIconDialog({ project, open, onOpenChange }: ProjectIconDi
                         </div>
                     </div>
 
-                    <div className="section-label mt-4 mb-1.5">Emoji</div>
+                    <div className={`${SECTION_LABEL} mt-4 mb-1.5`}>Emoji</div>
                     <div className="flex items-center gap-2">
                         <input
                             className="field w-24 text-center"
@@ -103,7 +104,7 @@ export function ProjectIconDialog({ project, open, onOpenChange }: ProjectIconDi
                         </Button>
                     </div>
 
-                    <div className="section-label mt-4 mb-1.5">Icon</div>
+                    <div className={`${SECTION_LABEL} mt-4 mb-1.5`}>Icon</div>
                     <div className="grid grid-cols-10 gap-1">
                         {PROJECT_ICON_NAMES.map((name) => (
                             <Tooltip key={name} label={name} name>

@@ -13,6 +13,7 @@ import { groupRows, rowAfterArrow, rowOrder } from '@/shell/sidebar-rows';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { Brand } from '@/ui/Brand';
+import { SECTION_LABEL } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { Tooltip } from '@/ui/Tooltip';
 import { SidebarToggle } from '@/shell/SidebarToggle';
@@ -168,7 +169,7 @@ export function Sidebar() {
                     ) : (
                         groups.map((group) => (
                             <div key={group.status} className="mb-3">
-                                <div className="section-label flex items-center gap-1.5 px-2 py-1">
+                                <div className={`${SECTION_LABEL} flex items-center gap-1.5 px-2 py-1`}>
                                     {group.status !== 'none' && <StatusDot status={group.status} plain />}
                                     {group.label}
                                     <span className="ml-auto tabular-nums">{group.rows.length}</span>

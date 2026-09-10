@@ -25,6 +25,7 @@ import { fileManagerName, useServer } from '@/state/server';
 import { useSessions } from '@/state/sessions';
 import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
+import { MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 
 /* The context menu of one node, the same from its frame and from its row in the sidebar. */
@@ -69,10 +70,10 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
 
     return (
         <ContextMenu.Portal>
-            <ContextMenu.Positioner className="popup-layer">
+            <ContextMenu.Positioner className="z-[var(--z-popup)]">
                 <ContextMenu.Popup className="menu-popup">
                     <ContextMenu.Item className="menu-item" onClick={onRename}>
-                        <Icon icon={Pencil} size={14} /> Rename <span className="menu-hint">dbl-click</span>
+                        <Icon icon={Pencil} size={14} /> Rename <span className={MENU_HINT}>dbl-click</span>
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().duplicateNode(id)}>
                         <Icon icon={Copy} size={14} /> Duplicate
@@ -82,7 +83,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().startLink(id)}>
                         <Icon icon={Link2} size={14} /> Connect to...
-                        <span className="menu-hint">Then click a node</span>
+                        <span className={MENU_HINT}>Then click a node</span>
                     </ContextMenu.Item>
                     {node.kind === 'group' && (
                         <>
@@ -93,7 +94,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                             {node.worktree ? (
                                 <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().setGroupWorktree(id, null)}>
                                     <Icon icon={GitBranch} size={14} /> Unbind worktree
-                                    <span className="menu-hint">Checkout stays</span>
+                                    <span className={MENU_HINT}>Checkout stays</span>
                                 </ContextMenu.Item>
                             ) : (
                                 <ContextMenu.Item className="menu-item" onClick={() => useUi.getState().setWorktreeDialogFor(id)}>
@@ -127,7 +128,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                                 <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
                             </ContextMenu.SubmenuTrigger>
                             <ContextMenu.Portal>
-                                <ContextMenu.Positioner className="popup-layer" sideOffset={4} alignOffset={-4}>
+                                <ContextMenu.Positioner className="z-[var(--z-popup)]" sideOffset={4} alignOffset={-4}>
                                     <ContextMenu.Popup className="menu-popup min-w-40">
                                         {NOTE_COLORS.map((color) => (
                                             <ContextMenu.Item
@@ -150,13 +151,13 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                             <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
                         </ContextMenu.SubmenuTrigger>
                         <ContextMenu.Portal>
-                            <ContextMenu.Positioner className="popup-layer" sideOffset={4} alignOffset={-4}>
+                            <ContextMenu.Positioner className="z-[var(--z-popup)]" sideOffset={4} alignOffset={-4}>
                                 <ContextMenu.Popup className="menu-popup min-w-40">
                                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().setNodeAccent(id, null)}>
                                         <span className="h-3 w-3 rounded-full border border-border-strong" /> None
                                         {!node.accent && <Icon icon={Check} size={14} className="ml-auto" />}
                                     </ContextMenu.Item>
-                                    <ContextMenu.Separator className="menu-separator" />
+                                    <ContextMenu.Separator className={MENU_SEPARATOR} />
                                     {NODE_ACCENTS.map((a) => (
                                         <ContextMenu.Item key={a.id} className="menu-item" onClick={() => useCanvas.getState().setNodeAccent(id, a.id)}>
                                             <span className="h-3 w-3 rounded-full" style={{ background: a.color }} /> {a.label}
@@ -167,7 +168,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                             </ContextMenu.Positioner>
                         </ContextMenu.Portal>
                     </ContextMenu.SubmenuRoot>
-                    <ContextMenu.Separator className="menu-separator" />
+                    <ContextMenu.Separator className={MENU_SEPARATOR} />
                     <ContextMenu.Item className="menu-item text-status-error" onClick={remove}>
                         <Icon icon={Trash} size={14} /> Delete <kbd>⌫</kbd>
                     </ContextMenu.Item>

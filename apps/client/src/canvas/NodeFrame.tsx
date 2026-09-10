@@ -8,6 +8,7 @@ import { useNodeStatus } from '@/state/chats';
 import { useHasContextLinks } from '@/context/sync';
 import { NODE_ACCENTS } from '@/canvas/accents';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
+import { BTN_GROUP } from '@/ui/classes';
 import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
 import { useHeldWhileVisible, useNodeInViewport } from '@/canvas/culling';
@@ -41,6 +42,10 @@ const STATUS_CLASS: Record<AgentStatus, string> = {
 };
 
 const RESIZE_EDGES = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'] as const;
+
+/* A group is a frame under its nodes: a faint tint of its accent, never a surface of its own. */
+const GROUP_FRAME =
+    'border-dashed bg-[color-mix(in_srgb,var(--group-accent,var(--text-faint))_7%,transparent)] hover:bg-[color-mix(in_srgb,var(--group-accent,var(--text-faint))_10%,transparent)]';
 
 const EDGE_STYLE: Record<(typeof RESIZE_EDGES)[number], string> = {
     n: 'top-0 left-3 right-3 h-2 -translate-y-1/2 cursor-ns-resize',
@@ -129,7 +134,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                 className={clsx(
                     // isolate: xterm's layers carry z-indexes; without a stacking context they would paint over a node added later.
                     'absolute isolate flex flex-col overflow-hidden rounded-xl border focus-visible:outline-none',
-                    isGroup ? 'node-group' : isNote ? clsx('node-note shadow-node', noteColorClass(node.color)) : 'bg-surface shadow-node',
+                    isGroup ? GROUP_FRAME : isNote ? clsx('shadow-node', noteColorClass(node.color)) : 'bg-surface shadow-node',
                     focused
                         ? 'node-focused border-transparent'
                         : selected
@@ -162,7 +167,12 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         // The collapse button carries 6px of optical padding inside its 28px square, so
                         // 4px of header padding puts its glyph in the same column as a node's kind icon.
                         isGroup ? 'pl-1' : 'pl-2.5',
-                        isGroup ? 'bg-transparent' : isNote ? 'border-b bg-transparent' : 'border-b border-border bg-surface-raised'
+                        isGroup
+                            ? 'bg-transparent'
+                            : isNote
+                              ? // A note is its color all over, so the divider is a shade of the text and fits every note color.
+                                'border-b border-[color-mix(in_srgb,var(--text)_12%,transparent)] bg-transparent'
+                              : 'border-b border-border bg-surface-raised'
                     )}
                 >
                     {isGroup && (
@@ -195,7 +205,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                             {STATUS_LABEL[status]}
                         </Pill>
                     )}
-                    <div className="btn-group shrink-0">
+                    <div className={`${BTN_GROUP} shrink-0`}>
                         <Tooltip label="Zoom to node" name>
                             <button className="icon-btn h-7 w-7" onClick={() => useCanvas.getState().goToNode(id)}>
                                 <Icon icon={Maximize2} size={16} />
@@ -229,7 +239,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     <Tooltip label="Drag to connect to another node" side="right">
                         <div
                             data-port={id}
-                            className="node-port absolute -right-2 top-1/2 z-20 h-4 w-4 -translate-y-1/2 cursor-crosshair rounded-full border-2 border-accent bg-surface"
+                            className="absolute -right-2 top-1/2 z-20 h-4 w-4 -translate-y-1/2 cursor-crosshair rounded-full border-2 border-accent bg-surface shadow-[0_0_0_2px_var(--surface)] hover:bg-accent"
                         />
                     </Tooltip>
                 )}

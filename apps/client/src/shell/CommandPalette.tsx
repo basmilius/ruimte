@@ -14,6 +14,7 @@ import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
 import { desktop } from '@/desktop/bridge';
 import { Button } from '@/ui/Button';
+import { SECTION_LABEL, TOOLTIP_KBD } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 
 const KIND_ICON: Record<NodeKind, React.ReactNode> = {
@@ -264,7 +265,7 @@ export function CommandPalette() {
                                 }
                             }}
                         />
-                        <kbd className="tooltip-kbd">esc</kbd>
+                        <kbd className={TOOLTIP_KBD}>esc</kbd>
                     </div>
                     <div id={LIST_ID} className="max-h-[50vh] overflow-auto p-1.5" role="listbox" aria-label="Results">
                         <div aria-live="polite">
@@ -275,7 +276,7 @@ export function CommandPalette() {
                             const first = i === 0 || entries[i - 1]!.section !== entry.section;
                             return (
                                 <div key={entry.id}>
-                                    {first && <div className="section-label px-2.5 pt-1.5 pb-1">{entry.section}</div>}
+                                    {first && <div className={`${SECTION_LABEL} px-2.5 pt-1.5 pb-1`}>{entry.section}</div>}
                                     <button
                                         id={optionId(i)}
                                         role="option"
@@ -291,7 +292,7 @@ export function CommandPalette() {
                                         <span className={clsx('min-w-0 truncate', browsing && 'font-mono text-code')}>{entry.label}</span>
                                         {entry.hint && <span className="text-xs text-text-faint">{entry.hint}</span>}
                                         <span className="grow" />
-                                        {entry.shortcut && <kbd className="tooltip-kbd">{entry.shortcut}</kbd>}
+                                        {entry.shortcut && <kbd className={TOOLTIP_KBD}>{entry.shortcut}</kbd>}
                                     </button>
                                 </div>
                             );
@@ -305,7 +306,7 @@ export function CommandPalette() {
                                 </span>
                             ) : (
                                 <span>
-                                    <kbd className="tooltip-kbd">↵</kbd> steps into a folder, <kbd className="tooltip-kbd">⌘↵</kbd> opens the typed path as a
+                                    <kbd className={TOOLTIP_KBD}>↵</kbd> steps into a folder, <kbd className={TOOLTIP_KBD}>⌘↵</kbd> opens the typed path as a
                                     project
                                 </span>
                             )}

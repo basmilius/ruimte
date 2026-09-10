@@ -27,6 +27,7 @@ import { useUi } from '@/state/ui';
 import { isApplePlatform } from '@/desktop/bridge';
 import { leaveNodeChordLabel } from '@/terminal/keymap';
 import { StatusSummary } from '@/shell/StatusSummary';
+import { BTN_GROUP, FLOAT, MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
@@ -59,7 +60,7 @@ export function Dock() {
 
     return (
         <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
-            <div className="float pointer-events-auto flex items-center gap-2 rounded-xl p-1">
+            <div className={`${FLOAT} pointer-events-auto flex items-center gap-2 rounded-xl p-1`}>
                 {/* In node mode the chip is the pointer's way out; on the canvas there is nothing to
                     leave, so it stays a label. A terminal hands Escape to the program it runs, which
                     is why the way out is a chord there and plain Escape everywhere else. */}
@@ -99,7 +100,7 @@ export function Dock() {
                         </Menu.Trigger>
                     </Tooltip>
                     <Menu.Portal>
-                        <Menu.Positioner className="popup-layer" side="top" sideOffset={10} align="start">
+                        <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={10} align="start">
                             <Menu.Popup className="menu-popup">
                                 <Menu.Item className="menu-item" onClick={() => add('terminal')}>
                                     <Icon icon={Terminal} size={14} /> Terminal <kbd>⌥T</kbd>
@@ -117,9 +118,9 @@ export function Dock() {
                                 <Menu.Item className="menu-item" onClick={() => add('note')}>
                                     <Icon icon={StickyNote} size={14} /> Note <kbd>⌥N</kbd>
                                 </Menu.Item>
-                                <Menu.Separator className="menu-separator" />
+                                <Menu.Separator className={MENU_SEPARATOR} />
                                 <Menu.Item className="menu-item" onClick={() => useCanvas.getState().addText(centerWorld())}>
-                                    <Icon icon={Type} size={14} /> Text <span className="menu-hint">dbl-click</span>
+                                    <Icon icon={Type} size={14} /> Text <span className={MENU_HINT}>dbl-click</span>
                                 </Menu.Item>
                             </Menu.Popup>
                         </Menu.Positioner>
@@ -127,7 +128,7 @@ export function Dock() {
                 </Menu.Root>
 
                 <Separator />
-                <div className="btn-group">
+                <div className={BTN_GROUP}>
                     <Tooltip label="Zoom out" name>
                         <button className="icon-btn" onClick={() => useCanvas.getState().zoomTo(Math.round(zoom * 100 - 10) / 100)}>
                             <Icon icon={Minus} size={16} />
@@ -140,7 +141,7 @@ export function Dock() {
                             </Menu.Trigger>
                         </Tooltip>
                         <Menu.Portal>
-                            <Menu.Positioner className="popup-layer" side="top" sideOffset={10} align="center">
+                            <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={10} align="center">
                                 <Menu.Popup className="menu-popup min-w-44">
                                     <Menu.RadioGroup value={preset} onValueChange={(value: number) => useCanvas.getState().zoomTo(value / 100)}>
                                         {ZOOM_PRESETS.map((pct) => (
@@ -155,7 +156,7 @@ export function Dock() {
                                             </Menu.RadioItem>
                                         ))}
                                     </Menu.RadioGroup>
-                                    <Menu.Separator className="menu-separator" />
+                                    <Menu.Separator className={MENU_SEPARATOR} />
                                     <Menu.Item className="menu-item" onClick={() => useCanvas.getState().fitAll()}>
                                         <span className="grid h-4 w-4 place-items-center">
                                             <Icon icon={Maximize} size={14} />
@@ -186,7 +187,7 @@ export function Dock() {
                 </div>
                 <Separator />
 
-                <div className="btn-group">
+                <div className={BTN_GROUP}>
                     <Menu.Root>
                         <Tooltip label="Lock" name>
                             <Menu.Trigger className="icon-btn" data-active={anyLocked}>
@@ -194,9 +195,9 @@ export function Dock() {
                             </Menu.Trigger>
                         </Tooltip>
                         <Menu.Portal>
-                            <Menu.Positioner className="popup-layer" side="top" sideOffset={10} align="end">
+                            <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={10} align="end">
                                 <Menu.Popup className="menu-popup">
-                                    <div className="menu-label">Refuse gestures</div>
+                                    <div className={MENU_LABEL}>Refuse gestures</div>
                                     {LOCK_ROWS.map((row) => (
                                         <Menu.CheckboxItem
                                             key={row.key}
@@ -216,7 +217,7 @@ export function Dock() {
                                             </span>
                                         </Menu.CheckboxItem>
                                     ))}
-                                    <Menu.Separator className="menu-separator" />
+                                    <Menu.Separator className={MENU_SEPARATOR} />
                                     <Menu.Item className="menu-item" onClick={() => useCanvas.getState().setAllLocks(!allLocked)}>
                                         {allLocked ? <Icon icon={LockOpen} size={14} /> : <Icon icon={Lock} size={14} />}
                                         {allLocked ? 'Unlock everything' : 'Lock everything'}
@@ -234,9 +235,9 @@ export function Dock() {
                             </Menu.Trigger>
                         </Tooltip>
                         <Menu.Portal>
-                            <Menu.Positioner className="popup-layer" side="top" sideOffset={10} align="end">
+                            <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={10} align="end">
                                 <Menu.Popup className="menu-popup min-w-48">
-                                    <div className="menu-label">Saved layouts</div>
+                                    <div className={MENU_LABEL}>Saved layouts</div>
                                     {layouts.length === 0 && <div className="px-2.5 pb-1.5 text-xs text-text-faint">Nothing saved yet.</div>}
                                     {layouts.map((layout) => (
                                         <Menu.Item key={layout.name} className="menu-item group" onClick={() => useCanvas.getState().applyLayout(layout.name)}>
@@ -257,7 +258,7 @@ export function Dock() {
                                             </Tooltip>
                                         </Menu.Item>
                                     ))}
-                                    <Menu.Separator className="menu-separator" />
+                                    <Menu.Separator className={MENU_SEPARATOR} />
                                     <Menu.Item className="menu-item" onClick={() => useUi.getState().setLayoutDialogOpen(true)}>
                                         <Icon icon={Save} size={14} /> Save current layout
                                     </Menu.Item>

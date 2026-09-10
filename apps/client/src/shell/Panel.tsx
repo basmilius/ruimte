@@ -9,6 +9,7 @@ import { GitPanel } from '@/shell/panels/GitPanel';
 import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useUi, type PanelKind } from '@/state/ui';
+import { SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -92,7 +93,7 @@ export function Panel() {
                             panel.open && hasOverlayControls() && 'toolbar-overlay-inset'
                         )}
                     >
-                        <span className="section-label shrink-0">{label}</span>
+                        <span className={`${SECTION_LABEL} shrink-0`}>{label}</span>
                         {/* The panel's own controls, between its name and the close button. */}
                         <div ref={setHeaderSlot} className="flex min-w-0 grow items-center gap-2" />
                         <Tooltip label={`Close ${label}`} kbd="⌘⌥B" name>

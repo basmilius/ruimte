@@ -20,7 +20,7 @@ export function AgentIcon({ kind, size = 14, className }: { kind: AgentKind; siz
         return <Icon icon={Bot} size={size} className={className} />;
     }
     return (
-        <svg role="img" aria-label={mark.title} viewBox="0 0 24 24" width={size} height={size} fill="currentColor" className={clsx('icon', className)}>
+        <svg role="img" aria-label={mark.title} viewBox="0 0 24 24" width={size} height={size} fill="currentColor" className={clsx('align-middle', className)}>
             <path d={mark.path} />
         </svg>
     );

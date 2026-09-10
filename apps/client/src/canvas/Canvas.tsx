@@ -564,7 +564,7 @@ export function Canvas() {
             <ContextMenu.Trigger
                 render={<div />}
                 ref={rootRef}
-                className="canvas-grid relative h-full w-full overflow-hidden touch-none"
+                className="relative h-full w-full touch-none overflow-hidden bg-canvas-bg bg-[image:radial-gradient(circle,var(--canvas-dot)_1px,transparent_1px)]"
                 style={{
                     backgroundSize: `${gridStep}px ${gridStep}px`,
                     backgroundPosition: `${camera.x}px ${camera.y}px`,

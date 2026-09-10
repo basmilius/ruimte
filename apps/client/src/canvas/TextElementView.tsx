@@ -67,7 +67,7 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
                 <span
                     data-port={id}
                     contentEditable={false}
-                    className="node-port absolute -right-3 top-1/2 h-4 w-4 -translate-y-1/2 cursor-crosshair rounded-full border-2 border-accent bg-surface"
+                    className="absolute -right-3 top-1/2 h-4 w-4 -translate-y-1/2 cursor-crosshair rounded-full border-2 border-accent bg-surface shadow-[0_0_0_2px_var(--surface)] hover:bg-accent"
                 />
             )}
         </div>

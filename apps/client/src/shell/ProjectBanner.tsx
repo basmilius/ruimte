@@ -2,6 +2,7 @@ import { CircleAlert, GitBranch } from 'lucide-react';
 import { projectClient } from '@/project';
 import { useProject } from '@/state/project';
 import { Button } from '@/ui/Button';
+import { FLOAT } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 
 /* Floats at the top of the canvas, under the toolbar, when the file changed under unsaved edits or a save failed. */
@@ -13,7 +14,7 @@ export function ProjectBanner() {
     }
     return (
         <div className="pointer-events-auto absolute inset-x-0 top-3 z-20 flex justify-center px-4" role="status" aria-live="polite">
-            <div className="float flex max-w-[640px] items-center gap-3 rounded-lg px-3 py-2 text-xs text-text">
+            <div className={`${FLOAT} flex max-w-[640px] items-center gap-3 rounded-lg px-3 py-2 text-xs text-text`}>
                 {conflict ? (
                     <>
                         <Icon icon={GitBranch} size={12} className="shrink-0 text-status-needs-you" />

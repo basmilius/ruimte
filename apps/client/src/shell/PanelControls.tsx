@@ -2,6 +2,7 @@ import { FileText } from 'lucide-react';
 import { PANELS } from '@/shell/panels';
 import { useFiles } from '@/state/files';
 import { useUi } from '@/state/ui';
+import { BTN_GROUP } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -14,7 +15,7 @@ export function PanelControls() {
     const hasTabs = useFiles((s) => s.tabs.length > 0);
 
     return (
-        <div className="btn-group">
+        <div className={BTN_GROUP}>
             {/* No open file means nothing to preview, so the toggle arrives with the first one. */}
             {hasTabs && (
                 <Tooltip label="Preview" name>

@@ -5,6 +5,7 @@ import { addAgentNode } from '@/agents/nodes';
 import type { Point } from '@/canvas/math';
 import { useCanvas, type NodeKind } from '@/state/canvas';
 import { useUi } from '@/state/ui';
+import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 
 /* The menu for a right-click on empty canvas; everything it adds lands where the click was. */
@@ -15,9 +16,9 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
     };
     return (
         <ContextMenu.Portal>
-            <ContextMenu.Positioner className="popup-layer">
+            <ContextMenu.Positioner className="z-[var(--z-popup)]">
                 <ContextMenu.Popup className="menu-popup">
-                    <div className="menu-label">Add here</div>
+                    <div className={MENU_LABEL}>Add here</div>
                     <ContextMenu.Item className="menu-item" onClick={() => add('terminal')}>
                         <Icon icon={Terminal} size={14} /> Terminal <kbd>⌥T</kbd>
                     </ContextMenu.Item>
@@ -35,9 +36,9 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                         <Icon icon={StickyNote} size={14} /> Note <kbd>⌥N</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().addText(at())}>
-                        <Icon icon={Type} size={14} /> Text <span className="menu-hint">dbl-click</span>
+                        <Icon icon={Type} size={14} /> Text <span className={MENU_HINT}>dbl-click</span>
                     </ContextMenu.Item>
-                    <ContextMenu.Separator className="menu-separator" />
+                    <ContextMenu.Separator className={MENU_SEPARATOR} />
                     <ContextMenu.Item className="menu-item" disabled={!hasSelection} onClick={() => useCanvas.getState().groupSelection()}>
                         <Icon icon={SquareDashedMousePointer} size={14} /> Group selection <kbd>⌘G</kbd>
                     </ContextMenu.Item>
@@ -53,7 +54,7 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().fitAll()}>
                         <Icon icon={Maximize} size={14} /> Zoom to fit <kbd>⇧1</kbd>
                     </ContextMenu.Item>
-                    <ContextMenu.Separator className="menu-separator" />
+                    <ContextMenu.Separator className={MENU_SEPARATOR} />
                     <ContextMenu.Item className="menu-item" onClick={() => useUi.getState().setSettings({ open: true })}>
                         <Icon icon={Settings} size={14} /> Settings <kbd>⌘,</kbd>
                     </ContextMenu.Item>
