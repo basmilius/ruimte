@@ -43,6 +43,7 @@ export interface PreviewState {
 }
 
 const CLOSED_PANEL: PanelState = { open: false, kind: 'files' };
+const CLOSED_PREVIEW: PreviewState = { open: false };
 
 /* The kind on its own for an open panel, `closed:` in front for one that is not, so a toggle still
    knows which panel it reopens. The shape the legacy key was written in. */
@@ -104,6 +105,10 @@ interface UiStore {
     /* Null until a drag gives the column a width of the person's own for this project. */
     panelWidth: number | null;
     previewWidth: number | null;
+    /* Whether the columns around the canvas show what was stored rather than what a person did.
+       True from startup and again for every project that opens, false from the first change made
+       here by hand. A column only slides when it is false, so a restore lands at its width. */
+    panelsRestoring: boolean;
     layoutDialogOpen: boolean;
     /* The group a worktree is being bound to, while its dialog is up. */
     worktreeDialogFor: string | null;
@@ -120,7 +125,7 @@ interface UiStore {
     togglePreview(): void;
     setPanelWidth(width: number): void;
     setPreviewWidth(width: number): void;
-    /* Puts a project's panels on screen in one go, when it opens. */
+    /* Puts a project's panels on screen in one go, when it opens; they land without sliding. */
     setPanels(state: PanelDefaults): void;
 }
 
@@ -131,10 +136,13 @@ export const useUi = create<UiStore>((set, get) => ({
     paletteSeed: '',
     sidebarOpen: readSidebarOpen(),
     settings: { open: false, section: 'appearance' },
-    panel: PANEL_DEFAULTS.panel,
-    preview: PANEL_DEFAULTS.preview,
-    panelWidth: PANEL_DEFAULTS.panelWidth,
-    previewWidth: PANEL_DEFAULTS.previewWidth,
+    /* Closed until a project says otherwise: the panels belong to a project and there is none
+       yet, so the first paint of a reload cannot flash open a panel the project has closed. */
+    panel: CLOSED_PANEL,
+    preview: CLOSED_PREVIEW,
+    panelWidth: null,
+    previewWidth: null,
+    panelsRestoring: true,
     layoutDialogOpen: false,
     worktreeDialogFor: null,
     setWorktreeDialogFor(groupId) {
@@ -142,7 +150,7 @@ export const useUi = create<UiStore>((set, get) => ({
     },
     setSidebarOpen(open) {
         persistSidebarOpen(open);
-        set({ sidebarOpen: open });
+        set({ sidebarOpen: open, panelsRestoring: false });
     },
     toggleSidebar() {
         get().setSidebarOpen(!get().sidebarOpen);
@@ -160,29 +168,37 @@ export const useUi = create<UiStore>((set, get) => ({
         set({ settings: { ...get().settings, ...patch } });
     },
     setPanel(patch) {
-        set({ panel: { ...get().panel, ...patch } });
+        set({ panel: { ...get().panel, ...patch }, panelsRestoring: false });
     },
     togglePanel(kind) {
         const panel = get().panel;
         /* Without a kind the chord reopens whatever was up last, so the panel has one toggle of its own. */
-        set({ panel: kind ? { open: !(panel.open && panel.kind === kind), kind } : { ...panel, open: !panel.open } });
+        set({ panel: kind ? { open: !(panel.open && panel.kind === kind), kind } : { ...panel, open: !panel.open }, panelsRestoring: false });
     },
     setPreviewOpen(open) {
         if (get().preview.open === open) {
             return;
         }
-        set({ preview: { open } });
+        set({ preview: { open }, panelsRestoring: false });
     },
     togglePreview() {
         get().setPreviewOpen(!get().preview.open);
     },
     setPanelWidth(width) {
-        set({ panelWidth: width });
+        set({ panelWidth: width, panelsRestoring: false });
     },
     setPreviewWidth(width) {
-        set({ previewWidth: width });
+        set({ previewWidth: width, panelsRestoring: false });
     },
     setPanels(state) {
-        set({ panel: state.panel, preview: state.preview, panelWidth: state.panelWidth, previewWidth: state.previewWidth });
+        /* One update, so a panel and the width it opens at reach the DOM together: two would put a
+           frame with the default width in between, and that frame is a slide. */
+        set({
+            panel: state.panel,
+            preview: state.preview,
+            panelWidth: state.panelWidth,
+            previewWidth: state.previewWidth,
+            panelsRestoring: true
+        });
     }
 }));

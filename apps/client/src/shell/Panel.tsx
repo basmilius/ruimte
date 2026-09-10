@@ -15,7 +15,7 @@ const DEFAULT_WIDTH = 540;
 const MIN_WIDTH = 240;
 // A drag stops here instead of squeezing the canvas away.
 const MIN_CANVAS_WIDTH = 360;
-// How long the open and close motion takes; the same number as the class below.
+// How long the open and close motion takes; the same number as `.panel-shell` in `styles.css`.
 const TRANSITION_MS = 200;
 
 function PanelBody({ kind, label }: { kind: PanelKind; label: string }) {
@@ -76,7 +76,7 @@ export function Panel() {
             ref={ref}
             inert={!panel.open}
             data-instant={instant ? '' : undefined}
-            className="panel-shell flex h-full shrink-0 justify-end overflow-hidden transition-[width] duration-200 ease-out"
+            className="panel-shell flex h-full shrink-0 justify-end overflow-hidden"
             style={{ width: panel.open ? width : 0 }}
             onTransitionEnd={(event) => {
                 if (event.propertyName === 'width' && event.target === event.currentTarget) {

@@ -3,7 +3,14 @@ import { parsePanel, parsePreview, parseWidth, useUi } from './ui';
 
 describe('ui', () => {
     beforeEach(() => {
-        useUi.setState({ sidebarOpen: true, panel: { open: false, kind: 'files' }, preview: { open: false } });
+        useUi.setState({
+            sidebarOpen: true,
+            panel: { open: false, kind: 'files' },
+            preview: { open: false },
+            panelWidth: null,
+            previewWidth: null,
+            panelsRestoring: true
+        });
     });
 
     test('the sidebar starts open where no storage answers and follows the toggle', () => {
@@ -65,5 +72,52 @@ describe('ui', () => {
         expect(parsePanel('')).toEqual({ open: false, kind: 'files' });
         expect(parsePanel('terminal')).toEqual({ open: false, kind: 'files' });
         expect(parsePanel('closed:terminal')).toEqual({ open: false, kind: 'files' });
+    });
+
+    /* The columns may not animate while they are showing what was stored: on a cold load the panels
+       are closed until the project's local file arrives, and that arrival is a width change of its
+       own. `panelsRestoring` is what `useInstantWidth` reads, so this is the whole sequence that
+       has to land at once, and the first change made by hand is where the sliding starts. */
+    test('a restored panel lands at its width and only a change made by hand slides', () => {
+        expect(useUi.getState().panel.open).toBe(false);
+        expect(useUi.getState().panelsRestoring).toBe(true);
+
+        useUi.getState().setPanels({ panel: { open: true, kind: 'files' }, preview: { open: false }, panelWidth: 720, previewWidth: null });
+        expect(useUi.getState().panel).toEqual({ open: true, kind: 'files' });
+        expect(useUi.getState().panelWidth).toBe(720);
+        expect(useUi.getState().panelsRestoring).toBe(true);
+
+        useUi.getState().togglePanel('files');
+        expect(useUi.getState().panelsRestoring).toBe(false);
+
+        // A project that opens after that brings its own panels, which land without sliding again.
+        useUi.getState().setPanels({ panel: { open: false, kind: 'git' }, preview: { open: false }, panelWidth: null, previewWidth: null });
+        expect(useUi.getState().panelsRestoring).toBe(true);
+    });
+
+    test('every column a person moves turns the transition back on', () => {
+        const moves: Array<() => void> = [
+            () => useUi.getState().setPanel({ open: true }),
+            () => useUi.getState().togglePanel('git'),
+            () => useUi.getState().setPreviewOpen(true),
+            () => useUi.getState().setPanelWidth(600),
+            () => useUi.getState().setPreviewWidth(480),
+            () => useUi.getState().setSidebarOpen(false)
+        ];
+        for (const move of moves) {
+            useUi.setState({ panelsRestoring: true });
+            move();
+            expect(useUi.getState().panelsRestoring).toBe(false);
+        }
+    });
+
+    test('a restore is one update, so the panel and its width reach the screen together', () => {
+        let notified = 0;
+        const unsubscribe = useUi.subscribe(() => {
+            notified += 1;
+        });
+        useUi.getState().setPanels({ panel: { open: true, kind: 'files' }, preview: { open: true }, panelWidth: 720, previewWidth: 480 });
+        unsubscribe();
+        expect(notified).toBe(1);
     });
 });

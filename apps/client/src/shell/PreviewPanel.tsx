@@ -17,7 +17,7 @@ const MIN_WIDTH = 360;
 const MAX_DEFAULT_WIDTH = 720;
 // A drag stops here instead of squeezing the canvas away.
 const MIN_CANVAS_WIDTH = 360;
-// How long the open and close motion takes; the same number as the class below.
+// How long the open and close motion takes; the same number as `.panel-shell` in `styles.css`.
 const TRANSITION_MS = 200;
 
 /* Half of the room the canvas had, which is what the preview opens with until a drag says otherwise. */
@@ -99,7 +99,7 @@ export function PreviewPanel() {
             ref={ref}
             inert={!open}
             data-instant={instant ? '' : undefined}
-            className="panel-shell flex h-full shrink-0 justify-end overflow-hidden transition-[width] duration-200 ease-out"
+            className="panel-shell flex h-full shrink-0 justify-end overflow-hidden"
             style={{ width: open ? width : 0 }}
             onTransitionEnd={(event) => {
                 if (event.propertyName === 'width' && event.target === event.currentTarget) {
