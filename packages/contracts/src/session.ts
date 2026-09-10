@@ -96,3 +96,11 @@ export const SessionExitEventSchema = z.object({
     exitCode: z.number().int()
 });
 export type SessionExitEvent = z.infer<typeof SessionExitEventSchema>;
+
+// Sent instead of the output a slow client missed: the daemon owns the screen, so it can hand
+// out a fresh one and continue the stream from there.
+export const SessionResyncEventSchema = z.object({
+    sessionId: SessionIdSchema,
+    screen: z.string()
+});
+export type SessionResyncEvent = z.infer<typeof SessionResyncEventSchema>;

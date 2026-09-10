@@ -4,7 +4,7 @@ import { TransportError, type Transport, type TransportStatus } from '../transpo
 
 type OutputHandler = (data: string) => void;
 type ExitHandler = (exitCode: number) => void;
-type ScreenHandler = (result: SessionAttachResult) => void;
+type ScreenHandler = (result: Pick<SessionAttachResult, 'screen'>) => void;
 
 interface OpenOptions {
     cwd?: string;
@@ -48,6 +48,8 @@ export class SessionClient {
         this.sink = sink;
         this.unsubscribe.push(
             transport.on('session.output', ({ sessionId, data }) => this.fanOut(this.outputHandlers, sessionId, data)),
+            // The daemon dropped output for a slow socket and sent the screen it owns instead; repaint from it.
+            transport.on('session.resync', ({ sessionId, screen }) => this.fanOut(this.screenHandlers, sessionId, { screen })),
             transport.on('session.exit', ({ sessionId, exitCode }) => {
                 this.sink.setExited(sessionId, exitCode);
                 this.fanOut(this.exitHandlers, sessionId, exitCode);

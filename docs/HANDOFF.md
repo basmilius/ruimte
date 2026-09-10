@@ -20,8 +20,11 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
 - **Phase 3, daemon** (`apps/server`): `Bun.spawn({ terminal })` PTYs, one `@xterm/headless`
   per session so the daemon owns the screen, output coalesced per 16 ms, snapshots under
   `$RUIMTE_HOME/sessions` with atomic writes, tests with real shells (`bun test` at the root
-  runs 291 across 44 files today),
-  `bun run --cwd apps/server smoke`.
+  runs 338 across 48 files today),
+  `bun run --cwd apps/server smoke`. A socket that falls behind (over 1 MB queued, or a frame
+  Bun reports as dropped or backpressured) stops getting `session.output`; on `drain` every
+  session that lost bytes gets a `session.resync` with a fresh screen and streams on
+  (`src/backpressure.ts`), so a slow client costs a repaint instead of the daemon's memory.
 - **Phase 4, terminal node**: xterm 6 with WebGL and a DOM fallback, reattach after
   reconnect, viewport culling with a static plate after 10 s offscreen, exit bar with Restart,
   session status in the sidebar, a Playwright e2e in `apps/client/e2e`.
@@ -569,4 +572,6 @@ canvas, against Ruimte, one verdict each.
    terminal agent mode.
 
 Known gaps to keep in mind: no WebGL context budget (many visible terminals may lose
-contexts), no backpressure for a slow client, the 30-node performance target is unmeasured.
+contexts), the 30-node performance target is unmeasured. Backpressure is handled per socket
+(output dropped over the high-water mark, repaired with `session.resync` on drain); what is not
+there is a per-session cap, so one very loud shell can still be the reason a client is dropped.

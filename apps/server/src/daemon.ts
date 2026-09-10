@@ -2,6 +2,7 @@ import { dirname, join, normalize, resolve } from 'node:path';
 import type { ServerWebSocket } from 'bun';
 import { PairPayloadSchema, type AgentKind, type ServerFrame } from '@ruimte/contracts';
 import { AgentStore } from './agents/agent-store.ts';
+import { OutputGate } from './backpressure.ts';
 import { decideAccess, isLoopbackAddress, reachabilityOf } from './auth/access.ts';
 import { pairingUrl } from './cli/pairing.ts';
 import { AuthStore } from './auth/auth-store.ts';
@@ -106,6 +107,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
 
     interface ConnectionState {
         client: ClientConnection;
+        gate: OutputGate;
         unsubscribe(): void;
     }
 
@@ -196,11 +198,20 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         },
         websocket: {
             open(ws) {
+                const clientId = `client-${nextClientId++}`;
+                const gate = new OutputGate({
+                    socket: ws,
+                    screenOf: (sessionId) => {
+                        const session = manager.get(sessionId);
+                        // A session this client no longer watches needs no screen; its mark just goes.
+                        return session?.isAttached(clientId) ? session.serializeScreen() : Promise.resolve(null);
+                    }
+                });
                 const client: ClientConnection = {
-                    id: `client-${nextClientId++}`,
+                    id: clientId,
                     access: ws.data,
                     send(frame: ServerFrame) {
-                        ws.send(JSON.stringify(frame));
+                        gate.send(frame);
                     }
                 };
                 const sink = ({ event, payload }: Parameters<Parameters<typeof manager.subscribe>[1]>[0]): void => sendEvent(client, event, payload);
@@ -209,12 +220,17 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 const unsubscribeProjects = projects.subscribe(client.id, sink);
                 connections.set(ws, {
                     client,
+                    gate,
                     unsubscribe() {
                         unsubscribeSessions();
                         unsubscribeChats();
                         unsubscribeProjects();
                     }
                 });
+            },
+            drain(ws) {
+                // The socket has room again: every session that lost output gets a fresh screen.
+                connections.get(ws)?.gate.onDrain();
             },
             message(ws, message) {
                 const state = connections.get(ws);
