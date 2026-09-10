@@ -357,3 +357,70 @@ describe('git', () => {
         expect(REQUEST_SCHEMAS['git.discard'].result.safeParse({ stash: null }).success).toBe(true);
     });
 });
+
+describe('usage', () => {
+    const totals = { calls: 3, input: 100, cacheRead: 900, cacheWrite: 50, cacheWrite1h: 10, output: 40, reasoning: 12 };
+    const summary = {
+        from: '2026-09-04',
+        to: '2026-09-10',
+        resolution: 'day',
+        timeZone: 'Europe/Amsterdam',
+        buckets: [{ slot: '2026-09-10', provider: 'claude', model: 'claude-opus-5', totals, costUsd: 1.25, cacheSavingsUsd: 0.4, sessions: 2 }],
+        models: [{ provider: 'claude', model: 'claude-opus-5', totals, costUsd: 1.25, priceBasis: 'exact', pricedAs: null }],
+        projects: [
+            {
+                folder: '/home/bas/ruimte',
+                name: 'ruimte',
+                projectId: 'p1',
+                byProvider: { claude: { costUsd: 1.25, tokens: 1090 } },
+                totals,
+                costUsd: 1.25
+            }
+        ],
+        sessions: 2,
+        scan: { at: 1_700_000_000_000, files: 1149, changedFiles: 3, durationMs: 84, running: false, failed: false },
+        pricing: { source: 'litellm', fetchedAt: 1_700_000_000_000, models: 812 },
+        roots: [{ provider: 'claude', path: '/home/bas/.claude/projects', status: 'ok', message: null }]
+    };
+
+    test('a summary is asked per period in the viewer time zone', () => {
+        const { payload, result } = REQUEST_SCHEMAS['usage.summary'];
+        expect(payload.safeParse({ from: '2026-09-04', to: '2026-09-10', resolution: 'hour', timeZone: 'UTC' }).success).toBe(true);
+        expect(payload.safeParse({ from: '2026-09-04', to: '2026-09-10', resolution: 'week', timeZone: 'UTC' }).success).toBe(false);
+        expect(result.safeParse(summary).success).toBe(true);
+    });
+
+    test('an unpriced model keeps a null cost and a provider outside the readers is refused', () => {
+        const { result } = REQUEST_SCHEMAS['usage.summary'];
+        expect(result.safeParse({ ...summary, models: [{ ...summary.models[0], costUsd: null, priceBasis: 'unknown', pricedAs: null }] }).success).toBe(true);
+        expect(result.safeParse({ ...summary, buckets: [{ ...summary.buckets[0], provider: 'gemini' }] }).success).toBe(false);
+        expect(result.safeParse({ ...summary, buckets: [{ ...summary.buckets[0], totals: { ...totals, output: -1 } }] }).success).toBe(false);
+    });
+
+    test('a scan tells the page what to ask for next', () => {
+        expect(EVENT_SCHEMAS['usage.changed'].safeParse({ scannedAt: 1_700_000_000_000 }).success).toBe(true);
+        expect(EVENT_SCHEMAS['usage.changed'].safeParse({}).success).toBe(false);
+    });
+
+    test('a window carries a fraction and the moment it resets', () => {
+        const provider = {
+            kind: 'claude',
+            plan: 'max',
+            checkedAt: 1_700_000_000_000,
+            source: 'probe',
+            windows: [{ id: 'five_hour', kind: 'session', label: 'Session', used: 0.38, resetsAt: 1_700_000_600_000, durationMs: 18_000_000 }],
+            cost: { sessionUsd: 1.5 },
+            unavailable: null
+        };
+        expect(REQUEST_SCHEMAS['usage.limits'].result.safeParse({ providers: [provider] }).success).toBe(true);
+        expect(EVENT_SCHEMAS['usage.limitsChanged'].safeParse({ providers: [provider] }).success).toBe(true);
+        expect(
+            REQUEST_SCHEMAS['usage.limits'].result.safeParse({ providers: [{ ...provider, windows: [{ ...provider.windows[0], used: 1.4 }] }] }).success
+        ).toBe(false);
+        expect(
+            REQUEST_SCHEMAS['usage.refreshLimits'].result.safeParse({
+                providers: [{ ...provider, windows: [], cost: null, unavailable: { reason: 'not-installed', message: null } }]
+            }).success
+        ).toBe(true);
+    });
+});
