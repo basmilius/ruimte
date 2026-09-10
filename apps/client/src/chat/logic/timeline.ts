@@ -1,4 +1,13 @@
-import type { ChatApprovalItem, ChatAssistantItem, ChatItem, ChatQuestionItem, ChatToolItem, ChatTurnItem, ChatUserItem } from '@ruimte/contracts';
+import type {
+    ChatApprovalItem,
+    ChatAssistantItem,
+    ChatCheckpointDiff,
+    ChatItem,
+    ChatQuestionItem,
+    ChatToolItem,
+    ChatTurnItem,
+    ChatUserItem
+} from '@ruimte/contracts';
 import { hasFileChanges, isFileChange } from './tools';
 
 /*
@@ -16,7 +25,7 @@ export type TimelineRow =
     | { kind: 'question'; id: string; item: ChatQuestionItem }
     | { kind: 'note'; id: string; level: 'info' | 'warning' | 'error'; text: string }
     | { kind: 'compaction'; id: string; preTokens: number | null }
-    | { kind: 'changed-files'; id: string; turnId: string; tools: ChatToolItem[] }
+    | { kind: 'changed-files'; id: string; turnId: string; tools: ChatToolItem[]; diff: ChatCheckpointDiff | null; checkpoint: boolean }
     | { kind: 'turn-fold'; id: string; turn: ChatTurnItem; label: string; hiddenCount: number; expanded: boolean }
     | { kind: 'working'; id: string; startedAt: number };
 
@@ -156,11 +165,17 @@ const rowsForItems = (items: ChatItem[], options: TimelineOptions): TimelineRow[
     return rows;
 };
 
-const changedFilesRow = (turnId: string, items: ChatItem[]): TimelineRow | null => {
+/* The card of a settled turn: the checkpoint diff when the daemon took one, else what the tool calls carry. */
+const changedFilesRow = (turn: ChatTurnItem, items: ChatItem[]): TimelineRow | null => {
     const edits = items.filter(
         (item): item is ChatToolItem => item.kind === 'tool' && item.state === 'done' && isFileChange(item.name) && hasFileChanges(item)
     );
-    return edits.length > 0 ? { kind: 'changed-files', id: `files-${turnId}`, turnId, tools: edits } : null;
+    const diff = turn.checkpointDiff ?? null;
+    const empty = diff === null ? edits.length === 0 : diff.files.length === 0;
+    if (empty) {
+        return null;
+    }
+    return { kind: 'changed-files', id: `files-${turn.id}`, turnId: turn.id, tools: edits, diff, checkpoint: turn.checkpoint !== undefined };
 };
 
 const lastAssistantRow = (rows: TimelineRow[]): TimelineRow | null => {
@@ -230,7 +245,7 @@ export const deriveTimelineRows = (items: ChatItem[], options: TimelineOptions):
                 rows.push(...folded);
             }
         }
-        const changed = changedFilesRow(turnId, rest);
+        const changed = changedFilesRow(turn, rest);
         if (changed) {
             rows.push(changed);
         }

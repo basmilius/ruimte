@@ -87,6 +87,37 @@ describe('deriveTimelineRows', () => {
         expect(rows.map((row) => row.kind)).toEqual(['approval', 'working']);
     });
 
+    test("a turn's checkpoint diff carries the card, also when no tool call reported an edit", () => {
+        const checkpointDiff = { files: [{ path: 'src/a.ts', kind: 'update' as const, added: 2, deleted: 1, diff: '@@\n+a\n' }], truncated: false };
+        const items: ChatItem[] = [
+            { id: 't4', kind: 'turn', createdAt: 1, turnId: 't4', state: 'done', endedAt: 2, costUsd: 0, checkpoint: 'abc', checkpointDiff },
+            { id: 'u4', kind: 'user', createdAt: 1, turnId: 't4', text: 'patch it' },
+            tool('s1', 'Bash', { command: 'sed -i s/a/b/ src/a.ts' }, 'done', 't4')
+        ];
+        const rows = deriveTimelineRows(items, options);
+        expect(rows.map((row) => row.kind)).toEqual(['user', 'turn-fold', 'changed-files']);
+        expect(rows[2]).toMatchObject({ diff: checkpointDiff, checkpoint: true, tools: [] });
+    });
+
+    test('a checkpoint diff without files leaves the card out', () => {
+        const items: ChatItem[] = [
+            {
+                id: 't5',
+                kind: 'turn',
+                createdAt: 1,
+                turnId: 't5',
+                state: 'done',
+                endedAt: 2,
+                costUsd: 0,
+                checkpoint: 'abc',
+                checkpointDiff: { files: [], truncated: false }
+            },
+            { id: 'u5', kind: 'user', createdAt: 1, turnId: 't5', text: 'look around' },
+            { ...tool('e5', 'Edit', { file_path: 'a.ts', old_string: 'x', new_string: 'y' }), turnId: 't5' }
+        ];
+        expect(deriveTimelineRows(items, options).map((row) => row.kind)).toEqual(['user', 'turn-fold']);
+    });
+
     test('subagent tool calls stay hidden and items without a turn render as they are', () => {
         const items: ChatItem[] = [
             { id: 'u', kind: 'user', createdAt: 1, turnId: null, text: 'old' },

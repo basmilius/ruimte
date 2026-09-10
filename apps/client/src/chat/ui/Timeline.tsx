@@ -11,12 +11,13 @@ const ESTIMATED_ROW_PX = 56;
 
 interface RowProps {
     row: TimelineRow;
+    chatId: string;
     lastAssistantId: string | null;
     toggleGroup(id: string): void;
     toggleTurn(id: string): void;
 }
 
-function Row({ row, lastAssistantId, toggleGroup, toggleTurn }: RowProps) {
+function Row({ row, chatId, lastAssistantId, toggleGroup, toggleTurn }: RowProps) {
     switch (row.kind) {
         case 'user':
             return <UserRow item={row.item} />;
@@ -31,7 +32,7 @@ function Row({ row, lastAssistantId, toggleGroup, toggleTurn }: RowProps) {
         case 'turn-fold':
             return <TurnFoldRow turn={row.turn} label={row.label} expanded={row.expanded} onToggle={() => toggleTurn(row.turn.id)} />;
         case 'changed-files':
-            return <ChangedFilesRow tools={row.tools} />;
+            return <ChangedFilesRow chatId={chatId} turnId={row.turnId} tools={row.tools} diff={row.diff} checkpoint={row.checkpoint} />;
         case 'approval':
             return <ApprovalHistoryRow item={row.item} />;
         case 'question':
@@ -131,6 +132,7 @@ export function Timeline({ chatId }: { chatId: string }) {
                         >
                             <Row
                                 row={row}
+                                chatId={chatId}
                                 lastAssistantId={lastAssistantId}
                                 toggleGroup={(id) => toggle(setExpandedGroups, id)}
                                 toggleTurn={(id) => toggle(setExpandedTurns, id)}
