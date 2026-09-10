@@ -174,7 +174,9 @@ export const ProjectFileTabViewSchema = z.object({
     // The checkout the diff is read from; a bound group's worktree is not the project folder.
     cwd: z.string().min(1),
     scope: GitDiffScopeSchema,
-    staged: z.boolean()
+    staged: z.boolean(),
+    // The commit the `commit` scope reads; the tab is that whole commit, not one file of it.
+    commit: z.string().min(1).optional()
 });
 export type ProjectFileTabView = z.infer<typeof ProjectFileTabViewSchema>;
 
@@ -207,7 +209,9 @@ export const ProjectPanelsSchema = z.object({
         .object({
             scope: GitDiffScopeSchema,
             // Relative to the repository root, POSIX, no trailing slash, as `git.status` names a path.
-            collapsedDirs: z.array(z.string()).optional()
+            collapsedDirs: z.array(z.string()).optional(),
+            // Whole pixels the commit log takes at the bottom of the panel.
+            logHeight: z.number().int().positive().optional()
         })
         .optional()
 });
