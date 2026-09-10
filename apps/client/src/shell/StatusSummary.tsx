@@ -31,20 +31,24 @@ export function StatusSummary() {
         <>
             <div className="flex items-center gap-1">
                 {needsYou.length > 0 && (
-                    <Tooltip label="Go to the next node that needs you">
+                    <Tooltip label="Go to the next node that needs you" name>
                         <button
                             className="flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs tabular-nums text-text-muted hover:bg-surface-sunken hover:text-text"
                             onClick={next}
                         >
-                            <StatusDot status="needs-you" />
+                            <StatusDot status="needs-you" plain />
                             {needsYou.length}
                         </button>
                     </Tooltip>
                 )}
                 {running > 0 && (
                     <Tooltip label="Agents working">
-                        <span className="flex h-8 items-center gap-1.5 px-2 text-xs tabular-nums text-text-muted">
-                            <StatusDot status="running" />
+                        <span
+                            role="status"
+                            aria-label={`${running} agents working`}
+                            className="flex h-8 items-center gap-1.5 px-2 text-xs tabular-nums text-text-muted"
+                        >
+                            <StatusDot status="running" plain />
                             {running}
                         </span>
                     </Tooltip>

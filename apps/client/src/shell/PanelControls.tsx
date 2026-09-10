@@ -15,13 +15,8 @@ export function PanelControls() {
     return (
         <div className={clsx('btn-group', hasOverlayControls() && 'toolbar-overlay-inset')}>
             {PANELS.map((entry) => (
-                <Tooltip key={entry.kind} label={entry.label}>
-                    <button
-                        className="icon-btn"
-                        aria-label={entry.label}
-                        data-active={panel.open && panel.kind === entry.kind}
-                        onClick={() => useUi.getState().togglePanel(entry.kind)}
-                    >
+                <Tooltip key={entry.kind} label={entry.label} name>
+                    <button className="icon-btn" data-active={panel.open && panel.kind === entry.kind} onClick={() => useUi.getState().togglePanel(entry.kind)}>
                         <Icon icon={entry.icon} size={16} />
                     </button>
                 </Tooltip>

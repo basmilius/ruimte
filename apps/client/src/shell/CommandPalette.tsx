@@ -6,11 +6,13 @@ import type { FsBrowseEntry } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { projectClient } from '@/project';
 import { appCommands, type Command } from '@/shell/commands';
+import { readRecents, rememberRecent, sortByRecency } from '@/shell/palette-recents';
 import { useCanvas, type NodeKind } from '@/state/canvas';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
 import { desktop } from '@/desktop/bridge';
+import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 
 const KIND_ICON: Record<NodeKind, React.ReactNode> = {
@@ -28,8 +30,11 @@ const BROWSE_DEBOUNCE_MS = 60;
 
 interface Entry extends Command {
     icon: React.ReactNode;
-    section: 'Jump to' | 'Actions' | 'Folders';
+    section: 'Recent' | 'Jump to' | 'Actions' | 'Folders';
 }
+
+const LIST_ID = 'palette-list';
+const optionId = (index: number): string => `palette-option-${index}`;
 
 const matches = (query: string, text: string): boolean => {
     // Every typed word has to appear somewhere, in any order.
@@ -60,6 +65,7 @@ export function CommandPalette() {
     const [browse, setBrowse] = useState<{ parentPath: string; entries: FsBrowseEntry[] } | null>(null);
     const [failure, setFailure] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
+    const [recents, setRecents] = useState<string[]>(readRecents);
     const inputRef = useRef<HTMLInputElement>(null);
     const generation = useRef(0);
 
@@ -157,13 +163,19 @@ export function CommandPalette() {
                 section: 'Jump to',
                 run: () => useCanvas.getState().goToNode(node.id)
             }));
-        const actions: Entry[] = appCommands().map((command) => ({
+        const commands = appCommands();
+        const asEntry = (command: Command, section: Entry['section']): Entry => ({
             ...command,
             icon: command.agent ? <AgentIcon kind={command.agent} /> : <Icon icon={Zap} size={14} />,
-            section: 'Actions'
-        }));
-        return [...jumps, ...actions].filter((entry) => query === '' || matches(query, `${entry.label} ${entry.hint ?? ''}`));
-    }, [browsing, browse, nodes, order, query]);
+            section
+        });
+        if (query === '') {
+            // An empty palette is the one moment there is room to offer what you reach for most.
+            const split = sortByRecency(commands, recents);
+            return [...split.recent.map((command) => asEntry(command, 'Recent')), ...jumps, ...split.rest.map((command) => asEntry(command, 'Actions'))];
+        }
+        return [...jumps, ...commands.map((command) => asEntry(command, 'Actions'))].filter((entry) => matches(query, `${entry.label} ${entry.hint ?? ''}`));
+    }, [browsing, browse, nodes, order, query, recents]);
 
     // While browsing nothing is highlighted until the arrows say so, so Enter opens what was typed.
     const active = browsing ? (index >= 0 ? entries[index] : undefined) : entries[Math.min(index, entries.length - 1)];
@@ -176,6 +188,10 @@ export function CommandPalette() {
             entry.run();
             setIndex(-1);
             return;
+        }
+        // Jumping to a node is not a command; only what "Actions" lists is worth offering back.
+        if (entry.section !== 'Jump to') {
+            setRecents(rememberRecent(entry.id));
         }
         setOpen(false);
         entry.run();
@@ -194,6 +210,12 @@ export function CommandPalette() {
                         )}
                         <input
                             ref={inputRef}
+                            role="combobox"
+                            aria-expanded
+                            aria-controls={LIST_ID}
+                            aria-autocomplete="list"
+                            aria-activedescendant={active ? optionId(entries.indexOf(active)) : undefined}
+                            aria-label="Jump to a node, run a command, or open a folder"
                             className={clsx(
                                 'h-11 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint',
                                 browsing && 'font-mono text-code'
@@ -224,15 +246,18 @@ export function CommandPalette() {
                         />
                         <kbd className="tooltip-kbd">esc</kbd>
                     </div>
-                    <div className="max-h-[50vh] overflow-auto p-1.5" role="listbox">
-                        {entries.length === 0 && !browsing && <div className="px-3 py-6 text-center text-xs text-text-faint">Nothing matches</div>}
-                        {entries.length === 0 && browsing && <div className="px-3 py-6 text-center text-xs text-text-faint">No folders here yet</div>}
+                    <div id={LIST_ID} className="max-h-[50vh] overflow-auto p-1.5" role="listbox" aria-label="Results">
+                        <div aria-live="polite">
+                            {entries.length === 0 && !browsing && <div className="px-3 py-6 text-center text-xs text-text-faint">Nothing matches</div>}
+                            {entries.length === 0 && browsing && <div className="px-3 py-6 text-center text-xs text-text-faint">No folders here yet</div>}
+                        </div>
                         {entries.map((entry, i) => {
                             const first = i === 0 || entries[i - 1]!.section !== entry.section;
                             return (
                                 <div key={entry.id}>
-                                    {first && <div className="menu-label">{entry.section}</div>}
+                                    {first && <div className="section-label px-2.5 pt-1.5 pb-1">{entry.section}</div>}
                                     <button
+                                        id={optionId(i)}
                                         role="option"
                                         aria-selected={entry === active}
                                         className={clsx(
@@ -255,7 +280,9 @@ export function CommandPalette() {
                     {browsing && (
                         <div className="flex items-center gap-3 border-t border-border px-3 py-2 text-xs text-text-faint">
                             {failure ? (
-                                <span className="text-status-error">{failure}</span>
+                                <span className="text-status-error" role="alert">
+                                    {failure}
+                                </span>
                             ) : (
                                 <span>
                                     <kbd className="tooltip-kbd">↵</kbd> steps into a folder, <kbd className="tooltip-kbd">⌘↵</kbd> opens the typed path as a
@@ -264,8 +291,8 @@ export function CommandPalette() {
                             )}
                             <span className="grow" />
                             {desktop() && (
-                                <button
-                                    className="inline-flex h-7 items-center rounded-md px-2.5 text-xs font-medium text-text-muted hover:bg-surface-sunken hover:text-text"
+                                <Button
+                                    size="sm"
                                     onClick={() =>
                                         void desktop()
                                             ?.pickFolder(browse?.parentPath)
@@ -273,15 +300,11 @@ export function CommandPalette() {
                                     }
                                 >
                                     Browse…
-                                </button>
+                                </Button>
                             )}
-                            <button
-                                className="inline-flex h-7 items-center gap-1.5 rounded-md bg-accent px-2.5 text-xs font-medium text-accent-text disabled:opacity-50"
-                                disabled={busy || query.trim() === ''}
-                                onClick={() => void submitPath(query)}
-                            >
+                            <Button size="sm" variant="primary" disabled={busy || query.trim() === ''} onClick={() => void submitPath(query)}>
                                 <Icon icon={FolderPlus} size={12} /> Open as project
-                            </button>
+                            </Button>
                         </div>
                     )}
                 </Dialog.Popup>
