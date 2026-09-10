@@ -1,4 +1,4 @@
-import type { InteractionMode, RuntimeMode } from '@ruimte/contracts';
+import type { InteractionMode, ProviderCapabilities, RuntimeMode } from '@ruimte/contracts';
 
 // The app-server speaks JSON-RPC on stdio; the session adds nothing to the command line.
 export const CODEX_CHAT_ARGS = ['app-server'];
@@ -37,3 +37,21 @@ export const codexPromptPrefix = (interactionMode: InteractionMode): string =>
     interactionMode === 'plan'
         ? 'Plan mode: do not change files or run commands that change state. Investigate, then answer with a plan for me to approve.\n\n'
         : '';
+
+// What the app-server can do, as far as a client has to know.
+export const CODEX_CAPABILITIES: ProviderCapabilities = {
+    streamsToolOutput: true,
+    diffs: 'unified',
+    attachments: false,
+    mentions: false,
+    denyReason: false,
+    allowAlways: true,
+    asyncQuestions: true,
+    compaction: 'native',
+    planMode: 'prompt',
+    reportsCost: false,
+    reportsContextWindow: true,
+    slashCommands: false
+};
+
+export const CODEX_RESUME_COMMAND = 'codex resume {id}';
