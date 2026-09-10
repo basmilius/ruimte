@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Usage: kosten, tokens, projecten en limieten</title>
+<style>
+:root {
+  color-scheme: light;
+  --accent: #3f38b5;
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --image-outline: rgb(0 0 0 / 10%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 15px; }
+.diagram .small { font-size: 12px; fill: var(--muted); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); stroke-width: 1.5; }
+.diagram .node.plain { fill: var(--paper); stroke: var(--line); }
+.diagram .edge { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .edge.dashed { stroke-dasharray: 6 5; }
+.diagram .arrow { fill: var(--accent); }
+.diagram .track { fill: var(--line); }
+.diagram .fill { fill: var(--accent); }
+.diagram .fill.warn { fill: #b8860b; }
+.diagram .hair { stroke: var(--ink); stroke-width: 1; }
+.plot { min-width: 480px; }
+.mock { max-width: 360px; margin: 0 auto; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; line-height: 1.5; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide, .plot { min-width: 0; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .badge { print-color-adjust: exact; }
+}
+</style>
+<body>
+<a class="skip" href="#samenvatting">Naar de samenvatting</a>
+<header>
+  <p class="eyebrow">Ruimte / Ontwerpverkenning / 10 september 2026 / tweede versie</p>
+  <h1>Usage: een pagina met kosten, tokens, projecten en limieten</h1>
+  <p class="intro">Een chart-knop naast Settings opent een volledige pagina over het canvas, zoals in T3 Code. Bovenaan het totaal met een gestapelde balkgrafiek per provider, daaronder zes tegels, een breakdown per model, per project of per dag, en de 5-uur- en weekvensters. De daemon leest de transcripts van Claude Code en Codex, prijst ze met de LiteLLM-tabel en vraagt de limieten aan de CLI's. De client rendert.</p>
+  <p class="status">Voorstel goedgekeurd op de drie keuzes, nog niet gebouwd</p>
+  <p class="caption">Bron: Ruimte op commit <code>d24a75c</code> (main, 10 september 2026, met 91 ongecommitte wijzigingen), T3 Code op <code>3836890e</code>, ai-usage op <code>393294e</code>, Claude Code 2.1.267, Codex 0.153.4. Onderzoek door twee fable-agents, gedrag gelezen, geen code overgenomen. Vervangt de eerste versie van vandaag, die een popover voorstelde.</p>
+  <nav aria-label="Inhoud">
+    <a href="#samenvatting">Samenvatting</a>
+    <a href="#bronnen">Twee bronnen, één pagina</a>
+    <a href="#pagina">De pagina</a>
+    <a href="#data">Waar de cijfers vandaan komen</a>
+    <a href="#architectuur">Architectuur</a>
+    <a href="#datamodel">Datamodel</a>
+    <a href="#shell">De plek in de shell</a>
+    <a href="#stappen">Stappen</a>
+    <a href="#niet">Wat we niet doen</a>
+    <a href="#vragen">Open vragen</a>
+  </nav>
+</header>
+<main>
+  <section id="samenvatting" class="recommendation">
+    <h2>Samenvatting</h2>
+    <p>T3 Code en ai-usage tonen allebei kosten en tokens uit de transcripts die Claude Code en Codex op schijf achterlaten. Ze verschillen in wat ze eromheen bouwen. T3 heeft een Tokens-tab, een rij tegels, een 90-dagenperiode, een dag-voor-dag-tabel en cache savings. Ai-usage heeft een projectentabel met een gestapeld balkje per project, het aantal calls, een zichtbare prijsbasis per model, een gebundelde prijstabel voor offline gebruik, gestapelde balken in plaats van gelaagde vlakken, en een SQLite-store zodat de cijfers Claude's opruimen van oude transcripts overleven. De pagina voor Ruimte neemt van elk het beste.</p>
+    <p>De pagina leeft niet als view in <code>project.json</code> en niet in de settings-dialog. Hij is een app-niveau pagina (<code>page: 'usage' | null</code> in de ui-store) die <code>ViewHost</code> over het inerte canvas tekent, precies zoals een losse chat of terminal dat vandaag al doet. De sidebar blijft staan, dus de statusstippen van agents blijven zichtbaar. Terug via de Back-knop, Escape of elke klik op een view.</p>
+    <p>De daemon doet het werk. Een scanner leest de transcripts incrementeel (per bestand grootte, mtime en byte-offset), houdt een index onder <code>$RUIMTE_HOME/usage/</code>, prijst per model met LiteLLM plus een gebundelde snapshot, en beantwoordt <code>usage.summary</code>. De limieten komen van de CLI-probe uit de eerste versie van dit rapport en staan als derde metric op dezelfde pagina. De grafiek is eigen SVG in React, zo'n 200 regels, geen library: T3 tekent de zijne ook zelf en de vier grote libraries kosten 0,3 tot 7 MB voor één balkgrafiek.</p>
+    <div class="stats">
+      <div><strong>1,4 GB</strong><span>aan Claude-transcripts op deze Mac, 1149 bestanden</span></div>
+      <div><strong>627 ms</strong><span>volledige gefilterde parse in Bun, warme cache</span></div>
+      <div><strong>0</strong><span>chart-libraries nodig</span></div>
+      <div><strong>2 + 1</strong><span>requests en één event op de wire</span></div>
+    </div>
+    <p><span class="badge confirmed">Geverifieerd</span> De transcriptformaten van beide CLI's, de prijsbron en de matching-regels komen uit de code van beide bronnen en zijn gecontroleerd tegen echte bestanden op deze Mac. De scan-timing is gemeten met een script in het scratchpad.</p>
+    <p><span class="badge warning">Onzeker</span> Hoe Codex-tokens geteld moeten worden: T3 leest <code>last_token_usage</code> per event, ai-usage neemt de delta van <code>total_token_usage</code>. Beide claimen dat het klopt. Vergelijken op een week echte bestanden voordat we er een kiezen.</p>
+  </section>
+
+  <section id="bronnen">
+    <h2>Twee bronnen, één pagina</h2>
+    <p>Wat elk van de twee heeft, en wat de pagina van Ruimte overneemt. De laatste kolom is de keuze.</p>
+    <div class="table" role="region" aria-label="Vergelijking van T3 Code en ai-usage" tabindex="0">
+      <table class="wide">
+        <caption>Functies per bron en de keuze voor Ruimte</caption>
+        <thead><tr><th scope="col">Onderdeel</th><th scope="col">T3 Code</th><th scope="col">ai-usage</th><th scope="col">Ruimte</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Vorm</th><td>Pagina op <code>/usage</code>, tabs Cost, Tokens, Limits</td><td>Popover van 480 pt met subschermen Models, Projects, Processes</td><td>Pagina, metric Cost of Tokens, limieten eronder</td></tr>
+          <tr><th scope="row">Periodes</th><td>Past 24h (rollend), 7, 30, 90 dagen; tijdzone van de kijker gaat mee in de request</td><td>Today (vanaf middernacht, per uur), 7, 30 dagen</td><td>Today vanaf middernacht (ai-usage, zo groepeert <code>commit-log.ts</code> dagen ook), 7, 30, 90 dagen (T3), tijdzone in de request (T3)</td></tr>
+          <tr><th scope="row">Grafiek</th><td>Gelaagde gladde vlakken per provider, elk vanaf nul, 12% opacity; 224 px hoog; eigen SVG</td><td>Gestapelde balken per uur of dag, segment per provider; hover dimt andere balken tot 55%; Swift Charts, 130 pt</td><td>Gestapelde balken (het totaal per dag is leesbaar, kleine provider verdwijnt niet onder een groot vlak), 224 px, T3's tooltip met Total-regel, ai-usage's dimmen</td></tr>
+          <tr><th scope="row">Samenvatting</th><td>Groot getal, "N sessions · API estimate", rij per provider met aandeel</td><td>Groot getal, "$x at API rates, 1,2M tokens in 1.234 calls", rij per provider</td><td>Groot getal, "N sessions · M calls · at API rates", rij per provider als legenda</td></tr>
+          <tr><th scope="row">Tegels</th><td>Processed, Cached input, Uncached input, Output, Cache savings</td><td>Geen tegels</td><td>T3's vijf plus Cache writes (de dure soort, ai-usage toont hem in de tabel)</td></tr>
+          <tr><th scope="row">Per model</th><td>Model, Cost, Share, Tokens</td><td>Model, Calls, Read, Written, Cache R/W, Cost, met "?" bij onbeprijsd en een info-icoon bij familieprijs</td><td>ai-usage's kolommen plus T3's Share</td></tr>
+          <tr><th scope="row">Per project</th><td>Geen</td><td>Icoon en naam (git-root, <code>.idea/.name</code>, <code>.idea/icon.svg</code>), gestapeld balkje per provider, kosten, tokens</td><td>Overnemen; een map die een Ruimte-project is krijgt het icoon en de naam uit <code>projects.json</code></td></tr>
+          <tr><th scope="row">Per dag</th><td>Dag of uur, een kostenkolom per provider, Total, Tokens</td><td>Geen</td><td>Overnemen als derde breakdown, in v2</td></tr>
+          <tr><th scope="row">Prijzen</th><td>LiteLLM via HTTP, 24 h TTL, snapshot op schijf, geen ingebouwde fallback; exacte match; overrides in een dialog</td><td>LiteLLM, 24 h, plus gebundelde snapshot van 145 modellen; match exact, dan datumsuffix weg, dan familie; overrides in een JSON-bestand</td><td>ai-usage's drie stappen en de gebundelde snapshot; overrides in v2 als settings-sectie</td></tr>
+          <tr><th scope="row">Prijsstatus</th><td>In het contract, nergens getoond</td><td>"?" per model, info-tooltip "priced as ...", footer "Prices from LiteLLM of 4 Sep"</td><td>ai-usage, in de header van de pagina</td></tr>
+          <tr><th scope="row">Scannen</th><td>Op verzoek, cache per bestand met byte-offset en guard-hash, staleTime 60 s in de client</td><td>Elke 60 s, SQLite, offset plus parser-state per bestand</td><td>Incrementeel met offset en parser-state, JSON-index; timer alleen zolang een client de pagina open heeft</td></tr>
+          <tr><th scope="row">Limieten</th><td>Derde tab, CLI-probe</td><td>Sectie per provider onder de tabellen, uit statusline en transcripts</td><td>Sectie onderaan de pagina, CLI-probe (eerste versie van dit rapport)</td></tr>
+          <tr><th scope="row">Extra</th><td>Grok, meerdere environments, fork-onderdrukking bij Codex</td><td>Valuta via ECB, HTML/PDF-export, procesmonitor, bedrag in de menubalk</td><td>Niets hiervan in v1; export en valuta in v2</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="pagina">
+    <h2>De pagina</h2>
+    <p>De pagina vult de hoofdkolom (<code>absolute inset-0 bg-surface</code>), scrolt als geheel, met de inhoud in een gecentreerde kolom van ongeveer 960 px, zoals een losse chat zijn kolom houdt.</p>
+    <figure class="panel">
+      <div class="table" role="region" aria-label="Schets van de usage-pagina" tabindex="0">
+        <svg class="diagram plot" viewBox="0 0 960 700" role="img" aria-labelledby="page-title page-desc">
+          <title id="page-title">Schets van de usage-pagina</title>
+          <desc id="page-desc">Bovenaan een kopregel met Back, de titel Usage, een periodekiezer Today, 7, 30 en 90 dagen, een metric-keuze Cost of Tokens, een refresh-knop en een regel met scan- en prijsstatus. Daaronder links het totaal met een rij per provider, rechts een gestapelde balkgrafiek. Dan zes tegels, een breakdown met de keuze Models, Projects of Days en een tabel, en onderaan de limieten per provider.</desc>
+          <rect x="0" y="0" width="960" height="700" fill="var(--paper)"/>
+          <rect x="0" y="0" width="200" height="700" fill="var(--panel)"/>
+          <text x="16" y="30" class="small">Sidebar</text>
+          <rect x="12" y="52" width="176" height="22" rx="5" fill="var(--highlight)"/>
+          <rect x="12" y="80" width="176" height="22" rx="5" fill="var(--paper)"/>
+          <rect x="12" y="108" width="176" height="22" rx="5" fill="var(--paper)"/>
+          <rect x="12" y="660" width="24" height="24" rx="5" fill="var(--paper)"/>
+          <rect x="132" y="660" width="24" height="24" rx="5" fill="var(--accent)"/>
+          <rect x="160" y="660" width="24" height="24" rx="5" fill="var(--paper)"/>
+          <text x="144" y="676" text-anchor="middle" class="small" style="fill:var(--paper)">▥</text>
+          <text x="172" y="676" text-anchor="middle" class="small">⚙</text>
+          <!-- header -->
+          <text x="224" y="38" class="small">←</text>
+          <text x="246" y="38" style="font-weight:600">Usage</text>
+          <rect x="320" y="20" width="236" height="26" rx="6" fill="var(--line)"/>
+          <rect x="322" y="22" width="52" height="22" rx="5" fill="var(--paper)"/>
+          <text x="348" y="37" text-anchor="middle" class="small">Today</text>
+          <text x="404" y="37" text-anchor="middle" class="small">7 days</text>
+          <text x="466" y="37" text-anchor="middle" class="small">30 days</text>
+          <text x="526" y="37" text-anchor="middle" class="small">90 days</text>
+          <rect x="572" y="20" width="118" height="26" rx="6" fill="var(--line)"/>
+          <rect x="574" y="22" width="56" height="22" rx="5" fill="var(--paper)"/>
+          <text x="602" y="37" text-anchor="middle" class="small">Cost</text>
+          <text x="660" y="37" text-anchor="middle" class="small">Tokens</text>
+          <text x="712" y="38" class="small">↻</text>
+          <text x="320" y="66" class="small">Scanned 14:05, 1,149 files · Prices from LiteLLM, Sep 4</text>
+          <!-- summary + chart -->
+          <text x="224" y="110" style="font-size:36px;font-weight:600">$142.18</text>
+          <text x="224" y="132" class="small">38 sessions · 1,234 calls · at API rates</text>
+          <circle cx="229" cy="164" r="4" fill="var(--accent)"/>
+          <text x="240" y="168" class="small">Claude Code</text>
+          <text x="470" y="168" text-anchor="end" class="small">$118.40 · 9.8M</text>
+          <circle cx="229" cy="190" r="4" fill="#30b0c7"/>
+          <text x="240" y="194" class="small">Codex</text>
+          <text x="470" y="194" text-anchor="end" class="small">$23.78 · 2.1M</text>
+          <!-- chart -->
+          <line x1="520" y1="80" x2="940" y2="80" class="grid" stroke="var(--line)"/>
+          <line x1="520" y1="130" x2="940" y2="130" stroke="var(--line)"/>
+          <line x1="520" y1="180" x2="940" y2="180" stroke="var(--line)"/>
+          <line x1="520" y1="230" x2="940" y2="230" stroke="var(--line)"/>
+          <text x="512" y="84" text-anchor="end" class="small">$30</text>
+          <text x="512" y="134" text-anchor="end" class="small">$20</text>
+          <text x="512" y="184" text-anchor="end" class="small">$10</text>
+          <text x="512" y="234" text-anchor="end" class="small">0</text>
+          <g>
+            <rect x="530" y="170" width="40" height="60" fill="var(--accent)"/><rect x="530" y="150" width="40" height="20" fill="#30b0c7"/>
+            <rect x="590" y="140" width="40" height="90" fill="var(--accent)"/><rect x="590" y="120" width="40" height="20" fill="#30b0c7"/>
+            <rect x="650" y="200" width="40" height="30" fill="var(--accent)"/><rect x="650" y="190" width="40" height="10" fill="#30b0c7"/>
+            <rect x="710" y="110" width="40" height="120" fill="var(--accent)"/><rect x="710" y="90" width="40" height="20" fill="#30b0c7"/>
+            <rect x="770" y="230" width="40" height="0" fill="var(--accent)"/>
+            <rect x="830" y="160" width="40" height="70" fill="var(--accent)"/><rect x="830" y="145" width="40" height="15" fill="#30b0c7"/>
+            <rect x="890" y="185" width="40" height="45" fill="var(--accent)"/><rect x="890" y="170" width="40" height="15" fill="#30b0c7"/>
+          </g>
+          <line x1="730" y1="72" x2="730" y2="230" class="hair"/>
+          <rect x="742" y="60" width="150" height="74" rx="8" fill="var(--paper)" stroke="var(--line)"/>
+          <text x="752" y="78" class="small">Thu Sep 4</text>
+          <circle cx="756" cy="93" r="3" fill="var(--accent)"/><text x="764" y="97" class="small">Claude Code</text><text x="882" y="97" text-anchor="end" class="small">$24.10</text>
+          <circle cx="756" cy="108" r="3" fill="#30b0c7"/><text x="764" y="112" class="small">Codex</text><text x="882" y="112" text-anchor="end" class="small">$4.02</text>
+          <text x="764" y="127" class="small" style="font-weight:600">Total</text><text x="882" y="127" text-anchor="end" class="small" style="font-weight:600">$28.12</text>
+          <text x="550" y="250" text-anchor="middle" class="small">Sep 4</text>
+          <text x="730" y="250" text-anchor="middle" class="small">Sep 7</text>
+          <text x="910" y="250" text-anchor="middle" class="small">Sep 10</text>
+          <!-- tiles -->
+          <g>
+            <rect x="224" y="280" width="112" height="52" rx="8" fill="var(--paper)" stroke="var(--line)"/><text x="236" y="298" class="small">Processed</text><text x="236" y="320" style="font-weight:500">11.9M</text>
+            <rect x="345" y="280" width="112" height="52" rx="8" fill="var(--paper)" stroke="var(--line)"/><text x="357" y="298" class="small">Uncached input</text><text x="357" y="320" style="font-weight:500">412K</text>
+            <rect x="466" y="280" width="112" height="52" rx="8" fill="var(--paper)" stroke="var(--line)"/><text x="478" y="298" class="small">Cached input</text><text x="478" y="320" style="font-weight:500">9.6M</text>
+            <rect x="587" y="280" width="112" height="52" rx="8" fill="var(--paper)" stroke="var(--line)"/><text x="599" y="298" class="small">Cache writes</text><text x="599" y="320" style="font-weight:500">1.2M</text>
+            <rect x="708" y="280" width="112" height="52" rx="8" fill="var(--paper)" stroke="var(--line)"/><text x="720" y="298" class="small">Output</text><text x="720" y="320" style="font-weight:500">640K</text>
+            <rect x="829" y="280" width="111" height="52" rx="8" fill="var(--paper)" stroke="var(--line)"/><text x="841" y="298" class="small">Cache savings</text><text x="841" y="320" style="font-weight:500">$38.20</text>
+          </g>
+          <!-- breakdown -->
+          <text x="224" y="372" style="font-weight:600">Breakdown</text>
+          <rect x="740" y="354" width="200" height="26" rx="6" fill="var(--line)"/>
+          <rect x="742" y="356" width="60" height="22" rx="5" fill="var(--paper)"/>
+          <text x="772" y="371" text-anchor="middle" class="small">Models</text>
+          <text x="840" y="371" text-anchor="middle" class="small">Projects</text>
+          <text x="908" y="371" text-anchor="middle" class="small">Days</text>
+          <line x1="224" y1="392" x2="940" y2="392" stroke="var(--line)"/>
+          <text x="224" y="410" class="small">Model</text><text x="560" y="410" text-anchor="end" class="small">Calls</text><text x="640" y="410" text-anchor="end" class="small">Input</text><text x="720" y="410" text-anchor="end" class="small">Output</text><text x="820" y="410" text-anchor="end" class="small">Cache R/W</text><text x="890" y="410" text-anchor="end" class="small">Cost</text><text x="940" y="410" text-anchor="end" class="small">Share</text>
+          <line x1="224" y1="418" x2="940" y2="418" stroke="var(--line)"/>
+          <circle cx="229" cy="436" r="3" fill="var(--accent)"/><text x="240" y="440" class="small">Claude Fable 5.1</text><text x="560" y="440" text-anchor="end" class="small">812</text><text x="640" y="440" text-anchor="end" class="small">302K</text><text x="720" y="440" text-anchor="end" class="small">498K</text><text x="820" y="440" text-anchor="end" class="small">7.9M / 1.0M</text><text x="890" y="440" text-anchor="end" class="small">$96.30</text><text x="940" y="440" text-anchor="end" class="small">68%</text>
+          <circle cx="229" cy="462" r="3" fill="var(--accent)"/><text x="240" y="466" class="small">Claude Opus 5</text><text x="560" y="466" text-anchor="end" class="small">210</text><text x="640" y="466" text-anchor="end" class="small">80K</text><text x="720" y="466" text-anchor="end" class="small">112K</text><text x="820" y="466" text-anchor="end" class="small">1.7M / 190K</text><text x="890" y="466" text-anchor="end" class="small">$22.10</text><text x="940" y="466" text-anchor="end" class="small">16%</text>
+          <circle cx="229" cy="488" r="3" fill="#30b0c7"/><text x="240" y="492" class="small">GPT-5.6 Sol</text><text x="560" y="492" text-anchor="end" class="small">190</text><text x="640" y="492" text-anchor="end" class="small">30K</text><text x="720" y="492" text-anchor="end" class="small">30K</text><text x="820" y="492" text-anchor="end" class="small">2.0M / 0</text><text x="890" y="492" text-anchor="end" class="small">$23.78</text><text x="940" y="492" text-anchor="end" class="small">17%</text>
+          <circle cx="229" cy="514" r="3" fill="#30b0c7"/><text x="240" y="518" class="small">gpt-5.7-preview  ⓘ</text><text x="560" y="518" text-anchor="end" class="small">22</text><text x="640" y="518" text-anchor="end" class="small">4K</text><text x="720" y="518" text-anchor="end" class="small">6K</text><text x="820" y="518" text-anchor="end" class="small">40K / 0</text><text x="890" y="518" text-anchor="end" class="small">?</text><text x="940" y="518" text-anchor="end" class="small"></text>
+          <!-- limits -->
+          <text x="224" y="572" style="font-weight:600">Limits</text>
+          <text x="224" y="600" class="small">Claude · Max</text>
+          <text x="224" y="622" class="small">Session</text><text x="560" y="622" text-anchor="end" class="small">38% · resets 16:18</text>
+          <rect class="track" x="224" y="628" width="336" height="8" rx="4"/><rect class="fill" x="224" y="628" width="128" height="8" rx="4"/>
+          <text x="224" y="660" class="small">Weekly</text><text x="560" y="660" text-anchor="end" class="small">62% · resets Sat 09:00</text>
+          <rect class="track" x="224" y="666" width="336" height="8" rx="4"/><rect class="fill" x="224" y="666" width="208" height="8" rx="4"/>
+          <text x="604" y="600" class="small">Codex · Pro</text>
+          <text x="604" y="622" class="small">Weekly</text><text x="940" y="622" text-anchor="end" class="small">12% · resets Tue 09:00</text>
+          <rect class="track" x="604" y="628" width="336" height="8" rx="4"/><rect class="fill" x="604" y="628" width="40" height="8" rx="4"/>
+        </svg>
+      </div>
+      <figcaption>Schets, geen screenshot. Alle getallen zijn demonstratiewaarden. De sidebar links blijft staan; de chart-knop in de footer is actief. De limieten-sectie is de inhoud van de eerste versie van dit rapport, nu onderaan de pagina in plaats van in een popover.</figcaption>
+    </figure>
+    <h3>Van boven naar beneden</h3>
+    <ol>
+      <li><strong>Kopregel</strong> van 48 px onder de app-toolbar: een Back <code>icon-btn</code> (ArrowLeft, Escape), de titel, een <code>Segmented</code> voor de periode (Today, 7 days, 30 days, 90 days), een <code>Segmented</code> voor de metric (Cost, Tokens), een refresh-knop die draait zolang een scan loopt, en rechts de herkomstregel "Scanned 14:05, 1,149 files · Prices from LiteLLM, Sep 4". Dat zijn ai-usage's footerregels, naar boven verplaatst zodat je ze ziet zonder te scrollen. Periode en metric onthouden in localStorage, zoals T3 precies die twee bewaart.</li>
+      <li><strong>Samenvatting en grafiek</strong> naast elkaar (grid <code>18rem 1fr</code> op <code>lg:</code>, gestapeld daaronder). Links het grote getal (kosten of tokens, afhankelijk van de metric) met de regel "38 sessions · 1,234 calls · at API rates". Daaronder een rij per actieve provider: stip in de providerkleur, merkteken, naam, rechts kosten en tokens. Die rijen zijn de legenda van de grafiek, in beide bronnen. Rechts de gestapelde balken: 24 voor Today, 7, 30 of 90 voor de rest, y is kosten of tokens. Gridlijnen op drie of vier "nette" ticks, x-labels elke 3 uur, 1, 7 of 15 dagen. Hover: een verticale lijn op het slot, de andere balken dimmen tot 55%, en een tooltip met het slotlabel, een regel per provider en een Total-regel. Lege slots houden hun x-positie, zodat een gat zichtbaar blijft.</li>
+      <li><strong>Zes tegels</strong> (<code>grid-cols-2 md:grid-cols-6</code>): Processed tokens, Uncached input, Cached input, Cache writes, Output, Cache savings. Dezelfde tegels op beide metrics.</li>
+      <li><strong>Breakdown</strong> met een <code>Segmented</code> Models, Projects, Days (Hours op Today) en één tabel eronder. Models: stip plus de weergavenaam (het ruwe id als tooltip), Calls, Input, Output, Cache R/W, Cost, Share; "?" met een tooltip "No price known" bij een onbeprijsd model, een info-icoon "Priced as claude-opus-4-5" bij een familieprijs; gesorteerd op kosten, onbeprijsd onderaan. Projects: icoon en naam, een gestapeld balkje van 9 px per provider geschaald op het grootste project, kosten, tokens, en het korte pad eronder in <code>text-text-faint</code>. Days: slot, een kostenkolom per provider, Total, Tokens, nieuwste boven, alleen slots met activiteit.</li>
+      <li><strong>Limits</strong>: per provider de plannaam en per venster een balk zoals ai-usage hem toont: het gebruikte percentage als geheel getal, de balk begrensd op 100, en de reset als kloktijd ("resets 16:18" vandaag, anders "resets Tue 09:00"). Kleuren: rood vanaf 90%, amber vanaf 70%, daaronder de accentkleur. Geen countdown, geen hairline. De cijfers komen van de CLI-probe uit de eerste versie.</li>
+    </ol>
+    <h3>Staten</h3>
+    <ul>
+      <li>Geen van beide transcriptmappen bestaat: een <code>EmptyState</code> met "No Claude or Codex transcripts found. The daemon reads ~/.claude/projects and ~/.codex/sessions."</li>
+      <li>Nog geen antwoord: een skeleton van samenvatting, grafiek en tegels (T3's <code>UsageSkeleton</code>).</li>
+      <li>Scan mislukt: de laatste samenvatting blijft staan met een rode regel in de kopregel. T3 heeft geen foutstaat op paginaniveau en toont dan nullen; dat willen we niet.</li>
+      <li>Periode zonder activiteit: de grafiek met lege slots en nullen, geen extra melding.</li>
+    </ul>
+  </section>
+
+  <section id="data">
+    <h2>Waar de cijfers vandaan komen</h2>
+    <h3>Kosten en tokens: de transcripts</h3>
+    <p>Beide CLI's schrijven elke turn naar JSONL-bestanden op schijf. Niemand leest een API hiervoor; de daemon leest die bestanden, net als T3 en ai-usage.</p>
+    <div class="split">
+      <div class="panel">
+        <h3>Claude Code</h3>
+        <p><code>~/.claude/projects/**/*.jsonl</code> (of <code>CLAUDE_CONFIG_DIR</code>, dat <code>agents/install.ts</code> al kent). Regels met <code>type: 'assistant'</code> dragen <code>message.usage</code>: <code>input_tokens</code>, <code>cache_read_input_tokens</code>, <code>cache_creation_input_tokens</code> met daarin <code>ephemeral_1h_input_tokens</code>, <code>output_tokens</code> en <code>output_tokens_details.thinking_tokens</code>. Verder <code>message.model</code>, <code>message.id</code>, <code>timestamp</code>, <code>sessionId</code> en <code>cwd</code> op elke regel. Die <code>cwd</code> is waarom een projectenbreakdown gratis is.</p>
+        <p>Dedupe: een bericht staat er meerdere keren in (een regel per content block, en groeiend tijdens streaming). T3 houdt het eerste record per <code>message.id</code>, ai-usage het maximum per veld. Het maximum dekt beide gevallen.</p>
+      </div>
+      <div class="panel">
+        <h3>Codex</h3>
+        <p><code>~/.codex/sessions/**/*.jsonl</code> (of <code>CODEX_HOME</code>). Regels <code>event_msg</code> met <code>payload.type: 'token_count'</code> dragen <code>info.total_token_usage</code> (cumulatief) en <code>info.last_token_usage</code>; <code>turn_context</code> geeft het model, <code>session_meta</code> de <code>cwd</code>. Velden: <code>input_tokens</code>, <code>cached_input_tokens</code>, <code>cache_write_input_tokens</code>, <code>output_tokens</code>, <code>reasoning_output_tokens</code>. Ongecachete input is <code>input - cached - cache_write</code>.</p>
+        <p>Telling: ai-usage neemt de delta van het cumulatieve totaal en valt terug op <code>last_token_usage</code> bij een negatieve delta (compact of resume). T3 leest <code>last_token_usage</code> en onderdrukt kopieën van forks en sub-agents. Voorstel: ai-usage's delta plus T3's fork-onderdrukking, na een vergelijking op echte bestanden.</p>
+      </div>
+    </div>
+    <h3>Prijzen</h3>
+    <p>Beide bronnen gebruiken dezelfde tabel: <code>model_prices_and_context_window.json</code> uit de LiteLLM-repo op GitHub, prijzen per token in USD, ververst na 24 uur. Ai-usage bundelt daarnaast een snapshot van 145 modellen in de app zodat kosten bij de eerste start en offline werken; T3 heeft die fallback niet en toont dan alles als onbeprijsd. Matching bij ai-usage: exact, dan met de datumsuffix eraf (<code>claude-opus-4-5-20251101</code> wordt <code>claude-opus-4-5</code>), dan de langste familie op een streepje. T3 eist een exacte match en markeert kale familienamen (<code>opus</code>, <code>fable</code>) als onprijsbaar. Ontbrekende cache-tarieven: lezen 10% van input, schrijven 125%, 1-uurs-cache 200%. Cache savings is <code>cached × (input - cacheRead)</code> (T3). Reasoning-tokens zijn een deel van output en worden nooit apart geprijsd.</p>
+    <p class="note">Voor een abonnement is dit niet wat je betaalt, maar wat dezelfde calls via de API zouden kosten. Ai-usage zegt dat in de export-footer; op de pagina staat het als "at API rates" in de samenvattingsregel.</p>
+    <h3>Limieten: de CLI-probe</h3>
+    <p>Onveranderd ten opzichte van de eerste versie. Een <code>get_usage</code> control request naar een Claude-probe-proces, <code>account/rateLimits/read</code> naar <code>codex app-server</code>, elke vijf minuten en op verzoek, en de live-events uit lopende chat-nodes ertussen. Geen credentials, geen HTTP naar Anthropic of OpenAI. Ai-usage heeft de directe route geprobeerd en verwijderd: keychain-prompts bij elke token-refresh, 429's, geen refresh.</p>
+  </section>
+
+  <section id="architectuur">
+    <h2>Architectuur</h2>
+    <figure class="panel">
+      <div class="table" role="region" aria-label="Diagram van de datastroom" tabindex="0">
+        <svg class="diagram plot" viewBox="0 0 900 340" role="img" aria-labelledby="flow-title flow-desc">
+          <title id="flow-title">Datastroom van de usage-pagina</title>
+          <desc id="flow-desc">De transcriptmappen van Claude en Codex gaan door een scanner met index naar een aggregator die met de prijstabel de samenvatting maakt. De CLI-probe en de chat-nodes voeden de UsageMonitor voor de limieten. Beide beantwoorden requests van de client en pushen een event. De client heeft een store en de pagina.</desc>
+          <defs><marker id="arr2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0 0 L8 4 L0 8 Z"/></marker></defs>
+          <rect class="node plain" x="10" y="30" width="220" height="60" rx="12"/>
+          <text x="120" y="55" text-anchor="middle">Transcripts op schijf</text>
+          <text x="120" y="76" text-anchor="middle" class="small">~/.claude/projects, ~/.codex/sessions</text>
+          <rect class="node plain" x="10" y="130" width="220" height="60" rx="12"/>
+          <text x="120" y="155" text-anchor="middle">LiteLLM-prijstabel</text>
+          <text x="120" y="176" text-anchor="middle" class="small">HTTP, 24 h, plus gebundelde snapshot</text>
+          <rect class="node plain" x="10" y="250" width="220" height="60" rx="12"/>
+          <text x="120" y="275" text-anchor="middle">CLI-probe en chat-nodes</text>
+          <text x="120" y="296" text-anchor="middle" class="small">get_usage, rateLimits/read, events</text>
+          <rect class="node" x="300" y="60" width="260" height="100" rx="12"/>
+          <text x="430" y="90" text-anchor="middle">UsageScanner</text>
+          <text x="430" y="112" text-anchor="middle" class="small">incrementeel, index onder $RUIMTE_HOME</text>
+          <text x="430" y="130" text-anchor="middle" class="small">aggregatie per slot, provider, model</text>
+          <text x="430" y="148" text-anchor="middle" class="small">apps/server/src/usage</text>
+          <rect class="node" x="300" y="240" width="260" height="80" rx="12"/>
+          <text x="430" y="270" text-anchor="middle">UsageMonitor</text>
+          <text x="430" y="292" text-anchor="middle" class="small">limieten, eerste versie van dit rapport</text>
+          <rect class="node" x="660" y="140" width="230" height="90" rx="12"/>
+          <text x="775" y="170" text-anchor="middle">Client store en UsagePage</text>
+          <text x="775" y="192" text-anchor="middle" class="small">usage.summary bij openen en periode</text>
+          <text x="775" y="210" text-anchor="middle" class="small">usage.limits, events daarna</text>
+          <path class="edge" d="M230 60 C270 60 270 95 292 95" marker-end="url(#arr2)"/>
+          <path class="edge" d="M230 160 C270 160 270 125 292 125" marker-end="url(#arr2)"/>
+          <path class="edge" d="M230 280 H292" marker-end="url(#arr2)"/>
+          <path class="edge" d="M560 110 C610 110 610 170 652 170" marker-end="url(#arr2)"/>
+          <path class="edge" d="M560 280 C610 280 610 200 652 200" marker-end="url(#arr2)"/>
+          <text x="616" y="74" text-anchor="middle" class="small">usage.summary</text>
+          <text x="616" y="92" text-anchor="middle" class="small">usage.changed</text>
+          <text x="640" y="300" text-anchor="middle" class="small">usage.limits</text>
+          <text x="640" y="318" text-anchor="middle" class="small">usage.limitsChanged</text>
+          <text x="120" y="332" text-anchor="middle" class="small">bronnen op de daemon-machine</text>
+          <text x="430" y="332" text-anchor="middle" class="small">daemon</text>
+          <text x="775" y="332" text-anchor="middle" class="small">client (n stuks)</text>
+        </svg>
+      </div>
+      <figcaption>Twee onafhankelijke onderdelen in de daemon. De scanner en de monitor delen niets behalve de map <code>apps/server/src/usage</code> en de handler-file. Elke gepairde client krijgt dezelfde antwoorden, dus n clients kosten geen n scans.</figcaption>
+    </figure>
+    <h3>De scanner</h3>
+    <ul>
+      <li><strong>Incrementeel.</strong> Per bestand grootte, mtime, byte-offset en de parser-state (voor Codex het lopende cumulatieve totaal, het model en de <code>cwd</code>). Ongewijzigd: overslaan. Gegroeid: verder lezen vanaf de offset. Gekrompen of gelijk met nieuwe mtime: opnieuw vanaf nul. Dat is ai-usage's <code>Scanner</code> met T3's regels. Een prefilter op <code>"usage"</code> of <code>token_count</code> voorkomt dat regels zonder cijfers door <code>JSON.parse</code> gaan.</li>
+      <li><strong>Index</strong> op <code>$RUIMTE_HOME/usage/index.json</code>, via <code>writeAtomic</code>, mode 0600, records als tuples zoals T3's cache (onder 6 MB voor 30 dagen). De index is afgeleide data: weggooien kost een koude scan van enkele seconden, verder niets. Ai-usage's argument voor een persistente store telt wel: Claude Code ruimt transcripts op na <code>cleanupPeriodDays</code>, en records in de index overleven dat. Gemeten op deze Mac: 1,4 GB Claude-transcripts, gefilterde parse in 627 ms met warme cache; T3 noemt 2 tot 3,5 s koud. Dat rechtvaardigt geen SQLite; <code>bun:sqlite</code> blijft de uitwijk als de index boven een paar MB groeit.</li>
+      <li><strong>Wanneer.</strong> Bij <code>usage.summary</code> als de vorige scan ouder is dan 60 s, en elke 60 s zolang een client de pagina open heeft (<code>usage.subscribe</code> en <code>unsubscribe</code>, zoals de folder-watcher per client werkt). Eén in-flight guard, zoals <code>snapshot-store.ts</code>. Geen recursieve watcher op 1,4 GB; de timer is genoeg.</li>
+      <li><strong>Aggregatie</strong> in TypeScript in het geheugen: 100.000 records per slot, provider en model sommeren is milliseconden. De request draagt de IANA-tijdzone van de kijker (T3), zodat een remote daemon in de dagen van de kijker bucket.</li>
+      <li><strong>Projecten.</strong> De <code>cwd</code> per record vouwt naar de git-root (ai-usage's <code>ProjectResolver</code>, worktrees tellen mee voor de hoofdrepo). Een map die in <code>projects.json</code> staat krijgt de naam, kleur en het icoon van dat Ruimte-project; de icoonresolver van de daemon leest <code>.idea/icon.svg</code> al, dus ai-usage's truc is er al.</li>
+      <li><strong>Prijzen.</strong> De daemon haalt de LiteLLM-tabel op met 24 h TTL en schrijft een snapshot naar <code>$RUIMTE_HOME/usage/prices.json</code>; in de repo zit een gebundelde snapshot als fallback, ververst door een script zoals ai-usage's <code>snapshot-pricing.sh</code>. Dit is de eerste uitgaande HTTP-request van de daemon. De gebundelde snapshot maakt hem optioneel, en een vlag <code>--no-price-fetch</code> is één regel in <code>config.ts</code>.</li>
+    </ul>
+    <h3>De client</h3>
+    <p>Een store <code>state/usage.ts</code> met de laatste samenvatting per periode en de limieten. De pagina vraagt <code>usage.summary</code> bij openen en bij elke periodewissel, met de "wat was gevraagd"-sleutel uit <code>CommitLog.tsx</code> zodat een verlaat antwoord nooit over een nieuwere periode heen tekent. Een <code>usage.changed</code>-event (alleen <code>scannedAt</code>) is het sein om opnieuw te vragen. Formatters in <code>shell/usage/format.ts</code>: <code>formatUsd</code>, <code>formatTokens</code> ("1.2M"), <code>formatCount</code>. Nieuwe tokens in <code>styles.css</code>: <code>--chart-claude</code> en <code>--chart-codex</code> (met dark-variant en <code>@theme inline</code>), gereserveerd <code>--chart-gemini</code> en <code>--chart-copilot</code>.</p>
+    <h3>De grafiek</h3>
+    <p>Eigen SVG in React, geen library. T3 tekent zijn grafiek in 452 regels zonder dependency; gestapelde balken met gridlijnen, hover en een tooltip zijn kleiner, zo'n 200 regels. De enige wiskunde is T3's <code>niceScale</code> van 13 regels en <code>value / max</code>. Elke kleur is een <code>var(--chart-*)</code>-token en elke tekst een gewoon HTML-element, wat de regels "alleen semantische tokens" en "geen halve pixels" controleerbaar houdt. Twee dingen anders dan T3: de SVG krijgt zijn breedte van een <code>ResizeObserver</code> (of <code>useInstantWidth</code>) en tekent in echte pixels in plaats van <code>preserveAspectRatio="none"</code>, zodat balkbreedtes en gaten hele pixels zijn; en x en breedte worden afgerond. Gemeten alternatieven (unpacked, <code>npm view</code>): recharts 7,4 MB, chart.js 6,2 MB, uplot 545 KB, visx shape plus scale 370 KB, nivo bar 343 KB plus dependencies. Alleen <code>d3-scale</code> (174 KB, ISC) zou een zinnige helper zijn en die is voor één <code>niceScale</code> niet nodig.</p>
+  </section>
+
+  <section id="datamodel">
+    <h2>Datamodel</h2>
+    <p><code>packages/contracts/src/usage.ts</code>, zod 4. Buckets per slot, provider en model zijn wat de grafiek, de tegels, de samenvatting en de Days-tabel nodig hebben; de client sommeert ze. De prijsbasis per model en de projectverdeling zijn daar niet uit af te leiden zonder <code>project</code> op elke bucket (slot × model × project explodeert), dus die twee lijsten stuurt de daemon apart. <code>costUsd: null</code> in plaats van T3's <code>costSource</code>-enum houdt "onbeprijsd" zichtbaar in elke consument zonder tweede veld.</p>
+<pre><code>export const UsageProviderSchema = z.enum(['claude', 'codex']);      // subset van AgentKindSchema, groeit met de readers
+export const UsageResolutionSchema = z.enum(['hour', 'day']);
+
+// Tokensoorten zijn disjunct; reasoning is een deel van output en telt nooit mee in een totaal.
+export const UsageTotalsSchema = z.object({
+    calls: z.number().int().nonnegative(),
+    input: z.number().int().nonnegative(),           // ongecachete input
+    cacheRead: z.number().int().nonnegative(),
+    cacheWrite: z.number().int().nonnegative(),      // alle cache creation, 1 h inbegrepen
+    cacheWrite1h: z.number().int().nonnegative(),
+    output: z.number().int().nonnegative(),
+    reasoning: z.number().int().nonnegative()
+});
+
+export const UsageBucketSchema = z.object({
+    slot: z.string(),                                 // 'YYYY-MM-DD' of ISO-uurstart, in de tijdzone van de request
+    provider: UsageProviderSchema,
+    model: z.string(),
+    totals: UsageTotalsSchema,
+    costUsd: z.number().nullable(),                   // null: geen prijs bekend
+    cacheSavingsUsd: z.number(),
+    sessions: z.number().int().nonnegative()
+});
+
+export const UsageModelSchema = z.object({
+    provider: UsageProviderSchema,
+    model: z.string(),
+    totals: UsageTotalsSchema,
+    costUsd: z.number().nullable(),
+    priceBasis: z.enum(['exact', 'family', 'override', 'unknown']),
+    pricedAs: z.string().nullable()                   // de familiesleutel of de override, voor de tooltip
+});
+
+export const UsageProjectSchema = z.object({
+    folder: z.string(),                               // git-root of cwd, absoluut
+    name: z.string(),
+    projectId: z.string().nullable(),                 // een Ruimte-project als de map er een is
+    byProvider: z.record(UsageProviderSchema, z.object({ costUsd: z.number(), tokens: z.number().int() })),
+    totals: UsageTotalsSchema,
+    costUsd: z.number()
+});
+
+export const UsageSummaryPayloadSchema = z.object({
+    from: z.string(), to: z.string(),                 // 'YYYY-MM-DD', inclusief, in timeZone
+    resolution: UsageResolutionSchema,
+    timeZone: z.string()                              // IANA; de daemon kan op een andere machine staan
+});
+
+export const UsageSummaryResultSchema = z.object({
+    from: z.string(), to: z.string(), resolution: UsageResolutionSchema, timeZone: z.string(),
+    buckets: z.array(UsageBucketSchema),
+    models: z.array(UsageModelSchema),
+    projects: z.array(UsageProjectSchema),
+    sessions: z.number().int().nonnegative(),         // uniek over de periode
+    scan: z.object({ at: z.number(), files: z.number().int(), changedFiles: z.number().int(), durationMs: z.number().int(), running: z.boolean() }),
+    pricing: z.object({ source: z.enum(['litellm', 'snapshot', 'none']), fetchedAt: z.number().nullable(), models: z.number().int() }),
+    roots: z.array(z.object({ provider: UsageProviderSchema, path: z.string(), status: z.enum(['ok', 'missing', 'failed']), message: z.string().nullable() }))
+});
+
+// REQUEST_SCHEMAS
+'usage.summary': { payload: UsageSummaryPayloadSchema, result: UsageSummaryResultSchema },
+'usage.limits':  { payload: EmptySchema, result: UsageLimitsSnapshotSchema },   // eerste versie van dit rapport
+// EVENT_SCHEMAS
+'usage.changed':       z.object({ scannedAt: z.number() }),                     // opnieuw vragen
+'usage.limitsChanged': UsageLimitsSnapshotSchema,</code></pre>
+    <p>De limieten-schemas (<code>UsageWindowSchema</code>, <code>ProviderUsageSchema</code>) staan in de eerste versie en veranderen niet; alleen de namen van de request en het event krijgen het voorvoegsel <code>limits</code> zodat ze naast de samenvatting passen.</p>
+  </section>
+
+  <section id="shell">
+    <h2>De plek in de shell</h2>
+    <p>Drie plekken zijn overwogen. Een view-kind valt af: een view staat in <code>project.json</code>, een gedeeld en gecommit bestand, en usage is machine-brede data die niets met een project te maken heeft. Het zou bovendien een literal toevoegen aan een zod-union die de daemon en de migratie lezen, en een sidebar-rij per project geven. De settings-dialog valt af: 820 bij 600 px is te klein voor een grafiek en twee tabellen, een modal blokkeert het canvas, en de README noemt settings "a handful of settings". Wat er wel thuishoort is later de prijs-override-editor, als sectie <code>usage</code>, geopend vanaf de pagina.</p>
+    <p>Blijft over: een app-niveau pagina in de ui-store, waar <code>paletteOpen</code>, <code>settings</code> en de dialog-vlaggen al wonen ("Which app-level dialog is up; nothing here belongs to a node").</p>
+<pre><code>export type AppPage = 'usage';
+// in UiStore
+page: AppPage | null;
+setPage(page: AppPage | null): void;</code></pre>
+    <ul>
+      <li><code>ViewHost.tsx</code> leest <code>page</code> en behandelt hem als een standalone view: het canvas wordt <code>invisible</code> en <code>inert</code> en blijft gemount (de terminals mogen niet herbouwen), en <code>UsagePage</code> tekent in het <code>absolute inset-0 bg-surface</code>-slot. Een actieve standalone view blijft eronder verborgen; de pagina wint. Eén extra <code>||</code> in de bestaande conditie.</li>
+      <li><code>Dock.tsx</code> en <code>ViewToolbar.tsx</code> krijgen elk een guard, zodat de dock en de folder-pill van een terminal niet over de pagina heen staan. De files- en git-panels mogen blijven.</li>
+      <li>Sluiten: <code>setPage(null)</code> vanuit Back, Escape en bovenin <code>showView</code> in <code>project/views.ts</code>. Elke route naar een view loopt daar doorheen (sidebar-rij, palet, view-menu, <code>⌘1..9</code>, <code>stepView</code>), ook een klik op de view die al actief is, omdat <code>setActiveView</code> op hetzelfde id vroeg terugkeert en de close dus ervoor moet. De ui-store mag de document-store niet importeren (circulair), daarom zit het in <code>views.ts</code>.</li>
+      <li>Openen: de chart-knop in de sidebar-footer naast Settings, met <code>data-active</code> zolang de pagina open is, en een palet-commando "Usage". Geen sidebar-rij is actief terwijl de pagina open is; dat klopt, want de pagina is geen view.</li>
+      <li>Geen persistentie. Na een reload land je op de actieve view van het project.</li>
+    </ul>
+  </section>
+
+  <section id="stappen">
+    <h2>Stappen</h2>
+    <p>Zeven stappen, elk apart te committen. De volgorde begint bij de data, omdat de pagina zonder cijfers niets te tonen heeft, en zet de limieten als laatste omdat die het enige onderdeel met een open vraag zijn.</p>
+    <ol class="steps">
+      <li class="step"><div>
+        <h3>Contract en readers</h3>
+        <p><code>packages/contracts/src/usage.ts</code> met de schemas hierboven, regels in de tabellen en de barrel, een test. <code>apps/server/src/usage/readers/claude.ts</code> en <code>codex.ts</code>: één functie per regel die een record of niets teruggeeft, met de parser-state voor Codex. Tests op echte regels uit de scratchpad-samples (structuur, geen inhoud).</p>
+        <p>Klaar als: beide readers de velden uit de sectie "Waar de cijfers vandaan komen" leveren, de Claude-dedupe het maximum per <code>message.id</code> houdt en de Codex-delta bij een negatieve waarde op <code>last_token_usage</code> terugvalt. Eerst een vergelijking van beide Codex-methodes op een week echte bestanden, met het verschil in een commitbericht.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Scanner, index en prijzen</h3>
+        <p><code>apps/server/src/usage/scanner.ts</code> (bestanden opsommen, offset en state per bestand, prefilter, <code>writeAtomic</code> naar <code>$RUIMTE_HOME/usage/index.json</code>), <code>pricing.ts</code> (LiteLLM-fetch met TTL, snapshot, gebundelde fallback, matching in drie stappen, cache-defaults), <code>aggregate.ts</code> (buckets, modellen, projecten, sessies), <code>projects.ts</code> (git-root-vouwen, koppeling met <code>projects.json</code>). Handler <code>usage.summary</code> in <code>handlers/usage.ts</code>, wiring in <code>daemon.ts</code>, de 60 s-timer met subscribe en unsubscribe, <code>usage.changed</code>.</p>
+        <p>Klaar als: een koude scan op deze Mac onder 5 s klaar is en een warme onder 100 ms, een tweede aanroep zonder wijzigingen geen bestand opent, en <code>usage.summary</code> voor 7 dagen dezelfde totalen geeft als ai-usage voor dezelfde periode (met de gekozen Codex-methode). Tests met een nep-<code>RUIMTE_HOME</code> en kleine transcriptbestanden.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>De pagina in de shell</h3>
+        <p><code>page</code> in <code>state/ui.ts</code>, de guards in <code>ViewHost</code>, <code>Dock</code> en <code>ViewToolbar</code>, <code>setPage(null)</code> in <code>showView</code>, de sidebar-knop, het palet-commando, en een lege <code>shell/usage/UsagePage.tsx</code> met alleen de kopregel en de Back-knop.</p>
+        <p>Klaar als: de pagina opent en sluit via knop, Escape, palet en elke view-klik, het canvas eronder niet herbouwt (terminal-inhoud blijft staan) en de dock en view-toolbar verborgen zijn.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Samenvatting, grafiek en tegels</h3>
+        <p><code>state/usage.ts</code>, <code>shell/usage/format.ts</code>, <code>UsageChart.tsx</code> (gestapelde balken, <code>niceScale</code>, hover, tooltip in een <code>FLOAT</code>), <code>UsageSummary.tsx</code>, <code>UsageTiles.tsx</code>, de periodekiezer en metric-keuze met localStorage, de chart-tokens in <code>styles.css</code>, skeleton en lege staten.</p>
+        <p>Klaar als: alle vier periodes en beide metrics kloppen met de tabel, de balkbreedtes hele pixels zijn, de tooltip aan de randen omklapt en <code>bun run check</code> plus <code>bun run format</code> schoon zijn.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Breakdown Models en Projects</h3>
+        <p><code>UsageBreakdown.tsx</code> met de <code>Segmented</code> en twee tabellen; de projectrij met icoon, gestapeld balkje en kort pad; "?" en info-tooltips voor de prijsbasis.</p>
+        <p>Klaar als: de kolommen sorteren zoals beschreven, een Ruimte-project zijn eigen icoon en naam toont, en een onbeprijsd model onderaan staat met de tooltip.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Limieten</h3>
+        <p>De <code>UsageMonitor</code> en de probe uit de eerste versie, met de requestnamen <code>usage.limits</code> en <code>usage.limitsChanged</code>, de events uit <code>claude-protocol.ts</code> en <code>codex-protocol.ts</code>, en de sectie onderaan de pagina. Begint met de spike van een half uur: antwoordt <code>get_usage</code> vóór de eerste turn zonder SDK?</p>
+        <p>Klaar als: de sectie na een verse daemon-start beide providers met plan en vensters toont zonder open chat, en een turn in een chat de balk live bijwerkt.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Documentatie</h3>
+        <p>Een alinea in <code>CLAUDE.md</code> onder het wire-protocol, de map <code>usage/</code> in <code>apps/server/README.md</code>, en de keuzes (pagina in plaats van view, index in plaats van SQLite, geen credentials, LiteLLM met snapshot) in <code>docs/HANDOFF.md</code>.</p>
+        <p>Klaar als: een volgende agent uit HANDOFF kan lezen waarom de pagina geen view is en waarom de daemon de CLI's vraagt en niet het endpoint.</p>
+      </div></li>
+    </ol>
+    <p>Stappen 1 en 2 zijn daemon-werk en kunnen parallel aan 3 en 4 lopen zolang het contract uit stap 1 eerst gecommit is. Bij elkaar is dit ongeveer een week voor één agent.</p>
+  </section>
+
+  <section id="niet">
+    <h2>Wat we niet doen</h2>
+    <ul>
+      <li>Een chart-library. Eén balkgrafiek en één gestapeld balkje rechtvaardigen geen 0,3 tot 7 MB.</li>
+      <li>SQLite. De index in JSON is regenereerbaar en de aggregatie kost milliseconden. <code>bun:sqlite</code> blijft de uitwijk.</li>
+      <li>Het usage-endpoint van Anthropic of OpenAI aanroepen, of tokens uit de keychain of <code>~/.codex/auth.json</code> lezen.</li>
+      <li>Meerdere environments samenvoegen (T3), Grok, of provider-gerapporteerde kosten uit oude Claude-transcripts.</li>
+      <li>Een tikkende klok bij de limieten, of een bedrag op de sidebar-knop.</li>
+      <li>In v1: de Days-tabel, prijs-overrides, valuta, export, Gemini en Copilot, en een filter per project. Dat is v2, in die volgorde. De Days-tabel is klein en kan mee zodra stap 5 staat.</li>
+    </ul>
+  </section>
+
+  <section id="vragen">
+    <h2>Open vragen en onzekerheden</h2>
+    <p><span class="badge warning">Onzeker</span> De Codex-telling. T3's <code>last_token_usage</code> met fork-onderdrukking versus ai-usage's delta van <code>total_token_usage</code>. Stap 1 begint met een vergelijking op echte bestanden; tot die tijd is de delta-methode het voorstel omdat die een hervatte scan overleeft via de opgeslagen parser-state.</p>
+    <p><span class="badge warning">Onzeker</span> Of <code>get_usage</code> in <code>claude -p</code> antwoordt vóór de eerste turn zonder de SDK. Ongewijzigd sinds de eerste versie; stap 6 begint met de spike.</p>
+    <p><span class="badge warning">Onzeker</span> Uitgaande HTTP vanuit de daemon bestaat vandaag niet. De LiteLLM-fetch is de eerste. De gebundelde snapshot maakt hem optioneel, maar het is een beleidskeuze voor een tool die "geen login, geen API-key" belooft.</p>
+    <p><span class="badge warning">Onzeker</span> De transcriptformaten van Gemini en Copilot zijn niet onderzocht; geen van beide bronnen leest ze.</p>
+    <p><span class="badge confirmed">Besloten</span> Today vanaf middernacht, zoals ai-usage. <code>commit-log.ts</code> groepeert dagen al zo en elke balk is dan "één kalenderdag", ook in de 7- en 30-dagenweergave.</p>
+    <p><span class="badge info">Keuze</span> Gestapelde balken (ai-usage) in plaats van gelaagde vlakken (T3). Het totaal per dag is leesbaar en de kleine provider verdwijnt niet onder de grote.</p>
+    <p><span class="badge confirmed">Besloten</span> De limieten zoals ai-usage: het gebruikte percentage, de reset als kloktijd, rood vanaf 90% en amber vanaf 70%.</p>
+    <p><span class="badge confirmed">Besloten</span> Providerkleuren als nieuwe tokens <code>--chart-claude</code> en <code>--chart-codex</code>, ai-usage's paar (oranje <code>#ff9500</code>, teal <code>#30b0c7</code>) in een light- en dark-variant in <code>styles.css</code>, gereserveerd <code>--chart-gemini</code> en <code>--chart-copilot</code>.</p>
+  </section>
+</main>
+<footer><p>Geverifieerd uit code: de usage-pagina, het contract, de scanner-cache en de prijslogica van T3 (shallow clone op <code>3836890e</code>), de views, charts, store, scanner en pricing van ai-usage (<code>393294e</code>), en de shell, ui-store, ViewHost en daemon-utilities van Ruimte op de werkboom van <code>d24a75c</code>. Op deze Mac gemeten: 1,4 GB Claude-transcripts in 1149 bestanden, 99.757 usage-regels, gefilterde parse 627 ms met warme cache (script <code>scan-timing.ts</code> in het scratchpad). Niet uitgevoerd: een koude scan-timing, een echte <code>get_usage</code>-probe zonder SDK, en de vergelijking van de twee Codex-telmethodes. Niets in de Ruimte-repo is gewijzigd behalve dit rapport.</p></footer>
+</body>
+</html>

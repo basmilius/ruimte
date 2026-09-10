@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · De tekenview</title>
+<style>
+:root {
+  color-scheme: light;
+  --accent: #3f38b5;
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --image-outline: rgb(0 0 0 / 10%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+table { font-variant-numeric: tabular-nums; }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 15px; }
+.diagram .small { font-size: 12px; fill: var(--muted); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .file { fill: var(--paper); stroke: var(--accent); stroke-dasharray: 4 3; }
+.diagram .edge { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow { fill: var(--accent); }
+.plot { min-width: 720px; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; line-height: 1.5; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media (max-width: 900px) { .split.three { grid-template-columns: 1fr; } }
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+}
+@media (max-width: 420px) { .step { grid-template-columns: 30px 1fr; } }
+@media print {
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide, .plot { min-width: 0; }
+  th, td { overflow-wrap: anywhere; }
+  .split, .split.three { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#samenvatting">Naar de samenvatting</a>
+<header>
+  <p class="eyebrow">Ruimte / Ontwerp / 10 september 2026, bijgewerkt na de beslissingen</p>
+  <h1>De tekenview</h1>
+  <p class="intro">Een nieuwe soort view naast canvas, chat, terminal en browser: een tekening in de stijl van Excalidraw. In <code>project.json</code> staat alleen <code>{ kind: 'drawing', id, name }</code>. De elementen liggen in een eigen bestand onder <code>.ruimte/drawings/</code>, met dezelfde rev-discipline als het projectbestand. We renderen zelf op een 2D-canvas met <code>perfect-freehand</code> en <code>roughjs</code> en halen Excalidraw niet binnen. Een tekening kan ook als node op een canvas staan en is via <code>ruimte-context</code> leesbaar voor een agent.</p>
+  <p class="status">Beslissingen genomen, nog niet gebouwd</p>
+  <p class="caption">Bron: de werkboom van Ruimte op 10 september 2026 (ongecommitte refactor bovenop <code>d24a75c</code>). Regelnummers verwijzen naar de werkboom, niet naar HEAD. Het volledige onderzoek met alle verwijzingen staat in <a href="../research/drawing-view.md"><code>docs/research/drawing-view.md</code></a>. Npm-feiten zijn op 10 september uit het register gehaald.</p>
+  <nav aria-label="Inhoud">
+    <a href="#samenvatting">Samenvatting</a>
+    <a href="#beslissingen">Beslissingen</a>
+    <a href="#nu">Waar we staan</a>
+    <a href="#model">Het model</a>
+    <a href="#daemon">De daemon</a>
+    <a href="#client">De client</a>
+    <a href="#rendering">Rendering</a>
+    <a href="#interface">Interface</a>
+    <a href="#geschiedenis">Undo en opslaan</a>
+    <a href="#export">Export, node en context</a>
+    <a href="#stappen">De stappen</a>
+    <a href="#open">Nog open</a>
+  </nav>
+</header>
+<main>
+  <section id="samenvatting" class="recommendation">
+    <h2>Samenvatting</h2>
+    <p>De tekenview past in het bestaande viewmodel zonder dat <code>project.json</code> meer leert dan één nieuwe kind. Alles wat het projectbestand al verdiend heeft (een rev, atomaire writes, een watcher die eigen writes herkent, een conflictbanner) geldt één op één voor een tekening, dus de daemon krijgt een <code>DrawingStore</code> naast de <code>ProjectStore</code> en de client een <code>DrawingClient</code> naast de <code>ProjectClient</code>.</p>
+    <ul>
+      <li><strong>Bestand.</strong> <code>&lt;map&gt;/.ruimte/drawings/&lt;viewId&gt;.json</code>, versie 1, met <code>rev</code> en een lijst elementen (rect, diamond, ellipse, line, freehand, text), meegenomen in git. Kleuren zijn paletnamen, geen hexwaarden, zodat een tekening beide thema's volgt.</li>
+      <li><strong>Wire.</strong> Vier requests (<code>drawing.open</code>, <code>drawing.save</code> met <code>baseRev</code>, <code>drawing.close</code>, <code>drawing.copy</code>) en één event (<code>drawing.changed</code>) uit een eigen directorywatcher.</li>
+      <li><strong>Rendering.</strong> Eigen renderer op <code>&lt;canvas&gt;</code> 2D. De pure geometrie en de SVG-painter komen in een nieuw workspace-pakket <code>packages/drawing</code>, zodat de client ze voor export gebruikt en de daemon voor de agentcontext.</li>
+      <li><strong>Gedrag zoals Excalidraw.</strong> Kale lettertoetsen voor de gereedschappen, drie niveaus slordigheid met "Artist" als standaard, het gereedschap springt na een vorm terug naar select tenzij vergrendeld met Q, gum en vergrendelen vanaf de eerste versie, Kalam als standaardfont voor tekst.</li>
+      <li><strong>Omvang.</strong> Tien stappen, ongeveer anderhalve tot twee weken. Stap 1 en 2 (contracts en daemon) zijn zonder UI testbaar.</li>
+      <li><strong>Vooraf.</strong> Eén blokkerende plek: <code>mapViews</code> in <code>project-files.ts</code> roept <code>mapCwd(view.node)</code> aan voor elke view met een node-vorm en crasht op een view zonder <code>node</code>.</li>
+    </ul>
+  </section>
+
+  <section id="beslissingen">
+    <h2>Beslissingen</h2>
+    <p>Bas beantwoordde de twaalf open vragen op 10 september. Dit is wat er vastligt en wat het aan het ontwerp verandert.</p>
+    <div class="table" role="region" aria-label="Beslissingen per vraag" tabindex="0">
+      <table>
+        <thead><tr><th scope="col">Vraag</th><th scope="col">Beslissing</th><th scope="col">Gevolg voor het ontwerp</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Git</th><td>Tekeningen gaan mee in git.</td><td>Geen <code>.gitignore</code>, één element per regel in het bestand zodat de diff leesbaar blijft.</td></tr>
+          <tr><th scope="row">Toetsen</th><td>Zoals Excalidraw.</td><td>Kale letters en cijfers voor de gereedschappen, alleen terwijl de tekening het toetsenbord heeft. Een uitzondering op "elke chord een modifier" in de HANDOFF-beslissingen.</td></tr>
+          <tr><th scope="row">Gereedschappen</th><td>Zwevende dock in onze stijl.</td><td>Zoals voorgesteld: de <code>FLOAT</code>-glaskaart onderaan, Lucide-iconen, <code>BTN_GROUP</code>.</td></tr>
+          <tr><th scope="row">Kleuren</th><td>Themavolgend.</td><td>Tien paletnamen, geen hexwaarden in het bestand.</td></tr>
+          <tr><th scope="row">Handgetekend</th><td>Zoals Excalidraw.</td><td>Drie niveaus (Architect 0, Artist 1, Cartoonist 2), Artist als standaard, per element. Het stijlpaneel zet de selectie én de standaard voor nieuwe elementen.</td></tr>
+          <tr><th scope="row">Fonts</th><td>Onze eigen sans en mono, plus een handgetekend font.</td><td>Een tekst kiest <code>hand</code>, <code>sans</code> of <code>mono</code>. Hand is Kalam (OFL 1.1, via <code>@fontsource/kalam</code>), de standaard en het tweede gebundelde font naast Geist. De HANDOFF-beslissing "Geist alleen voor het woordmerk" krijgt een regel erbij.</td></tr>
+          <tr><th scope="row">Dupliceren</th><td>Ja.</td><td>Request <code>drawing.copy</code>, de daemon kopieert het bestand op rev 0.</td></tr>
+          <tr><th scope="row">Node en context</th><td>Ja, beide.</td><td>Nodekind <code>drawing</code> op het canvas dat hetzelfde bestand toont, en contextbron <code>drawing</code> die de daemon live als SVG en tekstlijst serveert. Twee extra stappen.</td></tr>
+          <tr><th scope="row">Raster</th><td>Als instelling.</td><td><code>drawingSnap</code> in <code>Settings</code>, standaard uit, in een groep "Drawing" in de instellingen.</td></tr>
+          <tr><th scope="row">Gum en vergrendelen</th><td>Meteen.</td><td>Beide in stap 6, <code>locked</code> zat al in het schema.</td></tr>
+          <tr><th scope="row">Afbeeldingen</th><td>Geen.</td><td>Geen <code>image</code>-kind, ook niet gereserveerd.</td></tr>
+          <tr><th scope="row">Export</th><td>PNG en SVG, naar klembord en als download.</td><td>Vier acties in de dock en het commandopalet. Download werkt in de browser en in Electron via een anker, de desktop bridge krijgt later een native opslagdialoog.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="nu">
+    <h2>Waar we staan</h2>
+    <p>Views zijn af. <code>ProjectViewSchema</code> (<code>packages/contracts/src/project.ts</code> L204-210) is een discriminated union met canvas, chat, terminal, browser en sinds kort een separator (een lijn in de sidebar die niets opent). Chat, terminal en browser bestaan als losse view: <code>shell/ViewHost.tsx</code> schakelt op <code>view.kind</code>, het canvas blijft gemount maar wordt <code>invisible</code> en <code>inert</code>. Omdat <code>ProjectViewKind</code> uit de union is afgeleid, faalt elke <code>Record&lt;ProjectViewKind, ...&gt;</code> in de client zodra er een kind bijkomt. Dat vangnet stuurt het grootste deel van stap 3.</p>
+    <p>De daemon leest en schrijft <code>project.json</code> via de <code>ProjectStore</code> (<code>apps/server/src/projects/project-store.ts</code>). De watcher is een niet-recursieve <code>fs.watch</code> op de map <code>.ruimte</code>, filtert op bestandsnaam, wacht 150 ms per burst en vergelijkt de tekst met <code>lastText</code> om een eigen write van een externe te onderscheiden. Een save met een oude <code>baseRev</code> krijgt <code>rev-conflict</code>. De client slaat 400 ms na de laatste bewerking op en schrijft de camera 1000 ms later naar <code>&lt;projectId&gt;.local.json</code>.</p>
+    <h3>Wat elke losse view nu als één sessie behandelt</h3>
+    <p>Vijf plekken gaan ervan uit dat een losse view een sessienode is met dezelfde id. Een tekening is dat niet en moet daar worden overgeslagen.</p>
+    <div class="table" role="region" aria-label="Plekken die een drawing-case nodig hebben" tabindex="0">
+      <table>
+        <thead><tr><th scope="col">Bestand</th><th scope="col">Nu</th><th scope="col">Nodig</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>apps/server/src/projects/project-files.ts</code></th><td><code>mapViews</code> roept <code>mapCwd(view.node)</code> aan voor elke view met een node</td><td><span class="badge danger">Blokkerend</span> View zonder <code>node</code> ongewijzigd doorgeven</td></tr>
+          <tr><th scope="row"><code>apps/client/src/project/views.ts</code></th><td><code>nodesOfView</code> en <code>projectNodes</code> maken één node per losse view</td><td>Lege lijst voor een tekening</td></tr>
+          <tr><th scope="row"><code>apps/client/src/terminal/lifecycle-watch.ts</code></th><td>Elke losse view wordt een live sessie-id</td><td>Tekening overslaan</td></tr>
+          <tr><th scope="row"><code>apps/client/src/nodes/node-host.ts</code></th><td><code>hostOfView</code> bouwt een <code>NodeHost</code></td><td><code>null</code> voor een tekening</td></tr>
+          <tr><th scope="row"><code>apps/client/src/shell/Sidebar.tsx</code></th><td><code>self</code> wordt een node-rij met <code>view.kind</code> als <code>NodeKind</code></td><td><code>self: null</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="model">
+    <h2>Het model</h2>
+    <p>Twee bestanden. Het projectbestand kent de view alleen bij naam en id. Het tekenbestand is een eigen document met een eigen versie en rev, en gaat mee in git.</p>
+<pre><code>&lt;map&gt;/.ruimte/project.json                       versie 2, met { kind: 'drawing', id, name }
+&lt;map&gt;/.ruimte/drawings/&lt;viewId&gt;.json             één document per tekenview
+$RUIMTE_HOME/projects/&lt;projectId&gt;/drawings/       voor een project zonder map</code></pre>
+    <p>Een submap en geen <code>.ruimte/&lt;viewId&gt;.drawing.json</code>, omdat <code>.ruimte</code> in git zit en door mensen gelezen wordt. De twee bestanden die de daemon nu documenteert blijven zo alleen op het hoogste niveau. De bestandsnaam is de view-id door <code>encodeURIComponent</code>, nooit de naam, zodat een rename nooit een bestand verplaatst.</p>
+    <h3>Het tekendocument</h3>
+    <p>Nieuw bestand <code>packages/contracts/src/drawing.ts</code>. De volgorde in de array is de z-volgorde, achter naar voor, zoals <code>nodes</code> in een canvasview. Ids zijn <code>nextId('el')</code> en verlaten het tekenbestand nooit, dus <code>duplicateIdIn</code> voor het projectbestand blijft ongewijzigd.</p>
+<pre><code>const ElementBaseSchema = z.object({
+    id: z.string().min(1),
+    x: z.number(), y: z.number(), w: z.number(), h: z.number(),
+    angle: z.number().optional(),                 // radialen rond het midden
+    stroke: DrawingColorSchema,                   // 'ink' | 'muted' | 'accent' | 'red' | ... | 'pink'
+    strokeWidth: z.union([z.literal(1), z.literal(2), z.literal(4)]),
+    strokeStyle: z.enum(['solid', 'dashed', 'dotted']).optional(),
+    fill: z.enum(['none', 'solid', 'hachure']).optional(),
+    fillColor: DrawingColorSchema.optional(),
+    roughness: z.union([z.literal(0), z.literal(1), z.literal(2)]).optional(), // Architect, Artist, Cartoonist; afwezig is 1
+    seed: z.number().int().nonnegative(),         // houdt de wiebel gelijk op elke render
+    locked: z.boolean().optional()
+});
+
+export const DrawingElementSchema = z.discriminatedUnion('kind', [
+    ElementBaseSchema.extend({ kind: z.literal('rect'), radius: z.number().nonnegative().optional() }),
+    ElementBaseSchema.extend({ kind: z.literal('diamond') }),
+    ElementBaseSchema.extend({ kind: z.literal('ellipse') }),
+    ElementBaseSchema.extend({ kind: z.literal('line'), points: ..., arrowStart: ..., arrowEnd: ... }),
+    ElementBaseSchema.extend({ kind: z.literal('freehand'), points: [x, y, pressure?][] }),
+    ElementBaseSchema.extend({ kind: z.literal('text'), text: z.string(), size: ..., font: z.enum(['hand', 'sans', 'mono']).optional(), align: ... })
+]);
+
+export const DrawingDocumentSchema = z.object({
+    version: z.literal(1),
+    rev: z.number().int().nonnegative(),
+    elements: z.array(DrawingElementSchema)
+});</code></pre>
+    <ul>
+      <li><strong>Kleuren als namen.</strong> Tien paletnamen die <code>styles.css</code> in beide thema's op een token afbeeldt, zoals <code>--note-*</code> en <code>--status-*</code> nu doen. Het bestand bevat nooit een hexwaarde.</li>
+      <li><strong>Slordigheid als drie niveaus.</strong> Excalidraw noemt ze Architect, Artist en Cartoonist. Een afwezige <code>roughness</code> leest als 1, zodat een met de hand geschreven bestand er meteen handgetekend uitziet.</li>
+      <li><strong>Font per tekst.</strong> <code>hand</code> is de standaard en mag daarom ontbreken. <code>sans</code> is <code>--font-sans</code>, <code>mono</code> is <code>--font-mono</code> en volgt daarmee het monospace-font uit de instellingen.</li>
+      <li><strong>Wereldeenheden.</strong> Dezelfde eenheden als het canvas, zodat de tekennode op een canvas het bestand 1:1 toont.</li>
+      <li><strong>Serialisatie.</strong> Het bovenste niveau ingesprongen, elk element op één regel. <code>JSON.stringify(doc, null, 2)</code> zet elk punt van elke streek op een eigen regel en maakt een git-diff onleesbaar.</li>
+      <li><strong>Punten.</strong> Freehand-punten worden bij commit op één decimaal afgerond. Een streek van 300 punten is dan ongeveer 3 KB.</li>
+    </ul>
+    <p>In <code>project.ts</code> komt er één lid bij de union: <code>ViewBaseSchema.extend({ kind: z.literal('drawing') })</code>. <code>migrateDocument</code> verandert niet. <code>isOpenableView</code> blijft waar voor een tekening.</p>
+  </section>
+
+  <section id="daemon">
+    <h2>De daemon</h2>
+    <figure class="panel">
+      <div class="table" role="region" aria-label="Diagram van de opslagstroom, horizontaal scrollbaar" tabindex="0">
+        <svg class="diagram plot" viewBox="0 0 960 220" role="img" aria-labelledby="flow-title flow-desc">
+          <title id="flow-title">Opslagstroom van een tekening</title>
+          <desc id="flow-desc">De tekenview bewerkt de store, de DrawingClient stuurt drawing.save over de socket, de DrawingStore schrijft het bestand atomair. Een externe write wordt door de watcher gezien en komt als drawing.changed terug bij de client.</desc>
+          <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0 0 L8 4 L0 8 Z"/></marker></defs>
+          <rect class="node" x="20" y="30" width="180" height="70" rx="12"/>
+          <text x="110" y="60" text-anchor="middle">useDrawing</text>
+          <text x="110" y="82" text-anchor="middle" class="small">store in de client</text>
+          <rect class="node" x="260" y="30" width="180" height="70" rx="12"/>
+          <text x="350" y="60" text-anchor="middle">DrawingClient</text>
+          <text x="350" y="82" text-anchor="middle" class="small">400 ms, baseRev</text>
+          <rect class="node" x="520" y="30" width="180" height="70" rx="12"/>
+          <text x="610" y="60" text-anchor="middle">DrawingStore</text>
+          <text x="610" y="82" text-anchor="middle" class="small">rev, lastText, watcher</text>
+          <rect class="file" x="760" y="30" width="180" height="70" rx="12"/>
+          <text x="850" y="60" text-anchor="middle">drawings/&lt;id&gt;.json</text>
+          <text x="850" y="82" text-anchor="middle" class="small">writeAtomic</text>
+          <path class="edge" d="M200 65 H252" marker-end="url(#arrow)"/>
+          <path class="edge" d="M440 65 H512" marker-end="url(#arrow)"/>
+          <path class="edge" d="M700 65 H752" marker-end="url(#arrow)"/>
+          <text x="476" y="52" text-anchor="middle" class="small">drawing.save</text>
+          <path class="edge" d="M850 100 V160 H380 V108" marker-end="url(#arrow)"/>
+          <text x="600" y="152" text-anchor="middle" class="small">externe write: watcher (150 ms), dan drawing.changed</text>
+          <path class="edge" d="M320 100 V125 H110 V108" marker-end="url(#arrow)"/>
+          <text x="230" y="140" text-anchor="middle" class="small">load of conflict</text>
+        </svg>
+      </div>
+      <figcaption>De tekenview bewerkt de store, de client stuurt een save met de rev die hij laadde, de daemon schrijft atomair. Een write van buiten komt via de watcher als event terug en wordt geladen, of gaat naar de conflictbanner als er nog onopgeslagen werk is.</figcaption>
+    </figure>
+    <h3>Requests en events</h3>
+    <div class="table" role="region" aria-label="Nieuwe wire-contracten" tabindex="0">
+      <table>
+        <thead><tr><th scope="col">Naam</th><th scope="col">Payload</th><th scope="col">Antwoord</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>drawing.open</code></th><td><code>{ projectId, viewId }</code></td><td><code>{ document }</code>, <code>EMPTY_DRAWING</code> als het bestand ontbreekt (er wordt niets geschreven tot de eerste save)</td></tr>
+          <tr><th scope="row"><code>drawing.save</code></th><td><code>{ projectId, viewId, baseRev, content }</code></td><td><code>{ rev }</code>, of <code>rev-conflict</code></td></tr>
+          <tr><th scope="row"><code>drawing.close</code></th><td><code>{ projectId, viewId }</code></td><td>leeg</td></tr>
+          <tr><th scope="row"><code>drawing.copy</code></th><td><code>{ projectId, from, to }</code></td><td>leeg. Kopieert het bestand op rev 0; ontbreekt de bron, dan wordt niets geschreven</td></tr>
+          <tr><th scope="row"><code>drawing.changed</code> (event)</th><td><code>{ projectId, viewId, document }</code></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Foutcodes in een <code>DrawingError</code>, vertaald door de handler zoals <code>ProjectError</code>: <code>project-not-found</code>, <code>drawing-not-found</code> (de view-id is geen tekenview van dat project), <code>drawing-invalid</code> (JSON dat geen tekening is, het bestand blijft staan, de client toont een banner) en <code>rev-conflict</code>.</p>
+    <p>Geen generieke <code>fs.write</code>. <code>fs.read</code> is begrensd, snuffelt aan binaries en heeft geen rev. Een generieke write zou de conflictregel, de atomaire rename en de test "eigen write of externe bewerking" in de client leggen. De daemon houdt dat, zoals bij <code>project.json</code>.</p>
+    <h3>De DrawingStore</h3>
+    <ul>
+      <li><strong>Eigen watcher.</strong> Een tweede niet-recursieve <code>fs.watch</code> op <code>.ruimte/drawings</code>, lui gestart bij de eerste open tekening van een project, gesloten met het project. Een niet-recursieve watch op <code>.ruimte</code> ziet op macOS een write in een submap niet betrouwbaar.</li>
+      <li><strong>Zelfde reload.</strong> Per bestandsnaam 150 ms wachten, tekst vergelijken met <code>lastText</code>, een half geschreven bestand overslaan, dan <code>drawing.changed</code> met het volledige document.</li>
+      <li><strong>Wezen opruimen.</strong> Na een geslaagde <code>project.save</code> berekent de <code>ProjectStore</code> welke tekenview-ids verdwenen zijn en verwijdert de <code>DrawingStore</code> die bestanden. Alleen op <code>project.save</code>, nooit op een externe wijziging van <code>project.json</code>: een git pull kan een view laten verdwijnen omdat het bestand nog niet binnen is, en dan zouden we andermans werk weggooien.</li>
+      <li><strong>Dupliceren.</strong> De client voegt de nieuwe view toe, flusht de projectsave en vraagt dan <code>drawing.copy</code>. De kopie is bytegelijk op <code>rev: 0</code>; element-ids hoeven alleen binnen een bestand uniek te zijn.</li>
+      <li><strong>Verwijderd bestand.</strong> Verdwijnt het tekenbestand onder een open tekening, dan blijft de tekening staan en maakt de volgende save het bestand opnieuw aan. Alleen <code>project.json</code> bepaalt of een tekening bestaat.</li>
+      <li><strong>Project verwijderen.</strong> <code>deleteUnlocked</code> doet nu een niet-recursieve <code>rm</code> van <code>.ruimte</code> die stil mag falen. Met een <code>drawings/</code>-submap blijft <code>.ruimte</code> dan achter, dus eerst <code>rm -rf</code> van de submap.</li>
+    </ul>
+  </section>
+
+  <section id="client">
+    <h2>De client</h2>
+    <div class="split">
+      <div class="panel">
+        <h3><code>useDrawing</code></h3>
+        <p>Een zustand-store in <code>state/drawing.ts</code>, gevormd naar <code>useCanvas</code>: <code>camera</code>, <code>elements</code>, <code>selection</code>, <code>tool</code>, <code>toolLocked</code>, <code>style</code> voor het volgende element, <code>draft</code> (het element dat getekend wordt en nog niet in <code>elements</code> zit), <code>past</code> en <code>future</code> met limiet 100, plus <code>rev</code>, <code>dirty</code>, <code>edits</code> en <code>conflict</code>.</p>
+        <p>De camera-acties zijn kopieën van die in <code>state/canvas.ts</code>. <code>useCanvas</code> zelf is niet herbruikbaar: het is de editor van de actieve canvasview en de lifecycle-watcher leest zijn nodes als sessies.</p>
+      </div>
+      <div class="panel">
+        <h3><code>DrawingClient</code></h3>
+        <p>In <code>drawing/drawing-client.ts</code>, gevormd naar <code>ProjectClient</code>. Volgt <code>activeViewId</code>: wordt de actieve view een tekening, dan flusht hij de vorige, roept <code>drawing.open</code> aan en laadt het document met de camera uit <code>viewLocal</code>. Elke <code>edits</code>-tik plant een save na 400 ms, één save tegelijk. Flush op viewwissel, projectwissel, <code>beforeunload</code>, <code>visibilitychange</code> en bij het sluiten van een tekstbewerking.</p>
+        <p>Een projectwissel moet de tekening flushen vóór <code>ProjectClient.open</code> het document wegschrijft. Voorstel: een geïnjecteerde <code>beforeSwitch</code>-hook op <code>ProjectClient</code>, testbaar met de bestaande <code>FakeTransport</code>.</p>
+      </div>
+    </div>
+    <h3>De camera in het lokale bestand</h3>
+    <p><code>ProjectLocal.views[viewId].camera</code> bestaat al voor elke view. Twee wijzigingen volstaan: <code>localOfCanvas</code> in <code>state/document.ts</code> wordt <code>localOfActive</code> en leest bij een tekening <code>useDrawing.camera</code>, en <code>ProjectClient</code> krijgt naast <code>CanvasAccess</code> een <code>DrawingAccess</code> zodat <code>scheduleLocal</code> ook op een tekencamera vuurt. Zonder opgeslagen camera past de tekening bij het eerste viewport alle elementen in beeld, zoals <code>loadView</code> doet.</p>
+    <h3>Wat de typecheck afdwingt</h3>
+    <ul>
+      <li><code>ViewHost.tsx</code>: <code>view.kind === 'drawing' &amp;&amp; &lt;DrawingView id={view.id} /&gt;</code>. <code>useLeaveOnEscape</code> vraagt de store eerst of er iets te wissen valt (draft, tekstbewerking, selectie, een ander gereedschap dan select) voordat het de body verlaat.</li>
+      <li><code>ViewMenu.tsx</code>, <code>Sidebar.tsx</code>, <code>CommandPalette.tsx</code>: <code>VIEW_ICON</code> krijgt <code>drawing: PenTool</code>. "New drawing" komt na Canvas in <code>NewViewItems</code>. "Put on canvas" verdwijnt voor een tekening, "Duplicate" blijft.</li>
+      <li><code>commands.ts</code>: <code>view-new-drawing</code>, <code>view-demote</code> alleen voor chat, terminal en browser, en <code>fit</code>, <code>zoom-selection</code> en <code>zoom-reset</code> sturen naar <code>useDrawing</code> als een tekening actief is. Zelfde labels en chords, dus het palet krijgt geen tweede set. De vier exportacties komen erbij.</li>
+      <li><code>Toolbar.tsx</code>: de dirty-stip leest <code>useProject.dirty || useDrawing.dirty</code>. <code>ProjectBanner.tsx</code> leest beide conflicten, één banner is minder code dan twee.</li>
+      <li><code>state/document.ts</code>: <code>addDrawingView(name)</code> zoals <code>addCanvasView</code>, <code>putOnCanvas</code> weigert een tekening, <code>duplicateView</code> kopieert een tekenview via <code>drawing.copy</code>.</li>
+      <li><code>state/settings.ts</code>: <code>drawingSnap: boolean</code>, standaard <code>false</code>, met een groep "Drawing" in <code>SettingsNav</code>.</li>
+    </ul>
+  </section>
+
+  <section id="rendering">
+    <h2>Rendering</h2>
+    <div class="split three">
+      <div class="panel">
+        <h3>a. Excalidraw inbedden</h3>
+        <p><span class="badge danger">Afgewezen</span></p>
+        <p><code>@excalidraw/excalidraw</code> 0.18.1, MIT, peer <code>react ^19</code>. Werkt in Vite en Electron zonder Node-API's. Maar: 31 runtime-dependencies (Radix, jotai, sass, pica), fonts van een CDN die de CSP <code>font-src 'self'</code> blokkeert, eigen iconenset, eigen toolbar, eigen Cmd+Z en Escape, eigen menu en klembordformaat. De regels uit CLAUDE.md (tokens, Lucide, hele pixels, <code>Tooltip</code>) zijn er niet op toe te passen. Het zou Excalidraw in Ruimte zijn, geen Ruimte-tekening.</p>
+      </div>
+      <div class="panel">
+        <h3>b. Canvas 2D, eigen renderer</h3>
+        <p><span class="badge confirmed">Gekozen</span></p>
+        <p><code>perfect-freehand</code> 1.2.3 (MIT, nul dependencies) maakt van <code>[x, y, pressure]</code> een omtrekpolygoon dat als <code>Path2D</code> gevuld wordt. <code>roughjs</code> 4.6.6 (MIT, vier kleine dependencies) tekent rect, diamond, ellipse en lijn met <code>roughness</code> en <code>seed</code>. Met <code>roughness: 0</code> is het strak, dus één codepad voor de drie niveaus. Ongewijzigd sinds 2023, prima voor een geometriebibliotheek en later vervangbaar zonder het bestandsformaat te raken.</p>
+      </div>
+      <div class="panel">
+        <h3>c. SVG</h3>
+        <p><span class="badge warning">Niet gekozen</span></p>
+        <p>Gratis hittests, native tekst en export. Verliest op het ene wat een schets veel doet: freehand. Elke streek is een <code>&lt;path&gt;</code> met honderden punten in de DOM die de browser bij elke pan en zoom opnieuw tessellateert. Honderd streken plus live tekenen op 120 Hz is waar SVG frames laat vallen. SVG blijft wel het exportformaat en de vorm waarin een agent de tekening leest.</p>
+      </div>
+    </div>
+    <h3>Een pakket voor de pure delen</h3>
+    <p>De geometrie (bounds, rotatie, hittests, arrow-punten, de freehand-omtrek) en de SVG-painter hebben geen DOM nodig: <code>rough.generator()</code> geeft paden terug en <code>perfect-freehand</code> is pure wiskunde. Ze komen in een nieuw workspace-pakket <code>packages/drawing</code> dat alleen <code>@ruimte/contracts</code>, <code>roughjs</code> en <code>perfect-freehand</code> kent. De client gebruikt het voor hittests en SVG-export, de daemon voor de agentcontext. Zo bestaat de tekenlogica één keer en zijn de tests platformloos. De canvas-painter blijft in de client, die heeft een <code>CanvasRenderingContext2D</code> nodig.</p>
+    <h3>Hoe de renderer in elkaar zit</h3>
+    <ul>
+      <li><strong>Twee canvassen en een overlay.</strong> Eén <code>&lt;canvas&gt;</code> voor de vastgelegde elementen, hertekend per <code>requestAnimationFrame</code> bij elke element- of camerawijziging, bewust van <code>devicePixelRatio</code>, met <code>ctx.setTransform(zoom * dpr, 0, 0, zoom * dpr, camera.x * dpr, camera.y * dpr)</code> zodat elementcode in wereldeenheden tekent. Een tweede canvas voor de streek in wording en de hover-omtrek. Een DOM-overlay in schermruimte voor de selectiebox met acht handvatten en een rotatiehandvat, de marquee en de <code>textarea</code> tijdens een tekstbewerking, zodat handvatten op hele pixels blijven bij elke zoom.</li>
+      <li><strong>Hittests in pure geometrie.</strong> Bounds voor rect, diamond, ellipse en tekst (de hoek toegepast op het punt in plaats van de box), afstand tot segment voor lijnen met tolerantie <code>max(6, strokeWidth * 2) / zoom</code>, voor freehand hetzelfde over de omtrek. Bovenste element wint, een vergrendeld element doet niet mee.</li>
+      <li><strong>Cache per element.</strong> De roughjs-generator is deterministisch per seed, dus de uitvoer wordt gecachet op element-id plus een versiehash. Dat houdt een tekening van 500 elementen goedkoop bij pannen.</li>
+      <li><strong>Tekst.</strong> <code>ctx.measureText</code> per regel met het font van het element, gecachet op <code>(text, size, font)</code>. Breedte en hoogte volgen de tekst tot iemand het element herschaalt, daarna wrapt de tekst op <code>w</code>. Het handgetekende font moet geladen zijn vóór de eerste meting (<code>document.fonts.load</code>), anders meet de fallback.</li>
+      <li><strong>Hergebruik.</strong> <code>canvas/math.ts</code> in zijn geheel (camera, fit, zoom, intersects), het wheel- en Space-sleeppatroon en de schermruimte-marquee uit <code>Canvas.tsx</code>, het history-patroon uit <code>state/canvas.ts</code>, en het textarea-patroon uit <code>NoteNode.tsx</code>.</li>
+    </ul>
+    <h3>Het handgetekende font</h3>
+    <p>De interface gebruikt de systeemstack en Geist alleen voor het woordmerk. Een tekening krijgt een derde font: Kalam, van Indian Type Foundry, via <code>@fontsource/kalam</code> 5.3.0 (OFL 1.1, gecontroleerd in het npm-register en in de Google Fonts-repository). Excalifont valt af: het is het eigen font van Excalidraw, met hun copyright en handelsmerk, en een tekening in Ruimte zou er dan uitzien als een Excalidraw-tekening. Kalam heeft drie gewichten (300, 400, 700) en blijft leesbaar op kleine grootte; alleen het gewicht 400 wordt gebundeld. Het pakket brengt de <code>woff2</code>-bestanden en de licentie mee, dezelfde route als Geist nu (<code>@fontsource-variable/geist</code> in <code>main.tsx</code>), en de CSP staat <code>font-src 'self'</code> toe. Het font wordt lui geladen bij de eerste tekenview via een dynamische import van <code>@fontsource/kalam/400.css</code> en <code>document.fonts.load</code>, niet bij de start van de app. De HANDOFF-beslissing "Geist voor het woordmerk, verder de systeemstack" krijgt de regel erbij dat Kalam het font van tekst in een tekening is.</p>
+  </section>
+
+  <section id="interface">
+    <h2>Interface</h2>
+    <p>Een zwevende dock onderaan, dezelfde <code>FLOAT</code>-glaskaart als de canvasdock, met groepen gescheiden door <code>Separator</code>: gereedschappen, stijl, zoom, undo en redo, en een overloopmenu met de exportacties. <code>Dock.tsx</code> geeft al <code>null</code> terug op een losse view, dus de twee overlappen nooit. Elke knop toont zijn toets in de <code>Tooltip</code>.</p>
+    <div class="table" role="region" aria-label="Gereedschappen, toetsen, iconen en gedrag" tabindex="0">
+      <table class="wide">
+        <thead><tr><th scope="col">Gereedschap</th><th scope="col">Toets</th><th scope="col">Lucide-icoon</th><th scope="col">Gedrag</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Select</th><td>V of 1</td><td><code>MousePointer2</code></td><td>Klik selecteert het bovenste element, Shift wisselt, marquee op lege ruimte. Slepen verplaatst, handvatten schalen (Shift houdt de verhouding), rotatiehandvat. Delete, Cmd+A, Cmd+D dupliceert met 16 eenheden offset, pijltjes verschuiven 1 (Shift 8), Cmd+] en Cmd+[ voor de z-volgorde. Dubbelklik op tekst bewerkt, dubbelklik op lege ruimte maakt tekst.</td></tr>
+          <tr><th scope="row">Hand</th><td>H</td><td><code>Hand</code></td><td>Pannen door te slepen. Space doet hetzelfde in elk gereedschap.</td></tr>
+          <tr><th scope="row">Rect</th><td>R of 2</td><td><code>Square</code></td><td>Slepen vanuit een hoek, Shift maakt een vierkant, Alt tekent vanuit het midden. Een klik zonder slepen maakt een vorm van 160 bij 96.</td></tr>
+          <tr><th scope="row">Diamond</th><td>D of 3</td><td><code>Diamond</code></td><td>Als rect, een ruit binnen dezelfde box.</td></tr>
+          <tr><th scope="row">Ellipse</th><td>O of 4</td><td><code>Circle</code></td><td>Als rect, Shift maakt een cirkel.</td></tr>
+          <tr><th scope="row">Arrow</th><td>A of 5</td><td><code>MoveUpRight</code></td><td>Slepen maakt twee punten, Shift snapt de hoek op 15 graden. De pijlpunt volgt de richting van het laatste segment.</td></tr>
+          <tr><th scope="row">Line</th><td>L of 6</td><td><code>Minus</code></td><td>Als arrow, zonder punt.</td></tr>
+          <tr><th scope="row">Freehand</th><td>P of 7</td><td><code>Pencil</code></td><td>Pointer down start een draft met <code>[x, y, pressure]</code>, move voegt toe (met <code>getCoalescedEvents</code> waar beschikbaar), up legt vast met afgeronde punten. <code>simulatePressure</code> voor een muis.</td></tr>
+          <tr><th scope="row">Text</th><td>T of 8</td><td><code>Type</code></td><td>Klik plaatst een tekst en opent de textarea in de overlay, geschaald met de zoom via <code>font-size</code>. Escape of blur legt vast, lege tekst verwijdert zichzelf. De textarea stopt de propagatie van toetsen zodat de lettertoetsen niet vuren.</td></tr>
+          <tr><th scope="row">Eraser</th><td>E of 0</td><td><code>Eraser</code></td><td>Klik of sleep over elementen; geraakte elementen lichten op en verdwijnen bij pointer up als één undo-stap. Vergrendelde elementen blijven staan.</td></tr>
+          <tr><th scope="row">Tool vergrendelen</th><td>Q</td><td><code>Lock</code> / <code>LockOpen</code></td><td>Zoals Excalidraw: na een vorm, lijn of tekst springt het gereedschap terug naar select, tenzij vergrendeld. Freehand blijft altijd actief.</td></tr>
+          <tr><th scope="row">Element vergrendelen</th><td>Cmd+Shift+L</td><td><code>Lock</code> in het contextmenu</td><td>Een vergrendeld element is niet te selecteren, verplaatsen of wissen en toont een slotje in de hoek bij hover. Ontgrendelen via het contextmenu op het element of "Unlock all" in de dock.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>Stijl en kleur</h3>
+    <ul>
+      <li>Een kleurknop opent een <code>.menu-popup</code> met tien swatches als <code>bg-draw-*</code>-cirkels, een breedtemenu met drie rijen (1, 2, 4), een lijnstijlmenu (solid, dashed, dotted), een vulmenu (none, solid, hachure), een slordigheidsmenu (Architect, Artist, Cartoonist) en voor tekst een fontmenu (Hand, Sans, Mono) en een groottemenu.</li>
+      <li>Zoals in Excalidraw zet elke stijlkeuze de selectie én de standaard voor nieuwe elementen. De standaard bij een verse app is Artist, breedte 2, geen vulling, font Hand. De laatst gekozen stijl leeft in de store, niet in het bestand.</li>
+      <li>De tokens: <code>--draw-ink: var(--text)</code>, <code>--draw-muted: var(--text-muted)</code>, <code>--draw-accent: var(--accent)</code> en zeven tinten van <code>--draw-red</code> tot <code>--draw-pink</code> met een lichte en donkere waarde, na <code>--note-*</code> in beide themablokken, met <code>@theme</code>-aliassen. De painter leest ze via <code>getComputedStyle(root)</code> en opnieuw als <code>useTheme.resolved</code> wisselt.</li>
+      <li>Het puntraster blijft <code>--canvas-bg</code> en <code>--canvas-dot</code>, de selectie <code>--selection</code> en <code>--accent</code>, de marquee <code>border-accent bg-accent/10</code>. Handvatten 8 px, strokebreedtes 1, 2 en 4 wereldeenheden, tekstgroottes hele pixels. Het viewicoon wordt <code>PenTool</code>.</li>
+      <li>Rastersnapping staat in de instellingen (groep "Drawing", standaard uit). Aan betekent: hoekpunten, verplaatsingen en schaalstappen snappen op het <code>GRID</code> van 8 eenheden, freehand nooit. Cmd tijdens het slepen keert de instelling tijdelijk om.</li>
+    </ul>
+    <h3>Toetsen</h3>
+    <p>Een <code>useDrawingKeys</code>-hook op <code>window</code> terwijl de tekening in beeld is en <code>bodyFocused</code>. De lettertoetsen uit de tabel gelden alleen zonder modifier, zonder open tekstbewerking en zonder dialoog; <code>isTypingTarget</code> uit <code>Canvas.tsx</code> is de test. Daarnaast Cmd+Z, Cmd+Shift+Z, Cmd+A, Cmd+D, Delete, Escape (wist in vaste volgorde: draft, tekstbewerking, selectie, dan terug naar select), pijltjes, Cmd+0, Shift+1, Shift+2, <code>+</code> en <code>-</code>, Cmd+] en Cmd+[, Cmd+Shift+L. <code>Canvas.tsx</code> slaat zijn eigen toetsen over terwijl een losse view actief is maar houdt de app-brede chords, dus er is geen dubbele afhandeling. Alles komt in <code>shortcuts.ts</code> onder een groep "Drawing" en verschijnt zo in het Keyboard-paneel. De uitzondering op "elke chord een modifier" wordt als beslissing in <code>docs/HANDOFF.md</code> opgeschreven: een tekening heeft het toetsenbord zoals een terminal dat heeft.</p>
+  </section>
+
+  <section id="geschiedenis">
+    <h2>Undo, opslaan en externe bewerkingen</h2>
+    <ul>
+      <li><strong>Eén history-entry per gebaar.</strong> <code>beginDraft</code> onthoudt niets, <code>commitDraft</code> eenmaal. Verplaatsen, schalen en roteren onthouden op de eerste stap (de <code>first</code>-vlag van <code>moveSelected</code> in <code>state/canvas.ts</code>). Een tekstbewerking onthoudt eenmaal bij commit, met de oude tekst. Een gumsleep is één entry.</li>
+      <li><strong>Undo raakt alleen elementen.</strong> Selectie wordt gewist, camera en gereedschap blijven, dezelfde regel als op het canvas. <code>load</code> reset <code>past</code> en <code>future</code>. Toetsen worden genegeerd tijdens een tekstbewerking (de textarea heeft zijn eigen undo) en als een dialoog open is.</li>
+      <li><strong>Autosave.</strong> 400 ms na de laatste bewerking, nooit tijdens een streek: de draft zit niet in <code>elements</code>, dus niets is dirty tot <code>commitDraft</code>. Een tekening die nooit is aangeraakt laat geen bestand achter.</li>
+      <li><strong>Conflicten.</strong> Identiek aan <code>project.json</code>: de save noemt de geladen rev, <code>rev-conflict</code> houdt <code>dirty</code> vast en wacht op <code>drawing.changed</code>. Met onopgeslagen werk gaat het binnenkomende document naar de banner ("Take the file", "Keep mine"), zonder werk wordt het in situ geladen. Twee vensters op dezelfde tekening gedragen zich als twee machines.</li>
+      <li><strong>Externe bewerking.</strong> Het document vervangt <code>elements</code> maar houdt <code>selection</code> (gefilterd op overlevende ids), <code>tool</code>, <code>style</code>, <code>camera</code> en <code>editingTextId</code> als die id overleeft met dezelfde tekst. Een <code>project.changed</code> die de actieve tekenview verwijdert, laat <code>useDocument.load</code> een andere view kiezen. De client ziet de wissel en ontlaadt zonder op te slaan, anders zou de save het bestand als wees laten herrijzen.</li>
+    </ul>
+  </section>
+
+  <section id="export">
+    <h2>Export, de tekennode en context voor agents</h2>
+    <h3>Export</h3>
+    <ul>
+      <li><strong>Vier acties.</strong> "Copy as PNG", "Save PNG", "Copy as SVG", "Save SVG", in het overloopmenu van de dock, in het commandopalet en in het contextmenu van de tekening. Met een selectie exporteren ze de selectie, anders alles. Een marge van 32 wereldeenheden, achtergrond <code>--canvas-bg</code> of transparant (een schakelaar in het menu, onthouden in de store).</li>
+      <li><strong>PNG.</strong> Een offscreen canvas op 2x, dezelfde painter als het scherm, <code>toBlob('image/png')</code>. Naar het klembord met <code>ClipboardItem</code>; als download via een anker met een object-URL, wat in de browser en in Electron werkt (Electron slaat zonder dialoog op in de downloadmap).</li>
+      <li><strong>SVG.</strong> De painter uit <code>packages/drawing</code>: roughjs-paden, freehand-polygonen, <code>&lt;text&gt;</code> met de paletnamen vertaald naar de kleuren van het thema van dat moment. Fonts worden bij naam genoemd, niet ingebed; een SVG die buiten Ruimte opent valt daarom terug op een systeemfont. Inbedden kan later als het nodig blijkt.</li>
+      <li><strong>Desktop.</strong> De bridge krijgt <code>saveFile(suggestedName, bytes, filters)</code> dat <code>dialog.showSaveDialog</code> opent, zodat de desktop-app vraagt waar het bestand heen mag. Klein, maar een IPC-uitbreiding in <code>preload.ts</code> en <code>bridge.ts</code>.</li>
+    </ul>
+    <h3>De tekennode op een canvas</h3>
+    <p><code>NodeKindSchema</code> (<code>project.ts</code> L9) krijgt <code>drawing</code>; de node draagt een <code>viewId</code> die naar een tekenview van hetzelfde project wijst. De node toont het bestand in beeld gepast en volgt <code>drawing.changed</code>, dus twee nodes en de view laten altijd hetzelfde zien. Bewerken gebeurt in de view: dubbelklik of de knop in de nodeheader opent de view, zoals "Open as view" nu werkt. De verhouding is dus een spiegel, geen verhuizing: "Put on canvas" blijft verborgen voor een tekening en "Show on canvas" voegt een node toe. Een node waarvan de view is verwijderd toont een <code>EmptyState</code> met "Drawing removed". Het contextmenu van de view en de sidebar krijgen "Show on canvas". Bewerken in de node zelf is een latere fase; het component en de store zijn ervoor gebouwd (de <code>DrawingView</code> is een body die een host aanneemt, zoals <code>ChatBody</code>), maar één actieve tekening tegelijk is voor de eerste versie genoeg.</p>
+    <h3>Leesbaar voor een agent</h3>
+    <p>Een edge van een tekennode naar een agentnode maakt de tekening context, zoals een tekst, terminal of chat dat nu is. <code>ContextSourceSchema.kind</code> (<code>packages/contracts/src/context.ts</code> L6) krijgt <code>drawing</code> met de <code>viewId</code> als <code>id</code>; de client stuurt geen inhoud mee, de daemon leest het bestand live uit de <code>DrawingStore</code>, zoals hij een terminal of chat live leest. <code>GET /context</code> levert per tekening twee dingen: de teksten in leesvolgorde (boven naar beneden, links naar rechts, met de pijlen als regels "A naar B" tussen de teksten die ze verbinden, zodat een schema als lijst leesbaar is) en de volledige SVG, gerenderd door <code>packages/drawing</code> op de daemon. De SVG staat achter een eigen sectie zodat een agent die alleen de tekst wil het zwaardere deel kan overslaan. <code>context/sources.ts</code> op de client leert dat een <code>drawing</code>-node een bron is.</p>
+  </section>
+
+  <section id="stappen">
+    <h2>De stappen</h2>
+    <p>S is een uur of twee, M een halve tot een hele dag, L een tot twee dagen. Elke stap eindigt met <code>bun run format</code>, <code>bun run check</code> en <code>bun test</code> groen en een conventional commit. Bas test in de browser, Electron is alleen nodig voor de opslagdialoog in stap 8.</p>
+    <ol class="steps">
+      <li class="step"><div>
+        <h3>Contracts <span class="badge">S</span></h3>
+        <p>Nieuw <code>packages/contracts/src/drawing.ts</code> met de schema's, <code>EMPTY_DRAWING</code>, <code>migrateDrawing</code> en <code>duplicateElementIdIn</code>. Het <code>drawing</code>-lid in <code>ProjectViewSchema</code>. De vier requests en het event in <code>REQUEST_SCHEMAS</code> en <code>EVENT_SCHEMAS</code>.</p>
+        <p>Klaar als <code>drawing.test.ts</code> een document rondstuurt, een onbekende kind en een dubbele id weigert, en een tekenview binnen een projectdocument parseert.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Daemon <span class="badge">M</span></h3>
+        <p><code>mapViews</code> laat een view zonder <code>node</code> met rust. <code>DrawingStore</code> met watcher en <code>copy</code>, handler in <code>handlers/drawing.ts</code>, registratie en abonnement per socket in <code>daemon.ts</code>. <code>ProjectStore</code> onthoudt de tekenview-ids van het laatste document, ruimt wezen op na een save en verwijdert <code>drawings/</code> bij <code>project.delete</code>.</p>
+        <p>Klaar als <code>drawing-store.test.ts</code> (naar het patroon van <code>project-store.test.ts</code>) aantoont: open van een ontbrekende tekening geeft <code>EMPTY_DRAWING</code> en schrijft niets, de eerste save schrijft rev 1 met één element per regel, een oude rev is <code>rev-conflict</code>, een externe write geeft <code>drawing.changed</code> en een eigen write niet, een corrupt bestand wordt apart gezet, <code>project.save</code> zonder de view verwijdert het bestand, <code>copy</code> schrijft een bytegelijk bestand op rev 0.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Client-plumbing voor de nieuwe kind <span class="badge">M</span></h3>
+        <p>De typecheck stuurt: <code>addDrawingView</code>, <code>newDrawingView</code>, <code>duplicateView</code> voor een tekening, de vijf overslaan-plekken uit de tabel hierboven, <code>VIEW_ICON</code> op drie plekken, <code>NewViewItems</code>, de commands, <code>ViewHost</code> met een <code>EmptyState</code>-placeholder, de sneltoetsgroep, de instelling <code>drawingSnap</code> met zijn paneel.</p>
+        <p>Klaar als een tekenview bestaat, in de sidebar staat, hernoemt, dupliceert en verwijdert, en <code>document.test.ts</code>, <code>sidebar-rows.test.ts</code> en <code>project-client.test.ts</code> de nieuwe gevallen dekken.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Store en client <span class="badge">M</span></h3>
+        <p><code>useDrawing</code>, <code>DrawingClient</code> met wiring in <code>project/index.ts</code>, <code>DrawingAccess</code> op <code>ProjectClient</code> voor de lokale camera, de dirty-stip en de banner die beide stores lezen.</p>
+        <p>Klaar als <code>drawing.test.ts</code> undo per gebaar, redo-wissen en history-reset bij load dekt, en <code>drawing-client.test.ts</code> met een <code>FakeTransport</code>: open bij wissel, save 400 ms na een edit met de geladen rev, één save tegelijk, conflict bij <code>rev-conflict</code> plus <code>drawing.changed</code> terwijl dirty, stille reload als clean, flush vóór een viewwissel, geen save na verwijdering.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Pakket, renderer en camera <span class="badge">L</span></h3>
+        <p>Nieuw workspace-pakket <code>packages/drawing</code> met <code>geometry.ts</code>, <code>svg.ts</code> en <code>reading-order.ts</code> (tekst en pijlen als lijst), pure en getest. In de client <code>drawing/paint.ts</code> (de canvas-painter, getest tegen een kleine recorder als nep-<code>CanvasRenderingContext2D</code>), <code>DrawingView.tsx</code> met het puntraster, de twee canvassen, de overlay, de <code>ResizeObserver</code>, de native wheel-listener en Space-pannen, <code>palette.ts</code> en de <code>--draw-*</code>-tokens in <code>styles.css</code>. Dependencies <code>perfect-freehand</code> en <code>roughjs</code>; <code>@fontsource/kalam</code>, lui geladen.</p>
+        <p>Klaar als een met de hand geschreven tekenbestand met alle zes kinds en drie fonts in beeld verschijnt, pant en zoomt, en de camera na een reload terugkomt. <code>svg.ts</code> geeft voor hetzelfde bestand een SVG die in de browser hetzelfde beeld geeft.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Gereedschappen <span class="badge">L</span></h3>
+        <p>Select met marquee, verplaatsen, schalen en roteren; hand; rect, diamond, ellipse; arrow en line; freehand; text met de textarea-overlay; eraser; element vergrendelen; tool vergrendelen met Q en terugspringen naar select; rastersnapping achter de instelling. Cursors per gereedschap. Kan per gereedschap een commit zijn.</p>
+        <p>Klaar als elk gereedschap uit de tabel doet wat er staat en elke bewerking één undo-stap is.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Dock, stijlmenu's en toetsen <span class="badge">M</span></h3>
+        <p><code>DrawingDock.tsx</code> met de groepen, de popovers voor kleur, breedte, lijnstijl, vulling, slordigheid, font en grootte, <code>useDrawingKeys</code> met de lettertoetsen, de groep "Drawing" in <code>shortcuts.ts</code>, de beslissing in <code>docs/HANDOFF.md</code>.</p>
+        <p>Klaar als elke toets uit het Keyboard-paneel werkt, een letter in een tekstbewerking nooit een gereedschap kiest en de dock nergens de canvasdock overlapt.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Export en klembord <span class="badge">M</span></h3>
+        <p>De vier exportacties, de achtergrondschakelaar, kopiëren en plakken van elementen binnen de app als <code>application/x-ruimte-drawing</code> met nieuwe ids en seeds, <code>saveFile</code> in de desktop bridge en <code>preload.ts</code>.</p>
+        <p>Klaar als een PNG en een SVG van een selectie en van de hele tekening op het klembord en als download aankomen, in de browser en in Electron.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>De tekennode op een canvas <span class="badge">M</span></h3>
+        <p><code>drawing</code> in <code>NodeKindSchema</code> met <code>viewId</code>, een <code>DrawingNode</code> die de painter in leesmodus gebruikt en <code>drawing.changed</code> volgt, "Show on canvas" in de viewmenu's, de lege staat voor een verwijderde view, en de overslaan-plekken die een node zonder sessie moeten kennen (<code>lifecycle-watch.ts</code>, <code>nodesOfView</code>).</p>
+        <p>Klaar als een tekening op twee canvassen en in de view na een bewerking binnen een seconde hetzelfde toont, en een verwijderde view de nodes niet laat crashen.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Context voor agents <span class="badge">M</span></h3>
+        <p><code>drawing</code> in <code>ContextSourceSchema</code>, <code>context/sources.ts</code> neemt tekennodes mee, de daemon rendert bij <code>GET /context</code> de tekstlijst en de SVG via <code>packages/drawing</code> uit de <code>DrawingStore</code>. Documentatie: een alinea in <code>docs/HANDOFF.md</code>, een regel in <code>README.md</code>, de on-disk layout in <code>apps/server/README.md</code>.</p>
+        <p>Klaar als <code>ruimte-context</code> in een agentsessie met een edge vanaf een tekennode de teksten, de pijlen en de SVG teruggeeft, en de daemontest dat zonder client aantoont.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <section id="open">
+    <h2>Nog open</h2>
+    <ul>
+      <li><strong>Bewerken in de node.</strong> De tekennode is in de eerste versie een spiegel die de view opent. Inline bewerken op het canvas komt als het gemist wordt.</li>
+      <li><strong>Fonts in de SVG.</strong> Bij naam, niet ingebed. Blijkt een SVG buiten Ruimte te lelijk, dan wordt inbedden een losse stap.</li>
+    </ul>
+  </section>
+</main>
+<footer><p>Er is niets gebouwd. Het onderzoek is uitgevoerd door een fable-subagent op de werkboom van 10 september 2026; regelnummers kunnen verschuiven door de lopende refactor (de separator-view kwam er tijdens het onderzoek al bij). Pakketfeiten (versies, licenties, dependencies, peer-ranges) komen uit het npm-register op dezelfde dag en zijn niet lokaal geïnstalleerd of getest. De licentie van Kalam (OFL 1.1) is op 10 september in het npm-register en de Google Fonts-repository nagelezen. De schattingen per stap zijn ervaring, geen meting. Rendering-prestaties van SVG versus canvas zijn niet in dit project gemeten; de vergelijking is een redenering over DOM-kosten bij freehand-streken.</p></footer>
+</body>
+</html>

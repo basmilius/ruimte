@@ -52,7 +52,10 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   user frame in between), so content that arrives while no turn is open opens one with
   `origin: 'agent'`, the notification's summary as its label and a checkpoint of its own. The
   node goes back to running, the timeline shows "Sub-agent finished: <summary>" where a user
-  bubble would be, the fold and the changed-files card work as for any turn, and an OS
+  bubble would be. That header is one line and stays one line: the CLI is free to hand its whole
+  report as the summary, so the projector keeps the first line of it (`summaryLine`, 80
+  characters) as the turn's label and the report itself goes to the sub-agent row, behind "Show
+  result", where it renders as markdown. The fold and the changed-files card work as for any turn, and an OS
   notification fires when the window is not focused, the same rule as needs-you. A frame with a
   `parent_tool_use_id` belongs to the sub-agent's own row and never opens a turn; a message sent
   while such a turn runs settles it as stale instead of being refused as busy. A delegation is a
@@ -124,7 +127,7 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   jumping around; decide again once real projects have many nodes.
 
 - **Collapsible sidebar**: `useUi.sidebarOpen` (localStorage `ruimte.sidebar`, machine state,
-  never in `project.json`) shows and hides the session list. The `<aside>` is a wrapper that
+  never in `project.json`) shows and hides the list of views. The `<aside>` is a wrapper that
   animates its width between 248 and 0 in 200 ms over a fixed 248px inner column, so nothing
   reflows on the way out; it keeps its children mounted and goes `inert` while closed, and
   `prefers-reduced-motion` drops the motion through the global rule in `styles.css`. One
@@ -135,12 +138,29 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   `ConnectionDot` moved to the toolbar, so the connection stays readable while the list is gone.
   Cmd+B toggles it from the app-wide chord block in `Canvas.tsx`, so it works from inside a node;
   off macOS Ctrl+B belongs to readline and tmux, so there it only fires outside node mode. The
-  palette has "Toggle sidebar". The rows are 32px, grouped by status through
-  `shell/sidebar-rows.ts` (a pure list module with its own tests), and they carry a roving
-  tabindex: Tab reaches one row, Up and Down walk the list in reading order without wrapping,
-  F2 renames and the selected row is `aria-current`. The footer button says "New terminal",
-  which is what it opens; agents and chats are one plus away in the dock. An empty list says so
-  instead of showing nothing.
+  palette has "Toggle sidebar". The rows are 32px and come from `shell/sidebar-rows.ts` (a pure
+  list module with its own tests) as one tree: a "Needs you" section over the whole project when
+  something waits, with the view a node lives in named beside it, then the views in the order the
+  file lists them, with the nodes of an open canvas under it. Only the canvas that is on screen is
+  open, the rest folds out on its chevron, and a folded one keeps a count and the heaviest status
+  of what it holds. The status grouping of the old flat list is gone: the order is the project's
+  and the dock keeps the counters. Rows carry a roving tabindex: Tab reaches one row, Up and Down
+  walk the list in reading order without wrapping, Left and Right fold a canvas, F2 renames, the
+  view that is up and the selected node are `aria-current`. A chat and an agent terminal wear the
+  mark of their CLI through `AgentIcon` instead of the glyph of their kind, in the same 16px slot;
+  a plain terminal keeps `Terminal`, a page its favicon, a canvas `Frame`. A view row has a context
+  menu (Rename, Duplicate for a canvas, Delete, which asks first when something in the view still
+  runs) and drags to reorder: the pointer's y against the row midpoints says which gap it is asking
+  for, a 2px accent line is drawn in that gap and the drop writes the order into the file; the
+  nodes under a canvas are no gap a view can land in. A separator is a view of kind `separator` in
+  the file: a 24px row of a 1px line that holds nothing, says nothing, never opens, is
+  skipped by Cmd+1 to Cmd+9 and by the previous and next chords, and is no target for "Move node to
+  view". It carries no name (the schema still allows one, which nothing writes and nothing reads),
+  so it drags like any other row and its menu is Delete alone. A view that is one node carries that node's
+  status and draft dot on its own row, and its menu offers "Put on canvas" where a canvas offers
+  "Duplicate". The footer button says "New view" and opens the same choice the breadcrumb does: a
+  canvas, a plain shell, an agent chat or terminal from the daemon's catalog, a page, or a
+  separator; nodes are one plus away in the dock.
 
 - **Connection tooltip**: the `ConnectionDot` says what it is showing. `shell/connection-info.ts`
   (a pure module with its own tests) writes the four lines: the state (Connected, Reconnecting with
@@ -157,8 +177,13 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
 - **Toolbar and panel slot**: `apps/client/src/shell/Toolbar.tsx` is a 48px bar at the top of
   the canvas column, next to the sidebar's strip, `bg-surface` with a bottom border and the drag
   region. Left is the breadcrumb: the machine when the daemon is not loopback, the
-  `ProjectMenu` as a ghost button (it left the sidebar), "Canvas" and the unsaved dot; the
-  floating chip over the canvas is gone and `ProjectBanner` now floats under the bar. Right is
+  `ProjectMenu` as a ghost button (it left the sidebar), the `ViewMenu` with the name of the view
+  that is up, and the unsaved dot; the floating chip over the canvas is gone and `ProjectBanner`
+  now floats under the bar. The view menu lists every view with its chord, makes one of any kind,
+  renames and deletes; renaming, deleting, the question before a promotion and the address of a new
+  browser view all go through `shell/ViewDialogs.tsx`, which the sidebar and the palette open as
+  well. `ViewToolbar` sits beside the breadcrumb with what a standalone view's node header would
+  have carried. Right is
   the `ConnectionDot` and `shell/PanelControls.tsx`, the button group of Preview, Files and Git
   over `useUi.panel` and `useUi.preview` (machine state, never in `project.json`). The preview
   toggle is only there while a file is open, because with no tabs there is nothing to show.
@@ -216,8 +241,16 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   pure and tested (`shell/panels/files-tree.ts`). Hidden entries are always fetched and filtered in the client, so
   the eye button costs no request; what git ignores goes to the tree's git lane as `ignored` and
   dims. A single click on a directory toggles it and on a file selects it; double-click and Enter
-  open it in the preview panel. The filter field runs `fs.search` (150 ms, 200 results) into a second
-  model, so a flat result list and lazy loading never fight. Right-click is a Base UI
+  open it in the preview panel. The panel's controls sit in two rows, the way the git panel's do: the
+  panel header carries one muted chip with the name of the project folder, and the 40px row under it
+  is the same `FILE_TOOLBAR` the preview and the git panel use. In it the filter field grows, and a
+  `Separator` divides it from the group of `FileToolbarToggle` buttons: hidden files (pressed while
+  they are shown), Expand all, Collapse all and Refresh. Expand all opens only the directories the
+  tree already holds, so what they list unfolds on the next click. The filter field runs `fs.search`
+  (150 ms, 200 results) into a second
+  model, so a flat result list and lazy loading never fight; Escape clears it. While the first
+  listing is on its way, when the folder holds nothing and when the filter answers with nothing, an
+  `EmptyState` stands where the tree would be. Right-click is a Base UI
   `ContextMenu` of the app's own (Open, Reveal in Finder with the daemon's file manager name, Copy
   path, Copy relative path): the library's own context menu slots a node into its shadow root, and
   the app's menu style, layer and portal are worth more than that hook. A row drags with
@@ -328,7 +361,11 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   position lives through a save.
   Markdown (`.md`, `.mdx`, `.markdown`) is the chat's own `Markdown` component with a Preview and
   Source switch in the viewer's toolbar; Source is the code view, and both share one toolbar so the
-  switch does not move when it is used.
+  switch does not move when it is used. The preview reads the way a chat of its own reads: the
+  scroller sets `--text-sm: 15px` and `--text-sm--line-height: 24px`, the same overrides
+  `ViewHost` puts on a chat view, and centers the prose in a 768px column while the scrollbar keeps
+  the panel's edge. Prose takes its size from that override, so the preview reads at the same
+  rhythm a chat view does; code blocks stay on `--text-code`.
   HTML (`.html`, `.htm`) has the same switch (`shell/panels/HtmlFile.tsx`). Preview loads the file as
   a `file://` URL (`localFileUrl`, every segment percent-encoded, tested) in a `<webview>` of the
   panel's own, so the stylesheet and the images next to it resolve the way they do from Finder. That
@@ -369,6 +406,23 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   a text file past 2 MB, is an `EmptyState` naming the size with a "Reveal in Finder" button
   (`shell/panels/UnsupportedFile.tsx`).
 
+- **Copy is a right-click away everywhere**: the app draws all of its own menus, so a surface
+  without one offers nothing at all, and every surface that carries selectable text has to offer
+  Copy. `TextMenu` (`ui/TextMenu.tsx`) is the small one: a div that carries text, Copy for what is
+  selected inside it and Select all for the whole of it, on Cmd+A as well. `FileScroll` is that
+  component now, so every file the preview draws has it (a diff is not selectable at all, so it
+  gets none). The thread has one of its own (`chat/ui/TimelineMenu.tsx` over
+  `chat/logic/timeline-target.ts`): Copy for the selection inside the thread, Copy message for the
+  item under the pointer (`messageTextOf` in `chat/logic/timeline-copy.ts`, which is an answer's
+  markdown as plain text), Copy code when the click landed in a code block, Copy as markdown for an
+  answer, Select all, and Open in preview for the file a mention chip or a changed-files row names.
+  The row under the pointer is found through the `data-item-id` the timeline puts on every virtual
+  row, the file through a `data-file-path`. A note that is being written and a terminal carry what
+  their own field needs instead of a document selection: Cut, Copy, Paste and Select all over the
+  textarea's value, and Copy, Paste and Select all over xterm's own selection. A right-click in one
+  of these no longer opens the node's menu, which the frame around it still has; Cmd+C is untouched
+  everywhere, since a browser copies a selection by itself.
+
 - **Settings, the way T3 Code lays them out** (studied, then written from scratch): one
   dialog with a section list on the left (Base UI Tabs, arrow keys move, `activateOnFocus`)
   and a pane on the right, built from `SettingsSection` (a titled card) and `SettingsRow`
@@ -398,14 +452,14 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   daemon for a second dev setup.
 
 - **Phase 8, projects and persistence**: `apps/server/src/projects` owns the registry
-  (`projects.json`), the canvas files and a directory watcher per open project. The client
+  (`projects.json`), the project files and a directory watcher per open project. The client
   (`apps/client/src/project`) saves edits 400 ms after the last one against the rev it loaded,
   the camera a second after it stops moving into the machine-local file, and shows a banner
   with "Take the file" or "Keep mine" when the file changed under unsaved edits.
-  The machine-local file (`<projectId>.local.json`, `ProjectLocalSchema`) holds the camera, the
-  focused node and the panels: which panel is up and its width, whether the preview is up and its
-  width, the open file tabs with the active one and their pins, and the directories the file tree
-  had open. Every panel field is optional, so a file from before them parses as "use the defaults".
+  The machine-local file (`<projectId>.local.json`, `ProjectLocalSchema`) holds which view was
+  open, the camera and the focused node per view, and the panels: which panel is up and its width,
+  whether the preview is up and its width, the open file tabs with the active one and their pins,
+  and the directories the file tree had open. Every panel field is optional, so a file from before them parses as "use the defaults".
   `project/panels-port.ts` is the seam: it puts a project's panels on screen in the same tick as
   its canvas, so nothing flashes the project that left, and it reports a change made afterwards so
   the client can write it a second later. What it applies itself is never reported, which is what
@@ -414,12 +468,12 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   lists the daemon's directories (`fs.browse`), Enter steps in, Cmd+Enter opens the typed path
   as a project; the native dialog comes with Electron as an extra. "Open in Finder" (label from
   the daemon's platform: Finder, Explorer, Files) sits in the project menu, the palette and a
-  node's context menu, through `fs.reveal`. The project menu also creates canvases without a
-  folder, closes (sessions keep running) and deletes with a confirm. Undo and redo
-  (Cmd+Z, Cmd+Shift+Z) cover placement, adding and deleting; the history resets when another
-  project loads. Node ids are random now, since they end up in a shared file.
-  A project has an identity: `name` and an optional `icon` (an emoji or one of 40 Lucide names)
-  in the canvas file, and everything else read from the folder. Without a chosen icon the daemon
+  node's context menu, through `fs.reveal`. The project menu also creates projects without a
+  folder (one canvas view to start with), closes (sessions keep running) and deletes with a
+  confirm. Undo and redo (Cmd+Z, Cmd+Shift+Z) cover placement, adding and deleting; the history
+  resets when another project or another view loads. Node ids are random now, since they end up in
+  a shared file. A project has an identity: `name` and an optional `icon` (an emoji or one of 40
+  Lucide names) in the project file, and everything else read from the folder. Without a chosen icon the daemon
   walks `.ruimte/icon.*`, `.idea/icon.*`, `.vscode/icon.*`, the usual favicon paths and the
   `<link rel="icon">` of a root `index.html`, jailed inside the folder, typed by magic bytes,
   capped at 256 KB, and falls back to the first letter on the project color. The name is seeded
@@ -435,17 +489,147 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   watcher covers `.ruimte/icon.*` and ships a `project.summary` event, so an icon dropped in by
   hand shows up while the app is open.
 
+- **Views**: a project is a folder with a list of views, not one canvas. `project.json` is version
+  2: name, color, icon and `views`, at least one, in sidebar order. A canvas view carries the
+  nodes, texts, edges and layouts the file used to carry itself; a chat, terminal or browser view
+  is one node without a place on a canvas, under the id that is also its session id. Two invariants hold at
+  parse time, both because a view id and a node id are keys of one flat session map on the daemon:
+  every id is unique across the whole project, and an edge points at two things in its own canvas
+  view. An edge that does not is dropped on the way in; a repeated id is refused with a message
+  that names it (`project-invalid`). `migrateDocument` and `migrateLocal` (`packages/contracts`)
+  read version 1 and wrap it in one canvas view with the fixed id `main` and the name "Canvas".
+  The id is fixed on purpose: the file can be shared through a repository, and two machines that
+  migrate it on their own have to land on the same id or the second save adds a ghost view. The
+  daemon writes only version 2, so a project that is opened and never saved stays readable for an
+  older build. On the client `useDocument` (`state/document.ts`) owns the list and which view is
+  up; `useCanvas` is the editor of the canvas view that is on screen. A switch writes the canvas
+  back into the document, remembers that view's camera and focus, and loads the next one, which
+  resets undo the way a project switch does. Nothing else notices: `terminal/lifecycle.ts` derives
+  the live set from every node of every view, so a switch ends no session and deleting a view is
+  what ends the sessions on it; `context/sync.ts` derives readable context over every view, so an
+  agent keeps its lines while its canvas is off screen; `shell/notifications.ts` and the dock's
+  counters span the project, and "Needs you" jumps across views. The browser pages live in
+  `browser/WebviewParking.tsx`, a layer outside the canvas transform that owns one host per node
+  for the life of the app and places it in screen coordinates: a `<webview>` loses its page the
+  moment it leaves the DOM, so a host is never moved and a page whose view is off screen goes
+  `visibility: hidden` instead. It is also the seam a browser view will take its host from.
+  Cmd+1 to Cmd+9 open the nth view, Cmd+Shift+[ and Cmd+Shift+] step through them and Cmd+T makes
+  one; the palette has a "Views" section and its "Jump to" spans every view, naming the one a node
+  lives in. Files, Git and the preview stay per project: they are about the folder.
+
+- **A view that is one node**: `shell/ViewHost.tsx` is the main column. A canvas view draws the
+  canvas; every other kind draws the body of its one node without a frame. The canvas stays mounted
+  and goes `invisible` and `inert` under it, because it owns the app's pointer and key handling and
+  its terminals would otherwise rebuild on the way back; `Canvas.tsx` skips its own keys while a
+  view of its own is up. The bodies moved out of the canvas folder to `src/nodes` (`ChatBody`,
+  `TerminalBody`, `BrowserBody`), where `NodeFrame` and the host both take them, and `node-host.ts`
+  is what they read instead of the canvas store: one `NodeHost` for a node in a frame and for a
+  view of its own, so no body knows which of the two it is in. What a node header carried moves to
+  the toolbar (`ViewToolbar`): the folder and the permission mode of a terminal, the navigation bar
+  of a browser. A chat of its own reads in a column: 768px of content, centered, at 15px over 24px
+  (`--text-sm` and its line height, overridden on the wrapper, so every `text-sm` inside follows
+  while code keeps `--text-code`). The scroller stays the full width of the main column, so its
+  scrollbar sits at that column's edge and only the rows and the composer are centered in it
+  (`.chat-column` and `.chat-column-content` in `styles.css`). In a node nothing of this applies:
+  there the thread is 14px over the 22px `NodeFrame` gives a chat body. The rhythm of a turn is two
+  gaps on the timeline's own rows, not on the markdown, so the tool rows inside a turn stay tight:
+  16px from a question to its answer and 24px from the end of a turn to the next question in a
+  node, 20px and 32px in a view (`--chat-answer-gap` and `--chat-turn-gap`). A browser view is the parked host over the whole column, so a page keeps its
+  session and its scroll position between a canvas and a view; without the desktop app it shows the
+  same "opens in the desktop app" notice a browser node does. Focus is explicit here too:
+  `useDocument.bodyFocused` says whether the keyboard is in the body, a switch puts it there, and
+  Escape (Cmd+Escape in a terminal, the chord a terminal node uses) leaves to the view's row in the
+  sidebar, because there is no canvas to fall back to. The dock belongs to the canvas and stays
+  away here, so a click in the body is the way back in and the counters are the sidebar's
+  "Needs you" section.
+
+- **Open as view and Put on canvas**: two document changes that move a chat, terminal or browser
+  between a canvas and a view of its own. The id never changes, so the daemon sees nothing: the
+  session, the thread and the page go on. Promoting drops the lines drawn into the node, since an
+  edge belongs to one canvas, and asks first when there are any; putting one back lands it in the
+  middle of what the target canvas last looked at, selected, on the canvas that was up last
+  (`lastCanvasViewId`). Both sit in the node's context menu, the view's row, the breadcrumb and the
+  palette. `ruimte-context` answers a standalone chat with nothing, the way it answers a node with
+  no lines: `context/sync.ts` derives per canvas view, and a promotion clears what the node had.
+
 - **Phase 7, Electron shell and browser node**: `apps/desktop` is a small main process
   (`src/main.ts`) plus a preload that exposes `window.ruimteDesktop` (platform, native folder
   dialog, open external, guest devtools). `bun run dev:desktop` opens the window against the
   Vite dev server while `bun dev` runs; without `RUIMTE_DEV_URL` the shell spawns the daemon
   from the repo through bun with `--serve apps/client/dist`, so one origin serves client and
   socket (a packaged app runs the compiled daemon from its resources, phase 11). Browser nodes are `<webview>` elements owned by
-  `apps/client/src/browser/registry.ts` and positioned by `WebviewLayer` over the canvas in world
+  `apps/client/src/browser/registry.ts` and placed by `WebviewParking` over the canvas in screen
   space; they are created once and never re-parented, and a project switch only hides them, so
-  a form keeps what was typed. The layer passes pointer events to a page only while its node is
+  a form keeps what was typed. The address field reads short while nobody is in it (`prettyUrl` in
+  `apps/client/src/browser/pretty-url.ts`, with its own test): `https://` goes, and so does the
+  slash of a bare origin, while `http://` stays because it is a warning and every other scheme
+  stays because it says something. Focusing it brings the whole address back, selected, and what
+  Enter sends is what was typed. The layer passes pointer events to a page only while its node is
   focused and no canvas gesture is running. Inspect opens the guest's devtools in a window of
-  ours that stays above a fullscreen app. `electron-updater` reads the feed electron-builder
+  ours that stays above a fullscreen app.
+  A load says that it is one: the reload button becomes a stop while the page is on its way
+  (`webview.stop()`), and a 2px line sweeps under the address field, from `did-start-loading` to
+  `did-stop-loading` or `did-fail-load`. It sweeps rather than fills because a guest reports a start
+  and a stop and nothing in between, so a percentage would be invented. A main-frame load that fails
+  (anything but the aborted `-3`) gets a plate of the app's own instead of Chromium's gray page:
+  `classifyLoadError` (`apps/client/src/browser/load-error.ts`, pure, with its own test) turns the
+  code and the description into a class (offline, dns, refused, certificate, timeout, blocked,
+  address, other), a title, a line about what to check where there is one, and Chromium's own
+  symbol, which is the part worth searching for. An unknown code falls back to the generic sentence
+  plus that symbol rather than an invented reason. The plate names the address that failed and
+  offers Try again and Open in the system browser, never a way past a certificate; Try again is
+  withheld for the address class, where running that exact navigation again cannot end differently.
+  It is drawn into the parked host, over the page it replaces, so a browser node and a browser view
+  show the same surface, and it clears on `did-start-loading` and nowhere else: a failed navigation
+  leaves Chromium on its own error page under the address that failed, so clearing it from
+  `did-navigate` would wipe the plate the moment it appeared. A page whose load failed also stops
+  naming its node, because the title on offer is then the error page's.
+  A right-click inside a page gets one of two menus, and `params.isEditable` picks which. An
+  editable field is the platform's: `editableGuestMenu` (`src/main.ts`) builds a native menu and
+  pops it, so macOS can hang whatever it hangs off a text field. Everything else is the client's,
+  because Electron ships no menu for web content and a native one reads as another program's.
+  For that half the shell keeps the `context-menu` listener on the guest (`guestContextMenu`) and
+  forwards what the click landed on over `browser:context-menu`: the point, the link, the image,
+  the selection, the edit flags and the guest's web contents id. An editable click never leaves the
+  shell, so nothing on the wire carries a spelling suggestion any more.
+  The native menu is roles wherever a role exists, which is what the platform recognizes:
+  the spellchecker's guesses first (plain items calling `replaceMisspelling`), then `undo` and
+  `redo`, `cut`, `copy`, `paste`, `pasteAndMatchStyle` on a rich field, `delete` and `selectAll`,
+  each enabled from the click's own edit flags. On macOS a selection adds Look Up and Search with
+  Google, ours because Electron has no role for either (`showDefinitionForSelection` and the same
+  search URL the client's menu opens). Share and Services left the template: the menu is popped
+  with `frame: params.frame`, which is what makes macOS append its own rows, so keeping ours would
+  list them twice. Every native menu ends in Inspect element, the same row the client's does.
+  `BrowserContextMenu` (`apps/client/src/browser/BrowserContextMenu.tsx`, mounted once in
+  `WebviewParking`) turns a forwarded click into a Base UI `ContextMenu` with the app's own rows:
+  Back, Forward and Reload, then what the click landed on. A link adds "Open link in new browser
+  node" (`openLinkBeside` puts it beside the one the link came from, or opens another view when the
+  page is one), "Open link in system browser", "Copy link address" and "Copy link text"; an image
+  adds Copy image, Copy image address and Save image as...; a selection adds Copy and "Search the
+  web for ...". Every menu ends in Inspect element. Which rows there are is `buildBrowserMenu`
+  (`apps/client/src/browser/browser-menu.ts`), a pure function over the params with its own test;
+  it answers editable params with no groups at all, so a shell old enough to still forward one
+  draws nothing instead of a menu missing its edit rows.
+  The click happened in a page, so no event in the window can anchor the popup: the component maps
+  the page's point through the host's bounding rect (the camera's zoom is the box against the
+  element's own width) and hands the trigger a `contextmenu` event at that point. The rows the
+  client owns it runs itself (the history through the registry, the new node, a string to the
+  clipboard); the rest goes back as `browser:context-action` and the shell carries it out on the
+  guest that asked (`copy`, `copyImageAt`, `downloadURL`, the inspector, `shell.openExternal`).
+  AutoFill, Writing Tools and Services are now expected on that native menu, though nobody has seen
+  them yet. Electron leaves the OS rows off unless the menu is popped with the frame that invoked
+  it, and passing `params.frame` is the whole fix (nodeterm carries the same one). AutoFill there is
+  Apple's Passwords app and nothing else: Electron ships only the datalist autofill popup
+  (`shell/browser/ui/views/autofill_popup_view.cc`), not Chrome's password manager. An earlier probe
+  (a throwaway Electron app around the same `<webview>`, right-clicking a `type="password"` field
+  through `sendInputEvent`) showed the menu pops on `formControlType: 'input-password'` and stays
+  up, but this machine grants neither screen recording nor accessibility to a scripted reader, so
+  the popped NSMenu could not be read back, and Electron's own JS `menu.items` shows only the
+  template. To check by hand: restart the shell, open a browser node on a page with a login form and
+  right-click the password field, and see whether AutoFill sits above Undo.
+  Only guests of the browser
+  partition get one: the preview partition is sealed, with nowhere to navigate and nothing to
+  inspect. `electron-updater` reads the feed electron-builder
   writes into a packaged app; a checkout skips it. `bun run --cwd apps/desktop smoke` boots the
   shell, adds a browser node through the keyboard and waits for its page to load; with
   `RUIMTE_CAPTURE=<path>` it writes the left end of the band to a PNG in device pixels instead,
@@ -459,8 +643,14 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   `desktop/bridge.ts`) and belongs to the leftmost strip
   (the sidebar's when it is open, the toolbar's when it is closed), only outside fullscreen
   (the shell sends `window:fullscreen`), the rightmost element in the band keeps the width of the
-  overlay controls free through `env(titlebar-area-*)` on Windows and Linux, and the overlay
-  colors follow the client's theme over IPC.
+  overlay controls free through `env(titlebar-area-*)` on Windows and Linux. The client reports its
+  theme over IPC (`setTheme`, with the resolved theme, whether the app follows the system, and the
+  value of `--bg`), and the shell spends it three ways: the overlay colors, the window's own
+  background, and `nativeTheme.themeSource`, which is what Chromium answers `prefers-color-scheme`
+  with. Without that last one a page in a browser node reads the OS while the app is set to the
+  other theme. Only "follows the system" maps to `'system'`; a fixed choice pins it. A page also
+  paints on `--bg` until it brings a background of its own, through the parked host and the
+  `<webview>` element, and the preview partition keeps its deliberate white.
   The window runs under a content security policy, in two places because two things serve the
   client: the daemon sends it as a `Content-Security-Policy` header on everything under `--serve`
   (`CLIENT_CSP` in `apps/server/src/daemon.ts`, which is what a packaged app gets), and the same
@@ -621,6 +811,28 @@ canvas, against Ruimte, one verdict each.
   every utility of the same specificity, so `icon-btn h-7 w-7` silently stayed 32 pixels and
   `menu-popup min-w-48` kept the wider default; inside the layer a call site's utility wins,
   which is what the heights in the code already claimed.
+- Markdown is Tailwind Typography (`@plugin "@tailwindcss/typography"`), not a stylesheet of its
+  own: the `Markdown` component carries `prose prose-sm max-w-none text-sm` next to
+  `.chat-markdown`, and `.chat-markdown` is only what the app decides instead of the plugin. The
+  plugin registers `prose` with `addComponents`, so its rules land in the same `components` layer
+  and are written after the app's own, which lose a tie on order. Whatever has to beat them says
+  so: the variables through `.prose.chat-markdown`, the rest through a selector of its own (an
+  element next to the class outranks the `:where()` prose wraps its own in), and the size through
+  the `text-sm` utility, since a utility is a layer later. That is why the size is not in
+  `.chat-markdown`.
+- The colors are the semantic tokens mapped onto the prose variables (`--tw-prose-body` and
+  `--tw-prose-headings` from `--text`, `--tw-prose-links` from `--accent`, `--tw-prose-code` and
+  `--tw-prose-pre-code` from `--text` with `--tw-prose-pre-bg` from `--surface-sunken`, counters
+  and bullets from `--text-faint`, every border and rule from `--border`, captions from
+  `--text-muted`). The tokens flip with the theme themselves, so both themes come free and
+  `dark:prose-invert` would only be a second source of truth. The size is `--text-sm` and its line
+  height, which a chat node, a chat view and the file preview each set for themselves, so prose
+  reads 14/22 on the canvas and 15/24 in a view and in a preview; every margin prose sets is an
+  `em`, so the air follows the size. Headings stay on the app's flatter scale (h1 `--text-lg`, h2
+  `--text-base`, h3 and h4 `--text-sm`) and code stays on `--text-code`, without the quotes prose
+  puts around inline code. What is left in `.chat-markdown` is what prose lacks: task lists
+  without a bullet, and a table in a `.chat-table` wrapper that scrolls on its own instead of
+  widening the column.
 - What floats over what is four numbers in `styles.css`: dialog backdrop 80, dialog 90,
   `--z-popup` 100 (`z-[var(--z-popup)]` on every menu, select and popover positioner, so one
   opened inside a dialog is not swallowed by it), tooltip 110.
@@ -736,7 +948,14 @@ canvas, against Ruimte, one verdict each.
   output).
 - `@file` mentions are plain `@path` text in the prompt, because that is what the Claude CLI
   expands itself (checked with `claude -p` 2.1.266); the chosen paths travel next to the text
-  as `mentions` only so the timeline can draw them as chips. The picker searches through
+  as `mentions` only so the timeline can draw them as chips. In the composer a chip is painted on
+  a layer behind the textarea, so it may only add a tint, an inset ring and a radius
+  (`CHIP_BEHIND_TEXT` in `src/chat/ui/chips.ts`): the caret is placed by the textarea from its own
+  raw text, so a weight, a font size or a horizontal padding on the chip moved the drawn text off
+  its characters and left the caret sitting in the wrong word. Padding cannot be handed back as a
+  negative margin, since a wrapped chip takes it again on every line, and `chipText` is what the
+  layer draws so a test can hold it against the textarea's value. The pill with the file icon in
+  front of the path is the sent message's (`CHIP_IN_MESSAGE`). The picker searches through
   `fs.search`: `git ls-files` (tracked plus untracked, minus .gitignore) inside a repo, a
   bounded walk elsewhere, ranked by a small fuzzy score on the daemon.
 - An attachment goes over the wire as base64 in `chat.send` once (25 MB and 8 per message) and
@@ -795,6 +1014,10 @@ canvas, against Ruimte, one verdict each.
   deep, because a stashed prompt usually moves to another node on the canvas. A stashed entry
   keeps the text, the mentions, the skills and what the files were called; the bytes are not kept,
   so the row says so and the files are not restored.
+- Prompt recall is the other half of that shelf and keeps no storage of its own: Arrow Up in an
+  empty composer walks back through the last fifty user items of that chat's own thread, Arrow
+  Down walks forward, and Escape puts the empty box back instead of leaving the node (a plain
+  Escape still leaves when nothing was recalled).
 - An image attachment and an image an agent read open large in a dialog with zoom and pan
   (`chat/ui/ImageView.tsx`): the wheel zooms around the pointer, dragging pans, Escape closes. A
   `Read` of a path with an image suffix asks `fs.read` what the file is and draws it under the row;
@@ -813,6 +1036,27 @@ canvas, against Ruimte, one verdict each.
   `never` + `danger-full-access`. Not mapped: cost (Codex reports none), the deny reason, slash commands, permission-profile
   requests and MCP elicitations (refused with a JSON-RPC error). Gemini and Copilot open as
   terminals only; the daemon builds their launch line like every other CLI's.
+- The title of a node follows the session until someone sets it. `titleSource` on the node says
+  who named it: absent means nobody has, `'auto'` means the session did, `'user'` means a person
+  did and nothing overwrites it again. A chat takes its name from the prompt that opens it
+  (`deriveNodeTitle` in `apps/client/src/chat/title.ts`: the first line, cut around 48 characters
+  on a word boundary, without the punctuation that ended the sentence), once, so a later prompt
+  never renames a node you are looking at. Every rename goes through `renameNode`, which writes
+  `'user'` unless a caller says otherwise. A terminal agent cannot follow this rule yet: the hooks
+  of Claude Code and Codex carry `session_id`, `hook_event_name`, `transcript_path`, a tool name
+  and a notification type, and no name the CLI gave the session, so the name would have to come
+  out of the transcript file. That is a reader per CLI and is not built.
+- A CLI that goes down with its shell is `exited`, not `error`. The daemon sees the PTY child end
+  while its agent record is still live and writes `status: 'exited', live: false`
+  (`SessionManager.handleExit`), the record outlives the shell, and the node shows `[session ended]`
+  with a Resume button next to Restart. Resume puts the CLI's own session id on the node
+  (`resume`) and starts a fresh shell, which the daemon launches with the CLI's resume line; the
+  status is no longer `running`, so the sidebar and the dock's summary stop counting it. This is the
+  daemon's own reading, the one thing the hooks structurally cannot report.
+- A note starts an agent: "Start agent from note" in a note's context menu makes a chat node beside
+  it, fixed to the CLI you picked, seeds the note's body as the composer's draft (never sent, the
+  person presses Enter) and draws the edge from the note into the chat, so the note stays readable
+  through `ruimte-context` after it is edited.
 
 ## Gotchas already paid for
 
