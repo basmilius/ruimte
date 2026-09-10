@@ -4,6 +4,8 @@ import { deriveTimelineRows, type TimelineRow } from '@/chat/logic/timeline';
 import { ApprovalHistoryRow, AssistantRow, CompactionRow, NoteRow, QuestionHistoryRow, UserRow } from '@/chat/ui/rows/MessageRows';
 import { ChangedFilesRow, TurnFoldRow, WorkGroupRow, WorkLiveRow, WorkRow, WorkingRow } from '@/chat/ui/rows/WorkRows';
 import { useChats } from '@/state/chats';
+import { AgentIcon } from '@/agents/AgentIcon';
+import { EmptyState } from '@/ui/EmptyState';
 
 /* Below this distance from the bottom the thread follows new content; above it the reader scrolled back on purpose. */
 const FOLLOW_THRESHOLD_PX = 40;
@@ -53,6 +55,7 @@ export function Timeline({ chatId }: { chatId: string }) {
     const order = useChats((s) => s.byNodeId[chatId]?.order);
     const items = useChats((s) => s.byNodeId[chatId]?.items);
     const activeTurnId = useChats((s) => s.byNodeId[chatId]?.info.activeTurnId ?? null);
+    const info = useChats((s) => s.byNodeId[chatId]?.info ?? null);
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
     const [expandedTurns, setExpandedTurns] = useState<Set<string>>(() => new Set());
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -109,6 +112,16 @@ export function Timeline({ chatId }: { chatId: string }) {
         // Opening or closing a fold is a deliberate look back, not a reason to jump to the end.
         followRef.current = false;
     };
+
+    if (rows.length === 0) {
+        return (
+            <div className="flex min-h-0 grow items-center justify-center">
+                <EmptyState icon={info ? <AgentIcon kind={info.provider} /> : undefined}>
+                    {info ? `${info.selection.model} is ready. Ask it anything.` : 'Ask anything.'}
+                </EmptyState>
+            </div>
+        );
+    }
 
     return (
         <div

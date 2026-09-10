@@ -92,13 +92,14 @@ class FakeTransport implements Transport {
 }
 
 const makeSink = () => {
-    const state: ReturnType<ProjectSink['getState']> & { projects: ProjectSummary[]; error: string | null } = {
+    const state: ReturnType<ProjectSink['getState']> & { projects: ProjectSummary[]; error: string | null; switching: boolean } = {
         current: null,
         rev: 0,
         dirty: false,
         conflict: null,
         projects: [],
-        error: null
+        error: null,
+        switching: false
     };
     const sink: ProjectSink = {
         setProjects: (projects) => {
@@ -121,6 +122,9 @@ const makeSink = () => {
         },
         setError: (error) => {
             state.error = error;
+        },
+        setSwitching: (switching) => {
+            state.switching = switching;
         },
         getState: () => state
     };

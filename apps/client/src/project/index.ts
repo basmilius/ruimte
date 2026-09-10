@@ -12,5 +12,6 @@ export const projectClient = new ProjectClient(transport, useCanvas, {
     setDirty: actions.setDirty,
     setConflict: actions.setConflict,
     setError: actions.setError,
+    setSwitching: actions.setSwitching,
     getState: () => useProject.getState()
 });

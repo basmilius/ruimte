@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { PanelControls } from '@/shell/PanelControls';
 import { PANELS } from '@/shell/panels';
 import { useUi } from '@/state/ui';
+import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -100,16 +101,18 @@ export function Panel() {
                 <div className="relative flex h-full shrink-0 flex-col border-l border-border bg-surface" style={{ width }}>
                     {panel.open && <div className="absolute inset-y-0 left-0 z-10 w-2 cursor-col-resize" onPointerDown={startResize} />}
                     <header className="app-drag flex h-12 shrink-0 items-center gap-2 border-b border-border px-3">
-                        <span className="text-sm font-medium text-text">{label}</span>
+                        <span className="section-label">{label}</span>
                         <span className="grow" />
-                        <Tooltip label="Close">
-                            <button className="icon-btn" aria-label={`Close ${label}`} onClick={() => useUi.getState().setPanel({ open: false })}>
+                        <Tooltip label={`Close ${label}`} kbd="⌘⌥B" name>
+                            <button className="icon-btn" onClick={() => useUi.getState().setPanel({ open: false })}>
                                 <Icon icon={X} size={16} />
                             </button>
                         </Tooltip>
                         {panel.open && <PanelControls />}
                     </header>
-                    <div className="grid grow place-items-center p-4 text-xs text-text-faint">Nothing here yet.</div>
+                    <div className="grid grow place-items-center">
+                        <EmptyState>The {label.toLowerCase()} panel is next: it has nothing to show yet.</EmptyState>
+                    </div>
                 </div>
             )}
         </aside>

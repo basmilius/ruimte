@@ -15,6 +15,7 @@ import { useUi } from '@/state/ui';
    when the list slides away. */
 export function Toolbar() {
     const dirty = useProject((s) => s.dirty);
+    const switching = useProject((s) => s.switching);
     const machine = useServer((s) => (s.reachability && s.reachability !== 'loopback' ? s.label : null));
     const panel = useUi((s) => s.panel);
     const sidebarOpen = useUi((s) => s.sidebarOpen);
@@ -22,7 +23,7 @@ export function Toolbar() {
 
     return (
         <header
-            className="app-drag flex h-12 shrink-0 items-center gap-2 border-b border-border bg-surface pr-3 pl-2 text-xs text-text-muted transition-[padding] duration-200 ease-out"
+            className="app-drag relative flex h-12 shrink-0 items-center gap-2 border-b border-border bg-surface pr-3 pl-2 text-xs text-text-muted transition-[padding] duration-200 ease-out"
             style={sidebarOpen ? undefined : { paddingLeft: inset ?? STRIP_PADDING_PX }}
         >
             {!sidebarOpen && <SidebarToggle />}
@@ -36,10 +37,17 @@ export function Toolbar() {
                 <ProjectMenu />
                 <span className="text-text-faint">/</span>
                 <span>Canvas</span>
-                {dirty && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-faint" aria-label="Unsaved changes" />}
+                {/* A live region, not a decorated span: a reader announces the change instead of
+                    passing over a dot it has no reason to visit. */}
+                <span role="status" aria-live="polite" className="flex shrink-0 items-center">
+                    {dirty && <span className="h-1.5 w-1.5 rounded-full bg-text-faint" />}
+                    <span className="sr-only">{dirty ? 'Unsaved changes' : 'Everything saved'}</span>
+                </span>
             </div>
             <ConnectionDot />
             {!panel.open && <PanelControls />}
+            {/* Opening another project takes a round trip to the daemon; the line says the wait is the app's. */}
+            {switching && <div className="progress-line absolute inset-x-0 bottom-0" role="progressbar" aria-label="Opening the project" />}
         </header>
     );
 }

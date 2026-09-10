@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Tooltip } from '@/ui/Tooltip';
+import clsx from 'clsx';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { WebglAddon } from '@xterm/addon-webgl';
@@ -14,6 +14,8 @@ import { sessionClient } from '@/terminal';
 import { lastScreenOf, registerTerminal } from '@/terminal/registry';
 import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
 import { useTransportStatus } from '@/transport/status';
+import { NodeNotice } from '@/canvas/nodes/NodeNotice';
+import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 
 const RESIZE_DEBOUNCE_MS = 50;
@@ -219,6 +221,12 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
         setGeneration((g) => g + 1);
     };
 
+    const close = (): void => {
+        const canvas = useCanvas.getState();
+        canvas.select([id]);
+        canvas.deleteSelected();
+    };
+
     const restart = async (): Promise<void> => {
         try {
             await sessionClient.kill(id);
@@ -232,7 +240,7 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
         <div className="absolute inset-0 bg-term-bg">
             <div ref={hostRef} className="term-host" />
             {status !== 'open' && (
-                <div className="pointer-events-none absolute inset-x-3 top-3 z-10 rounded-lg border border-border bg-surface-raised/90 px-3 py-2 text-xs text-text-muted">
+                <NodeNotice>
                     {status === 'closed' ? (
                         <>
                             Not connected to the Ruimte server. Run <code className="font-mono text-text">bun run dev:server</code>.
@@ -240,27 +248,23 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
                     ) : (
                         'Connecting to the Ruimte server'
                     )}
-                </div>
+                </NodeNotice>
             )}
             {failure && (
-                <div className="absolute inset-x-3 top-3 z-10 flex items-center gap-3 rounded-lg border border-border bg-surface-raised/90 px-3 py-2 text-xs text-status-error">
-                    <span className="grow">{failure}</span>
-                    <Tooltip label="Try again">
-                        <button className="icon-btn h-7 w-7 shrink-0" onClick={rebuild}>
-                            <Icon icon={RotateCw} size={16} />
-                        </button>
-                    </Tooltip>
-                </div>
+                <NodeNotice tone="error" onRetry={rebuild}>
+                    {failure}
+                </NodeNotice>
             )}
             {exited !== undefined && (
-                <div className="absolute inset-x-0 bottom-0 z-10 flex items-center gap-3 border-t border-border bg-surface-raised/90 px-3 py-1.5 font-mono text-xs text-term-dim">
-                    <span className="grow">[process exited with code {exited}]</span>
-                    <button
-                        className="inline-flex h-7 items-center gap-1.5 rounded-md bg-surface-sunken px-2 font-sans text-xs font-medium text-text hover:bg-border"
-                        onClick={() => void restart()}
-                    >
+                <div className="absolute inset-x-0 bottom-0 z-10 flex items-center gap-2 border-t border-border bg-surface-raised/90 px-3 py-1.5 font-mono text-xs text-term-dim">
+                    {/* A shell that ended on its own reads as a footnote; a non-zero code is news. */}
+                    <span className={clsx('grow', exited !== 0 && 'text-status-error')}>[process exited with code {exited}]</span>
+                    <Button size="sm" variant="secondary" onClick={() => void restart()}>
                         <Icon icon={RotateCw} size={12} /> Restart
-                    </button>
+                    </Button>
+                    <Button size="sm" onClick={close}>
+                        Close node
+                    </Button>
                 </div>
             )}
         </div>

@@ -12,12 +12,15 @@ interface ProjectStore {
     conflict: ProjectDocument | null;
     /* Why the last save or open failed, for the banner. */
     error: string | null;
+    /* A project is being opened; the canvas under it is the old one until the document arrives. */
+    switching: boolean;
     setProjects(projects: ProjectSummary[]): void;
     setCurrent(current: ProjectSummary | null, rev: number): void;
     setRev(rev: number): void;
     setDirty(dirty: boolean): void;
     setConflict(conflict: ProjectDocument | null): void;
     setError(error: string | null): void;
+    setSwitching(switching: boolean): void;
 }
 
 /* Which project is on the canvas and how its file and the screen relate. */
@@ -28,6 +31,7 @@ export const useProject = create<ProjectStore>((set) => ({
     dirty: false,
     conflict: null,
     error: null,
+    switching: false,
     setProjects(projects) {
         set({ projects });
     },
@@ -45,5 +49,8 @@ export const useProject = create<ProjectStore>((set) => ({
     },
     setError(error) {
         set({ error });
+    },
+    setSwitching(switching) {
+        set({ switching });
     }
 }));
