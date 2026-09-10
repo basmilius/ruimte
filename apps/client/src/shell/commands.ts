@@ -1,7 +1,17 @@
-import { isCanvasView, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
+import { isCanvasView, isSessionView, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
 import { addAgentNode, addAgentView, type AgentTarget } from '@/agents/nodes';
 import { toWorld } from '@/canvas/math';
-import { askDeleteView, askOpenAsView, askRenameView, canOpenAsView, newCanvasView, newSeparatorView, newTerminalView, putOnCanvas } from '@/project/views';
+import {
+    askDeleteView,
+    askOpenAsView,
+    askRenameView,
+    canOpenAsView,
+    newCanvasView,
+    newDrawingView,
+    newSeparatorView,
+    newTerminalView,
+    putOnCanvas
+} from '@/project/views';
 import { useCanvas, type AddNodeOptions, type NodeKind } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
@@ -103,6 +113,7 @@ export const appCommands = (): Command[] => {
                   { id: 'view-delete', label: 'Delete view', run: () => askDeleteView(activeViewId) }
               ]
             : []),
+        { id: 'view-new-drawing', label: 'New drawing view', run: () => void newDrawingView() },
         { id: 'view-new-terminal', label: 'New terminal view', run: () => void newTerminalView() },
         { id: 'view-new-separator', label: 'New separator', run: () => void newSeparatorView() },
         {
@@ -113,7 +124,7 @@ export const appCommands = (): Command[] => {
         ...(selected && canOpenAsView(selected.kind)
             ? [{ id: 'view-promote', label: 'Open as view', hint: selected.title, run: () => askOpenAsView(selected.id) }]
             : []),
-        ...(activeView && !isCanvasView(activeView)
+        ...(activeView && isSessionView(activeView)
             ? [{ id: 'view-demote', label: 'Put on canvas', hint: activeView.name, run: () => void putOnCanvas(activeView.id) }]
             : []),
         ...moveNodeCommands(),

@@ -6,7 +6,7 @@ import clsx from 'clsx';
 import { isCanvasView, isSessionView, type AgentKind, type NodeKind, type ProjectViewKind } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { useDrafts } from '@/chat/drafts';
-import { askDeleteView, putOnCanvas, revealNode, showView } from '@/project/views';
+import { askDeleteView, duplicateViewOf, putOnCanvas, revealNode, showView } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
@@ -343,11 +343,12 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
                         <ContextMenu.Item className="menu-item" onClick={() => setRenaming(true)}>
                             <Icon icon={Pencil} size={14} /> Rename <kbd>F2</kbd>
                         </ContextMenu.Item>
-                        {view.kind === 'canvas' ? (
-                            <ContextMenu.Item className="menu-item" onClick={() => useDocument.getState().duplicateView(view.id)}>
+                        {(view.kind === 'canvas' || view.kind === 'drawing') && (
+                            <ContextMenu.Item className="menu-item" onClick={() => duplicateViewOf(view.id)}>
                                 <Icon icon={Copy} size={14} /> Duplicate
                             </ContextMenu.Item>
-                        ) : (
+                        )}
+                        {view.kind !== 'canvas' && view.kind !== 'drawing' && (
                             <ContextMenu.Item className="menu-item" onClick={() => putOnCanvas(view.id)}>
                                 <Icon icon={Frame} size={14} /> Put on canvas
                             </ContextMenu.Item>

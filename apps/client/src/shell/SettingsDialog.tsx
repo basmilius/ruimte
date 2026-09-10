@@ -6,6 +6,7 @@ import { AboutPane } from '@/shell/settings/panes/AboutPane';
 import { AgentsPane } from '@/shell/settings/panes/AgentsPane';
 import { AppearancePane } from '@/shell/settings/panes/AppearancePane';
 import { CanvasPane } from '@/shell/settings/panes/CanvasPane';
+import { DrawingPane } from '@/shell/settings/panes/DrawingPane';
 import { FilesPane } from '@/shell/settings/panes/FilesPane';
 import { GitPane } from '@/shell/settings/panes/GitPane';
 import { KeyboardPane } from '@/shell/settings/panes/KeyboardPane';
@@ -17,6 +18,7 @@ import { Icon } from '@/ui/Icon';
 const PANES: Record<SettingsSectionId, () => React.JSX.Element> = {
     appearance: AppearancePane,
     canvas: CanvasPane,
+    drawing: DrawingPane,
     files: FilesPane,
     git: GitPane,
     agents: AgentsPane,

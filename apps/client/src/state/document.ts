@@ -3,6 +3,7 @@ import {
     MAIN_VIEW_ID,
     MAIN_VIEW_NAME,
     isCanvasView,
+    isDrawingView,
     isOpenableView,
     isSessionView,
     type NodeTitleSource,
@@ -48,6 +49,8 @@ interface DocumentState {
     addCanvasView(name: string): string;
     /* A line in the sidebar with nothing behind it, to group the views around it. */
     addSeparatorView(): string;
+    /* A sketch of its own. Its elements live in a file of their own, which the daemon keeps. */
+    addDrawingView(name: string): string;
     /* A chat, terminal or browser without a canvas under it. The id is the session id, as for a node. */
     addStandaloneView(view: StandaloneRequest): string;
     renameView(id: string, name: string, source?: NodeTitleSource | null): void;
@@ -177,6 +180,13 @@ export const useDocument = create<DocumentState>((set, get) => ({
         return view.id;
     },
 
+    addDrawingView(name) {
+        const view: ProjectView = { kind: 'drawing', id: nextId('view'), name };
+        set((state) => ({ views: [...state.exportViews(), view], edits: state.edits + 1 }));
+        get().setActiveView(view.id);
+        return view.id;
+    },
+
     addStandaloneView(request) {
         const id = request.id ?? nextId(request.kind);
         const view: ProjectView =
@@ -227,10 +237,13 @@ export const useDocument = create<DocumentState>((set, get) => ({
     duplicateView(id) {
         const state = get();
         const source = state.exportViews().find((view) => view.id === id);
-        if (!source || !isCanvasView(source)) {
+        if (!source || (!isCanvasView(source) && !isDrawingView(source))) {
             return null;
         }
-        const copy = copyOfCanvas(source, `${source.name} copy`);
+        // A drawing view holds nothing itself; the daemon copies the file it points at.
+        const copy: ProjectView = isCanvasView(source)
+            ? copyOfCanvas(source, `${source.name} copy`)
+            : { kind: 'drawing', id: nextId('view'), name: `${source.name} copy` };
         const at = state.views.findIndex((view) => view.id === id);
         const views = state.exportViews();
         set({ views: [...views.slice(0, at + 1), copy, ...views.slice(at + 1)], edits: state.edits + 1 });

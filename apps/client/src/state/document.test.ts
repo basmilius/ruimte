@@ -205,3 +205,35 @@ describe('what a save would write', () => {
         expect(local.views.b).toEqual({ camera: { x: 7, y: 8, zoom: 2 }, focusedNodeId: null });
     });
 });
+
+describe('a drawing view', () => {
+    test('a new drawing opens on the spot and carries nothing but its name', () => {
+        const id = useDocument.getState().addDrawingView('Sketch');
+        expect(useDocument.getState().activeViewId).toBe(id);
+        expect(useDocument.getState().views.at(-1)).toEqual({ kind: 'drawing', id, name: 'Sketch' });
+        // It is not a canvas, so the canvas store lets go of the view it had.
+        expect(useCanvas.getState().viewId).toBeNull();
+        expect(useDocument.getState().bodyFocused).toBe(true);
+    });
+
+    test('a duplicate lands next to it under a new id, so the daemon can copy the file into it', () => {
+        const id = useDocument.getState().addDrawingView('Sketch');
+        const copyId = useDocument.getState().duplicateView(id);
+        expect(copyId).not.toBe(id);
+        expect(useDocument.getState().views.map((each) => each.id)).toEqual(['a', 'b', id, copyId!]);
+        expect(useDocument.getState().views.at(-1)).toMatchObject({ kind: 'drawing', name: 'Sketch copy' });
+    });
+
+    test('it never becomes a node on a canvas: it is a file, not a session', () => {
+        const id = useDocument.getState().addDrawingView('Sketch');
+        expect(useDocument.getState().putOnCanvas(id, 'a')).toBe(false);
+        expect(useDocument.getState().views.map((each) => each.id)).toContain(id);
+    });
+
+    test('deleting it takes its local state with it and opens the neighbor', () => {
+        const id = useDocument.getState().addDrawingView('Sketch');
+        useDocument.getState().deleteView(id);
+        expect(useDocument.getState().views.map((each) => each.id)).toEqual(['a', 'b']);
+        expect(useDocument.getState().activeViewId).toBe('b');
+    });
+});

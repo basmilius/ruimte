@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import clsx from 'clsx';
+import { PenTool } from 'lucide-react';
 import { isCanvasView, type ProjectView } from '@ruimte/contracts';
 import { Canvas } from '@/canvas/Canvas';
 import { BrowserFallback, usePage } from '@/nodes/BrowserBody';
@@ -9,6 +10,8 @@ import { activeViewOf, useDocument } from '@/state/document';
 import { isApplePlatform } from '@/desktop/bridge';
 import { isLeaveNodeChord } from '@/terminal/keymap';
 import { focusViewRow } from '@/shell/sidebar-focus';
+import { EmptyState } from '@/ui/EmptyState';
+import { Icon } from '@/ui/Icon';
 import { isInFloatingLayer } from '@/ui/floating';
 
 /*
@@ -55,6 +58,11 @@ function StandaloneView({ view }: { view: ProjectView }) {
             )}
             {view.kind === 'terminal' && <TerminalBody id={view.id} focused={focused} />}
             {view.kind === 'browser' && <BrowserViewSurface id={view.id} />}
+            {view.kind === 'drawing' && (
+                <div className="flex h-full w-full items-center justify-center">
+                    <EmptyState icon={<Icon icon={PenTool} size={16} />}>This drawing has no surface yet; the tools arrive with the renderer.</EmptyState>
+                </div>
+            )}
         </div>
     );
 }

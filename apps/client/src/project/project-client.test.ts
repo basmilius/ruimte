@@ -350,3 +350,18 @@ describe('ProjectClient', () => {
         dispose();
     });
 });
+
+describe('a project with a drawing view', () => {
+    test('the view survives a load and the save that follows it', async () => {
+        const { transport, dispose } = setup();
+        transport.views = [canvasView('main'), { kind: 'drawing', id: 'view-1', name: 'Sketch' }];
+        await tick();
+        expect(useDocument.getState().views.at(-1)).toEqual({ kind: 'drawing', id: 'view-1', name: 'Sketch' });
+
+        useDocument.getState().renameView('view-1', 'Plan');
+        await tick(20);
+        const saved = transport.of('project.save').at(-1)?.payload as { content: { views: unknown[] } };
+        expect(saved.content.views.at(-1)).toMatchObject({ kind: 'drawing', id: 'view-1', name: 'Plan' });
+        dispose();
+    });
+});

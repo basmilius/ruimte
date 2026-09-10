@@ -1,9 +1,9 @@
 import { Menu } from '@base-ui-components/react/menu';
 import { Check, ChevronDown, Frame, Globe, MessageSquare, Minus, Pencil, PenTool, Terminal, Trash } from 'lucide-react';
-import { isCanvasView, isOpenableView, type ProjectViewKind } from '@ruimte/contracts';
+import { isOpenableView, isSessionView, type ProjectViewKind } from '@ruimte/contracts';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentView } from '@/agents/nodes';
-import { askDeleteView, askRenameView, newCanvasView, newSeparatorView, newTerminalView, putOnCanvas, showView } from '@/project/views';
+import { askDeleteView, askRenameView, newCanvasView, newDrawingView, newSeparatorView, newTerminalView, putOnCanvas, showView } from '@/project/views';
 import { useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
@@ -28,6 +28,9 @@ export function NewViewItems() {
             <div className={MENU_LABEL}>New view</div>
             <Menu.Item className="menu-item" onClick={() => newCanvasView()}>
                 <Icon icon={Frame} size={14} /> Canvas <kbd>⌘T</kbd>
+            </Menu.Item>
+            <Menu.Item className="menu-item" onClick={() => void newDrawingView()}>
+                <Icon icon={PenTool} size={14} /> Drawing
             </Menu.Item>
             <Menu.Item className="menu-item" onClick={() => void newTerminalView()}>
                 <Icon icon={Terminal} size={14} /> Terminal
@@ -78,7 +81,7 @@ export function ViewMenu() {
                         <Menu.Separator className={MENU_SEPARATOR} />
                         <NewViewItems />
                         <Menu.Separator className={MENU_SEPARATOR} />
-                        {!isCanvasView(active) && (
+                        {isSessionView(active) && (
                             <Menu.Item className="menu-item" onClick={() => putOnCanvas(active.id)}>
                                 <Icon icon={Frame} size={14} /> Put on canvas
                             </Menu.Item>
