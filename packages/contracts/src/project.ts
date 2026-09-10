@@ -162,7 +162,10 @@ const ViewBaseSchema = z.object({
     name: z.string().min(1),
     // Who named the view, the rule a node follows: absent or 'auto' means the page it hosts may
     // still name it, 'user' means a person did and nothing renames it again.
-    titleSource: NodeTitleSourceSchema.optional()
+    titleSource: NodeTitleSourceSchema.optional(),
+    // Absent means the row wears the mark of what it is: its kind, its CLI, or a page's favicon.
+    // Present means a person overruled that, so nothing the view hosts changes it again.
+    icon: ProjectIconChoiceSchema.optional()
 });
 
 /*

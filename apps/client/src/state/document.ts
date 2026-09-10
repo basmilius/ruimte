@@ -9,6 +9,7 @@ import {
     type NodeTitleSource,
     type ProjectCanvasView,
     type ProjectDocument,
+    type ProjectIconChoice,
     type ProjectLocal,
     type ProjectNode,
     type ProjectView,
@@ -55,6 +56,8 @@ interface DocumentState {
     /* A chat, terminal or browser without a canvas under it. The id is the session id, as for a node. */
     addStandaloneView(view: StandaloneRequest): string;
     renameView(id: string, name: string, source?: NodeTitleSource | null): void;
+    /* Overrules the mark a view wears in the lists; null hands it back to its kind. */
+    setViewIcon(id: string, icon: ProjectIconChoice | null): void;
     deleteView(id: string): void;
     duplicateView(id: string): string | null;
     moveView(id: string, toIndex: number): void;
@@ -216,6 +219,21 @@ export const useDocument = create<DocumentState>((set, get) => ({
         }
         set((state) => ({
             views: state.views.map((view) => (view.id === id ? { ...view, name, titleSource: source ?? undefined } : view)),
+            edits: state.edits + 1
+        }));
+    },
+
+    setViewIcon(id, icon) {
+        const current = get().views.find((view) => view.id === id);
+        // A separator is a bare line with no room for a mark, so there is nothing to override.
+        if (!current || current.kind === 'separator') {
+            return;
+        }
+        if ((current.icon ?? null) === null && icon === null) {
+            return;
+        }
+        set((state) => ({
+            views: state.views.map((view) => (view.id === id ? { ...view, icon: icon ?? undefined } : view)),
             edits: state.edits + 1
         }));
     },

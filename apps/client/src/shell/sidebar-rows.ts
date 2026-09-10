@@ -1,4 +1,4 @@
-import type { AgentKind, AgentStatus, NodeKind, ProjectViewKind } from '@ruimte/contracts';
+import type { AgentKind, AgentStatus, NodeKind, ProjectIconChoice, ProjectViewKind } from '@ruimte/contracts';
 
 export interface SidebarNode {
     id: string;
@@ -16,6 +16,8 @@ export interface SidebarView {
     /* Empty for a separator, which is a bare line with nothing on it. */
     name: string;
     kind: ProjectViewKind;
+    /* What a person picked for it, which outranks the mark of its kind. */
+    icon: ProjectIconChoice | null;
     /* The CLI a chat or terminal view runs, the way a node carries one. */
     provider: AgentKind | null;
     /* What sits on the canvas. A view that is not a canvas lists nothing: it is one node itself. */

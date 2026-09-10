@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Trash } from 'lucide-react';
 import { viewIsBusy } from '@/project/views';
+import { ViewIconDialog } from '@/shell/ViewIconDialog';
 import { useCanvas } from '@/state/canvas';
 import { resetTitle } from '@/nodes/node-host';
 import { useDocument } from '@/state/document';
@@ -9,7 +11,7 @@ import { useUi } from '@/state/ui';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 
-/* Renaming, deleting, promoting and a new page: everything a view asks before it happens. */
+/* Renaming, deleting, promoting, picking a mark and a new page: everything a view asks before it happens. */
 export function ViewDialogs() {
     const dialog = useUi((s) => s.viewDialog);
     const setDialog = useUi((s) => s.setViewDialog);
@@ -98,7 +100,9 @@ export function ViewDialogs() {
                             </p>
                         </>
                     )}
-                    <div className="mt-4 flex items-center justify-end gap-2">
+                    {dialog?.kind === 'icon' && view && <ViewIconDialog view={view} onClose={close} />}
+                    {/* The icon dialog writes on every click and carries its own way out. */}
+                    <div className={clsx('mt-4 flex items-center justify-end gap-2', dialog?.kind === 'icon' && 'hidden')}>
                         <Button onClick={close}>Cancel</Button>
                         {dialog?.kind === 'delete' && (
                             <Button

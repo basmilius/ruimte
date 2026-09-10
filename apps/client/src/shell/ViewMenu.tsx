@@ -1,11 +1,12 @@
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, ChevronDown, Frame, Globe, MessageSquare, Minus, Pencil, PenTool, Terminal, Trash } from 'lucide-react';
-import { isDrawingView, isOpenableView, isSessionView, type ProjectViewKind } from '@ruimte/contracts';
+import { Check, ChevronDown, Frame, Globe, Minus, Pencil, PenTool, Smile, Terminal, Trash } from 'lucide-react';
+import { isDrawingView, isOpenableView, isSessionView } from '@ruimte/contracts';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentView } from '@/agents/nodes';
 import {
     askDeleteView,
     askRenameView,
+    askViewIcon,
     newCanvasView,
     newDrawingView,
     newSeparatorView,
@@ -14,19 +15,11 @@ import {
     showOnCanvas,
     showView
 } from '@/project/views';
+import { ViewGlyph } from '@/project/ViewGlyph';
 import { useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
-
-const VIEW_ICON: Record<ProjectViewKind, typeof Terminal> = {
-    canvas: Frame,
-    chat: MessageSquare,
-    terminal: Terminal,
-    browser: Globe,
-    drawing: PenTool,
-    separator: Minus
-};
 
 /*
  * What "New view" offers: a canvas, or one session with no canvas around it. The agent submenus are
@@ -77,7 +70,12 @@ export function ViewMenu() {
                         <div className={MENU_LABEL}>Views</div>
                         {views.filter(isOpenableView).map((view, index) => (
                             <Menu.Item key={view.id} className="menu-item" onClick={() => showView(view.id)}>
-                                <Icon icon={VIEW_ICON[view.kind]} size={14} />
+                                <ViewGlyph
+                                    id={view.id}
+                                    kind={view.kind}
+                                    icon={view.kind === 'separator' ? null : view.icon}
+                                    provider={view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null}
+                                />
                                 <span className="truncate">{view.name}</span>
                                 {view.id === activeViewId && (
                                     <span className="ml-auto flex shrink-0 items-center">
@@ -103,6 +101,9 @@ export function ViewMenu() {
                         )}
                         <Menu.Item className="menu-item" onClick={() => askRenameView(active.id)}>
                             <Icon icon={Pencil} size={14} /> Rename view
+                        </Menu.Item>
+                        <Menu.Item className="menu-item" onClick={() => askViewIcon(active.id)}>
+                            <Icon icon={Smile} size={14} /> Change icon…
                         </Menu.Item>
                         <Menu.Item className="menu-item text-status-error" onClick={() => askDeleteView(active.id)}>
                             <Icon icon={Trash} size={14} /> Delete view
