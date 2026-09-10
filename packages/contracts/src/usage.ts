@@ -96,6 +96,16 @@ export const UsageRootSchema = z.object({
 });
 export type UsageRoot = z.infer<typeof UsageRootSchema>;
 
+/* The day's ECB reference rate for one dollar, so a page can show what a call cost in its own money. */
+export const UsageRateSchema = z.object({
+    currency: z.string(),
+    rate: z.number().positive(),
+    /* The day the rate is of, as the bank publishes it: `YYYY-MM-DD`. */
+    date: z.string(),
+    fetchedAt: z.number()
+});
+export type UsageRate = z.infer<typeof UsageRateSchema>;
+
 export const UsageSummaryResultSchema = z.object({
     from: z.string(),
     to: z.string(),
@@ -108,6 +118,8 @@ export const UsageSummaryResultSchema = z.object({
     sessions: z.number().int().nonnegative(),
     scan: UsageScanSchema,
     pricing: UsagePricingSchema,
+    /* Null while no rate has been fetched, which is how the page knows to stay in dollars. */
+    rate: UsageRateSchema.nullable(),
     roots: z.array(UsageRootSchema)
 });
 export type UsageSummaryResult = z.infer<typeof UsageSummaryResultSchema>;

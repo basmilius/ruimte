@@ -30,27 +30,33 @@ export const parseClaudeLine = (line: string): UsageRecord | null => {
     }
     const model = asString(message.model);
     const timestampMs = Date.parse(asString(record.timestamp));
-    if (model === '' || Number.isNaN(timestampMs)) {
+    // `<synthetic>` is what Claude Code writes for a message it made up itself, an error or an
+    // interruption. It never reached the API, and its counts are zero, so it is not a call.
+    if (model === '' || model === '<synthetic>' || Number.isNaN(timestampMs)) {
         return null;
     }
     const creation = asObject(usage.cache_creation);
     const outputDetails = asObject(usage.output_tokens_details);
     const messageId = asString(message.id);
+    const totals = {
+        calls: 1,
+        input: int(usage.input_tokens),
+        cacheRead: int(usage.cache_read_input_tokens),
+        cacheWrite: int(usage.cache_creation_input_tokens),
+        cacheWrite1h: creation === null ? 0 : int(creation.ephemeral_1h_input_tokens),
+        output: int(usage.output_tokens),
+        reasoning: outputDetails === null ? 0 : int(outputDetails.thinking_tokens)
+    };
+    if (totals.input + totals.cacheRead + totals.cacheWrite + totals.output === 0) {
+        return null;
+    }
     return {
         provider: 'claude',
         timestampMs,
         model,
         sessionId: asString(record.sessionId),
         cwd: asString(record.cwd),
-        totals: {
-            calls: 1,
-            input: int(usage.input_tokens),
-            cacheRead: int(usage.cache_read_input_tokens),
-            cacheWrite: int(usage.cache_creation_input_tokens),
-            cacheWrite1h: creation === null ? 0 : int(creation.ephemeral_1h_input_tokens),
-            output: int(usage.output_tokens),
-            reasoning: outputDetails === null ? 0 : int(outputDetails.thinking_tokens)
-        },
+        totals,
         dedupeKey: messageId === '' ? null : messageId
     };
 };

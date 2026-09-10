@@ -1,6 +1,7 @@
 import type { UsageSummaryPayload, UsageSummaryResult } from '@ruimte/contracts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { aggregate } from './aggregate.ts';
+import { ExchangeRates } from './exchange.ts';
 import { PriceBook } from './pricing.ts';
 import type { KnownProject } from './projects.ts';
 import { UsageScanner, type ScanReport } from './scanner.ts';
@@ -11,7 +12,7 @@ const SCAN_TTL_MS = 60_000;
 
 export interface UsageServiceOptions {
     home: string;
-    /* Off with `--no-price-fetch`: the bundled table then prices everything. */
+    /* Off with `--no-price-fetch`: the bundled table then prices everything and no rate is asked for. */
     allowPriceFetch?: boolean;
     /* The projects the daemon knows, so a folder can wear the name it has in the app. */
     knownProjects(): Promise<KnownProject[]>;
@@ -29,6 +30,7 @@ const EMPTY_SCAN: ScanReport = { at: 0, files: 0, changedFiles: 0, durationMs: 0
 export class UsageService {
     private readonly scanner: UsageScanner;
     private readonly prices: PriceBook;
+    private readonly rates: ExchangeRates;
     private readonly knownProjects: UsageServiceOptions['knownProjects'];
     private readonly sinks = new Map<string, SessionSink>();
     private readonly followers = new Set<string>();
@@ -40,6 +42,7 @@ export class UsageService {
     constructor(options: UsageServiceOptions) {
         this.scanner = new UsageScanner(options.home, options.roots);
         this.prices = new PriceBook(options.home, options.allowPriceFetch ?? true);
+        this.rates = new ExchangeRates(options.home, options.allowPriceFetch ?? true);
         this.knownProjects = options.knownProjects;
     }
 
@@ -92,6 +95,7 @@ export class UsageService {
                 failed: this.failed
             },
             pricing: this.prices.pricing,
+            rate: this.rates.current,
             roots: this.report.roots
         };
     }
@@ -112,13 +116,14 @@ export class UsageService {
     }
 
     private async runScan(): Promise<void> {
-        // The price table is fetched beside the walk, so a slow answer never holds up the scan.
+        // The table and the rate are fetched beside the walk, so a slow answer never holds up the scan.
         const [report] = await Promise.all([
             this.scanner.scan().catch((e: unknown) => {
                 console.error('The usage scan failed', e);
                 return null;
             }),
-            this.prices.ensure()
+            this.prices.ensure(),
+            this.rates.ensure()
         ]);
         this.failed = report === null;
         if (report === null) {
