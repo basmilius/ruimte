@@ -1,12 +1,13 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { ChevronRight, FileDiff, X } from 'lucide-react';
-import type { ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
-import { fileChanges, formatElapsed, liveOutput, toolStartedAt, toolSummary } from '@/chat/logic/tools';
+import type { ChatFileChange, ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
+import { fileChanges, formatElapsed, liveOutput, toolStartedAt, toolSummary, unifiedChanges, type FileChange } from '@/chat/logic/tools';
 import { toolIcon } from '@/chat/ui/icons';
 
-// The diff renderer carries shiki; it only loads once a thread shows a file change.
+// The diff renderers carry shiki; they only load once a thread shows a file change.
 const EditDiff = lazy(() => import('@/chat/ui/EditDiff'));
+const UnifiedDiff = lazy(() => import('@/chat/ui/UnifiedDiff'));
 
 const OUTPUT_LIMIT = 4000;
 
@@ -54,10 +55,17 @@ function ToggleLine({
 }
 
 function ToolBody({ tool }: { tool: ChatToolItem }) {
-    const changes = fileChanges(tool.name, tool.input);
+    const patches = unifiedChanges(tool);
+    const changes = patches.length > 0 ? [] : fileChanges(tool.name, tool.input);
     return (
         <div className="mb-1 ml-8 overflow-hidden rounded-md border border-border bg-surface-raised">
-            {changes.length > 0 ? (
+            {patches.length > 0 ? (
+                <Suspense fallback={<div className="px-3 py-2 text-[12px] text-text-faint">Loading diff</div>}>
+                    {patches.map((change, index) => (
+                        <UnifiedDiff key={index} change={change} />
+                    ))}
+                </Suspense>
+            ) : changes.length > 0 ? (
                 <Suspense fallback={<div className="px-3 py-2 text-[12px] text-text-faint">Loading diff</div>}>
                     {changes.map((change, index) => (
                         <EditDiff key={index} change={change} />
@@ -68,7 +76,7 @@ function ToolBody({ tool }: { tool: ChatToolItem }) {
                     {clip(JSON.stringify(tool.input, null, 2) ?? '')}
                 </pre>
             )}
-            {tool.output !== null && tool.output !== '' && (
+            {tool.output !== null && tool.output !== '' && patches.length === 0 && (
                 <pre
                     className={clsx(
                         'max-h-64 overflow-auto whitespace-pre-wrap border-t border-border px-3 py-2 font-mono text-[11.5px] leading-[1.6] select-text',
@@ -171,10 +179,27 @@ export function TurnFoldRow({ turn, label, expanded, onToggle }: { turn: ChatTur
 /* The files a settled turn changed, as a card; each file opens its diff in place. */
 export function ChangedFilesRow({ tools }: { tools: ChatToolItem[] }) {
     const [open, setOpen] = useState<Record<string, boolean>>({});
-    const byPath = new Map<string, ChatToolItem[]>();
+    const byPath = new Map<string, { edits: FileChange[]; patches: ChatFileChange[] }>();
+    const entryFor = (path: string) => {
+        const existing = byPath.get(path);
+        if (existing) {
+            return existing;
+        }
+        const created = { edits: [] as FileChange[], patches: [] as ChatFileChange[] };
+        byPath.set(path, created);
+        return created;
+    };
     for (const tool of tools) {
-        const path = (tool.input as { file_path?: string })?.file_path ?? tool.id;
-        byPath.set(path, [...(byPath.get(path) ?? []), tool]);
+        const patches = unifiedChanges(tool);
+        if (patches.length > 0) {
+            for (const patch of patches) {
+                entryFor(patch.path).patches.push(patch);
+            }
+            continue;
+        }
+        for (const change of fileChanges(tool.name, tool.input)) {
+            entryFor(change.path || tool.id).edits.push(change);
+        }
     }
     return (
         <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface-raised">
@@ -184,30 +209,36 @@ export function ChangedFilesRow({ tools }: { tools: ChatToolItem[] }) {
                     {byPath.size} changed file{byPath.size === 1 ? '' : 's'}
                 </span>
             </div>
-            {[...byPath].map(([path, edits]) => (
-                <div key={path} className="border-t border-border">
-                    <button
-                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12px] text-text-muted hover:bg-surface-sunken"
-                        onClick={() => setOpen((o) => ({ ...o, [path]: !o[path] }))}
-                    >
-                        <ChevronRight size={12} className={clsx('shrink-0 text-text-faint transition-transform', open[path] && 'rotate-90')} />
-                        <span className="min-w-0 truncate font-mono text-text">{path}</span>
-                        <span className="grow" />
-                        <span className="text-text-faint">
-                            {edits.length} edit{edits.length === 1 ? '' : 's'}
-                        </span>
-                    </button>
-                    {open[path] && (
-                        <div className="border-t border-border">
-                            <Suspense fallback={<div className="px-3 py-2 text-[12px] text-text-faint">Loading diff</div>}>
-                                {edits.flatMap((edit) =>
-                                    fileChanges(edit.name, edit.input).map((change, index) => <EditDiff key={`${edit.id}-${index}`} change={change} />)
-                                )}
-                            </Suspense>
-                        </div>
-                    )}
-                </div>
-            ))}
+            {[...byPath].map(([path, entry]) => {
+                const count = entry.edits.length + entry.patches.length;
+                return (
+                    <div key={path} className="border-t border-border">
+                        <button
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12px] text-text-muted hover:bg-surface-sunken"
+                            onClick={() => setOpen((o) => ({ ...o, [path]: !o[path] }))}
+                        >
+                            <ChevronRight size={12} className={clsx('shrink-0 text-text-faint transition-transform', open[path] && 'rotate-90')} />
+                            <span className="min-w-0 truncate font-mono text-text">{path}</span>
+                            <span className="grow" />
+                            <span className="text-text-faint">
+                                {count} edit{count === 1 ? '' : 's'}
+                            </span>
+                        </button>
+                        {open[path] && (
+                            <div className="border-t border-border">
+                                <Suspense fallback={<div className="px-3 py-2 text-[12px] text-text-faint">Loading diff</div>}>
+                                    {entry.patches.map((change, index) => (
+                                        <UnifiedDiff key={`patch-${index}`} change={change} />
+                                    ))}
+                                    {entry.edits.map((change, index) => (
+                                        <EditDiff key={`edit-${index}`} change={change} />
+                                    ))}
+                                </Suspense>
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
         </div>
     );
 }

@@ -81,6 +81,8 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
     const items = useChats((s) => s.byNodeId[chatId]?.items);
 
     const provider = providers.find((entry) => entry.kind === info.provider);
+    // Until the daemon answered, take the CLI for a full one; a capability it lacks says so itself.
+    const capabilities = provider?.capabilities;
     const models: ModelInfo[] = provider?.models ?? [];
     const model = models.find((entry) => entry.slug === info.selection.model);
     const busy = info.activeTurnId !== null;
@@ -190,6 +192,10 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
     };
 
     const trackMention = (el: HTMLTextAreaElement): void => {
+        // A CLI that does not expand `@path` gets the text as it is, so the picker stays out of the way.
+        if (capabilities?.mentions === false) {
+            return;
+        }
         const next = el.selectionStart === el.selectionEnd ? findMentionQuery(el.value, el.selectionStart) : null;
         setMention((current) => (current?.start === next?.start && current?.query === next?.query ? current : next));
     };
@@ -212,6 +218,10 @@ export function Composer({ chatId, info, focused, disabled, onSend }: ComposerPr
 
     const addFiles = (incoming: File[]): void => {
         if (incoming.length === 0) {
+            return;
+        }
+        if (capabilities?.attachments === false) {
+            setNotice(`${provider?.name ?? 'This agent'} takes no images`);
             return;
         }
         const checked = checkAttachmentLimits(
