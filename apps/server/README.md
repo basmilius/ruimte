@@ -43,6 +43,8 @@ $RUIMTE_HOME/
     <sessionId>.agent.json         the agent CLI last seen in that session, for a cold resume
   chats/                           mode 0700
     <chatId>.json                  the thread and info of one chat node
+  checkpoints/                     mode 0700
+    <repo>-<hash>.index            the private git index a turn's checkpoint is written through
 ```
 
 File names are the id passed through `encodeURIComponent`, so an id can never name a path outside its directory.
@@ -106,7 +108,8 @@ A Claude chat is `claude -p --input-format stream-json --output-format stream-js
 - An `AskUserQuestion` call becomes a question item instead; `chat.answer` returns the answers keyed by question index, the daemon keys them by question text for the CLI.
 - `chat.configure` changes the selection or a mode. A running process keeps its flags until the turn ends; the next send starts a fresh process with `--resume` and the new flags.
 - `chat.cancel` sends an interrupt and the turn ends as `aborted`. `chat.compact` follows the provider's capability: Claude Code gets `/compact` as a turn, Codex a call of its own.
-- A settled tool item may carry `changes`, the files it touched with the unified diff per file, for a provider that reports one (Codex). Claude Code's edits keep the text before and after in the tool input until per-turn checkpoints exist.
+- A settled tool item may carry `changes`, the files it touched with the unified diff per file, for a provider that reports one (Codex). Claude Code's edits only carry the text before and after in the tool input, which is why a turn takes a checkpoint of its own.
+- A turn takes a checkpoint when it starts: `src/git/checkpoints.ts` writes the chat's folder as a git tree through an index file of ours (`GIT_INDEX_FILE` under `$RUIMTE_HOME/checkpoints`, `git add -A`, `git write-tree`), so the person's own index, stashes and commits are untouched and ignored files stay ignored. The tree id sits on the turn item as `checkpoint`. When the turn settles the daemon diffs the working tree against it and puts the answer on the turn as `checkpointDiff`: one unified diff per file with the added and deleted line counts, at most 100 files (`truncated` says there were more), no body for a binary file or a patch over the cap (`omitted`). `chat.turnDiff { chatId, turnId }` answers the same shape for a turn that has no stored diff yet, which is how a client asks while a turn is still running. A folder outside a repository, or a git that fails, leaves both fields off and the card falls back to what the CLI reported.
 - A running tool item may carry `progress`: `startedAt` from the CLI's `tool_progress` frame (`elapsed_time_seconds`, verified on 2.1.266), `description` from its `task_started` frame, and `output` for a provider that streams partial output (a `delta` event on a tool item appends to it). Claude Code sends `tool_progress` for a local Bash only under its remote gate (`CLAUDE_CODE_REMOTE` or `CLAUDE_CODE_CONTAINER_ID`, once per 30 s) and never streams Bash output, so the client counts from the item's own timestamp when nothing came. The result drops `progress`.
 - The thread is written to `chats/<id>.json` after every turn; a chat whose process ended (or a daemon that restarted) starts the CLI again with `--resume` on the next send.
 - `chat.send` takes optional `attachments` (base64 PNG, JPEG, GIF or WebP, at most 5 MB each and 8 per message) and `mentions` (paths the person picked with `@`). Attachments become `image` content blocks next to the text in the CLI's `user` frame; mentions stay `@path` in the text, which the CLI expands itself, and are stored on the user item so a client can draw them as chips.

@@ -50,7 +50,13 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   on its line (the timer counts from the CLI's `tool_progress` start when one came, else from
   the item's own timestamp) and, for a provider that streams partial output, the last lines
   under it; the reducer folds `tool_progress` and `task_started` into an optional `progress`
-  on the tool item and `fake-claude.ts` emits both on `run: <cmd>`.
+  on the tool item and `fake-claude.ts` emits both on `run: <cmd>`. The changed-files card shows
+  real diffs now: a turn takes a checkpoint of the chat's folder when it starts (a git tree written
+  through an index of ours under `$RUIMTE_HOME/checkpoints`, so the person's index and stashes stay
+  untouched, `apps/server/src/git/checkpoints.ts`), and when the turn settles the daemon puts the
+  diff of the working tree against that tree on the turn item. The card prefers that diff, then the
+  provider's own `changes`, then the edit's before and after; `chat.turnDiff` answers a turn whose
+  diff has not arrived, which is also how a client asks while a turn runs.
 - **Phase 6c, Codex chat backend and one session for every CLI**: a chat node with
   `provider: 'codex'` runs `codex app-server` (JSON-RPC over stdio). Approvals for commands and
   file changes, both kinds of Codex question (blocking `request_user_input` and the async one
@@ -225,7 +231,7 @@ canvas, against Ruimte, one verdict each.
 | Group frame with a bound worktree | Group node with collapse, nesting and a worktree | Done |
 | Browser node (navigable Chromium) and Web node (one page, fits content) | Browser node in the desktop app | Done; the fit-to-content web node is a browser node with a size, skip |
 | Editor node (Monaco, image and PDF preview, Cmd+S) | None | Later: an agent's edits already show as diffs in the chat; a file viewer is worth it once the daemon has an upload and file index (the composer's `@` picker is the start) |
-| Diff node (HEAD vs index vs worktree per file) | Changed-files card with diffs per turn | Later: per-turn checkpoints against the working tree are on the #5 list; a standalone diff node comes with them |
+| Diff node (HEAD vs index vs worktree per file) | Changed-files card with the turn's checkpoint diff | Done for a turn; a standalone diff node for a folder is still later |
 | Files node (folder listing pinned to one directory) | Folder browsing in the palette | Skip: the palette browses; a directory pane on the canvas invites a file manager, which is not the product |
 | Subagent node (live card per Claude subagent from hooks) | Subagent tool calls fold into the chat's work rows | Later, only if hooks carry enough: a card per subagent on the canvas is a status view, and the chat's folded rows already show it |
 | Loop node and Trigger node (cron and schedule into a terminal) | None | Skip: scheduling belongs to the agent's own tools or the OS; a canvas is not a scheduler |
@@ -264,6 +270,11 @@ canvas, against Ruimte, one verdict each.
   not running. The command hook is a no-op without `RUIMTE_HOOK_URL`.
 - A chat process is not started when the node mounts, only on the first message, so a canvas
   full of chat nodes costs nothing until used.
+- A turn's checkpoint diff compares two trees of ours, not the tree against the working tree:
+  `git diff <tree>` only sees what git already tracks, so a file the agent created would be
+  missing. The prompt waits for the checkpoint (a few milliseconds on a warm index), because a
+  tree taken after the first edit is not a checkpoint. Nothing restores a checkpoint; going back
+  would undo the person's own edits of that turn as much as the agent's.
 - The demo canvas is gone. A fresh install boots into an empty "Untitled canvas" project; the
   last opened project id lives in localStorage.
 - Terminal and chat nodes without their own directory start in the project folder.
@@ -381,13 +392,14 @@ canvas, against Ruimte, one verdict each.
 
 In the order that makes sense, each one an issue on GitHub:
 
-1. **#5 and #6 follow-ups**: per-turn checkpoints so the changed-files card can show real diffs
-   against the working tree instead of the edit's before and after, and a third chat provider
-   (Gemini, Copilot or opencode) as the proof that the backend seam holds: it is a provider
-   value, a backend and a protocol mapper, plus one literal in `AgentKind`. The Codex backend,
-   the fold onto one `ChatSession` with `ChatBackend`s, Codex's streamed command output, its
-   unified diffs in the changed-files card, mentions, attachments and the "send Escape to the
-   app" toggle are done.
+1. **#5 and #6 follow-ups**: a third chat provider (Gemini, Copilot or opencode) as the proof
+   that the backend seam holds: it is a provider value, a backend and a protocol mapper, plus one
+   literal in `AgentKind`. The Codex backend, the fold onto one `ChatSession` with `ChatBackend`s,
+   Codex's streamed command output, its unified diffs in the changed-files card, per-turn
+   checkpoints (#12), mentions, attachments and the "send Escape to the app" toggle are done.
+   Left on the checkpoints: no way to go back to one (a restore reads as a revert of the person's
+   own work as much as the agent's), and the diff is of the whole folder, so an edit the person
+   made themselves during a turn lands in the card too.
 2. **#7 follow-ups**: a webview keeps the canvas's z-order only by being above everything, so
    a node dragged over a browser node slides under its page; the traffic-light inset is fixed,
    not measured; no Windows or Linux run yet.
