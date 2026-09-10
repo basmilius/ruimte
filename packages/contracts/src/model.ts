@@ -94,5 +94,4 @@ export const ProviderListResultSchema = z.object({
 export type ProviderListResult = z.infer<typeof ProviderListResultSchema>;
 
 /* Fills a provider's resume template; the id is quoted so a shell takes it as one word. */
-export const resumeCommandFor = (template: string, agentSessionId: string): string =>
-    template.replace('{id}', `'${agentSessionId.replaceAll("'", `'\\''`)}'`);
+export const resumeCommandFor = (template: string, agentSessionId: string): string => template.replace('{id}', `'${agentSessionId.replaceAll("'", `'\\''`)}'`);

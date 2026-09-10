@@ -44,8 +44,7 @@ export const parseQuestions = (input: unknown): ChatQuestion[] => {
 
 // What the CLI waits for on stdin, kept until `chat.approve` or `chat.answer` names the request.
 type Pending =
-    | { type: 'approval'; toolUseId: string | null; input: unknown; suggestions: unknown[] }
-    | { type: 'question'; toolUseId: string | null; input: unknown };
+    { type: 'approval'; toolUseId: string | null; input: unknown; suggestions: unknown[] } | { type: 'question'; toolUseId: string | null; input: unknown };
 
 /*
  * Claude Code's stream-json frames, in and out. Text is keyed by message id plus the ordinal of the
@@ -157,7 +156,9 @@ export class ClaudeProtocol {
 
     private handleSystem(frame: Frame, events: BackendEvent[]): void {
         if (frame.subtype === 'init') {
-            const commands = Array.isArray(frame.slash_commands) ? frame.slash_commands.filter((command): command is string => typeof command === 'string') : [];
+            const commands = Array.isArray(frame.slash_commands)
+                ? frame.slash_commands.filter((command): command is string => typeof command === 'string')
+                : [];
             this.model = str(frame.model) ?? this.model;
             events.push({ type: 'session', agentSessionId: str(frame.session_id), model: str(frame.model), slashCommands: commands });
         } else if (frame.subtype === 'task_started') {

@@ -62,7 +62,14 @@ describe('ClaudeProtocol', () => {
             protocol.handle({
                 type: 'assistant',
                 parent_tool_use_id: 'toolu_task',
-                message: { id: 'msg_3', content: [{ type: 'text', text: 'inner' }, { type: 'tool_use', id: 'toolu_5', name: 'Read', input: {} }], usage }
+                message: {
+                    id: 'msg_3',
+                    content: [
+                        { type: 'text', text: 'inner' },
+                        { type: 'tool_use', id: 'toolu_5', name: 'Read', input: {} }
+                    ],
+                    usage
+                }
             })
         ).toEqual([{ type: 'tool.started', ref: 'toolu_5', name: 'Read', input: {}, parentRef: 'toolu_task' }]);
     });

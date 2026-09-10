@@ -1,14 +1,17 @@
 import { randomBytes } from 'node:crypto';
 import { homedir } from 'node:os';
-import type { ChatConfigurePayload, ChatCreatePayload, ChatEvent, ChatInfo, ChatItem, ContextSource } from '@ruimte/contracts';
+import type { AgentKind, ChatConfigurePayload, ChatCreatePayload, ChatEvent, ChatInfo, ChatItem, ContextSource } from '@ruimte/contracts';
+import type { ChatProvider } from '../providers/provider.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionSink } from '../sessions/manager.ts';
 import { ChatSession, type ChatSendExtras } from './chat-session.ts';
 import type { ChatStore } from './chat-store.ts';
-import { CodexChatSession } from './codex-session.ts';
 import { ChatError } from './errors.ts';
-import { CODEX_CHAT_ARGS } from '../providers/codex.ts';
 import { claudeProvider } from '../providers/claude-provider.ts';
+import { codexProvider } from '../providers/codex-provider.ts';
+
+// The CLI behind each kind of chat; the registry hands out the same values to everything else.
+const PROVIDERS: Record<AgentKind, ChatProvider> = { claude: claudeProvider, codex: codexProvider };
 
 export interface ChatManagerOptions {
     providers: ProviderRegistry;
@@ -26,16 +29,12 @@ export interface ChatManagerOptions {
     codexCommand?: string[];
 }
 
-// Both speak to the manager alike; only what they spawn and how they talk to it differs.
-type AnyChatSession = ChatSession | CodexChatSession;
-
 export class ChatManager {
     private readonly providers: ProviderRegistry;
     private readonly store: ChatStore | null;
     private readonly env: Record<string, string>;
-    private readonly command: string[];
-    private readonly codexCommand: string[];
-    private readonly chats = new Map<string, AnyChatSession>();
+    private readonly commands: Record<AgentKind, string[]>;
+    private readonly chats = new Map<string, ChatSession>();
     private readonly sinks = new Map<string, SessionSink>();
     private readonly attached = new Map<string, Set<string>>();
     private readonly tokens = new Map<string, string>();
@@ -46,11 +45,13 @@ export class ChatManager {
     constructor(options: ChatManagerOptions) {
         this.providers = options.providers;
         this.store = options.store ?? null;
-        this.command = options.command ?? ['claude'];
         this.contextUrl = options.contextUrl ?? null;
         this.hasContext = options.hasContext ?? (() => false);
         this.contextSources = options.contextSources ?? (() => []);
-        this.codexCommand = options.codexCommand ?? ['codex', ...CODEX_CHAT_ARGS];
+        this.commands = {
+            claude: options.command ?? claudeProvider.command,
+            codex: options.codexCommand ?? codexProvider.command
+        };
         this.env = {};
         for (const [key, value] of Object.entries(options.env ?? process.env)) {
             // The hook variables belong to terminal sessions; a chat reports through its own stream.
@@ -109,19 +110,17 @@ export class ChatManager {
         const items = stored?.items.map(settle) ?? [];
         const token = randomBytes(24).toString('base64url');
         this.tokens.set(token, payload.chatId);
-        const shared = {
+        const session = new ChatSession({
             info,
             items,
+            provider: PROVIDERS[provider],
+            command: this.commands[provider],
             env: this.contextUrl ? { ...this.env, RUIMTE_CONTEXT_URL: this.contextUrl, RUIMTE_CONTEXT_TOKEN: token } : this.env,
             hasContext: () => this.hasContext(payload.chatId),
             contextSources: () => this.contextSources(payload.chatId),
             emit: (event: ChatEvent) => this.emit(payload.chatId, event),
             persist: () => this.persist(payload.chatId)
-        };
-        const session: AnyChatSession =
-            provider === 'codex'
-                ? new CodexChatSession({ ...shared, command: this.codexCommand, catalog })
-                : new ChatSession({ ...shared, command: this.command, provider: claudeProvider });
+        });
         this.chats.set(session.id, session);
         return session.info;
     }
@@ -200,7 +199,7 @@ export class ChatManager {
         return [...this.chats.values()].map((session) => session.info);
     }
 
-    get(chatId: string): AnyChatSession | undefined {
+    get(chatId: string): ChatSession | undefined {
         return this.chats.get(chatId);
     }
 
@@ -235,7 +234,7 @@ export class ChatManager {
         }
     }
 
-    private require(chatId: string): AnyChatSession {
+    private require(chatId: string): ChatSession {
         const session = this.chats.get(chatId);
         if (!session) {
             throw new ChatError('chat-not-found', `No chat ${chatId}`);

@@ -213,8 +213,9 @@ export class ThreadProjector {
         if (previous?.progress) {
             item.progress = previous.progress;
         }
-        if (previous?.changes) {
-            item.changes = previous.changes;
+        const changes = event.changes ?? previous?.changes;
+        if (changes) {
+            item.changes = changes;
         }
         events.push(this.thread.upsert(item));
     }
