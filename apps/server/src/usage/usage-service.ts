@@ -1,0 +1,139 @@
+import type { UsageSummaryPayload, UsageSummaryResult } from '@ruimte/contracts';
+import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import { aggregate } from './aggregate.ts';
+import { PriceBook } from './pricing.ts';
+import type { KnownProject } from './projects.ts';
+import { UsageScanner, type ScanReport } from './scanner.ts';
+import type { UsageRootPath } from './roots.ts';
+
+/* A scan this fresh answers the question the page is asking, so nothing is opened for it. */
+const SCAN_TTL_MS = 60_000;
+
+export interface UsageServiceOptions {
+    home: string;
+    /* Off with `--no-price-fetch`: the bundled table then prices everything. */
+    allowPriceFetch?: boolean;
+    /* The projects the daemon knows, so a folder can wear the name it has in the app. */
+    knownProjects(): Promise<KnownProject[]>;
+    roots?: UsageRootPath[];
+}
+
+const EMPTY_SCAN: ScanReport = { at: 0, files: 0, changedFiles: 0, durationMs: 0, roots: [] };
+
+/*
+ * What the usage page asks the daemon. It owns one scanner and one price table for every client:
+ * the transcripts are machine-wide, so a second person looking costs a second aggregation and not a
+ * second scan. The scan runs when a request finds the last one stale and, while any client has the
+ * page open, once a minute, which is what `usage.changed` announces.
+ */
+export class UsageService {
+    private readonly scanner: UsageScanner;
+    private readonly prices: PriceBook;
+    private readonly knownProjects: UsageServiceOptions['knownProjects'];
+    private readonly sinks = new Map<string, SessionSink>();
+    private readonly followers = new Set<string>();
+    private report: ScanReport = EMPTY_SCAN;
+    private failed = false;
+    private inFlight: Promise<void> | null = null;
+    private timer: ReturnType<typeof setInterval> | null = null;
+
+    constructor(options: UsageServiceOptions) {
+        this.scanner = new UsageScanner(options.home, options.roots);
+        this.prices = new PriceBook(options.home, options.allowPriceFetch ?? true);
+        this.knownProjects = options.knownProjects;
+    }
+
+    subscribe(clientId: string, sink: SessionSink): () => void {
+        this.sinks.set(clientId, sink);
+        return () => {
+            if (this.sinks.get(clientId) === sink) {
+                this.sinks.delete(clientId);
+            }
+            this.unfollow(clientId);
+        };
+    }
+
+    /* The page is open here: keep the numbers moving until it closes or the socket does. */
+    follow(clientId: string): void {
+        this.followers.add(clientId);
+        this.timer ??= setInterval(() => {
+            void this.rescan();
+        }, SCAN_TTL_MS);
+    }
+
+    unfollow(clientId: string): void {
+        this.followers.delete(clientId);
+        if (this.followers.size === 0 && this.timer !== null) {
+            clearInterval(this.timer);
+            this.timer = null;
+        }
+    }
+
+    async summary(payload: UsageSummaryPayload): Promise<UsageSummaryResult> {
+        if (Date.now() - this.report.at > SCAN_TTL_MS) {
+            await this.rescan();
+        }
+        const { buckets, models, projects, sessions } = await aggregate(this.scanner.records(), payload, this.prices, await this.knownProjects());
+        return {
+            from: payload.from,
+            to: payload.to,
+            resolution: payload.resolution,
+            timeZone: payload.timeZone,
+            buckets,
+            models,
+            projects,
+            sessions,
+            scan: {
+                at: this.report.at,
+                files: this.report.files,
+                changedFiles: this.report.changedFiles,
+                durationMs: this.report.durationMs,
+                running: this.inFlight !== null,
+                failed: this.failed
+            },
+            pricing: this.prices.pricing,
+            roots: this.report.roots
+        };
+    }
+
+    stop(): void {
+        if (this.timer !== null) {
+            clearInterval(this.timer);
+            this.timer = null;
+        }
+    }
+
+    /* One pass at a time: a request that arrives while a pass runs waits for that one's answer. */
+    private rescan(): Promise<void> {
+        this.inFlight ??= this.runScan().finally(() => {
+            this.inFlight = null;
+        });
+        return this.inFlight;
+    }
+
+    private async runScan(): Promise<void> {
+        // The price table is fetched beside the walk, so a slow answer never holds up the scan.
+        const [report] = await Promise.all([
+            this.scanner.scan().catch((e: unknown) => {
+                console.error('The usage scan failed', e);
+                return null;
+            }),
+            this.prices.ensure()
+        ]);
+        this.failed = report === null;
+        if (report === null) {
+            // The last good numbers stay on screen; only the moment of the scan is not moved on.
+            return;
+        }
+        this.report = report;
+        if (report.changedFiles > 0) {
+            this.emit({ event: 'usage.changed', payload: { scannedAt: report.at } });
+        }
+    }
+
+    private emit(event: SessionEvent): void {
+        for (const sink of this.sinks.values()) {
+            sink(event);
+        }
+    }
+}

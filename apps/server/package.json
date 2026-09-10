@@ -8,7 +8,8 @@
     "start": "bun src/main.ts",
     "typecheck": "tsc --noEmit",
     "smoke": "bun src/smoke.ts",
-        "compile": "bun scripts/compile.ts"
+    "compile": "bun scripts/compile.ts",
+    "snapshot-prices": "bun scripts/snapshot-prices.ts"
   },
   "dependencies": {
     "@ruimte/contracts": "workspace:*",
