@@ -13,6 +13,7 @@ export const MONO_FONTS = [
 export type MonoFontId = (typeof MONO_FONTS)[number]['id'];
 
 export const FONT_SIZE_RANGE = { min: 10, max: 20, step: 1 } as const;
+export const INTERFACE_FONT_SIZE_RANGE = { min: 12, max: 20, step: 1 } as const;
 
 export interface Settings {
     /* One of the node accents, or null for the theme's own accent. */
@@ -20,6 +21,9 @@ export interface Settings {
     font: MonoFontId;
     /* Terminal font size in px; every terminal refits when it changes. */
     fontSize: number;
+    /* The root font size in px, so the rem-based interface scales with it. Code and the terminal
+       keep their own absolute sizes and stay put. */
+    interfaceFontSize: number;
 }
 
 interface SettingsStore extends Settings {
@@ -28,20 +32,25 @@ interface SettingsStore extends Settings {
     update(patch: Partial<Settings>): void;
 }
 
-export const DEFAULT_SETTINGS: Settings = { accent: null, font: 'system', fontSize: 13 };
+export const DEFAULT_SETTINGS: Settings = { accent: null, font: 'system', fontSize: 13, interfaceFontSize: 16 };
 
 // Rounded as well as clamped: the stepper used to move in halves, so a browser can still hand back
-// a half pixel from before, and the terminal renders sharpest on a whole one.
-const clampFontSize = (value: unknown): number => {
-    const size = typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : DEFAULT_SETTINGS.fontSize;
-    return Math.min(FONT_SIZE_RANGE.max, Math.max(FONT_SIZE_RANGE.min, size));
+// a half pixel from before, and both text and the terminal render sharpest on a whole one.
+const clampSize = (value: unknown, range: { min: number; max: number }, fallback: number): number => {
+    const size = typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : fallback;
+    return Math.min(range.max, Math.max(range.min, size));
 };
 
 const read = (): Settings => {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
         const stored = raw ? (JSON.parse(raw) as Partial<Settings>) : {};
-        return { ...DEFAULT_SETTINGS, ...stored, fontSize: clampFontSize(stored.fontSize) };
+        return {
+            ...DEFAULT_SETTINGS,
+            ...stored,
+            fontSize: clampSize(stored.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize),
+            interfaceFontSize: clampSize(stored.interfaceFontSize, INTERFACE_FONT_SIZE_RANGE, DEFAULT_SETTINGS.interfaceFontSize)
+        };
     } catch {
         return DEFAULT_SETTINGS;
     }
@@ -50,6 +59,7 @@ const read = (): Settings => {
 /* The few tokens a person may change are set on the root, over the theme's own values. */
 const apply = (settings: Settings): void => {
     const root = document.documentElement.style;
+    root.setProperty('font-size', `${settings.interfaceFontSize}px`);
     const accent = NODE_ACCENTS.find((entry) => entry.id === settings.accent)?.color;
     if (accent) {
         root.setProperty('--accent', accent);
@@ -75,9 +85,10 @@ export const useSettings = create<SettingsStore>((set, get) => {
         ...initial,
         version: 0,
         update(patch) {
-            const { accent, font, fontSize } = get();
-            const next: Settings = { accent, font, fontSize, ...patch };
-            next.fontSize = clampFontSize(next.fontSize);
+            const { accent, font, fontSize, interfaceFontSize } = get();
+            const next: Settings = { accent, font, fontSize, interfaceFontSize, ...patch };
+            next.fontSize = clampSize(next.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize);
+            next.interfaceFontSize = clampSize(next.interfaceFontSize, INTERFACE_FONT_SIZE_RANGE, DEFAULT_SETTINGS.interfaceFontSize);
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
             } catch {
