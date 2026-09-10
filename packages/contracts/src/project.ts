@@ -163,10 +163,40 @@ export const ProjectDocumentSchema = ProjectContentSchema.extend({
 });
 export type ProjectDocument = z.infer<typeof ProjectDocumentSchema>;
 
-// Per machine, never in the shared file: where the camera was and what had focus.
+// The surfaces beside the canvas that can be up; the toolbar has a button per kind.
+export const ProjectPanelKindSchema = z.enum(['files', 'git']);
+export type ProjectPanelKind = z.infer<typeof ProjectPanelKindSchema>;
+
+// One file the preview has open. Whether it is edited is view state and stays out of the file.
+export const ProjectFileTabSchema = z.object({
+    path: z.string().min(1),
+    pinned: z.boolean()
+});
+export type ProjectFileTab = z.infer<typeof ProjectFileTabSchema>;
+
+/*
+ * How the panels around the canvas stood when this project was last on screen. Every field is
+ * optional on its own, so a local file written before the panels moved in here still parses and
+ * a field that is missing falls back to what the app defaults to.
+ */
+export const ProjectPanelsSchema = z.object({
+    panel: z.object({ open: z.boolean(), kind: ProjectPanelKindSchema }).optional(),
+    preview: z.object({ open: z.boolean() }).optional(),
+    // Whole pixels. Absent means the panel opens at the width the app picks for it.
+    panelWidth: z.number().int().positive().optional(),
+    previewWidth: z.number().int().positive().optional(),
+    tabs: z.array(ProjectFileTabSchema).optional(),
+    activeTab: z.string().nullable().optional(),
+    // What the file tree had open, the way the tree names a directory: relative, POSIX, trailing slash.
+    expandedDirs: z.array(z.string()).optional()
+});
+export type ProjectPanels = z.infer<typeof ProjectPanelsSchema>;
+
+// Per machine, never in the shared file: where the camera was, what had focus, how the panels stood.
 export const ProjectLocalSchema = z.object({
     camera: z.object({ x: z.number(), y: z.number(), zoom: z.number().positive() }).nullable(),
-    focusedNodeId: z.string().nullable()
+    focusedNodeId: z.string().nullable(),
+    panels: ProjectPanelsSchema.optional()
 });
 export type ProjectLocal = z.infer<typeof ProjectLocalSchema>;
 

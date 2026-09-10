@@ -90,6 +90,21 @@ export const buildTreeInput = (root: string, cache: EntryCache, showHidden: bool
    diffs what it knows against what the model says and loads the difference. */
 export const newlyExpanded = (before: ReadonlySet<string>, after: ReadonlySet<string>): string[] => [...after].filter((path) => !before.has(path));
 
+/*
+ * What is open after the tree reported itself: the directories it says are open, plus the ones it
+ * has not heard of yet. A directory remembered from the last visit is not in the tree until its
+ * parent has been listed, and dropping it there would collapse it the moment the listing arrives.
+ */
+export const mergeExpanded = (remembered: ReadonlySet<string>, reported: ReadonlySet<string>, known: ReadonlySet<string>): Set<string> => {
+    const merged = new Set(reported);
+    for (const path of remembered) {
+        if (!known.has(path)) {
+            merged.add(path);
+        }
+    }
+    return merged;
+};
+
 export interface SortRow {
     isDirectory: boolean;
     /* The path split on separators; `src/index.ts` is two segments, the directory `src/` is one. */

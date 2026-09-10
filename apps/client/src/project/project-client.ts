@@ -1,6 +1,7 @@
 import type { ProjectContent, ProjectDocument, ProjectIconChoice, ProjectLocal, ProjectSummary } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
+import type { PanelsPort } from './panels-port';
 
 const LAST_PROJECT_KEY = 'ruimte.lastProject';
 
@@ -51,12 +52,13 @@ const isConnectionError = (e: unknown): boolean => e instanceof TransportError &
 
 /*
  * Keeps the canvas on screen and the project file in step. Edits save after a short pause;
- * the camera goes to the machine-local file on its own, slower clock. A change that arrives
- * from disk replaces the canvas when nothing is unsaved, and otherwise waits for a decision.
+ * the camera and the panels go to the machine-local file on their own, slower clock. A change that
+ * arrives from disk replaces the canvas when nothing is unsaved, and otherwise waits for a decision.
  */
 export class ProjectClient {
     private readonly transport: Transport;
     private readonly canvas: CanvasAccess;
+    private readonly panels: PanelsPort;
     private readonly sink: ProjectSink;
     private readonly storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null;
     private readonly saveDelayMs: number;
@@ -67,9 +69,10 @@ export class ProjectClient {
     private saving: Promise<void> | null = null;
     private booted = false;
 
-    constructor(transport: Transport, canvas: CanvasAccess, sink: ProjectSink, options: ProjectClientOptions = {}) {
+    constructor(transport: Transport, canvas: CanvasAccess, panels: PanelsPort, sink: ProjectSink, options: ProjectClientOptions = {}) {
         this.transport = transport;
         this.canvas = canvas;
+        this.panels = panels;
         this.sink = sink;
         this.storage = options.storage ?? (typeof localStorage === 'undefined' ? null : localStorage);
         this.saveDelayMs = options.saveDelayMs ?? 400;
@@ -78,7 +81,8 @@ export class ProjectClient {
             transport.on('project.changed', ({ projectId, document }) => this.onChanged(projectId, document)),
             transport.on('project.summary', ({ summary }) => this.applySummary(summary)),
             transport.subscribeStatus((status) => this.onStatus(status)),
-            canvas.subscribe((state, previous) => this.onCanvas(state, previous))
+            canvas.subscribe((state, previous) => this.onCanvas(state, previous)),
+            panels.subscribe(() => this.scheduleLocal())
         );
         if (transport.status === 'open') {
             void this.boot();
@@ -107,11 +111,13 @@ export class ProjectClient {
     async closeProject(): Promise<void> {
         const current = this.sink.getState().current;
         await this.flush();
+        this.flushLocal();
         if (current) {
             await this.transport.request('project.close', { projectId: current.projectId }).catch(() => undefined);
         }
         this.storage?.removeItem(LAST_PROJECT_KEY);
         this.canvas.getState().loadDocument(null, null);
+        this.panels.load(null, undefined);
         this.sink.setCurrent(null, 0);
     }
 
@@ -236,12 +242,15 @@ export class ProjectClient {
         this.sink.setSwitching(true);
         try {
             await this.flush();
+            this.flushLocal();
             const previous = this.sink.getState().current;
             if (previous && previous.projectId !== payload.projectId) {
                 await this.transport.request('project.close', { projectId: previous.projectId }).catch(() => undefined);
             }
             const result = await this.transport.request('project.open', payload);
             this.canvas.getState().loadDocument(result.document, result.local);
+            // In the same tick as the canvas, so the panels never paint the project that just left.
+            this.panels.load(result.summary.projectId, result.local.panels);
             this.sink.setChosenIcon(result.document.icon ?? null);
             this.sink.setCurrent(result.summary, result.document.rev);
             this.storage?.setItem(LAST_PROJECT_KEY, result.summary.projectId);
@@ -280,15 +289,28 @@ export class ProjectClient {
         }
         this.localTimer = setTimeout(() => {
             this.localTimer = null;
-            const current = this.sink.getState().current;
-            if (!current) {
-                return;
-            }
-            const { camera, mode } = this.canvas.getState();
-            void this.transport
-                .request('project.save-local', { projectId: current.projectId, local: { camera, focusedNodeId: mode.kind === 'node' ? mode.nodeId : null } })
-                .catch(() => undefined);
+            this.saveLocal();
         }, this.localDelayMs);
+    }
+
+    /* Writes what is pending now, so a project that is on its way out takes its own state with it. */
+    private flushLocal(): void {
+        if (!this.localTimer) {
+            return;
+        }
+        clearTimeout(this.localTimer);
+        this.localTimer = null;
+        this.saveLocal();
+    }
+
+    private saveLocal(): void {
+        const current = this.sink.getState().current;
+        if (!current) {
+            return;
+        }
+        const { camera, mode } = this.canvas.getState();
+        const local: ProjectLocal = { camera, focusedNodeId: mode.kind === 'node' ? mode.nodeId : null, panels: this.panels.export() };
+        void this.transport.request('project.save-local', { projectId: current.projectId, local }).catch(() => undefined);
     }
 
     private save(): Promise<void> {

@@ -12,7 +12,17 @@ import type { FileTree as FileTreeModel, FileTreeDirectoryHandle } from '@pierre
 import { FileTree, useFileTree } from '@pierre/trees/react';
 import { ChevronsDownUp, Copy, CornerUpRight, Eye, EyeOff, Folder, FolderOpen, RefreshCw, Search } from 'lucide-react';
 import { MENTION_DRAG_TYPE } from '@/chat/mentions';
-import { LOADING_NAME, absoluteOf, buildTreeInput, compareRows, isDirectoryPath, newlyExpanded, treePathOf, type EntryCache } from '@/shell/panels/files-tree';
+import {
+    LOADING_NAME,
+    absoluteOf,
+    buildTreeInput,
+    compareRows,
+    isDirectoryPath,
+    mergeExpanded,
+    newlyExpanded,
+    treePathOf,
+    type EntryCache
+} from '@/shell/panels/files-tree';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
@@ -61,7 +71,6 @@ const rowPathOf = (event: { nativeEvent: Event }): string | null => {
  */
 export function FilesPanel() {
     const folder = useProject((s) => s.current?.folder ?? null);
-    const projectId = useProject((s) => s.current?.projectId ?? null);
     const platform = useServer((s) => s.platform);
     const reachability = useServer((s) => s.reachability);
     const machine = useServer((s) => s.label);
@@ -75,7 +84,7 @@ export function FilesPanel() {
     const [matches, setMatches] = useState<readonly string[]>([]);
     const cacheRef = useRef<EntryCache>(EMPTY_CACHE);
     const expandedRef = useRef<ReadonlySet<string>>(new Set());
-    const directoriesRef = useRef<readonly string[]>([]);
+    const directoriesRef = useRef<ReadonlySet<string>>(new Set());
     const selectionRef = useRef<readonly string[]>([]);
     const menuPathRef = useRef<string | null>(null);
     const cache = listed.folder === folder ? listed.byDir : EMPTY_CACHE;
@@ -133,11 +142,8 @@ export function FilesPanel() {
     }, [cache]);
 
     useEffect(() => {
-        useFiles.getState().load(projectId);
-    }, [projectId]);
-
-    useEffect(() => {
-        expandedRef.current = new Set();
+        // What the project remembered is where the tree starts, and what it has to fetch to get there.
+        expandedRef.current = new Set(useFiles.getState().expandedDirs);
         if (!folder) {
             return;
         }
@@ -145,7 +151,12 @@ export function FilesPanel() {
         void transport
             .request('fs.watch', { path: folder })
             .catch(() => undefined)
-            .then(() => load(folder));
+            .then(() => {
+                void load(folder);
+                for (const dir of expandedRef.current) {
+                    void load(absoluteOf(folder, dir));
+                }
+            });
         return () => {
             void transport.request('fs.unwatch', { path: folder }).catch(() => undefined);
         };
@@ -171,8 +182,8 @@ export function FilesPanel() {
         const { paths, ignored } = buildTreeInput(folder, cache, showHidden);
         model.resetPaths(paths, { initialExpandedPaths: [...expandedRef.current] });
         model.setGitStatus(ignored.map((path) => ({ path, status: 'ignored' as const })));
-        directoriesRef.current = [...cache.values()].flatMap((entries) =>
-            entries.filter((entry) => entry.kind === 'directory').map((entry) => treePathOf(folder, entry))
+        directoriesRef.current = new Set(
+            [...cache.values()].flatMap((entries) => entries.filter((entry) => entry.kind === 'directory').map((entry) => treePathOf(folder, entry)))
         );
     }, [cache, folder, model, showHidden]);
 
@@ -186,14 +197,16 @@ export function FilesPanel() {
             return;
         }
         return model.subscribe(() => {
-            const open = new Set<string>();
+            const reported = new Set<string>();
             for (const dir of directoriesRef.current) {
                 if (directoryHandle(model, dir)?.isExpanded()) {
-                    open.add(dir);
+                    reported.add(dir);
                 }
             }
+            const open = mergeExpanded(expandedRef.current, reported, directoriesRef.current);
             const opened = newlyExpanded(expandedRef.current, open);
             expandedRef.current = open;
+            useFiles.getState().setExpandedDirs([...open]);
             for (const path of opened) {
                 const absolute = absoluteOf(folder, path);
                 if (!cacheRef.current.has(absolute)) {
@@ -250,9 +263,12 @@ export function FilesPanel() {
     };
 
     const collapseAll = (): void => {
+        // Emptied first, so a directory that is remembered but not in the tree yet closes with the rest.
+        expandedRef.current = new Set();
         for (const dir of directoriesRef.current) {
             directoryHandle(model, dir)?.collapse();
         }
+        useFiles.getState().setExpandedDirs([]);
     };
 
     const refresh = (): void => {

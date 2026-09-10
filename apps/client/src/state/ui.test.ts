@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { parsePanel, parsePreview, serializePanel, serializePreview, useUi } from './ui';
+import { parsePanel, parsePreview, parseWidth, useUi } from './ui';
 
 describe('ui', () => {
     beforeEach(() => {
@@ -31,16 +31,12 @@ describe('ui', () => {
         expect(useUi.getState().panel).toEqual({ open: true, kind: 'git' });
     });
 
-    // The store reads and writes localStorage, which `bun test` has none of; the round trip is
-    // what the reload depends on, so the two halves are tested on their own.
-    test('the panel that was up survives the round trip through storage', () => {
-        for (const panel of [
-            { open: true, kind: 'files' as const },
-            { open: true, kind: 'git' as const },
-            { open: false, kind: 'git' as const }
-        ]) {
-            expect(parsePanel(serializePanel(panel))).toEqual(panel);
-        }
+    // The panels live in the project's local file now; the keys below are only what a project that
+    // has none of its own starts from, so reading them is the half that still matters.
+    test('the panel the legacy key names is what a project without panels starts from', () => {
+        expect(parsePanel('git')).toEqual({ open: true, kind: 'git' });
+        expect(parsePanel('closed:git')).toEqual({ open: false, kind: 'git' });
+        expect(parsePanel('files')).toEqual({ open: true, kind: 'files' });
     });
 
     test('the preview opens and closes on its own, next to whichever panel is up', () => {
@@ -54,12 +50,14 @@ describe('ui', () => {
         expect(useUi.getState().preview).toEqual({ open: false });
     });
 
-    test('the preview that was up survives the round trip through storage', () => {
-        for (const preview of [{ open: true }, { open: false }]) {
-            expect(parsePreview(serializePreview(preview))).toEqual(preview);
-        }
+    test('only an open preview is stored as open, and a width has to be a positive number', () => {
+        expect(parsePreview('open')).toEqual({ open: true });
         expect(parsePreview(null)).toEqual({ open: false });
         expect(parsePreview('yes')).toEqual({ open: false });
+        expect(parseWidth('540')).toBe(540);
+        expect(parseWidth(null)).toBeNull();
+        expect(parseWidth('wide')).toBeNull();
+        expect(parseWidth('-10')).toBeNull();
     });
 
     test('nothing stored, or something else entirely, lands on a closed files panel', () => {
