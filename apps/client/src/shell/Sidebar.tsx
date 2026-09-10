@@ -109,8 +109,13 @@ export function Sidebar() {
             style={{ width: open ? SIDEBAR_WIDTH_PX : 0 }}
         >
             <div className="flex h-full flex-col border-r border-border bg-surface" style={{ width: SIDEBAR_WIDTH_PX }}>
-                <div className="app-drag flex h-12 items-center gap-2 pr-3" style={{ paddingLeft: inset ?? STRIP_PADDING_PX }}>
+                <div className="app-drag relative flex h-12 items-center gap-2 pr-3" style={{ paddingLeft: inset ?? STRIP_PADDING_PX }}>
                     <SidebarToggle />
+                    {/* The mark centers in what the traffic lights leave of the strip, so the toggle
+                        and the search button beside it cannot pull it off center. */}
+                    <span className="pointer-events-none absolute inset-y-0 right-0 grid place-items-center" style={{ left: inset ?? STRIP_PADDING_PX }}>
+                        <span className="grid h-6 w-6 place-items-center rounded-md bg-accent text-xs font-semibold text-accent-text">R</span>
+                    </span>
                     <span className="grow" />
                     <Tooltip label="Search" kbd="⌘K">
                         <button className="icon-btn h-7 w-7" onClick={() => useUi.getState().setPaletteOpen(true)}>
