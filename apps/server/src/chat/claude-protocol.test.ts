@@ -301,4 +301,19 @@ describe('ClaudeProtocol', () => {
         expect(protocol.handle({ type: 'rate_limit_event' })).toEqual([]);
         expect(protocol.handle('junk')).toEqual([]);
     });
+
+    test('what a turn says about the plan leaves the chat as a limits event', () => {
+        const protocol = new ClaudeProtocol();
+        expect(
+            protocol.handle({ type: 'rate_limit_event', rate_limit_info: { rateLimitType: 'five_hour', utilization: 0.31, resetsAt: 1_789_000_000 } })
+        ).toEqual([
+            {
+                type: 'limits',
+                update: {
+                    kind: 'claude',
+                    windows: [{ id: 'five_hour', label: 'Session', kind: 'session', durationMs: 18_000_000, used: 0.31, resetsAt: 1_789_000_000_000 }]
+                }
+            }
+        ]);
+    });
 });

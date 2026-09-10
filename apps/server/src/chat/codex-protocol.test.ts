@@ -313,3 +313,27 @@ describe('reasoning', () => {
         expect(protocol.handle({ method: 'item/completed', params: { item: { type: 'reasoning', id: 'r2', summary: [], content: [] } } })).toEqual([]);
     });
 });
+
+describe('rate limits', () => {
+    test('what a turn says about the plan leaves the chat as a limits event', () => {
+        const protocol = new CodexProtocol(0);
+        const params = { rateLimits: { limitId: 'codex', planType: 'pro', primary: { usedPercent: 96, windowDurationMins: 10080, resetsAt: 1_789_453_149 } } };
+        expect(protocol.handle({ method: 'account/rateLimits/updated', params })).toEqual([
+            {
+                type: 'limits',
+                update: {
+                    kind: 'codex',
+                    plan: 'pro',
+                    windows: [{ id: 'primary', kind: 'weekly', label: 'Weekly', used: 0.96, resetsAt: 1_789_453_149_000, durationMs: 604_800_000 }]
+                }
+            }
+        ]);
+    });
+
+    test('the budget of one model is not the plan', () => {
+        const protocol = new CodexProtocol(0);
+        expect(
+            protocol.handle({ method: 'account/rateLimits/updated', params: { rateLimits: { limitId: 'codex_spark', primary: { usedPercent: 3 } } } })
+        ).toEqual([]);
+    });
+});

@@ -1,4 +1,5 @@
 import type { ChatQuestion, ChatSubagentUsage } from '@ruimte/contracts';
+import { readClaudeEvent } from '../usage/limits/normalize.ts';
 import type { ApprovalDecision, BackendEvent } from './backend.ts';
 
 type Frame = Record<string, unknown>;
@@ -103,6 +104,14 @@ export class ClaudeProtocol {
             case 'tool_progress':
                 this.handleToolProgress(frame, events);
                 break;
+            case 'rate_limit_event': {
+                // The plan's own numbers, streamed while a turn runs; the usage monitor keeps them.
+                const update = readClaudeEvent(frame.rate_limit_info);
+                if (update !== null) {
+                    events.push({ type: 'limits', update });
+                }
+                break;
+            }
             default:
                 break;
         }
