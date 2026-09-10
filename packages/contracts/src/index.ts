@@ -32,7 +32,21 @@ import {
     FsSearchResultSchema,
     FsWatchPayloadSchema
 } from './fs.ts';
-import { WorktreeAddPayloadSchema, WorktreeAddResultSchema, WorktreeListPayloadSchema, WorktreeListResultSchema, WorktreeRemovePayloadSchema } from './git.ts';
+import {
+    GitCwdPayloadSchema,
+    GitDiffPayloadSchema,
+    GitDiffResultSchema,
+    GitDiscardPayloadSchema,
+    GitDiscardResultSchema,
+    GitStagePayloadSchema,
+    GitStatusEventSchema,
+    GitStatusSchema,
+    WorktreeAddPayloadSchema,
+    WorktreeAddResultSchema,
+    WorktreeListPayloadSchema,
+    WorktreeListResultSchema,
+    WorktreeRemovePayloadSchema
+} from './git.ts';
 import { AuthRevokePayloadSchema, AuthSessionsResultSchema, EndpointInfoSchema, PairingTokenResultSchema } from './auth.ts';
 import { ContextSetPayloadSchema } from './context.ts';
 import { ProviderListResultSchema } from './model.ts';
@@ -125,6 +139,12 @@ export const REQUEST_SCHEMAS = {
     'git.worktree-add': { payload: WorktreeAddPayloadSchema, result: WorktreeAddResultSchema },
     'git.worktree-list': { payload: WorktreeListPayloadSchema, result: WorktreeListResultSchema },
     'git.worktree-remove': { payload: WorktreeRemovePayloadSchema, result: EmptySchema },
+    'git.status': { payload: GitCwdPayloadSchema, result: GitStatusSchema },
+    'git.watch': { payload: GitCwdPayloadSchema, result: EmptySchema },
+    'git.unwatch': { payload: GitCwdPayloadSchema, result: EmptySchema },
+    'git.diff': { payload: GitDiffPayloadSchema, result: GitDiffResultSchema },
+    'git.stage': { payload: GitStagePayloadSchema, result: EmptySchema },
+    'git.discard': { payload: GitDiscardPayloadSchema, result: GitDiscardResultSchema },
     'context.set': { payload: ContextSetPayloadSchema, result: EmptySchema },
     'endpoint.info': { payload: EmptySchema, result: EndpointInfoSchema },
     'auth.sessions': { payload: EmptySchema, result: AuthSessionsResultSchema },
@@ -152,7 +172,8 @@ export const EVENT_SCHEMAS = {
     'chat.event': ChatEventEnvelopeSchema,
     'project.changed': ProjectChangedEventSchema,
     'project.summary': ProjectSummaryEventSchema,
-    'fs.changed': FsChangedEventSchema
+    'fs.changed': FsChangedEventSchema,
+    'git.status': GitStatusEventSchema
 } as const satisfies Record<string, z.ZodType>;
 
 export type EventType = keyof typeof EVENT_SCHEMAS;

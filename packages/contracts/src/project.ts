@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
+import { GitDiffScopeSchema } from './git.ts';
 import { RuntimeModeSchema } from './model.ts';
 
 export const ProjectIdSchema = z.string().min(1);
@@ -167,10 +168,22 @@ export type ProjectDocument = z.infer<typeof ProjectDocumentSchema>;
 export const ProjectPanelKindSchema = z.enum(['files', 'git']);
 export type ProjectPanelKind = z.infer<typeof ProjectPanelKindSchema>;
 
+// A tab that shows the file's diff instead of the file itself, so both can be open at once.
+export const ProjectFileTabViewSchema = z.object({
+    kind: z.literal('diff'),
+    // The checkout the diff is read from; a bound group's worktree is not the project folder.
+    cwd: z.string().min(1),
+    scope: GitDiffScopeSchema,
+    staged: z.boolean()
+});
+export type ProjectFileTabView = z.infer<typeof ProjectFileTabViewSchema>;
+
 // One file the preview has open. Whether it is edited is view state and stays out of the file.
 export const ProjectFileTabSchema = z.object({
     path: z.string().min(1),
-    pinned: z.boolean()
+    pinned: z.boolean(),
+    // Absent means the tab shows the file; the diff tab of the same file carries this.
+    view: ProjectFileTabViewSchema.optional()
 });
 export type ProjectFileTab = z.infer<typeof ProjectFileTabSchema>;
 
@@ -188,7 +201,9 @@ export const ProjectPanelsSchema = z.object({
     tabs: z.array(ProjectFileTabSchema).optional(),
     activeTab: z.string().nullable().optional(),
     // What the file tree had open, the way the tree names a directory: relative, POSIX, trailing slash.
-    expandedDirs: z.array(z.string()).optional()
+    expandedDirs: z.array(z.string()).optional(),
+    // The git panel's own state; the scope is what a diff tab opens in.
+    git: z.object({ scope: GitDiffScopeSchema }).optional()
 });
 export type ProjectPanels = z.infer<typeof ProjectPanelsSchema>;
 
