@@ -62,7 +62,8 @@ interface ModelPickerProps {
  * Which model answers, in the shape T3 Code uses: the provider's mark plus the model's short name
  * as the trigger, a search field over the popup, one group per provider and the legacy models
  * behind an expander. Before the first message the list carries every installed CLI, so picking
- * another provider's model is also how a chat picks its provider.
+ * another provider's model is also how a chat picks its provider. A chat bound to one CLI passes
+ * only that CLI, which drops the group headers and leaves its own catalog to choose from.
  */
 export function ModelPicker({ providers, provider, selection, open, onOpenChange, onChange }: ModelPickerProps) {
     const [query, setQuery] = useState('');
@@ -222,18 +223,6 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                 </Popover.Positioner>
             </Popover.Portal>
         </Popover.Root>
-    );
-}
-
-/* A chat opened for one CLI shows what it runs on; there is nothing to choose, so there is no popup. */
-export function ModelBadge({ provider, providerName, model }: { provider: AgentKind; providerName: string; model: string }) {
-    return (
-        <Tooltip label={`${providerName} · ${model}. This chat was opened for ${providerName}.`}>
-            <span className="flex h-7 shrink-0 cursor-default items-center gap-1 whitespace-nowrap rounded-md px-2 text-xs text-text-muted">
-                <AgentIcon kind={provider} size={12} />
-                <span className="max-w-40 truncate">{model}</span>
-            </span>
-        </Tooltip>
     );
 }
 
