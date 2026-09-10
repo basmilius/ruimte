@@ -17,6 +17,7 @@ import {
 } from '@ruimte/contracts';
 import { toWorld } from '@/canvas/math';
 import { NODE_SIZE, nextId, useCanvas } from '@/state/canvas';
+import { useDrawing } from '@/state/drawing';
 
 export const emptyCanvasView = (id: string, name: string): ProjectCanvasView => ({
     kind: 'canvas',
@@ -75,7 +76,11 @@ interface DocumentState {
 export type StandaloneRequest =
     { kind: 'chat' | 'terminal'; name: string; id?: string; node: StandaloneNode } | { kind: 'browser'; name: string; id?: string; url: string };
 
-const localOfCanvas = (): ProjectViewLocal => {
+/* Where the view that is on screen stands. A drawing keeps its camera in its own store. */
+const localOfActive = (view: ProjectView | undefined): ProjectViewLocal => {
+    if (view && isDrawingView(view)) {
+        return { camera: useDrawing.getState().camera, focusedNodeId: null };
+    }
     const { camera, mode } = useCanvas.getState();
     return { camera, focusedNodeId: mode.kind === 'node' ? mode.nodeId : null };
 };
@@ -156,7 +161,8 @@ export const useDocument = create<DocumentState>((set, get) => ({
             return;
         }
         const views = state.exportViews();
-        const viewLocal = state.activeViewId ? { ...state.viewLocal, [state.activeViewId]: localOfCanvas() } : state.viewLocal;
+        const previous = state.views.find((view) => view.id === state.activeViewId);
+        const viewLocal = state.activeViewId ? { ...state.viewLocal, [state.activeViewId]: localOfActive(previous) } : state.viewLocal;
         const canvas = isCanvasView(next);
         // A view of its own has no canvas to fall back to, so the keyboard starts inside its body.
         set({ views, viewLocal, activeViewId: id, lastCanvasViewId: canvas ? id : state.lastCanvasViewId, bodyFocused: !canvas });
@@ -394,10 +400,11 @@ export const useDocument = create<DocumentState>((set, get) => ({
     },
 
     exportLocal() {
-        const { activeViewId, viewLocal } = get();
+        const { activeViewId, viewLocal, views } = get();
+        const active = views.find((view) => view.id === activeViewId);
         return {
             activeViewId,
-            views: activeViewId ? { ...viewLocal, [activeViewId]: localOfCanvas() } : viewLocal
+            views: activeViewId ? { ...viewLocal, [activeViewId]: localOfActive(active) } : viewLocal
         };
     }
 }));

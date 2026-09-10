@@ -1,4 +1,4 @@
-import { isCanvasView, isOpenableView, isSessionView, MAIN_VIEW_NAME, type NodeKind, type ProjectView } from '@ruimte/contracts';
+import { isCanvasView, isDrawingView, isOpenableView, isSessionView, MAIN_VIEW_NAME, type NodeKind, type ProjectView } from '@ruimte/contracts';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useDocument, viewOfNode } from '@/state/document';
@@ -41,7 +41,16 @@ export const newSeparatorView = (): string => useDocument.getState().addSeparato
 export const newDrawingView = (): string => useDocument.getState().addDrawingView(freeName(useDocument.getState().views, 'Drawing'));
 
 /* Copies a canvas or a drawing view. A drawing's elements are copied by the daemon, not here. */
-export const duplicateViewOf = (id: string): string | null => useDocument.getState().duplicateView(id);
+export const duplicateViewOf = (id: string): string | null => {
+    const source = useDocument.getState().views.find((view) => view.id === id);
+    const copyId = useDocument.getState().duplicateView(id);
+    if (copyId && source && isDrawingView(source)) {
+        // Loaded here rather than at the top: this module is the actions, and importing the clients
+        // would pull the transport into everything that only wants to know what a view holds.
+        void import('@/project').then(({ drawingClient }) => drawingClient.copy(id, copyId));
+    }
+    return copyId;
+};
 
 /* The nth view, one-based, for Cmd+1 through Cmd+9. Separators are lines, so they are not counted. */
 export const viewAtIndex = (index: number): ProjectView | undefined => useDocument.getState().views.filter(isOpenableView)[index - 1];

@@ -54,10 +54,19 @@ export interface ProjectSink {
     };
 }
 
+/* The slice of the drawing store the client watches: its camera is machine state like the canvas's. */
+interface DrawingAccess {
+    getState(): { camera: { x: number; y: number; zoom: number }; loading: boolean };
+    subscribe: StoreApi<DrawingAccess extends { getState(): infer S } ? S : never>['subscribe'];
+}
+
 interface ProjectClientOptions {
     saveDelayMs?: number;
     localDelayMs?: number;
     storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
+    drawing?: DrawingAccess;
+    /* Runs before a project is swapped in, so the drawing on screen reaches its own file first. */
+    beforeSwitch?: () => Promise<void>;
 }
 
 const isConnectionError = (e: unknown): boolean => e instanceof TransportError && (e.code === 'not-connected' || e.code === 'disconnected');
@@ -75,6 +84,7 @@ export class ProjectClient {
     private readonly storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null;
     private readonly saveDelayMs: number;
     private readonly localDelayMs: number;
+    private readonly beforeSwitch: () => Promise<void>;
     private readonly unsubscribe: Array<() => void> = [];
     private saveTimer: ReturnType<typeof setTimeout> | null = null;
     private localTimer: ReturnType<typeof setTimeout> | null = null;
@@ -96,13 +106,23 @@ export class ProjectClient {
         this.storage = options.storage ?? (typeof localStorage === 'undefined' ? null : localStorage);
         this.saveDelayMs = options.saveDelayMs ?? 400;
         this.localDelayMs = options.localDelayMs ?? 1000;
+        this.beforeSwitch = options.beforeSwitch ?? (() => Promise.resolve());
         this.unsubscribe.push(
             transport.on('project.changed', ({ projectId, document }) => this.onChanged(projectId, document)),
             transport.on('project.summary', ({ summary }) => this.applySummary(summary)),
             transport.subscribeStatus((status) => this.onStatus(status)),
             canvas.subscribe((state, previous) => this.onCanvas(state, previous)),
             documents.subscribe((state, previous) => this.onDocument(state, previous)),
-            panels.subscribe(() => this.scheduleLocal())
+            panels.subscribe(() => this.scheduleLocal()),
+            ...(options.drawing
+                ? [
+                      options.drawing.subscribe((state, previous) => {
+                          if (!state.loading && !previous.loading && state.camera !== previous.camera) {
+                              this.scheduleLocal();
+                          }
+                      })
+                  ]
+                : [])
         );
         if (transport.status === 'open') {
             void this.boot();
@@ -261,6 +281,7 @@ export class ProjectClient {
     private async open(payload: { projectId?: string; folder?: string; name?: string }): Promise<void> {
         this.sink.setSwitching(true);
         try {
+            await this.beforeSwitch();
             await this.flush();
             this.flushLocal();
             const previous = this.sink.getState().current;
