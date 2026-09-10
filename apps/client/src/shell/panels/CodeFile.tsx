@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { WrapText } from 'lucide-react';
 import type { FsReadText } from '@ruimte/contracts';
+import { FileScroll } from '@/shell/panels/FileScroll';
 import { highlightCode } from '@/shell/panels/highlight';
 import { useTheme } from '@/state/theme';
 import { Icon } from '@/ui/Icon';
@@ -127,11 +128,11 @@ export function CodeFile({ read, toolbarStart }: CodeFileProps) {
                     </button>
                 </Tooltip>
             </div>
-            <div className="file-code min-h-0 grow overflow-auto" data-wrap={wrap}>
+            <FileScroll className="file-code" data-wrap={wrap}>
                 {chunks.map((chunk) => (
                     <CodeChunk key={chunk.start} code={chunk.code} lines={chunk.lines} start={chunk.start} language={language} theme={theme} />
                 ))}
-            </div>
+            </FileScroll>
         </div>
     );
 }

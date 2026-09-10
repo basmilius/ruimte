@@ -39,7 +39,7 @@ export function ImageFile({ path, name, read }: { path: string; name: string; re
                     />
                 )}
             </div>
-            <div className="file-footer">
+            <div className="file-footer select-text">
                 {/* An SVG without a width of its own reports nothing, and 0 x 0 is worse than no line at all. */}
                 {size !== null && size.width > 0 && (
                     <span>

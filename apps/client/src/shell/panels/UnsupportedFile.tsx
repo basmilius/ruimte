@@ -15,6 +15,7 @@ export function UnsupportedFile({ path, name, read }: { path: string; name: stri
     };
     return (
         <EmptyState
+            className="select-text"
             icon={<Icon icon={FileQuestion} size={20} />}
             action={
                 <Button variant="secondary" size="sm" onClick={reveal}>

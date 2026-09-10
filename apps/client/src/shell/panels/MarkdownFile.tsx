@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FsReadText } from '@ruimte/contracts';
 import { Markdown } from '@/chat/ui/Markdown';
 import { CodeFile } from '@/shell/panels/CodeFile';
+import { FileScroll } from '@/shell/panels/FileScroll';
 import { Segmented } from '@/shell/settings/controls';
 
 type MarkdownView = 'preview' | 'source';
@@ -25,9 +26,9 @@ export function MarkdownFile({ name, read }: { name: string; read: FsReadText })
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <div className="file-toolbar">{toggle}</div>
-            <div className="min-h-0 grow overflow-auto px-4 py-3">
+            <FileScroll className="px-4 py-3">
                 <Markdown text={read.text} />
-            </div>
+            </FileScroll>
         </div>
     );
 }
