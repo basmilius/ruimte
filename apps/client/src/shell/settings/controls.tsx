@@ -43,17 +43,6 @@ export function Segmented<T extends string>({
     );
 }
 
-export const selectClass =
-    'h-8 max-w-56 rounded-lg border border-border bg-surface-raised px-2 text-xs text-text outline-none focus-visible:ring-1 focus-visible:ring-accent';
-
-export function SelectControl({ value, onChange, label, children }: { value: string; onChange(value: string): void; label: string; children: ReactNode }) {
-    return (
-        <select className={selectClass} value={value} aria-label={label} onChange={(e) => onChange(e.target.value)}>
-            {children}
-        </select>
-    );
-}
-
 export function Toggle({ checked, onChange, label }: { checked: boolean; onChange(checked: boolean): void; label: string }) {
     return (
         <Switch.Root
