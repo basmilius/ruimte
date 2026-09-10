@@ -367,10 +367,14 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   focused and no canvas gesture is running. Inspect opens the guest's devtools in a window of
   ours that stays above a fullscreen app. `electron-updater` reads the feed electron-builder
   writes into a packaged app; a checkout skips it. `bun run --cwd apps/desktop smoke` boots the
-  shell, adds a browser node through the keyboard and waits for its page to load. The title
-  bar is `hiddenInset` with the traffic lights at (12, 18) on macOS and a native
-  controls overlay elsewhere, the sidebar's top strip and the toolbar next to it are both drag
-  regions and together make one 48px band (children reset to `initial`, controls `no-drag`),
+  shell, adds a browser node through the keyboard and waits for its page to load; with
+  `RUIMTE_CAPTURE=<path>` it writes the left end of the band to a PNG in device pixels instead,
+  which is how that band gets measured rather than guessed. The title bar is
+  `hiddenInset` with the traffic lights at (12, 17) on macOS, not the naive `(48 - 12) / 2`,
+  because `trafficLightPosition` places the top of the buttons' frame and that frame measures
+  14pt on current macOS; a native controls overlay elsewhere, the sidebar's top strip and the
+  toolbar next to it are both drag regions and together make one 48px band (children reset to
+  `initial`, controls `no-drag`),
   the traffic-light inset comes from `useTrafficLightInset()` (84px, `TRAFFIC_LIGHTS_INSET_PX` in
   `desktop/bridge.ts`) and belongs to the leftmost strip
   (the sidebar's when it is open, the toolbar's when it is closed), only outside fullscreen
