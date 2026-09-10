@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Menu } from '@base-ui-components/react/menu';
 import { Popover } from '@base-ui-components/react/popover';
 import clsx from 'clsx';
-import { Check, ChevronDown, ChevronRight, Search, Shield, SlidersHorizontal } from 'lucide-react';
+import { Bookmark, Check, ChevronDown, ChevronRight, Search, Shield, SlidersHorizontal, Trash2 } from 'lucide-react';
 import type { AgentKind, ModelInfo, ModelSelection, ProviderInfo, RuntimeMode } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
+import { forgetStashed, useStash, type StashedPrompt } from '@/chat/stash';
 import { Select, type SelectItem } from '@/ui/Select';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
@@ -295,6 +296,61 @@ export function OptionsPicker({
                 ))}
             </Popup>
         </Menu.Root>
+    );
+}
+
+/*
+ * Prompts put aside with Cmd+S. The shelf is the whole app's, not this chat's: on a canvas a
+ * stashed prompt usually moves to another node, which is the reason to put it away in the first
+ * place. Restoring drops the text, the mentions and the skills into this composer; the files a
+ * draft held are named on the row but not kept, because their bytes never go to storage.
+ */
+export function StashPicker({ onRestore }: { onRestore(prompt: StashedPrompt): void }) {
+    const prompts = useStash((s) => s.prompts);
+    if (prompts.length === 0) {
+        return null;
+    }
+    return (
+        <Popover.Root>
+            <Tooltip label="Stashed prompts" kbd="⌘S">
+                <Popover.Trigger className={triggerClass}>
+                    <Icon icon={Bookmark} size={12} />
+                    <span className="tabular-nums">{prompts.length}</span>
+                </Popover.Trigger>
+            </Tooltip>
+            <Popover.Portal>
+                <Popover.Positioner className="popup-layer" side="top" sideOffset={8} align="start">
+                    <Popover.Popup className="picker-popup w-80">
+                        <div className="section-label px-3 pt-2">Stashed prompts</div>
+                        <div className="max-h-72 overflow-auto p-1">
+                            {prompts.map((prompt) => (
+                                <div key={prompt.id} className="group/stash flex items-start gap-1">
+                                    <Popover.Close
+                                        className="flex min-w-0 grow flex-col gap-0.5 rounded-md px-2 py-1.5 text-left text-xs text-text-muted hover:bg-surface-sunken hover:text-text"
+                                        onClick={() => onRestore(prompt)}
+                                    >
+                                        <span className="line-clamp-2 whitespace-pre-wrap">{prompt.text || 'No text'}</span>
+                                        {prompt.attachments.length > 0 && (
+                                            <span className="text-text-faint">
+                                                {prompt.attachments.length} {prompt.attachments.length === 1 ? 'file' : 'files'}, not kept
+                                            </span>
+                                        )}
+                                    </Popover.Close>
+                                    <Tooltip label="Delete" name>
+                                        <button
+                                            className="icon-btn mt-1 h-6 w-6 shrink-0 rounded opacity-0 group-hover/stash:opacity-100 focus-visible:opacity-100"
+                                            onClick={() => forgetStashed(prompt.id)}
+                                        >
+                                            <Icon icon={Trash2} size={14} />
+                                        </button>
+                                    </Tooltip>
+                                </div>
+                            ))}
+                        </div>
+                    </Popover.Popup>
+                </Popover.Positioner>
+            </Popover.Portal>
+        </Popover.Root>
     );
 }
 
