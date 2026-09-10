@@ -375,6 +375,11 @@ body {
         border: 1px solid var(--border);
         box-shadow: var(--shadow-float);
         outline: none;
+        /* The positioner says how much room is left before the viewport edge; a long menu scrolls
+           inside that, with some air so it never sits against the window's edge. */
+        max-height: calc(var(--available-height) - 16px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
         transform-origin: var(--transform-origin);
         transition: opacity 120ms ease, scale 120ms ease;
     }
