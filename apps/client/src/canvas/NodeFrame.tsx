@@ -2,6 +2,7 @@ import { memo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { ChevronDown, ChevronRight, GitBranch, Globe, Keyboard, LayoutGrid, Link2, Maximize2, MessageSquare, StickyNote, Terminal, X } from 'lucide-react';
+import { AgentIcon } from '@/agents/AgentIcon';
 import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
 import { useHasContextLinks } from '@/context/sync';
@@ -165,7 +166,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         </Tooltip>
                     )}
                     {accent && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: accent }} />}
-                    <span className="shrink-0 text-text-muted">{ICONS[node.kind]}</span>
+                    <span className="shrink-0 text-text-muted">{node.provider ? <AgentIcon kind={node.provider} /> : ICONS[node.kind]}</span>
                     <span className="flex min-w-0 grow items-center" onDoubleClick={() => setRenaming(true)}>
                         <Title id={id} title={node.title} editing={renaming} onDone={() => setRenaming(false)} />
                     </span>

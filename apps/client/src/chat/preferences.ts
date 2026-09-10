@@ -7,9 +7,16 @@ export interface ChatPreferences {
     selection: ModelSelection | null;
     runtimeMode: RuntimeMode;
     interactionMode: InteractionMode;
+    // What an agent started as a terminal node runs in; a chat picks its own mode in the composer.
+    terminalRuntimeMode: RuntimeMode;
 }
 
-export const DEFAULT_CHAT_PREFERENCES: ChatPreferences = { selection: null, runtimeMode: 'full-access', interactionMode: 'default' };
+export const DEFAULT_CHAT_PREFERENCES: ChatPreferences = {
+    selection: null,
+    runtimeMode: 'full-access',
+    interactionMode: 'default',
+    terminalRuntimeMode: 'full-access'
+};
 
 const read = (): ChatPreferences => {
     try {
@@ -20,7 +27,7 @@ const read = (): ChatPreferences => {
     }
 };
 
-/* What a new chat starts with: the last model and modes the person picked, like a remembered default. */
+/* What a new agent starts with: the last model and modes the person picked, like a remembered default. */
 export const useChatPreferences = create<ChatPreferences>(() => read());
 
 export const readChatPreferences = (): ChatPreferences => useChatPreferences.getState();

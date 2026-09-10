@@ -1,5 +1,4 @@
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { resumeCommandFor } from '@ruimte/contracts';
 import {
     Check,
     ChevronRight,
@@ -50,20 +49,17 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
     };
     // The same CLI session can continue in the other kind of node, next to this one.
     const beside = { x: node.x + node.w + 40 + 260, y: node.y + node.h / 2 };
+    // Any CLI the daemon has a chat backend for can go on in a chat node.
+    const canOpenInChat = agent ? providers.some((entry) => entry.kind === agent.kind && entry.capabilities.chat) : false;
     const openInChat = (): void => {
-        // Any CLI the daemon has a chat backend for can go on in a chat node.
-        if (agent && providers.some((entry) => entry.kind === agent.kind)) {
+        if (agent) {
             useCanvas.getState().addNode('chat', beside, { title: node.title, cwd: node.cwd, resume: agent.agentSessionId, provider: agent.kind });
         }
     };
     const openInTerminal = (): void => {
-        if (chatSession) {
-            const template = providers.find((entry) => entry.kind === chatProvider)?.resumeCommand;
-            const command = template ? resumeCommandFor(template, chatSession) : null;
-            if (!command) {
-                return;
-            }
-            useCanvas.getState().addNode('terminal', beside, { title: node.title, cwd: chatCwd, command });
+        // The daemon owns the resume line: the node only says which CLI and which session.
+        if (chatSession && chatProvider) {
+            useCanvas.getState().addNode('terminal', beside, { title: node.title, cwd: chatCwd, provider: chatProvider, resume: chatSession });
         }
     };
     // The folder the node works in: its own, or the project's when it has none.
@@ -109,7 +105,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                             {node.escapeToApp ? <Check size={13} className="ml-auto" /> : <kbd>⌘Esc leaves</kbd>}
                         </ContextMenu.Item>
                     )}
-                    {node.kind === 'terminal' && agent?.kind === 'claude' && (
+                    {node.kind === 'terminal' && canOpenInChat && (
                         <ContextMenu.Item className="menu-item" onClick={openInChat}>
                             <MessageSquare size={14} /> Open in chat
                         </ContextMenu.Item>
