@@ -43,6 +43,9 @@ export type BackendEvent =
     | { type: 'session'; agentSessionId: string | null; model: string | null; slashCommands?: string[]; skills?: string[] }
     | { type: 'text.delta'; ref: string; text: string }
     | { type: 'text.done'; ref: string; text: string }
+    // What the model thought before it answered; consecutive blocks become one thinking item.
+    | { type: 'thinking.delta'; ref: string; text: string }
+    | { type: 'thinking.done'; ref: string; text: string }
     | { type: 'tool.started'; ref: string; name: string; input: unknown; parentRef: string | null; changes?: ChatFileChange[] }
     | { type: 'tool.progress'; ref: string; startedAt: number | null; description: string | null }
     | { type: 'tool.output'; ref: string; text: string }

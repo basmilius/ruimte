@@ -87,6 +87,9 @@ const parseAsyncQuestions = (questions: unknown): ChatQuestion[] => {
     }));
 };
 
+const toLines = (value: unknown): string[] =>
+    Array.isArray(value) ? value.filter((line): line is string => typeof line === 'string' && line.trim() !== '') : [];
+
 const CHANGE_KINDS = new Set<ChatFileChange['kind']>(['add', 'update', 'delete']);
 
 /* The files a `fileChange` item touches, with the unified diff Codex reports per file. */
@@ -187,6 +190,23 @@ export class CodexProtocol {
                 const text = str(params.delta);
                 if (ref && text) {
                     events.push({ type: 'text.delta', ref, text });
+                }
+                break;
+            }
+            case 'item/reasoning/summaryTextDelta':
+            case 'item/reasoning/textDelta': {
+                const ref = str(params.itemId);
+                const text = str(params.delta);
+                if (ref && text) {
+                    events.push({ type: 'thinking.delta', ref, text });
+                }
+                break;
+            }
+            case 'item/reasoning/summaryPartAdded': {
+                // A new part of the same summary; without a break the parts run into each other.
+                const ref = str(params.itemId);
+                if (ref && num(params.summaryIndex) > 0) {
+                    events.push({ type: 'thinking.delta', ref, text: '\n\n' });
                 }
                 break;
             }
@@ -342,6 +362,14 @@ export class CodexProtocol {
             case 'plan':
                 this.text(`plan-${ref}`, str(item.text) ?? '', completed, events);
                 return;
+            case 'reasoning': {
+                // The deltas already streamed this; the completed item is what a resumed thread replays.
+                const lines = [...toLines(item.summary), ...toLines(item.content)];
+                if (completed && lines.length > 0) {
+                    events.push({ type: 'thinking.done', ref, text: lines.join('\n\n') });
+                }
+                return;
+            }
             case 'commandExecution':
                 this.tool(
                     ref,

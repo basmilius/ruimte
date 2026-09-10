@@ -26,6 +26,11 @@ const assistantText = (text: string): void => {
     const id = `msg_${++messageCounter}`;
     out({ type: 'stream_event', event: { type: 'message_start', message: { id, model } }, session_id: sessionId });
     out({ type: 'stream_event', event: { type: 'content_block_start', index: 0, content_block: { type: 'thinking', thinking: '' } }, session_id: sessionId });
+    out({
+        type: 'stream_event',
+        event: { type: 'content_block_delta', index: 0, delta: { type: 'thinking_delta', thinking: 'weighing it' } },
+        session_id: sessionId
+    });
     out({ type: 'stream_event', event: { type: 'content_block_stop', index: 0 }, session_id: sessionId });
     out({ type: 'stream_event', event: { type: 'content_block_start', index: 1, content_block: { type: 'text', text: '' } }, session_id: sessionId });
     const half = Math.ceil(text.length / 2);

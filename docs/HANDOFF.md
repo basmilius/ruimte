@@ -562,6 +562,11 @@ canvas, against Ruimte, one verdict each.
   block, because both CLIs read a file with their own tools and a path costs no tokens until
   the agent looks. A remote client uploads over the socket like a loopback one; a signed HTTP
   upload is only worth it once someone attaches a video over a slow link.
+- A thinking row shows what the model weighed before it answered: "Thinking..." with the text
+  under it while it streams, "Thought for 8s" with the text behind a fold once the answer
+  starts. Claude's thinking deltas and Codex's reasoning summaries both become one `thinking`
+  item per stretch, and `ProviderCapabilities.reportsThinking` says which CLI hands it over.
+  Codex is otherwise silent for long stretches, which is where this earns its place.
 - Any file can be attached now, up to 25 MB and 8 per message. The bytes go to
   `$RUIMTE_HOME/attachments/<chatId>/<id>.<ext>` and the thread keeps name, mime, size and path,
   which also ends the growth the old inline images caused: a thread written before this is

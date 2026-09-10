@@ -219,3 +219,77 @@ describe('ThreadProjector', () => {
         expect(thread.info).toMatchObject({ running: false, status: 'idle' });
     });
 });
+
+describe('thinking', () => {
+    test('consecutive blocks are one item, and the first answer closes it', () => {
+        const { thread, project } = setup();
+        project(
+            { type: 'thinking.delta', ref: 'm1:k0', text: 'first ' },
+            { type: 'thinking.delta', ref: 'm1:k0', text: 'thought' },
+            { type: 'thinking.delta', ref: 'm1:k1', text: 'second thought' }
+        );
+        const thinking = thread.list().filter((item) => item.kind === 'thinking');
+        expect(thinking).toHaveLength(1);
+        expect(thinking[0]).toMatchObject({ text: 'first thought\n\nsecond thought', streaming: true, endedAt: null, turnId: 'turn-1' });
+
+        project({ type: 'text.delta', ref: 'm1:t0', text: 'the answer' });
+        const settled = thread.list().find((item) => item.kind === 'thinking');
+        expect(settled).toMatchObject({ streaming: false });
+        expect(settled?.kind === 'thinking' && settled.endedAt).not.toBeNull();
+        // The row sits in front of the answer it led to.
+        expect(thread.list().map((item) => item.kind)).toEqual(['turn', 'thinking', 'assistant']);
+    });
+
+    test('a second stretch after the answer is its own item', () => {
+        const { thread, project } = setup();
+        project(
+            { type: 'thinking.delta', ref: 'm1:k0', text: 'before' },
+            { type: 'text.done', ref: 'm1:t0', text: 'partial' },
+            { type: 'thinking.delta', ref: 'm2:k0', text: 'after' }
+        );
+        expect(
+            thread
+                .list()
+                .filter((item) => item.kind === 'thinking')
+                .map((item) => item.text)
+        ).toEqual(['before', 'after']);
+    });
+
+    test('a done for a ref that already streamed adds nothing, and one that did not opens the item', () => {
+        const { thread, project } = setup();
+        project({ type: 'thinking.delta', ref: 'm1:k0', text: 'streamed' }, { type: 'thinking.done', ref: 'm1:k0', text: 'streamed' });
+        expect(
+            thread
+                .list()
+                .filter((item) => item.kind === 'thinking')
+                .map((item) => item.text)
+        ).toEqual(['streamed']);
+
+        const other = setup();
+        other.project({ type: 'thinking.done', ref: 'r1', text: 'replayed' });
+        expect(
+            other.thread
+                .list()
+                .filter((item) => item.kind === 'thinking')
+                .map((item) => item.text)
+        ).toEqual(['replayed']);
+    });
+
+    test('an empty block opens nothing, so a CLI that always sends one costs no row', () => {
+        const { thread, project } = setup();
+        project({ type: 'thinking.delta', ref: 'm1:k0', text: '' }, { type: 'text.done', ref: 'm1:t0', text: 'hi' });
+        expect(thread.list().some((item) => item.kind === 'thinking')).toBe(false);
+    });
+
+    test('a turn that ends while it thinks leaves the row settled', () => {
+        const { thread, project } = setup();
+        project({ type: 'thinking.delta', ref: 'm1:k0', text: 'halfway' }, { type: 'turn.done', state: 'aborted', costUsd: 0 });
+        expect(thread.list().find((item) => item.kind === 'thinking')).toMatchObject({ streaming: false });
+    });
+
+    test('thinking alone opens a turn the CLI started itself', () => {
+        const { project, openTurn } = idleSetup();
+        project({ type: 'thinking.delta', ref: 'm1:k0', text: 'unprompted' });
+        expect(openTurn()).toMatchObject({ origin: 'agent', state: 'running' });
+    });
+});

@@ -11,6 +11,8 @@ const startsAgentTurn = (event: BackendEvent): boolean => {
     switch (event.type) {
         case 'text.delta':
         case 'text.done':
+        case 'thinking.delta':
+        case 'thinking.done':
         case 'approval.requested':
         case 'question.requested':
             return true;
@@ -39,6 +41,8 @@ export class ThreadProjector {
     private readonly now: () => number;
     // What the last background task said it did; the label of the turn the CLI opens about it.
     private taskSummary: string | null = null;
+    // The stretch of thinking still open: its item, and which refs already streamed into it.
+    private thinking: { id: string; refs: Set<string>; last: string | null } | null = null;
 
     constructor(thread: ChatThread, options: ProjectorOptions) {
         this.thread = thread;
@@ -66,10 +70,18 @@ export class ThreadProjector {
                     })
                 );
                 break;
+            case 'thinking.delta':
+                this.appendThinking(generation, event.ref, event.text, false, events);
+                break;
+            case 'thinking.done':
+                this.appendThinking(generation, event.ref, event.text, true, events);
+                break;
             case 'text.delta':
+                this.closeThinking(events);
                 this.appendText(this.itemId(generation, event.ref), event.text, events);
                 break;
             case 'text.done': {
+                this.closeThinking(events);
                 const id = this.itemId(generation, event.ref);
                 const existing = this.thread.get(id);
                 events.push(
@@ -85,6 +97,7 @@ export class ThreadProjector {
                 break;
             }
             case 'tool.started':
+                this.closeThinking(events);
                 this.startTool(generation, event, events);
                 break;
             case 'tool.progress':
@@ -101,6 +114,7 @@ export class ThreadProjector {
                 this.settleTool(generation, event, events);
                 break;
             case 'approval.requested':
+                this.closeThinking(events);
                 events.push(
                     this.thread.upsert({
                         id: `approval-${event.requestId}`,
@@ -119,6 +133,7 @@ export class ThreadProjector {
                 events.push(this.thread.setStatus('needs-you'));
                 break;
             case 'question.requested':
+                this.closeThinking(events);
                 events.push(
                     this.thread.upsert({
                         id: `question-${event.requestId}`,
@@ -210,9 +225,12 @@ export class ThreadProjector {
 
     /* Whatever was open when the turn or the process ended: nobody is going to answer it now. */
     private settleOpenItems(events: ChatEvent[]): void {
+        this.thinking = null;
         for (const item of this.thread.list()) {
             if (item.kind === 'assistant' && item.streaming) {
                 events.push(this.thread.upsert({ ...item, streaming: false }));
+            } else if (item.kind === 'thinking' && item.streaming) {
+                events.push(this.thread.upsert({ ...item, streaming: false, endedAt: this.now() }));
             } else if (item.kind === 'approval' && item.decision === 'pending') {
                 events.push(this.thread.upsert({ ...item, decision: 'cancelled' }));
             } else if (item.kind === 'question' && item.state === 'pending') {
@@ -225,6 +243,48 @@ export class ThreadProjector {
 
     private itemId(generation: number, ref: string): string {
         return `${generation}:${ref}`;
+    }
+
+    /*
+     * One thinking item per stretch: consecutive blocks (Claude's thinking blocks, Codex's reasoning
+     * parts) land in the same item, separated by a blank line, and the first real content of the turn
+     * closes it. A `.done` for a ref that already streamed adds nothing; it is what a replayed item
+     * carries for a client that missed the deltas.
+     */
+    private appendThinking(generation: number, ref: string, text: string, done: boolean, events: ChatEvent[]): void {
+        const key = this.itemId(generation, ref);
+        const open = this.thinking;
+        if (open?.refs.has(key) && done) {
+            return;
+        }
+        if (!open && text.trim() === '') {
+            return;
+        }
+        if (!open) {
+            const id = `${key}:think`;
+            this.thinking = { id, refs: new Set([key]), last: key };
+            events.push(
+                this.thread.upsert({ id, kind: 'thinking', createdAt: this.now(), turnId: this.thread.info.activeTurnId, text, streaming: true, endedAt: null })
+            );
+            return;
+        }
+        const separator = open.last !== null && open.last !== key ? '\n\n' : '';
+        open.refs.add(key);
+        open.last = key;
+        const delta = this.thread.appendText(open.id, `${separator}${text}`);
+        if (delta) {
+            events.push(delta);
+        }
+    }
+
+    /* Ends the stretch: the row stops shimmering and starts saying how long it took. */
+    private closeThinking(events: ChatEvent[]): void {
+        const open = this.thinking;
+        this.thinking = null;
+        const item = open ? this.thread.get(open.id) : undefined;
+        if (item?.kind === 'thinking' && item.streaming) {
+            events.push(this.thread.upsert({ ...item, streaming: false, endedAt: this.now() }));
+        }
     }
 
     private appendText(id: string, text: string, events: ChatEvent[]): void {

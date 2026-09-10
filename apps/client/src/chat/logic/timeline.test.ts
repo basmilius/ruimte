@@ -171,3 +171,41 @@ describe('labels', () => {
         expect(agentTurnLabel({ ...turn, origin: 'agent' })).toBe('Continued on its own');
     });
 });
+
+describe('thinking rows', () => {
+    const thinking = (streaming: boolean): ChatItem => ({
+        id: 'k1',
+        kind: 'thinking',
+        createdAt: 1000,
+        turnId: 't2',
+        text: 'weighing it',
+        streaming,
+        endedAt: streaming ? null : 9000
+    });
+
+    test('a stretch that still runs sits in front of the answer, inside the open turn', () => {
+        const rows = deriveTimelineRows(
+            [
+                { id: 't2', kind: 'turn', createdAt: 1000, turnId: 't2', state: 'running', endedAt: null, costUsd: 0 },
+                { id: 'u2', kind: 'user', createdAt: 1000, turnId: 't2', text: 'think' },
+                thinking(true)
+            ],
+            { ...options, activeTurnId: 't2' }
+        );
+        expect(rows.map((row) => row.kind)).toEqual(['user', 'thinking', 'working']);
+    });
+
+    test('a settled stretch folds behind the turn label, before the answer it led to', () => {
+        const rows = deriveTimelineRows(
+            [
+                { id: 't2', kind: 'turn', createdAt: 1000, turnId: 't2', state: 'done', endedAt: 13_000, costUsd: 0 },
+                { id: 'u2', kind: 'user', createdAt: 1000, turnId: 't2', text: 'think' },
+                thinking(false),
+                { id: 'a2', kind: 'assistant', createdAt: 9000, turnId: 't2', text: 'Done.', streaming: false }
+            ],
+            { ...options, expandedTurns: new Set(['t2']) }
+        );
+        expect(rows.map((row) => row.kind)).toEqual(['user', 'turn-fold', 'thinking', 'assistant']);
+        expect(turnLabel({ id: 't2', kind: 'turn', createdAt: 1000, turnId: 't2', state: 'done', endedAt: 9000, costUsd: 0 })).toBe('Worked for 8s');
+    });
+});
