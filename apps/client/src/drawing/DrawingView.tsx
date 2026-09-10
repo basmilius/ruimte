@@ -7,7 +7,7 @@ import { DrawingDock } from '@/drawing/DrawingDock';
 import { DrawingOverlay } from '@/drawing/DrawingOverlay';
 import { loadDrawingFont } from '@/drawing/fonts';
 import { DRAG_THRESHOLD, DEFAULT_SHAPE, constrainAngle, lineElement, settleStroke, shapeElement, shapeRect, snapPoint, textElement } from '@/drawing/gestures';
-import { applyCamera, clearPathCache, paintElements } from '@/drawing/paint';
+import { applyCamera, clearPathCache, fitTextBox, paintElements } from '@/drawing/paint';
 import { readFontStacks, readPalette } from '@/drawing/palette';
 import { useDrawingKeys } from '@/drawing/use-drawing-keys';
 import { nextId } from '@/state/canvas';
@@ -358,7 +358,13 @@ export function DrawingView({ id }: { id: string }) {
             }
             case 'resize': {
                 const to = resizeRect(active.from, active.handle, snapPoint(point, snap), e.shiftKey);
-                const moved = new Map(active.elements.map((element) => [element.id, scaleElement(element, active.from, to)]));
+                // A text is dragged by width; its height is whatever the wrapped lines come to.
+                const moved = new Map(
+                    active.elements.map((element) => {
+                        const scaled = scaleElement(element, active.from, to);
+                        return [element.id, scaled.kind === 'text' ? { ...scaled, ...fitTextBox(scaled) } : scaled];
+                    })
+                );
                 state.replaceElements(
                     state.elements.map((element) => moved.get(element.id) ?? element),
                     active.first

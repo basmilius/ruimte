@@ -103,18 +103,15 @@ export const measureText = (
 
 /*
  * The box a text takes for what it says: the glyphs' own box until the person dragged one, and
- * from then on that box, which only grows when the lines no longer fit. Without a DOM (the
- * store's tests) the box stays as it is.
+ * from then on that width, with the height the wrapped lines come to. Without a DOM (the store's
+ * tests) the box stays as it is.
  */
 export const fitTextBox = (element: DrawingElement & { kind: 'text' }, text = element.text): { w: number; h: number } => {
     if (typeof document === 'undefined') {
         return { w: element.w, h: element.h };
     }
     const fitted = textSize({ ...element, text }, readFontStacks());
-    if (!element.sized) {
-        return fitted;
-    }
-    return { w: Math.max(element.w, fitted.w), h: Math.max(element.h, fitted.h) };
+    return element.sized ? { w: element.w, h: fitted.h } : fitted;
 };
 
 const paintText = (ctx: CanvasRenderingContext2D, element: DrawingElement & { kind: 'text' }, options: PaintOptions): void => {
