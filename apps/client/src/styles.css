@@ -349,6 +349,11 @@ body {
     /* Keyboard focus is visible on every control; pointer focus stays quiet. */
     .icon-btn:focus-visible, .menu-item:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
     .menu-item:focus-visible { outline-offset: -2px; }
+    /* Base UI moves DOM focus to the item the pointer hovers, and a browser keeps `:focus-visible`
+       on for scripted focus as long as its own keyboard flag is up, so after any keystroke the ring
+       would follow the mouse through every menu. The last real input event decides instead
+       (`startInputModality`); hover keeps the background it already has. */
+    :root[data-modality='pointer'] .menu-item:focus-visible { outline: none; }
 
     /* One stack for everything that floats: a dialog, then the menus and selects a dialog can host,
        then the tooltips over those. A popup under its own dialog is the bug this ordering prevents. */
