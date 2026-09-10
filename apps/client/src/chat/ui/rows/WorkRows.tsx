@@ -46,7 +46,7 @@ export function ToggleLine({
             )}
             onClick={onToggle}
         >
-            <span className={clsx('grid h-6 w-6 shrink-0 place-items-center', live && 'chat-live')}>{icon}</span>
+            <span className={clsx('grid h-6 w-6 shrink-0 place-items-center', live && 'text-accent')}>{icon}</span>
             <span className={clsx('shrink-0', live && 'chat-live-text')}>{label}</span>
             {detail && <span className="min-w-0 truncate font-mono text-text-faint">{detail}</span>}
             <span className="grow" />
@@ -366,7 +366,7 @@ export function WorkingRow({ startedAt }: { startedAt: number }) {
     }, [startedAt]);
     return (
         <div className="flex h-7 items-center gap-2 px-1 pb-2 text-xs text-text-muted">
-            <span className="chat-live grid h-6 w-6 place-items-center">
+            <span className="grid h-6 w-6 place-items-center text-accent">
                 <span className="h-2 w-2 rounded-full bg-status-running" />
             </span>
             <span className="chat-live-text">Working for</span>

@@ -20,11 +20,13 @@ import { PROMPT_MAX_CHARS, promptGuard, usableSlashCommands } from '@/chat/guard
 import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferences';
 import { stashDraft, useStash, type StashedPrompt } from '@/chat/stash';
 import { pageTimeline } from '@/chat/timeline-scroll';
+import { CHIP_BEHIND_TEXT, MENTION_TONE, SKILL_TONE } from '@/chat/ui/chips';
 import { ContextMeter } from '@/chat/ui/ContextMeter';
 import { ApprovalDock, QuestionDock } from '@/chat/ui/PendingDock';
 import { ModelPicker, ModePicker, OptionsPicker, StashPicker } from '@/chat/ui/Pickers';
 import { useChats } from '@/state/chats';
 import { useProviders } from '@/state/providers';
+import { BTN_GROUP, MENU_LABEL } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
@@ -526,7 +528,12 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
     return (
         <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10">
             <div
-                className={clsx('chat-composer pointer-events-auto flex flex-col', dragging && 'chat-composer-drop')}
+                className={clsx(
+                    'pointer-events-auto flex flex-col overflow-hidden rounded-2xl border shadow-float backdrop-blur-[14px] focus-within:border-accent',
+                    dragging
+                        ? 'border-accent bg-[color-mix(in_srgb,var(--accent-soft)_60%,var(--surface-raised))]'
+                        : 'border-border bg-[color-mix(in_srgb,var(--surface-raised)_92%,transparent)]'
+                )}
                 onDragOver={(e) => {
                     if (e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes(MENTION_DRAG_TYPE)) {
                         e.preventDefault();
@@ -604,7 +611,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                 )}
                 {mentionMenuOpen && (
                     <div className="border-b border-border px-1.5 py-1.5">
-                        {mention.query === '' && files.length > 0 && <div className="menu-label">Files in this folder</div>}
+                        {mention.query === '' && files.length > 0 && <div className={MENU_LABEL}>Files in this folder</div>}
                         {files.length === 0 && <div className="px-2 py-1 text-xs text-text-faint">{mention.query ? 'No files match' : 'No files here'}</div>}
                         {files.map((path, index) => {
                             const { name, dir } = splitPath(path);
@@ -633,7 +640,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                             <div key={message.id} className="group/queued flex items-center gap-2 rounded-md px-1.5 py-1 text-xs text-text-muted">
                                 <Icon icon={Clock} size={12} className="shrink-0 text-text-faint" />
                                 <span className="min-w-0 grow truncate">{message.text || `${message.attachments?.length ?? 0} attachments`}</span>
-                                <span className="btn-group opacity-0 transition-opacity group-hover/queued:opacity-100 focus-within:opacity-100">
+                                <span className={`${BTN_GROUP} opacity-0 transition-opacity group-hover/queued:opacity-100 focus-within:opacity-100`}>
                                     <Tooltip label="Send now" name>
                                         <button
                                             className="icon-btn h-5 w-5 rounded"
@@ -691,14 +698,14 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                         {segments.map((segment, index) => {
                             if (segment.kind === 'mention') {
                                 return (
-                                    <span key={index} className="mention-chip">
+                                    <span key={index} className={`${MENTION_TONE} ${CHIP_BEHIND_TEXT}`}>
                                         @{segment.path}
                                     </span>
                                 );
                             }
                             if (segment.kind === 'skill') {
                                 return (
-                                    <span key={index} className="skill-chip">
+                                    <span key={index} className={`${SKILL_TONE} ${CHIP_BEHIND_TEXT}`}>
                                         ${segment.name}
                                     </span>
                                 );

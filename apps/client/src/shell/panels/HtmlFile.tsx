@@ -9,6 +9,7 @@ import { dirnameOf } from '@/shell/panels/files-tree';
 import { useEndpoints } from '@/state/endpoints';
 import { transport } from '@/transport';
 import { Button } from '@/ui/Button';
+import { BTN_GROUP } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
@@ -118,8 +119,8 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
 
     const controls = (
         <>
-            {onDesktop && !onThisMachine && <span className="file-toolbar-label">Preview needs the file on this machine</span>}
-            <div className="btn-group">
+            {onDesktop && !onThisMachine && <span className="text-xs text-text-muted">Preview needs the file on this machine</span>}
+            <div className={BTN_GROUP}>
                 <FileToolbarToggle icon={Eye} label={previewLabel} active={view === 'preview'} disabled={!canPreview} onClick={() => setView('preview')} />
                 <FileToolbarToggle icon={Code} label="Source" active={view === 'source'} onClick={() => setView('source')} />
             </div>

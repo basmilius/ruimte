@@ -33,7 +33,7 @@ export function ContextMeter({ usage, disabled, onCompact }: { usage: ChatUsage;
                 </svg>
             </Popover.Trigger>
             <Popover.Portal>
-                <Popover.Positioner side="top" sideOffset={8} align="end" className="popup-layer">
+                <Popover.Positioner side="top" sideOffset={8} align="end" className="z-[var(--z-popup)]">
                     <Popover.Popup className="menu-popup min-w-56 p-3 text-xs text-text-muted">
                         <div className="flex items-baseline justify-between">
                             <span className="text-sm font-medium text-text">{usage.contextWindow ? `${percent}% of context` : 'Context'}</span>

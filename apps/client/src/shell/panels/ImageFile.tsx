@@ -4,6 +4,7 @@ import type { FsReadBinary } from '@ruimte/contracts';
 import { fileBytesUrl } from '@/shell/panels/file-url';
 import { formatBytes } from '@/shell/panels/file-size';
 import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
+import { BTN_GROUP } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 
@@ -19,7 +20,7 @@ export function ImageFile({ path, name, read }: { path: string; name: string; re
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <FileToolbar>
-                <div className="btn-group">
+                <div className={BTN_GROUP}>
                     <FileToolbarToggle icon={Maximize} label="Fit to the panel" active={zoom === 'fit'} onClick={() => setZoom('fit')} />
                     <FileToolbarToggle icon={Scan} label="Actual size (1:1)" active={zoom === 'full'} onClick={() => setZoom('full')} />
                 </div>
@@ -37,7 +38,7 @@ export function ImageFile({ path, name, read }: { path: string; name: string; re
                     />
                 )}
             </div>
-            <div className="file-footer select-text">
+            <div className="flex h-7 shrink-0 items-center gap-3 border-t border-border px-2 text-xs text-text-muted select-text">
                 {/* An SVG without a width of its own reports nothing, and 0 x 0 is worse than no line at all. */}
                 {size !== null && size.width > 0 && (
                     <span>

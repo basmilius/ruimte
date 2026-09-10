@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Menu } from '@base-ui-components/react/menu';
 import { Copy, CornerUpRight, Globe, ListX, MoreHorizontal, Pin, PinOff, RefreshCw, WrapText, X, type LucideIcon } from 'lucide-react';
+import { FILE_TOOLBAR } from '@/shell/panels/classes';
 import { useFileActions } from '@/shell/panels/file-actions';
 import { isHtmlName } from '@/shell/panels/file-kind';
 import { localFileUrl } from '@/shell/panels/file-url';
@@ -11,6 +12,7 @@ import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { transport } from '@/transport';
+import { MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
@@ -22,7 +24,7 @@ import { Tooltip } from '@/ui/Tooltip';
  */
 export function FileToolbar({ children }: { children?: ReactNode }) {
     return (
-        <div className="file-toolbar">
+        <div className={FILE_TOOLBAR}>
             <span className="grow" />
             {children}
             {/* With no controls the menu is the only group there is, and a line would divide nothing. */}
@@ -115,7 +117,7 @@ function FileMenu() {
                 </Menu.Trigger>
             </Tooltip>
             <Menu.Portal>
-                <Menu.Positioner className="popup-layer" side="bottom" align="end" sideOffset={6}>
+                <Menu.Positioner className="z-[var(--z-popup)]" side="bottom" align="end" sideOffset={6}>
                     <Menu.Popup className="menu-popup">
                         <Menu.Item
                             className="menu-item"
@@ -130,18 +132,18 @@ function FileMenu() {
                                 <Icon icon={Globe} size={14} /> Open in a browser node
                             </Menu.Item>
                         )}
-                        <Menu.Separator className="menu-separator" />
+                        <Menu.Separator className={MENU_SEPARATOR} />
                         <Menu.Item className="menu-item" onClick={() => copyText(path)}>
                             <Icon icon={Copy} size={14} /> Copy path
                         </Menu.Item>
                         <Menu.Item className="menu-item" disabled={folder === null} onClick={() => copyText(relativeTo(folder ?? '', path))}>
                             <Icon icon={Copy} size={14} /> Copy relative path
                         </Menu.Item>
-                        <Menu.Separator className="menu-separator" />
+                        <Menu.Separator className={MENU_SEPARATOR} />
                         <Menu.Item className="menu-item" onClick={refresh}>
                             <Icon icon={RefreshCw} size={14} /> Refresh
                         </Menu.Item>
-                        <Menu.Separator className="menu-separator" />
+                        <Menu.Separator className={MENU_SEPARATOR} />
                         <Menu.Item className="menu-item" onClick={() => useFiles.getState().setPinned(key, !pinned)}>
                             <Icon icon={pinned ? PinOff : Pin} size={14} /> {pinned ? 'Unpin tab' : 'Pin tab'}
                         </Menu.Item>

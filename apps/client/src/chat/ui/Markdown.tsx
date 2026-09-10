@@ -57,7 +57,7 @@ const components = {
         if (className?.startsWith('language-') || text.includes('\n')) {
             return <CodeBlock code={text.replace(/\n$/, '')} lang={languageOf(className)} />;
         }
-        return <code className="chat-inline-code">{text}</code>;
+        return <code className="rounded-sm bg-surface-sunken px-1 py-px font-mono text-code">{text}</code>;
     },
     a({ href, children }: { href?: string; children?: ReactNode }) {
         return (

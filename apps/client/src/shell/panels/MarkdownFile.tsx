@@ -5,6 +5,7 @@ import { Markdown } from '@/chat/ui/Markdown';
 import { CodeFile } from '@/shell/panels/CodeFile';
 import { FileScroll } from '@/shell/panels/FileScroll';
 import { DisabledWrapToggle, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
+import { BTN_GROUP } from '@/ui/classes';
 import { Separator } from '@/ui/Separator';
 
 type MarkdownView = 'preview' | 'source';
@@ -16,7 +17,7 @@ type MarkdownView = 'preview' | 'source';
 export function MarkdownFile({ name, read }: { name: string; read: FsReadText }) {
     const [view, setView] = useState<MarkdownView>('preview');
     const toggle = (
-        <div className="btn-group">
+        <div className={BTN_GROUP}>
             <FileToolbarToggle icon={Eye} label="Preview" active={view === 'preview'} onClick={() => setView('preview')} />
             <FileToolbarToggle icon={Code} label="Source" active={view === 'source'} onClick={() => setView('source')} />
         </div>

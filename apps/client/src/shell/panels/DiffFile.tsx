@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { Columns2, FileDiff, FileWarning, GitBranch, GitCompare, LoaderCircle, Rows2, Space, WrapText } from 'lucide-react';
 import type { GitDiffFile, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
+import { FILE_TOOLBAR } from '@/shell/panels/classes';
 import { relativeTime } from '@/shell/panels/commit-log';
 import { FileActionsContext } from '@/shell/panels/file-actions';
 import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
@@ -9,6 +10,7 @@ import { useFiles, type FileTabView } from '@/state/files';
 import { useGit } from '@/state/git';
 import { useSettings } from '@/state/settings';
 import { transport } from '@/transport';
+import { BTN_GROUP } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
@@ -77,7 +79,7 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
         <FileActionsContext.Provider value={actions}>
             <div className="flex min-h-0 min-w-0 grow flex-col">
                 <FileToolbar>
-                    <span className="btn-group">
+                    <span className={BTN_GROUP}>
                         <FileToolbarToggle
                             icon={FileDiff}
                             label="Against the working tree"
@@ -87,7 +89,7 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
                         <FileToolbarToggle icon={GitBranch} label="Against the base branch" active={view.scope === 'base'} onClick={() => setScope('base')} />
                     </span>
                     <Separator />
-                    <span className="btn-group">
+                    <span className={BTN_GROUP}>
                         <FileToolbarToggle
                             icon={Rows2}
                             label="One patch, stacked"
@@ -205,10 +207,10 @@ function CommitDiff({ tabKey, cwd, commit }: { tabKey: string; cwd: string; comm
 
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
-            <div className="file-toolbar">
-                <span className="file-toolbar-label truncate font-mono">{meta?.shortHash ?? commit.slice(0, 7)}</span>
+            <div className={FILE_TOOLBAR}>
+                <span className="truncate font-mono text-xs text-text-muted">{meta?.shortHash ?? commit.slice(0, 7)}</span>
                 <span className="grow" />
-                <span className="btn-group">
+                <span className={BTN_GROUP}>
                     <FileToolbarToggle
                         icon={Rows2}
                         label="One patch, stacked"
