@@ -100,6 +100,14 @@ export const diffTrees = async (top: string, from: string, to: string): Promise<
     return { files, truncated: counts.length > files.length };
 };
 
+export interface DiffOptions {
+    scope: GitDiffScope;
+    /* Worktree scope only: the index against HEAD instead of the working tree against the index. */
+    staged: boolean;
+    /* Leaves changes that are whitespace alone out of the diff, counts included. */
+    ignoreWhitespace: boolean;
+}
+
 const isTracked = async (top: string, path: string): Promise<boolean> => {
     const listed = await git(['ls-files', '-z', '--', `:(literal)${path}`], top);
     return listed !== null && listed !== '';
@@ -111,14 +119,15 @@ const isTracked = async (top: string, path: string): Promise<boolean> => {
  * consult. `base` diffs the merge base against the working tree, so a file the panel lists shows
  * everything this branch did to it, committed or not.
  */
-const diffArgs = async (top: string, path: string, scope: GitDiffScope, staged: boolean, mergeBase: string | null): Promise<string[]> => {
+const diffArgs = async (top: string, path: string, options: DiffOptions, mergeBase: string | null): Promise<string[]> => {
+    const args = [...PATCH_ARGS, ...(options.ignoreWhitespace ? ['--ignore-all-space'] : [])];
     if (!(await isTracked(top, path))) {
-        return ['diff', ...PATCH_ARGS, '--no-index', '/dev/null', path];
+        return ['diff', ...args, '--no-index', '/dev/null', path];
     }
-    if (scope === 'base') {
-        return ['diff', ...PATCH_ARGS, mergeBase ?? 'HEAD', '--', `:(literal)${path}`];
+    if (options.scope === 'base') {
+        return ['diff', ...args, mergeBase ?? 'HEAD', '--', `:(literal)${path}`];
     }
-    return ['diff', ...PATCH_ARGS, ...(staged ? ['--cached'] : []), '--', `:(literal)${path}`];
+    return ['diff', ...args, ...(options.staged ? ['--cached'] : []), '--', `:(literal)${path}`];
 };
 
 /* The same call with `--numstat` in it, which is where the counts and the binary flag come from. */
@@ -128,9 +137,9 @@ const asNumstat = (args: string[]): string[] => ['diff', '--numstat', '-z', ...a
  * One file's diff for the git panel. `--no-index` answers 1 when the two sides differ, which is the
  * normal outcome and not a failure, so only a code above that means the diff could not be read.
  */
-export const diffFile = async (cwd: string, path: string, scope: GitDiffScope, staged: boolean, mergeBase: string | null): Promise<GitDiffResult> => {
+export const diffFile = async (cwd: string, path: string, options: DiffOptions, mergeBase: string | null): Promise<GitDiffResult> => {
     const top = await toplevel(cwd);
-    const args = await diffArgs(top, path, scope, staged, mergeBase);
+    const args = await diffArgs(top, path, options, mergeBase);
     const counts = await runGit(asNumstat(args), top);
     const stat = counts.code > 1 ? null : (parseNumstat(counts.stdout)[0] ?? null);
     const result: GitDiffResult = {

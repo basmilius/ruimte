@@ -230,7 +230,10 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   the same rule that decides where a node made inside such a group starts. The header is that
   target as a chip, the branch, ahead and behind, and a refresh. `git.status` groups the changed
   files as Conflicted, Staged, Changes and Untracked, and a file that is staged and changed again
-  since is in two of them with the counts of its own side in each. A group is a tree of the folders
+  since is in two of them with the counts of its own side in each. The chip is a menu of every
+  checkout the panel could be on (the project folder and the worktrees `git.worktree-list` knows,
+  with the group that binds one named beside it); a pick outranks the selection until the selection
+  points somewhere else of its own. A group is a tree of the folders
   its files sit in (`shell/panels/git-tree.ts`, pure and tested: directories first, a chain nothing
   branches in is one row, a collapse takes its subtree with it); the `gitTree` setting in Settings >
   Git lists them flat instead, and the folded folders travel with the project's local file. Every
@@ -240,8 +243,11 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   what resets the working tree, and the panel says so with the name to `git stash pop`. While the
   panel is open the daemon watches the repository (`git.watch`) and pushes a `git.status` event per
   burst; a repository it gives up on says `live: false` and the panel refreshes on focus instead.
-  Clicking a change opens its diff in the preview: one diff tab, the way a review pane works, whose
-  path and scope follow the next change unless it is pinned. That tab is the row the panel marks as
+  Clicking a change opens its diff in the preview: one tab named "Changes", the way a review pane
+  works, whose path and scope follow the next change unless it is pinned. Its toolbar holds the
+  scope, stacked against split, whitespace and wrap; the first three are `diffLayout` and
+  `diffWhitespace` in Settings > Git, so the toolbar and the settings are the same switch, and
+  whitespace off means `--ignore-all-space` on the daemon, counts included. That tab is the row the panel marks as
   selected, and the Files panel does the same the other way around: the file of the active preview
   tab is the selected row there, revealed by expanding its parents and scrolled only if it is out
   of view.
@@ -256,9 +262,9 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   active one, double-click pins, and the tabs travel with the project's machine-local file, so a
   reload keeps them, another canvas starts with its own and nobody else sees them. A tab is keyed
   by its `key`, not its path, because a file and its diff are two tabs of one path: a diff tab
-  carries a `view { kind: 'diff', cwd, scope, staged }`, wears the scope as a pill in the strip and
-  is drawn by `shell/panels/DiffFile.tsx` over `UnifiedDiff`, with the wrap toggle and the scope
-  switch in the same toolbar every renderer uses. The store owns
+  carries a `view { kind: 'diff', cwd, scope, staged }`, reads as "Changes" with the file's name in
+  its tooltip and the diff's `+n -n` beside it, and is drawn by `shell/panels/DiffFile.tsx` over
+  `UnifiedDiff`, in the same toolbar every renderer uses. The store owns
   the panel with them: the first open file brings the preview up and the last close takes it away.
   Opening it takes half of what the canvas had (`floor(width / 2)`, at most 720, at least 360)
   every time, until a drag of its left edge gives the project a width of its own, which outranks
@@ -331,7 +337,7 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   layouts, all acting on the open canvas, nothing stored), Files (`filesTabLimit`, how many files
   the viewer keeps open, 1 to 20 and 5 by default, and `filesShowHidden`, the same value the
   panel's eye button writes), Git (`gitTree`, whether the status list groups its files by folder
-  or lists them flat), Agents (the remembered defaults for
+  or lists them flat, plus `diffLayout` and `diffWhitespace` for the diff), Agents (the remembered defaults for
   a new chat from `chat/preferences.ts`, now a zustand store the composer and the dialog
   share: one model row per provider with that model's knobs under it, the permissions a chat
   starts in and the mode a terminal agent starts in, plus the providers the daemon found),

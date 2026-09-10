@@ -1,14 +1,11 @@
 import { useEffect, useRef, type WheelEvent as ReactWheelEvent } from 'react';
-import { X } from 'lucide-react';
+import { GitCompare, X } from 'lucide-react';
 import { basenameOf } from '@/shell/panels/files-tree';
-import { useFiles, type FileTabView } from '@/state/files';
+import { useFiles } from '@/state/files';
+import { useGit } from '@/state/git';
 import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
-import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
-
-/* What a diff tab is of the file it names: the index, the base branch, or the working tree. */
-const viewLabel = (view: FileTabView): string => (view.staged ? 'staged' : view.scope === 'base' ? 'base' : 'diff');
 
 /*
  * The open files as a strip of tabs, inside the preview panel's own header. A tab that is not
@@ -19,6 +16,7 @@ const viewLabel = (view: FileTabView): string => (view.staged ? 'staged' : view.
 export function FileTabs() {
     const tabs = useFiles((s) => s.tabs);
     const active = useFiles((s) => s.active);
+    const counts = useGit((s) => s.counts);
     const stripRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -35,7 +33,9 @@ export function FileTabs() {
     return (
         <div ref={stripRef} className="files-tab-strip" onWheel={onWheel}>
             {tabs.map((tab) => {
-                const label = basenameOf(tab.path);
+                // One tab holds every change a person opens, so it is named after that and not after
+                // the file in it; the file's own name is a hover away.
+                const label = tab.view ? 'Changes' : basenameOf(tab.path);
                 return (
                     <span
                         key={tab.key}
@@ -44,17 +44,24 @@ export function FileTabs() {
                         data-pinned={tab.pinned}
                         data-view={tab.view ? 'diff' : undefined}
                     >
-                        <button
-                            className="files-tab-open"
-                            aria-current={tab.key === active}
-                            onClick={() => useFiles.getState().activate(tab.key)}
-                            onDoubleClick={() => useFiles.getState().setPinned(tab.key, !tab.pinned)}
-                        >
-                            <FileIcon path={tab.path} size={14} />
-                            <span className="files-tab-name">{label}</span>
-                            {tab.view && <Pill className="shrink-0 px-1.5 py-0">{viewLabel(tab.view)}</Pill>}
-                            <span className="files-tab-dot" data-dirty={tab.dirty} />
-                        </button>
+                        <Tooltip label={tab.view ? basenameOf(tab.path) : tab.path}>
+                            <button
+                                className="files-tab-open"
+                                aria-current={tab.key === active}
+                                onClick={() => useFiles.getState().activate(tab.key)}
+                                onDoubleClick={() => useFiles.getState().setPinned(tab.key, !tab.pinned)}
+                            >
+                                {tab.view ? <Icon icon={GitCompare} size={14} className="shrink-0 text-text-faint" /> : <FileIcon path={tab.path} size={14} />}
+                                <span className="files-tab-name">{label}</span>
+                                {tab.view && counts[tab.key] !== undefined && (
+                                    <span className="shrink-0 tabular-nums">
+                                        <span className="text-term-green">+{counts[tab.key]!.added}</span>{' '}
+                                        <span className="text-term-red">-{counts[tab.key]!.deleted}</span>
+                                    </span>
+                                )}
+                                <span className="files-tab-dot" data-dirty={tab.dirty} />
+                            </button>
+                        </Tooltip>
                         <Tooltip label={`Close ${label}`} kbd="⌘W" name>
                             <button className="files-tab-close" onClick={() => useFiles.getState().close(tab.key)}>
                                 <Icon icon={X} size={12} />

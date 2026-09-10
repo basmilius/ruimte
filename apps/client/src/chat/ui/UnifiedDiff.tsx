@@ -32,7 +32,14 @@ const lineClass = (line: string): string => {
     return 'text-text-muted';
 };
 
-export default function UnifiedDiff({ change, overflow = 'wrap' }: { change: ChatFileChange; overflow?: 'wrap' | 'scroll' }) {
+interface UnifiedDiffProps {
+    change: ChatFileChange;
+    overflow?: 'wrap' | 'scroll';
+    /* `split` puts the old and the new side by side; the chat always stacks. */
+    diffStyle?: 'unified' | 'split';
+}
+
+export default function UnifiedDiff({ change, overflow = 'wrap', diffStyle = 'unified' }: UnifiedDiffProps) {
     const resolved = useTheme((t) => t.resolved);
     const patch = useMemo(() => asPatch(change), [change]);
     const options = useMemo(
@@ -40,10 +47,11 @@ export default function UnifiedDiff({ change, overflow = 'wrap' }: { change: Cha
             theme: DIFF_THEME,
             themeType: resolved,
             disableFileHeader: true,
+            diffStyle,
             overflow,
             hunkSeparators: 'simple' as const
         }),
-        [overflow, resolved]
+        [diffStyle, overflow, resolved]
     );
     if (patch === null) {
         return (

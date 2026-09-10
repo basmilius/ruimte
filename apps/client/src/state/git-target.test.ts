@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { CanvasNode } from './canvas.ts';
-import { gitTarget } from './git-target.ts';
+import { gitTarget, gitTargets } from './git-target.ts';
 
 const node = (id: string, over: Partial<CanvasNode> = {}): CanvasNode => ({
     id,
@@ -52,5 +52,23 @@ describe('gitTarget', () => {
 
     test('the first selected node that is in a worktree decides', () => {
         expect(gitTarget(nodes(group, inside, outside), ['n2', 'n1'], '/repo').cwd).toBe('/wt/feature');
+    });
+});
+
+describe('gitTargets', () => {
+    test('the project folder comes first, then every worktree the daemon knows', () => {
+        const worktrees = [
+            { path: '/wt/feature', branch: 'feature/x' },
+            { path: '/wt/fix', branch: 'fix/y' }
+        ];
+        expect(gitTargets(nodes(group), worktrees, '/repo')).toEqual([
+            { cwd: '/repo', label: 'repo', branch: null, kind: 'project' },
+            { cwd: '/wt/feature', label: 'feature/x', branch: 'feature/x', kind: 'worktree', group: 'g1' },
+            { cwd: '/wt/fix', label: 'fix/y', branch: 'fix/y', kind: 'worktree' }
+        ]);
+    });
+
+    test('a canvas without a folder offers the worktrees alone', () => {
+        expect(gitTargets({}, [{ path: '/wt/feature', branch: 'feature/x' }], null).map((target) => target.cwd)).toEqual(['/wt/feature']);
     });
 });

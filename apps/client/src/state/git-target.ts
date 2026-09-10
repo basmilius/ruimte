@@ -1,3 +1,4 @@
+import type { Worktree } from '@ruimte/contracts';
 import { membersOf, type CanvasNode } from '@/state/canvas';
 import { basenameOf } from '@/shell/panels/files-tree';
 
@@ -8,6 +9,8 @@ export interface GitTarget {
     label: string;
     branch: string | null;
     kind: 'project' | 'worktree';
+    /* The name of the group that binds this worktree, when one does. */
+    group?: string;
 }
 
 const boundGroupOf = (nodes: Record<string, CanvasNode>, id: string): CanvasNode | null => {
@@ -40,4 +43,24 @@ export const gitTarget = (nodes: Record<string, CanvasNode>, selection: string[]
         }
     }
     return { cwd: folder, label: folder === null ? '' : basenameOf(folder), branch: null, kind: 'project' };
+};
+
+/*
+ * Every checkout the panel can be pointed at by hand: the project folder first, then the worktrees
+ * the daemon knows, each with the group that binds it when there is one. The order is the one the
+ * repository reports, so a menu built from this reads the same way twice.
+ */
+export const gitTargets = (nodes: Record<string, CanvasNode>, worktrees: readonly Worktree[], folder: string | null): GitTarget[] => {
+    const targets: GitTarget[] = folder === null ? [] : [{ cwd: folder, label: basenameOf(folder), branch: null, kind: 'project' }];
+    for (const worktree of worktrees) {
+        const group = Object.values(nodes).find((node) => node.kind === 'group' && node.worktree?.path === worktree.path);
+        targets.push({
+            cwd: worktree.path,
+            label: worktree.branch,
+            branch: worktree.branch,
+            kind: 'worktree',
+            ...(group ? { group: group.title } : {})
+        });
+    }
+    return targets;
 };
