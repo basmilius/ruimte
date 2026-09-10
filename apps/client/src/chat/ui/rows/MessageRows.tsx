@@ -37,7 +37,7 @@ export function UserRow({ item }: { item: ChatUserItem }) {
                 </div>
             )}
             {item.text !== '' && (
-                <div className="relative max-w-[80%] rounded-2xl bg-accent-soft px-3.5 py-2.5 text-sm leading-normal text-text select-text">
+                <div className="relative max-w-[80%] rounded-2xl bg-surface-active px-3.5 py-2.5 text-sm leading-normal text-text select-text">
                     <div className={clsx('whitespace-pre-wrap', long && !open && 'chat-fold')}>
                         {segments.map((segment, index) =>
                             segment.kind === 'mention' ? (
