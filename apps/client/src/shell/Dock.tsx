@@ -29,6 +29,7 @@ import { leaveNodeChordLabel } from '@/terminal/keymap';
 import { StatusSummary } from '@/shell/StatusSummary';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
+import { Separator } from '@/ui/Separator';
 
 const centerWorld = () => {
     const s = useCanvas.getState();
@@ -88,7 +89,7 @@ export function Dock() {
                         </div>
                     )}
                 </Tooltip>
-                <span className="h-5 w-px bg-border" />
+                <Separator />
                 <StatusSummary />
 
                 <Menu.Root>
@@ -125,7 +126,7 @@ export function Dock() {
                     </Menu.Portal>
                 </Menu.Root>
 
-                <span className="h-5 w-px bg-border" />
+                <Separator />
                 <div className="btn-group">
                     <Tooltip label="Zoom out" name>
                         <button className="icon-btn" onClick={() => useCanvas.getState().zoomTo(Math.round(zoom * 100 - 10) / 100)}>
@@ -183,7 +184,7 @@ export function Dock() {
                         </button>
                     </Tooltip>
                 </div>
-                <span className="h-5 w-px bg-border" />
+                <Separator />
 
                 <div className="btn-group">
                     <Menu.Root>

@@ -11,6 +11,7 @@ import { transport } from '@/transport';
 import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
+import { Separator } from '@/ui/Separator';
 
 type HtmlView = 'preview' | 'source';
 
@@ -132,6 +133,7 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
             ) : (
                 <FileToolbar>
                     {controls}
+                    <Separator />
                     <DisabledWrapToggle />
                 </FileToolbar>
             )}

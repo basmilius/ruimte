@@ -7,6 +7,7 @@ import { useCanvas } from '@/state/canvas';
 import { NodeNotice } from '@/canvas/nodes/NodeNotice';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
+import { Separator } from '@/ui/Separator';
 
 const DEFAULT_URL = 'https://bas.dev';
 
@@ -70,6 +71,7 @@ export function BrowserNode({ id, focused }: { id: string; focused: boolean }) {
                         </button>
                     </Tooltip>
                 </div>
+                <Separator />
                 <div
                     className={clsx(
                         'flex h-7 grow items-center gap-2 rounded-md bg-surface-sunken px-2.5 text-xs text-text-muted',
@@ -100,6 +102,7 @@ export function BrowserNode({ id, focused }: { id: string; focused: boolean }) {
                         }}
                     />
                 </div>
+                <Separator />
                 <div className="btn-group">
                     <Tooltip label="Open in the system browser" name>
                         <button className="icon-btn h-7 w-7" onClick={() => void desktop()?.openExternal(state?.url ?? url)}>

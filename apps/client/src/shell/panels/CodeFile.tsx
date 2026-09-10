@@ -5,6 +5,7 @@ import { FileScroll } from '@/shell/panels/FileScroll';
 import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { highlightCode } from '@/shell/panels/highlight';
 import { useTheme } from '@/state/theme';
+import { Separator } from '@/ui/Separator';
 
 // One screen of code, near enough. Small enough to highlight without a stutter, large enough that a
 // long file is a handful of blocks instead of thousands.
@@ -120,6 +121,7 @@ export function CodeFile({ read, toolbarExtra }: CodeFileProps) {
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <FileToolbar label={language}>
                 {toolbarExtra}
+                {toolbarExtra !== undefined && <Separator />}
                 <FileToolbarToggle icon={WrapText} label={wrap ? 'Stop wrapping long lines' : 'Wrap long lines'} active={wrap} onClick={() => setWrap(!wrap)} />
             </FileToolbar>
             <FileScroll className="file-code" data-wrap={wrap}>

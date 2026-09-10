@@ -3,6 +3,7 @@ import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { nodeStatus, useSessions } from '@/state/sessions';
 import { StatusDot } from '@/canvas/NodeFrame';
+import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
 
 /* How many nodes need you and how many are working; the first is a button that walks through them. */
@@ -54,7 +55,7 @@ export function StatusSummary() {
                     </Tooltip>
                 )}
             </div>
-            <span className="h-5 w-px bg-border" />
+            <Separator />
         </>
     );
 }
