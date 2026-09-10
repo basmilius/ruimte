@@ -5,6 +5,7 @@ import { hasOverlayControls } from '@/desktop/bridge';
 import { FileTabs } from '@/shell/panels/FileTabs';
 import { FileViewer } from '@/shell/panels/FileViewer';
 import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
+import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useCanvas } from '@/state/canvas';
 import { useFiles } from '@/state/files';
 import { useUi } from '@/state/ui';
@@ -35,6 +36,12 @@ export function PreviewPanel() {
     const stored = useUi((s) => s.previewWidth);
     /* Closed and done animating. Until then the contents stay mounted, so a close plays out. */
     const [settled, setSettled] = useState(!open);
+    const instant = useInstantWidth();
+    /* A width that lands without a transition fires no `transitionend`, so the motion it would have
+       ended is over in the same commit that starts it. */
+    if (instant && settled !== !open) {
+        setSettled(!open);
+    }
     const present = open || !settled;
     const ref = useRef<HTMLElement>(null);
     /* What a project with no width of its own gets, taken the moment the preview opens: half of
@@ -91,6 +98,7 @@ export function PreviewPanel() {
         <aside
             ref={ref}
             inert={!open}
+            data-instant={instant ? '' : undefined}
             className="panel-shell flex h-full shrink-0 justify-end overflow-hidden transition-[width] duration-200 ease-out"
             style={{ width: open ? width : 0 }}
             onTransitionEnd={(event) => {
