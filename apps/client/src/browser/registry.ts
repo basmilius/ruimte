@@ -89,8 +89,9 @@ class BrowserRegistry {
             return null;
         }
         const element = document.createElement('webview') as WebviewElement;
+        // Only settings that turn something on: an Electron webview attribute counts as set the moment
+        // it is there, so `allowpopups="false"` would be popups switched on. A page here opens nothing.
         element.setAttribute('partition', 'persist:ruimte');
-        element.setAttribute('allowpopups', 'false');
         element.style.width = '100%';
         element.style.height = '100%';
         element.src = normalizeUrl(initialUrl);
