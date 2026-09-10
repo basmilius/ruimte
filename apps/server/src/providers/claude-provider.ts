@@ -12,5 +12,6 @@ export const claudeProvider: ChatProvider = {
     command: ['claude'],
     resumeCommand: CLAUDE_RESUME_COMMAND,
     detect: detectCli,
+    oneShotArgs: (prompt) => ['-p', prompt, '--output-format', 'text'],
     createBackend: (launch, host) => new ClaudeBackend(launch, host)
 };

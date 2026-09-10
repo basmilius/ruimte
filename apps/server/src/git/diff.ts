@@ -1,5 +1,6 @@
-import type { ChatCheckpointDiff, ChatCheckpointFile, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
-import { git, runGit, toplevel } from './run.ts';
+import type { ChatCheckpointDiff, ChatCheckpointFile, GitDiffFile, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
+import { readCommit } from './log.ts';
+import { git, runGit, toplevel, GitError } from './run.ts';
 
 // Beyond these a diff stops being something a person reads, and the chat file stops being small.
 const MAX_FILES = 100;
@@ -102,6 +103,8 @@ export const diffTrees = async (top: string, from: string, to: string): Promise<
 
 export interface DiffOptions {
     scope: GitDiffScope;
+    /* Commit scope only: which commit the file is read from. */
+    commit?: string;
     /* Worktree scope only: the index against HEAD instead of the working tree against the index. */
     staged: boolean;
     /* Leaves changes that are whitespace alone out of the diff, counts included. */
@@ -121,8 +124,13 @@ const isTracked = async (top: string, path: string): Promise<boolean> => {
  */
 const diffArgs = async (top: string, path: string, options: DiffOptions, mergeBase: string | null): Promise<string[]> => {
     const args = [...PATCH_ARGS, ...(options.ignoreWhitespace ? ['--ignore-all-space'] : [])];
-    if (!(await isTracked(top, path))) {
+    // Only the working tree can hold a file git has never seen; in history every path is tracked.
+    if (options.scope === 'worktree' && !(await isTracked(top, path))) {
         return ['diff', ...args, '--no-index', '/dev/null', path];
+    }
+    if (options.scope === 'commit') {
+        const commit = options.commit ?? 'HEAD';
+        return ['diff', ...args, `${commit}^`, commit, '--', `:(literal)${path}`];
     }
     if (options.scope === 'base') {
         return ['diff', ...args, mergeBase ?? 'HEAD', '--', `:(literal)${path}`];
@@ -164,4 +172,46 @@ export const diffFile = async (cwd: string, path: string, options: DiffOptions, 
     }
     result.diff = patch.stdout;
     return result;
+};
+
+// The tree of a repository with nothing in it: what the first commit is diffed against.
+const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+
+/* A commit's parent, or the empty tree for the first commit, which has none to compare with. */
+const parentOf = async (top: string, commit: string): Promise<string> => {
+    const parent = (await git(['rev-parse', '--verify', '--quiet', `${commit}^`], top))?.trim();
+    return parent || EMPTY_TREE;
+};
+
+/*
+ * A whole commit as one answer: every file it touched, with the same caps a turn's diff has, plus
+ * the row that names it. The panel's log opens this in a tab of its own, which is why it is one
+ * request and not one per file.
+ */
+export const diffCommit = async (cwd: string, commit: string): Promise<GitDiffResult> => {
+    const top = await toplevel(cwd);
+    const hash = (await git(['rev-parse', '--verify', commit], top))?.trim();
+    if (!hash) {
+        throw new GitError('git-failed', `${commit} is not a commit in this repository.`);
+    }
+    const diff = await diffTrees(top, await parentOf(top, hash), hash);
+    const meta = await readCommit(top, hash);
+    const files: GitDiffFile[] = (diff?.files ?? []).map((file) => ({
+        path: file.path,
+        diff: file.diff,
+        added: file.added,
+        deleted: file.deleted,
+        binary: file.omitted === 'binary',
+        ...(file.omitted ? { omitted: file.omitted } : {})
+    }));
+    return {
+        path: '',
+        diff: '',
+        added: files.reduce((total, file) => total + file.added, 0),
+        deleted: files.reduce((total, file) => total + file.deleted, 0),
+        binary: false,
+        files,
+        truncated: diff?.truncated ?? false,
+        ...(meta ? { commit: meta } : {})
+    };
 };

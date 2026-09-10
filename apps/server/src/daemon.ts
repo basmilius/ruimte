@@ -110,7 +110,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         }
     });
     registerFsHandlers(dispatcher, folders);
-    registerGitHandlers(dispatcher, new Worktrees(config.home), statuses);
+    registerGitHandlers(dispatcher, new Worktrees(config.home), statuses, providers);
 
     if (config.installHooks) {
         // Only the CLIs the daemon has a normalizer for are listed; the others run without status.

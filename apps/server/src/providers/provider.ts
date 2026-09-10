@@ -17,6 +17,9 @@ export interface ChatProvider {
     readonly command: string[];
     // What a terminal runs to continue one of this CLI's sessions; `{id}` stands for the session id.
     readonly resumeCommand: string;
+    /* The arguments for one prompt in and one answer out, no session and no chat, which is how the
+       daemon asks for a commit message. Absent on a CLI that only runs interactively. */
+    oneShotArgs?(prompt: string): string[];
     detect(command: string, env: Record<string, string | undefined>): Promise<CliDetection>;
     createBackend(launch: BackendLaunch, host: BackendHost): ChatBackend;
 }

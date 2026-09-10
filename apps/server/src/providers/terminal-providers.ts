@@ -38,6 +38,9 @@ const terminalProvider = (kind: AgentKind, name: string, command: string, resume
     }
 });
 
-export const geminiProvider = terminalProvider('gemini', 'Gemini', 'gemini', 'gemini --resume {id}');
+export const geminiProvider: ChatProvider = {
+    ...terminalProvider('gemini', 'Gemini', 'gemini', 'gemini --resume {id}'),
+    oneShotArgs: (prompt) => ['--prompt', prompt]
+};
 
 export const copilotProvider = terminalProvider('copilot', 'GitHub Copilot', 'copilot', 'copilot --resume={id}');
