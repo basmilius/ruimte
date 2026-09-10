@@ -164,8 +164,13 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   `<main>` is a row of the canvas column, `shell/PreviewPanel.tsx` and `shell/Panel.tsx`, so both
   panels span the full height and their own 48px headers (a drag region, with the panel's name or
   the tab strip and a close button) continue the band the sidebar strip and the toolbar start.
-  `PanelControls` renders in the toolbar while the panel is closed and in the panel's header once it
-  is open, at the same x, and the overlay-controls inset on Windows and Linux travels with it. The panel stays mounted and animates its width between 0 and the stored
+  `PanelControls` stays in the toolbar whether a panel is open or not, so a toggle never moves out
+  from under the pointer, and a hairline separates it from the palette group that keeps the
+  toolbar's right end; the panel's own header carries its title and its close button and nothing
+  else. On Windows and Linux the native controls overlay covers that right end, so exactly one
+  element takes `toolbar-overlay-inset`: the Files or Git panel's header while it is open, the
+  preview's header while the preview is open on its own, and the palette group when neither is.
+  The panel stays mounted and animates its width between 0 and the stored
   width in 200 ms over a fixed inner column; a resize drag sets `[data-resizing]`, which turns the
   transition off, and the contents unmount when the closing transition ends (immediately under
   reduced motion). Resizable from its left edge, min 240 and default 540, through
@@ -353,12 +358,13 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   ours that stays above a fullscreen app. `electron-updater` reads the feed electron-builder
   writes into a packaged app; a checkout skips it. `bun run --cwd apps/desktop smoke` boots the
   shell, adds a browser node through the keyboard and waits for its page to load. The title
-  bar is `hiddenInset` with the traffic lights at (16, 18) on macOS and a native
+  bar is `hiddenInset` with the traffic lights at (12, 18) on macOS and a native
   controls overlay elsewhere, the sidebar's top strip and the toolbar next to it are both drag
   regions and together make one 48px band (children reset to `initial`, controls `no-drag`),
-  the traffic-light inset comes from `useTrafficLightInset()` and belongs to the leftmost strip
+  the traffic-light inset comes from `useTrafficLightInset()` (84px, `TRAFFIC_LIGHTS_INSET_PX` in
+  `desktop/bridge.ts`) and belongs to the leftmost strip
   (the sidebar's when it is open, the toolbar's when it is closed), only outside fullscreen
-  (the shell sends `window:fullscreen`), the rightmost strip keeps the width of the
+  (the shell sends `window:fullscreen`), the rightmost element in the band keeps the width of the
   overlay controls free through `env(titlebar-area-*)` on Windows and Linux, and the overlay
   colors follow the client's theme over IPC.
 
