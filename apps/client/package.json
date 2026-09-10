@@ -11,8 +11,10 @@
   },
   "dependencies": {
     "@base-ui-components/react": "^1.0.0-rc.0",
-    "@hugeicons/core-free-icons": "^4.3.2",
-    "@hugeicons/react": "^1.1.10",
+    "@fortawesome/duotone-regular-svg-icons": "^7",
+    "@fortawesome/fontawesome-svg-core": "^7",
+    "@fortawesome/free-brands-svg-icons": "^7",
+    "@fortawesome/react-fontawesome": "^3",
     "@pierre/diffs": "^1.4.1",
     "@ruimte/contracts": "workspace:*",
     "@tanstack/react-virtual": "^3.14.11",
@@ -27,7 +29,6 @@
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "shiki": "^4.4.3",
-    "simple-icons": "^16.30.0",
     "zustand": "^5.0.15"
   },
   "devDependencies": {

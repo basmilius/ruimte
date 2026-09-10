@@ -1,5 +1,5 @@
 import { Popover } from '@base-ui-components/react/popover';
-import { ArrowShrink01Icon } from '@hugeicons/core-free-icons';
+import { faCompress } from '@fortawesome/duotone-regular-svg-icons';
 import type { ChatUsage } from '@ruimte/contracts';
 import { Icon } from '@/ui/Icon';
 
@@ -55,7 +55,7 @@ export function ContextMeter({ usage, disabled, onCompact }: { usage: ChatUsage;
                             disabled={disabled || usage.contextTokens === 0}
                             onClick={onCompact}
                         >
-                            <Icon icon={ArrowShrink01Icon} size={12} /> Compact context
+                            <Icon icon={faCompress} size={12} /> Compact context
                         </button>
                     </Popover.Popup>
                 </Popover.Positioner>

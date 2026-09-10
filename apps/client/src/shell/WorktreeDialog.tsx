@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { GitBranchIcon } from '@hugeicons/core-free-icons';
+import { faCodeBranch } from '@fortawesome/duotone-regular-svg-icons';
 import { useCanvas } from '@/state/canvas';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
@@ -58,7 +58,7 @@ export function WorktreeDialog() {
                 <Dialog.Backdrop className="dialog-backdrop" />
                 <Dialog.Popup className="dialog-popup top-[24vh] w-[420px] p-5">
                     <Dialog.Title className="flex items-center gap-2 text-[15px] font-semibold text-text">
-                        <Icon icon={GitBranchIcon} size={15} /> Bind to a worktree
+                        <Icon icon={faCodeBranch} size={15} /> Bind to a worktree
                     </Dialog.Title>
                     {folder ? (
                         <>

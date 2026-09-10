@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client';
+import { config } from '@fortawesome/fontawesome-svg-core';
 import { App } from '@/App';
 import { startNeedsYouNotifications } from '@/shell/notifications';
 import { startSessionLifecycle } from '@/terminal/lifecycle';
@@ -11,8 +12,12 @@ import '@/project';
 import { exposeTerminalTestHooks } from '@/terminal/registry';
 import '@/state/theme';
 import '@/state/settings';
+import '@fortawesome/fontawesome-svg-core/styles.css';
 import '@xterm/xterm/css/xterm.css';
 import '@/styles.css';
+
+// The Font Awesome stylesheet is imported above, so the library must not inject a second copy.
+config.autoAddCss = false;
 
 startSessionLifecycle();
 startNeedsYouNotifications();

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import clsx from 'clsx';
 import { Switch } from '@base-ui-components/react/switch';
-import { MinusIcon, PlusIcon } from '@hugeicons/core-free-icons';
+import { faMinus, faPlus } from '@fortawesome/duotone-regular-svg-icons';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 
@@ -92,12 +92,12 @@ export function Stepper({ value, min, max, step, unit, label, onChange }: Steppe
             <div className="btn-group rounded-lg bg-surface-sunken p-0.5">
                 <Tooltip label="Smaller">
                     <button className="icon-btn h-7 w-7" aria-label={`${label}: smaller`} disabled={value <= min} onClick={() => nudge(-1)}>
-                        <Icon icon={MinusIcon} size={13} />
+                        <Icon icon={faMinus} size={13} />
                     </button>
                 </Tooltip>
                 <Tooltip label="Larger">
                     <button className="icon-btn h-7 w-7" aria-label={`${label}: larger`} disabled={value >= max} onClick={() => nudge(1)}>
-                        <Icon icon={PlusIcon} size={13} />
+                        <Icon icon={faPlus} size={13} />
                     </button>
                 </Tooltip>
             </div>

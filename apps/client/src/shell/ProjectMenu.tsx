@@ -2,7 +2,7 @@ import { useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Menu } from '@base-ui-components/react/menu';
-import { CheckIcon, ChevronDownIcon, ExternalLinkIcon, FolderOpenIcon, PlusIcon, TrashIcon, XIcon } from '@hugeicons/core-free-icons';
+import { faArrowUpRightFromSquare, faCheck, faChevronDown, faFolderOpen, faPlus, faTrash, faXmark } from '@fortawesome/duotone-regular-svg-icons';
 import { projectClient } from '@/project';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
@@ -74,7 +74,7 @@ export function ProjectMenu() {
                 <Menu.Trigger className="flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-left hover:bg-surface-sunken data-[popup-open]:bg-surface-sunken">
                     <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: current?.color ?? 'var(--text-faint)' }} />
                     <span className="truncate text-[13px] font-medium text-text">{current?.name ?? 'No project'}</span>
-                    <Icon icon={ChevronDownIcon} size={14} className="shrink-0 text-text-muted" />
+                    <Icon icon={faChevronDown} size={14} className="shrink-0 text-text-muted" />
                 </Menu.Trigger>
                 <Menu.Portal>
                     <Menu.Positioner className="z-50" side="bottom" sideOffset={6} align="start">
@@ -92,15 +92,15 @@ export function ProjectMenu() {
                                         <span className="truncate">{project.name}</span>
                                         <span className="truncate text-[11px] text-text-faint">{project.folder ?? 'Not in a folder'}</span>
                                     </span>
-                                    {project.projectId === current?.projectId && <Icon icon={CheckIcon} size={13} className="ml-auto" />}
+                                    {project.projectId === current?.projectId && <Icon icon={faCheck} size={13} className="ml-auto" />}
                                 </Menu.Item>
                             ))}
                             {projects.length > 0 && <Menu.Separator className="menu-separator" />}
                             <Menu.Item className="menu-item" onClick={() => openDialog({ kind: 'new' })}>
-                                <Icon icon={PlusIcon} size={14} /> New canvas
+                                <Icon icon={faPlus} size={14} /> New canvas
                             </Menu.Item>
                             <Menu.Item className="menu-item" onClick={() => void openFolder()}>
-                                <Icon icon={FolderOpenIcon} size={14} /> Open folder
+                                <Icon icon={faFolderOpen} size={14} /> Open folder
                             </Menu.Item>
                             {current && (
                                 <>
@@ -110,18 +110,18 @@ export function ProjectMenu() {
                                             className="menu-item"
                                             onClick={() => void transport.request('fs.reveal', { path: current.folder! }).catch(() => undefined)}
                                         >
-                                            <Icon icon={ExternalLinkIcon} size={14} /> Open in {fileManagerName(platform)}
+                                            <Icon icon={faArrowUpRightFromSquare} size={14} /> Open in {fileManagerName(platform)}
                                         </Menu.Item>
                                     )}
                                     <Menu.Item className="menu-item" onClick={() => void projectClient.closeProject()}>
-                                        <Icon icon={XIcon} size={14} /> Close project
+                                        <Icon icon={faXmark} size={14} /> Close project
                                         <span className="ml-auto text-[11px] text-text-faint">Sessions keep running</span>
                                     </Menu.Item>
                                     <Menu.Item
                                         className="menu-item text-status-error"
                                         onClick={() => openDialog({ kind: 'delete', projectId: current.projectId, name: current.name, folder: current.folder })}
                                     >
-                                        <Icon icon={TrashIcon} size={14} /> Delete project
+                                        <Icon icon={faTrash} size={14} /> Delete project
                                     </Menu.Item>
                                 </>
                             )}
@@ -176,7 +176,7 @@ export function ProjectMenu() {
                                     disabled={busy}
                                     onClick={() => void run(() => projectClient.deleteProject(dialog.projectId, true))}
                                 >
-                                    <Icon icon={TrashIcon} size={13} /> Delete
+                                    <Icon icon={faTrash} size={13} /> Delete
                                 </button>
                             ) : (
                                 <button className={clsx(buttonClass, 'bg-accent text-accent-text disabled:opacity-50')} disabled={busy} onClick={submit}>
