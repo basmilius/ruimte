@@ -14,7 +14,17 @@ import {
     ChatTurnDiffPayloadSchema,
     ChatTurnDiffResultSchema
 } from './chat.ts';
-import { FsBrowsePayloadSchema, FsBrowseResultSchema, FsRevealPayloadSchema, FsSearchPayloadSchema, FsSearchResultSchema } from './fs.ts';
+import {
+    FsBrowsePayloadSchema,
+    FsBrowseResultSchema,
+    FsChangedEventSchema,
+    FsListPayloadSchema,
+    FsListResultSchema,
+    FsRevealPayloadSchema,
+    FsSearchPayloadSchema,
+    FsSearchResultSchema,
+    FsWatchPayloadSchema
+} from './fs.ts';
 import { WorktreeAddPayloadSchema, WorktreeAddResultSchema, WorktreeListPayloadSchema, WorktreeListResultSchema, WorktreeRemovePayloadSchema } from './git.ts';
 import { AuthRevokePayloadSchema, AuthSessionsResultSchema, EndpointInfoSchema, PairingTokenResultSchema } from './auth.ts';
 import { ContextSetPayloadSchema } from './context.ts';
@@ -97,6 +107,9 @@ export const REQUEST_SCHEMAS = {
     'fs.browse': { payload: FsBrowsePayloadSchema, result: FsBrowseResultSchema },
     'fs.reveal': { payload: FsRevealPayloadSchema, result: EmptySchema },
     'fs.search': { payload: FsSearchPayloadSchema, result: FsSearchResultSchema },
+    'fs.list': { payload: FsListPayloadSchema, result: FsListResultSchema },
+    'fs.watch': { payload: FsWatchPayloadSchema, result: EmptySchema },
+    'fs.unwatch': { payload: FsWatchPayloadSchema, result: EmptySchema },
     'git.worktree-add': { payload: WorktreeAddPayloadSchema, result: WorktreeAddResultSchema },
     'git.worktree-list': { payload: WorktreeListPayloadSchema, result: WorktreeListResultSchema },
     'git.worktree-remove': { payload: WorktreeRemovePayloadSchema, result: EmptySchema },
@@ -126,7 +139,8 @@ export const EVENT_SCHEMAS = {
     'session.list-changed': EmptySchema,
     'chat.event': ChatEventEnvelopeSchema,
     'project.changed': ProjectChangedEventSchema,
-    'project.summary': ProjectSummaryEventSchema
+    'project.summary': ProjectSummaryEventSchema,
+    'fs.changed': FsChangedEventSchema
 } as const satisfies Record<string, z.ZodType>;
 
 export type EventType = keyof typeof EVENT_SCHEMAS;
