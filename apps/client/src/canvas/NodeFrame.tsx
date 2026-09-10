@@ -8,6 +8,7 @@ import { useNodeStatus } from '@/state/chats';
 import { useHasContextLinks } from '@/context/sync';
 import { NODE_ACCENTS } from '@/canvas/accents';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
+import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
 import { useHeldWhileVisible, useNodeInViewport } from '@/canvas/culling';
 import { TerminalNode, TerminalPlate } from '@/canvas/nodes/TerminalNode';
@@ -52,12 +53,14 @@ const EDGE_STYLE: Record<(typeof RESIZE_EDGES)[number], string> = {
     sw: 'bottom-0 left-0 h-3.5 w-3.5 translate-y-1/2 -translate-x-1/2 cursor-nesw-resize'
 };
 
-export function StatusDot({ status, className }: { status: AgentStatus; className?: string }) {
-    return (
-        <Tooltip label={STATUS_LABEL[status]}>
-            <span className={clsx('inline-block h-2 w-2 rounded-full', STATUS_CLASS[status], status === 'running' && 'animate-pulse', className)} />
-        </Tooltip>
-    );
+/* `plain` drops the tooltip: inside a control that already has a name of its own, a second tooltip
+   under the pointer only fights the first one. */
+export function StatusDot({ status, className, plain = false }: { status: AgentStatus; className?: string; plain?: boolean }) {
+    const dot = <span className={clsx('inline-block h-2 w-2 rounded-full', STATUS_CLASS[status], status === 'running' && 'animate-pulse', className)} />;
+    if (plain) {
+        return dot;
+    }
+    return <Tooltip label={STATUS_LABEL[status]}>{dot}</Tooltip>;
 }
 
 function Title({ id, title, editing, onDone }: { id: string; title: string; editing: boolean; onDone: () => void }) {
@@ -155,13 +158,16 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
             >
                 <header
                     className={clsx(
-                        'flex h-[39px] shrink-0 items-center gap-2 pl-2.5 pr-1 text-text-muted',
+                        'flex h-[39px] shrink-0 items-center gap-2 pr-1 text-text-muted',
+                        // The collapse button carries 6px of optical padding inside its 28px square, so
+                        // 4px of header padding puts its glyph in the same column as a node's kind icon.
+                        isGroup ? 'pl-1' : 'pl-2.5',
                         isGroup ? 'bg-transparent' : isNote ? 'border-b bg-transparent' : 'border-b border-border bg-surface-raised'
                     )}
                 >
                     {isGroup && (
-                        <Tooltip label={collapsed ? 'Expand' : 'Collapse'}>
-                            <button className="icon-btn -ml-1 h-7 w-7" onClick={() => useCanvas.getState().toggleGroupCollapse(id)}>
+                        <Tooltip label={collapsed ? 'Expand' : 'Collapse'} name>
+                            <button className="icon-btn h-7 w-7" onClick={() => useCanvas.getState().toggleGroupCollapse(id)}>
                                 {collapsed ? <Icon icon={ChevronRight} size={16} /> : <Icon icon={ChevronDown} size={16} />}
                             </button>
                         </Tooltip>
@@ -171,48 +177,38 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     <span className="flex min-w-0 grow items-center" onDoubleClick={() => setRenaming(true)}>
                         <Title id={id} title={node.title} editing={renaming} onDone={() => setRenaming(false)} />
                     </span>
-                    {collapsed && (
-                        <span className="shrink-0 rounded-full bg-surface-sunken px-2 py-0.5 text-xs tabular-nums text-text-muted">
-                            {node.memberIds?.length ?? 0} inside
-                        </span>
-                    )}
+                    {collapsed && <Pill className="tabular-nums">{node.memberIds?.length ?? 0} inside</Pill>}
                     {isGroup && node.worktree && (
                         <Tooltip label={node.worktree.path}>
-                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 font-mono text-xs text-text-muted">
-                                <Icon icon={GitBranch} size={12} /> {node.worktree.branch}
-                            </span>
+                            <Pill mono icon={<Icon icon={GitBranch} size={12} />}>
+                                {node.worktree.branch}
+                            </Pill>
                         </Tooltip>
                     )}
                     {node.kind === 'terminal' && hasContext && !renaming && (
                         <Tooltip label="Linked context. The agent in this terminal reads it with ruimte-context (list, read <id>).">
-                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 text-xs text-text-muted">
-                                <Icon icon={Link2} size={12} /> context
-                            </span>
+                            <Pill icon={<Icon icon={Link2} size={12} />}>context</Pill>
                         </Tooltip>
                     )}
                     {node.kind === 'terminal' && node.escapeToApp && !renaming && (
                         <Tooltip label="Escape goes to the program in this terminal; click to turn off. Leave the node with" kbd="⌘Esc / ⌃Esc">
-                            <button
-                                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 text-xs text-text-muted hover:text-text"
-                                onClick={() => useCanvas.getState().updateNode(id, { escapeToApp: false })}
-                            >
-                                <Icon icon={Keyboard} size={12} /> Esc
-                            </button>
+                            <Pill icon={<Icon icon={Keyboard} size={12} />} onClick={() => useCanvas.getState().updateNode(id, { escapeToApp: false })}>
+                                Esc
+                            </Pill>
                         </Tooltip>
                     )}
                     {status && !renaming && (
-                        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-surface-sunken px-2 py-0.5 text-xs text-text-muted">
-                            <StatusDot status={status} />
+                        <Pill className="gap-1.5" icon={<StatusDot status={status} plain />}>
                             {STATUS_LABEL[status]}
-                        </span>
+                        </Pill>
                     )}
                     <div className="btn-group shrink-0">
-                        <Tooltip label="Zoom to node">
+                        <Tooltip label="Zoom to node" name>
                             <button className="icon-btn h-7 w-7" onClick={() => useCanvas.getState().goToNode(id)}>
                                 <Icon icon={Maximize2} size={16} />
                             </button>
                         </Tooltip>
-                        <Tooltip label="Close">
+                        <Tooltip label="Close node" name>
                             <button className="icon-btn h-7 w-7" onClick={remove}>
                                 <Icon icon={X} size={16} />
                             </button>

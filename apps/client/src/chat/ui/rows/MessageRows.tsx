@@ -58,7 +58,7 @@ export function UserRow({ item }: { item: ChatUserItem }) {
                 </div>
             )}
             <div className="mt-1 flex h-5 items-center gap-1 pr-1 opacity-0 transition-opacity group-hover/user:opacity-100">
-                <Tooltip label="Copy">
+                <Tooltip label="Copy" name>
                     <button className="icon-btn h-5 w-5 rounded" onClick={() => copy(item.text)}>
                         <Icon icon={Copy} size={14} />
                     </button>
@@ -75,7 +75,7 @@ export function AssistantRow({ item, last }: { item: ChatAssistantItem; last: bo
             {item.streaming && item.text === '' && <span className="inline-block h-3.5 w-1.5 animate-pulse rounded-sm bg-text-faint align-middle" />}
             {last && !item.streaming && (
                 <div className="mt-1 flex h-5 items-center gap-1 opacity-0 transition-opacity group-hover/assistant:opacity-100">
-                    <Tooltip label="Copy">
+                    <Tooltip label="Copy" name>
                         <button className="icon-btn h-5 w-5 rounded" onClick={() => copy(item.text)}>
                             <Icon icon={Copy} size={14} />
                         </button>
