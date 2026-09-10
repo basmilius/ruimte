@@ -647,10 +647,16 @@ body {
         display: flex;
         align-items: center;
         gap: 4px;
-        height: 32px;
+        height: 40px;
         flex-shrink: 0;
         padding: 0 8px;
         border-bottom: 1px solid var(--border);
+        background: var(--surface);
+    }
+    .file-toolbar-label {
+        color: var(--text-muted);
+        font-size: var(--text-xs);
+        line-height: var(--text-xs--line-height);
     }
     .file-footer {
         display: flex;

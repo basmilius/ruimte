@@ -2,10 +2,9 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { WrapText } from 'lucide-react';
 import type { FsReadText } from '@ruimte/contracts';
 import { FileScroll } from '@/shell/panels/FileScroll';
+import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { highlightCode } from '@/shell/panels/highlight';
 import { useTheme } from '@/state/theme';
-import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
 
 // One screen of code, near enough. Small enough to highlight without a stutter, large enough that a
 // long file is a handful of blocks instead of thousands.
@@ -96,12 +95,12 @@ function CodeChunk({ code, lines, start, language, theme }: ChunkProps) {
 export interface CodeFileProps {
     name: string;
     read: FsReadText;
-    /* What the file's own renderer puts on the left of the toolbar, such as the markdown view switch. */
-    toolbarStart?: ReactNode;
+    /* Controls the file's own renderer adds to the toolbar, such as the markdown view switch. */
+    toolbarExtra?: ReactNode;
 }
 
 /* Any text file, highlighted a block at a time. */
-export function CodeFile({ read, toolbarStart }: CodeFileProps) {
+export function CodeFile({ read, toolbarExtra }: CodeFileProps) {
     const theme = useTheme((t) => t.resolved);
     const [wrap, setWrap] = useState(false);
     const language = read.language ?? 'text';
@@ -119,15 +118,10 @@ export function CodeFile({ read, toolbarStart }: CodeFileProps) {
 
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
-            <div className="file-toolbar">
-                {toolbarStart}
-                <span className="grow" />
-                <Tooltip label={wrap ? 'Stop wrapping long lines' : 'Wrap long lines'} name>
-                    <button className="icon-btn h-6 w-6" aria-pressed={wrap} onClick={() => setWrap(!wrap)}>
-                        <Icon icon={WrapText} size={14} />
-                    </button>
-                </Tooltip>
-            </div>
+            <FileToolbar label={language}>
+                {toolbarExtra}
+                <FileToolbarToggle icon={WrapText} label={wrap ? 'Stop wrapping long lines' : 'Wrap long lines'} active={wrap} onClick={() => setWrap(!wrap)} />
+            </FileToolbar>
             <FileScroll className="file-code" data-wrap={wrap}>
                 {chunks.map((chunk) => (
                     <CodeChunk key={chunk.start} code={chunk.code} lines={chunk.lines} start={chunk.start} language={language} theme={theme} />
