@@ -25,6 +25,10 @@ interface ChatManagerOptions {
     codexCommand?: string[];
 }
 
+// Above this the record is big enough that rewriting it on every tool call costs more than it saves.
+const DEBOUNCE_ABOVE_BYTES = 256 * 1024;
+const DEBOUNCE_MS = 500;
+
 export class ChatManager {
     private readonly providers: ProviderRegistry;
     private readonly store: ChatStore | null;
@@ -35,6 +39,9 @@ export class ChatManager {
     private readonly sinks = new Map<string, SessionSink>();
     private readonly attached = new Map<string, Set<string>>();
     private readonly tokens = new Map<string, string>();
+    // How big each record was the last time it went to disk, and the writes waiting for a big one.
+    private readonly sizes = new Map<string, number>();
+    private readonly waiting = new Map<string, ReturnType<typeof setTimeout>>();
     private readonly contextUrl: string | null;
     private readonly hasContext: (chatId: string) => boolean;
     private readonly contextSources: (chatId: string) => ContextSource[];
@@ -118,7 +125,8 @@ export class ChatManager {
             contextSources: () => this.contextSources(payload.chatId),
             ...(this.checkpoints ? { checkpoints: this.checkpoints } : {}),
             emit: (event: ChatEvent) => this.emit(payload.chatId, event),
-            persist: () => this.persist(payload.chatId)
+            persist: () => this.persist(payload.chatId),
+            persistSoon: () => this.persistSoon(payload.chatId)
         });
         this.chats.set(session.id, session);
         return session.info;
@@ -151,7 +159,7 @@ export class ChatManager {
 
     send(chatId: string, text: string, extras: ChatSendExtras = {}): void {
         const session = this.require(chatId);
-        if (session.info.activeTurnId) {
+        if (session.busy) {
             throw new ChatError('chat-busy', `Chat ${chatId} is still working on the previous message`);
         }
         session.send(text, extras);
@@ -159,7 +167,7 @@ export class ChatManager {
 
     compact(chatId: string): void {
         const session = this.require(chatId);
-        if (session.info.activeTurnId) {
+        if (session.busy) {
             throw new ChatError('chat-busy', `Chat ${chatId} is still working on the previous message`);
         }
         session.compact();
@@ -189,6 +197,8 @@ export class ChatManager {
     async kill(chatId: string): Promise<void> {
         const session = this.require(chatId);
         session.dispose();
+        this.cancelWaiting(chatId);
+        this.sizes.delete(chatId);
         this.chats.delete(chatId);
         this.attached.delete(chatId);
         for (const [token, id] of this.tokens) {
@@ -212,11 +222,60 @@ export class ChatManager {
         for (const session of this.chats.values()) {
             session.stop();
         }
+        for (const chatId of this.chats.keys()) {
+            this.cancelWaiting(chatId);
+        }
         await Promise.all([...this.chats.keys()].map((chatId) => this.persistNow(chatId)));
     }
 
+    /*
+     * Every thread to disk without awaiting anything. A `bun --watch` reload restarts the module while
+     * the signal handler is still on its first await, so the threads go down before that first await.
+     */
+    persistAllSync(): void {
+        if (!this.store) {
+            return;
+        }
+        for (const [chatId, session] of this.chats) {
+            this.cancelWaiting(chatId);
+            const { info, items } = session.thread.snapshot();
+            try {
+                this.store.writeSync(chatId, info, items);
+            } catch (e) {
+                console.error(`Chat record for ${chatId} failed`, e);
+            }
+        }
+    }
+
     private persist(chatId: string): void {
+        this.cancelWaiting(chatId);
         void this.persistNow(chatId).catch((e) => console.error(`Chat record for ${chatId} failed`, e));
+    }
+
+    /* A write that may wait: a long thread is not rewritten for every tool call that settles. */
+    private persistSoon(chatId: string): void {
+        if ((this.sizes.get(chatId) ?? 0) < DEBOUNCE_ABOVE_BYTES) {
+            this.persist(chatId);
+            return;
+        }
+        if (this.waiting.has(chatId)) {
+            return;
+        }
+        const timer = setTimeout(() => {
+            this.waiting.delete(chatId);
+            this.persist(chatId);
+        }, DEBOUNCE_MS);
+        // A pending write must never be the reason the process stays up.
+        timer.unref?.();
+        this.waiting.set(chatId, timer);
+    }
+
+    private cancelWaiting(chatId: string): void {
+        const timer = this.waiting.get(chatId);
+        if (timer) {
+            clearTimeout(timer);
+            this.waiting.delete(chatId);
+        }
     }
 
     private async persistNow(chatId: string): Promise<void> {
@@ -225,7 +284,7 @@ export class ChatManager {
             return;
         }
         const { info, items } = session.thread.snapshot();
-        await this.store.write(chatId, info, items);
+        this.sizes.set(chatId, await this.store.write(chatId, info, items));
     }
 
     private emit(chatId: string, event: ChatEvent): void {

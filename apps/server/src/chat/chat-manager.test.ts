@@ -334,6 +334,51 @@ describe('ChatManager', () => {
         await rm(repo, { recursive: true, force: true });
     });
 
+    test('a background subagent that settles opens a turn of the agent, with the summary as its label', async () => {
+        await manager.create({ chatId: 'chat-bg', cwd: home });
+        manager.attach('chat-bg', 'c1');
+        manager.send('chat-bg', 'background: 0.05 report written');
+        await waitFor(idle, 'the turn that launched the subagent');
+        expect(recorder.ofKind('turn')).toHaveLength(1);
+
+        // Nothing is sent from here: the CLI wakes the agent itself once the task settles.
+        await waitFor(() => recorder.ofKind('turn').length === 2, 'the turn the CLI opens on its own');
+        const agentTurn = recorder.ofKind('turn')[1]!;
+        expect(agentTurn).toMatchObject({ origin: 'agent', label: 'report written' });
+        expect(recorder.events.some((event) => event.type === 'item' && event.item.id === agentTurn.id && event.item.kind === 'turn')).toBe(true);
+        expect(recorder.events.some((event) => event.type === 'info' && event.info.activeTurnId === agentTurn.id && event.info.status === 'running')).toBe(
+            true
+        );
+
+        const settled = (): boolean => {
+            const turn = recorder.items.get(agentTurn.id);
+            return turn?.kind === 'turn' && turn.state === 'done';
+        };
+        await waitFor(settled, 'the turn the CLI opened to settle');
+        expect(recorder.items.get(agentTurn.id)).toMatchObject({ state: 'done', endedAt: expect.any(Number) });
+        expect(idle()).toBe(true);
+        // The person wrote one message; the second turn has none and carries the agent's own answer.
+        expect(recorder.ofKind('user')).toHaveLength(1);
+        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['I will report back', 'the subagent says: report written']);
+        expect(recorder.ofKind('assistant')[1]?.turnId).toBe(agentTurn.id);
+    });
+
+    test('the record holds a turn while it is still running', async () => {
+        await manager.create({ chatId: 'chat-open', cwd: home });
+        manager.attach('chat-open', 'c1');
+        manager.send('chat-open', 'slow');
+        await waitForAsync(async () => {
+            const stored = await store.read('chat-open');
+            return stored?.items.some((item) => item.kind === 'turn' && item.state === 'running') === true;
+        }, 'the open turn on disk');
+
+        const stored = await store.read('chat-open');
+        expect(stored?.items.map((item) => item.kind)).toEqual(['turn', 'user']);
+        expect(stored?.info.activeTurnId).not.toBeNull();
+        manager.cancel('chat-open');
+        await waitFor(idle, 'the turn to end');
+    });
+
     test('kill drops the thread and its record', async () => {
         await manager.create({ chatId: 'chat-7', cwd: home });
         manager.attach('chat-7', 'c1');

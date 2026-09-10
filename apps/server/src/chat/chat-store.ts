@@ -1,3 +1,4 @@
+import { mkdirSync, renameSync, writeFileSync } from 'node:fs';
 import { mkdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ChatInfoSchema, ChatItemSchema, type ChatInfo, type ChatItem } from '@ruimte/contracts';
@@ -11,7 +12,7 @@ type ChatRecord = z.infer<typeof RecordSchema>;
 
 const fileName = (chatId: string): string => `${encodeURIComponent(chatId)}.json`;
 
-/* One JSON file per chat under `$RUIMTE_HOME/chats`, written after every turn and on shutdown. */
+/* One JSON file per chat under `$RUIMTE_HOME/chats`, written while a turn runs and on shutdown. */
 export class ChatStore {
     readonly dir: string;
 
@@ -19,9 +20,24 @@ export class ChatStore {
         this.dir = join(home, 'chats');
     }
 
-    async write(chatId: string, info: ChatInfo, items: ChatItem[]): Promise<void> {
+    /* Answers how many bytes the record took, which is what tells a caller whether writing it is cheap. */
+    async write(chatId: string, info: ChatInfo, items: ChatItem[]): Promise<number> {
+        const body = JSON.stringify({ info, items });
         await mkdir(this.dir, { recursive: true, mode: 0o700 });
-        await writeAtomic(join(this.dir, fileName(chatId)), JSON.stringify({ info, items }));
+        await writeAtomic(join(this.dir, fileName(chatId)), body);
+        return body.length;
+    }
+
+    /*
+     * The same write without a turn of the event loop. A `bun --watch` reload restarts the module
+     * before an awaited write comes back, so a shutdown has to put the threads down synchronously.
+     */
+    writeSync(chatId: string, info: ChatInfo, items: ChatItem[]): void {
+        const target = join(this.dir, fileName(chatId));
+        const temp = `${target}.${process.pid}.tmp`;
+        mkdirSync(this.dir, { recursive: true, mode: 0o700 });
+        writeFileSync(temp, JSON.stringify({ info, items }), { mode: 0o600 });
+        renameSync(temp, target);
     }
 
     async read(chatId: string): Promise<ChatRecord | null> {

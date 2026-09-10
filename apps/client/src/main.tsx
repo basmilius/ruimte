@@ -1,6 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { App } from '@/App';
-import { startNeedsYouNotifications } from '@/shell/notifications';
+import { startAgentNotifications } from '@/shell/notifications';
 import { startSessionLifecycle } from '@/terminal/lifecycle';
 import { startServerInfo } from '@/transport/server-info';
 import { startPing } from '@/transport/ping';
@@ -18,7 +18,7 @@ import '@xterm/xterm/css/xterm.css';
 import '@/styles.css';
 
 startSessionLifecycle();
-startNeedsYouNotifications();
+startAgentNotifications();
 startServerInfo();
 startPing();
 startContextSync();

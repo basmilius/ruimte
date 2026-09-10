@@ -2,9 +2,10 @@
  * Stands in for `claude -p --input-format stream-json` in tests: speaks the same frames, needs no
  * network. `tool: <cmd>` asks for permission first, `run: <cmd>` runs without asking and reports
  * progress the way the real CLI does, `ask: <question>` asks the person a question, `compact`
- * reports a compaction, `write: <path> <text>` writes a file and reports it as an edit, `slow`
- * waits for an interrupt, `crash` dies. The init frame carries the argument list as `argv`, so a
- * test can see which flags a session started with.
+ * reports a compaction, `write: <path> <text>` writes a file and reports it as an edit,
+ * `background: <seconds> <summary>` launches a subagent and wakes the main agent when it settles,
+ * the way the CLI does that on its own, `slow` waits for an interrupt, `crash` dies. The init frame
+ * carries the argument list as `argv`, so a test can see which flags a session started with.
  */
 import { writeFileSync } from 'node:fs';
 
@@ -125,6 +126,64 @@ const handleUser = (text: string): void => {
         });
         assistantText('written');
         result();
+        return;
+    }
+    if (text.startsWith('background:')) {
+        const [secondsText = '0', ...rest] = text.slice(11).trim().split(' ');
+        const summary = rest.join(' ') || 'done';
+        const id = `msg_${++messageCounter}`;
+        out({
+            type: 'assistant',
+            message: {
+                id,
+                model,
+                role: 'assistant',
+                content: [{ type: 'tool_use', id: 'toolu_agent', name: 'Agent', input: { prompt: summary, run_in_background: true } }],
+                usage
+            },
+            session_id: sessionId
+        });
+        out({
+            type: 'system',
+            subtype: 'task_started',
+            task_id: 'task-agent',
+            tool_use_id: 'toolu_agent',
+            description: summary,
+            subagent_type: 'general-purpose',
+            is_backgrounded: true,
+            task_type: 'local_agent',
+            session_id: sessionId
+        });
+        out({
+            type: 'user',
+            message: {
+                role: 'user',
+                content: [{ type: 'tool_result', tool_use_id: 'toolu_agent', content: 'Async agent launched successfully.', is_error: false }]
+            },
+            session_id: sessionId
+        });
+        assistantText('I will report back');
+        result();
+        // What the real CLI does after the turn ended: no user frame, a notification, a fresh init,
+        // an assistant message of its own and a result.
+        setTimeout(
+            () => {
+                out({
+                    type: 'system',
+                    subtype: 'task_notification',
+                    task_id: 'task-agent',
+                    tool_use_id: 'toolu_agent',
+                    status: 'completed',
+                    output_file: '',
+                    summary,
+                    session_id: sessionId
+                });
+                out({ type: 'system', subtype: 'init', session_id: sessionId, model, cwd: process.cwd(), tools: ['Bash'], slash_commands: [], argv: args });
+                assistantText(`the subagent says: ${summary}`);
+                result();
+            },
+            Math.max(0, Math.round(Number(secondsText) * 1000))
+        );
         return;
     }
     if (text.startsWith('run:')) {

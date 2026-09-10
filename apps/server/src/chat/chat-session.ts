@@ -22,6 +22,8 @@ interface ChatSessionOptions {
     checkpoints?: CheckpointService;
     emit(event: ChatEvent): void;
     persist(): void;
+    // A write that may wait a moment: the work of a turn in flight, so a restart loses less than a whole turn.
+    persistSoon(): void;
 }
 
 export interface ChatSendExtras {
@@ -54,6 +56,8 @@ export class ChatSession {
     private lastSources: ContextSource[] | null = null;
     // The checkpoint of the turn in flight; everything queued for that turn waits for it.
     private turnReady: Promise<void> = Promise.resolve();
+    // Turns we settled ourselves whose `result` is still on its way; it may not close the turn after them.
+    private staleResults = 0;
 
     constructor(options: ChatSessionOptions) {
         this.options = options;
@@ -71,6 +75,13 @@ export class ChatSession {
 
     get running(): boolean {
         return this.backend?.running === true;
+    }
+
+    /* Whether the person has to wait. A turn the CLI opened itself is stepped on by the next message. */
+    get busy(): boolean {
+        const turnId = this.thread.info.activeTurnId;
+        const turn = turnId ? this.thread.get(turnId) : undefined;
+        return turnId !== null && (turn?.kind !== 'turn' || turn.origin !== 'agent');
     }
 
     /* Model and permission changes; a turn in flight keeps its process until it ends. */
@@ -95,6 +106,7 @@ export class ChatSession {
     }
 
     send(text: string, extras: ChatSendExtras = {}): void {
+        this.settleAgentTurn();
         const note = this.contextNote(text);
         const turnId = this.openTurn(text, note, extras);
         const input = {
@@ -182,7 +194,7 @@ export class ChatSession {
     private openTurn(text: string | null, note: string | null, extras: ChatSendExtras): string {
         const turnId = newId('turn');
         const now = Date.now();
-        const events = [this.thread.upsert({ id: turnId, kind: 'turn', createdAt: now, turnId, state: 'running', endedAt: null, costUsd: 0 })];
+        const events = [this.thread.upsert({ id: turnId, kind: 'turn', createdAt: now, turnId, state: 'running', origin: 'user', endedAt: null, costUsd: 0 })];
         if (note !== null) {
             events.push(this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'info', text: note }));
         }
@@ -193,7 +205,24 @@ export class ChatSession {
         }
         events.push(this.thread.patchInfo({ status: 'running', activeTurnId: turnId }));
         this.emit(events);
+        // On disk before the CLI answers, so a daemon that goes down mid-turn still shows the question.
+        this.options.persist();
         return turnId;
+    }
+
+    /*
+     * A turn the CLI opened itself is closed the moment the person types: they are steering now, and
+     * the `result` still coming for that turn must not settle the one they just started.
+     */
+    private settleAgentTurn(): void {
+        const turnId = this.thread.info.activeTurnId;
+        const turn = turnId ? this.thread.get(turnId) : undefined;
+        if (turn?.kind !== 'turn' || turn.origin !== 'agent') {
+            return;
+        }
+        this.staleResults += 1;
+        this.emit([this.thread.upsert({ ...turn, state: 'done', endedAt: Date.now() }), this.thread.patchInfo({ status: 'idle', activeTurnId: null })]);
+        this.settleCheckpoint(turn.id);
     }
 
     /* Records the folder's tree on the turn; a folder without git leaves the turn as it is. */
@@ -321,12 +350,29 @@ export class ChatSession {
             this.backend = null;
             this.starting = null;
         }
+        // A turn we settled ourselves still has its own `result` coming; it may not close the turn after it.
+        if (event.type === 'turn.done' && this.staleResults > 0) {
+            this.staleResults -= 1;
+            return;
+        }
+        if (event.type === 'exit' || event.type === 'failed') {
+            this.staleResults = 0;
+        }
         const openTurnId = this.thread.info.activeTurnId;
         this.emit(this.projector.project(generation, event));
-        if (event.type === 'turn.done' || event.type === 'exit' || event.type === 'failed') {
+        const activeTurnId = this.thread.info.activeTurnId;
+        if (openTurnId === null && activeTurnId !== null) {
+            // The CLI opened this turn itself; it takes a checkpoint like any other, so the card can
+            // show what the agent changed while nobody was watching.
+            void this.checkpoint(activeTurnId);
             this.options.persist();
         }
-        if (openTurnId !== null && this.thread.info.activeTurnId === null) {
+        if (event.type === 'turn.done' || event.type === 'exit' || event.type === 'failed') {
+            this.options.persist();
+        } else if (event.type === 'tool.done') {
+            this.options.persistSoon();
+        }
+        if (openTurnId !== null && activeTurnId === null) {
             this.settleCheckpoint(openTurnId);
         }
     }

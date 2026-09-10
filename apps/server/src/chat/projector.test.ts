@@ -22,11 +22,21 @@ const info: ChatInfo = {
 
 const setup = (generation = 1) => {
     const thread = new ChatThread(info);
-    thread.upsert({ id: 'turn-1', kind: 'turn', createdAt: 0, turnId: 'turn-1', state: 'running', endedAt: null, costUsd: 0 });
+    thread.upsert({ id: 'turn-1', kind: 'turn', createdAt: 0, turnId: 'turn-1', state: 'running', origin: 'user', endedAt: null, costUsd: 0 });
     let clock = 1;
     const projector = new ThreadProjector(thread, { providerName: 'Test CLI', now: () => clock++ });
     const project = (...events: BackendEvent[]) => events.flatMap((event) => projector.project(generation, event));
     return { thread, projector, project };
+};
+
+// A chat between turns: the CLI is alive, nobody asked it anything, and no turn is open.
+const idleSetup = () => {
+    const thread = new ChatThread({ ...info, status: 'idle', activeTurnId: null });
+    let clock = 1;
+    const projector = new ThreadProjector(thread, { providerName: 'Test CLI', now: () => clock++ });
+    const project = (...events: BackendEvent[]) => events.flatMap((event) => projector.project(1, event));
+    const openTurn = () => thread.list().find((item) => item.kind === 'turn');
+    return { thread, project, openTurn };
 };
 
 describe('ThreadProjector', () => {
@@ -82,6 +92,49 @@ describe('ThreadProjector', () => {
         project({ type: 'tool.started', ref: 'patch-1', name: 'ApplyPatch', input: { summary: 'a.ts' }, parentRef: null });
         project({ type: 'tool.done', ref: 'patch-1', output: '-x\n+y\n', state: 'done', changes });
         expect(thread.get('1:patch-1')).toMatchObject({ state: 'done', changes });
+    });
+
+    test('the agent talking outside a turn opens one of its own, labeled with the task that woke it', () => {
+        const { thread, project, openTurn } = idleSetup();
+        project({ type: 'task.done', ref: 'toolu_agent', summary: 'Report written', ok: true });
+        expect(openTurn()).toBeUndefined();
+
+        project({ type: 'text.delta', ref: 'msg_9:t0', text: 'The report is done' });
+        const turn = openTurn();
+        expect(turn).toMatchObject({ kind: 'turn', state: 'running', origin: 'agent', label: 'Report written' });
+        expect(thread.info).toMatchObject({ status: 'running', activeTurnId: turn?.id ?? '' });
+        // No message of the person in front of it, and the text belongs to the new turn.
+        expect(thread.list().some((item) => item.kind === 'user')).toBe(false);
+        expect(thread.get('1:msg_9:t0')).toMatchObject({ turnId: turn?.id ?? '' });
+
+        project({ type: 'turn.done', state: 'done', costUsd: 0.02 });
+        expect(thread.get(turn?.id ?? '')).toMatchObject({ state: 'done', endedAt: expect.any(Number) });
+        expect(thread.info).toMatchObject({ status: 'idle', activeTurnId: null, usage: { turns: 1 } });
+    });
+
+    test('a turn the CLI opens without a task behind it has no label, and the summary is used once', () => {
+        const first = idleSetup();
+        first.project({ type: 'text.done', ref: 'msg_1:t0', text: 'going on' });
+        expect(first.openTurn()).toMatchObject({ origin: 'agent' });
+        expect(first.openTurn()).not.toHaveProperty('label');
+
+        const second = idleSetup();
+        second.project({ type: 'task.done', ref: null, summary: 'Sleep finished', ok: true }, { type: 'text.done', ref: 'msg_1:t0', text: 'a' });
+        second.project({ type: 'turn.done', state: 'done', costUsd: 0 });
+        second.project({ type: 'text.done', ref: 'msg_2:t0', text: 'b' });
+        const turns = second.thread.list().filter((item) => item.kind === 'turn');
+        expect(turns).toHaveLength(2);
+        expect(turns[0]).toMatchObject({ label: 'Sleep finished' });
+        expect(turns[1]).not.toHaveProperty('label');
+    });
+
+    test('a frame from a subagent never opens a turn of its own', () => {
+        const { thread, project, openTurn } = idleSetup();
+        project({ type: 'tool.started', ref: 'toolu_inner', name: 'Bash', input: { command: 'sleep 20' }, parentRef: 'toolu_agent' });
+        project({ type: 'tool.done', ref: 'toolu_inner', output: 'ok', state: 'done' });
+        expect(openTurn()).toBeUndefined();
+        expect(thread.get('1:toolu_inner')).toMatchObject({ turnId: null, parentToolUseId: 'toolu_agent' });
+        expect(thread.info).toMatchObject({ status: 'idle', activeTurnId: null });
     });
 
     test('an approval waits under its request id and a withdrawal cancels it', () => {
