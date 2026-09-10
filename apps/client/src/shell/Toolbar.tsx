@@ -9,6 +9,7 @@ import { ViewMenu } from '@/shell/ViewMenu';
 import { useHasViewToolbar, ViewToolbar } from '@/shell/ViewToolbar';
 import { STRIP_PADDING_PX } from '@/shell/Sidebar';
 import { SidebarToggle } from '@/shell/SidebarToggle';
+import { useDrawing } from '@/state/drawing';
 import { useProject } from '@/state/project';
 import { useServer } from '@/state/server';
 import { useUi } from '@/state/ui';
@@ -23,7 +24,9 @@ import { Tooltip } from '@/ui/Tooltip';
    hidden; the left padding follows the sidebar's width, which keeps the breadcrumb from jumping
    when the list slides away. */
 export function Toolbar() {
-    const dirty = useProject((s) => s.dirty);
+    const projectDirty = useProject((s) => s.dirty);
+    const drawingDirty = useDrawing((s) => s.dirty);
+    const dirty = projectDirty || drawingDirty;
     const switching = useProject((s) => s.switching);
     const machine = useServer((s) => (s.reachability && s.reachability !== 'loopback' ? s.label : null));
     const panel = useUi((s) => s.panel);

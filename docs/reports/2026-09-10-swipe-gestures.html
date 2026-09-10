@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ruimte · Back- en forward-gestures in de browser</title>
+<title>Ruimte · Back en forward met een trackpad-gebaar</title>
 <style>
 :root {
   color-scheme: light;
@@ -43,9 +43,8 @@ h3 { font-size: 19px; margin: 26px 0 10px; }
 h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
 p { margin: 0 0 16px; text-wrap: pretty; }
 li, figcaption, blockquote { text-wrap: pretty; }
-.long-excerpt { text-wrap: wrap; }
 a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
-a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
 a:hover { text-decoration-thickness: 2px; }
 .intro { font-size: 21px; max-width: 850px; }
 .eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
@@ -57,20 +56,18 @@ nav a:hover, summary:hover { background: var(--panel); }
 nav a:active, summary:active { background: var(--highlight); }
 section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
 .recommendation { background: var(--highlight); }
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
-.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
-.stats span { display: block; font-size: 13px; margin-top: 7px; }
-.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
 .table { overflow-x: auto; margin: 20px 0; }
 table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
 caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
 th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
 th { background: var(--panel); }
+table { font-variant-numeric: tabular-nums; }
 .wide { min-width: 680px; }
 li { margin-bottom: 10px; }
 ul, ol { padding-left: 23px; }
 .note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
 .split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .split > * { min-width: 0; }
 .panel { background: var(--panel); padding: 24px; border-radius: 12px; }
 .panel h3 { margin-top: 0; }
@@ -80,50 +77,43 @@ ul, ol { padding-left: 23px; }
 .badge.danger { color: var(--danger); background: var(--danger-bg); }
 .badge.info { color: var(--info); background: var(--info-bg); }
 figure { margin: 20px 0; }
-.split > figure { margin: 0; }
 figcaption { margin-top: 10px; }
 .diagram { display: block; width: 100%; height: auto; }
 .diagram text { font-family: inherit; fill: var(--ink); font-size: 15px; }
+.diagram .small { font-size: 12px; fill: var(--muted); }
 .diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .file { fill: var(--paper); stroke: var(--accent); stroke-dasharray: 4 3; }
 .diagram .edge { fill: none; stroke: var(--accent); stroke-width: 2; }
 .diagram .arrow { fill: var(--accent); }
-.diagram .label { fill: var(--muted); font-size: 13px; }
+.plot { min-width: 720px; }
 .steps { list-style: none; padding: 0; counter-reset: step; }
 .step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
 .step::before { content: counter(step); font-size: 26px; color: var(--accent); }
 .step h3 { margin: 0 0 10px; }
 code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
-pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; line-height: 1.5; }
 pre code { overflow-wrap: normal; font-size: inherit; }
 details { border-top: 1px solid var(--line); margin-top: 16px; }
 summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
 .skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
 .skip:focus { top: 16px; }
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
-}
+@media (max-width: 900px) { .split.three { grid-template-columns: 1fr; } }
 @media (max-width: 700px) {
   header, main, footer { padding: 24px 16px; }
   header { padding-top: 40px; }
   section { padding: 24px 18px; }
   .split { grid-template-columns: 1fr; }
-  .stats { gap: 12px; }
-  .stats strong { font-size: 30px; }
 }
-@media (max-width: 420px) {
-  .stats { grid-template-columns: 1fr; }
-  .step { grid-template-columns: 30px 1fr; }
-}
+@media (max-width: 420px) { .step { grid-template-columns: 30px 1fr; } }
 @media print {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
   :root { background: var(--paper); }
   header, main, footer { max-width: none; padding: 16px 0; }
   nav, .skip { display: none; }
   section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
   .table { overflow: visible; }
-  .wide { min-width: 0; }
+  .wide, .plot { min-width: 0; }
   th, td { overflow-wrap: anywhere; }
-  .split { grid-template-columns: 1fr; }
+  .split, .split.three { grid-template-columns: 1fr; }
   figure, tr, .panel { break-inside: avoid; }
   h2, h3 { break-after: avoid; }
   pre { white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -132,275 +122,313 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
 </style>
 </head>
 <body>
-<a class="skip" href="#advies">Naar de inhoud</a>
+<a class="skip" href="#antwoord">Naar het antwoord</a>
 <header>
-  <p class="eyebrow">Ruimte / Uitzoekwerk / 10 september 2026</p>
-  <h1>Back en forward met twee vingers in de browser-node</h1>
-  <p class="intro">Het kan, maar niet met een schakelaar. Electron levert de gesture die Chrome op macOS geeft niet, dus wij detecteren hem zelf uit de wheel-events van de pagina en tekenen de terugkoppeling in de host die de node en de browser-view al delen. Een dag werk, en de dekking is goed genoeg om er dagelijks op te leunen.</p>
-  <p class="status">Advies: zelf detecteren, nu bouwen, en de Electron-API volgen die er misschien aan komt</p>
-  <p class="caption">Onderzocht op main (commit 5358501), Electron 44.3.0, macOS. Geen code gewijzigd.</p>
+  <p class="eyebrow">Ruimte / Onderzoek / 10 september 2026</p>
+  <h1>Back en forward met een trackpad-gebaar</h1>
+  <p class="intro">Het gebaar dat je uit Chrome kent, twee vingers naar links voor terug, bestaat in Electron niet. Chromium levert alleen het lege haakje; de detectie, de pijl-overlay en de navigatie zitten in de Chrome-browser zelf en zijn niet meegeleverd. Wij kunnen het wel nabouwen: een preload in de gastpagina meet de wheel-events, de host beslist, en de overlay tekenen we zelf in de laag waar de pagina al hangt. Twee vingers, in een node en in een browser view, is haalbaar in ongeveer anderhalve dag. Het gebaar dat met je vinger meebeweegt en terugveert vraagt een native addon.</p>
+  <p class="status">Onderzoek, nog niet gebouwd</p>
+  <p class="caption">Bron: de werkboom van Ruimte op 10 september 2026 bovenop <code>5358501</code>, Electron 44.3.0 (Chromium 152) en de Electron- en Chromium-broncode van 10 september 2026. Wat niet in een draaiende app is nagemeten staat als zodanig gemarkeerd in <a href="#open">Wat we nog niet weten</a>.</p>
   <nav aria-label="Inhoud">
-    <a href="#advies">Advies</a>
-    <a href="#waarom">Waarom het niet gratis is</a>
-    <a href="#routes">De vier routes</a>
-    <a href="#inbouw">Hoe het in Ruimte past</a>
-    <a href="#risico">Wat er scheef kan gaan</a>
+    <a href="#antwoord">Het antwoord</a>
+    <a href="#waarom">Waarom het er niet vanzelf is</a>
+    <a href="#routes">Vier routes</a>
+    <a href="#ontwerp">Het ontwerp</a>
+    <a href="#drempels">De heuristiek</a>
+    <a href="#overlay">Wat je ziet</a>
+    <a href="#randen">Randgevallen</a>
+    <a href="#open">Wat we nog niet weten</a>
+    <a href="#klein">Kleine winst nu</a>
     <a href="#plan">Plan</a>
     <a href="#bronnen">Bronnen</a>
   </nav>
 </header>
 <main>
-  <section id="advies" class="recommendation">
-    <h2>Advies</h2>
-    <p>Bouw route A: een preload-script in de guest-pagina telt horizontale wheel-deltas op, besluit dat het een swipe is, en meldt dat aan de node. De node navigeert en tekent een pijl die met de vinger meeloopt. Dit werkt met de twee vingers die je gewend bent, vraagt geen systeeminstelling, geen native module en geen nieuwe Electron.</p>
-    <p>Doe route B er in dezelfde middag bij: tien regels in de shell die het bestaande <code>swipe</code>-event van het venster op de gefocuste browser-node zetten. Dat vangt de gebruiker met een drie-vinger-instelling gratis mee.</p>
-    <p>Route C, de nette Electron-API, ligt sinds 4 september 2026 als pull request klaar. Zet hem op de volglijst, bouw er niet op. Route D, een eigen native module, is dezelfde uitkomst als C tegen de prijs van een build-keten die dit project vandaag niet heeft.</p>
-    <div class="stats">
-      <div><strong>2</strong><span>vingers, zonder dat de gebruiker iets instelt</span></div>
-      <div><strong>~1</strong><span>dag werk voor route A, inclusief de animatie</span></div>
-      <div><strong>11</strong><span>jaar dat de Electron-issue open staat</span></div>
-      <div><strong>0</strong><span>native dependencies erbij</span></div>
+
+<section id="antwoord" class="recommendation">
+  <h2>Het antwoord</h2>
+  <p>Ja, het kan, maar niet door een schakelaar om te zetten. Er is geen Electron-optie, geen Chromium-flag en geen <code>webPreferences</code>-veld dat het gebaar aanzet op macOS. Wat wij bouwen is een eigen gebaar dat hetzelfde voelt.</p>
+  <div class="split three">
+    <div class="panel">
+      <h3>Wel te doen</h3>
+      <p>Twee vingers naar links en rechts, met een drempel en een overlay, in een browser-node en in een browser view. Werkt met de standaardinstelling van macOS, want die stuurt scroll-events.</p>
+      <p><span class="badge confirmed">Ongeveer 1,5 dag</span></p>
     </div>
-    <p>Eén implementatie bedient allebei de plekken uit je vraag. De browser-node en de browser-view delen dezelfde geparkeerde host, dus wat daar gebeurt geldt voor beide.</p>
-  </section>
-
-  <section id="waarom">
-    <h2>Waarom het niet gratis is</h2>
-    <p>De twee-vinger swipe in Google Chrome komt niet uit Chromium's gedeelde onderdelen. Op macOS zit hij in Chrome's eigen browserlaag: een <code>HistorySwiper</code> die op AppKit's <code>trackSwipeEventWithOptions:</code> leunt, met Chrome's eigen overlay en Chrome's eigen navigatiebeleid. Electron neemt die laag niet over. Dat is geen vermoeden: het staat zo in de pull request die de functie nu aan Electron probeert toe te voegen.</p>
-    <blockquote>
-      <p class="long-excerpt">"Chromium's <code>HistorySwiper</code> was evaluated for direct reuse. It is coupled to renderer input acknowledgements, overscroll state, Chrome's history overlay, and browser navigation. Those policies do not fit a window-level Electron event, particularly because a <code>BaseWindow</code> can contain zero or multiple <code>WebContents</code>."</p>
-      <p class="caption">electron/electron#53522, 4 september 2026</p>
-    </blockquote>
-    <p>Wat Electron 44 wel heeft, en wat het niet meer heeft:</p>
-    <div class="table">
-      <table class="wide">
-        <caption>De macOS-gesture-API van Electron 44.3.0, zoals die in <code>electron.d.ts</code> staat</caption>
-        <thead>
-          <tr><th>API</th><th>Wat het geeft</th><th>Bruikbaar voor ons</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><code>BrowserWindow.on('swipe')</code></td>
-            <td>Richting bij een drie-vinger swipe, zonder fase en zonder voortgang</td>
-            <td><span class="badge warning">Deels</span> Vuurt alleen als de gebruiker in Systeeminstellingen "Veeg tussen pagina's" op "met twee of drie vingers" heeft staan. Dat is niet de standaard, en met twee vingers vuurt hij dan nog steeds niet.</td>
-          </tr>
-          <tr>
-            <td><code>scroll-touch-begin</code>, <code>-end</code>, <code>-edge</code></td>
-            <td>De ruwe scroll-fasen van de trackpad op vensterniveau</td>
-            <td><span class="badge danger">Weg</span> Verwijderd in Electron 23. Oudere blogposts over dit onderwerp leunen er allemaal op.</td>
-          </tr>
-          <tr>
-            <td><code>webContents.on('input-event')</code></td>
-            <td>Elk input-event dat naar een pagina gaat, inclusief <code>mouseWheel</code></td>
-            <td><span class="badge info">Misschien</span> De typing van <code>MouseWheelInputEvent</code> kent <code>deltaX</code> en <code>hasPreciseScrollingDeltas</code>, maar geen fase. Niet gemeten of het geëmitteerde object die velden echt draagt.</td>
-          </tr>
-          <tr>
-            <td><code>--enable-features=TouchpadOverscrollHistoryNavigation</code></td>
-            <td>Chromium's overscroll-navigatie</td>
-            <td><span class="badge danger">Nee</span> Die vlag stuurt de Aura-implementatie aan. Op macOS loopt de gesture via AppKit en Chrome's eigen laag, die Electron niet meelevert.</td>
-          </tr>
-          <tr>
-            <td><code>BaseWindow.on('swipe-gesture')</code></td>
-            <td>Richting, fase (<code>began</code>, <code>changed</code>, <code>ended</code>, <code>cancelled</code>) en voortgang tussen 0 en 1</td>
-            <td><span class="badge">Nog niet</span> Open pull request, review vereist. Bestaat vandaag in geen enkele Electron-release.</td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="panel">
+      <h3>Niet zonder native code</h3>
+      <p>De pagina die met je vinger meeschuift en terugveert als je halverwege loslaat. Dat is <code>trackSwipeEventWithOptions:</code> uit AppKit, en dat bereik je alleen via een addon of een Electron-patch.</p>
+      <p><span class="badge warning">Extra 2 tot 4 dagen, plus signing</span></p>
     </div>
-    <p>De vraag "kan dat?" is dus eigenlijk twee vragen. Kunnen we zien dat er geveegd wordt? Ja, uit de wheel-events. Kunnen we het net zo laten voelen als in Chrome, met de pagina die onder je vinger meeschuift en terugveert als je loslaat? Niet helemaal, want het stuk informatie dat AppKit daarvoor geeft, de fase van de veeg, bereikt web-content niet.</p>
-    <details open>
-      <summary>Wat er in de wheel-events ontbreekt</summary>
-      <p>Op macOS weet AppKit of een scroll-reeks nog onder je vingers zit of al uitrolt op momentum. Chromium draagt dat intern mee als <code>phase</code> en <code>momentumPhase</code>, maar zet het niet op de <code>WheelEvent</code> die een pagina ziet. Dat is precies wat een Electron-gebruiker in februari 2024 in issue #2683 rapporteerde, met een preload-script erbij dat de rest wel doet. Het gevolg voor ons: het einde van een gesture is niet af te lezen, alleen af te leiden uit stilte van ongeveer 120 ms.</p>
-    </details>
-  </section>
-
-  <section id="routes">
-    <h2>De vier routes</h2>
-    <div class="table">
-      <table class="wide">
-        <caption>Afweging per route, met de kosten in dagen werk</caption>
-        <thead>
-          <tr><th>Route</th><th>Gevoel</th><th>Dekking</th><th>Werk</th><th>Prijs</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>A. Wheel-detectie in een preload</strong></td>
-            <td>Pijl die meeloopt, navigatie bij loslaten. Geen echte rubberband.</td>
-            <td>Twee vingers, elke Mac, geen instelling</td>
-            <td>~1 dag</td>
-            <td>Heuristiek. Een pagina die zelf horizontaal scrollt vraagt een uitzondering.</td>
-          </tr>
-          <tr>
-            <td><strong>B. Het <code>swipe</code>-event van het venster</strong></td>
-            <td>Schokkerig: één signaal, geen voortgang</td>
-            <td>Alleen drie vingers, alleen met de niet-standaard instelling</td>
-            <td>~20 minuten</td>
-            <td>Vrijwel geen. Werkt naast A.</td>
-          </tr>
-          <tr>
-            <td><strong>C. Wachten op <code>swipe-gesture</code></strong></td>
-            <td>Zoals Chrome, met echte voortgang</td>
-            <td>Twee vingers, mits de systeeminstelling swipe-tracking toestaat</td>
-            <td>Nu niets, later een dag</td>
-            <td>Onbekende landingsdatum, daarna een Electron-major afwachten.</td>
-          </tr>
-          <tr>
-            <td><strong>D. Eigen native module</strong></td>
-            <td>Zoals C</td>
-            <td>Zoals C</td>
-            <td>2 tot 3 dagen</td>
-            <td>Objective-C, node-gyp, universal build en notarisatie in een keten die nu alleen <code>bun build</code> kent.</td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="panel">
+      <h3>Gratis meegenomen</h3>
+      <p>Dezelfde beslislaag bedient straks <code>⌘ [</code> en <code>⌘ ]</code> en de vierde en vijfde muisknop. Die chords zijn nog vrij; <code>⇧ ⌘ [</code> is al van de views.</p>
+      <p><span class="badge info">Een uur</span></p>
     </div>
-    <p>A en B bijten elkaar niet: B luistert op het venster, A in de pagina, en met de standaardinstelling vuurt B nooit. Zet ze allebei op dezelfde functie in de registry en de gebruiker merkt het verschil niet.</p>
-  </section>
+  </div>
+  <p>Aanbeveling: bouw de wheel-route (route A hieronder), zet er een schakelaar in de instellingen bij, en houd de native variant als optie voor later. Chromium 152 geeft sinds kort <code>WheelEvent.momentum</code>, en dat neemt precies het stuk onzekerheid weg waar iedereen voor ons op stukliep.</p>
+</section>
 
-  <section id="inbouw">
-    <h2>Hoe het in Ruimte past</h2>
-    <p>De keten is kort, en elk schakelpunt bestaat al in de code.</p>
-    <figure>
-      <svg class="diagram" viewBox="0 0 900 250" role="img" aria-labelledby="keten-titel">
-        <title id="keten-titel">De weg van een veeg op de trackpad naar een navigatie in de node</title>
-        <defs>
-          <marker id="pijl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-            <path class="arrow" d="M 0 0 L 10 5 L 0 10 z"/>
-          </marker>
-        </defs>
-        <rect class="node" x="8" y="40" width="180" height="66" rx="10"/>
-        <text x="98" y="68" text-anchor="middle">Trackpad</text>
-        <text class="label" x="98" y="90" text-anchor="middle">wheel in de pagina</text>
+<section id="waarom">
+  <h2>Waarom het er niet vanzelf is</h2>
+  <p>Chromium's macOS-view roept bij elk scroll-event eerst een optionele delegate aan (<code>RenderWidgetHostViewCocoa.scrollWheel:</code> vraagt <code>handleEvent:</code> aan zijn <code>responderDelegate</code>) en stuurt het event anders door naar de renderer. In <code>content/</code> is die delegate <code>nullptr</code>. Chrome vult hem met <code>ChromeRenderWidgetHostViewMacDelegate</code>, die alles doorgeeft aan <code>HistorySwiper</code>: de gesture-detectie, de halve cirkel met de pijl en de navigatie zitten daar. Dat bestand staat in <code>chrome/browser/</code>, dus Electron heeft het niet, en Electron overschrijft <code>GetWebContentsViewDelegate</code> niet.</p>
+  <p>De andere kant van Chromium helpt ook niet: de feature <code>TouchpadOverscrollHistoryNavigation</code> in <code>content/common/features.cc</code> staat achter <code>#if IS_CHROMEOS || IS_WIN || IS_LINUX</code>, en de vlag <code>overscroll-history-navigation</code> is <code>USE_AURA</code>. Op macOS doen beide niets.</p>
+  <p>In Electron loopt dit al lang. Issue <a href="https://github.com/electron/electron/issues/2683">#2683</a> staat open sinds 2015 met het label <em>pr welcome</em>. PR <a href="https://github.com/electron/electron/pull/49235">#49235</a> is als stale gesloten in augustus 2026. Opvolger <a href="https://github.com/electron/electron/pull/53522">#53522</a> (4 september 2026) voegt een <code>swipe-gesture</code> event toe met <code>direction</code>, <code>phase</code> en <code>progress</code>, gebouwd op <code>trackSwipeEventWithOptions:</code> in <code>ElectronNSWindow.sendEvent:</code>. Die PR heeft nog geen review en zit niet in 44.</p>
+  <figure>
+    <svg class="diagram" viewBox="0 0 940 250" role="img" aria-labelledby="pad-titel">
+      <title id="pad-titel">De weg van een twee-vinger scroll naar een navigatie, met de plek waar Chrome afslaat en wij afslaan</title>
+      <defs>
+        <marker id="pijl" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path class="arrow" d="M0 0 L9 4.5 L0 9 z"/></marker>
+      </defs>
+      <rect class="node" x="8" y="30" width="150" height="58" rx="10"/>
+      <text x="83" y="55" text-anchor="middle">Trackpad</text>
+      <text class="small" x="83" y="74" text-anchor="middle">NSEvent, scroll</text>
+      <rect class="node" x="196" y="30" width="170" height="58" rx="10"/>
+      <text x="281" y="55" text-anchor="middle">RenderWidget</text>
+      <text class="small" x="281" y="74" text-anchor="middle">HostViewCocoa</text>
+      <rect class="file" x="404" y="30" width="180" height="58" rx="10"/>
+      <text x="494" y="55" text-anchor="middle">responderDelegate</text>
+      <text class="small" x="494" y="74" text-anchor="middle">leeg in Electron</text>
+      <rect class="node" x="404" y="150" width="180" height="58" rx="10"/>
+      <text x="494" y="175" text-anchor="middle">De gastpagina</text>
+      <text class="small" x="494" y="194" text-anchor="middle">wheel-event, preload</text>
+      <rect class="node" x="622" y="150" width="150" height="58" rx="10"/>
+      <text x="697" y="175" text-anchor="middle">De client</text>
+      <text class="small" x="697" y="194" text-anchor="middle">beslist en tekent</text>
+      <rect class="node" x="810" y="150" width="122" height="58" rx="10"/>
+      <text x="871" y="175" text-anchor="middle">goBack()</text>
+      <text class="small" x="871" y="194" text-anchor="middle">registry</text>
+      <path class="edge" d="M158 59 H190" marker-end="url(#pijl)"/>
+      <path class="edge" d="M366 59 H398" marker-end="url(#pijl)"/>
+      <path class="edge" d="M494 88 V144" marker-end="url(#pijl)"/>
+      <path class="edge" d="M584 179 H616" marker-end="url(#pijl)"/>
+      <path class="edge" d="M772 179 H804" marker-end="url(#pijl)"/>
+      <text class="small" x="600" y="46">Chrome slaat hier af naar HistorySwiper</text>
+      <text class="small" x="600" y="66">en tekent de pijl. Wij hebben dat niet.</text>
+      <text class="small" x="200" y="179">Onze route: het event gaat gewoon</text>
+      <text class="small" x="200" y="199">door naar de pagina, en daar meten we.</text>
+    </svg>
+    <figcaption>Het scroll-event komt hoe dan ook in de pagina terecht. Chrome onderschept het een laag eerder; wij lezen het een laag later.</figcaption>
+  </figure>
+</section>
 
-        <rect class="node" x="240" y="40" width="180" height="66" rx="10"/>
-        <text x="330" y="68" text-anchor="middle">Preload</text>
-        <text class="label" x="330" y="90" text-anchor="middle">telt deltaX op</text>
+<section id="routes">
+  <h2>Vier routes</h2>
+  <div class="table">
+    <table class="wide">
+      <caption>Wat elke route oplevert en kost</caption>
+      <thead>
+        <tr><th scope="col">Route</th><th scope="col">Gebaar</th><th scope="col">Gevoel</th><th scope="col">Werk</th><th scope="col">Risico</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">A. Preload leest wheel-events <span class="badge confirmed">aanbevolen</span></th>
+          <td>Twee vingers, standaardinstelling van macOS</td>
+          <td>Drempel plus eigen overlay. Geen meebewegende pagina, geen terugveren.</td>
+          <td>1 tot 2 dagen</td>
+          <td>Heuristiek, dus vals-positief op pagina's die zelf horizontaal scrollen. Beheersbaar met de randcheck.</td>
+        </tr>
+        <tr>
+          <th scope="row">B. Het <code>swipe</code> event van het venster</th>
+          <td>Drie vingers, en alleen als de gebruiker "Swipe between pages" op twee of drie vingers heeft staan</td>
+          <td>Eén klap, geen voortgang, geen animatie</td>
+          <td>Een halve dag</td>
+          <td>Botst met Mission Control op drie vingers. Vuurt niet bij de tweevinger-stand. Weinig gebruikers zullen het vinden.</td>
+        </tr>
+        <tr>
+          <th scope="row">C. Native addon met <code>trackSwipeEventWithOptions:</code></th>
+          <td>Twee vingers, precies zoals Safari</td>
+          <td>Voortgang, momentum en terugveren van het systeem zelf</td>
+          <td>2 tot 4 dagen bovenop A</td>
+          <td>Objective-C++ addon, prebuilds voor arm64 en x64, meesigneren voor notarization, en swizzelen in een venster dat Electron zelf ook al aanraakt.</td>
+        </tr>
+        <tr>
+          <th scope="row">D. Wachten op Electron PR #53522</th>
+          <td>Twee vingers, met <code>phase</code> en <code>progress</code></td>
+          <td>Zoals C, maar dan uit de doos</td>
+          <td>Nul, plus de dag om het aan te sluiten</td>
+          <td>Geen review, geen datum, en de voorganger is als stale gesloten. Niet iets om op te plannen.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Route A en C sluiten elkaar niet uit: de beslislaag en de overlay uit A blijven staan als C er ooit bij komt, want ook C levert alleen richting en voortgang. Dat is de reden om A eerst te bouwen en de detectie netjes af te schermen.</p>
+  <details open>
+    <summary>Waarom het hoofdproces niet meekijkt</summary>
+    <p>De voor de hand liggende gedachte is om de wheel-events in <code>apps/desktop/src/main.ts</code> op te vangen, want daar kennen we de guest al. Dat gaat niet: <code>webContents.on('input-event')</code> geeft bij een <code>mouseWheel</code> alleen <code>type</code> en <code>modifiers</code> mee. De converter in <code>shell/common/gin_converters/blink_converter.cc</code> heeft een uitgewerkte tak voor toetsenbord- en muisevents, en <code>kMouseWheel</code> valt buiten <code>IsMouseEventType</code>, dus die belandt in de generieke tak zonder delta's, zonder positie en zonder fase. De oude <code>scroll-touch-begin</code>, <code>scroll-touch-end</code> en <code>scroll-touch-edge</code> zijn in Electron 22 gedeprecieerd en in 23 verwijderd; de aangeraden vervanging (<code>gestureScrollBegin</code> en <code>gestureScrollEnd</code> via <code>input-event</code>) geeft begin en einde van een gebaar, maar geen richting en geen afstand. Bruikbaar hooguit als extra signaal dat een gebaar afgelopen is, niet als bron.</p>
+  </details>
+</section>
 
-        <rect class="node" x="472" y="40" width="180" height="66" rx="10"/>
-        <text x="562" y="68" text-anchor="middle">Registry</text>
-        <text class="label" x="562" y="90" text-anchor="middle">ipc-message</text>
+<section id="ontwerp">
+  <h2>Het ontwerp</h2>
+  <p>Vier stukken, elk op de plek waar dat soort werk in Ruimte al staat.</p>
+  <h3>1. Een preload in de gastsessie</h3>
+  <p>De shell registreert één preload op de partitie die alle browser-nodes delen, zodat de client geen pad hoeft te kennen:</p>
+  <pre><code>// apps/desktop/src/main.ts, naast sealPreviewSession()
+session.fromPartition(BROWSER_PARTITION).registerPreloadScript({
+    type: 'frame',
+    filePath: join(here, 'guest.cjs')
+});</code></pre>
+  <p><code>session.setPreloads</code> is gedeprecieerd, <code>registerPreloadScript</code> is de opvolger en zit in 44. Het bestand komt uit dezelfde <code>bun build</code>-stap als <code>preload.cjs</code>, want een gastpreload draait in een sandbox en kan niets vanuit <code>node_modules</code> laden.</p>
+  <h3>2. De gast meet, de host beslist</h3>
+  <p>De preload doet zo min mogelijk: hij luistert passief op <code>window</code> in de bubbelfase, zodat hij ziet of de pagina het event zelf al heeft afgehandeld, en stuurt per event een monster naar de host. Wat er niet in de host te bepalen is, bepaalt de gast: of het element onder de cursor nog horizontaal kan scrollen, en of een voorouder <code>overscroll-behavior-x</code> op <code>contain</code> of <code>none</code> heeft staan.</p>
+  <pre><code>// apps/desktop/src/guest.ts
+window.addEventListener('wheel', (event) =&gt; {
+    ipcRenderer.sendToHost('ruimte:wheel', {
+        deltaX: event.deltaX,
+        deltaY: event.deltaY,
+        // Chromium 152 vertelt zelf of de vinger al los is; dit is de kern van de detectie.
+        momentum: event.momentum === true,
+        handled: event.defaultPrevented,
+        pinned: pinnedSide(event.target)
+    });
+}, { passive: true });</code></pre>
+  <p>De client hangt er één luisteraar aan in <code>registry.ts</code>, waar de andere webview-events al staan: <code>element.addEventListener('ipc-message', ...)</code>.</p>
+  <h3>3. Een pure beslisser met een test</h3>
+  <p>De heuristiek wordt een pure functie in <code>apps/client/src/browser/swipe.ts</code>, in dezelfde vorm als <code>load-error.ts</code>, <code>pretty-url.ts</code> en <code>browser-menu.ts</code>: staat in, monster erbij, staat en uitkomst eruit. Daarmee is elke drempel in <code>swipe.test.ts</code> vast te leggen zonder een echte trackpad, inclusief de momentumstaart en de pagina die halverwege van richting verandert.</p>
+  <pre><code>export interface SwipeState { axis: number; started: number; last: number; armed: boolean; }
+export type SwipeOutcome = { kind: 'idle' } | { kind: 'progress'; side: 'back' | 'forward'; progress: number } | { kind: 'navigate'; side: 'back' | 'forward' };
 
-        <rect class="node" x="704" y="8" width="188" height="66" rx="10"/>
-        <text x="798" y="36" text-anchor="middle">goBack()</text>
-        <text class="label" x="798" y="58" text-anchor="middle">de webview navigeert</text>
+export const feedWheel = (state: SwipeState, sample: WheelSample, now: number): { state: SwipeState; outcome: SwipeOutcome } =&gt; { ... };</code></pre>
+  <h3>4. De overlay in de geparkeerde host</h3>
+  <p><code>BrowserErrorPlate</code> laat al zien hoe je iets over een pagina tekent: een portal naar <code>browserRegistry.get(id)?.parentElement</code>, de host die <code>WebviewParking</code> plaatst. De pijl gebruikt dezelfde ingang, en daarmee werkt hij zonder extra werk in een node en in een browser view, precies zoals de foutplaat.</p>
+  <div class="note">
+    <p>De voortgang mag niet door de zustand-store van de browser lopen zoals <code>url</code> en <code>loading</code>. Die schrijft bij elk event elke abonnee wakker en de plaatsingslus van <code>WebviewParking</code> hangt aan dezelfde store. Geef de overlay een eigen kleine store of een ref met een eigen render, zodat een gebaar van 400 ms geen 30 canvasplaatsingen kost.</p>
+  </div>
+</section>
 
-        <rect class="node" x="704" y="104" width="188" height="66" rx="10"/>
-        <text x="798" y="132" text-anchor="middle">Overlay</text>
-        <text class="label" x="798" y="154" text-anchor="middle">pijl in de geparkeerde host</text>
+<section id="drempels">
+  <h2>De heuristiek</h2>
+  <p>Er is geen fase-informatie in een <code>wheel</code>-event: begin en einde van een gebaar zie je niet. Wel nieuw sinds Chromium 151 is <code>WheelEvent.momentum</code>, een boolean die <code>true</code> is zodra de vinger van de trackpad is. Electron 44 draagt Chromium 152, dus wij hebben hem. Alle implementaties voor ons moesten momentum uit timing afleiden (Min: 70 ms stilte, drie deltas vergelijken, uitschieters opvangen); dat mag nu weg.</p>
+  <div class="table">
+    <table>
+      <caption>Voorgestelde waarden, met de herkomst</caption>
+      <thead><tr><th scope="col">Regel</th><th scope="col">Waarde</th><th scope="col">Waarom</th></tr></thead>
+      <tbody>
+        <tr><td>Navigeren bij</td><td>150 px netto op de x-as</td><td>Min gebruikt 150, de Chrome-extensie 130. Chromium zelf meet 8 procent van de trackpadbreedte, wat wij niet kunnen zien.</td></tr>
+        <tr><td>Horizontale dominantie</td><td><code>|dx| &gt; 3 |dy|</code> over het gebaar</td><td>Min. WebKit annuleert al bij verticaal boven de helft van horizontaal.</td></tr>
+        <tr><td>Momentum</td><td>Telt niet mee voor de beslissing</td><td>Chromium's eigen swiper start nooit op een event dat alleen momentum draagt. Wij lezen <code>event.momentum</code> in plaats van het te raden.</td></tr>
+        <tr><td>Einde van een gebaar</td><td>70 ms zonder een monster</td><td>Min. Ondergrens ligt bij de 60 Hz waarmee macOS scroll-events levert.</td></tr>
+        <tr><td>Na een navigatie</td><td>500 ms doof</td><td>Anders loopt de staart van hetzelfde gebaar meteen door in de volgende pagina.</td></tr>
+        <tr><td>Randcheck</td><td>Bij het eerste monster van een gebaar</td><td>Een carousel of een breed codeblok onder de cursor houdt het gebaar. Min hercontroleert niet tijdens het gebaar en cachet de uitkomst 750 ms.</td></tr>
+        <tr><td>Pagina die zelf afhandelt</td><td><code>defaultPrevented</code> stopt het gebaar</td><td>Maps en Figma vangen wheel af. Bubbelfase luisteren geeft dit gratis; capture zou het te vroeg zien.</td></tr>
+        <tr><td>In een iframe</td><td>Nooit navigeren</td><td>De preload draait alleen in het hoofdframe, dus de scrollpositie van het iframe is niet leesbaar. Min doet hetzelfde.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Eén ding om af te spreken: <code>overscroll-behavior-x: contain</code> respecteren of niet. De CSS-werkgroep constateert dat de meeste browsers het voor swipe-navigatie negeren (<a href="https://github.com/w3c/csswg-drafts/issues/7878">csswg-drafts #7878</a>), maar Chromium's mac-swiper leest het wel. Het is het enige signaal dat een pagina heeft om te zeggen "dit gebaar is van mij". Voorstel: respecteren.</p>
+</section>
 
-        <path class="edge" d="M 188 73 L 232 73" marker-end="url(#pijl)"/>
-        <path class="edge" d="M 420 73 L 464 73" marker-end="url(#pijl)"/>
-        <path class="edge" d="M 652 73 C 678 73, 678 41, 696 41" marker-end="url(#pijl)"/>
-        <path class="edge" d="M 652 73 C 678 73, 678 137, 696 137" marker-end="url(#pijl)"/>
-
-        <rect class="node" x="240" y="180" width="412" height="52" rx="10"/>
-        <text class="label" x="446" y="212" text-anchor="middle">Alles binnen de partitie persist:ruimte, dus alleen browser-nodes zien dit</text>
-      </svg>
-      <figcaption>De veeg verlaat de guest via <code>sendToHost</code> en komt binnen op dezelfde plek waar <code>did-navigate</code> en <code>page-favicon-updated</code> al binnenkomen.</figcaption>
-    </figure>
-
-    <h3>Waar de code landt</h3>
-    <ul>
-      <li><strong><code>apps/desktop/src/main.ts</code></strong>: registreer het preload-script één keer op de browser-partitie met <code>session.fromPartition(BROWSER_PARTITION).registerPreloadScript({ type: 'frame', filePath })</code>. De partitie en de <code>isBrowserGuest</code>-controle staan er al, dus het script raakt nooit de client zelf.</li>
-      <li><strong>een nieuw <code>apps/desktop/src/guest.ts</code></strong>: de detectie, gebouwd naast <code>preload.ts</code> in het bestaande <code>build:main</code>-script.</li>
-      <li><strong><code>apps/client/src/browser/registry.ts</code></strong>: één regel bij <code>listen()</code> erbij, een <code>ipc-message</code>-listener die op het kanaal <code>swipe</code> <code>this.back(nodeId)</code> of <code>this.forward(nodeId)</code> aanroept en de voortgang in de store zet.</li>
-      <li><strong><code>apps/client/src/nodes/BrowserBody.tsx</code></strong>: de overlay, als tweelingbroer van <code>BrowserErrorPlate</code>. Die portalt al naar <code>browserRegistry.get(id)?.parentElement</code>, precies de host die de node en de browser-view delen.</li>
-    </ul>
-
-    <h3>De detectie</h3>
-    <p>Het script hangt in de capture-fase aan <code>window</code>, dus een pagina die <code>preventDefault</code> doet houdt ons niet tegen. Het telt op zolang de beweging horizontaal is en niets in de keten onder de cursor nog kan scrollen.</p>
-    <pre><code>const THRESHOLD = 100;   // CSS-pixels voordat een veeg telt
-const IDLE_MS = 120;     // stilte die het einde van de veeg markeert
-
-let travel = 0;
-let idle: ReturnType&lt;typeof setTimeout&gt; | null = null;
-
-window.addEventListener(
-    'wheel',
-    (event) =&gt; {
-        // Een muiswiel levert grove ticks, een trackpad kleine precieze deltas.
-        if (event.deltaMode !== 0 || Math.abs(event.deltaX) &lt;= Math.abs(event.deltaY)) {
-            return reset();
-        }
-        // De pagina mag eerst: pas als niets meer opzij kan, is het een veeg.
-        if (travel === 0 &amp;&amp; scrollableUnder(event.target, event.deltaX)) {
-            return reset();
-        }
-        travel += event.deltaX;
-        ipcRenderer.sendToHost('swipe', { phase: 'move', travel, threshold: THRESHOLD });
-        ...
-    },
-    { capture: true, passive: true }
-);</code></pre>
-    <p>Het einde komt uit de timer: geen wheel-event meer voor 120 ms betekent dat de veeg voorbij is, en dan navigeert de registry als de drempel gehaald is. Dat is de plek waar route C het beter zou doen, want AppKit weet dat zeker en wij gokken het.</p>
-
-    <h3>De terugkoppeling</h3>
-    <p>Chrome schuift de vorige pagina in beeld. Dat kunnen wij niet zonder een plaatje van die pagina, en <code>capturePage()</code> per navigatie is geen prijs die deze functie waard is. Wat wel kan en genoeg is: een ronde chip met een pijl die vanaf de rand meeschuift met <code>travel / THRESHOLD</code>, feller wordt naarmate de drempel nadert, en bij loslaten onder de drempel terugglijdt. Eén element, één transform, en hij zit in de host die al met de camera meeschaalt.</p>
-    <div class="split">
-      <div class="panel">
-        <h3>Alleen op een gefocuste node</h3>
-        <p><code>WebviewParking</code> geeft de pointer alleen aan een gefocuste node en nooit tijdens een gesture van het canvas. Een niet-gefocuste node ziet de wheel-events dus niet eens: die gaan naar het canvas, dat ermee pant. Dat is de bestaande regel voor scrollen, en de veeg hoort er vanzelf bij.</p>
-      </div>
-      <div class="panel">
-        <h3>Node en view tegelijk</h3>
-        <p>Een browser-view is dezelfde host over de hele kolom. De detectie zit in de pagina en de overlay in de host, dus geen van beide weet of hij in een node of in een view staat. Er is niets aparts te bouwen voor de view.</p>
-      </div>
+<section id="overlay">
+  <h2>Wat je ziet</h2>
+  <div class="split">
+    <div class="panel">
+      <h3>Chrome: een schild aan de rand</h3>
+      <p>De pagina blijft staan. Aan de linker- of rechterrand schuift een halve cirkel naar binnen met een pijl erin: straal 70, hoogte 140, breedte groeit lineair met de voortgang, alpha van 0,25 naar 0,65. Bij het bereiken van de drempel wordt hij iets hoger en 0,75, daarna 0,4 seconde uitfaden.</p>
+      <p><span class="badge confirmed">Na te bouwen in een middag</span></p>
     </div>
-  </section>
+    <div class="panel">
+      <h3>Safari: de pagina schuift mee</h3>
+      <p>De live pagina beweegt met de vinger opzij, met een gradient-schaduw van 81 px aan de rand. Eronder ligt een stilstaande snapshot van de vorige pagina, gedimd op 0,12, die oplicht naarmate het gebaar vordert.</p>
+      <p><span class="badge warning">Vraagt een snapshot vóór elke navigatie</span></p>
+    </div>
+  </div>
+  <p>Voor ons is Chrome de goede keuze, en niet alleen omdat het minder werk is. De Safari-variant zou de webview zelf moeten verschuiven, en dat is precies wat <code>WebviewParking</code> nooit doet: de host staat op een vaste plek en Chromium gooit een pagina weg zodra je hem verplaatst in de DOM. Een transform op de host is denkbaar, maar dan schuift de pagina binnen de node-omlijsting en heb je een tweede laag nodig voor de snapshot uit <code>webview.capturePage()</code>. Dat is een feature van een andere orde.</p>
+  <p>De pijl volgt de voortgang, dus hij is stil op het moment dat de vinger stil is. Bij <code>prefers-reduced-motion</code> vervalt het uitfaden en verdwijnt de pijl direct.</p>
+</section>
 
-  <section id="risico">
-    <h2>Wat er scheef kan gaan</h2>
-    <ul>
-      <li><strong>Pagina's die zelf horizontaal scrollen.</strong> Een kaart, een carrousel, een brede tabel. De keten onder de cursor aflopen en pas veegen als niets meer opzij kan, dekt het normale geval. Een pagina die scrollen zelf naspeelt met JavaScript, zoals sommige presentatie-sites, kan een valse veeg opleveren.</li>
-      <li><strong>Cross-origin iframes.</strong> Een wheel-event boven een ingesloten YouTube of Stripe-frame bereikt het hoofdframe niet. Het preload-script op de partitie draait wel in elk frame, maar of <code>sendToHost</code> vanuit een subframe aankomt is niet geverifieerd. Valt dat tegen, dan gaat het bericht via de main-process en <code>browserRegistry.nodeIdOfContents</code>, dat er al is voor het contextmenu.</li>
-      <li><strong>Het momentum na loslaten.</strong> Zonder fase-informatie telt de uitrol mee. Met de drempel op 100 px en een stilte-venster van 120 ms viel dat in andermans implementaties mee, maar de exacte getallen zijn iets om op je eigen trackpad bij te stellen.</li>
-      <li><strong>Muis versus trackpad.</strong> Een muis met een kantelwiel levert <code>deltaMode</code> ongelijk aan nul of grove deltas. Dat filter is nodig, anders navigeert een kantelwiel per ongeluk.</li>
-      <li><strong>De richting van het teken.</strong> Of vingers naar rechts een negatieve <code>deltaX</code> geven hangt aan de instelling voor natuurlijk scrollen. Uitlezen bij de eerste test, niet vooraf vastleggen.</li>
-      <li><strong>Route B's systeeminstelling.</strong> Het <code>swipe</code>-event vuurt alleen als "Veeg tussen pagina's" op twee of drie vingers staat, en dan nog alleen bij drie vingers. Het is meegenomen, geen vangnet.</li>
-    </ul>
-    <p class="note">Eén ding is niet op te lossen zolang de detectie in de pagina zit: een pagina die de veeg zelf al gebruikt, zoals een fotoviewer die met vegen door foto's bladert, krijgt hem nu twee keer. Chrome heeft dat probleem niet, omdat daar de overscroll-status van de compositor meeweegt. Als dat in de praktijk bijt, is dat het sterkste argument om alsnog op route C te gaan zitten.</p>
-  </section>
+<section id="randen">
+  <h2>Randgevallen in Ruimte</h2>
+  <ul>
+    <li><strong>Het canvas pant met dezelfde vingers.</strong> Dat botst niet: <code>WebviewParking</code> geeft de pointer alleen aan een pagina terwijl haar node focus heeft en er geen canvasgebaar loopt, en <code>Canvas.tsx</code> laat de wheel met rust zodra een gefocuste node de eigenaar is. Een niet-gefocuste browser-node krijgt de scroll dus nooit, en het canvas pant zoals altijd.</li>
+    <li><strong>De node staat op een schaal.</strong> De host krijgt <code>scale(camera.zoom)</code>. Of de wheel-delta's die de gast ziet meeschalen met die transform is niet nagemeten. Zo ja, dan hoort de drempel door <code>camera.zoom</code> gedeeld te worden, zoals Min met zijn zoomfactor doet. Dit is het eerste dat een prototype moet uitwijzen.</li>
+    <li><strong>Een browser view heeft geen node.</strong> De view legt dezelfde host over de hele kolom en gebruikt dezelfde toolbar, dus de detectie hoeft niets van views te weten zolang zij aan de node-id hangt.</li>
+    <li><strong>Alleen macOS.</strong> Een muiswiel met horizontale as bestaat ook op Windows, maar daar hoort back en forward bij knop 4 en 5, niet bij een veeg. Zet de detectie achter <code>platform === 'darwin'</code>.</li>
+    <li><strong>Uit te zetten.</strong> Min kreeg klachten over te gevoelige trackpads (<a href="https://github.com/minbrowser/min/issues/264">min #264</a>) en een verzoek om een schakelaar (<a href="https://github.com/minbrowser/min/issues/39">min #39</a>). Neem hem meteen mee in de instellingen, naast de canvasgebaren.</li>
+    <li><strong>Er is niets om naar terug te gaan.</strong> De store weet dat al: <code>canGoBack</code> en <code>canGoForward</code> staan er. Zonder geschiedenis geen overlay, in plaats van een pijl die niets doet.</li>
+  </ul>
+</section>
 
-  <section id="plan">
-    <h2>Plan</h2>
-    <ol class="steps">
-      <li class="step">
-        <h3>Meet eerst wat er binnenkomt</h3>
-        <p>Een preload op de partitie die een halve minuut lang <code>deltaX</code>, <code>deltaMode</code> en de tijd tussen de events logt, terwijl je veegt, scrollt en een kantelwiel gebruikt. Klaar als je de drempel en het stilte-venster op echte getallen kunt zetten in plaats van op 100 en 120.</p>
-      </li>
-      <li class="step">
-        <h3>Detectie plus navigatie, zonder animatie</h3>
-        <p>Veeg naar rechts gaat terug, veeg naar links gaat vooruit, in de node en in de browser-view. Klaar als tien vegen op vijf verschillende sites tien keer het juiste doen, en scrollen in Google Maps geen navigatie oplevert.</p>
-      </li>
-      <li class="step">
-        <h3>De pijl die meeloopt</h3>
-        <p>Een chip in de geparkeerde host, aangestuurd door de voortgang uit de store. Klaar als hij op een node op halve zoom net zo groot oogt als op volle zoom, en als een afgebroken veeg terugglijdt in plaats van te springen.</p>
-      </li>
-      <li class="step">
-        <h3>Het drie-vinger-event erbij</h3>
-        <p><code>mainWindow.on('swipe')</code> naar dezelfde functie in de registry, met de gefocuste browser-node als doel. Klaar als het werkt met de systeeminstelling aan en niets doet met de instelling uit.</p>
-      </li>
-      <li class="step">
-        <h3>Zet electron/electron#53522 op de volglijst</h3>
-        <p>Landt <code>swipe-gesture</code>, dan vervangt hij de detectie en blijft de overlay staan. De <code>progress</code> uit dat event is precies de waarde die de chip dan al gebruikt, dus het is een wissel van bron, geen herbouw.</p>
-      </li>
-    </ol>
-  </section>
+<section id="open">
+  <h2>Wat we nog niet weten</h2>
+  <p>Vijf dingen die een prototype van een uur beantwoordt, en die het ontwerp kunnen bijstellen. Ze zijn uit de broncode afgeleid, niet in een draaiende app gemeten.</p>
+  <ul>
+    <li><code>WheelEvent.momentum</code> in Electron 44. Het staat op <em>stable</em> in Chromium en de release notes van Chrome 151 noemen het, maar het is hier niet in de app gecontroleerd. Een regel in de devtools van een gastpagina volstaat.</li>
+    <li>Of de wheel-delta's meeschalen met de <code>scale()</code> op de host.</li>
+    <li>Of <code>ipc-message</code> vanuit een sandboxed gastpreload zonder verlies aankomt. Er was in Electron 5 een bug waarbij het event onder contextIsolation leeg aankwam (<a href="https://github.com/electron/electron/issues/19186">#19186</a>, gesloten). Zo niet, dan gaat het monster via <code>ipcRenderer.send</code> naar de shell en koppelt de shell het aan de guest, zoals het contextmenu nu al doet.</li>
+    <li>Of het <code>swipe</code> event van het venster vuurt terwijl de muis boven een guest staat. Voor route B relevant. De responder chain zegt van wel (de guest is een OOPIF in dezelfde <code>RenderWidgetHostViewCocoa</code>, die zelf geen <code>swipeWithEvent:</code> implementeert), maar dat is een afleiding.</li>
+    <li>Welke van de drie standen van "Swipe between pages" <code>isSwipeTrackingFromScrollEventsEnabled()</code> op <code>true</code> zet. Bepaalt of wij die vraag kunnen gebruiken om de feature automatisch aan of uit te zetten.</li>
+  </ul>
+</section>
 
-  <section id="bronnen">
-    <h2>Bronnen</h2>
-    <ul>
-      <li><a href="https://github.com/electron/electron/issues/2683">electron/electron#2683</a>, "Support two-finger swipe navigation", open sinds september 2015. Bevat het preload-script waar route A op leunt en de bevestiging dat <code>WheelEvent</code> geen fase draagt.</li>
-      <li><a href="https://github.com/electron/electron/pull/53522">electron/electron#53522</a>, "feat: swipe-gesture event on BaseWindow", geopend 4 september 2026, 232 regels, review vereist. Opvolger van #49235 en de bron van het citaat over <code>HistorySwiper</code>.</li>
-      <li><a href="https://www.electronjs.org/docs/latest/api/browser-window">BrowserWindow</a>, het <code>swipe</code>-event en de systeeminstelling die het vereist.</li>
-      <li><a href="https://www.electronjs.org/docs/latest/breaking-changes">Breaking Changes</a>, het verwijderen van <code>scroll-touch-*</code> in Electron 23.</li>
-      <li><a href="https://www.electronjs.org/docs/latest/api/webview-tag">webview tag</a>, het <code>preload</code>-attribuut, dat er nog is, naast <code>session.registerPreloadScript</code>.</li>
-      <li>In de code: <code>apps/client/src/browser/registry.ts</code>, <code>apps/client/src/browser/WebviewParking.tsx</code>, <code>apps/client/src/nodes/BrowserBody.tsx</code>, <code>apps/desktop/src/main.ts</code>, <code>apps/desktop/src/preload.ts</code>.</li>
-    </ul>
-  </section>
+<section id="klein">
+  <h2>Kleine winst nu</h2>
+  <p>Los van het gebaar mist de browser twee dingen die iedereen blind probeert. Ze delen straks dezelfde beslislaag en kosten nu een uur.</p>
+  <ul>
+    <li><code>⌘ [</code> en <code>⌘ ]</code> voor terug en verder. Beide chords zijn vrij; <code>⇧ ⌘ [</code> en <code>⇧ ⌘ ]</code> zijn al van de vorige en volgende view, wat precies de verhouding is die je wilt.</li>
+    <li>De vierde en vijfde muisknop. Chromium levert ze in de gastpagina als <code>mouseup</code> met <code>button</code> 3 en 4; dezelfde preload kan ze doorgeven.</li>
+  </ul>
+</section>
+
+<section id="plan">
+  <h2>Plan</h2>
+  <ol class="steps">
+    <li class="step">
+      <h3>Meten wat er binnenkomt</h3>
+      <p>Een gastpreload die elk wheel-monster naar de host stuurt, en een tijdelijke regel in de console. Doel: <code>momentum</code>, de schaalvraag en <code>ipc-message</code> beantwoord.</p>
+      <p class="caption">Klaar als: een veeg van links naar rechts in een node op zoom 1 en op zoom 0,5 een reeks monsters oplevert waarvan je de x-som kunt uitrekenen, met momentum apart herkenbaar.</p>
+    </li>
+    <li class="step">
+      <h3>De beslisser, met test</h3>
+      <p><code>swipe.ts</code> plus <code>swipe.test.ts</code>: drempel, dominantie, momentum, einde van een gebaar, de doofpot na een navigatie, en de gast die zegt dat de pagina nog kan scrollen.</p>
+      <p class="caption">Klaar als: opgenomen monsters van een echte veeg, een verticale scroll en een carousel-scroll door <code>bun test</code> gaan zonder een browser.</p>
+    </li>
+    <li class="step">
+      <h3>Aansluiten op de registry</h3>
+      <p>De luisteraar in <code>registry.ts</code>, <code>back()</code> en <code>forward()</code> als uitkomst, en de doofpot na de navigatie.</p>
+      <p class="caption">Klaar als: het gebaar navigeert in een node en in een browser view, en niets doet zonder geschiedenis.</p>
+    </li>
+    <li class="step">
+      <h3>De pijl</h3>
+      <p>De overlay in de geparkeerde host, met voortgang buiten de browserstore om, en <code>prefers-reduced-motion</code>.</p>
+      <p class="caption">Klaar als: de pijl groeit met de vinger, blijft staan als de vinger stilstaat en verdwijnt zonder navigatie als het gebaar onder de drempel blijft.</p>
+    </li>
+    <li class="step">
+      <h3>De schakelaar en de toetsen</h3>
+      <p>Een instelling om het gebaar uit te zetten, plus <code>⌘ [</code> en <code>⌘ ]</code> en de zijknoppen van de muis.</p>
+      <p class="caption">Klaar als: uit is echt uit (geen preload-verkeer), en de toetsen werken ook terwijl het adresveld geen focus heeft.</p>
+    </li>
+  </ol>
+</section>
+
+<section id="bronnen">
+  <h2>Bronnen</h2>
+  <h3>Waarom Electron het niet heeft</h3>
+  <ul>
+    <li><a href="https://github.com/chromium/chromium/blob/main/chrome/browser/renderer_host/chrome_render_widget_host_view_mac_history_swiper.h">Chromium, history_swiper</a> en <a href="https://github.com/chromium/chromium/blob/main/content/app_shim_remote_cocoa/render_widget_host_view_cocoa.mm">render_widget_host_view_cocoa.mm</a></li>
+    <li><a href="https://github.com/chromium/chromium/blob/main/content/common/features.cc">content/common/features.cc</a>, <code>TouchpadOverscrollHistoryNavigation</code> buiten macOS</li>
+    <li><a href="https://github.com/electron/electron/issues/2683">electron#2683</a>, <a href="https://github.com/electron/electron/pull/49235">#49235</a> (stale), <a href="https://github.com/electron/electron/pull/53522">#53522</a> (open)</li>
+    <li><a href="https://github.com/electron/electron/blob/44-x-y/shell/common/gin_converters/blink_converter.cc">blink_converter.cc</a>, de converter zonder wheel-tak; <a href="https://github.com/electron/electron/pull/39814">#39814</a>, het verwijderen van <code>scroll-touch-*</code></li>
+    <li><a href="https://github.com/electron/electron/blob/44-x-y/shell/browser/ui/cocoa/electron_ns_window.mm">electron_ns_window.mm</a>, het drie-vinger <code>swipe</code> event</li>
+  </ul>
+  <h3>Wat een pagina wel vertelt</h3>
+  <ul>
+    <li><a href="https://developer.chrome.com/release-notes/151">Chrome 151 release notes</a> en <a href="https://raw.githubusercontent.com/chromium/chromium/main/third_party/blink/renderer/core/events/wheel_event.idl">wheel_event.idl</a>, <code>WheelEvent.momentum</code></li>
+    <li><a href="https://raw.githubusercontent.com/chromium/chromium/main/components/input/web_input_event_builders_mac.mm">web_input_event_builders_mac.mm</a>, waar fase en momentum uit de NSEvent komen</li>
+    <li><a href="https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/EventOverview/HandlingTouchEvents/HandlingTouchEvents.html">Apple, Handling Trackpad Events</a> en <a href="https://developer.apple.com/documentation/appkit/nsevent/isswipetrackingfromscrolleventsenabled">isSwipeTrackingFromScrollEventsEnabled</a></li>
+    <li><a href="https://github.com/w3c/csswg-drafts/issues/7878">csswg-drafts#7878</a>, <code>overscroll-behavior-x</code> en swipe-navigatie</li>
+  </ul>
+  <h3>Wie het al deed</h3>
+  <ul>
+    <li><a href="https://github.com/minbrowser/min/blob/master/js/webviewGestures.js">Min, webviewGestures.js</a> en zijn <a href="https://github.com/minbrowser/min/blob/master/js/preload/default.js">preload</a></li>
+    <li><a href="https://chromium.googlesource.com/chromium/src/+/92b363d346f9baa152e6e9c9d7fccb3e62ff5067/chrome/browser/ui/cocoa/history_overlay_controller.mm">Chrome, history_overlay_controller.mm</a>, de maten van het schild</li>
+    <li><a href="https://raw.githubusercontent.com/WebKit/WebKit/main/Source/WebKit/UIProcess/mac/ViewGestureControllerMac.mm">WebKit, ViewGestureControllerMac.mm</a>, de meeschuivende pagina</li>
+    <li><a href="https://www.electronjs.org/docs/latest/api/session">Electron session</a>, <code>registerPreloadScript</code>; <a href="https://www.electronjs.org/docs/latest/api/webview-tag">webview-tag</a>, geen scroll-listeners op de tag</li>
+  </ul>
+</section>
+
 </main>
 <footer>
-  <p>Geverifieerd in de typings van Electron 44.3.0 in dit project en in de bronnen hierboven. Niet gemeten: welke velden <code>webContents.on('input-event')</code> bij een <code>mouseWheel</code> echt draagt, of <code>sendToHost</code> vanuit een cross-origin subframe aankomt, en hoe de detectie zich houdt met een Magic Mouse. Die drie zijn met stap 1 van het plan in een half uur te beantwoorden.</p>
+  <p>Ruimte, 10 september 2026. Onderzoek naar aanleiding van de vraag of de back- en forward-gebaren uit Chrome ook in onze browser-node en browser view kunnen. Nog niet gebouwd; de stappen in <a href="#plan">Plan</a> zijn het voorstel.</p>
 </footer>
 </body>
 </html>
