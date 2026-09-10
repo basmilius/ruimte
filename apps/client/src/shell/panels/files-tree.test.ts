@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { FsEntry } from '@ruimte/contracts';
-import { LOADING_NAME, absoluteOf, buildTreeInput, compareRows, isDirectoryPath, newlyExpanded, relativeTo, treePathOf } from './files-tree.ts';
+import { LOADING_NAME, absoluteOf, buildTreeInput, compareRows, dirnameOf, isDirectoryPath, newlyExpanded, relativeTo, treePathOf } from './files-tree.ts';
 
 const ROOT = '/repo';
 
@@ -71,12 +71,34 @@ describe('newlyExpanded', () => {
 });
 
 describe('compareRows', () => {
+    /* The tree sorts whole paths, so a row is what it says about itself: its segments and whether it ends in a slash. */
+    const rows = (...paths: string[]): string[] =>
+        [...paths]
+            .map((path) => ({ path, isDirectory: path.endsWith('/'), segments: path.replace(/\/$/, '').split('/') }))
+            .sort(compareRows)
+            .map((row) => row.path);
+
     test('directories first, then numbers the way a person reads them', () => {
-        const rows = [
-            { basename: 'item10.txt', isDirectory: false },
-            { basename: 'item2.txt', isDirectory: false },
-            { basename: 'src', isDirectory: true }
-        ];
-        expect([...rows].sort(compareRows).map((row) => row.basename)).toEqual(['src', 'item2.txt', 'item10.txt']);
+        expect(rows('item10.txt', 'item2.txt', 'src/')).toEqual(['src/', 'item2.txt', 'item10.txt']);
+    });
+
+    test('a directory a file names comes before every file beside it', () => {
+        expect(rows('a.ts', 'src/index.ts', 'README.md', 'docs/guide.md')).toEqual(['docs/guide.md', 'src/index.ts', 'a.ts', 'README.md']);
+    });
+
+    test('the rule holds at every level, not only the top one', () => {
+        expect(rows('src/index.ts', 'src/utils/format.ts')).toEqual(['src/utils/format.ts', 'src/index.ts']);
+    });
+
+    test('case is not a reason to split two names apart', () => {
+        expect(rows('banana.ts', 'Apple.ts', 'cherry.ts')).toEqual(['Apple.ts', 'banana.ts', 'cherry.ts']);
+    });
+});
+
+describe('dirnameOf', () => {
+    test('names the folder a file sits in, whichever separator the daemon uses', () => {
+        expect(dirnameOf('/repo/src/index.ts')).toBe('/repo/src');
+        expect(dirnameOf('/a.txt')).toBe('/');
+        expect(dirnameOf('C:\\repo\\a.ts')).toBe('C:\\repo');
     });
 });
