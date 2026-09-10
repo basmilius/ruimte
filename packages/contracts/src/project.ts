@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
+import { RuntimeModeSchema } from './model.ts';
 
 export const ProjectIdSchema = z.string().min(1);
 export type ProjectId = z.infer<typeof ProjectIdSchema>;
@@ -22,10 +23,12 @@ export const ProjectNodeSchema = z.object({
     command: z.string().optional(),
     // Terminal only: Escape goes to the program in the shell instead of leaving node mode.
     escapeToApp: z.boolean().optional(),
-    // Chat only: the agent session to continue.
+    // Terminal and chat: the agent session to continue.
     resume: z.string().optional(),
-    // Chat only: which agent CLI answers; absent means Claude Code.
+    // Terminal and chat: which agent CLI this node hosts; absent on a chat means Claude Code.
     provider: AgentKindSchema.optional(),
+    // Terminal only: the permission mode its agent was started in, so a reload starts it the same way.
+    runtimeMode: RuntimeModeSchema.optional(),
     // Browser only: the page it shows.
     url: z.string().optional(),
     // Group only: folded to its header, with the nodes it held out of sight until it opens again.

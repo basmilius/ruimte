@@ -1,6 +1,19 @@
 import { z } from 'zod';
-import { AgentInfoSchema } from './agent.ts';
+import { AgentInfoSchema, AgentKindSchema } from './agent.ts';
 import { SessionIdSchema } from './ids.ts';
+import { RuntimeModeSchema } from './model.ts';
+
+// An agent CLI to start in a fresh shell. The daemon owns the command line, so every client
+// launches a CLI the same way and a new flag never has to travel over the wire.
+export const AgentLaunchSchema = z.object({
+    kind: AgentKindSchema,
+    // Ruimte's own permission vocabulary; each CLI's launcher maps it to its flags.
+    runtimeMode: RuntimeModeSchema.optional(),
+    model: z.string().min(1).optional(),
+    // The CLI's own session id, to continue that conversation instead of starting one.
+    resume: z.string().min(1).optional()
+});
+export type AgentLaunch = z.infer<typeof AgentLaunchSchema>;
 
 const cols = z.number().int().positive();
 const rows = z.number().int().positive();
@@ -28,7 +41,9 @@ export const SessionCreatePayloadSchema = z.object({
     rows,
     shell: z.string().optional(),
     // Typed into the fresh shell as its first line, so a node can open straight into a program.
-    command: z.string().optional()
+    command: z.string().optional(),
+    // An agent CLI to start instead; the daemon builds its command line and types that.
+    agent: AgentLaunchSchema.optional()
 });
 export type SessionCreatePayload = z.infer<typeof SessionCreatePayloadSchema>;
 

@@ -54,6 +54,11 @@ export type InteractionMode = z.infer<typeof InteractionModeSchema>;
 // What a provider's CLI can do, so a client never offers what it would drop and the daemon
 // never asks for what the protocol has no room for. Read by the composer and the thread rows.
 export const ProviderCapabilitiesSchema = z.object({
+    // Where this CLI can be opened: as a chat node, as a terminal node, or both.
+    chat: z.boolean(),
+    terminal: z.boolean(),
+    // Whether the daemon understands this CLI's hooks; without them a node shows the session status only.
+    hooks: z.boolean(),
     // Partial output while a tool call runs, for the live row under it.
     streamsToolOutput: z.boolean(),
     // How a file change reaches the thread: as a unified diff, as the text before and after, or not at all.
