@@ -10,7 +10,9 @@ import {
     ChatInfoSchema,
     ChatListResultSchema,
     ChatSendPayloadSchema,
-    ChatTargetPayloadSchema
+    ChatTargetPayloadSchema,
+    ChatTurnDiffPayloadSchema,
+    ChatTurnDiffResultSchema
 } from './chat.ts';
 import { FsBrowsePayloadSchema, FsBrowseResultSchema, FsRevealPayloadSchema, FsSearchPayloadSchema, FsSearchResultSchema } from './fs.ts';
 import { WorktreeAddPayloadSchema, WorktreeAddResultSchema, WorktreeListPayloadSchema, WorktreeListResultSchema, WorktreeRemovePayloadSchema } from './git.ts';
@@ -78,6 +80,7 @@ export const REQUEST_SCHEMAS = {
     'chat.answer': { payload: ChatAnswerPayloadSchema, result: EmptySchema },
     'chat.configure': { payload: ChatConfigurePayloadSchema, result: ChatInfoSchema },
     'chat.compact': { payload: ChatTargetPayloadSchema, result: EmptySchema },
+    'chat.turnDiff': { payload: ChatTurnDiffPayloadSchema, result: ChatTurnDiffResultSchema },
     'provider.list': { payload: EmptySchema, result: ProviderListResultSchema },
     'project.list': { payload: EmptySchema, result: ProjectListResultSchema },
     'project.open': { payload: ProjectOpenPayloadSchema, result: ProjectOpenResultSchema },
