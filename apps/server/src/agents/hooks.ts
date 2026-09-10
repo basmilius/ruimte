@@ -1,5 +1,4 @@
-import { resumeCommandFor, type AgentKind, type AgentStatus } from '@ruimte/contracts';
-import { providerFor } from '../providers/registry.ts';
+import type { AgentKind, AgentStatus } from '@ruimte/contracts';
 
 export interface HookOutcome {
     agentSessionId: string;
@@ -44,7 +43,8 @@ const NOTIFICATION_STATUS: Record<string, AgentStatus> = {
 const asString = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
 
 // Events to install a hook for; the receiver ignores anything else, so an extra event costs nothing but a POST.
-export const HOOK_EVENTS: Record<AgentKind, string[]> = {
+// A kind without an entry has no normalizer yet: it launches in a terminal and reports no agent status.
+export const HOOK_EVENTS: Partial<Record<AgentKind, string[]>> = {
     claude: [
         'SessionStart',
         'UserPromptSubmit',
@@ -62,6 +62,9 @@ export const HOOK_EVENTS: Record<AgentKind, string[]> = {
     ],
     codex: ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PermissionRequest', 'SubagentStop', 'Stop', 'Interrupt', 'SessionEnd']
 };
+
+/* Whether the daemon understands this CLI's hooks at all; the receiver turns the others away. */
+export const hasHooks = (kind: AgentKind): boolean => HOOK_EVENTS[kind] !== undefined;
 
 /* Turns one hook payload into a status; null when the payload says nothing about status or is not a hook at all. */
 export const normalizeHook = (body: unknown): HookOutcome | null => {
@@ -89,6 +92,3 @@ export const normalizeHook = (body: unknown): HookOutcome | null => {
     }
     return { agentSessionId, transcriptPath, status: status === 'gone' ? null : status };
 };
-
-/* How each CLI is told to pick its session up again; the template is the provider's own. */
-export const resumeCommand = (kind: AgentKind, agentSessionId: string): string => resumeCommandFor(providerFor(kind).resumeCommand, agentSessionId);

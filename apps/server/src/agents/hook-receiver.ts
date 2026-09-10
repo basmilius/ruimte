@@ -1,8 +1,9 @@
-import { AgentKindSchema } from '@ruimte/contracts';
+import { AgentKindSchema, type AgentKind } from '@ruimte/contracts';
 import type { HookResult } from '../sessions/manager.ts';
+import { hasHooks } from './hooks.ts';
 
 export interface HookTarget {
-    applyHook(kind: 'claude' | 'codex', token: string, body: unknown): Promise<HookResult>;
+    applyHook(kind: AgentKind, token: string, body: unknown): Promise<HookResult>;
 }
 
 export const HOOKS_PATH = '/hooks';
@@ -37,8 +38,9 @@ export const handleHookRequest = async (
     if (request.method !== 'POST') {
         return new Response('Method not allowed', { status: 405 });
     }
+    // A kind the daemon has no normalizer for is as unknown here as one that is not an agent at all.
     const kind = AgentKindSchema.safeParse(pathname.slice(HOOKS_PATH.length + 1));
-    if (!kind.success) {
+    if (!kind.success || !hasHooks(kind.data)) {
         return new Response('Unknown agent', { status: 404 });
     }
     const token = bearer(request);

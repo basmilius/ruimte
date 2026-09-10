@@ -25,7 +25,7 @@ describe('mergeHooks', () => {
         const { config, changed } = mergeHooks({}, 'claude');
         expect(changed).toBe(true);
         const hooks = config.hooks as Record<string, Array<{ hooks: Array<{ command: string }> }>>;
-        expect(Object.keys(hooks).sort()).toEqual([...HOOK_EVENTS.claude].sort());
+        expect(Object.keys(hooks).sort()).toEqual([...(HOOK_EVENTS.claude ?? [])].sort());
         expect(hooks.Stop).toHaveLength(1);
         expect(hooks.Stop[0]?.hooks[0]?.command).toBe(hookCommand('claude'));
     });

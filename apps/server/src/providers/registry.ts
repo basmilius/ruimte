@@ -4,12 +4,13 @@ import { claudeProvider } from './claude-provider.ts';
 import { codexProvider } from './codex-provider.ts';
 import type { CliDetection } from './detect.ts';
 import type { ChatProvider } from './provider.ts';
+import { copilotProvider, geminiProvider } from './terminal-providers.ts';
 
 // How long a "is it installed" answer stays good; an install mid-session shows up on the next check.
 const DETECTION_TTL_MS = 60_000;
 
-// The CLIs the daemon ships with. A new one is one more value here.
-export const BUILT_IN_PROVIDERS: ChatProvider[] = [claudeProvider, codexProvider];
+// The CLIs the daemon ships with, in the order every menu lists them. A new one is one more value here.
+export const BUILT_IN_PROVIDERS: ChatProvider[] = [claudeProvider, codexProvider, geminiProvider, copilotProvider];
 
 /* The provider of a kind, for the places that have no registry at hand (the hooks). */
 export const providerFor = (kind: AgentKind): ChatProvider => BUILT_IN_PROVIDERS.find((provider) => provider.kind === kind) ?? claudeProvider;
@@ -42,7 +43,7 @@ export class ProviderRegistry {
                 name: provider.name,
                 ...(await this.detection(provider)),
                 models: provider.catalog.list(),
-                defaultModel: provider.catalog.defaultModel,
+                defaultModel: provider.catalog.defaultModel || null,
                 capabilities: provider.capabilities,
                 resumeCommand: provider.resumeCommand
             }))
