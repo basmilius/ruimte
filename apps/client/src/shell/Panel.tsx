@@ -68,7 +68,7 @@ export function Panel() {
         <aside ref={ref} className="relative flex h-full shrink-0 flex-col border-l border-border bg-surface" style={{ width }}>
             <div className="absolute inset-y-0 -left-1 z-10 w-2 cursor-col-resize" onPointerDown={startResize} />
             <header className="flex h-10 shrink-0 items-center gap-2 border-b border-border pr-2 pl-3">
-                <span className="text-[13px] font-medium text-text">{label}</span>
+                <span className="text-sm font-medium text-text">{label}</span>
                 <span className="grow" />
                 <Tooltip label="Close">
                     <button className="icon-btn h-7 w-7" aria-label={`Close ${label}`} onClick={() => useUi.getState().setPanel({ open: false })}>
@@ -76,7 +76,7 @@ export function Panel() {
                     </button>
                 </Tooltip>
             </header>
-            <div className="grid grow place-items-center p-4 text-[12px] text-text-faint">Nothing here yet.</div>
+            <div className="grid grow place-items-center p-4 text-xs text-text-faint">Nothing here yet.</div>
         </aside>
     );
 }

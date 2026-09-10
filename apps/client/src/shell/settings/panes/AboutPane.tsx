@@ -42,13 +42,13 @@ export function AboutPane() {
                 <SettingsRow
                     label="Machine"
                     description={reachability ? REACHABILITY_LABELS[reachability] : 'The daemon has not introduced itself yet.'}
-                    control={<span className="text-[12px] text-text-muted">{label ?? (status === 'open' ? 'Unnamed' : 'Not connected')}</span>}
+                    control={<span className="text-xs text-text-muted">{label ?? (status === 'open' ? 'Unnamed' : 'Not connected')}</span>}
                 />
-                <SettingsRow label="Platform" control={<span className="font-mono text-[12px] text-text-muted">{platform ?? '?'}</span>} />
+                <SettingsRow label="Platform" control={<span className="font-mono text-code text-text-muted">{platform ?? '?'}</span>} />
                 <SettingsRow
                     label="Data folder"
                     description="Sessions, chats, worktrees and the project registry live here."
-                    control={<span className="max-w-72 truncate font-mono text-[12px] text-text-muted">{home ?? '?'}</span>}
+                    control={<span className="max-w-72 truncate font-mono text-code text-text-muted">{home ?? '?'}</span>}
                 />
             </SettingsSection>
             <SettingsSection title="Links">

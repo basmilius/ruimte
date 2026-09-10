@@ -47,7 +47,7 @@ export function UserRow({ item }: { item: ChatUserItem }) {
                 </div>
             )}
             {item.text !== '' && (
-                <div className="relative max-w-[80%] rounded-2xl bg-accent-soft px-3.5 py-2.5 text-[13px] leading-relaxed text-text select-text">
+                <div className="relative max-w-[80%] rounded-2xl bg-accent-soft px-3.5 py-2.5 text-sm leading-normal text-text select-text">
                     <div className={clsx('whitespace-pre-wrap', long && !open && 'chat-fold')}>
                         {segments.map((segment, index) =>
                             segment.kind === 'mention' ? (
@@ -60,7 +60,7 @@ export function UserRow({ item }: { item: ChatUserItem }) {
                         )}
                     </div>
                     {long && (
-                        <button className="mt-1 flex items-center gap-1 text-[11px] text-text-muted hover:text-text" onClick={() => setOpen((o) => !o)}>
+                        <button className="mt-1 flex items-center gap-1 text-xs text-text-muted hover:text-text" onClick={() => setOpen((o) => !o)}>
                             <Icon icon={faChevronDown} size={12} className={clsx('transition-transform', open && 'rotate-180')} />{' '}
                             {open ? 'Show less' : 'Show all'}
                         </button>
@@ -70,7 +70,7 @@ export function UserRow({ item }: { item: ChatUserItem }) {
             <div className="mt-1 flex h-5 items-center gap-1 pr-1 opacity-0 transition-opacity group-hover/user:opacity-100">
                 <Tooltip label="Copy">
                     <button className="icon-btn h-5 w-5 rounded" onClick={() => copy(item.text)}>
-                        <Icon icon={faCopy} size={11} />
+                        <Icon icon={faCopy} size={14} />
                     </button>
                 </Tooltip>
             </div>
@@ -87,7 +87,7 @@ export function AssistantRow({ item, last }: { item: ChatAssistantItem; last: bo
                 <div className="mt-1 flex h-5 items-center gap-1 opacity-0 transition-opacity group-hover/assistant:opacity-100">
                     <Tooltip label="Copy">
                         <button className="icon-btn h-5 w-5 rounded" onClick={() => copy(item.text)}>
-                            <Icon icon={faCopy} size={11} />
+                            <Icon icon={faCopy} size={14} />
                         </button>
                     </Tooltip>
                 </div>
@@ -97,16 +97,16 @@ export function AssistantRow({ item, last }: { item: ChatAssistantItem; last: bo
 }
 
 const NOTE_ICON = {
-    info: <Icon icon={faCircleInfo} size={13} />,
-    warning: <Icon icon={faTriangleExclamation} size={13} />,
-    error: <Icon icon={faCircleExclamation} size={13} />
+    info: <Icon icon={faCircleInfo} size={16} />,
+    warning: <Icon icon={faTriangleExclamation} size={16} />,
+    error: <Icon icon={faCircleExclamation} size={16} />
 };
 
 export function NoteRow({ level, text }: { level: 'info' | 'warning' | 'error'; text: string }) {
     return (
         <div
             className={clsx(
-                'flex items-center gap-1.5 px-1 pb-2 text-[12px]',
+                'flex items-center gap-1.5 px-1 pb-2 text-xs',
                 level === 'error' ? 'text-status-error' : level === 'warning' ? 'text-status-needs-you' : 'text-text-faint'
             )}
         >
@@ -120,7 +120,7 @@ const formatTokens = (count: number): string => (count >= 1000 ? `${Math.round(c
 
 export function CompactionRow({ preTokens }: { preTokens: number | null }) {
     return (
-        <div className="flex items-center gap-3 pb-3 text-[11px] text-text-faint">
+        <div className="flex items-center gap-3 pb-3 text-xs text-text-faint">
             <span className="h-px grow bg-border" />
             <Icon icon={faCompress} size={12} />
             <span>Context compacted{preTokens ? ` from ${formatTokens(preTokens)} tokens` : ''}</span>
@@ -143,7 +143,7 @@ export function ApprovalHistoryRow({ item }: { item: ChatApprovalItem }) {
     }
     const decision = DECISION[item.decision];
     return (
-        <div className="flex items-center gap-2 px-1 pb-2 text-[12px] text-text-faint">
+        <div className="flex items-center gap-2 px-1 pb-2 text-xs text-text-faint">
             <span className={clsx('flex items-center gap-1', item.decision === 'deny' && 'text-status-error')}>
                 {decision.icon} {decision.label}
             </span>
@@ -157,8 +157,8 @@ export function QuestionHistoryRow({ item }: { item: ChatQuestionItem }) {
     return (
         <div className="pb-2">
             {item.questions.map((question) => (
-                <div key={question.id} className="flex items-start gap-2 px-1 py-0.5 text-[12px] text-text-faint">
-                    <Icon icon={faCommentQuestion} size={13} className="mt-0.5 shrink-0" />
+                <div key={question.id} className="flex items-start gap-2 px-1 py-0.5 text-xs text-text-faint">
+                    <Icon icon={faCommentQuestion} size={16} className="mt-0.5 shrink-0" />
                     <span className="min-w-0">
                         <span className="text-text-muted">{question.question}</span>
                         {item.state === 'answered' && item.answers?.[question.id] !== undefined && (

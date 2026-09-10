@@ -16,9 +16,9 @@ export function KeyboardPane() {
     return (
         <>
             <div className="relative">
-                <Icon icon={faMagnifyingGlass} size={14} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-text-faint" aria-hidden />
+                <Icon icon={faMagnifyingGlass} size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-text-faint" aria-hidden />
                 <input
-                    className="h-9 w-full rounded-lg border border-border bg-surface pr-9 pl-9 text-[13px] text-text outline-none placeholder:text-text-faint focus:border-accent"
+                    className="h-9 w-full rounded-lg border border-border bg-surface pr-9 pl-9 text-sm text-text outline-none placeholder:text-text-faint focus:border-accent"
                     placeholder="Search shortcuts"
                     aria-label="Search shortcuts"
                     value={query}
@@ -34,11 +34,11 @@ export function KeyboardPane() {
                 />
                 {query && (
                     <button className="icon-btn absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2" aria-label="Clear search" onClick={() => setQuery('')}>
-                        <Icon icon={faXmark} size={13} />
+                        <Icon icon={faXmark} size={16} />
                     </button>
                 )}
             </div>
-            {visible.length === 0 && <p className="px-1 text-[12px] text-text-muted">Nothing matches "{query.trim()}".</p>}
+            {visible.length === 0 && <p className="px-1 text-xs text-text-muted">Nothing matches "{query.trim()}".</p>}
             {visible.map((group) => (
                 <SettingsSection key={group.title} title={group.title}>
                     {group.shortcuts.map((shortcut, index) => (
@@ -46,7 +46,7 @@ export function KeyboardPane() {
                     ))}
                 </SettingsSection>
             ))}
-            <p className="px-1 text-[12px] text-text-faint">On Windows and Linux, ⌘ is Ctrl and ⌥ is Alt.</p>
+            <p className="px-1 text-xs text-text-faint">On Windows and Linux, ⌘ is Ctrl and ⌥ is Alt.</p>
         </>
     );
 }

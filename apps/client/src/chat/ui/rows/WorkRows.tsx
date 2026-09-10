@@ -39,7 +39,7 @@ function ToggleLine({
     return (
         <button
             className={clsx(
-                'flex h-7 w-full items-center gap-2 rounded-md px-1 text-left text-[12px] text-text-muted hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
+                'flex h-7 w-full items-center gap-2 rounded-md px-1 text-left text-xs text-text-muted hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
                 failed && 'text-status-error',
                 className
             )}
@@ -62,26 +62,26 @@ function ToolBody({ tool }: { tool: ChatToolItem }) {
     return (
         <div className="mb-1 ml-8 overflow-hidden rounded-md border border-border bg-surface-raised">
             {patches.length > 0 ? (
-                <Suspense fallback={<div className="px-3 py-2 text-[12px] text-text-faint">Loading diff</div>}>
+                <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">Loading diff</div>}>
                     {patches.map((change, index) => (
                         <UnifiedDiff key={index} change={change} />
                     ))}
                 </Suspense>
             ) : changes.length > 0 ? (
-                <Suspense fallback={<div className="px-3 py-2 text-[12px] text-text-faint">Loading diff</div>}>
+                <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">Loading diff</div>}>
                     {changes.map((change, index) => (
                         <EditDiff key={index} change={change} />
                     ))}
                 </Suspense>
             ) : (
-                <pre className="max-h-64 overflow-auto px-3 py-2 font-mono text-[12px] leading-[1.6] text-text-muted select-text">
+                <pre className="max-h-64 overflow-auto px-3 py-2 font-mono text-code text-text-muted select-text">
                     {clip(JSON.stringify(tool.input, null, 2) ?? '')}
                 </pre>
             )}
             {tool.output !== null && tool.output !== '' && patches.length === 0 && (
                 <pre
                     className={clsx(
-                        'max-h-64 overflow-auto whitespace-pre-wrap border-t border-border px-3 py-2 font-mono text-[12px] leading-[1.6] select-text',
+                        'max-h-64 overflow-auto whitespace-pre-wrap border-t border-border px-3 py-2 font-mono text-code select-text',
                         tool.state === 'error' ? 'text-term-red' : 'text-term-fg'
                     )}
                 >
@@ -123,7 +123,7 @@ function RunningFor({ startedAt }: { startedAt: number }) {
         const timer = window.setInterval(tick, 1000);
         return () => window.clearInterval(timer);
     }, [startedAt]);
-    return <span ref={ref} className="shrink-0 text-[12px] text-text-faint tabular-nums" />;
+    return <span ref={ref} className="shrink-0 text-xs text-text-faint tabular-nums" />;
 }
 
 /* A call still running: its timer on the line, and for a provider that streams output, the last lines under it. */
@@ -143,7 +143,7 @@ export function WorkLiveRow({ tool }: { tool: ChatToolItem }) {
             />
             {open && <ToolBody tool={tool} />}
             {tail !== null && !open && (
-                <pre className="mb-1 ml-8 max-h-48 overflow-auto rounded-md border border-border bg-surface-raised px-3 py-2 font-mono text-[12px] leading-[1.6] whitespace-pre-wrap text-term-fg select-text">
+                <pre className="mb-1 ml-8 max-h-48 overflow-auto rounded-md border border-border bg-surface-raised px-3 py-2 font-mono text-code whitespace-pre-wrap text-term-fg select-text">
                     {tail}
                 </pre>
             )}
@@ -166,7 +166,7 @@ export function TurnFoldRow({ turn, label, expanded, onToggle }: { turn: ChatTur
         <div className="pb-1.5">
             <button
                 className={clsx(
-                    'flex h-7 items-center gap-1.5 rounded-md border border-border px-2 text-[12px] text-text-muted hover:bg-surface-sunken',
+                    'flex h-7 items-center gap-1.5 rounded-md border border-border px-2 text-xs text-text-muted hover:bg-surface-sunken',
                     turn.state === 'error' && 'text-status-error'
                 )}
                 onClick={onToggle}
@@ -183,10 +183,10 @@ const omittedLabel = (reason: 'binary' | 'too-large'): string => (reason === 'bi
 /* One file of a turn's checkpoint diff: its patch, or the reason there is none. */
 function CheckpointFileBody({ file }: { file: ChatCheckpointFile }) {
     if (file.omitted) {
-        return <div className="px-3 py-2 text-[12px] text-text-faint">{omittedLabel(file.omitted)}</div>;
+        return <div className="px-3 py-2 text-xs text-text-faint">{omittedLabel(file.omitted)}</div>;
     }
     return (
-        <Suspense fallback={<div className="px-3 py-2 text-[12px] text-text-faint">Loading diff</div>}>
+        <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">Loading diff</div>}>
             <UnifiedDiff change={file} />
         </Suspense>
     );
@@ -234,8 +234,8 @@ export function ChangedFilesRow({
     if (checkpointDiff !== null && checkpointDiff.files.length > 0) {
         return (
             <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface-raised">
-                <div className="flex items-center gap-2 px-3 py-2 text-[12px] text-text-muted">
-                    <Icon icon={faCodeCompare} size={13} />
+                <div className="flex items-center gap-2 px-3 py-2 text-xs text-text-muted">
+                    <Icon icon={faCodeCompare} size={16} />
                     <span className="font-medium text-text">
                         {checkpointDiff.files.length} changed file{checkpointDiff.files.length === 1 ? '' : 's'}
                     </span>
@@ -244,7 +244,7 @@ export function ChangedFilesRow({
                 {checkpointDiff.files.map((file) => (
                     <div key={file.path} className="border-t border-border">
                         <button
-                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12px] text-text-muted hover:bg-surface-sunken"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-text-muted hover:bg-surface-sunken"
                             onClick={() => setOpen((o) => ({ ...o, [file.path]: !o[file.path] }))}
                         >
                             <Icon
@@ -304,8 +304,8 @@ function ProviderChangedFiles({
     }
     return (
         <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface-raised">
-            <div className="flex items-center gap-2 px-3 py-2 text-[12px] text-text-muted">
-                <Icon icon={faCodeCompare} size={13} />
+            <div className="flex items-center gap-2 px-3 py-2 text-xs text-text-muted">
+                <Icon icon={faCodeCompare} size={16} />
                 <span className="font-medium text-text">
                     {byPath.size} changed file{byPath.size === 1 ? '' : 's'}
                 </span>
@@ -315,7 +315,7 @@ function ProviderChangedFiles({
                 return (
                     <div key={path} className="border-t border-border">
                         <button
-                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12px] text-text-muted hover:bg-surface-sunken"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-text-muted hover:bg-surface-sunken"
                             onClick={() => setOpen((o) => ({ ...o, [path]: !o[path] }))}
                         >
                             <Icon
@@ -331,7 +331,7 @@ function ProviderChangedFiles({
                         </button>
                         {open[path] && (
                             <div className="border-t border-border">
-                                <Suspense fallback={<div className="px-3 py-2 text-[12px] text-text-faint">Loading diff</div>}>
+                                <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">Loading diff</div>}>
                                     {entry.patches.map((change, index) => (
                                         <UnifiedDiff key={`patch-${index}`} change={change} />
                                     ))}
@@ -365,7 +365,7 @@ export function WorkingRow({ startedAt }: { startedAt: number }) {
         return () => window.clearInterval(timer);
     }, [startedAt]);
     return (
-        <div className="flex h-7 items-center gap-2 px-1 pb-2 text-[12px] text-text-muted">
+        <div className="flex h-7 items-center gap-2 px-1 pb-2 text-xs text-text-muted">
             <span className="chat-live grid h-6 w-6 place-items-center">
                 <span className="h-2 w-2 rounded-full bg-status-running" />
             </span>

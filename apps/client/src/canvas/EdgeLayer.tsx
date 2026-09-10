@@ -46,11 +46,11 @@ const textRect = (text: { x: number; y: number; size: number; text: string }): R
 function EdgeLabel({ id, label, at, editing, onEdit }: { id: string; label: string | undefined; at: Point; editing: boolean; onEdit(editing: boolean): void }) {
     if (editing) {
         return (
-            <foreignObject x={at.x - 60} y={at.y - 12} width="120" height="24">
+            <foreignObject x={at.x - 60} y={at.y - 14} width="120" height="28">
                 <input
                     autoFocus
                     defaultValue={label ?? ''}
-                    className="h-6 w-full rounded-full border border-accent bg-surface-raised px-2 text-center text-[11px] text-text outline-none"
+                    className="h-7 w-full rounded-full border border-accent bg-surface-raised px-2 text-center text-xs text-text outline-none"
                     onPointerDown={(e) => e.stopPropagation()}
                     onBlur={(e) => {
                         useCanvas.getState().setEdgeLabel(id, e.currentTarget.value);
@@ -71,8 +71,8 @@ function EdgeLabel({ id, label, at, editing, onEdit }: { id: string; label: stri
     }
     return (
         <g transform={`translate(${at.x}, ${at.y})`} className="cursor-text" onDoubleClick={(e) => (e.stopPropagation(), onEdit(true))}>
-            <rect x="-30" y="-11" width="60" height="22" rx="11" fill="var(--surface-raised)" stroke="var(--border)" />
-            <text textAnchor="middle" dominantBaseline="middle" fontSize="11" fill="var(--text-muted)" fontFamily="var(--font-sans)">
+            <rect x="-32" y="-12" width="64" height="24" rx="12" fill="var(--surface-raised)" stroke="var(--border)" />
+            <text textAnchor="middle" dominantBaseline="middle" className="text-xs" fill="var(--text-muted)" fontFamily="var(--font-sans)">
                 {label}
             </text>
         </g>

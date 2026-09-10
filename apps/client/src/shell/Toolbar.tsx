@@ -16,7 +16,7 @@ export function Toolbar() {
     const panel = useUi((s) => s.panel);
 
     return (
-        <header className="app-drag flex h-12 shrink-0 items-center gap-2 border-b border-border bg-surface pr-3 pl-2 text-[12px] text-text-muted">
+        <header className="app-drag flex h-12 shrink-0 items-center gap-2 border-b border-border bg-surface pr-3 pl-2 text-xs text-text-muted">
             <div className="flex min-w-0 grow items-center gap-2">
                 {machine && (
                     <>

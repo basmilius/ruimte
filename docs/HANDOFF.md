@@ -287,6 +287,15 @@ canvas, against Ruimte, one verdict each.
 - No fractional pixels. Type sizes, paddings and stroke widths are whole numbers; a `rem` value
   has to land on a whole pixel at the 16px root, and an `em` at the size it inherits. Ratios
   (line height, opacity, letter spacing) are not lengths and stay as they are.
+- One type scale, declared once in `@theme` in `apps/client/src/styles.css`, never a bracket
+  size at a call site: `text-xs` is 12/16 for meta (hints, pills, kbd, tooltips, badges,
+  counters, section labels), `text-sm` 14/20 for body (rows, inputs, menus, chat text, the
+  composer, node titles), `text-base` 16/24 for dialog titles and markdown h2, `text-lg` 18/24
+  for markdown h1. Nothing sits below 12px. The four are `rem`, so a change of the root font
+  size moves text and the rem-based layout together.
+- Code keeps a size of its own, `--text-code` (13px mono on a 20px line), for code blocks,
+  inline code, diffs, tool output and the mono inputs. It is absolute, so it never scales twice
+  with the root, and the terminal has its own `fontSize` setting (default 13) next to it.
 - Tooltips are the `Tooltip` component in `src/ui/Tooltip.tsx`, never a `title` attribute.
   One `TooltipProvider` at the app root gives the shared 150 ms delay.
 - Escape leaves node mode unless a terminal node has "Send Escape to the app" on (its context

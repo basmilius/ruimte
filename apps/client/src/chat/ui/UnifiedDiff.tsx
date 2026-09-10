@@ -47,7 +47,7 @@ export default function UnifiedDiff({ change }: { change: ChatFileChange }) {
     );
     if (patch === null) {
         return (
-            <pre className="max-h-64 overflow-auto px-3 py-2 font-mono text-[12px] leading-[1.6] select-text">
+            <pre className="max-h-64 overflow-auto px-3 py-2 font-mono text-code select-text">
                 {change.diff
                     .replace(/\n$/, '')
                     .split('\n')

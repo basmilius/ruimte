@@ -14,8 +14,8 @@ export function SettingsSection({ title, description, action, children }: Settin
         <section className="flex flex-col gap-2" aria-label={title}>
             <div className="flex items-end gap-3 px-1">
                 <div className="min-w-0 grow">
-                    <h3 className="text-[13px] font-medium text-text">{title}</h3>
-                    {description && <p className="mt-0.5 text-[12px] text-text-muted">{description}</p>}
+                    <h3 className="text-sm font-medium text-text">{title}</h3>
+                    {description && <p className="mt-0.5 text-xs text-text-muted">{description}</p>}
                 </div>
                 {action}
             </div>

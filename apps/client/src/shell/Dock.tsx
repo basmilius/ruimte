@@ -60,7 +60,7 @@ export function Dock() {
                 <Tooltip label={mode === 'node' ? 'Keyboard goes to this node. Escape returns to the canvas.' : 'Keyboard goes to the canvas'}>
                     <div
                         className={clsx(
-                            'flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12px] font-medium',
+                            'flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium',
                             mode === 'node' ? 'bg-accent-soft text-accent' : 'text-text-muted'
                         )}
                     >
@@ -81,24 +81,24 @@ export function Dock() {
                         <Menu.Positioner className="z-50" side="top" sideOffset={10} align="start">
                             <Menu.Popup className="menu-popup">
                                 <Menu.Item className="menu-item" onClick={() => add('terminal')}>
-                                    <Icon icon={faTerminal} size={14} /> Terminal <kbd>⌥T</kbd>
+                                    <Icon icon={faTerminal} size={16} /> Terminal <kbd>⌥T</kbd>
                                 </Menu.Item>
                                 <Menu.Item className="menu-item" onClick={() => add('chat')}>
-                                    <Icon icon={faMessage} size={14} /> Chat <kbd>⌥C</kbd>
+                                    <Icon icon={faMessage} size={16} /> Chat <kbd>⌥C</kbd>
                                 </Menu.Item>
                                 <AgentSubmenus onPick={(target, provider) => addAgentNode(target, provider, centerWorld())} />
                                 <Menu.Item className="menu-item" onClick={() => add('browser')}>
-                                    <Icon icon={faGlobe} size={14} /> Browser <kbd>⌥B</kbd>
+                                    <Icon icon={faGlobe} size={16} /> Browser <kbd>⌥B</kbd>
                                 </Menu.Item>
                                 <Menu.Item className="menu-item" onClick={() => add('group')}>
-                                    <Icon icon={faGrid2} size={14} /> Group <kbd>⌥G</kbd>
+                                    <Icon icon={faGrid2} size={16} /> Group <kbd>⌥G</kbd>
                                 </Menu.Item>
                                 <Menu.Item className="menu-item" onClick={() => add('note')}>
-                                    <Icon icon={faNoteSticky} size={14} /> Note <kbd>⌥N</kbd>
+                                    <Icon icon={faNoteSticky} size={16} /> Note <kbd>⌥N</kbd>
                                 </Menu.Item>
                                 <Menu.Separator className="menu-separator" />
                                 <Menu.Item className="menu-item" onClick={() => useCanvas.getState().addText(centerWorld())}>
-                                    <Icon icon={faFont} size={14} /> Text <kbd>dbl-click</kbd>
+                                    <Icon icon={faFont} size={16} /> Text <kbd>dbl-click</kbd>
                                 </Menu.Item>
                             </Menu.Popup>
                         </Menu.Positioner>
@@ -114,7 +114,7 @@ export function Dock() {
                     </Tooltip>
                     <Menu.Root>
                         <Tooltip label="Zoom presets">
-                            <Menu.Trigger className="h-8 min-w-14 rounded-lg px-1 text-[12px] tabular-nums text-text-muted hover:bg-surface-sunken hover:text-text data-[popup-open]:bg-surface-sunken data-[popup-open]:text-text">
+                            <Menu.Trigger className="h-8 min-w-14 rounded-lg px-1 text-xs tabular-nums text-text-muted hover:bg-surface-sunken hover:text-text data-[popup-open]:bg-surface-sunken data-[popup-open]:text-text">
                                 {zoomPct}%
                             </Menu.Trigger>
                         </Tooltip>
@@ -126,7 +126,7 @@ export function Dock() {
                                             <Menu.RadioItem key={pct} value={pct} className="menu-item">
                                                 <span className="grid h-4 w-4 place-items-center">
                                                     <Menu.RadioItemIndicator>
-                                                        <Icon icon={faCheck} size={13} />
+                                                        <Icon icon={faCheck} size={16} />
                                                     </Menu.RadioItemIndicator>
                                                 </span>
                                                 <span className="tabular-nums">{pct}%</span>
@@ -137,13 +137,13 @@ export function Dock() {
                                     <Menu.Separator className="menu-separator" />
                                     <Menu.Item className="menu-item" onClick={() => useCanvas.getState().fitAll()}>
                                         <span className="grid h-4 w-4 place-items-center">
-                                            <Icon icon={faExpand} size={13} />
+                                            <Icon icon={faExpand} size={16} />
                                         </span>{' '}
                                         Zoom to fit <kbd>⇧1</kbd>
                                     </Menu.Item>
                                     <Menu.Item className="menu-item" disabled={!hasSelection} onClick={() => useCanvas.getState().zoomToSelection()}>
                                         <span className="grid h-4 w-4 place-items-center">
-                                            <Icon icon={faCropSimple} size={13} />
+                                            <Icon icon={faCropSimple} size={16} />
                                         </span>{' '}
                                         Zoom to selection <kbd>⇧2</kbd>
                                     </Menu.Item>
@@ -191,16 +191,16 @@ export function Dock() {
                                             </span>
                                             <span>
                                                 <span className="block">{row.label}</span>
-                                                <span className="block text-[11px] text-text-faint">{row.hint}</span>
+                                                <span className="block text-xs text-text-faint">{row.hint}</span>
                                             </span>
                                         </Menu.CheckboxItem>
                                     ))}
                                     <Menu.Separator className="menu-separator" />
                                     <Menu.Item className="menu-item" onClick={() => useCanvas.getState().setAllLocks(!allLocked)}>
-                                        {allLocked ? <Icon icon={faLockOpen} size={14} /> : <Icon icon={faLock} size={14} />}
+                                        {allLocked ? <Icon icon={faLockOpen} size={16} /> : <Icon icon={faLock} size={16} />}
                                         {allLocked ? 'Unlock everything' : 'Lock everything'}
                                     </Menu.Item>
-                                    <div className="px-2.5 pb-1.5 pt-1 text-[11px] text-text-faint">Buttons and shortcuts still work while locked.</div>
+                                    <div className="px-2.5 pb-1.5 pt-1 text-xs text-text-faint">Buttons and shortcuts still work while locked.</div>
                                 </Menu.Popup>
                             </Menu.Positioner>
                         </Menu.Portal>
@@ -216,10 +216,10 @@ export function Dock() {
                             <Menu.Positioner className="z-50" side="top" sideOffset={10} align="end">
                                 <Menu.Popup className="menu-popup min-w-48">
                                     <div className="menu-label">Saved layouts</div>
-                                    {layouts.length === 0 && <div className="px-2.5 pb-1.5 text-[11px] text-text-faint">Nothing saved yet.</div>}
+                                    {layouts.length === 0 && <div className="px-2.5 pb-1.5 text-xs text-text-faint">Nothing saved yet.</div>}
                                     {layouts.map((layout) => (
                                         <Menu.Item key={layout.name} className="menu-item group" onClick={() => useCanvas.getState().applyLayout(layout.name)}>
-                                            <Icon icon={faTableLayout} size={14} className="text-text-faint" />
+                                            <Icon icon={faTableLayout} size={16} className="text-text-faint" />
                                             <span className="truncate">{layout.name}</span>
                                             <Tooltip label="Delete">
                                                 <span
@@ -238,7 +238,7 @@ export function Dock() {
                                     ))}
                                     <Menu.Separator className="menu-separator" />
                                     <Menu.Item className="menu-item" onClick={() => useUi.getState().setLayoutDialogOpen(true)}>
-                                        <Icon icon={faFloppyDisk} size={14} /> Save current layout
+                                        <Icon icon={faFloppyDisk} size={16} /> Save current layout
                                     </Menu.Item>
                                 </Menu.Popup>
                             </Menu.Positioner>

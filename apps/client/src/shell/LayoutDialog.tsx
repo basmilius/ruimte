@@ -24,11 +24,11 @@ export function LayoutDialog() {
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
                 <Dialog.Popup className="dialog-popup top-[24vh] w-[380px] p-5">
-                    <Dialog.Title className="text-[15px] font-semibold text-text">Save layout</Dialog.Title>
-                    <p className="mt-1 text-[12px] text-text-muted">Where every node and text sits right now, under a name you can apply later.</p>
+                    <Dialog.Title className="text-base font-semibold text-text">Save layout</Dialog.Title>
+                    <p className="mt-1 text-xs text-text-muted">Where every node and text sits right now, under a name you can apply later.</p>
                     <input
                         autoFocus
-                        className="mt-3 h-9 w-full rounded-lg border border-border bg-surface px-2.5 text-[13px] text-text outline-none placeholder:text-text-faint focus:border-accent"
+                        className="mt-3 h-9 w-full rounded-lg border border-border bg-surface px-2.5 text-sm text-text outline-none placeholder:text-text-faint focus:border-accent"
                         placeholder="Name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
@@ -41,13 +41,13 @@ export function LayoutDialog() {
                     />
                     <div className="mt-4 flex items-center justify-end gap-2">
                         <button
-                            className="inline-flex h-8 items-center rounded-md px-3 text-[12px] font-medium text-text-muted hover:bg-surface-sunken hover:text-text"
+                            className="inline-flex h-8 items-center rounded-md px-3 text-xs font-medium text-text-muted hover:bg-surface-sunken hover:text-text"
                             onClick={() => setOpen(false)}
                         >
                             Cancel
                         </button>
                         <button
-                            className="inline-flex h-8 items-center rounded-md bg-accent px-3 text-[12px] font-medium text-accent-text disabled:opacity-50"
+                            className="inline-flex h-8 items-center rounded-md bg-accent px-3 text-xs font-medium text-accent-text disabled:opacity-50"
                             disabled={!name.trim()}
                             onClick={submit}
                         >

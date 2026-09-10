@@ -26,7 +26,7 @@ const LOCAL_COMMANDS = [
 ];
 
 // The textarea and the chip layer behind it must wrap identically, so they share every metric.
-const INPUT_CLASS = 'w-full whitespace-pre-wrap break-words px-3.5 pb-1 pt-3 text-[13px] leading-relaxed';
+const INPUT_CLASS = 'w-full whitespace-pre-wrap break-words px-3.5 pb-1 pt-3 text-sm leading-normal';
 
 interface ComposerProps {
     chatId: string;
@@ -399,7 +399,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                             <button
                                 key={command.name}
                                 className={clsx(
-                                    'flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-[12px]',
+                                    'flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs',
                                     index === menuIndex ? 'bg-surface-sunken text-text' : 'text-text-muted'
                                 )}
                                 onMouseEnter={() => setMenuIndex(index)}
@@ -418,7 +418,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                 {mentionMenuOpen && (
                     <div className="border-b border-border px-1.5 py-1.5">
                         {files.length === 0 && (
-                            <div className="px-2 py-1 text-[12px] text-text-faint">{mention.query ? 'No files match' : 'Type to search files'}</div>
+                            <div className="px-2 py-1 text-xs text-text-faint">{mention.query ? 'No files match' : 'Type to search files'}</div>
                         )}
                         {files.map((path, index) => {
                             const { name, dir } = splitPath(path);
@@ -426,7 +426,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                                 <button
                                     key={path}
                                     className={clsx(
-                                        'flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-[12px]',
+                                        'flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs',
                                         index === menuIndex ? 'bg-surface-sunken text-text' : 'text-text-muted'
                                     )}
                                     onMouseEnter={() => setMenuIndex(index)}
@@ -451,7 +451,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                                         className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-surface-raised text-text-muted opacity-0 transition-opacity hover:text-text group-hover/thumb:opacity-100 focus-visible:opacity-100"
                                         onClick={() => removeAttachment(index)}
                                     >
-                                        <Icon icon={faXmark} size={11} />
+                                        <Icon icon={faXmark} size={14} />
                                     </button>
                                 </Tooltip>
                             </div>
@@ -507,7 +507,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                         onKeyDown={onKeyDown}
                     />
                 </div>
-                {notice && <div className="px-3.5 pb-1 text-[11px] text-status-error">{notice}</div>}
+                {notice && <div className="px-3.5 pb-1 text-xs text-status-error">{notice}</div>}
                 <div className="flex items-center gap-1 px-2 pb-2">
                     {providerFixed ? (
                         <ModelBadge provider={info.provider} providerName={provider?.name ?? info.provider} model={model?.name ?? info.selection.model} />
@@ -535,7 +535,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-status-error text-accent-text"
                                 onClick={() => void chatClient.cancel(chatId).catch(() => undefined)}
                             >
-                                <Icon icon={faSquare} size={11} />
+                                <Icon icon={faSquare} size={14} />
                             </button>
                         </Tooltip>
                     ) : (

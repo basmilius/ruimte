@@ -10,7 +10,7 @@ import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 
 const triggerClass =
-    'flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-[12px] text-text-muted hover:bg-surface-sunken hover:text-text data-[popup-open]:bg-surface-sunken data-[popup-open]:text-text';
+    'flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-xs text-text-muted hover:bg-surface-sunken hover:text-text data-[popup-open]:bg-surface-sunken data-[popup-open]:text-text';
 
 function Popup({ children, minWidth }: { children: React.ReactNode; minWidth?: string }) {
     return (
@@ -27,15 +27,15 @@ function RadioRow({ value, label, hint, badge }: { value: string; label: string;
         <Menu.RadioItem value={value} className="menu-item">
             <span className="grid h-4 w-4 place-items-center">
                 <Menu.RadioItemIndicator>
-                    <Icon icon={faCheck} size={13} />
+                    <Icon icon={faCheck} size={16} />
                 </Menu.RadioItemIndicator>
             </span>
             <span className="flex min-w-0 flex-col">
                 <span className="flex items-center gap-1.5">
                     {label}
-                    {badge && <span className="rounded bg-accent-soft px-1 text-[10px] font-medium uppercase text-accent">{badge}</span>}
+                    {badge && <span className="rounded bg-accent-soft px-1 text-xs font-medium uppercase text-accent">{badge}</span>}
                 </span>
-                {hint && <span className="text-[11px] text-text-faint">{hint}</span>}
+                {hint && <span className="text-xs text-text-faint">{hint}</span>}
             </span>
         </Menu.RadioItem>
     );
@@ -133,7 +133,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
         <Popover.Root open={open} onOpenChange={setOpen}>
             <Tooltip label={owner ? `${owner.name} · ${current?.name ?? selection.model}` : 'Choose model'} kbd="/model">
                 <Popover.Trigger className={triggerClass}>
-                    <AgentIcon kind={provider} size={13} />
+                    <AgentIcon kind={provider} size={16} />
                     <span className="max-w-40 truncate">{current?.name ?? selection.model}</span>
                     <Icon icon={faChevronDown} size={12} className="text-text-faint" />
                 </Popover.Trigger>
@@ -142,10 +142,10 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                 <Popover.Positioner className="z-50" side="top" sideOffset={8} align="start">
                     <Popover.Popup className="picker-popup" initialFocus={inputRef}>
                         <div className="flex items-center gap-2 border-b border-border px-2.5">
-                            <Icon icon={faMagnifyingGlass} size={13} className="shrink-0 text-text-faint" />
+                            <Icon icon={faMagnifyingGlass} size={16} className="shrink-0 text-text-faint" />
                             <input
                                 ref={inputRef}
-                                className="h-9 w-full bg-transparent text-[13px] text-text outline-none placeholder:text-text-faint"
+                                className="h-9 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint"
                                 placeholder="Search models"
                                 spellCheck={false}
                                 value={query}
@@ -158,7 +158,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                         </div>
                         <div ref={listRef} className="max-h-72 overflow-auto p-1" role="listbox">
                             {entries.length === 0 && (
-                                <div className="px-3 py-6 text-center text-[12px] text-text-faint">
+                                <div className="px-3 py-6 text-center text-xs text-text-faint">
                                     {providers.length === 0 ? 'No chat provider installed' : 'No models match'}
                                 </div>
                             )}
@@ -169,7 +169,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                                             key="legacy"
                                             data-active={i === index}
                                             className={clsx(
-                                                'flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[12px]',
+                                                'flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs',
                                                 i === index ? 'bg-surface-sunken text-text' : 'text-text-faint'
                                             )}
                                             onMouseEnter={() => setIndex(i)}
@@ -188,7 +188,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                                     <div key={`${entry.provider.kind}/${entry.model.slug}`}>
                                         {first && (
                                             <div className="menu-label flex items-center gap-1.5">
-                                                <AgentIcon kind={entry.provider.kind} size={11} />
+                                                <AgentIcon kind={entry.provider.kind} size={14} />
                                                 {entry.provider.name}
                                             </div>
                                         )}
@@ -197,21 +197,21 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                                             aria-selected={chosen}
                                             data-active={i === index}
                                             className={clsx(
-                                                'flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px]',
+                                                'flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm',
                                                 i === index ? 'bg-surface-sunken text-text' : 'text-text-muted'
                                             )}
                                             onMouseEnter={() => setIndex(i)}
                                             onClick={() => choose(entry)}
                                         >
-                                            <span className="grid h-4 w-4 shrink-0 place-items-center">{chosen && <Icon icon={faCheck} size={13} />}</span>
+                                            <span className="grid h-4 w-4 shrink-0 place-items-center">{chosen && <Icon icon={faCheck} size={16} />}</span>
                                             <span className="min-w-0 truncate">{entry.model.name}</span>
                                             {entry.model.badge && (
-                                                <span className="rounded bg-accent-soft px-1 text-[10px] font-medium uppercase text-accent">
+                                                <span className="rounded bg-accent-soft px-1 text-xs font-medium uppercase text-accent">
                                                     {entry.model.badge}
                                                 </span>
                                             )}
                                             <span className="grow" />
-                                            {entry.model.legacy && <span className="text-[11px] text-text-faint">Legacy</span>}
+                                            {entry.model.legacy && <span className="text-xs text-text-faint">Legacy</span>}
                                         </button>
                                     </div>
                                 );
@@ -228,8 +228,8 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
 export function ModelBadge({ provider, providerName, model }: { provider: AgentKind; providerName: string; model: string }) {
     return (
         <Tooltip label={`${providerName} · ${model}. This chat was opened for ${providerName}.`}>
-            <span className="flex h-7 shrink-0 cursor-default items-center gap-1 whitespace-nowrap rounded-md px-2 text-[12px] text-text-muted">
-                <AgentIcon kind={provider} size={13} />
+            <span className="flex h-7 shrink-0 cursor-default items-center gap-1 whitespace-nowrap rounded-md px-2 text-xs text-text-muted">
+                <AgentIcon kind={provider} size={16} />
                 <span className="max-w-40 truncate">{model}</span>
             </span>
         </Tooltip>

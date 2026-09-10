@@ -14,8 +14,8 @@ import { Icon } from '@/ui/Icon';
 type DialogKind = { kind: 'new' } | { kind: 'delete'; projectId: string; name: string; folder: string | null } | null;
 
 const fieldClass =
-    'h-9 w-full rounded-lg border border-border bg-surface px-2.5 text-[13px] text-text outline-none placeholder:text-text-faint focus:border-accent';
-const buttonClass = 'inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-[12px] font-medium';
+    'h-9 w-full rounded-lg border border-border bg-surface px-2.5 text-sm text-text outline-none placeholder:text-text-faint focus:border-accent';
+const buttonClass = 'inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-medium';
 
 /* The project segment of the toolbar's breadcrumb: every known canvas, plus the ways to make, open, close and delete one. */
 export function ProjectMenu() {
@@ -73,8 +73,8 @@ export function ProjectMenu() {
             <Menu.Root>
                 <Menu.Trigger className="flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-left hover:bg-surface-sunken data-[popup-open]:bg-surface-sunken">
                     <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: current?.color ?? 'var(--text-faint)' }} />
-                    <span className="truncate text-[13px] font-medium text-text">{current?.name ?? 'No project'}</span>
-                    <Icon icon={faChevronDown} size={14} className="shrink-0 text-text-muted" />
+                    <span className="truncate text-sm font-medium text-text">{current?.name ?? 'No project'}</span>
+                    <Icon icon={faChevronDown} size={16} className="shrink-0 text-text-muted" />
                 </Menu.Trigger>
                 <Menu.Portal>
                     <Menu.Positioner className="z-50" side="bottom" sideOffset={6} align="start">
@@ -90,17 +90,17 @@ export function ProjectMenu() {
                                     <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: project.color }} />
                                     <span className="flex min-w-0 flex-col">
                                         <span className="truncate">{project.name}</span>
-                                        <span className="truncate text-[11px] text-text-faint">{project.folder ?? 'Not in a folder'}</span>
+                                        <span className="truncate text-xs text-text-faint">{project.folder ?? 'Not in a folder'}</span>
                                     </span>
-                                    {project.projectId === current?.projectId && <Icon icon={faCheck} size={13} className="ml-auto" />}
+                                    {project.projectId === current?.projectId && <Icon icon={faCheck} size={16} className="ml-auto" />}
                                 </Menu.Item>
                             ))}
                             {projects.length > 0 && <Menu.Separator className="menu-separator" />}
                             <Menu.Item className="menu-item" onClick={() => openDialog({ kind: 'new' })}>
-                                <Icon icon={faPlus} size={14} /> New canvas
+                                <Icon icon={faPlus} size={16} /> New canvas
                             </Menu.Item>
                             <Menu.Item className="menu-item" onClick={() => void openFolder()}>
-                                <Icon icon={faFolderOpen} size={14} /> Open folder
+                                <Icon icon={faFolderOpen} size={16} /> Open folder
                             </Menu.Item>
                             {current && (
                                 <>
@@ -110,18 +110,18 @@ export function ProjectMenu() {
                                             className="menu-item"
                                             onClick={() => void transport.request('fs.reveal', { path: current.folder! }).catch(() => undefined)}
                                         >
-                                            <Icon icon={faArrowUpRightFromSquare} size={14} /> Open in {fileManagerName(platform)}
+                                            <Icon icon={faArrowUpRightFromSquare} size={16} /> Open in {fileManagerName(platform)}
                                         </Menu.Item>
                                     )}
                                     <Menu.Item className="menu-item" onClick={() => void projectClient.closeProject()}>
-                                        <Icon icon={faXmark} size={14} /> Close project
-                                        <span className="ml-auto text-[11px] text-text-faint">Sessions keep running</span>
+                                        <Icon icon={faXmark} size={16} /> Close project
+                                        <span className="ml-auto text-xs text-text-faint">Sessions keep running</span>
                                     </Menu.Item>
                                     <Menu.Item
                                         className="menu-item text-status-error"
                                         onClick={() => openDialog({ kind: 'delete', projectId: current.projectId, name: current.name, folder: current.folder })}
                                     >
-                                        <Icon icon={faTrash} size={14} /> Delete project
+                                        <Icon icon={faTrash} size={16} /> Delete project
                                     </Menu.Item>
                                 </>
                             )}
@@ -136,8 +136,8 @@ export function ProjectMenu() {
                     <Dialog.Popup className="dialog-popup top-[24vh] w-[420px] p-5">
                         {dialog?.kind === 'new' && (
                             <>
-                                <Dialog.Title className="text-[15px] font-semibold text-text">New canvas</Dialog.Title>
-                                <p className="mt-1 text-[12px] text-text-muted">
+                                <Dialog.Title className="text-base font-semibold text-text">New canvas</Dialog.Title>
+                                <p className="mt-1 text-xs text-text-muted">
                                     Stored with the app, not in a folder. Open a folder instead to share it through git.
                                 </p>
                                 <input
@@ -157,15 +157,15 @@ export function ProjectMenu() {
                         )}
                         {dialog?.kind === 'delete' && (
                             <>
-                                <Dialog.Title className="text-[15px] font-semibold text-text">Delete {dialog.name}?</Dialog.Title>
-                                <p className="mt-1 text-[12px] text-text-muted">
+                                <Dialog.Title className="text-base font-semibold text-text">Delete {dialog.name}?</Dialog.Title>
+                                <p className="mt-1 text-xs text-text-muted">
                                     {dialog.folder
                                         ? 'Forgets the project here. Its canvas file in the folder is removed too; nothing else in the folder is touched.'
                                         : 'The canvas and its file are removed. Running sessions keep running until their nodes are closed.'}
                                 </p>
                             </>
                         )}
-                        {failure && <p className="mt-2 text-[12px] text-status-error">{failure}</p>}
+                        {failure && <p className="mt-2 text-xs text-status-error">{failure}</p>}
                         <div className="mt-4 flex items-center justify-end gap-2">
                             <button className={clsx(buttonClass, 'text-text-muted hover:bg-surface-sunken hover:text-text')} onClick={() => setDialog(null)}>
                                 Cancel
@@ -176,7 +176,7 @@ export function ProjectMenu() {
                                     disabled={busy}
                                     onClick={() => void run(() => projectClient.deleteProject(dialog.projectId, true))}
                                 >
-                                    <Icon icon={faTrash} size={13} /> Delete
+                                    <Icon icon={faTrash} size={16} /> Delete
                                 </button>
                             ) : (
                                 <button className={clsx(buttonClass, 'bg-accent text-accent-text disabled:opacity-50')} disabled={busy} onClick={submit}>

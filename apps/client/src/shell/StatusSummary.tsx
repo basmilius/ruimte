@@ -33,7 +33,7 @@ export function StatusSummary() {
                 {needsYou.length > 0 && (
                     <Tooltip label="Go to the next node that needs you">
                         <button
-                            className="flex h-8 items-center gap-1.5 rounded-lg px-2 text-[12px] tabular-nums text-text-muted hover:bg-surface-sunken hover:text-text"
+                            className="flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs tabular-nums text-text-muted hover:bg-surface-sunken hover:text-text"
                             onClick={next}
                         >
                             <StatusDot status="needs-you" />
@@ -43,7 +43,7 @@ export function StatusSummary() {
                 )}
                 {running > 0 && (
                     <Tooltip label="Agents working">
-                        <span className="flex h-8 items-center gap-1.5 px-2 text-[12px] tabular-nums text-text-muted">
+                        <span className="flex h-8 items-center gap-1.5 px-2 text-xs tabular-nums text-text-muted">
                             <StatusDot status="running" />
                             {running}
                         </span>

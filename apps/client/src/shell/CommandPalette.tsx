@@ -26,11 +26,11 @@ import { desktop } from '@/desktop/bridge';
 import { Icon } from '@/ui/Icon';
 
 const KIND_ICON: Record<NodeKind, React.ReactNode> = {
-    terminal: <Icon icon={faTerminal} size={14} />,
-    chat: <Icon icon={faMessage} size={14} />,
-    browser: <Icon icon={faGlobe} size={14} />,
-    group: <Icon icon={faGrid2} size={14} />,
-    note: <Icon icon={faNoteSticky} size={14} />
+    terminal: <Icon icon={faTerminal} size={16} />,
+    chat: <Icon icon={faMessage} size={16} />,
+    browser: <Icon icon={faGlobe} size={16} />,
+    group: <Icon icon={faGrid2} size={16} />,
+    note: <Icon icon={faNoteSticky} size={16} />
 };
 
 // Typing a path turns the palette into a folder browser; anything else searches nodes and actions.
@@ -141,7 +141,7 @@ export function CommandPalette() {
                     id: 'browse-up',
                     label: '..',
                     hint: 'Up one folder',
-                    icon: <Icon icon={faArrowTurnUp} size={14} />,
+                    icon: <Icon icon={faArrowTurnUp} size={16} />,
                     section: 'Folders',
                     run: () => setQuery(up)
                 });
@@ -151,7 +151,7 @@ export function CommandPalette() {
                     id: `dir-${entry.fullPath}`,
                     label: entry.name,
                     hint: entry.hasCanvas ? 'Has a canvas' : undefined,
-                    icon: entry.hasCanvas ? <Icon icon={faFolderCheck} size={14} /> : <Icon icon={faFolder} size={14} />,
+                    icon: entry.hasCanvas ? <Icon icon={faFolderCheck} size={16} /> : <Icon icon={faFolder} size={16} />,
                     section: 'Folders',
                     run: () => setQuery(`${entry.fullPath}/`)
                 });
@@ -171,7 +171,7 @@ export function CommandPalette() {
             }));
         const actions: Entry[] = appCommands().map((command) => ({
             ...command,
-            icon: command.agent ? <AgentIcon kind={command.agent} /> : <Icon icon={faBolt} size={14} />,
+            icon: command.agent ? <AgentIcon kind={command.agent} /> : <Icon icon={faBolt} size={16} />,
             section: 'Actions'
         }));
         return [...jumps, ...actions].filter((entry) => query === '' || matches(query, `${entry.label} ${entry.hint ?? ''}`));
@@ -207,8 +207,8 @@ export function CommandPalette() {
                         <input
                             ref={inputRef}
                             className={clsx(
-                                'h-11 w-full bg-transparent text-[14px] text-text outline-none placeholder:text-text-faint',
-                                browsing && 'font-mono text-[13px]'
+                                'h-11 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint',
+                                browsing && 'font-mono text-code'
                             )}
                             placeholder="Jump to a node, run a command, or type a path like ~/projects to open a folder"
                             value={query}
@@ -237,8 +237,8 @@ export function CommandPalette() {
                         <kbd className="tooltip-kbd">esc</kbd>
                     </div>
                     <div className="max-h-[50vh] overflow-auto p-1.5" role="listbox">
-                        {entries.length === 0 && !browsing && <div className="px-3 py-6 text-center text-[12px] text-text-faint">Nothing matches</div>}
-                        {entries.length === 0 && browsing && <div className="px-3 py-6 text-center text-[12px] text-text-faint">No folders here yet</div>}
+                        {entries.length === 0 && !browsing && <div className="px-3 py-6 text-center text-xs text-text-faint">Nothing matches</div>}
+                        {entries.length === 0 && browsing && <div className="px-3 py-6 text-center text-xs text-text-faint">No folders here yet</div>}
                         {entries.map((entry, i) => {
                             const first = i === 0 || entries[i - 1]!.section !== entry.section;
                             return (
@@ -248,15 +248,15 @@ export function CommandPalette() {
                                         role="option"
                                         aria-selected={entry === active}
                                         className={clsx(
-                                            'flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-[13px]',
+                                            'flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm',
                                             entry === active ? 'bg-surface-sunken text-text' : 'text-text-muted'
                                         )}
                                         onMouseEnter={() => setIndex(i)}
                                         onClick={() => run(entry)}
                                     >
                                         <span className="shrink-0 text-text-faint">{entry.icon}</span>
-                                        <span className={clsx('min-w-0 truncate', browsing && 'font-mono text-[12px]')}>{entry.label}</span>
-                                        {entry.hint && <span className="text-[11px] text-text-faint">{entry.hint}</span>}
+                                        <span className={clsx('min-w-0 truncate', browsing && 'font-mono text-code')}>{entry.label}</span>
+                                        {entry.hint && <span className="text-xs text-text-faint">{entry.hint}</span>}
                                         <span className="grow" />
                                         {entry.shortcut && <kbd className="tooltip-kbd">{entry.shortcut}</kbd>}
                                     </button>
@@ -265,7 +265,7 @@ export function CommandPalette() {
                         })}
                     </div>
                     {browsing && (
-                        <div className="flex items-center gap-3 border-t border-border px-3 py-2 text-[11px] text-text-faint">
+                        <div className="flex items-center gap-3 border-t border-border px-3 py-2 text-xs text-text-faint">
                             {failure ? (
                                 <span className="text-status-error">{failure}</span>
                             ) : (
@@ -277,7 +277,7 @@ export function CommandPalette() {
                             <span className="grow" />
                             {desktop() && (
                                 <button
-                                    className="inline-flex h-7 items-center rounded-md px-2.5 text-[12px] font-medium text-text-muted hover:bg-surface-sunken hover:text-text"
+                                    className="inline-flex h-7 items-center rounded-md px-2.5 text-xs font-medium text-text-muted hover:bg-surface-sunken hover:text-text"
                                     onClick={() =>
                                         void desktop()
                                             ?.pickFolder(browse?.parentPath)
@@ -288,11 +288,11 @@ export function CommandPalette() {
                                 </button>
                             )}
                             <button
-                                className="inline-flex h-7 items-center gap-1.5 rounded-md bg-accent px-2.5 text-[12px] font-medium text-accent-text disabled:opacity-50"
+                                className="inline-flex h-7 items-center gap-1.5 rounded-md bg-accent px-2.5 text-xs font-medium text-accent-text disabled:opacity-50"
                                 disabled={busy || query.trim() === ''}
                                 onClick={() => void submitPath(query)}
                             >
-                                <Icon icon={faFolderPlus} size={13} /> Open as project
+                                <Icon icon={faFolderPlus} size={16} /> Open as project
                             </button>
                         </div>
                     )}
