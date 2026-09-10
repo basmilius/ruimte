@@ -5,6 +5,7 @@ import { BrowserToolbar } from '@/nodes/BrowserBody';
 import { useNodeHost } from '@/nodes/node-host';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
+import { useUi } from '@/state/ui';
 import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
@@ -17,7 +18,8 @@ const KINDS_WITH_TOOLBAR = new Set<ProjectViewKind>(['browser', 'terminal']);
 /* Whether the bar has view content to fence off. A canvas and a chat have none. */
 export const useHasViewToolbar = (): boolean => {
     const view = useDocument((s) => activeViewOf(s));
-    return view !== null && KINDS_WITH_TOOLBAR.has(view.kind);
+    const page = useUi((s) => s.page);
+    return page === null && view !== null && KINDS_WITH_TOOLBAR.has(view.kind);
 };
 
 /*
@@ -29,10 +31,12 @@ export const useHasViewToolbar = (): boolean => {
 export function ViewToolbar() {
     const view = useDocument((s) => activeViewOf(s));
     const focused = useDocument((s) => s.bodyFocused);
+    const page = useUi((s) => s.page);
     const projectFolder = useProject((s) => s.current?.folder ?? null);
     const host = useNodeHost(view && !isCanvasView(view) ? view.id : '');
 
-    if (!view || !KINDS_WITH_TOOLBAR.has(view.kind)) {
+    // A page fills the column, so a terminal's folder pill would stand over it.
+    if (page !== null || !view || !KINDS_WITH_TOOLBAR.has(view.kind)) {
         return null;
     }
     if (view.kind === 'browser') {

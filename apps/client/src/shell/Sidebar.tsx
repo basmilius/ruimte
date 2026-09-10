@@ -1,7 +1,23 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
-import { ChevronRight, Copy, Frame, Globe, LayoutGrid, MessageSquare, Pencil, PenTool, Plus, Settings, Smile, StickyNote, Terminal, Trash } from 'lucide-react';
+import {
+    ChartNoAxesColumn,
+    ChevronRight,
+    Copy,
+    Frame,
+    Globe,
+    LayoutGrid,
+    MessageSquare,
+    Pencil,
+    PenTool,
+    Plus,
+    Settings,
+    Smile,
+    StickyNote,
+    Terminal,
+    Trash
+} from 'lucide-react';
 import clsx from 'clsx';
 import { isCanvasView, isSessionView, type AgentKind, type NodeKind } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
@@ -375,6 +391,7 @@ export function Sidebar() {
     const chats = useChats((s) => s.byNodeId);
     const drafts = useDrafts((s) => s.ids);
     const open = useUi((s) => s.sidebarOpen);
+    const usageOpen = useUi((s) => s.page === 'usage');
     const expanded = useUi(useShallow((s) => s.sidebarExpanded));
     const instant = useInstantWidth();
     const inset = useTrafficLightInset();
@@ -572,6 +589,11 @@ export function Sidebar() {
                             </Menu.Positioner>
                         </Menu.Portal>
                     </Menu.Root>
+                    <Tooltip label="Usage" name>
+                        <button className="icon-btn" data-active={usageOpen || undefined} onClick={() => useUi.getState().setPage('usage')}>
+                            <Icon icon={ChartNoAxesColumn} size={16} />
+                        </button>
+                    </Tooltip>
                     <Tooltip label="Settings" kbd="⌘," name>
                         <button className="icon-btn" onClick={() => useUi.getState().setSettings({ open: true })}>
                             <Icon icon={Settings} size={16} />

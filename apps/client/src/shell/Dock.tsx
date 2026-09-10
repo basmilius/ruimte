@@ -45,6 +45,7 @@ const centerWorld = () => {
  * section, and the way out of a body is Escape, the chord a terminal uses, or its row in the list.
  */
 export function Dock() {
+    const page = useUi((s) => s.page);
     const onCanvas = useDocument((s) => {
         const view = activeViewOf(s);
         return view === null || isCanvasView(view);
@@ -66,7 +67,8 @@ export function Dock() {
         useCanvas.getState().addNode(kind, centerWorld());
     };
 
-    if (!onCanvas) {
+    // A page fills the column: the canvas under it is inert and its controls have nothing to act on.
+    if (!onCanvas || page !== null) {
         return null;
     }
     return (

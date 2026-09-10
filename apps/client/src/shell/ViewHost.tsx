@@ -8,6 +8,8 @@ import { BrowserFallback, usePage } from '@/nodes/BrowserBody';
 import { ChatBody } from '@/nodes/ChatBody';
 import { TerminalBody } from '@/nodes/TerminalBody';
 import { activeViewOf, useDocument } from '@/state/document';
+import { useUi } from '@/state/ui';
+import { UsagePage } from '@/shell/usage/UsagePage';
 import { isApplePlatform } from '@/desktop/bridge';
 import { isLeaveNodeChord } from '@/terminal/keymap';
 import { focusViewRow } from '@/shell/sidebar-focus';
@@ -75,17 +77,22 @@ function BrowserViewSurface({ id }: { id: string }) {
 /*
  * The main column. A canvas view draws the canvas; every other kind draws the body of its one node,
  * without a frame. The canvas stays mounted either way: it owns the app's pointer and key handling,
- * and its terminals keep their screens instead of rebuilding on the way back.
+ * and its terminals keep their screens instead of rebuilding on the way back. An app-level page is
+ * neither: it belongs to the machine and not to the project, so it draws over whatever is active
+ * and hands the column back untouched when it closes.
  */
 export function ViewHost() {
     const view = useDocument((s) => activeViewOf(s));
+    const page = useUi((s) => s.page);
     const standalone = view !== null && !isCanvasView(view) ? view : null;
+    const covered = page !== null || standalone !== null;
     return (
         <>
-            <div className={clsx('absolute inset-0', standalone && 'invisible')} inert={standalone !== null}>
+            <div className={clsx('absolute inset-0', covered && 'invisible')} inert={covered}>
                 <Canvas />
             </div>
-            {standalone && <StandaloneView view={standalone} />}
+            {page === null && standalone && <StandaloneView view={standalone} />}
+            {page === 'usage' && <UsagePage />}
         </>
     );
 }

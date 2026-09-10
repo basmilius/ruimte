@@ -5,6 +5,10 @@ export type SettingsSectionId = 'appearance' | 'canvas' | 'drawing' | 'files' | 
 
 export type PanelKind = ProjectPanelKind;
 
+/* A surface of the app rather than of a project: it fills the main column and no view is active
+   while it is up. Not persisted, so a reload lands on the project's own view. */
+export type AppPage = 'usage';
+
 const PANEL_KINDS: readonly PanelKind[] = ['files', 'git'];
 
 const SIDEBAR_STORAGE_KEY = 'ruimte.sidebar';
@@ -102,6 +106,7 @@ export type ViewDialog =
 
 interface UiStore {
     paletteOpen: boolean;
+    page: AppPage | null;
     /* Whether the session list is in view; it survives a reload, like everything else on the canvas. */
     sidebarOpen: boolean;
     /* Which canvases the sidebar has folded open, per project, or null until the list seeds itself.
@@ -124,6 +129,7 @@ interface UiStore {
     worktreeDialogFor: string | null;
     /* What a view is being asked about, from the sidebar, the breadcrumb or the palette alike. */
     viewDialog: ViewDialog;
+    setPage(page: AppPage | null): void;
     setWorktreeDialogFor(groupId: string | null): void;
     setViewDialog(dialog: ViewDialog): void;
     setSidebarOpen(open: boolean): void;
@@ -147,6 +153,7 @@ interface UiStore {
    they are loaded from and saved to its machine-local file by `project/panels-port.ts`. */
 export const useUi = create<UiStore>((set, get) => ({
     paletteOpen: false,
+    page: null,
     paletteSeed: '',
     sidebarOpen: readSidebarOpen(),
     sidebarExpanded: null,
@@ -161,6 +168,9 @@ export const useUi = create<UiStore>((set, get) => ({
     layoutDialogOpen: false,
     worktreeDialogFor: null,
     viewDialog: null,
+    setPage(page) {
+        set({ page });
+    },
     setWorktreeDialogFor(groupId) {
         set({ worktreeDialogFor: groupId });
     },
