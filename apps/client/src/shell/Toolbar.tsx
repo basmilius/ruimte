@@ -1,3 +1,6 @@
+import clsx from 'clsx';
+import { Search } from 'lucide-react';
+import { hasOverlayControls } from '@/desktop/bridge';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { ConnectionDot } from '@/shell/ConnectionDot';
 import { PanelControls } from '@/shell/PanelControls';
@@ -7,6 +10,8 @@ import { SidebarToggle } from '@/shell/SidebarToggle';
 import { useProject } from '@/state/project';
 import { useServer } from '@/state/server';
 import { useUi } from '@/state/ui';
+import { Icon } from '@/ui/Icon';
+import { Tooltip } from '@/ui/Tooltip';
 
 /* The band above the canvas: which project is open, and the panels that sit next to it. It is as
    tall as the sidebar's own strip, so the two read as one title bar across the window. The
@@ -45,7 +50,16 @@ export function Toolbar() {
                 </span>
             </div>
             <ConnectionDot />
-            {!panel.open && <PanelControls />}
+            {!panel.open && <PanelControls atEdge={false} />}
+            {/* The palette keeps the toolbar's right end in both panel states, so the search icon is
+                where the window controls are on Windows and Linux and the inset moves onto it. */}
+            <div className={clsx('btn-group', !panel.open && hasOverlayControls() && 'toolbar-overlay-inset')}>
+                <Tooltip label="Search" kbd="⌘K" name>
+                    <button className="icon-btn" onClick={() => useUi.getState().setPaletteOpen(true)}>
+                        <Icon icon={Search} size={16} />
+                    </button>
+                </Tooltip>
+            </div>
             {/* Opening another project takes a round trip to the daemon; the line says the wait is the app's. */}
             {switching && <div className="progress-line absolute inset-x-0 bottom-0" role="progressbar" aria-label="Opening the project" />}
         </header>
