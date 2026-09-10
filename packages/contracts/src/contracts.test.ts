@@ -198,10 +198,10 @@ describe('project', () => {
         const summary = { projectId: 'p1', name: 'Ruimte', color: '#7c74ff', folder: '/repo', lastOpenedAt: 1, available: true };
         expect(ProjectSummarySchema.safeParse({ ...summary, icon: { kind: 'initial', value: 'R' }, nameSource: 'folder' }).success).toBe(true);
         expect(
-            ProjectSummarySchema.safeParse({ ...summary, icon: { kind: 'image', value: '.idea/icon.svg', version: '17-42' }, nameSource: 'idea' }).success
+            ProjectSummarySchema.safeParse({ ...summary, icon: { kind: 'image', value: '.idea/icon.svg', version: '17-42' }, nameSource: 'chosen' }).success
         ).toBe(true);
         // An image icon without a version would make an uncacheable URL.
-        expect(ProjectSummarySchema.safeParse({ ...summary, icon: { kind: 'image', value: '.idea/icon.svg' }, nameSource: 'idea' }).success).toBe(false);
+        expect(ProjectSummarySchema.safeParse({ ...summary, icon: { kind: 'image', value: '.idea/icon.svg' }, nameSource: 'chosen' }).success).toBe(false);
         expect(ProjectSummarySchema.safeParse({ ...summary, icon: { kind: 'initial', value: 'R' }, nameSource: 'guessed' }).success).toBe(false);
         expect(ProjectSummarySchema.safeParse(summary).success).toBe(false);
     });

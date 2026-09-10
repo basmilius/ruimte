@@ -30,7 +30,7 @@ import {
     ICON_EXTENSION_BY_MIME,
     PROJECT_FILE
 } from './project-files.ts';
-import { IdentityCache, sniffMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
+import { IdentityCache, readIdeaName, sniffMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
 
 type ProjectErrorCode = 'project-not-found' | 'project-missing' | 'rev-conflict' | 'folder-not-found' | 'bad-icon';
 
@@ -134,7 +134,7 @@ export class ProjectStore {
             lastOpenedAt: entry.lastOpenedAt,
             available,
             icon,
-            nameSource: nameSourceOf(entry.name, entry.folder, derived?.name ?? null)
+            nameSource: nameSourceOf(entry.name, entry.folder)
         };
     }
 
@@ -145,6 +145,8 @@ export class ProjectStore {
     private async openUnlocked(payload: ProjectOpenPayload): Promise<ProjectOpenResult> {
         const entries = await this.loadRegistry();
         let entry: RegistryEntry | undefined;
+        // Only a folder the daemon never saw before may take its name from `.idea/.name`.
+        let firstOpen = false;
         if (payload.projectId) {
             entry = entries.find((candidate) => candidate.projectId === payload.projectId);
             if (!entry) {
@@ -155,9 +157,11 @@ export class ProjectStore {
             if (!(await isDirectory(folder))) {
                 throw new ProjectError('folder-not-found', `${folder} is not a folder`);
             }
-            entry = entries.find((candidate) => candidate.folder === folder) ?? {
+            const known = entries.find((candidate) => candidate.folder === folder);
+            firstOpen = !known;
+            entry = known ?? {
                 projectId: newId(),
-                name: payload.name ?? (await this.identity.resolve(folder)).name ?? basename(folder),
+                name: payload.name ?? basename(folder),
                 color: payload.color ?? DEFAULT_COLOR,
                 folder,
                 lastOpenedAt: Date.now()
@@ -186,6 +190,10 @@ export class ProjectStore {
         } else if (payload.projectId && entry.folder) {
             throw new ProjectError('project-missing', `The canvas of ${entry.name} is gone from ${entry.folder}`);
         } else {
+            // The one moment `.idea/.name` counts: it seeds the file, and the file owns the name from here.
+            if (firstOpen && entry.folder && !payload.name) {
+                entry = { ...entry, name: (await readIdeaName(entry.folder)) ?? entry.name };
+            }
             document = { version: 1, rev: 0, name: entry.name, color: entry.color, nodes: [], texts: [], edges: [], layouts: [] };
             text = await writeDocument(path, document);
         }
@@ -459,16 +467,13 @@ const sameIcon = (left: ProjectIcon | null, right: ProjectIcon | null): boolean 
     left === right || (left !== null && right !== null && left.kind === right.kind && left.value === right.value);
 
 /*
- * A name that still matches what the folder declares is the folder's, not a decision; the client
- * says so under the icon picker. Renaming to exactly that string reads as the folder's too, which
- * is the honest answer: there is nothing on disk that says otherwise.
+ * A name that still matches the folder's own is the folder's, not a decision; the client says so
+ * under the icon picker. Renaming to exactly that string reads as the folder's too, which is the
+ * honest answer: there is nothing on disk that says otherwise.
  */
-const nameSourceOf = (name: string, folder: string | null, ideaName: string | null): ProjectNameSource => {
+const nameSourceOf = (name: string, folder: string | null): ProjectNameSource => {
     if (!folder) {
         return 'chosen';
-    }
-    if (ideaName !== null && name === ideaName) {
-        return 'idea';
     }
     return name === basename(folder) ? 'folder' : 'chosen';
 };

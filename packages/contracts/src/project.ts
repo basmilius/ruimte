@@ -138,9 +138,8 @@ export const ProjectIconSchema = z.discriminatedUnion('kind', [
 ]);
 export type ProjectIcon = z.infer<typeof ProjectIconSchema>;
 
-// Where the name on screen came from: a person typed it, it is the folder's own name, or
-// `.idea/.name` declared it.
-export const ProjectNameSourceSchema = z.enum(['chosen', 'folder', 'idea']);
+// Where the name on screen came from: a person typed it, or it is the folder's own name.
+export const ProjectNameSourceSchema = z.enum(['chosen', 'folder']);
 export type ProjectNameSource = z.infer<typeof ProjectNameSourceSchema>;
 
 // What the person edits; the daemon wraps it with the version and the rev.
