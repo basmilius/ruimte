@@ -27,7 +27,13 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   (`src/backpressure.ts`), so a slow client costs a repaint instead of the daemon's memory.
 - **Phase 4, terminal node**: xterm 6 with WebGL and a DOM fallback, reattach after
   reconnect, viewport culling with a static plate after 10 s offscreen, exit bar with Restart,
-  session status in the sidebar, a Playwright e2e in `apps/client/e2e`.
+  session status in the sidebar, a Playwright e2e in `apps/client/e2e`. A budget of 10 live
+  WebGL contexts keeps a zoomed-out canvas under what a browser holds
+  (`DEFAULT_WEBGL_CONTEXTS` in `terminal/webgl-slots.ts`, later a setting): the ranking is the
+  focused terminal, then the ones most recently focused or written to, and the rest draw with
+  the DOM renderer until a slot frees up. `terminal/webgl-budget.ts` turns that into addons
+  loaded and disposed (a refit on every swap, `window.ruimte.webglContexts()` to see who
+  holds one); the ranking itself is pure and tested in `webgl-slots.test.ts`.
 
 - **Phase 5, agent status via hooks**: the daemon installs command hooks for Claude Code and
   Codex at startup (`--no-hooks` to skip), receives them on `POST /hooks/<kind>` with a
@@ -490,6 +496,9 @@ canvas, against Ruimte, one verdict each.
 - Tailwind's `dark:` variant follows `data-theme`, not the OS (`@custom-variant` in
   `styles.css`).
 - `bun test` would pick up the Playwright spec; `bunfig.toml` excludes `e2e/`.
+- `WebglAddon.dispose()` puts the DOM renderer back but leaves its canvas to the garbage
+  collector, so the browser keeps counting that context. The budget loses it by hand
+  (`WEBGL_lose_context`) after the dispose, when the addon's own listeners are already gone.
 - The stream-json `assistant` frames arrive one content block at a time under the same
   message id, and their block index does not match the streaming index. Text items are keyed
   by message id and the ordinal of the text block (`claude-protocol.ts`), and the projector puts
@@ -571,7 +580,8 @@ canvas, against Ruimte, one verdict each.
    line; a note's title as the first heading of its body; a per-project override of the
    terminal agent mode.
 
-Known gaps to keep in mind: no WebGL context budget (many visible terminals may lose
-contexts), the 30-node performance target is unmeasured. Backpressure is handled per socket
-(output dropped over the high-water mark, repaired with `session.resync` on drain); what is not
-there is a per-session cap, so one very loud shell can still be the reason a client is dropped.
+Known gaps to keep in mind: the WebGL budget is a fixed 10 contexts, not a setting and not
+measured against what a given machine really keeps alive; the 30-node performance target is
+unmeasured. Backpressure is handled per socket (output dropped over the high-water mark,
+repaired with `session.resync` on drain); what is not there is a per-session cap, so one very
+loud shell can still be the reason a client is dropped.
