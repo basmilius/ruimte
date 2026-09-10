@@ -90,6 +90,15 @@ export const ChatToolProgressSchema = z.object({
 });
 export type ChatToolProgress = z.infer<typeof ChatToolProgressSchema>;
 
+// One file a tool call changed, as the CLI reports it; `diff` is unified text for a provider that
+// gives one and empty for a provider whose edits only carry the text before and after.
+export const ChatFileChangeSchema = z.object({
+    path: z.string(),
+    kind: z.enum(['add', 'update', 'delete']),
+    diff: z.string()
+});
+export type ChatFileChange = z.infer<typeof ChatFileChangeSchema>;
+
 export const ChatToolItemSchema = z.object({
     ...base,
     kind: z.literal('tool'),
@@ -100,7 +109,8 @@ export const ChatToolItemSchema = z.object({
     state: ChatToolStateSchema,
     // Set for a tool call made by a subagent, with the id of the Task call that spawned it.
     parentToolUseId: z.string().nullable(),
-    progress: ChatToolProgressSchema.optional()
+    progress: ChatToolProgressSchema.optional(),
+    changes: z.array(ChatFileChangeSchema).optional()
 });
 
 export const ChatApprovalDecisionSchema = z.enum(['pending', 'allow', 'allow-always', 'deny', 'cancelled']);

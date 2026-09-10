@@ -1,4 +1,4 @@
-import type { InteractionMode, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type { InteractionMode, ModelSelection, ProviderCapabilities, RuntimeMode } from '@ruimte/contracts';
 
 // Base arguments for a chat process; the session adds what the selection and the modes ask for.
 export const CLAUDE_CHAT_ARGS = [
@@ -53,26 +53,23 @@ export const claudeArgs = (launch: ClaudeLaunch): string[] => {
     return args;
 };
 
+// What the CLI can do, as far as a client has to know.
+export const CLAUDE_CAPABILITIES: ProviderCapabilities = {
+    streamsToolOutput: false,
+    diffs: 'before-after',
+    attachments: true,
+    mentions: true,
+    denyReason: true,
+    allowAlways: true,
+    asyncQuestions: false,
+    compaction: 'prompt',
+    planMode: 'native',
+    reportsCost: true,
+    reportsContextWindow: true,
+    slashCommands: true
+};
+
+export const CLAUDE_RESUME_COMMAND = 'claude --resume {id}';
+
 /* Words the model reads as instructions, prepended to the prompt for options the CLI has no flag for. */
 export const promptPrefix = (selection: ModelSelection): string => (selection.options.effort === 'ultrathink' ? 'ultrathink\n\n' : '');
-
-export interface CliDetection {
-    installed: boolean;
-    version: string | null;
-}
-
-/* Asks the CLI for its version; a missing binary is a plain "not installed", never an error. */
-export const detectCli = async (command: string, env: Record<string, string | undefined> = process.env): Promise<CliDetection> => {
-    try {
-        const proc = Bun.spawn([command, '--version'], { stdout: 'pipe', stderr: 'ignore', env: env as Record<string, string> });
-        const output = await new Response(proc.stdout).text();
-        const code = await proc.exited;
-        if (code !== 0) {
-            return { installed: false, version: null };
-        }
-        const version = /\d+\.\d+\.\d+/.exec(output)?.[0] ?? output.trim() ?? null;
-        return { installed: true, version };
-    } catch {
-        return { installed: false, version: null };
-    }
-};

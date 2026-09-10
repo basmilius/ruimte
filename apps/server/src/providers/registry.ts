@@ -1,6 +1,8 @@
 import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
 import { ModelCatalog } from './catalog.ts';
-import { detectCli, type CliDetection } from './claude.ts';
+import { CLAUDE_CAPABILITIES, CLAUDE_RESUME_COMMAND } from './claude.ts';
+import { CODEX_CAPABILITIES, CODEX_RESUME_COMMAND } from './codex.ts';
+import { detectCli, type CliDetection } from './detect.ts';
 import codexManifest from './codex-models.json' with { type: 'json' };
 
 // How long a "is it installed" answer stays good; an install mid-session shows up on the next check.
@@ -22,8 +24,24 @@ export class ProviderRegistry {
     async list(): Promise<ProviderInfo[]> {
         const [claude, codex] = await Promise.all([this.detection('claude'), this.detection('codex')]);
         return [
-            { kind: 'claude', name: 'Claude Code', ...claude, models: this.claude.list(), defaultModel: this.claude.defaultModel },
-            { kind: 'codex', name: 'Codex', ...codex, models: this.codex.list(), defaultModel: this.codex.defaultModel }
+            {
+                kind: 'claude',
+                name: 'Claude Code',
+                ...claude,
+                models: this.claude.list(),
+                defaultModel: this.claude.defaultModel,
+                capabilities: CLAUDE_CAPABILITIES,
+                resumeCommand: CLAUDE_RESUME_COMMAND
+            },
+            {
+                kind: 'codex',
+                name: 'Codex',
+                ...codex,
+                models: this.codex.list(),
+                defaultModel: this.codex.defaultModel,
+                capabilities: CODEX_CAPABILITIES,
+                resumeCommand: CODEX_RESUME_COMMAND
+            }
         ];
     }
 
