@@ -12,7 +12,7 @@ export function SettingsNav() {
                     value={section.id}
                     className="flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm text-text-muted outline-none transition-colors hover:bg-surface-sunken hover:text-text focus-visible:ring-2 focus-visible:ring-accent data-active:bg-surface-sunken data-active:text-text"
                 >
-                    <Icon icon={section.icon} size={15} className="shrink-0 text-text-faint" />
+                    <Icon icon={section.icon} size={16} className="shrink-0 text-text-faint" />
                     {section.label}
                 </Tabs.Tab>
             ))}

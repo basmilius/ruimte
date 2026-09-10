@@ -17,7 +17,7 @@ export function ProjectBanner() {
             <div className="float flex max-w-[640px] items-center gap-3 rounded-lg px-3 py-2 text-xs text-text">
                 {conflict ? (
                     <>
-                        <Icon icon={faCodeBranch} size={16} className="shrink-0 text-status-needs-you" />
+                        <Icon icon={faCodeBranch} size={12} className="shrink-0 text-status-needs-you" />
                         <span className="grow">The canvas changed on disk while you had unsaved edits.</span>
                         <button
                             className={`${buttonClass} text-text-muted hover:bg-surface-sunken hover:text-text`}
@@ -31,7 +31,7 @@ export function ProjectBanner() {
                     </>
                 ) : (
                     <>
-                        <Icon icon={faCircleExclamation} size={16} className="shrink-0 text-status-error" />
+                        <Icon icon={faCircleExclamation} size={12} className="shrink-0 text-status-error" />
                         <span className="grow">{error}</span>
                         <button
                             className={`${buttonClass} text-text-muted hover:bg-surface-sunken hover:text-text`}

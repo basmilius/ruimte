@@ -72,7 +72,7 @@ export function Panel() {
                 <span className="grow" />
                 <Tooltip label="Close">
                     <button className="icon-btn h-7 w-7" aria-label={`Close ${label}`} onClick={() => useUi.getState().setPanel({ open: false })}>
-                        <Icon icon={faXmark} size={15} />
+                        <Icon icon={faXmark} size={16} />
                     </button>
                 </Tooltip>
             </header>

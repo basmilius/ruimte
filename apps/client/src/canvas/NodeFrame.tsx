@@ -31,11 +31,11 @@ import { noteColorClass } from '@/canvas/note-colors';
 import { Icon } from '@/ui/Icon';
 
 const ICONS: Record<NodeKind, ReactNode> = {
-    terminal: <Icon icon={faTerminal} size={16} />,
-    chat: <Icon icon={faMessage} size={16} />,
-    browser: <Icon icon={faGlobe} size={16} />,
-    group: <Icon icon={faGrid2} size={16} />,
-    note: <Icon icon={faNoteSticky} size={16} />
+    terminal: <Icon icon={faTerminal} size={14} />,
+    chat: <Icon icon={faMessage} size={14} />,
+    browser: <Icon icon={faGlobe} size={14} />,
+    group: <Icon icon={faGrid2} size={14} />,
+    note: <Icon icon={faNoteSticky} size={14} />
 };
 
 const STATUS_LABEL: Record<AgentStatus, string> = {
@@ -174,7 +174,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                 >
                     {isGroup && (
                         <Tooltip label={collapsed ? 'Expand' : 'Collapse'}>
-                            <button className="icon-btn -ml-1 h-6 w-6" onClick={() => useCanvas.getState().toggleGroupCollapse(id)}>
+                            <button className="icon-btn -ml-1 h-7 w-7" onClick={() => useCanvas.getState().toggleGroupCollapse(id)}>
                                 {collapsed ? <Icon icon={faChevronRight} size={16} /> : <Icon icon={faChevronDown} size={16} />}
                             </button>
                         </Tooltip>
@@ -192,14 +192,14 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     {isGroup && node.worktree && (
                         <Tooltip label={node.worktree.path}>
                             <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 font-mono text-xs text-text-muted">
-                                <Icon icon={faCodeBranch} size={14} /> {node.worktree.branch}
+                                <Icon icon={faCodeBranch} size={12} /> {node.worktree.branch}
                             </span>
                         </Tooltip>
                     )}
                     {node.kind === 'terminal' && hasContext && !renaming && (
                         <Tooltip label="Linked context. The agent in this terminal reads it with ruimte-context (list, read <id>).">
                             <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 text-xs text-text-muted">
-                                <Icon icon={faLink} size={14} /> context
+                                <Icon icon={faLink} size={12} /> context
                             </span>
                         </Tooltip>
                     )}
@@ -209,7 +209,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                                 className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 text-xs text-text-muted hover:text-text"
                                 onClick={() => useCanvas.getState().updateNode(id, { escapeToApp: false })}
                             >
-                                <Icon icon={faKeyboard} size={14} /> Esc
+                                <Icon icon={faKeyboard} size={12} /> Esc
                             </button>
                         </Tooltip>
                     )}

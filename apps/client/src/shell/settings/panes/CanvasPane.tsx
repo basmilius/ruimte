@@ -41,7 +41,7 @@ export function CanvasPane() {
                         <>
                             <Keys keys="⇧ 1" />
                             <button className={buttonClass} onClick={() => useCanvas.getState().fitAll()}>
-                                <Icon icon={faExpand} size={16} /> Fit
+                                <Icon icon={faExpand} size={12} /> Fit
                             </button>
                         </>
                     }
@@ -53,7 +53,7 @@ export function CanvasPane() {
                         <>
                             <Keys keys="⇧ 2" />
                             <button className={buttonClass} disabled={!hasSelection} onClick={() => useCanvas.getState().zoomToSelection()}>
-                                <Icon icon={faCropSimple} size={16} /> Frame
+                                <Icon icon={faCropSimple} size={12} /> Frame
                             </button>
                         </>
                     }

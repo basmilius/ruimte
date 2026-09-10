@@ -27,7 +27,7 @@ function RadioRow({ value, label, hint, badge }: { value: string; label: string;
         <Menu.RadioItem value={value} className="menu-item">
             <span className="grid h-4 w-4 place-items-center">
                 <Menu.RadioItemIndicator>
-                    <Icon icon={faCheck} size={16} />
+                    <Icon icon={faCheck} size={14} />
                 </Menu.RadioItemIndicator>
             </span>
             <span className="flex min-w-0 flex-col">
@@ -133,7 +133,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
         <Popover.Root open={open} onOpenChange={setOpen}>
             <Tooltip label={owner ? `${owner.name} · ${current?.name ?? selection.model}` : 'Choose model'} kbd="/model">
                 <Popover.Trigger className={triggerClass}>
-                    <AgentIcon kind={provider} size={16} />
+                    <AgentIcon kind={provider} size={12} />
                     <span className="max-w-40 truncate">{current?.name ?? selection.model}</span>
                     <Icon icon={faChevronDown} size={12} className="text-text-faint" />
                 </Popover.Trigger>
@@ -142,7 +142,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                 <Popover.Positioner className="z-50" side="top" sideOffset={8} align="start">
                     <Popover.Popup className="picker-popup" initialFocus={inputRef}>
                         <div className="flex items-center gap-2 border-b border-border px-2.5">
-                            <Icon icon={faMagnifyingGlass} size={16} className="shrink-0 text-text-faint" />
+                            <Icon icon={faMagnifyingGlass} size={14} className="shrink-0 text-text-faint" />
                             <input
                                 ref={inputRef}
                                 className="h-9 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint"
@@ -188,7 +188,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                                     <div key={`${entry.provider.kind}/${entry.model.slug}`}>
                                         {first && (
                                             <div className="menu-label flex items-center gap-1.5">
-                                                <AgentIcon kind={entry.provider.kind} size={14} />
+                                                <AgentIcon kind={entry.provider.kind} size={12} />
                                                 {entry.provider.name}
                                             </div>
                                         )}
@@ -203,7 +203,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                                             onMouseEnter={() => setIndex(i)}
                                             onClick={() => choose(entry)}
                                         >
-                                            <span className="grid h-4 w-4 shrink-0 place-items-center">{chosen && <Icon icon={faCheck} size={16} />}</span>
+                                            <span className="grid h-4 w-4 shrink-0 place-items-center">{chosen && <Icon icon={faCheck} size={14} />}</span>
                                             <span className="min-w-0 truncate">{entry.model.name}</span>
                                             {entry.model.badge && (
                                                 <span className="rounded bg-accent-soft px-1 text-xs font-medium uppercase text-accent">
@@ -229,7 +229,7 @@ export function ModelBadge({ provider, providerName, model }: { provider: AgentK
     return (
         <Tooltip label={`${providerName} · ${model}. This chat was opened for ${providerName}.`}>
             <span className="flex h-7 shrink-0 cursor-default items-center gap-1 whitespace-nowrap rounded-md px-2 text-xs text-text-muted">
-                <AgentIcon kind={provider} size={16} />
+                <AgentIcon kind={provider} size={12} />
                 <span className="max-w-40 truncate">{model}</span>
             </span>
         </Tooltip>

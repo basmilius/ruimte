@@ -39,7 +39,7 @@ function SessionRow({ node }: { node: CanvasNode }) {
     if (renaming) {
         return (
             <div className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-sm">
-                <Icon icon={kindIcon} size={16} className="shrink-0 text-text-muted" />
+                <Icon icon={kindIcon} size={14} className="shrink-0 text-text-muted" />
                 <input
                     autoFocus
                     defaultValue={node.title}
@@ -77,7 +77,7 @@ function SessionRow({ node }: { node: CanvasNode }) {
                 onClick={() => useCanvas.getState().goToNode(node.id)}
                 onDoubleClick={() => setRenaming(true)}
             >
-                <Icon icon={kindIcon} size={16} className="shrink-0" />
+                <Icon icon={kindIcon} size={14} className="shrink-0" />
                 <span className="truncate">{node.title}</span>
                 <span className="grow" />
                 {status && <StatusDot status={status} />}
@@ -105,7 +105,7 @@ export function Sidebar() {
                 <span className="grow" />
                 <Tooltip label="Search" kbd="⌘K">
                     <button className="icon-btn h-7 w-7" onClick={() => useUi.getState().setPaletteOpen(true)}>
-                        <Icon icon={faMagnifyingGlass} size={15} />
+                        <Icon icon={faMagnifyingGlass} size={16} />
                     </button>
                 </Tooltip>
             </div>
@@ -139,12 +139,12 @@ export function Sidebar() {
                     className="flex h-8 grow items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-surface-sunken hover:text-text"
                     onClick={() => addNodeAtCenter('terminal')}
                 >
-                    <Icon icon={faPlus} size={15} /> New session
+                    <Icon icon={faPlus} size={14} /> New session
                 </button>
                 <ConnectionDot />
                 <Tooltip label="Settings" kbd="⌘,">
                     <button className="icon-btn" onClick={() => useUi.getState().setSettings({ open: true })}>
-                        <Icon icon={faGear} size={15} />
+                        <Icon icon={faGear} size={16} />
                     </button>
                 </Tooltip>
             </div>

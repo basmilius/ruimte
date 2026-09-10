@@ -15,7 +15,7 @@ import {
 } from '@fortawesome/pro-regular-svg-icons';
 import { Icon } from '@/ui/Icon';
 
-const SIZE = 14;
+const SIZE = 12;
 
 /* The icon that says what a tool call is about; unknown tools get the wrench. */
 export const toolIcon = (name: string): ReactNode => {

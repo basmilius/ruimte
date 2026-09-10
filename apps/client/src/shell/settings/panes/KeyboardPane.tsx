@@ -16,7 +16,7 @@ export function KeyboardPane() {
     return (
         <>
             <div className="relative">
-                <Icon icon={faMagnifyingGlass} size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-text-faint" aria-hidden />
+                <Icon icon={faMagnifyingGlass} size={14} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-text-faint" aria-hidden />
                 <input
                     className="h-9 w-full rounded-lg border border-border bg-surface pr-9 pl-9 text-sm text-text outline-none placeholder:text-text-faint focus:border-accent"
                     placeholder="Search shortcuts"
