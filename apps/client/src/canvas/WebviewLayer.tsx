@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { browserRegistry, useBrowser } from '@/browser/registry';
-import { isNodeFocused, useCanvas } from '@/state/canvas';
+import { GROUP_HEADER_PX, isNodeFocused, useCanvas } from '@/state/canvas';
 
-// The frame's header and the browser toolbar sit above the page.
-const HEADER_PX = 39;
+// The browser toolbar sits under the frame's header, both above the page.
 const TOOLBAR_PX = 37;
 
 function WebviewSlot({ nodeId, shield }: { nodeId: string; shield: boolean }) {
@@ -27,9 +26,9 @@ function WebviewSlot({ nodeId, shield }: { nodeId: string; shield: boolean }) {
             className="absolute overflow-hidden"
             style={{
                 left: node?.x ?? 0,
-                top: (node?.y ?? 0) + HEADER_PX + TOOLBAR_PX,
+                top: (node?.y ?? 0) + GROUP_HEADER_PX + TOOLBAR_PX,
                 width: node?.w ?? 1,
-                height: Math.max(1, (node?.h ?? 1) - HEADER_PX - TOOLBAR_PX),
+                height: Math.max(1, (node?.h ?? 1) - GROUP_HEADER_PX - TOOLBAR_PX),
                 visibility: visible ? 'visible' : 'hidden',
                 // Only a focused node hands the pointer to its page, and never while the canvas is mid-gesture.
                 pointerEvents: visible && focused && !shield ? 'auto' : 'none'

@@ -1,7 +1,7 @@
 import { stat } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
-export type RevealErrorCode = 'path-not-found' | 'reveal-failed';
+type RevealErrorCode = 'path-not-found' | 'reveal-failed';
 
 export class RevealError extends Error {
     readonly code: RevealErrorCode;

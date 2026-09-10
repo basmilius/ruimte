@@ -2,7 +2,7 @@ import type { Subprocess } from 'bun';
 
 export type CodexFrame = Record<string, unknown>;
 
-export interface CodexTransportOptions {
+interface CodexTransportOptions {
     command: string[];
     cwd: string;
     env: Record<string, string>;
@@ -11,7 +11,7 @@ export interface CodexTransportOptions {
     onExit(exitCode: number | null): void;
 }
 
-export class CodexRpcError extends Error {
+class CodexRpcError extends Error {
     readonly code: number | null;
 
     constructor(method: string, error: unknown) {

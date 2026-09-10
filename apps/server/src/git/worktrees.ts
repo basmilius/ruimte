@@ -3,7 +3,7 @@ import { mkdir } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
 import type { Worktree } from '@ruimte/contracts';
 
-export type GitErrorCode = 'not-a-repo' | 'git-failed' | 'worktree-not-found';
+type GitErrorCode = 'not-a-repo' | 'git-failed' | 'worktree-not-found';
 
 export class GitError extends Error {
     readonly code: GitErrorCode;

@@ -5,7 +5,7 @@ import { useCanvas } from '@/state/canvas';
 /* Screen pixels around the viewport that still count as visible, so an edge does not flicker. */
 const VIEW_MARGIN = 96;
 /* How long a node stays live after leaving the viewport; a pan across it never thrashes. */
-export const OFFSCREEN_GRACE_MS = 10_000;
+const OFFSCREEN_GRACE_MS = 10_000;
 
 export const useNodeInViewport = (id: string): boolean =>
     useCanvas((s) => {

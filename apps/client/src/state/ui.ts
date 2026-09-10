@@ -22,13 +22,13 @@ const persistSidebarOpen = (open: boolean): void => {
     }
 };
 
-export interface PanelState {
+interface PanelState {
     open: boolean;
     /* Which panel the surface shows; it survives a close, so the toggle reopens the last one. */
     kind: PanelKind;
 }
 
-export interface SettingsState {
+interface SettingsState {
     open: boolean;
     /* The section the dialog shows; it stays where it was so reopening lands on the same pane. */
     section: SettingsSectionId;

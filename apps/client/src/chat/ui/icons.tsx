@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Bot, Eye, FileCode, FolderSearch, Globe, Hammer, ListTodo, Search, SquarePen, Terminal, Wrench, Zap } from 'lucide-react';
+import { Bot, Eye, FolderSearch, Globe, Hammer, ListTodo, Search, SquarePen, Terminal, Wrench, Zap } from 'lucide-react';
 import { Icon } from '@/ui/Icon';
 
 const SIZE = 12;
@@ -34,5 +34,3 @@ export const toolIcon = (name: string): ReactNode => {
             return name.startsWith('mcp__') ? <Icon icon={Hammer} size={SIZE} /> : <Icon icon={Wrench} size={SIZE} />;
     }
 };
-
-export const fileIcon = (): ReactNode => <Icon icon={FileCode} size={SIZE} />;

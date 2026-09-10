@@ -1,10 +1,10 @@
-export interface Shortcut {
+interface Shortcut {
     /* Chord parts separated by a space, `⇧ ⌘ Z`; each part becomes its own key cap. */
     keys: string;
     label: string;
 }
 
-export interface ShortcutGroup {
+interface ShortcutGroup {
     title: string;
     shortcuts: Shortcut[];
 }

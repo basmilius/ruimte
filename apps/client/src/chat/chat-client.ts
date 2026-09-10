@@ -13,7 +13,7 @@ import type { ChatSink } from '../state/chats';
 import type { ProviderInfo } from '@ruimte/contracts';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 
-export interface ChatOpenOptions {
+interface ChatOpenOptions {
     /* Which agent CLI answers; a chat that exists on the daemon keeps its own. */
     provider?: AgentKind;
     cwd?: string;
@@ -34,7 +34,7 @@ interface Mounted extends ChatOpenOptions {
     attached: boolean;
 }
 
-export interface ProviderSink {
+interface ProviderSink {
     setProviders(providers: ProviderInfo[]): void;
 }
 

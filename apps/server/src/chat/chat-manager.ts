@@ -7,7 +7,7 @@ import type { SessionSink } from '../sessions/manager.ts';
 import { ChatSession, type ChatSendExtras } from './chat-session.ts';
 import type { ChatStore } from './chat-store.ts';
 import { ChatError } from './errors.ts';
-export interface ChatManagerOptions {
+interface ChatManagerOptions {
     providers: ProviderRegistry;
     store?: ChatStore;
     // Takes a git tree per turn; without it a turn has no checkpoint and the card falls back to the CLI's own changes.

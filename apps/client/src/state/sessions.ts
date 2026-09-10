@@ -3,7 +3,7 @@ import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
 import type { CanvasNode } from '@/state/canvas';
 import type { ChatsById } from '@/state/chats';
 
-export interface SessionState {
+interface SessionState {
     /* True while this client holds a live attachment on the daemon. */
     attached: boolean;
     /* Exit code of the shell, once it has ended. Absent while it runs. */
@@ -50,7 +50,7 @@ export const useSessions = create<SessionsStore>((set) => ({
     }
 }));
 
-export const sessionStatus = (state: SessionState | undefined): AgentStatus | undefined => {
+const sessionStatus = (state: SessionState | undefined): AgentStatus | undefined => {
     if (!state) {
         return undefined;
     }

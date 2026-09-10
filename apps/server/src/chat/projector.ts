@@ -2,7 +2,7 @@ import type { ChatEvent, ChatItem, ChatToolItem, ChatToolProgress } from '@ruimt
 import type { BackendEvent } from './backend.ts';
 import type { ChatThread } from './thread.ts';
 
-export interface ProjectorOptions {
+interface ProjectorOptions {
     // How the CLI is named in the notes a stopped process leaves behind.
     providerName: string;
     now?(): number;

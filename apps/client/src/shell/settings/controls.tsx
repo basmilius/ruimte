@@ -94,7 +94,7 @@ export function Stepper({ value, min, max, step, unit, label, onChange }: Steppe
     );
 }
 
-export function Kbd({ children }: { children: ReactNode }) {
+function Kbd({ children }: { children: ReactNode }) {
     return <kbd className="rounded-md border border-border bg-surface-sunken px-1.5 py-0.5 font-sans text-xs text-text-muted">{children}</kbd>;
 }
 

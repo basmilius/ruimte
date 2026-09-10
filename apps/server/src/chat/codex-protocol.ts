@@ -2,10 +2,10 @@ import type { ChatFileChange, ChatQuestion } from '@ruimte/contracts';
 import type { ApprovalDecision, BackendEvent } from './backend.ts';
 import type { CodexFrame } from './codex-transport.ts';
 
-export type CodexRpcId = number | string;
+type CodexRpcId = number | string;
 
 /* How an answer reaches the app-server: as the reply to its request, or as a steer into the turn. */
-export type CodexAnswer = { kind: 'respond'; rpcId: CodexRpcId; result: unknown } | { kind: 'steer'; text: string };
+type CodexAnswer = { kind: 'respond'; rpcId: CodexRpcId; result: unknown } | { kind: 'steer'; text: string };
 
 type Frame = Record<string, unknown>;
 
@@ -42,7 +42,7 @@ const textOf = (content: unknown): string => {
 };
 
 /* A blocking `request_user_input` question, as far as the person needs to see it. */
-export const parseBlockingQuestions = (questions: unknown): ChatQuestion[] => {
+const parseBlockingQuestions = (questions: unknown): ChatQuestion[] => {
     if (!Array.isArray(questions)) {
         return [];
     }
@@ -58,7 +58,7 @@ export const parseBlockingQuestions = (questions: unknown): ChatQuestion[] => {
 };
 
 /* The questions an agent message carries when Codex asks without blocking the turn. */
-export const parseAsyncQuestions = (questions: unknown): ChatQuestion[] => {
+const parseAsyncQuestions = (questions: unknown): ChatQuestion[] => {
     if (!Array.isArray(questions)) {
         return [];
     }

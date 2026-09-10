@@ -16,7 +16,7 @@ import { isNotFound, writeAtomic } from '../fs.ts';
 import type { SessionSink } from '../sessions/manager.ts';
 import { documentPathInFolder, fromPortable, parseDocument, readDocument, toPortable, writeDocument, PROJECT_FILE } from './project-files.ts';
 
-export type ProjectErrorCode = 'project-not-found' | 'project-missing' | 'rev-conflict' | 'folder-not-found';
+type ProjectErrorCode = 'project-not-found' | 'project-missing' | 'rev-conflict' | 'folder-not-found';
 
 export class ProjectError extends Error {
     readonly code: ProjectErrorCode;

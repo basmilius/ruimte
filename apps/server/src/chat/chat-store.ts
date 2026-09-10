@@ -7,7 +7,7 @@ import { isNotFound, writeAtomic } from '../fs.ts';
 // zod strips what it does not know, so a file written by an older build (with `interactionMode`,
 // say) still parses and loses only the dropped field.
 const RecordSchema = z.object({ info: ChatInfoSchema, items: z.array(ChatItemSchema) });
-export type ChatRecord = z.infer<typeof RecordSchema>;
+type ChatRecord = z.infer<typeof RecordSchema>;
 
 const fileName = (chatId: string): string => `${encodeURIComponent(chatId)}.json`;
 

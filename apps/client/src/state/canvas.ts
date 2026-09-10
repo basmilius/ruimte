@@ -61,13 +61,13 @@ export interface Edge {
  * An edge being drawn: from a node or text to wherever the pointer is, in world units. Started from
  * a port it lives as long as the drag; started from a menu (`aiming`) it waits for a click on a target.
  */
-export interface LinkDraft {
+interface LinkDraft {
     from: string;
     to: Point;
     aiming?: boolean;
 }
 
-// A collapsed group is its header only.
+// The height of a node frame's header; a collapsed group is its header only.
 export const GROUP_HEADER_PX = 39;
 
 /* Which gestures the canvas refuses. Commands (dock buttons, shortcuts) always work. */
@@ -78,7 +78,7 @@ export interface Locks {
     resize: boolean;
 }
 
-export type Mode = { kind: 'canvas' } | { kind: 'node'; nodeId: string };
+type Mode = { kind: 'canvas' } | { kind: 'node'; nodeId: string };
 
 /* What undo and redo restore: the placement of everything, never the camera or the selection. */
 interface Snapshot {
@@ -203,7 +203,7 @@ const center = (rect: Rect): Point => ({ x: rect.x + rect.w / 2, y: rect.y + rec
 const contains = (rect: Rect, point: Point): boolean => point.x >= rect.x && point.x <= rect.x + rect.w && point.y >= rect.y && point.y <= rect.y + rect.h;
 
 /* What one group holds: its remembered members when collapsed, else whatever has its center inside the frame. */
-export const membersOf = (group: CanvasNode, nodes: Record<string, CanvasNode>, texts: Record<string, TextElement>): string[] => {
+const membersOf = (group: CanvasNode, nodes: Record<string, CanvasNode>, texts: Record<string, TextElement>): string[] => {
     if (group.collapsed) {
         return group.memberIds ?? [];
     }

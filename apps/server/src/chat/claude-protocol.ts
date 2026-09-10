@@ -27,7 +27,7 @@ const contextTokens = (usage: unknown): number =>
     isRecord(usage) ? num(usage.input_tokens) + num(usage.cache_creation_input_tokens) + num(usage.cache_read_input_tokens) : 0;
 
 // The CLI's AskUserQuestion input, as far as the person needs to see it.
-export const parseQuestions = (input: unknown): ChatQuestion[] => {
+const parseQuestions = (input: unknown): ChatQuestion[] => {
     if (!isRecord(input) || !Array.isArray(input.questions)) {
         return [];
     }

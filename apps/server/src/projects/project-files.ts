@@ -6,7 +6,7 @@ import { isNotFound, writeAtomic } from '../fs.ts';
 export const PROJECT_DIR = '.ruimte';
 export const PROJECT_FILE = 'project.json';
 
-export type ReadOutcome = { kind: 'ok'; document: ProjectDocument; text: string } | { kind: 'missing' } | { kind: 'corrupt'; setAside: string };
+type ReadOutcome = { kind: 'ok'; document: ProjectDocument; text: string } | { kind: 'missing' } | { kind: 'corrupt'; setAside: string };
 
 /*
  * Reads a canvas file. A file that is not a valid document is moved next to itself with a

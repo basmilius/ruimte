@@ -10,12 +10,12 @@ import { copilotProvider, geminiProvider } from './terminal-providers.ts';
 const DETECTION_TTL_MS = 60_000;
 
 // The CLIs the daemon ships with, in the order every menu lists them. A new one is one more value here.
-export const BUILT_IN_PROVIDERS: ChatProvider[] = [claudeProvider, codexProvider, geminiProvider, copilotProvider];
+const BUILT_IN_PROVIDERS: ChatProvider[] = [claudeProvider, codexProvider, geminiProvider, copilotProvider];
 
 /* The provider of a kind, for the places that have no registry at hand (the hooks). */
 export const providerFor = (kind: AgentKind): ChatProvider => BUILT_IN_PROVIDERS.find((provider) => provider.kind === kind) ?? claudeProvider;
 
-export interface ProviderRegistryOptions {
+interface ProviderRegistryOptions {
     providers?: ChatProvider[];
     // The executables to probe, when they are not the ones the providers name.
     commands?: Partial<Record<AgentKind, string>>;

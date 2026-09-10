@@ -3,7 +3,7 @@ import type { AgentStatus, ChatEvent, ChatInfo, ChatItem } from '@ruimte/contrac
 import type { CanvasNode } from '@/state/canvas';
 import { nodeStatus, useSessions } from '@/state/sessions';
 
-export interface ChatState {
+interface ChatState {
     info: ChatInfo;
     items: Record<string, ChatItem>;
     order: string[];

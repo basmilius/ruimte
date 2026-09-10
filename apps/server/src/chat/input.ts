@@ -1,6 +1,6 @@
 import type { ChatAttachment } from '@ruimte/contracts';
 
-export interface UserMessageInput {
+interface UserMessageInput {
     text: string;
     attachments?: ChatAttachment[];
     // Written before the text, for what the CLI has no flag for (`ultrathink`).

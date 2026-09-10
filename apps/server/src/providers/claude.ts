@@ -1,7 +1,7 @@
 import type { ModelSelection, ProviderCapabilities, RuntimeMode } from '@ruimte/contracts';
 
 // Base arguments for a chat process; the session adds what the selection and the modes ask for.
-export const CLAUDE_CHAT_ARGS = [
+const CLAUDE_CHAT_ARGS = [
     '-p',
     '--output-format',
     'stream-json',
@@ -23,7 +23,7 @@ const PERMISSION_MODE: Record<RuntimeMode, string | null> = {
     'full-access': 'bypassPermissions'
 };
 
-export interface ClaudeLaunch {
+interface ClaudeLaunch {
     selection: ModelSelection;
     runtimeMode: RuntimeMode;
     resume: string | null;

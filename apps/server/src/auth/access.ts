@@ -43,9 +43,9 @@ export interface Access {
     sessionId: string | null;
 }
 
-export type AccessDecision = { ok: true; access: Access } | { ok: false; status: number; reason: string };
+type AccessDecision = { ok: true; access: Access } | { ok: false; status: number; reason: string };
 
-export interface AccessOptions {
+interface AccessOptions {
     allowedOrigins: string[];
     // A daemon told to accept only tokens, loopback included.
     requireToken: boolean;

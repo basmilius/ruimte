@@ -16,8 +16,8 @@ export interface Point {
     y: number;
 }
 
-export const ZOOM_MIN = 0.1;
-export const ZOOM_MAX = 4;
+const ZOOM_MIN = 0.1;
+const ZOOM_MAX = 4;
 export const GRID = 8;
 
 export const clampZoom = (zoom: number): number => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom));
