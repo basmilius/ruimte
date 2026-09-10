@@ -102,7 +102,9 @@ describe('ChatManager', () => {
 
         manager.send('chat-1', 'hello there');
         expect(manager.get('chat-1')?.running).toBe(true);
-        expect(() => manager.send('chat-1', 'again')).toThrow('still working');
+        // A send while the turn runs queues instead of failing; this test wants the queue empty again.
+        expect(manager.send('chat-1', 'again')).toEqual({ queued: true });
+        manager.unqueue('chat-1', manager.get('chat-1')!.info.queue![0]!.id);
         await waitFor(idle, 'the turn to end');
 
         expect(recorder.ofKind('user').map((item) => item.text)).toEqual(['hello there']);
@@ -389,5 +391,53 @@ describe('ChatManager', () => {
         expect(manager.list()).toEqual([]);
         expect(await store.read('chat-7')).toBeNull();
         expect(() => manager.send('chat-7', 'x')).toThrow('No chat');
+    });
+
+    test('messages sent during a turn queue in order and go out when it settles', async () => {
+        await manager.create({ chatId: 'chat-q', cwd: home });
+        manager.attach('chat-q', 'c1');
+        expect(manager.send('chat-q', 'first')).toEqual({ queued: false });
+        expect(manager.send('chat-q', 'second')).toEqual({ queued: true });
+        expect(manager.send('chat-q', 'third')).toEqual({ queued: true });
+        expect(recorder.info?.queue?.map((message) => message.text)).toEqual(['second', 'third']);
+
+        await waitFor(() => recorder.ofKind('user').length === 3, 'the queue to drain');
+        expect(recorder.ofKind('user').map((item) => item.text)).toEqual(['first', 'second', 'third']);
+        await waitFor(idle, 'the last turn to end');
+        expect(recorder.info?.queue).toEqual([]);
+    });
+
+    test('a queued message can be dropped, and the queue survives a reload', async () => {
+        await manager.create({ chatId: 'chat-q2', cwd: home });
+        manager.attach('chat-q2', 'c1');
+        // A turn that waits for an interrupt keeps the queue from draining while the test looks at it.
+        manager.send('chat-q2', 'slow');
+        manager.send('chat-q2', 'dropped');
+        manager.send('chat-q2', 'kept');
+        const queue = recorder.info!.queue!;
+        manager.unqueue('chat-q2', queue[0]!.id);
+        expect(recorder.info?.queue?.map((message) => message.text)).toEqual(['kept']);
+        expect(() => manager.unqueue('chat-q2', queue[0]!.id)).toThrow('No queued message');
+
+        // A daemon that goes down mid-turn must not lose what was waiting behind it.
+        const queueOnDisk = async (): Promise<string> => ((await store.read('chat-q2'))?.info.queue ?? []).map((message) => message.text).join();
+        await waitForAsync(async () => (await queueOnDisk()) === 'kept', 'the queue on disk');
+        manager.get('chat-q2')?.dispose();
+        const reloaded = makeManager();
+        expect((await reloaded.create({ chatId: 'chat-q2' })).queue?.map((message) => message.text)).toEqual(['kept']);
+        await reloaded.shutdown();
+    });
+
+    test('send now stops the running turn and puts that message first', async () => {
+        await manager.create({ chatId: 'chat-q3', cwd: home });
+        manager.attach('chat-q3', 'c1');
+        manager.send('chat-q3', 'slow');
+        manager.send('chat-q3', 'waiting');
+        manager.send('chat-q3', 'urgent');
+        const urgent = recorder.info!.queue!.find((message) => message.text === 'urgent')!;
+        manager.sendNow('chat-q3', urgent.id);
+
+        await waitFor(() => recorder.ofKind('user').length === 3, 'the interrupted turn to give way');
+        expect(recorder.ofKind('user').map((item) => item.text)).toEqual(['slow', 'urgent', 'waiting']);
     });
 });

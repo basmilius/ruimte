@@ -111,8 +111,25 @@ export class ChatClient {
         }
     }
 
-    async send(chatId: string, text: string, extras: ChatSendExtras = {}): Promise<void> {
-        await this.transport.request('chat.send', { chatId, text, mentions: extras.mentions, skills: extras.skills, attachments: extras.attachments });
+    /* Answers whether a turn was still running, so the message went into the chat's queue instead. */
+    async send(chatId: string, text: string, extras: ChatSendExtras = {}): Promise<boolean> {
+        const { queued } = await this.transport.request('chat.send', {
+            chatId,
+            text,
+            mentions: extras.mentions,
+            skills: extras.skills,
+            attachments: extras.attachments
+        });
+        return queued;
+    }
+
+    async unqueue(chatId: string, messageId: string): Promise<void> {
+        await this.transport.request('chat.unqueue', { chatId, messageId });
+    }
+
+    /* Stops the turn in the way and puts this queued message first. */
+    async sendNow(chatId: string, messageId: string): Promise<void> {
+        await this.transport.request('chat.sendNow', { chatId, messageId });
     }
 
     /* Files under `cwd` that fuzzy-match `query`, for the composer's mention picker. */

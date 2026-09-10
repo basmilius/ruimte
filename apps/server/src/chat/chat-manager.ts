@@ -56,6 +56,8 @@ export class ChatManager {
     // How big each record was the last time it went to disk, and the writes waiting for a big one.
     private readonly sizes = new Map<string, number>();
     private readonly waiting = new Map<string, ReturnType<typeof setTimeout>>();
+    // The write in flight per chat, so the next one queues behind it instead of racing it.
+    private readonly writes = new Map<string, Promise<void>>();
     private readonly contextUrl: string | null;
     private readonly hasContext: (chatId: string) => boolean;
     private readonly contextSources: (chatId: string) => ContextSource[];
@@ -172,12 +174,21 @@ export class ChatManager {
         }
     }
 
-    send(chatId: string, text: string, extras: ChatSendExtras = {}): void {
-        const session = this.require(chatId);
-        if (session.busy) {
-            throw new ChatError('chat-busy', `Chat ${chatId} is still working on the previous message`);
+    /* Answers whether the message went into the chat's queue because a turn was still running. */
+    send(chatId: string, text: string, extras: ChatSendExtras = {}): { queued: boolean } {
+        return this.require(chatId).send(text, extras);
+    }
+
+    unqueue(chatId: string, messageId: string): void {
+        if (!this.require(chatId).unqueue(messageId)) {
+            throw new ChatError('request-not-found', `No queued message ${messageId} in chat ${chatId}`);
         }
-        session.send(text, extras);
+    }
+
+    sendNow(chatId: string, messageId: string): void {
+        if (!this.require(chatId).sendNow(messageId)) {
+            throw new ChatError('request-not-found', `No queued message ${messageId} in chat ${chatId}`);
+        }
     }
 
     /* What the chat's CLI would run as a skill, for the composer's `$` picker. */
@@ -220,6 +231,7 @@ export class ChatManager {
         session.dispose();
         this.cancelWaiting(chatId);
         this.sizes.delete(chatId);
+        this.writes.delete(chatId);
         this.chats.delete(chatId);
         this.attached.delete(chatId);
         for (const [token, id] of this.tokens) {
@@ -299,13 +311,24 @@ export class ChatManager {
         }
     }
 
-    private async persistNow(chatId: string): Promise<void> {
-        const session = this.chats.get(chatId);
-        if (!session || !this.store) {
-            return;
-        }
-        const { info, items } = session.thread.snapshot();
-        this.sizes.set(chatId, await this.store.write(chatId, info, items));
+    /*
+     * One write at a time per chat. Two records in flight together rename in whichever order the
+     * file system finishes them, so an older snapshot could land last and undo what just happened.
+     */
+    private persistNow(chatId: string): Promise<void> {
+        const next = (this.writes.get(chatId) ?? Promise.resolve()).then(async () => {
+            const session = this.chats.get(chatId);
+            if (!session || !this.store) {
+                return;
+            }
+            const { info, items } = session.thread.snapshot();
+            this.sizes.set(chatId, await this.store.write(chatId, info, items));
+        });
+        this.writes.set(
+            chatId,
+            next.catch(() => undefined)
+        );
+        return next;
     }
 
     private emit(chatId: string, event: ChatEvent): void {

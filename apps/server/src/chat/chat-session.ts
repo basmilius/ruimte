@@ -4,6 +4,7 @@ import type {
     ChatEvent,
     ChatInfo,
     ChatItem,
+    ChatQueuedMessage,
     ChatSkill,
     ContextSource,
     ModelSelection,
@@ -116,7 +117,74 @@ export class ChatSession {
         return this.thread.info;
     }
 
-    send(text: string, extras: ChatSendExtras = {}): void {
+    /*
+     * A message while a turn runs joins the queue instead of being refused; the daemon sends it when
+     * that turn settles. One queue for both providers: Claude's steer and Codex's own queue have
+     * different semantics, and one rule is easier to reason about than a rule per CLI.
+     */
+    send(text: string, extras: ChatSendExtras = {}): { queued: boolean } {
+        if (this.busy) {
+            const message: ChatQueuedMessage = {
+                id: newId('queued'),
+                text,
+                createdAt: Date.now(),
+                ...(extras.mentions?.length ? { mentions: extras.mentions } : {}),
+                ...(extras.skills?.length ? { skills: extras.skills } : {}),
+                ...(extras.attachments?.length ? { attachments: extras.attachments } : {})
+            };
+            this.setQueue([...this.queue, message]);
+            return { queued: true };
+        }
+        this.dispatch(text, extras);
+        return { queued: false };
+    }
+
+    /* Drops a queued message; false when nothing waits under that id. */
+    unqueue(messageId: string): boolean {
+        const queue = this.queue;
+        if (!queue.some((message) => message.id === messageId)) {
+            return false;
+        }
+        this.setQueue(queue.filter((message) => message.id !== messageId));
+        return true;
+    }
+
+    /* Puts a queued message first and stops the turn in its way; the settle sends it. */
+    sendNow(messageId: string): boolean {
+        const queue = this.queue;
+        const message = queue.find((entry) => entry.id === messageId);
+        if (!message) {
+            return false;
+        }
+        this.setQueue([message, ...queue.filter((entry) => entry.id !== messageId)]);
+        if (this.busy) {
+            this.cancel();
+            return true;
+        }
+        this.drainQueue();
+        return true;
+    }
+
+    private get queue(): ChatQueuedMessage[] {
+        return this.thread.info.queue ?? [];
+    }
+
+    private setQueue(queue: ChatQueuedMessage[]): void {
+        this.emit([this.thread.patchInfo({ queue })]);
+        this.options.persist();
+    }
+
+    /* The next queued message, once nothing is in its way. */
+    private drainQueue(): void {
+        const [next, ...rest] = this.queue;
+        if (!next || this.busy) {
+            return;
+        }
+        this.setQueue(rest);
+        this.dispatch(next.text, { mentions: next.mentions, skills: next.skills, attachments: next.attachments });
+    }
+
+    private dispatch(text: string, extras: ChatSendExtras): void {
         this.settleAgentTurn();
         const note = this.contextNote(text);
         const turnId = this.openTurn(text, note, extras);
@@ -413,6 +481,10 @@ export class ChatSession {
         }
         if (openTurnId !== null && activeTurnId === null) {
             this.settleCheckpoint(openTurnId);
+        }
+        // The turn is over and the CLI is still there, so whatever waited behind it can go out now.
+        if (event.type === 'turn.done') {
+            this.drainQueue();
         }
     }
 

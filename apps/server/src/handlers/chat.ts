@@ -36,8 +36,19 @@ export const registerChatHandlers = (dispatcher: Dispatcher, manager: ChatManage
     );
 
     dispatcher.register('chat.send', (payload) =>
+        translate(() => manager.send(payload.chatId, payload.text, { mentions: payload.mentions, skills: payload.skills, attachments: payload.attachments }))
+    );
+
+    dispatcher.register('chat.unqueue', (payload) =>
         translate(() => {
-            manager.send(payload.chatId, payload.text, { mentions: payload.mentions, skills: payload.skills, attachments: payload.attachments });
+            manager.unqueue(payload.chatId, payload.messageId);
+            return {};
+        })
+    );
+
+    dispatcher.register('chat.sendNow', (payload) =>
+        translate(() => {
+            manager.sendNow(payload.chatId, payload.messageId);
             return {};
         })
     );

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { ArrowUp, FileText, Square, X, Zap } from 'lucide-react';
+import { ArrowUp, Clock, FastForward, FileText, Square, X, Zap } from 'lucide-react';
 import type { AgentKind, ChatApprovalItem, ChatInfo, ChatQuestionItem, ChatSkill, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { attachmentUrl, checkAttachmentLimits, imageFilesOf, readAttachments } from '@/chat/attachments';
@@ -103,6 +103,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
     const models: ModelInfo[] = provider?.models ?? [];
     const model = models.find((entry) => entry.slug === info.selection.model);
     const busy = info.activeTurnId !== null;
+    const queue = info.queue ?? [];
     const text = draft.text;
     // The CLI announces its session on the first message, so anything before that is still a blank chat.
     const started = info.agentSessionId !== null || info.usage.turns > 0;
@@ -343,7 +344,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
 
     const submit = (): void => {
         const trimmed = text.trim();
-        if (isEmptyDraft(draft) || disabled || busy) {
+        if (isEmptyDraft(draft) || disabled) {
             return;
         }
         const chosen = commands[menuIndex];
@@ -572,6 +573,34 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                         })}
                     </div>
                 )}
+                {queue.length > 0 && (
+                    <div className="flex flex-col gap-1 border-b border-border px-2 py-1.5">
+                        {queue.map((message) => (
+                            <div key={message.id} className="group/queued flex items-center gap-2 rounded-md px-1.5 py-1 text-xs text-text-muted">
+                                <Icon icon={Clock} size={12} className="shrink-0 text-text-faint" />
+                                <span className="min-w-0 grow truncate">{message.text || `${message.attachments?.length ?? 0} attachments`}</span>
+                                <span className="btn-group opacity-0 transition-opacity group-hover/queued:opacity-100 focus-within:opacity-100">
+                                    <Tooltip label="Send now" name>
+                                        <button
+                                            className="icon-btn h-5 w-5 rounded"
+                                            onClick={() => void chatClient.sendNow(chatId, message.id).catch(() => undefined)}
+                                        >
+                                            <Icon icon={FastForward} size={12} />
+                                        </button>
+                                    </Tooltip>
+                                    <Tooltip label="Remove" name>
+                                        <button
+                                            className="icon-btn h-5 w-5 rounded"
+                                            onClick={() => void chatClient.unqueue(chatId, message.id).catch(() => undefined)}
+                                        >
+                                            <Icon icon={X} size={12} />
+                                        </button>
+                                    </Tooltip>
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                )}
                 {draft.attachments.length > 0 && (
                     <div className="flex flex-wrap gap-2 px-3 pt-3">
                         {draft.attachments.map((attachment, index) => (
@@ -667,7 +696,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                     <ModePicker runtimeMode={info.runtimeMode} onChange={(runtimeMode) => configure({ runtimeMode })} />
                     <span className="grow" />
                     <ContextMeter usage={info.usage} disabled={busy || disabled} onCompact={() => void chatClient.compact(chatId).catch(() => undefined)} />
-                    {busy ? (
+                    {busy && (
                         <Tooltip label="Stop" name>
                             <button
                                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-status-error text-accent-text"
@@ -676,8 +705,10 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                                 <Icon icon={Square} size={16} />
                             </button>
                         </Tooltip>
-                    ) : (
-                        <Tooltip label="Send" kbd="↵" name>
+                    )}
+                    {/* While a turn runs the same button queues the message instead of sending it. */}
+                    {(!busy || !isEmptyDraft(draft)) && (
+                        <Tooltip label={busy ? 'Queue' : 'Send'} kbd="↵" name>
                             <button
                                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-accent-text disabled:opacity-40"
                                 disabled={isEmptyDraft(draft) || disabled}
