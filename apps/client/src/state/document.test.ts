@@ -112,6 +112,22 @@ describe('changing the list of views', () => {
         expect(copy.nodes[0]!.resume).toBeUndefined();
     });
 
+    test('a view keeps the icon a person picked until it is handed back', () => {
+        useDocument.getState().setViewIcon('a', { kind: 'lucide', value: 'rocket' });
+        expect(useDocument.getState().views[0]).toMatchObject({ icon: { kind: 'lucide', value: 'rocket' } });
+
+        useDocument.getState().setViewIcon('a', null);
+        expect(canvasAt(0).icon).toBeUndefined();
+    });
+
+    test('handing back an icon a view never had claims no edit', () => {
+        const before = useDocument.getState().edits;
+        useDocument.getState().setViewIcon('a', null);
+        expect(useDocument.getState().edits).toBe(before);
+        useDocument.getState().setViewIcon('a', { kind: 'emoji', value: '\u{1f680}' });
+        expect(useDocument.getState().edits).toBe(before + 1);
+    });
+
     test('reordering writes the order into the document', () => {
         useDocument.getState().moveView('b', 0);
         expect(useDocument.getState().views.map((each) => each.id)).toEqual(['b', 'a']);

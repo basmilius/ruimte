@@ -1,12 +1,12 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
-import { ChevronRight, Copy, Frame, Globe, LayoutGrid, MessageSquare, Minus, Pencil, PenTool, Plus, Settings, StickyNote, Terminal, Trash } from 'lucide-react';
+import { ChevronRight, Copy, Frame, Globe, LayoutGrid, MessageSquare, Pencil, PenTool, Plus, Settings, Smile, StickyNote, Terminal, Trash } from 'lucide-react';
 import clsx from 'clsx';
-import { isCanvasView, isSessionView, type AgentKind, type NodeKind, type ProjectViewKind } from '@ruimte/contracts';
+import { isCanvasView, isSessionView, type AgentKind, type NodeKind } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { useDrafts } from '@/chat/drafts';
-import { askDeleteView, duplicateViewOf, putOnCanvas, revealNode, showOnCanvas, showView } from '@/project/views';
+import { askDeleteView, askViewIcon, duplicateViewOf, putOnCanvas, revealNode, showOnCanvas, showView } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
@@ -27,6 +27,7 @@ import { Favicon } from '@/browser/Favicon';
 import { resetTitle } from '@/nodes/node-host';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
+import { ViewGlyph } from '@/project/ViewGlyph';
 import { Brand } from '@/ui/Brand';
 import { SECTION_LABEL } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
@@ -44,17 +45,15 @@ export const SIDEBAR_WIDTH_PX = 248;
 /* The padding the strip starts with where there are no traffic lights to clear. */
 export const STRIP_PADDING_PX = 12;
 
-/* Every kind a row can be: the views of the project and the nodes on a canvas, in one table, since
-   the three kinds both lists share wear the same glyph either way. */
-const ROW_ICON: Record<NodeKind | ProjectViewKind, typeof Terminal> = {
-    canvas: Frame,
+/* Every kind a node on a canvas can be. A view row draws itself through `ViewGlyph`, which starts
+   from the icon a person picked and falls back to the same marks. */
+const ROW_ICON: Record<NodeKind, typeof Terminal> = {
     terminal: Terminal,
     chat: MessageSquare,
     browser: Globe,
     group: LayoutGrid,
     note: StickyNote,
-    drawing: PenTool,
-    separator: Minus
+    drawing: PenTool
 };
 
 const ROW = 'flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors';
@@ -89,7 +88,7 @@ interface RowProps {
  * What a row wears at its left edge: a page its own favicon, an agent the mark of its CLI, and
  * anything else the glyph of its kind. The 16px slot is the same either way, so nothing shifts.
  */
-function RowIcon({ id, kind, provider, className }: { id: string; kind: NodeKind | ProjectViewKind; provider: AgentKind | null; className?: string }) {
+function RowIcon({ id, kind, provider, className }: { id: string; kind: NodeKind; provider: AgentKind | null; className?: string }) {
     if (kind === 'browser') {
         return <Favicon id={id} />;
     }
@@ -248,7 +247,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
         return (
             <div className={ROW}>
                 <span className={ICON_SLOT}>
-                    <RowIcon id={view.id} kind={view.kind} provider={view.provider} className="text-text-muted" />
+                    <ViewGlyph id={view.id} kind={view.kind} icon={view.icon} provider={view.provider} className="text-text-muted" />
                 </span>
                 <RenameField
                     value={view.name}
@@ -295,8 +294,8 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
                     }
                 }}
             >
-                {/* One slot at the row's left edge: the kind of the view, and the chevron in its place
-                    the moment folding is on offer. */}
+                {/* One slot at the row's left edge: the mark of the view, and the chevron in its place
+                    under the pointer, so a folded row and an open one read the same at rest. */}
                 <span
                     role="presentation"
                     className={clsx(ICON_SLOT, row.expandable && 'rounded-sm hover:bg-surface-hover')}
@@ -307,23 +306,18 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
                         }
                     }}
                 >
-                    <RowIcon
+                    <ViewGlyph
                         id={view.id}
                         kind={view.kind}
+                        icon={view.icon}
                         provider={view.provider}
-                        className={clsx(
-                            'col-start-1 row-start-1',
-                            row.expandable && (row.expanded ? 'hidden' : 'group-hover:hidden group-focus-visible:hidden')
-                        )}
+                        className={clsx('col-start-1 row-start-1', row.expandable && 'group-hover:hidden group-focus-visible:hidden')}
                     />
                     {row.expandable && (
                         <Icon
                             icon={ChevronRight}
                             size={14}
-                            className={clsx(
-                                'col-start-1 row-start-1 transition-transform duration-150',
-                                row.expanded ? 'rotate-90' : 'hidden group-hover:block group-focus-visible:block'
-                            )}
+                            className={clsx('col-start-1 row-start-1 hidden group-hover:block group-focus-visible:block', row.expanded && 'rotate-90')}
                         />
                     )}
                 </span>
@@ -342,6 +336,9 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
                     <ContextMenu.Popup className="menu-popup">
                         <ContextMenu.Item className="menu-item" onClick={() => setRenaming(true)}>
                             <Icon icon={Pencil} size={14} /> Rename <kbd>F2</kbd>
+                        </ContextMenu.Item>
+                        <ContextMenu.Item className="menu-item" onClick={() => askViewIcon(view.id)}>
+                            <Icon icon={Smile} size={14} /> Change icon…
                         </ContextMenu.Item>
                         {(view.kind === 'canvas' || view.kind === 'drawing') && (
                             <ContextMenu.Item className="menu-item" onClick={() => duplicateViewOf(view.id)}>
@@ -407,6 +404,7 @@ export function Sidebar() {
                     id: view.id,
                     name: view.name ?? '',
                     kind: view.kind,
+                    icon: (view.kind === 'separator' ? null : view.icon) ?? null,
                     provider: provider ?? null,
                     nodes: live.filter((node) => isSessionKind(node.kind)).map(asRow),
                     // Only a session view is a node of its own; a separator and a drawing have no status.

@@ -172,3 +172,5 @@ export const askDeleteView = (id: string): void => {
 };
 
 export const askRenameView = (id: string): void => useUi.getState().setViewDialog({ kind: 'rename', viewId: id });
+
+export const askViewIcon = (id: string): void => useUi.getState().setViewDialog({ kind: 'icon', viewId: id });

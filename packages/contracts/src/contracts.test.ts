@@ -237,6 +237,21 @@ describe('project', () => {
         expect(document([view, { kind: 'separator' }]).success).toBe(false);
     });
 
+    test('a view may overrule the mark of its kind, with the same two kinds a project picks from', () => {
+        const view = { kind: 'canvas', id: 'main', name: 'Canvas', nodes: [], texts: [], edges: [] };
+        const document = (views: unknown[]) => ProjectDocumentSchema.safeParse({ version: 2, rev: 1, name: 'p', color: 'violet', views });
+        expect(document([{ ...view, icon: { kind: 'lucide', value: 'rocket' } }]).success).toBe(true);
+        expect(document([{ ...view, icon: { kind: 'emoji', value: '\u{1f680}' } }]).success).toBe(true);
+        // No icon at all is the default: the row wears the mark of what it is.
+        const bare = document([view]);
+        expect(bare.success && bare.data.views[0]!.kind === 'canvas' && bare.data.views[0]!.icon).toBeUndefined();
+        expect(document([{ ...view, icon: { kind: 'lucide', value: 'unicorn' } }]).success).toBe(false);
+        expect(document([{ ...view, icon: { kind: 'image', value: '.ruimte/icon.svg', version: '1' } }]).success).toBe(false);
+        // A separator has no room for a mark, so one written into the file is dropped on the way in.
+        const withSeparator = document([view, { kind: 'separator', id: 's1', icon: { kind: 'lucide', value: 'rocket' } }]);
+        expect(withSeparator.success && withSeparator.data.views[1]).toEqual({ kind: 'separator', id: 's1' });
+    });
+
     test('a canvas file without an icon parses, and only the two kinds a person picks are allowed', () => {
         const view = { kind: 'canvas', id: 'main', name: 'Canvas', nodes: [], texts: [], edges: [] };
         const before = { version: 2, rev: 4, name: 'p', color: 'violet', views: [view] };

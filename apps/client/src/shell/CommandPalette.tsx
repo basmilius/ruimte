@@ -1,26 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
-import {
-    CornerLeftUp,
-    Folder,
-    FolderCheck,
-    FolderPlus,
-    Frame,
-    Globe,
-    LayoutGrid,
-    MessageSquare,
-    Minus,
-    PenTool,
-    Search,
-    StickyNote,
-    Terminal,
-    Zap
-} from 'lucide-react';
-import { isCanvasView, isOpenableView, type FsBrowseEntry, type ProjectViewKind } from '@ruimte/contracts';
+import { CornerLeftUp, Folder, FolderCheck, FolderPlus, Globe, LayoutGrid, MessageSquare, PenTool, Search, StickyNote, Terminal, Zap } from 'lucide-react';
+import { isCanvasView, isOpenableView, type FsBrowseEntry } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { projectClient } from '@/project';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
+import { ViewGlyph } from '@/project/ViewGlyph';
 import { revealNode, showView } from '@/project/views';
 import { appCommands, type Command } from '@/shell/commands';
 import { readRecents, rememberRecent, sortByRecency } from '@/shell/palette-recents';
@@ -41,15 +27,6 @@ const KIND_ICON: Record<NodeKind, React.ReactNode> = {
     group: <Icon icon={LayoutGrid} size={14} />,
     note: <Icon icon={StickyNote} size={14} />,
     drawing: <Icon icon={PenTool} size={14} />
-};
-
-const VIEW_ICON: Record<ProjectViewKind, React.ReactNode> = {
-    canvas: <Icon icon={Frame} size={14} />,
-    chat: KIND_ICON.chat,
-    terminal: KIND_ICON.terminal,
-    browser: KIND_ICON.browser,
-    drawing: KIND_ICON.drawing,
-    separator: <Icon icon={Minus} size={14} />
 };
 
 // Typing a path turns the palette into a folder browser; anything else searches nodes and actions.
@@ -207,7 +184,14 @@ export function CommandPalette() {
             id: `view-${view.id}`,
             label: view.name ?? '',
             shortcut: index < 9 ? `⌘${index + 1}` : undefined,
-            icon: VIEW_ICON[view.kind],
+            icon: (
+                <ViewGlyph
+                    id={view.id}
+                    kind={view.kind}
+                    icon={view.kind === 'separator' ? null : view.icon}
+                    provider={view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null}
+                />
+            ),
             section: 'Views' as const,
             run: () => showView(view.id)
         }));
