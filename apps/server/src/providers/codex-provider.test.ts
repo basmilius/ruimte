@@ -5,17 +5,17 @@ import { ProviderRegistry } from './registry.ts';
 describe('codex catalog', () => {
     test('lists the app-server models with a reasoning option and one default', () => {
         const registry = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.153.4' }) });
-        const models = registry.codex.list();
+        const codex = registry.catalogFor('codex');
+        const models = codex.list();
         expect(models.filter((model) => model.isDefault).map((model) => model.slug)).toEqual(['gpt-6-astra']);
         expect(models.find((model) => model.slug === 'gpt-5.6-sol')?.options[0]).toMatchObject({ id: 'effort', type: 'select', defaultChoice: 'low' });
-        expect(registry.codex.normalize({ model: 'astra', options: { effort: 'ultra', contextWindow: '1m' } })).toEqual({
+        expect(codex.normalize({ model: 'astra', options: { effort: 'ultra', contextWindow: '1m' } })).toEqual({
             model: 'gpt-6-astra',
             options: { effort: 'ultra' }
         });
-        expect(registry.codex.normalize({ model: 'gpt-5.5', options: { effort: 'ultra' } }).options.effort).toBe('medium');
-        expect(registry.codex.contextWindowFor(registry.codex.normalize({ model: 'spark' }))).toBe(121600);
-        expect(registry.catalogFor('codex')).toBe(registry.codex);
-        expect(registry.catalogFor('claude')).toBe(registry.claude);
+        expect(codex.normalize({ model: 'gpt-5.5', options: { effort: 'ultra' } }).options.effort).toBe('medium');
+        expect(codex.contextWindowFor(codex.normalize({ model: 'spark' }))).toBe(121600);
+        expect(registry.catalogFor('claude')).not.toBe(codex);
     });
 });
 
