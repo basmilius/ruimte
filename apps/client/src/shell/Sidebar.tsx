@@ -21,7 +21,6 @@ import { StatusDot } from '@/canvas/NodeFrame';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { Tooltip } from '@/ui/Tooltip';
 import { ConnectionDot } from '@/shell/ConnectionDot';
-import { ProjectMenu } from '@/shell/ProjectMenu';
 import { TRAFFIC_LIGHTS_INSET_PX, hasTrafficLights } from '@/desktop/bridge';
 import { useDesktopFullscreen } from '@/desktop/useFullscreen';
 import { Icon } from '@/ui/Icon';
@@ -120,11 +119,7 @@ export function Sidebar() {
                 </Tooltip>
             </div>
 
-            <div className="px-2">
-                <ProjectMenu />
-            </div>
-
-            <div className="mt-4 min-h-0 grow overflow-auto px-2">
+            <div className="mt-2 min-h-0 grow overflow-auto px-2">
                 {GROUPS.map((group) => {
                     const rows = nodes.filter((n) => {
                         const status = nodeStatus(n, sessions, chats);

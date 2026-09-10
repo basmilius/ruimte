@@ -17,7 +17,7 @@ const fieldClass =
     'h-9 w-full rounded-lg border border-border bg-surface px-2.5 text-[13px] text-text outline-none placeholder:text-text-faint focus:border-accent';
 const buttonClass = 'inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-[12px] font-medium';
 
-/* The project switcher in the sidebar: every known canvas, plus the ways to make, open, close and delete one. */
+/* The project segment of the toolbar's breadcrumb: every known canvas, plus the ways to make, open, close and delete one. */
 export function ProjectMenu() {
     const projects = useProject((s) => s.projects);
     const current = useProject((s) => s.current);
@@ -71,11 +71,10 @@ export function ProjectMenu() {
     return (
         <>
             <Menu.Root>
-                <Menu.Trigger className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface-raised px-2.5 py-2 text-left hover:bg-surface-sunken data-[popup-open]:bg-surface-sunken">
+                <Menu.Trigger className="flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-left hover:bg-surface-sunken data-[popup-open]:bg-surface-sunken">
                     <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: current?.color ?? 'var(--text-faint)' }} />
                     <span className="truncate text-[13px] font-medium text-text">{current?.name ?? 'No project'}</span>
-                    <span className="grow" />
-                    <Icon icon={ChevronDownIcon} size={14} className="text-text-muted" />
+                    <Icon icon={ChevronDownIcon} size={14} className="shrink-0 text-text-muted" />
                 </Menu.Trigger>
                 <Menu.Portal>
                     <Menu.Positioner className="z-50" side="bottom" sideOffset={6} align="start">
