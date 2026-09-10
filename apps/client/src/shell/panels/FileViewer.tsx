@@ -1,4 +1,6 @@
+import { useMemo } from 'react';
 import { FileText, FileWarning, LoaderCircle } from 'lucide-react';
+import { FileActionsContext } from '@/shell/panels/file-actions';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { renderFile } from '@/shell/panels/renderers';
 import { useFileRead } from '@/shell/panels/use-file-read';
@@ -13,6 +15,7 @@ import { Icon } from '@/ui/Icon';
  */
 function FileBody({ path, name }: { path: string; name: string }) {
     const { state, retry } = useFileRead(path);
+    const actions = useMemo(() => ({ path, name, refresh: retry }), [path, name, retry]);
 
     if (state.status === 'loading') {
         return <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>Reading {name}.</EmptyState>;
@@ -31,7 +34,7 @@ function FileBody({ path, name }: { path: string; name: string }) {
             </EmptyState>
         );
     }
-    return renderFile({ path, name, read: state.read });
+    return <FileActionsContext.Provider value={actions}>{renderFile({ path, name, read: state.read })}</FileActionsContext.Provider>;
 }
 
 /* The preview panel's body: whichever tab is up, under the strip that names them. */
