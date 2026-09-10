@@ -39,7 +39,7 @@ $RUIMTE_HOME/
   projects.json                    every canvas the daemon knows: id, name, color, folder
   projects/
     <projectId>/project.json       a canvas that is not in a folder
-    <projectId>.local.json         camera and focus for one canvas, per machine
+    <projectId>.local.json         camera, focus and panels of one canvas, per machine
   sessions/                        mode 0700
     <sessionId>.txt                serialized screen plus scrollback of one session
     <sessionId>.agent.json         the agent CLI last seen in that session, for a cold resume
@@ -55,7 +55,7 @@ File names are the id passed through `encodeURIComponent`, so an id can never na
 
 ## Projects
 
-A project is a folder; its canvas is `<folder>/.ruimte/project.json`, pretty-printed with a `rev` that goes up on every write, so it diffs and merges like any other file in the repository. Node directories inside the folder are stored relative to it (`./apps/server`), so a clone on another machine resolves them against its own checkout. A canvas without a folder lives under `projects/` in the app data dir. Camera and focus go to `<projectId>.local.json`, never into the shared file.
+A project is a folder; its canvas is `<folder>/.ruimte/project.json`, pretty-printed with a `rev` that goes up on every write, so it diffs and merges like any other file in the repository. Node directories inside the folder are stored relative to it (`./apps/server`), so a clone on another machine resolves them against its own checkout. A canvas without a folder lives under `projects/` in the app data dir. What belongs to this machine goes to `<projectId>.local.json`, never into the shared file: the camera, the focused node and, under `panels`, which panel is up and how wide, whether the preview is up and how wide, the open file tabs with the active one and their pins, and the directories the file tree had open. Every field under `panels` is optional, so a file written before them still parses and the client falls back to its own defaults.
 
 `project.open` takes an id, a folder (the canvas is created there when the folder has none) or nothing (a fresh canvas without a folder). `project.save` names the `baseRev` the client loaded and answers `rev-conflict` when the file moved on. While a project is open the daemon watches its directory; a write it did not make itself arrives as a `project.changed` event with the document now on disk. A file that does not parse is moved aside as `project.json.corrupt-<timestamp>` and a fresh canvas takes its place; it is never overwritten. Every write is a temp file plus rename, with a short retry for Windows. `project.delete` forgets the project and, when asked, removes the canvas file; a folder's other files are never touched.
 

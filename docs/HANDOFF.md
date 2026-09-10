@@ -168,11 +168,13 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   is open, at the same x, and the overlay-controls inset on Windows and Linux travels with it. The panel stays mounted and animates its width between 0 and the stored
   width in 200 ms over a fixed inner column; a resize drag sets `[data-resizing]`, which turns the
   transition off, and the contents unmount when the closing transition ends (immediately under
-  reduced motion). Resizable from its left edge, min 360 and default 540 in localStorage
-  (`ruimte.panel.width`), through `shell/useColumnResize.ts`, the one handle implementation both
-  panels share. Which panel is up is in localStorage as well (`ruimte.panel`, the kind for an open
-  one and `closed:<kind>` for the other) and whether the preview is up next to it (`ruimte.preview`),
-  so a reload comes back to both. Cmd+Alt+B toggles the Files or Git panel that was open last; the
+  reduced motion). Resizable from its left edge, min 240 and default 540, through
+  `shell/useColumnResize.ts`, the one handle implementation both panels share: it owns the drag and
+  nothing else, the width belongs to whoever asks for the handle. Which panel is up, whether the
+  preview is up next to it and both widths belong to the project, in its machine-local file
+  (**Phase 8** below); the old `ruimte.panel`, `ruimte.preview`, `ruimte.panel.width` and
+  `ruimte.preview.width` keys are read once as what a project that has none of its own starts from
+  and are never written again. Cmd+Alt+B toggles the Files or Git panel that was open last; the
   palette has "Toggle preview panel", "Toggle files panel" and "Toggle git panel". The Git panel is
   still the placeholder.
 
@@ -189,8 +191,11 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   has opened yet carries one hidden placeholder row so its chevron is there. The library reports
   an expansion nowhere, so the panel subscribes to the model and diffs `isExpanded()` over the
   directories it knows; a directory that just opened and has never been listed is the one the
-  daemon hears about. `buildTreeInput` and the path helpers are pure and tested
-  (`shell/panels/files-tree.ts`). Hidden entries are always fetched and filtered in the client, so
+  daemon hears about. What was open belongs to the project: the panel starts from the directories
+  its local file names, lists every one of them at once so the tree can unfold that deep, and
+  `mergeExpanded` keeps a remembered directory the tree has not heard of yet from being dropped
+  before its parent arrives. "Collapse all" clears it. `buildTreeInput` and the path helpers are
+  pure and tested (`shell/panels/files-tree.ts`). Hidden entries are always fetched and filtered in the client, so
   the eye button costs no request; what git ignores goes to the tree's git lane as `ignored` and
   dims. A single click on a directory toggles it and on a file selects it; double-click and Enter
   open it in the preview panel. The filter field runs `fs.search` (150 ms, 200 results) into a second
@@ -211,11 +216,12 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   sits under that. A tab is a Lucide glyph by extension, the name, a close button and a reserved dot
   for a future dirty mark, unpinned tabs in italic the way a preview tab reads. `state/files.ts`
   holds them (tested pure helpers): past `filesTabLimit` the oldest unpinned tab closes, never the
-  active one, double-click pins, and the tabs live in `sessionStorage` per project, so a reload keeps
-  them and another canvas starts empty. The store owns the panel with them: the first open file
-  brings the preview up and the last close takes it away. Opening it takes half of what the canvas
-  had (`floor(width / 2)`, at most 720, at least 360) every time, until a drag of its left edge
-  writes a width to `ruimte.preview.width`, which outranks the rule from then on. It opens and closes
+  active one, double-click pins, and the tabs travel with the project's machine-local file, so a
+  reload keeps them, another canvas starts with its own and nobody else sees them. The store owns
+  the panel with them: the first open file brings the preview up and the last close takes it away.
+  Opening it takes half of what the canvas had (`floor(width / 2)`, at most 720, at least 360)
+  every time, until a drag of its left edge gives the project a width of its own, which outranks
+  the rule from then on. It opens and closes
   the way the panel beside it does, and the two animate independently.
 
 - **Drawing a file**: the viewer reads the active tab through `useFileRead`
@@ -274,7 +280,15 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   (`projects.json`), the canvas files and a directory watcher per open project. The client
   (`apps/client/src/project`) saves edits 400 ms after the last one against the rev it loaded,
   the camera a second after it stops moving into the machine-local file, and shows a banner
-  with "Take the file" or "Keep mine" when the file changed under unsaved edits. Folders are
+  with "Take the file" or "Keep mine" when the file changed under unsaved edits.
+  The machine-local file (`<projectId>.local.json`, `ProjectLocalSchema`) holds the camera, the
+  focused node and the panels: which panel is up and its width, whether the preview is up and its
+  width, the open file tabs with the active one and their pins, and the directories the file tree
+  had open. Every panel field is optional, so a file from before them parses as "use the defaults".
+  `project/panels-port.ts` is the seam: it puts a project's panels on screen in the same tick as
+  its canvas, so nothing flashes the project that left, and it reports a change made afterwards so
+  the client can write it a second later. What it applies itself is never reported, which is what
+  keeps a load from saving itself back. A canvas without a folder has such a file too. Folders are
   picked the way T3 Code does it: type a path in the command palette (`/`, `~/`, `./`) and it
   lists the daemon's directories (`fs.browse`), Enter steps in, Cmd+Enter opens the typed path
   as a project; the native dialog comes with Electron as an extra. "Open in Finder" (label from
