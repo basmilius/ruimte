@@ -38,6 +38,14 @@ export const claudeArgs = (launch: ClaudeLaunch): string[] => {
     if (typeof effort === 'string' && FLAG_EFFORTS.has(effort)) {
         args.push('--effort', effort);
     }
+    /*
+     * Fast mode has no flag of its own; the CLI reads it from the settings blob, which is also the
+     * opt-in the init frame asks for (without it the frame answers `sdk_opt_in_required`). It only
+     * takes on a model that offers it, so the catalog puts the option on those models alone.
+     */
+    if (launch.selection.options.fastMode === true) {
+        args.push('--settings', JSON.stringify({ fastMode: true }));
+    }
     const permissionMode = PERMISSION_MODE[launch.runtimeMode];
     if (permissionMode) {
         args.push('--permission-mode', permissionMode);

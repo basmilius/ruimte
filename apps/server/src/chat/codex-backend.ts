@@ -1,6 +1,6 @@
 import type { ChatSkill } from '@ruimte/contracts';
 import { CONTEXT_PROMPT } from '../context/context-note.ts';
-import { codexThreadOptions } from '../providers/codex.ts';
+import { codexServiceTier, codexThreadOptions } from '../providers/codex.ts';
 import type { ApprovalDecision, BackendEvent, BackendHost, BackendLaunch, ChatBackend, TurnInput } from './backend.ts';
 import { CodexProtocol } from './codex-protocol.ts';
 import { attachmentNote } from './input.ts';
@@ -78,9 +78,11 @@ export class CodexBackend implements ChatBackend {
         this.transport = transport;
         await transport.request('initialize', { clientInfo: CLIENT_INFO, capabilities: { experimentalApi: true, requestAttestation: false } });
         transport.notify('initialized', {});
+        const tier = codexServiceTier(this.launch.selection);
         const params = {
             cwd: this.launch.cwd,
             model: this.launch.selection.model,
+            ...(tier === null ? {} : { serviceTier: tier }),
             ...codexThreadOptions(this.launch.runtimeMode)
         };
         let result: unknown;
@@ -118,11 +120,13 @@ export class CodexBackend implements ChatBackend {
             parts.push(`\n\n${note}`);
         }
         const effort = this.launch.selection.options.effort;
+        const tier = codexServiceTier(this.launch.selection);
         this.request('turn/start', {
             threadId: this.threadId,
             input: textInput(parts.join('')),
             model: this.launch.selection.model,
-            ...(typeof effort === 'string' ? { effort } : {})
+            ...(typeof effort === 'string' ? { effort } : {}),
+            ...(tier === null ? {} : { serviceTier: tier })
         });
     }
 
