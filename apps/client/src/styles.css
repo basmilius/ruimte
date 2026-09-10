@@ -591,9 +591,10 @@ body {
        not. Its chrome stays out of it: a drag on a fold header or a chip would select the row. */
     /* The air a thread needs to read as turns: the step from a question to its answer, and the
        wider step from the end of one turn to the next question. A view of its own gets more of both,
-       the way its type does. */
-    .chat-thread { user-select: text; --chat-answer-gap: 16px; --chat-turn-gap: 24px; }
-    .chat-column .chat-thread { --chat-answer-gap: 20px; --chat-turn-gap: 32px; }
+       the way its type does. The block gap is the step inside a turn, where a run of tool lines
+       meets prose or a card. */
+    .chat-thread { user-select: text; --chat-answer-gap: 16px; --chat-turn-gap: 24px; --chat-block-gap: 12px; }
+    .chat-column .chat-thread { --chat-answer-gap: 20px; --chat-turn-gap: 32px; --chat-block-gap: 16px; }
     .chat-thread button, .chat-thread kbd { user-select: none; }
 
     /*
