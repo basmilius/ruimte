@@ -3,6 +3,23 @@
 /* dark: follows the app theme, not the OS. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
+/* Iron, the brand gray scale. Only the brand tokens below read from it; the interface keeps its
+   own grays. Not part of `@theme`, so no `bg-iron-*` utility exists and a component cannot reach
+   past the semantic tokens. */
+:root {
+    --color-iron-50: #f9fafb;
+    --color-iron-100: #f3f4f6;
+    --color-iron-200: #e5e6eb;
+    --color-iron-300: #d6d9e0;
+    --color-iron-400: #9ba1b0;
+    --color-iron-500: #6a6f81;
+    --color-iron-600: #495265;
+    --color-iron-700: #353e53;
+    --color-iron-800: #1d2639;
+    --color-iron-900: #0f1529;
+    --color-iron-950: #020513;
+}
+
 /* Semantic tokens. Components only ever reference these, never a raw color. */
 :root, [data-theme="light"] {
     color-scheme: light;
@@ -18,6 +35,8 @@
     --accent: #4f46e5;
     --accent-soft: #eef0ff;
     --accent-text: #ffffff;
+    --brand-front: var(--color-iron-300);
+    --brand-back: var(--color-iron-900);
     --canvas-bg: #eeeef1;
     --canvas-dot: #cfcfd6;
     --selection: rgb(79 70 229 / 0.55);
@@ -72,6 +91,10 @@
     --accent: #7c74ff;
     --accent-soft: #26244a;
     --accent-text: #ffffff;
+    /* The symbol's own iron-900 back is darker than the dark surface it sits on, which loses the
+       shape; iron-700 keeps the same relation to the surface that iron-900 has in the light theme. */
+    --brand-front: var(--color-iron-300);
+    --brand-back: var(--color-iron-700);
     --canvas-bg: #0e0e11;
     --canvas-dot: #26262d;
     --selection: rgb(124 116 255 / 0.6);
@@ -141,6 +164,8 @@
     --color-accent: var(--accent);
     --color-accent-soft: var(--accent-soft);
     --color-accent-text: var(--accent-text);
+    --color-brand-front: var(--brand-front);
+    --color-brand-back: var(--brand-back);
     --color-canvas-bg: var(--canvas-bg);
     --color-status-running: var(--status-running);
     --color-status-needs-you: var(--status-needs-you);
