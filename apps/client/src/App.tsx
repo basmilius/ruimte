@@ -6,6 +6,7 @@ import { WorktreeDialog } from '@/shell/WorktreeDialog';
 import { Dock } from '@/shell/Dock';
 import { SettingsDialog } from '@/shell/SettingsDialog';
 import { Panel } from '@/shell/Panel';
+import { PreviewPanel } from '@/shell/PreviewPanel';
 import { ProjectBanner } from '@/shell/ProjectBanner';
 import { Sidebar } from '@/shell/Sidebar';
 import { Toolbar } from '@/shell/Toolbar';
@@ -33,6 +34,7 @@ export function App() {
                             <Dock />
                         </div>
                     </div>
+                    <PreviewPanel />
                     <Panel />
                 </main>
             </div>

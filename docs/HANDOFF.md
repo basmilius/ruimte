@@ -151,21 +151,23 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   region. Left is the breadcrumb: the machine when the daemon is not loopback, the
   `ProjectMenu` as a ghost button (it left the sidebar), "Canvas" and the unsaved dot; the
   floating chip over the canvas is gone and `ProjectBanner` now floats under the bar. Right is
-  the `ConnectionDot` and `shell/PanelControls.tsx`, the `.btn-group` of Files and Git over
-  `useUi.panel` (machine state, never in `project.json`). `<main>` is a row of the canvas column
-  and `shell/Panel.tsx`, so the panel spans the full height and its own 48px header (a drag
-  region, with the panel's name and a close button) continues the band the sidebar strip and the
-  toolbar start. `PanelControls` renders in the toolbar while the panel is closed and in the
-  panel's header once it is open, at the same x, and the overlay-controls inset on Windows and
-  Linux travels with it. The panel stays mounted and animates its width between 0 and the stored
+  the `ConnectionDot` and `shell/PanelControls.tsx`, the `.btn-group` of Preview, Files and Git
+  over `useUi.panel` and `useUi.preview` (machine state, never in `project.json`). The preview
+  toggle is only there while a file is open, because with no tabs there is nothing to show.
+  `<main>` is a row of the canvas column, `shell/PreviewPanel.tsx` and `shell/Panel.tsx`, so both
+  panels span the full height and their own 48px headers (a drag region, with the panel's name or
+  the tab strip and a close button) continue the band the sidebar strip and the toolbar start.
+  `PanelControls` renders in the toolbar while the panel is closed and in the panel's header once it
+  is open, at the same x, and the overlay-controls inset on Windows and Linux travels with it. The panel stays mounted and animates its width between 0 and the stored
   width in 200 ms over a fixed inner column; a resize drag sets `[data-resizing]`, which turns the
   transition off, and the contents unmount when the closing transition ends (immediately under
   reduced motion). Resizable from its left edge, min 360 and default 540 in localStorage
-  (`ruimte.panel.width`), through `shell/useColumnResize.ts`, the one handle implementation the
-  panel and the Files split share. Which panel is up is in localStorage as well (`ruimte.panel`,
-  the kind for an open one and `closed:<kind>` for the other), so a reload comes back to the panel
-  that was there. Cmd+Alt+B toggles the panel that was open last; the palette keeps "Toggle files
-  panel" and "Toggle git panel". The Git panel is still the placeholder.
+  (`ruimte.panel.width`), through `shell/useColumnResize.ts`, the one handle implementation both
+  panels share. Which panel is up is in localStorage as well (`ruimte.panel`, the kind for an open
+  one and `closed:<kind>` for the other) and whether the preview is up next to it (`ruimte.preview`),
+  so a reload comes back to both. Cmd+Alt+B toggles the Files or Git panel that was open last; the
+  palette has "Toggle preview panel", "Toggle files panel" and "Toggle git panel". The Git panel is
+  still the placeholder.
 
 - **Files panel**: `shell/panels/FilesPanel.tsx`, the tree on `@pierre/trees` (pinned to
   `1.0.0-beta.6`), which renders itself with Preact inside a shadow root and takes the app's
@@ -184,7 +186,7 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   (`shell/panels/files-tree.ts`). Hidden entries are always fetched and filtered in the client, so
   the eye button costs no request; what git ignores goes to the tree's git lane as `ignored` and
   dims. A single click on a directory toggles it and on a file selects it; double-click and Enter
-  open it in the viewer. The filter field runs `fs.search` (150 ms, 200 results) into a second
+  open it in the preview panel. The filter field runs `fs.search` (150 ms, 200 results) into a second
   model, so a flat result list and lazy loading never fight. Right-click is a Base UI
   `ContextMenu` of the app's own (Open, Reveal in Finder with the daemon's file manager name, Copy
   path, Copy relative path): the library's own context menu slots a node into its shadow root, and
@@ -192,17 +194,22 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   `application/x-ruimte-mention` next to the library's own `text/plain`, and the chat composer's
   drop zone takes it: the paths land as `@path` at the end of the prompt and join the draft's
   mentions. While the panel is open the daemon watches the folder (`fs.watch`) and `fs.changed`
-  re-lists only the directories the client has loaded.
+  re-lists only the directories the client has loaded. The panel is the tree and nothing else: the
+  preview stands next to it and stays where it is when the tree closes.
 
-- **File viewer**: `shell/panels/FileViewer.tsx` is the second column, mounted while a file is
-  open. A 32px tab strip lines up with the tree's tool row: a Lucide glyph by extension, the name,
-  a close button and a reserved dot for a future dirty mark, unpinned tabs in italic the way a
-  preview tab reads. `state/files.ts` holds them (tested pure helpers): past `filesTabLimit` the
-  oldest unpinned tab closes, never the active one, double-click pins, and the tabs live in
-  `sessionStorage` per project, so a reload keeps them and another canvas starts empty. The split
-  is resizable, tree width in `ruimte.files.tree` (default 280, min 200); the first open file
-  widens the panel to make room for the viewer and the last close hands the width back, unless the
-  person dragged the panel's own edge in between.
+- **Preview panel**: `shell/PreviewPanel.tsx` is a panel of its own between the canvas and the
+  Files or Git panel, so the row reads sidebar, canvas, preview, panel. Its header is the same 48px
+  drag region, with `shell/panels/FileTabs.tsx` in it and a close button; `shell/panels/FileViewer.tsx`
+  is the body underneath, and the renderer's own toolbar (Preview and Source, wrap, Fit and 1:1)
+  sits under that. A tab is a Lucide glyph by extension, the name, a close button and a reserved dot
+  for a future dirty mark, unpinned tabs in italic the way a preview tab reads. `state/files.ts`
+  holds them (tested pure helpers): past `filesTabLimit` the oldest unpinned tab closes, never the
+  active one, double-click pins, and the tabs live in `sessionStorage` per project, so a reload keeps
+  them and another canvas starts empty. The store owns the panel with them: the first open file
+  brings the preview up and the last close takes it away. Opening it takes half of what the canvas
+  had (`floor(width / 2)`, at most 720, at least 360) every time, until a drag of its left edge
+  writes a width to `ruimte.preview.width`, which outranks the rule from then on. It opens and closes
+  the way the panel beside it does, and the two animate independently.
 
 - **Drawing a file**: the viewer reads the active tab through `useFileRead`
   (`shell/panels/use-file-read.ts`) and hands the result to `renderFile`

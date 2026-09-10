@@ -587,14 +587,14 @@ body {
         --trees-font-size-override: 12px;
     }
 
+    /* The tabs fill the preview panel's header, which is where the band's own border already is. */
     .files-tab-strip {
         display: flex;
         align-items: center;
         gap: 2px;
-        height: 32px;
-        flex-shrink: 0;
-        padding: 0 4px;
-        border-bottom: 1px solid var(--border);
+        min-width: 0;
+        height: 100%;
+        flex: 1;
         overflow-x: auto;
         scrollbar-width: none;
     }
@@ -642,7 +642,7 @@ body {
     }
     .files-tab-close:hover { background: var(--surface-raised); color: var(--text); }
 
-    /* The viewer's own row under the tabs, for whatever the open file can be switched between. */
+    /* The viewer's own row under the panel's header, for whatever the open file can be switched between. */
     .file-toolbar {
         display: flex;
         align-items: center;

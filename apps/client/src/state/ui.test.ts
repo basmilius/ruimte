@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { parsePanel, serializePanel, useUi } from './ui';
+import { parsePanel, parsePreview, serializePanel, serializePreview, useUi } from './ui';
 
 describe('ui', () => {
     beforeEach(() => {
-        useUi.setState({ sidebarOpen: true, panel: { open: false, kind: 'files' } });
+        useUi.setState({ sidebarOpen: true, panel: { open: false, kind: 'files' }, preview: { open: false } });
     });
 
     test('the sidebar starts open where no storage answers and follows the toggle', () => {
@@ -41,6 +41,25 @@ describe('ui', () => {
         ]) {
             expect(parsePanel(serializePanel(panel))).toEqual(panel);
         }
+    });
+
+    test('the preview opens and closes on its own, next to whichever panel is up', () => {
+        useUi.getState().togglePanel('files');
+        useUi.getState().togglePreview();
+        expect(useUi.getState().preview).toEqual({ open: true });
+        expect(useUi.getState().panel).toEqual({ open: true, kind: 'files' });
+        useUi.getState().togglePanel('files');
+        expect(useUi.getState().preview).toEqual({ open: true });
+        useUi.getState().setPreviewOpen(false);
+        expect(useUi.getState().preview).toEqual({ open: false });
+    });
+
+    test('the preview that was up survives the round trip through storage', () => {
+        for (const preview of [{ open: true }, { open: false }]) {
+            expect(parsePreview(serializePreview(preview))).toEqual(preview);
+        }
+        expect(parsePreview(null)).toEqual({ open: false });
+        expect(parsePreview('yes')).toEqual({ open: false });
     });
 
     test('nothing stored, or something else entirely, lands on a closed files panel', () => {
