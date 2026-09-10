@@ -1,4 +1,4 @@
-import type { ChatAttachment } from '@ruimte/contracts';
+import type { ChatAttachmentUpload } from '@ruimte/contracts';
 
 const STORAGE_KEY = 'ruimte.chat.drafts';
 
@@ -6,13 +6,13 @@ export interface ChatDraft {
     text: string;
     mentions: string[];
     skills: string[];
-    attachments: ChatAttachment[];
+    attachments: ChatAttachmentUpload[];
 }
 
 export const EMPTY_DRAFT: ChatDraft = { text: '', mentions: [], skills: [], attachments: [] };
 
 // Older records only had text; the arrays are filled in on read.
-type DraftRecord = { text: string; mentions?: string[]; skills?: string[]; attachments?: ChatAttachment[] };
+type DraftRecord = { text: string; mentions?: string[]; skills?: string[]; attachments?: ChatAttachmentUpload[] };
 
 const readAll = (): Record<string, DraftRecord> => {
     try {
@@ -51,7 +51,7 @@ export const writeDraft = (chatId: string, draft: ChatDraft): void => {
     if (store(drafts)) {
         return;
     }
-    // Images can outgrow the storage quota; the text is the part worth keeping then.
+    // A file can outgrow the storage quota; the text is the part worth keeping then.
     drafts[chatId] = { text: draft.text, mentions: draft.mentions, skills: draft.skills };
     store(drafts);
 };

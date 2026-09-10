@@ -6,6 +6,7 @@ import type { ChatEvent, ChatInfo, ChatItem } from '@ruimte/contracts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { waitFor, waitForAsync } from '../sessions/test-helpers.ts';
+import { AttachmentStore } from './attachment-store.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatStore } from './chat-store.ts';
 
@@ -50,16 +51,19 @@ class ChatRecorder {
 
 let home: string;
 let store: ChatStore;
+let attachments: AttachmentStore;
 let manager: ChatManager;
 let recorder: ChatRecorder;
 
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
 
-const makeManager = () => new ChatManager({ providers, store, command: ['false'], codexCommand: FAKE_CODEX, env: { PATH: process.env.PATH, HOME: home } });
+const makeManager = () =>
+    new ChatManager({ providers, store, attachments, command: ['false'], codexCommand: FAKE_CODEX, env: { PATH: process.env.PATH, HOME: home } });
 
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-codex-'));
-    store = new ChatStore(home);
+    attachments = new AttachmentStore(home);
+    store = new ChatStore(home, attachments);
     manager = makeManager();
     recorder = new ChatRecorder();
     manager.subscribe('c1', recorder.sink());
@@ -92,10 +96,10 @@ describe('ChatManager with Codex', () => {
             selection: { model: 'gpt-6-astra', options: { effort: 'medium' } },
             usage: { contextWindow: 258400 }
         });
-        manager.send('chat-1', 'hello there');
+        await manager.send('chat-1', 'hello there');
         expect(manager.get('chat-1')?.running).toBe(true);
         // A send while the turn runs queues instead of failing; this test wants the queue empty again.
-        expect(manager.send('chat-1', 'again')).toEqual({ queued: true });
+        expect(await manager.send('chat-1', 'again')).toEqual({ queued: true });
         manager.unqueue('chat-1', manager.get('chat-1')!.info.queue![0]!.id);
         await waitFor(idle, 'the turn to end');
 
@@ -118,7 +122,7 @@ describe('ChatManager with Codex', () => {
 
     test('a command approval becomes an approval card; allowing always sends the policy amendment', async () => {
         await open('chat-2');
-        manager.send('chat-2', 'tool: date');
+        await manager.send('chat-2', 'tool: date');
         await waitFor(() => recorder.info?.status === 'needs-you', 'needs-you');
 
         const approval = recorder.ofKind('approval')[0];
@@ -141,7 +145,7 @@ describe('ChatManager with Codex', () => {
 
     test('denying declines the command and the tool ends in error', async () => {
         await open('chat-3');
-        manager.send('chat-3', 'tool: rm -rf /');
+        await manager.send('chat-3', 'tool: rm -rf /');
         await waitFor(() => recorder.info?.status === 'needs-you', 'needs-you');
         manager.approve('chat-3', recorder.ofKind('approval')[0]!.requestId, 'deny', 'not that');
         await waitFor(idle, 'the turn to end');
@@ -151,7 +155,7 @@ describe('ChatManager with Codex', () => {
 
     test('a file change asks too and shows the diff on the tool item', async () => {
         await open('chat-e');
-        manager.send('chat-e', 'edit: hello.txt');
+        await manager.send('chat-e', 'edit: hello.txt');
         await waitFor(() => recorder.info?.status === 'needs-you', 'needs-you');
         expect(recorder.ofKind('approval')[0]).toMatchObject({ toolName: 'ApplyPatch', description: 'Write outside the sandbox', canAllowAlways: false });
         manager.approve('chat-e', recorder.ofKind('approval')[0]!.requestId, 'allow');
@@ -161,7 +165,7 @@ describe('ChatManager with Codex', () => {
 
     test('a blocking question is answered by question id', async () => {
         await open('chat-q');
-        manager.send('chat-q', 'ask: Which color?');
+        await manager.send('chat-q', 'ask: Which color?');
         await waitFor(() => recorder.info?.status === 'needs-you', 'needs-you');
         const question = recorder.ofKind('question')[0];
         expect(question).toMatchObject({ state: 'pending', questions: [{ id: 'color', header: 'Choice', question: 'Which color?', multiSelect: false }] });
@@ -176,7 +180,7 @@ describe('ChatManager with Codex', () => {
 
     test('an async question is answered by steering the running turn', async () => {
         await open('chat-a');
-        manager.send('chat-a', 'async: Which color?');
+        await manager.send('chat-a', 'async: Which color?');
         await waitFor(() => recorder.info?.status === 'needs-you', 'needs-you');
         const question = recorder.ofKind('question')[0];
         expect(question?.questions[0]).toMatchObject({ id: '0', question: 'Which color?' });
@@ -187,7 +191,7 @@ describe('ChatManager with Codex', () => {
 
     test('cancel interrupts a running turn and marks it aborted', async () => {
         await open('chat-4');
-        manager.send('chat-4', 'slow');
+        await manager.send('chat-4', 'slow');
         await waitFor(() => recorder.ofKind('assistant').length === 1, 'the turn to stream');
         manager.cancel('chat-4');
         await waitFor(idle, 'the turn to end');
@@ -197,7 +201,7 @@ describe('ChatManager with Codex', () => {
 
     test('configure restarts the app-server with the new settings on the next send and resumes the thread', async () => {
         await open('chat-c');
-        manager.send('chat-c', 'first');
+        await manager.send('chat-c', 'first');
         await waitFor(idle, 'first turn');
         const threadId = recorder.info?.agentSessionId;
 
@@ -209,7 +213,7 @@ describe('ChatManager with Codex', () => {
         expect(info).toMatchObject({ selection: { model: 'gpt-5.6-sol', options: { effort: 'xhigh' } }, runtimeMode: 'supervised' });
         expect(manager.configure({ chatId: 'chat-c', runtimeMode: 'supervised' })).toBe(info);
 
-        manager.send('chat-c', 'again');
+        await manager.send('chat-c', 'again');
         await waitFor(() => recorder.info?.usage.turns === 2 && idle(), 'second turn');
         expect(recorder.info?.agentSessionId).toBe(threadId ?? null);
         expect(recorder.info?.model).toBe('gpt-5.6-sol untrusted read-only');
@@ -218,7 +222,7 @@ describe('ChatManager with Codex', () => {
 
     test('a thread survives a new manager and the next send resumes the same Codex thread', async () => {
         await open('chat-5');
-        manager.send('chat-5', 'first');
+        await manager.send('chat-5', 'first');
         await waitFor(idle, 'the turn to end');
         const threadId = recorder.info?.agentSessionId;
         await waitForAsync(async () => (await store.read('chat-5')) !== null, 'the record on disk');
@@ -241,7 +245,7 @@ describe('ChatManager with Codex', () => {
 
     test('a thread Codex no longer has starts fresh with a warning', async () => {
         await open('chat-g', { resume: 'gone' });
-        manager.send('chat-g', 'hi');
+        await manager.send('chat-g', 'hi');
         await waitFor(idle, 'the turn to end');
         expect(recorder.ofKind('note')[0]).toMatchObject({ level: 'warning', text: expect.stringContaining('could not resume') });
         expect(recorder.info?.agentSessionId?.startsWith('fake-')).toBe(true);
@@ -250,7 +254,7 @@ describe('ChatManager with Codex', () => {
 
     test('compaction shows up as a marker in a turn of its own', async () => {
         await open('chat-k');
-        manager.send('chat-k', 'x');
+        await manager.send('chat-k', 'x');
         await waitFor(idle, 'the first turn');
         manager.compact('chat-k');
         await waitFor(() => recorder.info?.usage.turns === 2 && idle(), 'the compaction turn');
@@ -260,34 +264,34 @@ describe('ChatManager with Codex', () => {
 
     test('a failed turn leaves an error note and the chat can go on', async () => {
         await open('chat-f');
-        manager.send('chat-f', 'fail');
+        await manager.send('chat-f', 'fail');
         await waitFor(idle, 'the failed turn');
         expect(recorder.ofKind('note')[0]).toMatchObject({ level: 'error', text: 'The model is overloaded' });
         expect(recorder.ofKind('turn')[0]?.state).toBe('error');
-        manager.send('chat-f', 'again');
+        await manager.send('chat-f', 'again');
         await waitFor(() => recorder.info?.usage.turns === 2 && idle(), 'the next turn');
         expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: again (medium)']);
     });
 
     test('an app-server that dies mid-turn leaves an error note and the chat can go on', async () => {
         await open('chat-6');
-        manager.send('chat-6', 'crash');
+        await manager.send('chat-6', 'crash');
         await waitFor(() => recorder.info?.running === false && recorder.info.status === 'error', 'error status');
         expect(recorder.ofKind('note')[0]).toMatchObject({ level: 'error', text: 'Codex exited with code 1' });
         expect(recorder.ofKind('turn')[0]?.state).toBe('error');
 
-        manager.send('chat-6', 'again');
+        await manager.send('chat-6', 'again');
         await waitFor(idle, 'the next turn');
         expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: again (medium)']);
     });
 
     test('a missing binary ends the turn with the spawn error', async () => {
-        const broken = new ChatManager({ providers, store, codexCommand: ['/nonexistent/codex'], env: { PATH: process.env.PATH, HOME: home } });
+        const broken = new ChatManager({ providers, store, attachments, codexCommand: ['/nonexistent/codex'], env: { PATH: process.env.PATH, HOME: home } });
         const other = new ChatRecorder();
         broken.subscribe('c1', other.sink());
         await broken.create({ chatId: 'chat-m', provider: 'codex', cwd: home });
         broken.attach('chat-m', 'c1');
-        broken.send('chat-m', 'hi');
+        void broken.send('chat-m', 'hi');
         await waitFor(() => other.info?.status === 'error' && other.info.activeTurnId === null, 'the spawn failure');
         expect(other.ofKind('note')[0]?.level).toBe('error');
         await broken.shutdown();

@@ -59,20 +59,25 @@ export const splitSkillPrompt = (text: string, skills: string[]): { lead: string
 };
 
 /*
- * The `user` frame the CLI reads on stdin. The message body is the Anthropic API shape: a
- * content array of text and image blocks, which the CLI passes through unchanged (checked
- * against claude 2.1.266). An image-only message carries no empty text block.
+ * Where the files someone attached live on this machine. Both CLIs open a file by path with their
+ * own tools, images included, which keeps the bytes out of the thread and off the wire.
+ */
+export const attachmentNote = (attachments: ChatAttachment[]): string =>
+    attachments.length === 0 ? '' : `Attached files:\n${attachments.map((attachment) => `- ${attachment.path} (${attachment.name})`).join('\n')}`;
+
+/*
+ * The `user` frame the CLI reads on stdin. The message body is the Anthropic API shape: a content
+ * array of text blocks, which the CLI passes through unchanged (checked against claude 2.1.266).
+ * The attachments are named by path in the leading block, so the invocation of a skill stays last.
  */
 export const buildUserMessage = ({ text, attachments = [], prefix = '', skills = [] }: UserMessageInput): Record<string, unknown> => {
     const content: unknown[] = [];
     const { lead, invocation } = splitSkillPrompt(text, skills);
+    const note = attachmentNote(attachments);
     // The prefix must be the first thing the model reads, so it joins the leading block.
-    const prompt = `${prefix}${lead}`;
-    if (prompt.trim() !== '') {
+    const prompt = [`${prefix}${lead}`.trimEnd(), note].filter((part) => part.trim() !== '').join('\n\n');
+    if (prompt !== '') {
         content.push({ type: 'text', text: prompt });
-    }
-    for (const attachment of attachments) {
-        content.push({ type: 'image', source: { type: 'base64', media_type: attachment.mediaType, data: attachment.data } });
     }
     if (invocation !== null) {
         content.push({ type: 'text', text: invocation });

@@ -2,6 +2,8 @@ import { randomBytes } from 'node:crypto';
 import { homedir } from 'node:os';
 import type {
     AgentKind,
+    ChatAttachment,
+    ChatAttachmentUpload,
     ChatCheckpointDiff,
     ChatConfigurePayload,
     ChatCreatePayload,
@@ -15,6 +17,7 @@ import type { CheckpointService } from '../git/checkpoints.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionSink } from '../sessions/manager.ts';
 import { SkillIndex } from '../skills/skills.ts';
+import type { AttachmentStore } from './attachment-store.ts';
 import { ChatSession, type ChatSendExtras } from './chat-session.ts';
 import type { ChatStore } from './chat-store.ts';
 import { ChatError } from './errors.ts';
@@ -36,6 +39,8 @@ interface ChatManagerOptions {
     codexCommand?: string[];
     // Where the skill folders are looked for; a test points it at a temporary tree.
     skills?: SkillIndex;
+    // Where the files people attach are written.
+    attachments: AttachmentStore;
 }
 
 // Above this the record is big enough that rewriting it on every tool call costs more than it saves.
@@ -47,6 +52,7 @@ export class ChatManager {
     private readonly store: ChatStore | null;
     private readonly checkpoints: CheckpointService | null;
     private readonly skillIndex: SkillIndex;
+    private readonly attachments: AttachmentStore;
     private readonly env: Record<string, string>;
     private readonly commands: Partial<Record<AgentKind, string[]>>;
     private readonly chats = new Map<string, ChatSession>();
@@ -67,6 +73,7 @@ export class ChatManager {
         this.store = options.store ?? null;
         this.checkpoints = options.checkpoints ?? null;
         this.skillIndex = options.skills ?? new SkillIndex();
+        this.attachments = options.attachments;
         this.contextUrl = options.contextUrl ?? null;
         this.hasContext = options.hasContext ?? (() => false);
         this.contextSources = options.contextSources ?? (() => []);
@@ -174,9 +181,35 @@ export class ChatManager {
         }
     }
 
-    /* Answers whether the message went into the chat's queue because a turn was still running. */
-    send(chatId: string, text: string, extras: ChatSendExtras = {}): { queued: boolean } {
-        return this.require(chatId).send(text, extras);
+    /*
+     * Answers whether the message went into the chat's queue because a turn was still running. The
+     * uploads become files first, so a queued message carries paths and never its own bytes.
+     */
+    async send(chatId: string, text: string, extras: ChatSendExtras = {}, uploads: ChatAttachmentUpload[] = []): Promise<{ queued: boolean }> {
+        const session = this.require(chatId);
+        const attachments = await Promise.all(uploads.map((upload) => this.attachments.save(chatId, upload)));
+        return session.send(text, { ...extras, ...(attachments.length > 0 ? { attachments } : {}) });
+    }
+
+    /* The file behind `/attachments/<chatId>/<id>`: what this chat's thread or queue says it is. */
+    attachment(chatId: string, id: string): ChatAttachment | null {
+        const session = this.chats.get(chatId);
+        if (!session) {
+            return null;
+        }
+        for (const item of session.thread.list()) {
+            const found = item.kind === 'user' ? item.attachments?.find((attachment) => attachment.id === id) : undefined;
+            if (found) {
+                return found;
+            }
+        }
+        for (const message of session.info.queue ?? []) {
+            const found = message.attachments?.find((attachment) => attachment.id === id);
+            if (found) {
+                return found;
+            }
+        }
+        return null;
     }
 
     unqueue(chatId: string, messageId: string): void {
@@ -239,7 +272,7 @@ export class ChatManager {
                 this.tokens.delete(token);
             }
         }
-        await this.store?.delete(chatId);
+        await Promise.all([this.store?.delete(chatId), this.attachments.removeAll(chatId)]);
     }
 
     list(): ChatInfo[] {

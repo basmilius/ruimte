@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { buildUserMessage, splitSkillPrompt } from './input.ts';
 
-const png = { name: 'shot.png', mediaType: 'image/png' as const, data: 'iVBORw0KGgo=' };
+const png = { id: 'a1', name: 'shot.png', mime: 'image/png', size: 12, path: '/home/x/.ruimte/attachments/chat-1/a1.png' };
 
 describe('buildUserMessage', () => {
     test('text alone is one text block in a user frame', () => {
@@ -18,17 +18,18 @@ describe('buildUserMessage', () => {
         expect((frame.message as { content: Array<{ text: string }> }).content[0]!.text).toBe('ultrathink\n\nplan it');
     });
 
-    test('attachments follow the text as base64 image blocks', () => {
+    test('attachments are named by path under the text, since both CLIs read a file themselves', () => {
         const frame = buildUserMessage({ text: 'what is this', attachments: [png] });
         expect((frame.message as { content: unknown[] }).content).toEqual([
-            { type: 'text', text: 'what is this' },
-            { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'iVBORw0KGgo=' } }
+            { type: 'text', text: 'what is this\n\nAttached files:\n- /home/x/.ruimte/attachments/chat-1/a1.png (shot.png)' }
         ]);
     });
 
-    test('an image without text does not send an empty text block', () => {
+    test('an attachment without text carries the note alone', () => {
         const frame = buildUserMessage({ text: '  ', attachments: [png] });
-        expect((frame.message as { content: Array<{ type: string }> }).content.map((block) => block.type)).toEqual(['image']);
+        expect((frame.message as { content: Array<{ text: string }> }).content).toEqual([
+            { type: 'text', text: 'Attached files:\n- /home/x/.ruimte/attachments/chat-1/a1.png (shot.png)' }
+        ] as never);
     });
 });
 
@@ -54,15 +55,18 @@ describe('skill dispatch', () => {
         ]);
     });
 
-    test('the images sit between the leading block and the invocation', () => {
+    test('the attachment note stays in the leading block, so the invocation is still last', () => {
         const frame = buildUserMessage({ text: 'see $unslop', skills: ['unslop'], attachments: [png] });
-        expect((frame.message as { content: Array<{ type: string }> }).content.map((block) => block.type)).toEqual(['text', 'image', 'text']);
+        const blocks = (frame.message as { content: Array<{ text: string }> }).content;
+        expect(blocks).toHaveLength(2);
+        expect(blocks[0]!.text).toBe('see\n\nAttached files:\n- /home/x/.ruimte/attachments/chat-1/a1.png (shot.png)');
+        expect(blocks[1]!.text).toBe('/unslop');
     });
 
     test('the prefix stays the first thing the model reads', () => {
         const frame = buildUserMessage({ text: '$unslop it', skills: ['unslop'], prefix: 'ultrathink\n\n' });
         expect((frame.message as { content: unknown[] }).content).toEqual([
-            { type: 'text', text: 'ultrathink\n\n' },
+            { type: 'text', text: 'ultrathink' },
             { type: 'text', text: '/unslop it' }
         ]);
     });

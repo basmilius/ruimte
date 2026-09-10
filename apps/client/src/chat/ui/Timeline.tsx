@@ -22,7 +22,7 @@ interface RowProps {
 function Row({ row, chatId, lastAssistantId, toggleGroup, toggleTurn }: RowProps) {
     switch (row.kind) {
         case 'user':
-            return <UserRow item={row.item} />;
+            return <UserRow chatId={chatId} item={row.item} />;
         case 'turn-start':
             return <AgentTurnRow label={row.label} />;
         case 'assistant':

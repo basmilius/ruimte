@@ -1,6 +1,6 @@
 import type {
     AgentKind,
-    ChatAttachment,
+    ChatAttachmentUpload,
     ChatCheckpointDiff,
     ChatConfigurePayload,
     ChatInfo,
@@ -30,7 +30,7 @@ export interface ChatSendExtras {
     mentions?: string[];
     /* Skills picked with `$`; they also sit in the text, this is what the timeline chips. */
     skills?: string[];
-    attachments?: ChatAttachment[];
+    attachments?: ChatAttachmentUpload[];
 }
 
 interface Mounted extends ChatOpenOptions {

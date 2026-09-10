@@ -10,13 +10,14 @@ import {
     Info,
     MessageCircleQuestionMark,
     Minimize2,
+    Paperclip,
     TriangleAlert,
     X,
     Zap,
     type LucideIcon
 } from 'lucide-react';
 import type { ChatApprovalItem, ChatAssistantItem, ChatQuestionItem, ChatUserItem } from '@ruimte/contracts';
-import { attachmentUrl } from '@/chat/attachments';
+import { attachmentUrl, formatBytes, isImageAttachment } from '@/chat/attachments';
 import { tokenizeChips } from '@/chat/mentions';
 import { Markdown } from '@/chat/ui/Markdown';
 import { toolSummary } from '@/chat/logic/tools';
@@ -41,7 +42,7 @@ function Chip({ icon, label, skill = false }: { icon: LucideIcon; label: string;
     );
 }
 
-export function UserRow({ item }: { item: ChatUserItem }) {
+export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }) {
     const [open, setOpen] = useState(false);
     const long = item.text.split('\n').length > USER_FOLD_LINES || item.text.length > USER_FOLD_CHARS;
     const segments = tokenizeChips(item.text, item.mentions ?? [], item.skills ?? []);
@@ -50,14 +51,28 @@ export function UserRow({ item }: { item: ChatUserItem }) {
         <div className="group/user flex flex-col items-end pb-4">
             {attachments.length > 0 && (
                 <div className="mb-1.5 flex max-w-[80%] flex-wrap justify-end gap-1.5">
-                    {attachments.map((attachment, index) => (
-                        <img
-                            key={`${attachment.name}-${index}`}
-                            src={attachmentUrl(attachment)}
-                            alt={attachment.name}
-                            className="max-h-32 max-w-48 rounded-lg border border-border object-cover"
-                        />
-                    ))}
+                    {attachments.map((attachment) =>
+                        isImageAttachment(attachment.mime) ? (
+                            <img
+                                key={attachment.id}
+                                src={attachmentUrl(chatId, attachment.id)}
+                                alt={attachment.name}
+                                className="max-h-32 max-w-48 rounded-lg border border-border object-cover"
+                            />
+                        ) : (
+                            <a
+                                key={attachment.id}
+                                href={attachmentUrl(chatId, attachment.id)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex max-w-56 items-center gap-1.5 rounded-lg border border-border bg-surface-sunken px-2.5 py-1.5 text-xs text-text-muted hover:text-text"
+                            >
+                                <Icon icon={Paperclip} size={12} className="shrink-0 text-text-faint" />
+                                <span className="truncate">{attachment.name}</span>
+                                <span className="shrink-0 text-text-faint">{formatBytes(attachment.size)}</span>
+                            </a>
+                        )
+                    )}
                 </div>
             )}
             {item.text !== '' && (

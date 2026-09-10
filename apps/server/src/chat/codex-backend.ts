@@ -3,6 +3,7 @@ import { CONTEXT_PROMPT } from '../context/context-note.ts';
 import { codexThreadOptions } from '../providers/codex.ts';
 import type { ApprovalDecision, BackendEvent, BackendHost, BackendLaunch, ChatBackend, TurnInput } from './backend.ts';
 import { CodexProtocol } from './codex-protocol.ts';
+import { attachmentNote } from './input.ts';
 import { CodexTransport, type CodexFrame } from './codex-transport.ts';
 
 // After stdin closed, an app-server that is still around is not going to say more.
@@ -112,6 +113,10 @@ export class CodexBackend implements ChatBackend {
             parts.push(`${input.preamble}\n\n`);
         }
         parts.push(input.text);
+        const note = attachmentNote(input.attachments);
+        if (note !== '') {
+            parts.push(`\n\n${note}`);
+        }
         const effort = this.launch.selection.options.effort;
         this.request('turn/start', {
             threadId: this.threadId,
