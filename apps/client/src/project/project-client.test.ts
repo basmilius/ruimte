@@ -12,7 +12,9 @@ const summary = (projectId: string, folder: string | null = null): ProjectSummar
     color: '#000',
     folder,
     lastOpenedAt: 0,
-    available: true
+    available: true,
+    icon: { kind: 'initial', value: projectId[0]!.toUpperCase() },
+    nameSource: 'chosen'
 });
 
 const document = (rev: number, nodes: ProjectDocument['nodes'] = []): ProjectDocument => ({
@@ -95,6 +97,7 @@ const makeSink = () => {
     const state: ReturnType<ProjectSink['getState']> & { projects: ProjectSummary[]; error: string | null; switching: boolean } = {
         current: null,
         rev: 0,
+        chosenIcon: null,
         dirty: false,
         conflict: null,
         projects: [],
@@ -113,6 +116,12 @@ const makeSink = () => {
         },
         setRev: (rev) => {
             state.rev = rev;
+        },
+        setChosenIcon: (chosenIcon) => {
+            state.chosenIcon = chosenIcon;
+        },
+        setSummary: (current) => {
+            state.current = current;
         },
         setDirty: (dirty) => {
             state.dirty = dirty;
