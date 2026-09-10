@@ -39,6 +39,7 @@ $RUIMTE_HOME/
   projects.json                    every canvas the daemon knows: id, name, color, folder
   projects/
     <projectId>/project.json       a canvas that is not in a folder
+    <projectId>/drawings/<viewId>.json   the drawings of a canvas that is not in a folder
     <projectId>.local.json         camera, focus and panels of one canvas, per machine
   sessions/                        mode 0700
     <sessionId>.txt                serialized screen plus scrollback of one session
@@ -66,6 +67,26 @@ A project is a folder; its canvas is `<folder>/.ruimte/project.json`, pretty-pri
 `GET /projects/<projectId>/icon?v=<version>&theme=dark` serves the bytes, gated by the same rules as `/ws` (loopback free, any other client sends its session token as `?token=`). It answers with the sniffed `Content-Type`, `X-Content-Type-Options: nosniff`, `Content-Disposition: inline`, `Cache-Control: private, max-age=31536000, immutable` (the URL changes whenever the file does) and, for an SVG, `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'`, so opening the URL directly runs nothing either. `project.list` never carries image bytes.
 
 `project.setIcon { projectId, image: { mime, base64 } | null }` writes `<folder>/.ruimte/icon.<ext>` (PNG, JPEG, GIF, WebP or SVG, at most 256 KB, checked against the bytes' own magic, the other `icon.*` in that directory removed) or, with a null image, deletes it. It answers with the fresh summary and sends `project.summary` to every client. An emoji or a Lucide choice needs no request of its own: the client writes `icon` into the canvas file through `project.save`. The watcher on `<folder>/.ruimte` covers `icon.*` as well as `project.json`, so an icon copied in by hand also arrives as `project.summary`.
+
+## Drawings
+
+A drawing view holds nothing in `project.json` but its id and its name; its elements live in
+`<folder>/.ruimte/drawings/<viewId>.json` (version 1, with a `rev`), which goes into git next to the
+project file. The top level is indented and every element sits on one line, so a diff reads like a
+drawing rather than like a list of coordinates. The file name is the view id through
+`encodeURIComponent`, so a rename never moves a file.
+
+`drawing.open { projectId, viewId }` answers with the document, or with an empty one when there is
+no file: a drawing nobody touched leaves nothing on disk. `drawing.save` names the `baseRev` it was
+built on and answers `rev-conflict` when the file moved on, `drawing.close` forgets it, and
+`drawing.copy { projectId, from, to }` writes a copy at rev 0, which is what duplicating a view is.
+A second non-recursive watcher on `.ruimte/drawings` (started with the first drawing of a project)
+turns an outside write into `drawing.changed` with the document now on disk, 150 ms after the burst
+settles and never for a write the daemon made itself. Broken JSON is set aside as
+`<viewId>.json.corrupt-<timestamp>`; a file that parses but is not a drawing stays where it is and
+the request answers `drawing-invalid`. A drawing view that leaves the project through `project.save`
+takes its file with it; a view that disappears through an outside edit of `project.json` never does,
+because a pull can drop a view whose file is still on its way.
 
 ## Sessions
 
@@ -188,7 +209,7 @@ A browser sends its page's origin with the upgrade; the daemon accepts its own o
 
 ## Context links
 
-An edge on the canvas into a terminal or chat node lets that agent read the source. The client tells the daemon what each agent node may read (`context.set`: a text element or a note with its content, a browser node as its address, a terminal or chat by id); the daemon reads terminals and chats live when asked. An edge between two other nodes is a drawing the client keeps to itself; the daemon never hears about it. Every shell and chat gets `RUIMTE_CONTEXT_URL` (`http://127.0.0.1:<port>/context`), a bearer token (`RUIMTE_HOOK_TOKEN` in a shell, `RUIMTE_CONTEXT_TOKEN` in a chat) and the directory of `ruimte-context` in front of its PATH (`apps/server/bin` in a checkout, the app's `bin` resource when packaged), where `ruimte-context` lists the linked sources and `ruimte-context read <id>` prints one.
+An edge on the canvas into a terminal or chat node lets that agent read the source. The client tells the daemon what each agent node may read (`context.set`: a text element or a note with its content, a browser node as its address, a terminal, chat or drawing by id); the daemon reads terminals, chats and drawings live when asked. A drawing arrives as its texts in reading order with the arrows between them as `A -> B` lines, and the whole picture as an SVG behind a heading of its own, so an agent that only wants to know what the drawing says can stop at the list. An edge between two other nodes is a drawing the client keeps to itself; the daemon never hears about it. Every shell and chat gets `RUIMTE_CONTEXT_URL` (`http://127.0.0.1:<port>/context`), a bearer token (`RUIMTE_HOOK_TOKEN` in a shell, `RUIMTE_CONTEXT_TOKEN` in a chat) and the directory of `ruimte-context` in front of its PATH (`apps/server/bin` in a checkout, the app's `bin` resource when packaged), where `ruimte-context` lists the linked sources and `ruimte-context read <id>` prints one.
 
 How an agent hears that the CLI exists depends on where it runs:
 

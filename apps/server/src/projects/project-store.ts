@@ -398,6 +398,11 @@ export class ProjectStore {
         return this.documentPath(this.require(projectId).entry);
     }
 
+    /* The projects that are open right now, in no particular order. */
+    openProjectIds(): string[] {
+        return [...this.open.keys()];
+    }
+
     isDrawingView(projectId: string, viewId: string): boolean {
         return this.require(projectId).drawingIds.has(viewId);
     }

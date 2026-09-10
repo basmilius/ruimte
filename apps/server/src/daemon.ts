@@ -77,6 +77,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const context: ContextStore = new ContextStore({
         terminalText: (sessionId) => manager.get(sessionId)?.plainText() ?? Promise.resolve(null),
         chatItems: (chatId) => chats.get(chatId)?.thread.list() ?? null,
+        drawingElements: (viewId) => drawings.elementsOf(viewId),
         targetForToken: (token) => manager.sessionIdForToken(token) ?? chats.chatIdForToken(token)
     });
     const attachments = new AttachmentStore(config.home);

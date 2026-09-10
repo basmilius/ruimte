@@ -1,4 +1,5 @@
-import type { ChatItem, ContextSource } from '@ruimte/contracts';
+import type { ChatItem, ContextSource, DrawingElement } from '@ruimte/contracts';
+import { renderDrawing } from './context-drawing.ts';
 
 export const CONTEXT_PATH = '/context';
 
@@ -6,6 +7,8 @@ export const CONTEXT_PATH = '/context';
 const MAX_LINES = 2000;
 
 interface ContextReaders {
+    /* The elements of a drawing view, or null when no open project has one under that id. */
+    drawingElements(viewId: string): Promise<DrawingElement[] | null>;
     /* The plain text of a terminal session's screen and scrollback, or null when there is none. */
     terminalText(sessionId: string): Promise<string | null>;
     /* A chat's thread, or null when there is none. */
@@ -98,6 +101,10 @@ export class ContextStore {
             case 'chat': {
                 const items = this.readers.chatItems(source.id);
                 return items ? renderTranscript(items) : null;
+            }
+            case 'drawing': {
+                const elements = await this.readers.drawingElements(source.id);
+                return elements ? renderDrawing(elements) : null;
             }
         }
     }

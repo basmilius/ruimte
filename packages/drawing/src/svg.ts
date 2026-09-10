@@ -15,6 +15,23 @@ export interface SvgOptions {
 
 export const DEFAULT_SVG_MARGIN = 32;
 
+/*
+ * What the palette names are worth where no theme is loaded (an export read outside the app, the
+ * daemon rendering a drawing for an agent): the values of the light theme in `styles.css`.
+ */
+export const DEFAULT_PALETTE: Record<DrawingColor, string> = {
+    ink: '#18181b',
+    muted: '#6f6f78',
+    accent: '#4f46e5',
+    red: '#d64545',
+    orange: '#d97706',
+    yellow: '#b7860b',
+    green: '#2f8a4f',
+    blue: '#2563eb',
+    purple: '#7c3aed',
+    pink: '#db2777'
+};
+
 const escapeXml = (value: string): string =>
     value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 

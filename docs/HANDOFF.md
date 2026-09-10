@@ -758,6 +758,29 @@ started; it fits after #10, when a remote daemon makes it worth its weight.
   the palette rows and an agent node's header show the CLI's brand mark from simple-icons,
   monochrome in `currentColor` (`agents/AgentIcon.tsx`).
 
+- **Drawing view**: a fifth kind of view, a sketch in the spirit of Excalidraw, written from
+  scratch. `project.json` knows it as `{ kind: 'drawing', id, name }` and nothing else; its
+  elements live in `<folder>/.ruimte/drawings/<viewId>.json` (version 1, a `rev`, one element per
+  line so a git diff reads), under the same discipline the project file has: `drawing.open`,
+  `drawing.save { baseRev }`, `drawing.close`, `drawing.copy`, and `drawing.changed` from a
+  watcher of its own on that directory (`apps/server/src/projects/drawing-store.ts`). A view that
+  a person deletes takes its file with it; a view an outside edit drops never does. The client is
+  `useDrawing` plus `DrawingClient` (`apps/client/src/drawing`), shaped after `useCanvas` and
+  `ProjectClient`: autosave 400 ms after the last edit, a flush before every switch, and the
+  conflict banner shared with the project's. The camera goes to `<projectId>.local.json` under the
+  slot every view already has. Six element kinds (rect, diamond, ellipse, line, freehand, text),
+  ten palette names instead of hex values (`--draw-*` in both themes), three levels of sloppiness
+  through roughjs with a seed per element, strokes through perfect-freehand. The surface is two
+  canvases (the drawing and the stroke in the making) with a DOM overlay for the handles, the
+  marquee and the text editor, so handles stay whole pixels at every zoom. The pure half of all
+  that (geometry, hit tests, paths, SVG, reading order) is `packages/drawing`, which the daemon
+  uses too. Export is PNG and SVG, to the clipboard or as a file (a native dialog in the desktop
+  app through `saveFile`); copy and paste inside the app carry elements, not a picture. A drawing
+  can also be a node on a canvas: a read-only mirror that follows the file and opens the view on a
+  double-click ("Show on canvas" in the view menus). An edge from such a node into an agent makes
+  the drawing readable: the daemon serves the texts in reading order with the arrows as `A -> B`
+  lines, and the SVG behind a heading of its own.
+
 ## Feature decisions
 
 Features worth weighing for the
@@ -793,6 +816,10 @@ canvas, against Ruimte, one verdict each.
   no text is being typed and no dialog is up, and they are listed under "Drawing" in the Keyboard
   pane like every other chord.
 - Never highlight the canvas grid in the accent color. The dots stay neutral in every state.
+- A drawing keeps its elements beside `project.json`, in `<folder>/.ruimte/drawings/<viewId>.json`,
+  and they go into git with it: a sketch that explains a repository belongs to that repository. The
+  file is named after the view id, never the view name, so a rename moves nothing, and every color
+  in it is a palette name, never a hex value, so the same file reads in both themes.
 - Icon buttons get equal padding on every side. Buttons that belong together sit in a
   `BTN_GROUP` with 1px gaps; groups keep the wider gap of their container.
 - The shared components in `src/ui/` are `Icon`, `Brand`, `Tooltip`, `Select`, `Button`
