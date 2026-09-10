@@ -1,7 +1,8 @@
 # Handoff
 
-State of Ruimte on 2026-09-09, written for whoever picks this up next (human or agent). Read
-`CLAUDE.md` first for the rules; this file says where things are and what is next.
+State of Ruimte on 2026-09-10, written for whoever picks this up next (human or agent). Read
+`CLAUDE.md` first for the rules; this file says where things are and how the code got that way.
+`docs/PLAN.md` says what comes next.
 
 ## What works today
 
@@ -12,13 +13,14 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
 - **Phase 1, UI prototype** (`apps/client`): sidebar, floating dock, custom canvas with
   canvas/node modes, live grid snapping, per-aspect locks, zoom presets menu, node context menu
   with a color submenu, text elements, Base UI tooltips with a shared provider, light and dark
-  tokens in `src/styles.css`. Chat and browser nodes are still placeholders.
+  tokens in `src/styles.css`. Chat and browser nodes arrived in phases 6 and 7.
 - **Phase 2, monorepo**: `apps/client`, `apps/server`, `packages/contracts` (zod 4). The client
   talks only through `src/transport` (WebSocket, reconnect with backoff). CI runs check, build
   and test on ubuntu and macos.
 - **Phase 3, daemon** (`apps/server`): `Bun.spawn({ terminal })` PTYs, one `@xterm/headless`
   per session so the daemon owns the screen, output coalesced per 16 ms, snapshots under
-  `$RUIMTE_HOME/sessions` with atomic writes, 42 tests with real shells,
+  `$RUIMTE_HOME/sessions` with atomic writes, tests with real shells (`bun test` at the root
+  runs 291 across 44 files today),
   `bun run --cwd apps/server smoke`.
 - **Phase 4, terminal node**: xterm 6 with WebGL and a DOM fallback, reattach after
   reconnect, viewport culling with a static plate after 10 s offscreen, exit bar with Restart,
@@ -221,8 +223,8 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   `bun run serve` is the Server Edition. Tested by pairing this client with a second daemon on the LAN
   address of this machine and switching both ways.
 
-Issues #1 to #10 on GitHub describe each phase; #2, #3 and #4 are closed, #1 and #5 to #10
-are implemented but wait for a review before closing.
+Issues #1 to #10 on GitHub describe each phase and are all closed. Open: #11 (packaging and
+releases), #12 (chat follow-ups) and #13 (browser node follow-ups).
 
 Research on showing a live browser page without a `<webview>` (for the web build and remote
 daemons) is in `docs/research/browser-streaming.md`: the recommendation is a headless
@@ -303,7 +305,7 @@ canvas, against Ruimte, one verdict each.
 | Image and PDF preview (inside the editor node) | None | Later, with the editor node |
 | Dino minigame | None | Skip |
 | Kanban board (separate view, session cards in columns) | None | Skip, a decision in this file: no kanban, ever |
-| Spawn team (agents wired to their opener) | None | Later: fits once the Codex backend exists; the edges and worktrees it needs are there |
+| Spawn team (agents wired to their opener) | None | Later, phase 18: the chat backends, the edges and the worktrees it needs are there |
 | Remote pairing and relay | Endpoints with pairing, tokens and origin checks | Done, relay is a seam |
 
 ## Decisions that are not in the code
@@ -439,11 +441,9 @@ canvas, against Ruimte, one verdict each.
   because the composer shows no difference between the two kinds of question.
 - Codex runtime modes: `supervised` = `untrusted` + `read-only`, `auto-accept-edits` =
   `untrusted` + `workspace-write`, `auto` = `on-request` + `workspace-write`, `full-access` =
-  `never` + `danger-full-access`. Plan mode is a read-only sandbox plus an instruction in the
-  prompt, because app-server 0.153 reports the collaboration mode but never takes it. Not
-  mapped: cost (Codex reports none), the deny reason, slash commands, permission-profile
-  requests and MCP elicitations (refused with a JSON-RPC error). Gemini and Copilot still open
-  as terminals with the CLI typed in.
+  `never` + `danger-full-access`. Not mapped: cost (Codex reports none), the deny reason, slash commands, permission-profile
+  requests and MCP elicitations (refused with a JSON-RPC error). Gemini and Copilot open as
+  terminals only; the daemon builds their launch line like every other CLI's.
 
 ## Gotchas already paid for
 
@@ -513,49 +513,30 @@ canvas, against Ruimte, one verdict each.
 
 ## Next
 
-In the order that makes sense, each one an issue on GitHub:
+`docs/PLAN.md` holds the phases and their order. What is open here, in short:
 
-1. **#5 and #6 follow-ups**: a third chat provider (Gemini, Copilot or opencode) as the proof
-   that the backend seam holds: it is a provider value, a backend and a protocol mapper, plus one
-   literal in `AgentKind`. The Codex backend, the fold onto one `ChatSession` with `ChatBackend`s,
-   Codex's streamed command output, its unified diffs in the changed-files card, per-turn
-   checkpoints (#12), mentions, attachments and the "send Escape to the app" toggle are done.
-   Left on the checkpoints: no way to go back to one (a restore reads as a revert of the person's
-   own work as much as the agent's), and the diff is of the whole folder, so an edit the person
-   made themselves during a turn lands in the card too.
-2. **#7 follow-ups**: a webview keeps the canvas's z-order only by being above everything, so
-   a node dragged over a browser node slides under its page; the traffic-light inset is fixed,
-   not measured; no Windows or Linux run yet.
-3. **#9 follow-ups**: the mid-conversation note, the shell's first-prompt line and the hook
-   answer are done (see the gotcha above). Left: Codex inside a terminal gets no hint, since
-   its hook output contract is not verified; and a link made while a shell already runs could
-   be announced at the next shell prompt without typing into the PTY (a `precmd`/`PROMPT_COMMAND`
-   probe of a daemon-owned flag file), which was judged too invasive for now.
-4. **Settings follow-ups**: remappable chords (the Keyboard pane is the natural home), a
-   "restore defaults" action once there is more than a handful of stored values, and the
-   canvas font size for chat and text elements if anyone asks for it.
-5. **#10 follow-ups**: one endpoint at a time is the model; a project list that spans machines
-   would need a transport per endpoint. TLS is a reverse proxy's job and is only documented.
-6. **Phase 12 follow-ups**: a color or an arrowhead per plain line if drawings ask for it
-   (`ProjectEdge` is ready for an additive field); a note's title as the first heading of its
-   body instead of a separate rename; an editor node and a diff node from the parity list.
-7. **#11 follow-ups**: put the Apple secrets in the repository and tag `v0.1.0` to get the
-   first signed, notarized build (the local `bun run dist` already signs with the Developer ID
-   in the keychain); enable Pages with source "GitHub Actions" and point ruimte.app at it; the
-   30-second video for the landing page; Windows (the daemon on Bun's Windows PTY or Node with
-   node-pty); an app icon that is more than a placeholder; the daemon as a background service
-   so closing the app keeps sessions alive.
-
-8. **Phase 13 follow-ups**: Gemini and Copilot have no hooks yet, so a terminal with one shows
-   no agent status and no "Open in chat"; each is one event table, one config path and one
-   normalizer (`~/.gemini/settings.json` with its own event names, an owned JSON file under
-   `~/.copilot/hooks/`). Codex's CLI takes only `on-request` and `never` on
-   `--ask-for-approval` (0.153), so the three modes that still ask launch a terminal Codex the
-   same way; the chat's `untrusted` has no counterpart on the command line. simple-icons has no
-   OpenAI mark, so Codex shows Lucide's `Bot`. The mode
-   is one global setting; nodeterm also has a per project override, which would be the first
-   preference in `project.json`. A node keeps the title of its catalog entry: no polling of the
-   CLI's own session name.
+1. **#12**: the Codex hook contract in a terminal (the other four boxes are done). On the
+   checkpoints: no way back to one (a restore reads as a revert of the person's own work as
+   much as the agent's), and the diff is of the whole folder, so an edit the person made
+   during a turn lands in the card too.
+2. **#13**: a webview keeps the canvas's z-order only by being above everything, so a node
+   dragged over a browser node slides under its page; the traffic-light inset is fixed, not
+   measured; no Windows or Linux run yet.
+3. **#11**: the Apple secrets and a `v0.1.0` tag for the first signed, notarized build; Pages
+   with source "GitHub Actions" so ruimte.app deploys; the landing video; Windows (the daemon
+   on Bun's Windows PTY or Node with node-pty); a real app icon; the daemon as a background
+   service so closing the app keeps sessions alive.
+4. **A third chat provider** (Gemini, Copilot or opencode) as the proof that the backend seam
+   holds: a provider value, a backend and a protocol mapper, plus one literal in `AgentKind`.
+   Hooks for Gemini and Copilot are a day per CLI on top.
+5. **Files and Git panels**: both render "Nothing here yet." A tree needs `fs.list` and
+   `fs.read`, a status view needs `git.status` and `git.diff` (phase 17).
+6. **Settings**: remappable chords (the Keyboard pane lists them read-only), a "restore
+   defaults" action, a canvas font size for chat and text elements.
+7. **Smaller ones**: a link made while a shell already runs is only visible in the header and
+   to the hooks (a `precmd` probe was judged too invasive); a color or an arrowhead per plain
+   line; a note's title as the first heading of its body; a per-project override of the
+   terminal agent mode.
 
 Known gaps to keep in mind: no WebGL context budget (many visible terminals may lose
 contexts), no backpressure for a slow client, the 30-node performance target is unmeasured.
