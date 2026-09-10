@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatToolItem } from '@ruimte/contracts';
-import { formatElapsed, liveOutput, toolStartedAt } from './tools';
+import { approvalChanges, formatElapsed, hasFileChanges, liveOutput, toolStartedAt, unifiedChanges } from './tools';
 
 const running = (progress?: ChatToolItem['progress']): ChatToolItem => ({
     id: 'b1',
@@ -37,5 +37,38 @@ describe('live tool helpers', () => {
         expect(formatElapsed(12_400)).toBe('12s');
         expect(formatElapsed(120_000)).toBe('2m');
         expect(formatElapsed(125_000)).toBe('2m 5s');
+    });
+});
+
+const patched = (changes: ChatToolItem['changes']): ChatToolItem => ({
+    ...running(),
+    id: 'p1',
+    toolUseId: 'p1',
+    name: 'ApplyPatch',
+    input: { summary: 'a.ts' },
+    output: '-x\n+y\n',
+    state: 'done',
+    progress: undefined,
+    changes
+});
+
+describe('file change helpers', () => {
+    test('a call carries the unified diffs a provider reported, and an empty diff is nothing to show', () => {
+        expect(unifiedChanges(patched([{ path: 'a.ts', kind: 'update', diff: '-x\n+y\n' }]))).toHaveLength(1);
+        expect(unifiedChanges(patched([{ path: 'a.ts', kind: 'update', diff: '' }]))).toEqual([]);
+        expect(unifiedChanges(running())).toEqual([]);
+    });
+
+    test('a turn shows a call in its changed files card when either kind of change is there', () => {
+        expect(hasFileChanges(patched([{ path: 'a.ts', kind: 'update', diff: '-x\n+y\n' }]))).toBe(true);
+        expect(hasFileChanges(patched([]))).toBe(false);
+        expect(hasFileChanges({ ...running(), name: 'Write', input: { file_path: 'a.ts', content: 'hi' } })).toBe(true);
+    });
+
+    test('an approval repeats the diffs in its input, and anything else is no diff at all', () => {
+        expect(approvalChanges({ summary: 'a.ts', changes: [{ path: 'a.ts', kind: 'update', diff: '-x\n' }] })).toHaveLength(1);
+        expect(approvalChanges({ changes: [{ path: 'a.ts', diff: '' }] })).toEqual([]);
+        expect(approvalChanges({ command: 'date' })).toEqual([]);
+        expect(approvalChanges(null)).toEqual([]);
     });
 });
