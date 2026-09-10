@@ -29,6 +29,8 @@ import { Icon } from '@/ui/Icon';
 
 const MAX_ROWS_PX = 200;
 const SEARCH_DEBOUNCE_MS = 80;
+// What fits above the composer without turning the picker into a file tree.
+const MENTION_RESULTS = 8;
 const NOTICE_MS = 4000;
 
 // Commands the composer handles itself; the CLI's own ones are sent through as text.
@@ -155,9 +157,9 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
             return;
         }
         let stale = false;
-        const timer = setTimeout(() => {
+        const search = (): void => {
             chatClient
-                .searchFiles(info.cwd, mention.query)
+                .searchFiles(info.cwd, mention.query, MENTION_RESULTS)
                 .then((result) => {
                     if (!stale) {
                         setSearched(result.files);
@@ -165,7 +167,15 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                     }
                 })
                 .catch(() => undefined);
-        }, SEARCH_DEBOUNCE_MS);
+        };
+        // A bare `@` is not a keystroke in a query: it opens the list of what is there, at once.
+        if (mention.query === '') {
+            search();
+            return () => {
+                stale = true;
+            };
+        }
+        const timer = setTimeout(search, SEARCH_DEBOUNCE_MS);
         return () => {
             stale = true;
             clearTimeout(timer);
@@ -584,9 +594,8 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                 )}
                 {mentionMenuOpen && (
                     <div className="border-b border-border px-1.5 py-1.5">
-                        {files.length === 0 && (
-                            <div className="px-2 py-1 text-xs text-text-faint">{mention.query ? 'No files match' : 'Type to search files'}</div>
-                        )}
+                        {mention.query === '' && files.length > 0 && <div className="menu-label">Files in this folder</div>}
+                        {files.length === 0 && <div className="px-2 py-1 text-xs text-text-faint">{mention.query ? 'No files match' : 'No files here'}</div>}
                         {files.map((path, index) => {
                             const { name, dir } = splitPath(path);
                             return (

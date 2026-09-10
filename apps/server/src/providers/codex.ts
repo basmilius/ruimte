@@ -40,7 +40,9 @@ export const CODEX_CAPABILITIES: ProviderCapabilities = {
     streamsToolOutput: true,
     diffs: 'unified',
     attachments: false,
-    mentions: false,
+    // Codex has no mention part in its protocol; the picker sends the path as text, which is all
+    // the model needs to open the file with its own tools.
+    mentions: true,
     denyReason: false,
     allowAlways: true,
     asyncQuestions: true,
