@@ -1,4 +1,4 @@
-import type { GitRef, GitRefsResult } from '@ruimte/contracts';
+import type { GitRef, GitRefsResult, GitStash } from '@ruimte/contracts';
 import { git, toplevel } from './run.ts';
 import { resolveBase } from './status.ts';
 
@@ -49,6 +49,21 @@ export const parseRefs = (output: string, kind: GitRef['kind'], worktrees: Map<s
     return refs;
 };
 
+/* `stash list` writes the ref and the message it was saved under, one stash per line. */
+export const parseStashes = (output: string): GitStash[] => {
+    const stashes: GitStash[] = [];
+    for (const line of output.split('\n')) {
+        if (line === '') {
+            continue;
+        }
+        const [ref = '', ...rest] = line.split(FIELD);
+        if (ref !== '') {
+            stashes.push({ ref, message: rest.join(FIELD) });
+        }
+    }
+    return stashes;
+};
+
 /*
  * Every branch the panel can put the checkout on, newest tip first: the local ones, then the remote
  * ones. A branch another worktree has out carries that path, because git refuses to check it out
@@ -56,13 +71,18 @@ export const parseRefs = (output: string, kind: GitRef['kind'], worktrees: Map<s
  */
 export const listRefs = async (cwd: string): Promise<GitRefsResult> => {
     const top = await toplevel(cwd);
-    const [locals, remotes, worktrees, base] = await Promise.all([
+    const [locals, remotes, worktrees, stashes, base] = await Promise.all([
         git(['for-each-ref', '--sort=-committerdate', `--format=${REF_FORMAT}`, 'refs/heads'], top),
         git(['for-each-ref', '--sort=-committerdate', `--format=${REF_FORMAT}`, 'refs/remotes'], top),
         git(['worktree', 'list', '--porcelain'], top),
+        git(['stash', 'list', `--format=%gd${FIELD}%gs`], top),
         resolveBase(top)
     ]);
     const branches = parseWorktreeBranches(worktrees ?? '');
     const refs = [...parseRefs(locals ?? '', 'local', branches, base), ...parseRefs(remotes ?? '', 'remote', new Map(), base)];
-    return { refs: refs.slice(0, MAX_REFS), current: refs.find((ref) => ref.current)?.name ?? null };
+    return {
+        refs: refs.slice(0, MAX_REFS),
+        current: refs.find((ref) => ref.current)?.name ?? null,
+        stashes: parseStashes(stashes ?? '')
+    };
 };

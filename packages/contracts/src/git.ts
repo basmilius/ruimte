@@ -183,9 +183,18 @@ export const GitRefSchema = z.object({
 });
 export type GitRef = z.infer<typeof GitRefSchema>;
 
+// One entry of `git stash list`: the ref that pops it and the line it was saved under.
+export const GitStashSchema = z.object({
+    ref: z.string(),
+    message: z.string()
+});
+export type GitStash = z.infer<typeof GitStashSchema>;
+
 export const GitRefsResultSchema = z.object({
     refs: z.array(GitRefSchema),
-    current: z.string().nullable()
+    current: z.string().nullable(),
+    // Newest first, the order `stash@{0}` counts in.
+    stashes: z.array(GitStashSchema)
 });
 export type GitRefsResult = z.infer<typeof GitRefsResultSchema>;
 
