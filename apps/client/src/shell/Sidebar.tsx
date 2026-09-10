@@ -1,9 +1,9 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
-import { ChevronRight, Copy, Frame, Globe, LayoutGrid, MessageSquare, Minus, Pencil, Plus, Settings, StickyNote, Terminal, Trash } from 'lucide-react';
+import { ChevronRight, Copy, Frame, Globe, LayoutGrid, MessageSquare, Minus, Pencil, PenTool, Plus, Settings, StickyNote, Terminal, Trash } from 'lucide-react';
 import clsx from 'clsx';
-import { isCanvasView, type AgentKind, type NodeKind, type ProjectViewKind } from '@ruimte/contracts';
+import { isCanvasView, isSessionView, type AgentKind, type NodeKind, type ProjectViewKind } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { useDrafts } from '@/chat/drafts';
 import { askDeleteView, putOnCanvas, revealNode, showView } from '@/project/views';
@@ -53,6 +53,7 @@ const ROW_ICON: Record<NodeKind | ProjectViewKind, typeof Terminal> = {
     browser: Globe,
     group: LayoutGrid,
     note: StickyNote,
+    drawing: PenTool,
     separator: Minus
 };
 
@@ -395,15 +396,15 @@ export function Sidebar() {
                     status: nodeStatus(node, sessions, chats) ?? null,
                     draft: node.kind === 'chat' && drafts.includes(node.id)
                 });
-                const provider = isCanvasView(view) || view.kind === 'separator' || view.kind === 'browser' ? undefined : view.node.provider;
+                const provider = view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : undefined;
                 return {
                     id: view.id,
                     name: view.name ?? '',
                     kind: view.kind,
                     provider: provider ?? null,
                     nodes: live.filter((node) => isSessionKind(node.kind)).map(asRow),
-                    // A separator is a line, not a node, so it carries no status and no draft dot.
-                    self: isCanvasView(view) || view.kind === 'separator' ? null : asRow({ id: view.id, kind: view.kind, title: view.name, provider })
+                    // Only a session view is a node of its own; a separator and a drawing have no status.
+                    self: isSessionView(view) ? asRow({ id: view.id, kind: view.kind, title: view.name, provider }) : null
                 };
             }),
         [views, canvasViewId, order, nodes, sessions, chats, drafts]

@@ -1,4 +1,4 @@
-import { isCanvasView, isOpenableView, isSeparatorView, MAIN_VIEW_NAME, type NodeKind, type ProjectView } from '@ruimte/contracts';
+import { isCanvasView, isOpenableView, isSessionView, MAIN_VIEW_NAME, type NodeKind, type ProjectView } from '@ruimte/contracts';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useDocument, viewOfNode } from '@/state/document';
@@ -53,12 +53,12 @@ export const stepView = (delta: -1 | 1): void => {
 
 /* What a view holds, in the words the status needs. The canvas store owns the view that is on screen. */
 export const nodesOfView = (view: ProjectView): StatusOf[] => {
-    if (isSeparatorView(view)) {
-        return [];
-    }
-    if (!isCanvasView(view)) {
+    if (isSessionView(view)) {
         // A standalone view is one node without a canvas, under its own id.
         return [{ id: view.id, kind: view.kind }];
+    }
+    if (!isCanvasView(view)) {
+        return [];
     }
     if (view.id === useDocument.getState().activeViewId) {
         const canvas = useCanvas.getState();
@@ -81,11 +81,11 @@ export const projectNodes = (): ProjectNodeRef[] => {
     const canvas = useCanvas.getState();
     const { views } = useDocument.getState();
     return views.flatMap<ProjectNodeRef>((view) => {
-        if (isSeparatorView(view)) {
-            return [];
+        if (isSessionView(view)) {
+            return [{ id: view.id, kind: view.kind, title: view.name }];
         }
         if (!isCanvasView(view)) {
-            return [{ id: view.id, kind: view.kind, title: view.name }];
+            return [];
         }
         return view.id === canvas.viewId ? canvas.order.map((id) => canvas.nodes[id]!) : view.nodes;
     });

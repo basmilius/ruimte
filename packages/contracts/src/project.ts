@@ -201,11 +201,25 @@ export const ProjectSeparatorViewSchema = z.object({
 });
 export type ProjectSeparatorView = z.infer<typeof ProjectSeparatorViewSchema>;
 
+export const ProjectChatViewSchema = ViewBaseSchema.extend({ kind: z.literal('chat'), node: StandaloneNodeSchema });
+export type ProjectChatView = z.infer<typeof ProjectChatViewSchema>;
+
+export const ProjectTerminalViewSchema = ViewBaseSchema.extend({ kind: z.literal('terminal'), node: StandaloneNodeSchema });
+export type ProjectTerminalView = z.infer<typeof ProjectTerminalViewSchema>;
+
+export const ProjectBrowserViewSchema = ViewBaseSchema.extend({ kind: z.literal('browser'), url: z.string() });
+export type ProjectBrowserView = z.infer<typeof ProjectBrowserViewSchema>;
+
+/* A sketch of its own. The elements live in `.ruimte/drawings/<id>.json`, never in this file. */
+export const ProjectDrawingViewSchema = ViewBaseSchema.extend({ kind: z.literal('drawing') });
+export type ProjectDrawingView = z.infer<typeof ProjectDrawingViewSchema>;
+
 export const ProjectViewSchema = z.discriminatedUnion('kind', [
     ProjectCanvasViewSchema,
-    ViewBaseSchema.extend({ kind: z.literal('chat'), node: StandaloneNodeSchema }),
-    ViewBaseSchema.extend({ kind: z.literal('terminal'), node: StandaloneNodeSchema }),
-    ViewBaseSchema.extend({ kind: z.literal('browser'), url: z.string() }),
+    ProjectChatViewSchema,
+    ProjectTerminalViewSchema,
+    ProjectBrowserViewSchema,
+    ProjectDrawingViewSchema,
     ProjectSeparatorViewSchema
 ]);
 export type ProjectView = z.infer<typeof ProjectViewSchema>;
@@ -214,6 +228,15 @@ export type ProjectViewKind = ProjectView['kind'];
 export const isCanvasView = (view: ProjectView): view is ProjectCanvasView => view.kind === 'canvas';
 
 export const isSeparatorView = (view: ProjectView): view is ProjectSeparatorView => view.kind === 'separator';
+
+export const isDrawingView = (view: ProjectView): view is ProjectDrawingView => view.kind === 'drawing';
+
+/*
+ * The views that are one session under their own id: what a node carries, without a canvas around
+ * it. A separator holds nothing and a drawing is a file, so neither has a session to attach to.
+ */
+export const isSessionView = (view: ProjectView): view is ProjectChatView | ProjectTerminalView | ProjectBrowserView =>
+    view.kind === 'chat' || view.kind === 'terminal' || view.kind === 'browser';
 
 /* The views a person can put on screen; a separator is a line in the list, not a place to go. */
 export const isOpenableView = (view: ProjectView): boolean => view.kind !== 'separator';

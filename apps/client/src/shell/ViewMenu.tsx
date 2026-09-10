@@ -1,5 +1,5 @@
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, ChevronDown, Frame, Globe, MessageSquare, Minus, Pencil, Terminal, Trash } from 'lucide-react';
+import { Check, ChevronDown, Frame, Globe, MessageSquare, Minus, Pencil, PenTool, Terminal, Trash } from 'lucide-react';
 import { isCanvasView, isOpenableView, type ProjectViewKind } from '@ruimte/contracts';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentView } from '@/agents/nodes';
@@ -14,6 +14,7 @@ const VIEW_ICON: Record<ProjectViewKind, typeof Terminal> = {
     chat: MessageSquare,
     terminal: Terminal,
     browser: Globe,
+    drawing: PenTool,
     separator: Minus
 };
 
