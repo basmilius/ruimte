@@ -280,6 +280,10 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   drops the newline it puts between line spans, so the lines can be blocks. Wrap is an icon button
   in the toolbar, per viewer session, nothing stored; it is drawn in every view and inert outside
   the source, so the switch next to it never moves.
+  Video (MP4, WebM, MOV, Matroska, Ogg, all named by their magic bytes) is a native `<video controls>`
+  on the same route, which serves it in ranges so the scrubber works. `canPlayType` is the gate: a
+  container the runtime cannot play (a MOV full of HEVC, most Matroska) draws the `EmptyState` with
+  the size and a "Reveal in Finder" button instead of a player that would only sit there.
   Images (PNG, JPEG, GIF, WebP, SVG) are an `<img>` on `GET /fs/file` (`shell/panels/file-url.ts`,
   the endpoint's token the way the project icon carries it), on a plain sunken surface with a Fit
   and 1:1 switch and a footer with the dimensions, the size and the mime. Everything else, a PDF or

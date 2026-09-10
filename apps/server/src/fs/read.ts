@@ -1,6 +1,6 @@
 import { lstat } from 'node:fs/promises';
 import { isAbsolute, resolve } from 'node:path';
-import { FS_READ_MAX_TEXT_BYTES, isImageMime, type FsReadResult } from '@ruimte/contracts';
+import { FS_READ_MAX_TEXT_BYTES, isImageMime, isVideoMime, type FsReadResult } from '@ruimte/contracts';
 
 type ReadErrorCode = 'not-found' | 'not-a-file' | 'bad-path';
 
@@ -36,6 +36,11 @@ const MAGIC: readonly { mime: string; signature: readonly number[] }[] = [
     { mime: 'application/pdf', signature: ascii('%PDF-') }
 ];
 
+// Brands an `ftyp` box can carry that hold sound and no picture; the container is the same as MP4's.
+const AUDIO_BRANDS = new Set(['M4A ', 'M4B ', 'M4P ']);
+
+const latin1 = (bytes: Uint8Array): string => new TextDecoder('latin1').decode(bytes);
+
 /* The mime a file's first bytes claim, or null when nothing recognizes them. */
 export const sniffMime = (bytes: Uint8Array): string | null => {
     for (const { mime, signature } of MAGIC) {
@@ -46,6 +51,22 @@ export const sniffMime = (bytes: Uint8Array): string | null => {
     // WebP is a RIFF container: the form type sits four bytes past the length.
     if (startsWith(bytes, ascii('RIFF')) && startsWith(bytes.subarray(8), ascii('WEBP'))) {
         return 'image/webp';
+    }
+    // An ISO base media file (MP4, M4V, MOV) names itself in an `ftyp` box four bytes in, and the
+    // brand behind it says which flavor: QuickTime carries codecs no browser has to play.
+    if (startsWith(bytes.subarray(4), ascii('ftyp'))) {
+        const brand = latin1(bytes.subarray(8, 12));
+        if (AUDIO_BRANDS.has(brand)) {
+            return null;
+        }
+        return brand === 'qt  ' ? 'video/quicktime' : 'video/mp4';
+    }
+    // WebM and Matroska share the EBML header; the DocType a few bytes in is what tells them apart.
+    if (startsWith(bytes, [0x1a, 0x45, 0xdf, 0xa3])) {
+        return latin1(bytes.subarray(0, 64)).includes('webm') ? 'video/webm' : 'video/x-matroska';
+    }
+    if (startsWith(bytes, ascii('OggS'))) {
+        return 'video/ogg';
     }
     return null;
 };
@@ -228,11 +249,11 @@ export const readFile = async (path: string): Promise<FsReadResult> => {
     };
 };
 
-/* The same file as bytes, for the image route. Null for anything that is not an image. */
-export const readImage = async (path: string): Promise<{ mime: string; bytes: Blob } | null> => {
+/* The same file as bytes, for the file route. Null for anything but the images and video it serves. */
+export const readMedia = async (path: string): Promise<{ mime: string; size: number; bytes: Blob } | null> => {
     const { file, mime } = await inspect(path);
-    if (!mime || !isImageMime(mime)) {
+    if (!mime || !(isImageMime(mime) || isVideoMime(mime))) {
         return null;
     }
-    return { mime, bytes: Bun.file(file.path) };
+    return { mime, size: file.size, bytes: Bun.file(file.path) };
 };

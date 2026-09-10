@@ -1,10 +1,11 @@
-import { isImageMime, type FsReadResult, type FsReadText } from '@ruimte/contracts';
+import { isImageMime, isVideoMime, type FsReadResult, type FsReadText } from '@ruimte/contracts';
 import { CodeFile } from '@/shell/panels/CodeFile';
 import { isHtmlName, isMarkdownName } from '@/shell/panels/file-kind';
 import { HtmlFile } from '@/shell/panels/HtmlFile';
 import { ImageFile } from '@/shell/panels/ImageFile';
 import { MarkdownFile } from '@/shell/panels/MarkdownFile';
 import { UnsupportedFile } from '@/shell/panels/UnsupportedFile';
+import { VideoFile } from '@/shell/panels/VideoFile';
 
 export interface FileRendererProps {
     /* Absolute on the daemon's machine. */
@@ -45,6 +46,9 @@ export const renderFile = ({ path, name, read }: FileRendererProps): React.JSX.E
     }
     if (read.kind === 'binary' && isImageMime(read.mime)) {
         return <ImageFile path={path} name={name} read={read} />;
+    }
+    if (read.kind === 'binary' && isVideoMime(read.mime)) {
+        return <VideoFile path={path} name={name} read={read} />;
     }
     return <UnsupportedFile path={path} name={name} read={read} />;
 };

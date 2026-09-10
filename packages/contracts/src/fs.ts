@@ -141,3 +141,10 @@ export type FsReadResult = z.infer<typeof FsReadResultSchema>;
 export const FS_IMAGE_MIMES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml'] as const;
 
 export const isImageMime = (mime: string): boolean => (FS_IMAGE_MIMES as readonly string[]).includes(mime);
+
+// Video `GET /fs/file` serves as well, in ranges so a player can seek. Whether the runtime can play
+// what is in the container is its own answer (`canPlayType`), which the viewer asks before it draws
+// a player: a MOV full of HEVC and most Matroska are containers Chromium recognizes and cannot play.
+export const FS_VIDEO_MIMES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska', 'video/ogg'] as const;
+
+export const isVideoMime = (mime: string): boolean => (FS_VIDEO_MIMES as readonly string[]).includes(mime);
