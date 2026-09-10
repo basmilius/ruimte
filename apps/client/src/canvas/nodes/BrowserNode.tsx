@@ -5,6 +5,7 @@ import { browserRegistry, useBrowser } from '@/browser/registry';
 import { desktop, isDesktop } from '@/desktop/bridge';
 import { useCanvas } from '@/state/canvas';
 import { NodeNotice } from '@/canvas/nodes/NodeNotice';
+import { BTN_GROUP } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
@@ -54,7 +55,7 @@ export function BrowserNode({ id, focused }: { id: string; focused: boolean }) {
     return (
         <div className="flex h-full flex-col bg-surface">
             <div className="relative flex h-[37px] shrink-0 items-center gap-2 border-b border-border bg-surface-raised px-1">
-                <div className="btn-group">
+                <div className={BTN_GROUP}>
                     <Tooltip label="Back" name>
                         <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!state?.canGoBack} onClick={() => browserRegistry.back(id)}>
                             <Icon icon={ArrowLeft} size={16} />
@@ -103,7 +104,7 @@ export function BrowserNode({ id, focused }: { id: string; focused: boolean }) {
                     />
                 </div>
                 <Separator />
-                <div className="btn-group">
+                <div className={BTN_GROUP}>
                     <Tooltip label="Open in the system browser" name>
                         <button className="icon-btn h-7 w-7" onClick={() => void desktop()?.openExternal(state?.url ?? url)}>
                             <Icon icon={ExternalLink} size={16} />

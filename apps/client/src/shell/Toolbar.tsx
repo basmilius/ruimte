@@ -10,6 +10,7 @@ import { SidebarToggle } from '@/shell/SidebarToggle';
 import { useProject } from '@/state/project';
 import { useServer } from '@/state/server';
 import { useUi } from '@/state/ui';
+import { BTN_GROUP } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
@@ -57,7 +58,7 @@ export function Toolbar() {
             {/* The palette keeps the toolbar's right end, so with no panel beside it the search icon
                 is what sits under the window controls on Windows and Linux and the inset lands here.
                 An open panel reaches the window's edge instead and its header takes the inset over. */}
-            <div className={clsx('btn-group', !panel.open && !previewOpen && hasOverlayControls() && 'toolbar-overlay-inset')}>
+            <div className={clsx(BTN_GROUP, !panel.open && !previewOpen && hasOverlayControls() && 'toolbar-overlay-inset')}>
                 <Tooltip label="Search" kbd="⌘K" name>
                     <button className="icon-btn" onClick={() => useUi.getState().setPaletteOpen(true)}>
                         <Icon icon={Search} size={16} />

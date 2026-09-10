@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Select as BaseSelect } from '@base-ui-components/react/select';
 import clsx from 'clsx';
 import { Check, ChevronDown } from 'lucide-react';
+import { MENU_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 
 export interface SelectItem<T extends string> {
@@ -101,13 +102,13 @@ export function Select<T extends string>({
                 </BaseSelect.Icon>
             </BaseSelect.Trigger>
             <BaseSelect.Portal>
-                <BaseSelect.Positioner className="popup-layer" side="bottom" align={align} sideOffset={6} alignItemWithTrigger={false}>
+                <BaseSelect.Positioner className="z-[var(--z-popup)]" side="bottom" align={align} sideOffset={6} alignItemWithTrigger={false}>
                     <BaseSelect.Popup className="menu-popup">
                         <BaseSelect.List className="max-h-80 overflow-auto">
                             {groups
                                 ? groups.map((group) => (
                                       <BaseSelect.Group key={group.label}>
-                                          <BaseSelect.GroupLabel className="menu-label">{group.label}</BaseSelect.GroupLabel>
+                                          <BaseSelect.GroupLabel className={MENU_LABEL}>{group.label}</BaseSelect.GroupLabel>
                                           {group.items.map((item) => (
                                               <Row key={item.value} item={item} />
                                           ))}

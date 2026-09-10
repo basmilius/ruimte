@@ -1,5 +1,7 @@
 import type { ReactElement, ReactNode } from 'react';
+import clsx from 'clsx';
 import { Tooltip as BaseTooltip } from '@base-ui-components/react/tooltip';
+import { TOOLTIP_KBD } from '@/ui/classes';
 
 type Side = 'top' | 'bottom' | 'left' | 'right';
 
@@ -30,9 +32,11 @@ export function Tooltip({ label, kbd, side = 'top', name = false, children }: To
             <BaseTooltip.Portal>
                 <BaseTooltip.Positioner side={side} sideOffset={6} className="tooltip-positioner">
                     <BaseTooltip.Popup className="tooltip-popup">
-                        <BaseTooltip.Viewport className="tooltip-viewport">
+                        <BaseTooltip.Viewport className="px-[9px] py-[5px] whitespace-nowrap">
                             <span>{label}</span>
-                            {kbd && <kbd className="tooltip-kbd">{kbd}</kbd>}
+                            {/* The viewport wraps its children in a div of its own, so the 8px
+                                between the label and the chord has to sit on the chord itself. */}
+                            {kbd && <kbd className={clsx(TOOLTIP_KBD, 'ml-2')}>{kbd}</kbd>}
                         </BaseTooltip.Viewport>
                     </BaseTooltip.Popup>
                 </BaseTooltip.Positioner>

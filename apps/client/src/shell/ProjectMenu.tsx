@@ -12,6 +12,7 @@ import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
 import { desktop } from '@/desktop/bridge';
 import { Button } from '@/ui/Button';
+import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 
 type DialogKind = { kind: 'new' } | { kind: 'rename' } | { kind: 'delete'; projectId: string; name: string; folder: string | null } | null;
@@ -84,9 +85,9 @@ export function ProjectMenu() {
                     <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
                 </Menu.Trigger>
                 <Menu.Portal>
-                    <Menu.Positioner className="popup-layer" side="bottom" sideOffset={6} align="start">
+                    <Menu.Positioner className="z-[var(--z-popup)]" side="bottom" sideOffset={6} align="start">
                         <Menu.Popup className="menu-popup min-w-60">
-                            {projects.length > 0 && <div className="menu-label">Projects</div>}
+                            {projects.length > 0 && <div className={MENU_LABEL}>Projects</div>}
                             {projects.map((project) => (
                                 <Menu.Item
                                     key={project.projectId}
@@ -110,7 +111,7 @@ export function ProjectMenu() {
                                     )}
                                 </Menu.Item>
                             ))}
-                            {projects.length > 0 && <Menu.Separator className="menu-separator" />}
+                            {projects.length > 0 && <Menu.Separator className={MENU_SEPARATOR} />}
                             <Menu.Item className="menu-item" onClick={() => openDialog({ kind: 'new' })}>
                                 <Icon icon={Plus} size={14} /> New canvas
                             </Menu.Item>
@@ -119,7 +120,7 @@ export function ProjectMenu() {
                             </Menu.Item>
                             {current && (
                                 <>
-                                    <Menu.Separator className="menu-separator" />
+                                    <Menu.Separator className={MENU_SEPARATOR} />
                                     {current.folder && (
                                         <Menu.Item
                                             className="menu-item"
@@ -133,11 +134,11 @@ export function ProjectMenu() {
                                     </Menu.Item>
                                     <Menu.Item className="menu-item" onClick={() => setIconOpen(true)}>
                                         <Icon icon={Image} size={14} /> Set icon
-                                        {current.nameSource !== 'chosen' && <span className="menu-hint">Name from the folder</span>}
+                                        {current.nameSource !== 'chosen' && <span className={MENU_HINT}>Name from the folder</span>}
                                     </Menu.Item>
                                     <Menu.Item className="menu-item" onClick={() => void projectClient.closeProject()}>
                                         <Icon icon={X} size={14} /> Close project
-                                        <span className="menu-hint">Sessions keep running</span>
+                                        <span className={MENU_HINT}>Sessions keep running</span>
                                     </Menu.Item>
                                     <Menu.Item
                                         className="menu-item text-status-error"

@@ -7,6 +7,7 @@ import { AGENT_TARGET_LABEL, type AgentTarget } from '@/agents/nodes';
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
 import { useChatPreferences } from '@/chat/preferences';
 import { useProviders } from '@/state/providers';
+import { MENU_HINT } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 
 /* A nested menu, in the popup of the dock as well as in the canvas's context menu: the parts are the same. */
@@ -18,7 +19,7 @@ function Submenu({ label, icon, children }: { label: string; icon: ReactNode; ch
                 <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
             </Menu.SubmenuTrigger>
             <Menu.Portal>
-                <Menu.Positioner className="popup-layer" sideOffset={4} alignOffset={-4}>
+                <Menu.Positioner className="z-[var(--z-popup)]" sideOffset={4} alignOffset={-4}>
                     <Menu.Popup className="menu-popup min-w-48">{children}</Menu.Popup>
                 </Menu.Positioner>
             </Menu.Portal>
@@ -51,7 +52,7 @@ function AgentRows({ target, onPick }: { target: AgentTarget; onPick(target: Age
                 <Menu.Item key={provider.kind} className="menu-item" disabled={!provider.installed} onClick={() => onPick(target, provider)}>
                     <AgentIcon kind={provider.kind} />
                     {provider.name}
-                    <span className="menu-hint">{!provider.installed ? 'Not installed' : target === 'terminal' ? modeLabel : null}</span>
+                    <span className={MENU_HINT}>{!provider.installed ? 'Not installed' : target === 'terminal' ? modeLabel : null}</span>
                 </Menu.Item>
             ))}
         </>
