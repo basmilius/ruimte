@@ -1,6 +1,17 @@
 import { describe, expect, test } from 'bun:test';
 import type { FsEntry } from '@ruimte/contracts';
-import { LOADING_NAME, absoluteOf, buildTreeInput, compareRows, dirnameOf, isDirectoryPath, newlyExpanded, relativeTo, treePathOf } from './files-tree.ts';
+import {
+    LOADING_NAME,
+    absoluteOf,
+    buildTreeInput,
+    compareRows,
+    dirnameOf,
+    isDirectoryPath,
+    mergeExpanded,
+    newlyExpanded,
+    relativeTo,
+    treePathOf
+} from './files-tree.ts';
 
 const ROOT = '/repo';
 
@@ -67,6 +78,18 @@ describe('newlyExpanded', () => {
     test('names only the directories that opened since the last look', () => {
         expect(newlyExpanded(new Set(['src/']), new Set(['src/', 'docs/']))).toEqual(['docs/']);
         expect(newlyExpanded(new Set(['src/']), new Set())).toEqual([]);
+    });
+});
+
+describe('mergeExpanded', () => {
+    test('a directory the tree knows follows the tree, one it has not heard of keeps what was remembered', () => {
+        const remembered = new Set(['src/', 'src/state/', 'docs/']);
+        const known = new Set(['src/', 'docs/']);
+        expect([...mergeExpanded(remembered, new Set(['src/']), known)]).toEqual(['src/', 'src/state/']);
+    });
+
+    test('a directory that opened for the first time is in the result', () => {
+        expect([...mergeExpanded(new Set(), new Set(['docs/']), new Set(['docs/']))]).toEqual(['docs/']);
     });
 });
 

@@ -2,15 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { PANELS } from '@/shell/panels';
 import { FilesPanel } from '@/shell/panels/FilesPanel';
-import { useColumnResize } from '@/shell/useColumnResize';
+import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
 import { useUi, type PanelKind } from '@/state/ui';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
-const STORAGE_KEY = 'ruimte.panel.width';
 const DEFAULT_WIDTH = 540;
-const MIN_WIDTH = 360;
+const MIN_WIDTH = 240;
 // A drag stops here instead of squeezing the canvas away.
 const MIN_CANVAS_WIDTH = 360;
 // How long the open and close motion takes; the same number as the class below.
@@ -35,16 +34,19 @@ function PanelBody({ kind, label }: { kind: PanelKind; label: string }) {
    while the panel slides in or out. */
 export function Panel() {
     const panel = useUi((s) => s.panel);
+    const stored = useUi((s) => s.panelWidth);
     /* Closed and done animating. Until then the contents stay mounted, so a close plays out. */
     const [settled, setSettled] = useState(!panel.open);
     const present = panel.open || !settled;
     const ref = useRef<HTMLElement>(null);
-    const { width, startResize } = useColumnResize(ref, {
-        storageKey: STORAGE_KEY,
-        defaultWidth: DEFAULT_WIDTH,
-        min: MIN_WIDTH,
+    const bounds = { min: MIN_WIDTH, max: () => window.innerWidth - MIN_CANVAS_WIDTH };
+    // The project may have been on a wider window than this one, so its width is clamped on the way in.
+    const width = clampColumnWidth(bounds, stored ?? DEFAULT_WIDTH);
+    const { startResize } = useColumnResize(ref, {
+        ...bounds,
+        width,
         from: 'right',
-        max: () => window.innerWidth - MIN_CANVAS_WIDTH
+        onWidth: (next) => useUi.getState().setPanelWidth(next)
     });
 
     useEffect(() => {

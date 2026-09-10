@@ -101,9 +101,20 @@ describe('ProjectStore', () => {
     test('a canvas without a folder lives under the app data dir, and local state stays out of the shared file', async () => {
         const opened = await store.openProject({ name: 'scratch' });
         expect(opened.summary.folder).toBeNull();
-        await store.saveLocal(opened.summary.projectId, { camera: { x: 1, y: 2, zoom: 0.5 }, focusedNodeId: 'n1' });
+        const panels = {
+            panel: { open: true, kind: 'files' as const },
+            preview: { open: true },
+            panelWidth: 480,
+            tabs: [{ path: '/scratch/notes.md', pinned: true }],
+            activeTab: '/scratch/notes.md',
+            expandedDirs: ['src/']
+        };
+        await store.saveLocal(opened.summary.projectId, { camera: { x: 1, y: 2, zoom: 0.5 }, focusedNodeId: 'n1', panels });
         const again = await store.openProject({ projectId: opened.summary.projectId });
-        expect(again.local).toEqual({ camera: { x: 1, y: 2, zoom: 0.5 }, focusedNodeId: 'n1' });
+        expect(again.local).toEqual({ camera: { x: 1, y: 2, zoom: 0.5 }, focusedNodeId: 'n1', panels });
+        // A local file from before the panels lived in it still opens, on the defaults.
+        await store.saveLocal(opened.summary.projectId, { camera: null, focusedNodeId: null });
+        expect((await store.openProject({ projectId: opened.summary.projectId })).local.panels).toBeUndefined();
         const files = await readdir(join(home, 'projects'));
         expect(files).toContain(`${opened.summary.projectId}.local.json`);
 

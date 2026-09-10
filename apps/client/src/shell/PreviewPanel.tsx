@@ -1,15 +1,14 @@
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { X } from 'lucide-react';
 import { FileTabs } from '@/shell/panels/FileTabs';
 import { FileViewer } from '@/shell/panels/FileViewer';
-import { hasStoredWidth, useColumnResize } from '@/shell/useColumnResize';
+import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
 import { useCanvas } from '@/state/canvas';
 import { useFiles } from '@/state/files';
 import { useUi } from '@/state/ui';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
-const STORAGE_KEY = 'ruimte.preview.width';
 const MIN_WIDTH = 360;
 // Half a wide canvas is more room than a file needs, so the width it opens with stops here.
 const MAX_DEFAULT_WIDTH = 720;
@@ -30,25 +29,31 @@ const halfOfCanvas = (): number => {
    width, so its contents do not reflow while it slides in or out. */
 export function PreviewPanel() {
     const open = useUi((s) => s.preview.open);
+    const stored = useUi((s) => s.previewWidth);
     /* Closed and done animating. Until then the contents stay mounted, so a close plays out. */
     const [settled, setSettled] = useState(!open);
     const present = open || !settled;
     const ref = useRef<HTMLElement>(null);
-    const { width, setWidth, startResize } = useColumnResize(ref, {
-        storageKey: STORAGE_KEY,
-        defaultWidth: MAX_DEFAULT_WIDTH,
-        min: MIN_WIDTH,
-        from: 'right',
-        max: () => window.innerWidth - MIN_CANVAS_WIDTH
-    });
-
-    /* Every open takes half of what the canvas has, until the person drags the edge themselves:
-       from then on the width in storage is theirs and the rule stays out of it. */
-    useLayoutEffect(() => {
-        if (open && !hasStoredWidth(STORAGE_KEY)) {
-            setWidth(halfOfCanvas());
+    /* What a project with no width of its own gets, taken the moment the preview opens: half of
+       what the canvas has right then. From the first drag on, the width the project remembers is
+       the person's and this stays out of it. */
+    const [appWidth, setAppWidth] = useState(halfOfCanvas);
+    const [wasOpen, setWasOpen] = useState(open);
+    if (open !== wasOpen) {
+        setWasOpen(open);
+        if (open) {
+            setAppWidth(halfOfCanvas());
         }
-    }, [open, setWidth]);
+    }
+    const bounds = { min: MIN_WIDTH, max: () => window.innerWidth - MIN_CANVAS_WIDTH };
+    // The project may have been on a wider window than this one, so its width is clamped on the way in.
+    const width = clampColumnWidth(bounds, stored ?? appWidth);
+    const { startResize } = useColumnResize(ref, {
+        ...bounds,
+        width,
+        from: 'right',
+        onWidth: (next) => useUi.getState().setPreviewWidth(next)
+    });
 
     useEffect(() => {
         if (open || settled) {

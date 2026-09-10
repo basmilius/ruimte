@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 import { useUi } from '@/state/ui';
 
-const STORAGE_PREFIX = 'ruimte.files.tabs.';
-
 export interface FileTab {
     /* Absolute on the daemon's machine, the same path `fs.reveal` and the viewer take. */
     path: string;
@@ -55,77 +53,52 @@ export const pinTab = (state: TabState, path: string, pinned: boolean): TabState
     active: state.active
 });
 
-const read = (projectId: string): TabState => {
-    try {
-        const raw = sessionStorage.getItem(`${STORAGE_PREFIX}${projectId}`);
-        const stored = raw ? (JSON.parse(raw) as Partial<TabState>) : null;
-        const tabs = (stored?.tabs ?? []).filter((tab): tab is FileTab => typeof tab?.path === 'string');
-        const active = tabs.some((tab) => tab.path === stored?.active) ? (stored?.active ?? null) : (tabs[0]?.path ?? null);
-        return { tabs, active };
-    } catch {
-        return { tabs: [], active: null };
-    }
-};
-
-const persist = (projectId: string | null, state: TabState): void => {
-    if (!projectId) {
-        return;
-    }
-    try {
-        sessionStorage.setItem(`${STORAGE_PREFIX}${projectId}`, JSON.stringify(state));
-    } catch {
-        // Storage that refuses keeps the tabs for this view only.
-    }
-};
-
 interface FilesStore extends TabState {
-    /* Whose tabs these are; a project that was never opened this session starts empty. */
+    /* Whose tabs these are; a canvas that is not open has none. */
     projectId: string | null;
-    load(projectId: string | null): void;
+    /* The directories the tree has open, the way the tree names one: relative, POSIX, trailing slash. */
+    expandedDirs: string[];
+    load(projectId: string | null, state: TabState & { expandedDirs: string[] }): void;
     open(path: string, limit: number): void;
     close(path: string): void;
     setPinned(path: string, pinned: boolean): void;
     activate(path: string): void;
+    setExpandedDirs(dirs: string[]): void;
 }
 
 /*
- * Which files the viewer has open. Machine state: it lives in `sessionStorage` per project, never in
- * `project.json`, so a reload keeps the tabs and another person opening the same canvas gets none.
+ * Which files the viewer has open and what the tree has unfolded. Machine state: it travels with
+ * the project's local file on this machine (`project/panels-port.ts`), never in `project.json`, so
+ * another person opening the same canvas gets none of it.
  */
 export const useFiles = create<FilesStore>((set, get) => ({
     projectId: null,
     tabs: [],
     active: null,
-    load(projectId) {
-        if (get().projectId === projectId) {
-            return;
-        }
-        set({ projectId, ...(projectId ? read(projectId) : { tabs: [], active: null }) });
+    expandedDirs: [],
+    load(projectId, state) {
+        set({ projectId, tabs: state.tabs, active: state.active, expandedDirs: state.expandedDirs });
     },
     /* A tab and the panel that draws it are one thing to the person opening a file: the first open
        brings the preview up and the last close takes it away again. */
     open(path, limit) {
-        const next = openTab(get(), path, limit);
-        persist(get().projectId, next);
-        set(next);
+        set(openTab(get(), path, limit));
         useUi.getState().setPreviewOpen(true);
     },
     close(path) {
         const next = closeTab(get(), path);
-        persist(get().projectId, next);
         set(next);
         if (next.tabs.length === 0) {
             useUi.getState().setPreviewOpen(false);
         }
     },
     setPinned(path, pinned) {
-        const next = pinTab(get(), path, pinned);
-        persist(get().projectId, next);
-        set(next);
+        set(pinTab(get(), path, pinned));
     },
     activate(path) {
-        const next: TabState = { tabs: get().tabs, active: path };
-        persist(get().projectId, next);
         set({ active: path });
+    },
+    setExpandedDirs(dirs) {
+        set({ expandedDirs: dirs });
     }
 }));
