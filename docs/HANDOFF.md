@@ -151,9 +151,45 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   width in 200 ms over a fixed inner column; a resize drag sets `[data-resizing]`, which turns the
   transition off, and the contents unmount when the closing transition ends (immediately under
   reduced motion). Resizable from its left edge, min 360 and default 540 in localStorage
-  (`ruimte.panel.width`). Cmd+Alt+B toggles the panel that was open last; the palette keeps
-  "Toggle files panel" and "Toggle git panel". The file browser and the git panel themselves are
-  the next phase.
+  (`ruimte.panel.width`), through `shell/useColumnResize.ts`, the one handle implementation the
+  panel and the Files split share. Which panel is up is in localStorage as well (`ruimte.panel`,
+  the kind for an open one and `closed:<kind>` for the other), so a reload comes back to the panel
+  that was there. Cmd+Alt+B toggles the panel that was open last; the palette keeps "Toggle files
+  panel" and "Toggle git panel". The Git panel is still the placeholder.
+
+- **Files panel**: `shell/panels/FilesPanel.tsx`, the tree on `@pierre/trees` (pinned to
+  `1.0.0-beta.6`), which renders itself with Preact inside a shadow root and takes the app's
+  tokens through the `--trees-*-override` variables on its host (`.files-tree` in `styles.css`).
+  The model is a flat list of paths relative to the project folder, POSIX, a directory with a
+  trailing slash. Directories load one at a time: `fs.list` on the folder, and a directory nobody
+  has opened yet carries one hidden placeholder row so its chevron is there. The library reports
+  an expansion nowhere, so the panel subscribes to the model and diffs `isExpanded()` over the
+  directories it knows; a directory that just opened and has never been listed is the one the
+  daemon hears about. `buildTreeInput` and the path helpers are pure and tested
+  (`shell/panels/files-tree.ts`). Hidden entries are always fetched and filtered in the client, so
+  the eye button costs no request; what git ignores goes to the tree's git lane as `ignored` and
+  dims. A single click on a directory toggles it and on a file selects it; double-click and Enter
+  open it in the viewer. The filter field runs `fs.search` (150 ms, 200 results) into a second
+  model, so a flat result list and lazy loading never fight. Right-click is a Base UI
+  `ContextMenu` of the app's own (Open, Reveal in Finder with the daemon's file manager name, Copy
+  path, Copy relative path): the library's own context menu slots a node into its shadow root, and
+  the app's menu style, layer and portal are worth more than that hook. A row drags with
+  `application/x-ruimte-mention` next to the library's own `text/plain`, and the chat composer's
+  drop zone takes it: the paths land as `@path` at the end of the prompt and join the draft's
+  mentions. While the panel is open the daemon watches the folder (`fs.watch`) and `fs.changed`
+  re-lists only the directories the client has loaded.
+
+- **File viewer**: `shell/panels/FileViewer.tsx` is the second column, mounted while a file is
+  open. A 32px tab strip lines up with the tree's tool row: a Lucide glyph by extension, the name,
+  a close button and a reserved dot for a future dirty mark, unpinned tabs in italic the way a
+  preview tab reads. `state/files.ts` holds them (tested pure helpers): past `filesTabLimit` the
+  oldest unpinned tab closes, never the active one, double-click pins, and the tabs live in
+  `sessionStorage` per project, so a reload keeps them and another canvas starts empty. The split
+  is resizable, tree width in `ruimte.files.tree` (default 280, min 200); the first open file
+  widens the panel to make room for the viewer and the last close hands the width back, unless the
+  person dragged the panel's own edge in between. Drawing a file is the next step: the body is an
+  `EmptyState` naming the file behind a `FileRenderer` registry (`shell/panels/renderers.tsx`), so
+  shiki, markdown and images drop in without the viewer changing, once `fs.read` exists.
 
 - **Settings, the way T3 Code lays them out** (studied, then written from scratch): one
   dialog with a section list on the left (Base UI Tabs, arrow keys move, `activateOnFocus`)
@@ -167,7 +203,9 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   Sections: Appearance (theme, accent, interface font size, terminal font and font size; the
   sizes live in `state/settings.ts`, the interface one sets the root font size and every
   terminal refits on a change of its own), Canvas (zoom presets, locks and
-  layouts, all acting on the open canvas, nothing stored), Agents (the remembered defaults for
+  layouts, all acting on the open canvas, nothing stored), Files (`filesTabLimit`, how many files
+  the viewer keeps open, 1 to 20 and 5 by default, and `filesShowHidden`, the same value the
+  panel's eye button writes), Agents (the remembered defaults for
   a new chat from `chat/preferences.ts`, now a zustand store the composer and the dialog
   share: one model row per provider with that model's knobs under it, the permissions a chat
   starts in and the mode a terminal agent starts in, plus the providers the daemon found),
