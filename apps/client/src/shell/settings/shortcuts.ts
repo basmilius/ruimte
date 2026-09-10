@@ -36,6 +36,10 @@ export const CANVAS_SHORTCUTS: readonly ShortcutGroup[] = [
         ]
     },
     {
+        title: 'Panels',
+        shortcuts: [{ keys: '⌘ ⌥ B', label: 'Toggle the panel that was open last' }]
+    },
+    {
         title: 'Nodes',
         shortcuts: [
             { keys: 'Tab', label: 'Move focus to the next node' },

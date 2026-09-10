@@ -309,6 +309,10 @@ body {
 .term-host .xterm { height: 100%; }
 .term-host .xterm .xterm-viewport { background-color: transparent !important; }
 
+/* A resize drag has to follow the pointer; the width transition that opens and closes the panel
+   would make it lag a frame behind, so the drag turns it off for as long as it runs. */
+.panel-shell[data-resizing] { transition: none; }
+
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition: none !important; animation: none !important; }
 }
