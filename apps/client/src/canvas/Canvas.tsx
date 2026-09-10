@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
+import { Plus } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { GRID, intersects, snapToGrid, toWorld, type Point, type Rect } from '@/canvas/math';
 import { useCanvas, type NodeKind } from '@/state/canvas';
@@ -11,6 +12,9 @@ import { EdgeLayer } from '@/canvas/EdgeLayer';
 import { NodeFrame } from '@/canvas/NodeFrame';
 import { TextElementView } from '@/canvas/TextElementView';
 import { WebviewLayer } from '@/canvas/WebviewLayer';
+import { Button } from '@/ui/Button';
+import { EmptyState } from '@/ui/EmptyState';
+import { Icon } from '@/ui/Icon';
 
 type Gesture =
     | { kind: 'pan'; last: Point }
@@ -586,6 +590,20 @@ export function Canvas() {
                     ))}
                     <WebviewLayer shield={activeGesture !== null} />
                 </div>
+                {renderOrder.length === 0 && textIds.length === 0 && (
+                    <div className="pointer-events-none absolute inset-0 grid place-items-center">
+                        <EmptyState
+                            className="pointer-events-auto"
+                            action={
+                                <Button variant="secondary" onClick={() => addNodeAtCenter('terminal')}>
+                                    <Icon icon={Plus} size={12} /> Add a terminal
+                                </Button>
+                            }
+                        >
+                            This canvas is empty. Right-click anywhere to add a node, or press ⌘K.
+                        </EmptyState>
+                    </div>
+                )}
                 {box && (
                     <div
                         className="pointer-events-none absolute rounded-sm border border-accent bg-accent/10"

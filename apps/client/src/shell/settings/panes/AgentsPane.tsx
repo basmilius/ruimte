@@ -10,7 +10,7 @@ import {
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Badge, Toggle } from '@/shell/settings/controls';
+import { Badge, Skeleton, Toggle } from '@/shell/settings/controls';
 import { useProviders } from '@/state/providers';
 import { Select, type SelectItem } from '@/ui/Select';
 
@@ -67,7 +67,11 @@ function ProviderModelRows({ provider, preferences }: { provider: ProviderInfo; 
         <>
             <SettingsRow
                 label={provider.name}
-                description="Provider default follows the CLI's own choice."
+                description={
+                    model
+                        ? `New chats and terminals on ${provider.name} start on ${model.name}${model.legacy ? ', a legacy model' : ''}.`
+                        : "Provider default follows the CLI's own choice."
+                }
                 control={
                     <Select
                         value={model?.slug ?? PROVIDER_DEFAULT}
@@ -102,12 +106,12 @@ export function AgentsPane() {
                 title="Defaults for new agents"
                 description="One model per CLI, the last one picked. The composer remembers what you pick there too; this is the same default."
             >
-                {withModels.length === 0 && (
-                    <SettingsRow
-                        muted
-                        label={loaded ? 'No agent CLI with a chat backend was found on the daemon.' : 'Waiting for the daemon to list its providers.'}
-                    />
-                )}
+                {withModels.length === 0 &&
+                    (loaded ? (
+                        <SettingsRow muted label="No agent CLI with a chat backend was found on the daemon." />
+                    ) : (
+                        <SettingsRow label={<Skeleton className="w-32" />} control={<Skeleton className="w-24" />} />
+                    ))}
                 {withModels.map((provider) => (
                     <ProviderModelRows key={provider.kind} provider={provider} preferences={preferences} />
                 ))}
@@ -138,7 +142,15 @@ export function AgentsPane() {
                 />
             </SettingsSection>
             <SettingsSection title="Providers" description="What the daemon found on its PATH. Install a CLI and restart the daemon to add one.">
-                {providers.length === 0 && <SettingsRow muted label={loaded ? 'No providers reported' : 'Waiting for the daemon'} />}
+                {providers.length === 0 &&
+                    (loaded ? (
+                        <SettingsRow muted label="No providers reported" />
+                    ) : (
+                        <>
+                            <SettingsRow label={<Skeleton className="w-28" />} control={<Skeleton className="w-16" />} />
+                            <SettingsRow label={<Skeleton className="w-36" />} control={<Skeleton className="w-16" />} />
+                        </>
+                    ))}
                 {providers.map((provider) => (
                     <SettingsRow
                         key={provider.kind}

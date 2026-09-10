@@ -27,6 +27,7 @@ export interface ProjectSink {
     setDirty(dirty: boolean): void;
     setConflict(conflict: ProjectDocument | null): void;
     setError(error: string | null): void;
+    setSwitching(switching: boolean): void;
     getState(): { current: ProjectSummary | null; rev: number; dirty: boolean; conflict: ProjectDocument | null };
 }
 
@@ -180,16 +181,21 @@ export class ProjectClient {
     }
 
     private async open(payload: { projectId?: string; folder?: string; name?: string }): Promise<void> {
-        await this.flush();
-        const previous = this.sink.getState().current;
-        if (previous && previous.projectId !== payload.projectId) {
-            await this.transport.request('project.close', { projectId: previous.projectId }).catch(() => undefined);
+        this.sink.setSwitching(true);
+        try {
+            await this.flush();
+            const previous = this.sink.getState().current;
+            if (previous && previous.projectId !== payload.projectId) {
+                await this.transport.request('project.close', { projectId: previous.projectId }).catch(() => undefined);
+            }
+            const result = await this.transport.request('project.open', payload);
+            this.canvas.getState().loadDocument(result.document, result.local);
+            this.sink.setCurrent(result.summary, result.document.rev);
+            this.storage?.setItem(LAST_PROJECT_KEY, result.summary.projectId);
+            await this.refreshList();
+        } finally {
+            this.sink.setSwitching(false);
         }
-        const result = await this.transport.request('project.open', payload);
-        this.canvas.getState().loadDocument(result.document, result.local);
-        this.sink.setCurrent(result.summary, result.document.rev);
-        this.storage?.setItem(LAST_PROJECT_KEY, result.summary.projectId);
-        await this.refreshList();
     }
 
     private onCanvas(state: ReturnType<CanvasAccess['getState']>, previous: ReturnType<CanvasAccess['getState']>): void {

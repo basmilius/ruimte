@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, CircleAlert, Code, ExternalLink, LoaderCircle, L
 import { browserRegistry, useBrowser } from '@/browser/registry';
 import { desktop, isDesktop } from '@/desktop/bridge';
 import { useCanvas } from '@/state/canvas';
+import { NodeNotice } from '@/canvas/nodes/NodeNotice';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 
@@ -51,19 +52,19 @@ export function BrowserNode({ id, focused }: { id: string; focused: boolean }) {
 
     return (
         <div className="flex h-full flex-col bg-surface">
-            <div className="flex h-[37px] shrink-0 items-center gap-2 border-b border-border bg-surface-raised px-1">
+            <div className="relative flex h-[37px] shrink-0 items-center gap-2 border-b border-border bg-surface-raised px-1">
                 <div className="btn-group">
-                    <Tooltip label="Back">
+                    <Tooltip label="Back" name>
                         <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!state?.canGoBack} onClick={() => browserRegistry.back(id)}>
                             <Icon icon={ArrowLeft} size={16} />
                         </button>
                     </Tooltip>
-                    <Tooltip label="Forward">
+                    <Tooltip label="Forward" name>
                         <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!state?.canGoForward} onClick={() => browserRegistry.forward(id)}>
                             <Icon icon={ArrowRight} size={16} />
                         </button>
                     </Tooltip>
-                    <Tooltip label="Reload" kbd="⇧ skips the cache">
+                    <Tooltip label="Reload" kbd="⇧ skips the cache" name>
                         <button className="icon-btn h-7 w-7" onClick={(e) => browserRegistry.reload(id, e.shiftKey)}>
                             {state?.loading ? <Icon icon={LoaderCircle} size={16} className="animate-spin" /> : <Icon icon={RotateCw} size={16} />}
                         </button>
@@ -78,6 +79,7 @@ export function BrowserNode({ id, focused }: { id: string; focused: boolean }) {
                     {secure && <Icon icon={Lock} size={12} className="shrink-0" />}
                     <input
                         className="grow bg-transparent font-mono text-code text-text outline-none placeholder:text-text-faint"
+                        aria-label="Address"
                         placeholder="Enter an address"
                         value={url}
                         spellCheck={false}
@@ -99,27 +101,26 @@ export function BrowserNode({ id, focused }: { id: string; focused: boolean }) {
                     />
                 </div>
                 <div className="btn-group">
-                    <Tooltip label="Open in the system browser">
+                    <Tooltip label="Open in the system browser" name>
                         <button className="icon-btn h-7 w-7" onClick={() => void desktop()?.openExternal(state?.url ?? url)}>
                             <Icon icon={ExternalLink} size={16} />
                         </button>
                     </Tooltip>
-                    <Tooltip label="Inspect">
+                    <Tooltip label="Inspect" name>
                         <button className="icon-btn h-7 w-7" onClick={() => browserRegistry.inspect(id)}>
                             <Icon icon={Code} size={16} />
                         </button>
                     </Tooltip>
                 </div>
+                {/* The spinning reload glyph says "busy"; the line under the address says how far. */}
+                {state?.loading && <div className="progress-line absolute inset-x-0 bottom-0" role="progressbar" aria-label="Loading the page" />}
             </div>
             <div className="relative grow bg-surface-sunken">
                 {state?.error && (
-                    <div className="absolute inset-x-3 top-3 z-10 flex items-center gap-2 rounded-lg border border-border bg-surface-raised/95 px-3 py-2 text-xs text-status-error">
-                        <Icon icon={CircleAlert} size={12} className="shrink-0" />
-                        <span className="grow select-text">The page did not load: {state.error}</span>
-                        <button className="icon-btn h-7 w-7 shrink-0" onClick={() => browserRegistry.reload(id, true)}>
-                            <Icon icon={RotateCw} size={16} />
-                        </button>
-                    </div>
+                    <NodeNotice tone="error" retryLabel="Reload the page" onRetry={() => browserRegistry.reload(id, true)}>
+                        <Icon icon={CircleAlert} size={12} className="mr-1.5" />
+                        The page did not load: {state.error}
+                    </NodeNotice>
                 )}
             </div>
         </div>

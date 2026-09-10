@@ -1,5 +1,4 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
-import { RotateCw } from 'lucide-react';
 import type { AgentKind, ModelSelection } from '@ruimte/contracts';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { defaultProvider, readChatPreferences, selectionFor } from '@/chat/preferences';
@@ -9,8 +8,7 @@ import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useProject } from '@/state/project';
 import { useTransportStatus } from '@/transport/status';
-import { Tooltip } from '@/ui/Tooltip';
-import { Icon } from '@/ui/Icon';
+import { NodeNotice } from '@/canvas/nodes/NodeNotice';
 
 const TITLE_LIMIT = 48;
 const DEFAULT_TITLE = 'New chat';
@@ -67,26 +65,17 @@ export function ChatNode({ id, focused }: { id: string; focused: boolean }) {
 
     return (
         <div className="relative flex h-full flex-col bg-surface">
-            {status !== 'open' && (
-                <div className="pointer-events-none absolute inset-x-3 top-3 z-10 rounded-lg border border-border bg-surface-raised/90 px-3 py-2 text-xs text-text-muted">
-                    {status === 'closed' ? 'Not connected to the Ruimte server.' : 'Connecting to the Ruimte server'}
-                </div>
-            )}
+            {status !== 'open' && <NodeNotice>{status === 'closed' ? 'Not connected to the Ruimte server.' : 'Connecting to the Ruimte server'}</NodeNotice>}
             {failure && (
-                <div className="absolute inset-x-3 top-3 z-10 flex items-center gap-3 rounded-lg border border-border bg-surface-raised/90 px-3 py-2 text-xs text-status-error">
-                    <span className="grow">{failure}</span>
-                    <Tooltip label="Try again">
-                        <button
-                            className="icon-btn h-7 w-7 shrink-0"
-                            onClick={() => {
-                                setFailure(null);
-                                setGeneration((g) => g + 1);
-                            }}
-                        >
-                            <Icon icon={RotateCw} size={16} />
-                        </button>
-                    </Tooltip>
-                </div>
+                <NodeNotice
+                    tone="error"
+                    onRetry={() => {
+                        setFailure(null);
+                        setGeneration((g) => g + 1);
+                    }}
+                >
+                    {failure}
+                </NodeNotice>
             )}
             <Suspense fallback={<div className="grow" />}>
                 <DiffPool>
