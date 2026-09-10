@@ -58,6 +58,14 @@ export const clearPathCache = (): void => cache.clear();
 export const fontOfElement = (element: DrawingElement & { kind: 'text' }, fonts: Record<DrawingFont, string>): string =>
     `${element.size}px ${fonts[fontOf(element.font)]}`;
 
+let scratch: CanvasRenderingContext2D | null = null;
+
+/* The box a text needs, measured off screen: what a text element takes as its width and height. */
+export const textSize = (element: DrawingElement & { kind: 'text' }, fonts: Record<DrawingFont, string>): { w: number; h: number } => {
+    scratch ??= document.createElement('canvas').getContext('2d');
+    return scratch ? measureText(scratch, element, fonts) : { w: element.w, h: element.h };
+};
+
 /* The box a text needs for the size it is set in; the caller decides what to do with it. */
 export const measureText = (
     ctx: CanvasRenderingContext2D,
