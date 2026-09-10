@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { faChevronRight, faCodeCompare, faXmark } from '@fortawesome/pro-regular-svg-icons';
+import { ChevronRight, FileDiff, X } from 'lucide-react';
 import type { ChatCheckpointDiff, ChatCheckpointFile, ChatFileChange, ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
 import { chatClient } from '@/chat';
 import { fileChanges, formatElapsed, liveOutput, toolStartedAt, toolSummary, unifiedChanges, type FileChange } from '@/chat/logic/tools';
@@ -50,8 +50,8 @@ function ToggleLine({
             {detail && <span className="min-w-0 truncate font-mono text-text-faint">{detail}</span>}
             <span className="grow" />
             {trailing}
-            {failed && <Icon icon={faXmark} size={12} className="shrink-0" />}
-            <Icon icon={faChevronRight} size={12} className={clsx('shrink-0 text-text-faint transition-transform', open && 'rotate-90')} />
+            {failed && <Icon icon={X} size={12} className="shrink-0" />}
+            <Icon icon={ChevronRight} size={12} className={clsx('shrink-0 text-text-faint transition-transform', open && 'rotate-90')} />
         </button>
     );
 }
@@ -171,7 +171,7 @@ export function TurnFoldRow({ turn, label, expanded, onToggle }: { turn: ChatTur
                 )}
                 onClick={onToggle}
             >
-                <Icon icon={faChevronRight} size={12} className={clsx('transition-transform', expanded && 'rotate-90')} />
+                <Icon icon={ChevronRight} size={12} className={clsx('transition-transform', expanded && 'rotate-90')} />
                 {label}
             </button>
         </div>
@@ -235,7 +235,7 @@ export function ChangedFilesRow({
         return (
             <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface-raised">
                 <div className="flex items-center gap-2 px-3 py-2 text-xs text-text-muted">
-                    <Icon icon={faCodeCompare} size={12} />
+                    <Icon icon={FileDiff} size={12} />
                     <span className="font-medium text-text">
                         {checkpointDiff.files.length} changed file{checkpointDiff.files.length === 1 ? '' : 's'}
                     </span>
@@ -248,7 +248,7 @@ export function ChangedFilesRow({
                             onClick={() => setOpen((o) => ({ ...o, [file.path]: !o[file.path] }))}
                         >
                             <Icon
-                                icon={faChevronRight}
+                                icon={ChevronRight}
                                 size={12}
                                 className={clsx('shrink-0 text-text-faint transition-transform', open[file.path] && 'rotate-90')}
                             />
@@ -305,7 +305,7 @@ function ProviderChangedFiles({
     return (
         <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface-raised">
             <div className="flex items-center gap-2 px-3 py-2 text-xs text-text-muted">
-                <Icon icon={faCodeCompare} size={12} />
+                <Icon icon={FileDiff} size={12} />
                 <span className="font-medium text-text">
                     {byPath.size} changed file{byPath.size === 1 ? '' : 's'}
                 </span>
@@ -318,11 +318,7 @@ function ProviderChangedFiles({
                             className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-text-muted hover:bg-surface-sunken"
                             onClick={() => setOpen((o) => ({ ...o, [path]: !o[path] }))}
                         >
-                            <Icon
-                                icon={faChevronRight}
-                                size={12}
-                                className={clsx('shrink-0 text-text-faint transition-transform', open[path] && 'rotate-90')}
-                            />
+                            <Icon icon={ChevronRight} size={12} className={clsx('shrink-0 text-text-faint transition-transform', open[path] && 'rotate-90')} />
                             <span className="min-w-0 truncate font-mono text-text">{path}</span>
                             <span className="grow" />
                             <span className="text-text-faint">

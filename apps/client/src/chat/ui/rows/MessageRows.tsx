@@ -1,16 +1,6 @@
 import { useState } from 'react';
 import clsx from 'clsx';
-import {
-    faCheck,
-    faChevronDown,
-    faCircleExclamation,
-    faCircleInfo,
-    faCommentQuestion,
-    faCompress,
-    faCopy,
-    faTriangleExclamation,
-    faXmark
-} from '@fortawesome/pro-regular-svg-icons';
+import { Check, ChevronDown, CircleAlert, Copy, Info, MessageCircleQuestionMark, Minimize2, TriangleAlert, X } from 'lucide-react';
 import type { ChatApprovalItem, ChatAssistantItem, ChatQuestionItem, ChatUserItem } from '@ruimte/contracts';
 import { attachmentUrl } from '@/chat/attachments';
 import { tokenizeMentions } from '@/chat/mentions';
@@ -61,7 +51,7 @@ export function UserRow({ item }: { item: ChatUserItem }) {
                     </div>
                     {long && (
                         <button className="mt-1 flex items-center gap-1 text-xs text-text-muted hover:text-text" onClick={() => setOpen((o) => !o)}>
-                            <Icon icon={faChevronDown} size={12} className={clsx('transition-transform', open && 'rotate-180')} />{' '}
+                            <Icon icon={ChevronDown} size={12} className={clsx('transition-transform', open && 'rotate-180')} />{' '}
                             {open ? 'Show less' : 'Show all'}
                         </button>
                     )}
@@ -70,7 +60,7 @@ export function UserRow({ item }: { item: ChatUserItem }) {
             <div className="mt-1 flex h-5 items-center gap-1 pr-1 opacity-0 transition-opacity group-hover/user:opacity-100">
                 <Tooltip label="Copy">
                     <button className="icon-btn h-5 w-5 rounded" onClick={() => copy(item.text)}>
-                        <Icon icon={faCopy} size={14} />
+                        <Icon icon={Copy} size={14} />
                     </button>
                 </Tooltip>
             </div>
@@ -87,7 +77,7 @@ export function AssistantRow({ item, last }: { item: ChatAssistantItem; last: bo
                 <div className="mt-1 flex h-5 items-center gap-1 opacity-0 transition-opacity group-hover/assistant:opacity-100">
                     <Tooltip label="Copy">
                         <button className="icon-btn h-5 w-5 rounded" onClick={() => copy(item.text)}>
-                            <Icon icon={faCopy} size={14} />
+                            <Icon icon={Copy} size={14} />
                         </button>
                     </Tooltip>
                 </div>
@@ -97,9 +87,9 @@ export function AssistantRow({ item, last }: { item: ChatAssistantItem; last: bo
 }
 
 const NOTE_ICON = {
-    info: <Icon icon={faCircleInfo} size={12} />,
-    warning: <Icon icon={faTriangleExclamation} size={12} />,
-    error: <Icon icon={faCircleExclamation} size={12} />
+    info: <Icon icon={Info} size={12} />,
+    warning: <Icon icon={TriangleAlert} size={12} />,
+    error: <Icon icon={CircleAlert} size={12} />
 };
 
 export function NoteRow({ level, text }: { level: 'info' | 'warning' | 'error'; text: string }) {
@@ -122,7 +112,7 @@ export function CompactionRow({ preTokens }: { preTokens: number | null }) {
     return (
         <div className="flex items-center gap-3 pb-3 text-xs text-text-faint">
             <span className="h-px grow bg-border" />
-            <Icon icon={faCompress} size={12} />
+            <Icon icon={Minimize2} size={12} />
             <span>Context compacted{preTokens ? ` from ${formatTokens(preTokens)} tokens` : ''}</span>
             <span className="h-px grow bg-border" />
         </div>
@@ -130,10 +120,10 @@ export function CompactionRow({ preTokens }: { preTokens: number | null }) {
 }
 
 const DECISION: Record<Exclude<ChatApprovalItem['decision'], 'pending'>, { label: string; icon: React.ReactNode }> = {
-    allow: { label: 'Allowed', icon: <Icon icon={faCheck} size={12} /> },
-    'allow-always': { label: 'Always allowed', icon: <Icon icon={faCheck} size={12} /> },
-    deny: { label: 'Declined', icon: <Icon icon={faXmark} size={12} /> },
-    cancelled: { label: 'No longer needed', icon: <Icon icon={faXmark} size={12} /> }
+    allow: { label: 'Allowed', icon: <Icon icon={Check} size={12} /> },
+    'allow-always': { label: 'Always allowed', icon: <Icon icon={Check} size={12} /> },
+    deny: { label: 'Declined', icon: <Icon icon={X} size={12} /> },
+    cancelled: { label: 'No longer needed', icon: <Icon icon={X} size={12} /> }
 };
 
 /* The outcome of a permission request, one quiet line; the request itself lived on the composer. */
@@ -158,7 +148,7 @@ export function QuestionHistoryRow({ item }: { item: ChatQuestionItem }) {
         <div className="pb-2">
             {item.questions.map((question) => (
                 <div key={question.id} className="flex items-start gap-2 px-1 py-0.5 text-xs text-text-faint">
-                    <Icon icon={faCommentQuestion} size={12} className="mt-0.5 shrink-0" />
+                    <Icon icon={MessageCircleQuestionMark} size={12} className="mt-0.5 shrink-0" />
                     <span className="min-w-0">
                         <span className="text-text-muted">{question.question}</span>
                         {item.state === 'answered' && item.answers?.[question.id] !== undefined && (

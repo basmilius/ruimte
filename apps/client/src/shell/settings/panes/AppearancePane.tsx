@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { faCheck } from '@fortawesome/pro-regular-svg-icons';
+import { Check } from 'lucide-react';
 import { NODE_ACCENTS } from '@/canvas/accents';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -29,7 +29,7 @@ function AccentSwatches() {
                     className={clsx('grid h-6 w-6 place-items-center rounded-full border border-border-strong text-text-muted', accent === null && ring)}
                     onClick={() => update({ accent: null })}
                 >
-                    {accent === null && <Icon icon={faCheck} size={12} />}
+                    {accent === null && <Icon icon={Check} size={12} />}
                 </button>
             </Tooltip>
             {NODE_ACCENTS.map((entry) => (
@@ -42,7 +42,7 @@ function AccentSwatches() {
                         style={{ background: entry.color }}
                         onClick={() => update({ accent: entry.id })}
                     >
-                        {accent === entry.id && <Icon icon={faCheck} size={12} />}
+                        {accent === entry.id && <Icon icon={Check} size={12} />}
                     </button>
                 </Tooltip>
             ))}

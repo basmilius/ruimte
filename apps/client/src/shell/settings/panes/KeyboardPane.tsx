@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { faMagnifyingGlass, faXmark } from '@fortawesome/pro-regular-svg-icons';
+import { Search, X } from 'lucide-react';
 import { appCommands } from '@/shell/commands';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -16,7 +16,7 @@ export function KeyboardPane() {
     return (
         <>
             <div className="relative">
-                <Icon icon={faMagnifyingGlass} size={14} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-text-faint" aria-hidden />
+                <Icon icon={Search} size={14} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-text-faint" aria-hidden />
                 <input
                     className="h-9 w-full rounded-lg border border-border bg-surface pr-9 pl-9 text-sm text-text outline-none placeholder:text-text-faint focus:border-accent"
                     placeholder="Search shortcuts"
@@ -34,7 +34,7 @@ export function KeyboardPane() {
                 />
                 {query && (
                     <button className="icon-btn absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2" aria-label="Clear search" onClick={() => setQuery('')}>
-                        <Icon icon={faXmark} size={16} />
+                        <Icon icon={X} size={16} />
                     </button>
                 )}
             </div>

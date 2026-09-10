@@ -1,4 +1,4 @@
-import { faCropSimple, faExpand, faTrash } from '@fortawesome/pro-regular-svg-icons';
+import { Maximize, Scan, Trash } from 'lucide-react';
 import { activeZoomPreset, ZOOM_PRESETS } from '@/canvas/math';
 import { LOCK_ROWS } from '@/canvas/locks';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
@@ -41,7 +41,7 @@ export function CanvasPane() {
                         <>
                             <Keys keys="⇧ 1" />
                             <button className={buttonClass} onClick={() => useCanvas.getState().fitAll()}>
-                                <Icon icon={faExpand} size={12} /> Fit
+                                <Icon icon={Maximize} size={12} /> Fit
                             </button>
                         </>
                     }
@@ -53,7 +53,7 @@ export function CanvasPane() {
                         <>
                             <Keys keys="⇧ 2" />
                             <button className={buttonClass} disabled={!hasSelection} onClick={() => useCanvas.getState().zoomToSelection()}>
-                                <Icon icon={faCropSimple} size={12} /> Frame
+                                <Icon icon={Scan} size={12} /> Frame
                             </button>
                         </>
                     }
@@ -103,7 +103,7 @@ export function CanvasPane() {
                                         aria-label={`Delete layout ${layout.name}`}
                                         onClick={() => useCanvas.getState().deleteLayout(layout.name)}
                                     >
-                                        <Icon icon={faTrash} size={16} />
+                                        <Icon icon={Trash} size={16} />
                                     </button>
                                 </Tooltip>
                             </>

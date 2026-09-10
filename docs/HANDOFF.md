@@ -245,8 +245,8 @@ started; it fits after #10, when a remote daemon makes it worth its weight.
   Copilot). "Open in terminal" on a chat sends the CLI and the session id instead of a command
   line. One setting, "Terminal agents start in" (Settings > Agents, default full access), is
   saved on the node as `runtimeMode`, so a reload starts the same CLI the same way. The menus,
-  the palette rows and an agent node's header show the CLI's brand mark from Font Awesome's
-  brand set, monochrome in `currentColor` (`agents/AgentIcon.tsx`).
+  the palette rows and an agent node's header show the CLI's brand mark from simple-icons,
+  monochrome in `currentColor` (`agents/AgentIcon.tsx`).
 
 ## Nodeterm parity
 
@@ -280,11 +280,12 @@ canvas, against Ruimte, one verdict each.
 - Never highlight the canvas grid in the accent color. The dots stay neutral in every state.
 - Icon buttons get equal padding on every side. Buttons that belong together sit in a
   `.btn-group` with 1px gaps; groups keep the wider gap of their container.
-- Every icon is a Font Awesome Pro regular icon drawn by the `Icon` component in
-  `src/ui/Icon.tsx` (`@fortawesome/react-fontawesome` plus
-  `@fortawesome/pro-regular-svg-icons`). The pixel box and the optical alignment live there, so a
-  call site only picks the icon and its pixel size. Installing needs the Font Awesome Pro registry
-  from the root `.npmrc`, see `apps/client/README.md`.
+- Every icon is a Lucide icon drawn by the `Icon` component in `src/ui/Icon.tsx`
+  (`lucide-react`). The pixel box, the 1.75 stroke weight and the optical alignment live there, so
+  a call site only picks the icon and its pixel size. An icon inline with 12px text is 12px, next
+  to 14px text 14px, and a standalone icon button is 16px in a 28 or 32 pixel square. The agent
+  CLIs' brand marks are simple-icons paths in `AgentIcon`; Codex has none, so it takes Lucide's
+  `Bot`.
 - No fractional pixels. Type sizes, paddings and stroke widths are whole numbers; a `rem` value
   has to land on a whole pixel at the 16px root, and an `em` at the size it inherits. Ratios
   (line height, opacity, letter spacing) are not lengths and stay as they are.
@@ -486,8 +487,8 @@ In the order that makes sense, each one an issue on GitHub:
    normalizer (`~/.gemini/settings.json` with its own event names, an owned JSON file under
    `~/.copilot/hooks/`). Codex's CLI takes only `on-request` and `never` on
    `--ask-for-approval` (0.153), so the three modes that still ask launch a terminal Codex the
-   same way; the chat's `untrusted` has no counterpart on the command line. Font Awesome has no
-   Gemini spark, so the Gemini CLI shows the Google mark. The mode
+   same way; the chat's `untrusted` has no counterpart on the command line. simple-icons has no
+   OpenAI mark, so Codex shows Lucide's `Bot`. The mode
    is one global setting; nodeterm also has a per project override, which would be the first
    preference in `project.json`. A node keeps the title of its catalog entry: no polling of the
    CLI's own session name.

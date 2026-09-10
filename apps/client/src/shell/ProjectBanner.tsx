@@ -1,4 +1,4 @@
-import { faCircleExclamation, faCodeBranch } from '@fortawesome/pro-regular-svg-icons';
+import { CircleAlert, GitBranch } from 'lucide-react';
 import { projectClient } from '@/project';
 import { useProject } from '@/state/project';
 import { Icon } from '@/ui/Icon';
@@ -17,7 +17,7 @@ export function ProjectBanner() {
             <div className="float flex max-w-[640px] items-center gap-3 rounded-lg px-3 py-2 text-xs text-text">
                 {conflict ? (
                     <>
-                        <Icon icon={faCodeBranch} size={12} className="shrink-0 text-status-needs-you" />
+                        <Icon icon={GitBranch} size={12} className="shrink-0 text-status-needs-you" />
                         <span className="grow">The canvas changed on disk while you had unsaved edits.</span>
                         <button
                             className={`${buttonClass} text-text-muted hover:bg-surface-sunken hover:text-text`}
@@ -31,7 +31,7 @@ export function ProjectBanner() {
                     </>
                 ) : (
                     <>
-                        <Icon icon={faCircleExclamation} size={12} className="shrink-0 text-status-error" />
+                        <Icon icon={CircleAlert} size={12} className="shrink-0 text-status-error" />
                         <span className="grow">{error}</span>
                         <button
                             className={`${buttonClass} text-text-muted hover:bg-surface-sunken hover:text-text`}

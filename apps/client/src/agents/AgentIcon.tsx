@@ -1,17 +1,27 @@
 import type { AgentKind } from '@ruimte/contracts';
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { faClaude, faCopilot, faGoogle, faOpenai } from '@fortawesome/free-brands-svg-icons';
+import clsx from 'clsx';
+import { Bot } from 'lucide-react';
+import { siClaude, siGithubcopilot, siGooglegemini } from 'simple-icons';
 import { Icon } from '@/ui/Icon';
 
-// Font Awesome has no Gemini spark, so the Gemini CLI takes the Google mark it ships under.
-const MARKS: Record<AgentKind, IconDefinition> = {
-    claude: faClaude,
-    codex: faOpenai,
-    gemini: faGoogle,
-    copilot: faCopilot
+// The brand marks from simple-icons (CC0), one path each, drawn in `currentColor` so a mark takes
+// the color of the row or header it sits in. simple-icons carries no OpenAI mark (it was removed
+// at OpenAI's request), so Codex takes the generic agent glyph until there is one we may ship.
+const MARKS: Partial<Record<AgentKind, { title: string; path: string }>> = {
+    claude: siClaude,
+    gemini: siGooglegemini,
+    copilot: siGithubcopilot
 };
 
 /* The mark of one agent CLI, for a menu row, a palette row and the header of an agent node. */
 export function AgentIcon({ kind, size = 14, className }: { kind: AgentKind; size?: number; className?: string }) {
-    return <Icon icon={MARKS[kind]} size={size} className={className} />;
+    const mark = MARKS[kind];
+    if (!mark) {
+        return <Icon icon={Bot} size={size} className={className} />;
+    }
+    return (
+        <svg role="img" aria-label={mark.title} viewBox="0 0 24 24" width={size} height={size} fill="currentColor" className={clsx('icon', className)}>
+            <path d={mark.path} />
+        </svg>
+    );
 }

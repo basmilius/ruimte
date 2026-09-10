@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { faArrowUp, faFileLines, faSquare, faXmark } from '@fortawesome/pro-regular-svg-icons';
+import { ArrowUp, FileText, Square, X } from 'lucide-react';
 import type { AgentKind, ChatApprovalItem, ChatInfo, ChatQuestionItem, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { attachmentUrl, checkAttachmentLimits, imageFilesOf, readAttachments } from '@/chat/attachments';
@@ -433,7 +433,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                                     onMouseDown={(e) => e.preventDefault()}
                                     onClick={() => chooseMention(path)}
                                 >
-                                    <Icon icon={faFileLines} size={12} className="shrink-0 text-text-faint" />
+                                    <Icon icon={FileText} size={12} className="shrink-0 text-text-faint" />
                                     <span className="truncate font-mono text-text">{name}</span>
                                     {dir && <span className="min-w-0 truncate text-text-faint">{dir}</span>}
                                 </button>
@@ -451,7 +451,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                                         className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-surface-raised text-text-muted opacity-0 transition-opacity hover:text-text group-hover/thumb:opacity-100 focus-visible:opacity-100"
                                         onClick={() => removeAttachment(index)}
                                     >
-                                        <Icon icon={faXmark} size={12} />
+                                        <Icon icon={X} size={12} />
                                     </button>
                                 </Tooltip>
                             </div>
@@ -535,7 +535,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-status-error text-accent-text"
                                 onClick={() => void chatClient.cancel(chatId).catch(() => undefined)}
                             >
-                                <Icon icon={faSquare} size={16} />
+                                <Icon icon={Square} size={16} />
                             </button>
                         </Tooltip>
                     ) : (
@@ -545,7 +545,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                                 disabled={isEmptyDraft(draft) || disabled}
                                 onClick={submit}
                             >
-                                <Icon icon={faArrowUp} size={16} />
+                                <Icon icon={ArrowUp} size={16} />
                             </button>
                         </Tooltip>
                     )}

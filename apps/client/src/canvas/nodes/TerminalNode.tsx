@@ -4,7 +4,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { WebglAddon } from '@xterm/addon-webgl';
 import { Terminal } from '@xterm/xterm';
-import { faRotateRight } from '@fortawesome/pro-regular-svg-icons';
+import { RotateCw } from 'lucide-react';
 import { useCanvas } from '@/state/canvas';
 import { useSessions } from '@/state/sessions';
 import { useProject } from '@/state/project';
@@ -247,7 +247,7 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
                     <span className="grow">{failure}</span>
                     <Tooltip label="Try again">
                         <button className="icon-btn h-7 w-7 shrink-0" onClick={rebuild}>
-                            <Icon icon={faRotateRight} size={16} />
+                            <Icon icon={RotateCw} size={16} />
                         </button>
                     </Tooltip>
                 </div>
@@ -259,7 +259,7 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
                         className="inline-flex h-7 items-center gap-1.5 rounded-md bg-surface-sunken px-2 font-sans text-xs font-medium text-text hover:bg-border"
                         onClick={() => void restart()}
                     >
-                        <Icon icon={faRotateRight} size={12} /> Restart
+                        <Icon icon={RotateCw} size={12} /> Restart
                     </button>
                 </div>
             )}
