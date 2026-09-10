@@ -42,6 +42,22 @@ export const toolSummary = (name: string, input: unknown): string => {
     }
 };
 
+// What `GET /fs/file` will serve; a path with another suffix is not worth asking the daemon about.
+const IMAGE_SUFFIXES = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
+
+/* The image file a tool call looked at, so the row can draw it; null for every other call. */
+export const readImagePath = (name: string, input: unknown): string | null => {
+    if (name !== 'Read' && name !== 'NotebookRead') {
+        return null;
+    }
+    const path = isRecord(input) ? str(input.file_path) : null;
+    if (path === null) {
+        return null;
+    }
+    const lowered = path.toLowerCase();
+    return IMAGE_SUFFIXES.some((suffix) => lowered.endsWith(suffix)) ? path : null;
+};
+
 /* The before and after text of a file-changing tool call, so the thread can show it as a diff. */
 export const fileChanges = (name: string, input: unknown): FileChange[] => {
     if (!isRecord(input)) {

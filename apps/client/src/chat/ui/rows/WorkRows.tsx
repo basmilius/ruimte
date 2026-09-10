@@ -3,7 +3,8 @@ import clsx from 'clsx';
 import { ChevronRight, FileDiff, X } from 'lucide-react';
 import type { ChatCheckpointDiff, ChatCheckpointFile, ChatFileChange, ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
 import { chatClient } from '@/chat';
-import { fileChanges, formatElapsed, liveOutput, toolStartedAt, toolSummary, unifiedChanges, type FileChange } from '@/chat/logic/tools';
+import { fileChanges, formatElapsed, liveOutput, readImagePath, toolStartedAt, toolSummary, unifiedChanges, type FileChange } from '@/chat/logic/tools';
+import { ReadImage } from '@/chat/ui/ImageView';
 import { toolIcon } from '@/chat/ui/icons';
 import { Icon } from '@/ui/Icon';
 
@@ -92,9 +93,11 @@ function ToolBody({ tool }: { tool: ChatToolItem }) {
     );
 }
 
-/* One settled tool call: a line, and its input and output behind it. */
+/* One settled tool call: a line, and its input and output behind it. An image the call looked at
+   is drawn under the line, because a picture says more about that read than its path does. */
 export function WorkRow({ tool, nested }: { tool: ChatToolItem; nested?: boolean }) {
     const [open, setOpen] = useState(false);
+    const image = tool.state === 'done' ? readImagePath(tool.name, tool.input) : null;
     return (
         <div className={clsx(nested ? 'ml-6' : '', 'pb-0.5')}>
             <ToggleLine
@@ -105,6 +108,7 @@ export function WorkRow({ tool, nested }: { tool: ChatToolItem; nested?: boolean
                 onToggle={() => setOpen((o) => !o)}
                 failed={tool.state === 'error'}
             />
+            {image !== null && <ReadImage path={image} />}
             {open && <ToolBody tool={tool} />}
         </div>
     );

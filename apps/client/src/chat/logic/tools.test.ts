@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatToolItem } from '@ruimte/contracts';
-import { approvalChanges, formatElapsed, hasFileChanges, liveOutput, toolStartedAt, unifiedChanges } from './tools';
+import { approvalChanges, formatElapsed, hasFileChanges, liveOutput, readImagePath, toolStartedAt, unifiedChanges } from './tools';
 
 const running = (progress?: ChatToolItem['progress']): ChatToolItem => ({
     id: 'b1',
@@ -14,6 +14,15 @@ const running = (progress?: ChatToolItem['progress']): ChatToolItem => ({
     state: 'running',
     parentToolUseId: null,
     progress
+});
+
+describe('readImagePath', () => {
+    test('names the image a read looked at and nothing else', () => {
+        expect(readImagePath('Read', { file_path: '/a/shot.PNG' })).toBe('/a/shot.PNG');
+        expect(readImagePath('Read', { file_path: '/a/notes.md' })).toBeNull();
+        expect(readImagePath('Read', {})).toBeNull();
+        expect(readImagePath('Write', { file_path: '/a/shot.png' })).toBeNull();
+    });
 });
 
 describe('live tool helpers', () => {

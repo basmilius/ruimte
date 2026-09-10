@@ -4,6 +4,7 @@ import { Bot, Brain, Check, ChevronDown, CircleAlert, Copy, Info, MessageCircleQ
 import type { ChatApprovalItem, ChatAssistantItem, ChatQuestionItem, ChatThinkingItem, ChatUserItem } from '@ruimte/contracts';
 import { attachmentUrl, formatBytes, isImageAttachment } from '@/chat/attachments';
 import { tokenizeChips } from '@/chat/mentions';
+import { ImageThumb } from '@/chat/ui/ImageView';
 import { Markdown } from '@/chat/ui/Markdown';
 import { formatDuration } from '@/chat/logic/timeline';
 import { toolSummary } from '@/chat/logic/tools';
@@ -40,11 +41,11 @@ export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }
                 <div className="mb-1.5 flex max-w-[80%] flex-wrap justify-end gap-1.5">
                     {attachments.map((attachment) =>
                         isImageAttachment(attachment.mime) ? (
-                            <img
+                            <ImageThumb
                                 key={attachment.id}
                                 src={attachmentUrl(chatId, attachment.id)}
                                 alt={attachment.name}
-                                className="max-h-32 max-w-48 rounded-lg border border-border object-cover"
+                                className="max-h-32 max-w-48 object-cover"
                             />
                         ) : (
                             <a
