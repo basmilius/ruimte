@@ -1,16 +1,12 @@
 import { useState } from 'react';
+import { Code, Eye } from 'lucide-react';
 import type { FsReadText } from '@ruimte/contracts';
 import { Markdown } from '@/chat/ui/Markdown';
 import { CodeFile } from '@/shell/panels/CodeFile';
 import { FileScroll } from '@/shell/panels/FileScroll';
-import { Segmented } from '@/shell/settings/controls';
+import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 
 type MarkdownView = 'preview' | 'source';
-
-const VIEWS: Array<{ id: MarkdownView; label: string }> = [
-    { id: 'preview', label: 'Preview' },
-    { id: 'source', label: 'Source' }
-];
 
 /*
  * A markdown file the way it is meant to be read, with the source a click away. Both views share one
@@ -18,14 +14,19 @@ const VIEWS: Array<{ id: MarkdownView; label: string }> = [
  */
 export function MarkdownFile({ name, read }: { name: string; read: FsReadText }) {
     const [view, setView] = useState<MarkdownView>('preview');
-    const toggle = <Segmented value={view} options={VIEWS} onChange={(id) => setView(id)} label="How to show this file" />;
+    const toggle = (
+        <div className="btn-group">
+            <FileToolbarToggle icon={Eye} label="Preview" active={view === 'preview'} onClick={() => setView('preview')} />
+            <FileToolbarToggle icon={Code} label="Source" active={view === 'source'} onClick={() => setView('source')} />
+        </div>
+    );
 
     if (view === 'source') {
-        return <CodeFile name={name} read={read} toolbarStart={toggle} />;
+        return <CodeFile name={name} read={read} toolbarExtra={toggle} />;
     }
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
-            <div className="file-toolbar">{toggle}</div>
+            <FileToolbar>{toggle}</FileToolbar>
             <FileScroll className="px-4 py-3">
                 <Markdown text={read.text} />
             </FileScroll>

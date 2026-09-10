@@ -1,18 +1,13 @@
 import { useState } from 'react';
-import { ImageOff } from 'lucide-react';
+import { ImageOff, Maximize, Scan } from 'lucide-react';
 import type { FsReadBinary } from '@ruimte/contracts';
 import { fileBytesUrl } from '@/shell/panels/file-url';
 import { formatBytes } from '@/shell/panels/file-size';
-import { Segmented } from '@/shell/settings/controls';
+import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 
 type Zoom = 'fit' | 'full';
-
-const ZOOMS: Array<{ id: Zoom; label: string }> = [
-    { id: 'fit', label: 'Fit' },
-    { id: 'full', label: '1:1' }
-];
 
 /* An image from the daemon's own route, on a plain surface: a checkerboard would fight every icon
    drawn for a light background. */
@@ -23,9 +18,12 @@ export function ImageFile({ path, name, read }: { path: string; name: string; re
 
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
-            <div className="file-toolbar">
-                <Segmented value={zoom} options={ZOOMS} onChange={(id) => setZoom(id)} label="How large to draw this image" />
-            </div>
+            <FileToolbar>
+                <div className="btn-group">
+                    <FileToolbarToggle icon={Maximize} label="Fit to the panel" active={zoom === 'fit'} onClick={() => setZoom('fit')} />
+                    <FileToolbarToggle icon={Scan} label="Actual size (1:1)" active={zoom === 'full'} onClick={() => setZoom('full')} />
+                </div>
+            </FileToolbar>
             <div className="grid min-h-0 grow place-items-center overflow-auto bg-surface-sunken p-4">
                 {failed ? (
                     <EmptyState icon={<Icon icon={ImageOff} size={20} />}>{name} could not be drawn; the file may have changed while it loaded.</EmptyState>
