@@ -45,3 +45,57 @@ export const FsSearchResultSchema = z.object({
     truncated: z.boolean()
 });
 export type FsSearchResult = z.infer<typeof FsSearchResultSchema>;
+
+// A directory longer than this is one nobody scrolls; the rest is a "more" row in the tree.
+export const FS_LIST_MAX_ENTRIES = 2000;
+// Past three levels a prefill costs more than the expand it saves.
+export const FS_LIST_MAX_DEPTH = 3;
+
+export const FsEntryKindSchema = z.enum(['file', 'directory', 'symlink', 'other']);
+export type FsEntryKind = z.infer<typeof FsEntryKindSchema>;
+
+export const FsEntrySchema = z.object({
+    name: z.string(),
+    // Absolute on the daemon's machine, the shape `fs.reveal` takes.
+    path: z.string(),
+    kind: FsEntryKindSchema,
+    // Null for anything that is not a file.
+    size: z.number().nullable(),
+    mtime: z.number(),
+    // A leading dot today; the Windows attribute joins later.
+    hidden: z.boolean(),
+    // What `git check-ignore` says, plus `.git` itself; false everywhere outside a repository.
+    ignored: z.boolean()
+});
+export type FsEntry = z.infer<typeof FsEntrySchema>;
+
+// One directory, or a few levels of it at once so a first paint needs no second round trip.
+export const FsListPayloadSchema = z.object({
+    path: z.string().min(1),
+    depth: z.number().int().positive().max(FS_LIST_MAX_DEPTH).optional(),
+    // Whether entries with a leading dot come along; they stay out by default.
+    hidden: z.boolean().optional()
+});
+export type FsListPayload = z.infer<typeof FsListPayloadSchema>;
+
+export const FsListResultSchema = z.object({
+    // The directory that was read, as an absolute path.
+    path: z.string(),
+    // Directories before files per level, then by name; a deeper level follows its own directory.
+    entries: z.array(FsEntrySchema),
+    // Whether the cap cut the listing short, so a missing name is not proof of absence.
+    truncated: z.boolean()
+});
+export type FsListResult = z.infer<typeof FsListResultSchema>;
+
+export const FsWatchPayloadSchema = z.object({
+    path: z.string().min(1)
+});
+export type FsWatchPayload = z.infer<typeof FsWatchPayloadSchema>;
+
+// The directories that changed under a watched root, coalesced over a settle window.
+export const FsChangedEventSchema = z.object({
+    root: z.string(),
+    paths: z.array(z.string())
+});
+export type FsChangedEvent = z.infer<typeof FsChangedEventSchema>;

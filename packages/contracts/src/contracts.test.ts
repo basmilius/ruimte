@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import {
     EVENT_SCHEMAS,
     EventSchema,
+    FsEntrySchema,
     REQUEST_SCHEMAS,
     ReplySchema,
     ProjectDocumentSchema,
@@ -213,5 +214,31 @@ describe('project', () => {
         expect(payload.safeParse({ projectId: 'p1', image: null }).success).toBe(true);
         expect(payload.safeParse({ projectId: 'p1', image: { mime: 'image/png', base64: 'AAAA' } }).success).toBe(true);
         expect(payload.safeParse({ projectId: 'p1' }).success).toBe(false);
+    });
+});
+
+describe('fs', () => {
+    test('fs.list takes a path with an optional depth and hidden flag', () => {
+        const { payload } = REQUEST_SCHEMAS['fs.list'];
+        expect(payload.safeParse({ path: '/repo' }).success).toBe(true);
+        expect(payload.safeParse({ path: '/repo', depth: 3, hidden: true }).success).toBe(true);
+        expect(payload.safeParse({ path: '/repo', depth: 4 }).success).toBe(false);
+        expect(payload.safeParse({ path: '/repo', depth: 0 }).success).toBe(false);
+        expect(payload.safeParse({ path: '' }).success).toBe(false);
+    });
+
+    test('an entry carries its kind, a nullable size and both flags', () => {
+        const entry = { name: 'index.ts', path: '/repo/index.ts', kind: 'file', size: 12, mtime: 1, hidden: false, ignored: false };
+        expect(FsEntrySchema.safeParse(entry).success).toBe(true);
+        expect(FsEntrySchema.safeParse({ ...entry, kind: 'directory', size: null }).success).toBe(true);
+        expect(FsEntrySchema.safeParse({ ...entry, kind: 'socket' }).success).toBe(false);
+        expect(FsEntrySchema.safeParse({ ...entry, size: undefined }).success).toBe(false);
+    });
+
+    test('fs.watch takes one path and fs.changed names the directories that moved', () => {
+        expect(REQUEST_SCHEMAS['fs.watch'].payload.safeParse({ path: '/repo' }).success).toBe(true);
+        expect(REQUEST_SCHEMAS['fs.unwatch'].payload.safeParse({ path: '' }).success).toBe(false);
+        expect(EVENT_SCHEMAS['fs.changed'].safeParse({ root: '/repo', paths: ['/repo/src'] }).success).toBe(true);
+        expect(EVENT_SCHEMAS['fs.changed'].safeParse({ root: '/repo' }).success).toBe(false);
     });
 });
