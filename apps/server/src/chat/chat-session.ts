@@ -1,4 +1,14 @@
-import type { ChatAttachment, ChatCheckpointDiff, ChatEvent, ChatInfo, ChatItem, ContextSource, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type {
+    ChatAttachment,
+    ChatCheckpointDiff,
+    ChatEvent,
+    ChatInfo,
+    ChatItem,
+    ChatSkill,
+    ContextSource,
+    ModelSelection,
+    RuntimeMode
+} from '@ruimte/contracts';
 import { contextChangeNote } from '../context/context-note.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
 import type { ChatProvider } from '../providers/provider.ts';
@@ -28,6 +38,7 @@ interface ChatSessionOptions {
 
 export interface ChatSendExtras {
     mentions?: string[];
+    skills?: string[];
     attachments?: ChatAttachment[];
 }
 
@@ -113,7 +124,8 @@ export class ChatSession {
             text,
             preamble: note,
             attachments: extras.attachments ?? [],
-            mentions: extras.mentions ?? []
+            mentions: extras.mentions ?? [],
+            skills: extras.skills ?? []
         };
         // The prompt waits for the checkpoint, so the tree is the folder as it was before the agent edited it.
         this.turnReady = this.checkpoint(turnId);
@@ -191,6 +203,32 @@ export class ChatSession {
         return await this.options.checkpoints.diff(this.thread.info.cwd, turn.checkpoint);
     }
 
+    /*
+     * What this chat's CLI would run as a skill. A running backend that answers the question itself
+     * (Codex) is the authority; otherwise the daemon's own scan is, narrowed to what the CLI's init
+     * frame said it has, so a skill turned off in its settings drops out after the first message.
+     */
+    async skills(scan: () => Promise<ChatSkill[]>): Promise<ChatSkill[]> {
+        const backend = this.backend;
+        if (backend?.running === true && backend.listSkills) {
+            try {
+                const own = await backend.listSkills();
+                if (own.length > 0) {
+                    return own;
+                }
+            } catch {
+                // The CLI could not answer; the scan below is what is left.
+            }
+        }
+        const scanned = await scan();
+        const announced = this.thread.info.skills;
+        if (!announced?.length) {
+            return scanned;
+        }
+        const known = new Set(announced);
+        return scanned.filter((skill) => known.has(skill.name));
+    }
+
     private openTurn(text: string | null, note: string | null, extras: ChatSendExtras): string {
         const turnId = newId('turn');
         const now = Date.now();
@@ -200,8 +238,9 @@ export class ChatSession {
         }
         if (text !== null) {
             const mentions = extras.mentions?.length ? extras.mentions : undefined;
+            const skills = extras.skills?.length ? extras.skills : undefined;
             const attachments = extras.attachments?.length ? extras.attachments : undefined;
-            events.push(this.thread.upsert({ id: newId('user'), kind: 'user', createdAt: now, turnId, text, mentions, attachments }));
+            events.push(this.thread.upsert({ id: newId('user'), kind: 'user', createdAt: now, turnId, text, mentions, skills, attachments }));
         }
         events.push(this.thread.patchInfo({ status: 'running', activeTurnId: turnId }));
         this.emit(events);

@@ -1,4 +1,4 @@
-import type { ChatAttachment, ChatFileChange, ChatQuestion, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type { ChatAttachment, ChatFileChange, ChatQuestion, ChatSkill, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 
 /*
  * The seam between one chat and one CLI. A backend owns a process and the protocol it speaks; it
@@ -29,6 +29,8 @@ export interface TurnInput {
     attachments: ChatAttachment[];
     // The paths the person picked with `@`; they also sit in the text, for a CLI that expands them itself.
     mentions: string[];
+    // The skills the person picked with `$`; they also sit in the text, for a CLI that expands them itself.
+    skills: string[];
 }
 
 export type ApprovalDecision = 'allow' | 'allow-always' | 'deny';
@@ -38,7 +40,7 @@ export type ApprovalDecision = 'allow' | 'allow-always' | 'deny';
  * a message id plus block ordinal, a native item id); the projector turns it into a thread item id.
  */
 export type BackendEvent =
-    | { type: 'session'; agentSessionId: string | null; model: string | null; slashCommands?: string[] }
+    | { type: 'session'; agentSessionId: string | null; model: string | null; slashCommands?: string[]; skills?: string[] }
     | { type: 'text.delta'; ref: string; text: string }
     | { type: 'text.done'; ref: string; text: string }
     | { type: 'tool.started'; ref: string; name: string; input: unknown; parentRef: string | null; changes?: ChatFileChange[] }
@@ -84,6 +86,8 @@ export interface ChatBackend {
     // False when nothing waits under that id, so the caller can answer the client with an error.
     respondApproval(requestId: string, decision: ApprovalDecision, message?: string): boolean;
     respondQuestion(requestId: string, answers: Record<string, string>): boolean;
+    // What this CLI would run right now, for a protocol that answers the question itself.
+    listSkills?(): Promise<ChatSkill[]>;
     // Closes the input and lets the CLI leave on its own; `dispose` kills it.
     stop(): void;
     dispose(): void;

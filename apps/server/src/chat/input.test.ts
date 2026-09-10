@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { buildUserMessage } from './input.ts';
+import { buildUserMessage, splitSkillPrompt } from './input.ts';
 
 const png = { name: 'shot.png', mediaType: 'image/png' as const, data: 'iVBORw0KGgo=' };
 
@@ -29,5 +29,56 @@ describe('buildUserMessage', () => {
     test('an image without text does not send an empty text block', () => {
         const frame = buildUserMessage({ text: '  ', attachments: [png] });
         expect((frame.message as { content: Array<{ type: string }> }).content.map((block) => block.type)).toEqual(['image']);
+    });
+});
+
+describe('skill dispatch', () => {
+    test('a picked skill becomes the last text block, starting with a slash', () => {
+        const frame = buildUserMessage({ text: 'look at the notes and $unslop them', skills: ['unslop'] });
+        expect((frame.message as { content: unknown[] }).content).toEqual([
+            { type: 'text', text: 'look at the notes and' },
+            { type: 'text', text: '/unslop them' }
+        ]);
+    });
+
+    test('a message that is only the skill carries one block', () => {
+        const frame = buildUserMessage({ text: '$unslop', skills: ['unslop'] });
+        expect((frame.message as { content: unknown[] }).content).toEqual([{ type: 'text', text: '/unslop' }]);
+    });
+
+    test('only the last skill is invoked; the earlier ones become slash names in the leading block', () => {
+        const frame = buildUserMessage({ text: 'run $lint first, then $unslop it', skills: ['unslop', 'lint'] });
+        expect((frame.message as { content: unknown[] }).content).toEqual([
+            { type: 'text', text: 'run /lint first, then' },
+            { type: 'text', text: '/unslop it' }
+        ]);
+    });
+
+    test('the images sit between the leading block and the invocation', () => {
+        const frame = buildUserMessage({ text: 'see $unslop', skills: ['unslop'], attachments: [png] });
+        expect((frame.message as { content: Array<{ type: string }> }).content.map((block) => block.type)).toEqual(['text', 'image', 'text']);
+    });
+
+    test('the prefix stays the first thing the model reads', () => {
+        const frame = buildUserMessage({ text: '$unslop it', skills: ['unslop'], prefix: 'ultrathink\n\n' });
+        expect((frame.message as { content: unknown[] }).content).toEqual([
+            { type: 'text', text: 'ultrathink\n\n' },
+            { type: 'text', text: '/unslop it' }
+        ]);
+    });
+
+    test('a dollar word that is not a known skill stays text', () => {
+        const frame = buildUserMessage({ text: 'it costs $20 and $unknown', skills: ['unslop'] });
+        expect((frame.message as { content: unknown[] }).content).toEqual([{ type: 'text', text: 'it costs $20 and $unknown' }]);
+    });
+});
+
+describe('splitSkillPrompt', () => {
+    test('a name that prefixes another is not mistaken for it', () => {
+        expect(splitSkillPrompt('use $release-notes now', ['release', 'release-notes'])).toEqual({ lead: 'use', invocation: '/release-notes now' });
+    });
+
+    test('text without a skill token is left alone', () => {
+        expect(splitSkillPrompt('nothing here', ['unslop'])).toEqual({ lead: 'nothing here', invocation: null });
     });
 });

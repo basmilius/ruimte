@@ -553,7 +553,15 @@ canvas, against Ruimte, one verdict each.
   API's own limits) and become `image` content blocks in the CLI's stream-json `user` frame,
   the Anthropic API shape passed through as is. The user item keeps the full data, so the
   thread file and `chat.attach` grow with every image; move them to files under the app data
-  dir when that starts to hurt. No `$skills` in the composer yet.
+  dir when that starts to hurt.
+- `$` in the composer opens the skill picker, the same shape as `@`: search, arrow keys, the
+  description on a second line. A picked skill becomes a `$name` chip in the text and a name in
+  `skills` on `chat.send`, and the slash menu labels the entries that are skills, inserting
+  `$name` so both spellings end on one path. Claude Code expands a skill only from the last text
+  block of a message when that block starts with `/name` (measured against 2.1.267 with a skill
+  that writes a marker file), so the daemon splits the prompt and puts the invocation last;
+  Codex reads `$name` in the text itself. Discovery is the daemon's (`apps/server/src/skills`),
+  narrowed after the first message to the `skills` array the CLI's own init frame carries.
 - A chat item id is the backend's own key for the item with the process generation in front
   (`1:toolu_x`), so a resumed CLI that numbers its messages from the start cannot overwrite an
   older item. An approval keeps `approval-<requestId>` as it was, since that id round-trips to

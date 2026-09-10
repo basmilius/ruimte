@@ -6,8 +6,8 @@ const usage = { input_tokens: 8, cache_creation_input_tokens: 2671, cache_read_i
 describe('ClaudeProtocol', () => {
     test('the init frame reports the session, and text streams under one ref per block', () => {
         const protocol = new ClaudeProtocol();
-        expect(protocol.handle({ type: 'system', subtype: 'init', session_id: 'sid', model: 'm', slash_commands: ['compact'] })).toEqual([
-            { type: 'session', agentSessionId: 'sid', model: 'm', slashCommands: ['compact'] }
+        expect(protocol.handle({ type: 'system', subtype: 'init', session_id: 'sid', model: 'm', slash_commands: ['compact'], skills: ['unslop'] })).toEqual([
+            { type: 'session', agentSessionId: 'sid', model: 'm', slashCommands: ['compact'], skills: ['unslop'] }
         ]);
 
         protocol.handle({ type: 'stream_event', event: { type: 'message_start', message: { id: 'msg_1' } } });

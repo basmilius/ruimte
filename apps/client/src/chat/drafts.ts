@@ -5,13 +5,14 @@ const STORAGE_KEY = 'ruimte.chat.drafts';
 export interface ChatDraft {
     text: string;
     mentions: string[];
+    skills: string[];
     attachments: ChatAttachment[];
 }
 
-export const EMPTY_DRAFT: ChatDraft = { text: '', mentions: [], attachments: [] };
+export const EMPTY_DRAFT: ChatDraft = { text: '', mentions: [], skills: [], attachments: [] };
 
 // Older records only had text; the arrays are filled in on read.
-type DraftRecord = { text: string; mentions?: string[]; attachments?: ChatAttachment[] };
+type DraftRecord = { text: string; mentions?: string[]; skills?: string[]; attachments?: ChatAttachment[] };
 
 const readAll = (): Record<string, DraftRecord> => {
     try {
@@ -36,7 +37,7 @@ export const isEmptyDraft = (draft: ChatDraft): boolean => draft.text.trim() ===
 /* An unsent prompt per chat node, kept across reloads so a half-written message is never lost. */
 export const readDraft = (chatId: string): ChatDraft => {
     const record = readAll()[chatId];
-    return record ? { text: record.text, mentions: record.mentions ?? [], attachments: record.attachments ?? [] } : EMPTY_DRAFT;
+    return record ? { text: record.text, mentions: record.mentions ?? [], skills: record.skills ?? [], attachments: record.attachments ?? [] } : EMPTY_DRAFT;
 };
 
 export const writeDraft = (chatId: string, draft: ChatDraft): void => {
@@ -46,11 +47,11 @@ export const writeDraft = (chatId: string, draft: ChatDraft): void => {
         store(drafts);
         return;
     }
-    drafts[chatId] = { text: draft.text, mentions: draft.mentions, attachments: draft.attachments };
+    drafts[chatId] = { text: draft.text, mentions: draft.mentions, skills: draft.skills, attachments: draft.attachments };
     if (store(drafts)) {
         return;
     }
     // Images can outgrow the storage quota; the text is the part worth keeping then.
-    drafts[chatId] = { text: draft.text, mentions: draft.mentions };
+    drafts[chatId] = { text: draft.text, mentions: draft.mentions, skills: draft.skills };
     store(drafts);
 };

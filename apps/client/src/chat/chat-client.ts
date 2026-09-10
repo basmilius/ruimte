@@ -5,6 +5,7 @@ import type {
     ChatConfigurePayload,
     ChatInfo,
     ChatItem,
+    ChatSkill,
     FsSearchResult,
     ModelSelection,
     RuntimeMode
@@ -27,6 +28,8 @@ interface ChatOpenOptions {
 export interface ChatSendExtras {
     /* Paths picked with `@`; they also sit in the text, this is what the timeline highlights. */
     mentions?: string[];
+    /* Skills picked with `$`; they also sit in the text, this is what the timeline chips. */
+    skills?: string[];
     attachments?: ChatAttachment[];
 }
 
@@ -109,12 +112,18 @@ export class ChatClient {
     }
 
     async send(chatId: string, text: string, extras: ChatSendExtras = {}): Promise<void> {
-        await this.transport.request('chat.send', { chatId, text, mentions: extras.mentions, attachments: extras.attachments });
+        await this.transport.request('chat.send', { chatId, text, mentions: extras.mentions, skills: extras.skills, attachments: extras.attachments });
     }
 
     /* Files under `cwd` that fuzzy-match `query`, for the composer's mention picker. */
     async searchFiles(cwd: string, query: string, limit = 8): Promise<FsSearchResult> {
         return this.transport.request('fs.search', { cwd, query, limit });
+    }
+
+    /* What this chat's CLI would run as a skill, for the composer's `$` picker. */
+    async listSkills(chatId: string): Promise<ChatSkill[]> {
+        const { skills } = await this.transport.request('skills.list', { chatId });
+        return skills;
     }
 
     async compact(chatId: string): Promise<void> {

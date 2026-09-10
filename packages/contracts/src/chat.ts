@@ -31,10 +31,30 @@ export const ChatInfoSchema = z.object({
     // The turn in flight, if any; items carry the same id so the client can fold work per turn.
     activeTurnId: z.string().nullable(),
     slashCommands: z.array(z.string()),
+    // What the CLI's own init frame says it will run; empty until the first message named them.
+    skills: z.array(z.string()).optional(),
     usage: ChatUsageSchema,
     createdAt: z.number()
 });
 export type ChatInfo = z.infer<typeof ChatInfoSchema>;
+
+// Where a skill was found: the person's own folder, the chat's folder, or a plugin.
+export const ChatSkillSourceSchema = z.enum(['user', 'project', 'plugin']);
+export type ChatSkillSource = z.infer<typeof ChatSkillSourceSchema>;
+
+// One skill a CLI can run, as the composer's `$` picker needs it.
+export const ChatSkillSchema = z.object({
+    name: z.string().min(1),
+    description: z.string(),
+    source: ChatSkillSourceSchema
+});
+export type ChatSkill = z.infer<typeof ChatSkillSchema>;
+
+export const SkillsListPayloadSchema = z.object({ chatId: ChatIdSchema });
+export type SkillsListPayload = z.infer<typeof SkillsListPayloadSchema>;
+
+export const SkillsListResultSchema = z.object({ skills: z.array(ChatSkillSchema) });
+export type SkillsListResult = z.infer<typeof SkillsListResultSchema>;
 
 const base = {
     id: z.string().min(1),
@@ -65,6 +85,8 @@ export const ChatUserItemSchema = z.object({
     text: z.string(),
     // Files the person picked with `@`; the paths also sit in the text, this is what the row highlights.
     mentions: z.array(z.string()).optional(),
+    // Skills the person picked with `$`; the names also sit in the text, this is what the row chips.
+    skills: z.array(z.string()).optional(),
     attachments: z.array(ChatAttachmentSchema).optional()
 });
 
@@ -263,6 +285,7 @@ export const ChatSendPayloadSchema = z
         chatId: ChatIdSchema,
         text: z.string(),
         mentions: z.array(z.string().min(1)).max(64).optional(),
+        skills: z.array(z.string().min(1)).max(16).optional(),
         attachments: z.array(ChatAttachmentSchema).max(CHAT_ATTACHMENTS_MAX_COUNT).optional()
     })
     .refine((payload) => payload.text.trim() !== '' || (payload.attachments?.length ?? 0) > 0, { message: 'A message needs text or an attachment' });

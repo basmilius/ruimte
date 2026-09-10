@@ -1,9 +1,20 @@
 import { randomBytes } from 'node:crypto';
 import { homedir } from 'node:os';
-import type { AgentKind, ChatCheckpointDiff, ChatConfigurePayload, ChatCreatePayload, ChatEvent, ChatInfo, ChatItem, ContextSource } from '@ruimte/contracts';
+import type {
+    AgentKind,
+    ChatCheckpointDiff,
+    ChatConfigurePayload,
+    ChatCreatePayload,
+    ChatEvent,
+    ChatInfo,
+    ChatItem,
+    ChatSkill,
+    ContextSource
+} from '@ruimte/contracts';
 import type { CheckpointService } from '../git/checkpoints.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionSink } from '../sessions/manager.ts';
+import { SkillIndex } from '../skills/skills.ts';
 import { ChatSession, type ChatSendExtras } from './chat-session.ts';
 import type { ChatStore } from './chat-store.ts';
 import { ChatError } from './errors.ts';
@@ -23,6 +34,8 @@ interface ChatManagerOptions {
     // Put in front of PATH, so `ruimte-context` is there for the CLI's shell.
     binDir?: string;
     codexCommand?: string[];
+    // Where the skill folders are looked for; a test points it at a temporary tree.
+    skills?: SkillIndex;
 }
 
 // Above this the record is big enough that rewriting it on every tool call costs more than it saves.
@@ -33,6 +46,7 @@ export class ChatManager {
     private readonly providers: ProviderRegistry;
     private readonly store: ChatStore | null;
     private readonly checkpoints: CheckpointService | null;
+    private readonly skillIndex: SkillIndex;
     private readonly env: Record<string, string>;
     private readonly commands: Partial<Record<AgentKind, string[]>>;
     private readonly chats = new Map<string, ChatSession>();
@@ -50,6 +64,7 @@ export class ChatManager {
         this.providers = options.providers;
         this.store = options.store ?? null;
         this.checkpoints = options.checkpoints ?? null;
+        this.skillIndex = options.skills ?? new SkillIndex();
         this.contextUrl = options.contextUrl ?? null;
         this.hasContext = options.hasContext ?? (() => false);
         this.contextSources = options.contextSources ?? (() => []);
@@ -163,6 +178,12 @@ export class ChatManager {
             throw new ChatError('chat-busy', `Chat ${chatId} is still working on the previous message`);
         }
         session.send(text, extras);
+    }
+
+    /* What the chat's CLI would run as a skill, for the composer's `$` picker. */
+    skills(chatId: string): Promise<ChatSkill[]> {
+        const session = this.require(chatId);
+        return session.skills(() => this.skillIndex.list(session.info.provider, session.info.cwd));
     }
 
     compact(chatId: string): void {
