@@ -2,6 +2,14 @@ import { create } from 'zustand';
 
 export type SettingsSectionId = 'appearance' | 'canvas' | 'agents' | 'machines' | 'keyboard' | 'about';
 
+export type PanelKind = 'files' | 'git';
+
+export interface PanelState {
+    open: boolean;
+    /* Which panel the surface shows; it survives a close, so the toggle reopens the last one. */
+    kind: PanelKind;
+}
+
 export interface SettingsState {
     open: boolean;
     /* The section the dialog shows; it stays where it was so reopening lands on the same pane. */
@@ -13,6 +21,7 @@ interface UiStore {
     /* Text the palette opens with; a path puts it straight into folder browsing. */
     paletteSeed: string;
     settings: SettingsState;
+    panel: PanelState;
     layoutDialogOpen: boolean;
     /* The group a worktree is being bound to, while its dialog is up. */
     worktreeDialogFor: string | null;
@@ -21,6 +30,8 @@ interface UiStore {
     setLayoutDialogOpen(open: boolean): void;
     setPaletteOpen(open: boolean): void;
     setSettings(patch: Partial<SettingsState>): void;
+    setPanel(patch: Partial<PanelState>): void;
+    togglePanel(kind: PanelKind): void;
 }
 
 /* Which app-level dialog is up; nothing here belongs to a project or a node. */
@@ -28,6 +39,7 @@ export const useUi = create<UiStore>((set, get) => ({
     paletteOpen: false,
     paletteSeed: '',
     settings: { open: false, section: 'appearance' },
+    panel: { open: false, kind: 'files' },
     layoutDialogOpen: false,
     worktreeDialogFor: null,
     setWorktreeDialogFor(groupId) {
@@ -44,5 +56,12 @@ export const useUi = create<UiStore>((set, get) => ({
     },
     setSettings(patch) {
         set({ settings: { ...get().settings, ...patch } });
+    },
+    setPanel(patch) {
+        set({ panel: { ...get().panel, ...patch } });
+    },
+    togglePanel(kind) {
+        const panel = get().panel;
+        set({ panel: { open: !(panel.open && panel.kind === kind), kind } });
     }
 }));

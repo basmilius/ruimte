@@ -117,11 +117,11 @@ const waitForDaemon = async (): Promise<void> => {
     throw new Error('The daemon did not come up');
 };
 
-// The strip the client reserves at the top of the sidebar, which the overlay controls share on Windows and Linux.
+// The band the client reserves across the sidebar's strip and the toolbar, which the overlay controls share on Windows and Linux.
 const TITLEBAR_HEIGHT = 48;
 const OVERLAY_COLORS = { dark: { color: '#1b1b1f', symbolColor: '#ececf1' }, light: { color: '#ffffff', symbolColor: '#18181b' } };
 
-/* The client draws its own chrome. macOS keeps the traffic lights, inset into the sidebar; elsewhere the window controls overlay the strip. */
+/* The client draws its own chrome. macOS keeps the traffic lights, inset into the sidebar; elsewhere the window controls overlay the toolbar's right end. */
 const titleBarOptions = (dark: boolean): Electron.BrowserWindowConstructorOptions =>
     process.platform === 'darwin'
         ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 16, y: 18 } }

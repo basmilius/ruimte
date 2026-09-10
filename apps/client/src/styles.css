@@ -348,7 +348,11 @@ body {
 .chat-code pre { margin: 0; padding: 0.625rem 0.75rem; background: transparent !important; font-family: var(--font-mono); font-size: 12px; line-height: 1.6; }
 .chat-code code { font-family: inherit; }
 
-/* In the desktop app the sidebar's top strip drags the window. Electron 44 lets children inherit
+/* Windows and Linux draw the native window controls over the top right of the toolbar, so the
+   region under them keeps their width free. The fallback covers a shell that answers no query. */
+.toolbar-overlay-inset { padding-right: calc(100vw - env(titlebar-area-x, calc(100vw - 138px)) - env(titlebar-area-width, 0px)); }
+
+/* In the desktop app the top band drags the window. Electron 44 lets children inherit
    the region, so they go back to `initial` (an explicit `none` counts as no-drag and breaks the
    drag), and the controls inside opt out on purpose. */
 .app-drag { -webkit-app-region: drag; }

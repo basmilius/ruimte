@@ -24,3 +24,9 @@ export const hasTrafficLights = (): boolean => desktop()?.platform === 'darwin';
 
 // Where macOS puts the traffic lights (see the shell), plus the gap the sidebar keeps after them.
 export const TRAFFIC_LIGHTS_INSET_PX = 76;
+
+/* True when the window controls sit over the top right of the window, which Windows and Linux do. */
+export const hasOverlayControls = (): boolean => {
+    const bridge = desktop();
+    return bridge !== null && bridge.platform !== 'darwin';
+};

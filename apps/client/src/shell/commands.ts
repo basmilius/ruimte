@@ -83,6 +83,8 @@ export const appCommands = (): Command[] => {
         { id: 'zoom-selection', label: 'Zoom to selection', shortcut: '⇧2', run: () => useCanvas.getState().zoomToSelection() },
         { id: 'zoom-reset', label: 'Zoom to 100%', shortcut: '⌘0', run: () => useCanvas.getState().zoomTo(1) },
         { id: 'lock', label: anyLocked ? 'Unlock everything' : 'Lock everything', run: () => useCanvas.getState().setAllLocks(!anyLocked) },
+        { id: 'panel-files', label: 'Toggle files panel', run: () => useUi.getState().togglePanel('files') },
+        { id: 'panel-git', label: 'Toggle git panel', run: () => useUi.getState().togglePanel('git') },
         { id: 'theme', label: 'Toggle light and dark', run: () => useTheme.getState().toggle() },
         { id: 'settings', label: 'Settings', shortcut: '⌘,', run: () => useUi.getState().setSettings({ open: true }) },
         { id: 'settings-keyboard', label: 'Keyboard shortcuts', run: () => useUi.getState().setSettings({ open: true, section: 'keyboard' }) },
