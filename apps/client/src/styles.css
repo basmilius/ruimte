@@ -643,8 +643,7 @@ body {
     /* The tabs fill the preview panel's header, which is where the band's own border already is. */
     .files-tab-strip {
         display: flex;
-        align-items: center;
-        gap: 2px;
+        align-items: stretch;
         min-width: 0;
         height: 100%;
         flex: 1;
@@ -653,49 +652,70 @@ body {
     }
     .files-tab-strip::-webkit-scrollbar { display: none; }
     .files-tab {
+        position: relative;
         display: inline-flex;
         align-items: center;
+        gap: 4px;
         flex-shrink: 0;
-        height: 24px;
-        padding-right: 2px;
-        border-radius: 6px;
+        height: 100%;
+        /* The close button carries 4px of hit padding around its glyph, so 8px here reads as the 12px on the left. */
+        padding: 0 8px 0 12px;
         color: var(--text-muted);
+        transition: background-color 100ms ease, color 100ms ease;
     }
-    .files-tab:hover { background: var(--surface-sunken); color: var(--text); }
-    .files-tab[data-active="true"] { background: var(--surface-active); color: var(--text); }
+    /* A tab lifts on hover instead of sinking: `--surface-raised` is the step above the panel's ground. */
+    .files-tab:hover { background: var(--surface-raised); color: var(--text); }
+    .files-tab[data-active="true"] { color: var(--text); }
+    /* The one mark of the active tab, inside it so turning it on moves nothing. */
+    .files-tab[data-active="true"]::after {
+        content: "";
+        position: absolute;
+        inset: auto 0 0 0;
+        height: 2px;
+        background: var(--accent);
+    }
     .files-tab-open {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        height: 24px;
+        min-width: 0;
         max-width: 160px;
-        padding: 0 4px 0 8px;
-        font-size: var(--text-xs);
-        line-height: var(--text-xs--line-height);
+        height: 100%;
+        font-size: var(--text-sm);
+        line-height: var(--text-sm--line-height);
         color: inherit;
     }
+    /* The strip clips, so the ring goes inside the tab instead of around it. */
+    .files-tab-open:focus-visible { outline-offset: -2px; }
     /* A diff tab carries the mark that says so next to the name, which needs the room. */
     .files-tab[data-view="diff"] .files-tab-open { max-width: 200px; }
-    /* A tab that is not pinned is a preview: the same italic an editor uses, and a double-click ends it. */
-    .files-tab:not([data-pinned="true"]) .files-tab-name { font-style: italic; }
     .files-tab-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .files-tab-dot {
+    /* Out of the row until there is something to mark, so a clean tab keeps the close button 8px from its name. */
+    .files-tab-dot { display: none; }
+    .files-tab-dot[data-dirty="true"] {
+        display: block;
         width: 6px;
         height: 6px;
         flex-shrink: 0;
         border-radius: 9999px;
+        background: var(--text-muted);
     }
-    .files-tab-dot[data-dirty="true"] { background: var(--text-muted); }
     .files-tab-close {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         width: 20px;
         height: 20px;
+        flex-shrink: 0;
         border-radius: 5px;
         color: var(--text-faint);
+        opacity: 0;
+        transition: background-color 100ms ease, color 100ms ease;
     }
-    .files-tab-close:hover { background: var(--surface-raised); color: var(--text); }
+    .files-tab:hover .files-tab-close,
+    .files-tab[data-active="true"] .files-tab-close,
+    .files-tab-close:focus-visible { opacity: 1; }
+    .files-tab-close:hover { background: var(--surface-active); color: var(--text); }
 
     /* The git panel's list: a header per group, then a row per changed file. */
     .git-group {

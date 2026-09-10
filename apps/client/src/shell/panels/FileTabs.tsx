@@ -1,5 +1,5 @@
 import { useEffect, useRef, type WheelEvent as ReactWheelEvent } from 'react';
-import { GitCompare, X } from 'lucide-react';
+import { GitCompare, Pin, X } from 'lucide-react';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
@@ -8,8 +8,8 @@ import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
 /*
- * The open files as a strip of tabs, inside the preview panel's own header. A tab that is not
- * pinned reads as a preview the way an editor draws one, and a double-click is what pins it.
+ * The open files as a strip of tabs, inside the preview panel's own header. A double-click pins a
+ * tab, and a pinned one carries the pin next to its close button.
  * Changes share one tab: the strip keeps the file's name so it stays readable, with the mark that
  * says this is a diff and not the file.
  */
@@ -37,13 +37,7 @@ export function FileTabs() {
                 // the file in it; the file's own name is a hover away.
                 const label = tab.view ? 'Changes' : basenameOf(tab.path);
                 return (
-                    <span
-                        key={tab.key}
-                        className="files-tab"
-                        data-active={tab.key === active}
-                        data-pinned={tab.pinned}
-                        data-view={tab.view ? 'diff' : undefined}
-                    >
+                    <span key={tab.key} className="files-tab" data-active={tab.key === active} data-view={tab.view ? 'diff' : undefined}>
                         <Tooltip label={tab.view ? basenameOf(tab.path) : tab.path}>
                             <button
                                 className="files-tab-open"
@@ -62,6 +56,7 @@ export function FileTabs() {
                                 <span className="files-tab-dot" data-dirty={tab.dirty} />
                             </button>
                         </Tooltip>
+                        {tab.pinned && <Icon icon={Pin} size={12} className="shrink-0 text-text-muted" />}
                         <Tooltip label={`Close ${label}`} kbd="⌘W" name>
                             <button className="files-tab-close" onClick={() => useFiles.getState().close(tab.key)}>
                                 <Icon icon={X} size={12} />

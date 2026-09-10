@@ -10,6 +10,7 @@ import { useCanvas } from '@/state/canvas';
 import { useFiles } from '@/state/files';
 import { useUi } from '@/state/ui';
 import { Icon } from '@/ui/Icon';
+import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
 
 const MIN_WIDTH = 360;
@@ -114,11 +115,12 @@ export function PreviewPanel() {
                         window controls' inset when it is the rightmost column on its own. */}
                     <header
                         className={clsx(
-                            'app-drag flex h-12 shrink-0 items-center gap-2 border-b border-border pr-3 pl-2',
+                            'app-drag flex h-12 shrink-0 items-center gap-2 border-b border-border pr-3',
                             open && !panelOpen && hasOverlayControls() && 'toolbar-overlay-inset'
                         )}
                     >
                         <FileTabs />
+                        <Separator />
                         <Tooltip label="Close preview" name>
                             <button className="icon-btn" onClick={() => useUi.getState().setPreviewOpen(false)}>
                                 <Icon icon={X} size={16} />
