@@ -46,6 +46,19 @@ export const dirnameOf = (path: string): string => {
     return cut > 0 ? path.slice(0, cut) : path.slice(0, cut + 1);
 };
 
+/* Every directory on the way to a row, outermost first, the way the tree names one. */
+export const ancestorDirsOf = (treePath: string): string[] => {
+    const segments = treePath.split('/').filter((segment) => segment !== '');
+    segments.pop();
+    const dirs: string[] = [];
+    let prefix = '';
+    for (const segment of segments) {
+        prefix = `${prefix}${segment}/`;
+        dirs.push(prefix);
+    }
+    return dirs;
+};
+
 export const treePathOf = (root: string, entry: FsEntry): string => {
     const relative = relativeTo(root, entry.path);
     return entry.kind === 'directory' ? `${relative}/` : relative;

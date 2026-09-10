@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { FileText, FileWarning, LoaderCircle } from 'lucide-react';
+import { DiffFile } from '@/shell/panels/DiffFile';
 import { FileActionsContext } from '@/shell/panels/file-actions';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { renderFile } from '@/shell/panels/renderers';
@@ -15,7 +16,7 @@ import { Icon } from '@/ui/Icon';
  */
 function FileBody({ path, name }: { path: string; name: string }) {
     const { state, retry } = useFileRead(path);
-    const actions = useMemo(() => ({ path, name, refresh: retry }), [path, name, retry]);
+    const actions = useMemo(() => ({ key: path, path, name, refresh: retry }), [path, name, retry]);
 
     if (state.status === 'loading') {
         return <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>Reading {name}.</EmptyState>;
@@ -40,8 +41,9 @@ function FileBody({ path, name }: { path: string; name: string }) {
 /* The preview panel's body: whichever tab is up, under the strip that names them. */
 export function FileViewer() {
     const active = useFiles((s) => s.active);
+    const tab = useFiles((s) => s.tabs.find((entry) => entry.key === s.active) ?? null);
 
-    if (!active) {
+    if (!active || !tab) {
         return (
             <div className="grid min-h-0 grow place-items-center">
                 <EmptyState icon={<Icon icon={FileText} size={20} />}>Open a file from the files panel to read it here.</EmptyState>
@@ -50,9 +52,13 @@ export function FileViewer() {
     }
 
     return (
-        // Keyed on the path, so switching tabs starts a read of its own instead of drawing the file before it.
+        // Keyed on the tab, so switching tabs starts a read of its own instead of drawing the file before it.
         <div className="flex min-h-0 min-w-0 grow flex-col justify-center">
-            <FileBody key={active} path={active} name={basenameOf(active)} />
+            {tab.view ? (
+                <DiffFile key={tab.key} tabKey={tab.key} path={tab.path} name={basenameOf(tab.path)} view={tab.view} />
+            ) : (
+                <FileBody key={tab.key} path={tab.path} name={basenameOf(tab.path)} />
+            )}
         </div>
     );
 }

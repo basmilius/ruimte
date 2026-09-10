@@ -1,9 +1,10 @@
 import type { ProjectPanels } from '@ruimte/contracts';
 import { useFiles } from '@/state/files';
+import { DEFAULT_SCOPE, useGit } from '@/state/git';
 import { parsePanels, serializePanels, type PanelsState } from '@/state/panel-state';
 import { PANEL_DEFAULTS, useUi } from '@/state/ui';
 
-const defaults = (): PanelsState => ({ ...PANEL_DEFAULTS, tabs: [], active: null, expandedDirs: [] });
+const defaults = (): PanelsState => ({ ...PANEL_DEFAULTS, tabs: [], active: null, expandedDirs: [], gitScope: DEFAULT_SCOPE, gitCollapsedDirs: [] });
 
 const read = (): PanelsState => {
     const ui = useUi.getState();
@@ -15,7 +16,9 @@ const read = (): PanelsState => {
         previewWidth: ui.previewWidth,
         tabs: files.tabs,
         active: files.active,
-        expandedDirs: files.expandedDirs
+        expandedDirs: files.expandedDirs,
+        gitScope: useGit.getState().scope,
+        gitCollapsedDirs: useGit.getState().collapsedDirs
     };
 };
 
@@ -34,7 +37,7 @@ export class PanelsPort {
 
     constructor() {
         const publish = (): void => this.publish();
-        this.unsubscribe = [useUi.subscribe(publish), useFiles.subscribe(publish)];
+        this.unsubscribe = [useUi.subscribe(publish), useFiles.subscribe(publish), useGit.subscribe(publish)];
         this.snapshot = this.stringify();
     }
 
@@ -44,6 +47,8 @@ export class PanelsPort {
         try {
             useUi.getState().setPanels(state);
             useFiles.getState().load(projectId, { tabs: state.tabs, active: state.active, expandedDirs: state.expandedDirs });
+            useGit.getState().setScope(state.gitScope);
+            useGit.getState().setCollapsedDirs(state.gitCollapsedDirs);
         } finally {
             this.applying = false;
             this.snapshot = this.stringify();

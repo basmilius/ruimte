@@ -29,6 +29,8 @@ export interface Settings {
     filesTabLimit: number;
     /* Whether the files tree shows dotfiles; the panel's eye button writes the same value. */
     filesShowHidden: boolean;
+    /* Whether the git panel groups its changed files by folder instead of listing them flat. */
+    gitTree: boolean;
 }
 
 interface SettingsStore extends Settings {
@@ -37,7 +39,15 @@ interface SettingsStore extends Settings {
     update(patch: Partial<Settings>): void;
 }
 
-const DEFAULT_SETTINGS: Settings = { accent: null, font: 'system', fontSize: 13, interfaceFontSize: 16, filesTabLimit: 5, filesShowHidden: false };
+const DEFAULT_SETTINGS: Settings = {
+    accent: null,
+    font: 'system',
+    fontSize: 13,
+    interfaceFontSize: 16,
+    filesTabLimit: 5,
+    filesShowHidden: false,
+    gitTree: true
+};
 
 // Rounded as well as clamped: the stepper used to move in halves, so a browser can still hand back
 // a half pixel from before, and both text and the terminal render sharpest on a whole one.
@@ -91,8 +101,8 @@ export const useSettings = create<SettingsStore>((set, get) => {
         ...initial,
         version: 0,
         update(patch) {
-            const { accent, font, fontSize, interfaceFontSize, filesTabLimit, filesShowHidden } = get();
-            const next: Settings = { accent, font, fontSize, interfaceFontSize, filesTabLimit, filesShowHidden, ...patch };
+            const { accent, font, fontSize, interfaceFontSize, filesTabLimit, filesShowHidden, gitTree } = get();
+            const next: Settings = { accent, font, fontSize, interfaceFontSize, filesTabLimit, filesShowHidden, gitTree, ...patch };
             next.fontSize = clampSize(next.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize);
             next.interfaceFontSize = clampSize(next.interfaceFontSize, INTERFACE_FONT_SIZE_RANGE, DEFAULT_SETTINGS.interfaceFontSize);
             next.filesTabLimit = clampSize(next.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit);

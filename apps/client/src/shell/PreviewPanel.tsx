@@ -86,10 +86,10 @@ export function PreviewPanel() {
             useFiles.getState().close(active);
         } else if (event.key === 'Tab' && event.ctrlKey && tabs.length > 1) {
             event.preventDefault();
-            const index = tabs.findIndex((tab) => tab.path === active);
+            const index = tabs.findIndex((tab) => tab.key === active);
             const next = tabs[(index + (event.shiftKey ? -1 : 1) + tabs.length) % tabs.length];
             if (next) {
-                useFiles.getState().activate(next.path);
+                useFiles.getState().activate(next.key);
             }
         }
     };

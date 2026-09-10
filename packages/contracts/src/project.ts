@@ -202,8 +202,14 @@ export const ProjectPanelsSchema = z.object({
     activeTab: z.string().nullable().optional(),
     // What the file tree had open, the way the tree names a directory: relative, POSIX, trailing slash.
     expandedDirs: z.array(z.string()).optional(),
-    // The git panel's own state; the scope is what a diff tab opens in.
-    git: z.object({ scope: GitDiffScopeSchema }).optional()
+    // The git panel's own state: the scope a diff tab opens in and the folders its list has folded up.
+    git: z
+        .object({
+            scope: GitDiffScopeSchema,
+            // Relative to the repository root, POSIX, no trailing slash, as `git.status` names a path.
+            collapsedDirs: z.array(z.string()).optional()
+        })
+        .optional()
 });
 export type ProjectPanels = z.infer<typeof ProjectPanelsSchema>;
 

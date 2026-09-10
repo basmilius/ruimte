@@ -83,14 +83,14 @@ function FileMenu() {
     const actions = useFileActions();
     const platform = useServer((s) => s.platform);
     const folder = useProject((s) => s.current?.folder ?? null);
-    const pinned = useFiles((s) => s.tabs.some((tab) => tab.path === actions?.path && tab.pinned));
-    const hasOthers = useFiles((s) => s.tabs.some((tab) => tab.path !== actions?.path));
+    const pinned = useFiles((s) => s.tabs.some((tab) => tab.key === actions?.key && tab.pinned));
+    const hasOthers = useFiles((s) => s.tabs.some((tab) => tab.key !== actions?.key));
 
     if (!actions) {
         return null;
     }
 
-    const { path, name, refresh } = actions;
+    const { key, path, name, refresh } = actions;
 
     const openInBrowserNode = (): void => {
         const id = addNodeAtCenter('browser');
@@ -101,8 +101,8 @@ function FileMenu() {
         const files = useFiles.getState();
         // A pinned tab goes with the rest: the person asked for this file and nothing else.
         for (const tab of files.tabs) {
-            if (tab.path !== path) {
-                files.close(tab.path);
+            if (tab.key !== key) {
+                files.close(tab.key);
             }
         }
     };
@@ -142,10 +142,10 @@ function FileMenu() {
                             <Icon icon={RefreshCw} size={14} /> Refresh
                         </Menu.Item>
                         <Menu.Separator className="menu-separator" />
-                        <Menu.Item className="menu-item" onClick={() => useFiles.getState().setPinned(path, !pinned)}>
+                        <Menu.Item className="menu-item" onClick={() => useFiles.getState().setPinned(key, !pinned)}>
                             <Icon icon={pinned ? PinOff : Pin} size={14} /> {pinned ? 'Unpin tab' : 'Pin tab'}
                         </Menu.Item>
-                        <Menu.Item className="menu-item" onClick={() => useFiles.getState().close(path)}>
+                        <Menu.Item className="menu-item" onClick={() => useFiles.getState().close(key)}>
                             <Icon icon={X} size={14} /> Close tab <kbd>⌘W</kbd>
                         </Menu.Item>
                         <Menu.Item className="menu-item" disabled={!hasOthers} onClick={closeOthers}>

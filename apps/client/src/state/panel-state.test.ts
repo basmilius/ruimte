@@ -9,7 +9,9 @@ const defaults: PanelsState = {
     previewWidth: null,
     tabs: [],
     active: null,
-    expandedDirs: []
+    expandedDirs: [],
+    gitScope: 'worktree',
+    gitCollapsedDirs: []
 };
 
 const full: PanelsState = {
@@ -18,11 +20,20 @@ const full: PanelsState = {
     panelWidth: 480,
     previewWidth: 640,
     tabs: [
-        { path: '/repo/readme.md', pinned: true, dirty: false },
-        { path: '/repo/src/main.ts', pinned: false, dirty: false }
+        { key: '/repo/readme.md', path: '/repo/readme.md', pinned: true, dirty: false },
+        { key: '/repo/src/main.ts', path: '/repo/src/main.ts', pinned: false, dirty: false },
+        {
+            key: 'diff:/repo/src/main.ts',
+            path: '/repo/src/main.ts',
+            view: { kind: 'diff', cwd: '/repo', scope: 'base', staged: false },
+            pinned: false,
+            dirty: false
+        }
     ],
-    active: '/repo/src/main.ts',
-    expandedDirs: ['src/', 'src/state/']
+    active: 'diff:/repo/src/main.ts',
+    expandedDirs: ['src/', 'src/state/'],
+    gitScope: 'base',
+    gitCollapsedDirs: ['src', 'src/state']
 };
 
 describe('panels in the machine-local file', () => {
@@ -49,6 +60,20 @@ describe('panels in the machine-local file', () => {
     test('an active tab that is not open is not what the viewer points at', () => {
         expect(parsePanels({ tabs: [{ path: 'a', pinned: false }], activeTab: 'b' }, defaults).active).toBe('a');
         expect(parsePanels({ tabs: [], activeTab: 'b' }, defaults).active).toBeNull();
+    });
+
+    test('a file and its diff are two tabs of one path, and a file without a scope opens on the default', () => {
+        const parsed = parsePanels(
+            {
+                tabs: [
+                    { path: 'a', pinned: false },
+                    { path: 'a', pinned: false, view: { kind: 'diff', cwd: '/repo', scope: 'base', staged: true } }
+                ]
+            },
+            defaults
+        );
+        expect(parsed.tabs.map((tab) => tab.key)).toEqual(['a', 'diff:a']);
+        expect(parsed.gitScope).toBe('worktree');
     });
 
     test('the daemon takes what is serialized, and a file from before the panels still parses', () => {

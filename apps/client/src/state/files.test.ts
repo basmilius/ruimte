@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { closeTab, openTab, pinTab, useFiles, type FileTab, type TabState } from './files.ts';
 import { useUi } from './ui.ts';
 
-const tab = (path: string, pinned = false): FileTab => ({ path, pinned, dirty: false });
+const tab = (path: string, pinned = false): FileTab => ({ key: path, path, pinned, dirty: false });
 
 const state = (paths: string[], active: string | null): TabState => ({ tabs: paths.map((path) => tab(path)), active });
 
@@ -27,6 +27,41 @@ describe('openTab', () => {
     test('nothing but pinned tabs means the limit gives way, never a pin', () => {
         const pinned: TabState = { tabs: [tab('a', true), tab('b', true)], active: 'a' };
         expect(openTab(pinned, 'c', 2).tabs.map((entry) => entry.path)).toEqual(['a', 'b', 'c']);
+    });
+});
+
+describe('a diff tab', () => {
+    test('sits next to the file it belongs to instead of replacing it', () => {
+        const view = { kind: 'diff', cwd: '/repo', scope: 'worktree', staged: false } as const;
+        const next = openTab(state(['a'], 'a'), 'a', 5, view);
+        expect(next.tabs.map((entry) => entry.key)).toEqual(['a', 'diff:a']);
+        expect(next.active).toBe('diff:a');
+    });
+
+    test('another change opens in the diff tab nobody pinned instead of a tab of its own', () => {
+        const first = openTab(state(['a'], 'a'), 'a', 5, { kind: 'diff', cwd: '/repo', scope: 'worktree', staged: false });
+        const second = openTab(first, 'b', 5, { kind: 'diff', cwd: '/repo', scope: 'worktree', staged: true });
+        expect(second.tabs.map((entry) => entry.key)).toEqual(['a', 'diff:b']);
+        expect(second.active).toBe('diff:b');
+    });
+
+    test('a pinned diff stays where it is and the next change opens beside it', () => {
+        const first = openTab(state([], null), 'a', 5, { kind: 'diff', cwd: '/repo', scope: 'worktree', staged: false });
+        const pinned = pinTab(first, 'diff:a', true);
+        const second = openTab(pinned, 'b', 5, { kind: 'diff', cwd: '/repo', scope: 'worktree', staged: false });
+        expect(second.tabs.map((entry) => entry.key)).toEqual(['diff:a', 'diff:b']);
+        // And the one that is not pinned is the one the change after that takes over again.
+        expect(openTab(second, 'c', 5, { kind: 'diff', cwd: '/repo', scope: 'worktree', staged: false }).tabs.map((entry) => entry.key)).toEqual([
+            'diff:a',
+            'diff:c'
+        ]);
+    });
+
+    test('opening it again in another scope moves the tab it already has', () => {
+        const first = openTab(state([], null), 'a', 5, { kind: 'diff', cwd: '/repo', scope: 'worktree', staged: false });
+        const second = openTab(first, 'a', 5, { kind: 'diff', cwd: '/repo', scope: 'base', staged: false });
+        expect(second.tabs).toHaveLength(1);
+        expect(second.tabs[0]!.view?.scope).toBe('base');
     });
 });
 
