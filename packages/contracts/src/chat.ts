@@ -240,9 +240,11 @@ export const ChatQuestionItemSchema = z.object({
     kind: z.literal('question'),
     requestId: z.string(),
     questions: z.array(ChatQuestionSchema).min(1),
+    // Set when the CLI goes on while it waits, which is the only kind that may be dismissed.
+    async: z.boolean().optional(),
     // Keyed by question id; null while the person has not answered.
     answers: z.record(z.string(), z.string()).nullable(),
-    state: z.enum(['pending', 'answered', 'cancelled'])
+    state: z.enum(['pending', 'answered', 'cancelled', 'dismissed'])
 });
 
 // One file of a turn's checkpoint diff: the working tree against the tree the turn started from.
@@ -390,6 +392,13 @@ export const ChatApprovePayloadSchema = z.object({
     message: z.string().optional()
 });
 export type ChatApprovePayload = z.infer<typeof ChatApprovePayloadSchema>;
+
+// Leaves an asynchronous question alone; the agent never hears about it and the item settles.
+export const ChatDismissPayloadSchema = z.object({
+    chatId: ChatIdSchema,
+    itemId: z.string().min(1)
+});
+export type ChatDismissPayload = z.infer<typeof ChatDismissPayloadSchema>;
 
 export const ChatAnswerPayloadSchema = z.object({
     chatId: ChatIdSchema,

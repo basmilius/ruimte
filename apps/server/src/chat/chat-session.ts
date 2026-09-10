@@ -245,6 +245,21 @@ export class ChatSession {
         return true;
     }
 
+    /*
+     * Leaves an asynchronous question alone. The CLI is not told: it asked beside its turn and
+     * carries on either way, so the item only has to stop waiting for the person.
+     */
+    dismiss(itemId: string): boolean {
+        const item = this.thread.get(itemId);
+        if (item?.kind !== 'question' || item.state !== 'pending' || item.async !== true) {
+            return false;
+        }
+        this.backend?.dismissRequest?.(item.requestId);
+        const status = this.thread.info.activeTurnId === null ? 'idle' : 'running';
+        this.emit([this.thread.upsert({ ...item, state: 'dismissed' }), this.thread.setStatus(status)]);
+        return true;
+    }
+
     /* Ends the process; the thread stays as it is. */
     stop(): void {
         this.backend?.stop();

@@ -56,16 +56,16 @@ const usePendingRequests = (chatId: string) => {
     const order = useChats((s) => s.byNodeId[chatId]?.order);
     return useMemo(() => {
         const approvals: ChatApprovalItem[] = [];
-        let question: ChatQuestionItem | null = null;
+        const questions: ChatQuestionItem[] = [];
         for (const id of order ?? []) {
             const item = items?.[id];
             if (item?.kind === 'approval' && item.decision === 'pending') {
                 approvals.push(item);
-            } else if (item?.kind === 'question' && item.state === 'pending' && !question) {
-                question = item;
+            } else if (item?.kind === 'question' && item.state === 'pending') {
+                questions.push(item);
             }
         }
-        return { approvals, question };
+        return { approvals, questions };
     }, [items, order]);
 };
 
@@ -94,10 +94,13 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const backdropRef = useRef<HTMLDivElement>(null);
     const providers = useProviders((s) => s.providers);
-    const { approvals, question } = usePendingRequests(chatId);
+    const { approvals, questions } = usePendingRequests(chatId);
     const order = useChats((s) => s.byNodeId[chatId]?.order);
     const items = useChats((s) => s.byNodeId[chatId]?.items);
 
+    // The dock shows one request at a time and says how many others are behind it.
+    const question = questions[0] ?? null;
+    const waiting = approvals.length + questions.length;
     const provider = providers.find((entry) => entry.kind === info.provider);
     // Absent until the daemon answered `provider.list`, so only an explicit false hides anything.
     const capabilities = provider?.capabilities;
@@ -496,8 +499,10 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                     inputRef.current?.focus();
                 }}
             >
-                {question && <QuestionDock chatId={chatId} item={question} focused={focused} />}
-                {!question && approvals[0] && <ApprovalDock chatId={chatId} item={approvals[0]} index={0} total={approvals.length} focused={focused} />}
+                {question && <QuestionDock chatId={chatId} item={question} more={waiting - 1} focused={focused} />}
+                {!question && approvals[0] && (
+                    <ApprovalDock chatId={chatId} item={approvals[0]} more={waiting - 1} denyReason={capabilities?.denyReason === true} focused={focused} />
+                )}
                 {commandMenuOpen && (
                     <div className="border-b border-border px-1.5 py-1.5">
                         {commands.map((command, index) => (

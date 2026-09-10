@@ -61,7 +61,8 @@ export type BackendEvent =
           description: string | null;
           canAllowAlways: boolean;
       }
-    | { type: 'question.requested'; requestId: string; questions: ChatQuestion[] }
+    // `async` marks a question the CLI goes on past, which is the only kind the person may dismiss.
+    | { type: 'question.requested'; requestId: string; questions: ChatQuestion[]; async?: boolean }
     // The CLI took an approval or a question back; the person no longer has to answer it.
     | { type: 'request.withdrawn'; requestId: string }
     // An agent the agent delegated to, keyed by the call that spawned it. `background` says whether
@@ -94,6 +95,8 @@ export interface ChatBackend {
     // False when nothing waits under that id, so the caller can answer the client with an error.
     respondApproval(requestId: string, decision: ApprovalDecision, message?: string): boolean;
     respondQuestion(requestId: string, answers: Record<string, string>): boolean;
+    // Drops an asynchronous question without telling the CLI, for a protocol that keeps one waiting.
+    dismissRequest?(requestId: string): boolean;
     // What this CLI would run right now, for a protocol that answers the question itself.
     listSkills?(): Promise<ChatSkill[]>;
     // Closes the input and lets the CLI leave on its own; `dispose` kills it.

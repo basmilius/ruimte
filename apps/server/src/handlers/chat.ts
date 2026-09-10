@@ -85,6 +85,13 @@ export const registerChatHandlers = (dispatcher: Dispatcher, manager: ChatManage
         })
     );
 
+    dispatcher.register('chat.dismiss', (payload) =>
+        translate(() => {
+            manager.dismiss(payload.chatId, payload.itemId);
+            return {};
+        })
+    );
+
     dispatcher.register('chat.kill', (payload) =>
         translate(async () => {
             await manager.kill(payload.chatId);

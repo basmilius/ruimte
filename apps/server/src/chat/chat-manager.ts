@@ -259,6 +259,12 @@ export class ChatManager {
         }
     }
 
+    dismiss(chatId: string, itemId: string): void {
+        if (!this.require(chatId).dismiss(itemId)) {
+            throw new ChatError('request-not-found', `No question to dismiss under ${itemId}`);
+        }
+    }
+
     async kill(chatId: string): Promise<void> {
         const session = this.require(chatId);
         session.dispose();

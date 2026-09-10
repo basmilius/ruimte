@@ -189,6 +189,28 @@ describe('ChatManager with Codex', () => {
         expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['you chose Red']);
     });
 
+    test('a blocking question cannot be dismissed', async () => {
+        await open('chat-b');
+        await manager.send('chat-b', 'ask: Which color?');
+        await waitFor(() => recorder.info?.status === 'needs-you', 'the question');
+        const blocking = recorder.ofKind('question')[0]!;
+        expect(blocking.async).toBeUndefined();
+        expect(() => manager.dismiss('chat-b', blocking.id)).toThrow('No question to dismiss');
+    });
+
+    test('an async question is dismissed without telling Codex and settles as dismissed', async () => {
+        await open('chat-d');
+        await manager.send('chat-d', 'async: Which color?');
+        await waitFor(() => recorder.info?.status === 'needs-you', 'the question');
+        const asked = recorder.ofKind('question')[0]!;
+        expect(asked.async).toBe(true);
+        manager.dismiss('chat-d', asked.id);
+        expect(recorder.items.get(asked.id)).toMatchObject({ state: 'dismissed' });
+        // The turn goes on: Codex asked beside it and never waits for the answer.
+        expect(recorder.info?.status).toBe('running');
+        expect(() => manager.dismiss('chat-d', asked.id)).toThrow('No question to dismiss');
+    });
+
     test('cancel interrupts a running turn and marks it aborted', async () => {
         await open('chat-4');
         await manager.send('chat-4', 'slow');

@@ -238,10 +238,27 @@ describe('CodexProtocol', () => {
                         ],
                         multiSelect: false
                     }
-                ]
+                ],
+                async: true
             }
         ]);
         expect(protocol.questionAnswer('call_1', { '0': 'Red' })).toEqual({ kind: 'steer', text: 'Red' });
+    });
+
+    test('an async question can be dismissed, a blocking one cannot', () => {
+        const protocol = new CodexProtocol(1);
+        const asked = message('call_2', 'Which?', { delivery: 'async', questions: [{ title: 'Which?', options: ['Red'] }] });
+        protocol.handle({ method: 'item/started', params: { ...ids, item: asked } });
+        protocol.handle({ method: 'item/completed', params: { ...ids, item: asked } });
+        protocol.handle({
+            method: 'thread/requestUserInput',
+            id: 7,
+            params: { ...ids, questions: [{ id: 'color', header: 'Choice', question: 'Which color?', options: [{ label: 'Red', description: '' }] }] }
+        });
+        expect(protocol.dismissQuestion('1-7')).toBe(false);
+        expect(protocol.dismissQuestion('call_2')).toBe(true);
+        expect(protocol.dismissQuestion('call_2')).toBe(false);
+        expect(protocol.questionAnswer('call_2', { '0': 'Red' })).toBeNull();
     });
 
     test('a server request it does not know says nothing, so the backend can refuse it', () => {

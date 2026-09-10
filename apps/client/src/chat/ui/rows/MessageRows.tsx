@@ -229,6 +229,7 @@ export function QuestionHistoryRow({ item }: { item: ChatQuestionItem }) {
                             <span className="ml-1.5 text-text">{item.answers[question.id]}</span>
                         )}
                         {item.state === 'cancelled' && <span className="ml-1.5">(not answered)</span>}
+                        {item.state === 'dismissed' && <span className="ml-1.5">(dismissed)</span>}
                     </span>
                 </div>
             ))}
