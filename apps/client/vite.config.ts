@@ -25,6 +25,10 @@ export default defineConfig({
             // A project's icon is bytes on the daemon, never a data URL on the wire.
             '/projects': {
                 target: daemon.replace(/^ws/, 'http')
+            },
+            // The same for an image the file viewer draws.
+            '/fs': {
+                target: daemon.replace(/^ws/, 'http')
             }
         }
     }
