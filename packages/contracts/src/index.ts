@@ -96,6 +96,7 @@ import {
     SessionTargetPayloadSchema,
     SessionWritePayloadSchema
 } from './session.ts';
+import { UsageChangedEventSchema, UsageLimitsSnapshotSchema, UsageSummaryPayloadSchema, UsageSummaryResultSchema } from './usage.ts';
 
 export * from './agent.ts';
 export * from './auth.ts';
@@ -111,6 +112,7 @@ export * from './project.ts';
 export * from './project-migrate.ts';
 export * from './server.ts';
 export * from './session.ts';
+export * from './usage.ts';
 
 const EmptySchema = z.object({});
 
@@ -175,6 +177,11 @@ export const REQUEST_SCHEMAS = {
     'git.cancel': { payload: GitCancelPayloadSchema, result: EmptySchema },
     'git.capabilities': { payload: GitCwdPayloadSchema, result: GitCapabilitiesResultSchema },
     'git.suggestMessage': { payload: GitSuggestMessagePayloadSchema, result: GitSuggestMessageResultSchema },
+    'usage.summary': { payload: UsageSummaryPayloadSchema, result: UsageSummaryResultSchema },
+    'usage.subscribe': { payload: EmptySchema, result: EmptySchema },
+    'usage.unsubscribe': { payload: EmptySchema, result: EmptySchema },
+    'usage.limits': { payload: EmptySchema, result: UsageLimitsSnapshotSchema },
+    'usage.refreshLimits': { payload: EmptySchema, result: UsageLimitsSnapshotSchema },
     'context.set': { payload: ContextSetPayloadSchema, result: EmptySchema },
     'endpoint.info': { payload: EmptySchema, result: EndpointInfoSchema },
     'auth.sessions': { payload: EmptySchema, result: AuthSessionsResultSchema },
@@ -205,7 +212,9 @@ export const EVENT_SCHEMAS = {
     'drawing.changed': DrawingChangedEventSchema,
     'fs.changed': FsChangedEventSchema,
     'git.status': GitStatusEventSchema,
-    'git.progress': GitProgressEventSchema
+    'git.progress': GitProgressEventSchema,
+    'usage.changed': UsageChangedEventSchema,
+    'usage.limitsChanged': UsageLimitsSnapshotSchema
 } as const satisfies Record<string, z.ZodType>;
 
 export type EventType = keyof typeof EVENT_SCHEMAS;
