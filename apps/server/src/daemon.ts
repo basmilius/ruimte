@@ -18,6 +18,7 @@ import { Dispatcher, sendEvent, type ClientAccess, type ClientConnection } from 
 import { VERSION } from './version.ts';
 import { registerAuthHandlers } from './handlers/auth.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
+import { FS_FILE_PATH, handleFsFileRequest } from './fs/file-route.ts';
 import { FolderWatcher } from './fs/watch.ts';
 import { registerFsHandlers } from './handlers/fs.ts';
 import { registerGitHandlers } from './handlers/git.ts';
@@ -179,6 +180,10 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
 
             if (url.pathname.startsWith(`${PROJECTS_PATH}/`)) {
                 return handleProjectRequest(request, url, remote, auth, access, projects);
+            }
+
+            if (url.pathname === FS_FILE_PATH) {
+                return handleFsFileRequest(request, url, remote, auth, access);
             }
 
             if (url.pathname.startsWith(`${HOOKS_PATH}/`)) {
