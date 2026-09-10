@@ -1,21 +1,26 @@
 import {
     useCallback,
     useEffect,
+    useMemo,
     useRef,
     useState,
     type DragEvent as ReactDragEvent,
     type KeyboardEvent as ReactKeyboardEvent,
-    type MouseEvent as ReactMouseEvent
+    type MouseEvent as ReactMouseEvent,
+    type ReactNode
 } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import type { FileTree as FileTreeModel, FileTreeDirectoryHandle } from '@pierre/trees';
 import { FileTree, useFileTree } from '@pierre/trees/react';
-import { ChevronsDownUp, Copy, CornerUpRight, Eye, EyeOff, Folder, FolderOpen, RefreshCw, Search } from 'lucide-react';
+import { ChevronsDownUp, ChevronsUpDown, Copy, CornerUpRight, Eye, Folder, FolderOpen, LoaderCircle, RefreshCw, Search } from 'lucide-react';
 import { MENTION_DRAG_TYPE } from '@/chat/mentions';
+import { FILE_TOOLBAR } from '@/shell/panels/classes';
+import { FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import {
     LOADING_NAME,
     absoluteOf,
     ancestorDirsOf,
+    basenameOf,
     buildTreeInput,
     compareRows,
     isDirectoryPath,
@@ -25,6 +30,7 @@ import {
     treePathOf,
     type EntryCache
 } from '@/shell/panels/files-tree';
+import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
@@ -35,7 +41,7 @@ import { EmptyState } from '@/ui/EmptyState';
 import { FILE_TREE_ICONS } from '@/ui/file-icon';
 import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
-import { Tooltip } from '@/ui/Tooltip';
+import { Separator } from '@/ui/Separator';
 
 const SEARCH_DEBOUNCE_MS = 150;
 const SEARCH_LIMIT = 200;
@@ -131,6 +137,9 @@ export function FilesPanel() {
 
     const searching = query.trim() !== '';
     const activeModel = searching ? searchModel : model;
+    /* The rows the tree is fed, kept here as well because what they add up to is what says whether
+       the panel has anything to show. */
+    const treeInput = useMemo(() => buildTreeInput(folder ?? '', cache, showHidden), [cache, folder, showHidden]);
 
     const load = useCallback(
         async (dir: string): Promise<void> => {
@@ -187,13 +196,12 @@ export function FilesPanel() {
         if (!folder) {
             return;
         }
-        const { paths, ignored } = buildTreeInput(folder, cache, showHidden);
-        model.resetPaths(paths, { initialExpandedPaths: [...expandedRef.current] });
-        model.setGitStatus(ignored.map((path) => ({ path, status: 'ignored' as const })));
+        model.resetPaths(treeInput.paths, { initialExpandedPaths: [...expandedRef.current] });
+        model.setGitStatus(treeInput.ignored.map((path) => ({ path, status: 'ignored' as const })));
         directoriesRef.current = new Set(
             [...cache.values()].flatMap((entries) => entries.filter((entry) => entry.kind === 'directory').map((entry) => treePathOf(folder, entry)))
         );
-    }, [cache, folder, model, showHidden]);
+    }, [cache, folder, model, treeInput]);
 
     /*
      * The tree reports an expansion nowhere, so every change of its own is the moment to compare
@@ -296,6 +304,14 @@ export function FilesPanel() {
         event.dataTransfer.setData(MENTION_DRAG_TYPE, paths.map((entry) => (isDirectoryPath(entry) ? entry.slice(0, -1) : entry)).join(' '));
     };
 
+    const expandAll = (): void => {
+        // Over the directories the tree already holds, and no further: what a directory opens is
+        // listed only once it is open, so the level under it unfolds on the next click.
+        for (const dir of directoriesRef.current) {
+            directoryHandle(model, dir)?.expand();
+        }
+    };
+
     const collapseAll = (): void => {
         // Emptied first, so a directory that is remembered but not in the tree yet closes with the rest.
         expandedRef.current = new Set();
@@ -322,21 +338,46 @@ export function FilesPanel() {
     if (!folder) {
         return (
             <div className="grid grow place-items-center">
-                <EmptyState icon={<Icon icon={Folder} size={20} />}>
-                    This canvas has no folder, so there is nothing to list. Open a project folder first.
-                </EmptyState>
+                <EmptyState icon={<Icon icon={Folder} size={20} />}>This canvas has no folder, so there are no files to list.</EmptyState>
             </div>
         );
     }
 
+    /* What stands where the tree would be while it holds no rows: the first listing still on its
+       way, a folder with nothing in it, or a filter nothing here answers to. */
+    const placeholder = (): ReactNode => {
+        if (searching) {
+            return matches.length > 0 ? null : <EmptyState icon={<Icon icon={Search} size={20} />}>No file in this folder matches the filter.</EmptyState>;
+        }
+        if (!cache.has(folder)) {
+            return <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>Reading {basenameOf(folder)}.</EmptyState>;
+        }
+        if (treeInput.paths.length > 0) {
+            return null;
+        }
+        if (!showHidden && (cache.get(folder)?.length ?? 0) > 0) {
+            return <EmptyState icon={<Icon icon={Folder} size={20} />}>Everything in this folder is hidden; the eye button shows it.</EmptyState>;
+        }
+        return <EmptyState icon={<Icon icon={Folder} size={20} />}>This folder is empty.</EmptyState>;
+    };
+
+    const empty = placeholder();
+
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
-            <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border px-2">
+            {/* The folder the tree is of belongs next to the panel's name, where the git panel puts
+                the checkout it is on. */}
+            <PanelHeaderSlot>
+                <Pill icon={<Icon icon={Folder} size={12} />}>{basenameOf(folder)}</Pill>
+            </PanelHeaderSlot>
+            <div className={FILE_TOOLBAR}>
                 <span className="relative min-w-0 grow">
-                    <Icon icon={Search} size={12} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-text-faint" />
+                    <Icon icon={Search} size={14} className="pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 text-text-faint" aria-hidden />
                     <input
-                        className="field h-6 w-full pl-7 pr-2 text-xs"
+                        className="field h-7 pl-8 text-xs"
                         placeholder="Filter files"
+                        aria-label="Filter files"
+                        spellCheck={false}
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         onKeyDown={(e) => {
@@ -347,82 +388,77 @@ export function FilesPanel() {
                         }}
                     />
                 </span>
-                <div className={BTN_GROUP}>
-                    <Tooltip label={showHidden ? 'Hide hidden files' : 'Show hidden files'} name>
-                        <button
-                            className="icon-btn h-6 w-6"
-                            aria-pressed={showHidden}
-                            onClick={() => useSettings.getState().update({ filesShowHidden: !showHidden })}
-                        >
-                            <Icon icon={showHidden ? Eye : EyeOff} size={14} />
-                        </button>
-                    </Tooltip>
-                    <Tooltip label="Collapse all" name>
-                        <button className="icon-btn h-6 w-6" onClick={collapseAll}>
-                            <Icon icon={ChevronsDownUp} size={14} />
-                        </button>
-                    </Tooltip>
-                    <Tooltip label="Refresh" name>
-                        <button className="icon-btn h-6 w-6" onClick={refresh}>
-                            <Icon icon={RefreshCw} size={14} />
-                        </button>
-                    </Tooltip>
-                </div>
+                <Separator />
+                <span className={BTN_GROUP}>
+                    <FileToolbarToggle
+                        icon={Eye}
+                        label="Show hidden files"
+                        active={showHidden}
+                        onClick={() => useSettings.getState().update({ filesShowHidden: !showHidden })}
+                    />
+                    <FileToolbarToggle icon={ChevronsUpDown} label="Expand all folders" active={false} onClick={expandAll} />
+                    <FileToolbarToggle icon={ChevronsDownUp} label="Collapse all folders" active={false} onClick={collapseAll} />
+                    <FileToolbarToggle icon={RefreshCw} label="Refresh" active={false} onClick={refresh} />
+                </span>
             </div>
             {reachability !== null && reachability !== 'loopback' && (
                 <div className="flex h-7 shrink-0 items-center px-2">
                     <Pill>{machine ?? 'Remote machine'}</Pill>
                 </div>
             )}
-            <ContextMenu.Root>
-                <ContextMenu.Trigger
-                    render={<div />}
-                    /* The padding is on the frame, not the scroller, so the first row keeps its
-                       distance from the filter bar instead of sliding under it. */
-                    className="min-h-0 grow overflow-hidden pt-2"
-                    onContextMenu={(event) => {
-                        menuPathRef.current = rowPathOf(event);
-                        if (menuPathRef.current) {
-                            activeModel.getItem(menuPathRef.current)?.select();
-                        }
-                    }}
-                >
-                    <FileTree
-                        key={searching ? 'search' : 'tree'}
-                        model={activeModel}
-                        className="files-tree"
-                        onDoubleClick={onDoubleClick}
-                        onKeyDown={onKeyDown}
-                        onDragStart={onDragStart}
-                    />
-                </ContextMenu.Trigger>
-                <ContextMenu.Portal>
-                    <ContextMenu.Positioner className="z-[var(--z-popup)]">
-                        <ContextMenu.Popup className="menu-popup">
-                            <ContextMenu.Item className="menu-item" onClick={onMenuPath((_absolute, treePath) => openPath(treePath))}>
-                                <Icon icon={FolderOpen} size={14} /> Open
-                            </ContextMenu.Item>
-                            <ContextMenu.Item
-                                className="menu-item"
-                                onClick={onMenuPath((absolute) => {
-                                    void transport.request('fs.reveal', { path: absolute }).catch(() => undefined);
-                                })}
-                            >
-                                <Icon icon={CornerUpRight} size={14} /> Reveal in {fileManagerName(platform)}
-                            </ContextMenu.Item>
-                            <ContextMenu.Item className="menu-item" onClick={onMenuPath((absolute) => copyText(absolute))}>
-                                <Icon icon={Copy} size={14} /> Copy path
-                            </ContextMenu.Item>
-                            <ContextMenu.Item
-                                className="menu-item"
-                                onClick={onMenuPath((_absolute, treePath) => copyText(isDirectoryPath(treePath) ? treePath.slice(0, -1) : treePath))}
-                            >
-                                <Icon icon={Copy} size={14} /> Copy relative path
-                            </ContextMenu.Item>
-                        </ContextMenu.Popup>
-                    </ContextMenu.Positioner>
-                </ContextMenu.Portal>
-            </ContextMenu.Root>
+            {empty !== null ? (
+                <div className="grid min-h-0 grow place-items-center">{empty}</div>
+            ) : (
+                <ContextMenu.Root>
+                    <ContextMenu.Trigger
+                        render={<div />}
+                        /* The padding is on the frame, not the scroller, so the first row keeps its
+                           distance from the toolbar instead of sliding under it. */
+                        className="min-h-0 grow overflow-hidden pt-2"
+                        onContextMenu={(event) => {
+                            menuPathRef.current = rowPathOf(event);
+                            if (menuPathRef.current) {
+                                activeModel.getItem(menuPathRef.current)?.select();
+                            }
+                        }}
+                    >
+                        <FileTree
+                            key={searching ? 'search' : 'tree'}
+                            model={activeModel}
+                            className="files-tree"
+                            onDoubleClick={onDoubleClick}
+                            onKeyDown={onKeyDown}
+                            onDragStart={onDragStart}
+                        />
+                    </ContextMenu.Trigger>
+                    <ContextMenu.Portal>
+                        <ContextMenu.Positioner className="z-[var(--z-popup)]">
+                            <ContextMenu.Popup className="menu-popup">
+                                <ContextMenu.Item className="menu-item" onClick={onMenuPath((_absolute, treePath) => openPath(treePath))}>
+                                    <Icon icon={FolderOpen} size={14} /> Open
+                                </ContextMenu.Item>
+                                <ContextMenu.Item
+                                    className="menu-item"
+                                    onClick={onMenuPath((absolute) => {
+                                        void transport.request('fs.reveal', { path: absolute }).catch(() => undefined);
+                                    })}
+                                >
+                                    <Icon icon={CornerUpRight} size={14} /> Reveal in {fileManagerName(platform)}
+                                </ContextMenu.Item>
+                                <ContextMenu.Item className="menu-item" onClick={onMenuPath((absolute) => copyText(absolute))}>
+                                    <Icon icon={Copy} size={14} /> Copy path
+                                </ContextMenu.Item>
+                                <ContextMenu.Item
+                                    className="menu-item"
+                                    onClick={onMenuPath((_absolute, treePath) => copyText(isDirectoryPath(treePath) ? treePath.slice(0, -1) : treePath))}
+                                >
+                                    <Icon icon={Copy} size={14} /> Copy relative path
+                                </ContextMenu.Item>
+                            </ContextMenu.Popup>
+                        </ContextMenu.Positioner>
+                    </ContextMenu.Portal>
+                </ContextMenu.Root>
+            )}
         </div>
     );
 }
