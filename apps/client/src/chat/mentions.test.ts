@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { findMentionQuery, findSkillQuery, insertMention, insertSkill, presentMentions, presentSkills, tokenizeChips } from './mentions';
+import { chipText, findMentionQuery, findSkillQuery, insertMention, insertSkill, presentMentions, presentSkills, tokenizeChips } from './mentions';
 
 describe('findMentionQuery', () => {
     test('opens on an @ that starts a word and follows it to the caret', () => {
@@ -80,5 +80,35 @@ describe('tokenizeChips with skills', () => {
             { kind: 'skill', name: 'unslop' },
             { kind: 'text', text: ' it' }
         ]);
+    });
+});
+
+describe('chipText', () => {
+    test('a chip stands for the sigil the text carries and its value', () => {
+        expect(chipText({ kind: 'mention', path: 'src/a.ts' })).toBe('@src/a.ts');
+        expect(chipText({ kind: 'skill', name: 'unslop' })).toBe('$unslop');
+        expect(chipText({ kind: 'text', text: '  two spaces  ' })).toBe('  two spaces  ');
+    });
+
+    /*
+     * The composer paints these segments on a layer behind the textarea, so the layer has to spell
+     * out the textarea's own value to the character. One character more or less and everything
+     * behind it is drawn away from the caret, which the textarea places from its raw text.
+     */
+    test('the segments of a prompt spell that prompt again', () => {
+        const long = `${'nested/'.repeat(10)}2026-09-10-tekenview.html`;
+        const cases: Array<[string, string[], string[]]> = [
+            ['@docs/reports/2026-09-10-tekenview.html this is a test', ['docs/reports/2026-09-10-tekenview.html'], []],
+            ['$unslop', [], ['unslop']],
+            ['run $unslop over @README.md, then @docs/HANDOFF.md.', ['README.md', 'docs/HANDOFF.md'], ['unslop']],
+            ['open @src/a.ts and @src/a.ts.bak.', ['src/a.ts', 'src/a.ts.bak'], []],
+            ['line one\n@a.ts opens the next one\n', ['a.ts'], []],
+            [`${'a word '.repeat(20)}@${long} and a tail that wraps`, [long], []],
+            ['nothing of the chosen is left', ['gone.ts'], ['gone']],
+            ['', ['a.ts'], ['unslop']]
+        ];
+        for (const [text, mentions, skills] of cases) {
+            expect(tokenizeChips(text, mentions, skills).map(chipText).join('')).toBe(text);
+        }
     });
 });

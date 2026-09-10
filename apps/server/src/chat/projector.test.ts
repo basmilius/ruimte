@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatInfo } from '@ruimte/contracts';
 import type { BackendEvent } from './backend.ts';
-import { ThreadProjector, stripAgentFooter } from './projector.ts';
+import { ThreadProjector, stripAgentFooter, summaryLine } from './projector.ts';
 import { ChatThread } from './thread.ts';
 
 const info: ChatInfo = {
@@ -430,6 +430,32 @@ describe('subagents', () => {
         );
         expect(thread.get('1:child_late')).toBeUndefined();
         expect(thread.get('1:toolu_agent')).toMatchObject({ itemsTruncated: true });
+    });
+
+    test('a report handed in as the summary is one line on the header and stays whole on the row', () => {
+        const { thread, project } = setup();
+        const report =
+            'Rewrote the parser so it reads the header before the body, which is what the spec asks for and what the old code only did by accident\n\n- the tests pass\n- nothing else changed';
+        project(
+            { type: 'tool.started', ref: 'toolu_agent', name: 'Agent', input: { run_in_background: true }, parentRef: null },
+            { type: 'tool.done', ref: 'toolu_agent', output: 'Async agent launched successfully.', state: 'done' },
+            { type: 'turn.done', state: 'done', costUsd: 0 },
+            { type: 'task.done', ref: 'toolu_agent', summary: report, ok: true }
+        );
+        project({ type: 'text.done', ref: 'msg_1:t0', text: 'here is what it found' });
+
+        const turn = thread.list().find((item) => item.kind === 'turn' && item.origin === 'agent');
+        const label = turn?.kind === 'turn' ? (turn.label ?? '') : '';
+        expect(label).toBe('Rewrote the parser so it reads the header before the body, which is what the...');
+        // The report is not thrown away, it only moves: the row's "Show result" fold has all of it.
+        expect(thread.get('1:toolu_agent')).toMatchObject({ summary: label, result: report });
+    });
+
+    test('summaryLine takes the first line that says something and never grows past a header', () => {
+        expect(summaryLine('  \n\nWrote the docs\nand more')).toBe('Wrote the docs');
+        expect(summaryLine('short enough')).toBe('short enough');
+        expect(summaryLine('x'.repeat(120))).toBe(`${'x'.repeat(80)}...`);
+        expect(summaryLine('')).toBe('');
     });
 
     test('the footer strip survives a CLI that says it a little differently', () => {

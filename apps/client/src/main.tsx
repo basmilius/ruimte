@@ -24,11 +24,20 @@ startPing();
 startContextSync();
 startEndpointSelection();
 startInputModality();
-// The native window controls on Windows and Linux take their colors from the client's theme.
-desktop()?.setTitleBarTheme(useTheme.getState().resolved === 'dark');
+/* The shell dresses its native chrome and every page it hosts in the theme the client is in. The
+   background travels with it, so `styles.css` stays the only place the token is written down. */
+const reportTheme = (): void => {
+    const { theme, resolved } = useTheme.getState();
+    desktop()?.setTheme?.({
+        resolved,
+        followsSystem: theme === 'system',
+        background: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
+    });
+};
+reportTheme();
 useTheme.subscribe((state, previous) => {
-    if (state.resolved !== previous.resolved) {
-        desktop()?.setTitleBarTheme(state.resolved === 'dark');
+    if (state.resolved !== previous.resolved || state.theme !== previous.theme) {
+        reportTheme();
     }
 });
 if (import.meta.env.DEV) {

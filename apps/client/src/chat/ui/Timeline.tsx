@@ -1,7 +1,11 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import clsx from 'clsx';
 import { deriveTimelineRows, type TimelineRow } from '@/chat/logic/timeline';
 import { registerTimeline } from '@/chat/timeline-scroll';
+import { EMPTY_TARGET, readTimelineTarget, type TimelineTarget } from '@/chat/logic/timeline-target';
+import { TimelineMenuPopup } from '@/chat/ui/TimelineMenu';
 import { AgentTurnRow, ApprovalHistoryRow, AssistantRow, CompactionRow, NoteRow, QuestionHistoryRow, ThinkingRow, UserRow } from '@/chat/ui/rows/MessageRows';
 import { SubagentRow } from '@/chat/ui/rows/SubagentRow';
 import { ChangedFilesRow, TurnFoldRow, WorkGroupRow, WorkLiveRow, WorkRow, WorkingRow } from '@/chat/ui/rows/WorkRows';
@@ -73,6 +77,7 @@ export function Timeline({ chatId }: { chatId: string }) {
     const [expandedSubagents, setExpandedSubagents] = useState<Set<string>>(() => new Set());
     const scrollRef = useRef<HTMLDivElement>(null);
     const followRef = useRef(true);
+    const [target, setTarget] = useState<TimelineTarget>(EMPTY_TARGET);
 
     const rows = useMemo(() => {
         if (!order || !items) {
@@ -157,38 +162,51 @@ export function Timeline({ chatId }: { chatId: string }) {
     }
 
     return (
-        <div
-            ref={scrollRef}
-            className="min-h-0 grow overflow-auto px-4 pt-4"
-            onScroll={(e) => {
-                const el = e.currentTarget;
-                followRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < FOLLOW_THRESHOLD_PX + COMPOSER_CLEARANCE_PX;
-            }}
-        >
-            <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
-                {virtualizer.getVirtualItems().map((virtualRow) => {
-                    const row = rows[virtualRow.index]!;
-                    return (
-                        <div
-                            key={row.id}
-                            data-index={virtualRow.index}
-                            ref={virtualizer.measureElement}
-                            className="absolute left-0 top-0 w-full"
-                            style={{ transform: `translateY(${virtualRow.start}px)` }}
-                        >
-                            <Row
-                                row={row}
-                                chatId={chatId}
-                                lastAssistantId={lastAssistantId}
-                                toggleGroup={(id) => toggle(setExpandedGroups, id)}
-                                toggleTurn={(id) => toggle(setExpandedTurns, id)}
-                                toggleSubagent={(id) => toggle(setExpandedSubagents, id)}
-                                openSubagent={openSubagent}
-                            />
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
+        <ContextMenu.Root>
+            <ContextMenu.Trigger
+                ref={scrollRef}
+                className="chat-thread min-h-0 grow overflow-auto px-4 pt-4"
+                onScroll={(e) => {
+                    const el = e.currentTarget;
+                    followRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < FOLLOW_THRESHOLD_PX + COMPOSER_CLEARANCE_PX;
+                }}
+                onContextMenu={(e) => setTarget(readTimelineTarget(e.target as HTMLElement, scrollRef.current, rows))}
+            >
+                <div className="chat-column-content relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+                    {virtualizer.getVirtualItems().map((virtualRow) => {
+                        const row = rows[virtualRow.index]!;
+                        // A question and its answer are one step apart, one turn and the next question a
+                        // wider one; the rows inside a turn keep their own tight rhythm. The gap is
+                        // padding on the measured element, so the virtualizer counts it in the height.
+                        const question = row.kind === 'user';
+                        return (
+                            <div
+                                key={row.id}
+                                data-index={virtualRow.index}
+                                data-item-id={row.id}
+                                ref={virtualizer.measureElement}
+                                className={clsx(
+                                    'absolute left-0 top-0 w-full',
+                                    question && 'pb-[var(--chat-answer-gap)]',
+                                    question && virtualRow.index > 0 && 'pt-[var(--chat-turn-gap)]'
+                                )}
+                                style={{ transform: `translateY(${virtualRow.start}px)` }}
+                            >
+                                <Row
+                                    row={row}
+                                    chatId={chatId}
+                                    lastAssistantId={lastAssistantId}
+                                    toggleGroup={(id) => toggle(setExpandedGroups, id)}
+                                    toggleTurn={(id) => toggle(setExpandedTurns, id)}
+                                    toggleSubagent={(id) => toggle(setExpandedSubagents, id)}
+                                    openSubagent={openSubagent}
+                                />
+                            </div>
+                        );
+                    })}
+                </div>
+            </ContextMenu.Trigger>
+            <TimelineMenuPopup target={target} scroller={scrollRef} />
+        </ContextMenu.Root>
     );
 }

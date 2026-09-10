@@ -38,10 +38,14 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
     }, [code, lang, theme]);
 
     if (html === null) {
+        // The same shape shiki hands back, so the block does not resize once it is highlighted and
+        // prose never sees a bare `pre` to paint from its own variables.
         return (
-            <pre className="chat-code">
-                <code>{code}</code>
-            </pre>
+            <div className="chat-code">
+                <pre>
+                    <code>{code}</code>
+                </pre>
+            </div>
         );
     }
     return <div className="chat-code" dangerouslySetInnerHTML={{ __html: html }} />;
@@ -65,13 +69,27 @@ const components = {
                 {children}
             </a>
         );
+    },
+    table({ children }: { children?: ReactNode }) {
+        // A table wider than the column scrolls on its own instead of pushing the thread sideways.
+        return (
+            <div className="chat-table">
+                <table>{children}</table>
+            </div>
+        );
     }
 };
 
-/* Assistant text as the model wrote it: GitHub-flavored markdown, code highlighted off the main path. */
+/*
+ * Assistant text as the model wrote it: GitHub-flavored markdown, code highlighted off the main
+ * path. Tailwind Typography sets the rhythm and `.chat-markdown` paints it in the theme's tokens.
+ * `text-sm` is the size, which a node, a view and the file preview each move for themselves, and it
+ * has to be a utility to outrank the one `prose-sm` brings; prose scales its own air off it in
+ * `em`. `max-w-none` leaves the column width to whoever renders this.
+ */
 export const Markdown = memo(function Markdown({ text }: { text: string }) {
     return (
-        <div className="chat-markdown">
+        <div className="chat-markdown prose prose-sm max-w-none text-sm">
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
                 {text}
             </ReactMarkdown>

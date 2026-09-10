@@ -13,7 +13,7 @@ import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 
 const triggerClass =
-    'flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-xs text-text-muted hover:bg-surface-sunken hover:text-text data-[popup-open]:bg-surface-sunken data-[popup-open]:text-text';
+    'flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 text-xs text-text-muted hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active data-[popup-open]:text-text';
 
 function Popup({ children, minWidth }: { children: React.ReactNode; minWidth?: string }) {
     return (
@@ -173,10 +173,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                                         <button
                                             key="legacy"
                                             data-active={i === index}
-                                            className={clsx(
-                                                'flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs',
-                                                i === index ? 'bg-surface-sunken text-text' : 'text-text-faint'
-                                            )}
+                                            className="cursor-row flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs text-text-faint"
                                             onMouseEnter={() => setIndex(i)}
                                             onClick={() => choose(entry)}
                                         >
@@ -201,10 +198,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                                             role="option"
                                             aria-selected={chosen}
                                             data-active={i === index}
-                                            className={clsx(
-                                                'flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm',
-                                                i === index ? 'bg-surface-sunken text-text' : 'text-text-muted'
-                                            )}
+                                            className="cursor-row flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-text-muted"
                                             onMouseEnter={() => setIndex(i)}
                                             onClick={() => choose(entry)}
                                         >
@@ -327,7 +321,7 @@ export function StashPicker({ onRestore }: { onRestore(prompt: StashedPrompt): v
                             {prompts.map((prompt) => (
                                 <div key={prompt.id} className="group/stash flex items-start gap-1">
                                     <Popover.Close
-                                        className="flex min-w-0 grow flex-col gap-0.5 rounded-md px-2 py-1.5 text-left text-xs text-text-muted hover:bg-surface-sunken hover:text-text"
+                                        className="flex min-w-0 grow flex-col gap-0.5 rounded-md px-2 py-1.5 text-left text-xs text-text-muted hover:bg-surface-hover hover:text-text"
                                         onClick={() => onRestore(prompt)}
                                     >
                                         <span className="line-clamp-2 whitespace-pre-wrap">{prompt.text || 'No text'}</span>

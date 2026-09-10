@@ -7,6 +7,7 @@ import { checkAttachmentLimits, filesOf, formatBytes, isImageAttachment, readAtt
 import { EMPTY_DRAFT, isEmptyDraft, readDraft, writeDraft, type ChatDraft } from '@/chat/drafts';
 import {
     MENTION_DRAG_TYPE,
+    chipText,
     findMentionQuery,
     findSkillQuery,
     insertMention,
@@ -36,6 +37,8 @@ const SEARCH_DEBOUNCE_MS = 80;
 // What fits above the composer without turning the picker into a file tree.
 const MENTION_RESULTS = 8;
 const NOTICE_MS = 4000;
+// How many sent prompts the arrow keys walk back through, per chat.
+const PROMPT_HISTORY = 50;
 
 // Commands the composer handles itself; the CLI's own ones are sent through as text.
 const LOCAL_COMMANDS = [
@@ -43,8 +46,13 @@ const LOCAL_COMMANDS = [
     { name: 'compact', hint: 'Fold the context' }
 ];
 
-// The textarea and the chip layer behind it must wrap identically, so they share every metric.
-const INPUT_CLASS = 'w-full whitespace-pre-wrap break-words px-3.5 pb-1 pt-3 text-sm leading-normal';
+/*
+ * The textarea and the chip layer behind it must wrap identically and put every glyph on the same
+ * pixel, so they share every metric that decides an advance width. A chip may add color and a
+ * radius on top of that, never spacing (see `CHIP_BEHIND_TEXT`): the caret is the textarea's, drawn
+ * from its own raw text, so drawn text that walks even a pixel leaves the caret next to it.
+ */
+const INPUT_CLASS = 'w-full px-3.5 pt-3 pb-1 text-sm leading-normal break-words whitespace-pre-wrap select-text';
 
 interface ComposerProps {
     chatId: string;
@@ -210,7 +218,8 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                 prompts.push({ text: item.text, mentions: item.mentions ?? [] });
             }
         }
-        return prompts;
+        // Walking back further than this is faster with the timeline than with the arrow key.
+        return prompts.slice(-PROMPT_HISTORY);
     }, [order, items]);
 
     const commandQuery = text.startsWith('/') && !text.includes('\n') ? text.slice(1).trim().toLowerCase() : null;
@@ -422,7 +431,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
         const next = historyIndex === null ? (direction === -1 ? history.length - 1 : null) : historyIndex + direction;
         if (next === null || next >= history.length) {
             setHistoryIndex(null);
-            setText('');
+            setText('', [], []);
             return true;
         }
         if (next < 0) {
@@ -435,6 +444,13 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
 
     const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
         if (e.key === 'Escape') {
+            // Escape leaves the node, unless it first has a recalled prompt to put back.
+            if (historyIndex !== null) {
+                e.preventDefault();
+                e.stopPropagation();
+                setHistoryIndex(null);
+                setText('', [], []);
+            }
             return;
         }
         e.stopPropagation();
@@ -526,7 +542,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
     const placeholder = disabled ? 'Not connected to the Ruimte server' : 'Ask anything, / for commands, @ for files, $ for skills';
 
     return (
-        <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10">
+        <div className="chat-column-content pointer-events-none absolute inset-x-3 bottom-3 z-10">
             <div
                 className={clsx(
                     'pointer-events-auto flex flex-col overflow-hidden rounded-2xl border shadow-float backdrop-blur-[14px] focus-within:border-accent',
@@ -564,10 +580,8 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                         {commands.map((command, index) => (
                             <button
                                 key={command.name}
-                                className={clsx(
-                                    'flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs',
-                                    index === menuIndex ? 'bg-surface-sunken text-text' : 'text-text-muted'
-                                )}
+                                data-active={index === menuIndex}
+                                className="cursor-row flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-text-muted"
                                 onMouseEnter={() => setMenuIndex(index)}
                                 onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => {
@@ -592,10 +606,8 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                         {skillMatches.map((skill, index) => (
                             <button
                                 key={skill.name}
-                                className={clsx(
-                                    'flex w-full items-start gap-2 rounded-md px-2 py-1 text-left text-xs',
-                                    index === menuIndex ? 'bg-surface-sunken text-text' : 'text-text-muted'
-                                )}
+                                data-active={index === menuIndex}
+                                className="cursor-row flex w-full items-start gap-2 rounded-md px-2 py-1 text-left text-xs text-text-muted"
                                 onMouseEnter={() => setMenuIndex(index)}
                                 onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => chooseSkill(skill.name)}
@@ -618,10 +630,8 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                             return (
                                 <button
                                     key={path}
-                                    className={clsx(
-                                        'flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs',
-                                        index === menuIndex ? 'bg-surface-sunken text-text' : 'text-text-muted'
-                                    )}
+                                    data-active={index === menuIndex}
+                                    className="cursor-row flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-text-muted"
                                     onMouseEnter={() => setMenuIndex(index)}
                                     onMouseDown={(e) => e.preventDefault()}
                                     onClick={() => chooseMention(path)}
@@ -696,21 +706,14 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                 <div className="relative">
                     <div ref={backdropRef} aria-hidden className={clsx(INPUT_CLASS, 'pointer-events-none absolute inset-0 overflow-hidden text-text')}>
                         {segments.map((segment, index) => {
-                            if (segment.kind === 'mention') {
-                                return (
-                                    <span key={index} className={`${MENTION_TONE} ${CHIP_BEHIND_TEXT}`}>
-                                        @{segment.path}
-                                    </span>
-                                );
+                            if (segment.kind === 'text') {
+                                return <span key={index}>{segment.text}</span>;
                             }
-                            if (segment.kind === 'skill') {
-                                return (
-                                    <span key={index} className={`${SKILL_TONE} ${CHIP_BEHIND_TEXT}`}>
-                                        ${segment.name}
-                                    </span>
-                                );
-                            }
-                            return <span key={index}>{segment.text}</span>;
+                            return (
+                                <span key={index} className={`${segment.kind === 'skill' ? SKILL_TONE : MENTION_TONE} ${CHIP_BEHIND_TEXT}`}>
+                                    {chipText(segment)}
+                                </span>
+                            );
                         })}
                         {text.endsWith('\n') && <br />}
                     </div>

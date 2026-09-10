@@ -25,9 +25,10 @@ const copy = (text: string): void => {
 };
 
 /* A picked file or skill in a sent message: the glyph stands in for the sigil the text still carries. */
-function Chip({ glyph, label, skill = false }: { glyph: ReactNode; label: string; skill?: boolean }) {
+function Chip({ glyph, label, skill = false, path }: { glyph: ReactNode; label: string; skill?: boolean; path?: string }) {
     return (
-        <span className={clsx(CHIP_IN_MESSAGE, skill ? SKILL_TONE : MENTION_TONE)}>
+        // The path is what the thread's menu opens in the preview from here.
+        <span className={clsx(CHIP_IN_MESSAGE, skill ? SKILL_TONE : MENTION_TONE)} data-file-path={path}>
             {glyph}
             <span className="truncate">{label}</span>
         </span>
@@ -40,7 +41,7 @@ export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }
     const segments = tokenizeChips(item.text, item.mentions ?? [], item.skills ?? []);
     const attachments = item.attachments ?? [];
     return (
-        <div className="group/user flex flex-col items-end pb-4">
+        <div className="group/user flex flex-col items-end">
             {attachments.length > 0 && (
                 <div className="mb-1.5 flex max-w-[80%] flex-wrap justify-end gap-1.5">
                     {attachments.map((attachment) =>
@@ -68,11 +69,11 @@ export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }
                 </div>
             )}
             {item.text !== '' && (
-                <div className="relative max-w-[80%] rounded-2xl bg-surface-active px-3.5 py-2.5 text-sm leading-normal text-text select-text">
+                <div className="relative max-w-[80%] rounded-2xl bg-surface-active px-3.5 py-2.5 text-sm text-text select-text">
                     <div className={clsx('whitespace-pre-wrap', long && !open && FOLD)}>
                         {segments.map((segment, index) => {
                             if (segment.kind === 'mention') {
-                                return <Chip key={index} glyph={<FileIcon path={segment.path} size={14} />} label={segment.path} />;
+                                return <Chip key={index} glyph={<FileIcon path={segment.path} size={14} />} label={segment.path} path={segment.path} />;
                             }
                             if (segment.kind === 'skill') {
                                 return <Chip key={index} glyph={<Icon icon={Zap} size={14} className="shrink-0 opacity-85" />} label={segment.name} skill />;
@@ -138,7 +139,7 @@ export function ThinkingRow({ item }: { item: ChatThinkingItem }) {
                 )}
             </button>
             {shown && item.text !== '' && (
-                <div className="mt-1 border-l border-border pl-2.5 text-xs leading-normal whitespace-pre-wrap text-text-faint select-text">{item.text}</div>
+                <div className="mt-1 border-l border-border pl-2.5 text-sm whitespace-pre-wrap text-text-faint select-text">{item.text}</div>
             )}
         </div>
     );
@@ -166,21 +167,22 @@ export function NoteRow({ level, text }: { level: 'info' | 'warning' | 'error'; 
 
 /*
  * The header of a turn the agent started itself, in place of the message of the person that is
- * missing. When the CLI named the sub-agent it woke up about, the header opens that row.
+ * missing. It is one line: what the sub-agent came back with lives on that agent's own row, behind
+ * "Show result". When the CLI named the sub-agent it woke up about, the header opens that row.
  */
 export function AgentTurnRow({ label, onOpen }: { label: string; onOpen?: () => void }) {
     if (!onOpen) {
         return (
-            <div className="flex items-center gap-1.5 pb-2 text-xs text-text-muted">
-                <Icon icon={Bot} size={12} />
-                <span className="select-text">{label}</span>
+            <div className="flex w-full items-center gap-1.5 pb-2 text-left text-xs text-text-muted">
+                <Icon icon={Bot} size={12} className="shrink-0" />
+                <span className="min-w-0 truncate select-text">{label}</span>
             </div>
         );
     }
     return (
-        <button className="flex items-center gap-1.5 pb-2 text-xs text-text-muted hover:text-text" onClick={onOpen}>
-            <Icon icon={Bot} size={12} />
-            <span>{label}</span>
+        <button className="flex w-full items-center gap-1.5 pb-2 text-left text-xs text-text-muted hover:text-text" onClick={onOpen}>
+            <Icon icon={Bot} size={12} className="shrink-0" />
+            <span className="min-w-0 truncate">{label}</span>
         </button>
     );
 }

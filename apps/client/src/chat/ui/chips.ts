@@ -7,12 +7,16 @@ export const MENTION_TONE = 'bg-accent-soft text-accent shadow-[inset_0_0_0_1px_
 export const SKILL_TONE = 'bg-skill-soft text-skill shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--skill)_25%,transparent)]';
 
 /*
- * In the composer the pill is painted on a layer behind the textarea, so its horizontal padding is
- * handed straight back as a negative margin: the advance width stays the text's own and every chip
- * keeps sitting on its own characters. Vertical padding on an inline box never changes the line
- * height, so that side needs no compensation, and the ring is inset for the same reason.
+ * In the composer the pill is painted on a layer behind the textarea, which draws the same string
+ * in the same font: the chip may only paint. Anything that moves a glyph (weight, size, letter
+ * spacing, horizontal padding, border, margin) walks the drawn text away from the textarea's own
+ * characters, and since the caret is placed by the textarea it ends up next to the wrong letter.
+ * Horizontal padding cannot be handed back as a negative margin either, because a chip that wraps
+ * gets that padding again on every fragment. Vertical padding and an inset ring change no advance
+ * width, so the pill takes its height and its outline from those. The full token with its icon
+ * lives in the sent message, where nothing has to line up.
  */
-export const CHIP_BEHIND_TEXT = 'mx-[-3px] box-decoration-clone rounded-[5px] px-[3px] py-0.5 font-medium';
+export const CHIP_BEHIND_TEXT = 'box-decoration-clone rounded-[4px] py-0.5';
 
 /* The same pill in the transcript, where nothing has to line up with a textarea: a real inline box
    a shade smaller than the text around it, with the icon in place of the sigil. */

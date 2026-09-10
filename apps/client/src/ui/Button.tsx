@@ -6,8 +6,8 @@ type ButtonSize = 'sm' | 'md';
 
 const VARIANT: Record<ButtonVariant, string> = {
     primary: 'bg-accent text-accent-text',
-    secondary: 'border border-border bg-surface-raised text-text hover:bg-surface-sunken disabled:hover:bg-surface-raised',
-    ghost: 'text-text-muted hover:bg-surface-sunken hover:text-text',
+    secondary: 'border border-border bg-surface-raised text-text hover:bg-surface-hover disabled:hover:bg-surface-raised',
+    ghost: 'text-text-muted hover:bg-surface-hover hover:text-text',
     danger: 'bg-status-error text-accent-text'
 };
 

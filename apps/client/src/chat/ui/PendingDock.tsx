@@ -85,7 +85,7 @@ export function ApprovalDock({
                     <Icon icon={X} size={12} /> Decline <kbd className={TOOLTIP_KBD}>esc</kbd>
                 </Button>
                 {item.canAllowAlways && (
-                    <Button size="sm" className="text-text hover:bg-surface-sunken" onClick={() => decide('allow-always')}>
+                    <Button size="sm" className="text-text hover:bg-surface-hover" onClick={() => decide('allow-always')}>
                         Always allow
                     </Button>
                 )}
@@ -237,13 +237,13 @@ export function QuestionDock({ chatId, item, more, focused }: { chatId: string; 
                     </Button>
                 )}
             </div>
-            <p className="px-3 pb-2 text-sm leading-normal text-text select-text">{question.question}</p>
+            <p className="px-3 pb-2 text-sm text-text select-text">{question.question}</p>
             <div className="flex flex-col gap-1 px-3 pb-2">
                 {question.choices.map((choice) => (
                     <button
                         key={choice.label}
                         className={clsx(
-                            'flex items-start gap-2 rounded-md border px-2.5 py-1.5 text-left text-xs hover:bg-surface-sunken',
+                            'flex items-start gap-2 rounded-md border px-2.5 py-1.5 text-left text-xs hover:bg-surface-hover',
                             selected.has(choice.label) ? 'border-accent bg-accent-soft' : 'border-border'
                         )}
                         onClick={() => pick(choice.label)}

@@ -43,7 +43,7 @@ const TRIGGER_SIZE = {
 
 const TRIGGER_VARIANT = {
     outlined: 'max-w-56 rounded-lg border border-border bg-surface-raised text-text focus-visible:ring-1 focus-visible:ring-accent',
-    ghost: 'rounded-md text-text-muted hover:bg-surface-sunken hover:text-text data-[popup-open]:bg-surface-sunken data-[popup-open]:text-text'
+    ghost: 'rounded-md text-text-muted hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active data-[popup-open]:text-text'
 } as const;
 
 /* A description makes the row two lines high; the check and the icon then belong on the label's
