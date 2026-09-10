@@ -1,5 +1,6 @@
 import { isImageMime, type FsReadResult, type FsReadText } from '@ruimte/contracts';
 import { CodeFile } from '@/shell/panels/CodeFile';
+import { isHtmlName, isMarkdownName } from '@/shell/panels/file-kind';
 import { HtmlFile } from '@/shell/panels/HtmlFile';
 import { ImageFile } from '@/shell/panels/ImageFile';
 import { MarkdownFile } from '@/shell/panels/MarkdownFile';
@@ -19,14 +20,6 @@ export interface TextFileRenderer {
     render(props: { path: string; name: string; read: FsReadText }): React.JSX.Element;
 }
 
-const MARKDOWN_EXTENSIONS = new Set(['md', 'mdx', 'markdown']);
-const HTML_EXTENSIONS = new Set(['html', 'htm']);
-
-const extensionOf = (name: string): string => {
-    const dot = name.lastIndexOf('.');
-    return dot > 0 ? name.slice(dot + 1).toLowerCase() : '';
-};
-
 /*
  * What draws a text file, tried in order; anything no entry claims falls to the code view, which
  * takes every language shiki knows and plain text for the rest.
@@ -34,12 +27,12 @@ const extensionOf = (name: string): string => {
 export const TEXT_RENDERERS: readonly TextFileRenderer[] = [
     {
         id: 'markdown',
-        match: (name) => MARKDOWN_EXTENSIONS.has(extensionOf(name)),
+        match: (name) => isMarkdownName(name),
         render: (props) => <MarkdownFile name={props.name} read={props.read} />
     },
     {
         id: 'html',
-        match: (name) => HTML_EXTENSIONS.has(extensionOf(name)),
+        match: (name) => isHtmlName(name),
         render: (props) => <HtmlFile path={props.path} name={props.name} read={props.read} />
     }
 ];
