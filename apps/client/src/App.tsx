@@ -9,6 +9,7 @@ import { Panel } from '@/shell/Panel';
 import { PreviewPanel } from '@/shell/PreviewPanel';
 import { ProjectBanner } from '@/shell/ProjectBanner';
 import { Sidebar } from '@/shell/Sidebar';
+import { Toasts } from '@/shell/Toasts';
 import { Toolbar } from '@/shell/Toolbar';
 import { useProject } from '@/state/project';
 import { TooltipProvider } from '@/ui/Tooltip';
@@ -42,6 +43,7 @@ export function App() {
             <SettingsDialog />
             <LayoutDialog />
             <WorktreeDialog />
+            <Toasts />
         </TooltipProvider>
     );
 }

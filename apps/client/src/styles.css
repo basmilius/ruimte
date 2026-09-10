@@ -751,6 +751,36 @@ body {
     .git-row:hover .git-row-actions,
     .git-row:focus-within .git-row-actions { visibility: visible; }
 
+    /* What a git action is doing, bottom right over everything, one card per action. */
+    .toast-host {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        z-index: var(--z-popup);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 360px;
+        max-width: calc(100vw - 32px);
+    }
+    .toast {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 10px 10px 10px 12px;
+        border-radius: 10px;
+    }
+    /* One line of what the command wrote, in the face it wrote it in; the rest is behind the copy button. */
+    .toast-line {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-family: var(--font-mono);
+        font-size: var(--text-xs);
+        line-height: var(--text-xs--line-height);
+        color: var(--text-muted);
+    }
+
     /* The viewer's own row under the panel's header, for whatever the open file can be switched between. */
     .file-toolbar {
         display: flex;
