@@ -17,7 +17,6 @@ import {
     Type,
     X
 } from 'lucide-react';
-import clsx from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentNode } from '@/agents/nodes';
@@ -57,28 +56,39 @@ export function Dock() {
     return (
         <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
             <div className="float pointer-events-auto flex items-center gap-2 rounded-xl p-1">
-                <Tooltip label={mode === 'node' ? 'Keyboard goes to this node. Escape returns to the canvas.' : 'Keyboard goes to the canvas'}>
-                    <div
-                        className={clsx(
-                            'flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium',
-                            mode === 'node' ? 'bg-accent-soft text-accent' : 'text-text-muted'
-                        )}
-                    >
-                        <span className={clsx('h-1.5 w-1.5 rounded-full', mode === 'node' ? 'bg-accent' : 'bg-text-faint')} />
-                        {mode === 'node' ? <span className="max-w-40 truncate">{focusedTitle}</span> : 'Canvas'}
-                    </div>
+                {/* In node mode the chip is the pointer's way out, the same thing Escape does; on the
+                    canvas there is nothing to leave, so it stays a label. */}
+                <Tooltip
+                    label={mode === 'node' ? 'Keyboard goes to this node. Click to return to the canvas.' : 'Keyboard goes to the canvas'}
+                    kbd={mode === 'node' ? 'Esc' : undefined}
+                >
+                    {mode === 'node' ? (
+                        <button
+                            className="flex h-8 items-center gap-1.5 rounded-lg bg-accent-soft px-2.5 text-xs font-medium text-accent"
+                            aria-label={`Leave ${focusedTitle ?? 'this node'} and return to the canvas`}
+                            onClick={() => useCanvas.getState().exitNode()}
+                        >
+                            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+                            <span className="max-w-40 truncate">{focusedTitle}</span>
+                        </button>
+                    ) : (
+                        <div className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-text-muted">
+                            <span className="h-1.5 w-1.5 rounded-full bg-text-faint" />
+                            Canvas
+                        </div>
+                    )}
                 </Tooltip>
                 <span className="h-5 w-px bg-border" />
                 <StatusSummary />
 
                 <Menu.Root>
-                    <Tooltip label="Add">
+                    <Tooltip label="Add" name>
                         <Menu.Trigger className="icon-btn">
                             <Icon icon={Plus} size={16} />
                         </Menu.Trigger>
                     </Tooltip>
                     <Menu.Portal>
-                        <Menu.Positioner className="z-50" side="top" sideOffset={10} align="start">
+                        <Menu.Positioner className="popup-layer" side="top" sideOffset={10} align="start">
                             <Menu.Popup className="menu-popup">
                                 <Menu.Item className="menu-item" onClick={() => add('terminal')}>
                                     <Icon icon={Terminal} size={14} /> Terminal <kbd>⌥T</kbd>
@@ -98,7 +108,7 @@ export function Dock() {
                                 </Menu.Item>
                                 <Menu.Separator className="menu-separator" />
                                 <Menu.Item className="menu-item" onClick={() => useCanvas.getState().addText(centerWorld())}>
-                                    <Icon icon={Type} size={14} /> Text <kbd>dbl-click</kbd>
+                                    <Icon icon={Type} size={14} /> Text <span className="menu-hint">dbl-click</span>
                                 </Menu.Item>
                             </Menu.Popup>
                         </Menu.Positioner>
@@ -107,7 +117,7 @@ export function Dock() {
 
                 <span className="h-5 w-px bg-border" />
                 <div className="btn-group">
-                    <Tooltip label="Zoom out">
+                    <Tooltip label="Zoom out" name>
                         <button className="icon-btn" onClick={() => useCanvas.getState().zoomTo(Math.round(zoom * 100 - 10) / 100)}>
                             <Icon icon={Minus} size={16} />
                         </button>
@@ -119,7 +129,7 @@ export function Dock() {
                             </Menu.Trigger>
                         </Tooltip>
                         <Menu.Portal>
-                            <Menu.Positioner className="z-50" side="top" sideOffset={10} align="center">
+                            <Menu.Positioner className="popup-layer" side="top" sideOffset={10} align="center">
                                 <Menu.Popup className="menu-popup min-w-44">
                                     <Menu.RadioGroup value={preset} onValueChange={(value: number) => useCanvas.getState().zoomTo(value / 100)}>
                                         {ZOOM_PRESETS.map((pct) => (
@@ -152,12 +162,12 @@ export function Dock() {
                         </Menu.Portal>
                     </Menu.Root>
 
-                    <Tooltip label="Zoom in">
+                    <Tooltip label="Zoom in" name>
                         <button className="icon-btn" onClick={() => useCanvas.getState().zoomTo(Math.round(zoom * 100 + 10) / 100)}>
                             <Icon icon={Plus} size={16} />
                         </button>
                     </Tooltip>
-                    <Tooltip label="Fit everything" kbd="Shift+1">
+                    <Tooltip label="Fit everything" kbd="Shift+1" name>
                         <button className="icon-btn" onClick={() => useCanvas.getState().fitAll()}>
                             <Icon icon={Maximize} size={16} />
                         </button>
@@ -167,13 +177,13 @@ export function Dock() {
 
                 <div className="btn-group">
                     <Menu.Root>
-                        <Tooltip label="Lock">
+                        <Tooltip label="Lock" name>
                             <Menu.Trigger className="icon-btn" data-active={anyLocked}>
                                 {anyLocked ? <Icon icon={Lock} size={16} /> : <Icon icon={LockOpen} size={16} />}
                             </Menu.Trigger>
                         </Tooltip>
                         <Menu.Portal>
-                            <Menu.Positioner className="z-50" side="top" sideOffset={10} align="end">
+                            <Menu.Positioner className="popup-layer" side="top" sideOffset={10} align="end">
                                 <Menu.Popup className="menu-popup">
                                     <div className="menu-label">Refuse gestures</div>
                                     {LOCK_ROWS.map((row) => (
@@ -207,13 +217,13 @@ export function Dock() {
                     </Menu.Root>
 
                     <Menu.Root>
-                        <Tooltip label="Layouts">
+                        <Tooltip label="Layouts" name>
                             <Menu.Trigger className="icon-btn">
                                 <Icon icon={LayoutTemplate} size={16} />
                             </Menu.Trigger>
                         </Tooltip>
                         <Menu.Portal>
-                            <Menu.Positioner className="z-50" side="top" sideOffset={10} align="end">
+                            <Menu.Positioner className="popup-layer" side="top" sideOffset={10} align="end">
                                 <Menu.Popup className="menu-popup min-w-48">
                                     <div className="menu-label">Saved layouts</div>
                                     {layouts.length === 0 && <div className="px-2.5 pb-1.5 text-xs text-text-faint">Nothing saved yet.</div>}
@@ -221,7 +231,7 @@ export function Dock() {
                                         <Menu.Item key={layout.name} className="menu-item group" onClick={() => useCanvas.getState().applyLayout(layout.name)}>
                                             <Icon icon={LayoutTemplate} size={14} className="text-text-faint" />
                                             <span className="truncate">{layout.name}</span>
-                                            <Tooltip label="Delete">
+                                            <Tooltip label="Delete" name>
                                                 <span
                                                     role="button"
                                                     className="ml-auto grid h-5 w-5 place-items-center rounded text-text-faint opacity-0 hover:bg-surface-sunken hover:text-text group-hover:opacity-100 group-data-[highlighted]:opacity-100"

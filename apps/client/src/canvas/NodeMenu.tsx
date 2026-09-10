@@ -70,10 +70,10 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
 
     return (
         <ContextMenu.Portal>
-            <ContextMenu.Positioner className="z-50">
+            <ContextMenu.Positioner className="popup-layer">
                 <ContextMenu.Popup className="menu-popup">
                     <ContextMenu.Item className="menu-item" onClick={onRename}>
-                        <Icon icon={Pencil} size={14} /> Rename <kbd>dbl-click</kbd>
+                        <Icon icon={Pencil} size={14} /> Rename <span className="menu-hint">dbl-click</span>
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().duplicateNode(id)}>
                         <Icon icon={Copy} size={14} /> Duplicate
@@ -83,7 +83,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().startLink(id)}>
                         <Icon icon={Link2} size={14} /> Connect to...
-                        <span className="ml-auto text-xs text-text-faint">Then click a node</span>
+                        <span className="menu-hint">Then click a node</span>
                     </ContextMenu.Item>
                     {node.kind === 'group' && (
                         <>
@@ -94,7 +94,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                             {node.worktree ? (
                                 <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().setGroupWorktree(id, null)}>
                                     <Icon icon={GitBranch} size={14} /> Unbind worktree
-                                    <span className="ml-auto text-xs text-text-faint">Checkout stays</span>
+                                    <span className="menu-hint">Checkout stays</span>
                                 </ContextMenu.Item>
                             ) : (
                                 <ContextMenu.Item className="menu-item" onClick={() => useUi.getState().setWorktreeDialogFor(id)}>
@@ -106,7 +106,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                     {node.kind === 'terminal' && (
                         <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().updateNode(id, { escapeToApp: !node.escapeToApp })}>
                             <Icon icon={Keyboard} size={14} /> Send Escape to the app
-                            {node.escapeToApp ? <Icon icon={Check} size={14} className="ml-auto" /> : <kbd>⌘Esc leaves</kbd>}
+                            {node.escapeToApp ? <Icon icon={Check} size={14} className="ml-auto" /> : <span className="menu-hint">⌘Esc leaves</span>}
                         </ContextMenu.Item>
                     )}
                     {node.kind === 'terminal' && canOpenInChat && (
@@ -134,7 +134,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                                 <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
                             </ContextMenu.SubmenuTrigger>
                             <ContextMenu.Portal>
-                                <ContextMenu.Positioner className="z-50" sideOffset={4} alignOffset={-4}>
+                                <ContextMenu.Positioner className="popup-layer" sideOffset={4} alignOffset={-4}>
                                     <ContextMenu.Popup className="menu-popup min-w-40">
                                         {NOTE_COLORS.map((color) => (
                                             <ContextMenu.Item
@@ -157,7 +157,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                             <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
                         </ContextMenu.SubmenuTrigger>
                         <ContextMenu.Portal>
-                            <ContextMenu.Positioner className="z-50" sideOffset={4} alignOffset={-4}>
+                            <ContextMenu.Positioner className="popup-layer" sideOffset={4} alignOffset={-4}>
                                 <ContextMenu.Popup className="menu-popup min-w-40">
                                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().setNodeAccent(id, null)}>
                                         <span className="h-3 w-3 rounded-full border border-border-strong" /> None
