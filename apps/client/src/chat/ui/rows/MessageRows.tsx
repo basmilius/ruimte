@@ -1,6 +1,20 @@
 import { useState } from 'react';
 import clsx from 'clsx';
-import { Bot, Check, ChevronDown, CircleAlert, Copy, Info, MessageCircleQuestionMark, Minimize2, TriangleAlert, X, Zap } from 'lucide-react';
+import {
+    Bot,
+    Check,
+    ChevronDown,
+    CircleAlert,
+    Copy,
+    FileText,
+    Info,
+    MessageCircleQuestionMark,
+    Minimize2,
+    TriangleAlert,
+    X,
+    Zap,
+    type LucideIcon
+} from 'lucide-react';
 import type { ChatApprovalItem, ChatAssistantItem, ChatQuestionItem, ChatUserItem } from '@ruimte/contracts';
 import { attachmentUrl } from '@/chat/attachments';
 import { tokenizeChips } from '@/chat/mentions';
@@ -16,6 +30,16 @@ const USER_FOLD_CHARS = 600;
 const copy = (text: string): void => {
     void navigator.clipboard?.writeText(text).catch(() => undefined);
 };
+
+/* A picked file or skill in a sent message: the icon stands in for the sigil the text still carries. */
+function Chip({ icon, label, skill = false }: { icon: LucideIcon; label: string; skill?: boolean }) {
+    return (
+        <span className={clsx('chat-chip', skill ? 'skill-chip' : 'mention-chip')}>
+            <Icon icon={icon} size={14} className="shrink-0 opacity-85" />
+            <span className="truncate">{label}</span>
+        </span>
+    );
+}
 
 export function UserRow({ item }: { item: ChatUserItem }) {
     const [open, setOpen] = useState(false);
@@ -41,19 +65,10 @@ export function UserRow({ item }: { item: ChatUserItem }) {
                     <div className={clsx('whitespace-pre-wrap', long && !open && 'chat-fold')}>
                         {segments.map((segment, index) => {
                             if (segment.kind === 'mention') {
-                                return (
-                                    <span key={index} className="mention-chip">
-                                        @{segment.path}
-                                    </span>
-                                );
+                                return <Chip key={index} icon={FileText} label={segment.path} />;
                             }
                             if (segment.kind === 'skill') {
-                                return (
-                                    <span key={index} className="skill-chip inline-flex items-center gap-1 align-baseline">
-                                        <Icon icon={Zap} size={11} />
-                                        {segment.name}
-                                    </span>
-                                );
+                                return <Chip key={index} icon={Zap} label={segment.name} skill />;
                             }
                             return <span key={index}>{segment.text}</span>;
                         })}
