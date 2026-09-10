@@ -15,7 +15,7 @@ const PAGE = 30;
 
 /* A commit row is its own open button: the row's states with the columns of a row that opens. */
 const LOG_ROW =
-    'group flex h-7 w-full min-w-0 items-center gap-1.5 pr-1 pl-3 text-xs text-inherit hover:bg-surface-sunken hover:text-text data-[selected]:bg-surface-active data-[selected]:text-text';
+    'group flex h-7 w-full min-w-0 items-center gap-1.5 pr-1 pl-3 text-xs text-inherit hover:bg-surface-hover hover:text-text data-[selected]:bg-surface-active data-[selected]:text-text';
 
 interface CommitLogProps {
     cwd: string;

@@ -33,8 +33,14 @@ export function MarkdownFile({ name, read }: { name: string; read: FsReadText })
                 <Separator />
                 <DisabledWrapToggle />
             </FileToolbar>
-            <FileScroll className="px-4 py-3">
-                <Markdown text={read.text} />
+            {/* Prose is read at the size the standalone chat view reads it at, 15px over 24px, in a
+                column of the same width. The scroller keeps the panel's full width, so its scrollbar
+                stays at the panel's edge; only the text inside it is centered. Code keeps
+                `--text-code`, which the override does not touch. */}
+            <FileScroll className="px-4 py-3 [--text-sm:15px] [--text-sm--line-height:24px]">
+                <div className="mx-auto max-w-[768px]">
+                    <Markdown text={read.text} />
+                </div>
             </FileScroll>
         </div>
     );

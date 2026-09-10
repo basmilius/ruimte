@@ -112,7 +112,7 @@ export function ProjectIconDialog({ project, open, onOpenChange }: ProjectIconDi
                                     type="button"
                                     disabled={busy}
                                     className={clsx(
-                                        'flex h-7 w-7 items-center justify-center rounded-md hover:bg-surface-sunken',
+                                        'flex h-7 w-7 items-center justify-center rounded-md hover:bg-surface-hover',
                                         chosen?.kind === 'lucide' && chosen.value === name ? 'bg-surface-active text-text' : 'text-text-muted'
                                     )}
                                     onClick={() => void run(() => projectClient.setChosenIcon({ kind: 'lucide', value: name }))}
