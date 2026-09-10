@@ -91,6 +91,13 @@
     --note-blue: #dbe9ff;
     --note-pink: #fde2ea;
     --note-gray: #ececef;
+    /* One color per agent CLI, so a bar, a dot and a legend row all name the same provider. Apple's
+       system orange and teal, the pair ai-usage uses; Gemini and Copilot are reserved for the day
+       their transcripts are read. */
+    --chart-claude: #ff9500;
+    --chart-codex: #30b0c7;
+    --chart-gemini: #3b82f6;
+    --chart-copilot: #64748b;
     /* The ten colors a drawing may name. The file holds the name, never the value, so a sketch
        reads in both themes and follows the accent when it asks for it. */
     --draw-ink: var(--text);
@@ -208,6 +215,10 @@
     --note-blue: #182f4b;
     --note-pink: #43212c;
     --note-gray: #26262d;
+    --chart-claude: #ff9f0a;
+    --chart-codex: #40c8e0;
+    --chart-gemini: #60a5fa;
+    --chart-copilot: #94a3b8;
     --draw-ink: var(--text);
     --draw-muted: var(--text-muted);
     --draw-accent: var(--accent);
@@ -304,6 +315,10 @@
     --color-note-blue: var(--note-blue);
     --color-note-pink: var(--note-pink);
     --color-note-gray: var(--note-gray);
+    --color-chart-claude: var(--chart-claude);
+    --color-chart-codex: var(--chart-codex);
+    --color-chart-gemini: var(--chart-gemini);
+    --color-chart-copilot: var(--chart-copilot);
     --color-draw-ink: var(--draw-ink);
     --color-draw-muted: var(--draw-muted);
     --color-draw-accent: var(--draw-accent);
