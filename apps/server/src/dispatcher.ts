@@ -27,7 +27,7 @@ export const sendEvent = <E extends EventType>(client: ClientConnection, event: 
     client.send({ type: 'event', event, payload });
 };
 
-export type Handler<T extends RequestType> = (
+type Handler<T extends RequestType> = (
     payload: RequestMap[T]['payload'],
     client: ClientConnection
 ) => RequestMap[T]['result'] | Promise<RequestMap[T]['result']>;

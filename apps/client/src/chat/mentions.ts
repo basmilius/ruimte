@@ -4,7 +4,7 @@ export interface MentionQuery {
     query: string;
 }
 
-export type MentionSegment = { kind: 'text'; text: string } | { kind: 'mention'; path: string };
+type MentionSegment = { kind: 'text'; text: string } | { kind: 'mention'; path: string };
 
 const isBoundary = (char: string | undefined): boolean => char === undefined || /\s/.test(char);
 

@@ -1,7 +1,7 @@
 import { Bot, Info, Keyboard, LayoutGrid, Palette, Server, type LucideIcon } from 'lucide-react';
 import type { SettingsSectionId } from '@/state/ui';
 
-export interface SettingsSectionMeta {
+interface SettingsSectionMeta {
     id: SettingsSectionId;
     label: string;
     /* One line under the pane title that says what the pane is about. */

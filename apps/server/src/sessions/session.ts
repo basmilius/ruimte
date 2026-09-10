@@ -3,19 +3,19 @@ import { Terminal } from '@xterm/headless';
 import type { AgentInfo } from '@ruimte/contracts';
 import type { PtyAdapter, PtyProcess } from '../pty/pty.ts';
 
-export const SCROLLBACK_LINES = 10_000;
+const SCROLLBACK_LINES = 10_000;
 
 // Roughly one animation frame: enough to fold a burst of small PTY reads into one frame on the
 // wire without adding a delay anyone can see.
-export const OUTPUT_TICK_MS = 16;
+const OUTPUT_TICK_MS = 16;
 
 // A shell that traps SIGHUP would otherwise keep a killed session alive forever.
-export const KILL_ESCALATION_MS = 2000;
+const KILL_ESCALATION_MS = 2000;
 
 export const RESTORED_TEXT = '[session restored, previous shell ended]';
-export const RESTORED_MARKER = `\r\n\x1b[2m${RESTORED_TEXT}\x1b[0m\r\n`;
+const RESTORED_MARKER = `\r\n\x1b[2m${RESTORED_TEXT}\x1b[0m\r\n`;
 
-export interface SessionOptions {
+interface SessionOptions {
     id: string;
     shell: string;
     args: string[];

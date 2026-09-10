@@ -5,7 +5,7 @@ import { TransportError, type Transport, type TransportStatus } from '../transpo
 const LAST_PROJECT_KEY = 'ruimte.lastProject';
 
 /* The slice of the canvas store the client reads and writes; the real store has more. */
-export interface CanvasAccess {
+interface CanvasAccess {
     getState(): {
         nodes: Record<string, unknown>;
         texts: Record<string, unknown>;
@@ -31,7 +31,7 @@ export interface ProjectSink {
     getState(): { current: ProjectSummary | null; rev: number; dirty: boolean; conflict: ProjectDocument | null };
 }
 
-export interface ProjectClientOptions {
+interface ProjectClientOptions {
     saveDelayMs?: number;
     localDelayMs?: number;
     storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;

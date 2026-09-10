@@ -1,6 +1,6 @@
 import type { AgentKind, AgentStatus } from '@ruimte/contracts';
 
-export interface HookOutcome {
+interface HookOutcome {
     agentSessionId: string;
     transcriptPath: string | null;
     // Null means the agent has left the shell.

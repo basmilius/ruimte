@@ -49,7 +49,7 @@ function Row({ row, chatId, lastAssistantId, toggleGroup, toggleTurn }: RowProps
 }
 
 /* Extra room under the last row so the floating composer never covers it. */
-export const COMPOSER_CLEARANCE_PX = 168;
+const COMPOSER_CLEARANCE_PX = 168;
 
 export function Timeline({ chatId }: { chatId: string }) {
     const order = useChats((s) => s.byNodeId[chatId]?.order);
@@ -81,6 +81,8 @@ export function Timeline({ chatId }: { chatId: string }) {
         return null;
     }, [rows]);
 
+    // The client does not run the React Compiler, so its memoization rule has nothing to break here.
+    // oxlint-disable-next-line react/incompatible-library
     const virtualizer = useVirtualizer({
         count: rows.length,
         getScrollElement: () => scrollRef.current,

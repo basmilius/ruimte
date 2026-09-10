@@ -7,7 +7,7 @@ import { ChatError } from './errors.ts';
 import { ThreadProjector } from './projector.ts';
 import { ChatThread } from './thread.ts';
 
-export interface ChatSessionOptions {
+interface ChatSessionOptions {
     info: ChatInfo;
     items?: ChatItem[];
     provider: ChatProvider;

@@ -1,4 +1,4 @@
-export type ChatErrorCode = 'chat-not-found' | 'chat-busy' | 'request-not-found' | 'chat-unsupported';
+type ChatErrorCode = 'chat-not-found' | 'chat-busy' | 'request-not-found' | 'chat-unsupported';
 
 export class ChatError extends Error {
     readonly code: ChatErrorCode;

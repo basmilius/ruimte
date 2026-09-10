@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { desktop } from '@/desktop/bridge';
 
-export interface BrowserState {
+interface BrowserState {
     url: string;
     title: string;
     loading: boolean;
@@ -53,7 +53,7 @@ interface WebviewElement extends HTMLElement {
 const ABORTED = -3;
 
 /* Adds a scheme when the person typed a bare host; anything with one is used as is. */
-export const normalizeUrl = (input: string): string => {
+const normalizeUrl = (input: string): string => {
     const trimmed = input.trim();
     if (trimmed === '') {
         return 'about:blank';

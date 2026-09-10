@@ -32,7 +32,7 @@ interface SettingsStore extends Settings {
     update(patch: Partial<Settings>): void;
 }
 
-export const DEFAULT_SETTINGS: Settings = { accent: null, font: 'system', fontSize: 13, interfaceFontSize: 16 };
+const DEFAULT_SETTINGS: Settings = { accent: null, font: 'system', fontSize: 13, interfaceFontSize: 16 };
 
 // Rounded as well as clamped: the stepper used to move in halves, so a browser can still hand back
 // a half pixel from before, and both text and the terminal render sharpest on a whole one.

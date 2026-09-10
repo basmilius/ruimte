@@ -6,14 +6,14 @@ import {
     type ChatAttachmentMediaType
 } from '@ruimte/contracts';
 
-export interface IncomingImage {
+interface IncomingImage {
     name: string;
     mediaType: string;
     // Decoded size; the base64 the wire carries is a third larger.
     bytes: number;
 }
 
-export interface AttachmentCheck<T extends IncomingImage> {
+interface AttachmentCheck<T extends IncomingImage> {
     accepted: T[];
     rejected: Array<{ name: string; reason: string }>;
 }

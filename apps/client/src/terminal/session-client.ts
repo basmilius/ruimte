@@ -2,11 +2,11 @@ import type { AgentLaunch, SessionAttachResult, SessionInfo } from '@ruimte/cont
 import type { SessionSink } from '../state/sessions';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 
-export type OutputHandler = (data: string) => void;
-export type ExitHandler = (exitCode: number) => void;
-export type ScreenHandler = (result: SessionAttachResult) => void;
+type OutputHandler = (data: string) => void;
+type ExitHandler = (exitCode: number) => void;
+type ScreenHandler = (result: SessionAttachResult) => void;
 
-export interface OpenOptions {
+interface OpenOptions {
     cwd?: string;
     /* Typed into the shell as its first line when the session is created. */
     command?: string;

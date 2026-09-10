@@ -1,6 +1,6 @@
 import type { Dispatcher } from '../dispatcher.ts';
 
-export interface ServerHandlerOptions {
+interface ServerHandlerOptions {
     version: string;
     home: string;
 }

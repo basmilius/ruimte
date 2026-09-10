@@ -3,10 +3,10 @@ import type { ProviderCapabilities, RuntimeMode } from '@ruimte/contracts';
 // The app-server speaks JSON-RPC on stdio; the session adds nothing to the command line.
 export const CODEX_CHAT_ARGS = ['app-server'];
 
-export type CodexApprovalPolicy = 'untrusted' | 'on-request' | 'never';
-export type CodexSandboxMode = 'read-only' | 'workspace-write' | 'danger-full-access';
+type CodexApprovalPolicy = 'untrusted' | 'on-request' | 'never';
+type CodexSandboxMode = 'read-only' | 'workspace-write' | 'danger-full-access';
 
-export interface CodexThreadOptions {
+interface CodexThreadOptions {
     approvalPolicy: CodexApprovalPolicy;
     sandbox: CodexSandboxMode;
 }

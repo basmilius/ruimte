@@ -9,7 +9,7 @@ import { defaultShell, defaultShellArgs, type PtyAdapter } from '../pty/pty.ts';
 import { Session } from './session.ts';
 import type { SnapshotStore } from './snapshot-store.ts';
 
-export type SessionErrorCode = 'session-exists' | 'session-not-found' | 'session-exited' | 'spawn-failed' | 'agent-not-found' | 'agent-live';
+type SessionErrorCode = 'session-exists' | 'session-not-found' | 'session-exited' | 'spawn-failed' | 'agent-not-found' | 'agent-live';
 
 export class SessionError extends Error {
     readonly code: SessionErrorCode;
@@ -25,7 +25,7 @@ export type SessionEvent = { [E in EventType]: { event: E; payload: EventMap[E] 
 
 export type SessionSink = (event: SessionEvent) => void;
 
-export interface CreateSessionOptions {
+interface CreateSessionOptions {
     sessionId: string;
     cols: number;
     rows: number;

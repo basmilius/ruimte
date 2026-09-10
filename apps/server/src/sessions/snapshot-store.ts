@@ -2,7 +2,7 @@ import { mkdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { isNotFound, writeAtomic } from '../fs.ts';
 
-export const SNAPSHOT_INTERVAL_MS = 30_000;
+const SNAPSHOT_INTERVAL_MS = 30_000;
 
 // The id is chosen by the client, so it is encoded before it becomes a file name: a slash or a
 // `..` in an id must never leave the sessions directory.
@@ -36,11 +36,11 @@ export class SnapshotStore {
     }
 }
 
-export interface SnapshotSource {
+interface SnapshotSource {
     snapshotAll(): Promise<Array<{ sessionId: string; screen: string }>>;
 }
 
-export interface SnapshotSchedule {
+interface SnapshotSchedule {
     flush(): Promise<void>;
     stop(): void;
 }

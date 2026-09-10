@@ -474,7 +474,7 @@ body {
        drag), and the controls inside opt out on purpose. */
     .app-drag { -webkit-app-region: drag; }
     .app-drag > * { -webkit-app-region: initial; }
-    .app-no-drag, .app-drag button, .app-drag input { -webkit-app-region: no-drag; }
+    .app-drag button, .app-drag input { -webkit-app-region: no-drag; }
 
     /* Icon buttons that belong together sit 1px apart; groups keep the wider gap of their container. */
     .btn-group { display: inline-flex; align-items: center; gap: 1px; }

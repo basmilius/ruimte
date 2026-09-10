@@ -5,7 +5,7 @@ export const CONTEXT_PATH = '/context';
 // A screen is read live; this keeps a long scrollback from flooding an agent's context.
 const MAX_LINES = 2000;
 
-export interface ContextReaders {
+interface ContextReaders {
     /* The plain text of a terminal session's screen and scrollback, or null when there is none. */
     terminalText(sessionId: string): Promise<string | null>;
     /* A chat's thread, or null when there is none. */

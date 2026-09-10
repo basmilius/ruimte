@@ -4,7 +4,7 @@ import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import type { FsBrowseResult } from '@ruimte/contracts';
 import { PROJECT_DIR, PROJECT_FILE } from '../projects/project-files.ts';
 
-export type BrowseErrorCode = 'cwd-required' | 'windows-path';
+type BrowseErrorCode = 'cwd-required' | 'windows-path';
 
 export class BrowseError extends Error {
     readonly code: BrowseErrorCode;
@@ -16,7 +16,7 @@ export class BrowseError extends Error {
     }
 }
 
-export interface BrowseOptions {
+interface BrowseOptions {
     home?: string;
     platform?: NodeJS.Platform;
 }

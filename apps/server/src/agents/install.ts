@@ -101,7 +101,7 @@ export const mergeHooks = (config: unknown, kind: AgentKind): { config: Record<s
     return { config: root, changed };
 };
 
-export type InstallResult = 'unchanged' | 'written';
+type InstallResult = 'unchanged' | 'written';
 
 /* Idempotent: the second run on the same file is a no-op. A file that is not JSON is left alone (throws). */
 export const installHooks = async (path: string, kind: AgentKind): Promise<InstallResult> => {

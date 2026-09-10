@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ModelInfo, ProviderInfo } from '@ruimte/contracts';
+import type { ProviderInfo } from '@ruimte/contracts';
 
 interface ProvidersStore {
     providers: ProviderInfo[];
@@ -15,6 +15,3 @@ export const useProviders = create<ProvidersStore>((set) => ({
         set({ providers, loaded: true });
     }
 }));
-
-export const findModel = (providers: ProviderInfo[], slug: string): ModelInfo | undefined =>
-    providers.flatMap((provider) => provider.models).find((model) => model.slug === slug);

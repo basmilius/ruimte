@@ -29,7 +29,7 @@ export type TimelineRow =
     | { kind: 'turn-fold'; id: string; turn: ChatTurnItem; label: string; hiddenCount: number; expanded: boolean }
     | { kind: 'working'; id: string; startedAt: number };
 
-export interface TimelineOptions {
+interface TimelineOptions {
     expandedGroups: ReadonlySet<string>;
     expandedTurns: ReadonlySet<string>;
     activeTurnId: string | null;

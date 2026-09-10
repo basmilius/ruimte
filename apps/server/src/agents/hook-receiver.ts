@@ -2,7 +2,7 @@ import { AgentKindSchema, type AgentKind } from '@ruimte/contracts';
 import type { HookResult } from '../sessions/manager.ts';
 import { hasHooks } from './hooks.ts';
 
-export interface HookTarget {
+interface HookTarget {
     applyHook(kind: AgentKind, token: string, body: unknown): Promise<HookResult>;
 }
 

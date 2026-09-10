@@ -1,7 +1,7 @@
 import { RequestError, type Dispatcher } from '../dispatcher.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 
-export interface EndpointIdentity {
+interface EndpointIdentity {
     label: string;
     version: string;
     // Mints a one-time pairing URL; what `ruimte pair` and the settings dialog hand to another machine.
