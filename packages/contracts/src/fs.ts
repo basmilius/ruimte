@@ -99,3 +99,45 @@ export const FsChangedEventSchema = z.object({
     paths: z.array(z.string())
 });
 export type FsChangedEvent = z.infer<typeof FsChangedEventSchema>;
+
+// A text file past this is one no viewer should hold in a string; the client offers the file itself instead.
+export const FS_READ_MAX_TEXT_BYTES = 2 * 1024 * 1024;
+
+export const FsReadPayloadSchema = z.object({
+    path: z.string().min(1)
+});
+export type FsReadPayload = z.infer<typeof FsReadPayloadSchema>;
+
+export const FsReadTextSchema = z.object({
+    kind: z.literal('text'),
+    text: z.string(),
+    encoding: z.literal('utf-8'),
+    size: z.number(),
+    mtime: z.number(),
+    // A highlighter id guessed from the extension; a name nothing recognizes leaves it off.
+    language: z.string().optional()
+});
+export type FsReadText = z.infer<typeof FsReadTextSchema>;
+
+// The bytes stay on the daemon: an image is fetched from `GET /fs/file`, anything else is not drawn at all.
+export const FsReadBinarySchema = z.object({
+    kind: z.literal('binary'),
+    mime: z.string(),
+    size: z.number(),
+    mtime: z.number()
+});
+export type FsReadBinary = z.infer<typeof FsReadBinarySchema>;
+
+export const FsReadTooLargeSchema = z.object({
+    kind: z.literal('too-large'),
+    size: z.number()
+});
+export type FsReadTooLarge = z.infer<typeof FsReadTooLargeSchema>;
+
+export const FsReadResultSchema = z.discriminatedUnion('kind', [FsReadTextSchema, FsReadBinarySchema, FsReadTooLargeSchema]);
+export type FsReadResult = z.infer<typeof FsReadResultSchema>;
+
+// What `GET /fs/file` serves; a read result names one of these before the client asks for the bytes.
+export const FS_IMAGE_MIMES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml'] as const;
+
+export const isImageMime = (mime: string): boolean => (FS_IMAGE_MIMES as readonly string[]).includes(mime);
