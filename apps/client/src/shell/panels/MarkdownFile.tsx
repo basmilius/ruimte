@@ -5,6 +5,7 @@ import { Markdown } from '@/chat/ui/Markdown';
 import { CodeFile } from '@/shell/panels/CodeFile';
 import { FileScroll } from '@/shell/panels/FileScroll';
 import { DisabledWrapToggle, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
+import { Separator } from '@/ui/Separator';
 
 type MarkdownView = 'preview' | 'source';
 
@@ -28,6 +29,7 @@ export function MarkdownFile({ name, read }: { name: string; read: FsReadText })
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <FileToolbar>
                 {toggle}
+                <Separator />
                 <DisabledWrapToggle />
             </FileToolbar>
             <FileScroll className="px-4 py-3">

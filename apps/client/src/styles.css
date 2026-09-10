@@ -697,7 +697,7 @@ body {
     .file-toolbar {
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 8px;
         height: 40px;
         flex-shrink: 0;
         padding: 0 8px;

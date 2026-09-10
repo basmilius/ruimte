@@ -12,6 +12,7 @@ import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { transport } from '@/transport';
 import { Icon } from '@/ui/Icon';
+import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
 
 /*
@@ -25,7 +26,8 @@ export function FileToolbar({ label, children }: { label?: string; children?: Re
             {label !== undefined && <span className="file-toolbar-label">{label}</span>}
             <span className="grow" />
             {children}
-            <span className="w-1" />
+            {/* With no controls the menu is the only group there is, and a line would divide nothing. */}
+            {children !== undefined && <Separator />}
             <FileMenu />
         </div>
     );

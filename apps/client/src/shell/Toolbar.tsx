@@ -11,13 +11,8 @@ import { useProject } from '@/state/project';
 import { useServer } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { Icon } from '@/ui/Icon';
+import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
-
-/* A hairline between two groups of buttons in the toolbar. The band's own gap puts 8px on either
-   side of it, so the line reads as a divider and not as a third group. */
-function ToolbarSeparator() {
-    return <span aria-hidden className="h-4 w-px shrink-0 bg-border" />;
-}
 
 /* The band above the canvas: which project is open, and the panels that sit next to it. It is as
    tall as the sidebar's own strip, so the two read as one title bar across the window. The
@@ -58,7 +53,7 @@ export function Toolbar() {
             </div>
             <ConnectionDot />
             <PanelControls />
-            <ToolbarSeparator />
+            <Separator />
             {/* The palette keeps the toolbar's right end, so with no panel beside it the search icon
                 is what sits under the window controls on Windows and Linux and the inset lands here.
                 An open panel reaches the window's edge instead and its header takes the inset over. */}
