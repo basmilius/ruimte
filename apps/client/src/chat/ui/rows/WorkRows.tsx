@@ -40,7 +40,7 @@ export function ToggleLine({
     return (
         <button
             className={clsx(
-                'flex h-7 w-full items-center gap-2 rounded-md px-1 text-left text-xs text-text-muted hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
+                'flex h-7 w-full items-center gap-2 rounded-md px-1 text-left text-xs text-text-muted hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
                 failed && 'text-status-error',
                 className
             )}
@@ -170,7 +170,7 @@ export function TurnFoldRow({ turn, label, expanded, onToggle }: { turn: ChatTur
         <div className="pb-1.5">
             <button
                 className={clsx(
-                    'flex h-7 items-center gap-1.5 rounded-md border border-border px-2 text-xs text-text-muted hover:bg-surface-sunken',
+                    'flex h-7 items-center gap-1.5 rounded-md border border-border px-2 text-xs text-text-muted hover:bg-surface-hover',
                     turn.state === 'error' && 'text-status-error'
                 )}
                 onClick={onToggle}
@@ -248,7 +248,8 @@ export function ChangedFilesRow({
                 {checkpointDiff.files.map((file) => (
                     <div key={file.path} className="border-t border-border">
                         <button
-                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-text-muted hover:bg-surface-sunken"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-text-muted hover:bg-surface-hover"
+                            data-file-path={file.path}
                             onClick={() => setOpen((o) => ({ ...o, [file.path]: !o[file.path] }))}
                         >
                             <Icon
@@ -319,7 +320,8 @@ function ProviderChangedFiles({
                 return (
                     <div key={path} className="border-t border-border">
                         <button
-                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-text-muted hover:bg-surface-sunken"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-text-muted hover:bg-surface-hover"
+                            data-file-path={path}
                             onClick={() => setOpen((o) => ({ ...o, [path]: !o[path] }))}
                         >
                             <Icon icon={ChevronRight} size={12} className={clsx('shrink-0 text-text-faint transition-transform', open[path] && 'rotate-90')} />

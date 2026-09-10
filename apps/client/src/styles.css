@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Markdown reads as prose, which is a rhythm nobody wants to write twice. The plugin brings it;
+   `.chat-markdown` below paints it in the theme's tokens and holds it to the app's type scale. */
+@plugin "@tailwindcss/typography";
+
 /* dark: follows the app theme, not the OS. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
@@ -27,11 +31,17 @@
     --surface: #ffffff;
     --surface-raised: #ffffff;
     --surface-sunken: #ececef;
+    /* The step under the pointer: one shade off the ground a row or a button sits on, and lighter
+       than the pressed step, so hover reads as a lift and pressed as the heavier state. A white
+       popup cannot go lighter, so in this theme the step is the softest gray there is. */
+    --surface-hover: #f3f3f5;
     /* The pressed step of a toggle. It cannot be `--surface-raised`, which equals `--surface` in the
-       light theme, and it has to sit a shade past `--surface-sunken` so pressed outranks hover. */
+       light theme, and it has to sit a shade past `--surface-hover` so pressed outranks hover. */
     --surface-active: #dcdce2;
     --border: #e2e2e6;
     --border-strong: #c9c9d0;
+    /* A hairline that stays out of the way: on a sunken field a full `--border` draws a box. */
+    --border-soft: #e7e7ea;
     --text: #18181b;
     --text-muted: #6f6f78;
     --text-faint: #a1a1aa;
@@ -107,9 +117,11 @@
     --surface: #1b1b1f;
     --surface-raised: #222227;
     --surface-sunken: #0f0f12;
+    --surface-hover: #2b2b32;
     --surface-active: #34343d;
     --border: #2a2a31;
     --border-strong: #3a3a43;
+    --border-soft: #1f1f25;
     --text: #ececf1;
     --text-muted: #9a9aa6;
     --text-faint: #5f5f6b;
@@ -204,9 +216,11 @@
     --color-surface: var(--surface);
     --color-surface-raised: var(--surface-raised);
     --color-surface-sunken: var(--surface-sunken);
+    --color-surface-hover: var(--surface-hover);
     --color-surface-active: var(--surface-active);
     --color-border: var(--border);
     --color-border-strong: var(--border-strong);
+    --color-border-soft: var(--border-soft);
     --color-text: var(--text);
     --color-text-muted: var(--text-muted);
     --color-text-faint: var(--text-faint);
@@ -286,7 +300,7 @@ body {
         color: var(--text-muted);
         transition: background-color 120ms ease, color 120ms ease, scale 120ms ease;
     }
-    .icon-btn:hover { background: var(--surface-sunken); color: var(--text); }
+    .icon-btn:hover { background: var(--surface-hover); color: var(--text); }
     .icon-btn:active { scale: 0.96; }
     /* Pressed, not important: a toggle that is on reads as a filled gray key. The accent stays for
        the focus ring, the primary button, canvas selection and agent status. */
@@ -350,9 +364,16 @@ body {
         cursor: default;
         outline: none;
     }
-    .menu-item[data-highlighted] { background: var(--surface-sunken); }
+    /* Base UI highlights a row for the pointer and for the arrow keys alike. The keyboard row is a
+       mark that has to be findable, the pointer's is the lift under the cursor. */
+    .menu-item[data-highlighted] { background: var(--surface-active); }
+    :root[data-modality='pointer'] .menu-item[data-highlighted] { background: var(--surface-hover); }
     .menu-item[data-disabled] { opacity: .45; }
-    .menu-item[data-popup-open] { background: var(--surface-sunken); }
+    /* A list the arrow keys walk that is not a Base UI menu: the palette, the model picker, the
+       composer's own menus. Its cursor carries the same two marks a menu row does. */
+    .cursor-row[data-active='true'] { background: var(--surface-active); color: var(--text); }
+    :root[data-modality='pointer'] .cursor-row[data-active='true'] { background: var(--surface-hover); }
+    .menu-item[data-popup-open] { background: var(--surface-active); }
     /* A chord in a row: pushed to the right, in the interface font, wherever a row carries one. */
     .menu-item kbd { margin-left: auto; font-family: var(--font-sans); font-size: var(--text-xs); color: var(--text-faint); }
 
@@ -476,22 +497,69 @@ body {
 
     /* Assistant markdown: the same type scale as the rest of the node, over elements the renderer
        makes and the JSX never sees. */
-    .chat-markdown { font-size: var(--text-sm); line-height: 1.5; color: var(--text); }
-    .chat-markdown > * + * { margin-top: 0.625rem; }
-    .chat-markdown h1, .chat-markdown h2, .chat-markdown h3, .chat-markdown h4 { font-weight: 600; line-height: 1.3; }
+    /* Text in a chat is there to be read and copied, so the thread selects even though the app does
+       not. Its chrome stays out of it: a drag on a fold header or a chip would select the row. */
+    /* The air a thread needs to read as turns: the step from a question to its answer, and the
+       wider step from the end of one turn to the next question. A view of its own gets more of both,
+       the way its type does. */
+    .chat-thread { user-select: text; --chat-answer-gap: 16px; --chat-turn-gap: 24px; }
+    .chat-column .chat-thread { --chat-answer-gap: 20px; --chat-turn-gap: 32px; }
+    .chat-thread button, .chat-thread kbd { user-select: none; }
+
+    /*
+     * A chat that is a view of its own reads in a column. The scroller keeps the full width of the
+     * main column, so its scrollbar sits at that column's right edge and nothing jumps when the
+     * thread grows past a screenful; only the rows and the composer inside it are centered.
+     */
+    .chat-column .chat-column-content { margin-inline: auto; max-width: 768px; }
+
+    /*
+     * Markdown anywhere in the app: the chat timeline, a note node and the file preview all render
+     * the same `Markdown` component, which carries `prose prose-sm max-w-none text-sm` next to this
+     * class. Prose brings the rhythm; everything here is what the app decides instead of the plugin.
+     * The semantic tokens flip with the theme on their own, so the prose variables read from them
+     * and `prose-invert` is a second source of truth the app does not need. The plugin's own rules
+     * sit in this same layer and are written after these, so what has to beat them says so: the
+     * variables through `.prose.chat-markdown`, everything below through a selector of its own, and
+     * the size through the `text-sm` utility, which a node, a view and the file preview each move.
+     */
+    .prose.chat-markdown {
+        --tw-prose-body: var(--text);
+        --tw-prose-headings: var(--text);
+        --tw-prose-lead: var(--text-muted);
+        --tw-prose-links: var(--accent);
+        --tw-prose-bold: var(--text);
+        --tw-prose-counters: var(--text-faint);
+        --tw-prose-bullets: var(--text-faint);
+        --tw-prose-hr: var(--border);
+        --tw-prose-quotes: var(--text);
+        --tw-prose-quote-borders: var(--border);
+        --tw-prose-captions: var(--text-muted);
+        --tw-prose-kbd: var(--text);
+        --tw-prose-code: var(--text);
+        --tw-prose-pre-code: var(--text);
+        --tw-prose-pre-bg: var(--surface-sunken);
+        --tw-prose-th-borders: var(--border);
+        --tw-prose-td-borders: var(--border);
+    }
+    /* Headings stay on the app's scale, which is flatter than the one prose brings. */
+    .chat-markdown :is(h1, h2, h3, h4) { font-weight: 600; line-height: 1.3; }
     .chat-markdown h1 { font-size: var(--text-lg); }
     .chat-markdown h2 { font-size: var(--text-base); }
-    .chat-markdown h3 { font-size: var(--text-sm); }
-    .chat-markdown ul, .chat-markdown ol { padding-left: 18px; }
-    .chat-markdown ul { list-style: disc; }
-    .chat-markdown ol { list-style: decimal; }
-    .chat-markdown li + li { margin-top: 0.25rem; }
-    .chat-markdown a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
-    .chat-markdown blockquote { border-left: 2px solid var(--border-strong); padding-left: 0.75rem; color: var(--text-muted); }
-    .chat-markdown hr { border: 0; border-top: 1px solid var(--border); }
-    .chat-markdown table { border-collapse: collapse; font-size: var(--text-xs); }
-    .chat-markdown th, .chat-markdown td { border: 1px solid var(--border); padding: 0.25rem 0.5rem; text-align: left; }
-    .chat-markdown strong { font-weight: 600; }
+    .chat-markdown :is(h3, h4) { font-size: var(--text-sm); }
+    .chat-markdown a { text-underline-offset: 2px; }
+    /* Code is the app's own: `--text-code` at every depth, and none of the quotes prose puts around
+       inline code, since the chip the component draws already says what it is. */
+    .chat-markdown code { font-size: var(--text-code); font-weight: 400; }
+    .chat-markdown code::before, .chat-markdown code::after { content: none; }
+    /* A checked box is the marker; prose would put a bullet next to it. */
+    .chat-markdown li:has(> input[type="checkbox"]) { list-style: none; }
+    .chat-markdown input[type="checkbox"] { margin-right: 6px; accent-color: var(--accent); }
+    /* A wide table scrolls in its own wrapper instead of stretching the column it sits in. The
+       wrapper is a scroll container, so the air around the table has to sit on it, not inside it. */
+    .chat-table { overflow-x: auto; margin-block: 2em; }
+    .chat-markdown table { margin: 0; border-collapse: collapse; font-size: var(--text-xs); }
+    .chat-markdown :is(th, td) { border: 1px solid var(--tw-prose-td-borders); padding: 4px 8px; text-align: left; }
 
     /* A code block is shiki's own `<pre>`, which brings a background of its own to override. */
     .chat-code { border-radius: 8px; border: 1px solid var(--border); background: var(--term-bg); overflow: auto; }

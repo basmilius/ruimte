@@ -81,6 +81,20 @@ export const presentMentions = (text: string, chosen: string[]): string[] => pre
 /* The chosen skills that still sit in the text as a whole `$name` token, in text order and without doubles. */
 export const presentSkills = (text: string, chosen: string[]): string[] => present(text, '$', chosen);
 
+/*
+ * The characters a segment stands for. A renderer draws this and nothing else, so a chip layer
+ * behind a textarea spells out exactly what the textarea holds, sigil included.
+ */
+export const chipText = (segment: ChipSegment): string => {
+    if (segment.kind === 'mention') {
+        return `@${segment.path}`;
+    }
+    if (segment.kind === 'skill') {
+        return `$${segment.name}`;
+    }
+    return segment.text;
+};
+
 /* Splits the text so a renderer can draw the mentions and skills as chips; longer values win when one prefixes another. */
 export const tokenizeChips = (text: string, mentions: string[], skills: string[] = []): ChipSegment[] => {
     const tokens = [

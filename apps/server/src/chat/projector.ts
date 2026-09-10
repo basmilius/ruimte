@@ -44,6 +44,26 @@ const MAX_SUBAGENT_TEXT = 64 * 1024;
 const AGENT_FOOTER = /\n*agentId:[^\n]*(?:\n+<usage>([\s\S]*?)<\/usage>)?\s*$/;
 const NO_OUTPUT = '(Subagent completed but returned no output.)';
 
+// How much of a notification's summary a turn header can carry before it stops being a header.
+const MAX_SUMMARY_CHARS = 80;
+
+/*
+ * One line about what a background subagent came back with, for the header of the turn it wakes.
+ * The CLI is free to hand its whole report as the summary, and a wall of markdown is not a header,
+ * so this takes the first line that says something and cuts it at a length a row can show. The
+ * report itself stays where it belongs, on the subagent's own row.
+ */
+export const summaryLine = (summary: string): string => {
+    const first = summary.split('\n').find((line) => line.trim() !== '') ?? '';
+    const text = first.replace(/\s+/g, ' ').trim();
+    if (text.length <= MAX_SUMMARY_CHARS) {
+        return text;
+    }
+    const cut = text.slice(0, MAX_SUMMARY_CHARS);
+    const space = cut.lastIndexOf(' ');
+    return `${(space > MAX_SUMMARY_CHARS / 2 ? cut.slice(0, space) : cut).trimEnd()}...`;
+};
+
 const usageField = (text: string, name: string): number => {
     const match = new RegExp(`${name}:\\s*(\\d+)`).exec(text);
     return match ? Number(match[1]) : 0;
@@ -216,14 +236,17 @@ export class ThreadProjector {
             case 'task.progress':
                 this.patchSubagentProgress(generation, event, events);
                 break;
-            case 'task.done':
+            case 'task.done': {
                 // The tool row already settled from its own result; what is left is the summary,
-                // which says what the turn the CLI opens next is about.
-                this.taskSummary = event.summary ?? this.taskSummary;
+                // which says what the turn the CLI opens next is about. One line of it: a header is
+                // not the place for a report, and the CLI is free to hand its whole answer here.
+                const line = event.summary === null ? '' : summaryLine(event.summary);
+                this.taskSummary = line === '' ? this.taskSummary : line;
                 if (event.ref !== null) {
                     this.settleBackgroundSubagent(generation, event.ref, event, events);
                 }
                 break;
+            }
             case 'usage':
                 events.push(
                     this.thread.patchInfo({
@@ -600,9 +623,14 @@ export class ThreadProjector {
             return;
         }
         this.taskToolUseId = item.toolUseId;
+        const full = event.summary?.trim() ?? '';
+        const line = full === '' ? null : summaryLine(full);
+        // The row says in one line what the agent did. When the CLI put its whole report in the
+        // summary, that report is the best one this row will ever get: it goes behind the fold.
+        const result = item.result ?? (line !== null && full !== line ? full : null);
         // A resumed agent notifies more than once; one that already settled only learns what came of it.
         if (item.status !== 'running') {
-            events.push(this.thread.upsert({ ...item, summary: event.summary ?? item.summary }));
+            events.push(this.thread.upsert({ ...item, summary: line ?? item.summary, result }));
             return;
         }
         events.push(
@@ -610,7 +638,8 @@ export class ThreadProjector {
                 ...item,
                 status: event.ok ? 'done' : 'failed',
                 finishedAt: this.now(),
-                summary: event.summary ?? item.summary,
+                summary: line ?? item.summary,
+                result,
                 usage: event.usage ?? item.usage,
                 ...(event.outputFile ? { outputFile: event.outputFile } : {})
             })
