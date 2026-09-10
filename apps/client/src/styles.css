@@ -263,29 +263,19 @@ body {
     color: var(--accent-text);
 }
 
-/* Every class the components use. Inside Tailwind's `components` layer on purpose: an
-   unlayered rule beats every utility of the same specificity, so `icon-btn h-7 w-7` would
-   silently stay 32 pixels and `menu-popup min-w-48` would keep the wider default. */
+/*
+ * What is left when every bundle of utilities has moved to the component that uses it: the rules a
+ * utility cannot write. Base UI state selectors shared by many items, a `:not()` chain, a rule
+ * whose element the JSX does not own (xterm, shiki, the `@pierre` libraries), a pseudo-element,
+ * a counter, a keyframe.
+ * Inside Tailwind's `components` layer on purpose: an unlayered rule beats every utility of the
+ * same specificity, so `icon-btn h-7 w-7` would silently stay 32 pixels and `menu-popup min-w-48`
+ * would keep the wider default.
+ */
 @layer components {
-    .canvas-grid {
-        background-color: var(--canvas-bg);
-        background-image: radial-gradient(circle, var(--canvas-dot) 1px, transparent 1px);
-    }
+    /* ---------------------------------------------------------------- Controls */
 
-    .float {
-        background: color-mix(in srgb, var(--surface-raised) 88%, transparent);
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
-        border: 1px solid var(--border);
-        box-shadow: var(--shadow-float);
-    }
-
-    /* An inline svg sits on the text baseline, which drops a square glyph below the words next to it;
-       the middle of the box against the middle of the text is what reads as aligned. */
-    .icon {
-        vertical-align: middle;
-    }
-
+    /* Every icon button in the app, with the pressed state a `data-` or `aria-` attribute puts on it. */
     .icon-btn {
         display: inline-flex;
         align-items: center;
@@ -318,6 +308,19 @@ body {
     .field::placeholder { color: var(--text-faint); }
     .field:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
 
+    /* Keyboard focus is visible on every control; pointer focus stays quiet. */
+    .icon-btn:focus-visible, .menu-item:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .menu-item:focus-visible { outline-offset: -2px; }
+    /* Base UI moves DOM focus to the item the pointer hovers, and a browser keeps `:focus-visible`
+       on for scripted focus as long as its own keyboard flag is up, so after any keystroke the ring
+       would follow the mouse through every menu. The last real input event decides instead
+       (`startInputModality`); hover keeps the background it already has. */
+    :root[data-modality='pointer'] .menu-item:focus-visible { outline: none; }
+
+    /* ---------------------------------------------------------------- Popups */
+
+    /* Base UI's open and close transitions are `data-` states on the popup itself, and every menu,
+       picker, dialog and tooltip in the app shares them. */
     .menu-popup {
         min-width: 200px;
         padding: 4px;
@@ -330,6 +333,9 @@ body {
         transition: opacity 120ms ease, scale 120ms ease;
     }
     .menu-popup[data-starting-style], .menu-popup[data-ending-style] { opacity: 0; scale: 0.96; }
+
+    /* A menu row, with the states Base UI puts on it while it is highlighted, disabled or the
+       trigger of a submenu that is open. */
     .menu-item {
         display: flex;
         align-items: center;
@@ -345,15 +351,10 @@ body {
         outline: none;
     }
     .menu-item[data-highlighted] { background: var(--surface-sunken); }
+    .menu-item[data-disabled] { opacity: .45; }
+    .menu-item[data-popup-open] { background: var(--surface-sunken); }
+    /* A chord in a row: pushed to the right, in the interface font, wherever a row carries one. */
     .menu-item kbd { margin-left: auto; font-family: var(--font-sans); font-size: var(--text-xs); color: var(--text-faint); }
-    /* A trailing hint in a menu row: what the item does to something else, never a chord. Chords
-       stay `<kbd>`, which the rule above already pushes to the right. */
-    .menu-item .menu-hint { margin-left: auto; padding-left: 12px; font-size: var(--text-xs); color: var(--text-faint); }
-    .menu-separator { height: 1px; margin: 4px 6px; background: var(--border); }
-    .menu-label, .section-label { font-size: var(--text-xs); color: var(--text-faint); letter-spacing: .04em; text-transform: uppercase; }
-    .menu-label { padding: 6px 10px 2px; }
-    /* The same label outside a popup: the sidebar's groups, the palette's sections. */
-    .section-label { font-weight: 500; }
 
     /* A menu with a search field on top: the field sits flush against the edge, so the padding is the list's. */
     .picker-popup {
@@ -369,40 +370,9 @@ body {
     }
     .picker-popup[data-starting-style], .picker-popup[data-ending-style] { opacity: 0; scale: 0.96; }
 
-    .text-element[contenteditable] { outline: none; cursor: text; user-select: text; }
-    .text-element[contenteditable]:empty::before { content: attr(data-placeholder); color: var(--text-faint); }
-
-    .node-focused { outline: 2px solid var(--accent); outline-offset: 0; }
-    .node-selected { outline: 2px solid var(--selection); outline-offset: 0; }
-    [data-node-id]:focus-visible:not(.node-focused):not(.node-selected) { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-    /* A group is a frame under its nodes: a faint tint of its accent, never a surface of its own. */
-    .node-group {
-        --group-accent: var(--text-faint);
-        background: color-mix(in srgb, var(--group-accent) 7%, transparent);
-        border-style: dashed;
-    }
-    .node-group:hover { background: color-mix(in srgb, var(--group-accent) 10%, transparent); }
-
-    /* The link handle on a selected node; it only shows when there is something to drag from. */
-    .node-port { box-shadow: 0 0 0 2px var(--surface); }
-    .node-port:hover { background: var(--accent); }
-
-    /* A note is its color all over; the header divider is a shade of the text, so it fits every note color. */
-    .node-note header { border-color: color-mix(in srgb, var(--text) 12%, transparent); }
-
-    /* Keyboard focus is visible on every control; pointer focus stays quiet. */
-    .icon-btn:focus-visible, .menu-item:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-    .menu-item:focus-visible { outline-offset: -2px; }
-    /* Base UI moves DOM focus to the item the pointer hovers, and a browser keeps `:focus-visible`
-       on for scripted focus as long as its own keyboard flag is up, so after any keystroke the ring
-       would follow the mouse through every menu. The last real input event decides instead
-       (`startInputModality`); hover keeps the background it already has. */
-    :root[data-modality='pointer'] .menu-item:focus-visible { outline: none; }
-
     /* One stack for everything that floats: a dialog, then the menus and selects a dialog can host,
-       then the tooltips over those. A popup under its own dialog is the bug this ordering prevents. */
-    .popup-layer { z-index: var(--z-popup); }
+       then the tooltips over those. A popup under its own dialog is the bug this ordering prevents;
+       a component reaches the middle step with `z-[var(--z-popup)]`. */
     .dialog-backdrop { position: fixed; inset: 0; z-index: var(--z-dialog-backdrop); background: color-mix(in srgb, var(--bg) 55%, transparent); }
     .dialog-backdrop[data-starting-style], .dialog-backdrop[data-ending-style] { opacity: 0; }
     .dialog-popup {
@@ -421,157 +391,9 @@ body {
     }
     .dialog-popup[data-starting-style], .dialog-popup[data-ending-style] { opacity: 0; scale: 0.97; }
 
-    /* xterm paints into a fixed-size box; the box fills the node body and the body sets the size. */
-    .term-host { position: absolute; inset: 0; padding: 6px 0 0 8px; }
-    .term-host .xterm { height: 100%; }
-    .term-host .xterm .xterm-viewport { background-color: transparent !important; }
-
-    /* The column slides open and shut. The transition lives here and not in a `transition-[width]`
-       utility, because a utility would sit in a later layer than the two rules that turn it off. A
-       resize drag has to follow the pointer instead of lagging a frame behind it, and a width a
-       project brings on load has to be there at once: only a person's own toggle slides. */
-    .panel-shell { transition: width 200ms cubic-bezier(0, 0, 0.2, 1); }
-    .panel-shell[data-resizing],
-    .panel-shell[data-instant] { transition: none; }
-
-    /* A 2px line that says "something is on its way" without knowing how far along it is: a bar of
-       a third of the width sweeping across. Used under the toolbar and under a browser's address. */
-    .progress-line { position: relative; height: 2px; overflow: hidden; background: color-mix(in srgb, var(--accent) 16%, transparent); }
-    .progress-line::after {
-        content: "";
-        position: absolute;
-        inset: 0 auto 0 0;
-        width: 33%;
-        background: var(--accent);
-        animation: progress-sweep 1.1s ease-in-out infinite;
-    }
-    @keyframes progress-sweep { from { transform: translateX(-100%); } to { transform: translateX(400%); } }
-
-    @media (prefers-reduced-motion: reduce) {
-        *, *::before, *::after { transition: none !important; animation: none !important; }
-    }
-
-    /* A diff inside a chat tool block; the library paints its own colors inside a shadow root. */
-    .chat-diff { font-size: var(--text-code); --diffs-font-size: var(--text-code); --diffs-font-family: var(--font-mono); }
-    .chat-diff + .chat-diff { border-top: 1px solid var(--border); }
-
-    /* The chat composer floats over the thread as a glass card. */
-    .chat-composer {
-        border-radius: 16px;
-        border: 1px solid var(--border);
-        background: color-mix(in srgb, var(--surface-raised) 92%, transparent);
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
-        box-shadow: var(--shadow-float);
-        overflow: hidden;
-    }
-    .chat-composer:focus-within { border-color: var(--accent); }
-    .chat-dock { border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--status-needs-you) 6%, transparent); }
-
-    .chat-composer-drop { border-color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 60%, var(--surface-raised)); }
-
-    /*
-     * An `@file` or `$skill` token drawn as a pill inside running text. In the composer the pill is
-     * painted on a layer behind the textarea, so its horizontal padding is handed straight back as a
-     * negative margin: the advance width stays the text's own and every chip keeps sitting on its
-     * own characters. Vertical padding on an inline box never changes the line height, so that side
-     * needs no compensation, and the ring is inset for the same reason.
-     */
-    .mention-chip, .skill-chip {
-        padding: 2px 3px;
-        margin: 0 -3px;
-        border-radius: 5px;
-        font-weight: 500;
-        background: var(--accent-soft);
-        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
-        color: var(--accent);
-        box-decoration-break: clone;
-        -webkit-box-decoration-break: clone;
-    }
-
-    /* A skill is the same token shape as a file mention, in its own hue. */
-    .skill-chip {
-        background: var(--skill-soft);
-        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--skill) 25%, transparent);
-        color: var(--skill);
-    }
-
-    /* The same pill in the transcript, where nothing has to line up with a textarea: a real inline
-       box a shade smaller than the text around it, with the icon in place of the sigil. */
-    .chat-chip {
-        display: inline-flex;
-        max-width: 100%;
-        height: 17px;
-        align-items: center;
-        gap: 4px;
-        margin: 0;
-        padding: 0 6px;
-        border-radius: 6px;
-        font-size: 12px;
-        line-height: 1;
-        vertical-align: -2px;
-    }
-
-    /* A folded user prompt fades out at the bottom instead of cutting a line in half. */
-    .chat-fold {
-        max-height: 10em;
-        overflow: hidden;
-        mask-image: linear-gradient(to bottom, black 70%, transparent);
-        -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent);
-    }
-
-    /* Live tool rows shine once across; a paused animation costs nothing. */
-    .chat-live { color: var(--accent); }
-    .chat-live-text {
-        background: linear-gradient(90deg, var(--text-muted) 0%, var(--text) 50%, var(--text-muted) 100%);
-        background-size: 200% 100%;
-        -webkit-background-clip: text;
-        background-clip: text;
-        color: transparent;
-        animation: chat-shine 1.6s linear infinite;
-    }
-    @keyframes chat-shine { from { background-position: 200% 0; } to { background-position: -200% 0; } }
-
-    /* Assistant markdown: the same type scale as the rest of the node, code in the terminal palette. */
-    .chat-markdown { font-size: var(--text-sm); line-height: 1.5; color: var(--text); }
-    .chat-markdown > * + * { margin-top: 0.625rem; }
-    .chat-markdown h1, .chat-markdown h2, .chat-markdown h3, .chat-markdown h4 { font-weight: 600; line-height: 1.3; }
-    .chat-markdown h1 { font-size: var(--text-lg); }
-    .chat-markdown h2 { font-size: var(--text-base); }
-    .chat-markdown h3 { font-size: var(--text-sm); }
-    .chat-markdown ul, .chat-markdown ol { padding-left: 18px; }
-    .chat-markdown ul { list-style: disc; }
-    .chat-markdown ol { list-style: decimal; }
-    .chat-markdown li + li { margin-top: 0.25rem; }
-    .chat-markdown a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
-    .chat-markdown blockquote { border-left: 2px solid var(--border-strong); padding-left: 0.75rem; color: var(--text-muted); }
-    .chat-markdown hr { border: 0; border-top: 1px solid var(--border); }
-    .chat-markdown table { border-collapse: collapse; font-size: var(--text-xs); }
-    .chat-markdown th, .chat-markdown td { border: 1px solid var(--border); padding: 0.25rem 0.5rem; text-align: left; }
-    .chat-markdown strong { font-weight: 600; }
-    .chat-inline-code { font-family: var(--font-mono); font-size: var(--text-code); padding: 1px 4px; border-radius: 4px; background: var(--surface-sunken); }
-    .chat-code { border-radius: 8px; border: 1px solid var(--border); background: var(--term-bg); overflow: auto; }
-    .chat-code pre { margin: 0; padding: 0.625rem 0.75rem; background: transparent !important; font-family: var(--font-mono); font-size: var(--text-code); line-height: var(--text-code--line-height); }
-    .chat-code code { font-family: inherit; }
-
-    /* Windows and Linux draw the native window controls over the top right of the toolbar, so the
-       region under them keeps their width free. The fallback covers a shell that answers no query. */
-    .toolbar-overlay-inset { padding-right: calc(100vw - env(titlebar-area-x, calc(100vw - 138px)) - env(titlebar-area-width, 0px)); }
-
-    /* In the desktop app the top band drags the window. Electron 44 lets children inherit
-       the region, so they go back to `initial` (an explicit `none` counts as no-drag and breaks the
-       drag), and the controls inside opt out on purpose. */
-    .app-drag { -webkit-app-region: drag; }
-    .app-drag > * { -webkit-app-region: initial; }
-    .app-drag button, .app-drag input { -webkit-app-region: no-drag; }
-
-    /* Icon buttons that belong together sit 1px apart; groups keep the wider gap of their container. */
-    .btn-group { display: inline-flex; align-items: center; gap: 1px; }
-    .menu-item[data-disabled] { opacity: .45; }
-    .menu-item[data-popup-open] { background: var(--surface-sunken); }
-
     /* Tooltips. The positioner animates its position, so a tooltip slides to the next button
-       instead of blinking; the popup fades and scales from its anchor side. */
+       instead of blinking; the popup fades and scales from its anchor side. Both drop the motion
+       while Base UI says the tooltip is instant. */
     .tooltip-positioner {
         z-index: var(--z-tooltip);
         pointer-events: none;
@@ -592,15 +414,107 @@ body {
     }
     .tooltip-popup[data-starting-style], .tooltip-popup[data-ending-style] { opacity: 0; scale: 0.98; }
     .tooltip-popup[data-instant] { transition: none; }
-    .tooltip-viewport { display: flex; align-items: center; gap: 8px; padding: 5px 9px; white-space: nowrap; }
-    .tooltip-kbd {
-        padding: 1px 5px;
-        border-radius: 4px;
-        background: var(--surface-sunken);
-        color: var(--text-muted);
-        font-family: var(--font-sans);
-        font-size: var(--text-xs);
+
+    /* ---------------------------------------------------------------- Canvas */
+
+    /* The focus ring of a node frame has to lose to the node that is focused or selected, which is
+       a `:not()` chain and not a variant. */
+    .node-focused { outline: 2px solid var(--accent); outline-offset: 0; }
+    .node-selected { outline: 2px solid var(--selection); outline-offset: 0; }
+    [data-node-id]:focus-visible:not(.node-focused):not(.node-selected) { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* A text element is a `contenteditable`, so its placeholder is drawn from an attribute and its
+       caret has to lose to the `cursor-default` the view puts on it while it is not being edited. */
+    .text-element[contenteditable] { outline: none; cursor: text; user-select: text; }
+    .text-element[contenteditable]:empty::before { content: attr(data-placeholder); color: var(--text-faint); }
+
+    /* ---------------------------------------------------------------- Shell */
+
+    /* The column slides open and shut. The transition lives here and not in a `transition-[width]`
+       utility, because a utility would sit in a later layer than the two rules that turn it off. A
+       resize drag has to follow the pointer instead of lagging a frame behind it, and a width a
+       project brings on load has to be there at once: only a person's own toggle slides. */
+    .panel-shell { transition: width 200ms cubic-bezier(0, 0, 0.2, 1); }
+    .panel-shell[data-resizing],
+    .panel-shell[data-instant] { transition: none; }
+
+    /* A 2px line that says "something is on its way" without knowing how far along it is: a bar of
+       a third of the width sweeping across, which is a pseudo-element and a keyframe. Used under
+       the toolbar and under a browser's address. */
+    .progress-line { position: relative; height: 2px; overflow: hidden; background: color-mix(in srgb, var(--accent) 16%, transparent); }
+    .progress-line::after {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 33%;
+        background: var(--accent);
+        animation: progress-sweep 1.1s ease-in-out infinite;
     }
+    @keyframes progress-sweep { from { transform: translateX(-100%); } to { transform: translateX(400%); } }
+
+    /* In the desktop app the top band drags the window. Electron 44 lets children inherit
+       the region, so they go back to `initial` (an explicit `none` counts as no-drag and breaks the
+       drag), and the controls inside opt out on purpose. */
+    .app-drag { -webkit-app-region: drag; }
+    .app-drag > * { -webkit-app-region: initial; }
+    .app-drag button, .app-drag input { -webkit-app-region: no-drag; }
+
+    /* Windows and Linux draw the native window controls over the top right of the toolbar, so the
+       region under them keeps their width free. The fallback covers a shell that answers no query;
+       nested `env()` fallbacks are what keeps this out of a utility. */
+    .toolbar-overlay-inset { padding-right: calc(100vw - env(titlebar-area-x, calc(100vw - 138px)) - env(titlebar-area-width, 0px)); }
+
+    /* ---------------------------------------------------------------- Terminal */
+
+    /* xterm paints into a fixed-size box of its own; the box fills the node body and the body sets
+       the size. The elements below the host are the addon's, not ours. */
+    .term-host { position: absolute; inset: 0; padding: 6px 0 0 8px; }
+    .term-host .xterm { height: 100%; }
+    .term-host .xterm .xterm-viewport { background-color: transparent !important; }
+
+    /* ---------------------------------------------------------------- Chat */
+
+    /* Assistant markdown: the same type scale as the rest of the node, over elements the renderer
+       makes and the JSX never sees. */
+    .chat-markdown { font-size: var(--text-sm); line-height: 1.5; color: var(--text); }
+    .chat-markdown > * + * { margin-top: 0.625rem; }
+    .chat-markdown h1, .chat-markdown h2, .chat-markdown h3, .chat-markdown h4 { font-weight: 600; line-height: 1.3; }
+    .chat-markdown h1 { font-size: var(--text-lg); }
+    .chat-markdown h2 { font-size: var(--text-base); }
+    .chat-markdown h3 { font-size: var(--text-sm); }
+    .chat-markdown ul, .chat-markdown ol { padding-left: 18px; }
+    .chat-markdown ul { list-style: disc; }
+    .chat-markdown ol { list-style: decimal; }
+    .chat-markdown li + li { margin-top: 0.25rem; }
+    .chat-markdown a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+    .chat-markdown blockquote { border-left: 2px solid var(--border-strong); padding-left: 0.75rem; color: var(--text-muted); }
+    .chat-markdown hr { border: 0; border-top: 1px solid var(--border); }
+    .chat-markdown table { border-collapse: collapse; font-size: var(--text-xs); }
+    .chat-markdown th, .chat-markdown td { border: 1px solid var(--border); padding: 0.25rem 0.5rem; text-align: left; }
+    .chat-markdown strong { font-weight: 600; }
+
+    /* A code block is shiki's own `<pre>`, which brings a background of its own to override. */
+    .chat-code { border-radius: 8px; border: 1px solid var(--border); background: var(--term-bg); overflow: auto; }
+    .chat-code pre { margin: 0; padding: 0.625rem 0.75rem; background: transparent !important; font-family: var(--font-mono); font-size: var(--text-code); line-height: var(--text-code--line-height); }
+    .chat-code code { font-family: inherit; }
+
+    /* A diff inside a chat tool block; the library paints its own colors inside a shadow root and
+       takes the face it draws them in through these variables. */
+    .chat-diff { font-size: var(--text-code); --diffs-font-size: var(--text-code); --diffs-font-family: var(--font-mono); }
+    .chat-diff + .chat-diff { border-top: 1px solid var(--border); }
+
+    /* Live tool rows shine once across; a paused animation costs nothing. */
+    .chat-live-text {
+        background: linear-gradient(90deg, var(--text-muted) 0%, var(--text) 50%, var(--text-muted) 100%);
+        background-size: 200% 100%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        animation: chat-shine 1.6s linear infinite;
+    }
+    @keyframes chat-shine { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+    /* ---------------------------------------------------------------- Files and git panels */
 
     /* The Files panel. The tree draws itself inside a shadow root that reaches nothing here except
        the `--trees-*-override` variables on its host, so the panel's tokens travel that way. */
@@ -624,7 +538,7 @@ body {
 
     /* A file icon outside the tree. The glyph fills with `currentColor`, so the hue the set gives
        the file type is the element's own color; a type the set leaves uncolored keeps the muted
-       text it would have in the tree. */
+       text it would have in the tree. The hue is an attribute the resolver puts on the element. */
     .file-icon { flex-shrink: 0; vertical-align: middle; fill: currentColor; color: var(--text-muted); }
     .file-icon[data-hue="gray"] { color: var(--file-icon-gray); }
     .file-icon[data-hue="red"] { color: var(--file-icon-red); }
@@ -640,234 +554,6 @@ body {
     .file-icon[data-hue="pink"] { color: var(--file-icon-pink); }
     .file-icon[data-hue="mauve"] { color: var(--file-icon-mauve); }
 
-    /* The tabs fill the preview panel's header, which is where the band's own border already is. */
-    .files-tab-strip {
-        display: flex;
-        align-items: stretch;
-        min-width: 0;
-        height: 100%;
-        flex: 1;
-        overflow-x: auto;
-        scrollbar-width: none;
-    }
-    .files-tab-strip::-webkit-scrollbar { display: none; }
-    .files-tab {
-        position: relative;
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        flex-shrink: 0;
-        height: 100%;
-        /* The close button carries 4px of hit padding around its glyph, so 8px here reads as the 12px on the left. */
-        padding: 0 8px 0 12px;
-        color: var(--text-muted);
-        transition: background-color 100ms ease, color 100ms ease;
-    }
-    /* A tab lifts on hover instead of sinking: `--surface-raised` is the step above the panel's ground. */
-    .files-tab:hover { background: var(--surface-raised); color: var(--text); }
-    .files-tab[data-active="true"] { color: var(--text); }
-    /* The one mark of the active tab, inside it so turning it on moves nothing. */
-    .files-tab[data-active="true"]::after {
-        content: "";
-        position: absolute;
-        inset: auto 0 0 0;
-        height: 2px;
-        background: var(--accent);
-    }
-    .files-tab-open {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        min-width: 0;
-        max-width: 160px;
-        height: 100%;
-        font-size: var(--text-sm);
-        line-height: var(--text-sm--line-height);
-        color: inherit;
-    }
-    /* The strip clips, so the ring goes inside the tab instead of around it. */
-    .files-tab-open:focus-visible { outline-offset: -2px; }
-    /* A diff tab carries the mark that says so next to the name, which needs the room. */
-    .files-tab[data-view="diff"] .files-tab-open { max-width: 200px; }
-    .files-tab-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    /* Out of the row until there is something to mark, so a clean tab keeps the close button 8px from its name. */
-    .files-tab-dot { display: none; }
-    .files-tab-dot[data-dirty="true"] {
-        display: block;
-        width: 6px;
-        height: 6px;
-        flex-shrink: 0;
-        border-radius: 9999px;
-        background: var(--text-muted);
-    }
-    .files-tab-close {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 20px;
-        height: 20px;
-        flex-shrink: 0;
-        border-radius: 5px;
-        color: var(--text-faint);
-        opacity: 0;
-        transition: background-color 100ms ease, color 100ms ease;
-    }
-    .files-tab:hover .files-tab-close,
-    .files-tab[data-active="true"] .files-tab-close,
-    .files-tab-close:focus-visible { opacity: 1; }
-    .files-tab-close:hover { background: var(--surface-active); color: var(--text); }
-
-    /* The git panel's list: a header per group, then a row per changed file. */
-    .git-group {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        height: 28px;
-        padding: 0 8px 0 12px;
-        font-size: var(--text-xs);
-        line-height: var(--text-xs--line-height);
-    }
-    .git-row {
-        display: flex;
-        align-items: center;
-        height: 28px;
-        padding-right: 4px;
-        color: var(--text-muted);
-    }
-    .git-row:hover { background: var(--surface-sunken); color: var(--text); }
-    /* The change the preview has open reads as the selected row, the way a tree marks one. */
-    .git-row[data-selected] { background: var(--surface-active); color: var(--text); }
-    .git-row-open {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        flex: 1;
-        min-width: 0;
-        height: 28px;
-        padding: 0 4px 0 12px;
-        font-size: var(--text-xs);
-        line-height: var(--text-xs--line-height);
-        color: inherit;
-    }
-    .git-row-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
-    .git-row-dir { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-faint); }
-    /* The three trailing cells are fixed and right-aligned, so the letters and the counts of every
-       row line up under each other however long the name before them is. */
-    .git-row-code {
-        width: 16px;
-        flex-shrink: 0;
-        text-align: right;
-        font-family: var(--font-mono);
-        color: var(--text-faint);
-    }
-    .git-row-count {
-        width: 32px;
-        flex-shrink: 0;
-        text-align: right;
-        font-variant-numeric: tabular-nums;
-    }
-    /* The buttons are the row's own, so they only show while the pointer is on it or one has focus. */
-    .git-row-actions { visibility: hidden; }
-    .git-row:hover .git-row-actions,
-    .git-row:focus-within .git-row-actions { visibility: visible; }
-
-    /* The message of the commit to come. The one multiline field in the app, so it carries the
-       field's border and focus ring without its fixed height. */
-    .commit-message {
-        width: 100%;
-        min-height: 64px;
-        padding: 6px 8px;
-        border-radius: 8px;
-        border: 1px solid var(--border);
-        background: var(--surface);
-        color: var(--text);
-        font-size: var(--text-xs);
-        line-height: var(--text-xs--line-height);
-        resize: none;
-        outline: none;
-    }
-    .commit-message::placeholder { color: var(--text-faint); }
-    .commit-message:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
-
-    /* The line the commit log hangs from: the border of the split, with a grab area around it. */
-    .git-split {
-        height: 5px;
-        flex-shrink: 0;
-        margin-bottom: -1px;
-        border-bottom: 1px solid var(--border);
-        cursor: row-resize;
-    }
-    .git-split:hover { border-color: var(--border-strong); }
-
-    /* The commit a log row is: the short hash, in the face git writes it in. */
-    .git-row-hash {
-        flex-shrink: 0;
-        font-family: var(--font-mono);
-        color: var(--text-faint);
-    }
-
-    /* What a git action is doing, bottom right over everything, one card per action. */
-    .toast-host {
-        position: fixed;
-        right: 16px;
-        bottom: 16px;
-        z-index: var(--z-popup);
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        width: 360px;
-        max-width: calc(100vw - 32px);
-    }
-    .toast {
-        display: flex;
-        align-items: flex-start;
-        gap: 8px;
-        padding: 10px 10px 10px 12px;
-        border-radius: 10px;
-    }
-    /* One line of what the command wrote, in the face it wrote it in; the rest is behind the copy button. */
-    .toast-line {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        font-family: var(--font-mono);
-        font-size: var(--text-xs);
-        line-height: var(--text-xs--line-height);
-        color: var(--text-muted);
-    }
-
-    /* The viewer's own row under the panel's header, for whatever the open file can be switched between. */
-    .file-toolbar {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        height: 40px;
-        flex-shrink: 0;
-        padding: 0 8px;
-        border-bottom: 1px solid var(--border);
-        background: var(--surface);
-    }
-    .file-toolbar-label {
-        color: var(--text-muted);
-        font-size: var(--text-xs);
-        line-height: var(--text-xs--line-height);
-    }
-    .file-footer {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        height: 28px;
-        flex-shrink: 0;
-        padding: 0 8px;
-        border-top: 1px solid var(--border);
-        color: var(--text-muted);
-        font-size: var(--text-xs);
-        line-height: var(--text-xs--line-height);
-    }
-
-    /* A file of code, drawn a chunk at a time. Every state of a chunk (reserved, plain, highlighted)
-       draws the same line box, so nothing below it shifts while shiki catches up. The line number is
-       a counter each chunk starts at its own offset, which is what keeps the chunks independent. */
     /* The diff draws its rows on a surface of its own, which is white or black unless the page says
        otherwise. Naming both sides the same token puts it on the app's code surface in either theme,
        and the container carries it too, so a diff shorter than the panel still fills it. */
@@ -876,6 +562,11 @@ body {
         --diffs-light-bg: var(--term-bg);
         --diffs-dark-bg: var(--term-bg);
     }
+
+    /* A file of code, drawn a chunk at a time by shiki. Every state of a chunk (reserved, plain,
+       highlighted) draws the same line box, so nothing below it shifts while shiki catches up. The
+       line number is a counter each chunk starts at its own offset, which is what keeps the chunks
+       independent. */
     .file-code { background: var(--term-bg); }
     .file-code pre {
         margin: 0;
@@ -906,6 +597,13 @@ body {
 
     /* The page an HTML file is drawn as. A <webview> needs a size in both directions of its own, and
        the white is the ground a browser gives a document that brings no background: a themed surface
-       would put the page's own dark text on a dark panel. */
+       would put the page's own dark text on a dark panel. The element is made by hand, so its class
+       is the only way in. */
     .file-preview-page { width: 100%; height: 100%; border: 0; background: #ffffff; }
+
+    /* ---------------------------------------------------------------- Motion */
+
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { transition: none !important; animation: none !important; }
+    }
 }

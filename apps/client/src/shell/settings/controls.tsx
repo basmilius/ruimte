@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import clsx from 'clsx';
 import { Switch } from '@base-ui-components/react/switch';
 import { Minus, Plus } from 'lucide-react';
+import { BTN_GROUP } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 
@@ -78,7 +79,7 @@ export function Stepper({ value, min, max, step, unit, label, onChange }: Steppe
                 {value}
                 {unit}
             </span>
-            <div className="btn-group rounded-lg bg-surface-sunken p-0.5">
+            <div className={`${BTN_GROUP} rounded-lg bg-surface-sunken p-0.5`}>
                 <Tooltip label="Smaller">
                     <button className="icon-btn h-7 w-7" aria-label={`${label}: smaller`} disabled={value <= min} onClick={() => nudge(-1)}>
                         <Icon icon={Minus} size={16} />
