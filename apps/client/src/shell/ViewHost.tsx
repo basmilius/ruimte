@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import { isCanvasView, type ProjectView } from '@ruimte/contracts';
 import { Canvas } from '@/canvas/Canvas';
 import { DrawingView } from '@/drawing/DrawingView';
+import { drawingCanClear } from '@/drawing/use-drawing-keys';
 import { BrowserFallback, usePage } from '@/nodes/BrowserBody';
 import { ChatBody } from '@/nodes/ChatBody';
 import { TerminalBody } from '@/nodes/TerminalBody';
@@ -23,6 +24,10 @@ const useLeaveOnEscape = (view: ProjectView): void => {
             const leaving = view.kind === 'terminal' ? isLeaveNodeChord(e, isApplePlatform()) : e.key === 'Escape' && !e.metaKey && !e.ctrlKey && !e.altKey;
             // An open popup or dialog owns Escape; it closes itself and the body keeps the keyboard.
             if (!leaving || !useDocument.getState().bodyFocused || isInFloatingLayer(e.target)) {
+                return;
+            }
+            // A drawing clears its draft, its selection and its tool first; only an empty one is left.
+            if (view.kind === 'drawing' && drawingCanClear()) {
                 return;
             }
             e.preventDefault();

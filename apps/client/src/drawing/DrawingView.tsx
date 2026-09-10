@@ -3,11 +3,13 @@ import { useShallow } from 'zustand/react/shallow';
 import type { DrawingElement } from '@ruimte/contracts';
 import { boundsOfElements, elementAt, rectFromPoints, resizeRect, scaleElement, type Point, type Rect, type ResizeHandle } from '@ruimte/drawing';
 import { GRID, toWorld } from '@/canvas/math';
+import { DrawingDock } from '@/drawing/DrawingDock';
 import { DrawingOverlay } from '@/drawing/DrawingOverlay';
 import { loadDrawingFont } from '@/drawing/fonts';
 import { DRAG_THRESHOLD, DEFAULT_SHAPE, constrainAngle, lineElement, settleStroke, shapeElement, shapeRect, snapPoint, textElement } from '@/drawing/gestures';
 import { applyCamera, clearPathCache, paintElements } from '@/drawing/paint';
 import { readFontStacks, readPalette } from '@/drawing/palette';
+import { useDrawingKeys } from '@/drawing/use-drawing-keys';
 import { nextId } from '@/state/canvas';
 import { newSeed, useDrawing } from '@/state/drawing';
 import { useSettings } from '@/state/settings';
@@ -51,6 +53,7 @@ export function DrawingView({ id }: { id: string }) {
     const gesture = useRef<Gesture | null>(null);
     const [gestureKind, setGestureKind] = useState<Gesture['kind'] | null>(null);
     const snapSetting = useSettings((s) => s.drawingSnap);
+    useDrawingKeys(true);
 
     // The hand of a drawing arrives with the first one that is opened, never with the app.
     useEffect(() => {
@@ -475,6 +478,7 @@ export function DrawingView({ id }: { id: string }) {
             <canvas ref={sceneRef} className="absolute inset-0 h-full w-full" />
             <canvas ref={draftRef} className="absolute inset-0 h-full w-full" />
             <DrawingOverlay marquee={marquee} />
+            <DrawingDock />
         </div>
     );
 }

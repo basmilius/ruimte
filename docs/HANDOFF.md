@@ -786,7 +786,12 @@ canvas, against Ruimte, one verdict each.
 
 - No kanban view, ever. Bas dislikes that workflow.
 - No bare single-letter shortcuts. Every chord needs a modifier and becomes remappable in a
-  later settings phase; until then the Keyboard section only lists them.
+  later settings phase; until then the Keyboard section only lists them. The one exception is a
+  drawing view: it has the keyboard the way a terminal has it, and its tools are the bare letters
+  and digits every sketching app uses (V/1 select, H hand, R/2 rect, D/3 diamond, O/4 ellipse,
+  A/5 arrow, L/6 line, P/7 freehand, T/8 text, E/0 eraser, Q keeps the tool). They fire only while
+  no text is being typed and no dialog is up, and they are listed under "Drawing" in the Keyboard
+  pane like every other chord.
 - Never highlight the canvas grid in the accent color. The dots stay neutral in every state.
 - Icon buttons get equal padding on every side. Buttons that belong together sit in a
   `BTN_GROUP` with 1px gaps; groups keep the wider gap of their container.
@@ -860,7 +865,11 @@ canvas, against Ruimte, one verdict each.
   box of both shapes.
 - Geist is in the client for the wordmark only (`@fontsource-variable/geist`, imported once in
   `main.tsx`, family "Geist Variable" behind `--font-brand`). The interface font stays the system
-  stack; no other text may use `font-brand`.
+  stack; no other text may use `font-brand`. The second bundled face is Kalam
+  (`@fontsource/kalam`, weight 400, OFL 1.1), the hand a drawing writes in. It is imported lazily
+  by the first drawing view, never at startup, and only a `text` element in a drawing may use it;
+  its other two fonts are `--font-sans` and `--font-mono`. Excalifont was rejected on purpose: it
+  is Excalidraw's own face, and a Ruimte drawing should not look like an Excalidraw one.
 - No fractional pixels. Type sizes, paddings and stroke widths are whole numbers; a `rem` value
   has to land on a whole pixel at the 16px root, and an `em` at the size it inherits. Ratios
   (line height, opacity, letter spacing) are not lengths and stay as they are.
