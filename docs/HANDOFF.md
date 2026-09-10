@@ -92,6 +92,18 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   elements join box selection with Shift. No minimap: the sidebar and the palette cover
   jumping around; decide again once real projects have many nodes.
 
+- **Collapsible sidebar**: `useUi.sidebarOpen` (localStorage `ruimte.sidebar`, machine state,
+  never in `project.json`) shows and hides the session list. The `<aside>` is a wrapper that
+  animates its width between 248 and 0 in 200 ms over a fixed 248px inner column, so nothing
+  reflows on the way out; it keeps its children mounted and goes `inert` while closed, and
+  `prefers-reduced-motion` drops the motion through the global rule in `styles.css`. One
+  `SidebarToggle` moves between the sidebar strip and the toolbar: both apply the traffic-light
+  inset through `useTrafficLightInset()` (`desktop/useFullscreen.ts`), so the button sits at the
+  same x either way and reads as one control that stays put. The brand mark and the
+  `ConnectionDot` live in the toolbar for the same reason. Cmd+B toggles it from the app-wide
+  chord block in `Canvas.tsx`, so it works from inside a node; off macOS Ctrl+B belongs to
+  readline and tmux, so there it only fires outside node mode. The palette has "Toggle sidebar".
+
 - **Toolbar and panel slot**: `apps/client/src/shell/Toolbar.tsx` is a 48px bar at the top of
   the main column, next to the sidebar's strip, `bg-surface` with a bottom border and the drag
   region. Left is the breadcrumb: the machine when the daemon is not loopback, the
@@ -154,8 +166,9 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   bar follows T3 Code: `hiddenInset` with the traffic lights at (16, 18) on macOS and a native
   controls overlay elsewhere, the sidebar's top strip and the toolbar next to it are both drag
   regions and together make one 48px band (children reset to `initial`, controls `no-drag`),
-  the traffic-light inset belongs to the sidebar strip and is only applied outside fullscreen
-  (the shell sends `window:fullscreen`), the toolbar's right region keeps the width of the
+  the traffic-light inset comes from `useTrafficLightInset()` and belongs to the leftmost strip
+  (the sidebar's when it is open, the toolbar's when it is closed), only outside fullscreen
+  (the shell sends `window:fullscreen`), the rightmost strip keeps the width of the
   overlay controls free through `env(titlebar-area-*)` on Windows and Linux, and the overlay
   colors follow the client's theme over IPC.
 

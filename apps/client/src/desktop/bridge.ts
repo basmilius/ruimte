@@ -25,6 +25,16 @@ export const hasTrafficLights = (): boolean => desktop()?.platform === 'darwin';
 // Where macOS puts the traffic lights (see the shell), plus the gap the sidebar keeps after them.
 export const TRAFFIC_LIGHTS_INSET_PX = 76;
 
+/* True on macOS, in the desktop app and in a browser tab alike. Chords differ there: Ctrl+B is
+   readline's backward-char and tmux's prefix, while Cmd+B is free. */
+export const isApplePlatform = (): boolean => {
+    const bridge = desktop();
+    if (bridge) {
+        return bridge.platform === 'darwin';
+    }
+    return typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+};
+
 /* True when the window controls sit over the top right of the window, which Windows and Linux do. */
 export const hasOverlayControls = (): boolean => {
     const bridge = desktop();

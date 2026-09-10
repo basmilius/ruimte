@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { GRID, intersects, snapToGrid, toWorld, type Point, type Rect } from '@/canvas/math';
 import { useCanvas, type NodeKind } from '@/state/canvas';
 import { useUi } from '@/state/ui';
+import { isApplePlatform } from '@/desktop/bridge';
 import { addNodeAtCenter } from '@/shell/commands';
 import { CanvasMenuPopup } from '@/canvas/CanvasMenu';
 import { EdgeLayer } from '@/canvas/EdgeLayer';
@@ -216,6 +217,13 @@ export function Canvas() {
             if (mod && e.key === ',') {
                 e.preventDefault();
                 useUi.getState().setSettings({ open: true });
+                return;
+            }
+            // Option+B on macOS is a dead key, so the chord reads the physical key, not the character.
+            // Ctrl+B is readline's backward-char and tmux's prefix, so off macOS it stays out of a node.
+            if (mod && !e.altKey && e.code === 'KeyB' && (isApplePlatform() || s.mode.kind !== 'node')) {
+                e.preventDefault();
+                useUi.getState().toggleSidebar();
                 return;
             }
             // A dialog owns the keyboard while it is up; Backspace there must not delete nodes.
