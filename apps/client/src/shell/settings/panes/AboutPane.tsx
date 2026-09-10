@@ -2,7 +2,8 @@ import { ExternalLink } from 'lucide-react';
 import { isDesktop } from '@/desktop/bridge';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Badge, buttonClass } from '@/shell/settings/controls';
+import { Badge } from '@/shell/settings/controls';
+import { Button } from '@/ui/Button';
 import { useServer } from '@/state/server';
 import { useTransportStatus } from '@/transport/status';
 import { BrandSymbol } from '@/ui/Brand';
@@ -64,9 +65,9 @@ export function AboutPane() {
                         label={link.label}
                         description={link.description}
                         control={
-                            <a className={buttonClass} href={link.href} target="_blank" rel="noreferrer">
+                            <Button variant="secondary" href={link.href}>
                                 Open <Icon icon={ExternalLink} size={12} />
-                            </a>
+                            </Button>
                         }
                     />
                 ))}

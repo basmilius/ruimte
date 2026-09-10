@@ -99,7 +99,7 @@ export function Select<T extends string>({
                 </BaseSelect.Icon>
             </BaseSelect.Trigger>
             <BaseSelect.Portal>
-                <BaseSelect.Positioner className="z-50" side="bottom" align={align} sideOffset={6} alignItemWithTrigger={false}>
+                <BaseSelect.Positioner className="popup-layer" side="bottom" align={align} sideOffset={6} alignItemWithTrigger={false}>
                     <BaseSelect.Popup className="menu-popup">
                         <BaseSelect.List className="max-h-80 overflow-auto">
                             {groups

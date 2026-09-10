@@ -5,6 +5,7 @@ import { useCanvas } from '@/state/canvas';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
+import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 
 // A group's title, as a branch name git accepts.
@@ -67,7 +68,8 @@ export function WorktreeDialog() {
                             </p>
                             <input
                                 autoFocus
-                                className="mt-3 h-9 w-full rounded-lg border border-border bg-surface px-2.5 font-mono text-code text-text outline-none placeholder:text-text-faint focus:border-accent"
+                                className="field mt-3 font-mono text-code"
+                                aria-label="Branch name"
                                 placeholder="branch name"
                                 value={value}
                                 spellCheck={false}
@@ -85,19 +87,10 @@ export function WorktreeDialog() {
                     )}
                     {failure && <p className="mt-2 text-xs text-status-error">{failure}</p>}
                     <div className="mt-4 flex items-center justify-end gap-2">
-                        <button
-                            className="inline-flex h-8 items-center rounded-md px-3 text-xs font-medium text-text-muted hover:bg-surface-sunken hover:text-text"
-                            onClick={() => close(null)}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            className="inline-flex h-8 items-center rounded-md bg-accent px-3 text-xs font-medium text-accent-text disabled:opacity-50"
-                            disabled={busy || !folder || !value.trim()}
-                            onClick={() => void submit()}
-                        >
+                        <Button onClick={() => close(null)}>Cancel</Button>
+                        <Button variant="primary" disabled={busy || !folder || !value.trim()} onClick={() => void submit()}>
                             {busy ? 'Making the checkout' : 'Bind'}
-                        </button>
+                        </Button>
                     </div>
                 </Dialog.Popup>
             </Dialog.Portal>

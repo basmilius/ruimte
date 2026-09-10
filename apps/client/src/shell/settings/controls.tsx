@@ -109,6 +109,11 @@ export function Keys({ keys }: { keys: string }) {
     );
 }
 
+/* A bar where a value will be, while the daemon has not answered yet. */
+export function Skeleton({ className }: { className?: string }) {
+    return <span className={clsx('block h-4 animate-pulse rounded bg-surface-sunken', className)} aria-hidden />;
+}
+
 export function Badge({ tone, children }: { tone: 'idle' | 'muted' | 'accent'; children: ReactNode }) {
     return (
         <span
@@ -123,6 +128,3 @@ export function Badge({ tone, children }: { tone: 'idle' | 'muted' | 'accent'; c
         </span>
     );
 }
-
-export const buttonClass =
-    'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border bg-surface-raised px-3 text-xs font-medium text-text hover:bg-surface-sunken disabled:opacity-50 disabled:hover:bg-surface-raised';

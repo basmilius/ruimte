@@ -3,7 +3,8 @@ import { activeZoomPreset, ZOOM_PRESETS } from '@/canvas/math';
 import { LOCK_ROWS } from '@/canvas/locks';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Keys, Segmented, Toggle, buttonClass } from '@/shell/settings/controls';
+import { Keys, Segmented, Toggle } from '@/shell/settings/controls';
+import { Button } from '@/ui/Button';
 import { useCanvas } from '@/state/canvas';
 import { useUi } from '@/state/ui';
 import { Tooltip } from '@/ui/Tooltip';
@@ -40,9 +41,9 @@ export function CanvasPane() {
                     control={
                         <>
                             <Keys keys="⇧ 1" />
-                            <button className={buttonClass} onClick={() => useCanvas.getState().fitAll()}>
+                            <Button variant="secondary" onClick={() => useCanvas.getState().fitAll()}>
                                 <Icon icon={Maximize} size={12} /> Fit
-                            </button>
+                            </Button>
                         </>
                     }
                 />
@@ -52,9 +53,9 @@ export function CanvasPane() {
                     control={
                         <>
                             <Keys keys="⇧ 2" />
-                            <button className={buttonClass} disabled={!hasSelection} onClick={() => useCanvas.getState().zoomToSelection()}>
+                            <Button variant="secondary" disabled={!hasSelection} onClick={() => useCanvas.getState().zoomToSelection()}>
                                 <Icon icon={Scan} size={12} /> Frame
-                            </button>
+                            </Button>
                         </>
                     }
                 />
@@ -79,9 +80,9 @@ export function CanvasPane() {
                 title="Layouts"
                 description="Named arrangements of this project's nodes."
                 action={
-                    <button className={buttonClass} onClick={() => useUi.getState().setLayoutDialogOpen(true)}>
+                    <Button variant="secondary" onClick={() => useUi.getState().setLayoutDialogOpen(true)}>
                         Save current
-                    </button>
+                    </Button>
                 }
             >
                 {layouts.length === 0 && (
@@ -94,9 +95,9 @@ export function CanvasPane() {
                         description={`${Object.keys(layout.nodes).length} nodes`}
                         control={
                             <>
-                                <button className={buttonClass} onClick={() => useCanvas.getState().applyLayout(layout.name)}>
+                                <Button variant="secondary" onClick={() => useCanvas.getState().applyLayout(layout.name)}>
                                     Apply
-                                </button>
+                                </Button>
                                 <Tooltip label="Delete layout">
                                     <button
                                         className="icon-btn h-8 w-8"

@@ -16,14 +16,17 @@ interface TooltipProps {
     label: ReactNode;
     kbd?: string;
     side?: Side;
+    /* Makes the label the accessible name of the trigger as well: what an icon-only button needs,
+       and the way to keep the name and the tooltip from ever saying two different things. */
+    name?: boolean;
     /* The trigger element. Its own children and handlers are kept; Base UI merges the tooltip props in. */
     children: ReactElement<Record<string, unknown>>;
 }
 
-export function Tooltip({ label, kbd, side = 'top', children }: TooltipProps) {
+export function Tooltip({ label, kbd, side = 'top', name = false, children }: TooltipProps) {
     return (
         <BaseTooltip.Root>
-            <BaseTooltip.Trigger render={children} />
+            <BaseTooltip.Trigger render={children} aria-label={name && typeof label === 'string' ? label : undefined} />
             <BaseTooltip.Portal>
                 <BaseTooltip.Positioner side={side} sideOffset={6} className="tooltip-positioner">
                     <BaseTooltip.Popup className="tooltip-popup">
