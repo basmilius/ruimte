@@ -14,6 +14,7 @@ import { TextElementView } from '@/canvas/TextElementView';
 import { WebviewLayer } from '@/canvas/WebviewLayer';
 import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
+import { isInFloatingLayer } from '@/ui/floating';
 import { Icon } from '@/ui/Icon';
 
 type Gesture =
@@ -195,6 +196,10 @@ export function Canvas() {
                 return;
             }
             if (e.key === 'Escape') {
+                // An open popup or dialog owns Escape. It closes itself, and the node it belongs to stays focused.
+                if (isInFloatingLayer(e.target)) {
+                    return;
+                }
                 if (s.linkDraft?.aiming) {
                     s.setLinkDraft(null);
                 } else if (s.editingTextId) {
@@ -301,8 +306,13 @@ export function Canvas() {
     };
 
     const onPointerDown = (e: ReactPointerEvent): void => {
-        const s = useCanvas.getState();
         const target = e.target as HTMLElement;
+        /* A popup portals out of its node but keeps bubbling here, so the checks below would read it
+           as empty canvas. The press belongs to the popup, node mode and all. */
+        if (isInFloatingLayer(target)) {
+            return;
+        }
+        const s = useCanvas.getState();
         const point = screenPoint(e);
         const nodeId = target.closest<HTMLElement>('[data-node-id]')?.dataset.nodeId ?? null;
         const textId = target.closest<HTMLElement>('[data-text-id]')?.dataset.textId ?? null;
@@ -540,7 +550,7 @@ export function Canvas() {
 
     const onDoubleClick = (e: React.MouseEvent): void => {
         const target = e.target as HTMLElement;
-        if (target.closest('[data-node-id]') || target.closest('[data-text-id]')) {
+        if (target.closest('[data-node-id]') || target.closest('[data-text-id]') || isInFloatingLayer(target)) {
             return;
         }
         const s = useCanvas.getState();
