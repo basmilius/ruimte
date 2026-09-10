@@ -554,6 +554,13 @@ canvas, against Ruimte, one verdict each.
   the Anthropic API shape passed through as is. The user item keeps the full data, so the
   thread file and `chat.attach` grow with every image; move them to files under the app data
   dir when that starts to hurt.
+- Enter while a turn runs queues the message instead of refusing it. The queue lives on the
+  daemon (`ChatInfo.queue`, written with the thread, so a reload keeps it) and drains when the
+  turn settles; the composer draws the waiting messages above itself with remove and "Send now",
+  which interrupts the turn and puts that message first. One explicit queue for both CLIs
+  instead of Claude's silent steer and Codex's own turn queue. A chat's record is written one
+  write at a time now: two in flight together renamed in either order, so an older snapshot
+  could land last and take the queue back.
 - `$` in the composer opens the skill picker, the same shape as `@`: search, arrow keys, the
   description on a second line. A picked skill becomes a `$name` chip in the text and a name in
   `skills` on `chat.send`, and the slash menu labels the entries that are skills, inserting

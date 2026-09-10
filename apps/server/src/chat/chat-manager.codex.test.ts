@@ -94,7 +94,9 @@ describe('ChatManager with Codex', () => {
         });
         manager.send('chat-1', 'hello there');
         expect(manager.get('chat-1')?.running).toBe(true);
-        expect(() => manager.send('chat-1', 'again')).toThrow('still working');
+        // A send while the turn runs queues instead of failing; this test wants the queue empty again.
+        expect(manager.send('chat-1', 'again')).toEqual({ queued: true });
+        manager.unqueue('chat-1', manager.get('chat-1')!.info.queue![0]!.id);
         await waitFor(idle, 'the turn to end');
 
         expect(recorder.ofKind('user').map((item) => item.text)).toEqual(['hello there']);

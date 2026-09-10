@@ -15,6 +15,34 @@ export const ChatUsageSchema = z.object({
 });
 export type ChatUsage = z.infer<typeof ChatUsageSchema>;
 
+// The API refuses an image over 5 MB; the count keeps one message from carrying a whole folder.
+export const CHAT_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
+export const CHAT_ATTACHMENTS_MAX_COUNT = 8;
+const MAX_BASE64_LENGTH = Math.ceil(CHAT_ATTACHMENT_MAX_BYTES / 3) * 4;
+
+// What the Anthropic API takes as an image block; the CLI passes the block through as is.
+export const ChatAttachmentMediaTypeSchema = z.enum(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
+export type ChatAttachmentMediaType = z.infer<typeof ChatAttachmentMediaTypeSchema>;
+
+export const ChatAttachmentSchema = z.object({
+    name: z.string().min(1).max(255),
+    mediaType: ChatAttachmentMediaTypeSchema,
+    // Base64 without a data-URL prefix.
+    data: z.string().min(1).max(MAX_BASE64_LENGTH)
+});
+export type ChatAttachment = z.infer<typeof ChatAttachmentSchema>;
+
+// A message typed while a turn was running; the daemon sends it when that turn settles.
+export const ChatQueuedMessageSchema = z.object({
+    id: z.string().min(1),
+    text: z.string(),
+    mentions: z.array(z.string()).optional(),
+    skills: z.array(z.string()).optional(),
+    attachments: z.array(ChatAttachmentSchema).optional(),
+    createdAt: z.number()
+});
+export type ChatQueuedMessage = z.infer<typeof ChatQueuedMessageSchema>;
+
 export const ChatInfoSchema = z.object({
     chatId: ChatIdSchema,
     provider: AgentKindSchema,
@@ -33,6 +61,8 @@ export const ChatInfoSchema = z.object({
     slashCommands: z.array(z.string()),
     // What the CLI's own init frame says it will run; empty until the first message named them.
     skills: z.array(z.string()).optional(),
+    // Messages typed while a turn ran, in the order they go out once it settles.
+    queue: z.array(ChatQueuedMessageSchema).optional(),
     usage: ChatUsageSchema,
     createdAt: z.number()
 });
@@ -61,23 +91,6 @@ const base = {
     createdAt: z.number(),
     turnId: z.string().nullable()
 };
-
-// What the Anthropic API takes as an image block; the CLI passes the block through as is.
-export const ChatAttachmentMediaTypeSchema = z.enum(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
-export type ChatAttachmentMediaType = z.infer<typeof ChatAttachmentMediaTypeSchema>;
-
-// The API refuses an image over 5 MB; the count keeps one message from carrying a whole folder.
-export const CHAT_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
-export const CHAT_ATTACHMENTS_MAX_COUNT = 8;
-const MAX_BASE64_LENGTH = Math.ceil(CHAT_ATTACHMENT_MAX_BYTES / 3) * 4;
-
-export const ChatAttachmentSchema = z.object({
-    name: z.string().min(1).max(255),
-    mediaType: ChatAttachmentMediaTypeSchema,
-    // Base64 without a data-URL prefix.
-    data: z.string().min(1).max(MAX_BASE64_LENGTH)
-});
-export type ChatAttachment = z.infer<typeof ChatAttachmentSchema>;
 
 export const ChatUserItemSchema = z.object({
     ...base,
@@ -290,6 +303,16 @@ export const ChatSendPayloadSchema = z
     })
     .refine((payload) => payload.text.trim() !== '' || (payload.attachments?.length ?? 0) > 0, { message: 'A message needs text or an attachment' });
 export type ChatSendPayload = z.infer<typeof ChatSendPayloadSchema>;
+
+// True when a turn was still running, so the message went into the chat's queue instead of out.
+export const ChatSendResultSchema = z.object({ queued: z.boolean() });
+export type ChatSendResult = z.infer<typeof ChatSendResultSchema>;
+
+export const ChatQueuePayloadSchema = z.object({
+    chatId: ChatIdSchema,
+    messageId: z.string().min(1)
+});
+export type ChatQueuePayload = z.infer<typeof ChatQueuePayloadSchema>;
 
 export const ChatApprovePayloadSchema = z.object({
     chatId: ChatIdSchema,
