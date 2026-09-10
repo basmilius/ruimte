@@ -105,16 +105,23 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   readline and tmux, so there it only fires outside node mode. The palette has "Toggle sidebar".
 
 - **Toolbar and panel slot**: `apps/client/src/shell/Toolbar.tsx` is a 48px bar at the top of
-  the main column, next to the sidebar's strip, `bg-surface` with a bottom border and the drag
-  region. Left is the breadcrumb: the machine when the daemon is not loopback, the
-  `ProjectMenu` as a ghost button (it left the sidebar), "Canvas" and the unsaved dot; the
+  the canvas column, next to the sidebar's strip, `bg-surface` with a bottom border and the drag
+  region. Left is the brand mark and the breadcrumb: the machine when the daemon is not loopback,
+  the `ProjectMenu` as a ghost button (it left the sidebar), "Canvas" and the unsaved dot; the
   floating chip over the canvas is gone and `ProjectBanner` now floats under the bar. Right is
-  a `.btn-group` of two toggles, Files and Git, over `useUi.panel` (machine state, never in
-  `project.json`); the palette has "Toggle files panel" and "Toggle git panel", no chords.
-  `shell/Panel.tsx` is the surface they open: an inline split right of the canvas under the
-  toolbar, resizable from its left edge, min 360 and default 540 in localStorage
-  (`ruimte.panel.width`), and for now only a header with the panel's name and a close button.
-  The file browser and the git panel themselves are the next phase.
+  the `ConnectionDot` and `shell/PanelControls.tsx`, the `.btn-group` of Files and Git over
+  `useUi.panel` (machine state, never in `project.json`). `<main>` is a row of the canvas column
+  and `shell/Panel.tsx`, so the panel spans the full height and its own 48px header (a drag
+  region, with the panel's name and a close button) continues the band the sidebar strip and the
+  toolbar start. `PanelControls` renders in the toolbar while the panel is closed and in the
+  panel's header once it is open, at the same x, and the overlay-controls inset on Windows and
+  Linux travels with it. The panel stays mounted and animates its width between 0 and the stored
+  width in 200 ms over a fixed inner column; a resize drag sets `[data-resizing]`, which turns the
+  transition off, and the contents unmount when the closing transition ends (immediately under
+  reduced motion). Resizable from its left edge, min 360 and default 540 in localStorage
+  (`ruimte.panel.width`). Cmd+Alt+B toggles the panel that was open last; the palette keeps
+  "Toggle files panel" and "Toggle git panel". The file browser and the git panel themselves are
+  the next phase.
 
 - **Settings** (written from scratch): one
   dialog with a section list on the left (Base UI Tabs, arrow keys move, `activateOnFocus`)

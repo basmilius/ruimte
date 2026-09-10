@@ -15,16 +15,16 @@ export function App() {
         <TooltipProvider>
             <div className="flex h-full w-full bg-bg">
                 <Sidebar />
-                <main className="flex min-w-0 grow flex-col">
-                    <Toolbar />
-                    <div className="flex min-h-0 grow">
-                        <div className="relative min-w-0 grow">
+                <main className="flex min-w-0 grow">
+                    <div className="flex min-w-0 grow flex-col">
+                        <Toolbar />
+                        <div className="relative min-h-0 grow">
                             <Canvas />
                             <ProjectBanner />
                             <Dock />
                         </div>
-                        <Panel />
                     </div>
+                    <Panel />
                 </main>
             </div>
             <CommandPalette />

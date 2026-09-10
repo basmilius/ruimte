@@ -220,6 +220,11 @@ export function Canvas() {
                 return;
             }
             // Option+B on macOS is a dead key, so the chord reads the physical key, not the character.
+            if (mod && e.altKey && e.code === 'KeyB') {
+                e.preventDefault();
+                useUi.getState().togglePanel();
+                return;
+            }
             // Ctrl+B is readline's backward-char and tmux's prefix, so off macOS it stays out of a node.
             if (mod && !e.altKey && e.code === 'KeyB' && (isApplePlatform() || s.mode.kind !== 'node')) {
                 e.preventDefault();
