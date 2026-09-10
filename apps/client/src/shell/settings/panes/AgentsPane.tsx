@@ -1,4 +1,4 @@
-import type { InteractionMode, ModelInfo, RuntimeMode } from '@ruimte/contracts';
+import type { InteractionMode, ModelInfo, ProviderInfo, RuntimeMode } from '@ruimte/contracts';
 import { rememberChatPreferences, useChatPreferences } from '@/chat/preferences';
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
@@ -7,6 +7,12 @@ import { Badge, Segmented, SelectControl, Toggle } from '@/shell/settings/contro
 import { findModel, useProviders } from '@/state/providers';
 
 const PROVIDER_DEFAULT = '';
+
+/* What a provider offers, in one sentence: where it can be opened and whether its hooks report status. */
+const providerAbilities = (provider: ProviderInfo): string => {
+    const where = provider.capabilities.chat ? 'Chat and terminal.' : 'Terminal only.';
+    return `${where} ${provider.capabilities.hooks ? 'Reports status through its hooks.' : 'No status beyond the session itself.'}`;
+};
 
 const APPROACHES: Array<{ id: InteractionMode; label: string }> = [
     { id: 'default', label: 'Build' },
@@ -63,7 +69,7 @@ export function AgentsPane() {
 
     return (
         <>
-            <SettingsSection title="Defaults for new chats" description="The composer remembers what you pick there too; this is the same default.">
+            <SettingsSection title="Defaults for new agents" description="The composer remembers what you pick there too; this is the same default.">
                 <SettingsRow
                     label="Model"
                     description={
@@ -112,6 +118,23 @@ export function AgentsPane() {
                     }
                 />
                 <SettingsRow
+                    label="Terminal agents start in"
+                    description="An agent opened as a terminal node starts its CLI in this mode."
+                    control={
+                        <SelectControl
+                            value={preferences.terminalRuntimeMode}
+                            label="Terminal agents start in"
+                            onChange={(value) => rememberChatPreferences({ terminalRuntimeMode: value as RuntimeMode })}
+                        >
+                            {RUNTIME_MODES.map((mode) => (
+                                <option key={mode.id} value={mode.id}>
+                                    {mode.label}
+                                </option>
+                            ))}
+                        </SelectControl>
+                    }
+                />
+                <SettingsRow
                     label="Approach"
                     description="Plan has the agent propose first; Build goes straight to work."
                     control={
@@ -132,7 +155,7 @@ export function AgentsPane() {
                         label={provider.name}
                         description={
                             provider.installed
-                                ? `${provider.version ? `Version ${provider.version}. ` : ''}${provider.models.length > 0 ? `${provider.models.length} models in the catalog.` : 'No chat backend yet; terminal agents only.'}`
+                                ? `${provider.version ? `Version ${provider.version}. ` : ''}${providerAbilities(provider)}`
                                 : 'Not found on the daemon.'
                         }
                         control={provider.installed ? <Badge tone="idle">Installed</Badge> : <Badge tone="muted">Missing</Badge>}

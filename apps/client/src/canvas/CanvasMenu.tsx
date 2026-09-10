@@ -1,5 +1,7 @@
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Globe, LayoutGrid, Maximize, MessageSquare, Scan, Settings, SquareDashedMousePointer, StickyNote, Terminal, Type } from 'lucide-react';
+import { AgentSubmenus } from '@/agents/AgentMenus';
+import { addAgentNode } from '@/agents/nodes';
 import type { Point } from '@/canvas/math';
 import { useCanvas, type NodeKind } from '@/state/canvas';
 import { useUi } from '@/state/ui';
@@ -21,6 +23,7 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                     <ContextMenu.Item className="menu-item" onClick={() => add('chat')}>
                         <MessageSquare size={14} /> Chat <kbd>⌥C</kbd>
                     </ContextMenu.Item>
+                    <AgentSubmenus onPick={(target, provider) => addAgentNode(target, provider, at())} />
                     <ContextMenu.Item className="menu-item" onClick={() => add('browser')}>
                         <Globe size={14} /> Browser <kbd>⌥B</kbd>
                     </ContextMenu.Item>

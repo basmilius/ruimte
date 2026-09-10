@@ -129,8 +129,10 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
         const node = useCanvas.getState().nodes[id];
         // A node without its own directory starts in the project folder, like a terminal opened from the repo.
         const cwd = node?.cwd ?? useProject.getState().current?.folder ?? undefined;
+        // An agent node says which CLI and how; the daemon turns that into the line the shell gets.
+        const agent = node?.provider ? { kind: node.provider, runtimeMode: node.runtimeMode, resume: node.resume } : undefined;
         sessionClient
-            .open(id, { cwd, command: node?.command }, term.cols, term.rows)
+            .open(id, { cwd, command: node?.command, agent }, term.cols, term.rows)
             .then((result) => {
                 if (!cancelled && result) {
                     term.write(result.screen);

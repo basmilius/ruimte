@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { CornerLeftUp, Folder, FolderCheck, FolderPlus, Globe, LayoutGrid, MessageSquare, Search, StickyNote, Terminal, Zap } from 'lucide-react';
 import type { FsBrowseEntry } from '@ruimte/contracts';
+import { AgentIcon } from '@/agents/AgentIcon';
 import { projectClient } from '@/project';
 import { appCommands, type Command } from '@/shell/commands';
 import { useCanvas, type NodeKind } from '@/state/canvas';
@@ -155,7 +156,11 @@ export function CommandPalette() {
                 section: 'Jump to',
                 run: () => useCanvas.getState().goToNode(node.id)
             }));
-        const actions: Entry[] = appCommands().map((command) => ({ ...command, icon: <Zap size={14} />, section: 'Actions' }));
+        const actions: Entry[] = appCommands().map((command) => ({
+            ...command,
+            icon: command.agent ? <AgentIcon kind={command.agent} /> : <Zap size={14} />,
+            section: 'Actions'
+        }));
         return [...jumps, ...actions].filter((entry) => query === '' || matches(query, `${entry.label} ${entry.hint ?? ''}`));
     }, [browsing, browse, nodes, order, query]);
 

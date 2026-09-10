@@ -1,4 +1,4 @@
-import type { SessionAttachResult, SessionInfo } from '@ruimte/contracts';
+import type { AgentLaunch, SessionAttachResult, SessionInfo } from '@ruimte/contracts';
 import type { SessionSink } from '../state/sessions';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 
@@ -10,6 +10,8 @@ export interface OpenOptions {
     cwd?: string;
     /* Typed into the shell as its first line when the session is created. */
     command?: string;
+    /* An agent CLI to start instead; the daemon builds the line it types. */
+    agent?: AgentLaunch;
 }
 
 interface Mounted extends OpenOptions {
@@ -58,7 +60,14 @@ export class SessionClient {
     async ensure(nodeId: string, options: OpenOptions, cols: number, rows: number): Promise<void> {
         this.opens.set(nodeId, options);
         try {
-            const info = await this.transport.request('session.create', { sessionId: nodeId, cwd: options.cwd, command: options.command, cols, rows });
+            const info = await this.transport.request('session.create', {
+                sessionId: nodeId,
+                cwd: options.cwd,
+                command: options.command,
+                agent: options.agent,
+                cols,
+                rows
+            });
             this.sink.setExited(nodeId, undefined);
             this.sink.setAgent(nodeId, info.agent ?? null);
         } catch (e) {

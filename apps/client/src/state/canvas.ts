@@ -13,7 +13,17 @@ import {
     type Rect
 } from '@/canvas/math';
 
-import type { AgentKind, AgentStatus, NodeKind, ProjectContent, ProjectDocument, ProjectLayout, ProjectLocal, ProjectNode } from '@ruimte/contracts';
+import type {
+    AgentKind,
+    AgentStatus,
+    NodeKind,
+    ProjectContent,
+    ProjectDocument,
+    ProjectLayout,
+    ProjectLocal,
+    ProjectNode,
+    RuntimeMode
+} from '@ruimte/contracts';
 
 export type { AgentStatus, NodeKind } from '@ruimte/contracts';
 
@@ -28,6 +38,8 @@ export interface AddNodeOptions {
     command?: string;
     resume?: string;
     provider?: AgentKind;
+    // Terminal agents only: the permission mode the CLI starts in.
+    runtimeMode?: RuntimeMode;
 }
 
 export interface TextElement extends Point {
@@ -442,7 +454,8 @@ export const useCanvas = create<CanvasState>((set, get) => ({
             cwd: options.cwd ?? host?.worktree?.path,
             command: options.command,
             resume: options.resume,
-            provider: options.provider
+            provider: options.provider,
+            runtimeMode: options.runtimeMode
         };
         set((s) => ({ nodes: { ...s.nodes, [id]: node }, order: [...s.order, id], selection: [id], mode: { kind: 'canvas' }, ...remember(s) }));
         return id;

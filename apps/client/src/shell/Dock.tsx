@@ -1,8 +1,6 @@
 import { Menu } from '@base-ui-components/react/menu';
 import {
-    Bot,
     Check,
-    ChevronRight,
     Globe,
     LayoutGrid,
     LayoutTemplate,
@@ -21,44 +19,21 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useShallow } from 'zustand/react/shallow';
-import type { AgentKind } from '@ruimte/contracts';
+import { AgentSubmenus } from '@/agents/AgentMenus';
+import { addAgentNode } from '@/agents/nodes';
 import { activeZoomPreset, toWorld, ZOOM_PRESETS } from '@/canvas/math';
 import { LOCK_ROWS } from '@/canvas/locks';
 import { useCanvas, type NodeKind } from '@/state/canvas';
-import { useProviders } from '@/state/providers';
 import { useUi } from '@/state/ui';
 import { StatusSummary } from '@/shell/StatusSummary';
 import { Tooltip } from '@/ui/Tooltip';
-
-// The CLIs the daemon has a chat backend for come from it; these open a terminal with the CLI started.
-const TERMINAL_AGENTS = [
-    { label: 'Gemini', command: 'gemini' },
-    { label: 'Copilot', command: 'copilot' }
-];
 
 const centerWorld = () => {
     const s = useCanvas.getState();
     return toWorld(s.camera, { x: s.viewport.w / 2, y: s.viewport.h / 2 });
 };
 
-function Submenu({ label, icon, children }: { label: string; icon: React.ReactNode; children: React.ReactNode }) {
-    return (
-        <Menu.SubmenuRoot>
-            <Menu.SubmenuTrigger className="menu-item">
-                {icon} {label}
-                <ChevronRight size={14} className="ml-auto text-text-faint" />
-            </Menu.SubmenuTrigger>
-            <Menu.Portal>
-                <Menu.Positioner className="z-50" sideOffset={4} alignOffset={-4}>
-                    <Menu.Popup className="menu-popup">{children}</Menu.Popup>
-                </Menu.Positioner>
-            </Menu.Portal>
-        </Menu.SubmenuRoot>
-    );
-}
-
 export function Dock() {
-    const providers = useProviders((s) => s.providers);
     const { zoom, mode, locks, focusedTitle, hasSelection, layouts } = useCanvas(
         useShallow((s) => ({
             zoom: s.camera.zoom,
@@ -74,8 +49,8 @@ export function Dock() {
     const zoomPct = Math.round(zoom * 100);
     const preset = activeZoomPreset(zoom);
 
-    const add = (kind: NodeKind, options?: { title?: string; command?: string; provider?: AgentKind }) => {
-        useCanvas.getState().addNode(kind, centerWorld(), options);
+    const add = (kind: NodeKind) => {
+        useCanvas.getState().addNode(kind, centerWorld());
     };
 
     return (
@@ -110,26 +85,7 @@ export function Dock() {
                                 <Menu.Item className="menu-item" onClick={() => add('chat')}>
                                     <MessageSquare size={14} /> Chat <kbd>⌥C</kbd>
                                 </Menu.Item>
-                                <Submenu label="Agent" icon={<Bot size={14} />}>
-                                    {providers.map((provider) => (
-                                        <Menu.Item
-                                            key={provider.kind}
-                                            className="menu-item"
-                                            onClick={() => add('chat', { title: provider.name, provider: provider.kind })}
-                                        >
-                                            <Bot size={14} className="text-text-faint" /> {provider.name}
-                                        </Menu.Item>
-                                    ))}
-                                    {TERMINAL_AGENTS.map((agent) => (
-                                        <Menu.Item
-                                            key={agent.label}
-                                            className="menu-item"
-                                            onClick={() => add('terminal', { title: agent.label, command: agent.command })}
-                                        >
-                                            <Bot size={14} className="text-text-faint" /> {agent.label}
-                                        </Menu.Item>
-                                    ))}
-                                </Submenu>
+                                <AgentSubmenus onPick={(target, provider) => addAgentNode(target, provider, centerWorld())} />
                                 <Menu.Item className="menu-item" onClick={() => add('browser')}>
                                     <Globe size={14} /> Browser <kbd>⌥B</kbd>
                                 </Menu.Item>
