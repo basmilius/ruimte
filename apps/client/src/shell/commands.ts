@@ -1,4 +1,4 @@
-import { isCanvasView, isSessionView, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
+import { isCanvasView, isDrawingView, isSessionView, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
 import { addAgentNode, addAgentView, type AgentTarget } from '@/agents/nodes';
 import { toWorld } from '@/canvas/math';
 import {
@@ -12,8 +12,10 @@ import {
     newTerminalView,
     putOnCanvas
 } from '@/project/views';
+import { copyDrawingPng, copyDrawingSvg, saveDrawingPng, saveDrawingSvg } from '@/drawing/export';
 import { useCanvas, type AddNodeOptions, type NodeKind } from '@/state/canvas';
-import { useDocument } from '@/state/document';
+import { useDrawing } from '@/state/drawing';
+import { activeViewOf, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useProviders } from '@/state/providers';
 import { fileManagerName, useServer } from '@/state/server';
@@ -31,6 +33,12 @@ export interface Command {
     agent?: AgentKind;
     run(): void;
 }
+
+/* Whichever surface is on screen owns the zoom rows in the palette. */
+const zoomTarget = (): Pick<ReturnType<typeof useCanvas.getState>, 'fitAll' | 'zoomToSelection' | 'zoomTo'> => {
+    const view = activeViewOf(useDocument.getState());
+    return view && isDrawingView(view) ? useDrawing.getState() : useCanvas.getState();
+};
 
 const centerWorld = () => {
     const s = useCanvas.getState();
@@ -95,6 +103,7 @@ export const appCommands = (): Command[] => {
     const { activeViewId, views } = useDocument.getState();
     const activeView = views.find((view) => view.id === activeViewId) ?? null;
     const selected = canvas.selection.length === 1 ? canvas.nodes[canvas.selection[0]!] : undefined;
+    const drawing = activeView !== null && isDrawingView(activeView);
     return [
         { id: 'open-folder', label: 'Open a folder as a project', hint: 'Type a path', run: () => useUi.getState().openPalette('~/') },
         ...(folder
@@ -148,9 +157,18 @@ export const appCommands = (): Command[] => {
             { id: `layout-apply-${layout.name}`, label: `Apply layout: ${layout.name}`, run: () => useCanvas.getState().applyLayout(layout.name) },
             { id: `layout-delete-${layout.name}`, label: `Delete layout: ${layout.name}`, run: () => useCanvas.getState().deleteLayout(layout.name) }
         ]),
-        { id: 'fit', label: 'Zoom to fit', shortcut: '⇧1', run: () => useCanvas.getState().fitAll() },
-        { id: 'zoom-selection', label: 'Zoom to selection', shortcut: '⇧2', run: () => useCanvas.getState().zoomToSelection() },
-        { id: 'zoom-reset', label: 'Zoom to 100%', shortcut: '⌘0', run: () => useCanvas.getState().zoomTo(1) },
+        // A drawing has a camera of its own, so the same three rows act on whichever is on screen.
+        { id: 'fit', label: 'Zoom to fit', shortcut: '⇧1', run: () => zoomTarget().fitAll() },
+        { id: 'zoom-selection', label: 'Zoom to selection', shortcut: '⇧2', run: () => zoomTarget().zoomToSelection() },
+        { id: 'zoom-reset', label: 'Zoom to 100%', shortcut: '⌘0', run: () => zoomTarget().zoomTo(1) },
+        ...(drawing
+            ? [
+                  { id: 'drawing-copy-png', label: 'Copy the drawing as PNG', run: () => void copyDrawingPng() },
+                  { id: 'drawing-save-png', label: 'Save the drawing as PNG', run: () => void saveDrawingPng() },
+                  { id: 'drawing-copy-svg', label: 'Copy the drawing as SVG', run: () => void copyDrawingSvg() },
+                  { id: 'drawing-save-svg', label: 'Save the drawing as SVG', run: () => void saveDrawingSvg() }
+              ]
+            : []),
         { id: 'lock', label: anyLocked ? 'Unlock everything' : 'Lock everything', run: () => useCanvas.getState().setAllLocks(!anyLocked) },
         { id: 'sidebar', label: 'Toggle sidebar', shortcut: '⌘B', run: () => useUi.getState().toggleSidebar() },
         { id: 'panel-preview', label: 'Toggle preview panel', run: () => useUi.getState().togglePreview() },

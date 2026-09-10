@@ -68,7 +68,9 @@ export const CANVAS_SHORTCUTS: readonly ShortcutGroup[] = [
             { keys: '⌘ D', label: 'Duplicate the selection' },
             { keys: '⌘ ]', label: 'Bring to front' },
             { keys: '⌘ [', label: 'Send to back' },
-            { keys: '⌘ drag', label: 'Invert the grid snapping setting' }
+            { keys: '⌘ drag', label: 'Invert the grid snapping setting' },
+            { keys: '⌘ C', label: 'Copy the selection as elements' },
+            { keys: '⌘ V', label: 'Paste elements into the drawing' }
         ]
     },
     {

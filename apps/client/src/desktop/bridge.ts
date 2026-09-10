@@ -46,6 +46,9 @@ export interface DesktopBridge {
        `prefers-color-scheme` every page it hosts asks for, and for the ground a page paints on
        before it has one. Optional for the same reason `onBrowserContextMenu` is. */
     setTheme?(theme: { resolved: 'light' | 'dark'; followsSystem: boolean; background: string }): void;
+    /* A native save dialog for bytes the client made (an exported drawing). Optional for the same
+       reason `onBrowserContextMenu` is; without it the client falls back to a browser download. */
+    saveFile?(suggestedName: string, bytes: Uint8Array, mime: string): Promise<string | null>;
 }
 
 declare global {

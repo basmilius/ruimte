@@ -19,5 +19,7 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
         ipcRenderer.on('window:fullscreen', handler);
         return () => ipcRenderer.removeListener('window:fullscreen', handler);
     },
-    setTheme: (theme: { resolved: 'light' | 'dark'; followsSystem: boolean; background: string }): void => ipcRenderer.send('window:theme', theme)
+    setTheme: (theme: { resolved: 'light' | 'dark'; followsSystem: boolean; background: string }): void => ipcRenderer.send('window:theme', theme),
+    saveFile: (suggestedName: string, bytes: Uint8Array, mime: string): Promise<string | null> =>
+        ipcRenderer.invoke('dialog:save-file', suggestedName, bytes, mime)
 });

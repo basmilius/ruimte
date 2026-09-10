@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { GRID } from '@/canvas/math';
+import { copyDrawingElements, readDrawingElements } from '@/drawing/export';
 import { useDrawing, type DrawingTool } from '@/state/drawing';
 import { useUi } from '@/state/ui';
 import { isInFloatingLayer } from '@/ui/floating';
@@ -110,6 +111,26 @@ export const useDrawingKeys = (active: boolean): void => {
                 if (key === 'l' && e.shiftKey) {
                     e.preventDefault();
                     state.toggleLockSelected();
+                    return;
+                }
+                if (key === 'c') {
+                    e.preventDefault();
+                    void copyDrawingElements();
+                    return;
+                }
+                if (key === 'x') {
+                    e.preventDefault();
+                    void copyDrawingElements().then(() => useDrawing.getState().deleteSelected());
+                    return;
+                }
+                if (key === 'v') {
+                    e.preventDefault();
+                    void navigator.clipboard.readText().then((text) => {
+                        const elements = readDrawingElements(text);
+                        if (elements) {
+                            useDrawing.getState().pasteElements(elements);
+                        }
+                    });
                     return;
                 }
                 if (key === ']') {
