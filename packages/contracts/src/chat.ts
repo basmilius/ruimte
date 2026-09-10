@@ -116,7 +116,9 @@ export const ChatAssistantItemSchema = z.object({
     ...base,
     kind: z.literal('assistant'),
     text: z.string(),
-    streaming: z.boolean()
+    streaming: z.boolean(),
+    // Set for text a subagent wrote, with the id of the Agent call that spawned it.
+    parentToolUseId: z.string().nullable().optional()
 });
 
 // One stretch of the model thinking out loud before it answers: Claude's thinking blocks, Codex's
@@ -165,6 +167,47 @@ export const ChatToolItemSchema = z.object({
     parentToolUseId: z.string().nullable(),
     progress: ChatToolProgressSchema.optional(),
     changes: z.array(ChatFileChangeSchema).optional()
+});
+
+export const ChatSubagentStatusSchema = z.enum(['running', 'done', 'failed']);
+export type ChatSubagentStatus = z.infer<typeof ChatSubagentStatusSchema>;
+
+// What a subagent spent, as the CLI counts it.
+export const ChatSubagentUsageSchema = z.object({
+    totalTokens: z.number().int().nonnegative(),
+    toolUses: z.number().int().nonnegative(),
+    durationMs: z.number().int().nonnegative()
+});
+export type ChatSubagentUsage = z.infer<typeof ChatSubagentUsageSchema>;
+
+/*
+ * One agent the agent delegated to, foreground or background. Its own work stays in the thread as
+ * ordinary items that carry `parentToolUseId`, so streaming keeps working; the timeline gathers
+ * them under this row. `result` is the report it ended with, as markdown.
+ */
+export const ChatSubagentItemSchema = z.object({
+    ...base,
+    kind: z.literal('subagent'),
+    // The id of the Agent call that spawned it, which is what every later frame about it names.
+    toolUseId: z.string(),
+    description: z.string(),
+    subagentType: z.string().nullable(),
+    prompt: z.string().nullable(),
+    // Whether it runs beside the turn instead of blocking it, so the turn can end before it does.
+    background: z.boolean(),
+    status: ChatSubagentStatusSchema,
+    startedAt: z.number(),
+    finishedAt: z.number().nullable(),
+    // What the CLI says it is doing while it runs, and what it says came of it once it settled.
+    summary: z.string().nullable(),
+    result: z.string().nullable(),
+    usage: ChatSubagentUsageSchema.nullable(),
+    // The tool it reached for last, for the line while it is still running.
+    lastTool: z.string().nullable(),
+    // The CLI's own transcript of the run, when it wrote one.
+    outputFile: z.string().optional(),
+    // Set when it did more than the thread keeps; what is there is the beginning of its work.
+    itemsTruncated: z.boolean()
 });
 
 export const ChatApprovalDecisionSchema = z.enum(['pending', 'allow', 'allow-always', 'deny', 'cancelled']);
@@ -229,6 +272,8 @@ export const ChatTurnItemSchema = z.object({
     origin: z.enum(['user', 'agent']).optional(),
     // What the CLI woke up about (the summary of a background task that settled); only an agent turn has one.
     label: z.string().optional(),
+    // The Agent call the CLI woke up about, so the header can point at the subagent row it belongs to.
+    taskToolUseId: z.string().optional(),
     endedAt: z.number().nullable(),
     costUsd: z.number().nonnegative(),
     // The git tree of the chat's folder when the turn started; absent outside a repository.
@@ -255,6 +300,7 @@ export const ChatItemSchema = z.discriminatedUnion('kind', [
     ChatAssistantItemSchema,
     ChatThinkingItemSchema,
     ChatToolItemSchema,
+    ChatSubagentItemSchema,
     ChatApprovalItemSchema,
     ChatQuestionItemSchema,
     ChatTurnItemSchema,
@@ -266,6 +312,7 @@ export type ChatUserItem = z.infer<typeof ChatUserItemSchema>;
 export type ChatAssistantItem = z.infer<typeof ChatAssistantItemSchema>;
 export type ChatThinkingItem = z.infer<typeof ChatThinkingItemSchema>;
 export type ChatToolItem = z.infer<typeof ChatToolItemSchema>;
+export type ChatSubagentItem = z.infer<typeof ChatSubagentItemSchema>;
 export type ChatApprovalItem = z.infer<typeof ChatApprovalItemSchema>;
 export type ChatQuestionItem = z.infer<typeof ChatQuestionItemSchema>;
 export type ChatTurnItem = z.infer<typeof ChatTurnItemSchema>;

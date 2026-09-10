@@ -476,7 +476,8 @@ export class ChatSession {
         }
         if (event.type === 'turn.done' || event.type === 'exit' || event.type === 'failed') {
             this.options.persist();
-        } else if (event.type === 'tool.done') {
+        } else if (event.type === 'tool.done' || event.type === 'task.done') {
+            // A background subagent settles between turns; without this its report is only in memory.
             this.options.persistSoon();
         }
         if (openTurnId !== null && activeTurnId === null) {

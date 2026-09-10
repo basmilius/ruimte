@@ -1,4 +1,4 @@
-import type { ChatQuestion } from '@ruimte/contracts';
+import type { ChatQuestion, ChatSubagentUsage } from '@ruimte/contracts';
 import type { ApprovalDecision, BackendEvent } from './backend.ts';
 
 type Frame = Record<string, unknown>;
@@ -22,6 +22,10 @@ const resultText = (content: unknown): string => {
         .filter((text): text is string => text !== null)
         .join('\n');
 };
+
+// What a subagent spent, as `task_progress` and `task_notification` report it.
+const taskUsage = (usage: unknown): ChatSubagentUsage | null =>
+    isRecord(usage) ? { totalTokens: num(usage.total_tokens), toolUses: num(usage.tool_uses), durationMs: num(usage.duration_ms) } : null;
 
 const contextTokens = (usage: unknown): number =>
     isRecord(usage) ? num(usage.input_tokens) + num(usage.cache_creation_input_tokens) + num(usage.cache_read_input_tokens) : 0;
@@ -164,12 +168,46 @@ export class ClaudeProtocol {
             const skills = Array.isArray(frame.skills) ? frame.skills.filter((skill): skill is string => typeof skill === 'string') : [];
             this.model = str(frame.model) ?? this.model;
             events.push({ type: 'session', agentSessionId: str(frame.session_id), model: str(frame.model), slashCommands: commands, skills });
-        } else if (frame.subtype === 'task_started' || frame.subtype === 'task_progress') {
-            // A Bash call or a subagent became a task; its description is the CLI's own words for the work.
+        } else if (frame.subtype === 'task_started') {
             const ref = str(frame.tool_use_id);
-            const description = str(frame.description);
-            if (ref && description) {
-                events.push({ type: 'tool.progress', ref, startedAt: null, description });
+            if (!ref) {
+                return;
+            }
+            if (frame.task_type === 'local_agent') {
+                events.push({
+                    type: 'task.started',
+                    ref,
+                    description: str(frame.description),
+                    subagentType: str(frame.subagent_type),
+                    prompt: str(frame.prompt),
+                    background: frame.is_backgrounded === true
+                });
+            } else {
+                // A Bash call became a task; its description is the CLI's own words for the work.
+                const description = str(frame.description);
+                if (description) {
+                    events.push({ type: 'tool.progress', ref, startedAt: null, description });
+                }
+            }
+        } else if (frame.subtype === 'task_progress') {
+            const ref = str(frame.tool_use_id);
+            if (!ref) {
+                return;
+            }
+            // Only a subagent reports what it spent; a task without that is a command with a description.
+            if (frame.task_type === 'local_agent' || str(frame.subagent_type)) {
+                events.push({
+                    type: 'task.progress',
+                    ref,
+                    summary: str(frame.description),
+                    lastTool: str(frame.last_tool_name),
+                    usage: taskUsage(frame.usage)
+                });
+            } else {
+                const description = str(frame.description);
+                if (description) {
+                    events.push({ type: 'tool.progress', ref, startedAt: null, description });
+                }
             }
         } else if (frame.subtype === 'task_notification') {
             // The CLI wakes the main agent itself when a background task settles; this frame is the only
@@ -178,7 +216,9 @@ export class ClaudeProtocol {
                 type: 'task.done',
                 ref: str(frame.tool_use_id),
                 summary: str(frame.summary),
-                ok: str(frame.status) === 'completed'
+                ok: str(frame.status) === 'completed',
+                usage: taskUsage(frame.usage),
+                outputFile: str(frame.output_file) || null
             });
         } else if (frame.subtype === 'compact_boundary') {
             const meta = isRecord(frame.compact_metadata) ? frame.compact_metadata : {};
@@ -238,10 +278,11 @@ export class ClaudeProtocol {
             if (!isRecord(block)) {
                 continue;
             }
-            if (block.type === 'text' && !parentRef) {
+            if (block.type === 'text') {
                 const ordinal = this.frameTextCount.get(messageId) ?? 0;
                 this.frameTextCount.set(messageId, ordinal + 1);
-                events.push({ type: 'text.done', ref: this.textRef(messageId, ordinal), text: str(block.text) ?? '' });
+                // A subagent's text is its own report, not the thread's answer; the parent says whose row it is.
+                events.push({ type: 'text.done', ref: this.textRef(messageId, ordinal), text: str(block.text) ?? '', ...(parentRef ? { parentRef } : {}) });
             } else if (block.type === 'thinking' && !parentRef) {
                 const ordinal = this.frameThinkingCount.get(messageId) ?? 0;
                 this.frameThinkingCount.set(messageId, ordinal + 1);

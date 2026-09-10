@@ -24,7 +24,7 @@ const thread: ChatItem[] = [
     { id: 'a1', kind: 'assistant', createdAt: 5000, turnId: 't1', text: 'Done.', streaming: false }
 ];
 
-const options = { expandedGroups: new Set<string>(), expandedTurns: new Set<string>(), activeTurnId: null };
+const options = { expandedGroups: new Set<string>(), expandedTurns: new Set<string>(), expandedSubagents: new Set<string>(), activeTurnId: null };
 
 describe('deriveTimelineRows', () => {
     test('a settled turn folds its work behind a label and keeps the final answer and changed files', () => {
@@ -141,7 +141,40 @@ describe('deriveTimelineRows', () => {
         expect(deriveTimelineRows(items, options).map((row) => row.kind)).toEqual(['user', 'turn-fold']);
     });
 
-    test('subagent tool calls stay hidden and items without a turn render as they are', () => {
+    test('a subagent is one row that carries its own work, and its text stays out of the thread', () => {
+        const subagent: ChatItem = {
+            id: 'sa1',
+            kind: 'subagent',
+            createdAt: 2,
+            turnId: 't6',
+            toolUseId: 'toolu_agent',
+            description: 'Find the bug',
+            subagentType: 'general-purpose',
+            prompt: 'look around',
+            background: true,
+            status: 'running',
+            startedAt: 2,
+            finishedAt: null,
+            summary: null,
+            result: null,
+            usage: null,
+            lastTool: 'Grep',
+            itemsTruncated: false
+        };
+        const items: ChatItem[] = [
+            { id: 't6', kind: 'turn', createdAt: 1, turnId: 't6', state: 'running', endedAt: null, costUsd: 0 },
+            { id: 'u6', kind: 'user', createdAt: 1, turnId: 't6', text: 'find it' },
+            subagent,
+            { ...tool('c1', 'Grep', { pattern: 'x' }, 'done', 't6'), parentToolUseId: 'toolu_agent' },
+            { id: 'c2', kind: 'assistant', createdAt: 3, turnId: 't6', text: 'the bug is in a.ts', streaming: false, parentToolUseId: 'toolu_agent' }
+        ];
+        const rows = deriveTimelineRows(items, { ...options, activeTurnId: 't6' });
+        expect(rows.map((row) => row.kind)).toEqual(['user', 'subagent', 'working']);
+        expect(rows[1]).toMatchObject({ id: 'sa1', expanded: false, children: [{ id: 'c1' }, { id: 'c2' }] });
+        expect(deriveTimelineRows(items, { ...options, activeTurnId: 't6', expandedSubagents: new Set(['sa1']) })[1]).toMatchObject({ expanded: true });
+    });
+
+    test('subagent tool calls of an older record stay hidden and items without a turn render as they are', () => {
         const items: ChatItem[] = [
             { id: 'u', kind: 'user', createdAt: 1, turnId: null, text: 'old' },
             { ...tool('inner', 'Read', {}), turnId: null, parentToolUseId: 'task-1' },

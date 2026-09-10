@@ -4,7 +4,8 @@
  * progress the way the real CLI does, `ask: <question>` asks the person a question, `compact`
  * reports a compaction, `write: <path> <text>` writes a file and reports it as an edit,
  * `background: <seconds> <summary>` launches a subagent and wakes the main agent when it settles,
- * the way the CLI does that on its own, `slow` waits for an interrupt, `crash` dies. The init frame
+ * the way the CLI does that on its own, `delegate: <description>` runs one in the foreground and
+ * answers the call with its report, `slow` waits for an interrupt, `crash` dies. The init frame
  * carries the argument list as `argv`, so a test can see which flags a session started with.
  */
 import { writeFileSync } from 'node:fs';
@@ -61,6 +62,47 @@ const result = (): void => {
         session_id: sessionId
     });
 };
+
+// What a subagent's own work looks like on the wire: frames of its own, under the call that spawned it.
+const subagentWork = (agentToolUseId: string, report: string): void => {
+    const child = (content: unknown[]): void => {
+        out({
+            type: 'assistant',
+            message: { id: `msg_${++messageCounter}`, model, role: 'assistant', content, usage },
+            parent_tool_use_id: agentToolUseId,
+            subagent_type: 'general-purpose',
+            session_id: sessionId
+        });
+    };
+    const childResult = (toolUseId: string, content: string): void => {
+        out({
+            type: 'user',
+            message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: toolUseId, content, is_error: false }] },
+            parent_tool_use_id: agentToolUseId,
+            session_id: sessionId
+        });
+    };
+    child([{ type: 'tool_use', id: `${agentToolUseId}_read`, name: 'Read', input: { file_path: 'README.md' } }]);
+    childResult(`${agentToolUseId}_read`, '# Ruimte');
+    child([{ type: 'tool_use', id: `${agentToolUseId}_bash`, name: 'Bash', input: { command: 'ls', description: 'List files' } }]);
+    childResult(`${agentToolUseId}_bash`, 'README.md');
+    out({
+        type: 'system',
+        subtype: 'task_progress',
+        task_id: `task-${agentToolUseId}`,
+        tool_use_id: agentToolUseId,
+        description: 'Running List files',
+        subagent_type: 'general-purpose',
+        usage: { total_tokens: 1500, tool_uses: 2, duration_ms: 250 },
+        last_tool_name: 'Bash',
+        session_id: sessionId
+    });
+    child([{ type: 'text', text: report }]);
+};
+
+// The footer the CLI appends to a foreground report, in its own words.
+const agentFooter = (agentId: string): string =>
+    `\n\nagentId: ${agentId} (use SendMessage with to: '${agentId}', summary: 'the report' to continue this agent)\n<usage>subagent_tokens: 1500\ntool_uses: 2\nduration_ms: 250</usage>`;
 
 let pendingApproval: { command: string } | null = null;
 let pendingQuestion: string | null = null;
@@ -133,6 +175,53 @@ const handleUser = (text: string): void => {
         result();
         return;
     }
+    if (text.startsWith('delegate:')) {
+        const description = text.slice(9).trim();
+        const report = '# Report\n\n- one\n- two';
+        out({
+            type: 'assistant',
+            message: {
+                id: `msg_${++messageCounter}`,
+                model,
+                role: 'assistant',
+                content: [
+                    {
+                        type: 'tool_use',
+                        id: 'toolu_delegate',
+                        name: 'Agent',
+                        input: { description, subagent_type: 'general-purpose', prompt: `Do this: ${description}` }
+                    }
+                ],
+                usage
+            },
+            session_id: sessionId
+        });
+        out({
+            type: 'system',
+            subtype: 'task_started',
+            task_id: 'task-delegate',
+            tool_use_id: 'toolu_delegate',
+            description,
+            subagent_type: 'general-purpose',
+            is_backgrounded: false,
+            spawn_depth: 1,
+            task_type: 'local_agent',
+            prompt: `Do this: ${description}`,
+            session_id: sessionId
+        });
+        subagentWork('toolu_delegate', report);
+        out({
+            type: 'user',
+            message: {
+                role: 'user',
+                content: [{ type: 'tool_result', tool_use_id: 'toolu_delegate', content: `${report}${agentFooter('agent_fake')}`, is_error: false }]
+            },
+            session_id: sessionId
+        });
+        assistantText('summarized');
+        result();
+        return;
+    }
     if (text.startsWith('background:')) {
         const [secondsText = '0', ...rest] = text.slice(11).trim().split(' ');
         const summary = rest.join(' ') || 'done';
@@ -143,7 +232,7 @@ const handleUser = (text: string): void => {
                 id,
                 model,
                 role: 'assistant',
-                content: [{ type: 'tool_use', id: 'toolu_agent', name: 'Agent', input: { prompt: summary, run_in_background: true } }],
+                content: [{ type: 'tool_use', id: 'toolu_agent', name: 'Agent', input: { description: summary, prompt: summary, run_in_background: true } }],
                 usage
             },
             session_id: sessionId
@@ -173,6 +262,7 @@ const handleUser = (text: string): void => {
         // an assistant message of its own and a result.
         setTimeout(
             () => {
+                subagentWork('toolu_agent', `the subagent says: ${summary}`);
                 out({
                     type: 'system',
                     subtype: 'task_notification',
@@ -181,6 +271,7 @@ const handleUser = (text: string): void => {
                     status: 'completed',
                     output_file: '',
                     summary,
+                    usage: { total_tokens: 1500, tool_uses: 2, duration_ms: 250 },
                     session_id: sessionId
                 });
                 out({ type: 'system', subtype: 'init', session_id: sessionId, model, cwd: process.cwd(), tools: ['Bash'], slash_commands: [], argv: args });

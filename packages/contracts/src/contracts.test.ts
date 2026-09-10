@@ -151,6 +151,44 @@ describe('agent and chat', () => {
         expect(EVENT_SCHEMAS['chat.event'].safeParse({ chatId: 'c1', event: { type: 'item', item: { ...item, kind: 'ghost' } } }).success).toBe(false);
     });
 
+    test('a subagent item carries its delegation, what it spent and the report it ended with', () => {
+        const subagent = {
+            id: '1:toolu_agent',
+            createdAt: 1,
+            turnId: 't1',
+            kind: 'subagent',
+            toolUseId: 'toolu_agent',
+            description: 'Find the bug',
+            subagentType: 'general-purpose',
+            prompt: 'look around',
+            background: true,
+            status: 'running',
+            startedAt: 1,
+            finishedAt: null,
+            summary: null,
+            result: null,
+            usage: null,
+            lastTool: 'Grep',
+            itemsTruncated: false
+        };
+        const event = (item: unknown) => EVENT_SCHEMAS['chat.event'].safeParse({ chatId: 'c1', event: { type: 'item', item } }).success;
+        expect(event(subagent)).toBe(true);
+        expect(
+            event({
+                ...subagent,
+                status: 'done',
+                finishedAt: 2,
+                summary: 'found it',
+                result: '# Report',
+                usage: { totalTokens: 10, toolUses: 2, durationMs: 30 },
+                outputFile: '/tmp/a1.output'
+            })
+        ).toBe(true);
+        expect(event({ ...subagent, status: 'cancelled' })).toBe(false);
+        // Text a subagent wrote names the call it belongs to; the thread's own text has no parent.
+        expect(event({ id: 'a1', createdAt: 1, turnId: 't1', kind: 'assistant', text: 'x', streaming: false, parentToolUseId: 'toolu_agent' })).toBe(true);
+    });
+
     test('chat.approve only takes allow, allow-always or deny', () => {
         const schema = REQUEST_SCHEMAS['chat.approve'].payload;
         expect(schema.safeParse({ chatId: 'c1', requestId: 'r1', decision: 'allow' }).success).toBe(true);

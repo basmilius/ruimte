@@ -1,4 +1,4 @@
-import type { ChatAttachment, ChatFileChange, ChatQuestion, ChatSkill, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type { ChatAttachment, ChatFileChange, ChatQuestion, ChatSkill, ChatSubagentUsage, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 
 /*
  * The seam between one chat and one CLI. A backend owns a process and the protocol it speaks; it
@@ -42,7 +42,8 @@ export type ApprovalDecision = 'allow' | 'allow-always' | 'deny';
 export type BackendEvent =
     | { type: 'session'; agentSessionId: string | null; model: string | null; slashCommands?: string[]; skills?: string[] }
     | { type: 'text.delta'; ref: string; text: string }
-    | { type: 'text.done'; ref: string; text: string }
+    // `parentRef` is set for text a subagent wrote: it belongs to that agent's row, not to the thread.
+    | { type: 'text.done'; ref: string; text: string; parentRef?: string | null }
     // What the model thought before it answered; consecutive blocks become one thinking item.
     | { type: 'thinking.delta'; ref: string; text: string }
     | { type: 'thinking.done'; ref: string; text: string }
@@ -63,9 +64,13 @@ export type BackendEvent =
     | { type: 'question.requested'; requestId: string; questions: ChatQuestion[] }
     // The CLI took an approval or a question back; the person no longer has to answer it.
     | { type: 'request.withdrawn'; requestId: string }
+    // An agent the agent delegated to, keyed by the call that spawned it. `background` says whether
+    // it runs beside the turn; a foreground one settles with the call's own result instead.
+    | { type: 'task.started'; ref: string; description: string | null; subagentType: string | null; prompt: string | null; background: boolean }
+    | { type: 'task.progress'; ref: string; summary: string | null; lastTool: string | null; usage: ChatSubagentUsage | null }
     // A task the CLI runs beside the turn (a background subagent, a backgrounded command) settled.
     // Its summary is what the CLI says came of it, and what a turn the CLI opens on its own is about.
-    | { type: 'task.done'; ref: string | null; summary: string | null; ok: boolean }
+    | { type: 'task.done'; ref: string | null; summary: string | null; ok: boolean; usage?: ChatSubagentUsage | null; outputFile?: string | null }
     | { type: 'usage'; contextTokens?: number; contextWindow?: number }
     | { type: 'compaction'; preTokens: number | null }
     | { type: 'model'; model: string }
