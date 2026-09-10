@@ -257,7 +257,7 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   drag region, with `shell/panels/FileTabs.tsx` in it and a close button; `shell/panels/FileViewer.tsx`
   is the body underneath, and the renderer's own toolbar (Preview and Source, wrap, Fit and 1:1)
   sits under that. A tab is the file's own icon, the name, a close button and a reserved dot
-  for a future dirty mark, unpinned tabs in italic the way a preview tab reads. `state/files.ts`
+  for a future dirty mark, and a pin next to the close button on a pinned tab. `state/files.ts`
   holds them (tested pure helpers): past `filesTabLimit` the oldest unpinned tab closes, never the
   active one, double-click pins, and the tabs travel with the project's machine-local file, so a
   reload keeps them, another canvas starts with its own and nobody else sees them. A tab is keyed
