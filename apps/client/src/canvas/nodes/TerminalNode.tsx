@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
-import { WebglAddon } from '@xterm/addon-webgl';
 import { Terminal } from '@xterm/xterm';
 import { RotateCw } from 'lucide-react';
 import { useCanvas } from '@/state/canvas';
@@ -15,6 +14,7 @@ import { sessionClient } from '@/terminal';
 import { isLeaveNodeChord, macMotionSequence } from '@/terminal/keymap';
 import { lastScreenOf, registerTerminal } from '@/terminal/registry';
 import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
+import { webglBudget } from '@/terminal/webgl-budget';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/canvas/nodes/NodeNotice';
 import { Button } from '@/ui/Button';
@@ -23,18 +23,6 @@ import { Icon } from '@/ui/Icon';
 const RESIZE_DEBOUNCE_MS = 50;
 /* ESC CR: what agent CLIs read as "newline, do not submit". Harmless in a plain shell. */
 const SHIFT_ENTER = '\x1b\r';
-
-let webgl2Available: boolean | null = null;
-
-/* Probed once for the page; the probe context is released so it does not count against the browser's cap. */
-const hasWebgl2 = (): boolean => {
-    if (webgl2Available === null) {
-        const context = document.createElement('canvas').getContext('webgl2');
-        webgl2Available = context !== null;
-        context?.getExtension('WEBGL_lose_context')?.loseContext();
-    }
-    return webgl2Available;
-};
 
 const createTerminal = (): Terminal =>
     new Terminal({
@@ -45,20 +33,6 @@ const createTerminal = (): Terminal =>
         scrollback: 5000,
         macOptionIsMeta: true
     });
-
-const loadRenderer = (term: Terminal): void => {
-    if (!hasWebgl2()) {
-        return;
-    }
-    try {
-        const webgl = new WebglAddon();
-        // Once the GPU drops the context xterm's DOM renderer takes over; nothing to re-acquire.
-        webgl.onContextLoss(() => webgl.dispose());
-        term.loadAddon(webgl);
-    } catch {
-        // The DOM renderer is already active; WebGL was only ever an upgrade.
-    }
-};
 
 /* What the placeholder for an offscreen terminal shows: the text of its last screen. */
 export function TerminalPlate({ id }: { id: string }) {
@@ -95,10 +69,20 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
         term.loadAddon(fit);
         term.loadAddon(new WebLinksAddon());
         term.open(host);
-        loadRenderer(term);
         fit.fit();
         termRef.current = term;
         fitRef.current = fit;
+
+        // A node resize and the renderer swaps of the WebGL budget both land here: WebGL and the
+        // DOM measure a glyph differently, so a swap can change how many cells fit.
+        const refit = (): void => {
+            const { cols, rows } = term;
+            fit.fit();
+            if (term.cols !== cols || term.rows !== rows) {
+                sessionClient.resize(id, term.cols, term.rows);
+            }
+        };
+        const releaseWebgl = webglBudget.register(id, term, refit);
 
         term.attachCustomKeyEventHandler((e) => {
             if (e.key === 'Escape') {
@@ -132,7 +116,11 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
 
         let cancelled = false;
         const unregister = registerTerminal(id, term);
-        const offOutput = sessionClient.onOutput(id, (data) => term.write(data));
+        const offOutput = sessionClient.onOutput(id, (data) => {
+            term.write(data);
+            // A terminal that is being written to outranks an idle one when contexts are scarce.
+            webglBudget.touch(id);
+        });
         const offScreen = sessionClient.onScreen(id, ({ screen }) => {
             term.reset();
             term.write(screen);
@@ -165,11 +153,7 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
             }
             timer = window.setTimeout(() => {
                 timer = null;
-                const { cols, rows } = term;
-                fit.fit();
-                if (term.cols !== cols || term.rows !== rows) {
-                    sessionClient.resize(id, term.cols, term.rows);
-                }
+                refit();
             }, RESIZE_DEBOUNCE_MS);
         });
         observer.observe(host);
@@ -192,6 +176,7 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
             offOutput();
             offScreen();
             unregister();
+            releaseWebgl();
             void sessionClient.detach(id);
             term.dispose();
             termRef.current = null;
@@ -206,10 +191,12 @@ export function TerminalNode({ id, focused }: { id: string; focused: boolean }) 
         }
         if (focused) {
             term.focus();
+            webglBudget.focus(id);
         } else {
             term.blur();
+            webglBudget.blur(id);
         }
-    }, [focused, generation]);
+    }, [id, focused, generation]);
 
     useEffect(() => {
         const term = termRef.current;

@@ -1,6 +1,7 @@
 import type { Terminal } from '@xterm/xterm';
 import { browserRegistry, useBrowser } from '@/browser/registry';
 import { useCanvas } from '@/state/canvas';
+import { webglBudget } from '@/terminal/webgl-budget';
 
 /* Live xterm instances by node id, and the last screen of the ones that were unmounted. */
 const live = new Map<string, Terminal>();
@@ -39,6 +40,8 @@ export interface TerminalTestHooks {
     terminalSize(nodeId: string): { cols: number; rows: number } | null;
     /* Node ids on the canvas, in stacking order. */
     nodeIds(): string[];
+    /* Node ids holding a WebGL renderer, highest ranked first. */
+    webglContexts(): string[];
     /* What a browser node's page reports, for the desktop smoke test. */
     browserState(nodeId: string): unknown;
     browserNavigate(nodeId: string, url: string): void;
@@ -65,6 +68,9 @@ export const exposeTerminalTestHooks = (): void => {
         },
         nodeIds() {
             return useCanvas.getState().order;
+        },
+        webglContexts() {
+            return webglBudget.holders();
         },
         browserState(nodeId) {
             return useBrowser.getState().byNodeId[nodeId] ?? null;
