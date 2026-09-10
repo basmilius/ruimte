@@ -14,7 +14,6 @@ interface UsageChartProps {
 }
 
 const HEIGHT = 224;
-const AXIS_WIDTH = 48;
 const TOOLTIP_WIDTH = 168;
 /* A bar that is dimmed still has to read as its own color, so the rest keeps well over half of it. */
 const DIMMED = 0.55;
@@ -61,74 +60,61 @@ export function UsageChart({ slots, providers, format, labelEvery }: UsageChartP
 
     return (
         <div className="flex flex-col">
-            <div className="flex">
-                <div className="relative shrink-0" style={{ width: AXIS_WIDTH, height: HEIGHT }}>
-                    {ticks.map((tick) => (
-                        <span
-                            key={tick}
-                            className="absolute right-2 -translate-y-1/2 text-xs tabular-nums text-text-faint"
-                            style={{ top: Math.round(HEIGHT - (tick / scale.max) * HEIGHT) }}
-                        >
-                            {format(tick)}
-                        </span>
-                    ))}
-                </div>
-                <div ref={measure} className="relative grow" style={{ height: HEIGHT }} onPointerMove={onPointerMove} onPointerLeave={() => setHovered(null)}>
-                    <svg width={width} height={HEIGHT} role="presentation">
-                        {ticks.map((tick) => {
-                            const y = Math.round(HEIGHT - (tick / scale.max) * HEIGHT) + 0.5;
-                            return <line key={tick} x1={0} x2={width} y1={y} y2={y} stroke="var(--border)" strokeWidth={1} />;
-                        })}
-                        {slots.map((slot, index) => {
-                            const left = Math.round(index * band + (band - barWidth) / 2);
-                            let bottom = HEIGHT;
-                            return (
-                                <g key={slot.slot} opacity={hovered === null || hovered === index ? 1 : DIMMED}>
-                                    {providers.map((provider) => {
-                                        const value = slot.byProvider[provider] ?? 0;
-                                        if (value <= 0) {
-                                            return null;
-                                        }
-                                        const height = Math.max(1, Math.round((value / scale.max) * HEIGHT));
-                                        bottom -= height;
-                                        return <rect key={provider} x={left} y={bottom} width={barWidth} height={height} fill={PROVIDER_COLORS[provider]} />;
-                                    })}
-                                </g>
-                            );
-                        })}
-                        {hovered !== null && (
-                            <line
-                                x1={Math.round(hovered * band + band / 2) + 0.5}
-                                x2={Math.round(hovered * band + band / 2) + 0.5}
-                                y1={0}
-                                y2={HEIGHT}
-                                stroke="var(--border-strong)"
-                                strokeWidth={1}
-                            />
-                        )}
-                    </svg>
-                    {active && (
-                        <div
-                            className={clsx(FLOAT, 'pointer-events-none absolute top-2 rounded-lg p-2 text-xs')}
-                            style={{ left: tooltipLeft, width: TOOLTIP_WIDTH }}
-                        >
-                            <p className="mb-1 font-medium">{slotLabel(active.slot)}</p>
-                            {providers.map((provider) => (
-                                <p key={provider} className="flex items-center gap-1.5 text-text-muted">
-                                    <span className="size-2 shrink-0 rounded-full" style={{ background: PROVIDER_COLORS[provider] }} />
-                                    {PROVIDER_LABELS[provider]}
-                                    <span className="ml-auto tabular-nums text-text">{format(active.byProvider[provider] ?? 0)}</span>
-                                </p>
-                            ))}
-                            <p className="mt-1 flex items-center gap-1.5 border-t border-border pt-1 font-medium">
-                                Total
-                                <span className="ml-auto tabular-nums">{format(active.total)}</span>
-                            </p>
-                        </div>
+            <div ref={measure} className="relative" style={{ height: HEIGHT }} onPointerMove={onPointerMove} onPointerLeave={() => setHovered(null)}>
+                <svg width={width} height={HEIGHT} role="presentation">
+                    {ticks.map((tick) => {
+                        const y = Math.round(HEIGHT - (tick / scale.max) * HEIGHT) + 0.5;
+                        return <line key={tick} x1={0} x2={width} y1={y} y2={y} stroke="var(--border)" strokeWidth={1} />;
+                    })}
+                    {slots.map((slot, index) => {
+                        const left = Math.round(index * band + (band - barWidth) / 2);
+                        let bottom = HEIGHT;
+                        return (
+                            <g key={slot.slot} opacity={hovered === null || hovered === index ? 1 : DIMMED}>
+                                {providers.map((provider) => {
+                                    const value = slot.byProvider[provider] ?? 0;
+                                    if (value <= 0) {
+                                        return null;
+                                    }
+                                    const height = Math.max(1, Math.round((value / scale.max) * HEIGHT));
+                                    bottom -= height;
+                                    return <rect key={provider} x={left} y={bottom} width={barWidth} height={height} fill={PROVIDER_COLORS[provider]} />;
+                                })}
+                            </g>
+                        );
+                    })}
+                    {hovered !== null && (
+                        <line
+                            x1={Math.round(hovered * band + band / 2) + 0.5}
+                            x2={Math.round(hovered * band + band / 2) + 0.5}
+                            y1={0}
+                            y2={HEIGHT}
+                            stroke="var(--border-strong)"
+                            strokeWidth={1}
+                        />
                     )}
-                </div>
+                </svg>
+                {active && (
+                    <div
+                        className={clsx(FLOAT, 'pointer-events-none absolute top-2 rounded-lg p-2 text-xs')}
+                        style={{ left: tooltipLeft, width: TOOLTIP_WIDTH }}
+                    >
+                        <p className="mb-1 font-medium">{slotLabel(active.slot)}</p>
+                        {providers.map((provider) => (
+                            <p key={provider} className="flex items-center gap-1.5 text-text-muted">
+                                <span className="size-2 shrink-0 rounded-full" style={{ background: PROVIDER_COLORS[provider] }} />
+                                {PROVIDER_LABELS[provider]}
+                                <span className="ml-auto tabular-nums text-text">{format(active.byProvider[provider] ?? 0)}</span>
+                            </p>
+                        ))}
+                        <p className="mt-1 flex items-center gap-1.5 border-t border-border pt-1 font-medium">
+                            Total
+                            <span className="ml-auto tabular-nums">{format(active.total)}</span>
+                        </p>
+                    </div>
+                )}
             </div>
-            <div className="relative mt-2 h-4" style={{ marginLeft: AXIS_WIDTH }}>
+            <div className="relative mt-2 h-4">
                 {slots.map((slot, index) =>
                     index % labelEvery === 0 ? (
                         <span
