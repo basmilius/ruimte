@@ -3,7 +3,7 @@ import { Check } from 'lucide-react';
 import { NODE_ACCENTS } from '@/canvas/accents';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Segmented, Stepper } from '@/shell/settings/controls';
+import { Segmented, Stepper, Toggle } from '@/shell/settings/controls';
 import { FONT_SIZE_RANGE, INTERFACE_FONT_SIZE_RANGE, MONO_FONTS, useSettings } from '@/state/settings';
 import { useTheme, type Theme } from '@/state/theme';
 import { Select } from '@/ui/Select';
@@ -57,6 +57,7 @@ export function AppearancePane() {
     const font = useSettings((s) => s.font);
     const fontSize = useSettings((s) => s.fontSize);
     const interfaceFontSize = useSettings((s) => s.interfaceFontSize);
+    const dockAutoHide = useSettings((s) => s.dockAutoHide);
     const update = useSettings((s) => s.update);
 
     return (
@@ -88,6 +89,11 @@ export function AppearancePane() {
                             onChange={(value) => update({ interfaceFontSize: value })}
                         />
                     }
+                />
+                <SettingsRow
+                    label="Hide the dock"
+                    description="The bar under a canvas or a drawing waits below the edge and comes back when the pointer nears the bottom."
+                    control={<Toggle checked={dockAutoHide} onChange={(checked) => update({ dockAutoHide: checked })} label="Hide the dock" />}
                 />
             </SettingsSection>
             <SettingsSection title="Terminal" description="Every terminal node picks these up the moment they change.">
