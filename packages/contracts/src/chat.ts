@@ -15,20 +15,29 @@ export const ChatUsageSchema = z.object({
 });
 export type ChatUsage = z.infer<typeof ChatUsageSchema>;
 
-// The API refuses an image over 5 MB; the count keeps one message from carrying a whole folder.
-export const CHAT_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
+// One frame carries the whole file, so the cap is what a WebSocket message may reasonably be.
+export const CHAT_ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024;
 export const CHAT_ATTACHMENTS_MAX_COUNT = 8;
 const MAX_BASE64_LENGTH = Math.ceil(CHAT_ATTACHMENT_MAX_BYTES / 3) * 4;
 
-// What the Anthropic API takes as an image block; the CLI passes the block through as is.
-export const ChatAttachmentMediaTypeSchema = z.enum(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
-export type ChatAttachmentMediaType = z.infer<typeof ChatAttachmentMediaTypeSchema>;
-
-export const ChatAttachmentSchema = z.object({
+// What the composer hands the daemon: the bytes, plus what the file is called and what it is.
+export const ChatAttachmentUploadSchema = z.object({
     name: z.string().min(1).max(255),
-    mediaType: ChatAttachmentMediaTypeSchema,
+    mime: z.string().min(1).max(255),
     // Base64 without a data-URL prefix.
     data: z.string().min(1).max(MAX_BASE64_LENGTH)
+});
+export type ChatAttachmentUpload = z.infer<typeof ChatAttachmentUploadSchema>;
+
+// What the thread keeps. The bytes live under `$RUIMTE_HOME/attachments/<chatId>`, so a thread with
+// a video in it is still a small JSON file and both CLIs read the file by its path like any other.
+export const ChatAttachmentSchema = z.object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    mime: z.string(),
+    size: z.number().int().nonnegative(),
+    // Absolute, on the machine the daemon runs on.
+    path: z.string()
 });
 export type ChatAttachment = z.infer<typeof ChatAttachmentSchema>;
 
@@ -299,7 +308,7 @@ export const ChatSendPayloadSchema = z
         text: z.string(),
         mentions: z.array(z.string().min(1)).max(64).optional(),
         skills: z.array(z.string().min(1)).max(16).optional(),
-        attachments: z.array(ChatAttachmentSchema).max(CHAT_ATTACHMENTS_MAX_COUNT).optional()
+        attachments: z.array(ChatAttachmentUploadSchema).max(CHAT_ATTACHMENTS_MAX_COUNT).optional()
     })
     .refine((payload) => payload.text.trim() !== '' || (payload.attachments?.length ?? 0) > 0, { message: 'A message needs text or an attachment' });
 export type ChatSendPayload = z.infer<typeof ChatSendPayloadSchema>;

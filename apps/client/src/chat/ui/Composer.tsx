@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { ArrowUp, Clock, FastForward, FileText, Square, X, Zap } from 'lucide-react';
+import { ArrowUp, Clock, FastForward, FileText, Paperclip, Square, X, Zap } from 'lucide-react';
 import type { AgentKind, ChatApprovalItem, ChatInfo, ChatQuestionItem, ChatSkill, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 import { chatClient, type ChatSendExtras } from '@/chat';
-import { attachmentUrl, checkAttachmentLimits, imageFilesOf, readAttachments } from '@/chat/attachments';
+import { checkAttachmentLimits, filesOf, formatBytes, isImageAttachment, readAttachments, uploadBytes, uploadPreviewUrl } from '@/chat/attachments';
 import { EMPTY_DRAFT, isEmptyDraft, readDraft, writeDraft, type ChatDraft } from '@/chat/drafts';
 import {
     MENTION_DRAG_TYPE,
@@ -320,22 +320,22 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
             return;
         }
         if (capabilities?.attachments === false) {
-            setNotice(`${provider?.name ?? 'This agent'} takes no images`);
+            setNotice(`${provider?.name ?? 'This agent'} takes no attachments`);
             return;
         }
         const checked = checkAttachmentLimits(
             draft.attachments.length,
-            incoming.map((file) => ({ name: file.name, mediaType: file.type, bytes: file.size, file }))
+            incoming.map((file) => ({ name: file.name, mime: file.type, bytes: file.size, file }))
         );
         if (checked.rejected[0]) {
-            setNotice(`${checked.rejected[0].name || 'Image'}: ${checked.rejected[0].reason}`);
+            setNotice(`${checked.rejected[0].name || 'That file'}: ${checked.rejected[0].reason}`);
         }
         if (checked.accepted.length === 0) {
             return;
         }
         readAttachments(checked.accepted.map((entry) => entry.file))
             .then((attachments) => setDraft((current) => ({ ...current, attachments: [...current.attachments, ...attachments] })))
-            .catch(() => setNotice('The image could not be read'));
+            .catch(() => setNotice('That file could not be read'));
     };
 
     const removeAttachment = (index: number): void => {
@@ -475,7 +475,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
             <div
                 className={clsx('chat-composer pointer-events-auto flex flex-col', dragging && 'chat-composer-drop')}
                 onDragOver={(e) => {
-                    if (imageFilesOf(e.dataTransfer).length > 0 || e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes(MENTION_DRAG_TYPE)) {
+                    if (e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes(MENTION_DRAG_TYPE)) {
                         e.preventDefault();
                         e.stopPropagation();
                         setDragging(true);
@@ -491,7 +491,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                     e.stopPropagation();
                     setDragging(false);
                     addMentions(e.dataTransfer.getData(MENTION_DRAG_TYPE).split(' '));
-                    addFiles(imageFilesOf(e.dataTransfer));
+                    addFiles(filesOf(e.dataTransfer));
                     inputRef.current?.focus();
                 }}
             >
@@ -605,7 +605,21 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                     <div className="flex flex-wrap gap-2 px-3 pt-3">
                         {draft.attachments.map((attachment, index) => (
                             <div key={`${attachment.name}-${index}`} className="group/thumb relative">
-                                <img src={attachmentUrl(attachment)} alt={attachment.name} className="h-14 w-14 rounded-lg border border-border object-cover" />
+                                {isImageAttachment(attachment.mime) ? (
+                                    <img
+                                        src={uploadPreviewUrl(attachment)}
+                                        alt={attachment.name}
+                                        className="h-14 w-14 rounded-lg border border-border object-cover"
+                                    />
+                                ) : (
+                                    <span className="flex h-14 w-36 flex-col justify-center gap-0.5 rounded-lg border border-border bg-surface-sunken px-2.5">
+                                        <span className="flex items-center gap-1.5 text-xs text-text">
+                                            <Icon icon={Paperclip} size={12} className="shrink-0 text-text-faint" />
+                                            <span className="truncate">{attachment.name}</span>
+                                        </span>
+                                        <span className="pl-5 text-xs text-text-faint">{formatBytes(uploadBytes(attachment))}</span>
+                                    </span>
+                                )}
                                 <Tooltip label={`Remove ${attachment.name}`}>
                                     <button
                                         className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-surface-raised text-text-muted opacity-0 transition-opacity hover:text-text group-hover/thumb:opacity-100 focus-visible:opacity-100"
@@ -669,10 +683,10 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                             }
                         }}
                         onPaste={(e) => {
-                            const images = imageFilesOf(e.clipboardData);
-                            if (images.length > 0) {
+                            const pasted = filesOf(e.clipboardData);
+                            if (pasted.length > 0) {
                                 e.preventDefault();
-                                addFiles(images);
+                                addFiles(pasted);
                             }
                         }}
                         onKeyDown={onKeyDown}

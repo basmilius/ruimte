@@ -1,52 +1,50 @@
-import {
-    CHAT_ATTACHMENTS_MAX_COUNT,
-    CHAT_ATTACHMENT_MAX_BYTES,
-    ChatAttachmentMediaTypeSchema,
-    type ChatAttachment,
-    type ChatAttachmentMediaType
-} from '@ruimte/contracts';
+import { CHAT_ATTACHMENTS_MAX_COUNT, CHAT_ATTACHMENT_MAX_BYTES, type ChatAttachmentUpload } from '@ruimte/contracts';
+import { activeEndpoint } from '@/state/endpoints';
 
-interface IncomingImage {
+const ATTACHMENTS_PATH = '/attachments';
+
+interface IncomingFile {
     name: string;
-    mediaType: string;
+    mime: string;
     // Decoded size; the base64 the wire carries is a third larger.
     bytes: number;
 }
 
-interface AttachmentCheck<T extends IncomingImage> {
+interface AttachmentCheck<T extends IncomingFile> {
     accepted: T[];
     rejected: Array<{ name: string; reason: string }>;
 }
 
-export const isAttachmentMediaType = (value: string): value is ChatAttachmentMediaType => ChatAttachmentMediaTypeSchema.safeParse(value).success;
+export const isImageAttachment = (mime: string): boolean => mime.startsWith('image/');
 
-const formatMb = (bytes: number): string => `${(bytes / 1024 / 1024).toFixed(bytes >= 1024 * 1024 ? 0 : 1)} MB`;
+export const formatBytes = (bytes: number): string => {
+    if (bytes < 1024) {
+        return `${bytes} B`;
+    }
+    if (bytes < 1024 * 1024) {
+        return `${Math.round(bytes / 1024)} KB`;
+    }
+    return `${(bytes / 1024 / 1024).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB`;
+};
 
-/* Which of the incoming images fit next to what the composer already holds, and why the rest do not. */
-export const checkAttachmentLimits = <T extends IncomingImage>(current: number, incoming: T[]): AttachmentCheck<T> => {
+/* Which of the incoming files fit next to what the composer already holds, and why the rest do not. */
+export const checkAttachmentLimits = <T extends IncomingFile>(current: number, incoming: T[]): AttachmentCheck<T> => {
     const accepted: T[] = [];
     const rejected: Array<{ name: string; reason: string }> = [];
-    for (const image of incoming) {
-        if (!isAttachmentMediaType(image.mediaType)) {
-            rejected.push({ name: image.name, reason: 'Only PNG, JPEG, GIF and WebP images can be attached' });
-        } else if (image.bytes > CHAT_ATTACHMENT_MAX_BYTES) {
-            rejected.push({ name: image.name, reason: `Larger than ${formatMb(CHAT_ATTACHMENT_MAX_BYTES)}` });
+    for (const file of incoming) {
+        if (file.bytes > CHAT_ATTACHMENT_MAX_BYTES) {
+            rejected.push({ name: file.name, reason: `Larger than ${formatBytes(CHAT_ATTACHMENT_MAX_BYTES)}` });
         } else if (current + accepted.length >= CHAT_ATTACHMENTS_MAX_COUNT) {
-            rejected.push({ name: image.name, reason: `At most ${CHAT_ATTACHMENTS_MAX_COUNT} images per message` });
+            rejected.push({ name: file.name, reason: `At most ${CHAT_ATTACHMENTS_MAX_COUNT} files per message` });
         } else {
-            accepted.push(image);
+            accepted.push(file);
         }
     }
     return { accepted, rejected };
 };
 
-/* The image files in a paste or drop; a paste of text or of a file that is not an image gives none. */
-export const imageFilesOf = (transfer: DataTransfer | null): File[] => {
-    if (!transfer) {
-        return [];
-    }
-    return [...transfer.files].filter((file) => file.type.startsWith('image/'));
-};
+/* The files in a paste or a drop; a paste of plain text gives none. */
+export const filesOf = (transfer: DataTransfer | null): File[] => (transfer ? [...transfer.files] : []);
 
 const readAsBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -60,15 +58,30 @@ const readAsBase64 = (file: File): Promise<string> =>
     });
 
 // A pasted screenshot has no name; the clock gives it one so the row and the agent can tell them apart.
-const nameFor = (file: File, index: number): string => file.name || `pasted-${Date.now()}-${index + 1}.${file.type.slice('image/'.length)}`;
+const nameFor = (file: File, index: number): string => file.name || `pasted-${Date.now()}-${index + 1}.${file.type.split('/')[1] ?? 'bin'}`;
 
-export const readAttachments = async (files: File[]): Promise<ChatAttachment[]> =>
+export const readAttachments = async (files: File[]): Promise<ChatAttachmentUpload[]> =>
     Promise.all(
         files.map(async (file, index) => ({
             name: nameFor(file, index),
-            mediaType: file.type as ChatAttachmentMediaType,
+            mime: file.type || 'application/octet-stream',
             data: await readAsBase64(file)
         }))
     );
 
-export const attachmentUrl = (attachment: ChatAttachment): string => `data:${attachment.mediaType};base64,${attachment.data}`;
+/* A preview of a file the composer still holds; the bytes have not reached the daemon yet. */
+export const uploadPreviewUrl = (upload: ChatAttachmentUpload): string => `data:${upload.mime};base64,${upload.data}`;
+
+/* What the file weighs, from the base64 the composer is holding: three bytes per four characters. */
+export const uploadBytes = (upload: ChatAttachmentUpload): number => Math.floor((upload.data.length * 3) / 4) - (upload.data.match(/=+$/)?.[0].length ?? 0);
+
+/*
+ * Where a sent attachment's bytes come from. They live on the daemon and never travel over the
+ * socket again, so the URL carries the endpoint's token the same way the socket does. The id names
+ * one file that never changes, which is what lets the browser cache it forever.
+ */
+export const attachmentUrl = (chatId: string, attachmentId: string): string => {
+    const endpoint = activeEndpoint();
+    const query = endpoint.token ? `?token=${encodeURIComponent(endpoint.token)}` : '';
+    return `${endpoint.httpBaseUrl}${ATTACHMENTS_PATH}/${encodeURIComponent(chatId)}/${encodeURIComponent(attachmentId)}${query}`;
+};

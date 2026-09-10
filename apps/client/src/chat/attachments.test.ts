@@ -1,32 +1,48 @@
 import { describe, expect, test } from 'bun:test';
-import { CHAT_ATTACHMENTS_MAX_COUNT, CHAT_ATTACHMENT_MAX_BYTES } from '@ruimte/contracts';
-import { attachmentUrl, checkAttachmentLimits, isAttachmentMediaType } from './attachments';
+import { CHAT_ATTACHMENTS_MAX_COUNT } from '@ruimte/contracts';
+import { checkAttachmentLimits, formatBytes, isImageAttachment, uploadBytes } from './attachments';
 
-const image = (name: string, bytes = 1000, mediaType = 'image/png') => ({ name, bytes, mediaType });
+const file = (name: string, mime: string, bytes: number) => ({ name, mime, bytes });
 
 describe('checkAttachmentLimits', () => {
-    test('accepts supported images under the size limit', () => {
-        const { accepted, rejected } = checkAttachmentLimits(0, [image('a.png'), image('b.jpg', 10, 'image/jpeg')]);
-        expect(accepted.map((entry) => entry.name)).toEqual(['a.png', 'b.jpg']);
-        expect(rejected).toEqual([]);
+    test('takes any file type now, so a PDF and a zip go through', () => {
+        const checked = checkAttachmentLimits(0, [file('paper.pdf', 'application/pdf', 10), file('bundle.zip', 'application/zip', 20)]);
+        expect(checked.accepted.map((entry) => entry.name)).toEqual(['paper.pdf', 'bundle.zip']);
+        expect(checked.rejected).toEqual([]);
     });
 
-    test('rejects other types and oversized images with a reason', () => {
-        const { accepted, rejected } = checkAttachmentLimits(0, [image('doc.pdf', 10, 'application/pdf'), image('big.png', CHAT_ATTACHMENT_MAX_BYTES + 1)]);
-        expect(accepted).toEqual([]);
-        expect(rejected.map((entry) => entry.name)).toEqual(['doc.pdf', 'big.png']);
-        expect(rejected[1]!.reason).toContain('5 MB');
+    test('refuses a file over the cap and says how big the cap is', () => {
+        const checked = checkAttachmentLimits(0, [file('huge.mov', 'video/quicktime', 26 * 1024 * 1024)]);
+        expect(checked.accepted).toEqual([]);
+        expect(checked.rejected[0]).toEqual({ name: 'huge.mov', reason: 'Larger than 25 MB' });
     });
 
-    test('counts what the composer already holds against the maximum', () => {
-        const { accepted, rejected } = checkAttachmentLimits(CHAT_ATTACHMENTS_MAX_COUNT - 1, [image('x.png'), image('y.png')]);
-        expect(accepted.map((entry) => entry.name)).toEqual(['x.png']);
-        expect(rejected[0]!.reason).toContain(String(CHAT_ATTACHMENTS_MAX_COUNT));
+    test('counts what the composer already holds against the per-message limit', () => {
+        const checked = checkAttachmentLimits(CHAT_ATTACHMENTS_MAX_COUNT, [file('one.png', 'image/png', 10)]);
+        expect(checked.accepted).toEqual([]);
+        expect(checked.rejected[0]?.reason).toBe(`At most ${CHAT_ATTACHMENTS_MAX_COUNT} files per message`);
     });
 });
 
-test('media type guard and data url', () => {
-    expect(isAttachmentMediaType('image/webp')).toBe(true);
-    expect(isAttachmentMediaType('image/svg+xml')).toBe(false);
-    expect(attachmentUrl({ name: 'a', mediaType: 'image/png', data: 'AAAA' })).toBe('data:image/png;base64,AAAA');
+describe('isImageAttachment', () => {
+    test('only an image mime draws as a thumbnail', () => {
+        expect(isImageAttachment('image/webp')).toBe(true);
+        expect(isImageAttachment('application/pdf')).toBe(false);
+    });
+});
+
+describe('formatBytes', () => {
+    test('reads as bytes, kilobytes or megabytes', () => {
+        expect(formatBytes(512)).toBe('512 B');
+        expect(formatBytes(2048)).toBe('2 KB');
+        expect(formatBytes(1_500_000)).toBe('1.4 MB');
+        expect(formatBytes(25 * 1024 * 1024)).toBe('25 MB');
+    });
+});
+
+describe('uploadBytes', () => {
+    test('answers what the base64 the composer holds weighs decoded', () => {
+        expect(uploadBytes({ name: 'a.txt', mime: 'text/plain', data: Buffer.from('hello').toString('base64') })).toBe(5);
+        expect(uploadBytes({ name: 'a.txt', mime: 'text/plain', data: Buffer.from('four').toString('base64') })).toBe(4);
+    });
 });

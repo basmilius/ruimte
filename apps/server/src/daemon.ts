@@ -9,6 +9,8 @@ import { AuthStore } from './auth/auth-store.ts';
 import { NoRelay, type Relay } from './auth/relay.ts';
 import { HOOKS_PATH, handleHookRequest } from './agents/hook-receiver.ts';
 import { defaultHookPaths, installHooks } from './agents/install.ts';
+import { ATTACHMENTS_PATH, handleAttachmentRequest } from './chat/attachment-route.ts';
+import { AttachmentStore } from './chat/attachment-store.ts';
 import { ChatManager } from './chat/chat-manager.ts';
 import { contextHint } from './context/context-note.ts';
 import { CONTEXT_PATH, ContextStore } from './context/context-store.ts';
@@ -63,9 +65,11 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         chatItems: (chatId) => chats.get(chatId)?.thread.list() ?? null,
         targetForToken: (token) => manager.sessionIdForToken(token) ?? chats.chatIdForToken(token)
     });
+    const attachments = new AttachmentStore(config.home);
     const chats: ChatManager = new ChatManager({
         providers,
-        store: new ChatStore(config.home),
+        store: new ChatStore(config.home, attachments),
+        attachments,
         checkpoints: new Checkpoints(config.home),
         contextUrl,
         binDir,
@@ -176,6 +180,10 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                     return undefined;
                 }
                 return new Response('Expected a WebSocket upgrade', { status: 426 });
+            }
+
+            if (url.pathname.startsWith(`${ATTACHMENTS_PATH}/`)) {
+                return handleAttachmentRequest(request, url, remote, auth, access, (chatId, id) => chats.attachment(chatId, id));
             }
 
             if (url.pathname.startsWith(`${PROJECTS_PATH}/`)) {

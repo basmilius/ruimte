@@ -7,6 +7,7 @@ import { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { waitFor, waitForAsync } from '../sessions/test-helpers.ts';
 import { Checkpoints } from '../git/checkpoints.ts';
+import { AttachmentStore } from './attachment-store.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatStore } from './chat-store.ts';
 
@@ -51,6 +52,7 @@ class ChatRecorder {
 
 let home: string;
 let store: ChatStore;
+let attachments: AttachmentStore;
 let manager: ChatManager;
 let recorder: ChatRecorder;
 
@@ -60,6 +62,7 @@ const makeManager = () =>
     new ChatManager({
         providers,
         store,
+        attachments,
         checkpoints: new Checkpoints(home),
         command: FAKE,
         env: { PATH: process.env.PATH, HOME: home, RUIMTE_HOOK_URL: 'x' }
@@ -67,7 +70,8 @@ const makeManager = () =>
 
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-chat-'));
-    store = new ChatStore(home);
+    attachments = new AttachmentStore(home);
+    store = new ChatStore(home, attachments);
     manager = makeManager();
     recorder = new ChatRecorder();
     manager.subscribe('c1', recorder.sink());
@@ -100,10 +104,10 @@ describe('ChatManager', () => {
         expect(manager.get('chat-1')?.running).toBe(false);
         expect(manager.attach('chat-1', 'c1')).toEqual({ info, items: [] });
 
-        manager.send('chat-1', 'hello there');
+        await manager.send('chat-1', 'hello there');
         expect(manager.get('chat-1')?.running).toBe(true);
         // A send while the turn runs queues instead of failing; this test wants the queue empty again.
-        expect(manager.send('chat-1', 'again')).toEqual({ queued: true });
+        expect(await manager.send('chat-1', 'again')).toEqual({ queued: true });
         manager.unqueue('chat-1', manager.get('chat-1')!.info.queue![0]!.id);
         await waitFor(idle, 'the turn to end');
 
@@ -128,7 +132,7 @@ describe('ChatManager', () => {
     test('a permission request becomes an approval card, and allowing always sends the suggested rule', async () => {
         await manager.create({ chatId: 'chat-2', cwd: home });
         manager.attach('chat-2', 'c1');
-        manager.send('chat-2', 'tool: date');
+        await manager.send('chat-2', 'tool: date');
         await waitFor(() => recorder.info?.status === 'needs-you', 'needs-you');
 
         const approval = recorder.ofKind('approval')[0];
@@ -154,7 +158,7 @@ describe('ChatManager', () => {
         await manager.create({ chatId: 'chat-2b', cwd: home });
         manager.attach('chat-2b', 'c1');
         const before = Date.now();
-        manager.send('chat-2b', 'run: sleep 30');
+        await manager.send('chat-2b', 'run: sleep 30');
         await waitFor(idle, 'the turn to end');
 
         const running = recorder.events.filter((event) => event.type === 'item' && event.item.kind === 'tool' && event.item.state === 'running');
@@ -168,7 +172,7 @@ describe('ChatManager', () => {
     test('denying answers the CLI and the tool ends in error', async () => {
         await manager.create({ chatId: 'chat-3', cwd: home });
         manager.attach('chat-3', 'c1');
-        manager.send('chat-3', 'tool: rm -rf /');
+        await manager.send('chat-3', 'tool: rm -rf /');
         await waitFor(() => recorder.info?.status === 'needs-you', 'needs-you');
         manager.approve('chat-3', 'req-1', 'deny', 'not that');
         await waitFor(idle, 'the turn to end');
@@ -178,7 +182,7 @@ describe('ChatManager', () => {
     test('a question to the person is answered by id and reaches the CLI by text', async () => {
         await manager.create({ chatId: 'chat-q', cwd: home });
         manager.attach('chat-q', 'c1');
-        manager.send('chat-q', 'ask: Which color?');
+        await manager.send('chat-q', 'ask: Which color?');
         await waitFor(() => recorder.info?.status === 'needs-you', 'needs-you');
         const question = recorder.ofKind('question')[0];
         expect(question).toMatchObject({
@@ -198,7 +202,7 @@ describe('ChatManager', () => {
     test('cancel interrupts a running turn and marks it aborted', async () => {
         await manager.create({ chatId: 'chat-4', cwd: home });
         manager.attach('chat-4', 'c1');
-        manager.send('chat-4', 'slow');
+        await manager.send('chat-4', 'slow');
         await waitFor(() => recorder.info?.running === true, 'process up');
         manager.cancel('chat-4');
         await waitFor(idle, 'the turn to end');
@@ -209,7 +213,7 @@ describe('ChatManager', () => {
     test('configure restarts the CLI with new flags on the next send and keeps the session', async () => {
         await manager.create({ chatId: 'chat-c', cwd: home });
         manager.attach('chat-c', 'c1');
-        manager.send('chat-c', 'first');
+        await manager.send('chat-c', 'first');
         await waitFor(idle, 'first turn');
         const sessionId = recorder.info?.agentSessionId;
 
@@ -226,7 +230,7 @@ describe('ChatManager', () => {
         // Same again is a no-op and does not schedule a restart.
         expect(manager.configure({ chatId: 'chat-c', runtimeMode: 'supervised' })).toBe(info);
 
-        manager.send('chat-c', 'argv?');
+        await manager.send('chat-c', 'argv?');
         await waitFor(() => recorder.info?.usage.turns === 2 && idle(), 'second turn');
         expect(recorder.info?.agentSessionId).toBe(sessionId ?? null);
         // The fake reports the `--model` it was started with, so this proves the restart carried the new flags.
@@ -237,7 +241,7 @@ describe('ChatManager', () => {
     test('a thread survives a new manager and the next send resumes the same CLI session', async () => {
         await manager.create({ chatId: 'chat-5', cwd: home });
         manager.attach('chat-5', 'c1');
-        manager.send('chat-5', 'first');
+        await manager.send('chat-5', 'first');
         await waitFor(idle, 'the turn to end');
         const sessionId = recorder.info?.agentSessionId;
         await waitForAsync(async () => (await store.read('chat-5')) !== null, 'the record on disk');
@@ -261,7 +265,7 @@ describe('ChatManager', () => {
     test('compaction shows up as a marker', async () => {
         await manager.create({ chatId: 'chat-k', cwd: home });
         manager.attach('chat-k', 'c1');
-        manager.send('chat-k', 'compact');
+        await manager.send('chat-k', 'compact');
         await waitFor(idle, 'the turn to end');
         expect(recorder.ofKind('compaction')[0]).toMatchObject({ preTokens: 5000 });
     });
@@ -269,17 +273,17 @@ describe('ChatManager', () => {
     test('a link made between turns is put in front of the next prompt, once, as a note', async () => {
         let sources: ContextSource[] = [];
         await manager.shutdown();
-        manager = new ChatManager({ providers, store, command: FAKE, env: { PATH: process.env.PATH, HOME: home }, contextSources: () => sources });
+        manager = new ChatManager({ providers, store, attachments, command: FAKE, env: { PATH: process.env.PATH, HOME: home }, contextSources: () => sources });
         manager.subscribe('c1', recorder.sink());
         await manager.create({ chatId: 'chat-ctx', cwd: home });
         manager.attach('chat-ctx', 'c1');
 
-        manager.send('chat-ctx', 'first');
+        await manager.send('chat-ctx', 'first');
         await waitFor(idle, 'the first turn');
         sources = [{ id: 'term-1', kind: 'terminal', title: 'dev server' }];
-        manager.send('chat-ctx', 'second');
+        await manager.send('chat-ctx', 'second');
         await waitFor(() => recorder.ofKind('assistant').length === 2, 'the second turn');
-        manager.send('chat-ctx', 'third');
+        await manager.send('chat-ctx', 'third');
         await waitFor(() => recorder.ofKind('assistant').length === 3, 'the third turn');
 
         const notes = recorder.ofKind('note');
@@ -297,12 +301,12 @@ describe('ChatManager', () => {
     test('a CLI that dies mid-turn leaves an error note and the chat can go on', async () => {
         await manager.create({ chatId: 'chat-6', cwd: home });
         manager.attach('chat-6', 'c1');
-        manager.send('chat-6', 'crash');
+        await manager.send('chat-6', 'crash');
         await waitFor(() => recorder.info?.running === false && recorder.info.status === 'error', 'error status');
         expect(recorder.ofKind('note')[0]).toMatchObject({ level: 'error', text: 'Claude Code exited with code 1' });
         expect(recorder.ofKind('turn')[0]?.state).toBe('error');
 
-        manager.send('chat-6', 'again');
+        await manager.send('chat-6', 'again');
         await waitFor(idle, 'the next turn');
         expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: again']);
     });
@@ -322,7 +326,7 @@ describe('ChatManager', () => {
 
         await manager.create({ chatId: 'chat-diff', cwd: repo });
         manager.attach('chat-diff', 'c1');
-        manager.send('chat-diff', 'write: made.txt hello');
+        await manager.send('chat-diff', 'write: made.txt hello');
         await waitFor(idle, 'the turn to end');
         await waitFor(() => recorder.ofKind('turn')[0]?.checkpointDiff !== undefined, 'the checkpoint diff');
 
@@ -339,7 +343,7 @@ describe('ChatManager', () => {
     test('a background subagent that settles opens a turn of the agent, with the summary as its label', async () => {
         await manager.create({ chatId: 'chat-bg', cwd: home });
         manager.attach('chat-bg', 'c1');
-        manager.send('chat-bg', 'background: 0.05 report written');
+        await manager.send('chat-bg', 'background: 0.05 report written');
         await waitFor(idle, 'the turn that launched the subagent');
         expect(recorder.ofKind('turn')).toHaveLength(1);
 
@@ -368,7 +372,7 @@ describe('ChatManager', () => {
     test('the record holds a turn while it is still running', async () => {
         await manager.create({ chatId: 'chat-open', cwd: home });
         manager.attach('chat-open', 'c1');
-        manager.send('chat-open', 'slow');
+        await manager.send('chat-open', 'slow');
         await waitForAsync(async () => {
             const stored = await store.read('chat-open');
             return stored?.items.some((item) => item.kind === 'turn' && item.state === 'running') === true;
@@ -384,7 +388,7 @@ describe('ChatManager', () => {
     test('kill drops the thread and its record', async () => {
         await manager.create({ chatId: 'chat-7', cwd: home });
         manager.attach('chat-7', 'c1');
-        manager.send('chat-7', 'x');
+        await manager.send('chat-7', 'x');
         await waitFor(idle, 'the turn to end');
         await waitForAsync(async () => (await store.read('chat-7')) !== null, 'record');
         await manager.kill('chat-7');
@@ -396,9 +400,9 @@ describe('ChatManager', () => {
     test('messages sent during a turn queue in order and go out when it settles', async () => {
         await manager.create({ chatId: 'chat-q', cwd: home });
         manager.attach('chat-q', 'c1');
-        expect(manager.send('chat-q', 'first')).toEqual({ queued: false });
-        expect(manager.send('chat-q', 'second')).toEqual({ queued: true });
-        expect(manager.send('chat-q', 'third')).toEqual({ queued: true });
+        expect(await manager.send('chat-q', 'first')).toEqual({ queued: false });
+        expect(await manager.send('chat-q', 'second')).toEqual({ queued: true });
+        expect(await manager.send('chat-q', 'third')).toEqual({ queued: true });
         expect(recorder.info?.queue?.map((message) => message.text)).toEqual(['second', 'third']);
 
         await waitFor(() => recorder.ofKind('user').length === 3, 'the queue to drain');
@@ -411,9 +415,9 @@ describe('ChatManager', () => {
         await manager.create({ chatId: 'chat-q2', cwd: home });
         manager.attach('chat-q2', 'c1');
         // A turn that waits for an interrupt keeps the queue from draining while the test looks at it.
-        manager.send('chat-q2', 'slow');
-        manager.send('chat-q2', 'dropped');
-        manager.send('chat-q2', 'kept');
+        await manager.send('chat-q2', 'slow');
+        await manager.send('chat-q2', 'dropped');
+        await manager.send('chat-q2', 'kept');
         const queue = recorder.info!.queue!;
         manager.unqueue('chat-q2', queue[0]!.id);
         expect(recorder.info?.queue?.map((message) => message.text)).toEqual(['kept']);
@@ -431,9 +435,9 @@ describe('ChatManager', () => {
     test('send now stops the running turn and puts that message first', async () => {
         await manager.create({ chatId: 'chat-q3', cwd: home });
         manager.attach('chat-q3', 'c1');
-        manager.send('chat-q3', 'slow');
-        manager.send('chat-q3', 'waiting');
-        manager.send('chat-q3', 'urgent');
+        await manager.send('chat-q3', 'slow');
+        await manager.send('chat-q3', 'waiting');
+        await manager.send('chat-q3', 'urgent');
         const urgent = recorder.info!.queue!.find((message) => message.text === 'urgent')!;
         manager.sendNow('chat-q3', urgent.id);
 

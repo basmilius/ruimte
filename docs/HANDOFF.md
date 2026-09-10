@@ -556,11 +556,18 @@ canvas, against Ruimte, one verdict each.
   as `mentions` only so the timeline can draw them as chips. The picker searches through
   `fs.search`: `git ls-files` (tracked plus untracked, minus .gitignore) inside a repo, a
   bounded walk elsewhere, ranked by a small fuzzy score on the daemon.
-- Image attachments go over the wire as base64 in `chat.send` (5 MB and 8 per message, the
-  API's own limits) and become `image` content blocks in the CLI's stream-json `user` frame,
-  the Anthropic API shape passed through as is. The user item keeps the full data, so the
-  thread file and `chat.attach` grow with every image; move them to files under the app data
-  dir when that starts to hurt.
+- An attachment goes over the wire as base64 in `chat.send` once (25 MB and 8 per message) and
+  never again: the daemon writes it under `$RUIMTE_HOME/attachments` and the thread keeps its
+  name, mime, size and path. The prompt names the file by path instead of carrying an `image`
+  block, because both CLIs read a file with their own tools and a path costs no tokens until
+  the agent looks. A remote client uploads over the socket like a loopback one; a signed HTTP
+  upload is only worth it once someone attaches a video over a slow link.
+- Any file can be attached now, up to 25 MB and 8 per message. The bytes go to
+  `$RUIMTE_HOME/attachments/<chatId>/<id>.<ext>` and the thread keeps name, mime, size and path,
+  which also ends the growth the old inline images caused: a thread written before this is
+  migrated on the read that opens it. The prompt names the files by path, since both CLIs open a
+  file with their own tools, and `GET /attachments/<chatId>/<id>` serves thumbnails and downloads
+  behind the project icon's access rules.
 - Enter while a turn runs queues the message instead of refusing it. The queue lives on the
   daemon (`ChatInfo.queue`, written with the thread, so a reload keeps it) and drains when the
   turn settles; the composer draws the waiting messages above itself with remove and "Send now",

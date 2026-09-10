@@ -29,6 +29,10 @@ export default defineConfig({
             // The same for an image the file viewer draws.
             '/fs': {
                 target: daemon.replace(/^ws/, 'http')
+            },
+            // And for a file someone attached to a message; the bytes stay on the daemon.
+            '/attachments': {
+                target: daemon.replace(/^ws/, 'http')
             }
         }
     }
