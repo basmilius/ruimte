@@ -1,5 +1,13 @@
 import type { ContextSource } from '@ruimte/contracts';
 
+/*
+ * What a linked agent is told once at the start of a chat, so it knows the CLI exists without
+ * being nagged every turn. A provider with a system prompt flag passes it there; one without it
+ * puts it in front of the first prompt.
+ */
+export const CONTEXT_PROMPT =
+    'The person linked context to this chat on their canvas. Run `ruimte-context` to list it and `ruimte-context read <id>` to read one item, whenever it could help.';
+
 // Past this many, a busy canvas would flood a prompt line; the rest becomes a count.
 const MAX_NAMED = 5;
 

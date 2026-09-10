@@ -6,19 +6,9 @@ import type { SessionSink } from '../sessions/manager.ts';
 import { ChatSession, type ChatSendExtras } from './chat-session.ts';
 import type { ChatStore } from './chat-store.ts';
 import { CodexChatSession } from './codex-session.ts';
+import { ChatError } from './errors.ts';
 import { CODEX_CHAT_ARGS } from '../providers/codex.ts';
-
-export type ChatErrorCode = 'chat-not-found' | 'chat-busy' | 'request-not-found';
-
-export class ChatError extends Error {
-    readonly code: ChatErrorCode;
-
-    constructor(code: ChatErrorCode, message: string) {
-        super(message);
-        this.name = 'ChatError';
-        this.code = code;
-    }
-}
+import { claudeProvider } from '../providers/claude-provider.ts';
 
 export interface ChatManagerOptions {
     providers: ProviderRegistry;
@@ -119,18 +109,19 @@ export class ChatManager {
         const items = stored?.items.map(settle) ?? [];
         const token = randomBytes(24).toString('base64url');
         this.tokens.set(token, payload.chatId);
-        const sessionOptions = {
+        const shared = {
             info,
             items,
-            command: provider === 'codex' ? this.codexCommand : this.command,
             env: this.contextUrl ? { ...this.env, RUIMTE_CONTEXT_URL: this.contextUrl, RUIMTE_CONTEXT_TOKEN: token } : this.env,
-            catalog,
             hasContext: () => this.hasContext(payload.chatId),
             contextSources: () => this.contextSources(payload.chatId),
             emit: (event: ChatEvent) => this.emit(payload.chatId, event),
             persist: () => this.persist(payload.chatId)
         };
-        const session: AnyChatSession = provider === 'codex' ? new CodexChatSession(sessionOptions) : new ChatSession(sessionOptions);
+        const session: AnyChatSession =
+            provider === 'codex'
+                ? new CodexChatSession({ ...shared, command: this.codexCommand, catalog })
+                : new ChatSession({ ...shared, command: this.command, provider: claudeProvider });
         this.chats.set(session.id, session);
         return session.info;
     }

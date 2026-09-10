@@ -1,9 +1,22 @@
-import type { ChatInfo, InteractionMode, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type { ChatEvent, ChatInfo, ChatItem, ContextSource, InteractionMode, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type { ModelCatalog } from '../providers/catalog.ts';
 import { codexPromptPrefix, codexThreadOptions } from '../providers/codex.ts';
-import type { ChatSessionOptions } from './chat-session.ts';
+
 import { CodexStreamReducer, type CodexAction, type CodexReducerOutput } from './codex-stream.ts';
 import { CodexTransport, type CodexFrame } from './codex-transport.ts';
 import { ChatThread } from './thread.ts';
+
+export interface CodexSessionOptions {
+    info: ChatInfo;
+    items?: ChatItem[];
+    command: string[];
+    env: Record<string, string>;
+    catalog: ModelCatalog;
+    hasContext(): boolean;
+    contextSources?(): ContextSource[];
+    emit(event: ChatEvent): void;
+    persist(): void;
+}
 
 // After stdin closed, an app-server that is still around is not going to say more.
 const EXIT_GRACE_MS = 3000;
@@ -24,7 +37,7 @@ const textInput = (text: string) => [{ type: 'text', text, text_elements: [] }];
 export class CodexChatSession {
     readonly thread: ChatThread;
     private readonly reducer: CodexStreamReducer;
-    private readonly options: ChatSessionOptions;
+    private readonly options: CodexSessionOptions;
     private readonly pending = new Map<string, CodexAction>();
     private transport: CodexTransport | null = null;
     private ready: Promise<CodexTransport> | null = null;
@@ -32,7 +45,7 @@ export class CodexChatSession {
     // Set by configure: the running process has the old settings, the next send starts a new one.
     private restartPending = false;
 
-    constructor(options: ChatSessionOptions) {
+    constructor(options: CodexSessionOptions) {
         this.options = options;
         this.thread = new ChatThread(options.info, options.items);
         this.reducer = new CodexStreamReducer(this.thread);
