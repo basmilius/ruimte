@@ -3,17 +3,19 @@ import clsx from 'clsx';
 import { Check, ChevronLeft, ChevronRight, MessageCircleQuestion, X } from 'lucide-react';
 import type { ChatApprovalItem, ChatQuestionItem } from '@ruimte/contracts';
 import { chatClient } from '@/chat';
-import { fileChanges, toolSummary } from '@/chat/logic/tools';
+import { approvalChanges, fileChanges, toolSummary } from '@/chat/logic/tools';
 import { toolIcon } from '@/chat/ui/icons';
 
 const EditDiff = lazy(() => import('@/chat/ui/EditDiff'));
+const UnifiedDiff = lazy(() => import('@/chat/ui/UnifiedDiff'));
 
 const buttonClass = 'inline-flex h-7 items-center gap-1 rounded-md px-2.5 text-[12px] font-medium';
 
 /* One permission request, fused to the top of the composer; the buttons answer it in place. */
 export function ApprovalDock({ chatId, item, index, total }: { chatId: string; item: ChatApprovalItem; index: number; total: number }) {
     const [open, setOpen] = useState(false);
-    const changes = fileChanges(item.toolName, item.input);
+    const patches = approvalChanges(item.input);
+    const changes = patches.length > 0 ? [] : fileChanges(item.toolName, item.input);
     const command = item.toolName === 'Bash' ? ((item.input as { command?: string })?.command ?? '') : '';
     const decide = (decision: 'allow' | 'allow-always' | 'deny'): void => {
         void chatClient.approve(chatId, item.requestId, decision).catch(() => undefined);
@@ -45,9 +47,15 @@ export function ApprovalDock({ chatId, item, index, total }: { chatId: string; i
                 </button>
             </div>
             {item.description && <p className="px-3 pb-2 text-[12px] text-text-muted">{item.description}</p>}
-            {(open || changes.length > 0) && (
+            {(open || changes.length > 0 || patches.length > 0) && (
                 <div className="max-h-64 overflow-auto border-t border-border">
-                    {changes.length > 0 ? (
+                    {patches.length > 0 ? (
+                        <Suspense fallback={<div className="px-3 py-2 text-[12px] text-text-faint">Loading diff</div>}>
+                            {patches.map((change, i) => (
+                                <UnifiedDiff key={i} change={change} />
+                            ))}
+                        </Suspense>
+                    ) : changes.length > 0 ? (
                         <Suspense fallback={<div className="px-3 py-2 text-[12px] text-text-faint">Loading diff</div>}>
                             {changes.map((change, i) => (
                                 <EditDiff key={i} change={change} />

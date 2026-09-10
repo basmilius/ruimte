@@ -1,4 +1,5 @@
 import { ContextMenu } from '@base-ui-components/react/context-menu';
+import { resumeCommandFor } from '@ruimte/contracts';
 import {
     Check,
     ChevronRight,
@@ -22,6 +23,7 @@ import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
+import { useProviders } from '@/state/providers';
 import { useSessions } from '@/state/sessions';
 import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
@@ -34,6 +36,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
     const chatCwd = useChats((s) => s.byNodeId[id]?.info.cwd);
     const chatProvider = useChats((s) => s.byNodeId[id]?.info.provider);
     const platform = useServer((s) => s.platform);
+    const providers = useProviders((s) => s.providers);
     const projectFolder = useProject((s) => s.current?.folder ?? null);
 
     if (!node) {
@@ -48,13 +51,18 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
     // The same CLI session can continue in the other kind of node, next to this one.
     const beside = { x: node.x + node.w + 40 + 260, y: node.y + node.h / 2 };
     const openInChat = (): void => {
-        if (agent?.kind === 'claude') {
+        // Any CLI the daemon has a chat backend for can go on in a chat node.
+        if (agent && providers.some((entry) => entry.kind === agent.kind)) {
             useCanvas.getState().addNode('chat', beside, { title: node.title, cwd: node.cwd, resume: agent.agentSessionId, provider: agent.kind });
         }
     };
     const openInTerminal = (): void => {
         if (chatSession) {
-            const command = chatProvider === 'codex' ? `codex resume ${chatSession}` : `claude --resume ${chatSession}`;
+            const template = providers.find((entry) => entry.kind === chatProvider)?.resumeCommand;
+            const command = template ? resumeCommandFor(template, chatSession) : null;
+            if (!command) {
+                return;
+            }
             useCanvas.getState().addNode('terminal', beside, { title: node.title, cwd: chatCwd, command });
         }
     };

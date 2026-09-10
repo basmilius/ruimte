@@ -1,5 +1,5 @@
 import type { ChatApprovalItem, ChatAssistantItem, ChatItem, ChatQuestionItem, ChatToolItem, ChatTurnItem, ChatUserItem } from '@ruimte/contracts';
-import { fileChanges, isFileChange } from './tools';
+import { hasFileChanges, isFileChange } from './tools';
 
 /*
  * What the thread shows, row by row. Items are what the daemon knows; rows are what a reader
@@ -32,6 +32,7 @@ const TOOL_VERBS: Record<string, { verb: string; noun: string }> = {
     Write: { verb: 'Wrote', noun: 'file' },
     MultiEdit: { verb: 'Edited', noun: 'file' },
     NotebookEdit: { verb: 'Edited', noun: 'notebook' },
+    ApplyPatch: { verb: 'Edited', noun: 'file' },
     Bash: { verb: 'Ran', noun: 'command' },
     Grep: { verb: 'Searched', noun: 'pattern' },
     Glob: { verb: 'Listed', noun: 'pattern' },
@@ -157,8 +158,7 @@ const rowsForItems = (items: ChatItem[], options: TimelineOptions): TimelineRow[
 
 const changedFilesRow = (turnId: string, items: ChatItem[]): TimelineRow | null => {
     const edits = items.filter(
-        (item): item is ChatToolItem =>
-            item.kind === 'tool' && isFileChange(item.name) && item.state === 'done' && fileChanges(item.name, item.input).length > 0
+        (item): item is ChatToolItem => item.kind === 'tool' && item.state === 'done' && isFileChange(item.name) && hasFileChanges(item)
     );
     return edits.length > 0 ? { kind: 'changed-files', id: `files-${turnId}`, turnId, tools: edits } : null;
 };

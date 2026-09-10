@@ -1,4 +1,4 @@
-import type { ChatToolItem } from '@ruimte/contracts';
+import type { ChatFileChange, ChatToolItem } from '@ruimte/contracts';
 
 export interface FileChange {
     path: string;
@@ -60,7 +60,24 @@ export const fileChanges = (name: string, input: unknown): FileChange[] => {
     return [];
 };
 
-export const isFileChange = (name: string): boolean => name === 'Edit' || name === 'Write' || name === 'MultiEdit';
+export const isFileChange = (name: string): boolean => name === 'Edit' || name === 'Write' || name === 'MultiEdit' || name === 'ApplyPatch';
+
+/* The unified diffs a provider put next to a tool call; empty for one that reports before and after. */
+export const unifiedChanges = (tool: ChatToolItem): ChatFileChange[] => (tool.changes ?? []).filter((change) => change.diff !== '');
+
+/* The same, for the copy an approval carries so the person can read what they are approving. */
+export const approvalChanges = (input: unknown): ChatFileChange[] => {
+    const changes = isRecord(input) ? input.changes : null;
+    if (!Array.isArray(changes)) {
+        return [];
+    }
+    return changes.filter(
+        (change): change is ChatFileChange => isRecord(change) && typeof change.path === 'string' && typeof change.diff === 'string' && change.diff !== ''
+    );
+};
+
+/* Whether a settled call is worth a row in the turn's changed files card. */
+export const hasFileChanges = (tool: ChatToolItem): boolean => unifiedChanges(tool).length > 0 || fileChanges(tool.name, tool.input).length > 0;
 
 /* When a running call started: what the CLI reported, or the moment the call appeared. */
 export const toolStartedAt = (tool: ChatToolItem): number => tool.progress?.startedAt ?? tool.createdAt;

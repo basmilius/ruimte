@@ -25,16 +25,15 @@ import type { AgentKind } from '@ruimte/contracts';
 import { activeZoomPreset, toWorld, ZOOM_PRESETS } from '@/canvas/math';
 import { LOCK_ROWS } from '@/canvas/locks';
 import { useCanvas, type NodeKind } from '@/state/canvas';
+import { useProviders } from '@/state/providers';
 import { useUi } from '@/state/ui';
 import { StatusSummary } from '@/shell/StatusSummary';
 import { Tooltip } from '@/ui/Tooltip';
 
-// Claude Code and Codex have a chat backend; the others open a terminal with the CLI already started.
-const AGENTS: Array<{ label: string; kind: NodeKind; command?: string; provider?: AgentKind }> = [
-    { label: 'Claude Code', kind: 'chat' },
-    { label: 'Codex', kind: 'chat', provider: 'codex' },
-    { label: 'Gemini', kind: 'terminal', command: 'gemini' },
-    { label: 'Copilot', kind: 'terminal', command: 'copilot' }
+// The CLIs the daemon has a chat backend for come from it; these open a terminal with the CLI started.
+const TERMINAL_AGENTS = [
+    { label: 'Gemini', command: 'gemini' },
+    { label: 'Copilot', command: 'copilot' }
 ];
 
 const centerWorld = () => {
@@ -59,6 +58,7 @@ function Submenu({ label, icon, children }: { label: string; icon: React.ReactNo
 }
 
 export function Dock() {
+    const providers = useProviders((s) => s.providers);
     const { zoom, mode, locks, focusedTitle, hasSelection, layouts } = useCanvas(
         useShallow((s) => ({
             zoom: s.camera.zoom,
@@ -111,20 +111,20 @@ export function Dock() {
                                     <MessageSquare size={14} /> Chat <kbd>⌥C</kbd>
                                 </Menu.Item>
                                 <Submenu label="Agent" icon={<Bot size={14} />}>
-                                    {AGENTS.map((agent) => (
+                                    {providers.map((provider) => (
+                                        <Menu.Item
+                                            key={provider.kind}
+                                            className="menu-item"
+                                            onClick={() => add('chat', { title: provider.name, provider: provider.kind })}
+                                        >
+                                            <Bot size={14} className="text-text-faint" /> {provider.name}
+                                        </Menu.Item>
+                                    ))}
+                                    {TERMINAL_AGENTS.map((agent) => (
                                         <Menu.Item
                                             key={agent.label}
                                             className="menu-item"
-                                            onClick={() =>
-                                                add(
-                                                    agent.kind,
-                                                    agent.provider
-                                                        ? { title: agent.label, provider: agent.provider }
-                                                        : agent.kind === 'terminal'
-                                                          ? { title: agent.label, command: agent.command }
-                                                          : undefined
-                                                )
-                                            }
+                                            onClick={() => add('terminal', { title: agent.label, command: agent.command })}
                                         >
                                             <Bot size={14} className="text-text-faint" /> {agent.label}
                                         </Menu.Item>
