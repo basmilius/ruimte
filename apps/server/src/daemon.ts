@@ -288,6 +288,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         shuttingDown = true;
         console.log(`ruimte server received ${signal}, writing snapshots`);
         snapshotSchedule.stop();
+        // Before anything is awaited: a `bun --watch` reload restarts the module during the first
+        // await, so a turn in flight would otherwise never reach its file.
+        chats.persistAllSync();
         try {
             await snapshotSchedule.flush();
             await chats.shutdown();
