@@ -31,10 +31,11 @@ to each other.
   two projects can be open side by side. This is the phase with real unknowns: `useCanvas`,
   `useDocument` and `useDrawing` are singletons that hold one open project, and a split needs a
   store per workspace. Section 4.6 is honest about what is not designed yet.
-- **Phase 7** makes a connection survive outside a test rig: a key pair per client instead of a
-  token in a query string, the daemon pinned at pairing rather than trusted by address, and a way to
-  find a machine that moved. It blocks nothing and comes last. Note that a session token does not
-  expire today; re-pairing after a container restart is the harness wiping `$RUIMTE_HOME`.
+- **Phase 7** makes a connection survive outside a test rig. Built: a key pair per client, signing a
+  challenge for a ticket that rotates per connection instead of a session token that never changed,
+  and the daemon pinned at pairing so its id is a proof rather than a string read off the wire. Not
+  built, with a recommendation in 4.7: finding a machine that moved (mDNS, the relay seam) and
+  transport security. It blocks nothing and came last.
 - Nothing is stored in `project.json` about which daemon a project belongs to, and nothing needs
   to be: a project id is minted by the daemon that owns it (`randomBytes(6).toString('base64url')`,
   `apps/server/src/projects/project-store.ts:76`), so the same folder on two machines is two
@@ -974,41 +975,136 @@ and the connection dot sit outside every provider and take an endpoint explicitl
 ### 4.7 Phase 7: a connection that survives
 
 Last, and it blocks nothing. Phases 1 to 6 assume a paired client stays paired; this one makes that
-true outside a test rig.
+true outside a test rig. Points 1 and 2 are built; points 3 and 4 are judged below and left alone.
 
-**What is true today, checked in the tree.** The pairing token is one time and expires after ten
-minutes (`PAIRING_TTL_MS`, `apps/server/src/auth/auth-store.ts:9,54,61`). The session token it hands
-out does not expire: a `SessionRecord` carries `id`, `label`, `tokenHash`, `createdAt` and
-`lastSeenAt` and nothing else (`auth-store.ts:10-16`), nothing prunes the list, and only
-`auth.revoke` removes a client. A paired client therefore stays paired until someone revokes it.
+**What was true before this phase.** The pairing token is one time and expires after ten minutes
+(`PAIRING_TTL_MS`, `apps/server/src/auth/auth-store.ts`). The session token it handed out did not
+expire: a `SessionRecord` carried `id`, `label`, `tokenHash`, `createdAt` and `lastSeenAt` and
+nothing else, nothing pruned the list, and only `auth.revoke` removed a client. A paired client
+therefore stayed paired until someone revoked it.
 
-Re-pairing after a container restart is the harness, not the product: `docker/entrypoint.sh:6-7`
-deletes `/work` and `$RUIMTE_HOME` on every start unless `RUIMTE_KEEP_STATE=1` is set, which takes
-`auth.json` and `endpoint.json` with it, so the daemon comes back as a different machine with no
-clients. Set `RUIMTE_KEEP_STATE=1` and a pairing survives a restart today.
+Re-pairing after a container restart is the harness, not the product: `docker/entrypoint.sh` deletes
+`/work` and `$RUIMTE_HOME` on every start unless `RUIMTE_KEEP_STATE=1` is set (the compose file now
+passes it through), which takes `auth.json` and `endpoint.json` with it, so the daemon comes back as
+a different machine with no clients.
 
-**What the phase is actually for.** Four things, in order of how much they matter.
+#### 1. A credential that can rotate (built)
 
-1. **A credential that can rotate.** The session token rides in the query string of the socket URL
-   (`socketUrlFor`, `state/endpoints.ts`), because a browser cannot put a header on a WebSocket
-   handshake. A query string ends up in logs and process lists, and the token never changes. The fix
-   is a key pair per client: pairing registers the client's public key, every connect signs a
-   challenge from the daemon, and nothing long lived travels on the wire again. `auth.json` stores
-   public keys instead of token hashes, and `auth.sessions` keeps reading the same.
-2. **Pinning the daemon.** Phase 1 notices that an address answers as another machine, but the
-   client still believes whatever answers. Give the daemon a key pair too, record its public key at
-   pairing (trust on first use), and the daemon id becomes a proof instead of a string it reads off
-   the wire. This is the half that matters once a connection leaves the machine.
-3. **Finding the machine again.** An endpoint keeps `httpBaseUrl` as a hint and nothing updates it,
-   so a laptop that changes network is simply gone. Two options, and they compose: mDNS on a LAN, or
-   the relay seam that already exists and does nothing (`apps/server/src/auth/relay.ts`, a `Relay`
-   interface plus a `NoRelay` that answers null).
-4. **Transport security.** A LAN connection is plain `ws://` today. The obvious answer is `wss` with
-   a self signed certificate pinned at pairing, and it is the wrong one: the client is a browser
-   page, so a self signed certificate means an interstitial the person has to click through, and a
-   client certificate is not reachable from JavaScript at all. That is the argument for doing the
-   crypto at the application layer (point 1 and 2, ed25519 through WebCrypto) over the existing
-   socket, and leaving real TLS to a tunnel in front of the daemon for anyone who wants one.
+A client registers an ed25519 public key when it pairs (`publicKey` on `POST /auth/pair`) and gets
+no session token at all. Every connection then runs a two-step handshake over plain HTTP before the
+socket opens:
+
+- `POST /auth/challenge` answers `{ challenge, daemon: { id, publicKey, signature } }`. The nonce is
+  32 random bytes, good for one attempt and one minute (`CHALLENGE_TTL_MS`).
+- `POST /auth/ticket` takes `{ publicKey, challenge, signature }` and answers `{ ticket, expiresIn }`.
+
+The ticket is what rides in `?token=` on the socket URL and on the three HTTP routes an `<img>`
+fetches. It is 32 random bytes, lives in the daemon's memory only, is good for twelve hours from its
+last use (`TICKET_TTL_MS`), is different on every connection and dies with the client's pairing. The
+query string still carries a credential, because a browser cannot put a header on a WebSocket
+handshake; what changed is that the thing in it is worth nothing tomorrow and nothing on any other
+machine, and that the private key that earns it never leaves the browser.
+
+The exact bytes both sides sign live in `packages/contracts/src/auth.ts` (`daemonChallengeMessage`,
+`clientAuthMessage`). Each carries the daemon id, so a signature collected by one machine proves
+nothing to another, and the client's message carries its own public key, so a challenge answered for
+one key cannot be handed in under another.
+
+The client's key pair is generated non-extractable and kept in IndexedDB as a `CryptoKey`
+(`apps/client/src/endpoint/client-key.ts`). That is the whole reason for IndexedDB over
+`localStorage`: a `CryptoKey` survives a structured clone, and non-extractable means the private
+bytes cannot be read by any script on the origin, ours or injected. A session token in
+`localStorage` can. One key pair per client, not per daemon: every daemon it pairs with is a machine
+of the same person, and a key each would buy bookkeeping and nothing else.
+
+Where it lands on the daemon: `auth.json` keeps `publicKey` instead of `tokenHash`, both optional
+and one of them required (`apps/server/src/auth/auth-store.ts`); the handshake, the challenges and
+the tickets are `apps/server/src/auth/handshake.ts`; `decideAccess` tries a ticket before it tries a
+token, in the same query parameter, which is why no URL builder on the client had to learn a second
+shape.
+
+**Migration, and why this one.** A client that paired before this holds a session token and keeps
+working. Over the connection that token already authenticated, `auth.registerKey` hangs a public key
+on that same session; the daemon keeps the token until the first signature lands and drops it then
+(`noteSignedIn`), and the client drops its copy the first time a ticket comes back. The other way
+would have been to refuse the old token and ask the person to pair again, which is one dialog for
+every already-paired client and a support question for anyone who does not read it. This way is
+invisible, it proves exactly as much as the token it replaces (a token holder is that client), and
+it is self-healing: if the browser cannot keep a key, nothing is registered, nothing is dropped and
+the token keeps working. Verified against a container that was really paired with the phase 6
+daemon: the daemon kept its id, gained a key pair, the token still opened a socket, the key
+registered, the signature worked and the token then answered 401.
+
+#### 2. Pinning the daemon (built)
+
+The daemon has an ed25519 key pair next to its id in `endpoint.json` and signs every challenge with
+it. A client records the public key at pairing (trust on first use, over the one exchange nobody can
+be in the middle of without the pairing token) and from then on refuses to connect to an address
+that cannot sign for that key: `signIn` throws and the person gets a toast saying the machine cannot
+prove it is itself. Phase 1's mismatch warning stays, one layer up; this is the layer that makes the
+daemon id a proof.
+
+`endpoint.info` carries `publicKey` too, which is how a client that paired on a token pins the key
+while it is upgrading: that connection is already authenticated, so the key it sees there is worth
+exactly as much as the pairing exchange was.
+
+`endpoint.json` stays at `version: 1` with two extra fields. Zod strips what it does not know, so a
+daemon from before this reads the file, keeps its id and leaves the keys alone. A version bump would
+make that daemon mint a new id and every paired client would see its machine answer as a stranger.
+
+**Compatibility, which phase 1 got wrong.** Every field this phase added to the wire is optional:
+`publicKey` on `EndpointInfo` and on the pair payload, `sessionToken` on the pair result. A phase 6
+client parses a phase 7 `endpoint.info` and a phase 7 pairing answer (checked by running the phase 6
+schemas against the running daemon); a phase 7 client falls back to its token when `/auth/challenge`
+answers 404, and falls back to it as well when WebCrypto has no ed25519.
+
+#### 3. Finding the machine again (not built, recommendation below)
+
+Still true: an endpoint keeps `httpBaseUrl` as a hint and nothing updates it, so a laptop that
+changes network is gone until someone types the new address. Two options, and they compose.
+
+- **mDNS on a LAN.** The daemon advertises `_ruimte._tcp` with its endpoint id and public key in the
+  TXT record; the client asks for the record when an endpoint it knows stops answering and moves
+  `httpBaseUrl` to what comes back, which is exactly the field phase 1 already calls a hint. With
+  the pinning above this is safe by construction: whatever the discovery says, the daemon still has
+  to sign for the key that was pinned, so a stranger answering on the advertised address gets
+  nowhere. The cost is real though: Bun has no mDNS, so it is a dependency (`bonjour-service` or a
+  hand-rolled responder over a UDP multicast socket) plus a permission prompt on macOS for local
+  network access in the packaged app, plus nothing at all in a browser, which cannot do mDNS: the
+  lookup would have to happen in the desktop shell and cross IPC. **Recommendation: do it, but only
+  for the desktop app, and only after someone has actually been bitten by a laptop that moved.**
+  A browser tab on another machine keeps typing the address.
+- **The relay seam.** `apps/server/src/auth/relay.ts` is a `Relay` interface with a `NoRelay` that
+  answers null. Filling it in means running a rendezvous service, which is a product decision and
+  not a phase: an account system, an uptime promise and someone else's bytes crossing our machine.
+  **Recommendation: leave it as the seam it is.** The moment there is a reason, the pinning built
+  here is what makes a relay tolerable, because a relayed connection would still have to sign.
+
+#### 4. Transport security (not built, recommendation below)
+
+A LAN connection is plain `ws://`. The obvious answer is `wss` with a self signed certificate pinned
+at pairing, and it is the wrong one: the client is a browser page, so a self signed certificate is
+an interstitial the person has to click through, and a client certificate is not reachable from
+JavaScript at all. That is the argument for doing the crypto at the application layer (points 1 and
+2, ed25519 through WebCrypto) and leaving real TLS to a tunnel in front of the daemon.
+
+What this phase does and does not buy, stated plainly, because it is easy to overstate:
+
+- A credential caught on the wire is worth twelve hours instead of forever, and worth nothing on
+  another machine.
+- The machine a client talks to is the one it paired with, proved per connection.
+- Everything else on the socket is still in the clear. Someone on the path reads every keystroke and
+  every file the panels fetch, and can change them. The handshake authenticates; it does not encrypt.
+
+**Recommendation, in order.** Keep telling people to put a reverse proxy with TLS in front (the
+server README does); that is a real answer today and costs us nothing. If that is ever not enough,
+the next step is not self signed TLS but an encrypted channel at the application layer over the
+socket we already have: an X25519 exchange authenticated by the ed25519 keys both sides now hold,
+with the frames sealed inside it. That is a real piece of work (key schedule, rekeying, a second
+framing layer, and every HTTP route that serves bytes to an `<img>` left outside it), so it should
+wait for someone who actually needs the daemon reachable over a network they do not trust. Until
+then the honest line is the one in the README: in the clear on a LAN, TLS through a proxy if you
+want it off the LAN.
 
 **What this is not.** Not an account system, not a cloud, not a rendezvous service we run. A relay
 stays a seam until someone needs it (`docs/PLAN.md` phase 25 says the same about browser streaming).
@@ -1070,6 +1166,23 @@ daemon (`apps/client/vite.config.ts:15-38`). The container endpoint is addressed
 reason the local row cannot learn its daemon id from its own URL (phase 1).
 
 ### 5.2 Scenarios per phase
+
+**Phase 7, a connection that survives**
+
+Run as `describe('signing in instead of carrying a token')` in the suite. Pairing with a public key
+hands out no session token; every connection carries a ticket of its own; the daemon signs its own
+challenge and another machine's key does not verify it; a wrong signature, a replayed challenge and
+a key nobody paired all answer 401; a signature made for another daemon id answers 401; revoking
+kills the ticket and the pairing in one; a client paired on a token registers a key over its own
+connection, keeps working until it signs and loses the token then.
+
+Two things the suite cannot do, run by hand once (see `docker/README.md`):
+
+- The upgrade of a container that was already paired: build the daemon of the commit before the
+  phase into an image, run it with `-e RUIMTE_KEEP_STATE=1` on a volume at `/root/.ruimte`, pair,
+  then run the current image on the same volume.
+- A phase 6 client against a phase 7 daemon: parse the daemon's `endpoint.info` and its pairing
+  answer with the schemas of the older commit and check that both still parse.
 
 **Phase 1, stable identity**
 
