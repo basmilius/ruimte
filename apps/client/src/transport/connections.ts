@@ -11,6 +11,7 @@ import { providerSinkFor } from '@/state/providers';
 import { sessionSinkFor } from '@/state/sessions';
 import { createWorkspaceStores, defaultWorkspaceStores } from '@/state/workspace';
 import { setCurrentWorkspace, type WorkspaceStores } from '@/state/workspace-stores';
+import { endProjectSessions } from '@/terminal/lifecycle';
 import { SessionClient } from '@/terminal/session-client';
 import { pool } from '@/transport';
 import { useOptionalConnection } from '@/transport/context';
@@ -141,6 +142,7 @@ const connect = (id: string, stores: WorkspaceStores, endpoint: Endpoint): Conne
     const projects = new ProjectClient(transport, stores.canvas, stores.document, panelsPort, projectSink(stores, endpointId), {
         drawing: stores.drawing,
         beforeSwitch: (): Promise<void> => drawings.flush(),
+        endSessions: endProjectSessions,
         endpointId
     });
     return {
