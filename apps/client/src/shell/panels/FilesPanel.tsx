@@ -10,12 +10,25 @@ import {
     type ReactNode
 } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
+import { Menu } from '@base-ui-components/react/menu';
 import type { FileTree as FileTreeModel, FileTreeDirectoryHandle } from '@pierre/trees';
 import { FileTree, useFileTree } from '@pierre/trees/react';
-import { ChevronsDownUp, ChevronsUpDown, Copy, CornerUpRight, Eye, Folder, FolderOpen, LoaderCircle, RefreshCw, Search } from 'lucide-react';
+import {
+    Check,
+    ChevronsDownUp,
+    ChevronsUpDown,
+    Copy,
+    CornerUpRight,
+    FileSearch,
+    Folder,
+    FolderOpen,
+    LoaderCircle,
+    MoreHorizontal,
+    RefreshCw,
+    Search
+} from 'lucide-react';
 import { MENTION_DRAG_TYPE } from '@/chat/mentions';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
-import { FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import {
     LOADING_NAME,
     absoluteOf,
@@ -23,6 +36,7 @@ import {
     basenameOf,
     buildTreeInput,
     compareRows,
+    gitStatusEntries,
     isDirectoryPath,
     mergeExpanded,
     newlyExpanded,
@@ -31,22 +45,40 @@ import {
     type EntryCache
 } from '@/shell/panels/files-tree';
 import { useFiles } from '@/state/files';
+import { useGitStatus } from '@/state/git-watch';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useSettings } from '@/state/settings';
+import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
-import { BTN_GROUP } from '@/ui/classes';
+import { MENU_SEPARATOR } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { FILE_TREE_ICONS } from '@/ui/file-icon';
 import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
-import { Separator } from '@/ui/Separator';
+import { Tooltip } from '@/ui/Tooltip';
 
 const SEARCH_DEBOUNCE_MS = 150;
 const SEARCH_LIMIT = 200;
 
-/* The placeholder that keeps an unloaded directory's chevron is a row nobody should see. */
-const TREE_CSS = `[data-item-path$="/${LOADING_NAME}"] { display: none !important; }`;
+/*
+ * Two rules over the tree's own stylesheet. The first hides the row that keeps an unloaded
+ * directory's chevron. The second turns the letter the git lane draws into a dot, in the color the
+ * lane already carries: a directory with changes under it gets a dot of the tree's own, so one
+ * shape says "this differs from HEAD" everywhere in the panel. An ignored file leaves that lane
+ * empty, which is why it is left out.
+ */
+const TREE_CSS = `
+    [data-item-path$="/${LOADING_NAME}"] { display: none !important; }
+    [data-item-git-status]:not([data-item-git-status="ignored"]) > [data-item-section="git"] > * { display: none; }
+    [data-item-git-status]:not([data-item-git-status="ignored"]) > [data-item-section="git"]::after {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 9999px;
+        background: currentColor;
+    }
+`;
 
 const EMPTY_CACHE: EntryCache = new Map();
 
@@ -87,6 +119,9 @@ export function FilesPanel() {
     /* Which file the preview has up; a diff tab points at the same file and counts as well. */
     const activeFile = useFiles((s) => s.tabs.find((tab) => tab.key === s.active)?.path ?? null);
     const tabLimit = useSettings((s) => s.filesTabLimit);
+    /* What git says about the project folder, so a changed file carries a dot. The git panel reads
+       the same watch; whichever of the two is up holds it. */
+    const gitStatus = useGitStatus(folder);
 
     /* The listings carry the folder they belong to, so a project switch drops them without an
        effect that would render twice to empty the tree. */
@@ -139,6 +174,7 @@ export function FilesPanel() {
     /* The rows the tree is fed, kept here as well because what they add up to is what says whether
        the panel has anything to show. */
     const treeInput = useMemo(() => buildTreeInput(folder ?? '', cache, showHidden), [cache, folder, showHidden]);
+    const changed = useMemo(() => (folder === null ? [] : gitStatusEntries(folder, gitStatus?.root ?? null, gitStatus?.files ?? [])), [folder, gitStatus]);
 
     const load = useCallback(
         async (dir: string): Promise<void> => {
@@ -196,11 +232,18 @@ export function FilesPanel() {
             return;
         }
         model.resetPaths(treeInput.paths, { initialExpandedPaths: [...expandedRef.current] });
-        model.setGitStatus(treeInput.ignored.map((path) => ({ path, status: 'ignored' as const })));
         directoriesRef.current = new Set(
             [...cache.values()].flatMap((entries) => entries.filter((entry) => entry.kind === 'directory').map((entry) => treePathOf(folder, entry)))
         );
     }, [cache, folder, model, treeInput]);
+
+    /* The marks the tree draws, on both models: what git ignores and what it says changed. They are
+       set apart from the rows, because a status arrives on its own schedule and the rows do not. */
+    useEffect(() => {
+        const entries = [...treeInput.ignored.map((path) => ({ path, status: 'ignored' as const })), ...changed];
+        model.setGitStatus(entries);
+        searchModel.setGitStatus(entries);
+    }, [changed, model, searchModel, treeInput]);
 
     /*
      * The tree reports an expansion nowhere, so every change of its own is the moment to compare
@@ -283,7 +326,9 @@ export function FilesPanel() {
         useFiles.getState().open(absoluteOf(folder, treePath), tabLimit);
     };
 
-    const onDoubleClick = (event: ReactMouseEvent<HTMLElement>): void => {
+    /* One click opens a file, the way every row in this app opens what it points at. A directory
+       is left to the tree, which folds it open on the same click. */
+    const onClick = (event: ReactMouseEvent<HTMLElement>): void => {
         openPath(rowPathOf(event));
     };
 
@@ -382,18 +427,47 @@ export function FilesPanel() {
                         }}
                     />
                 </span>
-                <Separator />
-                <span className={BTN_GROUP}>
-                    <FileToolbarToggle
-                        icon={Eye}
-                        label="Show hidden files"
-                        active={showHidden}
-                        onClick={() => useSettings.getState().update({ filesShowHidden: !showHidden })}
-                    />
-                    <FileToolbarToggle icon={ChevronsUpDown} label="Expand all folders" active={false} onClick={expandAll} />
-                    <FileToolbarToggle icon={ChevronsDownUp} label="Collapse all folders" active={false} onClick={collapseAll} />
-                    <FileToolbarToggle icon={RefreshCw} label="Refresh" active={false} onClick={refresh} />
-                </span>
+                <Menu.Root>
+                    <Tooltip label="More" name>
+                        <Menu.Trigger className="icon-btn h-7 w-7">
+                            <Icon icon={MoreHorizontal} size={14} />
+                        </Menu.Trigger>
+                    </Tooltip>
+                    <Menu.Portal>
+                        <Menu.Positioner className="z-[var(--z-popup)]" side="bottom" align="end" sideOffset={6}>
+                            <Menu.Popup className="menu-popup">
+                                <Menu.Item className="menu-item" onClick={() => useUi.getState().openFindInFiles()}>
+                                    <Icon icon={FileSearch} size={14} /> Find in files <kbd>⇧⌘F</kbd>
+                                </Menu.Item>
+                                <Menu.Separator className={MENU_SEPARATOR} />
+                                <Menu.CheckboxItem
+                                    className="menu-item"
+                                    checked={showHidden}
+                                    onCheckedChange={(checked) => useSettings.getState().update({ filesShowHidden: checked })}
+                                    closeOnClick={false}
+                                >
+                                    <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
+                                        <Menu.CheckboxItemIndicator>
+                                            <Icon icon={Check} size={12} />
+                                        </Menu.CheckboxItemIndicator>
+                                    </span>
+                                    Show hidden files
+                                </Menu.CheckboxItem>
+                                <Menu.Separator className={MENU_SEPARATOR} />
+                                <Menu.Item className="menu-item" onClick={expandAll}>
+                                    <Icon icon={ChevronsUpDown} size={14} /> Expand all folders
+                                </Menu.Item>
+                                <Menu.Item className="menu-item" onClick={collapseAll}>
+                                    <Icon icon={ChevronsDownUp} size={14} /> Collapse all folders
+                                </Menu.Item>
+                                <Menu.Separator className={MENU_SEPARATOR} />
+                                <Menu.Item className="menu-item" onClick={refresh}>
+                                    <Icon icon={RefreshCw} size={14} /> Refresh
+                                </Menu.Item>
+                            </Menu.Popup>
+                        </Menu.Positioner>
+                    </Menu.Portal>
+                </Menu.Root>
             </div>
             {reachability !== null && reachability !== 'loopback' && (
                 <div className="flex h-7 shrink-0 items-center px-2">
@@ -420,7 +494,7 @@ export function FilesPanel() {
                             key={searching ? 'search' : 'tree'}
                             model={activeModel}
                             className="files-tree"
-                            onDoubleClick={onDoubleClick}
+                            onClick={onClick}
                             onKeyDown={onKeyDown}
                             onDragStart={onDragStart}
                         />

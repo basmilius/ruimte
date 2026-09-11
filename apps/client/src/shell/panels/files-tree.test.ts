@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { FsEntry } from '@ruimte/contracts';
+import type { FsEntry, GitFile } from '@ruimte/contracts';
 import {
     LOADING_NAME,
     absoluteOf,
@@ -7,10 +7,12 @@ import {
     buildTreeInput,
     compareRows,
     dirnameOf,
+    gitStatusEntries,
     isDirectoryPath,
     mergeExpanded,
     newlyExpanded,
     relativeTo,
+    treeGitStatus,
     treePathOf
 } from './files-tree.ts';
 
@@ -132,5 +134,34 @@ describe('dirnameOf', () => {
         expect(dirnameOf('/repo/src/index.ts')).toBe('/repo/src');
         expect(dirnameOf('/a.txt')).toBe('/');
         expect(dirnameOf('C:\\repo\\a.ts')).toBe('C:\\repo');
+    });
+});
+
+const file = (path: string, status: string): GitFile => ({ path, status, state: 'unstaged', added: 0, deleted: 0, binary: false });
+
+describe('gitStatusEntries', () => {
+    test('names every changed row the way the tree does', () => {
+        const entries = gitStatusEntries('/repo', '/repo', [file('src/index.ts', 'M'), file('new.ts', '?'), file('gone.ts', 'D')]);
+        expect(entries).toEqual([
+            { path: 'src/index.ts', status: 'modified' },
+            { path: 'new.ts', status: 'untracked' },
+            { path: 'gone.ts', status: 'deleted' }
+        ]);
+    });
+
+    test('a repository above the folder keeps only what the folder holds', () => {
+        const entries = gitStatusEntries('/repo/apps/client', '/repo', [file('apps/client/src/a.ts', 'M'), file('apps/server/b.ts', 'M')]);
+        expect(entries).toEqual([{ path: 'src/a.ts', status: 'modified' }]);
+    });
+
+    test('a folder outside a repository has nothing to mark', () => {
+        expect(gitStatusEntries('/repo', null, [file('a.ts', 'M')])).toEqual([]);
+    });
+
+    test('a letter the tree does not know reads as a change', () => {
+        expect(treeGitStatus('T')).toBe('modified');
+        expect(treeGitStatus('UU')).toBe('modified');
+        expect(treeGitStatus('RM')).toBe('renamed');
+        expect(treeGitStatus('A')).toBe('added');
     });
 });
