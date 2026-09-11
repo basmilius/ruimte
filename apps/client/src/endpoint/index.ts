@@ -15,6 +15,7 @@ import { useUsageStore } from '@/state/usage';
 import { pool, transport } from '@/transport';
 import { dropMachine } from '@/transport/connections';
 import { clientKey } from './client-key';
+import { clientLabelFrom } from './client-label';
 import { forgetTicket } from './credentials';
 import { socketAddressFor } from './handshake';
 
@@ -168,10 +169,16 @@ export const revokePairedClient = async (session: AuthSession): Promise<void> =>
     await forgetEndpoint(activeEndpoint().id);
 };
 
-/* What the daemon lists this client as: the browser on this machine. */
+/* What the daemon lists this client as; `client-label.ts` holds the reading of it. */
 const clientLabel = (): string => {
-    const platform = window.ruimteDesktop?.platform ?? navigator.platform;
-    return `${window.ruimteDesktop ? 'Ruimte' : 'Browser'} on ${platform}`;
+    const data = (navigator as Navigator & { userAgentData?: { brands?: { brand: string }[]; platform?: string } }).userAgentData;
+    return clientLabelFrom({
+        desktopPlatform: window.ruimteDesktop?.platform ?? null,
+        brands: data?.brands ?? null,
+        uaPlatform: data?.platform ?? null,
+        userAgent: navigator.userAgent,
+        platform: navigator.platform
+    });
 };
 
 /* Opens the sockets this client keeps up on its own: the daemon that served the page, and the machine that is active. */
