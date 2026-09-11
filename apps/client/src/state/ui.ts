@@ -111,6 +111,9 @@ export type PaletteMode = 'default' | 'grep';
 interface UiStore {
     paletteOpen: boolean;
     paletteMode: PaletteMode;
+    /* Whether the folder picker is up, and the path it opens on; empty means the folder in hand. */
+    folderPickerOpen: boolean;
+    folderPickerSeed: string;
     page: AppPage | null;
     /* Whether the session list is in view; it survives a reload, like everything else on the canvas. */
     sidebarOpen: boolean;
@@ -145,6 +148,9 @@ interface UiStore {
     /* The palette in its find-in-files mode, from the palette itself or from the files panel. */
     openFindInFiles(seed?: string): void;
     setPaletteMode(mode: PaletteMode): void;
+    /* The picker, on a path that was typed elsewhere or on the folder it works out for itself. */
+    openFolderPicker(seed?: string): void;
+    setFolderPickerOpen(open: boolean): void;
     setLayoutDialogOpen(open: boolean): void;
     setPaletteOpen(open: boolean): void;
     setSettings(patch: Partial<SettingsState>): void;
@@ -168,6 +174,8 @@ const leaves = (opening: boolean, page: AppPage | null): { page: AppPage | null 
 export const useUi = create<UiStore>((set, get) => ({
     paletteOpen: false,
     paletteMode: 'default',
+    folderPickerOpen: false,
+    folderPickerSeed: '',
     page: null,
     paletteSeed: '',
     sidebarOpen: readSidebarOpen(),
@@ -213,6 +221,12 @@ export const useUi = create<UiStore>((set, get) => ({
     },
     setPaletteMode(mode) {
         set({ paletteMode: mode, paletteSeed: '' });
+    },
+    openFolderPicker(seed = '') {
+        set({ folderPickerOpen: true, folderPickerSeed: seed, paletteOpen: false });
+    },
+    setFolderPickerOpen(open) {
+        set(open ? { folderPickerOpen: true, folderPickerSeed: '' } : { folderPickerOpen: false });
     },
     setPaletteOpen(open) {
         set(open ? { paletteOpen: true, paletteMode: 'default', paletteSeed: '' } : { paletteOpen: false });

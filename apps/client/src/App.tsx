@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { WebviewParking } from '@/browser/WebviewParking';
 import { CommandPalette } from '@/shell/CommandPalette';
+import { FolderPicker } from '@/shell/FolderPicker';
 import { LayoutDialog } from '@/shell/LayoutDialog';
 import { ViewDialogs } from '@/shell/ViewDialogs';
 import { ViewHost } from '@/shell/ViewHost';
@@ -48,6 +49,7 @@ export function App() {
                 </main>
             </div>
             <CommandPalette />
+            <FolderPicker />
             <SettingsDialog />
             <LayoutDialog />
             <ViewDialogs />
