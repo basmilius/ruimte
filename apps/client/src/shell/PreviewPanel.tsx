@@ -46,6 +46,9 @@ export function PreviewPanel() {
     }
     const present = open || !settled;
     const ref = useRef<HTMLElement>(null);
+    const bodyRef = useRef<HTMLDivElement>(null);
+    /* Counts what was opened by hand, in the files panel, the git panel or the palette. */
+    const focusRequest = useFiles((s) => s.focusRequest);
     /* What a project with no width of its own gets, taken the moment the preview opens: half of
        what the canvas has right then. From the first drag on, the width the project remembers is
        the person's and this stays out of it. */
@@ -77,6 +80,18 @@ export function PreviewPanel() {
             window.clearTimeout(timer);
         };
     }, [open, settled]);
+
+    useEffect(() => {
+        if (focusRequest === 0) {
+            return;
+        }
+        /* A frame later, not now: the palette that opened this file is still closing, and a dialog
+           puts focus back where it found it on its way out. */
+        const frame = requestAnimationFrame(() => bodyRef.current?.focus());
+        return () => {
+            window.cancelAnimationFrame(frame);
+        };
+    }, [focusRequest]);
 
     const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
         const { tabs, active } = useFiles.getState();
@@ -110,7 +125,15 @@ export function PreviewPanel() {
             }}
         >
             {present && (
-                <div className="relative flex h-full shrink-0 flex-col border-l border-border bg-surface" style={{ width }} onKeyDown={onKeyDown}>
+                <div
+                    ref={bodyRef}
+                    /* Focusable by script alone: opening a file hands it the keyboard, so ⌘W closes
+                       the tab that just opened without a click first. */
+                    tabIndex={-1}
+                    className="relative flex h-full shrink-0 flex-col border-l border-border bg-surface outline-none"
+                    style={{ width }}
+                    onKeyDown={onKeyDown}
+                >
                     {open && <div className="absolute inset-y-0 left-0 z-10 w-2 cursor-col-resize" onPointerDown={startResize} />}
                     {/* The Files or Git panel sits right of this one, so the preview only takes the
                         window controls' inset when it is the rightmost column on its own. */}

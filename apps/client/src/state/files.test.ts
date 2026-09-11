@@ -87,13 +87,21 @@ describe('closeTab', () => {
 describe('the store and the preview panel', () => {
     beforeEach(() => {
         // No project id, so the tabs stay out of storage the test environment does not have.
-        useFiles.setState({ projectId: null, tabs: [], active: null });
+        useFiles.setState({ projectId: null, tabs: [], active: null, focusRequest: 0 });
         useUi.setState({ preview: { open: false } });
     });
 
     test('opening a file brings the preview up', () => {
         useFiles.getState().open('a', 5);
         expect(useUi.getState().preview.open).toBe(true);
+    });
+
+    test('a file opened by hand asks the preview for the keyboard, a restored project does not', () => {
+        useFiles.getState().open('a', 5);
+        useFiles.getState().open('b', 5);
+        expect(useFiles.getState().focusRequest).toBe(2);
+        useFiles.getState().load(null, { tabs: [], active: null, expandedDirs: [] });
+        expect(useFiles.getState().focusRequest).toBe(2);
     });
 
     test('the last tab that closes takes the preview with it', () => {
