@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { browseDirectories, resolveBrowsePath } from './browse.ts';
@@ -47,9 +47,31 @@ describe('browseDirectories', () => {
         expect((await browseDirectories(`${root}/zzz`, undefined)).entries).toEqual([]);
     });
 
-    test('a directory that does not exist lists as empty with the parent it would have had', async () => {
+    test('a directory that does not exist lists as empty and says it is not there', async () => {
         const result = await browseDirectories(join(root, 'missing') + '/', undefined);
-        expect(result).toEqual({ parentPath: join(root, 'missing'), entries: [] });
+        expect(result).toEqual({ parentPath: join(root, 'missing'), entries: [], exists: false });
+    });
+
+    test('a directory that cannot be read lists as empty, but says it is there', async () => {
+        const locked = join(root, 'locked');
+        await mkdir(locked, { mode: 0o000 });
+        try {
+            // Root reads a folder nobody else may, and then there is no unreadable folder to test.
+            const denied = await readdir(locked).then(
+                () => false,
+                () => true
+            );
+            if (denied) {
+                expect(await browseDirectories(`${locked}/`, undefined)).toEqual({ parentPath: locked, entries: [], exists: true });
+            }
+        } finally {
+            await chmod(locked, 0o700);
+        }
+    });
+
+    test('the hidden flag shows dot-folders without a dot having been typed', async () => {
+        expect((await browseDirectories(`${root}/`, undefined, { hidden: true })).entries.map((entry) => entry.name)).toEqual(['.git', 'apps', 'assets']);
+        expect((await browseDirectories(`${root}/`, undefined, { hidden: false })).entries.map((entry) => entry.name)).toEqual(['apps', 'assets']);
     });
 });
 

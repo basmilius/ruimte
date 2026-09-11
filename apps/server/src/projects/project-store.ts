@@ -37,7 +37,7 @@ import {
 } from './project-files.ts';
 import { IdentityCache, readIdeaName, sniffMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
 
-type ProjectErrorCode = 'project-not-found' | 'project-missing' | 'project-invalid' | 'rev-conflict' | 'folder-not-found' | 'bad-icon';
+type ProjectErrorCode = 'project-not-found' | 'project-missing' | 'project-invalid' | 'rev-conflict' | 'folder-not-found' | 'folder-create-failed' | 'bad-icon';
 
 export class ProjectError extends Error {
     readonly code: ProjectErrorCode;
@@ -189,6 +189,15 @@ export class ProjectStore {
             }
         } else if (payload.folder) {
             const folder = resolve(payload.folder);
+            /* Nothing is ever created over something that is already there: a file in the way falls
+               through to the check below, which says so in the sentence written for it. */
+            if (payload.createFolder && !(await exists(folder))) {
+                try {
+                    await mkdir(folder, { recursive: true });
+                } catch (e) {
+                    throw new ProjectError('folder-create-failed', `${folder} could not be created: ${e instanceof Error ? e.message : 'unknown error'}`);
+                }
+            }
             if (!(await isDirectory(folder))) {
                 throw new ProjectError('folder-not-found', `${folder} is not a folder`);
             }

@@ -4,7 +4,10 @@ import { z } from 'zod';
 export const FsBrowsePayloadSchema = z.object({
     partialPath: z.string().min(1).max(512),
     // The directory a relative path counts from, usually the open project's folder.
-    cwd: z.string().optional()
+    cwd: z.string().optional(),
+    /* Whether folders with a leading dot come along; they stay out by default. Optional, because a
+       daemon older than this client would fail the whole parse on a field it does not know. */
+    hidden: z.boolean().optional()
 });
 export type FsBrowsePayload = z.infer<typeof FsBrowsePayloadSchema>;
 
@@ -19,7 +22,10 @@ export type FsBrowseEntry = z.infer<typeof FsBrowseEntrySchema>;
 export const FsBrowseResultSchema = z.object({
     // The directory the entries were read from, as an absolute path.
     parentPath: z.string(),
-    entries: z.array(FsBrowseEntrySchema)
+    entries: z.array(FsBrowseEntrySchema),
+    /* Whether `parentPath` is a directory that is there; an empty listing alone cannot tell a
+       missing folder from an empty one. Undefined from a daemon that predates the field. */
+    exists: z.boolean().optional()
 });
 export type FsBrowseResult = z.infer<typeof FsBrowseResultSchema>;
 

@@ -18,7 +18,7 @@ const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
         });
 
 export const registerFsHandlers = (dispatcher: Dispatcher, watcher: FolderWatcher): void => {
-    dispatcher.register('fs.browse', (payload) => translate(() => browseDirectories(payload.partialPath, payload.cwd)));
+    dispatcher.register('fs.browse', (payload) => translate(() => browseDirectories(payload.partialPath, payload.cwd, { hidden: payload.hidden })));
 
     dispatcher.register('fs.search', (payload) => searchFiles(payload.cwd, payload.query, payload.limit));
 
