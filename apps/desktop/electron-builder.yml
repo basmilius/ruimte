@@ -25,7 +25,7 @@ publish:
   repo: ruimte
 mac:
   category: public.app-category.developer-tools
-  # The arch comes from the command line (`--arm64 --x64`), never from here, so a daemon is compiled for each one on purpose.
+  # The arch comes from the command line (`--arm64`), never from here, so a daemon is compiled for it on purpose.
   target: [dmg, zip]
   minimumSystemVersion: '26.0'
   hardenedRuntime: true

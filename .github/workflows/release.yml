@@ -24,10 +24,8 @@ jobs:
       - run: bun run check
       - run: bun test
       - run: bun run --cwd apps/client build
-      - name: Compile the daemon for both architectures
-        run: |
-          bun run --cwd apps/server compile -- --os mac --arch arm64
-          bun run --cwd apps/server compile -- --os mac --arch x64
+      - name: Compile the daemon
+        run: bun run --cwd apps/server compile -- --os mac --arch arm64
       # notarytool reads the key from a file, so the secret becomes one for the length of the job.
       - name: The App Store Connect key on disk
         env:
@@ -80,7 +78,7 @@ jobs:
           if [ -n "$APPLE_API_KEY" ]; then notarize=true; fi
           if [ -z "$RUIMTE_SIGN" ]; then export CSC_IDENTITY_AUTO_DISCOVERY=false; fi
           bun run build:main
-          bun x electron-builder --mac --arm64 --x64 --publish always \
+          bun x electron-builder --mac --arm64 --publish always \
             -c.extraMetadata.version="$RUIMTE_VERSION" -c.mac.notarize=$notarize
       - name: Shred the key and the keychain
         if: always()
