@@ -9,7 +9,11 @@
     "typecheck": "tsc --noEmit",
     "smoke": "bun src/smoke.ts",
     "compile": "bun scripts/compile.ts",
-    "snapshot-prices": "bun scripts/snapshot-prices.ts"
+    "snapshot-prices": "bun scripts/snapshot-prices.ts",
+    "docker:up": "docker compose -f docker/compose.yml up -d --build --wait",
+    "docker:down": "docker compose -f docker/compose.yml down",
+    "docker:pair": "docker/pair.sh",
+    "docker:test": "RUIMTE_DOCKER=1 bun test src/docker"
   },
   "dependencies": {
     "@ruimte/contracts": "workspace:*",

@@ -256,3 +256,11 @@ bun run --cwd apps/server smoke            # or: smoke ws://host:port/ws
 ```
 
 It creates a session, runs `uname`, prints the streamed output and the screen a reattach would receive, then kills the session.
+
+## A remote daemon in Docker
+
+`docker/` builds a second daemon on Linux, reachable from this machine on `127.0.0.1:4310`, with two
+git repositories of its own under `/work`. It is how the pairing, the token on the socket and the
+`lan` reachability get tested against a machine that is really not the client's. `bun run --cwd
+apps/server docker:up` starts it, `docker:pair` prints a pairing URL, `docker:test` runs the suite;
+the tests skip themselves unless `RUIMTE_DOCKER=1` is set. See `docker/README.md`.
