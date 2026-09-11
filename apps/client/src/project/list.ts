@@ -1,6 +1,6 @@
 import type { ProjectSummary } from '@ruimte/contracts';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
-import { useProject, type ProjectRow } from '@/state/project';
+import { useProjectList, type ProjectRow } from '@/state/project-list';
 import { pool, transportFor } from '@/transport';
 
 const CACHE_PREFIX = 'ruimte.projects.';
@@ -44,7 +44,7 @@ export const forgetCachedList = (endpointId: string, storage: ListStorage | null
 
 /* One machine's answer into the union, and into the list it is remembered by. */
 export const foldList = (endpointId: string, summaries: ProjectSummary[]): void => {
-    useProject.getState().setProjects(endpointId, summaries);
+    useProjectList.getState().setProjects(endpointId, summaries);
     writeCachedList(endpointId, summaries);
 };
 
@@ -67,7 +67,7 @@ export const refreshAllLists = async (): Promise<void> => {
 
 /* Fills the union from what each machine last answered, for the frame before any of them does. */
 export const primeCachedLists = (storage: ListStorage | null = browserStorage()): void => {
-    const state = useProject.getState();
+    const state = useProjectList.getState();
     for (const endpoint of useEndpoints.getState().endpoints) {
         if (state.projects.some((row) => row.endpointId === endpoint.id)) {
             continue;

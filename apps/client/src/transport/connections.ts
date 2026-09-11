@@ -8,6 +8,7 @@ import { chatSinkFor } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { useDrawing } from '@/state/drawing';
 import { activeEndpoint, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { useProjectList } from '@/state/project-list';
 import { useProject } from '@/state/project';
 import { providerSinkFor } from '@/state/providers';
 import { sessionSinkFor } from '@/state/sessions';
@@ -41,7 +42,7 @@ const projectSink = (endpointId: () => string): ProjectSink => {
     const actions = useProject.getState();
     return {
         setProjects: (projects) => foldList(endpointId(), projects),
-        patchProject: (summary) => actions.patchProject(endpointId(), summary),
+        patchProject: (summary) => useProjectList.getState().patchProject(endpointId(), summary),
         setCurrent: (current, rev) => actions.setCurrent(current, rev, endpointId()),
         setRev: actions.setRev,
         setChosenIcon: actions.setChosenIcon,

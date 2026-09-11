@@ -5,7 +5,7 @@ import type { UsageModel, UsageProject, UsageProvider, UsageSummaryResult } from
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { Segmented } from '@/shell/settings/controls';
 import { useEndpointId } from '@/state/keys';
-import { useProject } from '@/state/project';
+import { useProjectList } from '@/state/project-list';
 import type { UsageMetric } from '@/state/usage';
 import { SECTION_LABEL } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
@@ -112,7 +112,7 @@ function ModelRows({ models, metric, total }: { models: readonly UsageModel[]; m
 }
 
 function ProjectRows({ projects }: { projects: readonly UsageProject[] }) {
-    const rows = useProject((s) => s.projects);
+    const rows = useProjectList((s) => s.projects);
     const endpointId = useEndpointId();
     const money = useMoney();
     const top = Math.max(...projects.map((project) => project.costUsd), 0);

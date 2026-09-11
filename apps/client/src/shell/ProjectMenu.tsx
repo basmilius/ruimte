@@ -9,6 +9,7 @@ import { openProject } from '@/project/open';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ProjectIconDialog } from '@/shell/ProjectIconDialog';
 import { useEndpoints } from '@/state/endpoints';
+import { useProjectList } from '@/state/project-list';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { fileManagerName, useServer } from '@/state/server';
@@ -22,7 +23,7 @@ type DialogKind = { kind: 'new' } | { kind: 'rename' } | { kind: 'delete'; proje
 
 /* The project segment of the toolbar's breadcrumb: every known canvas, plus the ways to make, open, close and delete one. */
 export function ProjectMenu() {
-    const rows = useProject((s) => s.projects);
+    const rows = useProjectList((s) => s.projects);
     const current = useProject((s) => s.current);
     const currentEndpointId = useProject((s) => s.currentEndpointId);
     const endpoints = useEndpoints((s) => s.endpoints);

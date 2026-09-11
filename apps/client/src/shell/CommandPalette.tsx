@@ -47,6 +47,7 @@ import { useCanvas, type NodeKind } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { useFiles } from '@/state/files';
+import { useProjectList } from '@/state/project-list';
 import { useProject } from '@/state/project';
 import { fileManagerName, serverInfoOf, useServers } from '@/state/server';
 import { useSettings } from '@/state/settings';
@@ -157,7 +158,7 @@ export function CommandPalette() {
     const views = useDocument((s) => s.views);
     const activeViewId = useDocument((s) => s.activeViewId);
     const folder = useProject((s) => s.current?.folder ?? null);
-    const projects = useProject((s) => s.projects);
+    const projects = useProjectList((s) => s.projects);
     const currentProjectId = useProject((s) => s.current?.projectId ?? null);
     const currentEndpointId = useProject((s) => s.currentEndpointId);
     const endpoints = useEndpoints((s) => s.endpoints);
