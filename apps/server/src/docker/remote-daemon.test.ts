@@ -1,3 +1,6 @@
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import {
     parseServerFrame,
@@ -36,6 +39,8 @@ interface Pending {
 
 /* The client side of the wire, small enough to be obviously right: one socket, ids and events. */
 class RemoteClient {
+    /* Whether the daemon on the other end went away, which is the whole point of the pool's tests. */
+    closed = false;
     private readonly socket: WebSocket;
     private readonly pending = new Map<string, Pending>();
     private readonly output: string[] = [];
@@ -44,10 +49,19 @@ class RemoteClient {
     private constructor(socket: WebSocket) {
         this.socket = socket;
         socket.onmessage = (message) => this.receive(String(message.data));
+        socket.onclose = () => {
+            this.closed = true;
+            const waiting = [...this.pending.values()];
+            this.pending.clear();
+            for (const entry of waiting) {
+                entry.reject(new Error('disconnected'));
+            }
+        };
     }
 
-    static async connect(token: string): Promise<RemoteClient> {
-        const socket = new WebSocket(`ws://127.0.0.1:${PORT}/ws?token=${encodeURIComponent(token)}`);
+    static async connect(token: string | null, port: number = PORT): Promise<RemoteClient> {
+        const query = token === null ? '' : `?token=${encodeURIComponent(token)}`;
+        const socket = new WebSocket(`ws://127.0.0.1:${port}/ws${query}`);
         await new Promise<void>((resolve, reject) => {
             socket.onopen = () => resolve();
             socket.onclose = (event) => reject(new Error(`The daemon closed the socket: ${event.code} ${event.reason}`));
@@ -274,4 +288,124 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         expect(browsed.parentPath).toBe('/work');
         expect(browsed.entries.map((entry) => entry.name).sort()).toEqual(['atlas', 'beacon']);
     });
+});
+
+/* Starts or stops the container itself, for the half of the pool that is about a daemon falling away. */
+const docker = async (args: string[]): Promise<void> => {
+    const exit = await Bun.spawn(['docker', ...args], { stdout: 'ignore', stderr: 'inherit' }).exited;
+    if (exit !== 0) {
+        throw new Error(`docker ${args.join(' ')} exited with ${exit}`);
+    }
+};
+
+const answers = async (url: string): Promise<boolean> => (await fetch(`${url}/health`).catch(() => null))?.ok === true;
+
+/*
+ * Two daemons at once, which is what the client's transport pool holds: a socket per machine, each
+ * with a reconnect loop of its own. The second daemon is a plain one on this machine, so the one
+ * that has to keep working is not the one being stopped. The container is left running.
+ */
+describe.skipIf(!ENABLED)('two daemons at the same time', () => {
+    const LOCAL_PORT = Number(process.env.RUIMTE_LOCAL_PORT ?? 4311);
+    const LOCAL_URL = `http://127.0.0.1:${LOCAL_PORT}`;
+    let daemon: ReturnType<typeof Bun.spawn> | null = null;
+    let home = '';
+    let here: RemoteClient;
+    let there: RemoteClient;
+    const startedSessions: string[] = [];
+
+    beforeAll(async () => {
+        home = await mkdtemp(join(tmpdir(), 'ruimte-pool-'));
+        // Its own home and no hooks: a test daemon must leave this machine's state and CLI settings alone.
+        daemon = Bun.spawn(
+            ['bun', join(import.meta.dir, '../main.ts'), '--host', '127.0.0.1', '--port', String(LOCAL_PORT), '--no-hooks', '--no-price-fetch'],
+            { env: { ...process.env, RUIMTE_HOME: home }, stdout: 'ignore', stderr: 'inherit' }
+        );
+        await waitUntil(`a second daemon on ${LOCAL_URL}`, () => answers(LOCAL_URL));
+        await waitUntil(`the container on ${BASE_URL}`, () => answers(BASE_URL), 5_000);
+        // A daemon on this machine needs no token; the one in the container does.
+        here = await RemoteClient.connect(null, LOCAL_PORT);
+        there = await RemoteClient.connect((await pair()).sessionToken);
+    }, 60_000);
+
+    afterAll(async () => {
+        for (const sessionId of startedSessions) {
+            await here?.request('session.kill', { sessionId }).catch(() => undefined);
+        }
+        here?.close();
+        there?.close();
+        daemon?.kill();
+        await daemon?.exited;
+        await rm(home, { recursive: true, force: true });
+    });
+
+    test('both machines answer at once, each about itself', async () => {
+        const [mine, theirs] = await Promise.all([here.request<ServerHelloResult>('server.hello', {}), there.request<ServerHelloResult>('server.hello', {})]);
+        expect(mine.platform).toBe(process.platform);
+        expect(mine.home).toBe(home);
+        expect(theirs.platform).toBe('linux');
+        expect(theirs.home).toBe(HOME);
+
+        const [mineInfo, theirsInfo] = await Promise.all([here.request<EndpointInfo>('endpoint.info', {}), there.request<EndpointInfo>('endpoint.info', {})]);
+        // Two rows in the client's endpoint list only stay two rows because the ids differ.
+        expect(mineInfo.id).not.toBe(theirsInfo.id);
+        expect(mineInfo.reachability).toBe('loopback');
+        expect(theirsInfo.reachability).toBe('lan');
+    });
+
+    test('a shell on each machine runs on the machine it was started on', async () => {
+        const mine = `pool-here-${Date.now()}`;
+        const theirs = `pool-there-${Date.now()}`;
+        startedSessions.push(mine);
+        await here.request('session.create', { sessionId: mine, cwd: home, cols: 80, rows: 24 });
+        await here.request('session.attach', { sessionId: mine, cols: 80, rows: 24 });
+        await there.request('session.create', { sessionId: theirs, cwd: REPO, cols: 80, rows: 24 });
+        await there.request('session.attach', { sessionId: theirs, cols: 80, rows: 24 });
+
+        await here.request('session.write', { sessionId: mine, data: 'uname -s\n' });
+        await there.request('session.write', { sessionId: theirs, data: 'uname -s\n' });
+        let mineSaid = '';
+        let theirsSaid = '';
+        await waitUntil('both shells to answer', () => {
+            mineSaid += here.takeOutput();
+            theirsSaid += there.takeOutput();
+            return mineSaid.includes('Darwin') && theirsSaid.includes('Linux');
+        });
+        // The sessions of one machine never show up on the other; the daemons know nothing of each other.
+        const listed = await there.request<{ sessions: SessionInfo[] }>('session.list', {});
+        expect(listed.sessions.some((session) => session.sessionId === mine)).toBe(false);
+    });
+
+    test('the container falling away leaves the daemon on this machine untouched', async () => {
+        const sessionId = `pool-survivor-${Date.now()}`;
+        startedSessions.push(sessionId);
+        await here.request('session.create', { sessionId, cwd: home, cols: 80, rows: 24 });
+        await here.request('session.attach', { sessionId, cols: 80, rows: 24 });
+        here.takeOutput();
+
+        await docker(['stop', '--time', '5', CONTAINER]);
+        await waitUntil('the socket to the container to notice', () => there.closed);
+
+        expect(here.closed).toBe(false);
+        await here.request('session.write', { sessionId, data: 'echo still-here\n' });
+        let said = '';
+        await waitUntil('the shell on this machine to answer with the container gone', () => {
+            said += here.takeOutput();
+            return said.includes('still-here');
+        });
+        const hello = await here.request<ServerHelloResult>('server.hello', {});
+        expect(hello.home).toBe(home);
+    }, 60_000);
+
+    test('the container comes back and pairs again, next to the connection that never dropped', async () => {
+        await docker(['start', CONTAINER]);
+        await waitUntil(`the container on ${BASE_URL} again`, () => answers(BASE_URL), 60_000);
+
+        const back = await RemoteClient.connect((await pair()).sessionToken);
+        const info = await back.request<EndpointInfo>('endpoint.info', {});
+        expect(info.platform).toBe('linux');
+        expect(back.closed).toBe(false);
+        expect(here.closed).toBe(false);
+        back.close();
+    }, 90_000);
 });
