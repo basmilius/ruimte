@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectSummary } from '@ruimte/contracts';
 import { useEndpoints, type Endpoint } from '../state/endpoints';
-import { useProject } from '../state/project';
+import { useProjectList } from '../state/project-list';
 import { groupProjects, primeCachedLists, readCachedList, writeCachedList } from './list';
 
 const summary = (projectId: string, lastOpenedAt = 0): ProjectSummary => ({
@@ -33,35 +33,35 @@ const fakeStorage = (storage: Map<string, string>) => ({
 });
 
 beforeEach(() => {
-    useProject.setState({ projects: [] });
+    useProjectList.setState({ projects: [] });
 });
 
 describe('the union of the machines that are known', () => {
     test('one machine answering leaves the other machines listed', () => {
-        const state = useProject.getState();
+        const state = useProjectList.getState();
         state.setProjects('daemon-a', [summary('p1'), summary('p2')]);
         state.setProjects('daemon-b', [summary('q1')]);
         state.setProjects('daemon-a', [summary('p1')]);
-        expect(useProject.getState().projects).toEqual([
+        expect(useProjectList.getState().projects).toEqual([
             { endpointId: 'daemon-b', summary: summary('q1') },
             { endpointId: 'daemon-a', summary: summary('p1') }
         ]);
     });
 
     test('a renamed project only changes the row of its own machine', () => {
-        const state = useProject.getState();
+        const state = useProjectList.getState();
         state.setProjects('daemon-a', [summary('p1')]);
         state.setProjects('daemon-b', [summary('p1')]);
         state.patchProject('daemon-b', { ...summary('p1'), name: 'Renamed' });
-        expect(useProject.getState().projects.map((row) => `${row.endpointId}:${row.summary.name}`)).toEqual(['daemon-a:p1', 'daemon-b:Renamed']);
+        expect(useProjectList.getState().projects.map((row) => `${row.endpointId}:${row.summary.name}`)).toEqual(['daemon-a:p1', 'daemon-b:Renamed']);
     });
 
     test('a machine that is forgotten takes its rows with it', () => {
-        const state = useProject.getState();
+        const state = useProjectList.getState();
         state.setProjects('daemon-a', [summary('p1')]);
         state.setProjects('daemon-b', [summary('q1')]);
         state.forgetProjects('daemon-b');
-        expect(useProject.getState().projects.map((row) => row.endpointId)).toEqual(['daemon-a']);
+        expect(useProjectList.getState().projects.map((row) => row.endpointId)).toEqual(['daemon-a']);
     });
 
     test('the machine being worked on comes first, and one without projects is left out', () => {
@@ -99,9 +99,9 @@ describe('the list a machine is remembered by', () => {
         writeCachedList('daemon-a', [summary('p1')], fakeStorage(storage));
         writeCachedList('daemon-b', [summary('q1')], fakeStorage(storage));
         useEndpoints.setState({ endpoints: [endpoint('daemon-a', 'A'), endpoint('daemon-b', 'B')], activeId: 'daemon-a' });
-        useProject.getState().setProjects('daemon-a', [summary('p2')]);
+        useProjectList.getState().setProjects('daemon-a', [summary('p2')]);
 
         primeCachedLists(fakeStorage(storage));
-        expect(useProject.getState().projects.map((row) => `${row.endpointId}:${row.summary.projectId}`)).toEqual(['daemon-a:p2', 'daemon-b:q1']);
+        expect(useProjectList.getState().projects.map((row) => `${row.endpointId}:${row.summary.projectId}`)).toEqual(['daemon-a:p2', 'daemon-b:q1']);
     });
 });

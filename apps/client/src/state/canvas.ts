@@ -1,4 +1,5 @@
-import { create } from 'zustand';
+import { createStore, type StoreApi } from 'zustand';
+import { workspaceHook } from '@/state/workspace-stores';
 import {
     cameraCenteredOn,
     cameraToFit,
@@ -100,7 +101,7 @@ interface Viewport {
     h: number;
 }
 
-interface CanvasState {
+export interface CanvasState {
     /*
      * The view whose content this store is holding. The document store flips `activeViewId` before
      * it hands the canvas the next view, so pairing on that id makes the canvas stand in for a view
@@ -289,435 +290,449 @@ const snapshotOf = (s: Pick<CanvasState, 'nodes' | 'order' | 'texts' | 'edges' |
 /* Remembers the placement before a change; called by every action that changes it. */
 const remember = (s: CanvasState): Pick<CanvasState, 'past' | 'future'> => ({ past: [...s.past.slice(-(HISTORY_LIMIT - 1)), snapshotOf(s)], future: [] });
 
-export const useCanvas = create<CanvasState>((set, get) => ({
-    viewId: null,
-    camera: { x: 0, y: 0, zoom: 1 },
-    viewport: { w: 0, h: 0 },
-    nodes: {},
-    order: [],
-    texts: {},
-    edges: [],
-    layouts: [],
-    linkDraft: null,
-    hidden: new Set(),
-    selection: [],
-    mode: { kind: 'canvas' },
-    editingTextId: null,
-    locks: { pan: false, zoom: false, move: false, resize: false },
-    resizing: null,
-    gesturing: false,
-    loading: false,
-    past: [],
-    future: [],
+/* One canvas editor, for one workspace. A second project on screen is a second one of these. */
+export const createCanvasStore = (): StoreApi<CanvasState> =>
+    createStore<CanvasState>((set, get) => ({
+        viewId: null,
+        camera: { x: 0, y: 0, zoom: 1 },
+        viewport: { w: 0, h: 0 },
+        nodes: {},
+        order: [],
+        texts: {},
+        edges: [],
+        layouts: [],
+        linkDraft: null,
+        hidden: new Set(),
+        selection: [],
+        mode: { kind: 'canvas' },
+        editingTextId: null,
+        locks: { pan: false, zoom: false, move: false, resize: false },
+        resizing: null,
+        gesturing: false,
+        loading: false,
+        past: [],
+        future: [],
 
-    setViewport(viewport) {
-        set({ viewport });
-    },
-    setCamera(camera) {
-        set({ camera });
-    },
-    panBy(dx, dy) {
-        const { camera } = get();
-        set({ camera: { ...camera, x: camera.x + dx, y: camera.y + dy } });
-    },
-    zoomAt(factor, anchor) {
-        const { camera } = get();
-        set({ camera: zoomAround(camera, camera.zoom * factor, anchor) });
-    },
-    settleZoom(anchor) {
-        const { camera } = get();
-        const target = snapZoom(camera.zoom);
-        if (target !== camera.zoom) {
-            set({ camera: zoomAround(camera, target, anchor) });
-        }
-    },
-    zoomTo(zoom, anchor) {
-        const { camera, viewport } = get();
-        const point = anchor ?? { x: viewport.w / 2, y: viewport.h / 2 };
-        set({ camera: zoomAround(camera, clampZoom(zoom), point) });
-    },
-    fitAll() {
-        const { nodes, texts, viewport } = get();
-        const rects: Rect[] = [...Object.values(nodes), ...Object.values(texts).map((t) => ({ x: t.x, y: t.y, w: t.size * 12, h: t.size * 1.4 }))];
-        const bounds = unionRect(rects);
-        if (bounds && viewport.w > 0) {
-            set({ camera: cameraToFit(bounds, viewport) });
-        }
-    },
-    zoomToSelection() {
-        const { nodes, texts, selection, viewport } = get();
-        const rects: Rect[] = selection.flatMap((id) => {
-            if (nodes[id]) {
-                return [nodes[id]];
+        setViewport(viewport) {
+            set({ viewport });
+        },
+        setCamera(camera) {
+            set({ camera });
+        },
+        panBy(dx, dy) {
+            const { camera } = get();
+            set({ camera: { ...camera, x: camera.x + dx, y: camera.y + dy } });
+        },
+        zoomAt(factor, anchor) {
+            const { camera } = get();
+            set({ camera: zoomAround(camera, camera.zoom * factor, anchor) });
+        },
+        settleZoom(anchor) {
+            const { camera } = get();
+            const target = snapZoom(camera.zoom);
+            if (target !== camera.zoom) {
+                set({ camera: zoomAround(camera, target, anchor) });
             }
-            const t = texts[id];
-            return t ? [{ x: t.x, y: t.y, w: t.size * 12, h: t.size * 1.4 }] : [];
-        });
-        const bounds = unionRect(rects);
-        if (bounds) {
-            set({ camera: cameraToFit(bounds, viewport, 96, 1.5) });
-        }
-    },
-    goToNode(id) {
-        const { nodes, viewport, camera } = get();
-        const node = nodes[id];
-        if (!node) {
-            return;
-        }
-        set({ camera: cameraCenteredOn(node, viewport, Math.max(camera.zoom, 0.75)), selection: [id], mode: { kind: 'canvas' } });
-    },
-
-    select(ids, additive = false) {
-        const current = get().selection;
-        set({ selection: additive ? Array.from(new Set([...current, ...ids])) : ids });
-    },
-    clearSelection() {
-        set({ selection: [] });
-    },
-    selectInRect(rect) {
-        const { nodes, texts } = get();
-        const hits = [
-            ...Object.values(nodes)
-                .filter((n) => intersects(n, rect))
-                .map((n) => n.id),
-            ...Object.values(texts)
-                .filter((t) => intersects({ x: t.x, y: t.y, w: t.size * 8, h: t.size * 1.4 }, rect))
-                .map((t) => t.id)
-        ];
-        set({ selection: hits });
-    },
-    enterNode(id) {
-        get().bringToFront(id);
-        set({ mode: { kind: 'node', nodeId: id }, selection: [id], editingTextId: null });
-    },
-    exitNode() {
-        set({ mode: { kind: 'canvas' } });
-    },
-
-    moveSelected(dx, dy, first = false) {
-        const s = get();
-        const { nodes, texts, selection, locks } = s;
-        if (locks.move) {
-            return;
-        }
-        const nextNodes = { ...nodes };
-        const nextTexts = { ...texts };
-        for (const id of [...selection, ...carriedByGroups(nodes, texts, selection)]) {
-            if (nextNodes[id]) {
-                nextNodes[id] = { ...nextNodes[id], x: nextNodes[id].x + dx, y: nextNodes[id].y + dy };
-            } else if (nextTexts[id]) {
-                nextTexts[id] = { ...nextTexts[id], x: nextTexts[id].x + dx, y: nextTexts[id].y + dy };
+        },
+        zoomTo(zoom, anchor) {
+            const { camera, viewport } = get();
+            const point = anchor ?? { x: viewport.w / 2, y: viewport.h / 2 };
+            set({ camera: zoomAround(camera, clampZoom(zoom), point) });
+        },
+        fitAll() {
+            const { nodes, texts, viewport } = get();
+            const rects: Rect[] = [...Object.values(nodes), ...Object.values(texts).map((t) => ({ x: t.x, y: t.y, w: t.size * 12, h: t.size * 1.4 }))];
+            const bounds = unionRect(rects);
+            if (bounds && viewport.w > 0) {
+                set({ camera: cameraToFit(bounds, viewport) });
             }
-        }
-        set({ nodes: nextNodes, texts: nextTexts, ...(first ? remember(s) : {}) });
-    },
-    settleMove() {
-        const { nodes, texts, selection } = get();
-        const nextNodes = { ...nodes };
-        const nextTexts = { ...texts };
-        for (const id of [...selection, ...carriedByGroups(nodes, texts, selection)]) {
-            if (nextNodes[id]) {
-                nextNodes[id] = { ...nextNodes[id], x: snapToGrid(nextNodes[id].x), y: snapToGrid(nextNodes[id].y) };
-            } else if (nextTexts[id]) {
-                nextTexts[id] = { ...nextTexts[id], x: snapToGrid(nextTexts[id].x), y: snapToGrid(nextTexts[id].y) };
+        },
+        zoomToSelection() {
+            const { nodes, texts, selection, viewport } = get();
+            const rects: Rect[] = selection.flatMap((id) => {
+                if (nodes[id]) {
+                    return [nodes[id]];
+                }
+                const t = texts[id];
+                return t ? [{ x: t.x, y: t.y, w: t.size * 12, h: t.size * 1.4 }] : [];
+            });
+            const bounds = unionRect(rects);
+            if (bounds) {
+                set({ camera: cameraToFit(bounds, viewport, 96, 1.5) });
             }
-        }
-        set({ nodes: nextNodes, texts: nextTexts });
-    },
-    resizeNode(id, rect) {
-        const { nodes, locks } = get();
-        if (locks.resize || !nodes[id]) {
-            return;
-        }
-        set({ nodes: { ...nodes, [id]: { ...nodes[id], ...rect } } });
-    },
-    setResizing(id) {
-        // The handle goes down before the first resize, so this is where the old size is remembered.
-        set((s) => (id !== null && s.resizing === null ? { resizing: id, ...remember(s) } : { resizing: id }));
-    },
-    setGesturing(gesturing) {
-        set({ gesturing });
-    },
-    setNodeAccent(id, accent) {
-        set((s) => (s.nodes[id] ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], accent: accent ?? undefined } } } : {}));
-    },
-    renameNode(id, title, source = 'user') {
-        set((s) => {
-            const node = s.nodes[id];
-            // A rename that changes nothing claims nothing: the editor closes on a blur either way.
-            if (!node || (node.title === title && (node.titleSource ?? null) === source)) {
-                return {};
-            }
-            return { nodes: { ...s.nodes, [id]: { ...node, title, titleSource: source ?? undefined } } };
-        });
-    },
-    updateNode(id, patch) {
-        set((s) => (s.nodes[id] ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], ...patch } } } : {}));
-    },
-    duplicateNode(id) {
-        const source = get().nodes[id];
-        if (!source) {
-            return;
-        }
-        const copyId = nextId(source.kind);
-        // A copy is a new node: a fresh session, never the original's agent session.
-        const copy: CanvasNode = { ...source, id: copyId, x: source.x + 32, y: source.y + 32, resume: undefined };
-        set((s) => ({ nodes: { ...s.nodes, [copyId]: copy }, order: [...s.order, copyId], selection: [copyId], mode: { kind: 'canvas' }, ...remember(s) }));
-    },
-    bringToFront(id) {
-        const { order } = get();
-        if (order[order.length - 1] === id) {
-            return;
-        }
-        set({ order: [...order.filter((n) => n !== id), id] });
-    },
-    addNode(kind, at, options = {}) {
-        /* Without a view there is no project file behind the canvas, so a node here would be a live
-           terminal or agent that nothing ever saves. The surfaces that offer one are hidden in that
-           state; this is the floor under them. */
-        if (get().viewId === null && options.viewId === undefined) {
-            return null;
-        }
-        const id = nextId(kind);
-        const size = NODE_SIZE[kind];
-        // Made inside a group that is bound to a worktree, a node starts in that checkout.
-        const host = Object.values(get().nodes)
-            .filter((node) => node.kind === 'group' && node.worktree && contains(node, at))
-            .sort((a, b) => a.w * a.h - b.w * b.h)[0];
-        const node: CanvasNode = {
-            id,
-            kind,
-            title: options.title ?? DEFAULT_TITLES[kind],
-            x: snapToGrid(at.x - size.w / 2),
-            y: snapToGrid(at.y - size.h / 2),
-            ...size,
-            url: options.url,
-            cwd: options.cwd ?? host?.worktree?.path,
-            command: options.command,
-            resume: options.resume,
-            provider: options.provider,
-            providerFixed: options.providerFixed,
-            runtimeMode: options.runtimeMode,
-            viewId: options.viewId
-        };
-        set((s) => ({ nodes: { ...s.nodes, [id]: node }, order: [...s.order, id], selection: [id], mode: { kind: 'canvas' }, ...remember(s) }));
-        return id;
-    },
-    groupSelection() {
-        const { nodes, selection } = get();
-        const members = selection.map((id) => nodes[id]).filter((node): node is CanvasNode => Boolean(node) && node!.kind !== 'group');
-        const bounds = unionRect(members);
-        if (!bounds) {
-            return null;
-        }
-        const id = nextId('group');
-        const group: CanvasNode = {
-            id,
-            kind: 'group',
-            title: DEFAULT_TITLES.group,
-            x: snapToGrid(bounds.x - GROUP_PADDING),
-            y: snapToGrid(bounds.y - GROUP_PADDING - GROUP_HEADER),
-            w: snapToGrid(bounds.w + GROUP_PADDING * 2),
-            h: snapToGrid(bounds.h + GROUP_PADDING * 2 + GROUP_HEADER)
-        };
-        set((s) => ({ nodes: { ...s.nodes, [id]: group }, order: [...s.order, id], selection: [id], mode: { kind: 'canvas' }, ...remember(s) }));
-        return id;
-    },
-    addText(at) {
-        const id = nextId('text');
-        const text: TextElement = { id, x: snapToGrid(at.x), y: snapToGrid(at.y), text: '', size: 18 };
-        set((s) => ({ texts: { ...s.texts, [id]: text }, selection: [id], editingTextId: id, mode: { kind: 'canvas' }, ...remember(s) }));
-        return id;
-    },
-    updateText(id, text) {
-        set((s) => (s.texts[id] ? { texts: { ...s.texts, [id]: { ...s.texts[id], text } } } : {}));
-    },
-    setEditingText(id) {
-        set({ editingTextId: id });
-    },
-    deleteSelected() {
-        const { nodes, texts, order, edges, selection } = get();
-        if (selection.length === 0) {
-            return;
-        }
-        const gone = new Set(selection);
-        // A collapsed group takes what it hid along; nothing should linger unseen.
-        for (const id of selection) {
+        },
+        goToNode(id) {
+            const { nodes, viewport, camera } = get();
             const node = nodes[id];
-            if (node?.kind === 'group' && node.collapsed) {
-                for (const member of node.memberIds ?? []) {
-                    gone.add(member);
+            if (!node) {
+                return;
+            }
+            set({ camera: cameraCenteredOn(node, viewport, Math.max(camera.zoom, 0.75)), selection: [id], mode: { kind: 'canvas' } });
+        },
+
+        select(ids, additive = false) {
+            const current = get().selection;
+            set({ selection: additive ? Array.from(new Set([...current, ...ids])) : ids });
+        },
+        clearSelection() {
+            set({ selection: [] });
+        },
+        selectInRect(rect) {
+            const { nodes, texts } = get();
+            const hits = [
+                ...Object.values(nodes)
+                    .filter((n) => intersects(n, rect))
+                    .map((n) => n.id),
+                ...Object.values(texts)
+                    .filter((t) => intersects({ x: t.x, y: t.y, w: t.size * 8, h: t.size * 1.4 }, rect))
+                    .map((t) => t.id)
+            ];
+            set({ selection: hits });
+        },
+        enterNode(id) {
+            get().bringToFront(id);
+            set({ mode: { kind: 'node', nodeId: id }, selection: [id], editingTextId: null });
+        },
+        exitNode() {
+            set({ mode: { kind: 'canvas' } });
+        },
+
+        moveSelected(dx, dy, first = false) {
+            const s = get();
+            const { nodes, texts, selection, locks } = s;
+            if (locks.move) {
+                return;
+            }
+            const nextNodes = { ...nodes };
+            const nextTexts = { ...texts };
+            for (const id of [...selection, ...carriedByGroups(nodes, texts, selection)]) {
+                if (nextNodes[id]) {
+                    nextNodes[id] = { ...nextNodes[id], x: nextNodes[id].x + dx, y: nextNodes[id].y + dy };
+                } else if (nextTexts[id]) {
+                    nextTexts[id] = { ...nextTexts[id], x: nextTexts[id].x + dx, y: nextTexts[id].y + dy };
                 }
             }
-        }
-        const nextNodes = { ...nodes };
-        const nextTexts = { ...texts };
-        for (const id of gone) {
-            delete nextNodes[id];
-            delete nextTexts[id];
-        }
-        set({
-            nodes: nextNodes,
-            texts: nextTexts,
-            hidden: hiddenIn(nextNodes),
-            order: order.filter((id) => !gone.has(id)),
-            edges: edges.filter((e) => !gone.has(e.id) && !gone.has(e.from) && !gone.has(e.to)),
-            selection: [],
-            mode: { kind: 'canvas' },
-            ...remember(get())
-        });
-    },
-    toggleLock(key) {
-        set((s) => ({ locks: { ...s.locks, [key]: !s.locks[key] } }));
-    },
-    setAllLocks(locked) {
-        set({ locks: { pan: locked, zoom: locked, move: locked, resize: locked } });
-    },
-
-    toggleGroupCollapse(id) {
-        const s = get();
-        const group = s.nodes[id];
-        if (!group || group.kind !== 'group') {
-            return;
-        }
-        const next: CanvasNode = group.collapsed
-            ? { ...group, collapsed: false, memberIds: undefined, h: group.expandedHeight ?? group.h, expandedHeight: undefined }
-            : { ...group, collapsed: true, memberIds: membersOf(group, s.nodes, s.texts), expandedHeight: group.h, h: GROUP_HEADER_PX };
-        const nodes = { ...s.nodes, [id]: next };
-        const hidden = hiddenIn(nodes);
-        set({ nodes, hidden, selection: s.selection.filter((selected) => !hidden.has(selected)), ...remember(s) });
-    },
-    setGroupWorktree(id, worktree) {
-        set((s) => (s.nodes[id]?.kind === 'group' ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], worktree: worktree ?? undefined } } } : {}));
-    },
-    addEdge(from, to) {
-        const s = get();
-        const exists = (id: string): boolean => Boolean(s.nodes[id] || s.texts[id]);
-        if (from === to || !exists(from) || !exists(to)) {
-            return null;
-        }
-        // One line per pair, whichever way it was drawn.
-        if (s.edges.some((edge) => (edge.from === from && edge.to === to) || (edge.from === to && edge.to === from))) {
-            return null;
-        }
-        const id = nextId('edge');
-        const target = s.nodes[to];
-        // Only a line into an agent carries meaning, so only that one gets a label by default.
-        const label = target && isAgentKind(target.kind) ? 'context' : undefined;
-        set({ edges: [...s.edges, { id, from, to, label }], linkDraft: null, ...remember(s) });
-        return id;
-    },
-    startLink(from) {
-        const s = get();
-        const node = s.nodes[from];
-        const text = s.texts[from];
-        if (!node && !text) {
-            return;
-        }
-        const to = node ? center(node) : { x: text!.x, y: text!.y };
-        set({ linkDraft: { from, to, aiming: true }, selection: [from], mode: { kind: 'canvas' } });
-    },
-    removeEdge(id) {
-        set((s) => ({ edges: s.edges.filter((edge) => edge.id !== id), selection: s.selection.filter((selected) => selected !== id), ...remember(s) }));
-    },
-    setEdgeLabel(id, label) {
-        set((s) => ({ edges: s.edges.map((edge) => (edge.id === id ? { ...edge, label: label.trim() || undefined } : edge)) }));
-    },
-    setLinkDraft(draft) {
-        set({ linkDraft: draft });
-    },
-    saveLayout(name) {
-        const s = get();
-        const layout: ProjectLayout = {
-            name,
-            nodes: Object.fromEntries(Object.values(s.nodes).map((node) => [node.id, { x: node.x, y: node.y, w: node.w, h: node.h }])),
-            texts: Object.fromEntries(Object.values(s.texts).map((text) => [text.id, { x: text.x, y: text.y }]))
-        };
-        set({ layouts: [...s.layouts.filter((entry) => entry.name !== name), layout] });
-    },
-    applyLayout(name) {
-        const s = get();
-        const layout = s.layouts.find((entry) => entry.name === name);
-        if (!layout) {
-            return;
-        }
-        // Nodes the layout never saw stay where they are; nothing is added or removed.
-        const nodes = { ...s.nodes };
-        for (const [id, rect] of Object.entries(layout.nodes)) {
-            if (nodes[id]) {
-                nodes[id] = { ...nodes[id], ...rect };
+            set({ nodes: nextNodes, texts: nextTexts, ...(first ? remember(s) : {}) });
+        },
+        settleMove() {
+            const { nodes, texts, selection } = get();
+            const nextNodes = { ...nodes };
+            const nextTexts = { ...texts };
+            for (const id of [...selection, ...carriedByGroups(nodes, texts, selection)]) {
+                if (nextNodes[id]) {
+                    nextNodes[id] = { ...nextNodes[id], x: snapToGrid(nextNodes[id].x), y: snapToGrid(nextNodes[id].y) };
+                } else if (nextTexts[id]) {
+                    nextTexts[id] = { ...nextTexts[id], x: snapToGrid(nextTexts[id].x), y: snapToGrid(nextTexts[id].y) };
+                }
             }
-        }
-        const texts = { ...s.texts };
-        for (const [id, point] of Object.entries(layout.texts)) {
-            if (texts[id]) {
-                texts[id] = { ...texts[id], ...point };
+            set({ nodes: nextNodes, texts: nextTexts });
+        },
+        resizeNode(id, rect) {
+            const { nodes, locks } = get();
+            if (locks.resize || !nodes[id]) {
+                return;
             }
-        }
-        set({ nodes, texts, ...remember(s) });
-    },
-    deleteLayout(name) {
-        set((s) => ({ layouts: s.layouts.filter((entry) => entry.name !== name) }));
-    },
+            set({ nodes: { ...nodes, [id]: { ...nodes[id], ...rect } } });
+        },
+        setResizing(id) {
+            // The handle goes down before the first resize, so this is where the old size is remembered.
+            set((s) => (id !== null && s.resizing === null ? { resizing: id, ...remember(s) } : { resizing: id }));
+        },
+        setGesturing(gesturing) {
+            set({ gesturing });
+        },
+        setNodeAccent(id, accent) {
+            set((s) => (s.nodes[id] ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], accent: accent ?? undefined } } } : {}));
+        },
+        renameNode(id, title, source = 'user') {
+            set((s) => {
+                const node = s.nodes[id];
+                // A rename that changes nothing claims nothing: the editor closes on a blur either way.
+                if (!node || (node.title === title && (node.titleSource ?? null) === source)) {
+                    return {};
+                }
+                return { nodes: { ...s.nodes, [id]: { ...node, title, titleSource: source ?? undefined } } };
+            });
+        },
+        updateNode(id, patch) {
+            set((s) => (s.nodes[id] ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], ...patch } } } : {}));
+        },
+        duplicateNode(id) {
+            const source = get().nodes[id];
+            if (!source) {
+                return;
+            }
+            const copyId = nextId(source.kind);
+            // A copy is a new node: a fresh session, never the original's agent session.
+            const copy: CanvasNode = { ...source, id: copyId, x: source.x + 32, y: source.y + 32, resume: undefined };
+            set((s) => ({ nodes: { ...s.nodes, [copyId]: copy }, order: [...s.order, copyId], selection: [copyId], mode: { kind: 'canvas' }, ...remember(s) }));
+        },
+        bringToFront(id) {
+            const { order } = get();
+            if (order[order.length - 1] === id) {
+                return;
+            }
+            set({ order: [...order.filter((n) => n !== id), id] });
+        },
+        addNode(kind, at, options = {}) {
+            /* Without a view there is no project file behind the canvas, so a node here would be a live
+           terminal or agent that nothing ever saves. The surfaces that offer one are hidden in that
+           state; this is the floor under them. */
+            if (get().viewId === null && options.viewId === undefined) {
+                return null;
+            }
+            const id = nextId(kind);
+            const size = NODE_SIZE[kind];
+            // Made inside a group that is bound to a worktree, a node starts in that checkout.
+            const host = Object.values(get().nodes)
+                .filter((node) => node.kind === 'group' && node.worktree && contains(node, at))
+                .sort((a, b) => a.w * a.h - b.w * b.h)[0];
+            const node: CanvasNode = {
+                id,
+                kind,
+                title: options.title ?? DEFAULT_TITLES[kind],
+                x: snapToGrid(at.x - size.w / 2),
+                y: snapToGrid(at.y - size.h / 2),
+                ...size,
+                url: options.url,
+                cwd: options.cwd ?? host?.worktree?.path,
+                command: options.command,
+                resume: options.resume,
+                provider: options.provider,
+                providerFixed: options.providerFixed,
+                runtimeMode: options.runtimeMode,
+                viewId: options.viewId
+            };
+            set((s) => ({ nodes: { ...s.nodes, [id]: node }, order: [...s.order, id], selection: [id], mode: { kind: 'canvas' }, ...remember(s) }));
+            return id;
+        },
+        groupSelection() {
+            const { nodes, selection } = get();
+            const members = selection.map((id) => nodes[id]).filter((node): node is CanvasNode => Boolean(node) && node!.kind !== 'group');
+            const bounds = unionRect(members);
+            if (!bounds) {
+                return null;
+            }
+            const id = nextId('group');
+            const group: CanvasNode = {
+                id,
+                kind: 'group',
+                title: DEFAULT_TITLES.group,
+                x: snapToGrid(bounds.x - GROUP_PADDING),
+                y: snapToGrid(bounds.y - GROUP_PADDING - GROUP_HEADER),
+                w: snapToGrid(bounds.w + GROUP_PADDING * 2),
+                h: snapToGrid(bounds.h + GROUP_PADDING * 2 + GROUP_HEADER)
+            };
+            set((s) => ({ nodes: { ...s.nodes, [id]: group }, order: [...s.order, id], selection: [id], mode: { kind: 'canvas' }, ...remember(s) }));
+            return id;
+        },
+        addText(at) {
+            const id = nextId('text');
+            const text: TextElement = { id, x: snapToGrid(at.x), y: snapToGrid(at.y), text: '', size: 18 };
+            set((s) => ({ texts: { ...s.texts, [id]: text }, selection: [id], editingTextId: id, mode: { kind: 'canvas' }, ...remember(s) }));
+            return id;
+        },
+        updateText(id, text) {
+            set((s) => (s.texts[id] ? { texts: { ...s.texts, [id]: { ...s.texts[id], text } } } : {}));
+        },
+        setEditingText(id) {
+            set({ editingTextId: id });
+        },
+        deleteSelected() {
+            const { nodes, texts, order, edges, selection } = get();
+            if (selection.length === 0) {
+                return;
+            }
+            const gone = new Set(selection);
+            // A collapsed group takes what it hid along; nothing should linger unseen.
+            for (const id of selection) {
+                const node = nodes[id];
+                if (node?.kind === 'group' && node.collapsed) {
+                    for (const member of node.memberIds ?? []) {
+                        gone.add(member);
+                    }
+                }
+            }
+            const nextNodes = { ...nodes };
+            const nextTexts = { ...texts };
+            for (const id of gone) {
+                delete nextNodes[id];
+                delete nextTexts[id];
+            }
+            set({
+                nodes: nextNodes,
+                texts: nextTexts,
+                hidden: hiddenIn(nextNodes),
+                order: order.filter((id) => !gone.has(id)),
+                edges: edges.filter((e) => !gone.has(e.id) && !gone.has(e.from) && !gone.has(e.to)),
+                selection: [],
+                mode: { kind: 'canvas' },
+                ...remember(get())
+            });
+        },
+        toggleLock(key) {
+            set((s) => ({ locks: { ...s.locks, [key]: !s.locks[key] } }));
+        },
+        setAllLocks(locked) {
+            set({ locks: { pan: locked, zoom: locked, move: locked, resize: locked } });
+        },
 
-    loadView(view, local) {
-        const nodes = view ? Object.fromEntries(view.nodes.map((node) => [node.id, node])) : {};
-        const texts = view ? Object.fromEntries(view.texts.map((text) => [text.id, text])) : {};
-        set({
-            loading: true,
-            viewId: view?.id ?? null,
-            nodes,
-            order: view ? view.nodes.map((node) => node.id) : [],
-            texts,
-            edges: view?.edges ?? [],
-            layouts: view?.layouts ?? [],
-            linkDraft: null,
-            hidden: hiddenIn(nodes),
-            selection: [],
-            mode: { kind: 'canvas' },
-            editingTextId: null,
-            resizing: null,
-            past: [],
-            future: [],
-            ...(local?.camera ? { camera: local.camera } : {})
-        });
-        set({ loading: false });
-        if (!local?.camera) {
-            get().fitAll();
+        toggleGroupCollapse(id) {
+            const s = get();
+            const group = s.nodes[id];
+            if (!group || group.kind !== 'group') {
+                return;
+            }
+            const next: CanvasNode = group.collapsed
+                ? { ...group, collapsed: false, memberIds: undefined, h: group.expandedHeight ?? group.h, expandedHeight: undefined }
+                : { ...group, collapsed: true, memberIds: membersOf(group, s.nodes, s.texts), expandedHeight: group.h, h: GROUP_HEADER_PX };
+            const nodes = { ...s.nodes, [id]: next };
+            const hidden = hiddenIn(nodes);
+            set({ nodes, hidden, selection: s.selection.filter((selected) => !hidden.has(selected)), ...remember(s) });
+        },
+        setGroupWorktree(id, worktree) {
+            set((s) => (s.nodes[id]?.kind === 'group' ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], worktree: worktree ?? undefined } } } : {}));
+        },
+        addEdge(from, to) {
+            const s = get();
+            const exists = (id: string): boolean => Boolean(s.nodes[id] || s.texts[id]);
+            if (from === to || !exists(from) || !exists(to)) {
+                return null;
+            }
+            // One line per pair, whichever way it was drawn.
+            if (s.edges.some((edge) => (edge.from === from && edge.to === to) || (edge.from === to && edge.to === from))) {
+                return null;
+            }
+            const id = nextId('edge');
+            const target = s.nodes[to];
+            // Only a line into an agent carries meaning, so only that one gets a label by default.
+            const label = target && isAgentKind(target.kind) ? 'context' : undefined;
+            set({ edges: [...s.edges, { id, from, to, label }], linkDraft: null, ...remember(s) });
+            return id;
+        },
+        startLink(from) {
+            const s = get();
+            const node = s.nodes[from];
+            const text = s.texts[from];
+            if (!node && !text) {
+                return;
+            }
+            const to = node ? center(node) : { x: text!.x, y: text!.y };
+            set({ linkDraft: { from, to, aiming: true }, selection: [from], mode: { kind: 'canvas' } });
+        },
+        removeEdge(id) {
+            set((s) => ({ edges: s.edges.filter((edge) => edge.id !== id), selection: s.selection.filter((selected) => selected !== id), ...remember(s) }));
+        },
+        setEdgeLabel(id, label) {
+            set((s) => ({ edges: s.edges.map((edge) => (edge.id === id ? { ...edge, label: label.trim() || undefined } : edge)) }));
+        },
+        setLinkDraft(draft) {
+            set({ linkDraft: draft });
+        },
+        saveLayout(name) {
+            const s = get();
+            const layout: ProjectLayout = {
+                name,
+                nodes: Object.fromEntries(Object.values(s.nodes).map((node) => [node.id, { x: node.x, y: node.y, w: node.w, h: node.h }])),
+                texts: Object.fromEntries(Object.values(s.texts).map((text) => [text.id, { x: text.x, y: text.y }]))
+            };
+            set({ layouts: [...s.layouts.filter((entry) => entry.name !== name), layout] });
+        },
+        applyLayout(name) {
+            const s = get();
+            const layout = s.layouts.find((entry) => entry.name === name);
+            if (!layout) {
+                return;
+            }
+            // Nodes the layout never saw stay where they are; nothing is added or removed.
+            const nodes = { ...s.nodes };
+            for (const [id, rect] of Object.entries(layout.nodes)) {
+                if (nodes[id]) {
+                    nodes[id] = { ...nodes[id], ...rect };
+                }
+            }
+            const texts = { ...s.texts };
+            for (const [id, point] of Object.entries(layout.texts)) {
+                if (texts[id]) {
+                    texts[id] = { ...texts[id], ...point };
+                }
+            }
+            set({ nodes, texts, ...remember(s) });
+        },
+        deleteLayout(name) {
+            set((s) => ({ layouts: s.layouts.filter((entry) => entry.name !== name) }));
+        },
+
+        loadView(view, local) {
+            const nodes = view ? Object.fromEntries(view.nodes.map((node) => [node.id, node])) : {};
+            const texts = view ? Object.fromEntries(view.texts.map((text) => [text.id, text])) : {};
+            set({
+                loading: true,
+                viewId: view?.id ?? null,
+                nodes,
+                order: view ? view.nodes.map((node) => node.id) : [],
+                texts,
+                edges: view?.edges ?? [],
+                layouts: view?.layouts ?? [],
+                linkDraft: null,
+                hidden: hiddenIn(nodes),
+                selection: [],
+                mode: { kind: 'canvas' },
+                editingTextId: null,
+                resizing: null,
+                past: [],
+                future: [],
+                ...(local?.camera ? { camera: local.camera } : {})
+            });
+            set({ loading: false });
+            if (!local?.camera) {
+                get().fitAll();
+            }
+        },
+        exportContent() {
+            const { nodes, order, texts, edges, layouts } = get();
+            return {
+                nodes: order.map((id) => nodes[id]!).map(({ status: _status, ...node }) => node),
+                texts: Object.values(texts),
+                edges,
+                layouts
+            };
+        },
+        undo() {
+            const s = get();
+            const previous = s.past[s.past.length - 1];
+            if (!previous) {
+                return;
+            }
+            set({
+                ...previous,
+                hidden: hiddenIn(previous.nodes),
+                past: s.past.slice(0, -1),
+                future: [snapshotOf(s), ...s.future],
+                selection: [],
+                mode: { kind: 'canvas' }
+            });
+        },
+        redo() {
+            const s = get();
+            const next = s.future[0];
+            if (!next) {
+                return;
+            }
+            set({
+                ...next,
+                hidden: hiddenIn(next.nodes),
+                past: [...s.past, snapshotOf(s)],
+                future: s.future.slice(1),
+                selection: [],
+                mode: { kind: 'canvas' }
+            });
         }
-    },
-    exportContent() {
-        const { nodes, order, texts, edges, layouts } = get();
-        return {
-            nodes: order.map((id) => nodes[id]!).map(({ status: _status, ...node }) => node),
-            texts: Object.values(texts),
-            edges,
-            layouts
-        };
-    },
-    undo() {
-        const s = get();
-        const previous = s.past[s.past.length - 1];
-        if (!previous) {
-            return;
-        }
-        set({
-            ...previous,
-            hidden: hiddenIn(previous.nodes),
-            past: s.past.slice(0, -1),
-            future: [snapshotOf(s), ...s.future],
-            selection: [],
-            mode: { kind: 'canvas' }
-        });
-    },
-    redo() {
-        const s = get();
-        const next = s.future[0];
-        if (!next) {
-            return;
-        }
-        set({ ...next, hidden: hiddenIn(next.nodes), past: [...s.past, snapshotOf(s)], future: s.future.slice(1), selection: [], mode: { kind: 'canvas' } });
-    }
-}));
+    }));
+
+/* The canvas of no workspace at all: what a unit test reads and what the hook falls back on. */
+export const defaultCanvasStore = createCanvasStore();
+
+export const useCanvas = workspaceHook('canvas', defaultCanvasStore);
 
 export const isNodeFocused = (mode: Mode, id: string): boolean => mode.kind === 'node' && mode.nodeId === id;

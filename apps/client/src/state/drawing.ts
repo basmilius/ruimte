@@ -1,4 +1,5 @@
-import { create } from 'zustand';
+import { createStore, type StoreApi } from 'zustand';
+import { workspaceHook } from '@/state/workspace-stores';
 import type {
     DrawingColor,
     DrawingContent,
@@ -61,7 +62,7 @@ interface Viewport {
     h: number;
 }
 
-interface DrawingState {
+export interface DrawingState {
     /* The drawing view this store holds, or null while none is on screen. */
     viewId: string | null;
     camera: Camera;
@@ -221,397 +222,402 @@ const withStyle = (element: DrawingElement, patch: Partial<DrawingStyle>): Drawi
  * Shaped after `useCanvas`, which it cannot reuse: that store is the editor of a canvas view and
  * the session lifecycle reads its nodes.
  */
-export const useDrawing = create<DrawingState>((set, get) => ({
-    viewId: null,
-    camera: { x: 0, y: 0, zoom: 1 },
-    viewport: { w: 0, h: 0 },
-    elements: [],
-    selection: [],
-    tool: 'select',
-    toolLocked: false,
-    style: DEFAULT_STYLE,
-    draft: null,
-    erasing: [],
-    editingTextId: null,
-    rev: 0,
-    dirty: false,
-    edits: 0,
-    loading: false,
-    fitPending: false,
-    conflict: null,
-    error: null,
-    past: [],
-    future: [],
-    exportBackground: true,
+export const createDrawingStore = (): StoreApi<DrawingState> =>
+    createStore<DrawingState>((set, get) => ({
+        viewId: null,
+        camera: { x: 0, y: 0, zoom: 1 },
+        viewport: { w: 0, h: 0 },
+        elements: [],
+        selection: [],
+        tool: 'select',
+        toolLocked: false,
+        style: DEFAULT_STYLE,
+        draft: null,
+        erasing: [],
+        editingTextId: null,
+        rev: 0,
+        dirty: false,
+        edits: 0,
+        loading: false,
+        fitPending: false,
+        conflict: null,
+        error: null,
+        past: [],
+        future: [],
+        exportBackground: true,
 
-    load(viewId, document, local) {
-        set({
-            loading: true,
-            viewId,
-            elements: document.elements,
-            rev: document.rev,
-            dirty: false,
-            edits: 0,
-            conflict: null,
-            error: null,
-            selection: [],
-            draft: null,
-            erasing: [],
-            editingTextId: null,
-            past: [],
-            future: [],
-            fitPending: !local?.camera,
-            ...(local?.camera ? { camera: local.camera } : {})
-        });
-        set({ loading: false });
-        if (!local?.camera) {
-            get().fitAll();
-        }
-    },
-
-    unload() {
-        set({
-            viewId: null,
-            elements: [],
-            selection: [],
-            draft: null,
-            erasing: [],
-            editingTextId: null,
-            rev: 0,
-            dirty: false,
-            edits: 0,
-            conflict: null,
-            error: null,
-            past: [],
-            future: []
-        });
-    },
-
-    exportContent() {
-        return { elements: get().elements };
-    },
-
-    setViewport(viewport) {
-        set({ viewport });
-    },
-    setCamera(camera) {
-        set({ camera });
-    },
-    panBy(dx, dy) {
-        const { camera } = get();
-        set({ camera: { ...camera, x: camera.x + dx, y: camera.y + dy } });
-    },
-    zoomAt(factor, anchor) {
-        const { camera } = get();
-        set({ camera: zoomAround(camera, camera.zoom * factor, anchor) });
-    },
-    settleZoom(anchor) {
-        const { camera } = get();
-        const target = snapZoom(camera.zoom);
-        if (target !== camera.zoom) {
-            set({ camera: zoomAround(camera, target, anchor) });
-        }
-    },
-    zoomTo(zoom, anchor) {
-        const { camera, viewport } = get();
-        set({ camera: zoomAround(camera, clampZoom(zoom), anchor ?? { x: viewport.w / 2, y: viewport.h / 2 }) });
-    },
-    fitAll() {
-        const { elements, viewport } = get();
-        if (viewport.w === 0) {
-            return;
-        }
-        const bounds = boundsOf(elements);
-        set({ fitPending: false, ...(bounds ? { camera: cameraToFit(bounds, viewport) } : {}) });
-    },
-    zoomToSelection() {
-        const { elements, selection, viewport } = get();
-        const bounds = boundsOf(elements.filter((element) => selection.includes(element.id)));
-        if (bounds && viewport.w > 0) {
-            set({ camera: cameraToFit(bounds, viewport, 96, 1.5) });
-        }
-    },
-
-    select(ids, additive = false) {
-        const { selection } = get();
-        if (!additive) {
-            set({ selection: ids });
-            return;
-        }
-        const next = new Set(selection);
-        for (const id of ids) {
-            if (next.has(id)) {
-                next.delete(id);
-            } else {
-                next.add(id);
+        load(viewId, document, local) {
+            set({
+                loading: true,
+                viewId,
+                elements: document.elements,
+                rev: document.rev,
+                dirty: false,
+                edits: 0,
+                conflict: null,
+                error: null,
+                selection: [],
+                draft: null,
+                erasing: [],
+                editingTextId: null,
+                past: [],
+                future: [],
+                fitPending: !local?.camera,
+                ...(local?.camera ? { camera: local.camera } : {})
+            });
+            set({ loading: false });
+            if (!local?.camera) {
+                get().fitAll();
             }
-        }
-        set({ selection: [...next] });
-    },
-    selectAll() {
-        set((state) => ({ selection: state.elements.filter((element) => !element.locked).map((element) => element.id) }));
-    },
-    clearSelection() {
-        set({ selection: [] });
-    },
-    selectInRect(rect, additive = false) {
-        const hit = get()
-            .elements.filter((element) => !element.locked && intersects(element, rect))
-            .map((element) => element.id);
-        set((state) => ({ selection: additive ? [...new Set([...state.selection, ...hit])] : hit }));
-    },
+        },
 
-    setTool(tool) {
-        set({ tool, ...(tool === 'select' ? {} : { editingTextId: null }) });
-    },
-    toggleToolLock() {
-        set((state) => ({ toolLocked: !state.toolLocked }));
-    },
-    setStyle(patch) {
-        const state = get();
-        const style = { ...state.style, ...patch };
-        const selected = new Set(state.selection);
-        if (selected.size === 0) {
-            set({ style });
-            return;
-        }
-        const elements = state.elements.map((element) => (selected.has(element.id) && !element.locked ? withStyle(element, patch) : element));
-        set({ style, ...changed(state, elements) });
-    },
-    settleTool() {
-        const { tool, toolLocked } = get();
-        // Freehand is the one tool that stays: a sketch is a run of strokes, not one.
-        if (!toolLocked && isShapeTool(tool) && tool !== 'freehand') {
-            set({ tool: 'select' });
-        }
-    },
+        unload() {
+            set({
+                viewId: null,
+                elements: [],
+                selection: [],
+                draft: null,
+                erasing: [],
+                editingTextId: null,
+                rev: 0,
+                dirty: false,
+                edits: 0,
+                conflict: null,
+                error: null,
+                past: [],
+                future: []
+            });
+        },
 
-    beginDraft(element) {
-        set({ draft: element });
-    },
-    updateDraft(patch) {
-        set((state) => (state.draft ? { draft: { ...state.draft, ...patch } as DrawingElement } : {}));
-    },
-    commitDraft() {
-        const state = get();
-        const draft = state.draft;
-        if (!draft) {
-            return null;
-        }
-        set({ draft: null, selection: [draft.id], ...changed(state, [...state.elements, draft]) });
-        return draft.id;
-    },
-    cancelDraft() {
-        set({ draft: null });
-    },
-    addElement(element) {
-        const state = get();
-        set({ selection: [element.id], ...changed(state, [...state.elements, element]) });
-    },
+        exportContent() {
+            return { elements: get().elements };
+        },
 
-    moveSelected(dx, dy, first = true) {
-        const state = get();
-        const selected = new Set(state.selection);
-        const elements = state.elements.map((element) =>
-            selected.has(element.id) && !element.locked ? { ...element, x: element.x + dx, y: element.y + dy } : element
-        );
-        set(changed(state, elements, first));
-    },
-    replaceElements(next, first = true) {
-        const state = get();
-        set(changed(state, next, first));
-    },
-    updateElement(id, patch, first = true) {
-        const state = get();
-        const elements = state.elements.map((element) => (element.id === id ? ({ ...element, ...patch } as DrawingElement) : element));
-        set(changed(state, elements, first));
-    },
+        setViewport(viewport) {
+            set({ viewport });
+        },
+        setCamera(camera) {
+            set({ camera });
+        },
+        panBy(dx, dy) {
+            const { camera } = get();
+            set({ camera: { ...camera, x: camera.x + dx, y: camera.y + dy } });
+        },
+        zoomAt(factor, anchor) {
+            const { camera } = get();
+            set({ camera: zoomAround(camera, camera.zoom * factor, anchor) });
+        },
+        settleZoom(anchor) {
+            const { camera } = get();
+            const target = snapZoom(camera.zoom);
+            if (target !== camera.zoom) {
+                set({ camera: zoomAround(camera, target, anchor) });
+            }
+        },
+        zoomTo(zoom, anchor) {
+            const { camera, viewport } = get();
+            set({ camera: zoomAround(camera, clampZoom(zoom), anchor ?? { x: viewport.w / 2, y: viewport.h / 2 }) });
+        },
+        fitAll() {
+            const { elements, viewport } = get();
+            if (viewport.w === 0) {
+                return;
+            }
+            const bounds = boundsOf(elements);
+            set({ fitPending: false, ...(bounds ? { camera: cameraToFit(bounds, viewport) } : {}) });
+        },
+        zoomToSelection() {
+            const { elements, selection, viewport } = get();
+            const bounds = boundsOf(elements.filter((element) => selection.includes(element.id)));
+            if (bounds && viewport.w > 0) {
+                set({ camera: cameraToFit(bounds, viewport, 96, 1.5) });
+            }
+        },
 
-    deleteSelected() {
-        const state = get();
-        const selected = new Set(state.selection);
-        const elements = state.elements.filter((element) => !selected.has(element.id) || element.locked);
-        if (elements.length === state.elements.length) {
-            return;
-        }
-        set({ selection: [], editingTextId: null, ...changed(state, elements) });
-    },
-    duplicateSelected() {
-        const state = get();
-        const selected = new Set(state.selection);
-        const copies = state.elements
-            .filter((element) => selected.has(element.id))
-            .map((element) => ({
+        select(ids, additive = false) {
+            const { selection } = get();
+            if (!additive) {
+                set({ selection: ids });
+                return;
+            }
+            const next = new Set(selection);
+            for (const id of ids) {
+                if (next.has(id)) {
+                    next.delete(id);
+                } else {
+                    next.add(id);
+                }
+            }
+            set({ selection: [...next] });
+        },
+        selectAll() {
+            set((state) => ({ selection: state.elements.filter((element) => !element.locked).map((element) => element.id) }));
+        },
+        clearSelection() {
+            set({ selection: [] });
+        },
+        selectInRect(rect, additive = false) {
+            const hit = get()
+                .elements.filter((element) => !element.locked && intersects(element, rect))
+                .map((element) => element.id);
+            set((state) => ({ selection: additive ? [...new Set([...state.selection, ...hit])] : hit }));
+        },
+
+        setTool(tool) {
+            set({ tool, ...(tool === 'select' ? {} : { editingTextId: null }) });
+        },
+        toggleToolLock() {
+            set((state) => ({ toolLocked: !state.toolLocked }));
+        },
+        setStyle(patch) {
+            const state = get();
+            const style = { ...state.style, ...patch };
+            const selected = new Set(state.selection);
+            if (selected.size === 0) {
+                set({ style });
+                return;
+            }
+            const elements = state.elements.map((element) => (selected.has(element.id) && !element.locked ? withStyle(element, patch) : element));
+            set({ style, ...changed(state, elements) });
+        },
+        settleTool() {
+            const { tool, toolLocked } = get();
+            // Freehand is the one tool that stays: a sketch is a run of strokes, not one.
+            if (!toolLocked && isShapeTool(tool) && tool !== 'freehand') {
+                set({ tool: 'select' });
+            }
+        },
+
+        beginDraft(element) {
+            set({ draft: element });
+        },
+        updateDraft(patch) {
+            set((state) => (state.draft ? { draft: { ...state.draft, ...patch } as DrawingElement } : {}));
+        },
+        commitDraft() {
+            const state = get();
+            const draft = state.draft;
+            if (!draft) {
+                return null;
+            }
+            set({ draft: null, selection: [draft.id], ...changed(state, [...state.elements, draft]) });
+            return draft.id;
+        },
+        cancelDraft() {
+            set({ draft: null });
+        },
+        addElement(element) {
+            const state = get();
+            set({ selection: [element.id], ...changed(state, [...state.elements, element]) });
+        },
+
+        moveSelected(dx, dy, first = true) {
+            const state = get();
+            const selected = new Set(state.selection);
+            const elements = state.elements.map((element) =>
+                selected.has(element.id) && !element.locked ? { ...element, x: element.x + dx, y: element.y + dy } : element
+            );
+            set(changed(state, elements, first));
+        },
+        replaceElements(next, first = true) {
+            const state = get();
+            set(changed(state, next, first));
+        },
+        updateElement(id, patch, first = true) {
+            const state = get();
+            const elements = state.elements.map((element) => (element.id === id ? ({ ...element, ...patch } as DrawingElement) : element));
+            set(changed(state, elements, first));
+        },
+
+        deleteSelected() {
+            const state = get();
+            const selected = new Set(state.selection);
+            const elements = state.elements.filter((element) => !selected.has(element.id) || element.locked);
+            if (elements.length === state.elements.length) {
+                return;
+            }
+            set({ selection: [], editingTextId: null, ...changed(state, elements) });
+        },
+        duplicateSelected() {
+            const state = get();
+            const selected = new Set(state.selection);
+            const copies = state.elements
+                .filter((element) => selected.has(element.id))
+                .map((element) => ({
+                    ...element,
+                    id: nextId('el'),
+                    x: element.x + DUPLICATE_OFFSET,
+                    y: element.y + DUPLICATE_OFFSET,
+                    seed: newSeed()
+                }));
+            if (copies.length === 0) {
+                return;
+            }
+            set({ selection: copies.map((element) => element.id), ...changed(state, [...state.elements, ...copies]) });
+        },
+        pasteElements(elements) {
+            if (elements.length === 0) {
+                return;
+            }
+            const state = get();
+            const copies = elements.map((element) => ({
                 ...element,
                 id: nextId('el'),
                 x: element.x + DUPLICATE_OFFSET,
                 y: element.y + DUPLICATE_OFFSET,
                 seed: newSeed()
             }));
-        if (copies.length === 0) {
-            return;
-        }
-        set({ selection: copies.map((element) => element.id), ...changed(state, [...state.elements, ...copies]) });
-    },
-    pasteElements(elements) {
-        if (elements.length === 0) {
-            return;
-        }
-        const state = get();
-        const copies = elements.map((element) => ({
-            ...element,
-            id: nextId('el'),
-            x: element.x + DUPLICATE_OFFSET,
-            y: element.y + DUPLICATE_OFFSET,
-            seed: newSeed()
-        }));
-        set({ selection: copies.map((element) => element.id), ...changed(state, [...state.elements, ...copies]) });
-    },
-    setExportBackground(on) {
-        set({ exportBackground: on });
-    },
-    bringToFront() {
-        const state = get();
-        const selected = new Set(state.selection);
-        const staying = state.elements.filter((element) => !selected.has(element.id));
-        const moving = state.elements.filter((element) => selected.has(element.id));
-        if (moving.length === 0) {
-            return;
-        }
-        set(changed(state, [...staying, ...moving]));
-    },
-    sendToBack() {
-        const state = get();
-        const selected = new Set(state.selection);
-        const staying = state.elements.filter((element) => !selected.has(element.id));
-        const moving = state.elements.filter((element) => selected.has(element.id));
-        if (moving.length === 0) {
-            return;
-        }
-        set(changed(state, [...moving, ...staying]));
-    },
-    toggleLockSelected() {
-        const state = get();
-        const selected = new Set(state.selection);
-        if (selected.size === 0) {
-            return;
-        }
-        const locking = state.elements.some((element) => selected.has(element.id) && !element.locked);
-        const elements = state.elements.map((element) => (selected.has(element.id) ? { ...element, locked: locking || undefined } : element));
-        // A locked element cannot be picked up again, so the selection lets go of it.
-        set({ selection: locking ? [] : state.selection, ...changed(state, elements) });
-    },
-    unlockAll() {
-        const state = get();
-        if (!state.elements.some((element) => element.locked)) {
-            return;
-        }
-        set(
-            changed(
-                state,
-                state.elements.map(({ locked: _locked, ...element }) => element as DrawingElement)
-            )
-        );
-    },
+            set({ selection: copies.map((element) => element.id), ...changed(state, [...state.elements, ...copies]) });
+        },
+        setExportBackground(on) {
+            set({ exportBackground: on });
+        },
+        bringToFront() {
+            const state = get();
+            const selected = new Set(state.selection);
+            const staying = state.elements.filter((element) => !selected.has(element.id));
+            const moving = state.elements.filter((element) => selected.has(element.id));
+            if (moving.length === 0) {
+                return;
+            }
+            set(changed(state, [...staying, ...moving]));
+        },
+        sendToBack() {
+            const state = get();
+            const selected = new Set(state.selection);
+            const staying = state.elements.filter((element) => !selected.has(element.id));
+            const moving = state.elements.filter((element) => selected.has(element.id));
+            if (moving.length === 0) {
+                return;
+            }
+            set(changed(state, [...moving, ...staying]));
+        },
+        toggleLockSelected() {
+            const state = get();
+            const selected = new Set(state.selection);
+            if (selected.size === 0) {
+                return;
+            }
+            const locking = state.elements.some((element) => selected.has(element.id) && !element.locked);
+            const elements = state.elements.map((element) => (selected.has(element.id) ? { ...element, locked: locking || undefined } : element));
+            // A locked element cannot be picked up again, so the selection lets go of it.
+            set({ selection: locking ? [] : state.selection, ...changed(state, elements) });
+        },
+        unlockAll() {
+            const state = get();
+            if (!state.elements.some((element) => element.locked)) {
+                return;
+            }
+            set(
+                changed(
+                    state,
+                    state.elements.map(({ locked: _locked, ...element }) => element as DrawingElement)
+                )
+            );
+        },
 
-    setEditingText(id) {
-        set({ editingTextId: id });
-    },
-    updateText(id, text) {
-        const state = get();
-        const element = state.elements.find((candidate) => candidate.id === id);
-        if (!element || !isWritten(element) || element.text === text) {
-            return;
-        }
-        // An empty text is nothing at all, so it takes itself off the drawing. An empty note is
-        // still a sheet of paper: it stays, and waits for what is written on it later.
-        const gone = text.trim() === '' && element.kind === 'text';
-        const elements = gone
-            ? state.elements.filter((candidate) => candidate.id !== id)
-            : state.elements.map((candidate) => (candidate.id === id ? { ...candidate, text } : candidate));
-        set({ selection: gone ? [] : state.selection, ...changed(state, elements) });
-    },
+        setEditingText(id) {
+            set({ editingTextId: id });
+        },
+        updateText(id, text) {
+            const state = get();
+            const element = state.elements.find((candidate) => candidate.id === id);
+            if (!element || !isWritten(element) || element.text === text) {
+                return;
+            }
+            // An empty text is nothing at all, so it takes itself off the drawing. An empty note is
+            // still a sheet of paper: it stays, and waits for what is written on it later.
+            const gone = text.trim() === '' && element.kind === 'text';
+            const elements = gone
+                ? state.elements.filter((candidate) => candidate.id !== id)
+                : state.elements.map((candidate) => (candidate.id === id ? { ...candidate, text } : candidate));
+            set({ selection: gone ? [] : state.selection, ...changed(state, elements) });
+        },
 
-    beginErase() {
-        set({ erasing: [] });
-    },
-    eraseElement(id) {
-        set((state) => (state.erasing.includes(id) ? {} : { erasing: [...state.erasing, id] }));
-    },
-    commitErase() {
-        const state = get();
-        const gone = new Set(state.erasing);
-        if (gone.size === 0) {
-            return;
-        }
-        const elements = state.elements.filter((element) => !gone.has(element.id) || element.locked);
-        set({ erasing: [], selection: [], ...changed(state, elements) });
-    },
+        beginErase() {
+            set({ erasing: [] });
+        },
+        eraseElement(id) {
+            set((state) => (state.erasing.includes(id) ? {} : { erasing: [...state.erasing, id] }));
+        },
+        commitErase() {
+            const state = get();
+            const gone = new Set(state.erasing);
+            if (gone.size === 0) {
+                return;
+            }
+            const elements = state.elements.filter((element) => !gone.has(element.id) || element.locked);
+            set({ erasing: [], selection: [], ...changed(state, elements) });
+        },
 
-    undo() {
-        const state = get();
-        const previous = state.past.at(-1);
-        if (!previous) {
-            return;
-        }
-        set({
-            elements: previous,
-            past: state.past.slice(0, -1),
-            future: [state.elements, ...state.future],
-            selection: [],
-            editingTextId: null,
-            draft: null,
-            edits: state.edits + 1
-        });
-    },
-    redo() {
-        const state = get();
-        const next = state.future[0];
-        if (!next) {
-            return;
-        }
-        set({
-            elements: next,
-            past: [...state.past, state.elements],
-            future: state.future.slice(1),
-            selection: [],
-            editingTextId: null,
-            draft: null,
-            edits: state.edits + 1
-        });
-    },
+        undo() {
+            const state = get();
+            const previous = state.past.at(-1);
+            if (!previous) {
+                return;
+            }
+            set({
+                elements: previous,
+                past: state.past.slice(0, -1),
+                future: [state.elements, ...state.future],
+                selection: [],
+                editingTextId: null,
+                draft: null,
+                edits: state.edits + 1
+            });
+        },
+        redo() {
+            const state = get();
+            const next = state.future[0];
+            if (!next) {
+                return;
+            }
+            set({
+                elements: next,
+                past: [...state.past, state.elements],
+                future: state.future.slice(1),
+                selection: [],
+                editingTextId: null,
+                draft: null,
+                edits: state.edits + 1
+            });
+        },
 
-    setRev(rev) {
-        set({ rev });
-    },
-    setDirty(dirty) {
-        set({ dirty });
-    },
-    setConflict(conflict) {
-        set({ conflict });
-    },
-    setError(error) {
-        set({ error });
-    },
-    applyDocument(document) {
-        const state = get();
-        const alive = new Set(document.elements.map((element) => element.id));
-        const editing = state.editingTextId;
-        set({
-            loading: true,
-            elements: document.elements,
-            rev: document.rev,
-            dirty: false,
-            conflict: null,
-            // The camera never moves on a reload, and what still exists stays selected.
-            selection: state.selection.filter((id) => alive.has(id)),
-            editingTextId: editing && alive.has(editing) ? editing : null,
-            past: [],
-            future: []
-        });
-        set({ loading: false });
-    }
-}));
+        setRev(rev) {
+            set({ rev });
+        },
+        setDirty(dirty) {
+            set({ dirty });
+        },
+        setConflict(conflict) {
+            set({ conflict });
+        },
+        setError(error) {
+            set({ error });
+        },
+        applyDocument(document) {
+            const state = get();
+            const alive = new Set(document.elements.map((element) => element.id));
+            const editing = state.editingTextId;
+            set({
+                loading: true,
+                elements: document.elements,
+                rev: document.rev,
+                dirty: false,
+                conflict: null,
+                // The camera never moves on a reload, and what still exists stays selected.
+                selection: state.selection.filter((id) => alive.has(id)),
+                editingTextId: editing && alive.has(editing) ? editing : null,
+                past: [],
+                future: []
+            });
+            set({ loading: false });
+        }
+    }));
+
+export const defaultDrawingStore = createDrawingStore();
+
+export const useDrawing = workspaceHook('drawing', defaultDrawingStore);
 
 /* Keeps the hand-drawn wobble of an element the same on every render and on every machine. */
 export const newSeed = (): number => Math.floor(Math.random() * 2 ** 31);

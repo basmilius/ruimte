@@ -5,6 +5,7 @@ import { forgetCachedList } from '@/project/list';
 import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, activeEndpoint, parsePairingUrl, socketUrlFor, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { useProjectList } from '@/state/project-list';
 import { useProject } from '@/state/project';
 import { useProvidersStore } from '@/state/providers';
 import { useServers } from '@/state/server';
@@ -83,7 +84,7 @@ export const forgetEndpoint = async (id: string): Promise<void> => {
 
 /* Everything this client kept about a machine it no longer knows. */
 const forgetEndpointState = (id: string): void => {
-    useProject.getState().forgetProjects(id);
+    useProjectList.getState().forgetProjects(id);
     forgetCachedList(id);
     useSessions.getState().clear(id);
     useChats.getState().clear(id);
