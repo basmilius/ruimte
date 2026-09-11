@@ -5,3 +5,4 @@ dist
 release/
 .idea/
 .claude/worktrees/
+.ruimte/
