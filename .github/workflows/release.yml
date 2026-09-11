@@ -1,7 +1,7 @@
 name: Release
 
-# A tag `v1.2.3` builds the desktop app for macOS and Linux and uploads it to a draft GitHub release
-# with the files electron-updater reads (`latest-mac.yml`, `latest-linux.yml`). Publish the draft to ship.
+# A tag `v1.2.3` builds the desktop app for macOS and uploads it to a draft GitHub release with the
+# files electron-updater reads (`latest-mac.yml`). Publish the draft to ship.
 on:
   push:
     tags:
@@ -12,15 +12,7 @@ permissions:
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-latest
-            platform: mac
-          - os: ubuntu-latest
-            platform: linux
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -34,11 +26,10 @@ jobs:
       - run: bun run --cwd apps/client build
       - name: Compile the daemon for both architectures
         run: |
-          bun run --cwd apps/server compile -- --os ${{ matrix.platform }} --arch arm64
-          bun run --cwd apps/server compile -- --os ${{ matrix.platform }} --arch x64
+          bun run --cwd apps/server compile -- --os mac --arch arm64
+          bun run --cwd apps/server compile -- --os mac --arch x64
       # notarytool reads the key from a file, so the secret becomes one for the length of the job.
       - name: The App Store Connect key on disk
-        if: matrix.platform == 'mac'
         env:
           APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
         run: |
@@ -47,6 +38,7 @@ jobs:
           printf '%s' "$APPLE_API_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
           echo "APPLE_API_KEY=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
       - name: Build and upload
+        working-directory: apps/desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # A Developer ID certificate as base64 .p12 plus its password; without them the build is unsigned.
@@ -57,10 +49,10 @@ jobs:
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
         run: |
           notarize=false
-          if [ "${{ matrix.platform }}" = "mac" ] && [ -n "$APPLE_API_KEY" ]; then notarize=true; fi
+          if [ -n "$APPLE_API_KEY" ]; then notarize=true; fi
           if [ -z "$CSC_LINK" ]; then export CSC_IDENTITY_AUTO_DISCOVERY=false; fi
-          bun run --cwd apps/desktop build:main
-          bun x --cwd apps/desktop electron-builder --${{ matrix.platform }} --arm64 --x64 --publish always \
+          bun run build:main
+          bun x electron-builder --mac --arm64 --x64 --publish always \
             -c.extraMetadata.version="$RUIMTE_VERSION" -c.mac.notarize=$notarize
       - name: Shred the key
         if: always()

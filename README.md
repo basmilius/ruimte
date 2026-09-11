@@ -29,4 +29,4 @@ The repo is a Bun workspace: `apps/client` (React UI), `apps/server` (the daemon
 
 ## Release
 
-`bun run dist` builds the client, compiles the daemon for this machine and packages the desktop app into `apps/desktop/release` (signed when a Developer ID is in the keychain). A `v*` tag does the same on GitHub Actions for macOS and Linux and uploads a draft release that the app updates from; see `docs/RELEASE.md` for the icon, the signature and the notarization. `bun run serve` is the Server Edition: the daemon serving the built client to browsers on the network.
+`bun run dist` builds the client, compiles the daemon for this machine and packages the desktop app into `apps/desktop/release` (signed when a Developer ID is in the keychain). A `v*` tag does the same on GitHub Actions for macOS and uploads a draft release that the app updates from; see `docs/RELEASE.md` for the icon, the signature and the notarization. `bun run serve` is the Server Edition: the daemon serving the built client to browsers on the network.
