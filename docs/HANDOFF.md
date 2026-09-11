@@ -1124,6 +1124,29 @@ canvas, against Ruimte, one verdict each.
   and the only arithmetic a library would bring is a nice scale of ten lines. It draws in real
   pixels from a `ResizeObserver` instead of a stretched view box, so a bar lands on whole pixels.
 
+### Updating
+
+- The shell no longer interrupts. `setupUpdates` used to check once at startup and pop a native
+  dialog when a build had come down; it is now a state machine (`unsupported`, `idle`, `checking`,
+  `current`, `available`, `downloading`, `ready`, `error`) pushed to the window on every change. The
+  client draws it: a green button in the toolbar next to the palette when there is something to do,
+  and the Updates pane in settings for the detail.
+- The check runs when the client starts and every hour after that, from the shell, so it survives a
+  reload of the window. The timer starts with the first preference the client sends and never
+  before: until then the shell does not know whether it may download what a check turns up. A check
+  is skipped while one is running, while a download is running, and once a build is waiting to be
+  installed.
+- The auto-download preference belongs to the client, which keeps it in `localStorage` with the rest
+  of the settings. So `autoDownload` starts `false` in the shell, and the client sends the
+  preference and only then asks for the first check. Otherwise someone who turned it off would still
+  get a download on every launch, in the window before the client boots.
+- `--positive` is a new token, and the only green in `styles.css` that is not a domain color: the
+  others belong to the terminal's ANSI palette, to notes, to drawings and to file icons.
+  `--status-idle` is the same green but reads wrong on an update button.
+- The bridge methods are optional, like the ones before them: a shell that is already running
+  carries the preload it started with, so the client has to work when they are missing. Without
+  them the state stays `unsupported`, no button appears, and the pane says where updates come from.
+
 ## Gotchas already paid for
 
 - React registers `wheel` listeners as passive. Pinch zoom needs the native, non-passive
@@ -1218,10 +1241,10 @@ canvas, against Ruimte, one verdict each.
 2. **#13**: a webview keeps the canvas's z-order only by being above everything, so a node
    dragged over a browser node slides under its page; the traffic-light inset is fixed, not
    measured; no Windows or Linux run yet.
-3. **#11**: the Apple secrets and a `v0.1.0` tag for the first signed, notarized build; Pages
-   with source "GitHub Actions" so ruimte.app deploys; the landing video; Windows (the daemon
-   on Bun's Windows PTY or Node with node-pty); a real app icon; the daemon as a background
-   service so closing the app keeps sessions alive.
+3. **#11**: Pages with source "GitHub Actions" so ruimte.app deploys; the landing video; Windows
+   (the daemon on Bun's Windows PTY or Node with node-pty); the daemon as a background service so
+   closing the app keeps sessions alive. The signed and notarized build, the icon and the update
+   path are done: `docs/RELEASE.md`.
 4. **A third chat provider** (Gemini, Copilot or opencode) as the proof that the backend seam
    holds: a provider value, a backend and a protocol mapper, plus one literal in `AgentKind`.
    Hooks for Gemini and Copilot are a day per CLI on top.

@@ -28,6 +28,17 @@ export interface BrowserContextAction {
     payload?: { url?: string; x?: number; y?: number };
 }
 
+/* Where updating stands. Mirrors the `UpdateState` the shell keeps in `apps/desktop/src/main.ts`. */
+export interface UpdateState {
+    /* `unsupported` is a checkout, which has no feed; `current` means a check found nothing newer. */
+    status: 'unsupported' | 'idle' | 'checking' | 'current' | 'available' | 'downloading' | 'ready' | 'error';
+    currentVersion: string;
+    /* The version on the other side, once a check has seen one. */
+    version?: string;
+    percent?: number;
+    error?: string | null;
+}
+
 /* The shell's API, present only inside the desktop app. Mirrors `apps/desktop/src/preload.ts`. */
 export interface DesktopBridge {
     platform: string;
@@ -49,6 +60,17 @@ export interface DesktopBridge {
     /* A native save dialog for bytes the client made (an exported drawing). Optional for the same
        reason `onBrowserContextMenu` is; without it the client falls back to a browser download. */
     saveFile?(suggestedName: string, bytes: Uint8Array, mime: string): Promise<string | null>;
+    /* Updating, which only the shell can do. Optional for the same reason `onBrowserContextMenu`
+       is: a shell that is already running carries the preload it started with. Without them the
+       client shows no update button and the Updates pane says where updates come from instead. */
+    updateState?(): Promise<UpdateState>;
+    onUpdateState?(listener: (state: UpdateState) => void): () => void;
+    /* Whether the shell downloads an update as soon as it sees one. The client owns the setting and
+       sends it before the first check, so nothing downloads behind the back of someone who said no. */
+    configureUpdates?(autoDownload: boolean): Promise<void>;
+    checkForUpdate?(): Promise<void>;
+    downloadUpdate?(): Promise<void>;
+    installUpdate?(): void;
 }
 
 declare global {

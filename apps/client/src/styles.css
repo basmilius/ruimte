@@ -62,6 +62,7 @@
     --status-needs-you: #d97706;
     --status-idle: #16a34a;
     --status-error: #dc2626;
+    --positive: #16a34a;
     --term-bg: #fbfbfc;
     --term-fg: #27272a;
     --term-dim: #8e8e96;
@@ -186,6 +187,7 @@
     --status-needs-you: #fbbf24;
     --status-idle: #4ade80;
     --status-error: #f87171;
+    --positive: #4ade80;
     --term-bg: #0c0c0f;
     --term-fg: #d6d6de;
     --term-dim: #6b6b76;
@@ -303,6 +305,7 @@
     --color-status-needs-you: var(--status-needs-you);
     --color-status-idle: var(--status-idle);
     --color-status-error: var(--status-error);
+    --color-positive: var(--positive);
     --color-term-bg: var(--term-bg);
     --color-term-fg: var(--term-fg);
     --color-term-dim: var(--term-dim);

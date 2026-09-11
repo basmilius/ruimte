@@ -39,6 +39,8 @@ export interface Settings {
     drawingSnap: boolean;
     /* Whether the dock of a canvas or a drawing waits below the edge until the pointer comes near. */
     dockAutoHide: boolean;
+    /* Whether the desktop shell downloads an update as soon as it finds one, or waits to be asked. */
+    updatesAutoDownload: boolean;
 }
 
 interface SettingsStore extends Settings {
@@ -58,7 +60,8 @@ const DEFAULT_SETTINGS: Settings = {
     diffLayout: 'stacked',
     diffWhitespace: true,
     drawingSnap: false,
-    dockAutoHide: false
+    dockAutoHide: false,
+    updatesAutoDownload: true
 };
 
 // Rounded as well as clamped: the stepper used to move in halves, so a browser can still hand back
@@ -124,7 +127,8 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 diffLayout,
                 diffWhitespace,
                 drawingSnap,
-                dockAutoHide
+                dockAutoHide,
+                updatesAutoDownload
             } = get();
             const next: Settings = {
                 accent,
@@ -138,6 +142,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 diffWhitespace,
                 drawingSnap,
                 dockAutoHide,
+                updatesAutoDownload,
                 ...patch
             };
             next.fontSize = clampSize(next.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize);

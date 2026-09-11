@@ -429,29 +429,98 @@ ipcMain.handle('window:is-fullscreen', () => mainWindow?.isFullScreen() ?? false
 
 ipcMain.on('window:theme', (_event, theme: AppTheme) => applyTheme(theme));
 
-const setupUpdates = async (): Promise<void> => {
-    // The feed comes from app-update.yml that electron-builder writes into the bundle (GitHub releases); a checkout has none.
+/* What the client knows about updating. Mirrored in `apps/client/src/desktop/bridge.ts`. */
+interface UpdateState {
+    /* `unsupported` is a checkout, which has no feed; `current` means a check found nothing newer. */
+    status: 'unsupported' | 'idle' | 'checking' | 'current' | 'available' | 'downloading' | 'ready' | 'error';
+    currentVersion: string;
+    /* The version on the other side, once a check has seen one. */
+    version?: string;
+    percent?: number;
+    error?: string | null;
+}
+
+/*
+ * The updater is a state machine the client watches, not a dialog that interrupts. Every change is
+ * pushed to the window, which draws the green button in the toolbar and the Updates pane. A
+ * checkout has no feed (electron-updater reads `app-update.yml` from the bundle), so there the
+ * state stays `unsupported` and nothing in the client offers to update.
+ */
+let updateState: UpdateState = { status: 'unsupported', currentVersion: app.getVersion() };
+let updater: import('electron-updater').AppUpdater | null = null;
+let updateTimer: ReturnType<typeof setInterval> | null = null;
+
+/* Often enough that a release lands the same day, rarely enough to be invisible. */
+const UPDATE_INTERVAL_MS = 60 * 60 * 1000;
+
+const setUpdateState = (patch: Partial<UpdateState>): void => {
+    updateState = { ...updateState, ...patch };
+    mainWindow?.webContents.send('update:state', updateState);
+};
+
+const setupUpdates = (): void => {
     if (!app.isPackaged) {
         return;
     }
     try {
         const { autoUpdater } = require('electron-updater') as typeof import('electron-updater');
-        autoUpdater.autoDownload = true;
-        autoUpdater.on('update-downloaded', () => {
-            void dialog
-                .showMessageBox({ message: 'An update is ready', detail: 'Ruimte restarts to install it.', buttons: ['Restart', 'Later'], defaultId: 0 })
-                .then(({ response }) => {
-                    if (response === 0) {
-                        autoUpdater.quitAndInstall();
-                    }
-                });
-        });
-        await autoUpdater.checkForUpdates();
+        updater = autoUpdater;
+        // The client owns the preference and sends it before the first check, so nothing downloads
+        // behind the back of someone who turned it off.
+        autoUpdater.autoDownload = false;
+        autoUpdater.on('checking-for-update', () => setUpdateState({ status: 'checking', error: null }));
+        autoUpdater.on('update-available', (info) => setUpdateState({ status: 'available', version: info.version, error: null }));
+        autoUpdater.on('update-not-available', () => setUpdateState({ status: 'current', version: undefined, error: null }));
+        autoUpdater.on('download-progress', (progress) => setUpdateState({ status: 'downloading', percent: progress.percent }));
+        autoUpdater.on('update-downloaded', (info) => setUpdateState({ status: 'ready', version: info.version, percent: 100 }));
+        autoUpdater.on('error', (e) => setUpdateState({ status: 'error', error: e.message }));
+        setUpdateState({ status: 'idle' });
     } catch (e) {
-        // An unsigned build, no network or no release yet: the app stays as it is.
+        // electron-updater missing from the bundle is the only way here; the app stays as it is.
+        console.error('The updater did not start', e);
+    }
+};
+
+const checkForUpdate = async (): Promise<void> => {
+    // Nothing to learn while a check or a download is running, and a build that is already waiting
+    // to be installed does not get better for being asked about again.
+    if (!updater || updateState.status === 'checking' || updateState.status === 'downloading' || updateState.status === 'ready') {
+        return;
+    }
+    try {
+        await updater.checkForUpdates();
+    } catch (e) {
+        // checkForUpdates rejects as well as emitting `error`; the state is already set there.
         console.error('Update check failed', e);
     }
 };
+
+ipcMain.handle('update:state', () => updateState);
+
+ipcMain.handle('update:configure', (_event, autoDownload: boolean) => {
+    if (!updater) {
+        return;
+    }
+    updater.autoDownload = autoDownload;
+    // The hourly check starts with the first preference the client sends, never before: until then
+    // the shell does not know whether it is allowed to download what a check turns up.
+    updateTimer ??= setInterval(() => void checkForUpdate(), UPDATE_INTERVAL_MS);
+});
+
+ipcMain.handle('update:check', () => checkForUpdate());
+
+ipcMain.handle('update:download', async () => {
+    if (!updater) {
+        return;
+    }
+    try {
+        await updater.downloadUpdate();
+    } catch (e) {
+        console.error('Update download failed', e);
+    }
+});
+
+ipcMain.on('update:install', () => updater?.quitAndInstall());
 
 /*
  * Writes the left end of the title bar band to a PNG in device pixels, which is how its geometry
@@ -549,7 +618,7 @@ if (!app.requestSingleInstanceLock()) {
             app.quit();
             return;
         }
-        void setupUpdates();
+        setupUpdates();
     });
 
     app.on('activate', () => {
