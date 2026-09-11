@@ -201,6 +201,14 @@ function PairedClients() {
         }
     };
 
+    /*
+     * On this machine your own client needs no pairing to get in, so a row for it adds nothing to a
+     * list of what else has access. On a machine you paired with it stays: revoking it there is the
+     * one way to hand your own access back to that daemon, and forgetting a machine only drops what
+     * this client keeps, never the session the daemon holds.
+     */
+    const listed = reachability === 'loopback' ? (sessions?.filter((session) => !session.current) ?? null) : sessions;
+
     const copyLink = (): void => {
         if (!link) {
             return;
@@ -240,9 +248,9 @@ function PairedClients() {
                     </div>
                 </SettingsRow>
             )}
-            {sessions === null && failure === null && <SettingsRow label={<Skeleton className="w-40" />} control={<Skeleton className="w-8" />} />}
-            {sessions?.length === 0 && <SettingsRow muted label="Nothing else has access to this machine." />}
-            {sessions?.map((session) => (
+            {listed === null && failure === null && <SettingsRow label={<Skeleton className="w-40" />} control={<Skeleton className="w-8" />} />}
+            {listed?.length === 0 && <SettingsRow muted label="Nothing else has access to this machine." />}
+            {listed?.map((session) => (
                 <SettingsRow
                     key={session.id}
                     label={
