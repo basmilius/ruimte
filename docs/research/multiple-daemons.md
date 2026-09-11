@@ -10,7 +10,7 @@ to each other.
 
 ## 0. Summary of the recommendation
 
-- Six phases, each shippable on its own. The first two are bug fixes and a contract addition that
+- Seven phases, each shippable on its own. The first two are bug fixes and a contract addition that
   pay off whether or not the rest lands.
 - **Phase 1** gives the daemon an id it keeps in `$RUIMTE_HOME` and returns on `endpoint.info`, so
   an endpoint is a machine and not an address. The client keys its endpoint list on it and treats
@@ -31,6 +31,10 @@ to each other.
   two projects can be open side by side. This is the phase with real unknowns: `useCanvas`,
   `useDocument` and `useDrawing` are singletons that hold one open project, and a split needs a
   store per workspace. Section 4.6 is honest about what is not designed yet.
+- **Phase 7** makes a connection survive outside a test rig: a key pair per client instead of a
+  token in a query string, the daemon pinned at pairing rather than trusted by address, and a way to
+  find a machine that moved. It blocks nothing and comes last. Note that a session token does not
+  expire today; re-pairing after a container restart is the harness wiping `$RUIMTE_HOME`.
 - Nothing is stored in `project.json` about which daemon a project belongs to, and nothing needs
   to be: a project id is minted by the daemon that owns it (`randomBytes(6).toString('base64url')`,
   `apps/server/src/projects/project-store.ts:76`), so the same folder on two machines is two
@@ -860,6 +864,16 @@ an open. Route it through the current row's endpoint explicitly. The same for th
 listing two machines paints both sets of icons through one daemon's token. That is the first place
 the facade genuinely does not hold, and it is a good argument for doing phase 6 soon after.
 
+**Opening a folder on the machine that is active.** Two paths, and only one of them is right for a
+remote daemon. `ProjectMenu.openFolder` (`shell/ProjectMenu.tsx:51-61`) asks the Electron bridge for
+a native dialog when there is one, and falls back to the command palette on `~/` in a browser tab.
+The palette path is correct already: it browses with `fs.browse` over the transport, so it lists the
+active daemon's file system and opens a folder there. The native dialog is not: it picks a folder on
+the machine Electron runs on, which is the wrong file system the moment the active endpoint is
+somewhere else. Phase 5 should use the native dialog only when the active endpoint is the daemon on
+this machine, and the palette browser otherwise. A native dialog cannot browse a remote file system,
+so there is nothing to fix inside the bridge.
+
 ### 4.6 Phase 6: a context instead of a facade
 
 **Why.** A facade can only answer "the active endpoint", so two projects side by side is exactly
@@ -956,6 +970,48 @@ and the connection dot sit outside every provider and take an endpoint explicitl
    app-wide chords on `window`. With two workspaces those bindings have to consult the focused one.
 4. `docs/HANDOFF.md` decisions, the sidebar and the breadcrumb all assume one project. They need a
    pass, which is a design question for Bas, not an implementation detail.
+
+### 4.7 Phase 7: a connection that survives
+
+Last, and it blocks nothing. Phases 1 to 6 assume a paired client stays paired; this one makes that
+true outside a test rig.
+
+**What is true today, checked in the tree.** The pairing token is one time and expires after ten
+minutes (`PAIRING_TTL_MS`, `apps/server/src/auth/auth-store.ts:9,54,61`). The session token it hands
+out does not expire: a `SessionRecord` carries `id`, `label`, `tokenHash`, `createdAt` and
+`lastSeenAt` and nothing else (`auth-store.ts:10-16`), nothing prunes the list, and only
+`auth.revoke` removes a client. A paired client therefore stays paired until someone revokes it.
+
+Re-pairing after a container restart is the harness, not the product: `docker/entrypoint.sh:6-7`
+deletes `/work` and `$RUIMTE_HOME` on every start unless `RUIMTE_KEEP_STATE=1` is set, which takes
+`auth.json` and `endpoint.json` with it, so the daemon comes back as a different machine with no
+clients. Set `RUIMTE_KEEP_STATE=1` and a pairing survives a restart today.
+
+**What the phase is actually for.** Four things, in order of how much they matter.
+
+1. **A credential that can rotate.** The session token rides in the query string of the socket URL
+   (`socketUrlFor`, `state/endpoints.ts`), because a browser cannot put a header on a WebSocket
+   handshake. A query string ends up in logs and process lists, and the token never changes. The fix
+   is a key pair per client: pairing registers the client's public key, every connect signs a
+   challenge from the daemon, and nothing long lived travels on the wire again. `auth.json` stores
+   public keys instead of token hashes, and `auth.sessions` keeps reading the same.
+2. **Pinning the daemon.** Phase 1 notices that an address answers as another machine, but the
+   client still believes whatever answers. Give the daemon a key pair too, record its public key at
+   pairing (trust on first use), and the daemon id becomes a proof instead of a string it reads off
+   the wire. This is the half that matters once a connection leaves the machine.
+3. **Finding the machine again.** An endpoint keeps `httpBaseUrl` as a hint and nothing updates it,
+   so a laptop that changes network is simply gone. Two options, and they compose: mDNS on a LAN, or
+   the relay seam that already exists and does nothing (`apps/server/src/auth/relay.ts`, a `Relay`
+   interface plus a `NoRelay` that answers null).
+4. **Transport security.** A LAN connection is plain `ws://` today. The obvious answer is `wss` with
+   a self signed certificate pinned at pairing, and it is the wrong one: the client is a browser
+   page, so a self signed certificate means an interstitial the person has to click through, and a
+   client certificate is not reachable from JavaScript at all. That is the argument for doing the
+   crypto at the application layer (point 1 and 2, ed25519 through WebCrypto) over the existing
+   socket, and leaving real TLS to a tunnel in front of the daemon for anyone who wants one.
+
+**What this is not.** Not an account system, not a cloud, not a rendezvous service we run. A relay
+stays a seam until someone needs it (`docs/PLAN.md` phase 25 says the same about browser streaming).
 
 ## 5. Testing against a second daemon in Docker
 
