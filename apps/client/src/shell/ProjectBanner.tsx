@@ -23,10 +23,10 @@ export function ProjectBanner() {
     const dismiss = (): void => (drawing ? useDrawing.getState().setError(null) : useProject.getState().setError(null));
     return (
         <div className="pointer-events-auto absolute inset-x-0 top-3 z-20 flex justify-center px-4" role="status" aria-live="polite">
-            <div className={`${FLOAT} flex max-w-[640px] items-center gap-3 rounded-lg px-3 py-2 text-xs text-text`}>
+            <div className={`${FLOAT} flex max-w-[640px] items-center gap-3 rounded-lg px-3 py-2 text-sm text-text`}>
                 {conflict ? (
                     <>
-                        <Icon icon={GitBranch} size={12} className="shrink-0 text-status-needs-you" />
+                        <Icon icon={GitBranch} size={16} className="shrink-0 text-status-needs-you" />
                         <span className="grow">The {drawing ? 'drawing' : 'canvas'} changed on disk while you had unsaved edits.</span>
                         <Button size="sm" onClick={() => resolve('theirs')}>
                             Take the file
@@ -37,7 +37,7 @@ export function ProjectBanner() {
                     </>
                 ) : (
                     <>
-                        <Icon icon={CircleAlert} size={12} className="shrink-0 text-status-error" />
+                        <Icon icon={CircleAlert} size={16} className="shrink-0 text-status-error" />
                         <span className="grow">{error}</span>
                         <Button size="sm" onClick={dismiss}>
                             Dismiss

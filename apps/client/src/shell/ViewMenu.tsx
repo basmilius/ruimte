@@ -34,7 +34,6 @@ export function NewViewItems() {
     }
     return (
         <>
-            <div className={MENU_LABEL}>New view</div>
             <Menu.Item className="menu-item" onClick={() => newCanvasView()}>
                 <Icon icon={Frame} size={14} /> Canvas <kbd>⌘T</kbd>
             </Menu.Item>
@@ -67,6 +66,12 @@ export function ViewMenu() {
     return (
         <Menu.Root>
             <Menu.Trigger className="flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-left hover:bg-surface-hover data-[popup-open]:bg-surface-active">
+                <ViewGlyph
+                    id={active.id}
+                    kind={active.kind}
+                    icon={active.kind === 'separator' ? null : active.icon}
+                    provider={active.kind === 'chat' || active.kind === 'terminal' ? active.node.provider : null}
+                />
                 <span className="truncate text-sm text-text">{active.name}</span>
                 <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
             </Menu.Trigger>
@@ -93,6 +98,9 @@ export function ViewMenu() {
                             </Menu.Item>
                         ))}
                         <Menu.Separator className={MENU_SEPARATOR} />
+                        {/* Here the items follow the list of views, so they say what they are; under
+                            the button called "New view" they would repeat it. */}
+                        <div className={MENU_LABEL}>New view</div>
                         <NewViewItems />
                         <Menu.Separator className={MENU_SEPARATOR} />
                         {isSessionView(active) && (

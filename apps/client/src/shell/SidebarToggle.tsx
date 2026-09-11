@@ -13,7 +13,9 @@ export function SidebarToggle() {
             <button
                 className="icon-btn h-7 w-7 shrink-0"
                 aria-label={open ? 'Hide sidebar' : 'Show sidebar'}
-                aria-pressed={open}
+                /* Expanded rather than pressed: the icon already says which way it goes, and a
+                   pressed toggle would sit filled for as long as the sidebar is open. */
+                aria-expanded={open}
                 aria-controls="app-sidebar"
                 onClick={() => useUi.getState().toggleSidebar()}
             >

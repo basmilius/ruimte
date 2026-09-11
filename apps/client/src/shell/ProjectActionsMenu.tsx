@@ -117,7 +117,7 @@ export function ProjectActionsMenu() {
             <Dialog.Root open={closing !== null} onOpenChange={(next) => !next && setClosing(null)}>
                 <Dialog.Portal>
                     <Dialog.Backdrop className="dialog-backdrop" />
-                    <Dialog.Popup className="dialog-popup top-[24vh] w-[420px] p-5">
+                    <Dialog.Popup className="dialog-popup w-[420px] p-5">
                         <Dialog.Title className="text-base font-semibold text-text">Close {current.name}?</Dialog.Title>
                         <p className="mt-1 text-xs text-text-muted">{closeWarning(closing ?? 0)}</p>
                         <div className="mt-4 flex items-center justify-end gap-2">
@@ -133,7 +133,7 @@ export function ProjectActionsMenu() {
             <Dialog.Root open={deleteOpen} onOpenChange={setDeleteOpen}>
                 <Dialog.Portal>
                     <Dialog.Backdrop className="dialog-backdrop" />
-                    <Dialog.Popup className="dialog-popup top-[24vh] w-[420px] p-5">
+                    <Dialog.Popup className="dialog-popup w-[420px] p-5">
                         <Dialog.Title className="text-base font-semibold text-text">Delete {current.name}?</Dialog.Title>
                         <p className="mt-1 text-xs text-text-muted">
                             {current.folder

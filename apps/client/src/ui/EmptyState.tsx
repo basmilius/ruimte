@@ -16,7 +16,8 @@ export function EmptyState({ icon, children, action, className }: EmptyStateProp
         <div className={clsx('flex flex-col items-center justify-center gap-2 px-6 py-8 text-center', className)}>
             {icon && <span className="text-text-faint">{icon}</span>}
             <p className="max-w-[280px] text-xs leading-snug text-text-muted">{children}</p>
-            {action}
+            {/* The button is an answer to the sentence, not a third line of it. */}
+            {action && <div className="mt-2">{action}</div>}
         </div>
     );
 }

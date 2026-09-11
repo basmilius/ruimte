@@ -58,13 +58,13 @@ export function WorktreeDialog() {
         >
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className="dialog-popup top-[24vh] w-[420px] p-5">
+                <Dialog.Popup className="dialog-popup w-[420px] p-5">
                     <Dialog.Title className="flex items-center gap-2 text-base font-semibold text-text">
                         <Icon icon={GitBranch} size={16} /> Bind to a worktree
                     </Dialog.Title>
                     {folder ? (
                         <>
-                            <p className="mt-1 text-xs text-text-muted">
+                            <p className="mt-1 text-sm text-text-muted">
                                 A checkout of this branch is made next to the app data, and every terminal or chat created inside the group starts in it.
                             </p>
                             <input
@@ -84,9 +84,9 @@ export function WorktreeDialog() {
                             />
                         </>
                     ) : (
-                        <p className="mt-1 text-xs text-text-muted">This canvas is not in a folder, so there is no repository to make a worktree of.</p>
+                        <p className="mt-1 text-sm text-text-muted">This canvas is not in a folder, so there is no repository to make a worktree of.</p>
                     )}
-                    {failure && <p className="mt-2 text-xs text-status-error">{failure}</p>}
+                    {failure && <p className="mt-2 text-sm text-status-error">{failure}</p>}
                     <div className="mt-4 flex items-center justify-end gap-2">
                         <Button onClick={() => close(null)}>Cancel</Button>
                         <Button variant="primary" disabled={busy || !folder || !value.trim()} onClick={() => void submit()}>

@@ -89,7 +89,7 @@ export function ConnectionDot() {
     return (
         <Tooltip label={<ConnectionDetails connection={connection} />}>
             <span
-                className="grid h-8 w-5 shrink-0 place-items-center"
+                className="app-no-drag grid h-8 w-5 shrink-0 place-items-center"
                 role="status"
                 aria-label={`${describeConnection(connection, null)}. ${describePing(latency)}`}
             >

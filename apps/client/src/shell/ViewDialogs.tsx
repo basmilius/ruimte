@@ -52,17 +52,17 @@ export function ViewDialogs() {
         <Dialog.Root open={open} onOpenChange={(next) => !next && close()}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className="dialog-popup top-[24vh] w-[420px] p-5">
+                <Dialog.Popup className="dialog-popup w-[420px] p-5">
                     {dialog?.kind === 'rename' && (
                         <>
                             <Dialog.Title className="text-base font-semibold text-text">Rename view</Dialog.Title>
-                            <p className="mt-1 text-xs text-text-muted">The name goes into the project file, so everyone with the folder sees it.</p>
+                            <p className="mt-1 text-sm text-text-muted">The name goes into the project file, so everyone with the folder sees it.</p>
                         </>
                     )}
                     {dialog?.kind === 'new-browser' && (
                         <>
                             <Dialog.Title className="text-base font-semibold text-text">New browser view</Dialog.Title>
-                            <p className="mt-1 text-xs text-text-muted">The page fills the whole column. A bare host gets https in front of it.</p>
+                            <p className="mt-1 text-sm text-text-muted">The page fills the whole column. A bare host gets https in front of it.</p>
                         </>
                     )}
                     {(dialog?.kind === 'rename' || dialog?.kind === 'new-browser') && (
@@ -84,7 +84,7 @@ export function ViewDialogs() {
                     {dialog?.kind === 'delete' && (
                         <>
                             <Dialog.Title className="text-base font-semibold text-text">Delete {view?.name}?</Dialog.Title>
-                            <p className="mt-1 text-xs text-text-muted">
+                            <p className="mt-1 text-sm text-text-muted">
                                 {view && viewIsBusy(view)
                                     ? 'Something in this view is still running. Deleting it ends those sessions.'
                                     : 'The view and everything on it are gone from the project.'}
@@ -94,7 +94,7 @@ export function ViewDialogs() {
                     {dialog?.kind === 'promote' && (
                         <>
                             <Dialog.Title className="text-base font-semibold text-text">Open {nodeTitle} as a view?</Dialog.Title>
-                            <p className="mt-1 text-xs text-text-muted">
+                            <p className="mt-1 text-sm text-text-muted">
                                 The session keeps running under the same id. The lines drawn to this node stay on the canvas and are lost, because an edge
                                 belongs to one canvas.
                             </p>

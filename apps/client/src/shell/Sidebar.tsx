@@ -78,7 +78,7 @@ const ROW_ICON: Record<NodeKind, typeof Terminal> = {
     drawing: PenTool
 };
 
-const ROW = 'flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors';
+const ROW = 'flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm';
 /* Where a dragged row would land. It sits in the gap, so the rows around it do not move while
    the pointer travels. */
 const INSERT_LINE = 'pointer-events-none -my-px h-0.5 shrink-0 rounded-full bg-accent';
@@ -321,10 +321,12 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
                 }}
             >
                 {/* One slot at the row's left edge: the mark of the view, and the chevron in its place
-                    under the pointer, so a folded row and an open one read the same at rest. */}
+                    under the pointer, so a folded row and an open one read the same at rest. The
+                    padding grows that target to 24 pixels and the negative margin gives the space
+                    back, so the chevron is easy to hit without moving the name beside it. */}
                 <span
                     role="presentation"
-                    className={clsx(ICON_SLOT, row.expandable && 'rounded-sm hover:bg-surface-hover')}
+                    className={clsx(ICON_SLOT, row.expandable && '-m-1 box-content rounded-md p-1 hover:bg-surface-hover')}
                     onClick={(e) => {
                         if (row.expandable) {
                             e.stopPropagation();

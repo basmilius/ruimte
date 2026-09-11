@@ -42,7 +42,7 @@ export function SettingsDialog() {
         <Dialog.Root open={open} onOpenChange={(next) => setSettings({ open: next })}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className="dialog-popup top-[10vh] flex h-[min(600px,80vh)] w-[820px]">
+                <Dialog.Popup className="dialog-popup flex h-[min(600px,80vh)] w-[820px]">
                     <Tabs.Root
                         value={section}
                         onValueChange={(value) => setSettings({ section: value as SettingsSectionId })}

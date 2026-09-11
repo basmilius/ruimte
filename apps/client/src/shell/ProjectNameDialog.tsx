@@ -42,7 +42,7 @@ function NameForm({ description, action, initial = '', fallback, onSubmit, onOpe
 
     return (
         <>
-            <p className="mt-1 text-xs text-text-muted">{description}</p>
+            <p className="mt-1 text-sm text-text-muted">{description}</p>
             <input
                 autoFocus
                 className="field mt-3"
@@ -57,7 +57,7 @@ function NameForm({ description, action, initial = '', fallback, onSubmit, onOpe
                     }
                 }}
             />
-            {failure && <p className="mt-2 text-xs text-status-error">{failure}</p>}
+            {failure && <p className="mt-2 text-sm text-status-error">{failure}</p>}
             <div className="mt-4 flex items-center justify-end gap-2">
                 <Button onClick={() => onOpenChange(false)}>Cancel</Button>
                 <Button variant="primary" disabled={busy || name === ''} onClick={() => void submit()}>
@@ -74,7 +74,7 @@ export function ProjectNameDialog(props: ProjectNameDialogProps) {
         <Dialog.Root open={props.open} onOpenChange={props.onOpenChange}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className="dialog-popup top-[24vh] w-[420px] p-5">
+                <Dialog.Popup className="dialog-popup w-[420px] p-5">
                     <Dialog.Title className="text-base font-semibold text-text">{props.title}</Dialog.Title>
                     <NameForm {...props} />
                 </Dialog.Popup>

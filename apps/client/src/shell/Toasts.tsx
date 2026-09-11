@@ -38,15 +38,14 @@ function CopyOutput({ output }: { output: string }) {
 function ToastCard({ toast }: { toast: Toast }) {
     return (
         <div className={`flex items-start gap-2 rounded-[10px] p-2.5 pl-3 ${FLOAT}`}>
-            {/* The same box the menu rows use, so the mark lands on the title's line and not above it. */}
-            <span className="grid h-5 w-4 shrink-0 place-items-center">
-                <Icon icon={ICON[toast.kind]} size={14} className={clsx(TONE[toast.kind], toast.kind === 'progress' && 'animate-spin')} />
+            {/* The box is as tall as the title's own line, so the mark centers on that line instead
+               of on a square that is a little shorter than it. */}
+            <span className="grid h-[var(--text-sm--line-height)] w-5 shrink-0 place-items-center">
+                <Icon icon={ICON[toast.kind]} size={16} className={clsx(TONE[toast.kind], toast.kind === 'progress' && 'animate-spin')} />
             </span>
-            <div className="flex min-w-0 flex-col gap-1">
-                <span className="text-xs font-medium text-text">{toast.title}</span>
-                {toast.description !== undefined && toast.description !== '' && (
-                    <span className="truncate font-mono text-xs text-text-muted">{toast.description}</span>
-                )}
+            <div className="flex min-w-0 grow flex-col gap-1">
+                <span className="text-sm font-medium text-text">{toast.title}</span>
+                {toast.description !== undefined && toast.description !== '' && <span className="truncate text-xs text-text-muted">{toast.description}</span>}
                 {(toast.action || toast.output) && (
                     <div className="mt-1 flex items-center gap-2">
                         {toast.action && (

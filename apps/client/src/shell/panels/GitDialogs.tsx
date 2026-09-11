@@ -50,9 +50,9 @@ export function GitPrompt({ open, title, description, field, area, confirmLabel,
         <Dialog.Root open={open} onOpenChange={(next) => !next && onClose()}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className="dialog-popup top-[24vh] w-[420px] p-5">
+                <Dialog.Popup className="dialog-popup w-[420px] p-5">
                     <Dialog.Title className="text-base font-semibold text-text">{title}</Dialog.Title>
-                    {description !== undefined && <p className="mt-1 text-xs text-text-muted">{description}</p>}
+                    {description !== undefined && <p className="mt-1 text-sm text-text-muted">{description}</p>}
                     {field !== undefined && (
                         <label className="mt-4 flex flex-col gap-1.5">
                             <span className={SECTION_LABEL}>{field.label}</span>
@@ -134,9 +134,9 @@ export function GitChoice({ open, title, description, choices, filterFrom = 10, 
         <Dialog.Root open={open} onOpenChange={(next) => !next && onClose()}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className="dialog-popup top-[18vh] w-[420px] p-5">
+                <Dialog.Popup className="dialog-popup w-[420px] p-5">
                     <Dialog.Title className="text-base font-semibold text-text">{title}</Dialog.Title>
-                    {description !== undefined && <p className="mt-1 text-xs text-text-muted">{description}</p>}
+                    {description !== undefined && <p className="mt-1 text-sm text-text-muted">{description}</p>}
                     {choices.length > filterFrom && (
                         <div className="mt-4 flex items-center gap-2 rounded-lg border border-border px-2.5">
                             <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />
@@ -151,7 +151,7 @@ export function GitChoice({ open, title, description, choices, filterFrom = 10, 
                         </div>
                     )}
                     <div className="mt-3 max-h-72 overflow-y-auto">
-                        {shown.length === 0 && <p className="px-1 py-6 text-center text-xs text-text-faint">{empty}</p>}
+                        {shown.length === 0 && <p className="px-1 py-6 text-center text-sm text-text-faint">{empty}</p>}
                         {shown.map((choice) => (
                             <button
                                 key={choice.value}
@@ -161,7 +161,7 @@ export function GitChoice({ open, title, description, choices, filterFrom = 10, 
                                 disabled={choice.disabled}
                                 onClick={() => onPick(choice.value)}
                             >
-                                <span className="truncate font-mono text-xs">{choice.label}</span>
+                                <span className="truncate font-mono text-sm">{choice.label}</span>
                                 {choice.hint !== undefined && <span className={`${MENU_HINT} truncate`}>{choice.hint}</span>}
                             </button>
                         ))}

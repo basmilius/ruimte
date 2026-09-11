@@ -12,7 +12,7 @@ import { Tooltip } from '@/ui/Tooltip';
 /* A tab lifts on hover instead of sinking (`surface-raised` is the step above the panel's ground),
    and the active one carries its mark inside itself, so turning it on moves nothing. */
 const TAB =
-    "group relative inline-flex h-full shrink-0 items-center gap-1 pr-2 pl-3 text-text-muted transition-[background-color,color] duration-100 ease-[ease] hover:bg-surface-raised hover:text-text data-[active=true]:text-text data-[active=true]:after:absolute data-[active=true]:after:inset-x-0 data-[active=true]:after:bottom-0 data-[active=true]:after:h-[2px] data-[active=true]:after:bg-accent data-[active=true]:after:content-['']";
+    "group relative inline-flex h-full shrink-0 items-center gap-1 pr-2 pl-3 text-text-muted hover:bg-surface-raised hover:text-text data-[active=true]:text-text data-[active=true]:after:absolute data-[active=true]:after:inset-x-0 data-[active=true]:after:bottom-0 data-[active=true]:after:h-[2px] data-[active=true]:after:bg-accent data-[active=true]:after:content-['']";
 
 /* The strip clips, so the focus ring goes inside the tab. A diff tab carries the mark that says so
    next to the name, which needs the room. */
@@ -22,7 +22,7 @@ const TAB_OPEN =
 /* The close button is the tab's own: it shows while the pointer is on the tab, while the tab is the
    open one, and while it has focus. */
 const TAB_CLOSE =
-    'inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] text-text-faint opacity-0 transition-[background-color,color] duration-100 ease-[ease] group-hover:opacity-100 hover:bg-surface-active hover:text-text focus-visible:opacity-100 group-data-[active=true]:opacity-100';
+    'inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] text-text-faint opacity-0 group-hover:opacity-100 hover:bg-surface-active hover:text-text focus-visible:opacity-100 group-data-[active=true]:opacity-100';
 
 /*
  * The open files as a strip of tabs, inside the preview panel's own header. A double-click pins a

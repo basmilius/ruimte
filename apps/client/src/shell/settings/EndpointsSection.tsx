@@ -273,7 +273,7 @@ function PairedClients() {
             <Dialog.Root open={target !== null} onOpenChange={(open) => (open ? undefined : setTarget(null))}>
                 <Dialog.Portal>
                     <Dialog.Backdrop className="dialog-backdrop dialog-backdrop-nested" forceRender />
-                    <Dialog.Popup className="dialog-popup dialog-popup-nested top-[24vh] w-[380px] p-5">
+                    <Dialog.Popup className="dialog-popup dialog-popup-nested w-[380px] p-5">
                         <Dialog.Title className="text-base font-semibold text-text">Revoke {target?.label}?</Dialog.Title>
                         <p className="mt-1 text-xs text-text-muted">
                             {target?.current
@@ -326,7 +326,7 @@ function AddMachineDialog({ open, onOpenChange }: { open: boolean; onOpenChange(
         <Dialog.Root open={open} onOpenChange={onOpenChange}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop dialog-backdrop-nested" forceRender />
-                <Dialog.Popup className="dialog-popup dialog-popup-nested top-[24vh] w-[460px] p-5">
+                <Dialog.Popup className="dialog-popup dialog-popup-nested w-[460px] p-5">
                     <Dialog.Title className="text-base font-semibold text-text">Add a machine</Dialog.Title>
                     <p className="mt-1 text-xs text-text-muted">
                         Run Ruimte on the other machine and paste the link it prints. A machine you add here keeps its own sessions, projects and files.

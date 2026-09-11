@@ -26,7 +26,7 @@ export function ViewIconDialog({ view, onClose }: { view: ProjectView; onClose()
                 <ViewGlyph id={view.id} kind={view.kind} icon={chosen} provider={provider} size={20} />
                 <div className="flex min-w-0 flex-col">
                     <span className="truncate text-sm text-text">{view.kind === 'separator' ? 'Separator' : view.name}</span>
-                    <span className="truncate text-xs text-text-faint">{chosen ? 'Picked here' : 'The mark of what it is'}</span>
+                    <span className="truncate text-sm text-text-faint">{chosen ? 'Picked here' : 'The mark of what it is'}</span>
                 </div>
             </div>
 

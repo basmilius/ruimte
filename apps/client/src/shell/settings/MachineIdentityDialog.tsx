@@ -71,7 +71,7 @@ function IdentityForm({ endpointId, label, onOpenChange }: MachineIdentityDialog
                 <MachineGlyph icon={icon} size={32} className="text-text-muted" />
                 <div className="flex min-w-0 flex-col">
                     <span className="truncate text-sm text-text">{name.trim() === '' ? label : name.trim()}</span>
-                    <span className="truncate text-xs text-text-faint">Every client that pairs with this machine sees this name.</span>
+                    <span className="truncate text-sm text-text-faint">Every client that pairs with this machine sees this name.</span>
                 </div>
             </div>
 
@@ -90,7 +90,7 @@ function IdentityForm({ endpointId, label, onOpenChange }: MachineIdentityDialog
                     }
                 }}
             />
-            <p className="mt-1.5 text-xs text-text-faint">Leave it empty to go back to the name the machine answers with on its own.</p>
+            <p className="mt-1.5 text-sm text-text-faint">Leave it empty to go back to the name the machine answers with on its own.</p>
 
             <div className={`${SECTION_LABEL} mt-4 mb-1.5`}>Emoji</div>
             <div className="flex items-center gap-2">
@@ -133,7 +133,7 @@ function IdentityForm({ endpointId, label, onOpenChange }: MachineIdentityDialog
             </div>
 
             {failure && (
-                <p className="mt-3 text-xs text-status-error" role="alert">
+                <p className="mt-3 text-sm text-status-error" role="alert">
                     {failure}
                 </p>
             )}
@@ -154,7 +154,7 @@ export function MachineIdentityDialog(props: MachineIdentityDialogProps) {
         <Dialog.Root open={props.open} onOpenChange={props.onOpenChange}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop dialog-backdrop-nested" forceRender />
-                <Dialog.Popup className="dialog-popup dialog-popup-nested top-[14vh] w-[420px] p-5">
+                <Dialog.Popup className="dialog-popup dialog-popup-nested w-[420px] p-5">
                     <Dialog.Title className="text-base font-semibold text-text">Machine</Dialog.Title>
                     <IdentityForm {...props} />
                 </Dialog.Popup>

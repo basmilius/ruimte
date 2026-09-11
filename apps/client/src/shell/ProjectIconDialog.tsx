@@ -73,13 +73,13 @@ export function ProjectIconDialog({ project, open, onOpenChange }: ProjectIconDi
         <Dialog.Root open={open} onOpenChange={onOpenChange}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className="dialog-popup top-[18vh] w-[420px] p-5">
+                <Dialog.Popup className="dialog-popup w-[420px] p-5">
                     <Dialog.Title className="text-base font-semibold text-text">Project icon</Dialog.Title>
                     <div className="mt-3 flex items-center gap-3">
                         <ProjectGlyph projectId={project.projectId} icon={project.icon} color={project.color} size={32} />
                         <div className="flex min-w-0 flex-col">
                             <span className="truncate text-sm text-text">{project.name}</span>
-                            <span className="truncate text-xs text-text-faint">
+                            <span className="truncate text-sm text-text-faint">
                                 {project.icon.kind === 'image' ? `From ${project.icon.value}` : chosen ? 'Picked here' : 'The first letter of the name'}
                             </span>
                         </div>
@@ -124,7 +124,7 @@ export function ProjectIconDialog({ project, open, onOpenChange }: ProjectIconDi
                     </div>
 
                     {failure && (
-                        <p className="mt-3 text-xs text-status-error" role="alert">
+                        <p className="mt-3 text-sm text-status-error" role="alert">
                             {failure}
                         </p>
                     )}
@@ -152,7 +152,7 @@ export function ProjectIconDialog({ project, open, onOpenChange }: ProjectIconDi
                             Done
                         </Button>
                     </div>
-                    {!project.folder && <p className="mt-2 text-xs text-text-faint">A canvas without a folder has nowhere to keep an image.</p>}
+                    {!project.folder && <p className="mt-2 text-sm text-text-faint">A canvas without a folder has nowhere to keep an image.</p>}
                 </Dialog.Popup>
             </Dialog.Portal>
         </Dialog.Root>
