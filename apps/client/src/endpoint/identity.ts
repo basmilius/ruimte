@@ -1,6 +1,7 @@
 import type { EndpointInfo } from '@ruimte/contracts';
+import { forgetEndpoint } from '@/endpoint';
 import { rekeyLastProject } from '@/project/last-project';
-import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
+import { LOCAL_ENDPOINT_ID, endpointById, endpointForDaemon, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useToasts } from '@/state/toasts';
 import { pool, transportFor } from '@/transport';
 import { clientKey } from './client-key';
@@ -20,13 +21,34 @@ export const noteDaemonIdentity = (endpointId: string, info: EndpointInfo): stri
 };
 
 const settleId = (endpointId: string, daemonId: string): string => {
-    const endpoint = useEndpoints.getState().endpoints.find((entry) => entry.id === endpointId);
-    if (!endpoint || endpoint.daemonId === daemonId) {
+    const endpoint = endpointById(endpointId);
+    if (!endpoint) {
         return endpointId;
+    }
+    /*
+     * One row per daemon. Two rows for one machine would fill with the same sessions, chats and
+     * projects under two keys, and forgetting one of them would look like forgetting the machine.
+     * Only a row that is free to take this id looks for a twin: a paired row that answers as another
+     * daemon is the mismatch below, and adopting anything there is what pinning exists to prevent.
+     */
+    const twin = endpoint.daemonId === null || endpoint.daemonId === daemonId ? endpointForDaemon(daemonId, endpoint.id) : null;
+    if (twin?.id === LOCAL_ENDPOINT_ID) {
+        // The address this row was keyed on is this machine's own, and the local row reaches it without a credential.
+        void dropDuplicate(twin, endpoint);
+        return twin.id;
     }
     // The local row keeps its reserved id: the page's own origin is a daemon only in production, and a Vite server in dev.
     if (endpoint.id === LOCAL_ENDPOINT_ID || endpoint.id === daemonId) {
-        useEndpoints.getState().learnDaemonId(endpoint.id, daemonId);
+        if (endpoint.daemonId !== daemonId) {
+            useEndpoints.getState().learnDaemonId(endpoint.id, daemonId);
+        }
+        if (twin) {
+            // A machine paired over its LAN address before this row said who it is turns out to be this one.
+            void dropDuplicate(endpoint, twin);
+        }
+        return endpoint.id;
+    }
+    if (endpoint.daemonId === daemonId) {
         return endpoint.id;
     }
     if (endpoint.daemonId === null) {
@@ -34,7 +56,11 @@ const settleId = (endpointId: string, daemonId: string): string => {
         // The socket moves with the row: it is the one that just answered, and closing it would drop what is attached to it.
         pool.rekey(endpoint.id, daemonId, () => socketAddressFor(daemonId));
         rekeyTicket(endpoint.id, daemonId);
+        // The row that just answered keeps the address and the credential that work; `rekeyEndpoint` drops the row that held the id.
         useEndpoints.getState().rekeyEndpoint(endpoint.id, daemonId);
+        if (twin) {
+            reportOneMachine(endpoint, twin);
+        }
         return daemonId;
     }
     useEndpoints.getState().noteMismatch(endpoint.id, daemonId);
@@ -45,6 +71,22 @@ const settleId = (endpointId: string, daemonId: string): string => {
         description: `${endpoint.httpBaseUrl} is a different daemon than the one this client paired with. Pair again to talk to it.`
     });
     return endpoint.id;
+};
+
+/* The row that goes, with everything this client kept under its key; a row being worked on sends the app home first. */
+const dropDuplicate = async (kept: Endpoint, dropped: Endpoint): Promise<void> => {
+    await forgetEndpoint(dropped.id);
+    reportOneMachine(kept, dropped);
+};
+
+/* A row that disappears without a word reads as a machine that was forgotten, so say which two turned out to be one. */
+const reportOneMachine = (kept: Endpoint, dropped: Endpoint): void => {
+    useToasts.getState().show({
+        id: `endpoint-merged-${dropped.id}`,
+        kind: 'success',
+        title: `${dropped.label} is already in the list`,
+        description: `${dropped.httpBaseUrl} is another address of the daemon listed as ${kept.label}, so this client keeps one row for that machine.`
+    });
 };
 
 /*

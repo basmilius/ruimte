@@ -1,15 +1,16 @@
-import type { AuthSession, EndpointInfo } from '@ruimte/contracts';
+import { AuthChallengeResultSchema, type AuthSession, type EndpointInfo } from '@ruimte/contracts';
 import { useBrowser } from '@/browser/registry';
 import { projectClient } from '@/project';
 import { forgetCachedList } from '@/project/list';
 import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
-import { LOCAL_ENDPOINT_ID, activeEndpoint, parsePairingUrl, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { LOCAL_ENDPOINT_ID, activeEndpoint, endpointForDaemon, parsePairingUrl, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProjectList } from '@/state/project-list';
 import { useProject } from '@/state/project';
 import { useProvidersStore } from '@/state/providers';
 import { useServers } from '@/state/server';
 import { useSessions } from '@/state/sessions';
+import { useToasts } from '@/state/toasts';
 import { useUsageStore } from '@/state/usage';
 import { pool, transport } from '@/transport';
 import { dropMachine } from '@/transport/connections';
@@ -25,12 +26,17 @@ import { socketAddressFor } from './handshake';
  *
  * Pinning the daemon's own key happens here too, over the one exchange nobody can be in the middle
  * of without the pairing token: from now on that machine has to sign to be believed.
+ *
+ * A daemon lands in the list once. Pairing with one that is already there is that machine on a
+ * second address, and its row takes the address and the credential the pairing just handed out.
  */
 export const pairEndpoint = async (pairingUrl: string): Promise<Endpoint> => {
     const parsed = parsePairingUrl(pairingUrl);
     if (!parsed) {
         throw new Error('That is not a pairing link; it looks like http://machine:4210/pair#token');
     }
+    // Asked before the one-time token is spent, so a link for this machine's own daemon leaves no paired client behind.
+    refuseOwnDaemon(await daemonAt(parsed.httpBaseUrl));
     const key = await clientKey();
     const response = await fetch(`${parsed.httpBaseUrl}/auth/pair`, {
         method: 'POST',
@@ -44,6 +50,9 @@ export const pairEndpoint = async (pairingUrl: string): Promise<Endpoint> => {
     if (key && !endpoint.publicKey && !sessionToken) {
         throw new Error('That daemon answered with neither a key nor a token; there is nothing to talk to it with');
     }
+    // Again with the id the daemon itself put in the pairing answer, for a daemon whose address said nothing.
+    refuseOwnDaemon(endpoint.id);
+    const known = endpointForDaemon(endpoint.id);
     // Keyed on the daemon's own id, so pairing with a machine that is already in the list under another address moves that row.
     const record: Endpoint = {
         id: endpoint.id,
@@ -60,7 +69,41 @@ export const pairEndpoint = async (pairingUrl: string): Promise<Endpoint> => {
     useEndpoints.getState().add(record);
     // Pairing again with a machine that already has a socket hands out a new credential, so the socket follows the address it came on.
     pool.readdress(record.id, () => socketAddressFor(record.id));
+    if (known) {
+        useToasts.getState().show({
+            id: `endpoint-merged-${record.id}`,
+            kind: 'success',
+            title: `${known.label} is already in the list`,
+            description: `That link is another address of the same daemon, so this client moved its row to ${record.httpBaseUrl} rather than listing the machine twice.`
+        });
+    }
     return record;
+};
+
+/*
+ * Who answers at an address, asked before anything is spent: the challenge route is what a daemon
+ * tells anybody. Null for a daemon from before that route, which is answered for after the pairing.
+ */
+const daemonAt = async (httpBaseUrl: string): Promise<string | null> => {
+    const answer = await fetch(`${httpBaseUrl}/auth/challenge`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })
+        .then((response) => (response.ok ? (response.json() as Promise<unknown>) : null))
+        .catch(() => null);
+    const parsed = AuthChallengeResultSchema.safeParse(answer);
+    return parsed.success ? parsed.data.daemon.id : null;
+};
+
+/*
+ * The one machine a pairing cannot add. The daemon that served this page is already in the list as
+ * the local row, which reaches it over this page's own origin, without a credential and without a
+ * row that can be forgotten; a second row for it would carry the same sessions and projects under a
+ * key of its own. Updating the local row with the pasted address is not it either: in dev that
+ * origin is Vite, and the address it answers on is the way back to the daemon behind it.
+ */
+const refuseOwnDaemon = (daemonId: string | null): void => {
+    const known = daemonId === null ? null : endpointForDaemon(daemonId);
+    if (known?.id === LOCAL_ENDPOINT_ID) {
+        throw new Error(`That link is for the daemon that served this page; it is already in the list as ${known.label}.`);
+    }
 };
 
 /*

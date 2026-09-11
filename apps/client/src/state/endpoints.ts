@@ -38,6 +38,7 @@ interface EndpointsStore {
     activeId: string;
     /* Rows whose address answered as another daemon, and the id it answered with; a warning, never a change. */
     mismatched: Record<string, string>;
+    /* A machine that just paired. One daemon is one row, so a pairing with a machine already listed moves that row. */
     add(endpoint: Endpoint): void;
     remove(id: string): void;
     setActive(id: string): void;
@@ -47,7 +48,7 @@ interface EndpointsStore {
     pinDaemonKey(id: string, publicKey: string): void;
     /* The session token is not needed any more; this client signs for its credential now. */
     clearToken(id: string): void;
-    /* Moves a row onto the id its daemon answers with; the pre-phase-1 rows were keyed on an address. */
+    /* Moves a row onto the id its daemon answers with, over a row already under that id; the pre-phase-1 rows were keyed on an address. */
     rekeyEndpoint(oldId: string, newId: string): void;
     noteMismatch(id: string, daemonId: string): void;
 }
@@ -124,7 +125,11 @@ export const useEndpoints = create<EndpointsStore>((set, get) => ({
     ...read(),
     mismatched: {},
     add(endpoint) {
-        const endpoints = [...get().endpoints.filter((entry) => entry.id !== endpoint.id), endpoint];
+        const known = get().endpoints.find((entry) => entry.id === endpoint.id);
+        /* The row keeps its place in the list and takes the address and the credential the pairing
+           handed out. The key it pinned survives a pairing that brings none, which is what a client without ed25519 does. */
+        const row = known ? { ...endpoint, daemonPublicKey: endpoint.daemonPublicKey ?? known.daemonPublicKey } : endpoint;
+        const endpoints = known ? get().endpoints.map((entry) => (entry.id === row.id ? row : entry)) : [...get().endpoints, row];
         set({ endpoints });
         persist({ endpoints, activeId: get().activeId });
     },
@@ -172,9 +177,15 @@ export const useEndpoints = create<EndpointsStore>((set, get) => ({
             return;
         }
         // The row that just answered carries the address and the token that work, so it wins from an older row under that id.
+        const replaced = get().endpoints.find((entry) => entry.id === newId);
         const endpoints = get()
             .endpoints.filter((entry) => entry.id !== newId)
-            .map((entry) => (entry.id === oldId ? { ...entry, id: newId, daemonId: newId } : entry));
+            .map((entry) =>
+                entry.id === oldId
+                    ? // Trust on first use is about the daemon, not about the row, so the key the older row pinned outlives it.
+                      { ...entry, id: newId, daemonId: newId, daemonPublicKey: entry.daemonPublicKey ?? replaced?.daemonPublicKey ?? null }
+                    : entry
+            );
         const activeId = get().activeId === oldId ? newId : get().activeId;
         const { [oldId]: _gone, ...mismatched } = get().mismatched;
         set({ endpoints, activeId, mismatched });
@@ -187,6 +198,14 @@ export const useEndpoints = create<EndpointsStore>((set, get) => ({
 
 /* One machine by id, for code that is about a row rather than about the machine being worked on. */
 export const endpointById = (id: string): Endpoint | null => useEndpoints.getState().endpoints.find((entry) => entry.id === id) ?? null;
+
+/*
+ * The row this daemon is, whatever address it sits on. Only the local row holds a daemon id that is
+ * not its own key, so a match is either the row keyed on that id or the machine this page came from.
+ * `exceptId` leaves the row asking out of it, which is what makes it a duplicate check.
+ */
+export const endpointForDaemon = (daemonId: string, exceptId?: string): Endpoint | null =>
+    useEndpoints.getState().endpoints.find((entry) => entry.id !== exceptId && (entry.id === daemonId || entry.daemonId === daemonId)) ?? null;
 
 export const activeEndpoint = (): Endpoint => {
     const { endpoints, activeId } = useEndpoints.getState();
