@@ -71,6 +71,12 @@ drag-to-Applications window without a warning, and the app it hands over carries
 Notarizing the image itself would change its bytes after `latest-mac.yml` records their hash, so
 leave it alone.
 
+A published release does not reach the app at once. electron-updater reads
+`https://github.com/basmilius/ruimte/releases.atom`, and GitHub serves that feed from a cache: for
+a few minutes after publishing, a check still answers that the app is up to date. The same cache is
+why the feed can answer 404 just after a repository is made public. Wait and check again before
+going looking for a bug in the updater.
+
 ## The secrets in CI
 
 `.github/workflows/release.yml` notarizes when `APPLE_API_KEY_P8` is set, and only signs when it is
