@@ -45,10 +45,12 @@ export interface Access {
 
 type AccessDecision = { ok: true; access: Access } | { ok: false; status: number; reason: string };
 
-interface AccessOptions {
+export interface AccessOptions {
     allowedOrigins: string[];
     // A daemon told to accept only tokens, loopback included.
     requireToken: boolean;
+    // What turns a connection ticket back into a session; the handshake that handed it out.
+    tickets: { ticketSession(ticket: string): string | null };
 }
 
 /* Decides whether an upgrade or an API request may proceed and as whom. */
@@ -61,7 +63,8 @@ export const decideAccess = async (request: Request, remoteAddress: string, stor
     const header = request.headers.get('authorization') ?? '';
     const token = header.startsWith('Bearer ') ? header.slice(7).trim() : (url.searchParams.get('token') ?? '');
     if (token) {
-        const sessionId = await store.authenticate(token);
+        // A ticket first: it is what a client that signs for itself carries, and it costs no disk.
+        const sessionId = options.tickets.ticketSession(token) ?? (await store.authenticate(token));
         if (sessionId) {
             return { ok: true, access: { reachability, sessionId } };
         }

@@ -9,7 +9,8 @@ import { ProjectStore } from './project-store.ts';
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]);
 const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
 
-const OPTIONS = { allowedOrigins: [], requireToken: false };
+// No handshake in these tests, so a credential is only ever a session token.
+const OPTIONS = { allowedOrigins: [], requireToken: false, tickets: { ticketSession: () => null } };
 
 let root: string;
 let folder: string;
@@ -78,8 +79,8 @@ describe('the icon route', () => {
         const wrong = await ask(`${PROJECTS_PATH}/${projectId}/icon?v=1&token=nope`, '192.168.1.20');
         expect(wrong.status).toBe(401);
 
-        const paired = await auth.pair(auth.issuePairingToken(), 'a laptop');
-        const allowed = await ask(`${PROJECTS_PATH}/${projectId}/icon?v=1&token=${paired!.sessionToken}`, '192.168.1.20');
+        const paired = await auth.pair(auth.issuePairingToken(), { label: 'a laptop' });
+        const allowed = await ask(`${PROJECTS_PATH}/${projectId}/icon?v=1&token=${paired!.sessionToken!}`, '192.168.1.20');
         expect(allowed.status).toBe(200);
     });
 

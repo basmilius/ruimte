@@ -7,7 +7,8 @@ import { AuthStore } from '../auth/auth-store.ts';
 import { ATTACHMENTS_PATH, handleAttachmentRequest } from './attachment-route.ts';
 import { AttachmentStore } from './attachment-store.ts';
 
-const OPTIONS = { allowedOrigins: [], requireToken: false };
+// No handshake in these tests, so a credential is only ever a session token.
+const OPTIONS = { allowedOrigins: [], requireToken: false, tickets: { ticketSession: () => null } };
 
 let root: string;
 let auth: AuthStore;
@@ -68,8 +69,8 @@ describe('the attachment route', () => {
     test('a client from elsewhere needs the token the socket needs', async () => {
         expect((await ask('node-1', png.id, '192.168.1.20')).status).toBe(401);
 
-        const paired = await auth.pair(auth.issuePairingToken(), 'a laptop');
-        const url = new URL(`http://127.0.0.1:4210${ATTACHMENTS_PATH}/node-1/${png.id}?token=${paired!.sessionToken}`);
+        const paired = await auth.pair(auth.issuePairingToken(), { label: 'a laptop' });
+        const url = new URL(`http://127.0.0.1:4210${ATTACHMENTS_PATH}/node-1/${png.id}?token=${paired!.sessionToken!}`);
         const allowed = await handleAttachmentRequest(new Request(url), url, '192.168.1.20', auth, OPTIONS, lookup);
         expect(allowed.status).toBe(200);
     });

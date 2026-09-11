@@ -1,11 +1,12 @@
 import { dirname, join, normalize, resolve } from 'node:path';
 import type { ServerWebSocket } from 'bun';
-import { PairPayloadSchema, type AgentKind, type ServerFrame } from '@ruimte/contracts';
+import { AuthTicketPayloadSchema, PairPayloadSchema, type AgentKind, type ServerFrame } from '@ruimte/contracts';
 import { AgentStore } from './agents/agent-store.ts';
 import { OutputGate } from './backpressure.ts';
 import { decideAccess, isLoopbackAddress, reachabilityOf } from './auth/access.ts';
 import { pairingUrl } from './cli/pairing.ts';
 import { AuthStore } from './auth/auth-store.ts';
+import { Handshake } from './auth/handshake.ts';
 import { NoRelay, type Relay } from './auth/relay.ts';
 import { HOOKS_PATH, handleHookRequest } from './agents/hook-receiver.ts';
 import { defaultHookPaths, installHooks } from './agents/install.ts';
@@ -17,7 +18,7 @@ import { CONTEXT_PATH, ContextStore } from './context/context-store.ts';
 import { ChatStore } from './chat/chat-store.ts';
 import type { ServerConfig } from './config.ts';
 import { Dispatcher, sendEvent, type ClientAccess, type ClientConnection } from './dispatcher.ts';
-import { readOrCreateEndpointId } from './endpoint-id.ts';
+import { readOrCreateEndpointIdentity } from './endpoint-id.ts';
 import { VERSION } from './version.ts';
 import { registerAuthHandlers } from './handlers/auth.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
@@ -43,6 +44,9 @@ import { SnapshotStore, scheduleSnapshots } from './sessions/snapshot-store.ts';
 import { UsageMonitor } from './usage/limits/monitor.ts';
 import { UsageService } from './usage/usage-service.ts';
 
+// A client on another origin pairs and signs in from its own page, so the auth routes answer preflights and open CORS.
+const AUTH_CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST', 'access-control-allow-headers': 'content-type' };
+
 // Inside a `bun build --compile` binary the sources live on a virtual file system, so paths next to the source mean nothing.
 const compiled = import.meta.dir.startsWith('/$bunfs') || import.meta.dir.includes('~BUN');
 
@@ -63,10 +67,11 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const binDir = compiled ? dirname(process.execPath) : resolve(import.meta.dir, '..', 'bin');
     const contextUrl = `http://127.0.0.1:${config.port}${CONTEXT_PATH}`;
 
-    const endpointId = await readOrCreateEndpointId(config.home);
+    const identity = await readOrCreateEndpointIdentity(config.home);
     const auth = new AuthStore(config.home);
+    const handshake = new Handshake(auth, identity);
     const relay: Relay = new NoRelay();
-    const access = { allowedOrigins: config.allowedOrigins, requireToken: config.requireToken };
+    const access = { allowedOrigins: config.allowedOrigins, requireToken: config.requireToken, tickets: handshake };
 
     const snapshots = new SnapshotStore(config.home);
     const manager = new SessionManager({
@@ -113,11 +118,13 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerProjectHandlers(dispatcher, projects);
     registerDrawingHandlers(dispatcher, drawings);
     registerAuthHandlers(dispatcher, auth, {
-        id: endpointId,
+        id: identity.id,
         label: config.label,
         version: VERSION,
+        publicKey: identity.publicKey,
         pairingUrl: () => pairingUrl(config.host, server.port ?? config.port, auth.issuePairingToken()),
         disconnect: (sessionId) => {
+            handshake.revoke(sessionId);
             for (const ws of connections.keys()) {
                 if (ws.data.sessionId === sessionId) {
                     ws.close(4001, 'Access revoked');
@@ -152,12 +159,13 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     let nextClientId = 1;
 
     const endpointInfo = (reachability: ClientAccess['reachability'], authenticated: boolean) => ({
-        id: endpointId,
+        id: identity.id,
         label: config.label,
         platform: process.platform,
         version: VERSION,
         reachability,
-        authenticated
+        authenticated,
+        publicKey: identity.publicKey
     });
 
     const server = Bun.serve<ClientAccess>({
@@ -183,23 +191,55 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }
 
             if (url.pathname === '/auth/pair') {
-                // A client on another origin pairs from its own page, so this one route answers preflights and opens CORS.
-                const cors = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST', 'access-control-allow-headers': 'content-type' };
                 if (request.method === 'OPTIONS') {
-                    return new Response(null, { status: 204, headers: cors });
+                    return new Response(null, { status: 204, headers: AUTH_CORS });
                 }
                 if (request.method !== 'POST') {
-                    return new Response('Method not allowed', { status: 405, headers: cors });
+                    return new Response('Method not allowed', { status: 405, headers: AUTH_CORS });
                 }
                 const parsed = PairPayloadSchema.safeParse(await request.json().catch(() => null));
                 if (!parsed.success) {
-                    return new Response('Bad pairing request', { status: 400, headers: cors });
+                    return new Response('Bad pairing request', { status: 400, headers: AUTH_CORS });
                 }
-                const paired = await auth.pair(parsed.data.token, parsed.data.label);
+                const paired = await auth.pair(parsed.data.token, {
+                    label: parsed.data.label,
+                    ...(parsed.data.publicKey ? { publicKey: parsed.data.publicKey } : {})
+                });
                 if (!paired) {
-                    return new Response('That pairing link is used up or stale; ask for a new one', { status: 401, headers: cors });
+                    return new Response('That pairing link is used up or stale; ask for a new one', { status: 401, headers: AUTH_CORS });
                 }
-                return Response.json({ sessionToken: paired.sessionToken, endpoint: endpointInfo(reachabilityOf(remote), true) }, { headers: cors });
+                return Response.json(
+                    { ...(paired.sessionToken ? { sessionToken: paired.sessionToken } : {}), endpoint: endpointInfo(reachabilityOf(remote), true) },
+                    { headers: AUTH_CORS }
+                );
+            }
+
+            if (url.pathname === '/auth/challenge') {
+                if (request.method === 'OPTIONS') {
+                    return new Response(null, { status: 204, headers: AUTH_CORS });
+                }
+                if (request.method !== 'POST') {
+                    return new Response('Method not allowed', { status: 405, headers: AUTH_CORS });
+                }
+                return Response.json(handshake.challenge(), { headers: AUTH_CORS });
+            }
+
+            if (url.pathname === '/auth/ticket') {
+                if (request.method === 'OPTIONS') {
+                    return new Response(null, { status: 204, headers: AUTH_CORS });
+                }
+                if (request.method !== 'POST') {
+                    return new Response('Method not allowed', { status: 405, headers: AUTH_CORS });
+                }
+                const parsed = AuthTicketPayloadSchema.safeParse(await request.json().catch(() => null));
+                if (!parsed.success) {
+                    return new Response('Bad ticket request', { status: 400, headers: AUTH_CORS });
+                }
+                const ticket = await handshake.redeem(parsed.data);
+                if (!ticket) {
+                    return new Response('That signature does not open anything here; pair again', { status: 401, headers: AUTH_CORS });
+                }
+                return Response.json(ticket, { headers: AUTH_CORS });
             }
 
             if (url.pathname === '/ws') {

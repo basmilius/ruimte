@@ -59,7 +59,14 @@ import {
     WorktreeListResultSchema,
     WorktreeRemovePayloadSchema
 } from './git.ts';
-import { AuthRevokePayloadSchema, AuthSessionsResultSchema, EndpointInfoSchema, PairingTokenResultSchema } from './auth.ts';
+import {
+    AuthRegisterKeyPayloadSchema,
+    AuthRegisterKeyResultSchema,
+    AuthRevokePayloadSchema,
+    AuthSessionsResultSchema,
+    EndpointInfoSchema,
+    PairingTokenResultSchema
+} from './auth.ts';
 import { ContextSetPayloadSchema } from './context.ts';
 import {
     DrawingChangedEventSchema,
@@ -191,6 +198,7 @@ export const REQUEST_SCHEMAS = {
     'auth.sessions': { payload: EmptySchema, result: AuthSessionsResultSchema },
     'auth.revoke': { payload: AuthRevokePayloadSchema, result: EmptySchema },
     'auth.pairingToken': { payload: EmptySchema, result: PairingTokenResultSchema },
+    'auth.registerKey': { payload: AuthRegisterKeyPayloadSchema, result: AuthRegisterKeyResultSchema },
     'chat.kill': { payload: ChatTargetPayloadSchema, result: EmptySchema },
     'chat.list': { payload: EmptySchema, result: ChatListResultSchema }
 } as const satisfies Record<string, { payload: z.ZodType; result: z.ZodType }>;

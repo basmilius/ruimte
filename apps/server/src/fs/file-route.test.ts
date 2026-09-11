@@ -11,7 +11,8 @@ const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
 // An MP4 head (a box length, `ftyp`, the brand) with enough bytes behind it to ask for a slice of.
 const MP4 = Buffer.concat([Buffer.from([0x00, 0x00, 0x00, 0x20]), Buffer.from('ftyp'), Buffer.from('isom'), Buffer.alloc(100, 0x2a)]);
 
-const OPTIONS = { allowedOrigins: [], requireToken: false };
+// No handshake in these tests, so a credential is only ever a session token.
+const OPTIONS = { allowedOrigins: [], requireToken: false, tickets: { ticketSession: () => null } };
 
 let root: string;
 let auth: AuthStore;
@@ -104,8 +105,8 @@ describe('the file route', () => {
         const refused = await handleFsFileRequest(new Request(url), url, '192.168.1.20', auth, OPTIONS);
         expect(refused.status).toBe(401);
 
-        const paired = await auth.pair(auth.issuePairingToken(), 'a laptop');
-        url.searchParams.set('token', paired!.sessionToken);
+        const paired = await auth.pair(auth.issuePairingToken(), { label: 'a laptop' });
+        url.searchParams.set('token', paired!.sessionToken!);
         const allowed = await handleFsFileRequest(new Request(url), url, '192.168.1.20', auth, OPTIONS);
         expect(allowed.status).toBe(200);
     });
