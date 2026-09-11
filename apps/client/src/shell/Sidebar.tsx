@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
 import {
@@ -26,10 +26,12 @@ import { askDeleteView, askViewIcon, duplicateViewOf, putOnCanvas, revealNode, s
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
-import { useEndpointId } from '@/state/keys';
 import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
 import { useProject } from '@/state/project';
+import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
+import { WorkspaceStoresContext } from '@/state/workspace-stores';
+import { focusWorkspace, workspaceById } from '@/transport/connections';
 import {
     buildSidebar,
     isSessionKind,
@@ -37,9 +39,10 @@ import {
     rowOrder,
     type SidebarNode,
     type SidebarNodeRow,
-    type SidebarView,
-    type SidebarViewRow
+    type SidebarViewRow,
+    type SidebarWorkspace
 } from '@/shell/sidebar-rows';
+import { useSidebarSources } from '@/shell/sidebar-source';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { Favicon } from '@/browser/Favicon';
 import { resetTitle } from '@/nodes/node-host';
@@ -196,7 +199,11 @@ function NodeRow({ row, tabbable, onFocus, onArrow }: RowProps & { row: SidebarN
                 </span>
                 <span className="min-w-0 truncate">{node.title}</span>
                 {/* A row that stands outside its own view says where the node is, so the jump is no surprise. */}
-                {row.viewName && <span className="min-w-0 shrink truncate text-xs text-text-faint">{row.viewName}</span>}
+                {row.viewName && (
+                    <span className="min-w-0 shrink truncate text-xs text-text-faint">
+                        {row.projectName ? `${row.projectName} · ${row.viewName}` : row.viewName}
+                    </span>
+                )}
                 <span className="grow" />
                 {node.draft && (
                     <Tooltip label="Unsent draft">
@@ -384,13 +391,23 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
     );
 }
 
+/*
+ * A row acts on the project it is a row of. Pressing it puts that workspace in focus first, so the
+ * menus, the rename and the drop that follow read it as "the project in front of me"; the stores it
+ * provides are what the row itself reads, which is another project's selection than the focused one.
+ */
+function RowScope({ workspaceId, children }: { workspaceId: string; children: ReactNode }) {
+    const stores = workspaceById(workspaceId)?.stores ?? null;
+    return (
+        <div className="contents" onPointerDownCapture={() => focusWorkspace(workspaceId)} onFocusCapture={() => focusWorkspace(workspaceId)}>
+            {stores === null ? children : <WorkspaceStoresContext.Provider value={stores}>{children}</WorkspaceStoresContext.Provider>}
+        </div>
+    );
+}
+
 export function Sidebar() {
-    const views = useDocument((s) => s.views);
-    const activeViewId = useDocument((s) => s.activeViewId);
-    const canvasViewId = useCanvas((s) => s.viewId);
-    const order = useCanvas(useShallow((s) => s.order));
-    const nodes = useCanvas((s) => s.nodes);
-    const endpointId = useEndpointId();
+    const sources = useSidebarSources();
+    const scope = useSettings((s) => s.sidebarScope);
     const sessions = useSessions((s) => s.byKey);
     const chats = useChats((s) => s.byKey);
     const drafts = useDrafts((s) => s.ids);
@@ -403,39 +420,48 @@ export function Sidebar() {
     const listRef = useRef<HTMLDivElement>(null);
     /* Which row the arrows move from, and the only row Tab reaches. */
     const [rovingId, setRovingId] = useState<string | null>(null);
-    const [dragging, setDragging] = useState<string | null>(null);
+    /* The row being dragged and the list it came out of, so no other list draws a gap for it. */
+    const [dragging, setDragging] = useState<{ sectionId: string; viewId: string } | null>(null);
     /* The gap the row would drop into, drawn as a line between two rows. */
     const [insertAt, setInsertAt] = useState<number | null>(null);
 
-    const sidebarViews = useMemo<SidebarView[]>(
+    const workspaces = useMemo<SidebarWorkspace[]>(
         () =>
-            views.map((view) => {
-                // The canvas store owns the view it holds, so its nodes are the fresher ones. It pairs on
-                // the store's own view, not on the active one, which flips a tick before the canvas follows.
-                const live = isCanvasView(view) ? (view.id === canvasViewId ? order.map((id) => nodes[id]!) : view.nodes) : [];
-                const asRow = (node: StatusOf & { title: string; provider?: AgentKind }): SidebarNode => ({
-                    id: node.id,
-                    title: node.title,
-                    kind: node.kind,
-                    provider: node.provider ?? null,
-                    status: nodeStatus(node, sessions, chats, endpointId) ?? null,
-                    draft: node.kind === 'chat' && drafts.includes(node.id)
-                });
-                const provider = view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : undefined;
-                return {
-                    id: view.id,
-                    name: view.name ?? '',
-                    kind: view.kind,
-                    icon: (view.kind === 'separator' ? null : view.icon) ?? null,
-                    provider: provider ?? null,
-                    nodes: live.filter((node) => isSessionKind(node.kind)).map(asRow),
-                    // Only a session view is a node of its own; a separator and a drawing have no status.
-                    self: isSessionView(view) ? asRow({ id: view.id, kind: view.kind, title: view.name, provider }) : null
-                };
-            }),
-        [views, canvasViewId, order, nodes, sessions, chats, drafts, endpointId]
+            sources.map((source) => ({
+                id: source.id,
+                name: source.name,
+                focused: source.focused,
+                // A page owns the main column, so no view is showing and no row in the list is the active one.
+                activeViewId: usageOpen ? null : source.activeViewId,
+                views: source.views.map((view) => {
+                    // The canvas store owns the view it holds, so its nodes are the fresher ones. It pairs on
+                    // the store's own view, not on the active one, which flips a tick before the canvas follows.
+                    const live = isCanvasView(view) ? (view.id === source.canvasViewId ? source.order.map((id) => source.nodes[id]!) : view.nodes) : [];
+                    const asRow = (node: StatusOf & { title: string; provider?: AgentKind }): SidebarNode => ({
+                        id: node.id,
+                        title: node.title,
+                        kind: node.kind,
+                        provider: node.provider ?? null,
+                        status: nodeStatus(node, sessions, chats, source.endpointId) ?? null,
+                        draft: node.kind === 'chat' && drafts.includes(node.id)
+                    });
+                    const provider = view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : undefined;
+                    return {
+                        id: view.id,
+                        name: view.name ?? '',
+                        kind: view.kind,
+                        icon: (view.kind === 'separator' ? null : view.icon) ?? null,
+                        provider: provider ?? null,
+                        nodes: live.filter((node) => isSessionKind(node.kind)).map(asRow),
+                        // Only a session view is a node of its own; a separator and a drawing have no status.
+                        self: isSessionView(view) ? asRow({ id: view.id, kind: view.kind, title: view.name, provider }) : null
+                    };
+                })
+            })),
+        [sources, sessions, chats, drafts, usageOpen]
     );
 
+    const activeViewId = workspaces.find((workspace) => workspace.focused)?.activeViewId ?? null;
     const expandedIds = useMemo(() => new Set(expanded ?? (activeViewId === null ? [] : [activeViewId])), [expanded, activeViewId]);
 
     /* The list seeds itself with the canvas that is up, once per project. From there the set is the
@@ -445,22 +471,23 @@ export function Sidebar() {
             useUi.getState().setSidebarExpanded([activeViewId]);
         }
     }, [expanded, activeViewId]);
-    // A page owns the main column, so no view is showing and no row in the list is the active one.
-    const sections = buildSidebar({ views: sidebarViews, activeViewId: usageOpen ? null : activeViewId, expandedIds });
+    const sections = buildSidebar({ workspaces, scope, expandedIds });
     const rows = rowOrder(sections);
     const roving = rovingId !== null && rows.includes(rovingId) ? rovingId : (rows[0] ?? null);
+    const empty = workspaces.every((workspace) => workspace.views.length === 0);
 
-    const onDrag = (id: string | null): void => {
-        setDragging(id);
-        if (id === null) {
+    const onDrag = (drag: { sectionId: string; viewId: string } | null): void => {
+        setDragging(drag);
+        if (drag === null) {
             setInsertAt(null);
         }
     };
 
-    /* A drop writes the order into the file. The gap was read off the list as it stands, so taking
-       the row out of it first moves every gap below it up by one. */
+    /* A drop writes the order into the file of the project the row came from: pressing the row put
+       its workspace in focus, so the document store here is that project's. The gap was read off the
+       list as it stands, so taking the row out of it first moves every gap below it up by one. */
     const dropAt = (index: number): void => {
-        const id = dragging;
+        const id = dragging?.viewId ?? null;
         onDrag(null);
         const from = id === null ? -1 : useDocument.getState().views.findIndex((view) => view.id === id);
         if (id === null || from === -1) {
@@ -500,13 +527,13 @@ export function Sidebar() {
                 </div>
 
                 <div ref={listRef} className="mt-2 min-h-0 grow overflow-auto px-2">
-                    {sidebarViews.length === 0 ? (
+                    {empty ? (
                         <EmptyState>{hasProject ? 'This project has no views yet.' : 'No project is open yet.'}</EmptyState>
                     ) : (
                         sections.map((section) => {
-                            // Only the list of views takes a drop; the nodes under a canvas are not places
-                            // a view can go.
-                            const reorderable = section.id === 'views' && dragging !== null;
+                            // Only the list of views takes a drop, and only the one the row came out of; the
+                            // nodes under a canvas are not places a view can go.
+                            const reorderable = section.kind === 'views' && dragging?.sectionId === section.id;
                             return (
                                 <div
                                     key={section.id}
@@ -528,21 +555,24 @@ export function Sidebar() {
                                             : undefined
                                     }
                                 >
-                                    <div className={`${SECTION_LABEL} flex items-center gap-1.5 px-2 py-1`}>
-                                        {section.id === 'needs-you' && <StatusDot status="needs-you" plain />}
-                                        {section.label}
-                                        <span className="ml-auto tabular-nums">{section.rows.length}</span>
-                                    </div>
+                                    {section.label !== null && (
+                                        <div className={`${SECTION_LABEL} flex items-center gap-1.5 px-2 py-1`}>
+                                            {section.kind === 'needs-you' && <StatusDot status="needs-you" plain />}
+                                            {section.label}
+                                            <span className="ml-auto tabular-nums">{section.rows.length}</span>
+                                        </div>
+                                    )}
                                     {section.rows.map((row) => {
                                         if (row.type === 'node') {
                                             return (
-                                                <NodeRow
-                                                    key={row.rowId}
-                                                    row={row}
-                                                    tabbable={row.rowId === roving}
-                                                    onFocus={() => setRovingId(row.rowId)}
-                                                    onArrow={moveFocus}
-                                                />
+                                                <RowScope key={row.rowId} workspaceId={row.workspaceId}>
+                                                    <NodeRow
+                                                        row={row}
+                                                        tabbable={row.rowId === roving}
+                                                        onFocus={() => setRovingId(row.rowId)}
+                                                        onArrow={moveFocus}
+                                                    />
+                                                </RowScope>
                                             );
                                         }
                                         const shared = {
@@ -551,31 +581,33 @@ export function Sidebar() {
                                             onFocus: () => setRovingId(row.rowId),
                                             onArrow: moveFocus,
                                             onDelete: () => askDeleteView(row.view.id),
-                                            onDrag
+                                            onDrag: (viewId: string | null) => onDrag(viewId === null ? null : { sectionId: section.id, viewId })
                                         };
                                         return (
                                             <Fragment key={row.rowId}>
-                                                {section.id === 'views' && insertAt === row.index && <div className={INSERT_LINE} />}
-                                                {row.view.kind === 'separator' ? (
-                                                    <SeparatorRow {...shared} />
-                                                ) : (
-                                                    <ViewRow
-                                                        {...shared}
-                                                        onToggle={() => {
-                                                            const next = new Set(expandedIds);
-                                                            if (row.expanded) {
-                                                                next.delete(row.view.id);
-                                                            } else {
-                                                                next.add(row.view.id);
-                                                            }
-                                                            useUi.getState().setSidebarExpanded([...next]);
-                                                        }}
-                                                    />
-                                                )}
+                                                {reorderable && insertAt === row.index && <div className={INSERT_LINE} />}
+                                                <RowScope workspaceId={row.workspaceId}>
+                                                    {row.view.kind === 'separator' ? (
+                                                        <SeparatorRow {...shared} />
+                                                    ) : (
+                                                        <ViewRow
+                                                            {...shared}
+                                                            onToggle={() => {
+                                                                const next = new Set(expandedIds);
+                                                                if (row.expanded) {
+                                                                    next.delete(row.view.id);
+                                                                } else {
+                                                                    next.add(row.view.id);
+                                                                }
+                                                                useUi.getState().setSidebarExpanded([...next]);
+                                                            }}
+                                                        />
+                                                    )}
+                                                </RowScope>
                                             </Fragment>
                                         );
                                     })}
-                                    {section.id === 'views' && insertAt === sidebarViews.length && <div className={INSERT_LINE} />}
+                                    {reorderable && insertAt === section.viewCount && <div className={INSERT_LINE} />}
                                 </div>
                             );
                         })

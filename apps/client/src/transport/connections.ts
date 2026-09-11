@@ -58,6 +58,8 @@ export const MAIN_WORKSPACE_ID = 'main';
 
 const machines = new Map<string, Machine>();
 const workspaces = new Map<string, Workspace>();
+/* The same array until the set changes, so a React store reading it gets a stable snapshot. */
+let workspaceList: Workspace[] = [];
 const listeners = new Set<() => void>();
 /* Which workspace the code outside React is about; the only one there is, until panes exist. */
 let focusedId: string | null = null;
@@ -225,6 +227,11 @@ export const openWorkspace = (id: string, endpoint: Endpoint): Workspace => work
 
 export const workspaceById = (id: string): Workspace | null => workspaces.get(id) ?? null;
 
+/* Every workspace this window has open, in the order they were opened. */
+export const listWorkspaces = (): Workspace[] => workspaceList;
+
+export const focusedWorkspaceId = (): string | null => focusedId;
+
 /* Which workspace everything outside React means: the one whose project was touched last. */
 export const focusWorkspace = (id: string): void => {
     if (!workspaces.has(id) || focusedId === id) {
@@ -239,6 +246,7 @@ export const focusWorkspace = (id: string): void => {
  * a menu and a watcher all mean, and a machine switch answers that differently under the same stores.
  */
 const emit = (): void => {
+    workspaceList = [...workspaces.values()];
     const focused = focusedId === null ? null : (workspaces.get(focusedId) ?? null);
     setCurrentWorkspace(focused === null ? null : { stores: focused.stores, endpointId: focused.connection.endpointId });
     for (const listener of [...listeners]) {
@@ -246,7 +254,7 @@ const emit = (): void => {
     }
 };
 
-const subscribeWorkspaces = (listener: () => void): (() => void) => {
+export const subscribeWorkspaces = (listener: () => void): (() => void) => {
     listeners.add(listener);
     return () => {
         listeners.delete(listener);

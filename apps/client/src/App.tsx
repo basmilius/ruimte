@@ -16,7 +16,7 @@ import { Toolbar } from '@/shell/Toolbar';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { startUpdates } from '@/state/updates';
-import { useMainWorkspace, useWorkspaceConnection } from '@/transport/connections';
+import { focusWorkspace, useMainWorkspace, useWorkspaceConnection } from '@/transport/connections';
 import { WorkspaceProvider } from '@/transport/context';
 import { TooltipProvider } from '@/ui/Tooltip';
 
@@ -29,7 +29,9 @@ function Workspace() {
     const connection = useWorkspaceConnection(workspace);
     return (
         <WorkspaceProvider connection={connection} stores={workspace.stores}>
-            <div className="flex h-full w-full bg-bg">
+            {/* A press anywhere in it makes this the workspace everything outside React means: the
+                chords, the palette and the menus all act on the project that was touched last. */}
+            <div className="flex h-full w-full bg-bg" onPointerDownCapture={() => focusWorkspace(workspace.id)}>
                 <Sidebar />
                 <main className="flex min-w-0 grow">
                     <div className="flex min-w-0 grow flex-col">

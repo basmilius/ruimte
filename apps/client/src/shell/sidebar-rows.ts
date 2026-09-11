@@ -1,4 +1,5 @@
 import type { AgentKind, AgentStatus, NodeKind, ProjectIconChoice, ProjectViewKind } from '@ruimte/contracts';
+import type { SidebarScope } from '@/state/settings';
 
 export interface SidebarNode {
     id: string;
@@ -29,6 +30,8 @@ export interface SidebarView {
 export interface SidebarViewRow {
     type: 'view';
     rowId: string;
+    /* The workspace the view lives in, so a click acts on that project and not on the focused one. */
+    workspaceId: string;
     view: SidebarView;
     /* Where the view sits in the project's list, which is what a drop between two rows writes back. */
     index: number;
@@ -45,24 +48,45 @@ export interface SidebarViewRow {
 export interface SidebarNodeRow {
     type: 'node';
     rowId: string;
+    workspaceId: string;
     node: SidebarNode;
     viewId: string;
     /* Where the node lives, named only on a row that stands outside its own view. */
     viewName: string | null;
+    /* Which project it is in, named only where the list holds more than one of them. */
+    projectName: string | null;
 }
 
 export type SidebarRow = SidebarViewRow | SidebarNodeRow;
 
 export interface SidebarSection {
-    id: 'needs-you' | 'views';
-    label: string;
+    /* Unique across the list: the views of two workspaces are two sections. */
+    id: string;
+    kind: 'needs-you' | 'views';
+    /* Null where the list needs no heading: with one project on screen, its views are the only list there is. */
+    label: string | null;
+    /* Whose views these are; null for the waiting list, which spans every project in scope. */
+    workspaceId: string | null;
     rows: SidebarRow[];
+    /* How many views the list holds, which is the gap a drop under the last row lands in. */
+    viewCount: number;
 }
 
-export interface SidebarInput {
+/* One open project as the sidebar reads it. */
+export interface SidebarWorkspace {
+    id: string;
+    /* What the project is called, which is the heading over its views in window scope. */
+    name: string;
     /* In project order, which is the order of the file, so every machine reads the same list. */
     views: SidebarView[];
     activeViewId: string | null;
+    /* The workspace the keyboard and the menus mean; in project scope it is the only one listed. */
+    focused: boolean;
+}
+
+export interface SidebarInput {
+    workspaces: SidebarWorkspace[];
+    scope: SidebarScope;
     expandedIds: ReadonlySet<string>;
 }
 
@@ -79,49 +103,89 @@ export const heaviestStatus = (nodes: readonly SidebarNode[]): AgentStatus | nul
         return heaviest === null || WEIGHT[node.status] > WEIGHT[heaviest] ? node.status : heaviest;
     }, null);
 
+/* Which projects the list is about. Project scope is the workspace you are working in, and before
+   one has the focus it is the first there is, which is the only one until panes exist. */
+const inScope = (workspaces: readonly SidebarWorkspace[], scope: SidebarScope): SidebarWorkspace[] => {
+    if (scope === 'window') {
+        return [...workspaces];
+    }
+    const focused = workspaces.find((workspace) => workspace.focused) ?? workspaces[0];
+    return focused ? [focused] : [];
+};
+
 /*
- * The sidebar as one list of rows: what waits for you across the whole project first, then the
- * views in the order the file names them, with the nodes of an open canvas under it. The status
- * grouping of the old flat list is gone: the order is the project's, the dock keeps the counters.
+ * The sidebar as one list of rows: what waits for you across the projects in scope first, then the
+ * views of each in the order its file names them, with the nodes of an open canvas under it. The
+ * status grouping of the old flat list is gone: the order is the project's, the dock keeps the
+ * counters.
  */
-export const buildSidebar = ({ views, activeViewId, expandedIds }: SidebarInput): SidebarSection[] => {
+export const buildSidebar = ({ workspaces, scope, expandedIds }: SidebarInput): SidebarSection[] => {
+    const listed = inScope(workspaces, scope);
     const sections: SidebarSection[] = [];
     const waiting: SidebarRow[] = [];
-    for (const view of views) {
-        for (const node of [...view.nodes, ...(view.self ? [view.self] : [])]) {
-            if (node.status === 'needs-you') {
-                waiting.push({ type: 'node', rowId: `needs:${node.id}`, node, viewId: view.id, viewName: view.name });
+    for (const workspace of listed) {
+        for (const view of workspace.views) {
+            for (const node of [...view.nodes, ...(view.self ? [view.self] : [])]) {
+                if (node.status === 'needs-you') {
+                    waiting.push({
+                        type: 'node',
+                        rowId: `needs:${workspace.id}:${node.id}`,
+                        workspaceId: workspace.id,
+                        node,
+                        viewId: view.id,
+                        viewName: view.name,
+                        projectName: listed.length > 1 ? workspace.name : null
+                    });
+                }
             }
         }
     }
     if (waiting.length > 0) {
-        sections.push({ id: 'needs-you', label: 'Needs you', rows: waiting });
+        sections.push({ id: 'needs-you', kind: 'needs-you', label: 'Needs you', workspaceId: null, rows: waiting, viewCount: 0 });
     }
 
-    const rows: SidebarRow[] = [];
-    for (const [index, view] of views.entries()) {
-        const expandable = view.kind === 'canvas' && view.nodes.length > 0;
-        const expanded = expandable && expandedIds.has(view.id);
-        rows.push({
-            type: 'view',
-            rowId: `view:${view.id}`,
-            view,
-            index,
-            active: view.id === activeViewId,
-            expandable,
-            expanded,
-            status: view.self ? view.self.status : heaviestStatus(view.nodes),
-            draft: view.self?.draft ?? false,
-            count: view.nodes.length
+    for (const workspace of listed) {
+        const rows: SidebarRow[] = [];
+        for (const [index, view] of workspace.views.entries()) {
+            const expandable = view.kind === 'canvas' && view.nodes.length > 0;
+            const expanded = expandable && expandedIds.has(view.id);
+            rows.push({
+                type: 'view',
+                rowId: `view:${workspace.id}:${view.id}`,
+                workspaceId: workspace.id,
+                view,
+                index,
+                active: view.id === workspace.activeViewId,
+                expandable,
+                expanded,
+                status: view.self ? view.self.status : heaviestStatus(view.nodes),
+                draft: view.self?.draft ?? false,
+                count: view.nodes.length
+            });
+            if (!expanded) {
+                continue;
+            }
+            for (const node of view.nodes) {
+                rows.push({
+                    type: 'node',
+                    rowId: `node:${workspace.id}:${view.id}:${node.id}`,
+                    workspaceId: workspace.id,
+                    node,
+                    viewId: view.id,
+                    viewName: null,
+                    projectName: null
+                });
+            }
+        }
+        sections.push({
+            id: `views:${workspace.id}`,
+            kind: 'views',
+            label: scope === 'window' ? workspace.name : null,
+            workspaceId: workspace.id,
+            rows,
+            viewCount: workspace.views.length
         });
-        if (!expanded) {
-            continue;
-        }
-        for (const node of view.nodes) {
-            rows.push({ type: 'node', rowId: `node:${view.id}:${node.id}`, node, viewId: view.id, viewName: null });
-        }
     }
-    sections.push({ id: 'views', label: 'Views', rows });
     return sections;
 };
 
