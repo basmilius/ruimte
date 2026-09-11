@@ -52,7 +52,7 @@ import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
-import { transport } from '@/transport';
+import { useTransport } from '@/transport/context';
 import { MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { EmptyState } from '@/ui/EmptyState';
@@ -119,6 +119,7 @@ export function FilesPanel() {
     /* Which file the preview has up; a diff tab points at the same file and counts as well. */
     const activeFile = useFiles((s) => s.tabs.find((tab) => tab.key === s.active)?.path ?? null);
     const tabLimit = useSettings((s) => s.filesTabLimit);
+    const transport = useTransport();
     /* What git says about the project folder, so a changed file carries a dot. The git panel reads
        the same watch; whichever of the two is up holds it. */
     const gitStatus = useGitStatus(folder);
@@ -199,7 +200,7 @@ export function FilesPanel() {
                 // A folder that went away keeps the rows it had until the next refresh.
             }
         },
-        [folder]
+        [transport, folder]
     );
 
     useEffect(() => {
@@ -225,7 +226,7 @@ export function FilesPanel() {
         return () => {
             void transport.request('fs.unwatch', { path: folder }).catch(() => undefined);
         };
-    }, [folder, load]);
+    }, [transport, folder, load]);
 
     useEffect(() => {
         if (!folder) {
@@ -238,7 +239,7 @@ export function FilesPanel() {
                 }
             }
         });
-    }, [folder, load]);
+    }, [transport, folder, load]);
 
     useEffect(() => {
         if (!folder) {
@@ -358,7 +359,7 @@ export function FilesPanel() {
         return () => {
             window.clearTimeout(timer);
         };
-    }, [folder, query, searching]);
+    }, [transport, folder, query, searching]);
 
     useEffect(() => {
         searchModel.resetPaths([...matches]);

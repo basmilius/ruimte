@@ -7,7 +7,7 @@ import { DisabledWrapToggle, FileToolbar, FileToolbarToggle } from '@/shell/pane
 import { localFileUrl } from '@/shell/panels/file-url';
 import { dirnameOf } from '@/shell/panels/files-tree';
 import { useEndpoints } from '@/state/endpoints';
-import { transport } from '@/transport';
+import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
@@ -55,6 +55,7 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
     const [view, setView] = useState<HtmlView>(canPreview ? 'preview' : 'source');
     const [loading, setLoading] = useState(canPreview);
     const [error, setError] = useState<string | null>(null);
+    const transport = useTransport();
     const host = useRef<HTMLDivElement>(null);
     const page = useRef<PreviewWebview | null>(null);
     const url = localFileUrl(path);
@@ -103,7 +104,7 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
                 page.current?.reload();
             }
         });
-    }, [canPreview, path]);
+    }, [transport, canPreview, path]);
 
     const retry = useCallback(() => {
         setError(null);

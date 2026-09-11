@@ -10,7 +10,7 @@ import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useSettings } from '@/state/settings';
-import { transport } from '@/transport';
+import { useTransport } from '@/transport/context';
 import { MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
@@ -27,6 +27,7 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
     const platform = useServer((s) => s.platform);
     const folder = useProject((s) => s.current?.folder ?? null);
     const tabLimit = useSettings((s) => s.filesTabLimit);
+    const transport = useTransport();
 
     if (tab === null) {
         return null;
@@ -52,7 +53,7 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
             return;
         }
         const staged = !view.staged;
-        void stageFiles(view.cwd, [relativeTo(view.cwd, path)], staged).then((ok) => {
+        void stageFiles(transport, view.cwd, [relativeTo(view.cwd, path)], staged).then((ok) => {
             if (ok) {
                 useFiles.getState().setStaged(tabKey, staged);
             }

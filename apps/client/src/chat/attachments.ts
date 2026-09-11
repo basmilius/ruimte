@@ -1,5 +1,5 @@
 import { CHAT_ATTACHMENTS_MAX_COUNT, CHAT_ATTACHMENT_MAX_BYTES, type ChatAttachmentUpload } from '@ruimte/contracts';
-import { activeEndpoint } from '@/state/endpoints';
+import { activeEndpoint, endpointById } from '@/state/endpoints';
 
 const ATTACHMENTS_PATH = '/attachments';
 
@@ -78,10 +78,11 @@ export const uploadBytes = (upload: ChatAttachmentUpload): number => Math.floor(
 /*
  * Where a sent attachment's bytes come from. They live on the daemon and never travel over the
  * socket again, so the URL carries the endpoint's token the same way the socket does. The id names
- * one file that never changes, which is what lets the browser cache it forever.
+ * one file that never changes, which is what lets the browser cache it forever. The endpoint is the
+ * one the thread runs on, which is not the active machine once a second workspace is on screen.
  */
-export const attachmentUrl = (chatId: string, attachmentId: string): string => {
-    const endpoint = activeEndpoint();
+export const attachmentUrl = (chatId: string, attachmentId: string, endpointId?: string): string => {
+    const endpoint = (endpointId === undefined ? null : endpointById(endpointId)) ?? activeEndpoint();
     const query = endpoint.token ? `?token=${encodeURIComponent(endpoint.token)}` : '';
     return `${endpoint.httpBaseUrl}${ATTACHMENTS_PATH}/${encodeURIComponent(chatId)}/${encodeURIComponent(attachmentId)}${query}`;
 };

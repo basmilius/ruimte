@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ImageOff, Maximize, Scan } from 'lucide-react';
 import type { FsReadBinary } from '@ruimte/contracts';
 import { fileBytesUrl } from '@/shell/panels/file-url';
+import { useEndpointId } from '@/state/keys';
 import { formatBytes } from '@/shell/panels/file-size';
 import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { BTN_GROUP } from '@/ui/classes';
@@ -16,6 +17,7 @@ export function ImageFile({ path, name, read }: { path: string; name: string; re
     const [zoom, setZoom] = useState<Zoom>('fit');
     const [size, setSize] = useState<{ width: number; height: number } | null>(null);
     const [failed, setFailed] = useState(false);
+    const endpointId = useEndpointId();
 
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
@@ -30,7 +32,7 @@ export function ImageFile({ path, name, read }: { path: string; name: string; re
                     <EmptyState icon={<Icon icon={ImageOff} size={20} />}>{name} could not be drawn; the file may have changed while it loaded.</EmptyState>
                 ) : (
                     <img
-                        src={fileBytesUrl(path, read.mtime, read.size)}
+                        src={fileBytesUrl(path, read.mtime, read.size, endpointId)}
                         alt={name}
                         className={zoom === 'fit' ? 'h-auto max-w-full' : 'max-w-none'}
                         onLoad={(event) => setSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })}

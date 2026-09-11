@@ -4,7 +4,7 @@ import { Copy, GitCommitHorizontal } from 'lucide-react';
 import type { GitCommit } from '@ruimte/contracts';
 import { GIT_GROUP } from '@/shell/panels/classes';
 import { groupCommits, relativeTime } from '@/shell/panels/commit-log';
-import { transport } from '@/transport';
+import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
@@ -41,6 +41,7 @@ export function CommitLog({ cwd, revision, reading, onOpen }: CommitLogProps) {
     const [held, setHeld] = useState<{ asked: string; commits: GitCommit[]; cursor: string | null; failed: boolean } | null>(null);
     const [page, setPage] = useState<string | null>(null);
     const [now] = useState(() => Math.floor(Date.now() / 1000));
+    const transport = useTransport();
     const shown = held !== null && held.asked === asked ? held : null;
 
     useEffect(() => {
@@ -60,7 +61,7 @@ export function CommitLog({ cwd, revision, reading, onOpen }: CommitLogProps) {
         return () => {
             alive = false;
         };
-    }, [asked, cwd]);
+    }, [transport, asked, cwd]);
 
     const loadMore = (cursor: string): void => {
         setPage(cursor);
