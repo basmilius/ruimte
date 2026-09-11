@@ -119,7 +119,9 @@ const walk = async (root: string): Promise<{ files: string[]; truncated: boolean
     return { files, truncated: false };
 };
 
-const listFiles = async (cwd: string): Promise<{ files: string[]; truncated: boolean }> => {
+/* The files a search of this folder walks: what git tracks, or the walk that stands in for it,
+   cached because every keystroke asks again and the listing is the expensive half. */
+export const listSearchableFiles = async (cwd: string): Promise<{ files: string[]; truncated: boolean }> => {
     const cached = cache.get(cwd);
     if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
         return cached;
@@ -131,7 +133,7 @@ const listFiles = async (cwd: string): Promise<{ files: string[]; truncated: boo
 };
 
 export const searchFiles = async (cwd: string, query: string, limit = 20): Promise<FsSearchResult> => {
-    const { files, truncated } = await listFiles(cwd);
+    const { files, truncated } = await listSearchableFiles(cwd);
     return { files: rankFiles(files, query.trim(), Math.min(limit, FS_SEARCH_MAX_RESULTS)), truncated };
 };
 

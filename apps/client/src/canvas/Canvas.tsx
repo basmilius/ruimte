@@ -241,6 +241,12 @@ export function Canvas() {
                 }
                 return;
             }
+            // Shift makes the key uppercase, which is why this compares the code and not the key.
+            if (mod && e.shiftKey && e.code === 'KeyF') {
+                e.preventDefault();
+                useUi.getState().openFindInFiles();
+                return;
+            }
             if (mod && e.key === ',') {
                 e.preventDefault();
                 useUi.getState().setSettings({ open: true });

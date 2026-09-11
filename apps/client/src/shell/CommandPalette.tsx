@@ -1,7 +1,25 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { CornerLeftUp, Folder, FolderCheck, FolderPlus, Globe, LayoutGrid, MessageSquare, PenTool, Search, StickyNote, Terminal, Zap } from 'lucide-react';
+import {
+    CaseSensitive,
+    CornerLeftUp,
+    FileSearch,
+    Folder,
+    FolderCheck,
+    FolderPlus,
+    Globe,
+    LayoutGrid,
+    MessageSquare,
+    PenTool,
+    Regex,
+    Search,
+    StickyNote,
+    Terminal,
+    WholeWord,
+    Zap,
+    type LucideIcon
+} from 'lucide-react';
 import { isCanvasView, isOpenableView, type FsBrowseEntry } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { projectClient } from '@/project';
@@ -9,16 +27,23 @@ import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { revealNode, showView } from '@/project/views';
 import { appCommands, type Command } from '@/shell/commands';
+import { DEFAULT_GREP_OPTIONS, useGrepSearch, type GrepOptions } from '@/shell/palette-grep';
+import { PaletteGrepResults } from '@/shell/PaletteGrepResults';
 import { readRecents, rememberRecent, sortByRecency } from '@/shell/palette-recents';
+import { absoluteOf, basenameOf } from '@/shell/panels/files-tree';
 import { useCanvas, type NodeKind } from '@/state/canvas';
 import { useDocument } from '@/state/document';
+import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
+import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
 import { desktop } from '@/desktop/bridge';
 import { Button } from '@/ui/Button';
-import { SECTION_LABEL, TOOLTIP_KBD } from '@/ui/classes';
+import { BTN_GROUP, SECTION_LABEL, TOOLTIP_KBD } from '@/ui/classes';
+import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
+import { Tooltip } from '@/ui/Tooltip';
 
 const KIND_ICON: Record<NodeKind, React.ReactNode> = {
     terminal: <Icon icon={Terminal} size={14} />,
@@ -33,10 +58,13 @@ const KIND_ICON: Record<NodeKind, React.ReactNode> = {
 const isPathQuery = (query: string): boolean => query.startsWith('/') || query.startsWith('~') || query.startsWith('./') || query.startsWith('../');
 
 const BROWSE_DEBOUNCE_MS = 60;
+const FILE_DEBOUNCE_MS = 120;
+// Enough to recognize the file being looked for, few enough to leave room for what else matches.
+const FILE_RESULTS = 8;
 
 interface Entry extends Command {
     icon: React.ReactNode;
-    section: 'Recent' | 'Jump to' | 'Views' | 'Projects' | 'Actions' | 'Folders';
+    section: 'Recent' | 'Jump to' | 'Files' | 'Views' | 'Projects' | 'Actions' | 'Folders';
 }
 
 const LIST_ID = 'palette-list';
@@ -58,6 +86,24 @@ const parentOf = (path: string): string | null => {
     return `${trimmed.slice(0, cut)}/`;
 };
 
+/* One of the three switches that narrow a search in files, drawn as the pressed gray key every
+   other toggle in the app uses. */
+function SearchToggle({ icon, label, active, onClick }: { icon: LucideIcon; label: string; active: boolean; onClick: () => void }) {
+    return (
+        <Tooltip label={label} name>
+            <button
+                className="icon-btn h-7 w-7"
+                aria-pressed={active}
+                // The field keeps the keys; a toggle that takes focus would swallow the next arrow.
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={onClick}
+            >
+                <Icon icon={icon} size={14} />
+            </button>
+        </Tooltip>
+    );
+}
+
 /* Cmd+K: jump to a node, run an action, or type a path to open a folder as a project. */
 export function CommandPalette() {
     const open = useUi((s) => s.paletteOpen);
@@ -76,8 +122,14 @@ export function CommandPalette() {
     const [failure, setFailure] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
     const [recents, setRecents] = useState<string[]>(readRecents);
+    const [fileMatches, setFileMatches] = useState<readonly string[]>([]);
+    const [grepOptions, setGrepOptions] = useState<GrepOptions>(DEFAULT_GREP_OPTIONS);
     const inputRef = useRef<HTMLInputElement>(null);
     const generation = useRef(0);
+    const fileGeneration = useRef(0);
+    const mode = useUi((s) => s.paletteMode);
+    const grepping = mode === 'grep';
+    const grep = useGrepSearch(grepping ? folder : null, grepping ? query : '', grepOptions);
 
     const reset = (next: string): void => {
         setQuery(next);
@@ -96,7 +148,16 @@ export function CommandPalette() {
         }
     }
 
-    const browsing = isPathQuery(query);
+    const [seenMode, setSeenMode] = useState(mode);
+
+    // Switching modes with the palette already up is a fresh start as much as opening it is.
+    if (mode !== seenMode) {
+        setSeenMode(mode);
+        reset(seed);
+    }
+
+    // A path is a folder to browse, but only while the palette is looking for one.
+    const browsing = !grepping && isPathQuery(query);
 
     useEffect(() => {
         if (!browsing) {
@@ -123,6 +184,39 @@ export function CommandPalette() {
         return () => window.clearTimeout(timer);
     }, [browsing, query, folder]);
 
+    useEffect(() => {
+        const trimmed = query.trim();
+        const mine = ++fileGeneration.current;
+        if (grepping || browsing || folder === null || trimmed === '') {
+            return;
+        }
+        const timer = window.setTimeout(() => {
+            transport
+                .request('fs.search', { cwd: folder, query: trimmed, limit: FILE_RESULTS })
+                .then((result) => {
+                    if (mine === fileGeneration.current) {
+                        setFileMatches(result.files);
+                    }
+                })
+                .catch(() => {
+                    if (mine === fileGeneration.current) {
+                        setFileMatches([]);
+                    }
+                });
+        }, FILE_DEBOUNCE_MS);
+        return () => window.clearTimeout(timer);
+    }, [browsing, folder, grepping, query]);
+
+    const openFile = useCallback(
+        (path: string): void => {
+            if (folder === null) {
+                return;
+            }
+            useFiles.getState().open(absoluteOf(folder, path), useSettings.getState().filesTabLimit);
+        },
+        [folder]
+    );
+
     const submitPath = async (path: string): Promise<void> => {
         setBusy(true);
         setFailure(null);
@@ -137,6 +231,10 @@ export function CommandPalette() {
     };
 
     const entries = useMemo<Entry[]>(() => {
+        // Find in files draws its own results; the commands have no place among them.
+        if (grepping) {
+            return [];
+        }
         if (browsing) {
             const up = parentOf(query);
             const list: Entry[] = [];
@@ -205,6 +303,20 @@ export function CommandPalette() {
                 section: 'Projects',
                 run: () => void projectClient.openProject(project.projectId).catch(() => undefined)
             }));
+        /* What the last answer held stays out of a list it no longer belongs to; the effect above
+           only fills it, so an empty query or a folder browse never shows yesterday's files. */
+        const files: Entry[] = (query.trim() === '' ? [] : fileMatches).map((path) => {
+            const name = basenameOf(path);
+            return {
+                id: `file-${path}`,
+                label: name,
+                // The folder the file sits in; a name on its own says too little in a deep tree.
+                hint: path.slice(0, Math.max(path.length - name.length - 1, 0)) || undefined,
+                icon: <FileIcon path={path} size={14} />,
+                section: 'Files' as const,
+                run: () => openFile(path)
+            };
+        });
         const commands = appCommands();
         const asEntry = (command: Command, section: Entry['section']): Entry => ({
             ...command,
@@ -222,13 +334,33 @@ export function CommandPalette() {
                 ...split.rest.map((command) => asEntry(command, 'Actions'))
             ];
         }
-        return [...jumps, ...viewSwitches, ...switches, ...commands.map((command) => asEntry(command, 'Actions'))].filter((entry) =>
-            matches(query, `${entry.label} ${entry.hint ?? ''}`)
-        );
-    }, [browsing, browse, nodes, order, views, activeViewId, query, recents, projects, currentProjectId]);
+        /* Every section is filtered on its own, so the file results can keep their place in the
+           middle. They answer to the query already, in the daemon's own ranking, and are not
+           filtered a second time here. */
+        const keep = (entry: Entry): boolean => matches(query, `${entry.label} ${entry.hint ?? ''}`);
+        return [
+            ...jumps.filter(keep),
+            ...files,
+            ...viewSwitches.filter(keep),
+            ...switches.filter(keep),
+            ...commands.map((command) => asEntry(command, 'Actions')).filter(keep)
+        ];
+    }, [browsing, browse, fileMatches, grepping, nodes, openFile, order, views, activeViewId, query, recents, projects, currentProjectId]);
 
     // While browsing nothing is highlighted until the arrows say so, so Enter opens what was typed.
     const active = browsing ? (index >= 0 ? entries[index] : undefined) : entries[Math.min(index, entries.length - 1)];
+    // What the arrow keys walk: the hits while searching in files, the rows of the list otherwise.
+    const count = grepping ? grep.matches.length : entries.length;
+    const activeHit = grepping ? Math.min(index, count - 1) : -1;
+
+    const runHit = (at: number): void => {
+        const match = grep.matches[at];
+        if (!match) {
+            return;
+        }
+        setOpen(false);
+        openFile(match.path);
+    };
 
     const run = (entry: Entry | undefined): void => {
         if (!entry) {
@@ -239,8 +371,8 @@ export function CommandPalette() {
             setIndex(-1);
             return;
         }
-        // Jumping to a node, a view or a project is not a command; only what "Actions" lists comes back.
-        if (entry.section !== 'Jump to' && entry.section !== 'Views' && entry.section !== 'Projects') {
+        // Jumping to a node, a file, a view or a project is not a command; only what "Actions" lists comes back.
+        if (entry.section !== 'Jump to' && entry.section !== 'Files' && entry.section !== 'Views' && entry.section !== 'Projects') {
             setRecents(rememberRecent(entry.id));
         }
         setOpen(false);
@@ -251,39 +383,50 @@ export function CommandPalette() {
         <Dialog.Root open={open} onOpenChange={setOpen}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className="dialog-popup top-[18vh] w-[560px]" initialFocus={inputRef}>
+                <Dialog.Popup
+                    /* Wider while searching in files: a hit is read in the lines around it, and those
+                       lines are source, which does not fold. */
+                    className={clsx('dialog-popup top-[18vh]', grepping ? 'w-[760px]' : 'w-[560px]')}
+                    initialFocus={inputRef}
+                >
                     <div className="flex items-center gap-2 border-b border-border px-3">
-                        {browsing ? (
-                            <Icon icon={FolderPlus} size={14} className="shrink-0 text-accent" />
-                        ) : (
-                            <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />
-                        )}
+                        {browsing && <Icon icon={FolderPlus} size={14} className="shrink-0 text-accent" />}
+                        {grepping && <Icon icon={FileSearch} size={14} className="shrink-0 text-accent" />}
+                        {!browsing && !grepping && <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />}
                         <input
                             ref={inputRef}
                             role="combobox"
                             aria-expanded
                             aria-controls={LIST_ID}
                             aria-autocomplete="list"
-                            aria-activedescendant={active ? optionId(entries.indexOf(active)) : undefined}
-                            aria-label="Jump to a node, run a command, or open a folder"
+                            aria-activedescendant={
+                                grepping ? (activeHit >= 0 ? optionId(activeHit) : undefined) : active ? optionId(entries.indexOf(active)) : undefined
+                            }
+                            aria-label={grepping ? 'Search through the files of this folder' : 'Jump to a node, run a command, or open a folder'}
                             className={clsx(
                                 'h-11 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint',
-                                browsing && 'font-mono text-code'
+                                (browsing || grepping) && 'font-mono text-code'
                             )}
-                            placeholder="Jump to a node, run a command, or type a path like ~/projects to open a folder"
+                            placeholder={
+                                grepping
+                                    ? 'Search through the files of this folder'
+                                    : 'Jump to a node, run a command, or type a path like ~/projects to open a folder'
+                            }
                             value={query}
                             spellCheck={false}
                             onChange={(e) => reset(e.target.value)}
                             onKeyDown={(e) => {
                                 if (e.key === 'ArrowDown') {
                                     e.preventDefault();
-                                    setIndex((i) => (entries.length === 0 ? -1 : (i + 1) % entries.length));
+                                    setIndex((i) => (count === 0 ? -1 : (i + 1) % count));
                                 } else if (e.key === 'ArrowUp') {
                                     e.preventDefault();
-                                    setIndex((i) => (entries.length === 0 ? -1 : (i - 1 + entries.length) % entries.length));
+                                    setIndex((i) => (count === 0 ? -1 : (i - 1 + count) % count));
                                 } else if (e.key === 'Enter') {
                                     e.preventDefault();
-                                    if (browsing && (active === undefined || e.metaKey || e.ctrlKey)) {
+                                    if (grepping) {
+                                        runHit(activeHit);
+                                    } else if (browsing && (active === undefined || e.metaKey || e.ctrlKey)) {
                                         void submitPath(query);
                                     } else {
                                         run(active);
@@ -291,16 +434,59 @@ export function CommandPalette() {
                                 } else if (e.key === 'Tab' && browsing && active) {
                                     e.preventDefault();
                                     run(active);
+                                } else if (e.key === 'Backspace' && grepping && query === '') {
+                                    // The mode leaves the way it was entered: one key, nothing typed.
+                                    e.preventDefault();
+                                    useUi.getState().setPaletteMode('default');
                                 }
                             }}
                         />
+                        {grepping && (
+                            <span className={BTN_GROUP}>
+                                <SearchToggle
+                                    icon={CaseSensitive}
+                                    label="Match case"
+                                    active={grepOptions.caseSensitive}
+                                    onClick={() => setGrepOptions((current) => ({ ...current, caseSensitive: !current.caseSensitive }))}
+                                />
+                                <SearchToggle
+                                    icon={WholeWord}
+                                    label="Whole words"
+                                    active={grepOptions.wholeWord}
+                                    onClick={() => setGrepOptions((current) => ({ ...current, wholeWord: !current.wholeWord }))}
+                                />
+                                <SearchToggle
+                                    icon={Regex}
+                                    label="Regular expression"
+                                    active={grepOptions.regex}
+                                    onClick={() => setGrepOptions((current) => ({ ...current, regex: !current.regex }))}
+                                />
+                            </span>
+                        )}
                         <kbd className={TOOLTIP_KBD}>esc</kbd>
                     </div>
                     <div id={LIST_ID} className="max-h-[50vh] overflow-auto p-1.5" role="listbox" aria-label="Results">
                         <div aria-live="polite">
-                            {entries.length === 0 && !browsing && <div className="px-3 py-6 text-center text-xs text-text-faint">Nothing matches</div>}
+                            {entries.length === 0 && !browsing && !grepping && (
+                                <div className="px-3 py-6 text-center text-xs text-text-faint">Nothing matches</div>
+                            )}
                             {entries.length === 0 && browsing && <div className="px-3 py-6 text-center text-xs text-text-faint">No folders here yet</div>}
+                            {grepping && query.trim() !== '' && !grep.busy && grep.failure === null && grep.matches.length === 0 && (
+                                <div className="px-3 py-6 text-center text-xs text-text-faint">No line in this folder matches</div>
+                            )}
+                            {grepping && query.trim() === '' && (
+                                <div className="px-3 py-6 text-center text-xs text-text-faint">Type to search through every file in this folder.</div>
+                            )}
                         </div>
+                        {grepping && (
+                            <PaletteGrepResults
+                                matches={grep.matches}
+                                active={activeHit}
+                                optionId={optionId}
+                                onHover={(at) => setIndex(at)}
+                                onRun={(at) => runHit(at)}
+                            />
+                        )}
                         {entries.map((entry, i) => {
                             const first = i === 0 || entries[i - 1]!.section !== entry.section;
                             return (
@@ -325,6 +511,25 @@ export function CommandPalette() {
                             );
                         })}
                     </div>
+                    {grepping && (
+                        <div className="flex items-center gap-3 border-t border-border px-3 py-2 text-xs text-text-faint">
+                            {grep.failure !== null ? (
+                                <span className="text-status-error" role="alert">
+                                    {grep.failure}
+                                </span>
+                            ) : (
+                                <span>
+                                    {grep.matches.length === 0
+                                        ? 'Nothing yet'
+                                        : `${grep.matches.length}${grep.truncated ? '+' : ''} in ${grep.files} file${grep.files === 1 ? '' : 's'}`}
+                                </span>
+                            )}
+                            <span className="grow" />
+                            <span>
+                                <kbd className={TOOLTIP_KBD}>↵</kbd> opens the file, <kbd className={TOOLTIP_KBD}>⌫</kbd> on an empty search goes back
+                            </span>
+                        </div>
+                    )}
                     {browsing && (
                         <div className="flex items-center gap-3 border-t border-border px-3 py-2 text-xs text-text-faint">
                             {failure ? (

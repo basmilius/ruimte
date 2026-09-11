@@ -107,6 +107,7 @@ export const appCommands = (): Command[] => {
     const drawing = activeView !== null && isDrawingView(activeView);
     return [
         { id: 'open-folder', label: 'Open a folder as a project', hint: 'Type a path', run: () => useUi.getState().openPalette('~/') },
+        ...(folder ? [{ id: 'find-in-files', label: 'Find in files', shortcut: '⌘⇧F', run: () => useUi.getState().openFindInFiles() }] : []),
         ...(folder
             ? [
                   {

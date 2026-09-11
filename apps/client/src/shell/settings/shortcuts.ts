@@ -18,6 +18,7 @@ export const CANVAS_SHORTCUTS: readonly ShortcutGroup[] = [
         title: 'Canvas',
         shortcuts: [
             { keys: '⌘ K', label: 'Command palette' },
+            { keys: '⇧ ⌘ F', label: 'Find in files' },
             { keys: 'Space drag', label: 'Pan the canvas' },
             { keys: '⌘ scroll', label: 'Zoom around the pointer' },
             { keys: '+', label: 'Zoom in' },

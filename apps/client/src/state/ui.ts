@@ -104,8 +104,13 @@ export type ViewDialog =
     | { kind: 'new-browser' }
     | null;
 
+/* What the palette is doing: jumping and running commands, or searching through the files of the
+   open folder. The mode is a step inside the same dialog, not a dialog of its own. */
+export type PaletteMode = 'default' | 'grep';
+
 interface UiStore {
     paletteOpen: boolean;
+    paletteMode: PaletteMode;
     page: AppPage | null;
     /* Whether the session list is in view; it survives a reload, like everything else on the canvas. */
     sidebarOpen: boolean;
@@ -137,6 +142,9 @@ interface UiStore {
     setSidebarOpen(open: boolean): void;
     toggleSidebar(): void;
     openPalette(seed?: string): void;
+    /* The palette in its find-in-files mode, from the palette itself or from the files panel. */
+    openFindInFiles(seed?: string): void;
+    setPaletteMode(mode: PaletteMode): void;
     setLayoutDialogOpen(open: boolean): void;
     setPaletteOpen(open: boolean): void;
     setSettings(patch: Partial<SettingsState>): void;
@@ -159,6 +167,7 @@ const leaves = (opening: boolean, page: AppPage | null): { page: AppPage | null 
    they are loaded from and saved to its machine-local file by `project/panels-port.ts`. */
 export const useUi = create<UiStore>((set, get) => ({
     paletteOpen: false,
+    paletteMode: 'default',
     page: null,
     paletteSeed: '',
     sidebarOpen: readSidebarOpen(),
@@ -197,10 +206,16 @@ export const useUi = create<UiStore>((set, get) => ({
         set({ layoutDialogOpen: open });
     },
     openPalette(seed = '') {
-        set({ paletteOpen: true, paletteSeed: seed });
+        set({ paletteOpen: true, paletteMode: 'default', paletteSeed: seed });
+    },
+    openFindInFiles(seed = '') {
+        set({ paletteOpen: true, paletteMode: 'grep', paletteSeed: seed });
+    },
+    setPaletteMode(mode) {
+        set({ paletteMode: mode, paletteSeed: '' });
     },
     setPaletteOpen(open) {
-        set(open ? { paletteOpen: true, paletteSeed: '' } : { paletteOpen: false });
+        set(open ? { paletteOpen: true, paletteMode: 'default', paletteSeed: '' } : { paletteOpen: false });
     },
     setSettings(patch) {
         set({ settings: { ...get().settings, ...patch } });
