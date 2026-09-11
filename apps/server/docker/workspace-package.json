@@ -1,0 +1,10 @@
+{
+  "name": "ruimte-remote",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "workspaces": [
+    "apps/server",
+    "packages/*"
+  ]
+}

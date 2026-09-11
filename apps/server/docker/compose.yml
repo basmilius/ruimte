@@ -1,0 +1,24 @@
+name: ruimte-remote
+
+services:
+  daemon:
+    build:
+      # The image needs the shared packages and the lockfile, so the whole repository is the context.
+      context: ../../..
+      dockerfile: apps/server/docker/Dockerfile
+    container_name: ruimte-remote
+    # A different port than the local daemon, and only this machine reaches it: the point is a
+    # daemon on another machine, not a daemon on the network.
+    ports:
+      - '127.0.0.1:4310:4310'
+    environment:
+      RUIMTE_LABEL: docker-linux
+    init: true
+    stop_grace_period: 5s
+    # `docker:up` waits on this, so the tests can talk to the daemon the moment it returns.
+    healthcheck:
+      test: ['CMD', 'bun', '-e', 'process.exit((await fetch("http://127.0.0.1:4310/health")).ok ? 0 : 1)']
+      interval: 2s
+      timeout: 5s
+      retries: 15
+      start_period: 2s

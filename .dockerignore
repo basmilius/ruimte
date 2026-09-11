@@ -1,0 +1,16 @@
+# The only image this repository builds is the Linux test daemon (apps/server/docker), which
+# needs the daemon, the shared packages and the lockfile. Everything else only slows the build.
+.git
+.github
+.idea
+.claude
+.DS_Store
+node_modules
+**/node_modules
+dist
+**/dist
+release
+*.local
+apps/client
+apps/desktop
+docs
