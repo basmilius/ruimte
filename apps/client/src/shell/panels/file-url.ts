@@ -1,8 +1,9 @@
+import { credentialFor } from '@/endpoint/credentials';
 import { activeEndpoint, endpointById } from '@/state/endpoints';
 
 /*
  * Where the bytes of an image the viewer draws come from. They live on the daemon and never travel
- * over the socket, so the URL carries the endpoint's token the same way the socket does. The version
+ * over the socket, so the URL carries the endpoint's credential the same way the socket does. The version
  * pins one set of bytes per URL, which is what lets the browser cache it forever; a write to the
  * file moves its mtime and the URL with it.
  *
@@ -12,8 +13,9 @@ import { activeEndpoint, endpointById } from '@/state/endpoints';
 export const fileBytesUrl = (path: string, mtime: number, size: number, endpointId?: string): string => {
     const endpoint = (endpointId === undefined ? null : endpointById(endpointId)) ?? activeEndpoint();
     const query = new URLSearchParams({ path, v: `${mtime}-${size}` });
-    if (endpoint.token) {
-        query.set('token', endpoint.token);
+    const credential = credentialFor(endpoint);
+    if (credential) {
+        query.set('token', credential);
     }
     return `${endpoint.httpBaseUrl}/fs/file?${query.toString()}`;
 };

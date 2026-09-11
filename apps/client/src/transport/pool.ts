@@ -1,5 +1,6 @@
 import type { Endpoint } from '@/state/endpoints';
 import type { ConnectionState, Transport, TransportStatus } from './transport';
+import type { SocketAddress } from './websocket-transport';
 
 /* How long a socket nobody holds stays up, so a switch there and back costs no round trip. */
 const IDLE_CLOSE_MS = 30_000;
@@ -9,7 +10,8 @@ const NO_SOCKET: ConnectionState = { status: 'closed', attempts: 0, retryAt: nul
 
 /* What the pool needs of a socket on top of `Transport`: a way to move it and a way to end it. */
 export interface PooledTransport extends Transport {
-    switchTo(url: string): void;
+    switchTo(address: SocketAddress): void;
+    retarget(address: SocketAddress): void;
     dispose(): void;
 }
 
@@ -78,12 +80,16 @@ export class TransportPool {
     }
 
     /* The address of an endpoint changed (a re-pair, another port); move the socket it already has. */
-    readdress(endpointId: string, url: string): void {
-        this.byId.get(endpointId)?.transport.switchTo(url);
+    readdress(endpointId: string, address: SocketAddress): void {
+        this.byId.get(endpointId)?.transport.switchTo(address);
     }
 
-    /* The daemon behind a row turned out to be one this client already knows under another id. */
-    rekey(oldId: string, newId: string): void {
+    /*
+     * The daemon behind a row turned out to be one this client already knows under another id. The
+     * socket stays up and only learns where to come back: the address it was opened with is about
+     * the row it just left, and a reconnect would look for an endpoint that no longer exists.
+     */
+    rekey(oldId: string, newId: string, address: SocketAddress): void {
         const entry = this.byId.get(oldId);
         if (!entry || oldId === newId) {
             return;
@@ -92,6 +98,7 @@ export class TransportPool {
         this.byId.delete(oldId);
         this.byId.set(newId, entry);
         entry.endpointId = newId;
+        entry.transport.retarget(address);
         entry.offStatus();
         entry.offStatus = entry.transport.subscribeStatus(() => this.emit(newId));
         this.resnapshot();

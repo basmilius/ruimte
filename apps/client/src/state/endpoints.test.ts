@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
+import { forgetTicket, rememberTicket } from '@/endpoint/credentials';
 import { LOCAL_ENDPOINT_ID, parsePairingUrl, parseStoredEndpoints, socketUrlFor, useEndpoints, type Endpoint } from './endpoints';
 
 const row = (id: string, overrides: Partial<Endpoint> = {}): Endpoint => ({
@@ -9,6 +10,7 @@ const row = (id: string, overrides: Partial<Endpoint> = {}): Endpoint => ({
     reachability: 'lan',
     token: `token-${id}`,
     daemonId: id,
+    daemonPublicKey: null,
     ...overrides
 });
 
@@ -22,10 +24,24 @@ describe('endpoints', () => {
         expect(parsePairingUrl('not a url')).toBeNull();
     });
 
-    test('socketUrlFor puts the token in the query and leaves loopback bare', () => {
-        const base = { id: 'x', label: 'x', httpBaseUrl: 'http://box:4210', wsBaseUrl: 'ws://box:4210', reachability: 'lan' as const, daemonId: null };
+    test('socketUrlFor puts the credential in the query and leaves loopback bare', () => {
+        const base = {
+            id: 'x',
+            label: 'x',
+            httpBaseUrl: 'http://box:4210',
+            wsBaseUrl: 'ws://box:4210',
+            reachability: 'lan' as const,
+            daemonId: null,
+            daemonPublicKey: null
+        };
         expect(socketUrlFor({ ...base, token: 'a b' })).toBe('ws://box:4210/ws?token=a%20b');
         expect(socketUrlFor({ ...base, token: null })).toBe('ws://box:4210/ws');
+
+        // A ticket wins from the session token underneath it, which is what makes the credential rotate.
+        rememberTicket('x', 'ticket-9');
+        expect(socketUrlFor({ ...base, token: 'a b' })).toBe('ws://box:4210/ws?token=ticket-9');
+        forgetTicket('x');
+        expect(socketUrlFor({ ...base, token: 'a b' })).toBe('ws://box:4210/ws?token=a%20b');
     });
 });
 
@@ -48,16 +64,24 @@ describe('the stored endpoint list', () => {
                 wsBaseUrl: 'ws://10.0.0.4:4210',
                 reachability: 'lan',
                 token: 't',
-                daemonId: null
+                daemonId: null,
+                daemonPublicKey: null
             }
         ]);
     });
 
     test('a blob of this version is taken as it stands, and the local row is never read back', () => {
-        const stored = JSON.stringify({ version: 2, endpoints: [row('box'), { ...row('stale'), id: LOCAL_ENDPOINT_ID }], activeId: 'box' });
+        const stored = JSON.stringify({ version: 3, endpoints: [row('box'), { ...row('stale'), id: LOCAL_ENDPOINT_ID }], activeId: 'box' });
         const parsed = parseStoredEndpoints(stored);
         expect(parsed.migrated).toBe(false);
         expect(parsed.endpoints.map((endpoint) => endpoint.id)).toEqual(['box']);
+    });
+
+    test('a blob from before the daemon key keeps its token and pins nothing yet', () => {
+        const { daemonPublicKey: _none, ...before } = row('box');
+        const parsed = parseStoredEndpoints(JSON.stringify({ version: 2, endpoints: [before], activeId: 'box' }));
+        expect(parsed.migrated).toBe(true);
+        expect(parsed.endpoints[0]).toEqual({ ...before, daemonPublicKey: null });
     });
 
     test('nothing stored and a blob that will not parse both end up empty', () => {
@@ -68,11 +92,11 @@ describe('the stored endpoint list', () => {
 
 describe('rekeying an endpoint', () => {
     beforeEach(() => {
-        useEndpoints.setState({ endpoints: [row(LOCAL_ENDPOINT_ID, { daemonId: null })], activeId: LOCAL_ENDPOINT_ID, mismatched: {} });
+        useEndpoints.setState({ endpoints: [row(LOCAL_ENDPOINT_ID, { daemonId: null, daemonPublicKey: null })], activeId: LOCAL_ENDPOINT_ID, mismatched: {} });
     });
 
     test('a row keyed on its address moves onto the daemon id, and the active choice follows', () => {
-        useEndpoints.getState().add(row('10.0.0.4:4210', { daemonId: null, httpBaseUrl: 'http://10.0.0.4:4210' }));
+        useEndpoints.getState().add(row('10.0.0.4:4210', { daemonId: null, daemonPublicKey: null, httpBaseUrl: 'http://10.0.0.4:4210' }));
         useEndpoints.getState().setActive('10.0.0.4:4210');
         useEndpoints.getState().rekeyEndpoint('10.0.0.4:4210', 'Kc9Ax2pQ0Zs');
 
@@ -86,7 +110,7 @@ describe('rekeying an endpoint', () => {
 
     test('the same daemon under two addresses ends up as one row, the one that just answered', () => {
         useEndpoints.getState().add(row('daemon-a', { httpBaseUrl: 'http://old:4210', token: 'old' }));
-        useEndpoints.getState().add(row('192.168.1.9:4210', { daemonId: null, httpBaseUrl: 'http://new:4210', token: 'new' }));
+        useEndpoints.getState().add(row('192.168.1.9:4210', { daemonId: null, daemonPublicKey: null, httpBaseUrl: 'http://new:4210', token: 'new' }));
         useEndpoints.getState().rekeyEndpoint('192.168.1.9:4210', 'daemon-a');
 
         const rows = useEndpoints.getState().endpoints.filter((endpoint) => endpoint.id === 'daemon-a');

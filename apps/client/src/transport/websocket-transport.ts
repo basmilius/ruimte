@@ -13,6 +13,9 @@ import { TransportError, type ConnectionState, type Transport, type TransportSta
 const RECONNECT_MIN_MS = 500;
 const RECONNECT_MAX_MS = 10_000;
 
+/* Where the next socket opens. A function, because the address carries a credential that is signed for per connection. */
+export type SocketAddress = string | (() => Promise<string>);
+
 interface Pending {
     type: RequestType;
     resolve(result: unknown): void;
@@ -28,10 +31,12 @@ export class WebSocketTransport implements Transport {
     private nextId = 1;
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     private disposed = false;
-    private url: string;
+    private address: SocketAddress;
+    // Bumped by anything that makes an attempt stale, so an address resolved slowly cannot open a socket nobody wants.
+    private generation = 0;
 
-    constructor(url: string) {
-        this.url = url;
+    constructor(address: SocketAddress) {
+        this.address = address;
         this.connect();
     }
 
@@ -43,16 +48,22 @@ export class WebSocketTransport implements Transport {
         return this.currentConnection;
     }
 
-    get address(): string {
-        return this.url;
+    /*
+     * Says where the next connection goes without touching the one that is open. What a socket that
+     * moved to another endpoint id needs: the machine did not change, only what this client calls it,
+     * and closing would drop every session attached to it.
+     */
+    retarget(address: SocketAddress): void {
+        this.address = address;
     }
 
     /* Points the socket at another address of the same daemon; it closes and comes back there. */
-    switchTo(url: string): void {
-        if (url === this.url) {
+    switchTo(address: SocketAddress): void {
+        if (address === this.address) {
             return;
         }
-        this.url = url;
+        this.address = address;
+        this.generation += 1;
         this.setConnection({ attempts: 0, retryAt: null });
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
@@ -101,6 +112,7 @@ export class WebSocketTransport implements Transport {
     // Stops reconnecting for good; used when the module that owns the transport is torn down.
     dispose(): void {
         this.disposed = true;
+        this.generation += 1;
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
             this.reconnectTimer = null;
@@ -127,7 +139,28 @@ export class WebSocketTransport implements Transport {
             return;
         }
         this.setConnection({ status: 'connecting', retryAt: null });
-        const socket = new WebSocket(this.url);
+        const generation = this.generation;
+        const resolved = typeof this.address === 'string' ? Promise.resolve(this.address) : this.address();
+        void resolved.then(
+            (url) => {
+                if (generation === this.generation && !this.disposed) {
+                    this.openSocket(url);
+                }
+            },
+            (e) => {
+                if (generation !== this.generation || this.disposed) {
+                    return;
+                }
+                // A daemon that will not say how to reach it is a daemon that is not reachable; the backoff is the same one.
+                console.warn('Could not work out how to connect', e);
+                this.scheduleReconnect();
+                this.setConnection({ status: 'closed' });
+            }
+        );
+    }
+
+    private openSocket(url: string): void {
+        const socket = new WebSocket(url);
         this.socket = socket;
 
         socket.onopen = () => {

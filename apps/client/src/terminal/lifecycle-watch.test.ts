@@ -18,7 +18,8 @@ const container: Endpoint = {
     wsBaseUrl: 'ws://127.0.0.1:4310',
     reachability: 'lan',
     token: 'token',
-    daemonId: 'Xk3p'
+    daemonId: 'Xk3p',
+    daemonPublicKey: null
 };
 
 let ended: string[] = [];

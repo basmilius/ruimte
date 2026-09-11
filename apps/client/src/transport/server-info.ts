@@ -17,7 +17,7 @@ const load = (endpointId: string): void => {
     void link
         .request('endpoint.info', {})
         .then(async (info) => {
-            const settled = noteDaemonIdentity(endpointId, info.id);
+            const settled = noteDaemonIdentity(endpointId, info);
             useServers.getState().setEndpoint(settled, { label: info.label, reachability: info.reachability });
             const hello = await link.request('server.hello', {});
             useServers.getState().setInfo(settled, { platform: hello.platform, home: hello.home, version: hello.version });
