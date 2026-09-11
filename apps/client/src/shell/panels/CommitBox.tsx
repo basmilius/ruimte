@@ -6,7 +6,7 @@ import { splitMessage } from '@/shell/panels/git-actions';
 import { nextActionId } from '@/shell/panels/use-git-actions';
 import { useGit } from '@/state/git';
 import { useToasts } from '@/state/toasts';
-import { transport } from '@/transport';
+import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
@@ -28,6 +28,7 @@ export function CommitBox({ cwd, status, capabilities, busy, onCommit }: CommitB
     const message = useGit((s) => s.messages[cwd] ?? '');
     const [writing, setWriting] = useState(false);
     const writingId = useRef<string | null>(null);
+    const transport = useTransport();
     const staged = status?.files.some((file) => file.state === 'staged') ?? false;
     const changed = (status?.files.length ?? 0) > 0;
     const { subject, body } = splitMessage(message);

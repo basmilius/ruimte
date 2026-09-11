@@ -31,7 +31,7 @@ import { useProviders } from '@/state/providers';
 import { fileManagerName, useServer } from '@/state/server';
 import { useSessionRow } from '@/state/sessions';
 import { useUi } from '@/state/ui';
-import { transport } from '@/transport';
+import { useTransport } from '@/transport/context';
 import { MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 
@@ -45,6 +45,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
     const platform = useServer((s) => s.platform);
     const providers = useProviders((s) => s.providers);
     const projectFolder = useProject((s) => s.current?.folder ?? null);
+    const transport = useTransport();
 
     if (!node) {
         return null;

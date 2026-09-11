@@ -10,7 +10,7 @@ import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
-import { transport } from '@/transport';
+import { useTransport } from '@/transport/context';
 import { BTN_GROUP, MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { EmptyState } from '@/ui/EmptyState';
@@ -167,6 +167,7 @@ function RowPathItems({
     platform: string | null;
     gone: boolean;
 }) {
+    const transport = useTransport();
     return (
         <>
             <ContextMenu.Item

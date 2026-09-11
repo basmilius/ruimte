@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import { Bot, Brain, Check, ChevronDown, CircleAlert, Copy, Info, MessageCircleQuestionMark, Minimize2, Paperclip, TriangleAlert, X, Zap } from 'lucide-react';
 import type { ChatApprovalItem, ChatAssistantItem, ChatQuestionItem, ChatThinkingItem, ChatUserItem } from '@ruimte/contracts';
 import { attachmentUrl, formatBytes, isImageAttachment } from '@/chat/attachments';
+import { useEndpointId } from '@/state/keys';
 import { tokenizeChips } from '@/chat/mentions';
 import { CHIP_IN_MESSAGE, MENTION_TONE, SKILL_TONE } from '@/chat/ui/chips';
 import { ImageThumb } from '@/chat/ui/ImageView';
@@ -37,6 +38,7 @@ function Chip({ glyph, label, skill = false, path }: { glyph: ReactNode; label: 
 
 export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }) {
     const [open, setOpen] = useState(false);
+    const endpointId = useEndpointId();
     const long = item.text.split('\n').length > USER_FOLD_LINES || item.text.length > USER_FOLD_CHARS;
     const segments = tokenizeChips(item.text, item.mentions ?? [], item.skills ?? []);
     const attachments = item.attachments ?? [];
@@ -48,14 +50,14 @@ export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }
                         isImageAttachment(attachment.mime) ? (
                             <ImageThumb
                                 key={attachment.id}
-                                src={attachmentUrl(chatId, attachment.id)}
+                                src={attachmentUrl(chatId, attachment.id, endpointId)}
                                 alt={attachment.name}
                                 className="max-h-32 max-w-48 object-cover"
                             />
                         ) : (
                             <a
                                 key={attachment.id}
-                                href={attachmentUrl(chatId, attachment.id)}
+                                href={attachmentUrl(chatId, attachment.id, endpointId)}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="flex max-w-56 items-center gap-1.5 rounded-lg border border-border bg-surface-sunken px-2.5 py-1.5 text-xs text-text-muted hover:text-text"

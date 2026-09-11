@@ -45,6 +45,10 @@ function Workspace() {
                     <Panel />
                 </main>
             </div>
+            {/* About the project that is open, so they belong to its workspace and not to the shell. */}
+            <LayoutDialog />
+            <ViewDialogs />
+            <WorktreeDialog />
         </WorkspaceProvider>
     );
 }
@@ -65,9 +69,6 @@ export function App() {
             <Workspace />
             <CommandPalette />
             <SettingsDialog />
-            <LayoutDialog />
-            <ViewDialogs />
-            <WorktreeDialog />
             <Toasts />
         </TooltipProvider>
     );

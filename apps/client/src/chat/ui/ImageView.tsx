@@ -4,7 +4,8 @@ import clsx from 'clsx';
 import { ImageOff, Minus, Plus, RotateCcw, X } from 'lucide-react';
 import { isImageMime, type FsReadResult } from '@ruimte/contracts';
 import { fileBytesUrl } from '@/shell/panels/file-url';
-import { transport } from '@/transport';
+import { useEndpointId } from '@/state/keys';
+import { useTransport } from '@/transport/context';
 import { BTN_GROUP } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
@@ -159,6 +160,8 @@ export function ImageThumb({ src, alt, className }: { src: string; alt: string; 
 export function ReadImage({ path }: { path: string }) {
     const [read, setRead] = useState<FsReadResult | null>(null);
     const [failed, setFailed] = useState(false);
+    const transport = useTransport();
+    const endpointId = useEndpointId();
 
     useEffect(() => {
         let cancelled = false;
@@ -177,7 +180,7 @@ export function ReadImage({ path }: { path: string }) {
         return () => {
             cancelled = true;
         };
-    }, [path]);
+    }, [transport, path]);
 
     if (failed) {
         return (
@@ -191,7 +194,7 @@ export function ReadImage({ path }: { path: string }) {
     }
     return (
         <div className="mb-1 ml-8">
-            <ImageThumb src={fileBytesUrl(path, read.mtime, read.size)} alt={path} className="max-h-48 max-w-full object-contain" />
+            <ImageThumb src={fileBytesUrl(path, read.mtime, read.size, endpointId)} alt={path} className="max-h-48 max-w-full object-contain" />
         </div>
     );
 }

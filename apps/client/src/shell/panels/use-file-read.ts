@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FsReadResult } from '@ruimte/contracts';
 import { dirnameOf } from '@/shell/panels/files-tree';
-import { transport, TransportError } from '@/transport';
+import { TransportError } from '@/transport';
+import { useTransport } from '@/transport/context';
 
 export type FileRead = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; read: FsReadResult };
 
@@ -13,6 +14,7 @@ export type FileRead = { status: 'loading' } | { status: 'error'; message: strin
 export const useFileRead = (path: string): { state: FileRead; retry(): void } => {
     const [state, setState] = useState<FileRead>({ status: 'loading' });
     const [attempt, setAttempt] = useState(0);
+    const transport = useTransport();
 
     useEffect(() => {
         let cancelled = false;
@@ -31,7 +33,7 @@ export const useFileRead = (path: string): { state: FileRead; retry(): void } =>
         return () => {
             cancelled = true;
         };
-    }, [path, attempt]);
+    }, [transport, path, attempt]);
 
     useEffect(() => {
         const folder = dirnameOf(path);
@@ -40,7 +42,7 @@ export const useFileRead = (path: string): { state: FileRead; retry(): void } =>
                 setAttempt((count) => count + 1);
             }
         });
-    }, [path]);
+    }, [transport, path]);
 
     const retry = useCallback(() => {
         setState({ status: 'loading' });

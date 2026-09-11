@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { GitActionPayload, GitActionResult } from '@ruimte/contracts';
 import { actionTitle, phaseLabel } from '@/shell/panels/git-actions';
 import { useToasts, type ToastAction } from '@/state/toasts';
-import { transport } from '@/transport';
+import { useTransport } from '@/transport/context';
 
 let counter = 0;
 
@@ -28,6 +28,7 @@ export interface RunOptions {
 export const useGitActions = (): ((payload: Omit<GitActionPayload, 'actionId'>, options?: RunOptions) => Promise<ActionOutcome>) => {
     /* Which toast a running action writes to; an action that is over is not in here. */
     const toastByAction = useRef(new Map<string, string>());
+    const transport = useTransport();
 
     useEffect(() => {
         return transport.on('git.progress', (payload) => {
@@ -37,38 +38,41 @@ export const useGitActions = (): ((payload: Omit<GitActionPayload, 'actionId'>, 
             }
             useToasts.getState().update(toastId, { title: phaseLabel(payload.phase), ...(payload.line === '' ? {} : { description: payload.line }) });
         });
-    }, []);
+    }, [transport]);
 
-    return useCallback(async (payload, options = {}) => {
-        const actionId = nextActionId();
-        const toasts = useToasts.getState();
-        const toastId = toasts.show({
-            title: actionTitle(payload.kind),
-            kind: 'progress',
-            action: {
-                label: 'Cancel',
-                run: () => void transport.request('git.cancel', { actionId }).catch(() => undefined)
-            }
-        });
-        toastByAction.current.set(actionId, toastId);
-        try {
-            const result = await transport.request('git.action', { ...payload, actionId });
-            const action = options.done?.(result);
-            useToasts.getState().show({
-                id: toastId,
-                title: result.summary,
-                kind: 'success',
-                ...(action ? { action } : {})
+    return useCallback(
+        async (payload, options = {}) => {
+            const actionId = nextActionId();
+            const toasts = useToasts.getState();
+            const toastId = toasts.show({
+                title: actionTitle(payload.kind),
+                kind: 'progress',
+                action: {
+                    label: 'Cancel',
+                    run: () => void transport.request('git.cancel', { actionId }).catch(() => undefined)
+                }
             });
-            return { ok: true, result };
-        } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : 'That did not work.';
-            useToasts
-                .getState()
-                .show({ id: toastId, title: `${actionTitle(payload.kind)} failed`, description: message.split('\n')[0], kind: 'error', output: message });
-            return { ok: false, message };
-        } finally {
-            toastByAction.current.delete(actionId);
-        }
-    }, []);
+            toastByAction.current.set(actionId, toastId);
+            try {
+                const result = await transport.request('git.action', { ...payload, actionId });
+                const action = options.done?.(result);
+                useToasts.getState().show({
+                    id: toastId,
+                    title: result.summary,
+                    kind: 'success',
+                    ...(action ? { action } : {})
+                });
+                return { ok: true, result };
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : 'That did not work.';
+                useToasts
+                    .getState()
+                    .show({ id: toastId, title: `${actionTitle(payload.kind)} failed`, description: message.split('\n')[0], kind: 'error', output: message });
+                return { ok: false, message };
+            } finally {
+                toastByAction.current.delete(actionId);
+            }
+        },
+        [transport]
+    );
 };

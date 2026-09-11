@@ -4,7 +4,7 @@ import { GitBranch } from 'lucide-react';
 import { useCanvas } from '@/state/canvas';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
-import { transport } from '@/transport';
+import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 
@@ -24,6 +24,7 @@ export function WorktreeDialog() {
     const [branch, setBranch] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
     const [failure, setFailure] = useState<string | null>(null);
+    const transport = useTransport();
 
     const value = branch ?? (group ? branchFromTitle(group.title) : '');
 

@@ -24,7 +24,7 @@ import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { useToasts } from '@/state/toasts';
-import { transport } from '@/transport';
+import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP, MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
@@ -97,6 +97,7 @@ export function GitPanel() {
     const bodyRef = useRef<HTMLDivElement>(null);
     const roomForPills = (useUi((s) => s.panelWidth) ?? 540) >= PILLS_FROM_WIDTH;
     const run = useGitActions();
+    const transport = useTransport();
 
     const refresh = useCallback(async (): Promise<void> => {
         if (cwd === null) {
@@ -110,7 +111,7 @@ export function GitPanel() {
             const message = error instanceof Error ? error.message : 'The status could not be read.';
             setHeld((previous) => ({ cwd, status: previous?.cwd === cwd ? previous.status : null, failure: message }));
         }
-    }, [cwd]);
+    }, [transport, cwd]);
 
     const loadRefs = useCallback((): void => {
         if (cwd === null) {
@@ -128,7 +129,7 @@ export function GitPanel() {
                 setStashes([]);
             })
             .finally(() => setLoadingRefs(false));
-    }, [cwd]);
+    }, [transport, cwd]);
 
     useEffect(() => {
         if (cwd === null) {
@@ -144,7 +145,7 @@ export function GitPanel() {
         return () => {
             watch.release();
         };
-    }, [cwd, refresh]);
+    }, [transport, cwd, refresh]);
 
     useEffect(() => {
         return transport.on('git.status', (payload) => {
@@ -153,7 +154,7 @@ export function GitPanel() {
                 setRevision((count) => count + 1);
             }
         });
-    }, [cwd]);
+    }, [transport, cwd]);
 
     useEffect(() => {
         // A repository the daemon gave up watching only moves when this window asks it to.
@@ -193,7 +194,7 @@ export function GitPanel() {
     const stage = (paths: string[], staged: boolean): void => {
         if (cwd !== null && paths.length > 0) {
             setBusy(true);
-            void stageFiles(cwd, paths, staged).finally(() => {
+            void stageFiles(transport, cwd, paths, staged).finally(() => {
                 setBusy(false);
                 void refresh();
             });

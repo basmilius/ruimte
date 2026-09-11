@@ -9,7 +9,7 @@ import { relativeTo } from '@/shell/panels/files-tree';
 import { useFiles, type FileTabView } from '@/state/files';
 import { useGit } from '@/state/git';
 import { useSettings } from '@/state/settings';
-import { transport } from '@/transport';
+import { useTransport } from '@/transport/context';
 import { BTN_GROUP } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
@@ -45,6 +45,7 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
        switch of scope reads as loading without an effect that has to empty the state first. */
     const asked = `${view.cwd}\u0000${relative}\u0000${view.scope}\u0000${String(view.staged)}\u0000${String(whitespace)}\u0000${nonce}`;
     const [held, setHeld] = useState<{ asked: string; state: DiffState } | null>(null);
+    const transport = useTransport();
     const state: DiffState = held !== null && held.asked === asked ? held.state : { status: 'loading' };
 
     useEffect(() => {
@@ -65,7 +66,7 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
         return () => {
             alive = false;
         };
-    }, [asked, relative, tabKey, view.cwd, view.scope, view.staged, whitespace]);
+    }, [transport, asked, relative, tabKey, view.cwd, view.scope, view.staged, whitespace]);
 
     const refresh = useCallback(() => setNonce((count) => count + 1), []);
     const actions = useMemo(() => ({ key: tabKey, path, name, refresh }), [tabKey, path, name, refresh]);
@@ -180,6 +181,7 @@ function CommitDiff({ tabKey, cwd, commit }: { tabKey: string; cwd: string; comm
        that has to empty the state first. */
     const asked = `${cwd}\u0000${commit}`;
     const [held, setHeld] = useState<{ asked: string; state: CommitState } | null>(null);
+    const transport = useTransport();
     const state: CommitState = held !== null && held.asked === asked ? held.state : { status: 'loading' };
 
     useEffect(() => {
@@ -200,7 +202,7 @@ function CommitDiff({ tabKey, cwd, commit }: { tabKey: string; cwd: string; comm
         return () => {
             alive = false;
         };
-    }, [asked, commit, cwd, tabKey]);
+    }, [transport, asked, commit, cwd, tabKey]);
 
     const meta = state.status === 'ready' ? state.diff.commit : undefined;
     const files: readonly GitDiffFile[] = state.status === 'ready' ? (state.diff.files ?? []) : [];

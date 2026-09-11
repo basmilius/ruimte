@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { CornerUpRight, FileVideo } from 'lucide-react';
 import type { FsReadBinary } from '@ruimte/contracts';
 import { fileBytesUrl } from '@/shell/panels/file-url';
+import { useEndpointId } from '@/state/keys';
 import { formatBytes } from '@/shell/panels/file-size';
 import { FileToolbar } from '@/shell/panels/FileToolbar';
 import { fileManagerName, useServer } from '@/state/server';
-import { transport } from '@/transport';
+import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
@@ -22,6 +23,8 @@ export function VideoFile({ path, name, read }: { path: string; name: string; re
     const platform = useServer((s) => s.platform);
     const [size, setSize] = useState<{ width: number; height: number } | null>(null);
     const [failed, setFailed] = useState(!canPlay(read.mime));
+    const transport = useTransport();
+    const endpointId = useEndpointId();
 
     const reveal = (): void => {
         void transport.request('fs.reveal', { path }).catch(() => undefined);
@@ -47,7 +50,7 @@ export function VideoFile({ path, name, read }: { path: string; name: string; re
                     <video
                         controls
                         preload="metadata"
-                        src={fileBytesUrl(path, read.mtime, read.size)}
+                        src={fileBytesUrl(path, read.mtime, read.size, endpointId)}
                         className="max-h-full max-w-full"
                         onLoadedMetadata={(event) => setSize({ width: event.currentTarget.videoWidth, height: event.currentTarget.videoHeight })}
                         onError={() => setFailed(true)}
