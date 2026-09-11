@@ -2,10 +2,10 @@ import { useCallback, useEffect } from 'react';
 import clsx from 'clsx';
 import { ArrowLeft, ChartNoAxesColumn, RefreshCw } from 'lucide-react';
 import { Segmented, Skeleton } from '@/shell/settings/controls';
-import { currentEndpointId } from '@/state/keys';
+import { useEndpointId } from '@/state/keys';
 import { useUi } from '@/state/ui';
 import { askedKey, USAGE_PERIODS, useUsage, useUsageStore, windowFor, type UsageMetric, type UsagePeriod } from '@/state/usage';
-import { transport } from '@/transport';
+import { useTransport } from '@/transport/context';
 import { EmptyState } from '@/ui/EmptyState';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
@@ -49,6 +49,9 @@ const useCloseOnEscape = (): void => {
  * one never lands, because the key it carries is no longer the one being shown.
  */
 const useSummary = (period: UsagePeriod): (() => void) => {
+    const transport = useTransport();
+    const endpointId = useEndpointId();
+
     useEffect(() => {
         const subscribe = (): void => void transport.request('usage.subscribe', {}).catch(() => undefined);
         if (transport.status === 'open') {
@@ -64,18 +67,17 @@ const useSummary = (period: UsagePeriod): (() => void) => {
             off();
             void transport.request('usage.unsubscribe', {}).catch(() => undefined);
         };
-    }, []);
+    }, [transport]);
 
     const load = useCallback((): void => {
         const payload = windowFor(period);
         const asked = askedKey(payload);
-        const endpointId = currentEndpointId();
         useUsageStore.getState().setLoading(endpointId, true);
         transport
             .request('usage.summary', payload)
             .then((summary) => useUsageStore.getState().receive(endpointId, asked, summary))
             .catch(() => useUsageStore.getState().fail(endpointId));
-    }, [period]);
+    }, [transport, endpointId, period]);
 
     useEffect(() => {
         if (transport.status === 'open') {
@@ -93,7 +95,7 @@ const useSummary = (period: UsagePeriod): (() => void) => {
             offChanged();
             offStatus();
         };
-    }, [load]);
+    }, [transport, load]);
 
     return load;
 };

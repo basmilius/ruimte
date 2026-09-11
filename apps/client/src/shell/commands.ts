@@ -23,7 +23,7 @@ import { providersOf } from '@/state/providers';
 import { fileManagerName, serverInfoOf } from '@/state/server';
 import { useTheme } from '@/state/theme';
 import { useUi } from '@/state/ui';
-import { transport } from '@/transport';
+import { transportFor } from '@/transport';
 
 export interface Command {
     id: string;
@@ -115,7 +115,10 @@ export const appCommands = (): Command[] => {
                   {
                       id: 'reveal',
                       label: `Open project in ${fileManagerName(serverInfoOf(currentEndpointId()).platform)}`,
-                      run: () => void transport.request('fs.reveal', { path: folder }).catch(() => undefined)
+                      run: () =>
+                          void transportFor(currentEndpointId())
+                              ?.request('fs.reveal', { path: folder })
+                              .catch(() => undefined)
                   }
               ]
             : []),

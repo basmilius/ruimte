@@ -52,7 +52,9 @@ import { useProject } from '@/state/project';
 import { fileManagerName, serverInfoOf, useServers } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
-import { transport, transportFor } from '@/transport';
+import { transportFor } from '@/transport';
+import { useFocusedConnection } from '@/transport/connections';
+import type { Transport } from '@/transport/transport';
 import { useOpenEndpoints } from '@/transport/status';
 import { desktop } from '@/desktop/bridge';
 import { Button } from '@/ui/Button';
@@ -96,8 +98,8 @@ interface BrowseAnswer {
  * this client has forgotten mid-browse has no socket left, and falling back to the active one lists
  * something rather than throwing.
  */
-const requestBrowse = async (endpointId: string, partialPath: string, cwd: string | null): Promise<BrowseAnswer> => {
-    const socket = transportFor(endpointId) ?? transport;
+const requestBrowse = async (endpointId: string, partialPath: string, cwd: string | null, fallback: Transport): Promise<BrowseAnswer> => {
+    const socket = transportFor(endpointId) ?? fallback;
     try {
         return { result: await socket.request('fs.browse', { partialPath, cwd: cwd ?? undefined }), failure: null };
     } catch (e) {
@@ -164,6 +166,8 @@ export function CommandPalette() {
     const endpoints = useEndpoints((s) => s.endpoints);
     const connected = useOpenEndpoints();
     const activeId = useEndpoints((s) => s.activeId);
+    /* The palette sits outside every workspace, so it works on the one the person has the focus in. */
+    const { transport } = useFocusedConnection();
     const browseAt = useUi((s) => s.paletteBrowseAt);
     const browseStartFolder = useSettings((s) => s.browseStartFolder);
     const [query, setQuery] = useState('');
@@ -256,7 +260,7 @@ export function CommandPalette() {
         // Nothing on screen yet is nothing to hold back, so the first listing goes out without the wait.
         const timer = window.setTimeout(
             () => {
-                void requestBrowse(browseEndpointId, query, cwdFor(browseEndpointId)).then((answer) => {
+                void requestBrowse(browseEndpointId, query, cwdFor(browseEndpointId), transport).then((answer) => {
                     // A later keystroke already asked again; this answer is stale.
                     if (mine !== generation.current) {
                         return;
@@ -268,7 +272,7 @@ export function CommandPalette() {
             listing === null ? 0 : BROWSE_DEBOUNCE_MS
         );
         return () => window.clearTimeout(timer);
-    }, [listing, browsing, machineStep, browseEndpointId, query, cwdFor]);
+    }, [transport, listing, browsing, machineStep, browseEndpointId, query, cwdFor]);
 
     /*
      * Every step fetches before it commits, so the path and the list change in the same frame and
@@ -285,13 +289,13 @@ export function CommandPalette() {
     const navigateTo = useCallback(
         async (path: string, endpointId: string): Promise<void> => {
             const mine = ++generation.current;
-            const answer = await requestBrowse(endpointId, path, cwdFor(endpointId));
+            const answer = await requestBrowse(endpointId, path, cwdFor(endpointId), transport);
             if (mine !== generation.current) {
                 return;
             }
             commitBrowse(endpointId, path, answer);
         },
-        [commitBrowse, cwdFor]
+        [transport, commitBrowse, cwdFor]
     );
 
     /*
@@ -304,7 +308,7 @@ export function CommandPalette() {
             const info = serverInfoOf(endpointId);
             const { start: from, home } = browseStart(browseStartFolder, info.home, separatorFor(info.platform));
             const mine = ++generation.current;
-            const answer = await requestBrowse(endpointId, from, cwdFor(endpointId));
+            const answer = await requestBrowse(endpointId, from, cwdFor(endpointId), transport);
             if (mine !== generation.current) {
                 return;
             }
@@ -314,7 +318,7 @@ export function CommandPalette() {
             }
             commitBrowse(endpointId, from, answer);
         },
-        [browseStartFolder, commitBrowse, cwdFor, navigateTo]
+        [transport, browseStartFolder, commitBrowse, cwdFor, navigateTo]
     );
 
     useEffect(() => {
@@ -370,7 +374,7 @@ export function CommandPalette() {
                 });
         }, FILE_DEBOUNCE_MS);
         return () => window.clearTimeout(timer);
-    }, [browsing, folder, grepping, query]);
+    }, [transport, browsing, folder, grepping, query]);
 
     const openFile = useCallback(
         (path: string): void => {

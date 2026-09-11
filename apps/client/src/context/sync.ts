@@ -3,7 +3,7 @@ import { deriveContextSources } from '@/context/sources';
 import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
-import { transport } from '@/transport';
+import { pool, transportFor } from '@/transport';
 
 const SETTLE_MS = 300;
 
@@ -46,10 +46,13 @@ export const startContextSync = (): (() => void) => {
     const sent = new Map<string, Map<string, string>>();
 
     const push = (force = false): void => {
-        if (transport.status !== 'open') {
+        /* The daemon of the project being edited, which is not the active machine once a second
+           workspace is on screen: a `context.set` on the wrong one would name a node it has never seen. */
+        const endpointId = currentEndpointId();
+        const transport = transportFor(endpointId);
+        if (transport?.status !== 'open') {
             return;
         }
-        const endpointId = currentEndpointId();
         const before = sent.get(endpointId) ?? new Map<string, string>();
         const wanted = contextSources();
         const next = new Map<string, string>();
@@ -89,16 +92,15 @@ export const startContextSync = (): (() => void) => {
             schedule();
         }
     });
-    const offStatus = transport.subscribeStatus((status) => {
-        if (status === 'open') {
+    const offStatus = pool.subscribe(() => {
+        const endpointId = currentEndpointId();
+        if (transportFor(endpointId)?.status !== 'open' || !sent.has(endpointId)) {
             // A daemon that answers again knows nothing of what it was told before it went away.
-            sent.delete(currentEndpointId());
+            sent.delete(endpointId);
             push(true);
         }
     });
-    if (transport.status === 'open') {
-        push(true);
-    }
+    push(true);
     return () => {
         offCanvas();
         offDocument();

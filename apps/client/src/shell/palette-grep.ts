@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FsGrepMatch } from '@ruimte/contracts';
-import { transport } from '@/transport';
+import { useFocusedConnection } from '@/transport/connections';
 
 // Long enough that a typed word is one search, short enough that the list feels like it follows.
 const GREP_DEBOUNCE_MS = 140;
@@ -67,6 +67,7 @@ export const firstContextLine = (match: FsGrepMatch): number => match.line - mat
 export const useGrepSearch = (folder: string | null, query: string, options: GrepOptions): GrepState => {
     const [answer, setAnswer] = useState<Answer>(NOTHING);
     const generation = useRef(0);
+    const { transport } = useFocusedConnection();
 
     useEffect(() => {
         const trimmed = query.trim();
@@ -98,7 +99,7 @@ export const useGrepSearch = (folder: string | null, query: string, options: Gre
         return () => {
             window.clearTimeout(timer);
         };
-    }, [folder, query, options.caseSensitive, options.wholeWord, options.regex]);
+    }, [transport, folder, query, options.caseSensitive, options.wholeWord, options.regex]);
 
     const trimmed = query.trim();
     if (folder === null || trimmed === '') {
