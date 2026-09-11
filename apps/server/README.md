@@ -273,4 +273,6 @@ It creates a session, runs `uname`, prints the streamed output and the screen a 
 git repositories of its own under `/work`. It is how the pairing, the handshake, the credential on
 the socket and the `lan` reachability get tested against a machine that is really not the client's.
 `bun run --cwd apps/server docker:up` starts it, `docker:pair` prints a pairing URL, `docker:test`
-runs the suite; the tests skip themselves unless `RUIMTE_DOCKER=1` is set. See `docker/README.md`.
+runs the suite against a fresh container of its own; the tests skip themselves unless
+`RUIMTE_DOCKER=1` is set. The machine keeps its home and its `/work` in two named volumes across a
+`docker:down`, and `docker:reset` is what empties them. See `docker/README.md`.

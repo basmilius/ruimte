@@ -1,11 +1,28 @@
 name: ruimte-remote
 
+# Both services run the same daemon from the same image; they differ in what they keep and where
+# they publish.
+x-daemon: &daemon
+  build:
+    # The image needs the shared packages and the lockfile, so the whole repository is the context.
+    context: ../../..
+    dockerfile: apps/server/docker/Dockerfile
+  image: ruimte-remote
+  init: true
+  stop_grace_period: 5s
+  # `docker:up` waits on this, so the tests can talk to the daemon the moment it returns.
+  healthcheck:
+    # Concatenated rather than interpolated: compose reads a `${...}` in here as its own.
+    test: ['CMD', 'bun', '-e', 'process.exit((await fetch(`http://127.0.0.1:` + process.env.RUIMTE_PORT + `/health`)).ok ? 0 : 1)']
+    interval: 2s
+    timeout: 5s
+    retries: 15
+    start_period: 2s
+
 services:
+  # The second machine to work against. Everything put on it stays on it across `docker:down`.
   daemon:
-    build:
-      # The image needs the shared packages and the lockfile, so the whole repository is the context.
-      context: ../../..
-      dockerfile: apps/server/docker/Dockerfile
+    <<: *daemon
     container_name: ruimte-remote
     # A different port than the local daemon, and only this machine reaches it: the point is a
     # daemon on another machine, not a daemon on the network.
@@ -13,15 +30,29 @@ services:
       - '127.0.0.1:4310:4310'
     environment:
       RUIMTE_LABEL: docker-linux
-      # Keeps $RUIMTE_HOME and /work across a restart, which is how a client that is already paired
-      # survives a rebuild; that is what checking an upgrade against an existing pairing needs.
-      RUIMTE_KEEP_STATE: ${RUIMTE_KEEP_STATE:-0}
-    init: true
-    stop_grace_period: 5s
-    # `docker:up` waits on this, so the tests can talk to the daemon the moment it returns.
-    healthcheck:
-      test: ['CMD', 'bun', '-e', 'process.exit((await fetch("http://127.0.0.1:4310/health")).ok ? 0 : 1)']
-      interval: 2s
-      timeout: 5s
-      retries: 15
-      start_period: 2s
+    # A named volume, not a bind mount: the file system has to be the container's own, which is
+    # what makes paths, permissions and checkouts here not this machine's.
+    volumes:
+      - home:/root/.ruimte
+      - work:/work
+
+  # The suite counts the projects a daemon lists and the repositories under /work, so it needs one
+  # that has seen nothing. That is a container of its own rather than a wipe of the one above,
+  # which would cost the state that container is kept around for.
+  daemon-test:
+    <<: *daemon
+    container_name: ruimte-remote-test
+    # Only `docker:test` starts this one; a plain `docker compose up` leaves it alone.
+    profiles: ['test']
+    ports:
+      - '127.0.0.1:4320:4320'
+    environment:
+      RUIMTE_LABEL: docker-linux
+      RUIMTE_PORT: '4320'
+      # No volumes at all, and a wipe on every start, so the restart halfway through the suite
+      # lands on a fresh machine as well.
+      RUIMTE_FRESH_STATE: '1'
+
+volumes:
+  home:
+  work:

@@ -12,8 +12,9 @@
     "snapshot-prices": "bun scripts/snapshot-prices.ts",
     "docker:up": "docker compose -f docker/compose.yml up -d --build --wait",
     "docker:down": "docker compose -f docker/compose.yml down",
+    "docker:reset": "docker compose -f docker/compose.yml --profile test down -v",
     "docker:pair": "docker/pair.sh",
-    "docker:test": "RUIMTE_DOCKER=1 bun test src/docker"
+    "docker:test": "docker/test.sh"
   },
   "dependencies": {
     "@ruimte/contracts": "workspace:*",
