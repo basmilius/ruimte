@@ -84,7 +84,7 @@ const reportUnknownKey = (endpoint: Endpoint): void => {
         id: `endpoint-key-${endpoint.id}`,
         kind: 'error',
         title: `${endpoint.label} does not know this client`,
-        description: 'Its access was taken away, or the daemon lost the pairing. Pair again to talk to it.'
+        description: 'Its access was taken away, or that machine lost the pairing. Pair again to talk to it.'
     });
 };
 

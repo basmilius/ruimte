@@ -105,7 +105,7 @@ function Provenance() {
     const currency = useUsage((s) => s.currency);
     const failed = useUsage((s) => s.failed);
     if (failed) {
-        return <p className="text-xs text-status-error">The daemon could not read the transcripts. These are the numbers of the last scan that worked.</p>;
+        return <p className="text-xs text-status-error">The machine could not read the transcripts. These are the numbers of the last scan that worked.</p>;
     }
     if (summary === null) {
         return null;

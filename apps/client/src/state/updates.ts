@@ -33,7 +33,7 @@ export const describeUpdate = (state: UpdateState): { headline: string; detail: 
         case 'unsupported':
             return {
                 headline: 'Updates come from the desktop app',
-                detail: 'A browser follows whichever daemon it is pointed at, and a checkout updates with git.'
+                detail: 'A browser follows whichever machine it is pointed at, and a checkout updates with git.'
             };
         case 'checking':
             return { headline: 'Looking for a newer version', detail: '' };
@@ -44,7 +44,7 @@ export const describeUpdate = (state: UpdateState): { headline: string; detail: 
         case 'ready':
             return {
                 headline: `Version ${state.version ?? 'unknown'} is ready`,
-                detail: 'Ruimte restarts to install it. Nothing you have open is lost: sessions live in the daemon.'
+                detail: 'Ruimte restarts to install it. Nothing you have open is lost: sessions live on the machine.'
             };
         case 'error':
             return { headline: 'The last check did not finish', detail: state.error ?? 'No reason given.' };

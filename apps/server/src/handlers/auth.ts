@@ -57,7 +57,7 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
     dispatcher.register('auth.pairingToken', (_payload, client) => {
         // Same rule as the HTTP route: only something on the daemon's own machine may invite another one.
         if ((client.access?.reachability ?? 'loopback') !== 'loopback') {
-            throw new RequestError('forbidden', "Only a client on the daemon's own machine can make a pairing link");
+            throw new RequestError('forbidden', 'Only a client on this machine can make a pairing link');
         }
         return { url: host.pairingUrl() };
     });

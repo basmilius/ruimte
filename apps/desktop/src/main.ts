@@ -68,7 +68,7 @@ const startDaemon = (): void => {
     }
     const target = daemonCommand();
     if (!target) {
-        dialog.showErrorBox('Ruimte', 'The daemon is missing. Run the desktop app from the repository or install a release.');
+        dialog.showErrorBox('Ruimte', 'The background service is missing. Run the desktop app from the repository or install a release.');
         app.quit();
         return;
     }
@@ -90,7 +90,7 @@ const startDaemon = (): void => {
     }
     daemon = spawn(target.command, target.args, { stdio, env });
     daemon.on('error', (e) => {
-        dialog.showErrorBox('Ruimte', `The daemon could not start: ${e.message}`);
+        dialog.showErrorBox('Ruimte', `The background service could not start: ${e.message}`);
         app.quit();
     });
     daemon.on('exit', (code) => {
@@ -117,7 +117,7 @@ const waitForDaemon = async (): Promise<void> => {
         }
         await new Promise((resolve) => setTimeout(resolve, 150));
     }
-    throw new Error('The daemon did not come up');
+    throw new Error('The background service did not come up');
 };
 
 // The band the client reserves across the sidebar's strip and the toolbar, which the overlay controls share on Windows and Linux.
@@ -623,7 +623,7 @@ if (!app.requestSingleInstanceLock()) {
         try {
             await waitForDaemon();
         } catch (e) {
-            dialog.showErrorBox('Ruimte', e instanceof Error ? e.message : 'The daemon did not start');
+            dialog.showErrorBox('Ruimte', e instanceof Error ? e.message : 'The background service did not start');
             app.quit();
             return;
         }

@@ -35,14 +35,14 @@ describe('a row that turns out to be a machine already in the list', () => {
         useToasts.setState({ toasts: [] });
     });
 
-    test('an address that answers as the daemon behind this page leaves the local row and drops the other', async () => {
+    test('an address that answers as the machine behind this page leaves the local row and drops the other', async () => {
         useEndpoints.setState({ endpoints: [local('daemon-here'), row('10.0.0.4:4210', { daemonId: null })] });
 
         expect(noteDaemonIdentity('10.0.0.4:4210', answers('daemon-here'))).toBe(LOCAL_ENDPOINT_ID);
         await Bun.sleep(1);
 
         expect(useEndpoints.getState().endpoints.map((entry) => entry.id)).toEqual([LOCAL_ENDPOINT_ID]);
-        expect(useToasts.getState().toasts[0]?.description).toContain('another address of the daemon listed as This machine');
+        expect(useToasts.getState().toasts[0]?.description).toContain('another address of the machine listed as This machine');
     });
 
     test('a machine paired over the LAN before this page said who it is folds into the local row', async () => {

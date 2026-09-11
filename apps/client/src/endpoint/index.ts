@@ -44,11 +44,11 @@ export const pairEndpoint = async (pairingUrl: string): Promise<Endpoint> => {
         body: JSON.stringify({ token: parsed.token, label: clientLabel(), ...(key ? { publicKey: key.publicKey } : {}) })
     });
     if (!response.ok) {
-        throw new Error(await response.text().catch(() => 'The daemon refused the pairing'));
+        throw new Error(await response.text().catch(() => 'That machine refused the pairing'));
     }
     const { sessionToken, endpoint } = (await response.json()) as { sessionToken?: string; endpoint: EndpointInfo };
     if (key && !endpoint.publicKey && !sessionToken) {
-        throw new Error('That daemon answered with neither a key nor a token; there is nothing to talk to it with');
+        throw new Error('That machine answered with neither a key nor a token; there is nothing to talk to it with');
     }
     // Again with the id the daemon itself put in the pairing answer, for a daemon whose address said nothing.
     refuseOwnDaemon(endpoint.id);
@@ -74,7 +74,7 @@ export const pairEndpoint = async (pairingUrl: string): Promise<Endpoint> => {
             id: `endpoint-merged-${record.id}`,
             kind: 'success',
             title: `${known.label} is already in the list`,
-            description: `That link is another address of the same daemon, so this client moved its row to ${record.httpBaseUrl} rather than listing the machine twice.`
+            description: `That link is another address of the same machine, so this client moved its row to ${record.httpBaseUrl} rather than listing it twice.`
         });
     }
     return record;
@@ -102,7 +102,7 @@ const daemonAt = async (httpBaseUrl: string): Promise<string | null> => {
 const refuseOwnDaemon = (daemonId: string | null): void => {
     const known = daemonId === null ? null : endpointForDaemon(daemonId);
     if (known?.id === LOCAL_ENDPOINT_ID) {
-        throw new Error(`That link is for the daemon that served this page; it is already in the list as ${known.label}.`);
+        throw new Error(`That link is for the machine that served this page; it is already in the list as ${known.label}.`);
     }
 };
 
