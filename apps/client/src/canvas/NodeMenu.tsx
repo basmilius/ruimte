@@ -79,6 +79,9 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
      */
     const startAgentFromNote = (provider: ProviderInfo): void => {
         const chatId = addAgentNode('chat', provider, beside);
+        if (chatId === null) {
+            return;
+        }
         const body = node.body?.trim();
         if (body) {
             writeDraft(chatId, { ...EMPTY_DRAFT, text: body });

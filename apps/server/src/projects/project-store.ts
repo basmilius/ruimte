@@ -141,13 +141,9 @@ export class ProjectStore {
         );
     }
 
+    /* Reading the list makes nothing: a daemon nobody has opened a project on answers an empty list,
+       and a client that has just paired with one is not handed a project it never asked for. */
     async list(): Promise<ProjectSummary[]> {
-        await this.locked(async () => {
-            // A daemon that knows no canvas makes one, so every client boots into the same project.
-            if ((await this.loadRegistry()).length === 0) {
-                await this.openUnlocked({ name: 'Untitled project' });
-            }
-        });
         const entries = await this.loadRegistry();
         return Promise.all(entries.map((entry) => this.summarize(entry)));
     }

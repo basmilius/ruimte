@@ -219,9 +219,10 @@ export function EndpointsSection() {
         setBusy(true);
         setFailure(null);
         try {
-            const endpoint = await pairEndpoint(link);
+            /* Pairing adds the machine and connects to it. Which machine the app is on is a choice
+               of its own, the radio beside every row, so it is not made here. */
+            await pairEndpoint(link);
             setLink('');
-            await activateEndpoint(endpoint.id);
         } catch (e) {
             setFailure(failureText(e, 'Pairing failed'));
         } finally {

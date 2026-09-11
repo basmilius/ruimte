@@ -28,6 +28,7 @@ import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { useEndpointId } from '@/state/keys';
 import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
+import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import {
     buildSidebar,
@@ -395,6 +396,7 @@ export function Sidebar() {
     const drafts = useDrafts((s) => s.ids);
     const open = useUi((s) => s.sidebarOpen);
     const usageOpen = useUi((s) => s.page === 'usage');
+    const hasProject = useProject((s) => s.current !== null);
     const expanded = useUi(useShallow((s) => s.sidebarExpanded));
     const instant = useInstantWidth();
     const inset = useTrafficLightInset();
@@ -499,7 +501,7 @@ export function Sidebar() {
 
                 <div ref={listRef} className="mt-2 min-h-0 grow overflow-auto px-2">
                     {sidebarViews.length === 0 ? (
-                        <EmptyState>No project is open yet.</EmptyState>
+                        <EmptyState>{hasProject ? 'This project has no views yet.' : 'No project is open yet.'}</EmptyState>
                     ) : (
                         sections.map((section) => {
                             // Only the list of views takes a drop; the nodes under a canvas are not places
@@ -581,8 +583,12 @@ export function Sidebar() {
                 </div>
 
                 <div className="flex items-center gap-1 border-t border-border p-2">
+                    {/* A view goes in a project file, so with none open the menu would offer nothing. */}
                     <Menu.Root>
-                        <Menu.Trigger className="flex h-8 grow items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active">
+                        <Menu.Trigger
+                            disabled={!hasProject}
+                            className="flex h-8 grow items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-surface-hover hover:text-text disabled:opacity-50 disabled:hover:bg-transparent data-[popup-open]:bg-surface-active"
+                        >
                             <Icon icon={Plus} size={14} /> New view
                         </Menu.Trigger>
                         <Menu.Portal>

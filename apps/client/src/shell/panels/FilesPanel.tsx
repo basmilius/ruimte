@@ -111,6 +111,7 @@ const rowPathOf = (event: { nativeEvent: Event }): string | null => {
  */
 export function FilesPanel() {
     const folder = useProject((s) => s.current?.folder ?? null);
+    const hasProject = useProject((s) => s.current !== null);
     const platform = useServer((s) => s.platform);
     const reachability = useServer((s) => s.reachability);
     const machine = useServer((s) => s.label);
@@ -435,7 +436,9 @@ export function FilesPanel() {
     if (!folder) {
         return (
             <div className="grid grow place-items-center">
-                <EmptyState icon={<Icon icon={Folder} size={20} />}>This canvas has no folder, so there are no files to list.</EmptyState>
+                <EmptyState icon={<Icon icon={Folder} size={20} />}>
+                    {hasProject ? 'This canvas has no folder, so there are no files to list.' : 'No project is open, so there are no files to list.'}
+                </EmptyState>
             </div>
         );
     }

@@ -10,6 +10,7 @@ import { useHasViewToolbar, ViewToolbar } from '@/shell/ViewToolbar';
 import { STRIP_PADDING_PX } from '@/shell/Sidebar';
 import { SidebarToggle } from '@/shell/SidebarToggle';
 import { useDrawing } from '@/state/drawing';
+import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useServer } from '@/state/server';
 import { useUi } from '@/state/ui';
@@ -33,6 +34,7 @@ export function Toolbar() {
     const panel = useUi((s) => s.panel);
     const previewOpen = useUi((s) => s.preview.open);
     const sidebarOpen = useUi((s) => s.sidebarOpen);
+    const hasView = useDocument((s) => s.activeViewId !== null);
     const hasViewToolbar = useHasViewToolbar();
     const inset = useTrafficLightInset();
 
@@ -52,8 +54,9 @@ export function Toolbar() {
                     </>
                 )}
                 <ProjectMenu />
-                {/* The open sidebar is the view switcher already; the segment comes back with it closed. */}
-                {!sidebarOpen && (
+                {/* The open sidebar is the view switcher already; the segment comes back with it
+                    closed, and only when there is a view for it to name. */}
+                {!sidebarOpen && hasView && (
                     <>
                         <span className="text-text-faint">/</span>
                         <ViewMenu />

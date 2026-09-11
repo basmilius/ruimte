@@ -17,15 +17,21 @@ import {
 } from '@/project/views';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { useDocument } from '@/state/document';
+import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 
 /*
  * What "New view" offers: a canvas, or one session with no canvas around it. The agent submenus are
- * the ones the dock uses, so the CLI list can never drift apart between the two.
+ * the ones the dock uses, so the CLI list can never drift apart between the two. A view belongs to a
+ * project file, so with none open there is nothing here to offer.
  */
 export function NewViewItems() {
+    const hasProject = useProject((s) => s.current !== null);
+    if (!hasProject) {
+        return null;
+    }
     return (
         <>
             <div className={MENU_LABEL}>New view</div>

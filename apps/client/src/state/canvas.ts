@@ -160,7 +160,8 @@ interface CanvasState {
     /* Changes what a node carries (its page, its folder) without touching its placement. */
     updateNode(id: string, patch: Partial<Pick<CanvasNode, 'url' | 'cwd' | 'command' | 'resume' | 'body' | 'color' | 'provider'>>): void;
     duplicateNode(id: string): void;
-    addNode(kind: NodeKind, at: Point, options?: AddNodeOptions): string;
+    /* Null with no view under the canvas: there is no project file such a node could live in. */
+    addNode(kind: NodeKind, at: Point, options?: AddNodeOptions): string | null;
     /* Wraps the selected nodes in a group; answers null when nothing is selected. */
     groupSelection(): string | null;
     addText(at: Point): string;
@@ -471,6 +472,12 @@ export const useCanvas = create<CanvasState>((set, get) => ({
         set({ order: [...order.filter((n) => n !== id), id] });
     },
     addNode(kind, at, options = {}) {
+        /* Without a view there is no project file behind the canvas, so a node here would be a live
+           terminal or agent that nothing ever saves. The surfaces that offer one are hidden in that
+           state; this is the floor under them. */
+        if (get().viewId === null && options.viewId === undefined) {
+            return null;
+        }
         const id = nextId(kind);
         const size = NODE_SIZE[kind];
         // Made inside a group that is bound to a worktree, a node starts in that checkout.

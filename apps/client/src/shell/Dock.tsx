@@ -46,9 +46,11 @@ const centerWorld = () => {
  */
 export function Dock() {
     const page = useUi((s) => s.page);
+    /* No view at all is no canvas either: with no project open the column holds the empty state and
+       these controls would act on a canvas nothing saves. */
     const onCanvas = useDocument((s) => {
         const view = activeViewOf(s);
-        return view === null || isCanvasView(view);
+        return view !== null && isCanvasView(view);
     });
     const { zoom, locks, hasSelection, layouts } = useCanvas(
         useShallow((s) => ({

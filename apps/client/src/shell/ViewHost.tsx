@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import clsx from 'clsx';
+import { FolderOpen } from 'lucide-react';
 import { isCanvasView, type ProjectView } from '@ruimte/contracts';
 import { Canvas } from '@/canvas/Canvas';
 import { DrawingView } from '@/drawing/DrawingView';
@@ -8,11 +9,16 @@ import { BrowserFallback, usePage } from '@/nodes/BrowserBody';
 import { ChatBody } from '@/nodes/ChatBody';
 import { TerminalBody } from '@/nodes/TerminalBody';
 import { activeViewOf, useDocument } from '@/state/document';
+import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { UsagePage } from '@/shell/usage/UsagePage';
 import { isApplePlatform } from '@/desktop/bridge';
 import { isLeaveNodeChord } from '@/terminal/keymap';
 import { focusViewRow } from '@/shell/sidebar-focus';
+import { Button } from '@/ui/Button';
+import { TOOLTIP_KBD } from '@/ui/classes';
+import { EmptyState } from '@/ui/EmptyState';
+import { Icon } from '@/ui/Icon';
 import { isInFloatingLayer } from '@/ui/floating';
 
 /*
@@ -75,6 +81,33 @@ function BrowserViewSurface({ id }: { id: string }) {
 }
 
 /*
+ * No project open, which is where a fresh install and a machine that has just been paired both
+ * start. Nothing is wrong, nothing is loading: a project is a thing you pick, and these are the two
+ * ways to pick one.
+ */
+function NoProject() {
+    return (
+        <div className="absolute inset-0 grid place-items-center bg-surface-sunken">
+            <EmptyState
+                icon={<Icon icon={FolderOpen} size={20} />}
+                action={
+                    <div className="flex items-center gap-2">
+                        <Button variant="secondary" onClick={() => useUi.getState().openPalette()}>
+                            Open a project
+                        </Button>
+                        <Button variant="secondary" onClick={() => useUi.getState().openFolderBrowser()}>
+                            Open a folder
+                        </Button>
+                    </div>
+                }
+            >
+                No project is open. Press <kbd className={TOOLTIP_KBD}>⌘K</kbd> for one you already have, or open a folder to start a new one.
+            </EmptyState>
+        </div>
+    );
+}
+
+/*
  * The main column. A canvas view draws the canvas; every other kind draws the body of its one node,
  * without a frame. The canvas stays mounted either way: it owns the app's pointer and key handling,
  * and its terminals keep their screens instead of rebuilding on the way back. An app-level page is
@@ -84,14 +117,18 @@ function BrowserViewSurface({ id }: { id: string }) {
 export function ViewHost() {
     const view = useDocument((s) => activeViewOf(s));
     const page = useUi((s) => s.page);
+    const hasProject = useProject((s) => s.current !== null);
     const standalone = view !== null && !isCanvasView(view) ? view : null;
-    const covered = page !== null || standalone !== null;
+    /* The canvas keeps its place under the empty state for the same reason it keeps it under a page:
+       it carries the app's chords, ⌘K among them, which is the one the empty state points at. */
+    const covered = page !== null || standalone !== null || !hasProject;
     return (
         <>
             <div className={clsx('absolute inset-0', covered && 'invisible')} inert={covered}>
                 <Canvas />
             </div>
             {page === null && standalone && <StandaloneView view={standalone} />}
+            {page === null && standalone === null && !hasProject && <NoProject />}
             {page === 'usage' && <UsagePage />}
         </>
     );
