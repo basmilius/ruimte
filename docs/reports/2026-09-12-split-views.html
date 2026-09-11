@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Views naast elkaar</title>
+<style>
+:root {
+  color-scheme: light;
+  --accent: #3f38b5;
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --image-outline: rgb(0 0 0 / 10%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { min-width: 480px; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--muted); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide, .plot { min-width: 0; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+
+/* De speeltuin bij het layoutmodel: kolommen naast elkaar, cellen erin onder elkaar. */
+.grid-demo { display: flex; gap: 6px; height: 360px; padding: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+.grid-col { display: flex; flex-direction: column; gap: 6px; flex: 1 1 0; min-width: 0; }
+.grid-cell { overflow: hidden; display: flex; flex: 1 1 0; min-height: 0; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 8px; background: var(--paper); border: 1px solid var(--line); border-radius: 9px; cursor: pointer; transition: border-color 120ms ease, box-shadow 120ms ease; }
+.grid-cell[data-focused="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.grid-cell-name { font-size: 14px; font-weight: 600; text-align: center; overflow-wrap: anywhere; }
+.grid-cell-tools { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; }
+.grid-cell-tools button { width: 36px; height: 36px; min-width: 0; min-height: 0; padding: 0; display: grid; place-items: center; border-radius: 6px; font-size: 13px; line-height: 1; }
+.grid-cell-tools button:disabled { opacity: .3; }
+.grid-cell-tools .close { color: var(--danger); }
+.demo-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+.demo-state { font-size: 14px; font-variant-numeric: tabular-nums; }
+.demo-full { color: var(--warning); font-weight: 600; }
+
+/* De vijf droppunten van een cel. */
+.zones .fill { fill: var(--highlight); }
+.zones .edge-zone { fill: color-mix(in srgb, var(--accent) 14%, var(--paper)); stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.zones .center-zone { fill: var(--paper); stroke: var(--accent); stroke-width: 1.5; }
+.zones text { font-size: 14px; }
+.zones .zone-label { fill: var(--muted); font-size: 13px; }
+.diagram .ghost { fill: color-mix(in srgb, var(--accent) 20%, var(--paper)); stroke: var(--accent); stroke-width: 2; }
+.diagram .frame { fill: var(--paper); stroke: var(--line); stroke-width: 1.5; }
+.diagram .muted-text { fill: var(--muted); font-size: 13px; }
+
+@media (max-width: 700px) {
+  .grid-demo { height: 480px; }
+  .grid-cell-tools button { width: 28px; height: 28px; font-size: 11px; }
+  .grid-cell-name { font-size: 12px; }
+}
+@media print {
+  /* Het raster dat op het scherm stond is het resultaat; de knoppen eronder zijn dat niet. */
+  .grid-cell-tools, #demo-reset { display: none; }
+  .grid-demo { height: 220px; break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#advies">Naar de inhoud</a>
+<header>
+  <p class="eyebrow">RUIMTE / FEATUREVOORSTEL / 12 SEPTEMBER 2026</p>
+  <h1>Views naast elkaar</h1>
+  <p class="intro">Een view die je naast een andere view sleept splitst de kolom die eronder ligt. Het raster is maximaal drie kolommen breed en drie cellen hoog, de gefocuste cel is het actieve item in de sidebar, en alles blijft binnen één project. Het echte werk zit niet in de layout maar in de canvas-store, die vandaag één view tegelijk kan houden.</p>
+  <p class="status">Voorstel, nog geen regel code</p>
+  <p class="caption">Gebaseerd op main bij 63a8142 met een schone werkkopie. Regelnummers uit die revisie. Het verschil met <a href="../research/windows.md">docs/research/windows.md</a> staat in <a href="#afbakening">Afbakening</a>: dat ontwerp zet <em>projecten</em> naast elkaar, dit zet <em>views</em> naast elkaar.</p>
+  <nav aria-label="Inhoud">
+    <a href="#advies">Advies</a>
+    <a href="#model">Het model</a>
+    <a href="#slepen">Slepen</a>
+    <a href="#stores">De stores</a>
+    <a href="#focus">Focus en sidebar</a>
+    <a href="#chords">Chords</a>
+    <a href="#opslag">Opslag</a>
+    <a href="#randen">Scherpe randen</a>
+    <a href="#fasen">Fasen</a>
+    <a href="#afbakening">Afbakening</a>
+    <a href="#vragen">Open vragen</a>
+  </nav>
+</header>
+<main>
+
+<section id="advies" class="recommendation">
+  <h2>Advies</h2>
+  <p>Bouw de split als <strong>kolommen van cellen</strong>, niet als een vrije boom en niet als een doorlopend raster. Een layout is een lijst van maximaal drie kolommen, en elke kolom is een lijst van maximaal drie cellen. De limiet van 3x3 is dan geen teller die je over een boom heen legt maar een eigenschap van het model zelf, en negen cellen is precies het maximum dat eruit volgt.</p>
+  <p>De layout hoort in het machine-lokale bestand, naast de camera en de panels, niet in <code>project.json</code>. Een split is persoonlijk, en <code>project.json</code> gaat mee in git.</p>
+  <p>Het zwaartepunt van de implementatie ligt in fase 2 van de vijf hieronder, en die fase verandert niets aan het scherm. <code>useCanvas</code> is vandaag de editor van één canvas-view (<code>apps/client/src/state/canvas.ts:104-110</code>) en <code>setActiveView</code> is een export-en-laad-wissel (<code>apps/client/src/state/document.ts:171-184</code>). Zolang dat zo is kan er maar één canvas op het scherm staan, hoeveel cellen de layout ook tekent. Chat-, terminal- en browser-views hebben dat probleem niet, want hun state hangt al aan <code>${endpointId}:${viewId}</code> (<code>apps/client/src/state/keys.ts:10</code>) en kan vandaag al naast zichzelf staan.</p>
+  <div class="stats">
+    <div><strong>3&#215;3</strong><span>kolommen bij cellen, dus 9 zichtbare views</span></div>
+    <div><strong>5</strong><span>fasen, waarvan 1 onzichtbaar</span></div>
+    <div><strong>1</strong><span>store die van singleton naar registry moet</span></div>
+  </div>
+  <p><span class="badge confirmed">Vastgesteld</span> <code>openWorkspace</code> bestaat al (<code>apps/client/src/transport/connections.ts:226</code>) maar heeft geen enkele caller, en opent een tweede <em>project</em>. Voor deze feature is hij niet nodig.</p>
+  <p><span class="badge confirmed">Vastgesteld</span> Het WebGL-budget regelt zichzelf al over cellen heen, want <code>webglBudget</code> is een module-singleton met een LRU van tien contexten (<code>apps/client/src/terminal/webgl-budget.ts:164</code>, <code>webgl-slots.ts:4</code>), dus negen cellen vol terminals verdelen dat budget zonder nieuwe code.</p>
+  <p><span class="badge warning">Risico</span> Een sleep die over een browser-cel gaat werkt niet vanzelf, want een <code>&lt;webview&gt;</code> slikt de drag-events van de pagina eromheen. Zie <a href="#randen">Scherpe randen</a>.</p>
+</section>
+
+<section id="model">
+  <h2>Het model</h2>
+  <p>Er zijn drie manieren om "maximaal 3x3" te bouwen, en ze verschillen in wat ze kunnen weigeren.</p>
+  <div class="split">
+    <div class="panel">
+      <h3>Kolommen van cellen</h3>
+      <p>De layout is een lijst kolommen; elke kolom is een lijst cellen. Twee getallen, twee limieten. Elke layout die het model kan uitdrukken is een layout die mag.</p>
+      <p>Prijs: links droppen op een cel in een kolom met drie cellen geeft een hele nieuwe kolom, niet een cel naast alleen die ene. De drop-indicator moet dat tonen.</p>
+    </div>
+    <div class="panel">
+      <h3>Binaire boom</h3>
+      <p>Elke split is een knoop met een richting en twee kinderen, zoals tmux. Splitst overal, in elke verhouding.</p>
+      <p>Prijs: "maximaal 3x3" bestaat niet in dit model. Je legt er een teller overheen die soms een splitsing weigert die de boom prima aankan, en dan moet je uitleggen waarom.</p>
+    </div>
+  </div>
+  <figure class="panel">
+    <div class="table" role="region" aria-label="Vergelijking van twee layoutmodellen, horizontaal scrollbaar" tabindex="0">
+      <svg class="diagram plot" viewBox="0 0 720 250" role="img" aria-labelledby="models-title models-desc">
+        <title id="models-title">Kolommen van cellen tegenover een doorlopend raster</title>
+        <desc id="models-desc">Links een layout van drie kolommen met achtereenvolgens een, twee en drie cellen, waarbij de celranden per kolom op eigen hoogtes liggen. Rechts een raster van drie bij drie waarin elke rij over alle kolommen dezelfde hoogte heeft.</desc>
+        <rect class="frame" x="20" y="40" width="96" height="180" rx="8"/>
+        <rect class="frame" x="122" y="40" width="96" height="87" rx="8"/>
+        <rect class="frame" x="122" y="133" width="96" height="87" rx="8"/>
+        <rect class="frame" x="224" y="40" width="96" height="56" rx="8"/>
+        <rect class="frame" x="224" y="102" width="96" height="56" rx="8"/>
+        <rect class="frame" x="224" y="164" width="96" height="56" rx="8"/>
+        <text x="170" y="26" text-anchor="middle">Kolommen van cellen</text>
+        <text x="170" y="243" text-anchor="middle" class="muted-text">Elke kolom deelt zichzelf in</text>
+        <rect class="frame" x="400" y="40" width="96" height="56" rx="8"/>
+        <rect class="frame" x="502" y="40" width="96" height="56" rx="8"/>
+        <rect class="frame" x="604" y="40" width="96" height="56" rx="8"/>
+        <rect class="frame" x="400" y="102" width="96" height="56" rx="8"/>
+        <rect class="frame" x="502" y="102" width="96" height="56" rx="8"/>
+        <rect class="frame" x="604" y="102" width="96" height="56" rx="8"/>
+        <rect class="frame" x="400" y="164" width="96" height="56" rx="8"/>
+        <rect class="frame" x="502" y="164" width="96" height="56" rx="8"/>
+        <rect class="frame" x="604" y="164" width="96" height="56" rx="8"/>
+        <text x="550" y="26" text-anchor="middle">Doorlopend raster</text>
+        <text x="550" y="243" text-anchor="middle" class="muted-text">Rijen lopen door over alle kolommen</text>
+      </svg>
+    </div>
+    <figcaption>Het derde model, een doorlopend raster, houdt de rijen gelijk over de kolommen heen. Dat leest als een tabel, maar het betekent dat een chat naast een canvas zetten de hoogte van elke andere cel verandert. Voor een werkoppervlak is dat het verkeerde gedrag.</figcaption>
+  </figure>
+  <p>Het model dat ik voorstel:</p>
+<pre><code>/* Een cel toont precies een view. Een view staat in hoogstens een cel. */
+interface SplitCell {
+    viewId: string;
+    /* Aandeel van de hoogte van zijn kolom; de cellen van een kolom sommeren tot 1. */
+    size: number;
+}
+
+interface SplitColumn {
+    cells: SplitCell[];   // 1 tot en met 3
+    /* Aandeel van de breedte; de kolommen sommeren tot 1. */
+    size: number;
+}
+
+interface SplitLayout {
+    columns: SplitColumn[];   // 1 tot en met 3
+    /* Welke cel de focus heeft; de sidebar leest dit als het actieve item. */
+    focus: { column: number; cell: number };
+}</code></pre>
+  <p>Eén view per cel en één cel per view. Een view die al open staat naar een andere cel slepen verplaatst hem, het maakt geen tweede kopie. Dat scheelt twee camera's op dezelfde nodes, en het houdt "het actieve item in de sidebar" een vraag met één antwoord.</p>
+  <p>De pure kant hiervan hoort in <code>apps/client/src/shell/split.ts</code>, naast <code>palette-browse.ts</code> en <code>sidebar-rows.ts</code>: <code>splitAt</code>, <code>closeCell</code>, <code>moveCell</code>, <code>focusDirection</code>, <code>canSplit</code>, met <code>bun test</code> ernaast. Geen React, geen DOM.</p>
+
+  <h3>Probeer de limiet</h3>
+  <p>Splits met de knoppen in een cel. De pijl zegt aan welke kant de nieuwe view komt; links en rechts maken een kolom, boven en onder een cel binnen de kolom. Een richting die de limiet zou breken is uitgeschakeld.</p>
+  <div id="demo-root">
+    <div class="grid-demo" id="demo-grid">
+      <div class="grid-col">
+        <div class="grid-cell" data-focused="true">
+          <span class="grid-cell-name">Canvas</span>
+        </div>
+      </div>
+    </div>
+    <div class="demo-bar">
+      <p class="demo-state" id="demo-state">1 kolom, 1 cel.</p>
+      <button type="button" id="demo-reset">Opnieuw</button>
+    </div>
+  </div>
+  <noscript><p class="caption">Zonder JavaScript toont de speeltuin de beginstand: één kolom met één cel, wat de layout is van elk project dat vandaag open staat.</p></noscript>
+  <p class="note">Kijk wat er gebeurt als een kolom drie cellen heeft. Links en rechts blijven werken zolang er een kolom bij mag, maar je krijgt een kolom over de volle hoogte. Dat is de prijs van het model, en de reden dat de drop-indicator de vorm moet tekenen die je krijgt en niet de rand die je aanwijst.</p>
+</section>
+
+<section id="slepen">
+  <h2>Slepen</h2>
+  <p>Een cel heeft vijf droppunten: vier randen en het midden. De randen splitsen, het midden vervangt de view die er staat. Het midden is het punt dat je het vaakst nodig hebt en dat in de meeste apps ontbreekt, namelijk een view openen waar je hem wil zonder er een cel bij te maken.</p>
+  <figure class="panel">
+    <div class="table" role="region" aria-label="De vijf droppunten van een cel, horizontaal scrollbaar" tabindex="0">
+      <svg class="diagram zones plot" viewBox="0 0 720 290" role="img" aria-labelledby="zones-title zones-desc">
+        <title id="zones-title">De vijf droppunten van een cel</title>
+        <desc id="zones-desc">Een cel verdeeld in vijf gebieden: een strook van een kwart van de breedte links en rechts, een strook van een kwart van de hoogte boven en onder, en het overgebleven midden. Links en rechts splitsen in een kolom, boven en onder in een cel, het midden vervangt de view.</desc>
+        <rect class="edge-zone" x="180" y="40" width="90" height="200" rx="6"/>
+        <rect class="edge-zone" x="450" y="40" width="90" height="200" rx="6"/>
+        <rect class="edge-zone" x="270" y="40" width="180" height="50" rx="6"/>
+        <rect class="edge-zone" x="270" y="190" width="180" height="50" rx="6"/>
+        <rect class="center-zone" x="270" y="90" width="180" height="100" rx="6"/>
+        <text x="225" y="136" text-anchor="middle">Kolom</text>
+        <text x="225" y="156" text-anchor="middle">ervoor</text>
+        <text x="495" y="136" text-anchor="middle">Kolom</text>
+        <text x="495" y="156" text-anchor="middle">erna</text>
+        <text x="360" y="70" text-anchor="middle">Cel erboven</text>
+        <text x="360" y="220" text-anchor="middle">Cel eronder</text>
+        <text x="360" y="146" text-anchor="middle">Vervang</text>
+        <text x="360" y="268" text-anchor="middle" class="zone-label">Randen: een kwart van de as, met een plafond van 96 pixels</text>
+      </svg>
+    </div>
+    <figcaption>Een kwart van de as houdt de randen bruikbaar in een smalle cel; het plafond van 96 pixels houdt het midden groot genoeg in een cel die het hele scherm vult.</figcaption>
+  </figure>
+  <p>De indicator tekent de rechthoek die de view gaat innemen, niet de rand waar de muis hangt. Anders klopt de asymmetrie van het model niet. Links droppen op een cel die in een kolom met twee buren zit levert een kolom over de volle hoogte op, en dat hoor je te zien voordat je loslaat.</p>
+  <figure class="panel">
+    <div class="table" role="region" aria-label="De drop-indicator bij een kolom met twee cellen, horizontaal scrollbaar" tabindex="0">
+      <svg class="diagram plot" viewBox="0 0 720 250" role="img" aria-labelledby="ghost-title ghost-desc">
+        <title id="ghost-title">De indicator bij een linkerdrop op de onderste cel van een kolom</title>
+        <desc id="ghost-desc">Twee kolommen. De rechterkolom heeft twee cellen boven elkaar. De muis hangt aan de linkerrand van de onderste cel, en de indicator vult de volle hoogte van de kolom in plaats van alleen die cel.</desc>
+        <rect class="frame" x="40" y="40" width="200" height="180" rx="8"/>
+        <rect class="frame" x="250" y="40" width="200" height="87" rx="8"/>
+        <rect class="frame" x="250" y="133" width="200" height="87" rx="8"/>
+        <rect class="ghost" x="250" y="40" width="100" height="180" rx="8"/>
+        <circle cx="266" cy="178" r="5" fill="var(--accent)"/>
+        <text x="140" y="136" text-anchor="middle">Canvas</text>
+        <text x="400" y="90" text-anchor="middle">Chat</text>
+        <text x="400" y="183" text-anchor="middle">Terminal</text>
+        <text x="530" y="120" class="muted-text">De muis hangt aan de linkerrand van Terminal,</text>
+        <text x="530" y="140" class="muted-text">de indicator vult de hele kolom.</text>
+      </svg>
+    </div>
+    <figcaption>Zonder deze regel voelt de sleep onvoorspelbaar, want je mikt op een cel en krijgt een kolom. Met deze regel is het gedrag zichtbaar voordat de layout verandert.</figcaption>
+  </figure>
+
+  <h3>Waar een sleep vandaan komt</h3>
+  <div class="table" role="region" aria-label="Sleepbronnen en waar ze in de code landen" tabindex="0">
+    <table class="wide">
+      <caption>Drie bronnen, één droplaag. Paden zijn relatief aan <code>apps/client/src/</code>.</caption>
+      <thead><tr><th scope="col">Bron</th><th scope="col">Bestaat al</th><th scope="col">Wat erbij moet</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Een view-rij in de sidebar</th><td><code>shell/Sidebar.tsx:245,306</code> is al <code>draggable</code>, voor het herordenen van de lijst</td><td>De sleep-id zit nu alleen in React-state, zonder <code>dataTransfer</code>-payload. Voor een drop buiten de sidebar moet er een MIME-type komen, zoals <code>MENTION_DRAG_TYPE</code> dat al doet voor een bestand naar de composer (<code>chat/mentions.ts:3</code>).</td></tr>
+        <tr><th scope="row">De header van een cel</th><td>Niets; cellen bestaan nog niet</td><td>Dezelfde payload. Een sleep tussen twee cellen is een verplaatsing. De bron verdwijnt en de buren groeien.</td></tr>
+        <tr><th scope="row">De command palette</th><td><code>shell/CommandPalette.tsx</code> opent een view via <code>showView</code> (<code>project/views.ts:16-19</code>)</td><td>Niets. Een view uit de palette landt in de gefocuste cel, wat vandaag al het gedrag is met één cel.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Het herordenen van de sidebar en het slepen naar een cel zijn dezelfde gesture met twee verschillende doelen. De sidebar-sectie houdt zijn eigen <code>onDragOver</code> met de insert-lijn (<code>shell/Sidebar.tsx:91-100,543-558</code>); de droplaag over de cellen komt ernaast te liggen. Omdat allebei op hetzelfde MIME-type luisteren hoeft de bron niet te weten waar hij landt.</p>
+  <p>Een richting die de limiet breekt licht niet op en krijgt <code>cursor: no-drop</code>. Geen toast, geen melding. Een doel dat er niet is hoeft geen uitleg.</p>
+</section>
+
+<section id="stores">
+  <h2>De stores, waar het werk zit</h2>
+  <p>Een workspace heeft vandaag vier stores en twee daarvan houden precies één view: <code>useCanvas</code> en <code>useDrawing</code>. De canvas-store zegt dat zelf in zijn eerste veld.</p>
+  <details open>
+    <summary>Wat de code zegt</summary>
+    <p class="caption"><code>apps/client/src/state/canvas.ts:104-110</code> op 63a8142</p>
+<pre><code>export interface CanvasState {
+    /*
+     * The view whose content this store is holding. The document store flips `activeViewId` before
+     * it hands the canvas the next view, so pairing on that id makes the canvas stand in for a view
+     * it does not hold yet; anything asking which nodes the project has must pair on this instead.
+     */
+    viewId: string | null;</code></pre>
+    <p class="caption"><code>apps/client/src/state/document.ts:171-184</code></p>
+<pre><code>setActiveView(id) {
+    ...
+    const views = state.exportViews();
+    ...
+    set({ views, viewLocal, activeViewId: id, ... });
+    peers.canvas.getState().loadView(canvas ? next : null, viewLocal[id] ?? null);
+},</code></pre>
+    <p>Van view wisselen is dus het canvas terugschrijven in de views-lijst en het volgende erin laden. Eén editor, om beurten. Dat is precies wat er niet meer kan als er twee canvassen tegelijk op het scherm staan, en het zegt niets over chat, terminal of browser, want die hangen aan <code>${endpointId}:${viewId}</code> (<code>apps/client/src/state/keys.ts:10</code>) en staan al naast zichzelf zodra er een tweede plek is om ze te tekenen.</p>
+  </details>
+  <p>Het voorstel houdt <code>workspaceHook</code> intact en zet er één trede bij. De twee editor-slots worden een registry, en een cel zegt via een context welke view hij toont.</p>
+<pre><code>/* De editors die nu een view houden, per view-id. */
+interface EditorRegistry&lt;T&gt; {
+    /* De store van een view op het scherm; maakt hem aan als hij nog niet leefde. */
+    of(viewId: string): StoreApi&lt;T&gt;;
+    /* Waar `exportViews` overheen loopt in plaats van over de ene peer. */
+    live(): Iterable&lt;[string, StoreApi&lt;T&gt;]&gt;;
+    release(viewId: string): void;
+}
+
+export interface WorkspaceStores {
+    canvases: EditorRegistry&lt;CanvasState&gt;;
+    drawings: EditorRegistry&lt;DrawingState&gt;;
+    document: StoreApi&lt;DocumentState&gt;;
+    project: StoreApi&lt;ProjectState&gt;;
+}</code></pre>
+  <p>Een store per <em>view</em>, niet per cel. Het is dezelfde verzameling, want een view staat in hoogstens één cel, maar de levenscyclus wordt eenvoudiger. De store ontstaat als de view in de layout komt en gaat weg als hij eruit gaat, in plaats van te hangen aan een vakje dat van inhoud wisselt.</p>
+  <p><code>useCanvas</code> resolvet dan in drie stappen in plaats van twee (<code>apps/client/src/state/workspace-stores.ts:68-82</code>): de cel waarin het component staat, anders de workspace, anders de fallback-store die een unit test krijgt. Buiten React blijft <code>useCanvas.getState()</code> "de gefocuste cel van de gefocuste workspace" betekenen, precies de betekenis die alle bestaande call sites al bedoelen.</p>
+  <div class="table" role="region" aria-label="Wat er per store verandert" tabindex="0">
+    <table class="wide">
+      <caption>De vier stores van een workspace en wat de split met ze doet.</caption>
+      <thead><tr><th scope="col">Store</th><th scope="col">Nu</th><th scope="col">Na de split</th></tr></thead>
+      <tbody>
+        <tr><th scope="row"><code>canvas</code></th><td>Eén editor, <code>viewId</code> zegt welke (<code>state/canvas.ts:104</code>)</td><td>Registry per view. <code>exportViews()</code> loopt over elke levende editor.</td></tr>
+        <tr><th scope="row"><code>drawing</code></th><td>Eén editor (<code>state/drawing.ts:65-67</code>); <code>DrawingClient</code> volgt <code>activeViewId</code> (<code>drawing/drawing-client.ts:147</code>)</td><td>Registry per view. De client abonneert per open drawing in plaats van op de actieve.</td></tr>
+        <tr><th scope="row"><code>document</code></th><td><code>createDocumentStore({ canvas, drawing })</code> met één peer van elk (<code>state/document.ts:87-90</code>)</td><td>Peers worden de registries. <code>activeViewId</code> blijft bestaan als afgeleide van de gefocuste cel.</td></tr>
+        <tr><th scope="row"><code>project</code></th><td>Naam, kleur, icoon, de lijst projecten</td><td>Onveranderd.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Als fase 2 te groot blijkt is er een goedkopere route. Alleen de gefocuste cel houdt een levende editor, de rest tekent een bevroren beeld van zijn view. Dat is minder waard (twee canvassen naast elkaar bewerken is juist de reden om te splitsen) en het maakt de focuswissel zichtbaar traag, maar het is een uitweg die het model niet verandert. Ik zou hem pas nemen als de registry echt vastloopt.</p>
+</section>
+
+<section id="focus">
+  <h2>Focus en de sidebar</h2>
+  <p>Precies één cel heeft de focus, en die cel bepaalt wat de sidebar als actief markeert. Dat is de wens, en het is ook de eenvoudigste regel, want er is één toetsenbord.</p>
+  <p>De sidebar hoeft er weinig voor te veranderen. <code>active: view.id === workspace.activeViewId</code> (<code>apps/client/src/shell/sidebar-rows.ts:158</code>) blijft staan zodra <code>activeViewId</code> "de view in de gefocuste cel" betekent. Wat erbij moet is een tweede, zwakkere markering. Een view die in een <em>andere</em> cel open staat is niet actief, maar ook niet dicht. Zonder dat verschil lijkt een view die je net naast je canvas hebt gezet gesloten.</p>
+  <div class="split">
+    <div class="panel">
+      <h3>Gefocuste cel</h3>
+      <p><code>ROW_SELECTED</code> (<code>bg-surface-active text-text</code>, <code>shell/Sidebar.tsx:87</code>) plus <code>aria-current="true"</code>, zoals nu.</p>
+    </div>
+    <div class="panel">
+      <h3>Open in een andere cel</h3>
+      <p>Iets zwakkers en zonder <code>aria-current</code>: een stip aan de rand van de rij, of de rijtekst op volle sterkte terwijl de achtergrond leeg blijft. Screenreaders horen het verschil via de rijtekst, niet via kleur alleen.</p>
+    </div>
+  </div>
+  <p>Wat wél verandert is het aantal <code>Canvas</code>-componenten. <code>isFocusedWorkspace</code> (<code>apps/client/src/state/workspace-stores.ts:52</code>) houdt de window-listener van een canvas weg van het project in de pane ernaast. Met negen cellen in dezelfde workspace zijn er negen listeners die allemaal door die guard heen komen. Er moet een <code>isFocusedCell</code> naast, met dezelfde vorm en dezelfde plek in <code>canvas/Canvas.tsx:212</code>.</p>
+  <p><code>document.bodyFocused</code> (<code>state/document.ts:43</code>) blijft één boolean. Het zegt of het toetsenbord in de body van de gefocuste cel zit of in de sidebar, en dat is met negen cellen nog steeds één vraag. Escape brengt de focus naar de rij van die view in de sidebar (<code>shell/ViewHost.tsx:29-48</code>), wat blijft kloppen.</p>
+  <p><code>useFocusedConnection</code> (<code>transport/connections.ts:275-279</code>) valt buiten een provider terug op <code>useMainWorkspace()</code> met de comment "the workspace with the focus, which is the one the app draws until panes exist". Die comment gaat over workspaces, niet over cellen, en blijft met deze feature kloppen, want alle cellen zitten in dezelfde workspace.</p>
+</section>
+
+<section id="chords">
+  <h2>Chords</h2>
+  <p>De splitsing window-chords tegenover workspace-chords staat er al: <code>shell/app-chords.ts:31-51</code> bindt eenmaal op <code>window</code> zonder guard, <code>canvas/Canvas.tsx:205-318</code> bindt ook op <code>window</code> maar met <code>isFocusedWorkspace</code> ervoor. De split voegt een derde laag toe die dezelfde vorm heeft.</p>
+  <div class="table" role="region" aria-label="Voorgestelde chords voor de split" tabindex="0">
+    <table class="wide">
+      <caption>Voorstel. Elk van deze chords is vandaag vrij, met één uitzondering die in de laatste kolom staat.</caption>
+      <thead><tr><th scope="col">Chord</th><th scope="col">Doet</th><th scope="col">Let op</th></tr></thead>
+      <tbody>
+        <tr><th scope="row"><kbd>⌘\</kbd></th><td>Splits de gefocuste cel naar rechts</td><td>Vrij. Moet door <code>isAppChord</code> (<code>terminal/keymap.ts:34-47</code>), anders slikt xterm hem.</td></tr>
+        <tr><th scope="row"><kbd>⌘⇧\</kbd></th><td>Splits naar onderen</td><td>Idem.</td></tr>
+        <tr><th scope="row"><kbd>⌘⌥←→↑↓</kbd></th><td>Verplaats de focus naar de cel in die richting</td><td>Vrij. Botst niet met <code>ADD_KEYS</code>, want die zijn <kbd>⌥</kbd> plus een letter.</td></tr>
+        <tr><th scope="row"><kbd>⌘W</kbd></th><td>Sluit de gefocuste cel</td><td><strong>Botst</strong> met de lokale binding in <code>shell/PreviewPanel.tsx:101</code>. Ofwel die wordt contextueel, ofwel de cel krijgt een andere chord.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><kbd>⌘1</kbd> tot <kbd>⌘9</kbd> (<code>canvas/Canvas.tsx:244-251</code>) en <kbd>⌘⇧[</kbd> / <kbd>⌘⇧]</kbd> (r. 252-256) blijven views kiezen, en die view landt in de gefocuste cel. Dat is hetzelfde gedrag als nu, want vandaag is er één cel. Ze hoeven niet over te gaan op het kiezen van een cel. Daarvoor is <kbd>⌘⌥</kbd> plus een pijl, en een raster navigeer je met richtingen, niet met nummers.</p>
+  <p>Elke nieuwe chord hoort in <code>shell/settings/shortcuts.ts</code>, dat de Keyboard-pane read-only voorleest. Een sectie "Split" naast "Canvas" en "Drawing".</p>
+</section>
+
+<section id="opslag">
+  <h2>Opslag</h2>
+  <p>De layout gaat in het machine-lokale bestand, als optioneel veld naast wat er al staat.</p>
+<pre><code>export const ProjectLocalSchema = z.object({
+    activeViewId: z.string().nullable(),
+    views: z.record(z.string(), ProjectViewLocalSchema),
+    panels: ProjectPanelsSchema.optional(),
+    // Nieuw. Afwezig betekent een kolom met een cel op `activeViewId`.
+    layout: SplitLayoutSchema.optional()
+});</code></pre>
+  <p><code>activeViewId</code> blijft geschreven, als de view in de gefocuste cel. Een bestand van vandaag leest dus als een layout met één cel, en een bestand met een layout leest in een oudere client als het project met die ene view open. Dat is geen concessie maar hetzelfde patroon dat <code>migrateLocal</code> al gebruikt voor het v1-bestand (<code>packages/contracts/src/project-migrate.ts:41-56</code>).</p>
+  <p>Niet in <code>project.json</code>. Dat bestand gaat in git en elke machine leest het; hoe jij je scherm indeelt is van jouw machine, net als de camera en de panelbreedtes. Het schrijven gaat mee met wat er al is: <code>localOfScreen()</code> (<code>apps/client/src/project/project-client.ts:417-419</code>), gedebouncet op één seconde, zonder rev en zonder conflictdetectie (<code>apps/server/src/projects/project-store.ts:310-313</code>). Dat blijft goed genoeg zolang het bestand per machine is.</p>
+  <p>Een layout kan naar een view wijzen die niet meer bestaat, bijvoorbeeld als een andere client hem verwijdert en <code>project.changed</code> binnenkomt. Het opschonen hoort in de pure <code>split.ts</code>, met een test ernaast: cellen zonder view vallen weg, kolommen zonder cellen vallen weg, en blijft er niets over dan gaat de eerste openable view in één cel. Dat is hetzelfde soort discipline waarmee de daemon een edge weggooit die buiten zijn canvas wijst (<code>withoutCrossViewEdges</code>, <code>project-migrate.ts:85-97</code>).</p>
+</section>
+
+<section id="randen">
+  <h2>Scherpe randen</h2>
+  <ol class="steps">
+    <li class="step"><div>
+      <h3>De canvas die altijd gemount blijft</h3>
+      <p><code>ViewHost</code> houdt <code>&lt;Canvas /&gt;</code> gemount en verbergt hem met <code>invisible</code> plus <code>inert</code> als er een standalone view overheen staat (<code>shell/ViewHost.tsx:126-128</code>). De comment zegt waarom. De canvas draagt de chords, en zijn terminals houden hun schermen in plaats van te herbouwen.</p>
+      <p>Met negen cellen kan dat niet blijven. Een raster van chats zou negen onzichtbare canvassen meedragen. Een cel moet tekenen wat zijn view is, en de chords moeten naar een plek die niet aan een canvas hangt. De terminal-schermen zijn geen probleem, want die leven in de per-machine stores en niet in de canvas-store.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Browserviews en drag-events</h3>
+      <p><code>WebviewParking</code> gaat uit van één vullende browserview per kolom en positioneert canvas-webviews met de camera van <code>useCanvas</code> (<code>apps/client/src/browser/WebviewParking.tsx:20-60</code>). Per cel een rect is het mechanische deel.</p>
+      <p>Het vervelende deel is de sleep zelf. Een <code>&lt;webview&gt;</code> vangt de events van de pagina eromheen, dus een sleep over een browsercel verliest zijn <code>dragover</code>. Tijdens een sleep moet de parking-laag <code>pointer-events: none</code> krijgen of tijdelijk uit beeld. Dat is te testen zodra er twee cellen zijn.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Negen canvassen is ongemeten</h3>
+      <p><code>docs/DECISIONS.md</code> noemt het doel van dertig nodes op één canvas al ongemeten. Negen canvassen tegelijk is een nieuwe onbekende bovenop die. Het WebGL-budget vangt de terminals op (tien contexten, LRU, <code>terminal/webgl-budget.ts:164</code>), maar het aantal React-bomen, pointer-handlers en resize-observers schaalt lineair met de cellen.</p>
+      <p>Meet dit in fase 3, met de layout op het scherm en voordat de sleep erbij komt. Een raster van negen dat hapert is een reden om de limiet te verlagen, niet om de sleep te verfijnen.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Toolbar en Dock</h3>
+      <p><code>Toolbar</code> staat boven de kolom en <code>Dock</code> onderin (<code>App.tsx:39,44</code>), allebei één keer. Met cellen wordt het de vraag of ze per cel meegaan of één keer blijven staan voor de gefocuste cel. Eén keer is rustiger en kost geen ruimte, maar de Dock hoort bij het canvas dat eronder ligt.</p>
+      <p>Ik zou de Toolbar één keer boven het raster laten staan met de gefocuste view erin, en de Dock meenemen per cel maar alleen tekenen in de cel die de focus heeft. Dit is de eerste open vraag hieronder.</p>
+    </div></li>
+  </ol>
+  <p class="note">Wat géén probleem is: de panels. <code>panelsPort</code> schrijft rechtstreeks in <code>useUi</code>, <code>useFiles</code>, <code>useGit</code> en <code>useBrowser</code> en is page-globaal (<code>apps/client/src/project/panels-port.ts</code>). De panels staan rechts van het hele raster, niet in een cel, dus dat klopt zoals het is. Hetzelfde voor de usage-page, die de hele kolom bedekt en dat mag blijven doen.</p>
+</section>
+
+<section id="fasen">
+  <h2>Fasen</h2>
+  <p>Vijf, waarvan de eerste twee niets aan het scherm veranderen. Dat is met opzet, want het model en de registry zijn te toetsen zonder dat er één pixel verschuift, en pas daarna is een raster tekenen een kwestie van layout.</p>
+  <ol class="steps">
+    <li class="step"><div>
+      <h3>Het model</h3>
+      <p><code>apps/client/src/shell/split.ts</code> met <code>splitAt</code>, <code>closeCell</code>, <code>moveCell</code>, <code>focusDirection</code>, <code>canSplit</code> en het opschonen van een dode view. <code>SplitLayoutSchema</code> in <code>packages/contracts</code>, <code>ProjectLocalSchema.layout</code> optioneel erachteraan.</p>
+      <p><strong>Klaar als:</strong> <code>bun test</code> dekt de vier operaties en allebei de limieten, een lokaal bestand zonder <code>layout</code> leest als één kolom met één cel op <code>activeViewId</code>, en de app draait onveranderd.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>De registry</h3>
+      <p><code>canvases</code> en <code>drawings</code> in <code>WorkspaceStores</code>, een pane-context die zegt welke view een subtree toont, <code>useCanvas</code> en <code>useDrawing</code> die in drie treden resolven, <code>exportViews()</code> over elke levende editor, <code>DrawingClient</code> die per open drawing abonneert in plaats van op de actieve.</p>
+      <p><strong>Klaar als:</strong> met één cel is het gedrag niet van het huidige te onderscheiden, van view wisselen bewaart camera en focus zoals nu, en <code>bun run check</code> is groen.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Het raster op het scherm</h3>
+      <p>De layoutcomponent met kolommen, cellen en splitters. <code>useColumnResize</code> (<code>shell/useColumnResize.ts:30</code>) is horizontaal; <code>GitPanel</code> doet hetzelfde verticaal met de hand (<code>shell/panels/GitPanel.tsx:279-296</code>). Die twee worden één as-agnostische hook. Splitsen via de chords en het view-menu, focus per cel, <code>isFocusedCell</code>, de tweede sidebar-markering.</p>
+      <p><strong>Klaar als:</strong> drie kolommen van drie cellen staan op het scherm, een chord landt in de gefocuste cel en niet in de acht andere, de sidebar markeert de goede rij, en het raster van negen is gemeten.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Slepen</h3>
+      <p>Het MIME-type voor een view, de droplaag met vijf zones per cel, de indicator die de toekomstige rechthoek tekent, en de twee bronnen: een rij in de sidebar en de header van een cel.</p>
+      <p><strong>Klaar als:</strong> een view uit de sidebar naast een andere slepen splitst de goede kant op, een richting die de limiet breekt licht niet op, en een sleep die over een browsercel gaat komt aan.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>De randen</h3>
+      <p><code>WebviewParking</code> per cel, de keuze over Toolbar en Dock, <kbd>⌘W</kbd> en de botsing met de preview, de nieuwe sectie in de Keyboard-pane, en wat er gebeurt als de laatste cel sluit.</p>
+      <p><strong>Klaar als:</strong> een browserview werkt in elke cel, en een project sluiten en heropenen zet het raster terug zoals het stond.</p>
+    </div></li>
+  </ol>
+</section>
+
+<section id="afbakening">
+  <h2>Afbakening</h2>
+  <p>Deze feature zet <strong>views van één project</strong> naast elkaar. <a href="../research/windows.md">docs/research/windows.md</a> zet <strong>projecten</strong> naast elkaar, en dat ontwerp koos op 11 september voor vensters in plaats van panes. De twee bijten elkaar niet. Het ene splitst binnen een workspace, het andere tussen workspaces. Sectie 7 van dat document houdt de deur voor beide open, en niets in dit voorstel sluit hem.</p>
+  <p>Wat er buiten valt:</p>
+  <ul>
+    <li><strong>Geen tabs in een cel.</strong> De sidebar is de lijst van views; een tweede navigatielaag in elke cel zou hem verdubbelen.</li>
+    <li><strong>Geen view van een ander project in een cel.</strong> Dat is de workspace-split, met een eigen ownership-vraag die <code>windows.md</code> sectie 3 uitschrijft.</li>
+    <li><strong>Geen view twee keer.</strong> Eén view, één cel. Twee camera's op dezelfde nodes is een feature waar niemand om vroeg en een bug waar iedereen tegenaan loopt.</li>
+    <li><strong>Geen vrije boom.</strong> Kolommen van cellen, drie bij drie, en dat is het hele model.</li>
+    <li><strong>Geen split voor een app-page.</strong> De usage-page gaat over een machine, niet over een project, en blijft de hele kolom bedekken.</li>
+  </ul>
+  <p class="note">Eén losse draad: <code>settings.sidebarScope</code> heeft in <code>state/settings.ts:15-19</code> de comment "One window holds one workspace today ... until panes arrive". Die comment gaat over de workspace-split, niet over deze. Hij blijft staan zoals hij is.</p>
+</section>
+
+<section id="vragen">
+  <h2>Open vragen</h2>
+  <ol>
+    <li><strong>Toolbar en Dock per cel of één keer?</strong> Mijn voorstel staat bij de scherpe randen: de Toolbar één keer boven het raster, de Dock alleen in de gefocuste cel. Dit is de enige vraag die de layout van fase 3 raakt.</li>
+    <li><strong>Welke chord sluit een cel?</strong> <kbd>⌘W</kbd> is de verwachting, maar de preview gebruikt hem lokaal (<code>shell/PreviewPanel.tsx:101</code>). Die lokale binding contextueel maken is de nettere oplossing en het meeste werk.</li>
+    <li><strong>Reist de layout mee naar een andere machine?</strong> Ik zeg nee, consistent met de camera en de panelbreedtes. Een raster dat je op een 32 inch scherm bouwde hoort niet op een laptop te verschijnen.</li>
+    <li><strong>Wat doet een cel die zijn view verliest?</strong> Mijn voorstel: hij valt weg en de buren groeien, zonder melding. Het alternatief is een lege cel met een keuze erin, wat rustiger oogt maar een staat toevoegt die onderhoud vraagt.</li>
+    <li><strong>Blijft 3x3 de limiet?</strong> De meting in fase 3 kan hem verlagen. Het model draagt elk getal; alleen de twee limieten in <code>split.ts</code> veranderen.</li>
+  </ol>
+</section>
+
+</main>
+<footer>
+  <p>Geverifieerd tegen de werkkopie op 63a8142: elk pad en elk regelnummer in dit rapport komt uit die revisie, en de codefragmenten zijn letterlijk overgenomen. Niet geverifieerd: de prestaties van negen cellen (nergens gemeten, en het bestaande doel van dertig nodes op één canvas is dat evenmin), en het gedrag van een sleep over een <code>&lt;webview&gt;</code> in Electron, dat pas te testen is zodra er twee cellen zijn. De TypeScript in dit rapport is voorgesteld, geen bestaande code. Een rapport is geen implementatie. Er is nog geen regel geschreven.</p>
+</footer>
+<script>
+{
+    const MAX_COLUMNS = 3;
+    const MAX_CELLS = 3;
+    const NAMES = ['Canvas', 'Chat', 'Terminal', 'Sketch', 'Browser', 'Notes', 'Server', 'Diff', 'Docs'];
+    const ARROWS = { left: '◀', right: '▶', up: '▲', down: '▼' };
+    const WHERE = { left: 'links ernaast', right: 'rechts ernaast', up: 'erboven', down: 'eronder' };
+
+    const grid = document.getElementById('demo-grid');
+    const state = document.getElementById('demo-state');
+    const reset = document.getElementById('demo-reset');
+    let columns = [['Canvas']];
+    let focus = { column: 0, cell: 0 };
+    let next = 1;
+
+    const cellCount = () => columns.reduce((total, column) => total + column.length, 0);
+
+    function canSplit(columnIndex, direction) {
+        if (direction === 'left' || direction === 'right') {
+            return columns.length < MAX_COLUMNS;
+        }
+        return columns[columnIndex].length < MAX_CELLS;
+    }
+
+    function split(columnIndex, cellIndex, direction) {
+        if (!canSplit(columnIndex, direction)) {
+            return;
+        }
+        const name = NAMES[next % NAMES.length];
+        next += 1;
+        if (direction === 'left' || direction === 'right') {
+            const at = direction === 'left' ? columnIndex : columnIndex + 1;
+            columns.splice(at, 0, [name]);
+            focus = { column: at, cell: 0 };
+        } else {
+            const at = direction === 'up' ? cellIndex : cellIndex + 1;
+            columns[columnIndex].splice(at, 0, name);
+            focus = { column: columnIndex, cell: at };
+        }
+        render();
+    }
+
+    function close(columnIndex, cellIndex) {
+        if (cellCount() === 1) {
+            return;
+        }
+        columns[columnIndex].splice(cellIndex, 1);
+        if (columns[columnIndex].length === 0) {
+            columns.splice(columnIndex, 1);
+        }
+        const column = Math.min(focus.column, columns.length - 1);
+        focus = { column, cell: Math.min(focus.cell, columns[column].length - 1) };
+        render();
+    }
+
+    function toolButton(label, text, disabled, onClick) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = text;
+        button.setAttribute('aria-label', label);
+        button.disabled = disabled;
+        button.addEventListener('click', (event) => {
+            event.stopPropagation();
+            onClick();
+        });
+        return button;
+    }
+
+    function render() {
+        grid.textContent = '';
+        columns.forEach((column, columnIndex) => {
+            const element = document.createElement('div');
+            element.className = 'grid-col';
+            column.forEach((name, cellIndex) => {
+                const focused = focus.column === columnIndex && focus.cell === cellIndex;
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell';
+                cell.dataset.focused = String(focused);
+                cell.addEventListener('click', () => {
+                    focus = { column: columnIndex, cell: cellIndex };
+                    render();
+                });
+
+                const title = document.createElement('span');
+                title.className = 'grid-cell-name';
+                title.textContent = name;
+                cell.append(title);
+
+                const tools = document.createElement('div');
+                tools.className = 'grid-cell-tools';
+                for (const direction of ['left', 'up', 'down', 'right']) {
+                    tools.append(
+                        toolButton(
+                            `Open een view ${WHERE[direction]} van ${name}`,
+                            ARROWS[direction],
+                            !canSplit(columnIndex, direction),
+                            () => split(columnIndex, cellIndex, direction)
+                        )
+                    );
+                }
+                const closeButton = toolButton(`Sluit ${name}`, '✕', cellCount() === 1, () => close(columnIndex, cellIndex));
+                closeButton.classList.add('close');
+                tools.append(closeButton);
+                cell.append(tools);
+                element.append(cell);
+            });
+            grid.append(element);
+        });
+
+        const cells = cellCount();
+        const columnText = `${columns.length} ${columns.length === 1 ? 'kolom' : 'kolommen'}`;
+        const cellText = `${cells} ${cells === 1 ? 'cel' : 'cellen'}`;
+        const full = columns.length === MAX_COLUMNS && columns.every((column) => column.length === MAX_CELLS);
+        state.textContent = `${columnText}, ${cellText}.`;
+        if (full) {
+            const label = document.createElement('span');
+            label.className = 'demo-full';
+            label.textContent = ' Vol: elke richting is uitgeschakeld.';
+            state.append(label);
+        }
+    }
+
+    reset.addEventListener('click', () => {
+        columns = [['Canvas']];
+        focus = { column: 0, cell: 0 };
+        next = 1;
+        render();
+    });
+
+    render();
+}
+</script>
+</body>
+</html>
