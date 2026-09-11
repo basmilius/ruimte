@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { UsageLimitsSnapshot } from '@ruimte/contracts';
-import { useEndpointId } from '@/state/keys';
-import { useUsage, useUsageStore } from '@/state/usage';
+import { useUsage, useUsageEndpointId, useUsageStore } from '@/state/usage';
 import { transportFor } from '@/transport';
 
 const MINUTE = 60_000;
@@ -47,7 +46,7 @@ const hold = (endpointId: string): Hold => {
 /* The snapshot of the machine in scope, kept fresh for as long as anything shows it. */
 export const useUsageLimits = (): UsageLimitsSnapshot | null => {
     const limits = useUsage((s) => s.limits);
-    const endpointId = useEndpointId();
+    const endpointId = useUsageEndpointId();
 
     useEffect(() => {
         const held = holds.get(endpointId) ?? hold(endpointId);

@@ -2,10 +2,13 @@ import { useCallback, useEffect } from 'react';
 import clsx from 'clsx';
 import { ArrowLeft, ChartNoAxesColumn, RefreshCw } from 'lucide-react';
 import { Segmented, Skeleton } from '@/shell/settings/controls';
+import { useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
 import { useUi } from '@/state/ui';
-import { askedKey, USAGE_PERIODS, useUsage, useUsageStore, windowFor, type UsageMetric, type UsagePeriod } from '@/state/usage';
-import { useTransport } from '@/transport/context';
+import { askedKey, UsageEndpointContext, USAGE_PERIODS, useUsage, useUsageStore, windowFor, type UsageMetric, type UsagePeriod } from '@/state/usage';
+import { useEndpointConnection, useHeldTransport } from '@/transport/status';
+import type { Transport } from '@/transport/transport';
+import { usageEndpointFor } from '@/shell/usage/picker';
 import { EmptyState } from '@/ui/EmptyState';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
@@ -44,15 +47,16 @@ const useCloseOnEscape = (): void => {
 };
 
 /*
- * Asks for the period that is up, keeps the answer under the key of the question it answers, and
- * tells the daemon to keep scanning while the page is here. A late answer to the period before this
- * one never lands, because the key it carries is no longer the one being shown.
+ * Asks the machine on screen for the period that is up, keeps the answer under the key of the
+ * question it answers, and tells that daemon to keep scanning while the page is here. A late answer
+ * to the period before this one never lands, because the key it carries is no longer the one being
+ * shown.
  */
-const useSummary = (period: UsagePeriod): (() => void) => {
-    const transport = useTransport();
-    const endpointId = useEndpointId();
-
+const useSummary = (endpointId: string, transport: Transport | null, period: UsagePeriod): (() => void) => {
     useEffect(() => {
+        if (transport === null) {
+            return;
+        }
         const subscribe = (): void => void transport.request('usage.subscribe', {}).catch(() => undefined);
         if (transport.status === 'open') {
             subscribe();
@@ -70,6 +74,9 @@ const useSummary = (period: UsagePeriod): (() => void) => {
     }, [transport]);
 
     const load = useCallback((): void => {
+        if (transport === null) {
+            return;
+        }
         const payload = windowFor(period);
         const asked = askedKey(payload);
         useUsageStore.getState().setLoading(endpointId, true);
@@ -80,6 +87,9 @@ const useSummary = (period: UsagePeriod): (() => void) => {
     }, [transport, endpointId, period]);
 
     useEffect(() => {
+        if (transport === null) {
+            return;
+        }
         if (transport.status === 'open') {
             load();
         }
@@ -145,18 +155,49 @@ function LoadingBody() {
 }
 
 /*
- * What both CLIs cost and how much of the plan is left, over the whole machine. It is a page and not
+ * A machine that is not answering says so, rather than leaving the page on a skeleton that never
+ * fills: the numbers come from one daemon and a socket that is down is the whole story.
+ */
+function MachineNote({ endpointId, stale }: { endpointId: string; stale: boolean }) {
+    const label = useEndpoints((s) => s.endpoints.find((entry) => entry.id === endpointId)?.label ?? 'This machine');
+    const { status } = useEndpointConnection(endpointId);
+    if (status === 'open') {
+        return null;
+    }
+    const line = status === 'connecting' ? `Connecting to ${label}...` : `${label} is not answering.`;
+    return <p className="text-xs text-text-muted">{stale ? `${line} These are the numbers of the last scan that reached it.` : line}</p>;
+}
+
+/* One tab per machine this client knows, in the order of the list; with one machine there is nothing to pick. */
+function MachinePicker({ endpointId }: { endpointId: string }) {
+    const endpoints = useEndpoints((s) => s.endpoints);
+    if (endpoints.length < 2) {
+        return null;
+    }
+    return (
+        <Segmented
+            value={endpointId}
+            options={endpoints.map((endpoint) => ({ id: endpoint.id, label: endpoint.label }))}
+            onChange={(id) => useUsageStore.getState().choose(id)}
+            label="Machine"
+        />
+    );
+}
+
+/*
+ * What both CLIs cost and how much of the plan is left, over one whole machine. It is a page and not
  * a view: a view lives in the project file, and none of this belongs to a project.
  */
-export function UsagePage() {
+function Page({ endpointId }: { endpointId: string }) {
     const period = useUsage((s) => s.period);
     const metric = useUsage((s) => s.metric);
     const summary = useUsage((s) => s.summary);
     const asked = useUsage((s) => s.asked);
     const loading = useUsage((s) => s.loading);
-    useCloseOnEscape();
-    const reload = useSummary(period);
+    const transport = useHeldTransport(endpointId);
+    const reload = useSummary(endpointId, transport, period);
     const money = useMoney();
+    const answering = transport?.status === 'open';
 
     const shown = summary !== null && asked === askedKey(windowFor(period)) ? summary : null;
     const derived = shown === null ? null : deriveUsage(shown, metric);
@@ -164,50 +205,80 @@ export function UsagePage() {
     const noRoots = shown !== null && shown.roots.every((root) => root.status === 'missing');
 
     return (
-        <div className="absolute inset-0 overflow-y-auto bg-surface">
-            <div className="mx-auto flex w-full max-w-[960px] flex-col gap-6 px-6 pt-4 pb-10">
-                <header className="flex h-12 shrink-0 items-center gap-3">
-                    <Tooltip label="Back" kbd="Esc" name>
-                        <button className="icon-btn" onClick={closePage}>
-                            <Icon icon={ArrowLeft} size={16} />
+        <div className="mx-auto flex w-full max-w-[960px] flex-col gap-6 px-6 pt-4 pb-10">
+            <header className="flex h-12 shrink-0 items-center gap-3">
+                <Tooltip label="Back" kbd="Esc" name>
+                    <button className="icon-btn" onClick={closePage}>
+                        <Icon icon={ArrowLeft} size={16} />
+                    </button>
+                </Tooltip>
+                <h1 className="text-base font-semibold">Usage</h1>
+                <div className="ml-auto flex items-center gap-2">
+                    <MachinePicker endpointId={endpointId} />
+                    <Segmented value={period} options={PERIOD_OPTIONS} onChange={(id) => useUsageStore.getState().setPeriod(id)} label="Period" />
+                    <Segmented value={metric} options={METRICS} onChange={(id) => useUsageStore.getState().setMetric(id)} label="Metric" />
+                    <Tooltip label="Scan again" name>
+                        <button className="icon-btn" onClick={reload} disabled={loading || !answering}>
+                            <Icon icon={RefreshCw} size={16} className={clsx(loading && 'animate-spin')} />
                         </button>
                     </Tooltip>
-                    <h1 className="text-base font-semibold">Usage</h1>
-                    <div className="ml-auto flex items-center gap-2">
-                        <Segmented value={period} options={PERIOD_OPTIONS} onChange={(id) => useUsageStore.getState().setPeriod(id)} label="Period" />
-                        <Segmented value={metric} options={METRICS} onChange={(id) => useUsageStore.getState().setMetric(id)} label="Metric" />
-                        <Tooltip label="Scan again" name>
-                            <button className="icon-btn" onClick={reload} disabled={loading}>
-                                <Icon icon={RefreshCw} size={16} className={clsx(loading && 'animate-spin')} />
-                            </button>
-                        </Tooltip>
+                </div>
+            </header>
+            <MachineNote endpointId={endpointId} stale={shown !== null} />
+            <Provenance />
+            {noRoots && (
+                <EmptyState icon={<Icon icon={ChartNoAxesColumn} size={24} />}>
+                    No Claude or Codex transcripts found. The daemon reads ~/.claude/projects and ~/.codex/sessions.
+                </EmptyState>
+            )}
+            {/* The skeleton is the wait for an answer; without a socket there is no answer on the way. */}
+            {shown === null && answering && <LoadingBody />}
+            {shown === null && !answering && (
+                <EmptyState icon={<Icon icon={ChartNoAxesColumn} size={24} />}>Nothing has been read from this machine yet.</EmptyState>
+            )}
+            {shown !== null && derived !== null && !noRoots && (
+                <>
+                    <div className="grid gap-6 lg:grid-cols-[18rem_1fr]">
+                        <UsageSummary
+                            metric={metric}
+                            costUsd={derived.costUsd}
+                            totals={derived.totals}
+                            sessions={shown.sessions}
+                            providers={derived.providers}
+                        />
+                        <UsageChart slots={derived.slots} providers={derived.active} format={value} labelEvery={labelEveryFor(derived.slots.length)} />
                     </div>
-                </header>
-                <Provenance />
-                {noRoots && (
-                    <EmptyState icon={<Icon icon={ChartNoAxesColumn} size={24} />}>
-                        No Claude or Codex transcripts found. The daemon reads ~/.claude/projects and ~/.codex/sessions.
-                    </EmptyState>
-                )}
-                {shown === null && <LoadingBody />}
-                {shown !== null && derived !== null && !noRoots && (
-                    <>
-                        <div className="grid gap-6 lg:grid-cols-[18rem_1fr]">
-                            <UsageSummary
-                                metric={metric}
-                                costUsd={derived.costUsd}
-                                totals={derived.totals}
-                                sessions={shown.sessions}
-                                providers={derived.providers}
-                            />
-                            <UsageChart slots={derived.slots} providers={derived.active} format={value} labelEvery={labelEveryFor(derived.slots.length)} />
-                        </div>
-                        <UsageTiles totals={derived.totals} cacheSavingsUsd={derived.cacheSavingsUsd} />
-                        <UsageBreakdown summary={shown} metric={metric} providers={derived.active} />
-                        <UsageLimits />
-                    </>
-                )}
-            </div>
+                    <UsageTiles totals={derived.totals} cacheSavingsUsd={derived.cacheSavingsUsd} />
+                    <UsageBreakdown summary={shown} metric={metric} providers={derived.active} />
+                    <UsageLimits />
+                </>
+            )}
+        </div>
+    );
+}
+
+/*
+ * One page with a machine picker rather than a page per machine: the numbers are a person's spend and
+ * a person works on several machines. Everything under it reads the picked machine through the
+ * context, which is what keeps the limit bars in the sidebar on the machine the work is on.
+ */
+export function UsagePage() {
+    const workspaceId = useEndpointId();
+    const chosen = useUsageStore((s) => s.chosen);
+    const known = useEndpoints((s) => s.endpoints);
+    useCloseOnEscape();
+    const endpointId = usageEndpointFor(
+        chosen,
+        known.map((endpoint) => endpoint.id),
+        workspaceId
+    );
+
+    return (
+        <div className="absolute inset-0 overflow-y-auto bg-surface">
+            <UsageEndpointContext.Provider value={endpointId}>
+                {/* Remounts on a switch, so no effect of the machine that left outlives it. */}
+                <Page key={endpointId} endpointId={endpointId} />
+            </UsageEndpointContext.Provider>
         </div>
     );
 }

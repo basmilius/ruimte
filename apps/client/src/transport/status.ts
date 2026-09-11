@@ -1,5 +1,6 @@
-import { useCallback, useSyncExternalStore } from 'react';
-import { pool, transport, type ConnectionState, type TransportStatus } from '@/transport';
+import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { useEndpoints } from '@/state/endpoints';
+import { pool, transport, type ConnectionState, type Transport, type TransportStatus } from '@/transport';
 
 const subscribe = (onChange: () => void): (() => void) => transport.subscribeStatus(onChange);
 const read = (): TransportStatus => transport.status;
@@ -27,6 +28,21 @@ export const useEndpointConnection = (endpointId: string): ConnectionState =>
         useCallback((onChange: () => void) => pool.subscribeStatus(endpointId, onChange), [endpointId]),
         useCallback(() => pool.statusOf(endpointId), [endpointId])
     );
+
+/*
+ * The socket of one machine, opened and kept from going idle for as long as this is on screen. Null
+ * for a machine this client does not know. A page that is about a machine it is not working on has to
+ * hold its own socket; nothing else does, and the pool closes what nobody holds.
+ */
+export const useHeldTransport = (endpointId: string): Transport | null => {
+    const endpoint = useEndpoints((s) => s.endpoints.find((entry) => entry.id === endpointId) ?? null);
+    const link = useSyncExternalStore(
+        useCallback((onChange: () => void) => pool.subscribeStatus(endpointId, onChange), [endpointId]),
+        useCallback(() => pool.peek(endpointId), [endpointId])
+    );
+    useEffect(() => (endpoint === null ? undefined : pool.hold(endpoint)), [endpoint]);
+    return link;
+};
 
 /* The machines this client holds a socket for, in the order the pool opened them. */
 export const useConnectedEndpoints = (): string[] => useSyncExternalStore(subscribePool, readPoolIds);
