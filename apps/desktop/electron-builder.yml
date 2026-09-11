@@ -56,7 +56,16 @@ dmg:
 linux:
   category: Development
   maintainer: Bas Milius <basmilius@hotmail.com>
-  target: [AppImage, deb]
+  target: [AppImage, deb, rpm]
+  # The package name is `@ruimte/desktop`, and deb and rpm put ${name} in the file name and the
+  # scope's slash in a directory that is not there. Every Linux artifact is named after the product.
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  # Same reason: without it the binary, the icons and the desktop entry are all called
+  # `@ruimtedesktop`, which is what sanitizing `@ruimte/desktop` leaves.
+  executableName: ruimte
+  # Electron reads `desktopName` from package.json for its app id, so the entry has to carry the
+  # same name or a desktop environment cannot tie the running window to the icon it launched.
+  syncDesktopName: true
 deb:
   depends:
     - libgtk-3-0

@@ -8,6 +8,7 @@
     "homepage": "https://ruimte.app",
     "type": "module",
     "main": "dist/main.cjs",
+    "desktopName": "ruimte.desktop",
     "scripts": {
         "build:main": "bun build src/main.ts --target=node --format=cjs --external electron --outfile dist/main.cjs && bun build src/preload.ts --target=node --format=cjs --external electron --outfile dist/preload.cjs",
         "dev": "bun run build:main && RUIMTE_DEV_URL=http://localhost:5173 bun scripts/launch.ts",
