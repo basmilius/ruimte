@@ -252,6 +252,17 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         expect(hello.version.length).toBeGreaterThan(0);
     });
 
+    test('a daemon in a container has no hardware to name', async () => {
+        const hello = await client.request<ServerHelloResult>('server.hello', {});
+        /*
+         * A container carries neither the DMI tree nor a device tree, so there is nothing here that
+         * says what the machine is and the field stays out of the answer; the row for such a daemon
+         * keeps the plain "This machine". A Linux daemon on real hardware answers with what its
+         * firmware wrote ("XPS 15 9500", "Raspberry Pi 4 Model B"), which is why it is optional.
+         */
+        expect(hello.model).toBeUndefined();
+    });
+
     test('endpoint.info knows the client is not on its machine', async () => {
         const info = await client.request<EndpointInfo>('endpoint.info', {});
         expect(info.platform).toBe('linux');

@@ -1,8 +1,8 @@
 import type { EndpointNameSource } from '@ruimte/contracts';
 import { noteDaemonIdentity } from '@/endpoint/identity';
-import { useEndpoints } from '@/state/endpoints';
+import { LOCAL_ENDPOINT_ID, localMachineLabel, useEndpoints } from '@/state/endpoints';
 import { currentEndpointId } from '@/state/keys';
-import { useServers } from '@/state/server';
+import { serverInfoOf, useServers } from '@/state/server';
 import { transport, transportFor } from '@/transport';
 
 /*
@@ -25,9 +25,11 @@ const load = (endpointId: string): void => {
                 icon: info.icon ?? null,
                 reachability: info.reachability
             });
-            adoptChosenName(settled, info.label, info.nameSource ?? null);
+            adoptMachineName(settled, info.label, info.nameSource ?? null);
             const hello = await link.request('server.hello', {});
-            useServers.getState().setInfo(settled, { platform: hello.platform, home: hello.home, version: hello.version });
+            useServers.getState().setInfo(settled, { platform: hello.platform, home: hello.home, version: hello.version, model: hello.model ?? null });
+            // The model arrives a request later than the name, so the row asks again now that it is known.
+            adoptMachineName(settled, info.label, info.nameSource ?? null);
         })
         .catch(() => undefined);
 };
@@ -35,11 +37,16 @@ const load = (endpointId: string): void => {
 /*
  * A name a person gave a machine is the machine's own, so the endpoint row this client keeps takes
  * it and every list stops saying two things at once. A default name is a hostname, which the row's
- * own label ("This machine", or what the pairing put there) reads better than.
+ * own label ("This MacBook Pro", or what the pairing put there) reads better than. Clearing the name
+ * lands here too, which is why the row for this machine is written back rather than left alone.
  */
-export const adoptChosenName = (endpointId: string, label: string, nameSource: EndpointNameSource | null): void => {
+export const adoptMachineName = (endpointId: string, label: string, nameSource: EndpointNameSource | null): void => {
     if (nameSource === 'chosen') {
         useEndpoints.getState().setLabel(endpointId, label);
+        return;
+    }
+    if (endpointId === LOCAL_ENDPOINT_ID) {
+        useEndpoints.getState().setLabel(endpointId, localMachineLabel(serverInfoOf(endpointId).model));
     }
 };
 
