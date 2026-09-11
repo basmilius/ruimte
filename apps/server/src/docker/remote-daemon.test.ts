@@ -298,6 +298,29 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         const browsed = await client.request<FsBrowseResult>('fs.browse', { partialPath: '/work/' });
         expect(browsed.parentPath).toBe('/work');
         expect(browsed.entries.map((entry) => entry.name).sort()).toEqual(['atlas', 'beacon']);
+        expect(browsed.exists).toBe(true);
+    });
+
+    test('a path that is not on that machine comes back as not there', async () => {
+        const browsed = await client.request<FsBrowseResult>('fs.browse', { partialPath: '/work/nowhere/' });
+        expect(browsed.parentPath).toBe('/work/nowhere');
+        expect(browsed.entries).toEqual([]);
+        expect(browsed.exists).toBe(false);
+    });
+
+    test('createFolder makes the folder on the machine that was asked, not on this one', async () => {
+        const folder = '/work/fresh/nested';
+        const opened = await client.request<ProjectOpenResult>('project.open', { folder, createFolder: true });
+        openedProjects.push(opened.summary.projectId);
+        expect(opened.summary.folder).toBe(folder);
+        expect(await inContainer(['sh', '-c', `test -d ${folder} && echo yes`])).toBe('yes');
+        // A daemon on this machine would have made the same path here, which is what this rules out.
+        expect(await Bun.file(folder).exists()).toBe(false);
+
+        const browsed = await client.request<FsBrowseResult>('fs.browse', { partialPath: '/work/fresh/' });
+        expect(browsed.entries.map((entry) => entry.name)).toEqual(['nested']);
+        expect(browsed.exists).toBe(true);
+        await inContainer(['rm', '-rf', '/work/fresh']);
     });
 });
 
