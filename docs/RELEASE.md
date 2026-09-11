@@ -83,6 +83,10 @@ not. Five repository secrets:
 | `APPLE_API_KEY_ID` | the key id |
 | `APPLE_API_ISSUER` | the issuer id |
 
+The workflow creates the draft release before electron-builder starts. Left to itself, two artifacts
+that finish at the same moment both see no release, both create one, and the upload behind the race
+it loses disappears without an error in the log.
+
 Export the certificate from Keychain Access (the private key, not just the certificate) and encode
 it with `base64 -i cert.p12 | pbcopy`. The workflow writes the `.p8` to a file under `RUNNER_TEMP`
 for the length of the job, because notarytool reads the key from disk, and removes it afterwards.

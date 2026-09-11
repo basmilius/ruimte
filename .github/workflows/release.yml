@@ -60,6 +60,14 @@ jobs:
           rm -f "$RUNNER_TEMP/cert.p12"
           security find-identity -v -p codesigning "$keychain"
           echo "RUIMTE_SIGN=1" >> "$GITHUB_ENV"
+      # Two artifacts that finish at once both find no release and both create one. One of the races
+      # loses, and its upload with it: v0.0.1 landed without the x64 zip that `latest-mac.yml` names.
+      - name: The draft release, before anything uploads
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 && exit 0
+          gh release create "$GITHUB_REF_NAME" --draft --title "$RUIMTE_VERSION" --notes ''
       - name: Build and upload
         working-directory: apps/desktop
         env:
