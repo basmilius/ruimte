@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { WebviewParking } from '@/browser/WebviewParking';
+import { useAppChords } from '@/shell/app-chords';
 import { CommandPalette } from '@/shell/CommandPalette';
 import { LayoutDialog } from '@/shell/LayoutDialog';
 import { ViewDialogs } from '@/shell/ViewDialogs';
@@ -57,6 +58,7 @@ function Workspace() {
 
 export function App() {
     const name = useProject((s) => s.current?.name ?? null);
+    useAppChords();
 
     // The Electron window has no title of its own, so this names it as well.
     useEffect(() => {

@@ -3,7 +3,7 @@ import { createCanvasStore, defaultCanvasStore, useCanvas } from './canvas';
 import { createDocumentStore } from './document';
 import { createDrawingStore } from './drawing';
 import { createProjectStore, useProject } from './project';
-import { currentStores, currentWorkspaceEndpointId, setCurrentWorkspace, type WorkspaceStores } from './workspace-stores';
+import { currentStores, currentWorkspaceEndpointId, isFocusedWorkspace, setCurrentWorkspace, type WorkspaceStores } from './workspace-stores';
 
 const workspace = (): WorkspaceStores => {
     const canvas = createCanvasStore();
@@ -90,5 +90,26 @@ describe('the hook over a slot', () => {
         off();
 
         expect(seen).toEqual(['first']);
+    });
+});
+
+describe('which workspace a chord acts on', () => {
+    test('the one that has the focus, never the one beside it', () => {
+        const here = workspace();
+        const there = workspace();
+        setCurrentWorkspace({ stores: here, endpointId: 'local' });
+
+        expect(isFocusedWorkspace(here)).toBe(true);
+        expect(isFocusedWorkspace(there)).toBe(false);
+    });
+
+    test('outside every workspace there is one project and it is this one', () => {
+        setCurrentWorkspace({ stores: workspace(), endpointId: 'local' });
+
+        expect(isFocusedWorkspace(null)).toBe(true);
+    });
+
+    test('before the first workspace is built nothing is blocked', () => {
+        expect(isFocusedWorkspace(workspace())).toBe(true);
     });
 });

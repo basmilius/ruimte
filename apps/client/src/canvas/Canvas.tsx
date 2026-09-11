@@ -1,12 +1,12 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Plus } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { isCanvasView } from '@ruimte/contracts';
 import { GRID, intersects, snapToGrid, toWorld, type Point, type Rect } from '@/canvas/math';
 import { useCanvas, type NodeKind } from '@/state/canvas';
+import { isFocusedWorkspace, WorkspaceStoresContext } from '@/state/workspace-stores';
 import { useUi } from '@/state/ui';
-import { isApplePlatform } from '@/desktop/bridge';
 import { newCanvasView, showView, stepView, viewAtIndex } from '@/project/views';
 import { activeViewOf, useDocument } from '@/state/document';
 import { addNodeAtCenter } from '@/shell/commands';
@@ -74,6 +74,8 @@ const resizedRect = (rect: Rect, edge: string, dx: number, dy: number): Rect => 
 };
 
 export function Canvas() {
+    /* Which workspace this canvas is, so a chord on the window can tell it from the one beside it. */
+    const stores = useContext(WorkspaceStoresContext);
     const rootRef = useRef<HTMLDivElement>(null);
     const gestureRef = useRef<Gesture | null>(null);
     const spaceRef = useRef(false);
@@ -202,6 +204,14 @@ export function Canvas() {
 
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent): void => {
+            /* Every chord below acts on one project: the views it switches between, the nodes it adds
+               and deletes, the panel beside it. Bound on the window, because a view has to answer
+               with the focus in the sidebar as well, so the workspace it belongs to is asked here.
+               The chords of the window itself (the palette, find in files, the settings, the sidebar)
+               are not in this listener at all: `shell/app-chords.ts` has them. */
+            if (!isFocusedWorkspace(stores)) {
+                return;
+            }
             const s = useCanvas.getState();
             if (e.code === 'Space' && !isTypingTarget(e.target)) {
                 spaceRef.current = true;
@@ -230,28 +240,6 @@ export function Canvas() {
                 return;
             }
             const mod = e.metaKey || e.ctrlKey;
-            // App-wide chords work from anywhere, a focused node or text field included. A focused
-            // terminal is the exception: it stops every chord it owns before this listener (`keymap.ts`).
-            if (mod && e.key === 'k') {
-                e.preventDefault();
-                if (useUi.getState().paletteOpen) {
-                    useUi.getState().setPaletteOpen(false);
-                } else {
-                    useUi.getState().openPalette();
-                }
-                return;
-            }
-            // Shift makes the key uppercase, which is why this compares the code and not the key.
-            if (mod && e.shiftKey && e.code === 'KeyF') {
-                e.preventDefault();
-                useUi.getState().openFindInFiles();
-                return;
-            }
-            if (mod && e.key === ',') {
-                e.preventDefault();
-                useUi.getState().setSettings({ open: true });
-                return;
-            }
             // The views answer from anywhere, a focused node included: they are how you leave one.
             if (mod && !e.altKey && !e.shiftKey && /^Digit[1-9]$/.test(e.code)) {
                 e.preventDefault();
@@ -275,12 +263,6 @@ export function Canvas() {
             if (mod && e.altKey && e.code === 'KeyB') {
                 e.preventDefault();
                 useUi.getState().togglePanel();
-                return;
-            }
-            // Ctrl+B is readline's backward-char and tmux's prefix, so off macOS it stays out of a node.
-            if (mod && !e.altKey && e.code === 'KeyB' && (isApplePlatform() || s.mode.kind !== 'node')) {
-                e.preventDefault();
-                useUi.getState().toggleSidebar();
                 return;
             }
             // A dialog owns the keyboard while it is up; Backspace there must not delete nodes. Nor may
@@ -333,7 +315,7 @@ export function Canvas() {
             window.removeEventListener('keydown', onKeyDown);
             window.removeEventListener('keyup', onKeyUp);
         };
-    }, []);
+    }, [stores]);
 
     const screenPoint = (e: { clientX: number; clientY: number }): Point => {
         const rect = rootRef.current!.getBoundingClientRect();
