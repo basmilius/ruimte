@@ -86,3 +86,16 @@ not. Five repository secrets:
 Export the certificate from Keychain Access (the private key, not just the certificate) and encode
 it with `base64 -i cert.p12 | pbcopy`. The workflow writes the `.p8` to a file under `RUNNER_TEMP`
 for the length of the job, because notarytool reads the key from disk, and removes it afterwards.
+
+Two things about that `.p12` cost an afternoon once.
+
+Apple's `security import` reads only the old PKCS12 ciphers. A file written by OpenSSL 3 with its
+defaults comes back as `MAC verification failed during PKCS12 import (wrong password?)`, which is
+about the algorithm, not the password. Rebuild one with `-legacy -macalg sha1` and
+`-certpbe pbeWithSHA1And3-KeyTripleDES-CBC -keypbe pbeWithSHA1And3-KeyTripleDES-CBC`.
+
+And the workflow builds the keychain itself rather than handing electron-builder `CSC_LINK`, because
+electron-builder creates a keychain with a random password and then unlocks it with the `.p12`
+password, so `security set-key-partition-list` answers `SecKeychainUnlock: The user name or
+passphrase you entered is not correct`. With the identity in a keychain on the search list,
+electron-builder finds it by discovery and never touches the file.
