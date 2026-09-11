@@ -22,7 +22,8 @@ const endpoint = (id: string, label: string): Endpoint => ({
     wsBaseUrl: `ws://${id}`,
     reachability: 'lan',
     token: null,
-    daemonId: id
+    daemonId: id,
+    daemonPublicKey: null
 });
 
 /* The three calls the list makes on the storage it is given, over a map a test can read. */

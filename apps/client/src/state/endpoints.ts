@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 import type { Reachability } from '@ruimte/contracts';
+import { credentialFor } from '@/endpoint/credentials';
 
 const STORAGE_KEY = 'ruimte.endpoints';
-// Version 1 keyed a row on its address; version 2 keys it on the id the daemon answers with.
-const STORAGE_VERSION = 2;
+// Version 1 keyed a row on its address; version 2 keys it on the id the daemon answers with; version 3 pins its key.
+const STORAGE_VERSION = 3;
 export const LOCAL_ENDPOINT_ID = 'local';
 
 export interface Endpoint {
@@ -14,13 +15,22 @@ export interface Endpoint {
     httpBaseUrl: string;
     wsBaseUrl: string;
     reachability: Reachability;
-    /* The long-lived session token from pairing; the loopback daemon needs none. */
+    /*
+     * The session token from pairing, for a daemon or a browser that cannot do key pairs. Null once
+     * this client has signed for a ticket instead, which is what every fresh pairing does.
+     */
     token: string | null;
     /*
      * The daemon that last answered on this address. `local` learns it too, which is how the client
      * tells that a paired row and the page's own daemon are the same machine.
      */
     daemonId: string | null;
+    /*
+     * The daemon's ed25519 public key, pinned the first time this client saw it over a connection it
+     * already trusted (pairing, or a token-authenticated socket). From then on a daemon has to sign
+     * a challenge with it, so the id above is a proof rather than a string read off the wire.
+     */
+    daemonPublicKey: string | null;
 }
 
 interface EndpointsStore {
@@ -33,6 +43,10 @@ interface EndpointsStore {
     setActive(id: string): void;
     setLabel(id: string, label: string): void;
     learnDaemonId(id: string, daemonId: string): void;
+    /* Trust on first use: the key is written once and never overwritten, so a later answer cannot replace it. */
+    pinDaemonKey(id: string, publicKey: string): void;
+    /* The session token is not needed any more; this client signs for its credential now. */
+    clearToken(id: string): void;
     /* Moves a row onto the id its daemon answers with; the pre-phase-1 rows were keyed on an address. */
     rekeyEndpoint(oldId: string, newId: string): void;
     noteMismatch(id: string, daemonId: string): void;
@@ -48,7 +62,8 @@ const localEndpoint = (): Endpoint => {
         wsBaseUrl: origin.replace(/^http/, 'ws'),
         reachability: 'loopback',
         token: null,
-        daemonId: null
+        daemonId: null,
+        daemonPublicKey: null
     };
 };
 
@@ -65,7 +80,7 @@ export const parseStoredEndpoints = (raw: string | null): { endpoints: Endpoint[
         const stored = JSON.parse(raw) as { version?: number; endpoints?: Endpoint[]; activeId?: string };
         const endpoints = (stored.endpoints ?? [])
             .filter((endpoint) => endpoint?.id !== undefined && endpoint.id !== LOCAL_ENDPOINT_ID)
-            .map((endpoint) => ({ ...endpoint, daemonId: endpoint.daemonId ?? null }));
+            .map((endpoint) => ({ ...endpoint, daemonId: endpoint.daemonId ?? null, daemonPublicKey: endpoint.daemonPublicKey ?? null }));
         return { endpoints, activeId: stored.activeId ?? null, migrated: stored.version !== STORAGE_VERSION };
     } catch {
         return { endpoints: [], activeId: null, migrated: false };
@@ -140,6 +155,18 @@ export const useEndpoints = create<EndpointsStore>((set, get) => ({
         set({ endpoints });
         persist({ endpoints, activeId: get().activeId });
     },
+    pinDaemonKey(id, publicKey) {
+        const endpoints = get().endpoints.map((entry) =>
+            entry.id === id && entry.daemonPublicKey === null ? { ...entry, daemonPublicKey: publicKey } : entry
+        );
+        set({ endpoints });
+        persist({ endpoints, activeId: get().activeId });
+    },
+    clearToken(id) {
+        const endpoints = get().endpoints.map((entry) => (entry.id === id ? { ...entry, token: null } : entry));
+        set({ endpoints });
+        persist({ endpoints, activeId: get().activeId });
+    },
     rekeyEndpoint(oldId, newId) {
         if (oldId === newId || oldId === LOCAL_ENDPOINT_ID || !get().endpoints.some((entry) => entry.id === oldId)) {
             return;
@@ -166,8 +193,15 @@ export const activeEndpoint = (): Endpoint => {
     return endpoints.find((entry) => entry.id === activeId) ?? endpoints[0]!;
 };
 
-/* The socket address for an endpoint; the token rides in the query, which a browser cannot put in a header. */
-export const socketUrlFor = (endpoint: Endpoint): string => `${endpoint.wsBaseUrl}/ws${endpoint.token ? `?token=${encodeURIComponent(endpoint.token)}` : ''}`;
+/*
+ * The socket address for an endpoint. The credential rides in the query because a browser cannot
+ * put a header on a WebSocket handshake; what makes that bearable is that a ticket is what normally
+ * sits there, good for one connection and for nothing on any other machine.
+ */
+export const socketUrlFor = (endpoint: Endpoint): string => {
+    const credential = credentialFor(endpoint);
+    return `${endpoint.wsBaseUrl}/ws${credential ? `?token=${encodeURIComponent(credential)}` : ''}`;
+};
 
 /* `http://host:port/pair#token`, as the daemon prints it. */
 export const parsePairingUrl = (input: string): { httpBaseUrl: string; token: string } | null => {

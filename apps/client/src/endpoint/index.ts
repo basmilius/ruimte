@@ -4,7 +4,7 @@ import { projectClient } from '@/project';
 import { forgetCachedList } from '@/project/list';
 import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
-import { LOCAL_ENDPOINT_ID, activeEndpoint, parsePairingUrl, socketUrlFor, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { LOCAL_ENDPOINT_ID, activeEndpoint, parsePairingUrl, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProjectList } from '@/state/project-list';
 import { useProject } from '@/state/project';
 import { useProvidersStore } from '@/state/providers';
@@ -13,25 +13,37 @@ import { useSessions } from '@/state/sessions';
 import { useUsageStore } from '@/state/usage';
 import { pool, transport } from '@/transport';
 import { dropMachine } from '@/transport/connections';
+import { clientKey } from './client-key';
+import { forgetTicket } from './credentials';
+import { socketAddressFor } from './handshake';
 
 /*
- * Pairs with a daemon on another machine: the pasted URL names the daemon and carries the
- * one-time token; the daemon answers with a session token this client keeps for that endpoint.
+ * Pairs with a daemon on another machine: the pasted URL names the daemon and carries the one-time
+ * token. This client registers its public key in the same request and signs for a ticket per
+ * connection after that, so nothing long lived is written down on either side. A daemon from before
+ * key pairs (and a browser without ed25519) falls back to the session token it answers with.
+ *
+ * Pinning the daemon's own key happens here too, over the one exchange nobody can be in the middle
+ * of without the pairing token: from now on that machine has to sign to be believed.
  */
 export const pairEndpoint = async (pairingUrl: string): Promise<Endpoint> => {
     const parsed = parsePairingUrl(pairingUrl);
     if (!parsed) {
         throw new Error('That is not a pairing link; it looks like http://machine:4210/pair#token');
     }
+    const key = await clientKey();
     const response = await fetch(`${parsed.httpBaseUrl}/auth/pair`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ token: parsed.token, label: clientLabel() })
+        body: JSON.stringify({ token: parsed.token, label: clientLabel(), ...(key ? { publicKey: key.publicKey } : {}) })
     });
     if (!response.ok) {
         throw new Error(await response.text().catch(() => 'The daemon refused the pairing'));
     }
-    const { sessionToken, endpoint } = (await response.json()) as { sessionToken: string; endpoint: EndpointInfo };
+    const { sessionToken, endpoint } = (await response.json()) as { sessionToken?: string; endpoint: EndpointInfo };
+    if (key && !endpoint.publicKey && !sessionToken) {
+        throw new Error('That daemon answered with neither a key nor a token; there is nothing to talk to it with');
+    }
     // Keyed on the daemon's own id, so pairing with a machine that is already in the list under another address moves that row.
     const record: Endpoint = {
         id: endpoint.id,
@@ -39,12 +51,15 @@ export const pairEndpoint = async (pairingUrl: string): Promise<Endpoint> => {
         httpBaseUrl: parsed.httpBaseUrl,
         wsBaseUrl: parsed.httpBaseUrl.replace(/^http/, 'ws'),
         reachability: endpoint.reachability,
-        token: sessionToken,
-        daemonId: endpoint.id
+        token: sessionToken ?? null,
+        daemonId: endpoint.id,
+        daemonPublicKey: key ? (endpoint.publicKey ?? null) : null
     };
+    // A row under this id from an earlier pairing carried a ticket for a credential that is now gone.
+    forgetTicket(record.id);
     useEndpoints.getState().add(record);
-    // Pairing again with a machine that already has a socket hands out a new token, so the socket follows the address it came on.
-    pool.readdress(record.id, socketUrlFor(record));
+    // Pairing again with a machine that already has a socket hands out a new credential, so the socket follows the address it came on.
+    pool.readdress(record.id, () => socketAddressFor(record.id));
     return record;
 };
 
@@ -77,6 +92,7 @@ export const forgetEndpoint = async (id: string): Promise<void> => {
         await activateEndpoint(LOCAL_ENDPOINT_ID);
     }
     useEndpoints.getState().remove(id);
+    forgetTicket(id);
     dropMachine(id);
     pool.drop(id);
     forgetEndpointState(id);

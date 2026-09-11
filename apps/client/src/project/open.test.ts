@@ -9,7 +9,8 @@ const endpoint = (id: string): Endpoint => ({
     wsBaseUrl: `ws://${id}`,
     reachability: 'lan',
     token: null,
-    daemonId: id
+    daemonId: id,
+    daemonPublicKey: null
 });
 
 const fakeStorage = (storage: Map<string, string>) => ({

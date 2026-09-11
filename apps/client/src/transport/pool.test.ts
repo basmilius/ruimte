@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { EventMap, EventType, RequestMap, RequestType } from '@ruimte/contracts';
 import type { Endpoint } from '../state/endpoints';
 import { TransportPool, type PooledTransport } from './pool';
+import type { SocketAddress } from './websocket-transport';
 import type { ConnectionState, TransportStatus } from './transport';
 
 const endpoint = (id: string): Endpoint => ({
@@ -11,16 +12,17 @@ const endpoint = (id: string): Endpoint => ({
     wsBaseUrl: `ws://${id}`,
     reachability: 'lan',
     token: null,
-    daemonId: null
+    daemonId: null,
+    daemonPublicKey: null
 });
 
 class FakeTransport implements PooledTransport {
-    url: string;
+    url: SocketAddress;
     disposed = false;
     connection: ConnectionState = { status: 'connecting', attempts: 0, retryAt: null };
     private readonly statusHandlers = new Set<(status: TransportStatus) => void>();
 
-    constructor(url: string) {
+    constructor(url: SocketAddress) {
         this.url = url;
     }
 
@@ -50,7 +52,11 @@ class FakeTransport implements PooledTransport {
         };
     }
 
-    switchTo(url: string): void {
+    switchTo(url: SocketAddress): void {
+        this.url = url;
+    }
+
+    retarget(url: SocketAddress): void {
         this.url = url;
     }
 
@@ -135,11 +141,14 @@ describe('TransportPool', () => {
     test('a row that learns its daemon id keeps the socket that just answered', () => {
         const { pool, opened } = setup();
         pool.hold(endpoint('127.0.0.1:4310'));
-        pool.rekey('127.0.0.1:4310', 'daemon-b');
+        const underNewId = () => Promise.resolve('ws://daemon-b/ws');
+        pool.rekey('127.0.0.1:4310', 'daemon-b', underNewId);
         expect(pool.peek('daemon-b')).toBe(opened[0]!);
         expect(pool.peek('127.0.0.1:4310')).toBeNull();
         expect(opened[0]?.disposed).toBe(false);
         expect(pool.ids()).toEqual(['daemon-b']);
+        // A reconnect has to look the row up under the id it moved to, not the one it left.
+        expect(opened[0]?.url).toBe(underNewId);
     });
 
     test('dropping an endpoint closes its socket and forgets it', () => {

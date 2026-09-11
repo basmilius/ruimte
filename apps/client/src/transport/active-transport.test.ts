@@ -12,7 +12,8 @@ const endpoint = (id: string): Endpoint => ({
     wsBaseUrl: `ws://${id}`,
     reachability: 'lan',
     token: null,
-    daemonId: null
+    daemonId: null,
+    daemonPublicKey: null
 });
 
 interface Pending {
@@ -71,6 +72,8 @@ class FakeTransport implements PooledTransport {
     }
 
     switchTo(): void {}
+
+    retarget(): void {}
 
     dispose(): void {}
 }
