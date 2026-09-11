@@ -2,8 +2,9 @@ import { useCallback, useEffect } from 'react';
 import clsx from 'clsx';
 import { ArrowLeft, ChartNoAxesColumn, RefreshCw } from 'lucide-react';
 import { Segmented, Skeleton } from '@/shell/settings/controls';
+import { currentEndpointId } from '@/state/keys';
 import { useUi } from '@/state/ui';
-import { askedKey, USAGE_PERIODS, useUsage, windowFor, type UsageMetric, type UsagePeriod } from '@/state/usage';
+import { askedKey, USAGE_PERIODS, useUsage, useUsageStore, windowFor, type UsageMetric, type UsagePeriod } from '@/state/usage';
 import { transport } from '@/transport';
 import { EmptyState } from '@/ui/EmptyState';
 import { Tooltip } from '@/ui/Tooltip';
@@ -68,11 +69,12 @@ const useSummary = (period: UsagePeriod): (() => void) => {
     const load = useCallback((): void => {
         const payload = windowFor(period);
         const asked = askedKey(payload);
-        useUsage.getState().setLoading(true);
+        const endpointId = currentEndpointId();
+        useUsageStore.getState().setLoading(endpointId, true);
         transport
             .request('usage.summary', payload)
-            .then((summary) => useUsage.getState().receive(asked, summary))
-            .catch(() => useUsage.getState().fail());
+            .then((summary) => useUsageStore.getState().receive(endpointId, asked, summary))
+            .catch(() => useUsageStore.getState().fail(endpointId));
     }, [period]);
 
     useEffect(() => {
@@ -170,8 +172,8 @@ export function UsagePage() {
                     </Tooltip>
                     <h1 className="text-base font-semibold">Usage</h1>
                     <div className="ml-auto flex items-center gap-2">
-                        <Segmented value={period} options={PERIOD_OPTIONS} onChange={(id) => useUsage.getState().setPeriod(id)} label="Period" />
-                        <Segmented value={metric} options={METRICS} onChange={(id) => useUsage.getState().setMetric(id)} label="Metric" />
+                        <Segmented value={period} options={PERIOD_OPTIONS} onChange={(id) => useUsageStore.getState().setPeriod(id)} label="Period" />
+                        <Segmented value={metric} options={METRICS} onChange={(id) => useUsageStore.getState().setMetric(id)} label="Metric" />
                         <Tooltip label="Scan again" name>
                             <button className="icon-btn" onClick={reload} disabled={loading}>
                                 <Icon icon={RefreshCw} size={16} className={clsx(loading && 'animate-spin')} />

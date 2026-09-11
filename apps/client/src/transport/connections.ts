@@ -3,30 +3,37 @@ import { DrawingClient } from '@/drawing/drawing-client';
 import { panelsPort } from '@/project/panels-port';
 import { ProjectClient, type ProjectSink } from '@/project/project-client';
 import { useCanvas } from '@/state/canvas';
-import { useChats } from '@/state/chats';
+import { chatSinkFor } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { useDrawing } from '@/state/drawing';
 import { activeEndpoint, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProject } from '@/state/project';
-import { useProviders } from '@/state/providers';
-import { useSessions } from '@/state/sessions';
+import { providerSinkFor } from '@/state/providers';
+import { sessionSinkFor } from '@/state/sessions';
 import { SessionClient } from '@/terminal/session-client';
 import { pool } from '@/transport';
 import type { Transport } from '@/transport/transport';
 
-/* Everything that runs on one daemon: its socket, and the four clients that own that socket's events. */
-export interface Connection {
-    /* The endpoint this socket belongs to; it moves when a row learns the id of the daemon behind it. */
+/* The clients of one daemon that write state keyed on that daemon, so several may be alive at once. */
+export interface Machine {
     endpointId: string;
     transport: Transport;
     sessions: SessionClient;
     chats: ChatClient;
+    dispose(): void;
+}
+
+/* The clients of the machine whose project is on screen; there is one project, so there is one of these. */
+interface Workspace {
+    endpointId: string;
+    transport: Transport;
     projects: ProjectClient;
     drawings: DrawingClient;
     dispose(): void;
 }
 
-let current: Connection | null = null;
+const machines = new Map<string, Machine>();
+let workspace: Workspace | null = null;
 
 const projectSink = (): ProjectSink => {
     const actions = useProject.getState();
@@ -44,12 +51,55 @@ const projectSink = (): ProjectSink => {
     };
 };
 
+const buildMachine = (endpoint: Endpoint): Machine => {
+    const transport = pool.require(endpoint);
+    const sessions = new SessionClient(transport, sessionSinkFor(endpoint.id));
+    const chats = new ChatClient(transport, chatSinkFor(endpoint.id), providerSinkFor(endpoint.id));
+    return {
+        endpointId: endpoint.id,
+        transport,
+        sessions,
+        chats,
+        dispose(): void {
+            sessions.dispose();
+            chats.dispose();
+        }
+    };
+};
+
 /*
- * The clients of one daemon, on that daemon's own socket. The drawing client is built first: the
- * project client hands it the moment before a project is swapped in, so the drawing on screen
- * reaches its own file while the old project is still open.
+ * The sessions and the threads of one daemon, on that daemon's own socket. Every row they write
+ * names their machine (`state/keys.ts`), so a second machine's clients paint nothing of this one's.
+ * Null for a machine this client no longer knows: a request meant for a daemon that was forgotten
+ * must not land on whichever machine happens to be active.
  */
-const build = (endpoint: Endpoint): Connection => {
+export const machineFor = (endpointId: string): Machine | null => {
+    const existing = machines.get(endpointId);
+    if (existing && existing.transport === pool.peek(endpointId)) {
+        return existing;
+    }
+    existing?.dispose();
+    machines.delete(endpointId);
+    const endpoint = useEndpoints.getState().endpoints.find((entry) => entry.id === endpointId);
+    if (!endpoint) {
+        return null;
+    }
+    const machine = buildMachine(endpoint);
+    machines.set(machine.endpointId, machine);
+    return machine;
+};
+
+/* The active machine always has a row in the endpoint list, so it always has clients. */
+const activeMachine = (): Machine => machineFor(activeEndpoint().id)!;
+
+/*
+ * The project and the drawing on screen, on the socket of the machine that project came from. One
+ * set at a time, because `state/project.ts`, `state/document.ts` and `state/canvas.ts` still hold
+ * one open project: a second live set would boot a second project into the same canvas. The drawing
+ * client is built first, so the project client can hand it the moment before a project is swapped in
+ * and the drawing on screen reaches its own file while the old project is still open.
+ */
+const buildWorkspace = (endpoint: Endpoint): Workspace => {
     const transport = pool.require(endpoint);
     const drawings = new DrawingClient(transport, useDrawing, useDocument, useProject, {
         flushProject: (): Promise<void> => projects.flush()
@@ -57,76 +107,91 @@ const build = (endpoint: Endpoint): Connection => {
     const projects = new ProjectClient(transport, useCanvas, useDocument, panelsPort, projectSink(), {
         drawing: useDrawing,
         beforeSwitch: (): Promise<void> => drawings.flush(),
-        endpointId: (): string => connection.endpointId
+        endpointId: (): string => current.endpointId
     });
-    const sessions = new SessionClient(transport, useSessions.getState());
-    const chats = new ChatClient(transport, useChats.getState(), useProviders.getState());
-    const connection: Connection = {
+    const current: Workspace = {
         endpointId: endpoint.id,
         transport,
-        sessions,
-        chats,
         projects,
         drawings,
         dispose(): void {
-            sessions.dispose();
-            chats.dispose();
             projects.dispose();
             drawings.dispose();
         }
     };
-    return connection;
-};
-
-/*
- * The clients of the machine that is active, built on its socket and torn down when another machine
- * takes over. One set at a time: the stores they write to (`state/project.ts`, `state/sessions.ts`,
- * `state/providers.ts`) still hold one daemon's answers, so a second live set would paint two
- * machines into one canvas. It is also what keeps a reattach on its own machine: a session client
- * knows one socket, and that socket never changes daemons. Phase 4 keys those stores on the
- * endpoint, and several sets can be alive at once.
- */
-export const activeConnection = (): Connection => {
-    const endpoint = activeEndpoint();
-    if (current) {
-        if (current.transport === pool.peek(endpoint.id)) {
-            // A row that learned the id of its daemon is the same machine under another name; the socket stayed put.
-            current.endpointId = endpoint.id;
-            return current;
-        }
-        current.dispose();
-    }
-    current = build(endpoint);
     return current;
 };
 
+const activeWorkspace = (): Workspace => {
+    const endpoint = activeEndpoint();
+    if (workspace) {
+        if (workspace.transport === pool.peek(endpoint.id)) {
+            // A row that learned the id of its daemon is the same machine under another name; the socket stayed put.
+            workspace.endpointId = endpoint.id;
+            return workspace;
+        }
+        workspace.dispose();
+    }
+    workspace = buildWorkspace(endpoint);
+    return workspace;
+};
+
 /*
- * A stand-in for one of the active connection's clients, so a call site keeps reading as "the daemon
+ * A stand-in for one of the active machine's clients, so a call site keeps reading as "the daemon
  * this project is on" and holds on to nothing that a switch replaced.
  */
-const activeClient = <T extends object>(pick: (connection: Connection) => T): T =>
+const activeClient = <T extends object>(pick: () => T): T =>
     new Proxy({} as T, {
         get(_target, property) {
-            const client = pick(activeConnection());
+            const client = pick();
             const value = Reflect.get(client, property) as unknown;
             return typeof value === 'function' ? (value as (...args: unknown[]) => unknown).bind(client) : value;
         }
     });
 
-export const sessionClient = activeClient((connection) => connection.sessions);
-export const chatClient = activeClient((connection) => connection.chats);
-export const projectClient = activeClient((connection) => connection.projects);
-export const drawingClient = activeClient((connection) => connection.drawings);
+export const sessionClient = activeClient(() => activeMachine().sessions);
+export const chatClient = activeClient(() => activeMachine().chats);
+export const projectClient = activeClient(() => activeWorkspace().projects);
+export const drawingClient = activeClient(() => activeWorkspace().drawings);
+
+/* The session client of one machine, for a node that names the daemon it runs on. */
+export const sessionClientFor = (endpointId: string): SessionClient | null => machineFor(endpointId)?.sessions ?? null;
+
+export const chatClientFor = (endpointId: string): ChatClient | null => machineFor(endpointId)?.chats ?? null;
+
+/* A machine whose socket the pool closed has no clients left to keep; the next call builds them again. */
+const prune = (): void => {
+    for (const [endpointId, machine] of [...machines]) {
+        if (pool.peek(endpointId) !== machine.transport) {
+            machines.delete(endpointId);
+            machine.dispose();
+        }
+    }
+};
+
+/* Everything one machine held, for a row that is forgotten or a session that was revoked. */
+export const dropMachine = (endpointId: string): void => {
+    const machine = machines.get(endpointId);
+    machines.delete(endpointId);
+    machine?.dispose();
+};
 
 /*
  * The active machine's clients exist from the first frame, because the project client is what opens
  * the project the person left off in as soon as its socket answers.
  */
 export const startConnections = (): (() => void) => {
-    activeConnection();
-    return useEndpoints.subscribe((state, before) => {
+    activeMachine();
+    activeWorkspace();
+    const offPool = pool.subscribe(prune);
+    const offEndpoints = useEndpoints.subscribe((state, before) => {
         if (state.activeId !== before.activeId) {
-            activeConnection();
+            activeMachine();
+            activeWorkspace();
         }
     });
+    return () => {
+        offPool();
+        offEndpoints();
+    };
 };

@@ -2,6 +2,7 @@ import { isCanvasView, type ContextSource } from '@ruimte/contracts';
 import { deriveContextSources } from '@/context/sources';
 import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
+import { currentEndpointId } from '@/state/keys';
 import { transport } from '@/transport';
 
 const SETTLE_MS = 300;
@@ -40,28 +41,32 @@ export const contextSources = (): Map<string, ContextSource[]> => {
  */
 export const startContextSync = (): (() => void) => {
     let timer: ReturnType<typeof setTimeout> | null = null;
-    let sent = new Map<string, string>();
+    /* What each machine was last told, per target. The nodes of one project are on one daemon, and
+       what another daemon was told has to stay standing while this one is edited. */
+    const sent = new Map<string, Map<string, string>>();
 
     const push = (force = false): void => {
         if (transport.status !== 'open') {
             return;
         }
+        const endpointId = currentEndpointId();
+        const before = sent.get(endpointId) ?? new Map<string, string>();
         const wanted = contextSources();
         const next = new Map<string, string>();
         for (const [targetId, sources] of wanted) {
             next.set(targetId, JSON.stringify(sources));
         }
         for (const [targetId, serialized] of next) {
-            if (force || sent.get(targetId) !== serialized) {
+            if (force || before.get(targetId) !== serialized) {
                 void transport.request('context.set', { targetId, sources: wanted.get(targetId)! }).catch(() => undefined);
             }
         }
-        for (const targetId of sent.keys()) {
+        for (const targetId of before.keys()) {
             if (!next.has(targetId)) {
                 void transport.request('context.set', { targetId, sources: [] }).catch(() => undefined);
             }
         }
-        sent = next;
+        sent.set(endpointId, next);
     };
 
     const schedule = (): void => {
@@ -86,7 +91,8 @@ export const startContextSync = (): (() => void) => {
     });
     const offStatus = transport.subscribeStatus((status) => {
         if (status === 'open') {
-            sent = new Map();
+            // A daemon that answers again knows nothing of what it was told before it went away.
+            sent.delete(currentEndpointId());
             push(true);
         }
     });

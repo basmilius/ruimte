@@ -3,6 +3,7 @@ import { isCanvasView } from '@ruimte/contracts';
 import { BrowserContextMenu } from '@/browser/BrowserContextMenu';
 import { browserRegistry, useBrowser } from '@/browser/registry';
 import { GROUP_HEADER_PX, isNodeFocused, useCanvas } from '@/state/canvas';
+import { splitKey } from '@/state/keys';
 import { activeViewOf, useDocument } from '@/state/document';
 
 // The browser toolbar sits under the frame's header, both above the page.
@@ -18,8 +19,8 @@ const TOOLBAR_PX = 37;
  */
 export function WebviewParking() {
     // Selecting the object and deriving the keys: a selector that builds an array loops forever.
-    const byNodeId = useBrowser((s) => s.byNodeId);
-    const ids = useMemo(() => Object.keys(byNodeId), [byNodeId]);
+    const byKey = useBrowser((s) => s.byKey);
+    const keys = useMemo(() => Object.keys(byKey), [byKey]);
     const hosts = useRef(new Map<string, HTMLDivElement>());
 
     useEffect(() => {
@@ -29,7 +30,8 @@ export function WebviewParking() {
             // A view of its own is one page over the whole column; the canvas under it shows nothing.
             const filling = active && active.kind === 'browser' ? active.id : null;
             const onCanvas = active === null || isCanvasView(active);
-            for (const [nodeId, host] of hosts.current) {
+            for (const [key, host] of hosts.current) {
+                const nodeId = splitKey(key).id;
                 if (nodeId === filling) {
                     host.style.visibility = 'visible';
                     host.style.pointerEvents = 'auto';
@@ -60,15 +62,15 @@ export function WebviewParking() {
             offCanvas();
             offDocument();
         };
-    }, [ids]);
+    }, [keys]);
 
-    const adopt = (nodeId: string, host: HTMLDivElement | null): void => {
+    const adopt = (key: string, host: HTMLDivElement | null): void => {
         if (!host) {
-            hosts.current.delete(nodeId);
+            hosts.current.delete(key);
             return;
         }
-        hosts.current.set(nodeId, host);
-        const element = browserRegistry.get(nodeId);
+        hosts.current.set(key, host);
+        const element = browserRegistry.get(key);
         if (element && element.parentElement !== host) {
             host.appendChild(element);
         }
@@ -76,13 +78,13 @@ export function WebviewParking() {
 
     return (
         <>
-            {ids.length > 0 && (
+            {keys.length > 0 && (
                 <div className="pointer-events-none absolute inset-0 overflow-hidden">
-                    {ids.map((nodeId) => (
+                    {keys.map((key) => (
                         <div
-                            key={nodeId}
+                            key={key}
                             ref={(host) => {
-                                adopt(nodeId, host);
+                                adopt(key, host);
                             }}
                             className="absolute top-0 left-0 origin-top-left overflow-hidden bg-bg"
                             style={{ visibility: 'hidden' }}

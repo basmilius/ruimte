@@ -21,7 +21,8 @@ import {
 } from 'lucide-react';
 import { classifyLoadError, type LoadErrorKind } from '@/browser/load-error';
 import { prettyUrl } from '@/browser/pretty-url';
-import { browserRegistry, useBrowser } from '@/browser/registry';
+import { browserRegistry, useBrowserRow } from '@/browser/registry';
+import { endpointKey, useEndpointId } from '@/state/keys';
 import { deriveNodeTitle } from '@/chat/title';
 import { desktop, isDesktop } from '@/desktop/bridge';
 import { renameHost, updateHost, useNodeHost } from '@/nodes/node-host';
@@ -42,15 +43,16 @@ export const usePage = (id: string): { url: string; available: boolean } => {
     const savedUrl = host?.url;
     const named = host?.titleSource === 'user';
     const title = host?.title;
-    const state = useBrowser((s) => s.byNodeId[id]);
+    const state = useBrowserRow(id, (row) => row);
+    const key = endpointKey(useEndpointId(), id);
     const available = isDesktop();
 
     useEffect(() => {
         if (available) {
-            browserRegistry.ensure(id, savedUrl ?? DEFAULT_URL);
+            browserRegistry.ensure(key, savedUrl ?? DEFAULT_URL);
         }
         // The page stays when this unmounts (culling, a view switch); only a delete destroys it.
-    }, [id, available, savedUrl]);
+    }, [key, available, savedUrl]);
 
     useEffect(() => {
         // The last address a page reached is what it opens with next time.
@@ -74,7 +76,8 @@ export const usePage = (id: string): { url: string; available: boolean } => {
 
 /* Back, forward, the address and reload: in the node's own bar, or in the toolbar for a browser view. */
 export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }) {
-    const state = useBrowser((s) => s.byNodeId[id]);
+    const state = useBrowserRow(id, (row) => row);
+    const key = endpointKey(useEndpointId(), id);
     const [draft, setDraft] = useState<string | null>(null);
     // The field reads short until someone puts the keyboard in it, and whole while they edit.
     const [editing, setEditing] = useState(false);
@@ -94,25 +97,25 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
         <>
             <div className={BTN_GROUP}>
                 <Tooltip label="Back" name>
-                    <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!state?.canGoBack} onClick={() => browserRegistry.back(id)}>
+                    <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!state?.canGoBack} onClick={() => browserRegistry.back(key)}>
                         <Icon icon={ArrowLeft} size={16} />
                     </button>
                 </Tooltip>
                 <Tooltip label="Forward" name>
-                    <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!state?.canGoForward} onClick={() => browserRegistry.forward(id)}>
+                    <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!state?.canGoForward} onClick={() => browserRegistry.forward(key)}>
                         <Icon icon={ArrowRight} size={16} />
                     </button>
                 </Tooltip>
                 {/* While a page is on its way the same square ends it, the way every browser does it. */}
                 {state?.loading ? (
                     <Tooltip label="Stop loading" name>
-                        <button className="icon-btn h-7 w-7" onClick={() => browserRegistry.stop(id)}>
+                        <button className="icon-btn h-7 w-7" onClick={() => browserRegistry.stop(key)}>
                             <Icon icon={X} size={16} />
                         </button>
                     </Tooltip>
                 ) : (
                     <Tooltip label="Reload" kbd="⇧ skips the cache" name>
-                        <button className="icon-btn h-7 w-7" onClick={(e) => browserRegistry.reload(id, e.shiftKey)}>
+                        <button className="icon-btn h-7 w-7" onClick={(e) => browserRegistry.reload(key, e.shiftKey)}>
                             <Icon icon={RotateCw} size={16} />
                         </button>
                     </Tooltip>
@@ -145,7 +148,7 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                         }
                         e.stopPropagation();
                         if (e.key === 'Enter') {
-                            browserRegistry.navigate(id, url);
+                            browserRegistry.navigate(key, url);
                             setDraft(null);
                             e.currentTarget.blur();
                         }
@@ -162,7 +165,7 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                     </button>
                 </Tooltip>
                 <Tooltip label="Inspect" name>
-                    <button className="icon-btn h-7 w-7" onClick={() => browserRegistry.inspect(id)}>
+                    <button className="icon-btn h-7 w-7" onClick={() => browserRegistry.inspect(key)}>
                         <Icon icon={Code} size={16} />
                     </button>
                 </Tooltip>
@@ -192,9 +195,10 @@ const ERROR_ICON: Record<LoadErrorKind, LucideIcon> = {
  * what the layer puts over the node and over a browser view's whole column alike.
  */
 function BrowserErrorPlate({ id }: { id: string }) {
-    const failure = useBrowser((s) => s.byNodeId[id]?.error ?? null);
+    const failure = useBrowserRow(id, (row) => row?.error ?? null);
+    const key = endpointKey(useEndpointId(), id);
     // The host is the page's parent, adopted by the layer long before any load can fail.
-    const host = failure === null ? null : (browserRegistry.get(id)?.parentElement ?? null);
+    const host = failure === null ? null : (browserRegistry.get(key)?.parentElement ?? null);
     if (!failure || !host) {
         return null;
     }
@@ -206,7 +210,7 @@ function BrowserErrorPlate({ id }: { id: string }) {
                 action={
                     <div className="flex items-center gap-2">
                         {error.retryable && (
-                            <Button variant="secondary" size="sm" onClick={() => browserRegistry.reload(id, true)}>
+                            <Button variant="secondary" size="sm" onClick={() => browserRegistry.reload(key, true)}>
                                 Try again
                             </Button>
                         )}

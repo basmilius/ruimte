@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectDocument, ProjectNode } from '@ruimte/contracts';
 import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
+import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { watchNodes } from '@/terminal/lifecycle-watch';
 
 const node = (id: string, kind: ProjectNode['kind'] = 'terminal'): ProjectNode => ({ id, kind, title: id, x: 0, y: 0, w: 100, h: 80 });
@@ -9,6 +10,16 @@ const node = (id: string, kind: ProjectNode['kind'] = 'terminal'): ProjectNode =
 const view = (id: string, nodes: ProjectNode[]): ProjectCanvasView => ({ kind: 'canvas', id, name: id, nodes, texts: [], edges: [], layouts: [] });
 
 const project = (views: ProjectCanvasView[]): ProjectDocument => ({ version: 2, rev: 1, name: 'p', color: '#000', views });
+
+const container: Endpoint = {
+    id: 'Xk3p',
+    label: 'Container',
+    httpBaseUrl: 'http://127.0.0.1:4310',
+    wsBaseUrl: 'ws://127.0.0.1:4310',
+    reachability: 'lan',
+    token: 'token',
+    daemonId: 'Xk3p'
+};
 
 let ended: string[] = [];
 let stop: (() => void) | null = null;
@@ -20,12 +31,14 @@ beforeEach(() => {
         activeViewId: 'a',
         views: {}
     });
-    stop = watchNodes((id, kind) => ended.push(`${kind}:${id}`));
+    stop = watchNodes((endpointId, id, kind) => ended.push(`${endpointId} ${kind}:${id}`));
 });
 
 afterEach(() => {
     stop?.();
     stop = null;
+    useEndpoints.getState().remove(container.id);
+    useEndpoints.getState().setActive(LOCAL_ENDPOINT_ID);
 });
 
 describe('a view switch', () => {
@@ -64,16 +77,34 @@ describe('a node leaving the document', () => {
     test('ends by kind', () => {
         useCanvas.getState().select(['t1', 'c1', 'b1']);
         useCanvas.getState().deleteSelected();
-        expect(ended.sort()).toEqual(['browser:b1', 'chat:c1', 'terminal:t1']);
+        expect(ended.sort()).toEqual(['local browser:b1', 'local chat:c1', 'local terminal:t1']);
     });
 
     test('ends a node on a view that is not on screen', () => {
         useDocument.getState().deleteView('b');
-        expect(ended).toEqual(['terminal:t2']);
+        expect(ended).toEqual(['local terminal:t2']);
     });
 
     test('ends nothing when another project swaps in', () => {
         useDocument.getState().load(project([view('x', [node('t9')])]), { activeViewId: 'x', views: {} });
+        expect(ended).toEqual([]);
+    });
+
+    test('names the machine it ran on, so the kill goes to that daemon', () => {
+        stop?.();
+        useEndpoints.getState().add(container);
+        useEndpoints.getState().setActive(container.id);
+        stop = watchNodes((endpointId, id, kind) => ended.push(`${endpointId} ${kind}:${id}`));
+        useCanvas.getState().select(['t1']);
+        useCanvas.getState().deleteSelected();
+        expect(ended).toEqual(['Xk3p terminal:t1']);
+    });
+
+    test('ends nothing of the machine that is left behind when another one takes over', () => {
+        useEndpoints.getState().add(container);
+        useEndpoints.getState().setActive(container.id);
+        useCanvas.getState().select(['t1', 'c1']);
+        useCanvas.getState().deleteSelected();
         expect(ended).toEqual([]);
     });
 });

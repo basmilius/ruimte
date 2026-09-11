@@ -12,7 +12,8 @@ import { Icon } from '@/ui/Icon';
 /* The guest the menu that is open belongs to, and where in its page the click landed. */
 interface MenuTarget {
     webContentsId: number;
-    nodeId: string;
+    /* The page's node, keyed on the machine its project is on (`state/keys.ts`). */
+    key: string;
     guest: { x: number; y: number };
 }
 
@@ -35,12 +36,12 @@ export function BrowserContextMenu() {
     useEffect(
         () =>
             desktop()?.onBrowserContextMenu?.((params) => {
-                const nodeId = browserRegistry.nodeIdOfContents(params.webContentsId);
-                const element = nodeId === null ? undefined : browserRegistry.get(nodeId);
-                if (nodeId === null || !element) {
+                const key = browserRegistry.keyOfContents(params.webContentsId);
+                const element = key === null ? undefined : browserRegistry.get(key);
+                if (key === null || !element) {
                     return;
                 }
-                const state = useBrowser.getState().byNodeId[nodeId];
+                const state = useBrowser.getState().byKey[key];
                 const rect = element.getBoundingClientRect();
                 // The camera's zoom, read back from what the host was drawn at.
                 const zoom = element.offsetWidth > 0 ? rect.width / element.offsetWidth : 1;
@@ -54,7 +55,7 @@ export function BrowserContextMenu() {
                 if (built.length === 0) {
                     return;
                 }
-                target.current = { webContentsId: params.webContentsId, nodeId, guest: point.guest };
+                target.current = { webContentsId: params.webContentsId, key, guest: point.guest };
                 at.current = point.window;
                 setGroups(built);
             }),
@@ -84,13 +85,13 @@ export function BrowserContextMenu() {
         switch (action.kind) {
             // The registry owns the page, so its own history and its error banner stay in one place.
             case 'back':
-                browserRegistry.back(current.nodeId);
+                browserRegistry.back(current.key);
                 return;
             case 'forward':
-                browserRegistry.forward(current.nodeId);
+                browserRegistry.forward(current.key);
                 return;
             case 'reload':
-                browserRegistry.reload(current.nodeId, false);
+                browserRegistry.reload(current.key, false);
                 return;
             case 'open-beside':
                 openLinkBeside(action.url, current.webContentsId);

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { desktop } from '@/desktop/bridge';
+import { dropEndpoint, endpointKey, isOfEndpoint, splitKey, useEndpointId } from '@/state/keys';
 
 /* A main-frame load that did not arrive, in Chromium's own terms. What to say about it is
    `classifyLoadError`; the registry only reports what happened. */
@@ -23,42 +24,55 @@ interface BrowserState {
 }
 
 interface BrowserStore {
-    byNodeId: Record<string, BrowserState>;
-    patch(nodeId: string, patch: Partial<BrowserState>): void;
-    forget(nodeId: string): void;
+    /* Keyed with `endpointKey`: two projects on two machines never share a page. */
+    byKey: Record<string, BrowserState>;
+    patch(key: string, patch: Partial<BrowserState>): void;
+    forget(key: string): void;
     /* The favicons the project's local file remembers, put back before any page has loaded. */
-    loadFavicons(favicons: Record<string, string>): void;
+    loadFavicons(endpointId: string, favicons: Record<string, string>): void;
+    /* A machine that is forgotten takes its pages with it. */
+    clear(endpointId: string): void;
 }
 
 export const useBrowser = create<BrowserStore>((set) => ({
-    byNodeId: {},
-    patch(nodeId, patch) {
-        set((s) => ({ byNodeId: { ...s.byNodeId, [nodeId]: { ...(s.byNodeId[nodeId] ?? EMPTY), ...patch } } }));
+    byKey: {},
+    patch(key, patch) {
+        set((s) => ({ byKey: { ...s.byKey, [key]: { ...(s.byKey[key] ?? EMPTY), ...patch } } }));
     },
-    forget(nodeId) {
+    forget(key) {
         set((s) => {
-            const next = { ...s.byNodeId };
-            delete next[nodeId];
-            return { byNodeId: next };
+            const next = { ...s.byKey };
+            delete next[key];
+            return { byKey: next };
         });
     },
-    loadFavicons(favicons) {
+    loadFavicons(endpointId, favicons) {
         set((s) => {
-            const next = { ...s.byNodeId };
+            const next = { ...s.byKey };
             for (const [nodeId, favicon] of Object.entries(favicons)) {
-                next[nodeId] = { ...(next[nodeId] ?? EMPTY), favicon };
+                const key = endpointKey(endpointId, nodeId);
+                next[key] = { ...(next[key] ?? EMPTY), favicon };
             }
-            return { byNodeId: next };
+            return { byKey: next };
         });
+    },
+    clear(endpointId) {
+        set((s) => ({ byKey: dropEndpoint(s.byKey, endpointId) }));
     }
 }));
 
-/* What the project's local file keeps of the pages: one icon per node, and only the ones there are. */
-export const faviconsOfProject = (byNodeId: Record<string, BrowserState>): Record<string, string> => {
+/* What one browser node shows, on the machine in scope. */
+export const useBrowserRow = <T>(nodeId: string, select: (row: BrowserState | undefined) => T): T => {
+    const endpointId = useEndpointId();
+    return useBrowser((s) => select(s.byKey[endpointKey(endpointId, nodeId)]));
+};
+
+/* What the project's local file keeps of the pages: one icon per node of this machine, and only the ones there are. */
+export const faviconsOfProject = (byKey: Record<string, BrowserState>, endpointId: string): Record<string, string> => {
     const favicons: Record<string, string> = {};
-    for (const [nodeId, state] of Object.entries(byNodeId)) {
-        if (state.favicon) {
-            favicons[nodeId] = state.favicon;
+    for (const [key, state] of Object.entries(byKey)) {
+        if (state.favicon && isOfEndpoint(key, endpointId)) {
+            favicons[splitKey(key).id] = state.favicon;
         }
     }
     return favicons;
@@ -117,15 +131,16 @@ const normalizeUrl = (input: string): string => {
  * hosts they sit in; this registry owns the elements.
  */
 class BrowserRegistry {
+    /* Keyed with `endpointKey`, the way the store above is: a page belongs to a node of one machine. */
     private readonly elements = new Map<string, WebviewElement>();
 
-    has(nodeId: string): boolean {
-        return this.elements.has(nodeId);
+    has(key: string): boolean {
+        return this.elements.has(key);
     }
 
     /* The element for a node, made on first use with the given page. */
-    ensure(nodeId: string, initialUrl: string): WebviewElement | null {
-        const existing = this.elements.get(nodeId);
+    ensure(key: string, initialUrl: string): WebviewElement | null {
+        const existing = this.elements.get(key);
         if (existing) {
             return existing;
         }
@@ -141,22 +156,22 @@ class BrowserRegistry {
         // What shows until the page paints. A page with a background of its own covers it at once.
         element.style.backgroundColor = 'var(--bg)';
         element.src = normalizeUrl(initialUrl);
-        this.listen(nodeId, element);
-        this.elements.set(nodeId, element);
-        useBrowser.getState().patch(nodeId, { url: element.src, loading: true });
+        this.listen(key, element);
+        this.elements.set(key, element);
+        useBrowser.getState().patch(key, { url: element.src, loading: true });
         return element;
     }
 
-    get(nodeId: string): WebviewElement | undefined {
-        return this.elements.get(nodeId);
+    get(key: string): WebviewElement | undefined {
+        return this.elements.get(key);
     }
 
-    /* Which node a guest page belongs to. The shell knows its pages by web contents id only. */
-    nodeIdOfContents(webContentsId: number): string | null {
-        for (const [nodeId, element] of this.elements) {
+    /* Which node a guest page belongs to, as a key. The shell knows its pages by web contents id only. */
+    keyOfContents(webContentsId: number): string | null {
+        for (const [key, element] of this.elements) {
             try {
                 if (element.getWebContentsId() === webContentsId) {
-                    return nodeId;
+                    return key;
                 }
             } catch {
                 // The guest is not attached yet, so it is not the one that asked.
@@ -165,36 +180,36 @@ class BrowserRegistry {
         return null;
     }
 
-    navigate(nodeId: string, input: string): void {
-        const element = this.elements.get(nodeId);
+    navigate(key: string, input: string): void {
+        const element = this.elements.get(key);
         if (!element) {
             return;
         }
         const url = normalizeUrl(input);
-        useBrowser.getState().patch(nodeId, { url, error: null });
+        useBrowser.getState().patch(key, { url, error: null });
         element.loadURL(url).catch(() => undefined);
     }
 
-    back(nodeId: string): void {
-        this.elements.get(nodeId)?.goBack();
+    back(key: string): void {
+        this.elements.get(key)?.goBack();
     }
 
-    forward(nodeId: string): void {
-        this.elements.get(nodeId)?.goForward();
+    forward(key: string): void {
+        this.elements.get(key)?.goForward();
     }
 
     /* Ends a navigation that is still running. The guest answers with `did-stop-loading`, so the
        bar and the button come back on their own. */
-    stop(nodeId: string): void {
-        this.elements.get(nodeId)?.stop();
+    stop(key: string): void {
+        this.elements.get(key)?.stop();
     }
 
-    reload(nodeId: string, ignoreCache: boolean): void {
-        const element = this.elements.get(nodeId);
+    reload(key: string, ignoreCache: boolean): void {
+        const element = this.elements.get(key);
         if (!element) {
             return;
         }
-        useBrowser.getState().patch(nodeId, { error: null });
+        useBrowser.getState().patch(key, { error: null });
         if (ignoreCache) {
             element.reloadIgnoringCache();
         } else {
@@ -202,8 +217,8 @@ class BrowserRegistry {
         }
     }
 
-    inspect(nodeId: string): void {
-        const element = this.elements.get(nodeId);
+    inspect(key: string): void {
+        const element = this.elements.get(key);
         if (element) {
             try {
                 desktop()?.openGuestDevTools(element.getWebContentsId());
@@ -214,21 +229,21 @@ class BrowserRegistry {
     }
 
     /* Ends the page for good; used when the node is deleted, never when a project switches. */
-    destroy(nodeId: string): void {
-        const element = this.elements.get(nodeId);
+    destroy(key: string): void {
+        const element = this.elements.get(key);
         if (!element) {
             return;
         }
-        this.elements.delete(nodeId);
+        this.elements.delete(key);
         element.remove();
-        useBrowser.getState().forget(nodeId);
+        useBrowser.getState().forget(key);
     }
 
-    private listen(nodeId: string, element: WebviewElement): void {
-        const patch = (value: Partial<BrowserState>): void => useBrowser.getState().patch(nodeId, value);
+    private listen(key: string, element: WebviewElement): void {
+        const patch = (value: Partial<BrowserState>): void => useBrowser.getState().patch(key, value);
         const sync = (): void => {
             const url = element.getURL();
-            const previous = useBrowser.getState().byNodeId[nodeId]?.url ?? '';
+            const previous = useBrowser.getState().byKey[key]?.url ?? '';
             patch({
                 url,
                 title: element.getTitle(),

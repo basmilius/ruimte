@@ -1,6 +1,7 @@
 import type { ProjectPanels } from '@ruimte/contracts';
 import { faviconsOfProject, useBrowser } from '@/browser/registry';
 import { useFiles } from '@/state/files';
+import { currentEndpointId } from '@/state/keys';
 import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE, useGit } from '@/state/git';
 import { parsePanels, serializePanels, type PanelsState } from '@/state/panel-state';
 import { PANEL_DEFAULTS, useUi } from '@/state/ui';
@@ -32,7 +33,7 @@ const read = (): PanelsState => {
         gitCollapsedDirs: useGit.getState().collapsedDirs,
         gitLogHeight: useGit.getState().logHeight,
         sidebarExpanded: ui.sidebarExpanded,
-        favicons: faviconsOfProject(useBrowser.getState().byNodeId)
+        favicons: faviconsOfProject(useBrowser.getState().byKey, currentEndpointId())
     };
 };
 
@@ -65,7 +66,7 @@ export class PanelsPort {
             useGit.getState().setCollapsedDirs(state.gitCollapsedDirs);
             useGit.getState().setLogHeight(state.gitLogHeight);
             useUi.getState().setSidebarExpanded(state.sidebarExpanded);
-            useBrowser.getState().loadFavicons(state.favicons);
+            useBrowser.getState().loadFavicons(currentEndpointId(), state.favicons);
         } finally {
             this.applying = false;
             this.snapshot = this.stringify();

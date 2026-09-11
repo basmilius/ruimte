@@ -1,6 +1,7 @@
 import { browserRegistry } from '@/browser/registry';
 import { NODE_SIZE, useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
+import { splitKey } from '@/state/keys';
 
 // The room between a page and the one a link opened beside it, the same step a duplicate takes.
 const BESIDE_PX = 32;
@@ -12,8 +13,8 @@ const BESIDE_PX = 32;
  * opens another view, since there is no canvas under it to sit on.
  */
 export const openLinkBeside = (url: string, webContentsId: number): void => {
-    const sourceId = browserRegistry.nodeIdOfContents(webContentsId);
-    const source = sourceId === null ? undefined : useCanvas.getState().nodes[sourceId];
+    const sourceKey = browserRegistry.keyOfContents(webContentsId);
+    const source = sourceKey === null ? undefined : useCanvas.getState().nodes[splitKey(sourceKey).id];
     if (!source) {
         useDocument.getState().addStandaloneView({ kind: 'browser', name: url, url });
         return;

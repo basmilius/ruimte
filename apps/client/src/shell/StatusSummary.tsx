@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { projectNodes, revealNode } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
+import { useEndpointId } from '@/state/keys';
 import { useDocument } from '@/state/document';
 import { nodeStatus, useSessions } from '@/state/sessions';
 import { StatusDot } from '@/canvas/NodeFrame';
@@ -17,14 +18,15 @@ export function StatusSummary() {
     const order = useCanvas(useShallow((s) => s.order));
     const canvasNodes = useCanvas((s) => s.nodes);
     const selection = useCanvas((s) => s.selection);
-    const sessions = useSessions((s) => s.byNodeId);
-    const chats = useChats((s) => s.byNodeId);
+    const endpointId = useEndpointId();
+    const sessions = useSessions((s) => s.byKey);
+    const chats = useChats((s) => s.byKey);
 
     // The dependencies are what `projectNodes` reads; the call itself takes the stores as they are.
     const nodes = useMemo(() => projectNodes(), [views, activeViewId, order, canvasNodes]);
 
-    const needsYou = nodes.filter((node) => nodeStatus(node, sessions, chats) === 'needs-you');
-    const running = nodes.filter((node) => nodeStatus(node, sessions, chats) === 'running').length;
+    const needsYou = nodes.filter((node) => nodeStatus(node, sessions, chats, endpointId) === 'needs-you');
+    const running = nodes.filter((node) => nodeStatus(node, sessions, chats, endpointId) === 'running').length;
     if (needsYou.length === 0 && running === 0) {
         return null;
     }

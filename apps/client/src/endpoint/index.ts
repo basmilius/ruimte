@@ -1,12 +1,16 @@
 import type { AuthSession, EndpointInfo } from '@ruimte/contracts';
+import { useBrowser } from '@/browser/registry';
 import { projectClient } from '@/project';
+import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, activeEndpoint, parsePairingUrl, socketUrlFor, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProject } from '@/state/project';
-import { useProviders } from '@/state/providers';
-import { useServer } from '@/state/server';
-import { useUsage } from '@/state/usage';
+import { useProvidersStore } from '@/state/providers';
+import { useServers } from '@/state/server';
+import { useSessions } from '@/state/sessions';
+import { useUsageStore } from '@/state/usage';
 import { pool, transport } from '@/transport';
+import { dropMachine } from '@/transport/connections';
 
 /*
  * Pairs with a daemon on another machine: the pasted URL names the daemon and carries the
@@ -55,15 +59,12 @@ const holdActive = (): void => {
 };
 
 /*
- * Everything one daemon answered goes, and the machine that took over gets the socket it needs. It
- * hangs off the store rather than off the click, because the active endpoint also moves when a
- * client revokes its own session, and later when a project on another machine is opened.
+ * The machine that took over gets the socket it needs. What the machine that left answered stays
+ * where it is: every store is keyed on the endpoint, so nothing of it can show up under the new one.
+ * The project list is the exception, being one machine's list until it becomes a union.
  */
 const onActiveEndpointChanged = (): void => {
     useProject.getState().setProjects([]);
-    useServer.getState().clear();
-    useProviders.getState().clear();
-    useUsage.getState().clear();
     holdActive();
 };
 
@@ -84,7 +85,19 @@ export const forgetEndpoint = async (id: string): Promise<void> => {
         await activateEndpoint(LOCAL_ENDPOINT_ID);
     }
     useEndpoints.getState().remove(id);
+    dropMachine(id);
     pool.drop(id);
+    forgetEndpointState(id);
+};
+
+/* Everything this client kept about a machine it no longer knows. */
+const forgetEndpointState = (id: string): void => {
+    useSessions.getState().clear(id);
+    useChats.getState().clear(id);
+    useBrowser.getState().clear(id);
+    useServers.getState().forget(id);
+    useProvidersStore.getState().forget(id);
+    useUsageStore.getState().forget(id);
 };
 
 /* The clients paired with the daemon this client talks to right now. */

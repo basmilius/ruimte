@@ -1,35 +1,53 @@
 import { create } from 'zustand';
+import type { Reachability } from '@ruimte/contracts';
+import { useEndpointId } from '@/state/keys';
 
-interface ServerStore {
+export interface ServerInfo {
     /* The daemon's platform (`darwin`, `win32`, `linux`); null until the first hello. */
     platform: string | null;
     home: string | null;
     version: string | null;
     /* How the daemon names itself and how far away it is, from `endpoint.info`. */
     label: string | null;
-    reachability: 'loopback' | 'lan' | 'tunnel' | 'public' | null;
-    setInfo(info: { platform: string; home: string; version: string }): void;
-    setEndpoint(info: { label: string; reachability: 'loopback' | 'lan' | 'tunnel' | 'public' }): void;
-    /* Everything here is one machine's answer, so it goes the moment the client points at another. */
-    clear(): void;
+    reachability: Reachability | null;
 }
 
-export const useServer = create<ServerStore>((set) => ({
-    platform: null,
-    home: null,
-    version: null,
-    label: null,
-    reachability: null,
-    setInfo(info) {
-        set(info);
+/* One object for a machine that has not said hello yet, so a selector gets a stable snapshot. */
+const UNKNOWN: ServerInfo = { platform: null, home: null, version: null, label: null, reachability: null };
+
+interface ServersStore {
+    byEndpoint: Record<string, ServerInfo>;
+    setInfo(endpointId: string, info: { platform: string; home: string; version: string }): void;
+    setEndpoint(endpointId: string, info: { label: string; reachability: Reachability }): void;
+    /* A machine that is forgotten takes what it said about itself with it. */
+    forget(endpointId: string): void;
+}
+
+/* What every daemon this client talked to said about itself. */
+export const useServers = create<ServersStore>((set, get) => ({
+    byEndpoint: {},
+    setInfo(endpointId, info) {
+        const current = get().byEndpoint[endpointId] ?? UNKNOWN;
+        set({ byEndpoint: { ...get().byEndpoint, [endpointId]: { ...current, ...info } } });
     },
-    setEndpoint(info) {
-        set(info);
+    setEndpoint(endpointId, info) {
+        const current = get().byEndpoint[endpointId] ?? UNKNOWN;
+        set({ byEndpoint: { ...get().byEndpoint, [endpointId]: { ...current, ...info } } });
     },
-    clear() {
-        set({ platform: null, home: null, version: null, label: null, reachability: null });
+    forget(endpointId) {
+        const { [endpointId]: _gone, ...rest } = get().byEndpoint;
+        set({ byEndpoint: rest });
     }
 }));
+
+/* What the machine in scope said about itself, read the way a component asks for one field. */
+export const useServer = <T>(select: (info: ServerInfo) => T): T => {
+    const endpointId = useEndpointId();
+    return useServers((s) => select(s.byEndpoint[endpointId] ?? UNKNOWN));
+};
+
+/* The same answer outside a render. */
+export const serverInfoOf = (endpointId: string): ServerInfo => useServers.getState().byEndpoint[endpointId] ?? UNKNOWN;
 
 /* What the daemon's machine calls its file manager; the daemon runs it, so its platform decides. */
 export const fileManagerName = (platform: string | null): string => {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Globe } from 'lucide-react';
-import { useBrowser } from '@/browser/registry';
+import { useBrowserRow } from '@/browser/registry';
 import { Icon } from '@/ui/Icon';
 
 /*
@@ -9,7 +9,7 @@ import { Icon } from '@/ui/Icon';
  * project's local file remembers is what it draws before the page is back.
  */
 export function Favicon({ id, size = 16 }: { id: string; size?: number }) {
-    const url = useBrowser((s) => s.byNodeId[id]?.favicon ?? null);
+    const url = useBrowserRow(id, (row) => row?.favicon ?? null);
     const [failed, setFailed] = useState<string | null>(null);
 
     if (!url || url === failed) {

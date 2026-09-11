@@ -2,6 +2,7 @@ import { isCanvasView, isDrawingView, isOpenableView, isSessionView, MAIN_VIEW_N
 import { toWorld } from '@/canvas/math';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
+import { currentEndpointId } from '@/state/keys';
 import { useDocument, viewOfNode } from '@/state/document';
 import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
 import { useUi } from '@/state/ui';
@@ -134,10 +135,11 @@ export const projectNodes = (): ProjectNodeRef[] => {
 
 /* Whether anything in a view is still talking to the daemon, which is what a delete asks about. */
 export const viewIsBusy = (view: ProjectView): boolean => {
-    const sessions = useSessions.getState().byNodeId;
-    const chats = useChats.getState().byNodeId;
+    const endpointId = currentEndpointId();
+    const sessions = useSessions.getState().byKey;
+    const chats = useChats.getState().byKey;
     return nodesOfView(view).some((node) => {
-        const status = nodeStatus(node, sessions, chats);
+        const status = nodeStatus(node, sessions, chats, endpointId);
         return status !== undefined && status !== 'idle';
     });
 };
