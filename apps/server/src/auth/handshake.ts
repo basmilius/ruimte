@@ -20,6 +20,9 @@ export const TICKET_TTL_MS = 12 * 60 * 60 * 1000;
  */
 const TICKETS_PER_SESSION = 8;
 
+// How many nonces can be waiting to be signed at once, over every client together.
+const MAX_OPEN_CHALLENGES = 512;
+
 interface Ticket {
     sessionId: string;
     expiresAt: number;
@@ -57,6 +60,12 @@ export class Handshake {
     /* A nonce to sign, and the daemon's own signature over it, which is what pins the daemon. */
     challenge(): AuthChallengeResult {
         this.sweep();
+        /* Nobody has to be paired to ask for one, so the list is capped as well as swept: without it
+           a caller that never signs anything decides how much memory this daemon holds. Dropping the
+           oldest costs a re-ask to whoever was slowest, and the client asks again on its next try. */
+        for (const challenge of [...this.challenges.keys()].slice(0, Math.max(0, this.challenges.size - (MAX_OPEN_CHALLENGES - 1)))) {
+            this.challenges.delete(challenge);
+        }
         const challenge = randomBytes(32).toString('base64url');
         this.challenges.set(challenge, this.now() + CHALLENGE_TTL_MS);
         return {

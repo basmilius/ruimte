@@ -141,6 +141,19 @@ describe('Handshake', () => {
         expect(alive).toEqual(tickets.slice(-8));
     });
 
+    test('a caller that asks for nonces and never signs one does not grow the daemon', async () => {
+        const key = generateKeyPair();
+        await store.pair(store.issuePairingToken(), { label: 'laptop', publicKey: key.publicKey });
+        const first = handshake.challenge().challenge;
+        for (let i = 0; i < 600; i++) {
+            handshake.challenge();
+        }
+        const signature = signMessage(key.privateKey, clientAuthMessage(DAEMON_ID, first, key.publicKey));
+        expect(await handshake.redeem({ publicKey: key.publicKey, challenge: first, signature })).toBeNull();
+        // The one that was just handed out still works, so a flood costs a re-ask and nothing more.
+        expect(await signIn(key)).not.toBeNull();
+    });
+
     test('signing in for the first time drops the session token that client paired with', async () => {
         const paired = await store.pair(store.issuePairingToken(), { label: 'container' });
         const key = generateKeyPair();
