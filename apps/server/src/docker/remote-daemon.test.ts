@@ -364,6 +364,25 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         }
     });
 
+    test('the sessions of a project outlive its close, so the client is the one that ends them', async () => {
+        const opened = await client.request<ProjectOpenResult>('project.open', { folder: '/work/beacon', name: 'Beacon' });
+        const { projectId } = opened.summary;
+        openedProjects.push(projectId);
+        const sessionId = `node-${Date.now()}`;
+        startedSessions.push(sessionId);
+        await client.request<SessionInfo>('session.create', { sessionId, cwd: '/work/beacon', cols: 80, rows: 24 });
+
+        /* A session is keyed on a node id and nothing on the machine ties it to a project, which is
+           why closing one stops its sessions from the client, one `session.kill` at a time. */
+        await client.request('project.close', { projectId });
+        const kept = await client.request<{ sessions: SessionInfo[] }>('session.list', {});
+        expect(kept.sessions.some((session) => session.sessionId === sessionId)).toBe(true);
+
+        await client.request('session.kill', { sessionId });
+        const gone = await client.request<{ sessions: SessionInfo[] }>('session.list', {});
+        expect(gone.sessions.some((session) => session.sessionId === sessionId)).toBe(false);
+    });
+
     test('a terminal session runs a shell in the repository', async () => {
         const sessionId = `docker-test-${Date.now()}`;
         const info = await client.request<SessionInfo>('session.create', { sessionId, cwd: REPO, cols: 80, rows: 24 });

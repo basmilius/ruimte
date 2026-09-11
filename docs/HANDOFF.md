@@ -469,9 +469,10 @@ daemon and start it again: the scrollback comes back with a `[session restored]`
   as a project; the native dialog comes with Electron as an extra. "Open in Finder" (label from
   the daemon's platform: Finder, Explorer, Files) sits in the project menu, the palette and a
   node's context menu, through `fs.reveal`. The project menu also creates projects without a
-  folder (one canvas view to start with), closes (sessions keep running) and deletes with a
-  confirm. Undo and redo (Cmd+Z, Cmd+Shift+Z) cover placement, adding and deleting; the history
-  resets when another project or another view loads. Node ids are random now, since they end up in
+  folder (one canvas view to start with), closes and deletes, both behind a confirm. Closing ends
+  the terminals and chats of the project (the confirmation counts them first); switching to another
+  project leaves them running. Undo and redo (Cmd+Z, Cmd+Shift+Z) cover placement, adding and
+  deleting; the history resets when another project or another view loads. Node ids are random now, since they end up in
   a shared file. A project has an identity: `name` and an optional `icon` (an emoji or one of 40
   Lucide names) in the project file, and everything else read from the folder. Without a chosen icon the daemon
   walks `.ruimte/icon.*`, `.idea/icon.*`, `.vscode/icon.*`, the usual favicon paths and the

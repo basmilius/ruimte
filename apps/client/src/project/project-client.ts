@@ -71,6 +71,11 @@ interface ProjectClientOptions {
     drawing?: DrawingAccess;
     /* Runs before a project is swapped in, so the drawing on screen reaches its own file first. */
     beforeSwitch?: () => Promise<void>;
+    /*
+     * Ends what the views still hold on the machine they were opened on. Only a person closing a
+     * project reaches this: switching away releases the project and leaves its sessions running.
+     */
+    endSessions?: (endpointId: string, views: readonly ProjectView[]) => void;
 }
 
 const isConnectionError = (e: unknown): boolean => e instanceof TransportError && (e.code === 'not-connected' || e.code === 'disconnected');
@@ -90,6 +95,7 @@ export class ProjectClient {
     private readonly saveDelayMs: number;
     private readonly localDelayMs: number;
     private readonly beforeSwitch: () => Promise<void>;
+    private readonly endSessions: (endpointId: string, views: readonly ProjectView[]) => void;
     private readonly unsubscribe: Array<() => void> = [];
     private saveTimer: ReturnType<typeof setTimeout> | null = null;
     private localTimer: ReturnType<typeof setTimeout> | null = null;
@@ -114,6 +120,7 @@ export class ProjectClient {
         this.saveDelayMs = options.saveDelayMs ?? 400;
         this.localDelayMs = options.localDelayMs ?? 1000;
         this.beforeSwitch = options.beforeSwitch ?? (() => Promise.resolve());
+        this.endSessions = options.endSessions ?? ((): void => undefined);
         this.unsubscribe.push(
             transport.on('project.changed', ({ projectId, document }) => this.onChanged(projectId, document)),
             transport.on('project.summary', ({ summary }) => this.applySummary(summary)),
@@ -160,11 +167,16 @@ export class ProjectClient {
         await this.open({ name });
     }
 
-    /* Leaves the canvas empty; the sessions of the nodes keep running on the daemon. */
+    /*
+     * Puts the project away: the sessions of its nodes end on the machine and the canvas is left
+     * empty. What is on screen is saved first, so a session goes only after the file it belongs to
+     * is on disk, and the views are read before the stores are emptied a few lines down.
+     */
     async closeProject(): Promise<void> {
         const current = this.sink.getState().current;
         await this.flush();
         this.flushLocal();
+        this.endSessions(this.endpointId(), this.documents.getState().exportViews());
         if (current) {
             await this.transport.request('project.close', { projectId: current.projectId }).catch(() => undefined);
         }

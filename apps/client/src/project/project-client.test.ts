@@ -20,6 +20,7 @@ import { TransportError, type Transport, type TransportStatus } from '../transpo
 import { PanelsPort } from './panels-port';
 import { rekeyLastProject } from './last-project';
 import { ProjectClient, type ProjectSink } from './project-client';
+import { sessionNodesOf } from './project-sessions';
 
 type Call = { type: RequestType; payload: unknown };
 
@@ -207,17 +208,20 @@ const setup = (
         storage.set('ruimte.lastProject', JSON.stringify({ ...stored, byEndpoint: { ...stored.byEndpoint, [endpointId]: open } }));
     }
     const panels = new PanelsPort();
+    /* What the client asked to end, in the words the caller would kill it with: kind and id, on the machine it named. */
+    const ended: Array<{ endpointId: string; nodes: string[] }> = [];
     const client = new ProjectClient(transport, stores.canvas, stores.document, panels, sink, {
         saveDelayMs: 1,
         localDelayMs: 1,
         endpointId: () => endpointId,
+        endSessions: (machine, views) => ended.push({ endpointId: machine, nodes: sessionNodesOf(views).map((node) => `${node.kind}:${node.id}`) }),
         storage: fakeStorage(storage)
     });
     const dispose = (): void => {
         client.dispose();
         panels.dispose();
     };
-    return { transport, sink, state, client, storage, panels, stores, dispose };
+    return { transport, sink, state, client, storage, panels, stores, ended, dispose };
 };
 
 describe('ProjectClient', () => {
@@ -395,6 +399,39 @@ describe('ProjectClient', () => {
         await client.closeProject();
         expect(state.current).toBeNull();
         expect(useCanvas.getState().order).toEqual([]);
+        dispose();
+    });
+
+    test('closing ends every session the project holds, on the machine it was opened on', async () => {
+        const { client, ended, dispose } = setup();
+        await tick();
+        const terminal = useCanvas.getState().addNode('terminal', { x: 0, y: 0 })!;
+        const chat = useCanvas.getState().addNode('chat', { x: 0, y: 0 })!;
+        useCanvas.getState().addNode('note', { x: 0, y: 0 });
+        // A view of its own is a session as much as a node on the canvas, and it is not on screen.
+        const view = useDocument.getState().addStandaloneView({ kind: 'terminal', name: 'Shell', node: {} });
+        useDocument.getState().setActiveView('main');
+        await client.closeProject();
+        expect(ended).toEqual([{ endpointId: 'daemon-a', nodes: [`terminal:${terminal}`, `chat:${chat}`, `terminal:${view}`] }]);
+        dispose();
+    });
+
+    test('switching to another project leaves the sessions of the one that left running', async () => {
+        const { transport, client, ended, dispose } = setup();
+        await tick();
+        transport.projects = [summary('p1', '/repo'), summary('p2')];
+        useCanvas.getState().addNode('terminal', { x: 0, y: 0 });
+        await client.openProject('p2');
+        expect(ended).toEqual([]);
+        dispose();
+    });
+
+    test('deleting the open project ends its sessions on the way out', async () => {
+        const { client, ended, dispose } = setup();
+        await tick();
+        const terminal = useCanvas.getState().addNode('terminal', { x: 0, y: 0 })!;
+        await client.deleteProject('p1', true);
+        expect(ended).toEqual([{ endpointId: 'daemon-a', nodes: [`terminal:${terminal}`] }]);
         dispose();
     });
 });
