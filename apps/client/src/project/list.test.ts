@@ -2,14 +2,15 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectSummary } from '@ruimte/contracts';
 import { useEndpoints, type Endpoint } from '../state/endpoints';
 import { useProjectList } from '../state/project-list';
-import { groupProjects, primeCachedLists, readCachedList, writeCachedList } from './list';
+import { menuProjects, primeCachedLists, readCachedList, writeCachedList } from './list';
 
-const summary = (projectId: string, lastOpenedAt = 0): ProjectSummary => ({
+const summary = (projectId: string, lastOpenedAt = 0, closedAt: number | null = null): ProjectSummary => ({
     projectId,
     name: projectId,
     color: '#000',
     folder: `/repo/${projectId}`,
     lastOpenedAt,
+    closedAt,
     available: true,
     icon: { kind: 'initial', value: projectId[0]!.toUpperCase() },
     nameSource: 'chosen'
@@ -64,17 +65,47 @@ describe('the union of the machines that are known', () => {
         state.forgetProjects('daemon-b');
         expect(useProjectList.getState().projects.map((row) => row.endpointId)).toEqual(['daemon-a']);
     });
+});
 
-    test('the machine being worked on comes first, and one without projects is left out', () => {
-        const endpoints = [endpoint('local', 'This machine'), endpoint('daemon-b', 'Work laptop'), endpoint('daemon-c', 'Studio')];
+describe('the switcher as one list', () => {
+    const endpoints = [endpoint('local', 'This machine'), endpoint('daemon-b', 'Work laptop')];
+
+    test('every machine in one list, most recently opened first', () => {
         const rows = [
-            { endpointId: 'daemon-b', summary: summary('q1') },
-            { endpointId: 'local', summary: summary('p1') }
+            { endpointId: 'daemon-b', summary: summary('q1', 10) },
+            { endpointId: 'local', summary: summary('p1', 30) },
+            { endpointId: 'daemon-b', summary: summary('q2', 20) }
         ];
-        const groups = groupProjects(rows, endpoints, 'daemon-b', ['daemon-b']);
-        expect(groups.map((group) => group.label)).toEqual(['Work laptop', 'This machine']);
-        expect(groups.map((group) => group.connected)).toEqual([true, false]);
-        expect(groups[0]!.rows).toHaveLength(1);
+        const { open } = menuProjects(rows, endpoints, ['daemon-b']);
+        expect(open.map((row) => row.summary.projectId)).toEqual(['p1', 'q2', 'q1']);
+        expect(open.map((row) => row.machineLabel)).toEqual(['This machine', 'Work laptop', 'Work laptop']);
+        expect(open.map((row) => row.connected)).toEqual([false, true, true]);
+    });
+
+    test('a project that was closed leaves the list for Recent, most recently closed first', () => {
+        const rows = [
+            { endpointId: 'local', summary: summary('p1', 30, 100) },
+            { endpointId: 'local', summary: summary('p2', 20) },
+            { endpointId: 'daemon-b', summary: summary('q1', 10, 300) }
+        ];
+        const { open, recent } = menuProjects(rows, endpoints, []);
+        expect(open.map((row) => row.summary.projectId)).toEqual(['p2']);
+        expect(recent.map((row) => row.summary.projectId)).toEqual(['q1', 'p1']);
+    });
+
+    test('a daemon that answers without closedAt leaves every project in use', () => {
+        const rows = [{ endpointId: 'local', summary: { ...summary('p1', 30), closedAt: undefined } }];
+        const { open, recent } = menuProjects(rows, endpoints, []);
+        expect(open).toHaveLength(1);
+        expect(recent).toHaveLength(0);
+    });
+
+    test('a machine this client no longer knows takes its rows with it', () => {
+        const rows = [
+            { endpointId: 'daemon-c', summary: summary('r1', 40) },
+            { endpointId: 'local', summary: summary('p1', 10) }
+        ];
+        expect(menuProjects(rows, endpoints, []).open.map((row) => row.summary.projectId)).toEqual(['p1']);
     });
 });
 
