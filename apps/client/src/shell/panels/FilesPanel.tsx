@@ -30,7 +30,6 @@ import {
     treePathOf,
     type EntryCache
 } from '@/shell/panels/files-tree';
-import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
@@ -365,11 +364,6 @@ export function FilesPanel() {
 
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
-            {/* The folder the tree is of belongs next to the panel's name, where the git panel puts
-                the checkout it is on. */}
-            <PanelHeaderSlot>
-                <Pill icon={<Icon icon={Folder} size={12} />}>{basenameOf(folder)}</Pill>
-            </PanelHeaderSlot>
             <div className={FILE_TOOLBAR}>
                 <span className="relative min-w-0 grow">
                     <Icon icon={Search} size={14} className="pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 text-text-faint" aria-hidden />
