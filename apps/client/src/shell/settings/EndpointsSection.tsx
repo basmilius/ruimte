@@ -113,7 +113,7 @@ const onlyLoopback = (link: string): boolean => {
     }
 };
 
-/* The clients paired with the active machine, each with a way to cut it off, and for the machine here a way to invite one. */
+/* The browsers and apps that paired with the active machine, each with a way to cut it off, and for the machine here a way to invite one. */
 function PairedClients() {
     const reachability = useServer((s) => s.reachability);
     const [sessions, setSessions] = useState<AuthSession[] | null>(null);
@@ -184,7 +184,7 @@ function PairedClients() {
     return (
         <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-                <span className="text-xs text-text-muted">Paired clients</span>
+                <span className="text-xs text-text-muted">Apps with access</span>
                 <span className="grow" />
                 {reachability === 'loopback' && (
                     <Button size="sm" variant="secondary" disabled={busy} onClick={() => void showLink()}>
@@ -192,6 +192,11 @@ function PairedClients() {
                     </Button>
                 )}
             </div>
+            <p className="text-xs text-text-faint">
+                {sessions !== null && sessions.length === 0
+                    ? 'Nothing else has access to this machine.'
+                    : 'Every browser and app that paired with this machine, until you revoke it.'}
+            </p>
             {link && (
                 <div className="flex flex-col gap-1.5 rounded-lg border border-border bg-surface-sunken p-2.5">
                     <div className="flex items-center gap-2">
@@ -209,7 +214,6 @@ function PairedClients() {
                     </p>
                 </div>
             )}
-            {sessions !== null && sessions.length === 0 && <p className="text-xs text-text-faint">Nothing else is paired with this machine.</p>}
             {sessions?.map((session) => (
                 <div key={session.id} className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-1.5">
                     <div className="flex min-w-0 grow flex-col">
