@@ -484,7 +484,7 @@ a day, several days. Each of the larger ones becomes a GitHub issue when it star
    during a turn lands in the card too.
 2. **#13**: a webview keeps the canvas's z-order only by being above everything, so a node
    dragged over a browser node slides under its page; the traffic-light inset is fixed, not
-   measured; no Windows or Linux run yet.
+   measured; no Windows run yet (Linux runs, see `docs/LINUX.md`).
 3. **#11**: Pages with source "GitHub Actions" so ruimte.app deploys; the landing video; Windows
    (the daemon on Bun's Windows PTY or Node with node-pty, `docs/research/windows.md` is the
    design for a project in its own window, not for the platform); the daemon as a background
