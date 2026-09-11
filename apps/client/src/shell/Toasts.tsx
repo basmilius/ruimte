@@ -45,7 +45,11 @@ function ToastCard({ toast }: { toast: Toast }) {
             </span>
             <div className="flex min-w-0 grow flex-col gap-1">
                 <span className="text-sm font-medium text-text">{toast.title}</span>
-                {toast.description !== undefined && toast.description !== '' && <span className="truncate text-xs text-text-muted">{toast.description}</span>}
+                {/* Wraps rather than clips: the line under the title is the one that says what went
+                   wrong, and a reason cut off at the card's edge is no reason at all. */}
+                {toast.description !== undefined && toast.description !== '' && (
+                    <span className="text-xs break-words text-pretty text-text-muted">{toast.description}</span>
+                )}
                 {(toast.action || toast.output) && (
                     <div className="mt-1 flex items-center gap-2">
                         {toast.action && (
