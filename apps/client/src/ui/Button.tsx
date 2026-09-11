@@ -9,7 +9,7 @@ const VARIANT: Record<ButtonVariant, string> = {
     secondary: 'border border-border bg-surface-raised text-text hover:bg-surface-hover disabled:hover:bg-surface-raised',
     ghost: 'text-text-muted hover:bg-surface-hover hover:text-text',
     danger: 'bg-status-error text-accent-text',
-    positive: 'bg-positive text-accent-text'
+    positive: 'bg-positive text-positive-text'
 };
 
 /* 28 and 32 pixels, the two heights the rest of the app already uses for a compact and a normal control. */

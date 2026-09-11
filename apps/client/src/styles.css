@@ -62,7 +62,8 @@
     --status-needs-you: #d97706;
     --status-idle: #16a34a;
     --status-error: #dc2626;
-    --positive: #16a34a;
+    --positive: #15803d;
+    --positive-text: #ffffff;
     --term-bg: #fbfbfc;
     --term-fg: #27272a;
     --term-dim: #8e8e96;
@@ -188,6 +189,9 @@
     --status-idle: #4ade80;
     --status-error: #f87171;
     --positive: #4ade80;
+    /* Dark on light green: the dark theme's positive is a foreground color, so text sits on it the
+       other way round from the light theme, where the same token is a fill deep enough for white. */
+    --positive-text: #052e16;
     --term-bg: #0c0c0f;
     --term-fg: #d6d6de;
     --term-dim: #6b6b76;
@@ -306,6 +310,7 @@
     --color-status-idle: var(--status-idle);
     --color-status-error: var(--status-error);
     --color-positive: var(--positive);
+    --color-positive-text: var(--positive-text);
     --color-term-bg: var(--term-bg);
     --color-term-fg: var(--term-fg);
     --color-term-dim: var(--term-dim);
