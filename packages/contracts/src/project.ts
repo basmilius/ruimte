@@ -372,6 +372,10 @@ export const ProjectSummarySchema = z.object({
     // Null for a canvas that lives in the app data dir instead of a folder.
     folder: z.string().nullable(),
     lastOpenedAt: z.number(),
+    /* When a person last closed this project, which is the only thing that moves it out of the list
+       of projects in use and under Recent. Null while it belongs in the list; absent from a daemon
+       that has no notion of closing, whose projects therefore all read as in use. */
+    closedAt: z.number().nullish(),
     // False when a folder project's file has gone missing since it was last seen.
     available: z.boolean(),
     // The choice from the file, or what the folder declares, or the initial on the project color.
@@ -425,6 +429,9 @@ export type ProjectSaveLocalPayload = z.infer<typeof ProjectSaveLocalPayloadSche
 
 export const ProjectTargetPayloadSchema = z.object({ projectId: ProjectIdSchema });
 export type ProjectTargetPayload = z.infer<typeof ProjectTargetPayloadSchema>;
+
+/* A project a person closed. The menu keeps it under Recent until someone opens it again. */
+export const isRecentProject = (summary: ProjectSummary): boolean => summary.closedAt !== null && summary.closedAt !== undefined;
 
 export const ProjectDeletePayloadSchema = z.object({
     projectId: ProjectIdSchema,

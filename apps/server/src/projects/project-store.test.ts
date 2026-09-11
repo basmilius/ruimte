@@ -298,6 +298,54 @@ describe('ProjectStore', () => {
         expect(canvas(opened.document).edges.map((edge) => edge.id)).toEqual(['e2']);
     });
 
+    test('closing a project drops it under Recent, and opening it again takes it back out', async () => {
+        const opened = await store.openProject({ folder });
+        const { projectId } = opened.summary;
+        expect(opened.summary.closedAt).toBeNull();
+
+        await store.closeProject(projectId);
+        const listed = (await store.list()).find((project) => project.projectId === projectId)!;
+        expect(listed.closedAt).toBeNumber();
+        // The other clients hear it, so every machine draws the same list.
+        expect(summaries.at(-1)).toMatchObject({ event: 'project.summary', payload: { summary: { projectId, closedAt: listed.closedAt } } });
+        // It is only a place in the menu: the project itself is untouched and still opens.
+        expect(listed.available).toBe(true);
+
+        summaries.length = 0;
+        const again = await store.openProject({ projectId });
+        expect(again.summary.closedAt).toBeNull();
+        expect((await store.list())[0]?.closedAt).toBeNull();
+        expect(summaries.at(-1)).toMatchObject({ event: 'project.summary', payload: { summary: { projectId, closedAt: null } } });
+    });
+
+    test('a project that is closed while it is open is let go of as well', async () => {
+        const { summary } = await store.openProject({ folder });
+        await store.closeProject(summary.projectId);
+        expect(store.openProjectIds()).toEqual([]);
+        // Nothing was saved or removed, so the canvas is still where it was.
+        expect(await readFile(documentPathInFolder(folder), 'utf8')).toContain('"version": 2');
+    });
+
+    test('closing survives a restart, because the registry carries it and not the client', async () => {
+        const { summary } = await store.openProject({ folder });
+        await store.closeProject(summary.projectId);
+        const restarted = new ProjectStore(home);
+        expect((await restarted.list())[0]?.closedAt).toBeNumber();
+    });
+
+    test('letting go of a project leaves the list where it was', async () => {
+        const { summary } = await store.openProject({ folder });
+        summaries.length = 0;
+        store.release(summary.projectId);
+        expect(store.openProjectIds()).toEqual([]);
+        expect((await store.list())[0]?.closedAt).toBeNull();
+        expect(summaries).toEqual([]);
+    });
+
+    test('closing a project nobody knows is refused', async () => {
+        await expect(store.closeProject('nope')).rejects.toMatchObject({ code: 'project-not-found' });
+    });
+
     test('a folder that is gone and an unknown id are refused', async () => {
         await expect(store.openProject({ folder: join(root, 'nope') })).rejects.toMatchObject({ code: 'folder-not-found' });
         await expect(store.openProject({ projectId: 'nope' })).rejects.toMatchObject({ code: 'project-not-found' });

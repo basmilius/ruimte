@@ -18,6 +18,7 @@ import {
     type ProjectListResult,
     type ProjectOpenResult,
     type ProjectSaveResult,
+    type ProjectSummaryEvent,
     type ProjectView,
     type ServerHelloResult,
     type SessionAttachResult,
@@ -333,6 +334,34 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         const back = await client.request<EndpointInfo>('endpoint.info', {});
         expect(back.label).toBe('docker-linux');
         expect(back.nameSource).toBe('default');
+    });
+
+    test('closing a project drops it under Recent on the machine, and opening it brings it back', async () => {
+        const other = await RemoteClient.connect(sessionToken);
+        try {
+            const opened = await client.request<ProjectOpenResult>('project.open', { folder: '/work/beacon', name: 'Beacon' });
+            const { projectId } = opened.summary;
+            openedProjects.push(projectId);
+            expect(opened.summary.closedAt).toBeNull();
+            other.takeEvents('project.summary');
+
+            await client.request('project.close', { projectId });
+            const closed = (await other.request<ProjectListResult>('project.list', {})).projects.find((project) => project.projectId === projectId);
+            expect(closed?.closedAt).toBeNumber();
+
+            // The other client is told, so a machine's list reads the same from both sides.
+            let heard: ProjectSummaryEvent[] = [];
+            await waitUntil('the other client to hear the project close', () => {
+                heard = heard.concat(other.takeEvents<ProjectSummaryEvent>('project.summary'));
+                return heard.some((event) => event.summary.projectId === projectId);
+            });
+
+            const again = await other.request<ProjectOpenResult>('project.open', { projectId });
+            expect(again.summary.closedAt).toBeNull();
+            expect((await client.request<ProjectListResult>('project.list', {})).projects.find((row) => row.projectId === projectId)?.closedAt).toBeNull();
+        } finally {
+            other.close();
+        }
     });
 
     test('a terminal session runs a shell in the repository', async () => {

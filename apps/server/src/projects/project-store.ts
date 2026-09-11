@@ -55,6 +55,10 @@ const RegistryEntrySchema = z.object({
     color: z.string(),
     folder: z.string().nullable(),
     lastOpenedAt: z.number(),
+    /* When a person last closed this project. Set means the menu keeps it under Recent; only
+       closing puts it there and only opening takes it out, so neither age nor whether it is open
+       right now moves a project. Absent in a registry written before closing meant anything. */
+    closedAt: z.number().nullish(),
     // A cache of what the canvas file holds, so `project.list` needs no document read.
     icon: ProjectIconChoiceSchema.nullish()
 });
@@ -163,6 +167,7 @@ export class ProjectStore {
             color: entry.color,
             folder: entry.folder,
             lastOpenedAt: entry.lastOpenedAt,
+            closedAt: entry.closedAt ?? null,
             available,
             icon,
             nameSource: nameSourceOf(entry.name, entry.folder)
@@ -241,10 +246,15 @@ export class ProjectStore {
             text = await writeDocument(path, document);
         }
 
-        entry = { ...entry, name: document.name, color: document.color, icon: document.icon ?? null, lastOpenedAt: Date.now() };
+        // Opening is what takes a project back out of Recent, wherever the open came from.
+        const wasRecent = entry.closedAt !== null && entry.closedAt !== undefined;
+        entry = { ...entry, name: document.name, color: document.color, icon: document.icon ?? null, lastOpenedAt: Date.now(), closedAt: null };
         await this.saveRegistry([...entries.filter((candidate) => candidate.projectId !== entry!.projectId), entry]);
+        if (wasRecent) {
+            this.publish(entry);
+        }
 
-        this.close(entry.projectId);
+        this.release(entry.projectId);
         const state: OpenProject = {
             entry,
             rev: document.rev,
@@ -352,7 +362,12 @@ export class ProjectStore {
         return { path: icon.lightPath, mime: icon.mime };
     }
 
-    close(projectId: string): void {
+    /*
+     * Lets go of an open project without saying anything about it: the watcher stops and the
+     * drawings are dropped. This is what switching to another project does, which is why it leaves
+     * the registry alone; a person closing a project is `closeProject`.
+     */
+    release(projectId: string): void {
         const state = this.open.get(projectId);
         if (!state) {
             return;
@@ -365,6 +380,22 @@ export class ProjectStore {
         this.open.delete(projectId);
     }
 
+    /* A person closed this project: it lets go and drops under Recent until someone opens it again. */
+    closeProject(projectId: string): Promise<void> {
+        return this.locked(async () => {
+            this.release(projectId);
+            const entries = await this.loadRegistry();
+            const entry = entries.find((candidate) => candidate.projectId === projectId);
+            if (!entry) {
+                throw new ProjectError('project-not-found', `No project ${projectId}`);
+            }
+            const closed = { ...entry, closedAt: Date.now() };
+            await this.saveRegistry(entries.map((candidate) => (candidate.projectId === projectId ? closed : candidate)));
+            // Every client shows the same list, so the row moves on the other machines too.
+            this.publish(closed);
+        });
+    }
+
     delete(projectId: string, removeFiles: boolean): Promise<void> {
         return this.locked(() => this.deleteUnlocked(projectId, removeFiles));
     }
@@ -375,7 +406,7 @@ export class ProjectStore {
         if (!entry) {
             throw new ProjectError('project-not-found', `No project ${projectId}`);
         }
-        this.close(projectId);
+        this.release(projectId);
         await this.saveRegistry(entries.filter((candidate) => candidate.projectId !== projectId));
         await rm(this.localPath(projectId), { force: true });
         if (!removeFiles) {
@@ -394,9 +425,10 @@ export class ProjectStore {
         }
     }
 
+    /* The daemon is going down: it lets go of every project without closing any of them. */
     closeAll(): void {
         for (const projectId of [...this.open.keys()]) {
-            this.close(projectId);
+            this.release(projectId);
         }
     }
 

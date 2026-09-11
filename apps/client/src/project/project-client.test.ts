@@ -326,14 +326,16 @@ describe('ProjectClient', () => {
         dispose();
     });
 
-    test('switching projects flushes edits, closes the old one and remembers the new one', async () => {
+    test('switching projects flushes edits, lets go of the old one and remembers the new one', async () => {
         const { transport, state, client, storage, dispose } = setup();
         await tick();
         transport.projects = [summary('p1', '/repo'), summary('p2')];
         useCanvas.getState().addText({ x: 0, y: 0 });
         await client.openProject('p2');
         expect(transport.of('project.save')).toHaveLength(1);
-        expect(transport.of('project.close').map((call) => call.payload)).toEqual([{ projectId: 'p1' }]);
+        // Released and not closed: the project switched away from stays in the list, not under Recent.
+        expect(transport.of('project.release').map((call) => call.payload)).toEqual([{ projectId: 'p1' }]);
+        expect(transport.of('project.close')).toEqual([]);
         expect(state.current?.projectId).toBe('p2');
         expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({ last: { endpointId: 'daemon-a', projectId: 'p2' }, byEndpoint: { 'daemon-a': 'p2' } });
         dispose();
