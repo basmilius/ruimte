@@ -3,8 +3,7 @@ import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Braces, Copy, Eye, FileText, MessageSquare, Scan } from 'lucide-react';
 import { markdownOf, messageTextOf } from '@/chat/logic/timeline-copy';
 import type { TimelineTarget } from '@/chat/logic/timeline-target';
-import { absoluteOf } from '@/shell/panels/files-tree';
-import { useFiles } from '@/state/files';
+import { openFileLink, useFileLinkCwd } from '@/shell/panels/file-links';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { MENU_SEPARATOR } from '@/ui/classes';
@@ -20,12 +19,14 @@ import { selectAllWithin } from '@/ui/selection';
 export function TimelineMenuPopup({ target, scroller }: { target: TimelineTarget; scroller: RefObject<HTMLDivElement | null> }) {
     const message = target.row === null ? null : messageTextOf(target.row);
     const markdown = target.row === null ? null : markdownOf(target.row);
+    // A thread outside a chat (a sub-agent's transcript) has no cwd of its own; the project answers there.
+    const cwd = useFileLinkCwd();
+    const folder = useProject((s) => s.current?.folder ?? null);
+    const tabLimit = useSettings((s) => s.filesTabLimit);
     const openInPreview = (): void => {
-        const folder = useProject.getState().current?.folder ?? null;
-        if (target.path === null || folder === null) {
-            return;
+        if (target.path !== null) {
+            openFileLink(cwd ?? folder, { path: target.path, ...(target.line === null ? {} : { line: target.line }), directory: false }, tabLimit);
         }
-        useFiles.getState().open(absoluteOf(folder, target.path), useSettings.getState().filesTabLimit);
     };
     return (
         <ContextMenu.Portal>

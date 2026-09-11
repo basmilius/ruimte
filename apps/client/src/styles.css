@@ -725,6 +725,13 @@ body {
         user-select: none;
     }
     .file-code[data-wrap="true"] pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+    /* The line a file reference asked for. The background is on the class and the animation fades it
+       out, so with motion turned off the mark still shows and the timer is what ends it. */
+    .file-code .line.is-revealed { background: var(--accent-soft); animation: file-line-flash 1.6s ease-out forwards; }
+    @keyframes file-line-flash {
+        from { background: var(--accent-soft); }
+        to { background: transparent; }
+    }
 
     /* The page an HTML file is drawn as. A <webview> needs a size in both directions of its own, and
        the white is the ground a browser gives a document that brings no background: a themed surface

@@ -10,6 +10,7 @@ import { AgentTurnRow, ApprovalHistoryRow, AssistantRow, CompactionRow, NoteRow,
 import { SubagentRow } from '@/chat/ui/rows/SubagentRow';
 import { ChangedFilesRow, TurnFoldRow, WorkGroupRow, WorkLiveRow, WorkRow, WorkingRow } from '@/chat/ui/rows/WorkRows';
 import { useChatRow } from '@/state/chats';
+import { FileLinkContext } from '@/shell/panels/file-links';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { EmptyState } from '@/ui/EmptyState';
 
@@ -171,55 +172,59 @@ export function Timeline({ chatId }: { chatId: string }) {
     }
 
     return (
-        <ContextMenu.Root>
-            <ContextMenu.Trigger
-                ref={scrollRef}
-                className="chat-thread min-h-0 grow overflow-auto px-4 pt-4"
-                onScroll={(e) => {
-                    const el = e.currentTarget;
-                    followRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < FOLLOW_THRESHOLD_PX + COMPOSER_CLEARANCE_PX;
-                }}
-                onContextMenu={(e) => setTarget(readTimelineTarget(e.target as HTMLElement, scrollRef.current, rows))}
-            >
-                <div className="chat-column-content relative w-full" style={{ height: virtualizer.getTotalSize() }}>
-                    {virtualizer.getVirtualItems().map((virtualRow) => {
-                        const row = rows[virtualRow.index]!;
-                        // A question and its answer are one step apart, one turn and the next question a
-                        // wider one; the rows inside a turn keep their own tight rhythm. The gap is
-                        // padding on the measured element, so the virtualizer counts it in the height.
-                        const question = row.kind === 'user';
-                        const previous = virtualRow.index > 0 ? rows[virtualRow.index - 1]! : null;
-                        // A question already carries the turn gap, and the row after one the answer gap.
-                        const seam = !question && previous !== null && previous.kind !== 'user' && isBlock(row) !== isBlock(previous);
-                        return (
-                            <div
-                                key={row.id}
-                                data-index={virtualRow.index}
-                                data-item-id={row.id}
-                                ref={virtualizer.measureElement}
-                                className={clsx(
-                                    'absolute left-0 top-0 w-full',
-                                    question && 'pb-[var(--chat-answer-gap)]',
-                                    question && virtualRow.index > 0 && 'pt-[var(--chat-turn-gap)]',
-                                    seam && 'pt-[var(--chat-block-gap)]'
-                                )}
-                                style={{ transform: `translateY(${virtualRow.start}px)` }}
-                            >
-                                <Row
-                                    row={row}
-                                    chatId={chatId}
-                                    lastAssistantId={lastAssistantId}
-                                    toggleGroup={(id) => toggle(setExpandedGroups, id)}
-                                    toggleTurn={(id) => toggle(setExpandedTurns, id)}
-                                    toggleSubagent={(id) => toggle(setExpandedSubagents, id)}
-                                    openSubagent={openSubagent}
-                                />
-                            </div>
-                        );
-                    })}
-                </div>
-            </ContextMenu.Trigger>
-            <TimelineMenuPopup target={target} scroller={scrollRef} />
-        </ContextMenu.Root>
+        // A file an answer names is relative to the folder this chat runs in, which is a worktree as
+        // often as it is the project itself.
+        <FileLinkContext.Provider value={info?.cwd ?? null}>
+            <ContextMenu.Root>
+                <ContextMenu.Trigger
+                    ref={scrollRef}
+                    className="chat-thread min-h-0 grow overflow-auto px-4 pt-4"
+                    onScroll={(e) => {
+                        const el = e.currentTarget;
+                        followRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < FOLLOW_THRESHOLD_PX + COMPOSER_CLEARANCE_PX;
+                    }}
+                    onContextMenu={(e) => setTarget(readTimelineTarget(e.target as HTMLElement, scrollRef.current, rows))}
+                >
+                    <div className="chat-column-content relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+                        {virtualizer.getVirtualItems().map((virtualRow) => {
+                            const row = rows[virtualRow.index]!;
+                            // A question and its answer are one step apart, one turn and the next question a
+                            // wider one; the rows inside a turn keep their own tight rhythm. The gap is
+                            // padding on the measured element, so the virtualizer counts it in the height.
+                            const question = row.kind === 'user';
+                            const previous = virtualRow.index > 0 ? rows[virtualRow.index - 1]! : null;
+                            // A question already carries the turn gap, and the row after one the answer gap.
+                            const seam = !question && previous !== null && previous.kind !== 'user' && isBlock(row) !== isBlock(previous);
+                            return (
+                                <div
+                                    key={row.id}
+                                    data-index={virtualRow.index}
+                                    data-item-id={row.id}
+                                    ref={virtualizer.measureElement}
+                                    className={clsx(
+                                        'absolute left-0 top-0 w-full',
+                                        question && 'pb-[var(--chat-answer-gap)]',
+                                        question && virtualRow.index > 0 && 'pt-[var(--chat-turn-gap)]',
+                                        seam && 'pt-[var(--chat-block-gap)]'
+                                    )}
+                                    style={{ transform: `translateY(${virtualRow.start}px)` }}
+                                >
+                                    <Row
+                                        row={row}
+                                        chatId={chatId}
+                                        lastAssistantId={lastAssistantId}
+                                        toggleGroup={(id) => toggle(setExpandedGroups, id)}
+                                        toggleTurn={(id) => toggle(setExpandedTurns, id)}
+                                        toggleSubagent={(id) => toggle(setExpandedSubagents, id)}
+                                        openSubagent={openSubagent}
+                                    />
+                                </div>
+                            );
+                        })}
+                    </div>
+                </ContextMenu.Trigger>
+                <TimelineMenuPopup target={target} scroller={scrollRef} />
+            </ContextMenu.Root>
+        </FileLinkContext.Provider>
     );
 }

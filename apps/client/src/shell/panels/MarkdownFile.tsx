@@ -3,7 +3,9 @@ import { Code, Eye } from 'lucide-react';
 import type { FsReadText } from '@ruimte/contracts';
 import { Markdown } from '@/chat/ui/Markdown';
 import { CodeFile } from '@/shell/panels/CodeFile';
+import { FileLinkContext } from '@/shell/panels/file-links';
 import { FileScroll } from '@/shell/panels/FileScroll';
+import { dirnameOf } from '@/shell/panels/files-tree';
 import { DisabledWrapToggle, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { BTN_GROUP } from '@/ui/classes';
 import { Separator } from '@/ui/Separator';
@@ -14,7 +16,7 @@ type MarkdownView = 'preview' | 'source';
  * A markdown file the way it is meant to be read, with the source a click away. Both views share one
  * toolbar, so the switch does not move when it is used.
  */
-export function MarkdownFile({ name, read }: { name: string; read: FsReadText }) {
+export function MarkdownFile({ path, name, read }: { path: string; name: string; read: FsReadText }) {
     const [view, setView] = useState<MarkdownView>('preview');
     const toggle = (
         <div className={BTN_GROUP}>
@@ -39,7 +41,11 @@ export function MarkdownFile({ name, read }: { name: string; read: FsReadText })
                 `--text-code`, which the override does not touch. */}
             <FileScroll className="px-4 py-3 [--text-sm:15px] [--text-sm--line-height:24px]">
                 <div className="mx-auto max-w-[768px]">
-                    <Markdown text={read.text} />
+                    {/* A link in a document counts from the folder that document sits in, the way it
+                        would on a forge. */}
+                    <FileLinkContext.Provider value={dirnameOf(path)}>
+                        <Markdown text={read.text} />
+                    </FileLinkContext.Provider>
                 </div>
             </FileScroll>
         </div>

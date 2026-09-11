@@ -1,6 +1,9 @@
 import { memo, useEffect, useState, type ReactNode } from 'react';
+import clsx from 'clsx';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { openFileLink, useFileLinkCwd, useFileLinkTarget, type FileRef } from '@/shell/panels/file-links';
+import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 
 type Highlighter = (code: string, lang: string, theme: 'light' | 'dark') => Promise<string>;
@@ -51,6 +54,73 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
     return <div className="chat-code" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
+const INLINE_CODE = 'rounded-sm bg-surface-sunken px-1 py-px font-mono text-code';
+
+/*
+ * A path an agent wrote down, opened in the preview panel. It keeps the shape of the code chip it
+ * would otherwise be, so a sentence full of them does not start dancing; only the color says it can
+ * be clicked. `data-file-path` is what the thread's own right-click menu reads, so a link answers to
+ * both ways of opening it.
+ */
+function FileLink({ target, className, children }: { target: FileRef; className?: string; children: ReactNode }) {
+    const cwd = useFileLinkCwd();
+    const limit = useSettings((s) => s.filesTabLimit);
+    return (
+        // `select-text` because a thread is copied as often as it is clicked, and a button is not
+        // selectable on its own.
+        <button
+            type="button"
+            className={clsx('cursor-pointer select-text', className)}
+            data-file-path={target.path}
+            data-file-line={target.line}
+            onClick={() => openFileLink(cwd, target, limit)}
+        >
+            {children}
+        </button>
+    );
+}
+
+/* Inline code, which is a file reference often enough that it is worth asking every time. */
+function InlineCode({ text }: { text: string }) {
+    const target = useFileLinkTarget(text);
+    if (target === null) {
+        return <code className={INLINE_CODE}>{text}</code>;
+    }
+    return (
+        <FileLink target={target} className={`${INLINE_CODE} text-accent hover:underline`}>
+            {text}
+        </FileLink>
+    );
+}
+
+/* The path a link target spells, with the one scheme that still means a file on the daemon's machine
+   taken off. A href nobody encoded is left as it is, since decoding throws on a stray percent. */
+const hrefPath = (href: string): string => {
+    const bare = href.replace(/^file:\/\//, '');
+    try {
+        return decodeURI(bare);
+    } catch {
+        return bare;
+    }
+};
+
+/* A markdown link, which is a file when its target names no scheme of its own. */
+function MarkdownLink({ href, children }: { href?: string; children?: ReactNode }) {
+    const target = useFileLinkTarget(hrefPath(href ?? ''));
+    if (target !== null) {
+        return (
+            <FileLink target={target} className="text-accent underline underline-offset-2">
+                {children}
+            </FileLink>
+        );
+    }
+    return (
+        <a href={href} target="_blank" rel="noreferrer">
+            {children}
+        </a>
+    );
+}
+
 const components = {
     pre({ children }: { children?: ReactNode }) {
         return <>{children}</>;
@@ -61,14 +131,10 @@ const components = {
         if (className?.startsWith('language-') || text.includes('\n')) {
             return <CodeBlock code={text.replace(/\n$/, '')} lang={languageOf(className)} />;
         }
-        return <code className="rounded-sm bg-surface-sunken px-1 py-px font-mono text-code">{text}</code>;
+        return <InlineCode text={text} />;
     },
     a({ href, children }: { href?: string; children?: ReactNode }) {
-        return (
-            <a href={href} target="_blank" rel="noreferrer">
-                {children}
-            </a>
-        );
+        return <MarkdownLink href={href}>{children}</MarkdownLink>;
     },
     table({ children }: { children?: ReactNode }) {
         // A table wider than the column scrolls on its own instead of pushing the thread sideways.

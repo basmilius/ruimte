@@ -87,6 +87,15 @@ export const pinTab = (state: TabState, key: string, pinned: boolean): TabState 
     active: state.active
 });
 
+export interface RevealLineRequest {
+    /* The tab this is about; a file that is not the one up ignores it. */
+    key: string;
+    /* One-based, the number the viewer puts in its gutter. */
+    line: number;
+    /* Goes up on every ask, so the same line twice is two jumps. */
+    nonce: number;
+}
+
 export interface RevealRequest {
     /* Absolute on the daemon's machine, the same path a tab carries. */
     path: string;
@@ -104,8 +113,10 @@ interface FilesStore extends TabState {
     expandedDirs: string[];
     /* What the files panel was asked to bring into view, from a menu somewhere else in the app. */
     reveal: RevealRequest | null;
+    /* The line the viewer was asked to jump to, from a file reference that named one. */
+    revealLine: RevealLineRequest | null;
     load(projectId: string | null, state: TabState & { expandedDirs: string[] }): void;
-    open(path: string, limit: number, view?: FileTabView): void;
+    open(path: string, limit: number, view?: FileTabView, line?: number): void;
     close(key: string): void;
     closeOthers(key: string): void;
     closeAll(): void;
@@ -129,13 +140,15 @@ export const useFiles = create<FilesStore>((set, get) => ({
     active: null,
     expandedDirs: [],
     reveal: null,
+    revealLine: null,
     load(projectId, state) {
-        set({ projectId, tabs: state.tabs, active: state.active, expandedDirs: state.expandedDirs, reveal: null });
+        set({ projectId, tabs: state.tabs, active: state.active, expandedDirs: state.expandedDirs, reveal: null, revealLine: null });
     },
     /* A tab and the panel that draws it are one thing to the person opening a file: the first open
        brings the preview up and the last close takes it away again. */
-    open(path, limit, view) {
-        set({ ...openTab(get(), path, limit, view), focusRequest: get().focusRequest + 1 });
+    open(path, limit, view, line) {
+        const reveal = line === undefined ? get().revealLine : { key: tabKey(path, view), line, nonce: (get().revealLine?.nonce ?? 0) + 1 };
+        set({ ...openTab(get(), path, limit, view), focusRequest: get().focusRequest + 1, revealLine: reveal });
         useUi.getState().setPreviewOpen(true);
     },
     close(key) {

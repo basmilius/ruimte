@@ -35,6 +35,9 @@ export const absoluteOf = (root: string, treePath: string): string => {
     return relative === '' ? withoutTrailingSeparator(root) : `${withoutTrailingSeparator(root)}${separator}${relative}`;
 };
 
+/* A path that names its own root, on either kind of machine: a leading separator, or a drive letter. */
+export const isAbsolutePath = (path: string): boolean => /^[\\/]/.test(path) || /^[a-zA-Z]:[\\/]/.test(path);
+
 /* A path the files panel can bring into view is one inside the folder that panel lists; a worktree
    or another checkout on the same machine is not. */
 export const revealableInFiles = (folder: string | null, path: string): boolean =>

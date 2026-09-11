@@ -29,7 +29,7 @@ export const TEXT_RENDERERS: readonly TextFileRenderer[] = [
     {
         id: 'markdown',
         match: (name) => isMarkdownName(name),
-        render: (props) => <MarkdownFile name={props.name} read={props.read} />
+        render: (props) => <MarkdownFile path={props.path} name={props.name} read={props.read} />
     },
     {
         id: 'html',
