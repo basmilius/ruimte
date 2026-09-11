@@ -151,8 +151,9 @@ export class ProjectClient {
         await this.open({ projectId });
     }
 
-    async openFolder(folder: string): Promise<void> {
-        await this.open({ folder });
+    /* Creating is the folder picker's business: everywhere else a folder that is gone stays gone. */
+    async openFolder(folder: string, createFolder = false): Promise<void> {
+        await this.open({ folder, createFolder });
     }
 
     async createProject(name: string): Promise<void> {
@@ -308,7 +309,7 @@ export class ProjectClient {
         }
     }
 
-    private async open(payload: { projectId?: string; folder?: string; name?: string }): Promise<void> {
+    private async open(payload: { projectId?: string; folder?: string; name?: string; createFolder?: boolean }): Promise<void> {
         this.sink.setSwitching(true);
         try {
             await this.beforeSwitch();
