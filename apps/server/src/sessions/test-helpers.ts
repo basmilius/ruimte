@@ -39,6 +39,15 @@ export class Recorder {
             .map((event) => (event.event === 'session.status' ? (event.payload.agent?.status ?? null) : null));
     }
 
+    resyncOf(sessionId: string): string | undefined {
+        for (const event of this.events) {
+            if (event.event === 'session.resync' && event.payload.sessionId === sessionId) {
+                return event.payload.screen;
+            }
+        }
+        return undefined;
+    }
+
     exitOf(sessionId: string): number | undefined {
         for (const event of this.events) {
             if (event.event === 'session.exit' && event.payload.sessionId === sessionId) {

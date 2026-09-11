@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { isLeaveNodeChord, leaveNodeChordLabel, macMotionSequence, type KeyChord } from './keymap.ts';
+import { isAppChord, isClearChord, isLeaveNodeChord, leaveNodeChordLabel, macMotionSequence, type KeyChord } from './keymap.ts';
 
 const chord = (key: string, modifiers: Partial<Omit<KeyChord, 'key'>> = {}): KeyChord => ({
     key,
+    code: '',
     metaKey: false,
     altKey: false,
     ctrlKey: false,
@@ -64,6 +65,59 @@ describe('isLeaveNodeChord', () => {
 
     test('another key is never the chord', () => {
         expect(isLeaveNodeChord(chord('Enter', { metaKey: true }), true)).toBe(false);
+    });
+});
+
+describe('isAppChord', () => {
+    const key = (code: string, modifiers: Partial<Omit<KeyChord, 'key'>> = {}): KeyChord => chord('', { code, ...modifiers });
+
+    test("the chords that move between views stay the app's", () => {
+        expect(isAppChord(key('Digit1', { metaKey: true }), true)).toBe(true);
+        expect(isAppChord(key('Digit9', { metaKey: true }), true)).toBe(true);
+        expect(isAppChord(key('KeyT', { metaKey: true }), true)).toBe(true);
+        expect(isAppChord(key('KeyB', { metaKey: true }), true)).toBe(true);
+        expect(isAppChord(key('KeyB', { metaKey: true, altKey: true }), true)).toBe(true);
+        expect(isAppChord(key('BracketLeft', { metaKey: true, shiftKey: true }), true)).toBe(true);
+        expect(isAppChord(key('BracketRight', { metaKey: true, shiftKey: true }), true)).toBe(true);
+        expect(isAppChord(chord(',', { code: 'Comma', metaKey: true }), true)).toBe(true);
+    });
+
+    test('everything else in a terminal belongs to the program', () => {
+        expect(isAppChord(key('KeyK', { metaKey: true }), true)).toBe(false);
+        expect(isAppChord(key('KeyZ', { metaKey: true }), true)).toBe(false);
+        expect(isAppChord(key('KeyA', { metaKey: true }), true)).toBe(false);
+        expect(isAppChord(key('Digit0', { metaKey: true }), true)).toBe(false);
+        expect(isAppChord(key('Digit1'), true)).toBe(false);
+        expect(isAppChord(key('KeyT', { metaKey: true, shiftKey: true }), true)).toBe(false);
+    });
+
+    test("on macOS Ctrl is the shell's, and off macOS Cmd is nothing", () => {
+        expect(isAppChord(key('Digit1', { ctrlKey: true }), true)).toBe(false);
+        expect(isAppChord(key('Digit1', { metaKey: true }), false)).toBe(false);
+        expect(isAppChord(key('Digit1', { ctrlKey: true }), false)).toBe(true);
+    });
+
+    test('off macOS Ctrl+B is the tmux prefix, so the shell keeps it', () => {
+        expect(isAppChord(key('KeyB', { ctrlKey: true }), false)).toBe(false);
+        expect(isAppChord(key('KeyB', { ctrlKey: true, altKey: true }), false)).toBe(true);
+    });
+});
+
+describe('isClearChord', () => {
+    test('macOS clears on Cmd+K, the way every native terminal does', () => {
+        expect(isClearChord(chord('k', { code: 'KeyK', metaKey: true }), true)).toBe(true);
+        expect(isClearChord(chord('k', { code: 'KeyK' }), true)).toBe(false);
+        expect(isClearChord(chord('k', { code: 'KeyK', metaKey: true, shiftKey: true }), true)).toBe(false);
+        expect(isClearChord(chord('k', { code: 'KeyK', ctrlKey: true }), true)).toBe(false);
+    });
+
+    test("elsewhere it is Ctrl+Shift+K, because Ctrl+K is readline's kill-line", () => {
+        expect(isClearChord(chord('K', { code: 'KeyK', ctrlKey: true, shiftKey: true }), false)).toBe(true);
+        expect(isClearChord(chord('k', { code: 'KeyK', ctrlKey: true }), false)).toBe(false);
+    });
+
+    test('another key is never the chord', () => {
+        expect(isClearChord(chord('l', { code: 'KeyL', metaKey: true }), true)).toBe(false);
     });
 });
 

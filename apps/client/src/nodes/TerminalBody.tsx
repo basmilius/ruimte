@@ -11,7 +11,7 @@ import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 import { isApplePlatform } from '@/desktop/bridge';
 import { sessionClient } from '@/terminal';
-import { isLeaveNodeChord, macMotionSequence } from '@/terminal/keymap';
+import { isAppChord, isClearChord, isLeaveNodeChord, macMotionSequence } from '@/terminal/keymap';
 import { lastScreenOf, registerTerminal } from '@/terminal/registry';
 import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
 import { webglBudget } from '@/terminal/webgl-budget';
@@ -92,27 +92,39 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
         const releaseWebgl = webglBudget.register(id, term, refit);
 
         term.attachCustomKeyEventHandler((e) => {
+            const apple = isApplePlatform();
             if (e.key === 'Escape') {
                 // Escape is the program's (an interrupt, a mode change); only the leave chord returns
                 // to the canvas, and it does so by falling through to the window listener unwritten.
-                if (isLeaveNodeChord(e, isApplePlatform())) {
+                if (isLeaveNodeChord(e, apple)) {
                     return false;
                 }
                 // The canvas listens on window, where any Escape would end node mode.
                 e.stopPropagation();
                 return true;
             }
-            if (e.type === 'keydown' && isApplePlatform()) {
+            // A focused terminal has the keyboard the way a native one does: every chord the app does
+            // not need to move between views stops here instead of reaching the window listeners.
+            if (!isAppChord(e, apple)) {
+                e.stopPropagation();
+            }
+            if (e.type !== 'keydown') {
+                return true;
+            }
+            if (isClearChord(e, apple)) {
+                e.preventDefault();
+                sessionClient.clear(id);
+                return false;
+            }
+            if (apple) {
                 const motion = macMotionSequence(e, term.modes.applicationCursorKeysMode);
                 if (motion) {
                     e.preventDefault();
-                    // A Cmd chord is the canvas's by default; this one belongs to the shell.
-                    e.stopPropagation();
                     sessionClient.write(id, motion);
                     return false;
                 }
             }
-            if (e.type === 'keydown' && e.key === 'Enter' && e.shiftKey) {
+            if (e.key === 'Enter' && e.shiftKey) {
                 e.preventDefault();
                 sessionClient.write(id, SHIFT_ENTER);
                 return false;

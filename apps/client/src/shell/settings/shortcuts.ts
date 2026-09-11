@@ -87,8 +87,14 @@ export const CANVAS_SHORTCUTS: readonly ShortcutGroup[] = [
         ]
     },
     {
+        /*
+         * A focused terminal keeps every chord that is not in this file's Views or Panels group, so a
+         * program sees the keyboard the way it would in a native terminal. That is why ⌘K clears here
+         * and opens the palette everywhere else.
+         */
         title: 'Terminal on macOS',
         shortcuts: [
+            { keys: '⌘ K', label: 'Clear the screen and the scrollback (⌃ ⇧ K elsewhere)' },
             { keys: '⌘ ←', label: 'Move to the beginning of the line' },
             { keys: '⌘ →', label: 'Move to the end of the line' },
             { keys: '⌥ ←', label: 'Move back one word' },

@@ -221,6 +221,15 @@ export class SessionManager {
         this.require(sessionId).resize(cols, rows);
     }
 
+    // Every attached client repaints from the screen the daemon owns, the same way it does after a resync.
+    async clear(sessionId: string): Promise<void> {
+        const session = this.require(sessionId);
+        const screen = await session.clear();
+        for (const clientId of session.attachedClients()) {
+            this.emit(clientId, { event: 'session.resync', payload: { sessionId, screen } });
+        }
+    }
+
     async kill(sessionId: string): Promise<void> {
         const session = this.require(sessionId);
         await this.snapshots?.delete(sessionId);
