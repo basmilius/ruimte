@@ -23,6 +23,15 @@ export const useNodeInViewport = (id: string): boolean =>
         return intersects(node, view);
     });
 
+/*
+ * Under this a node is a few dozen pixels tall, a shape on the canvas rather than something anyone
+ * is reading. What costs nothing to draw ignores it; a body that costs a read and a syntax
+ * highlighter shows its plate instead, which is what keeps a canvas full of files moving.
+ */
+export const READABLE_ZOOM = 0.4;
+
+export const useReadableZoom = (): boolean => useCanvas((s) => s.camera.zoom >= READABLE_ZOOM);
+
 /* True while visible and for a grace period after; the caller unmounts the live view when it turns false. */
 export const useHeldWhileVisible = (visible: boolean): boolean => {
     const [held, setHeld] = useState(true);

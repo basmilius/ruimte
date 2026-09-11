@@ -25,13 +25,13 @@ import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { BTN_GROUP } from '@/ui/classes';
 import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
-import { useHeldWhileVisible, useNodeInViewport } from '@/canvas/culling';
+import { useHeldWhileVisible, useNodeInViewport, useReadableZoom } from '@/canvas/culling';
 import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
 import { ChatBody } from '@/nodes/ChatBody';
 import { BrowserBody } from '@/nodes/BrowserBody';
 import { NoteNode } from '@/canvas/nodes/NoteNode';
 import { DrawingNode } from '@/canvas/nodes/DrawingNode';
-import { FileNode } from '@/canvas/nodes/FileNode';
+import { FileNode, FilePlate } from '@/canvas/nodes/FileNode';
 import { noteColorClass } from '@/canvas/note-colors';
 import { Favicon } from '@/browser/Favicon';
 import { FileIcon } from '@/ui/FileIcon';
@@ -139,6 +139,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const resizing = useCanvas((s) => s.resizing === id);
     const inViewport = useNodeInViewport(id);
     const live = useHeldWhileVisible(inViewport);
+    const readable = useReadableZoom();
     const [renaming, setRenaming] = useState(false);
     /* Where a file node's controls go: its own header, so the body draws no second bar under it.
        Every other node hands its body an empty slot, which keeps the canvas out of the window's. */
@@ -282,11 +283,14 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         {node.kind === 'browser' && <BrowserBody id={id} focused={focused} />}
                         {node.kind === 'note' && <NoteNode id={id} focused={focused} />}
                         {node.kind === 'drawing' && <DrawingNode id={id} />}
-                        {node.kind === 'file' && (
-                            <FileToolbarSlotProvider value={toolbarSlot}>
-                                <FileNode id={id} />
-                            </FileToolbarSlotProvider>
-                        )}
+                        {node.kind === 'file' &&
+                            (live && readable ? (
+                                <FileToolbarSlotProvider value={toolbarSlot}>
+                                    <FileNode id={id} />
+                                </FileToolbarSlotProvider>
+                            ) : (
+                                <FilePlate id={id} />
+                            ))}
                         {!focused && <div className="absolute inset-0" aria-hidden="true" />}
                     </div>
                 )}

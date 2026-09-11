@@ -576,7 +576,9 @@ a day, several days. Each of the larger ones becomes a GitHub issue when it star
     client may change on a machine, with a conflict question under it (an agent rewrote the file
     meanwhile). Plus a PDF renderer, a diff node that reuses the git panel's scopes, a line number
     in a file node's path, and "open in editor": an editor probe and preference, `fs.open` with
-    `path:line`, used from menus, diff rows and paths in terminal output.
+    `path:line`, used from menus, diff rows and paths in terminal output. Still unmeasured: what a
+    canvas of ten file nodes on the largest files of a repository costs, now that the plate and the
+    highlighting cap are the two things standing between it and the thirty-node goal.
 13. **A test floor**: a 30-node harness (a dev-only palette command or a Playwright spec, out of
     CI) and whatever it finds; a DOM setup for `bun test` with first specs for the composer and the
     canvas wiring; a daemon-backed e2e job in CI for the terminal spec.

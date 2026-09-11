@@ -2,6 +2,7 @@ import { isCanvasView, type ContextSource } from '@ruimte/contracts';
 import { deriveContextSources } from '@/context/sources';
 import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
+import { useProject } from '@/state/project';
 import { currentEndpointId } from '@/state/keys';
 import { pool, transportFor } from '@/transport';
 
@@ -9,6 +10,9 @@ const SETTLE_MS = 300;
 
 /* Whether this node has readable context linked into it, as one boolean for a header; the same rule `contextSources` applies. */
 export const useHasContextLinks = (id: string): boolean => useCanvas((s) => (deriveContextSources(s.nodes, s.texts, s.edges).get(id)?.length ?? 0) > 0);
+
+/* Where the project this canvas belongs to sits, which is what a file node's stored path counts from. */
+const projectFolder = (): string | null => useProject.getState().current?.folder ?? null;
 
 const byId = <T extends { id: string }>(items: T[]): Record<string, T> => Object.fromEntries(items.map((item) => [item.id, item]));
 
@@ -20,14 +24,15 @@ export const contextSources = (): Map<string, ContextSource[]> => {
     const merged = new Map<string, ContextSource[]>();
     const canvas = useCanvas.getState();
     const { views } = useDocument.getState();
+    const folder = projectFolder();
     for (const view of views) {
         if (!isCanvasView(view)) {
             continue;
         }
         const derived =
             view.id === canvas.viewId
-                ? deriveContextSources(canvas.nodes, canvas.texts, canvas.edges)
-                : deriveContextSources(byId(view.nodes), byId(view.texts), view.edges);
+                ? deriveContextSources(canvas.nodes, canvas.texts, canvas.edges, folder)
+                : deriveContextSources(byId(view.nodes), byId(view.texts), view.edges, folder);
         for (const [targetId, sources] of derived) {
             merged.set(targetId, sources);
         }

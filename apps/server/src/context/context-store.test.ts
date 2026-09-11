@@ -63,6 +63,14 @@ describe('ContextStore', () => {
         expect((await get('/context/other', 'tok')).status).toBe(404);
     });
 
+    test('a file answers with its path and never with its bytes', async () => {
+        store.set('agent', [{ id: 'node-1', kind: 'file', title: 'main.ts', text: '/repo/src/main.ts' }]);
+        expect(store.list('agent')).toEqual([{ id: 'node-1', kind: 'file', title: 'main.ts' }]);
+        const answer = (await store.read('agent', 'node-1')) ?? '';
+        expect(answer).toContain('/repo/src/main.ts');
+        expect(answer.split('\n')).toHaveLength(3);
+    });
+
     test('an empty set clears the target', () => {
         store.set('agent', [{ id: 'x', kind: 'text', title: 'x', text: '' }]);
         expect(store.has('agent')).toBe(true);

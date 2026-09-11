@@ -106,6 +106,14 @@ export class ContextStore {
                 const elements = await this.readers.drawingElements(source.id);
                 return elements ? renderDrawing(elements) : null;
             }
+            /*
+             * The path, never the bytes. An agent has file tools of its own, so reading it there is
+             * fresher than whatever this answered, it does not count twice against the window, and a
+             * file of a megabyte cannot push the rest of the context out. A drawing is the opposite
+             * case, which is why that one is rendered here: an agent can read it nowhere else.
+             */
+            case 'file':
+                return source.text ? `This is a file on disk. Read it with your own tools.\n\n${source.text}` : null;
         }
     }
 
