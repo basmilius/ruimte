@@ -8,7 +8,7 @@ import { menuProjects, type ProjectMenuRow } from '@/project/list';
 import { openProject } from '@/project/open';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ProjectNameDialog } from '@/shell/ProjectNameDialog';
-import { useEndpoints } from '@/state/endpoints';
+import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { useProjectList } from '@/state/project-list';
 import { useProject } from '@/state/project';
 import { useServers } from '@/state/server';
@@ -72,7 +72,9 @@ export function ProjectMenu() {
     const showMachine = endpoints.length > 1;
     /* The project's own machine, or the one the shell is pointed at while no project is open. */
     const machineId = currentEndpointId ?? activeId;
-    const machine = endpoints.find((endpoint) => endpoint.id === machineId) ?? null;
+    /* The pill names a machine only when the work is somewhere else. Being on the machine the app
+       runs on is the ordinary case, and a prefix that is on screen whatever you do says nothing. */
+    const machine = machineId === LOCAL_ENDPOINT_ID ? null : (endpoints.find((endpoint) => endpoint.id === machineId) ?? null);
     const machineIcon = useServers((s) => s.byEndpoint[machineId]?.icon ?? null);
 
     const isCurrent = (row: ProjectMenuRow): boolean => row.summary.projectId === current?.projectId && row.endpointId === currentEndpointId;
@@ -81,7 +83,7 @@ export function ProjectMenu() {
         <>
             <Menu.Root>
                 <Menu.Trigger className="flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-left hover:bg-surface-hover data-[popup-open]:bg-surface-active">
-                    {showMachine && machine && (
+                    {machine && (
                         <>
                             {/* The name gives way long before the project's does: it is the same word for
                                 every project on that machine, and what is left when it has gone is the
