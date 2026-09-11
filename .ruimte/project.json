@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "rev": 257,
+  "rev": 264,
   "name": "Ruimte",
   "color": "#7c74ff",
   "views": [
@@ -107,28 +107,9 @@
       }
     },
     {
-      "id": "chat-x8jyyb35",
-      "name": "Ik wil de chat opnieuw ontwerpen…",
-      "titleSource": "auto",
-      "kind": "chat",
-      "node": {
-        "provider": "claude",
-        "providerFixed": true
-      }
-    },
-    {
-      "id": "chat-7z52d2oq",
-      "name": "AI Agents (Chat & Terminal) moeten, net zoals…",
-      "titleSource": "auto",
-      "kind": "chat",
-      "node": {
-        "provider": "claude",
-        "providerFixed": true
-      }
-    },
-    {
       "id": "chat-sbmwx2f0",
-      "name": "Claude Code",
+      "name": "Vanuit de AI chat kan een agent wel eens linken…",
+      "titleSource": "auto",
       "kind": "chat",
       "node": {
         "provider": "claude",
