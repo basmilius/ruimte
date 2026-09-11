@@ -14,6 +14,7 @@ let folder: string;
 let store: ProjectStore;
 let changed: SessionEvent[];
 let summaries: SessionEvent[];
+let unsubscribe: () => void;
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-projects-'));
@@ -23,12 +24,15 @@ beforeEach(async () => {
     store = new ProjectStore(home);
     changed = [];
     summaries = [];
-    store.subscribe('c1', (event) => {
+    unsubscribe = store.subscribe('c1', (event) => {
         (event.event === 'project.summary' ? summaries : changed).push(event);
     });
 });
 
 afterEach(async () => {
+    // The sink reads the arrays of whichever test is running, so a summary still on its way out
+    // of the store being torn down would otherwise land in the next test's.
+    unsubscribe();
     store.closeAll();
     await rm(root, { recursive: true, force: true });
 });
@@ -306,7 +310,9 @@ describe('ProjectStore', () => {
         await store.closeProject(projectId);
         const listed = (await store.list()).find((project) => project.projectId === projectId)!;
         expect(listed.closedAt).toBeNumber();
-        // The other clients hear it, so every machine draws the same list.
+        /* The other clients hear it, so every machine draws the same list. The summary goes out
+           after the answer does, so it is waited for rather than read off the call before it. */
+        await waitFor(() => summaries.length >= 1, 'the summary event');
         expect(summaries.at(-1)).toMatchObject({ event: 'project.summary', payload: { summary: { projectId, closedAt: listed.closedAt } } });
         // It is only a place in the menu: the project itself is untouched and still opens.
         expect(listed.available).toBe(true);
@@ -315,6 +321,7 @@ describe('ProjectStore', () => {
         const again = await store.openProject({ projectId });
         expect(again.summary.closedAt).toBeNull();
         expect((await store.list())[0]?.closedAt).toBeNull();
+        await waitFor(() => summaries.length >= 1, 'the summary event');
         expect(summaries.at(-1)).toMatchObject({ event: 'project.summary', payload: { summary: { projectId, closedAt: null } } });
     });
 
