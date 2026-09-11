@@ -1,5 +1,6 @@
 import { ExternalLink } from 'lucide-react';
 import { isDesktop } from '@/desktop/bridge';
+import { REACHABILITY_LABELS } from '@/shell/connection-info';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Badge } from '@/shell/settings/controls';
@@ -8,13 +9,6 @@ import { useServer } from '@/state/server';
 import { useTransportStatus } from '@/transport/status';
 import { BrandSymbol } from '@/ui/Brand';
 import { Icon } from '@/ui/Icon';
-
-const REACHABILITY_LABELS = {
-    loopback: 'On this machine',
-    lan: 'On the local network',
-    tunnel: 'Through a tunnel',
-    public: 'On the public internet'
-} as const;
 
 const LINKS = [
     { label: 'ruimte.app', description: 'The site, with the download and the principles.', href: 'https://ruimte.app' },
@@ -34,11 +28,11 @@ export function AboutPane() {
         <>
             <SettingsSection
                 title="Ruimte"
-                description={isDesktop() ? 'The desktop app and the daemon it carries.' : 'The client in this browser and the daemon it talks to.'}
+                description={isDesktop() ? 'The desktop app and the machine it carries.' : 'The client in this browser and the machine it talks to.'}
             >
                 <SettingsRow
                     label="Version"
-                    description="As the daemon reports it; the client is built from the same tag."
+                    description="As the machine reports it; the client is built from the same tag."
                     control={
                         <>
                             <BrandSymbol size={16} />
@@ -48,7 +42,7 @@ export function AboutPane() {
                 />
                 <SettingsRow
                     label="Machine"
-                    description={reachability ? REACHABILITY_LABELS[reachability] : 'The daemon has not introduced itself yet.'}
+                    description={reachability ? REACHABILITY_LABELS[reachability] : 'The machine has not introduced itself yet.'}
                     control={<span className="text-xs text-text-muted">{label ?? (status === 'open' ? 'Unnamed' : 'Not connected')}</span>}
                 />
                 <SettingsRow label="Platform" control={<span className="font-mono text-code text-text-muted">{platform ?? '?'}</span>} />

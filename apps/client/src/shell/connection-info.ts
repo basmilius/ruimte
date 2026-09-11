@@ -1,6 +1,14 @@
 import type { Reachability } from '@ruimte/contracts';
 import type { ConnectionState } from '@/transport';
 
+/* How far away a machine is, in the words a row's tooltip and the About pane show. */
+export const REACHABILITY_LABELS: Record<Reachability, string> = {
+    loopback: 'On this machine',
+    lan: 'On the local network',
+    tunnel: 'Through a tunnel',
+    public: 'On the public internet'
+};
+
 export interface MachineInfo {
     /* What this client calls the daemon it points at (`endpoints.ts`). */
     endpointLabel: string;
@@ -48,6 +56,6 @@ export const describeMachine = (info: MachineInfo): string => {
     return `${info.endpointLabel} · ${info.machineLabel}`;
 };
 
-export const describeVersion = (version: string | null): string => `Daemon ${version ?? '-'}`;
+export const describeVersion = (version: string | null): string => `Version ${version ?? '-'}`;
 
 export const describePing = (latency: number | null): string => `Ping ${latency === null ? '-' : `${Math.round(latency)} ms`}`;
