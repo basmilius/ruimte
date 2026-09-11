@@ -58,6 +58,79 @@ describe('readOrCreateEndpointIdentity', () => {
         }
     });
 
+    test('a machine nobody has named answers to the name it was started with', async () => {
+        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        expect(identity.label).toBe('the-hostname');
+        expect(identity.nameSource).toBe('default');
+        expect(identity.icon).toBeNull();
+    });
+
+    test('a name and an icon go into the file and come back after a restart', async () => {
+        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        await identity.setIdentity('Studio', { kind: 'lucide', value: 'server' });
+        expect(identity.label).toBe('Studio');
+        expect(identity.nameSource).toBe('chosen');
+
+        const written = JSON.parse(await readFile(join(home, 'endpoint.json'), 'utf8')) as { version: number; name: string; privateKey: string };
+        // Still version 1: an older daemon reading this file has to keep the id rather than mint one.
+        expect(written.version).toBe(1);
+        expect(written.name).toBe('Studio');
+        // The key pair is written back with it, or the machine would have to pair again.
+        expect(written.privateKey).toContain('PRIVATE KEY');
+
+        const restarted = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        expect(restarted.id).toBe(identity.id);
+        expect(restarted.label).toBe('Studio');
+        expect(restarted.icon).toEqual({ kind: 'lucide', value: 'server' });
+    });
+
+    test('a name that was typed in a client wins over the one the daemon was started with', async () => {
+        await (await readOrCreateEndpointIdentity(home, 'from-the-flag')).setIdentity('Typed here', null);
+        // What `--label` or `RUIMTE_LABEL` says on the next start; the person's choice outlives it.
+        expect((await readOrCreateEndpointIdentity(home, 'from-the-flag')).label).toBe('Typed here');
+    });
+
+    test('clearing the name hands the machine back to the one it starts with', async () => {
+        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        await identity.setIdentity('Studio', { kind: 'emoji', value: '\u{1F5A5}\u{FE0F}' });
+        await identity.setIdentity(null, null);
+        expect(identity.label).toBe('the-hostname');
+        expect(identity.nameSource).toBe('default');
+
+        const written = JSON.parse(await readFile(join(home, 'endpoint.json'), 'utf8')) as Record<string, unknown>;
+        expect(written.name).toBeUndefined();
+        expect(written.icon).toBeUndefined();
+    });
+
+    test('every connected client hears the new name, and one that left hears nothing', async () => {
+        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        const first: unknown[] = [];
+        const second: unknown[] = [];
+        identity.subscribe('c1', (event) => first.push(event));
+        const unsubscribe = identity.subscribe('c2', (event) => second.push(event));
+
+        await identity.setIdentity('Studio', null);
+        expect(first).toEqual([{ event: 'endpoint.changed', payload: { id: identity.id, label: 'Studio', nameSource: 'chosen', icon: null } }]);
+        expect(second).toHaveLength(1);
+
+        unsubscribe();
+        await identity.setIdentity('Studio again', null);
+        expect(first).toHaveLength(2);
+        expect(second).toHaveLength(1);
+    });
+
+    test('a name or an icon that will not read is dropped, and the machine keeps its id', async () => {
+        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        const written = JSON.parse(await readFile(join(home, 'endpoint.json'), 'utf8')) as Record<string, unknown>;
+        await writeFile(join(home, 'endpoint.json'), JSON.stringify({ ...written, name: '', icon: { kind: 'nonsense', value: 'x' } }));
+
+        const read = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        expect(read.id).toBe(identity.id);
+        expect(read.publicKey).toBe(identity.publicKey);
+        expect(read.label).toBe('the-hostname');
+        expect(read.icon).toBeNull();
+    });
+
     test('replaces a file that will not parse instead of failing to start', async () => {
         await writeFile(join(home, 'endpoint.json'), '{ not json');
         const minted = await readOrCreateEndpointIdentity(home);

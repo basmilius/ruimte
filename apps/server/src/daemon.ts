@@ -67,7 +67,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const binDir = compiled ? dirname(process.execPath) : resolve(import.meta.dir, '..', 'bin');
     const contextUrl = `http://127.0.0.1:${config.port}${CONTEXT_PATH}`;
 
-    const identity = await readOrCreateEndpointIdentity(config.home);
+    // `--label` and `RUIMTE_LABEL` are the name a machine nobody has named yet answers to; a name
+    // typed in a client wins over both, or renaming from another machine would not survive a restart.
+    const identity = await readOrCreateEndpointIdentity(config.home, config.label);
     const auth = new AuthStore(config.home);
     const handshake = new Handshake(auth, identity);
     const relay: Relay = new NoRelay();
@@ -118,10 +120,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerProjectHandlers(dispatcher, projects);
     registerDrawingHandlers(dispatcher, drawings);
     registerAuthHandlers(dispatcher, auth, {
-        id: identity.id,
-        label: config.label,
+        identity,
         version: VERSION,
-        publicKey: identity.publicKey,
         pairingUrl: () => pairingUrl(config.host, server.port ?? config.port, auth.issuePairingToken()),
         disconnect: (sessionId) => {
             handshake.revoke(sessionId);
@@ -160,7 +160,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
 
     const endpointInfo = (reachability: ClientAccess['reachability'], authenticated: boolean) => ({
         id: identity.id,
-        label: config.label,
+        label: identity.label,
+        nameSource: identity.nameSource,
+        icon: identity.icon,
         platform: process.platform,
         version: VERSION,
         reachability,
@@ -303,6 +305,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 const sink = ({ event, payload }: Parameters<Parameters<typeof manager.subscribe>[1]>[0]): void => sendEvent(client, event, payload);
                 const unsubscribeSessions = manager.subscribe(client.id, sink);
                 const unsubscribeChats = chats.subscribe(client.id, sink);
+                const unsubscribeIdentity = identity.subscribe(client.id, sink);
                 const unsubscribeProjects = projects.subscribe(client.id, sink);
                 const unsubscribeDrawings = drawings.subscribe(client.id, sink);
                 const unsubscribeFolders = folders.subscribe(client.id, sink);
@@ -315,6 +318,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                     unsubscribe() {
                         unsubscribeSessions();
                         unsubscribeChats();
+                        unsubscribeIdentity();
                         unsubscribeProjects();
                         unsubscribeDrawings();
                         unsubscribeFolders();

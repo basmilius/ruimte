@@ -6,15 +6,15 @@ import type { ServerFrame } from '@ruimte/contracts';
 import { AuthStore } from '../auth/auth-store.ts';
 import { generateKeyPair } from '../auth/keys.ts';
 import { Dispatcher, type ClientAccess, type ClientConnection } from '../dispatcher.ts';
+import { readOrCreateEndpointIdentity, type EndpointIdentity } from '../endpoint-id.ts';
 import { registerAuthHandlers } from './auth.ts';
 
 let home: string;
 let store: AuthStore;
+let identity: EndpointIdentity;
 let dispatcher: Dispatcher;
 let minted: number;
 let disconnected: string[];
-
-const DAEMON_KEY = generateKeyPair().publicKey;
 
 const client = (access?: ClientAccess): { connection: ClientConnection; frames: ServerFrame[] } => {
     const frames: ServerFrame[] = [];
@@ -39,14 +39,13 @@ const ask = async (access: ClientAccess | undefined, type: string, payload: unkn
 beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-auth-handlers-'));
     store = new AuthStore(home);
+    identity = await readOrCreateEndpointIdentity(home, 'box');
     dispatcher = new Dispatcher();
     minted = 0;
     disconnected = [];
     registerAuthHandlers(dispatcher, store, {
-        id: 'daemon-1',
-        label: 'box',
+        identity,
         version: '0.0.0',
-        publicKey: DAEMON_KEY,
         pairingUrl: () => `http://box:4210/pair#${store.issuePairingToken()}${minted++}`,
         disconnect: (sessionId) => disconnected.push(sessionId)
     });
@@ -82,7 +81,45 @@ describe('auth handlers', () => {
 
     test('endpoint.info carries the key a client pins the machine on', async () => {
         const info = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.info');
-        expect(info).toMatchObject({ ok: true, result: { id: 'daemon-1', publicKey: DAEMON_KEY, authenticated: true } });
+        expect(info).toMatchObject({ ok: true, result: { id: identity.id, publicKey: identity.publicKey, authenticated: true } });
+    });
+
+    test('a machine nobody has named answers to the name it started with', async () => {
+        const info = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.info');
+        expect(info).toMatchObject({ ok: true, result: { label: 'box', nameSource: 'default', icon: null } });
+    });
+
+    test('naming the machine answers with the new name and tells every other client', async () => {
+        const heard: unknown[] = [];
+        identity.subscribe('other-client', (event) => heard.push(event));
+
+        const set = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', {
+            name: 'The one under the desk',
+            icon: { kind: 'lucide', value: 'server' }
+        });
+        expect(set).toMatchObject({ ok: true, result: { label: 'The one under the desk', nameSource: 'chosen', icon: { kind: 'lucide', value: 'server' } } });
+        expect(heard).toEqual([
+            {
+                event: 'endpoint.changed',
+                payload: { id: identity.id, label: 'The one under the desk', nameSource: 'chosen', icon: { kind: 'lucide', value: 'server' } }
+            }
+        ]);
+
+        // A client that connects after the rename is told the same thing without asking for it.
+        const info = await ask({ reachability: 'loopback', sessionId: null }, 'endpoint.info');
+        expect(info).toMatchObject({ ok: true, result: { label: 'The one under the desk' } });
+    });
+
+    test('a null name hands the machine back to the one it started with', async () => {
+        await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: 'Renamed', icon: null });
+        const cleared = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: null, icon: null });
+        expect(cleared).toMatchObject({ ok: true, result: { label: 'box', nameSource: 'default' } });
+    });
+
+    test('a name nobody could read is refused before it reaches the file', async () => {
+        const empty = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: '', icon: null });
+        expect(empty).toMatchObject({ ok: false });
+        expect(identity.label).toBe('box');
     });
 
     test('a paired client hangs a key on its own session; a loopback one has no session to hang it on', async () => {
