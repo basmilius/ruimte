@@ -27,7 +27,7 @@ import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { openFolderOn, openProject, reachEndpoint } from '@/project/open';
 import { revealNode, showView } from '@/project/views';
-import { appCommands, type Command } from '@/shell/commands';
+import { appCommands, OPENING_COMMAND_IDS, type Command } from '@/shell/commands';
 import {
     browseBack,
     browseMachines,
@@ -83,8 +83,14 @@ const FILE_DEBOUNCE_MS = 120;
 // Enough to recognize the file being looked for, few enough to leave room for what else matches.
 const FILE_RESULTS = 8;
 
+// What an empty palette shows of the two lists that have no natural end.
+const OPENING_RECENTS = 5;
+const OPENING_JUMPS = 8;
+
 interface Entry extends Command {
     icon: React.ReactNode;
+    /* Set on a jump row for a node of the view on screen; an empty palette offers only those. */
+    here?: boolean;
     /* Pushed to the end of the row, where a state belongs: the hint next to a name is about the name. */
     trailing?: React.ReactNode;
     section: 'Recent' | 'Jump to' | 'Files' | 'Views' | 'Projects' | 'Actions' | 'Folders' | 'Machines';
@@ -316,6 +322,12 @@ export function CommandPalette() {
         [transport, browseStartFolder, commitBrowse, cwdFor, navigateTo]
     );
 
+    /* The arrow keys move a highlight, not the scroll: without this the list stays where it is and
+       the selection walks off the bottom of it. `nearest` keeps a click from jumping the list. */
+    useEffect(() => {
+        document.getElementById(LIST_ID)?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' });
+    });
+
     useEffect(() => {
         /* A folders step that has not been anywhere yet is one the palette still has to open. The
            request goes out here rather than where the step was made, because that is a render.
@@ -468,6 +480,7 @@ export function CommandPalette() {
                     label: node.title,
                     hint: here ? node.kind : `${node.kind} in ${view.name}`,
                     icon: KIND_ICON[node.kind],
+                    here,
                     section: 'Jump to' as const,
                     run: () => revealNode(node.id)
                 }));
@@ -526,14 +539,16 @@ export function CommandPalette() {
             section
         });
         if (query === '') {
-            // An empty palette is the one moment there is room to offer what you reach for most.
+            /* Nothing typed is not the moment for the whole catalog: what was reached for last, the
+               nodes of the canvas in front of you, the views of this project, and the few actions
+               that earn a place. Everything else answers to a query. */
             const split = sortByRecency(commands, recents);
+            const featured = split.rest.filter((command) => OPENING_COMMAND_IDS.includes(command.id));
             return [
-                ...split.recent.map((command) => asEntry(command, 'Recent')),
-                ...jumps,
+                ...split.recent.slice(0, OPENING_RECENTS).map((command) => asEntry(command, 'Recent')),
+                ...jumps.filter((entry) => entry.here === true).slice(0, OPENING_JUMPS),
                 ...viewSwitches,
-                ...switches,
-                ...split.rest.map((command) => asEntry(command, 'Actions'))
+                ...featured.map((command) => asEntry(command, 'Actions'))
             ];
         }
         /* Every section is filtered on its own, so the file results can keep their place in the
@@ -659,7 +674,9 @@ export function CommandPalette() {
                 <Dialog.Popup
                     /* Wider while searching in files: a hit is read in the lines around it, and those
                        lines are source, which does not fold. */
-                    className={clsx('dialog-popup top-[18vh]', grepping ? 'w-[760px]' : 'w-[576px]')}
+                    /* The one surface that does not sit in the middle: it grows and shrinks with
+                       every keystroke, and a centered list would walk up the screen while you type. */
+                    className={clsx('dialog-popup top-[18vh] [translate:-50%_0]', grepping ? 'w-[760px]' : 'w-[576px]')}
                     initialFocus={inputRef}
                 >
                     <div className="flex items-center gap-2 border-b border-border px-3">

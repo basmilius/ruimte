@@ -53,19 +53,23 @@ export const addNodeAtCenter = (kind: NodeKind, options?: AddNodeOptions): strin
  * One command per agent CLI per kind of node, from the daemon's catalog. A CLI that is not there
  * keeps its row and opens the Agents settings, so the palette explains instead of failing.
  */
-const agentCommands = (target: AgentTarget, providers: ProviderInfo[]): Command[] =>
+const agentCommands = (target: AgentTarget, providers: ProviderInfo[], onCanvas: boolean): Command[] =>
     providers
         .filter((provider) => provider.capabilities[target])
         .flatMap((provider) => {
             const missing = (): void => useUi.getState().setSettings({ open: true, section: 'agents' });
             return [
-                {
-                    id: `agent-${target}-${provider.kind}`,
-                    label: `New ${provider.name} ${target}`,
-                    hint: provider.installed ? undefined : 'Not installed',
-                    agent: provider.kind,
-                    run: () => (provider.installed ? void addAgentNode(target, provider, centerWorld()) : missing())
-                },
+                ...(onCanvas
+                    ? [
+                          {
+                              id: `agent-${target}-${provider.kind}`,
+                              label: `New ${provider.name} ${target}`,
+                              hint: provider.installed ? undefined : 'Not installed',
+                              agent: provider.kind,
+                              run: () => (provider.installed ? void addAgentNode(target, provider, centerWorld()) : missing())
+                          }
+                      ]
+                    : []),
                 {
                     id: `agent-view-${target}-${provider.kind}`,
                     label: `New ${provider.name} ${target} view`,
@@ -97,6 +101,13 @@ const moveNodeCommands = (): Command[] => {
         }));
 };
 
+/*
+ * What an empty palette offers: the handful of rows worth a place before anything is typed. The
+ * rest of the list is one keystroke away, and a palette that opens on forty rows is a list to read
+ * rather than a place to start typing.
+ */
+export const OPENING_COMMAND_IDS: readonly string[] = ['add-chat', 'add-terminal', 'view-new', 'find-in-files', 'open-folder', 'usage', 'settings'];
+
 /* Everything the palette can do besides jumping to a node. One list, so the dock and the keys agree. */
 export const appCommands = (): Command[] => {
     const canvas = useCanvas.getState();
@@ -106,6 +117,9 @@ export const appCommands = (): Command[] => {
     const activeView = views.find((view) => view.id === activeViewId) ?? null;
     const selected = canvas.selection.length === 1 ? canvas.nodes[canvas.selection[0]!] : undefined;
     const drawing = activeView !== null && isDrawingView(activeView);
+    /* A row that writes into a canvas is offered only while one is on screen. In a chat or a
+       terminal view "New note" and "Zoom to fit" would act on a surface nobody is looking at. */
+    const onCanvas = activeView !== null && isCanvasView(activeView);
     const project = useProject.getState().current !== null;
     return [
         { id: 'open-folder', label: 'Open a folder as a project', run: () => useUi.getState().openFolderBrowser() },
@@ -147,31 +161,53 @@ export const appCommands = (): Command[] => {
                   ...(activeView && isSessionView(activeView)
                       ? [{ id: 'view-demote', label: 'Put on canvas', hint: activeView.name, run: () => void putOnCanvas(activeView.id) }]
                       : []),
-                  ...moveNodeCommands(),
-                  { id: 'add-terminal', label: 'New terminal', shortcut: '⌥T', run: () => void addNodeAtCenter('terminal') },
-                  { id: 'add-chat', label: 'New chat', shortcut: '⌥C', run: () => void addNodeAtCenter('chat') },
-                  ...agentCommands('chat', providersOf(currentEndpointId()).providers),
-                  ...agentCommands('terminal', providersOf(currentEndpointId()).providers),
-                  { id: 'add-browser', label: 'New browser', shortcut: '⌥B', run: () => void addNodeAtCenter('browser') },
-                  { id: 'add-group', label: 'New group', shortcut: '⌥G', run: () => void addNodeAtCenter('group') },
-                  { id: 'add-note', label: 'New note', shortcut: '⌥N', run: () => void addNodeAtCenter('note') },
-                  {
-                      id: 'group-selection',
-                      label: 'Group selection',
-                      hint: canvas.selection.length === 0 ? 'Select nodes first' : undefined,
-                      shortcut: '⌘G',
-                      run: () => void useCanvas.getState().groupSelection()
-                  },
-                  { id: 'add-text', label: 'New text', run: () => void useCanvas.getState().addText(centerWorld()) },
-                  { id: 'layout-save', label: 'Save layout as', hint: 'Remember where everything sits', run: () => useUi.getState().setLayoutDialogOpen(true) },
-                  ...canvas.layouts.flatMap((layout) => [
-                      { id: `layout-apply-${layout.name}`, label: `Apply layout: ${layout.name}`, run: () => useCanvas.getState().applyLayout(layout.name) },
-                      { id: `layout-delete-${layout.name}`, label: `Delete layout: ${layout.name}`, run: () => useCanvas.getState().deleteLayout(layout.name) }
-                  ]),
+                  ...agentCommands('chat', providersOf(currentEndpointId()).providers, onCanvas),
+                  ...agentCommands('terminal', providersOf(currentEndpointId()).providers, onCanvas),
+                  ...(onCanvas
+                      ? [
+                            ...moveNodeCommands(),
+                            { id: 'add-terminal', label: 'New terminal', shortcut: '⌥T', run: () => void addNodeAtCenter('terminal') },
+                            { id: 'add-chat', label: 'New chat', shortcut: '⌥C', run: () => void addNodeAtCenter('chat') },
+                            { id: 'add-browser', label: 'New browser', shortcut: '⌥B', run: () => void addNodeAtCenter('browser') },
+                            { id: 'add-group', label: 'New group', shortcut: '⌥G', run: () => void addNodeAtCenter('group') },
+                            { id: 'add-note', label: 'New note', shortcut: '⌥N', run: () => void addNodeAtCenter('note') },
+                            {
+                                id: 'group-selection',
+                                label: 'Group selection',
+                                hint: canvas.selection.length === 0 ? 'Select nodes first' : undefined,
+                                shortcut: '⌘G',
+                                run: () => void useCanvas.getState().groupSelection()
+                            },
+                            { id: 'add-text', label: 'New text', run: () => void useCanvas.getState().addText(centerWorld()) },
+                            {
+                                id: 'layout-save',
+                                label: 'Save layout as',
+                                hint: 'Remember where everything sits',
+                                run: () => useUi.getState().setLayoutDialogOpen(true)
+                            },
+                            ...canvas.layouts.flatMap((layout) => [
+                                {
+                                    id: `layout-apply-${layout.name}`,
+                                    label: `Apply layout: ${layout.name}`,
+                                    run: () => useCanvas.getState().applyLayout(layout.name)
+                                },
+                                {
+                                    id: `layout-delete-${layout.name}`,
+                                    label: `Delete layout: ${layout.name}`,
+                                    run: () => useCanvas.getState().deleteLayout(layout.name)
+                                }
+                            ]),
+                            { id: 'lock', label: anyLocked ? 'Unlock everything' : 'Lock everything', run: () => useCanvas.getState().setAllLocks(!anyLocked) }
+                        ]
+                      : []),
                   // A drawing has a camera of its own, so the same three rows act on whichever is on screen.
-                  { id: 'fit', label: 'Zoom to fit', shortcut: '⇧1', run: () => zoomTarget().fitAll() },
-                  { id: 'zoom-selection', label: 'Zoom to selection', shortcut: '⇧2', run: () => zoomTarget().zoomToSelection() },
-                  { id: 'zoom-reset', label: 'Zoom to 100%', shortcut: '⌘0', run: () => zoomTarget().zoomTo(1) },
+                  ...(onCanvas || drawing
+                      ? [
+                            { id: 'fit', label: 'Zoom to fit', shortcut: '⇧1', run: () => zoomTarget().fitAll() },
+                            { id: 'zoom-selection', label: 'Zoom to selection', shortcut: '⇧2', run: () => zoomTarget().zoomToSelection() },
+                            { id: 'zoom-reset', label: 'Zoom to 100%', shortcut: '⌘0', run: () => zoomTarget().zoomTo(1) }
+                        ]
+                      : []),
                   ...(drawing && activeView
                       ? [
                             { id: 'drawing-show-on-canvas', label: 'Show the drawing on canvas', run: () => void showOnCanvas(activeView.id) },
@@ -180,8 +216,7 @@ export const appCommands = (): Command[] => {
                             { id: 'drawing-copy-svg', label: 'Copy the drawing as SVG', run: () => void copyDrawingSvg() },
                             { id: 'drawing-save-svg', label: 'Save the drawing as SVG', run: () => void saveDrawingSvg() }
                         ]
-                      : []),
-                  { id: 'lock', label: anyLocked ? 'Unlock everything' : 'Lock everything', run: () => useCanvas.getState().setAllLocks(!anyLocked) }
+                      : [])
               ]
             : []),
         { id: 'usage', label: 'Usage', hint: 'Cost, tokens and limits of both CLIs', run: () => useUi.getState().togglePage('usage') },
