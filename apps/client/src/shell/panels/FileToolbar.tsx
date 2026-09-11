@@ -1,18 +1,9 @@
 import type { ReactNode } from 'react';
 import { Menu } from '@base-ui-components/react/menu';
-import { Copy, CornerUpRight, Globe, ListX, MoreHorizontal, Pin, PinOff, RefreshCw, WrapText, X, type LucideIcon } from 'lucide-react';
+import { MoreHorizontal, WrapText, type LucideIcon } from 'lucide-react';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
 import { useFileActions } from '@/shell/panels/file-actions';
-import { isHtmlName } from '@/shell/panels/file-kind';
-import { localFileUrl } from '@/shell/panels/file-url';
-import { relativeTo } from '@/shell/panels/files-tree';
-import { addNodeAtCenter } from '@/shell/commands';
-import { useCanvas } from '@/state/canvas';
-import { useFiles } from '@/state/files';
-import { useProject } from '@/state/project';
-import { fileManagerName, useServer } from '@/state/server';
-import { transport } from '@/transport';
-import { MENU_SEPARATOR } from '@/ui/classes';
+import { FileMenuItems } from '@/shell/panels/FileMenuItems';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
@@ -72,42 +63,17 @@ export function DisabledWrapToggle() {
     return <FileToolbarToggle icon={WrapText} label="Wrap long lines (source view only)" active={false} disabled onClick={() => undefined} />;
 }
 
-const copyText = (text: string): void => {
-    void navigator.clipboard.writeText(text).catch(() => undefined);
-};
-
 /*
- * Everything the open file can be asked, in one menu at the end of the bar: what the Files panel
- * offers a row (reveal, copy a path), what the tab strip offers a tab, and a fresh read. The file
- * comes from the viewer through `useFileActions`, so no renderer has to hand it over.
+ * Everything the open file can be asked, in one menu at the end of the bar. The items are the ones
+ * a right click on the tab offers as well; the file comes from the viewer through `useFileActions`,
+ * so no renderer has to hand it over.
  */
 function FileMenu() {
     const actions = useFileActions();
-    const platform = useServer((s) => s.platform);
-    const folder = useProject((s) => s.current?.folder ?? null);
-    const pinned = useFiles((s) => s.tabs.some((tab) => tab.key === actions?.key && tab.pinned));
-    const hasOthers = useFiles((s) => s.tabs.some((tab) => tab.key !== actions?.key));
 
     if (!actions) {
         return null;
     }
-
-    const { key, path, name, refresh } = actions;
-
-    const openInBrowserNode = (): void => {
-        const id = addNodeAtCenter('browser');
-        useCanvas.getState().updateNode(id, { url: localFileUrl(path) });
-    };
-
-    const closeOthers = (): void => {
-        const files = useFiles.getState();
-        // A pinned tab goes with the rest: the person asked for this file and nothing else.
-        for (const tab of files.tabs) {
-            if (tab.key !== key) {
-                files.close(tab.key);
-            }
-        }
-    };
 
     return (
         <Menu.Root>
@@ -119,40 +85,7 @@ function FileMenu() {
             <Menu.Portal>
                 <Menu.Positioner className="z-[var(--z-popup)]" side="bottom" align="end" sideOffset={6}>
                     <Menu.Popup className="menu-popup">
-                        <Menu.Item
-                            className="menu-item"
-                            onClick={() => {
-                                void transport.request('fs.reveal', { path }).catch(() => undefined);
-                            }}
-                        >
-                            <Icon icon={CornerUpRight} size={14} /> Reveal in {fileManagerName(platform)}
-                        </Menu.Item>
-                        {isHtmlName(name) && (
-                            <Menu.Item className="menu-item" onClick={openInBrowserNode}>
-                                <Icon icon={Globe} size={14} /> Open in a browser node
-                            </Menu.Item>
-                        )}
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        <Menu.Item className="menu-item" onClick={() => copyText(path)}>
-                            <Icon icon={Copy} size={14} /> Copy path
-                        </Menu.Item>
-                        <Menu.Item className="menu-item" disabled={folder === null} onClick={() => copyText(relativeTo(folder ?? '', path))}>
-                            <Icon icon={Copy} size={14} /> Copy relative path
-                        </Menu.Item>
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        <Menu.Item className="menu-item" onClick={refresh}>
-                            <Icon icon={RefreshCw} size={14} /> Refresh
-                        </Menu.Item>
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        <Menu.Item className="menu-item" onClick={() => useFiles.getState().setPinned(key, !pinned)}>
-                            <Icon icon={pinned ? PinOff : Pin} size={14} /> {pinned ? 'Unpin tab' : 'Pin tab'}
-                        </Menu.Item>
-                        <Menu.Item className="menu-item" onClick={() => useFiles.getState().close(key)}>
-                            <Icon icon={X} size={14} /> Close tab <kbd>⌘W</kbd>
-                        </Menu.Item>
-                        <Menu.Item className="menu-item" disabled={!hasOthers} onClick={closeOthers}>
-                            <Icon icon={ListX} size={14} /> Close other tabs
-                        </Menu.Item>
+                        <FileMenuItems tabKey={actions.key} onRefresh={actions.refresh} />
                     </Menu.Popup>
                 </Menu.Positioner>
             </Menu.Portal>

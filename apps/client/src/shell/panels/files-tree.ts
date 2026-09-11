@@ -35,6 +35,11 @@ export const absoluteOf = (root: string, treePath: string): string => {
     return relative === '' ? withoutTrailingSeparator(root) : `${withoutTrailingSeparator(root)}${separator}${relative}`;
 };
 
+/* A path the files panel can bring into view is one inside the folder that panel lists; a worktree
+   or another checkout on the same machine is not. */
+export const revealableInFiles = (folder: string | null, path: string): boolean =>
+    folder !== null && (path === folder || path.startsWith(`${folder}/`) || path.startsWith(`${folder}\\`));
+
 /* The tree marks a directory with a trailing slash, on a row and in a git status entry alike. */
 export const isDirectoryPath = (treePath: string): boolean => treePath.endsWith('/');
 

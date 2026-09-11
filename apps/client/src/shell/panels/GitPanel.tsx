@@ -12,6 +12,7 @@ import { GitChoice, GitPrompt, type Choice } from '@/shell/panels/GitDialogs';
 import { GitFileList } from '@/shell/panels/GitFileList';
 import { isUnmergedRefusal, pushButton } from '@/shell/panels/git-actions';
 import { activeDiffPath, allDirs } from '@/shell/panels/git-tree';
+import { stageFiles } from '@/shell/panels/stage-files';
 import { useGitActions } from '@/shell/panels/use-git-actions';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { useCanvas } from '@/state/canvas';
@@ -191,16 +192,10 @@ export function GitPanel() {
     const stage = (paths: string[], staged: boolean): void => {
         if (cwd !== null && paths.length > 0) {
             setBusy(true);
-            transport
-                .request('git.stage', { cwd, paths, staged })
-                .catch((error: unknown) => {
-                    const message = error instanceof Error ? error.message : 'That did not work.';
-                    useToasts.getState().show({ title: staged ? 'Staging failed' : 'Unstaging failed', description: message, kind: 'error', output: message });
-                })
-                .finally(() => {
-                    setBusy(false);
-                    void refresh();
-                });
+            void stageFiles(cwd, paths, staged).finally(() => {
+                setBusy(false);
+                void refresh();
+            });
         }
     };
 
@@ -232,6 +227,13 @@ export function GitPanel() {
     const openDiff = (file: GitFile): void => {
         if (status?.root) {
             useFiles.getState().open(`${status.root}/${file.path}`, tabLimit, { kind: 'diff', cwd: status.root, scope, staged: file.state === 'staged' });
+        }
+    };
+
+    /* The file next to its diff, for a change a person wants to read whole rather than as a patch. */
+    const openFile = (file: GitFile): void => {
+        if (status?.root) {
+            useFiles.getState().open(`${status.root}/${file.path}`, tabLimit);
         }
     };
 
@@ -380,6 +382,7 @@ export function GitPanel() {
                     reading={reading}
                     busy={busy}
                     onOpen={openDiff}
+                    onOpenFile={openFile}
                     onStage={stage}
                     onDiscard={(file) => setDialog({ kind: 'discard', file })}
                 />

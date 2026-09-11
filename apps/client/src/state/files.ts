@@ -87,6 +87,13 @@ export const pinTab = (state: TabState, key: string, pinned: boolean): TabState 
     active: state.active
 });
 
+export interface RevealRequest {
+    /* Absolute on the daemon's machine, the same path a tab carries. */
+    path: string;
+    /* Goes up on every ask, so revealing the same file twice is two reveals and not one. */
+    nonce: number;
+}
+
 interface FilesStore extends TabState {
     /* Whose tabs these are; a canvas that is not open has none. */
     projectId: string | null;
@@ -95,11 +102,17 @@ interface FilesStore extends TabState {
     focusRequest: number;
     /* The directories the tree has open, the way the tree names one: relative, POSIX, trailing slash. */
     expandedDirs: string[];
+    /* What the files panel was asked to bring into view, from a menu somewhere else in the app. */
+    reveal: RevealRequest | null;
     load(projectId: string | null, state: TabState & { expandedDirs: string[] }): void;
     open(path: string, limit: number, view?: FileTabView): void;
     close(key: string): void;
+    closeOthers(key: string): void;
+    closeAll(): void;
     setPinned(key: string, pinned: boolean): void;
     setScope(key: string, scope: GitDiffScope): void;
+    setStaged(key: string, staged: boolean): void;
+    revealInFiles(path: string): void;
     activate(key: string): void;
     setExpandedDirs(dirs: string[]): void;
 }
@@ -115,8 +128,9 @@ export const useFiles = create<FilesStore>((set, get) => ({
     tabs: [],
     active: null,
     expandedDirs: [],
+    reveal: null,
     load(projectId, state) {
-        set({ projectId, tabs: state.tabs, active: state.active, expandedDirs: state.expandedDirs });
+        set({ projectId, tabs: state.tabs, active: state.active, expandedDirs: state.expandedDirs, reveal: null });
     },
     /* A tab and the panel that draws it are one thing to the person opening a file: the first open
        brings the preview up and the last close takes it away again. */
@@ -131,11 +145,34 @@ export const useFiles = create<FilesStore>((set, get) => ({
             useUi.getState().setPreviewOpen(false);
         }
     },
+    /* A pinned tab goes with the rest: the person asked for this one file and nothing else. */
+    closeOthers(key) {
+        for (const tab of get().tabs) {
+            if (tab.key !== key) {
+                get().close(tab.key);
+            }
+        }
+    },
+    closeAll() {
+        for (const tab of get().tabs) {
+            get().close(tab.key);
+        }
+    },
     setPinned(key, pinned) {
         set(pinTab(get(), key, pinned));
     },
     setScope(key, scope) {
         set({ tabs: get().tabs.map((tab) => (tab.key === key && tab.view ? { ...tab, view: { ...tab.view, scope } } : tab)) });
+    },
+    /* Staging a file from its own diff moves the tab to the side of the index it now sits on. */
+    setStaged(key, staged) {
+        set({ tabs: get().tabs.map((tab) => (tab.key === key && tab.view ? { ...tab, view: { ...tab.view, staged } } : tab)) });
+    },
+    /* The files panel listens for this; it comes up if it was closed, the way opening a file brings
+       the preview up. */
+    revealInFiles(path) {
+        useUi.getState().setPanel({ open: true, kind: 'files' });
+        set({ reveal: { path, nonce: (get().reveal?.nonce ?? 0) + 1 } });
     },
     activate(key) {
         set({ active: key });

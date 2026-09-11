@@ -19,6 +19,7 @@ import {
     ChevronsUpDown,
     Copy,
     CornerUpRight,
+    FileDiff,
     FileSearch,
     Folder,
     FolderOpen,
@@ -45,6 +46,7 @@ import {
     type EntryCache
 } from '@/shell/panels/files-tree';
 import { useFiles } from '@/state/files';
+import { useGit } from '@/state/git';
 import { useGitStatus } from '@/state/git-watch';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
@@ -52,6 +54,7 @@ import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
 import { MENU_SEPARATOR } from '@/ui/classes';
+import { copyText } from '@/ui/clipboard';
 import { EmptyState } from '@/ui/EmptyState';
 import { FILE_TREE_ICONS } from '@/ui/file-icon';
 import { Icon } from '@/ui/Icon';
@@ -81,10 +84,6 @@ const TREE_CSS = `
 `;
 
 const EMPTY_CACHE: EntryCache = new Map();
-
-const copyText = (text: string): void => {
-    void navigator.clipboard.writeText(text).catch(() => undefined);
-};
 
 /* The tree's own handle type is a union whose two halves TypeScript cannot tell apart by method. */
 const directoryHandle = (model: FileTreeModel, path: string): FileTreeDirectoryHandle | null => {
@@ -134,8 +133,11 @@ export function FilesPanel() {
     const selectionRef = useRef<readonly string[]>([]);
     /* The file the tree last followed the preview to, so a click of the person's own is never undone. */
     const revealedRef = useRef<string | null>(null);
-    const menuPathRef = useRef<string | null>(null);
+    const [menuPath, setMenuPath] = useState<string | null>(null);
+    /* The reveal that was answered, so a listing arriving later does not scroll the tree again. */
+    const answeredReveal = useRef(0);
     const cache = listed.folder === folder ? listed.byDir : EMPTY_CACHE;
+    const reveal = useFiles((s) => s.reveal);
 
     const { model } = useFileTree({
         paths: [],
@@ -175,6 +177,16 @@ export function FilesPanel() {
        the panel has anything to show. */
     const treeInput = useMemo(() => buildTreeInput(folder ?? '', cache, showHidden), [cache, folder, showHidden]);
     const changed = useMemo(() => (folder === null ? [] : gitStatusEntries(folder, gitStatus?.root ?? null, gitStatus?.files ?? [])), [folder, gitStatus]);
+    /* Which side of git the row the menu is on sits on, or null for a file git has nothing to say
+       about; it is what decides whether that menu offers the diff. */
+    const changedStatus = useMemo(() => {
+        const root = gitStatus?.root ?? null;
+        if (folder === null || menuPath === null || root === null || isDirectoryPath(menuPath)) {
+            return null;
+        }
+        const repoPath = relativeTo(root, absoluteOf(folder, menuPath));
+        return gitStatus?.files.find((file) => file.path === repoPath)?.state ?? null;
+    }, [folder, gitStatus, menuPath]);
 
     const load = useCallback(
         async (dir: string): Promise<void> => {
@@ -275,30 +287,62 @@ export function FilesPanel() {
     }, [folder, load, model]);
 
     /*
+     * Brings one row into view: the directories on the way to it open, it becomes the selection, and
+     * the tree scrolls only as far as it has to. False while the row is not there yet, which is
+     * before the listings a directory on the way asked for have landed.
+     */
+    const bringIntoView = useCallback(
+        (treePath: string): boolean => {
+            for (const dir of ancestorDirsOf(treePath)) {
+                directoryHandle(model, dir)?.expand();
+            }
+            // A directory is a row of its own, which the tree names with a trailing slash.
+            const path = model.getItem(treePath) !== null ? treePath : `${treePath}/`;
+            if (model.getItem(path) === null) {
+                return false;
+            }
+            // The tree selects per item, so what was selected has to let go first.
+            for (const selected of model.getSelectedPaths()) {
+                model.getItem(selected)?.deselect();
+            }
+            model.getItem(path)?.select();
+            model.scrollToPath(path, { offset: 'nearest' });
+            return true;
+        },
+        [model]
+    );
+
+    /*
      * The tree follows the preview: the file of the active tab is the selected row. It runs on a tab
-     * change and on the listings that a reveal asks for, never on a selection the person makes here,
-     * and it scrolls only far enough to bring the row into view.
+     * change and on the listings that a reveal asks for, never on a selection the person makes here.
      */
     useEffect(() => {
         if (!folder || searching || activeFile === null || revealedRef.current === activeFile) {
             return;
         }
-        const treePath = relativeTo(folder, activeFile);
-        for (const dir of ancestorDirsOf(treePath)) {
-            directoryHandle(model, dir)?.expand();
+        if (bringIntoView(relativeTo(folder, activeFile))) {
+            revealedRef.current = activeFile;
         }
-        // The row is only there once the directories on the way to it have been listed.
-        if (model.getItem(treePath) === null) {
+    }, [activeFile, bringIntoView, cache, folder, searching]);
+
+    /*
+     * A reveal asked for somewhere else in the app: a menu in the git panel, on a tab, or in the
+     * preview's toolbar. The filter goes first, since a row a filter hides cannot be shown, and the
+     * ask is answered once however many listings it takes to get there.
+     */
+    useEffect(() => {
+        if (!folder || reveal === null || answeredReveal.current === reveal.nonce) {
             return;
         }
-        revealedRef.current = activeFile;
-        // The tree selects per item, so what was selected has to let go first.
-        for (const selected of model.getSelectedPaths()) {
-            model.getItem(selected)?.deselect();
+        if (searching) {
+            setQuery('');
+            return;
         }
-        model.getItem(treePath)?.select();
-        model.scrollToPath(treePath, { offset: 'nearest' });
-    }, [activeFile, cache, folder, model, searching]);
+        if (bringIntoView(relativeTo(folder, reveal.path))) {
+            answeredReveal.current = reveal.nonce;
+            revealedRef.current = reveal.path;
+        }
+    }, [bringIntoView, cache, folder, reveal, searching]);
 
     useEffect(() => {
         if (!folder || !searching) {
@@ -373,9 +417,18 @@ export function FilesPanel() {
 
     /* Every menu item acts on the row that was right-clicked, absolute path and tree path both. */
     const onMenuPath = (act: (absolute: string, treePath: string) => void) => (): void => {
-        const treePath = menuPathRef.current;
-        if (folder && treePath) {
-            act(absoluteOf(folder, treePath), treePath);
+        if (folder && menuPath) {
+            act(absoluteOf(folder, menuPath), menuPath);
+        }
+    };
+
+    /* The diff of the row the menu is on, which only a file git says changed has. */
+    const openChanges = (): void => {
+        const root = gitStatus?.root ?? null;
+        if (folder && menuPath && root !== null) {
+            const file = absoluteOf(folder, menuPath);
+            const staged = changedStatus === 'staged';
+            useFiles.getState().open(file, tabLimit, { kind: 'diff', cwd: root, scope: useGit.getState().scope, staged });
         }
     };
 
@@ -484,9 +537,10 @@ export function FilesPanel() {
                            distance from the toolbar instead of sliding under it. */
                         className="min-h-0 grow overflow-hidden pt-2"
                         onContextMenu={(event) => {
-                            menuPathRef.current = rowPathOf(event);
-                            if (menuPathRef.current) {
-                                activeModel.getItem(menuPathRef.current)?.select();
+                            const path = rowPathOf(event);
+                            setMenuPath(path);
+                            if (path) {
+                                activeModel.getItem(path)?.select();
                             }
                         }}
                     >
@@ -505,6 +559,11 @@ export function FilesPanel() {
                                 <ContextMenu.Item className="menu-item" onClick={onMenuPath((_absolute, treePath) => openPath(treePath))}>
                                     <Icon icon={FolderOpen} size={14} /> Open
                                 </ContextMenu.Item>
+                                {changedStatus !== null && (
+                                    <ContextMenu.Item className="menu-item" onClick={openChanges}>
+                                        <Icon icon={FileDiff} size={14} /> Open changes
+                                    </ContextMenu.Item>
+                                )}
                                 <ContextMenu.Item
                                     className="menu-item"
                                     onClick={onMenuPath((absolute) => {
@@ -512,6 +571,10 @@ export function FilesPanel() {
                                     })}
                                 >
                                     <Icon icon={CornerUpRight} size={14} /> Reveal in {fileManagerName(platform)}
+                                </ContextMenu.Item>
+                                <ContextMenu.Separator className={MENU_SEPARATOR} />
+                                <ContextMenu.Item className="menu-item" onClick={onMenuPath((absolute) => copyText(basenameOf(absolute)))}>
+                                    <Icon icon={Copy} size={14} /> Copy name
                                 </ContextMenu.Item>
                                 <ContextMenu.Item className="menu-item" onClick={onMenuPath((absolute) => copyText(absolute))}>
                                     <Icon icon={Copy} size={14} /> Copy path
