@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { forgetTicket, rememberTicket } from '@/endpoint/credentials';
-import { LOCAL_ENDPOINT_ID, parsePairingUrl, parseStoredEndpoints, socketUrlFor, useEndpoints, type Endpoint } from './endpoints';
+import { LOCAL_ENDPOINT_ID, endpointForDaemon, parsePairingUrl, parseStoredEndpoints, socketUrlFor, useEndpoints, type Endpoint } from './endpoints';
 
 const row = (id: string, overrides: Partial<Endpoint> = {}): Endpoint => ({
     id,
@@ -109,13 +109,15 @@ describe('rekeying an endpoint', () => {
     });
 
     test('the same daemon under two addresses ends up as one row, the one that just answered', () => {
-        useEndpoints.getState().add(row('daemon-a', { httpBaseUrl: 'http://old:4210', token: 'old' }));
+        useEndpoints.getState().add(row('daemon-a', { httpBaseUrl: 'http://old:4210', token: 'old', daemonPublicKey: 'pinned-key' }));
         useEndpoints.getState().add(row('192.168.1.9:4210', { daemonId: null, daemonPublicKey: null, httpBaseUrl: 'http://new:4210', token: 'new' }));
         useEndpoints.getState().rekeyEndpoint('192.168.1.9:4210', 'daemon-a');
 
         const rows = useEndpoints.getState().endpoints.filter((endpoint) => endpoint.id === 'daemon-a');
         expect(rows).toHaveLength(1);
         expect(rows[0]?.token).toBe('new');
+        // The row that held the id is gone, the daemon it pinned is the same machine.
+        expect(rows[0]?.daemonPublicKey).toBe('pinned-key');
     });
 
     test('the reserved local row and an unknown row are left alone', () => {
@@ -130,5 +132,32 @@ describe('rekeying an endpoint', () => {
         expect(useEndpoints.getState().mismatched['daemon-a']).toBe('daemon-b');
         useEndpoints.getState().remove('daemon-a');
         expect(useEndpoints.getState().mismatched).toEqual({});
+    });
+});
+
+describe('one row per daemon', () => {
+    beforeEach(() => {
+        useEndpoints.setState({ endpoints: [row(LOCAL_ENDPOINT_ID, { daemonId: null })], activeId: LOCAL_ENDPOINT_ID, mismatched: {} });
+    });
+
+    test('a machine that pairs again keeps its place in the list and takes the new address', () => {
+        useEndpoints.getState().add(row('daemon-a', { httpBaseUrl: 'http://old:4210', token: 'old', daemonPublicKey: 'pinned-key' }));
+        useEndpoints.getState().add(row('daemon-b'));
+        useEndpoints.getState().add(row('daemon-a', { httpBaseUrl: 'http://new:4210', token: 'new', daemonPublicKey: null }));
+
+        const rows = useEndpoints.getState().endpoints;
+        expect(rows.map((endpoint) => endpoint.id)).toEqual([LOCAL_ENDPOINT_ID, 'daemon-a', 'daemon-b']);
+        expect(rows[1]?.httpBaseUrl).toBe('http://new:4210');
+        expect(rows[1]?.token).toBe('new');
+        expect(rows[1]?.daemonPublicKey).toBe('pinned-key');
+    });
+
+    test('a daemon is found whatever address its row sits on, and never the row that is asking', () => {
+        useEndpoints.setState({ endpoints: [row(LOCAL_ENDPOINT_ID, { daemonId: 'daemon-here' }), row('daemon-a', { daemonId: null })] });
+
+        expect(endpointForDaemon('daemon-here')?.id).toBe(LOCAL_ENDPOINT_ID);
+        expect(endpointForDaemon('daemon-a')?.id).toBe('daemon-a');
+        expect(endpointForDaemon('daemon-a', 'daemon-a')).toBeNull();
+        expect(endpointForDaemon('daemon-c')).toBeNull();
     });
 });
