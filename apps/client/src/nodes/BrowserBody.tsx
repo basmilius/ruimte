@@ -30,7 +30,6 @@ import { BTN_GROUP } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
-import { Separator } from '@/ui/Separator';
 
 export const DEFAULT_URL = 'https://bas.dev';
 
@@ -119,7 +118,6 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                     </Tooltip>
                 )}
             </div>
-            <Separator />
             <div
                 className={clsx(
                     'relative flex h-7 grow items-center gap-2 overflow-hidden rounded-md border border-border-soft bg-surface-sunken px-2.5 text-xs text-text-muted',
@@ -157,7 +155,6 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                     rather than fills: it says the wait is the page's, not how far along it is. */}
                 {state?.loading && <div className="progress-line absolute inset-x-0 bottom-0" role="progressbar" aria-label="Loading the page" />}
             </div>
-            <Separator />
             <div className={BTN_GROUP}>
                 <Tooltip label="Open in the system browser" name>
                     <button className="icon-btn h-7 w-7" onClick={() => void desktop()?.openExternal(state?.url ?? url)}>
