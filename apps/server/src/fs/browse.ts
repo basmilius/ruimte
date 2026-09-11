@@ -19,6 +19,8 @@ export class BrowseError extends Error {
 interface BrowseOptions {
     home?: string;
     platform?: NodeJS.Platform;
+    /* Whether dot-folders come along even when the typed prefix does not start with a dot. */
+    hidden?: boolean;
 }
 
 const endsWithSeparator = (path: string): boolean => path.endsWith('/') || path.endsWith('\\');
@@ -48,7 +50,8 @@ export const resolveBrowsePath = (partialPath: string, cwd: string | undefined, 
 /*
  * Directories that complete what was typed. A path ending in a separator lists that directory;
  * otherwise the last segment filters its parent by prefix. Dot-folders stay hidden unless the
- * prefix itself starts with a dot. A directory that cannot be read lists as empty, not as an error.
+ * prefix itself starts with a dot or the caller asks for them. A directory that cannot be read
+ * lists as empty, not as an error, and `exists` is what tells that apart from one that is not there.
  */
 export const browseDirectories = async (partialPath: string, cwd: string | undefined, options: BrowseOptions = {}): Promise<FsBrowseResult> => {
     const trimmed = partialPath.trim();
@@ -60,9 +63,9 @@ export const browseDirectories = async (partialPath: string, cwd: string | undef
     try {
         names = (await readdir(parentPath, { withFileTypes: true })).map((entry) => ({ name: entry.name, isDirectory: entry.isDirectory() }));
     } catch {
-        return { parentPath, entries: [] };
+        return { parentPath: trimTrailing(parentPath), entries: [], exists: await isDirectory(parentPath) };
     }
-    const showHidden = prefix.startsWith('.');
+    const showHidden = options.hidden === true || prefix.startsWith('.');
     const matches = names
         .filter((entry) => entry.isDirectory && entry.name.toLowerCase().startsWith(prefix) && (showHidden || !entry.name.startsWith('.')))
         .sort((a, b) => a.name.localeCompare(b.name));
@@ -72,13 +75,24 @@ export const browseDirectories = async (partialPath: string, cwd: string | undef
             return { name: entry.name, fullPath, hasCanvas: await exists(join(fullPath, PROJECT_DIR, PROJECT_FILE)) };
         })
     );
-    return { parentPath: parentPath.endsWith(sep) && parentPath.length > 1 ? parentPath.slice(0, -1) : parentPath, entries };
+    return { parentPath: trimTrailing(parentPath), entries, exists: true };
 };
+
+/* A separator on the end says "list this", which the answer no longer means; the root keeps its. */
+const trimTrailing = (path: string): string => (path.endsWith(sep) && path.length > 1 ? path.slice(0, -1) : path);
 
 const exists = async (path: string): Promise<boolean> => {
     try {
         await stat(path);
         return true;
+    } catch {
+        return false;
+    }
+};
+
+const isDirectory = async (path: string): Promise<boolean> => {
+    try {
+        return (await stat(path)).isDirectory();
     } catch {
         return false;
     }

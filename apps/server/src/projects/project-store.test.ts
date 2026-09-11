@@ -301,6 +301,21 @@ describe('ProjectStore', () => {
         await expect(store.openProject({ folder: join(root, 'nope') })).rejects.toMatchObject({ code: 'folder-not-found' });
         await expect(store.openProject({ projectId: 'nope' })).rejects.toMatchObject({ code: 'project-not-found' });
     });
+
+    test('createFolder makes every missing folder on the way and opens the last one', async () => {
+        const deep = join(root, 'a', 'b', 'c');
+        const opened = await store.openProject({ folder: deep, createFolder: true });
+        expect(opened.summary.folder).toBe(deep);
+        expect(opened.summary.name).toBe('c');
+        expect(await readFile(documentPathInFolder(deep), 'utf8')).toContain('"version": 2');
+    });
+
+    test('createFolder onto a file leaves the file alone and still reads as no folder', async () => {
+        const file = join(root, 'notes.txt');
+        await writeFile(file, 'keep me');
+        await expect(store.openProject({ folder: file, createFolder: true })).rejects.toMatchObject({ code: 'folder-not-found' });
+        expect(await readFile(file, 'utf8')).toBe('keep me');
+    });
 });
 
 describe('portable paths', () => {

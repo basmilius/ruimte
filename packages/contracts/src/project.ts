@@ -390,7 +390,10 @@ export const ProjectOpenPayloadSchema = z.object({
     projectId: ProjectIdSchema.optional(),
     folder: z.string().optional(),
     name: z.string().optional(),
-    color: z.string().optional()
+    color: z.string().optional(),
+    /* Makes the folder, and every missing folder above it, when nothing is there yet. Only the
+       folder picker asks for this; every other caller opens what already exists. */
+    createFolder: z.boolean().optional()
 });
 export type ProjectOpenPayload = z.infer<typeof ProjectOpenPayloadSchema>;
 
