@@ -1316,6 +1316,13 @@ test.skipIf(!docker)('a paired container daemon keeps its id across a restart', 
   phase 1 makes it visibly unsupported by giving them the same id.
 - Cross-machine drag and drop of a node, and an edge between a node on one machine and a node on
   another. Both are interesting and neither is designed.
+- **A node that runs on a machine other than its project's.** Bas named the case on 2026-09-11: a
+  project on a Linux box that needs a Mac to build an iOS app, borrowing that machine when it is
+  available. Everything up to phase 7 assumes one project, one machine, and this breaks that
+  assumption rather than extending it. It would need a node to carry an endpoint of its own, a cwd
+  that means something on the borrowed machine (a checkout there, or a mount), the file panel and
+  the git panel to follow the node instead of the project, and the context edges of question 8. It
+  is a feature for later, written down here so the assumption it breaks is on record.
 
 ## 7. File index for the implementation agent
 
@@ -1369,7 +1376,7 @@ Changed, per phase:
 
 ## 8. Open questions for Bas
 
-Bas answered questions 3, 4, 5 and 6 on 2026-09-11:
+Bas answered questions 3, 4, 5, 6, 7 and 8 on 2026-09-11:
 
 - **Question 3**: a machine that is not connected still lists its projects from a remembered list,
   shown as unavailable until it answers.
@@ -1381,6 +1388,31 @@ Bas answered questions 3, 4, 5 and 6 on 2026-09-11:
   the work is on is said by opening a project (`openProject(endpointId, projectId)`) and by the
   machine step of the palette's browse mode. The rest of Bas's opinion about that pane is still to
   come and is mostly about its UI.
+- **Question 7**: one row per daemon, built on 2026-09-11. A daemon is in the list once, whatever
+  address it answers on, because two rows would carry the same sessions, chats and projects under
+  two keys and forgetting one of them would read as forgetting the machine. Pairing with a machine
+  that is already listed updates the row it has (the new address, the new credential, its place in
+  the list) and says so in a toast, rather than adding a second one: a fresh pairing link for a
+  known machine almost always means its old address stopped working, and refusing there would be
+  hostile. A link for the daemon that served this page is refused instead, because the local row
+  already reaches that machine over the page's own origin, without a credential and without a row
+  that can be forgotten; adopting the pasted address into the local row is not an option either,
+  since in dev that origin is Vite and not a daemon. The refusal happens before the one-time token
+  is spent, by asking `POST /auth/challenge` who answers at that address, and the id in the pairing
+  answer catches a daemon that has no such route. A row that only says who it is later falls under
+  the same rule: `settleId` looks for the row that daemon already has (`endpointForDaemon` in
+  `state/endpoints.ts`), keeps the local one whenever one of the two is local, and otherwise keeps
+  the row that just answered, whose address and credential are the ones known to work. The key the
+  other row pinned outlives it, because trust on first use is about the daemon and not about the
+  row. The row that goes is forgotten the way the Machines pane forgets one (`forgetEndpoint`, so
+  its sockets, ticket, cached projects and per-endpoint state go with it), and a toast names both
+  rows. `apps/client/src/endpoint/index.ts`, `apps/client/src/endpoint/identity.ts`,
+  `apps/client/src/state/endpoints.ts`, with tests in `endpoint/index.test.ts`,
+  `endpoint/identity.test.ts` and `state/endpoints.test.ts`. Nothing on the wire changed.
+- **Question 8**: for later, and wanted. An edge between a node on one machine and a node on another
+  is the assumption break written down in section 6 as "A node that runs on a machine other than its
+  project's"; the answer to this question is part of designing that feature. Until then `context.set`
+  stays per endpoint.
 
 Questions 1 and 2 stand, and the proposal holds for each until he says otherwise.
 
@@ -1399,8 +1431,3 @@ Questions 1 and 2 stand, and the proposal holds for each until he says otherwise
    read-only?
 6. After phase 6, is the Machines radiogroup still a radiogroup? "Active machine" only means
    "where a new project opens" once several are connected.
-7. Should a paired endpoint that turns out to be the same daemon as `local` (same `daemonId`) be
-   merged into one row, or listed twice because the two addresses behave differently (a token, a
-   different reachability)?
-8. Is an edge between a node on one machine and a node on another ever wanted? The answer decides
-   whether `context.set` stays per endpoint or has to become a client-side merge.
