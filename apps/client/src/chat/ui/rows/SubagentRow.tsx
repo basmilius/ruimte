@@ -47,7 +47,7 @@ function SubagentWork({ item, work }: { item: ChatSubagentItem; work: ChatItem[]
                         <WorkRow key={child.id} tool={child} />
                     )
                 ) : child.kind === 'assistant' ? (
-                    <div key={child.id} className="px-1 pb-2 text-xs text-text-muted select-text">
+                    <div key={child.id} className="-mx-1 px-1 pb-2 text-xs text-text-muted select-text">
                         <Markdown text={child.text} />
                     </div>
                 ) : null
@@ -82,7 +82,7 @@ export function SubagentRow({ item, work, expanded, onToggle }: { item: ChatSuba
     const running = item.status === 'running';
     const detail = item.description || item.summary || item.subagentType || '';
     return (
-        <div className="pb-0.5">
+        <div>
             <ToggleLine
                 icon={<Icon icon={Bot} size={12} />}
                 label="Sub-agent"

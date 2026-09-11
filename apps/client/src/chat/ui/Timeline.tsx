@@ -3,7 +3,7 @@ import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import clsx from 'clsx';
 import { deriveTimelineRows, type TimelineRow } from '@/chat/logic/timeline';
-import { registerTimeline } from '@/chat/timeline-scroll';
+import { registerTimeline, setTimelineAtEnd } from '@/chat/timeline-scroll';
 import { EMPTY_TARGET, readTimelineTarget, type TimelineTarget } from '@/chat/logic/timeline-target';
 import { TimelineMenuPopup } from '@/chat/ui/TimelineMenu';
 import { AgentTurnRow, ApprovalHistoryRow, AssistantRow, CompactionRow, NoteRow, QuestionHistoryRow, ThinkingRow, UserRow } from '@/chat/ui/rows/MessageRows';
@@ -21,14 +21,13 @@ const ESTIMATED_ROW_PX = 56;
 interface RowProps {
     row: TimelineRow;
     chatId: string;
-    lastAssistantId: string | null;
     toggleGroup(id: string): void;
     toggleTurn(id: string): void;
     toggleSubagent(id: string): void;
     openSubagent(toolUseId: string): void;
 }
 
-function Row({ row, chatId, lastAssistantId, toggleGroup, toggleTurn, toggleSubagent, openSubagent }: RowProps) {
+function Row({ row, chatId, toggleGroup, toggleTurn, toggleSubagent, openSubagent }: RowProps) {
     switch (row.kind) {
         case 'user':
             return <UserRow chatId={chatId} item={row.item} />;
@@ -37,7 +36,7 @@ function Row({ row, chatId, lastAssistantId, toggleGroup, toggleTurn, toggleSuba
             return <AgentTurnRow label={row.label} onOpen={toolUseId ? () => openSubagent(toolUseId) : undefined} />;
         }
         case 'assistant':
-            return <AssistantRow item={row.item} last={row.id === lastAssistantId} />;
+            return <AssistantRow item={row.item} />;
         case 'thinking':
             return <ThinkingRow item={row.item} />;
         case 'work':
@@ -104,16 +103,6 @@ export function Timeline({ chatId }: { chatId: string }) {
     // The composer pages through the thread with PageUp and PageDown; this is the element it moves.
     // An empty thread draws no scroller at all, so the first row is what puts one there to register.
     useEffect(() => registerTimeline(chatId, scrollRef.current), [chatId, empty]);
-
-    const lastAssistantId = useMemo(() => {
-        for (let i = rows.length - 1; i >= 0; i--) {
-            const row = rows[i]!;
-            if (row.kind === 'assistant') {
-                return row.id;
-            }
-        }
-        return null;
-    }, [rows]);
 
     // The client does not run the React Compiler, so its memoization rule has nothing to break here.
     // oxlint-disable-next-line react/incompatible-library
@@ -182,6 +171,7 @@ export function Timeline({ chatId }: { chatId: string }) {
                     onScroll={(e) => {
                         const el = e.currentTarget;
                         followRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < FOLLOW_THRESHOLD_PX + COMPOSER_CLEARANCE_PX;
+                        setTimelineAtEnd(chatId, followRef.current);
                     }}
                     onContextMenu={(e) => setTarget(readTimelineTarget(e.target as HTMLElement, scrollRef.current, rows))}
                 >
@@ -212,7 +202,6 @@ export function Timeline({ chatId }: { chatId: string }) {
                                     <Row
                                         row={row}
                                         chatId={chatId}
-                                        lastAssistantId={lastAssistantId}
                                         toggleGroup={(id) => toggle(setExpandedGroups, id)}
                                         toggleTurn={(id) => toggle(setExpandedTurns, id)}
                                         toggleSubagent={(id) => toggle(setExpandedSubagents, id)}

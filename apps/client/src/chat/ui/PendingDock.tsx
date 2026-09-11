@@ -4,7 +4,7 @@ import { Check, ChevronLeft, ChevronRight, MessageCircleQuestionMark, X } from '
 import type { ChatApprovalItem, ChatQuestionItem } from '@ruimte/contracts';
 import { chatClient } from '@/chat';
 import { approvalChanges, fileChanges, toolSummary } from '@/chat/logic/tools';
-import { toolIcon } from '@/chat/ui/icons';
+import { DOCK_ICON_SIZE, toolIcon } from '@/chat/ui/icons';
 import { Button } from '@/ui/Button';
 import { TOOLTIP_KBD } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
@@ -53,7 +53,7 @@ export function ApprovalDock({
     return (
         <div
             ref={ref}
-            className="border-b border-border bg-[color-mix(in_srgb,var(--status-needs-you)_6%,transparent)] outline-none"
+            className="border-b border-border outline-none"
             role="group"
             aria-label={`${item.toolName} wants permission`}
             tabIndex={-1}
@@ -74,8 +74,8 @@ export function ApprovalDock({
             }}
         >
             <div className="flex items-center gap-2 px-3 py-2 text-xs">
-                <span className="grid h-6 w-6 shrink-0 place-items-center text-status-needs-you">{toolIcon(item.toolName)}</span>
-                <span className="font-medium text-text">{item.toolName}</span>
+                <span className="grid h-6 w-6 shrink-0 place-items-center text-status-needs-you">{toolIcon(item.toolName, DOCK_ICON_SIZE)}</span>
+                <span className="text-sm font-medium text-text">{item.toolName}</span>
                 <button className="min-w-0 truncate text-left font-mono text-text-muted hover:text-text" onClick={() => setOpen((o) => !o)}>
                     {toolSummary(item.toolName, item.input) || 'wants to run'}
                 </button>
@@ -200,7 +200,7 @@ export function QuestionDock({ chatId, item, more, focused }: { chatId: string; 
     return (
         <div
             ref={ref}
-            className="border-b border-border bg-[color-mix(in_srgb,var(--status-needs-you)_6%,transparent)] outline-none"
+            className="border-b border-border outline-none"
             role="group"
             aria-label={question.header || 'Question'}
             tabIndex={-1}
@@ -221,8 +221,8 @@ export function QuestionDock({ chatId, item, more, focused }: { chatId: string; 
             }}
         >
             <div className="flex items-center gap-2 px-3 py-2 text-xs">
-                <Icon icon={MessageCircleQuestionMark} size={12} className="shrink-0 text-status-needs-you" />
-                <span className="font-medium text-text">{question.header || 'Question'}</span>
+                <Icon icon={MessageCircleQuestionMark} size={DOCK_ICON_SIZE} className="shrink-0 text-status-needs-you" />
+                <span className="text-sm font-medium text-text">{question.header || 'Question'}</span>
                 <span className="grow" />
                 {item.questions.length > 1 && (
                     <span className="tabular-nums text-text-faint">
@@ -237,14 +237,21 @@ export function QuestionDock({ chatId, item, more, focused }: { chatId: string; 
                     </Button>
                 )}
             </div>
-            <p className="px-3 pb-2 text-sm text-text select-text">{question.question}</p>
-            <div className="flex flex-col gap-1 px-3 pb-2">
+            <p className="px-3 pb-3 text-sm text-text select-text">{question.question}</p>
+            <div className="flex flex-col gap-1.5 px-3 pb-3">
                 {question.choices.map((choice) => (
                     <button
                         key={choice.label}
+                        /* The label answers the question and the line under it says what that means,
+                           so they stack: side by side the second one reads as part of the first. */
                         className={clsx(
-                            'flex items-start gap-2 rounded-md border px-2.5 py-1.5 text-left text-xs hover:bg-surface-hover',
-                            selected.has(choice.label) ? 'border-accent bg-accent-soft' : 'border-border'
+                            'flex flex-col items-start gap-0.5 rounded-md border px-3 py-2 text-left text-xs',
+                            /* The outline is the hover color and the fill under the pointer sits
+                               between that and the surface, so a choice lights up without its edge
+                               dissolving into it. */
+                            selected.has(choice.label)
+                                ? 'border-accent bg-accent-soft'
+                                : 'border-surface-hover hover:bg-[color-mix(in_srgb,var(--surface-hover)_50%,var(--surface-raised))]'
                         )}
                         onClick={() => pick(choice.label)}
                     >

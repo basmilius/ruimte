@@ -37,7 +37,7 @@ function RadioRow({ value, label, hint, badge }: { value: string; label: string;
             <span className="flex min-w-0 flex-col">
                 <span className="flex items-center gap-1.5">
                     {label}
-                    {badge && <span className="rounded bg-accent-soft px-1 text-xs font-medium uppercase text-accent">{badge}</span>}
+                    {badge && <span className="rounded bg-accent-soft px-1 text-xs font-medium text-accent">{badge}</span>}
                 </span>
                 {hint && <span className="text-xs text-text-faint">{hint}</span>}
             </span>
@@ -205,9 +205,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                                             <span className="grid h-4 w-4 shrink-0 place-items-center">{chosen && <Icon icon={Check} size={14} />}</span>
                                             <span className="min-w-0 truncate">{entry.model.name}</span>
                                             {entry.model.badge && (
-                                                <span className="rounded bg-accent-soft px-1 text-xs font-medium uppercase text-accent">
-                                                    {entry.model.badge}
-                                                </span>
+                                                <span className="rounded bg-accent-soft px-1 text-xs font-medium text-accent">{entry.model.badge}</span>
                                             )}
                                             <span className="grow" />
                                             {entry.model.legacy && <span className="text-xs text-text-faint">Legacy</span>}

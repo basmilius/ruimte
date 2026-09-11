@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import clsx from 'clsx';
-import { Bot, Brain, Check, ChevronDown, CircleAlert, Copy, Info, MessageCircleQuestionMark, Minimize2, Paperclip, TriangleAlert, X, Zap } from 'lucide-react';
+import { Bot, Brain, Check, ChevronDown, CircleAlert, Info, MessageCircleQuestionMark, Minimize2, Paperclip, TriangleAlert, X, Zap } from 'lucide-react';
 import type { ChatApprovalItem, ChatAssistantItem, ChatQuestionItem, ChatThinkingItem, ChatUserItem } from '@ruimte/contracts';
 import { attachmentUrl, formatBytes, isImageAttachment } from '@/chat/attachments';
 import { useEndpointId } from '@/state/keys';
@@ -10,7 +10,7 @@ import { ImageThumb } from '@/chat/ui/ImageView';
 import { Markdown } from '@/chat/ui/Markdown';
 import { formatDuration } from '@/chat/logic/timeline';
 import { toolSummary } from '@/chat/logic/tools';
-import { Tooltip } from '@/ui/Tooltip';
+import { ROW_GUTTER } from '@/chat/ui/icons';
 import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
 
@@ -20,10 +20,6 @@ const USER_FOLD_CHARS = 600;
 
 /* A folded user prompt fades out at the bottom instead of cutting a line in half. */
 const FOLD = 'max-h-[10em] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent)]';
-
-const copy = (text: string): void => {
-    void navigator.clipboard?.writeText(text).catch(() => undefined);
-};
 
 /* A picked file or skill in a sent message: the glyph stands in for the sigil the text still carries. */
 function Chip({ glyph, label, skill = false, path }: { glyph: ReactNode; label: string; skill?: boolean; path?: string }) {
@@ -43,7 +39,7 @@ export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }
     const segments = tokenizeChips(item.text, item.mentions ?? [], item.skills ?? []);
     const attachments = item.attachments ?? [];
     return (
-        <div className="group/user flex flex-col items-end">
+        <div className="flex flex-col items-end">
             {attachments.length > 0 && (
                 <div className="mb-1.5 flex max-w-[80%] flex-wrap justify-end gap-1.5">
                     {attachments.map((attachment) =>
@@ -91,31 +87,15 @@ export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }
                     )}
                 </div>
             )}
-            <div className="mt-1 flex h-5 items-center gap-1 pr-1 opacity-0 transition-opacity group-hover/user:opacity-100">
-                <Tooltip label="Copy" name>
-                    <button className="icon-btn h-5 w-5 rounded" onClick={() => copy(item.text)}>
-                        <Icon icon={Copy} size={14} />
-                    </button>
-                </Tooltip>
-            </div>
         </div>
     );
 }
 
-export function AssistantRow({ item, last }: { item: ChatAssistantItem; last: boolean }) {
+export function AssistantRow({ item }: { item: ChatAssistantItem }) {
     return (
-        <div className="group/assistant px-1 pb-2">
+        <div className="-mx-1 px-1 pb-2">
             <Markdown text={item.text} />
             {item.streaming && item.text === '' && <span className="inline-block h-3.5 w-1.5 animate-pulse rounded-sm bg-text-faint align-middle" />}
-            {last && !item.streaming && (
-                <div className="mt-1 flex h-5 items-center gap-1 opacity-0 transition-opacity group-hover/assistant:opacity-100">
-                    <Tooltip label="Copy" name>
-                        <button className="icon-btn h-5 w-5 rounded" onClick={() => copy(item.text)}>
-                            <Icon icon={Copy} size={14} />
-                        </button>
-                    </Tooltip>
-                </div>
-            )}
         </div>
     );
 }
@@ -128,9 +108,11 @@ export function ThinkingRow({ item }: { item: ChatThinkingItem }) {
     const [open, setOpen] = useState(false);
     const shown = open || item.streaming;
     return (
-        <div className="px-1 pb-2">
-            <button className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text" disabled={item.streaming} onClick={() => setOpen((o) => !o)}>
-                <Icon icon={Brain} size={12} />
+        <div className="-mx-1 px-1 pb-2">
+            <button className="flex items-center gap-2 text-xs text-text-muted hover:text-text" disabled={item.streaming} onClick={() => setOpen((o) => !o)}>
+                <span className={ROW_GUTTER}>
+                    <Icon icon={Brain} size={12} />
+                </span>
                 {item.streaming ? (
                     <span className="chat-live-text">Thinking...</span>
                 ) : (
@@ -157,11 +139,11 @@ export function NoteRow({ level, text }: { level: 'info' | 'warning' | 'error'; 
     return (
         <div
             className={clsx(
-                'flex items-center gap-1.5 px-1 pb-2 text-xs',
+                '-mx-1 mb-0.5 flex h-7 items-center gap-2 px-1 text-xs',
                 level === 'error' ? 'text-status-error' : level === 'warning' ? 'text-status-needs-you' : 'text-text-faint'
             )}
         >
-            {NOTE_ICON[level]}
+            <span className={ROW_GUTTER}>{NOTE_ICON[level]}</span>
             <span className="select-text">{text}</span>
         </div>
     );
@@ -175,15 +157,19 @@ export function NoteRow({ level, text }: { level: 'info' | 'warning' | 'error'; 
 export function AgentTurnRow({ label, onOpen }: { label: string; onOpen?: () => void }) {
     if (!onOpen) {
         return (
-            <div className="flex w-full items-center gap-1.5 pb-2 text-left text-xs text-text-muted">
-                <Icon icon={Bot} size={12} className="shrink-0" />
+            <div className="mb-0.5 flex h-7 w-full items-center gap-2 text-left text-xs text-text-muted">
+                <span className={ROW_GUTTER}>
+                    <Icon icon={Bot} size={12} />
+                </span>
                 <span className="min-w-0 truncate select-text">{label}</span>
             </div>
         );
     }
     return (
-        <button className="flex w-full items-center gap-1.5 pb-2 text-left text-xs text-text-muted hover:text-text" onClick={onOpen}>
-            <Icon icon={Bot} size={12} className="shrink-0" />
+        <button className="mb-0.5 flex h-7 w-full items-center gap-2 text-left text-xs text-text-muted hover:text-text" onClick={onOpen}>
+            <span className={ROW_GUTTER}>
+                <Icon icon={Bot} size={12} />
+            </span>
             <span className="min-w-0 truncate">{label}</span>
         </button>
     );
@@ -216,10 +202,9 @@ export function ApprovalHistoryRow({ item }: { item: ChatApprovalItem }) {
     }
     const decision = DECISION[item.decision];
     return (
-        <div className="flex items-center gap-2 px-1 pb-2 text-xs text-text-faint">
-            <span className={clsx('flex items-center gap-1', item.decision === 'deny' && 'text-status-error')}>
-                {decision.icon} {decision.label}
-            </span>
+        <div className="-mx-1 mb-0.5 flex h-7 items-center gap-2 px-1 text-xs text-text-faint">
+            <span className={clsx(ROW_GUTTER, item.decision === 'deny' && 'text-status-error')}>{decision.icon}</span>
+            <span className={clsx(item.decision === 'deny' && 'text-status-error')}>{decision.label}</span>
             <span className="text-text-muted">{item.toolName}</span>
             <span className="min-w-0 truncate font-mono">{toolSummary(item.toolName, item.input)}</span>
         </div>
@@ -228,10 +213,12 @@ export function ApprovalHistoryRow({ item }: { item: ChatApprovalItem }) {
 
 export function QuestionHistoryRow({ item }: { item: ChatQuestionItem }) {
     return (
-        <div className="pb-2">
+        <div>
             {item.questions.map((question) => (
-                <div key={question.id} className="flex items-start gap-2 px-1 py-0.5 text-xs text-text-faint">
-                    <Icon icon={MessageCircleQuestionMark} size={12} className="mt-0.5 shrink-0" />
+                <div key={question.id} className="-mx-1 mb-0.5 flex min-h-7 items-center gap-2 px-1 text-xs text-text-faint">
+                    <span className={ROW_GUTTER}>
+                        <Icon icon={MessageCircleQuestionMark} size={12} />
+                    </span>
                     <span className="min-w-0">
                         <span className="text-text-muted">{question.question}</span>
                         {item.state === 'answered' && item.answers?.[question.id] !== undefined && (

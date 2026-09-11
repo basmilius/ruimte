@@ -35,11 +35,10 @@ export function MarkdownFile({ path, name, read }: { path: string; name: string;
                 <Separator />
                 <DisabledWrapToggle />
             </FileToolbar>
-            {/* Prose is read at the size the standalone chat view reads it at, 15px over 24px, in a
-                column of the same width. The scroller keeps the panel's full width, so its scrollbar
-                stays at the panel's edge; only the text inside it is centered. Code keeps
-                `--text-code`, which the override does not touch. */}
-            <FileScroll className="px-4 py-3 [--text-sm:15px] [--text-sm--line-height:24px]">
+            {/* Prose is read in the same column the standalone chat view gives a thread, at the
+                app's own type. The scroller keeps the panel's full width, so its scrollbar stays at
+                the panel's edge; only the text inside it is centered. */}
+            <FileScroll className="px-4 py-3">
                 <div className="mx-auto max-w-[768px]">
                     {/* A link in a document counts from the folder that document sits in, the way it
                         would on a forge. */}

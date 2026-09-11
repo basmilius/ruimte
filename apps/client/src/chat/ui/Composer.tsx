@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import clsx from 'clsx';
-import { ArrowUp, Clock, FastForward, Paperclip, Square, X, Zap } from 'lucide-react';
+import { ArrowUp, ChevronDown, Clock, FastForward, Paperclip, Square, SquareSlash, X, Zap } from 'lucide-react';
 import type { AgentKind, ChatApprovalItem, ChatInfo, ChatQuestionItem, ChatSkill, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { checkAttachmentLimits, filesOf, formatBytes, isImageAttachment, readAttachments, uploadBytes, uploadPreviewUrl } from '@/chat/attachments';
@@ -20,7 +20,7 @@ import {
 import { PROMPT_MAX_CHARS, promptGuard, usableSlashCommands } from '@/chat/guards';
 import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferences';
 import { stashDraft, useStash, type StashedPrompt } from '@/chat/stash';
-import { pageTimeline } from '@/chat/timeline-scroll';
+import { pageTimeline, scrollTimelineToEnd, subscribeTimelineEnd, timelineAtEnd } from '@/chat/timeline-scroll';
 import { CHIP_BEHIND_TEXT, MENTION_TONE, SKILL_TONE } from '@/chat/ui/chips';
 import { ContextMeter } from '@/chat/ui/ContextMeter';
 import { ApprovalDock, QuestionDock } from '@/chat/ui/PendingDock';
@@ -29,7 +29,7 @@ import { isApplePlatform } from '@/desktop/bridge';
 import { useChatRow } from '@/state/chats';
 import { useProviders } from '@/state/providers';
 import { isShellChord } from '@/terminal/keymap';
-import { BTN_GROUP, MENU_LABEL } from '@/ui/classes';
+import { BTN_GROUP, FLOAT, MENU_LABEL } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
@@ -545,10 +545,31 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
         }
     };
 
+    /* The timeline owns the scroller; this is the one bit of it the composer needs to know. */
+    const atEnd = useSyncExternalStore(
+        subscribeTimelineEnd,
+        () => timelineAtEnd(chatId),
+        () => true
+    );
+
     const placeholder = disabled ? 'Not connected to the Ruimte server' : 'Ask anything, / for commands, @ for files, $ for skills';
 
     return (
         <div className="chat-column-content pointer-events-none absolute inset-x-3 bottom-3 z-10">
+            {/* Only while there is something below the fold. It sits over the composer rather than
+                in the thread, because the composer is the one thing whose height it always clears. */}
+            {!atEnd && (
+                <div className="mb-2 flex justify-center">
+                    <Tooltip label="Jump to the end" name>
+                        <button
+                            className={`${FLOAT} pointer-events-auto grid h-8 w-8 place-items-center rounded-full text-text-muted hover:text-text`}
+                            onClick={() => scrollTimelineToEnd(chatId)}
+                        >
+                            <Icon icon={ChevronDown} size={16} />
+                        </button>
+                    </Tooltip>
+                </div>
+            )}
             <div
                 className={clsx(
                     'pointer-events-auto flex flex-col overflow-hidden rounded-2xl border shadow-float backdrop-blur-[14px] focus-within:border-accent',
@@ -600,7 +621,11 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                                     inputRef.current?.focus();
                                 }}
                             >
-                                {command.skill && <Icon icon={Zap} size={12} className="shrink-0 text-skill" />}
+                                <Icon
+                                    icon={command.skill ? Zap : SquareSlash}
+                                    size={12}
+                                    className={clsx('shrink-0', command.skill ? 'text-skill' : 'text-text-faint')}
+                                />
                                 <span className="font-mono text-text">/{command.name}</span>
                                 <span className="text-text-faint">{command.hint}</span>
                             </button>

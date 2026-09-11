@@ -20,4 +20,4 @@ export const CHIP_BEHIND_TEXT = 'box-decoration-clone rounded-[4px] py-0.5';
 
 /* The same pill in the transcript, where nothing has to line up with a textarea: a real inline box
    a shade smaller than the text around it, with the icon in place of the sigil. */
-export const CHIP_IN_MESSAGE = 'inline-flex h-[17px] max-w-full items-center gap-1 rounded-md px-1.5 align-[-2px] text-[12px]/none font-medium';
+export const CHIP_IN_MESSAGE = 'inline-flex h-5 max-w-full items-center gap-1 rounded-md px-1.5 align-[-3px] text-xs/none font-medium';

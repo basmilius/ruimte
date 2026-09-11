@@ -12,8 +12,41 @@ export const registerTimeline = (chatId: string, element: HTMLElement | null): (
     return () => {
         if (scrollers.get(chatId) === element) {
             scrollers.delete(chatId);
+            ends.delete(chatId);
         }
     };
+};
+
+/*
+ * Whether the thread sits at its end. The timeline knows (it follows the tail while it is there),
+ * the composer draws the button that goes back, and the two never meet: this is where they agree.
+ */
+const ends = new Map<string, boolean>();
+const listeners = new Set<() => void>();
+
+export const setTimelineAtEnd = (chatId: string, atEnd: boolean): void => {
+    if (ends.get(chatId) === atEnd) {
+        return;
+    }
+    ends.set(chatId, atEnd);
+    for (const listener of listeners) {
+        listener();
+    }
+};
+
+export const subscribeTimelineEnd = (listener: () => void): (() => void) => {
+    listeners.add(listener);
+    return () => {
+        listeners.delete(listener);
+    };
+};
+
+/* A thread nobody has scrolled is at its end, so the button stays away until there is a way back. */
+export const timelineAtEnd = (chatId: string): boolean => ends.get(chatId) ?? true;
+
+export const scrollTimelineToEnd = (chatId: string): void => {
+    const element = scrollers.get(chatId);
+    element?.scrollTo({ top: element.scrollHeight, behavior: 'smooth' });
 };
 
 /* Pages the thread of this chat up or down; false when it has no timeline on screen. */

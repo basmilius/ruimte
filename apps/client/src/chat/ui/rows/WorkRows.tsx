@@ -5,7 +5,7 @@ import type { ChatCheckpointDiff, ChatCheckpointFile, ChatFileChange, ChatToolIt
 import { chatClient } from '@/chat';
 import { fileChanges, formatElapsed, liveOutput, readImagePath, toolStartedAt, toolSummary, unifiedChanges, type FileChange } from '@/chat/logic/tools';
 import { ReadImage } from '@/chat/ui/ImageView';
-import { toolIcon } from '@/chat/ui/icons';
+import { ROW_GUTTER, toolIcon } from '@/chat/ui/icons';
 import { Icon } from '@/ui/Icon';
 
 // The diff renderers carry shiki; they only load once a thread shows a file change.
@@ -40,13 +40,13 @@ export function ToggleLine({
     return (
         <button
             className={clsx(
-                'flex h-7 w-full items-center gap-2 rounded-md px-1 text-left text-xs text-text-muted hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
+                '-mx-1 mb-0.5 flex h-7 items-center gap-2 rounded-md px-1 text-left text-xs text-text-muted hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
                 failed && 'text-status-error',
                 className
             )}
             onClick={onToggle}
         >
-            <span className={clsx('grid h-6 w-6 shrink-0 place-items-center', live && 'text-accent')}>{icon}</span>
+            <span className={clsx(ROW_GUTTER, live && 'text-accent')}>{icon}</span>
             <span className={clsx('shrink-0', live && 'chat-live-text')}>{label}</span>
             {detail && <span className="min-w-0 truncate font-mono text-text-faint">{detail}</span>}
             <span className="grow" />
@@ -61,7 +61,7 @@ function ToolBody({ tool }: { tool: ChatToolItem }) {
     const patches = unifiedChanges(tool);
     const changes = patches.length > 0 ? [] : fileChanges(tool.name, tool.input);
     return (
-        <div className="mb-1 ml-8 overflow-hidden rounded-md border border-border bg-surface-raised">
+        <div className="mt-1.5 mb-2 ml-6 overflow-hidden rounded-md border border-border bg-surface-raised">
             {patches.length > 0 ? (
                 <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">Loading diff</div>}>
                     {patches.map((change, index) => (
@@ -99,7 +99,7 @@ export function WorkRow({ tool, nested }: { tool: ChatToolItem; nested?: boolean
     const [open, setOpen] = useState(false);
     const image = tool.state === 'done' ? readImagePath(tool.name, tool.input) : null;
     return (
-        <div className={clsx(nested ? 'ml-6' : '', 'pb-0.5')}>
+        <div className={nested ? 'ml-6' : undefined}>
             <ToggleLine
                 icon={toolIcon(tool.name)}
                 label={tool.name}
@@ -135,7 +135,7 @@ export function WorkLiveRow({ tool }: { tool: ChatToolItem }) {
     const [open, setOpen] = useState(false);
     const tail = liveOutput(tool);
     return (
-        <div className="pb-0.5">
+        <div>
             <ToggleLine
                 icon={toolIcon(tool.name)}
                 label={tool.name}
@@ -147,7 +147,7 @@ export function WorkLiveRow({ tool }: { tool: ChatToolItem }) {
             />
             {open && <ToolBody tool={tool} />}
             {tail !== null && !open && (
-                <pre className="mb-1 ml-8 max-h-48 overflow-auto rounded-md border border-border bg-surface-raised px-3 py-2 font-mono text-code whitespace-pre-wrap text-term-fg select-text">
+                <pre className="mt-1.5 mb-2 ml-6 max-h-48 overflow-auto rounded-md border border-border bg-surface-raised px-3 py-2 font-mono text-code whitespace-pre-wrap text-term-fg select-text">
                     {tail}
                 </pre>
             )}
@@ -159,7 +159,7 @@ export function WorkLiveRow({ tool }: { tool: ChatToolItem }) {
 export function WorkGroupRow({ tools, summary, expanded, onToggle }: { tools: ChatToolItem[]; summary: string; expanded: boolean; onToggle(): void }) {
     const failed = tools.some((tool) => tool.state === 'error');
     return (
-        <div className="pb-0.5">
+        <div>
             <ToggleLine icon={toolIcon(tools[0]!.name)} label={summary} open={expanded} onToggle={onToggle} failed={failed} />
         </div>
     );
@@ -170,12 +170,14 @@ export function TurnFoldRow({ turn, label, expanded, onToggle }: { turn: ChatTur
         <div className="pb-1.5">
             <button
                 className={clsx(
-                    'flex h-7 items-center gap-1.5 rounded-md border border-border px-2 text-xs text-text-muted hover:bg-surface-hover',
+                    'mb-0.5 flex h-7 items-center gap-2 rounded-md border border-border px-2 text-xs text-text-muted hover:bg-surface-hover',
                     turn.state === 'error' && 'text-status-error'
                 )}
                 onClick={onToggle}
             >
-                <Icon icon={ChevronRight} size={12} className={clsx('transition-transform', expanded && 'rotate-90')} />
+                <span className={ROW_GUTTER}>
+                    <Icon icon={ChevronRight} size={12} className={clsx('transition-transform', expanded && 'rotate-90')} />
+                </span>
                 {label}
             </button>
         </div>
@@ -367,8 +369,8 @@ export function WorkingRow({ startedAt }: { startedAt: number }) {
         return () => window.clearInterval(timer);
     }, [startedAt]);
     return (
-        <div className="flex h-7 items-center gap-2 px-1 pb-2 text-xs text-text-muted">
-            <span className="grid h-6 w-6 place-items-center text-accent">
+        <div className="-mx-1 mb-0.5 flex h-7 items-center gap-2 px-1 text-xs text-text-muted">
+            <span className={`${ROW_GUTTER} text-accent`}>
                 <span className="h-2 w-2 rounded-full bg-status-running" />
             </span>
             <span className="chat-live-text">Working for</span>

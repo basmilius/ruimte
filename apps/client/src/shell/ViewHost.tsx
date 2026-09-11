@@ -56,14 +56,13 @@ function StandaloneView({ view }: { view: ProjectView }) {
             // A press anywhere in the body is the way back in, the way clicking a node's body is.
             onPointerDownCapture={() => useDocument.getState().setBodyFocused(true)}
         >
-            {/* A thread that runs the whole window is unreadable, so a chat of its own keeps the column
-                at 768px of content, centered, with the surface filling what is left
-                beside it. The scroller itself stays the width of the column, so its scrollbar sits at
-                the column's own edge (`.chat-column` in `styles.css`). At that width the thread reads
-                at 15px over 24px, which every `text-sm` inside it follows; the chrome keeps its own
-                size and code keeps `--text-code`. */}
+            {/* A thread that runs the whole window is unreadable, so a chat of its own keeps a column
+                of 768px of content, centered, with the surface filling what is left beside it. The
+                scroller itself stays the width of the column, so its scrollbar sits at the column's
+                own edge (`.chat-column` in `styles.css`). The type is the app's own: a thread reads
+                the same here as it does in a node on the canvas. */}
             {view.kind === 'chat' && (
-                <div className="chat-column flex h-full w-full flex-col [--text-sm:15px] [--text-sm--line-height:24px]">
+                <div className="chat-column flex h-full w-full flex-col">
                     <ChatBody id={view.id} focused={focused} />
                 </div>
             )}
