@@ -408,6 +408,17 @@ describe.skipIf(!ENABLED)('two daemons at the same time', () => {
         expect(hello.home).toBe(home);
     }, 60_000);
 
+    /*
+     * What the project menu does with a machine that is not there: the union is per machine, so the
+     * one that is up keeps listing and opening its own projects while the other one is away.
+     */
+    test('a project on the machine that is up opens while the other one is gone', async () => {
+        const opened = await here.request<ProjectOpenResult>('project.open', { name: 'While the container is down' });
+        const listed = await here.request<ProjectListResult>('project.list', {});
+        expect(listed.projects.some((project) => project.projectId === opened.summary.projectId)).toBe(true);
+        expect(there.closed).toBe(true);
+    });
+
     test('the container comes back and pairs again, next to the connection that never dropped', async () => {
         await docker(['start', CONTAINER]);
         await waitUntil(`the container on ${BASE_URL} again`, () => answers(BASE_URL), 60_000);
@@ -565,5 +576,32 @@ describe.skipIf(!ENABLED)('one id on two machines', () => {
             said += there.takeOutput();
             return said.includes('Sprint goals') && said.includes('ship the pool');
         });
+    }, 30_000);
+
+    /*
+     * The two halves of the union. A project id is minted by the daemon that owns it, so one folder
+     * on two machines is two projects, and neither daemon knows anything of the other's list. Last
+     * of this block: opening a project writes into the folder the git tests above read.
+     */
+    test('one folder on both machines is two projects, and neither list holds the other', async () => {
+        const [mine, theirs] = await Promise.all([
+            here.request<ProjectOpenResult>('project.open', { folder: SHARED, name: 'Shared here' }),
+            there.request<ProjectOpenResult>('project.open', { folder: SHARED, name: 'Shared there' })
+        ]);
+        expect(mine.summary.projectId).not.toBe(theirs.summary.projectId);
+        expect(mine.summary.folder).toBe(SHARED);
+        expect(theirs.summary.folder).toBe(SHARED);
+
+        const [listedHere, listedThere] = await Promise.all([
+            here.request<ProjectListResult>('project.list', {}),
+            there.request<ProjectListResult>('project.list', {})
+        ]);
+        expect(listedHere.projects.map((project) => project.projectId)).toContain(mine.summary.projectId);
+        expect(listedHere.projects.map((project) => project.projectId)).not.toContain(theirs.summary.projectId);
+        expect(listedThere.projects.map((project) => project.projectId)).toContain(theirs.summary.projectId);
+        expect(listedThere.projects.map((project) => project.projectId)).not.toContain(mine.summary.projectId);
+
+        await here.request('project.delete', { projectId: mine.summary.projectId, removeFiles: true });
+        await there.request('project.delete', { projectId: theirs.summary.projectId, removeFiles: true });
     }, 30_000);
 });
