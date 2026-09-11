@@ -50,5 +50,11 @@ a daemon that knows no projects, a project opened on `/work/atlas`, a terminal s
 `uname -s`, `git.status` on the outstanding work and `fs.browse` on `/work`. It cleans up the
 session and the project it made.
 
+A second block runs two daemons at once, which is what the client's transport pool holds: it starts
+a plain daemon on this machine (its own `RUIMTE_HOME`, `--no-hooks`, port 4311) next to the
+container, asks both who they are, runs a shell on each, then stops the container and checks that
+the daemon on this machine keeps answering and keeps streaming its shell. It starts the container
+again afterwards, with the fresh state every start gives it.
+
 The suite skips itself unless `RUIMTE_DOCKER=1` is set, so `bun test` at the root, and CI, never
 tries to reach a container.
