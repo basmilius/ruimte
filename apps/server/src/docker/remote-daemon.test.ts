@@ -28,14 +28,18 @@ import {
  * another machine. It needs a container listening on a real port, so it only runs when someone
  * asks for it; `bun test` on this repository (and in CI) stays a run of unit tests.
  *
- *   bun run --cwd apps/server docker:up
  *   bun run --cwd apps/server docker:test
+ *
+ * That script starts `daemon-test`, a container of its own on 4320 that throws its state away on
+ * every start. The container on 4310 is the one to work against and keeps everything it is given,
+ * which these tests, counting projects and repositories, could not run against.
  */
 const ENABLED = process.env.RUIMTE_DOCKER === '1';
 
-const CONTAINER = process.env.RUIMTE_DOCKER_CONTAINER ?? 'ruimte-remote';
+// The test container by default, so a run by hand never reaches the one being worked against.
+const CONTAINER = process.env.RUIMTE_DOCKER_CONTAINER ?? 'ruimte-remote-test';
 // The compose file maps this port straight through, so it names the daemon on both sides.
-const PORT = Number(process.env.RUIMTE_DOCKER_PORT ?? 4310);
+const PORT = Number(process.env.RUIMTE_DOCKER_PORT ?? 4320);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const REPO = '/work/atlas';
 const HOME = '/root/.ruimte';
@@ -205,7 +209,7 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
             return response?.ok === true;
         };
         // A container started a second ago is still writing its repositories; anything longer is a container that is not there.
-        await waitUntil(`a daemon on ${BASE_URL}; start one with \`bun run --cwd apps/server docker:up\``, answers, 5_000);
+        await waitUntil(`a daemon on ${BASE_URL}; start one with \`bun run --cwd apps/server docker:test\``, answers, 5_000);
         paired = await pair();
         sessionToken = paired.sessionToken!;
         client = await RemoteClient.connect(sessionToken);
@@ -270,7 +274,7 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         expect(written.publicKey).toBe(info.publicKey!);
         /*
          * What a second start would do, run against the home of the daemon that is up. A real
-         * `docker restart` throws that home away (`docker/entrypoint.sh`, `RUIMTE_KEEP_STATE`), so
+         * `docker restart` throws that home away (`docker/entrypoint.sh`, `RUIMTE_FRESH_STATE`), so
          * it would test the harness instead of the daemon.
          */
         const restarted = await inContainer([
@@ -365,7 +369,7 @@ describe.skipIf(!ENABLED)('signing in instead of carrying a token', () => {
 
     beforeAll(async () => {
         const answers = async (): Promise<boolean> => (await fetch(`${BASE_URL}/health`).catch(() => null))?.ok === true;
-        await waitUntil(`a daemon on ${BASE_URL}; start one with \`bun run --cwd apps/server docker:up\``, answers, 5_000);
+        await waitUntil(`a daemon on ${BASE_URL}; start one with \`bun run --cwd apps/server docker:test\``, answers, 5_000);
         const info = (await (await fetch(`${BASE_URL}/auth/challenge`, { method: 'POST' })).json()) as AuthChallengeResult;
         daemonId = info.daemon.id;
         daemonKey = info.daemon.publicKey;

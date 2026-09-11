@@ -983,10 +983,10 @@ expire: a `SessionRecord` carried `id`, `label`, `tokenHash`, `createdAt` and `l
 nothing else, nothing pruned the list, and only `auth.revoke` removed a client. A paired client
 therefore stayed paired until someone revoked it.
 
-Re-pairing after a container restart is the harness, not the product: `docker/entrypoint.sh` deletes
-`/work` and `$RUIMTE_HOME` on every start unless `RUIMTE_KEEP_STATE=1` is set (the compose file now
-passes it through), which takes `auth.json` and `endpoint.json` with it, so the daemon comes back as
-a different machine with no clients.
+Re-pairing after a container restart was the harness, not the product: `docker/entrypoint.sh` used
+to delete `/work` and `$RUIMTE_HOME` on every start, which took `auth.json` and `endpoint.json` with
+it, so the daemon came back as a different machine with no clients. The container has kept both in
+named volumes since; only the test container still starts empty (`RUIMTE_FRESH_STATE=1`).
 
 #### 1. A credential that can rotate (built)
 
@@ -1119,8 +1119,8 @@ green everywhere else.
 **The container setup landed in `47ae572`**, while this chapter was being written. It lives under
 `apps/server/docker` (`Dockerfile`, `compose.yml`, `entrypoint.sh`, `pair.sh`, `workspace-package.json`,
 `README.md`) with `.dockerignore` at the root and the suite in `apps/server/src/docker/remote-daemon.test.ts`.
-Four scripts drive it: `docker:up`, `docker:test`, `docker:pair` and `docker:down` in
-`apps/server/package.json`. The container publishes `127.0.0.1:4310`, labels itself `docker-linux` and
+The scripts that drive it are `docker:up`, `docker:test`, `docker:pair`, `docker:down` and
+`docker:reset` in `apps/server/package.json`. The container publishes `127.0.0.1:4310`, labels itself `docker-linux` and
 seeds two repositories under `/work`. This chapter is about which scenarios to run, not about how the
 container is built.
 
@@ -1179,8 +1179,8 @@ connection, keeps working until it signs and loses the token then.
 Two things the suite cannot do, run by hand once (see `docker/README.md`):
 
 - The upgrade of a container that was already paired: build the daemon of the commit before the
-  phase into an image, run it with `-e RUIMTE_KEEP_STATE=1` on a volume at `/root/.ruimte`, pair,
-  then run the current image on the same volume.
+  phase into an image, run it on a volume at `/root/.ruimte`, pair, then run the current image on
+  the same volume.
 - A phase 6 client against a phase 7 daemon: parse the daemon's `endpoint.info` and its pairing
   answer with the schemas of the older commit and check that both still parse.
 

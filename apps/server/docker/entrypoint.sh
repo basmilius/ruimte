@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# The tests want to know what the machine holds, so every start rebuilds `/work` and throws away
-# the daemon's own state. Set RUIMTE_KEEP_STATE=1 to keep a paired client across a restart.
-if [ "${RUIMTE_KEEP_STATE:-0}" != "1" ]; then
+# The container is a machine to work against, so it keeps what is put on it. Only the test
+# container asks for a daemon that has seen nothing, with RUIMTE_FRESH_STATE=1 (`compose.yml`).
+if [ "${RUIMTE_FRESH_STATE:-0}" = "1" ]; then
     rm -rf /work "${RUIMTE_HOME:-/root/.ruimte}"
 fi
 
@@ -16,7 +16,9 @@ seed_repo() {
     git -C "$path" commit --quiet -m 'chore: start the repository'
 }
 
-if [ ! -d /work ]; then
+# Per repository, not per /work: the volume keeps whatever is put there by hand, and a seed that
+# ran once must not write over it on the next start.
+if [ ! -e /work/atlas ]; then
     seed_repo /work/atlas
     mkdir -p /work/atlas/src
     printf 'export const beam = () => 42;\n' > /work/atlas/src/beam.ts
@@ -31,7 +33,9 @@ if [ ! -d /work ]; then
     # What `git.status` is tested against: one tracked file changed, one file git has never seen.
     printf '\nA line nobody committed.\n' >> /work/atlas/README.md
     printf 'Loose thoughts.\n' > /work/atlas/notes.txt
+fi
 
+if [ ! -e /work/beacon ]; then
     seed_repo /work/beacon
 fi
 
