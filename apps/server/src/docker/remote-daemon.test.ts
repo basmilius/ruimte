@@ -9,6 +9,7 @@ import {
     parseServerFrame,
     type AuthChallengeResult,
     type AuthTicketResult,
+    type EndpointChangedEvent,
     type EndpointInfo,
     type PairResult,
     type FsBrowseResult,
@@ -302,6 +303,36 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
 
         const listed = await client.request<ProjectListResult>('project.list', {});
         expect(listed.projects.some((project) => project.projectId === opened.summary.projectId)).toBe(true);
+    });
+
+    test('naming the machine reaches every client and outlives the label it was started with', async () => {
+        const other = await RemoteClient.connect(sessionToken);
+        try {
+            const named = await client.request<EndpointInfo>('endpoint.setIdentity', { name: 'The box downstairs', icon: { kind: 'lucide', value: 'server' } });
+            expect(named.label).toBe('The box downstairs');
+            expect(named.nameSource).toBe('chosen');
+            expect(named.icon).toEqual({ kind: 'lucide', value: 'server' });
+
+            // The client that did not ask is told, so two machines never disagree about a name.
+            let heard: EndpointChangedEvent[] = [];
+            await waitUntil('the other client to hear the new name', () => {
+                heard = heard.concat(other.takeEvents<EndpointChangedEvent>('endpoint.changed'));
+                return heard.length > 0;
+            });
+            expect(heard.at(-1)).toMatchObject({ id: named.id, label: 'The box downstairs', nameSource: 'chosen' });
+
+            // It is the machine's, not the connection's: it sits in the home next to the id.
+            const written = JSON.parse(await inContainer(['cat', `${HOME}/endpoint.json`])) as { version: number; name: string };
+            expect(written.version).toBe(1);
+            expect(written.name).toBe('The box downstairs');
+        } finally {
+            // Back to `RUIMTE_LABEL`, which is what the rest of the suite expects this machine to answer.
+            await client.request('endpoint.setIdentity', { name: null, icon: null });
+            other.close();
+        }
+        const back = await client.request<EndpointInfo>('endpoint.info', {});
+        expect(back.label).toBe('docker-linux');
+        expect(back.nameSource).toBe('default');
     });
 
     test('a terminal session runs a shell in the repository', async () => {

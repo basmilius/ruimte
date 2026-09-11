@@ -1,14 +1,26 @@
 import { z } from 'zod';
+import { ProjectIconChoiceSchema } from './project.ts';
 
 // How a client reaches a daemon; the loopback one is what the app starts with.
 export const ReachabilitySchema = z.enum(['loopback', 'lan', 'tunnel', 'public']);
 export type Reachability = z.infer<typeof ReachabilitySchema>;
 
+// Whether a person named this machine from a client, or it still answers to the name it started with.
+export const EndpointNameSourceSchema = z.enum(['chosen', 'default']);
+export type EndpointNameSource = z.infer<typeof EndpointNameSourceSchema>;
+
 export const EndpointInfoSchema = z.object({
     // The daemon's own id, minted once and kept in its home; a client keys a machine on this because an address moves.
     id: z.string().min(1),
-    // The daemon's own name for itself, the machine's hostname unless configured.
+    // What this machine is called: the name a person gave it, or `--label`, `RUIMTE_LABEL`, else its hostname.
     label: z.string(),
+    // Which of the two the label is. Optional: a daemon from before a machine could be named answers without one.
+    nameSource: EndpointNameSourceSchema.optional(),
+    /* The icon a person picked for this machine, from the same closed set a project and a view pick
+       from, so one renderer in the client covers all three. Null when nobody picked one, absent
+       from a daemon that knows nothing of machine icons. An image is not among the kinds: a machine
+       has no folder to keep one in. */
+    icon: ProjectIconChoiceSchema.nullish(),
     platform: z.string(),
     version: z.string(),
     reachability: ReachabilitySchema,
@@ -35,6 +47,26 @@ export const PairResultSchema = z.object({
     endpoint: EndpointInfoSchema
 });
 export type PairResult = z.infer<typeof PairResultSchema>;
+
+/*
+ * `endpoint.setIdentity`: what this machine calls itself, set from any client that paired with it,
+ * so every client sees the same name and icon. Both fields are always sent, since a null is a
+ * choice of its own: it hands the machine back to the name it starts with, or leaves it iconless.
+ */
+export const EndpointSetIdentityPayloadSchema = z.object({
+    name: z.string().min(1).max(80).nullable(),
+    icon: ProjectIconChoiceSchema.nullable()
+});
+export type EndpointSetIdentityPayload = z.infer<typeof EndpointSetIdentityPayloadSchema>;
+
+// A client named this machine or gave it another icon; every other client redraws the row it keeps.
+export const EndpointChangedEventSchema = z.object({
+    id: z.string().min(1),
+    label: z.string(),
+    nameSource: EndpointNameSourceSchema,
+    icon: ProjectIconChoiceSchema.nullable()
+});
+export type EndpointChangedEvent = z.infer<typeof EndpointChangedEventSchema>;
 
 export const AuthSessionSchema = z.object({
     id: z.string().min(1),

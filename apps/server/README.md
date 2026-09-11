@@ -16,7 +16,7 @@ bun run --cwd apps/server dev              # same, restarts on file changes
 | `--port` | `4210` | Port for `/ws`, `/health` and `/hooks`. |
 | `--no-hooks` | off | Do not write the status hooks into the CLIs' settings files at startup. |
 | `--serve <dir>` | off | Serve a built client from `dir` next to the socket; unknown paths fall back to its `index.html`. Every response carries the client's `Content-Security-Policy` (`CLIENT_CSP` in `src/daemon.ts`), the twin of the `<meta http-equiv>` in `apps/client/index.html`: scripts and workers from the daemon itself plus `'wasm-unsafe-eval'` for shiki and `blob:` for the diff worker, inline styles allowed, no `'unsafe-eval'`, no frames, and `connect-src`, `img-src` and `media-src` wide enough for a paired endpoint on any host. |
-| `--label <name>` | hostname | What the daemon calls itself towards clients (`RUIMTE_LABEL` works too). |
+| `--label <name>` | hostname | What the daemon calls itself towards clients until someone names it from a client (`RUIMTE_LABEL` works too). |
 | `--allow-origin <origin>` | none | Extra browser origins allowed on the socket, on top of loopback and the daemon's own. Repeatable. |
 | `--require-token` | off | Refuse even loopback clients that have not paired. |
 | `--no-price-fetch` | off | Never ask LiteLLM for the model price table; the snapshot bundled with the app prices everything instead. |
@@ -31,13 +31,21 @@ bun run --cwd apps/server dev              # same, restarts on file changes
 
 On the socket, `server.hello` answers the daemon's version, platform and home. `server.ping` takes nothing and answers `{ time }`, the daemon's clock in epoch milliseconds; the client times the round trip itself (two machines never share a clock), which is the ping the connection dot shows.
 
+## The machine's name and icon
+
+`endpoint.info` answers `{ id, label, nameSource, icon, platform, version, reachability, authenticated, publicKey }`, and the answer to `POST /auth/pair` carries the same object, so a client that has just paired already knows what to call the machine. The `label` is the name: the one a person gave it, or, while `nameSource` is `default`, `--label`, else `RUIMTE_LABEL`, else the hostname. A fresh machine is therefore never nameless. The `icon` is `{ kind: 'emoji', value }` or `{ kind: 'lucide', value }`, the same closed set a project and a view pick from, and null while nobody picked one; there is no image kind, because a machine has no folder to keep a file in.
+
+`endpoint.setIdentity { name, icon }` sets both, from any client that paired with this daemon. A null name hands the machine back to the name it starts with and a null icon leaves it without one, so both fields are always sent. The name and the icon go into `endpoint.json` next to the id, not into one client's storage, and every other connected client is told with `endpoint.changed { id, label, nameSource, icon }`.
+
+A name typed in a client wins over `--label` and `RUIMTE_LABEL`. Those two say what a machine nobody has named answers to; a rename that a restart undid would be a bug, and clearing the name is the way back to them. `endpoint.json` stays at `version: 1` with the name and the icon added as fields: a daemon from before them reads the file, keeps its id and leaves them alone, where a version bump would make it mint a new id and answer to every paired client as a stranger. A name or an icon that will not read is dropped on its own and the id and key pair survive it.
+
 ## `RUIMTE_HOME`
 
 Where the daemon keeps its state. Defaults to `~/.ruimte`. Layout:
 
 ```
 $RUIMTE_HOME/
-  endpoint.json                    the daemon's own id and key pair, minted on first start
+  endpoint.json                    the daemon's own id and key pair, minted on first start, plus the name and icon it was given
   auth.json                        the clients paired with this daemon, by public key
   projects.json                    every canvas the daemon knows: id, name, color, folder
   projects/

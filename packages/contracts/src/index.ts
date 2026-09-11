@@ -64,7 +64,9 @@ import {
     AuthRegisterKeyResultSchema,
     AuthRevokePayloadSchema,
     AuthSessionsResultSchema,
+    EndpointChangedEventSchema,
     EndpointInfoSchema,
+    EndpointSetIdentityPayloadSchema,
     PairingTokenResultSchema
 } from './auth.ts';
 import { ContextSetPayloadSchema } from './context.ts';
@@ -195,6 +197,7 @@ export const REQUEST_SCHEMAS = {
     'usage.refreshLimits': { payload: EmptySchema, result: UsageLimitsSnapshotSchema },
     'context.set': { payload: ContextSetPayloadSchema, result: EmptySchema },
     'endpoint.info': { payload: EmptySchema, result: EndpointInfoSchema },
+    'endpoint.setIdentity': { payload: EndpointSetIdentityPayloadSchema, result: EndpointInfoSchema },
     'auth.sessions': { payload: EmptySchema, result: AuthSessionsResultSchema },
     'auth.revoke': { payload: AuthRevokePayloadSchema, result: EmptySchema },
     'auth.pairingToken': { payload: EmptySchema, result: PairingTokenResultSchema },
@@ -219,6 +222,7 @@ export const EVENT_SCHEMAS = {
     'session.status': SessionStatusEventSchema,
     'session.list-changed': EmptySchema,
     'chat.event': ChatEventEnvelopeSchema,
+    'endpoint.changed': EndpointChangedEventSchema,
     'project.changed': ProjectChangedEventSchema,
     'project.summary': ProjectSummaryEventSchema,
     'drawing.changed': DrawingChangedEventSchema,

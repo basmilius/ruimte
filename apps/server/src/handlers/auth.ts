@@ -1,28 +1,43 @@
-import { RequestError, type Dispatcher } from '../dispatcher.ts';
+import { RequestError, type ClientAccess, type Dispatcher } from '../dispatcher.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
+import type { EndpointIdentity } from '../endpoint-id.ts';
 
-interface EndpointIdentity {
-    id: string;
-    label: string;
+interface EndpointHost {
+    /* The machine itself: its id, its key pair and what it calls itself right now. */
+    identity: EndpointIdentity;
     version: string;
-    // The daemon's ed25519 public key, so a client that paired before there were key pairs can pin it.
-    publicKey: string;
     // Mints a one-time pairing URL; what `ruimte pair` and the settings dialog hand to another machine.
     pairingUrl(): string;
     // Revoking must take effect now, not at the next connection, so the daemon drops that session's sockets here.
     disconnect(sessionId: string): void;
 }
 
-export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, identity: EndpointIdentity): void => {
-    dispatcher.register('endpoint.info', (_payload, client) => ({
+export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, host: EndpointHost): void => {
+    const { identity } = host;
+
+    // Built per client: what the machine is called travels with what this connection is allowed.
+    const info = (access: ClientAccess | undefined) => ({
         id: identity.id,
         label: identity.label,
+        nameSource: identity.nameSource,
+        icon: identity.icon,
         platform: process.platform,
-        version: identity.version,
-        reachability: client.access?.reachability ?? 'loopback',
-        authenticated: client.access?.sessionId !== null && client.access?.sessionId !== undefined,
+        version: host.version,
+        reachability: access?.reachability ?? 'loopback',
+        authenticated: access?.sessionId !== null && access?.sessionId !== undefined,
         publicKey: identity.publicKey
-    }));
+    });
+
+    dispatcher.register('endpoint.info', (_payload, client) => info(client.access));
+
+    /*
+     * Any client that paired may name the machine: a name and an icon are how a person tells two
+     * machines apart, so they belong to the machine and not to whichever client typed them.
+     */
+    dispatcher.register('endpoint.setIdentity', async (payload, client) => {
+        await identity.setIdentity(payload.name, payload.icon);
+        return info(client.access);
+    });
 
     /*
      * The way over to a key pair for a client that paired when a session token was all there was.
@@ -44,14 +59,14 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, i
         if ((client.access?.reachability ?? 'loopback') !== 'loopback') {
             throw new RequestError('forbidden', "Only a client on the daemon's own machine can make a pairing link");
         }
-        return { url: identity.pairingUrl() };
+        return { url: host.pairingUrl() };
     });
 
     dispatcher.register('auth.revoke', async (payload) => {
         if (!(await store.revoke(payload.id))) {
             throw new RequestError('session-not-found', `No paired client ${payload.id}`);
         }
-        identity.disconnect(payload.id);
+        host.disconnect(payload.id);
         return {};
     });
 };
