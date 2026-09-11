@@ -2,45 +2,8 @@ import type { ProjectContent, ProjectDocument, ProjectIconChoice, ProjectLocal, 
 import type { StoreApi } from 'zustand';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
+import { browserStorage, readLastProject, rememberProject, type LastProjectStorage } from './last-project';
 import type { PanelsPort } from './panels-port';
-
-const LAST_PROJECT_KEY = 'ruimte.lastProject';
-
-type LastProjectStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
-
-const browserStorage = (): LastProjectStorage | null => (typeof localStorage === 'undefined' ? null : localStorage);
-
-/*
- * What was open per endpoint. A project id belongs to the daemon that minted it, so the project of
- * machine A is not in machine B's list and picking it up there would open whatever B lists first.
- * `legacyEndpointId` takes the single id this key held before a client knew more than one daemon.
- */
-const readLastProjects = (storage: LastProjectStorage | null, legacyEndpointId: string | null): Record<string, string> => {
-    const raw = storage?.getItem(LAST_PROJECT_KEY) ?? null;
-    if (raw === null) {
-        return {};
-    }
-    try {
-        const parsed = JSON.parse(raw) as unknown;
-        if (typeof parsed === 'object' && parsed !== null) {
-            return parsed as Record<string, string>;
-        }
-    } catch {
-        // A bare project id, written before this key was a record.
-    }
-    return legacyEndpointId === null ? {} : { [legacyEndpointId]: raw };
-};
-
-/* An endpoint that moves onto its daemon id keeps what was open on it (`rekeyEndpoint`). */
-export const rekeyLastProject = (oldId: string, newId: string, storage: LastProjectStorage | null = browserStorage()): void => {
-    const byEndpoint = readLastProjects(storage, oldId);
-    const projectId = byEndpoint[oldId];
-    if (projectId === undefined) {
-        return;
-    }
-    delete byEndpoint[oldId];
-    storage?.setItem(LAST_PROJECT_KEY, JSON.stringify({ ...byEndpoint, [newId]: projectId }));
-};
 
 /* The slice of the canvas store the client reads; the real store has more. */
 interface CanvasAccess {
@@ -71,7 +34,10 @@ interface DocumentAccess {
 }
 
 export interface ProjectSink {
+    /* What this endpoint lists; the store folds it into the union with the other machines'. */
     setProjects(projects: ProjectSummary[]): void;
+    /* One row of this endpoint's list, without touching what the other machines listed. */
+    patchProject(summary: ProjectSummary): void;
     setCurrent(current: ProjectSummary | null, rev: number): void;
     setRev(rev: number): void;
     setChosenIcon(chosenIcon: ProjectIconChoice | null): void;
@@ -82,7 +48,6 @@ export interface ProjectSink {
     setError(error: string | null): void;
     setSwitching(switching: boolean): void;
     getState(): {
-        projects: ProjectSummary[];
         current: ProjectSummary | null;
         rev: number;
         chosenIcon: ProjectIconChoice | null;
@@ -130,6 +95,7 @@ export class ProjectClient {
     private localTimer: ReturnType<typeof setTimeout> | null = null;
     private saving: Promise<void> | null = null;
     private booted = false;
+    private bootTask: Promise<void> | null = null;
 
     constructor(
         transport: Transport,
@@ -166,8 +132,13 @@ export class ProjectClient {
                 : [])
         );
         if (transport.status === 'open') {
-            void this.boot();
+            this.boot();
         }
+    }
+
+    /* Waits for the project this endpoint remembered, so a caller that wants another one does not race it. */
+    async settled(): Promise<void> {
+        await this.bootTask?.catch(() => undefined);
     }
 
     async refreshList(): Promise<ProjectSummary[]> {
@@ -309,23 +280,21 @@ export class ProjectClient {
 
     /* What is open on this endpoint now; the other endpoints keep what they had. */
     private remember(projectId: string | null): void {
-        const byEndpoint = readLastProjects(this.storage, this.endpointId());
-        if (projectId === null) {
-            delete byEndpoint[this.endpointId()];
-        } else {
-            byEndpoint[this.endpointId()] = projectId;
-        }
-        this.storage?.setItem(LAST_PROJECT_KEY, JSON.stringify(byEndpoint));
+        rememberProject(this.endpointId(), projectId, this.storage);
     }
 
-    private async boot(): Promise<void> {
+    private boot(): void {
         if (this.booted) {
             return;
         }
         this.booted = true;
+        this.bootTask = this.runBoot();
+    }
+
+    private async runBoot(): Promise<void> {
         try {
             const projects = await this.refreshList();
-            const remembered = readLastProjects(this.storage, this.endpointId())[this.endpointId()] ?? null;
+            const remembered = readLastProject(this.storage, this.endpointId()).byEndpoint[this.endpointId()] ?? null;
             // The daemon always lists at least one canvas; nothing to create from here.
             const target = projects.find((project) => project.projectId === remembered && project.available) ?? projects.find((project) => project.available);
             if (target) {
@@ -489,8 +458,8 @@ export class ProjectClient {
 
     /* The daemon saw a project's icon, name or color change; only the breadcrumb has to follow. */
     private applySummary(summary: ProjectSummary): void {
-        const { projects, current } = this.sink.getState();
-        this.sink.setProjects(projects.map((project) => (project.projectId === summary.projectId ? summary : project)));
+        const { current } = this.sink.getState();
+        this.sink.patchProject(summary);
         if (current?.projectId === summary.projectId) {
             this.sink.setSummary(summary);
         }
@@ -506,7 +475,7 @@ export class ProjectClient {
 
     private onStatus(status: TransportStatus): void {
         if (status === 'open') {
-            void this.boot();
+            this.boot();
             return;
         }
         this.booted = false;

@@ -16,7 +16,8 @@ import { useFiles } from '../state/files';
 import { useUi } from '../state/ui';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 import { PanelsPort } from './panels-port';
-import { ProjectClient, rekeyLastProject, type ProjectSink } from './project-client';
+import { rekeyLastProject } from './last-project';
+import { ProjectClient, type ProjectSink } from './project-client';
 
 type Call = { type: RequestType; payload: unknown };
 
@@ -131,6 +132,9 @@ const makeSink = () => {
     const sink: ProjectSink = {
         setProjects: (projects) => {
             state.projects = projects;
+        },
+        patchProject: (summary) => {
+            state.projects = state.projects.map((project) => (project.projectId === summary.projectId ? summary : project));
         },
         setCurrent: (current, rev) => {
             state.current = current;
@@ -296,7 +300,7 @@ describe('ProjectClient', () => {
         expect(transport.of('project.save')).toHaveLength(1);
         expect(transport.of('project.close').map((call) => call.payload)).toEqual([{ projectId: 'p1' }]);
         expect(state.current?.projectId).toBe('p2');
-        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({ 'daemon-a': 'p2' });
+        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({ last: { endpointId: 'daemon-a', projectId: 'p2' }, byEndpoint: { 'daemon-a': 'p2' } });
         dispose();
     });
 
@@ -391,15 +395,20 @@ describe('the project each machine had open', () => {
         await tick();
         expect(back.state.current?.projectId).toBe('p2');
         back.dispose();
-        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({ 'daemon-a': 'p2', 'daemon-b': 'q1' });
+        // What the person looked at last is the machine they ended on, which is what a cold boot follows.
+        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({
+            last: { endpointId: 'daemon-a', projectId: 'p2' },
+            byEndpoint: { 'daemon-a': 'p2', 'daemon-b': 'q1' }
+        });
     });
 
     test('closing a project forgets it on this machine only', async () => {
-        const storage = new Map<string, string>([['ruimte.lastProject', JSON.stringify({ 'daemon-a': 'p1', 'daemon-b': 'q1' })]]);
+        const stored = { last: { endpointId: 'daemon-a', projectId: 'p1' }, byEndpoint: { 'daemon-a': 'p1', 'daemon-b': 'q1' } };
+        const storage = new Map<string, string>([['ruimte.lastProject', JSON.stringify(stored)]]);
         const { client, dispose } = setup({ storage, endpointId: 'daemon-a' });
         await tick();
         await client.closeProject();
-        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({ 'daemon-b': 'q1' });
+        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({ last: null, byEndpoint: { 'daemon-b': 'q1' } });
         dispose();
     });
 
@@ -408,17 +417,32 @@ describe('the project each machine had open', () => {
         const { state, dispose } = setup({ storage, endpointId: 'daemon-a', projects: [summary('p1', '/repo'), summary('p2')] });
         await tick();
         expect(state.current?.projectId).toBe('p2');
-        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({ 'daemon-a': 'p2' });
+        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({ last: { endpointId: 'daemon-a', projectId: 'p2' }, byEndpoint: { 'daemon-a': 'p2' } });
+        dispose();
+    });
+
+    test('the record from before there was a last still says what each machine had open', async () => {
+        const storage = new Map<string, string>([['ruimte.lastProject', JSON.stringify({ 'daemon-a': 'p2', 'daemon-b': 'q1' })]]);
+        const { state, dispose } = setup({ storage, endpointId: 'daemon-a', projects: [summary('p1', '/repo'), summary('p2')] });
+        await tick();
+        expect(state.current?.projectId).toBe('p2');
         dispose();
     });
 
     test('an endpoint that moves onto its daemon id takes what it had open along', () => {
-        const storage = new Map<string, string>([['ruimte.lastProject', JSON.stringify({ '10.0.0.4:4210': 'p7', 'daemon-b': 'q1' })]]);
+        const stored = { last: { endpointId: '10.0.0.4:4210', projectId: 'p7' }, byEndpoint: { '10.0.0.4:4210': 'p7', 'daemon-b': 'q1' } };
+        const storage = new Map<string, string>([['ruimte.lastProject', JSON.stringify(stored)]]);
         rekeyLastProject('10.0.0.4:4210', 'daemon-x', fakeStorage(storage));
-        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({ 'daemon-x': 'p7', 'daemon-b': 'q1' });
+        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({
+            last: { endpointId: 'daemon-x', projectId: 'p7' },
+            byEndpoint: { 'daemon-b': 'q1', 'daemon-x': 'p7' }
+        });
 
         const legacy = new Map<string, string>([['ruimte.lastProject', 'p7']]);
         rekeyLastProject('10.0.0.4:4210', 'daemon-x', fakeStorage(legacy));
-        expect(JSON.parse(legacy.get('ruimte.lastProject')!)).toEqual({ 'daemon-x': 'p7' });
+        expect(JSON.parse(legacy.get('ruimte.lastProject')!)).toEqual({
+            last: { endpointId: 'daemon-x', projectId: 'p7' },
+            byEndpoint: { 'daemon-x': 'p7' }
+        });
     });
 });

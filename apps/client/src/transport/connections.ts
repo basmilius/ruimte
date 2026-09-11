@@ -1,5 +1,6 @@
 import { ChatClient } from '@/chat/chat-client';
 import { DrawingClient } from '@/drawing/drawing-client';
+import { foldList } from '@/project/list';
 import { panelsPort } from '@/project/panels-port';
 import { ProjectClient, type ProjectSink } from '@/project/project-client';
 import { useCanvas } from '@/state/canvas';
@@ -35,11 +36,13 @@ interface Workspace {
 const machines = new Map<string, Machine>();
 let workspace: Workspace | null = null;
 
-const projectSink = (): ProjectSink => {
+/* The store as one machine's project client sees it: every write names the endpoint it came from. */
+const projectSink = (endpointId: () => string): ProjectSink => {
     const actions = useProject.getState();
     return {
-        setProjects: actions.setProjects,
-        setCurrent: actions.setCurrent,
+        setProjects: (projects) => foldList(endpointId(), projects),
+        patchProject: (summary) => actions.patchProject(endpointId(), summary),
+        setCurrent: (current, rev) => actions.setCurrent(current, rev, endpointId()),
         setRev: actions.setRev,
         setChosenIcon: actions.setChosenIcon,
         setSummary: actions.setSummary,
@@ -104,11 +107,18 @@ const buildWorkspace = (endpoint: Endpoint): Workspace => {
     const drawings = new DrawingClient(transport, useDrawing, useDocument, useProject, {
         flushProject: (): Promise<void> => projects.flush()
     });
-    const projects = new ProjectClient(transport, useCanvas, useDocument, panelsPort, projectSink(), {
-        drawing: useDrawing,
-        beforeSwitch: (): Promise<void> => drawings.flush(),
-        endpointId: (): string => current.endpointId
-    });
+    const projects = new ProjectClient(
+        transport,
+        useCanvas,
+        useDocument,
+        panelsPort,
+        projectSink(() => current.endpointId),
+        {
+            drawing: useDrawing,
+            beforeSwitch: (): Promise<void> => drawings.flush(),
+            endpointId: (): string => current.endpointId
+        }
+    );
     const current: Workspace = {
         endpointId: endpoint.id,
         transport,

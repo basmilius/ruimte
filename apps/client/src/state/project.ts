@@ -1,9 +1,22 @@
 import { create } from 'zustand';
 import type { ProjectDocument, ProjectIconChoice, ProjectSummary } from '@ruimte/contracts';
 
+/*
+ * One project of one daemon. A project id is minted by the daemon that owns it, so the same id on
+ * two machines would be two projects; the endpoint is what tells them apart, and it is the client's
+ * knowledge rather than anything the daemon says.
+ */
+export interface ProjectRow {
+    endpointId: string;
+    summary: ProjectSummary;
+}
+
 interface ProjectStore {
-    projects: ProjectSummary[];
+    /* Every machine's projects at once, in the order each machine's last list answered. */
+    projects: ProjectRow[];
     current: ProjectSummary | null;
+    /* Which daemon the open project came from; during an open it is not yet the active one. */
+    currentEndpointId: string | null;
     /* The rev the canvas on screen came from; every save names it. */
     rev: number;
     /* The icon the file names, kept apart from the summary's so a save cannot drop it. */
@@ -16,8 +29,13 @@ interface ProjectStore {
     error: string | null;
     /* A project is being opened; the canvas under it is the old one until the document arrives. */
     switching: boolean;
-    setProjects(projects: ProjectSummary[]): void;
-    setCurrent(current: ProjectSummary | null, rev: number): void;
+    /* One machine's answer, replacing whatever that machine had listed before. */
+    setProjects(endpointId: string, summaries: ProjectSummary[]): void;
+    /* One row of one machine, for a rename or an icon that changed under the list. */
+    patchProject(endpointId: string, summary: ProjectSummary): void;
+    /* Every row of a machine this client no longer knows. */
+    forgetProjects(endpointId: string): void;
+    setCurrent(current: ProjectSummary | null, rev: number, endpointId: string | null): void;
     setRev(rev: number): void;
     setChosenIcon(chosenIcon: ProjectIconChoice | null): void;
     /* What the daemon says the current project looks like now, without touching the save state. */
@@ -29,20 +47,30 @@ interface ProjectStore {
 }
 
 /* Which project is on the canvas and how its file and the screen relate. */
-export const useProject = create<ProjectStore>((set) => ({
+export const useProject = create<ProjectStore>((set, get) => ({
     projects: [],
     current: null,
+    currentEndpointId: null,
     rev: 0,
     chosenIcon: null,
     dirty: false,
     conflict: null,
     error: null,
     switching: false,
-    setProjects(projects) {
-        set({ projects });
+    setProjects(endpointId, summaries) {
+        const others = get().projects.filter((row) => row.endpointId !== endpointId);
+        set({ projects: [...others, ...summaries.map((summary) => ({ endpointId, summary }))] });
     },
-    setCurrent(current, rev) {
-        set({ current, rev, dirty: false, conflict: null, error: null });
+    patchProject(endpointId, summary) {
+        set({
+            projects: get().projects.map((row) => (row.endpointId === endpointId && row.summary.projectId === summary.projectId ? { ...row, summary } : row))
+        });
+    },
+    forgetProjects(endpointId) {
+        set({ projects: get().projects.filter((row) => row.endpointId !== endpointId) });
+    },
+    setCurrent(current, rev, endpointId) {
+        set({ current, currentEndpointId: current ? endpointId : null, rev, dirty: false, conflict: null, error: null });
     },
     setRev(rev) {
         set({ rev });

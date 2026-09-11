@@ -4,6 +4,7 @@ import { CircleHelp, Folder, Info } from 'lucide-react';
 import type { UsageModel, UsageProject, UsageProvider, UsageSummaryResult } from '@ruimte/contracts';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { Segmented } from '@/shell/settings/controls';
+import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import type { UsageMetric } from '@/state/usage';
 import { SECTION_LABEL } from '@/ui/classes';
@@ -111,20 +112,22 @@ function ModelRows({ models, metric, total }: { models: readonly UsageModel[]; m
 }
 
 function ProjectRows({ projects }: { projects: readonly UsageProject[] }) {
-    const summaries = useProject((s) => s.projects);
+    const rows = useProject((s) => s.projects);
+    const endpointId = useEndpointId();
     const money = useMoney();
     const top = Math.max(...projects.map((project) => project.costUsd), 0);
     return (
         <div className={clsx(TABLE, 'gap-1')}>
             {projects.map((project) => {
-                const summary = summaries.find((candidate) => candidate.projectId === project.projectId);
+                // The usage on screen is one machine's, so the glyph of a project is that machine's too.
+                const summary = rows.find((row) => row.endpointId === endpointId && row.summary.projectId === project.projectId)?.summary;
                 return (
                     /* The glyph sits on the title rather than between the two lines, so a column of
                        icons lines up with the names beside it and not with the paths under them. */
                     <div key={project.folder} className={`${ROW} h-auto items-start py-1.5`}>
                         <span className="mt-px flex">
                             {summary ? (
-                                <ProjectGlyph projectId={summary.projectId} icon={summary.icon} color={summary.color} size={16} />
+                                <ProjectGlyph projectId={summary.projectId} endpointId={endpointId} icon={summary.icon} color={summary.color} size={16} />
                             ) : (
                                 <span className="text-text-faint">
                                     <Icon icon={Folder} size={16} />

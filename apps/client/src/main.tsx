@@ -6,6 +6,8 @@ import { startServerInfo } from '@/transport/server-info';
 import { startPing } from '@/transport/ping';
 import { startContextSync } from '@/context/sync';
 import { startEndpointSelection } from '@/endpoint';
+import { startProjectList } from '@/project/list';
+import { restoreLastEndpoint } from '@/project/open';
 import { startConnections } from '@/transport/connections';
 import { desktop } from '@/desktop/bridge';
 import { startInputModality } from '@/ui/modality';
@@ -22,8 +24,11 @@ startAgentNotifications();
 startServerInfo();
 startPing();
 startContextSync();
+/* Before anything opens a socket: the machine the work was left on decides which daemon boots. */
+restoreLastEndpoint();
 startEndpointSelection();
 startConnections();
+startProjectList();
 startInputModality();
 /* The shell dresses its native chrome and every page it hosts in the theme the client is in. The
    background travels with it, so `styles.css` stays the only place the token is written down. */
