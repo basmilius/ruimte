@@ -34,6 +34,18 @@ const waitForOpen = (transport: Transport, timeoutMs: number): Promise<void> =>
     });
 
 /*
+ * Dials a machine and waits for its socket, with the budget every switch in the app uses. The pool
+ * opens sockets lazily, so a machine that is not connected is usually one nothing has asked for yet.
+ */
+export const reachEndpoint = async (endpointId: string, timeoutMs = CONNECT_TIMEOUT_MS): Promise<void> => {
+    const transport = transportFor(endpointId);
+    if (!transport) {
+        throw new Error('That machine is not known any more');
+    }
+    await waitForOpen(transport, timeoutMs);
+};
+
+/*
  * Opens a project on the machine it belongs to. The only way in: a project id means nothing without
  * the daemon that minted it, so picking one out of the union is also picking a machine. The old
  * project is flushed on its own endpoint's socket before anything moves, which is what the order
@@ -65,6 +77,41 @@ export const openProject = async (endpointId: string, projectId: string): Promis
         useProject.getState().setError(e instanceof Error ? e.message : 'That project could not be opened');
         throw e;
     }
+};
+
+/* The pieces a test stands in for; every call site in the app passes none of them. */
+export interface FolderDeps {
+    activate(endpointId: string): Promise<void>;
+    reach(endpointId: string): Promise<void>;
+    openFolder(folder: string, createFolder: boolean): Promise<void>;
+}
+
+const REAL_FOLDER_DEPS: FolderDeps = {
+    activate: activateEndpoint,
+    reach: async (endpointId) => {
+        await reachEndpoint(endpointId);
+        // The machine that took over may still be opening what it had last; a folder on top of that would race.
+        await projectClient.settled();
+    },
+    openFolder: (folder, createFolder) => projectClient.openFolder(folder, createFolder)
+};
+
+/*
+ * The folder twin of `openProject`: a folder is a path on one machine, so opening one found while
+ * browsing another daemon has to move the whole client there first. `createFolder` is browse mode's
+ * offer to make a path that is not there, and the daemon makes the whole missing chain.
+ */
+export const openFolderOn = async (endpointId: string, folder: string, createFolder = false, deps: FolderDeps = REAL_FOLDER_DEPS): Promise<void> => {
+    if (endpointId === useEndpoints.getState().activeId) {
+        await deps.openFolder(folder, createFolder);
+        return;
+    }
+    if (!useEndpoints.getState().endpoints.some((endpoint) => endpoint.id === endpointId)) {
+        throw new Error('That machine is not known any more');
+    }
+    await deps.activate(endpointId);
+    await deps.reach(endpointId);
+    await deps.openFolder(folder, createFolder);
 };
 
 /*
