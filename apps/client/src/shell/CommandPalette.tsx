@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
 import {
+    ArrowLeft,
     CaseSensitive,
     CornerLeftUp,
     FileSearch,
@@ -26,7 +27,17 @@ import { ViewGlyph } from '@/project/ViewGlyph';
 import { openFolderOn, openProject, reachEndpoint } from '@/project/open';
 import { revealNode, showView } from '@/project/views';
 import { appCommands, type Command } from '@/shell/commands';
-import { browseMachines, endsWithSeparator, folderPresence, parentOf, separatorFor, startFolder } from '@/shell/palette-browse';
+import {
+    browseBack,
+    browseMachines,
+    endsWithSeparator,
+    folderPresence,
+    openBrowse,
+    parentOf,
+    separatorFor,
+    startFolder,
+    type BrowseStep
+} from '@/shell/palette-browse';
 import { DEFAULT_GREP_OPTIONS, useGrepSearch, type GrepOptions } from '@/shell/palette-grep';
 import { PaletteGrepResults } from '@/shell/PaletteGrepResults';
 import { readRecents, rememberRecent, sortByRecency } from '@/shell/palette-recents';
@@ -151,14 +162,15 @@ export function CommandPalette() {
     const endpoints = useEndpoints((s) => s.endpoints);
     const connected = useOpenEndpoints();
     const activeId = useEndpoints((s) => s.activeId);
+    const wantsBrowse = useUi((s) => s.paletteBrowse);
     const [query, setQuery] = useState('');
     const [index, setIndex] = useState(0);
+    /* Which step of browsing the palette is on, and null when it is not browsing at all. A step of
+       its own rather than something the text says, so browsing can open on nothing typed. */
+    const [browse, setBrowse] = useState<BrowseStep | null>(null);
     /* The listing on screen, under the machine and path it was asked for, so a navigation that
        already fetched one does not have the typing effect ask for it a second time. */
-    const [browse, setBrowse] = useState<{ key: string; result: FsBrowseResult | null } | null>(null);
-    /* The machine being browsed, which is the active one until the machine step says otherwise. */
-    const [browseEndpointId, setBrowseEndpointId] = useState(activeId);
-    const [machineStep, setMachineStep] = useState(false);
+    const [listing, setListing] = useState<{ key: string; result: FsBrowseResult | null } | null>(null);
     /* The machine a socket is being opened for; ours are dialed lazily, so this takes a moment. */
     const [dialing, setDialing] = useState<string | null>(null);
     const [failure, setFailure] = useState<string | null>(null);
@@ -172,6 +184,8 @@ export function CommandPalette() {
     const mode = useUi((s) => s.paletteMode);
     const grepping = mode === 'grep';
     const grep = useGrepSearch(grepping ? folder : null, grepping ? query : '', grepOptions);
+    const browseEndpointId = browse?.endpointId ?? activeId;
+    const machineStep = browse?.machines === true;
     const platform = useServers((s) => s.byEndpoint[browseEndpointId]?.platform ?? null);
     const sep = separatorFor(platform);
     const machines = useMemo(() => browseMachines(endpoints, activeId, connected), [endpoints, activeId, connected]);
@@ -179,23 +193,36 @@ export function CommandPalette() {
     /* A relative path counts from the open project's folder, and that folder is on one machine. */
     const cwdFor = useCallback((endpointId: string): string | null => (currentEndpointId === endpointId ? folder : null), [currentEndpointId, folder]);
 
-    // The listing stays on screen while the next one is in flight, so typing never empties the list.
+    /* Where browsing a machine opens: the folder of the project open on it, else that machine's home. */
+    const startFolderFor = useCallback(
+        (endpointId: string): string => {
+            const info = serverInfoOf(endpointId);
+            return startFolder(cwdFor(endpointId), info.home, separatorFor(info.platform));
+        },
+        [cwdFor]
+    );
+
+    /* Typing never leaves browsing and never empties the list: the field says where you are, the
+       step says what you are doing. A path typed in the ordinary palette is the second way in. */
     const reset = (next: string): void => {
+        const step = browse ?? (isPathQuery(next) ? { endpointId: activeId, machines: false, path: next } : null);
         setQuery(next);
-        setIndex(isPathQuery(next) ? -1 : 0);
+        setBrowse(step);
+        setIndex(step !== null && !step.machines ? -1 : 0);
         setFailure(null);
-        // Typing is about a path, and the machine step has no field of its own to type into.
-        setMachineStep(false);
     };
 
-    /* A palette that opens, or a mode that changes, starts on the machine the app is pointed at with
-       nothing of the last browse left on screen. */
-    const restart = (next: string): void => {
-        reset(next);
-        setBrowse(null);
-        setBrowseEndpointId(activeId);
-        setMachineStep(false);
+    /* A palette that opens, or a mode that changes, starts over: the machine the app is pointed at,
+       nothing of the last browse on screen, and the step whoever opened it asked for. */
+    const restart = (next: string, browseNow: boolean): void => {
+        setListing(null);
+        setFailure(null);
         setDialing(null);
+        const opened = browseNow ? openBrowse(activeId, machines.length, startFolderFor(activeId)) : null;
+        const step: BrowseStep | null = opened?.step ?? (isPathQuery(next) ? { endpointId: activeId, machines: false, path: next } : null);
+        setBrowse(step);
+        setQuery(opened?.query ?? next);
+        setIndex(step !== null && !step.machines ? -1 : 0);
     };
 
     const [seenOpen, setSeenOpen] = useState(false);
@@ -204,7 +231,7 @@ export function CommandPalette() {
     if (open !== seenOpen) {
         setSeenOpen(open);
         if (open) {
-            restart(seed);
+            restart(seed, wantsBrowse);
         }
     }
 
@@ -213,18 +240,18 @@ export function CommandPalette() {
     // Switching modes with the palette already up is a fresh start as much as opening it is.
     if (mode !== seenMode) {
         setSeenMode(mode);
-        restart(seed);
+        restart(seed, false);
     }
 
-    // A path is a folder to browse, but only while the palette is looking for one.
-    const browsing = !grepping && (isPathQuery(query) || machineStep);
+    const browsing = !grepping && browse !== null;
 
     useEffect(() => {
-        if (!browsing || machineStep) {
+        // An empty field is a step with nothing to list yet; the last listing stays under it.
+        if (!browsing || machineStep || query.trim() === '') {
             return;
         }
         const key = browseKey(browseEndpointId, query);
-        if (browse?.key === key) {
+        if (listing?.key === key) {
             return;
         }
         const mine = ++generation.current;
@@ -236,14 +263,14 @@ export function CommandPalette() {
                     if (mine !== generation.current) {
                         return;
                     }
-                    setBrowse({ key, result: answer.result });
+                    setListing({ key, result: answer.result });
                     setFailure(answer.failure);
                 });
             },
-            browse === null ? 0 : BROWSE_DEBOUNCE_MS
+            listing === null ? 0 : BROWSE_DEBOUNCE_MS
         );
         return () => window.clearTimeout(timer);
-    }, [browse, browsing, machineStep, browseEndpointId, query, cwdFor]);
+    }, [listing, browsing, machineStep, browseEndpointId, query, cwdFor]);
 
     /*
      * Every step fetches before it commits, so the path and the list change in the same frame and
@@ -256,10 +283,9 @@ export function CommandPalette() {
             if (mine !== generation.current) {
                 return;
             }
-            setBrowse({ key: browseKey(endpointId, path), result: answer.result });
+            setListing({ key: browseKey(endpointId, path), result: answer.result });
             setFailure(answer.failure);
-            setBrowseEndpointId(endpointId);
-            setMachineStep(false);
+            setBrowse({ endpointId, machines: false, path });
             setQuery(path);
             setIndex(-1);
         },
@@ -273,10 +299,6 @@ export function CommandPalette() {
      */
     const pickMachine = useCallback(
         async (endpointId: string): Promise<void> => {
-            if (endpointId === browseEndpointId) {
-                setMachineStep(false);
-                return;
-            }
             setDialing(endpointId);
             setFailure(null);
             try {
@@ -287,10 +309,9 @@ export function CommandPalette() {
                 return;
             }
             setDialing(null);
-            const info = serverInfoOf(endpointId);
-            await navigateTo(startFolder(cwdFor(endpointId), info.home, separatorFor(info.platform)), endpointId);
+            await navigateTo(startFolderFor(endpointId), endpointId);
         },
-        [browseEndpointId, cwdFor, navigateTo]
+        [navigateTo, startFolderFor]
     );
 
     useEffect(() => {
@@ -327,7 +348,7 @@ export function CommandPalette() {
     );
 
     /* What the daemon says about the path in the field: there, not there, or a daemon too old to say. */
-    const presence = browsing && !machineStep ? folderPresence(query, browse?.result ?? null, sep) : 'unknown';
+    const presence = browsing && !machineStep && query.trim() !== '' ? folderPresence(query, listing?.result ?? null, sep) : 'unknown';
 
     const submitPath = async (path: string): Promise<void> => {
         setBusy(true);
@@ -348,14 +369,17 @@ export function CommandPalette() {
             return [];
         }
         if (machineStep) {
-            return machines.map((row) => ({
-                id: `machine-${row.endpointId}`,
-                label: row.label,
-                hint: machineHint(row.endpointId, row.connected, dialing === row.endpointId),
-                icon: <span className={clsx('inline-block h-1.5 w-1.5 rounded-full', row.connected ? 'bg-status-idle' : 'bg-text-faint')} />,
-                section: 'Machines' as const,
-                run: () => void pickMachine(row.endpointId)
-            }));
+            // Typing on this step narrows the machines, the way typing narrows every other list here.
+            return machines
+                .filter((row) => matches(query, row.label))
+                .map((row) => ({
+                    id: `machine-${row.endpointId}`,
+                    label: row.label,
+                    hint: machineHint(row.endpointId, row.connected, dialing === row.endpointId),
+                    icon: <span className={clsx('inline-block h-1.5 w-1.5 rounded-full', row.connected ? 'bg-status-idle' : 'bg-text-faint')} />,
+                    section: 'Machines' as const,
+                    run: () => void pickMachine(row.endpointId)
+                }));
         }
         if (browsing) {
             const up = parentOf(query, sep);
@@ -374,7 +398,7 @@ export function CommandPalette() {
             /* A folder row is an icon and a name. The check on a folder that already holds a canvas
                is the one thing that stays, because it says what Enter will do: open that project
                again rather than make a second one beside it. */
-            for (const entry of browse?.result?.entries ?? []) {
+            for (const entry of listing?.result?.entries ?? []) {
                 list.push({
                     id: `dir-${entry.fullPath}`,
                     label: entry.name,
@@ -481,7 +505,7 @@ export function CommandPalette() {
         ];
     }, [
         browsing,
-        browse,
+        listing,
         connected,
         dialing,
         endpoints,
@@ -518,13 +542,42 @@ export function CommandPalette() {
         openFile(match.path);
     };
 
+    /* The machines take the list over and the field empties, so it can narrow them; the path the
+       folders step was on rides along in the step, and Backspace puts it back. */
     const showMachines = (): void => {
-        setMachineStep(true);
+        if (browse === null) {
+            return;
+        }
+        setBrowse({ ...browse, machines: true, path: query });
+        setQuery('');
         setIndex(0);
         setFailure(null);
     };
 
+    const leaveBrowse = (): void => {
+        setBrowse(null);
+        setQuery('');
+        setIndex(0);
+        setFailure(null);
+    };
+
+    const stepBack = (): void => {
+        if (browse === null) {
+            return;
+        }
+        const back = browseBack(browse, machines.length);
+        if (back.to === 'folders') {
+            void navigateTo(back.path, browse.endpointId);
+        } else if (back.to === 'machines') {
+            showMachines();
+        } else {
+            leaveBrowse();
+        }
+    };
+
     const browseLabel = endpoints.find((endpoint) => endpoint.id === browseEndpointId)?.label ?? 'This machine';
+    const backTo = browse === null ? null : browseBack(browse, machines.length).to;
+    const backLabel = backTo === 'folders' ? 'Back to the folders' : backTo === 'machines' ? 'Browse another machine' : 'Back to the palette';
     const submitLabel = presence === 'missing' ? 'Create and open' : 'Open folder';
     // Enter means "use what I typed" until a row is highlighted, and then the chord takes that over.
     const submitChord = active === undefined ? '↵' : '⌘↵';
@@ -564,25 +617,31 @@ export function CommandPalette() {
                     initialFocus={inputRef}
                 >
                     <div className="flex items-center gap-2 border-b border-border px-3">
-                        {/* The machine is in view the whole time, and is also the way into the list of
-                            them. With one machine known there is nothing to say, so it collapses to
-                            the folder icon the mode had before. */}
-                        {browsing && machines.length < 2 && <Icon icon={Folder} size={14} className="shrink-0 text-accent" />}
-                        {browsing && machines.length > 1 && (
-                            <Tooltip label={machineStep ? 'Back to the folders' : 'Browse another machine'} kbd="⌫">
+                        {/* The leading slot is the way one step back, and on the folders of a machine
+                            it says which machine that is. With one machine there is nothing to name,
+                            so it is the plain arrow that leaves browsing. */}
+                        {browsing && (
+                            <Tooltip label={backLabel} kbd="⌫">
                                 <button
                                     className="flex h-6 shrink-0 items-center gap-1.5 rounded-md px-1.5 text-xs text-text-muted hover:bg-surface-hover"
                                     // The field keeps the keys; a control that takes focus would swallow the next arrow.
                                     onMouseDown={(e) => e.preventDefault()}
-                                    onClick={() => (machineStep ? setMachineStep(false) : showMachines())}
+                                    onClick={stepBack}
+                                    aria-label={backLabel}
                                 >
-                                    <span
-                                        className={clsx(
-                                            'h-1.5 w-1.5 shrink-0 rounded-full',
-                                            connected.includes(browseEndpointId) ? 'bg-status-idle' : 'bg-text-faint'
-                                        )}
-                                    />
-                                    <span className="max-w-32 truncate">{browseLabel}</span>
+                                    {backTo !== 'machines' ? (
+                                        <Icon icon={ArrowLeft} size={14} />
+                                    ) : (
+                                        <>
+                                            <span
+                                                className={clsx(
+                                                    'h-1.5 w-1.5 shrink-0 rounded-full',
+                                                    connected.includes(browseEndpointId) ? 'bg-status-idle' : 'bg-text-faint'
+                                                )}
+                                            />
+                                            <span className="max-w-32 truncate">{browseLabel}</span>
+                                        </>
+                                    )}
                                 </button>
                             </Tooltip>
                         )}
@@ -607,9 +666,11 @@ export function CommandPalette() {
                             placeholder={
                                 grepping
                                     ? 'Search through the files of this folder'
-                                    : browsing
-                                      ? 'Enter a folder path, for example ~/projects/my-app'
-                                      : 'Jump to a node, run a command, or type a path like ~/projects to open a folder'
+                                    : machineStep
+                                      ? 'Search machines'
+                                      : browsing
+                                        ? 'Enter a folder path, for example ~/projects/my-app'
+                                        : 'Jump to a node, run a command, or type a path like ~/projects to open a folder'
                             }
                             value={query}
                             spellCheck={false}
@@ -640,14 +701,9 @@ export function CommandPalette() {
                                         // The mode leaves the way it was entered: one key, nothing typed.
                                         e.preventDefault();
                                         useUi.getState().setPaletteMode('default');
-                                    } else if (machineStep) {
+                                    } else if (browsing) {
                                         e.preventDefault();
-                                        setMachineStep(false);
-                                        setIndex(-1);
-                                    } else if (browse !== null && machines.length > 1) {
-                                        // An emptied field still has the folders of the last browse under it.
-                                        e.preventDefault();
-                                        showMachines();
+                                        stepBack();
                                     }
                                 }
                             }}
@@ -697,6 +753,7 @@ export function CommandPalette() {
                             {grepping && query.trim() === '' && (
                                 <div className="px-3 py-6 text-center text-xs text-text-faint">Type to search through every file in this folder.</div>
                             )}
+                            {machineStep && entries.length === 0 && <div className="px-3 py-6 text-center text-xs text-text-faint">No machine matches</div>}
                         </div>
                         {grepping && (
                             <PaletteGrepResults
@@ -771,11 +828,9 @@ export function CommandPalette() {
                                     <kbd className={TOOLTIP_KBD}>↵</kbd> Select
                                 </span>
                             )}
-                            {machines.length > 1 && (
-                                <span className="flex shrink-0 items-center gap-1.5">
-                                    <kbd className={TOOLTIP_KBD}>⌫</kbd> Back
-                                </span>
-                            )}
+                            <span className="flex shrink-0 items-center gap-1.5">
+                                <kbd className={TOOLTIP_KBD}>⌫</kbd> Back
+                            </span>
                             <span className="flex shrink-0 items-center gap-1.5">
                                 <kbd className={TOOLTIP_KBD}>esc</kbd> Close
                             </span>
@@ -791,7 +846,7 @@ export function CommandPalette() {
                                     size="sm"
                                     variant="secondary"
                                     onClick={() =>
-                                        void nativeDialog.pickFolder(browse?.result?.parentPath).then((picked) => (picked ? submitPath(picked) : undefined))
+                                        void nativeDialog.pickFolder(listing?.result?.parentPath).then((picked) => (picked ? submitPath(picked) : undefined))
                                     }
                                 >
                                     Browse in {fileManagerName(nativeDialog.platform)}

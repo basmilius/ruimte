@@ -119,6 +119,9 @@ interface UiStore {
     sidebarExpanded: string[] | null;
     /* Text the palette opens with; a path puts it straight into folder browsing. */
     paletteSeed: string;
+    /* Whether the palette opens in folder browsing, with nothing typed. Read once, when it opens,
+       the way the seed is: which step browsing is on after that is the palette's own business. */
+    paletteBrowse: boolean;
     settings: SettingsState;
     panel: PanelState;
     preview: PreviewState;
@@ -144,6 +147,9 @@ interface UiStore {
     openPalette(seed?: string): void;
     /* The palette in its find-in-files mode, from the palette itself or from the files panel. */
     openFindInFiles(seed?: string): void;
+    /* The palette browsing folders, from its own command or from the project menu. Nothing is
+       typed: with one machine it opens on that machine's start folder, with more on the machines. */
+    openFolderBrowser(): void;
     setPaletteMode(mode: PaletteMode): void;
     setLayoutDialogOpen(open: boolean): void;
     setPaletteOpen(open: boolean): void;
@@ -170,6 +176,7 @@ export const useUi = create<UiStore>((set, get) => ({
     paletteMode: 'default',
     page: null,
     paletteSeed: '',
+    paletteBrowse: false,
     sidebarOpen: readSidebarOpen(),
     sidebarExpanded: null,
     settings: { open: false, section: 'appearance' },
@@ -206,16 +213,19 @@ export const useUi = create<UiStore>((set, get) => ({
         set({ layoutDialogOpen: open });
     },
     openPalette(seed = '') {
-        set({ paletteOpen: true, paletteMode: 'default', paletteSeed: seed });
+        set({ paletteOpen: true, paletteMode: 'default', paletteSeed: seed, paletteBrowse: false });
     },
     openFindInFiles(seed = '') {
-        set({ paletteOpen: true, paletteMode: 'grep', paletteSeed: seed });
+        set({ paletteOpen: true, paletteMode: 'grep', paletteSeed: seed, paletteBrowse: false });
+    },
+    openFolderBrowser() {
+        set({ paletteOpen: true, paletteMode: 'default', paletteSeed: '', paletteBrowse: true });
     },
     setPaletteMode(mode) {
-        set({ paletteMode: mode, paletteSeed: '' });
+        set({ paletteMode: mode, paletteSeed: '', paletteBrowse: false });
     },
     setPaletteOpen(open) {
-        set(open ? { paletteOpen: true, paletteMode: 'default', paletteSeed: '' } : { paletteOpen: false });
+        set(open ? { paletteOpen: true, paletteMode: 'default', paletteSeed: '', paletteBrowse: false } : { paletteOpen: false });
     },
     setSettings(patch) {
         set({ settings: { ...get().settings, ...patch } });

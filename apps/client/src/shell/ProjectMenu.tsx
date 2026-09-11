@@ -7,10 +7,10 @@ import { projectClient } from '@/project';
 import { groupProjects } from '@/project/list';
 import { openProject } from '@/project/open';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
-import { openFolderBrowser } from '@/shell/commands';
 import { ProjectIconDialog } from '@/shell/ProjectIconDialog';
 import { useEndpoints } from '@/state/endpoints';
 import { useProject } from '@/state/project';
+import { useUi } from '@/state/ui';
 import { fileManagerName, useServer } from '@/state/server';
 import { transportFor } from '@/transport';
 import { useOpenEndpoints } from '@/transport/status';
@@ -133,7 +133,7 @@ export function ProjectMenu() {
                             <Menu.Item className="menu-item" onClick={() => openDialog({ kind: 'new' })}>
                                 <Icon icon={Plus} size={14} /> New project
                             </Menu.Item>
-                            <Menu.Item className="menu-item" onClick={openFolderBrowser}>
+                            <Menu.Item className="menu-item" onClick={() => useUi.getState().openFolderBrowser()}>
                                 <Icon icon={FolderOpen} size={14} /> Open folder
                             </Menu.Item>
                             {current && (
