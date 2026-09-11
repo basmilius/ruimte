@@ -37,6 +37,7 @@ Where the daemon keeps its state. Defaults to `~/.ruimte`. Layout:
 
 ```
 $RUIMTE_HOME/
+  endpoint.json                    the daemon's own id, minted on first start
   projects.json                    every canvas the daemon knows: id, name, color, folder
   projects/
     <projectId>/project.json       a canvas that is not in a folder
@@ -58,6 +59,8 @@ $RUIMTE_HOME/
 ```
 
 File names are the id passed through `encodeURIComponent`, so an id can never name a path outside its directory.
+
+One home belongs to one daemon. The id in `endpoint.json` is what a client calls this machine, and `projects.json` and the sessions are written as if nothing else touches them, so two daemons sharing a `RUIMTE_HOME` are two daemons a client cannot tell apart.
 
 ## Projects
 

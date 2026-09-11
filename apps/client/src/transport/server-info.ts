@@ -1,3 +1,4 @@
+import { noteDaemonIdentity } from '@/endpoint/identity';
 import { useServer } from '@/state/server';
 import { transport } from '@/transport';
 
@@ -8,7 +9,10 @@ const load = (): void => {
         .catch(() => undefined);
     transport
         .request('endpoint.info', {})
-        .then((info) => useServer.getState().setEndpoint({ label: info.label, reachability: info.reachability }))
+        .then((info) => {
+            useServer.getState().setEndpoint({ label: info.label, reachability: info.reachability });
+            noteDaemonIdentity(info.id);
+        })
         .catch(() => undefined);
 };
 

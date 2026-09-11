@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import {
     parseServerFrame,
     type EndpointInfo,
+    type PairResult,
     type FsBrowseResult,
     type GitStatus,
     type ProjectListResult,
@@ -26,6 +27,7 @@ const CONTAINER = process.env.RUIMTE_DOCKER_CONTAINER ?? 'ruimte-remote';
 const PORT = Number(process.env.RUIMTE_DOCKER_PORT ?? 4310);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const REPO = '/work/atlas';
+const HOME = '/root/.ruimte';
 
 interface Pending {
     resolve(value: unknown): void;
@@ -107,16 +109,18 @@ const waitUntil = async (label: string, ready: () => boolean | Promise<boolean>,
     }
 };
 
+/* What the command wrote on the other machine, for the things no request answers. */
+const inContainer = async (command: string[]): Promise<string> =>
+    (await new Response(Bun.spawn(['docker', 'exec', CONTAINER, ...command], { stderr: 'inherit' }).stdout).text()).trim();
+
 /*
  * A pairing token goes only to a client on the daemon's own machine, so the ask happens inside
  * the container. The URL it prints names the container, which nothing here resolves; only the
  * token behind the fragment travels back to the host.
  */
-const pair = async (): Promise<string> => {
-    const printed = await new Response(
-        Bun.spawn(['docker', 'exec', CONTAINER, 'bun', '/app/apps/server/src/main.ts', 'pair', '--port', String(PORT)], { stderr: 'inherit' }).stdout
-    ).text();
-    const token = printed.trim().split('\n').at(-1)?.split('#').at(-1) ?? '';
+const pair = async (): Promise<PairResult> => {
+    const printed = await inContainer(['bun', '/app/apps/server/src/main.ts', 'pair', '--port', String(PORT)]);
+    const token = printed.split('\n').at(-1)?.split('#').at(-1) ?? '';
     if (!token) {
         throw new Error(`No pairing token in what \`ruimte pair\` printed: ${printed}`);
     }
@@ -128,12 +132,12 @@ const pair = async (): Promise<string> => {
     if (!response.ok) {
         throw new Error(`Pairing failed: ${response.status} ${await response.text()}`);
     }
-    const { sessionToken } = (await response.json()) as { sessionToken: string };
-    return sessionToken;
+    return (await response.json()) as PairResult;
 };
 
 describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
     let client: RemoteClient;
+    let paired: PairResult;
     let sessionToken: string;
     const openedProjects: string[] = [];
     const startedSessions: string[] = [];
@@ -145,7 +149,8 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         };
         // A container started a second ago is still writing its repositories; anything longer is a container that is not there.
         await waitUntil(`a daemon on ${BASE_URL}; start one with \`bun run --cwd apps/server docker:up\``, answers, 5_000);
-        sessionToken = await pair();
+        paired = await pair();
+        sessionToken = paired.sessionToken;
         client = await RemoteClient.connect(sessionToken);
     });
 
@@ -191,6 +196,29 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         expect(info.authenticated).toBe(true);
         // Docker forwards the port through its own gateway, so the daemon sees a private address.
         expect(info.reachability).toBe('lan');
+    });
+
+    test('the pairing answer and endpoint.info name the same daemon', async () => {
+        const info = await client.request<EndpointInfo>('endpoint.info', {});
+        expect(info.id.length).toBeGreaterThan(8);
+        // The row a client keeps is built from the pairing answer, so the id has to be in it too.
+        expect(paired.endpoint.id).toBe(info.id);
+    });
+
+    test('the daemon keeps its id in its home, so a restart finds the same machine', async () => {
+        const info = await client.request<EndpointInfo>('endpoint.info', {});
+        expect(JSON.parse(await inContainer(['cat', `${HOME}/endpoint.json`]))).toEqual({ version: 1, id: info.id });
+        /*
+         * What a second start would do, run against the home of the daemon that is up. A real
+         * `docker restart` throws that home away (`docker/entrypoint.sh`, `RUIMTE_KEEP_STATE`), so
+         * it would test the harness instead of the daemon.
+         */
+        const restarted = await inContainer([
+            'bun',
+            '-e',
+            `import { readOrCreateEndpointId } from '/app/apps/server/src/endpoint-id.ts'; console.log(await readOrCreateEndpointId('${HOME}'));`
+        ]);
+        expect(restarted).toBe(info.id);
     });
 
     test('a client on another machine cannot mint a pairing link', async () => {

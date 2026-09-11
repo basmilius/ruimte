@@ -40,6 +40,7 @@ beforeEach(async () => {
     minted = 0;
     disconnected = [];
     registerAuthHandlers(dispatcher, store, {
+        id: 'daemon-1',
         label: 'box',
         version: '0.0.0',
         pairingUrl: () => `http://box:4210/pair#${store.issuePairingToken()}${minted++}`,
