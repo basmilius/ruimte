@@ -318,7 +318,8 @@ export class ProjectClient {
             this.flushLocal();
             const previous = this.sink.getState().current;
             if (previous && previous.projectId !== payload.projectId) {
-                await this.transport.request('project.close', { projectId: previous.projectId }).catch(() => undefined);
+                // Released, not closed: switching away is not the same as putting a project under Recent.
+                await this.transport.request('project.release', { projectId: previous.projectId }).catch(() => undefined);
             }
             const result = await this.transport.request('project.open', payload);
             this.documents.getState().load(result.document, result.local);

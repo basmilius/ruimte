@@ -47,7 +47,7 @@ Where the daemon keeps its state. Defaults to `~/.ruimte`. Layout:
 $RUIMTE_HOME/
   endpoint.json                    the daemon's own id and key pair, minted on first start, plus the name and icon it was given
   auth.json                        the clients paired with this daemon, by public key
-  projects.json                    every canvas the daemon knows: id, name, color, folder
+  projects.json                    every canvas the daemon knows: id, name, color, folder, and when it was last closed
   projects/
     <projectId>/project.json       a canvas that is not in a folder
     <projectId>/drawings/<viewId>.json   the drawings of a canvas that is not in a folder
@@ -76,6 +76,8 @@ One home belongs to one daemon. The id in `endpoint.json` is what a client calls
 A project is a folder; its canvas is `<folder>/.ruimte/project.json`, pretty-printed with a `rev` that goes up on every write, so it diffs and merges like any other file in the repository. Node directories inside the folder are stored relative to it (`./apps/server`), so a clone on another machine resolves them against its own checkout. A canvas without a folder lives under `projects/` in the app data dir. What belongs to this machine goes to `<projectId>.local.json`, never into the shared file: the camera, the focused node and, under `panels`, which panel is up and how wide, whether the preview is up and how wide, the open file tabs with the active one and their pins, and the directories the file tree had open. Every field under `panels` is optional, so a file written before them still parses and the client falls back to its own defaults.
 
 `project.open` takes an id, a folder (the canvas is created there when the folder has none) or nothing (a fresh canvas without a folder). With `createFolder` a folder that is not there is made first, and every missing folder above it; a file sitting at that path is never written over and still answers `folder-not-found`, while a mkdir that fails answers `folder-create-failed`. Only the client's folder picker asks for it. `project.save` names the `baseRev` the client loaded and answers `rev-conflict` when the file moved on. While a project is open the daemon watches its directory; a write it did not make itself arrives as a `project.changed` event with the document now on disk. A file that does not parse is moved aside as `project.json.corrupt-<timestamp>` and a fresh canvas takes its place; it is never overwritten. Every write is a temp file plus rename, with a short retry for Windows. `project.delete` forgets the project and, when asked, removes the canvas file; a folder's other files are never touched.
+
+Letting go of a project and closing one are two requests. `project.release` stops the watcher and drops the drawings, which is what a client does when it switches to another project on the same machine; the registry is untouched. `project.close` is a person closing the project: it releases it too, stamps `closedAt` on its registry entry and sends `project.summary` to every client. `project.list` answers with every project either way and carries `closedAt`, so the client shows the ones in use and keeps the closed ones under Recent. Only closing puts a project there and only `project.open` takes it out again (it clears `closedAt` and announces the summary), so neither age nor whether a project happens to be open right now moves it. Nothing is ever created by reading: a daemon with an empty registry answers `project.list` with an empty list.
 
 ### Name and icon
 

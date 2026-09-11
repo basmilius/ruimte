@@ -26,8 +26,16 @@ export const registerProjectHandlers = (dispatcher: Dispatcher, store: ProjectSt
     );
 
     dispatcher.register('project.close', (payload) =>
+        translate(async () => {
+            await store.closeProject(payload.projectId);
+            return {};
+        })
+    );
+
+    // Switching to another project on the same machine: the daemon lets go, the list does not move.
+    dispatcher.register('project.release', (payload) =>
         translate(() => {
-            store.close(payload.projectId);
+            store.release(payload.projectId);
             return {};
         })
     );

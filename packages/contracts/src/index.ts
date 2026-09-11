@@ -161,6 +161,7 @@ export const REQUEST_SCHEMAS = {
     'project.save': { payload: ProjectSavePayloadSchema, result: ProjectSaveResultSchema },
     'project.save-local': { payload: ProjectSaveLocalPayloadSchema, result: EmptySchema },
     'project.close': { payload: ProjectTargetPayloadSchema, result: EmptySchema },
+    'project.release': { payload: ProjectTargetPayloadSchema, result: EmptySchema },
     'project.setIcon': { payload: ProjectSetIconPayloadSchema, result: ProjectSummaryResultSchema },
     'project.delete': { payload: ProjectDeletePayloadSchema, result: EmptySchema },
     'drawing.open': { payload: DrawingTargetPayloadSchema, result: DrawingOpenResultSchema },
