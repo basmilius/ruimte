@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { GitCommitHorizontal } from 'lucide-react';
+import { ContextMenu } from '@base-ui-components/react/context-menu';
+import { Copy, GitCommitHorizontal } from 'lucide-react';
 import type { GitCommit } from '@ruimte/contracts';
 import { GIT_GROUP } from '@/shell/panels/classes';
 import { groupCommits, relativeTime } from '@/shell/panels/commit-log';
 import { transport } from '@/transport';
 import { Button } from '@/ui/Button';
-import { SECTION_LABEL } from '@/ui/classes';
+import { MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
+import { copyText } from '@/ui/clipboard';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
@@ -29,7 +31,8 @@ interface CommitLogProps {
 /*
  * The history of the checkout under the commit box. It reloads from the top whenever the status
  * changes, because a commit, a pull and a rebase all move the log and all move the status with it;
- * the pages that were loaded past the first are read again on the way down.
+ * the pages that were loaded past the first are read again on the way down. A right click on a row
+ * offers the commit and the two things a person copies out of one.
  */
 export function CommitLog({ cwd, revision, reading, onOpen }: CommitLogProps) {
     /* What was asked for, so the answer to the question before this one is not drawn and a status
@@ -102,24 +105,42 @@ export function CommitLog({ cwd, revision, reading, onOpen }: CommitLogProps) {
                         <span className={SECTION_LABEL}>{section.label}</span>
                     </header>
                     {section.commits.map((commit) => (
-                        <button
-                            key={commit.hash}
-                            className={LOG_ROW}
-                            aria-current={commit.hash === reading}
-                            data-selected={commit.hash === reading || undefined}
-                            onClick={() => onOpen(commit)}
-                        >
-                            <span className="shrink-0 font-mono text-text-faint">{commit.shortHash}</span>
-                            <span className="truncate text-text">{commit.subject}</span>
-                            {commit.refs.map((ref) => (
-                                <Pill key={ref} mono className="shrink-0 py-0">
-                                    {ref}
-                                </Pill>
-                            ))}
-                            <span className="grow" />
-                            <span className="truncate text-text-faint">{commit.author}</span>
-                            <span className="shrink-0 text-text-faint">{relativeTime(commit.at, now)}</span>
-                        </button>
+                        <ContextMenu.Root key={commit.hash}>
+                            <ContextMenu.Trigger
+                                render={<button />}
+                                className={LOG_ROW}
+                                aria-current={commit.hash === reading}
+                                data-selected={commit.hash === reading || undefined}
+                                onClick={() => onOpen(commit)}
+                            >
+                                <span className="shrink-0 font-mono text-text-faint">{commit.shortHash}</span>
+                                <span className="truncate text-text">{commit.subject}</span>
+                                {commit.refs.map((ref) => (
+                                    <Pill key={ref} mono className="shrink-0 py-0">
+                                        {ref}
+                                    </Pill>
+                                ))}
+                                <span className="grow" />
+                                <span className="truncate text-text-faint">{commit.author}</span>
+                                <span className="shrink-0 text-text-faint">{relativeTime(commit.at, now)}</span>
+                            </ContextMenu.Trigger>
+                            <ContextMenu.Portal>
+                                <ContextMenu.Positioner className="z-[var(--z-popup)]">
+                                    <ContextMenu.Popup className="menu-popup">
+                                        <ContextMenu.Item className="menu-item" onClick={() => onOpen(commit)}>
+                                            <Icon icon={GitCommitHorizontal} size={14} /> Open the commit
+                                        </ContextMenu.Item>
+                                        <ContextMenu.Separator className={MENU_SEPARATOR} />
+                                        <ContextMenu.Item className="menu-item" onClick={() => copyText(commit.hash)}>
+                                            <Icon icon={Copy} size={14} /> Copy commit hash
+                                        </ContextMenu.Item>
+                                        <ContextMenu.Item className="menu-item" onClick={() => copyText(commit.subject)}>
+                                            <Icon icon={Copy} size={14} /> Copy subject
+                                        </ContextMenu.Item>
+                                    </ContextMenu.Popup>
+                                </ContextMenu.Positioner>
+                            </ContextMenu.Portal>
+                        </ContextMenu.Root>
                     ))}
                 </section>
             ))}

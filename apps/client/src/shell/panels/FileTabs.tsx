@@ -1,5 +1,7 @@
 import { useEffect, useRef, type WheelEvent as ReactWheelEvent } from 'react';
+import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { GitCommitHorizontal, GitCompare, Pin, X } from 'lucide-react';
+import { FileMenuItems } from '@/shell/panels/FileMenuItems';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
@@ -24,7 +26,8 @@ const TAB_CLOSE =
 
 /*
  * The open files as a strip of tabs, inside the preview panel's own header. A double-click pins a
- * tab, and a pinned one carries the pin next to its close button.
+ * tab, a right click offers the same menu the toolbar carries, and a pinned tab shows the pin next
+ * to its close button.
  * Changes share one tab: the strip keeps the file's name so it stays readable, with the mark that
  * says this is a diff and not the file.
  */
@@ -59,39 +62,48 @@ export function FileTabs() {
                 const count = counts[tab.key];
                 const label = commit !== undefined ? commit.slice(0, 7) : tab.view ? 'Changes' : basenameOf(tab.path);
                 return (
-                    <span key={tab.key} className={TAB} data-active={tab.key === active} data-view={tab.view ? 'diff' : undefined}>
-                        <Tooltip label={commit !== undefined ? `The commit ${commit.slice(0, 7)}` : tab.view ? basenameOf(tab.path) : tab.path}>
-                            <button
-                                className={TAB_OPEN}
-                                aria-current={tab.key === active}
-                                onClick={() => useFiles.getState().activate(tab.key)}
-                                onDoubleClick={() => useFiles.getState().setPinned(tab.key, !tab.pinned)}
-                            >
-                                {tab.view ? (
-                                    <Icon icon={commit === undefined ? GitCompare : GitCommitHorizontal} size={14} className="shrink-0 text-text-faint" />
-                                ) : (
-                                    <FileIcon path={tab.path} size={14} />
-                                )}
-                                <span className="truncate">{label}</span>
-                                {/* A side that changed nothing has no number: `+0` is noise, and both
+                    <ContextMenu.Root key={tab.key}>
+                        <ContextMenu.Trigger render={<span />} className={TAB} data-active={tab.key === active} data-view={tab.view ? 'diff' : undefined}>
+                            <Tooltip label={commit !== undefined ? `The commit ${commit.slice(0, 7)}` : tab.view ? basenameOf(tab.path) : tab.path}>
+                                <button
+                                    className={TAB_OPEN}
+                                    aria-current={tab.key === active}
+                                    onClick={() => useFiles.getState().activate(tab.key)}
+                                    onDoubleClick={() => useFiles.getState().setPinned(tab.key, !tab.pinned)}
+                                >
+                                    {tab.view ? (
+                                        <Icon icon={commit === undefined ? GitCompare : GitCommitHorizontal} size={14} className="shrink-0 text-text-faint" />
+                                    ) : (
+                                        <FileIcon path={tab.path} size={14} />
+                                    )}
+                                    <span className="truncate">{label}</span>
+                                    {/* A side that changed nothing has no number: `+0` is noise, and both
                                     at zero is a diff with nothing in it to count. */}
-                                {tab.view && count !== undefined && (count.added > 0 || count.deleted > 0) && (
-                                    <span className="flex shrink-0 items-center gap-1 tabular-nums">
-                                        {count.added > 0 && <span className="text-term-green">+{count.added}</span>}
-                                        {count.deleted > 0 && <span className="text-term-red">-{count.deleted}</span>}
-                                    </span>
-                                )}
-                                {/* Out of the row until there is something to mark, so a clean tab keeps the close button 8px from its name. */}
-                                {tab.dirty && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-muted" />}
-                            </button>
-                        </Tooltip>
-                        {tab.pinned && <Icon icon={Pin} size={12} className="shrink-0 text-text-muted" />}
-                        <Tooltip label={`Close ${label}`} kbd="⌘W" name>
-                            <button className={TAB_CLOSE} onClick={() => useFiles.getState().close(tab.key)}>
-                                <Icon icon={X} size={12} />
-                            </button>
-                        </Tooltip>
-                    </span>
+                                    {tab.view && count !== undefined && (count.added > 0 || count.deleted > 0) && (
+                                        <span className="flex shrink-0 items-center gap-1 tabular-nums">
+                                            {count.added > 0 && <span className="text-term-green">+{count.added}</span>}
+                                            {count.deleted > 0 && <span className="text-term-red">-{count.deleted}</span>}
+                                        </span>
+                                    )}
+                                    {/* Out of the row until there is something to mark, so a clean tab keeps the close button 8px from its name. */}
+                                    {tab.dirty && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-muted" />}
+                                </button>
+                            </Tooltip>
+                            {tab.pinned && <Icon icon={Pin} size={12} className="shrink-0 text-text-muted" />}
+                            <Tooltip label={`Close ${label}`} kbd="⌘W" name>
+                                <button className={TAB_CLOSE} onClick={() => useFiles.getState().close(tab.key)}>
+                                    <Icon icon={X} size={12} />
+                                </button>
+                            </Tooltip>
+                        </ContextMenu.Trigger>
+                        <ContextMenu.Portal>
+                            <ContextMenu.Positioner className="z-[var(--z-popup)]">
+                                <ContextMenu.Popup className="menu-popup">
+                                    <FileMenuItems tabKey={tab.key} />
+                                </ContextMenu.Popup>
+                            </ContextMenu.Positioner>
+                        </ContextMenu.Portal>
+                    </ContextMenu.Root>
                 );
             })}
         </div>
