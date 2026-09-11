@@ -2,10 +2,10 @@ import clsx from 'clsx';
 import { useEffect, useState } from 'react';
 import { Tooltip } from '@/ui/Tooltip';
 import { describeConnection, describeMachine, describePing, describeVersion } from '@/shell/connection-info';
-import { useConnection } from '@/transport/status';
-import { pingNow, usePing } from '@/transport/ping';
+import { useConnectedEndpoints, useConnection, useEndpointConnection } from '@/transport/status';
+import { pingNow, useLatency } from '@/transport/ping';
 import { SLOW_PING_MS } from '@/transport/ping-monitor';
-import { useEndpoints } from '@/state/endpoints';
+import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServer } from '@/state/server';
 import type { ConnectionState, TransportStatus } from '@/transport';
 
@@ -28,11 +28,28 @@ function useCountdown(active: boolean): number {
     return now;
 }
 
+/* One of the machines this client holds a socket for: whether it is up, and how far away it is. */
+function MachineRow({ endpoint }: { endpoint: Endpoint }) {
+    const connection = useEndpointConnection(endpoint.id);
+    const latency = useLatency(endpoint.id);
+
+    return (
+        <span className="flex w-full items-center gap-1.5">
+            <span className={clsx('h-1.5 w-1.5 shrink-0 rounded-full', COLOR[connection.status])} />
+            <span className="min-w-0 grow truncate text-text-muted">{endpoint.label}</span>
+            <span className="shrink-0 text-text-faint">{describePing(latency)}</span>
+        </span>
+    );
+}
+
 /* The tooltip's body. It only mounts while the tooltip is open, so the extra measurement it asks
    for on mount is one per look, not one per render of the dot. */
 function ConnectionDetails({ connection }: { connection: ConnectionState }) {
-    const latency = usePing((s) => s.latency);
-    const endpointLabel = useEndpoints((s) => s.endpoints.find((entry) => entry.id === s.activeId)?.label ?? 'This machine');
+    const activeId = useEndpoints((s) => s.activeId);
+    const endpoints = useEndpoints((s) => s.endpoints);
+    const connected = useConnectedEndpoints();
+    const latency = useLatency(activeId);
+    const endpointLabel = endpoints.find((entry) => entry.id === activeId)?.label ?? 'This machine';
     const machineLabel = useServer((s) => s.label);
     const reachability = useServer((s) => s.reachability);
     const platform = useServer((s) => s.platform);
@@ -43,19 +60,30 @@ function ConnectionDetails({ connection }: { connection: ConnectionState }) {
         pingNow();
     }, []);
 
+    // Every machine with a socket, so "is my other daemon still up" is answerable without opening settings.
+    const machines = endpoints.filter((endpoint) => connected.includes(endpoint.id));
+
     return (
         <span className="flex flex-col items-start gap-0.5">
             <span>{describeConnection(connection, now)}</span>
             <span className="text-text-muted">{describeMachine({ endpointLabel, machineLabel, reachability, platform })}</span>
             <span className="text-text-muted">{describeVersion(version)}</span>
             <span className="text-text-muted">{describePing(latency)}</span>
+            {machines.length > 1 && (
+                <span className="mt-1 flex w-full flex-col items-start gap-0.5 border-t border-border pt-1">
+                    {machines.map((endpoint) => (
+                        <MachineRow key={endpoint.id} endpoint={endpoint} />
+                    ))}
+                </span>
+            )}
         </span>
     );
 }
 
 export function ConnectionDot() {
     const connection = useConnection();
-    const latency = usePing((s) => s.latency);
+    const activeId = useEndpoints((s) => s.activeId);
+    const latency = useLatency(activeId);
     const slow = connection.status === 'open' && latency !== null && latency > SLOW_PING_MS;
 
     return (

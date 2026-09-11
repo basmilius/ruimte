@@ -1,5 +1,4 @@
 import type { AgentLaunch, SessionAttachResult, SessionInfo } from '@ruimte/contracts';
-import { LOCAL_ENDPOINT_ID } from '../state/endpoints';
 import type { SessionSink } from '../state/sessions';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 
@@ -20,24 +19,23 @@ interface Mounted extends OpenOptions {
     rows: number;
     /* False between a lost connection (or a failed attach) and the next successful attach. */
     attached: boolean;
-    /* The daemon this session runs on; a socket that comes back pointed at another one is not its socket. */
-    endpointId: string;
 }
 
 const isConnectionError = (e: unknown): boolean => e instanceof TransportError && (e.code === 'not-connected' || e.code === 'disconnected');
 
 /**
- * One daemon session per node id, on top of the transport.
+ * One daemon session per node id, on top of the socket of one daemon.
  *
  * A node calls `ensure` and `attach` when it mounts and `detach` when it unmounts. Everything
  * in between (a lost socket, the daemon restarting) is this class's problem: every session that
  * is still mounted is created again and re-attached when the transport comes back, and the fresh
- * screen is handed to `onScreen` subscribers so the node can repaint from scratch.
+ * screen is handed to `onScreen` subscribers so the node can repaint from scratch. The transport
+ * it is given never changes machines, so a reattach can only ever reach the daemon these sessions
+ * run on (`transport/connections.ts`).
  */
 export class SessionClient {
     private readonly transport: Transport;
     private readonly sink: SessionSink;
-    private readonly endpointId: () => string;
     private readonly mounted = new Map<string, Mounted>();
     private readonly opens = new Map<string, OpenOptions>();
     // Cold resumes already typed this page life; a CLI that is not installed must not be retyped on every attach.
@@ -47,10 +45,9 @@ export class SessionClient {
     private readonly screenHandlers = new Map<string, Set<ScreenHandler>>();
     private readonly unsubscribe: Array<() => void> = [];
 
-    constructor(transport: Transport, sink: SessionSink, endpointId: () => string = () => LOCAL_ENDPOINT_ID) {
+    constructor(transport: Transport, sink: SessionSink) {
         this.transport = transport;
         this.sink = sink;
-        this.endpointId = endpointId;
         this.unsubscribe.push(
             transport.on('session.output', ({ sessionId, data }) => this.fanOut(this.outputHandlers, sessionId, data)),
             // The daemon dropped output for a slow socket and sent the screen it owns instead; repaint from it.
@@ -91,7 +88,7 @@ export class SessionClient {
      * reconnect has attached it.
      */
     async open(nodeId: string, options: OpenOptions, cols: number, rows: number): Promise<SessionAttachResult | null> {
-        this.mounted.set(nodeId, { ...options, cols, rows, attached: false, endpointId: this.endpointId() });
+        this.mounted.set(nodeId, { ...options, cols, rows, attached: false });
         try {
             await this.ensure(nodeId, options, cols, rows);
             return await this.attach(nodeId, cols, rows);
@@ -105,7 +102,7 @@ export class SessionClient {
 
     async attach(nodeId: string, cols: number, rows: number): Promise<SessionAttachResult> {
         // Registered before the request, so a socket that drops mid-flight still brings this node back.
-        this.mounted.set(nodeId, { ...this.opens.get(nodeId), cols, rows, attached: false, endpointId: this.endpointId() });
+        this.mounted.set(nodeId, { ...this.opens.get(nodeId), cols, rows, attached: false });
         try {
             const result = await this.transport.request('session.attach', { sessionId: nodeId, cols, rows });
             const entry = this.mounted.get(nodeId);
@@ -197,11 +194,16 @@ export class SessionClient {
         return this.mounted.has(nodeId);
     }
 
+    /* Lets go of the machine, which is not the same as ending its sessions: they keep running, the
+       daemon only stops streaming their output to a socket this client no longer reads. */
     dispose(): void {
         for (const off of this.unsubscribe) {
             off();
         }
         this.unsubscribe.length = 0;
+        for (const nodeId of [...this.mounted.keys()]) {
+            void this.detach(nodeId);
+        }
     }
 
     private listen<T>(table: Map<string, Set<(value: T) => void>>, nodeId: string, handler: (value: T) => void): () => void {
@@ -243,11 +245,6 @@ export class SessionClient {
     private async reattachAll(): Promise<void> {
         for (const [nodeId, entry] of [...this.mounted]) {
             if (entry.attached) {
-                continue;
-            }
-            // The socket that just opened belongs to another daemon; this session is not there, and creating it would be a second shell.
-            if (entry.endpointId !== this.endpointId()) {
-                this.mounted.delete(nodeId);
                 continue;
             }
             try {

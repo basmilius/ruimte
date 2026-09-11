@@ -291,11 +291,20 @@ export class ProjectClient {
         }
     }
 
+    /* Lets go of the machine: no more events, and no timer that would write to a daemon the client left. */
     dispose(): void {
         for (const off of this.unsubscribe) {
             off();
         }
         this.unsubscribe.length = 0;
+        if (this.saveTimer) {
+            clearTimeout(this.saveTimer);
+            this.saveTimer = null;
+        }
+        if (this.localTimer) {
+            clearTimeout(this.localTimer);
+            this.localTimer = null;
+        }
     }
 
     /* What is open on this endpoint now; the other endpoints keep what they had. */

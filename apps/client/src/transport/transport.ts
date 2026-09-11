@@ -18,8 +18,6 @@ export interface Transport {
        the object identity only changes when the state does, so a store can read it as a snapshot. */
     readonly connection?: ConnectionState;
     subscribeStatus(handler: (status: TransportStatus) => void): () => void;
-    /* Reconnects to another daemon. */
-    switchTo?(url: string): void;
 }
 
 // A rejected request always carries a code, so callers can branch without parsing messages.

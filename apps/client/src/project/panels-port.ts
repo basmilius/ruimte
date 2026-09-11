@@ -109,3 +109,6 @@ export class PanelsPort {
         return JSON.stringify(this.export());
     }
 }
+
+/* The panels are the viewer's, not a daemon's, so every connection writes the same port. */
+export const panelsPort = new PanelsPort();

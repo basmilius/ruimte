@@ -112,17 +112,8 @@ const setup = () => {
     const transport = new FakeTransport();
     const sink = new FakeSink();
     const providers: ProviderInfo[][] = [];
-    let endpointId = 'daemon-a';
-    const client = new ChatClient(transport, sink, { setProviders: (list) => providers.push(list) }, () => endpointId);
-    return {
-        transport,
-        sink,
-        client,
-        providers,
-        moveTo: (id: string): void => {
-            endpointId = id;
-        }
-    };
+    const client = new ChatClient(transport, sink, { setProviders: (list) => providers.push(list) });
+    return { transport, sink, client, providers };
 };
 
 describe('ChatClient', () => {
@@ -163,17 +154,16 @@ describe('ChatClient', () => {
         expect(sink.resets.map((r) => r.chatId)).toEqual(['a', 'b', 'a']);
     });
 
-    test('a socket that comes back pointed at another daemon leaves the first machine alone', async () => {
-        const { transport, client, moveTo } = setup();
+    test('letting go of the machine detaches every chat and kills none', async () => {
+        const { transport, client } = setup();
         await client.open('a', {});
-
-        transport.setStatus('closed');
         transport.calls.length = 0;
-        moveTo('daemon-b');
-        transport.setStatus('open');
+
+        client.dispose();
         await flush();
 
-        expect(transport.of('chat.create')).toHaveLength(0);
+        expect(transport.of('chat.detach').map((call) => call.payload)).toEqual([{ chatId: 'a' }]);
+        expect(transport.of('chat.kill')).toHaveLength(0);
         expect(client.isMounted('a')).toBe(false);
     });
 

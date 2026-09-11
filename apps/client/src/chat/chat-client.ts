@@ -11,7 +11,6 @@ import type {
     RuntimeMode
 } from '@ruimte/contracts';
 import type { ChatSink } from '../state/chats';
-import { LOCAL_ENDPOINT_ID } from '../state/endpoints';
 import type { ProviderInfo } from '@ruimte/contracts';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 
@@ -36,8 +35,6 @@ export interface ChatSendExtras {
 
 interface Mounted extends ChatOpenOptions {
     attached: boolean;
-    /* The daemon this chat runs on; a socket that comes back pointed at another one is not its socket. */
-    endpointId: string;
 }
 
 interface ProviderSink {
@@ -49,21 +46,20 @@ const isConnectionError = (e: unknown): boolean => e instanceof TransportError &
 /*
  * One daemon chat per node id. Like the terminal's session client: a node opens on mount and
  * detaches on unmount, and every mounted chat is attached again when the transport comes back.
- * The provider list is fetched once per connection and handed to its own store.
+ * The provider list is fetched once per connection and handed to its own store. The transport it is
+ * given never changes machines, so a reattach stays on the daemon these chats run on.
  */
 export class ChatClient {
     private readonly transport: Transport;
     private readonly sink: ChatSink;
     private readonly providers: ProviderSink | null;
-    private readonly endpointId: () => string;
     private readonly mounted = new Map<string, Mounted>();
     private readonly unsubscribe: Array<() => void> = [];
 
-    constructor(transport: Transport, sink: ChatSink, providers: ProviderSink | null = null, endpointId: () => string = () => LOCAL_ENDPOINT_ID) {
+    constructor(transport: Transport, sink: ChatSink, providers: ProviderSink | null = null) {
         this.transport = transport;
         this.sink = sink;
         this.providers = providers;
-        this.endpointId = endpointId;
         this.unsubscribe.push(
             transport.on('chat.event', ({ chatId, event }) => this.sink.apply(chatId, event)),
             transport.subscribeStatus((status) => this.onStatus(status))
@@ -75,7 +71,7 @@ export class ChatClient {
 
     /* Answers false when the transport is not connected; the chat opens once it is. */
     async open(chatId: string, options: ChatOpenOptions): Promise<boolean> {
-        this.mounted.set(chatId, { ...options, attached: false, endpointId: this.endpointId() });
+        this.mounted.set(chatId, { ...options, attached: false });
         try {
             await this.attach(chatId);
             return true;
@@ -203,11 +199,15 @@ export class ChatClient {
         return this.mounted.has(chatId);
     }
 
+    /* Lets go of the machine; the chats keep running there, the daemon only stops streaming them here. */
     dispose(): void {
         for (const off of this.unsubscribe) {
             off();
         }
         this.unsubscribe.length = 0;
+        for (const chatId of [...this.mounted.keys()]) {
+            void this.detach(chatId);
+        }
     }
 
     private async attach(chatId: string): Promise<{ info: ChatInfo; items: ChatItem[] }> {
@@ -243,11 +243,6 @@ export class ChatClient {
     private async reattachAll(): Promise<void> {
         for (const [chatId, entry] of [...this.mounted]) {
             if (entry.attached) {
-                continue;
-            }
-            // The socket that just opened belongs to another daemon; this chat is not there, and creating it would be a second one.
-            if (entry.endpointId !== this.endpointId()) {
-                this.mounted.delete(chatId);
                 continue;
             }
             try {

@@ -6,10 +6,10 @@ import { startServerInfo } from '@/transport/server-info';
 import { startPing } from '@/transport/ping';
 import { startContextSync } from '@/context/sync';
 import { startEndpointSelection } from '@/endpoint';
+import { startConnections } from '@/transport/connections';
 import { desktop } from '@/desktop/bridge';
 import { startInputModality } from '@/ui/modality';
 import { useTheme } from '@/state/theme';
-import '@/project';
 import { exposeTerminalTestHooks } from '@/terminal/registry';
 import '@/state/theme';
 import '@/state/settings';
@@ -23,6 +23,7 @@ startServerInfo();
 startPing();
 startContextSync();
 startEndpointSelection();
+startConnections();
 startInputModality();
 /* The shell dresses its native chrome and every page it hosts in the theme the client is in. The
    background travels with it, so `styles.css` stays the only place the token is written down. */

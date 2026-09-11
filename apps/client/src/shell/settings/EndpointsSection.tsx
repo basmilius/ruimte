@@ -4,9 +4,11 @@ import { Dialog } from '@base-ui-components/react/dialog';
 import { Check, Copy, Link2, Server, Trash } from 'lucide-react';
 import type { AuthSession } from '@ruimte/contracts';
 import { activateEndpoint, forgetEndpoint, listPairedClients, pairEndpoint, requestPairingUrl, revokePairedClient } from '@/endpoint';
-import { useEndpoints, LOCAL_ENDPOINT_ID } from '@/state/endpoints';
+import { useEndpoints, LOCAL_ENDPOINT_ID, type Endpoint } from '@/state/endpoints';
 import { useServer } from '@/state/server';
-import { transport } from '@/transport';
+import { pool, transport, type TransportStatus } from '@/transport';
+import { useEndpointConnection } from '@/transport/status';
+import { describeConnection } from '@/shell/connection-info';
 import { Button } from '@/ui/Button';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
@@ -26,6 +28,24 @@ const ago = (timestamp: number): string => {
 };
 
 const failureText = (e: unknown, fallback: string): string => (e instanceof Error ? e.message : fallback);
+
+const DOT: Record<TransportStatus, string> = {
+    open: 'bg-status-idle',
+    connecting: 'bg-status-needs-you',
+    closed: 'bg-status-error'
+};
+
+/* The socket of this row's machine: the dot says whether it answers, the words say what it is doing. */
+function EndpointState({ endpointId }: { endpointId: string }) {
+    const connection = useEndpointConnection(endpointId);
+
+    return (
+        <>
+            <span className={clsx('h-2 w-2 shrink-0 rounded-full', DOT[connection.status])} />
+            {connection.status !== 'open' && <span className="shrink-0 text-xs text-text-muted">{describeConnection(connection, null)}</span>}
+        </>
+    );
+}
 
 /* A pairing link that names the loopback address can only be a daemon that nobody else can reach. */
 const onlyLoopback = (link: string): boolean => {
@@ -185,6 +205,16 @@ export function EndpointsSection() {
     const [busy, setBusy] = useState(false);
     const [failure, setFailure] = useState<string | null>(null);
 
+    // Every machine on the list keeps a socket while the pane is open, which is what the dots read.
+    useEffect(() => {
+        const released = endpoints.map((endpoint: Endpoint) => pool.hold(endpoint));
+        return () => {
+            for (const release of released) {
+                release();
+            }
+        };
+    }, [endpoints]);
+
     const pair = async (): Promise<void> => {
         setBusy(true);
         setFailure(null);
@@ -201,8 +231,9 @@ export function EndpointsSection() {
 
     return (
         <div className="flex flex-col gap-2">
-            {/* One daemon is active at a time, so the list is a set of radios; forgetting a machine is
-                something else and sits beside the radio, not inside it. */}
+            {/* Every row here has a socket while the pane is open, but one machine is the one projects
+                open on, so the list stays a set of radios; forgetting a machine is something else and
+                sits beside the radio, not inside it. */}
             <div className="flex flex-col gap-2" role="radiogroup" aria-label="Machines this client talks to">
                 {endpoints.map((endpoint) => (
                     <div
@@ -225,8 +256,11 @@ export function EndpointsSection() {
                             </span>
                             <span className="flex min-w-0 grow flex-col">
                                 <span className="truncate text-sm text-text">{endpoint.label}</span>
-                                <span className="truncate font-mono text-xs text-text-faint">
-                                    {endpoint.id === LOCAL_ENDPOINT_ID ? 'loopback' : endpoint.httpBaseUrl}
+                                <span className="flex items-center gap-1.5">
+                                    <EndpointState endpointId={endpoint.id} />
+                                    <span className="min-w-0 truncate font-mono text-xs text-text-faint">
+                                        {endpoint.id === LOCAL_ENDPOINT_ID ? 'loopback' : endpoint.httpBaseUrl}
+                                    </span>
                                 </span>
                                 {mismatched[endpoint.id] !== undefined && (
                                     <span className="text-xs text-status-error">This address answers as another machine; pair again to talk to it.</span>

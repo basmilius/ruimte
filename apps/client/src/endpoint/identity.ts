@@ -1,6 +1,7 @@
 import { rekeyLastProject } from '@/project/project-client';
 import { activeEndpoint, LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { useToasts } from '@/state/toasts';
+import { pool } from '@/transport';
 
 /*
  * What the daemon behind the active endpoint just said it is. A row keyed on an address (every row
@@ -20,6 +21,8 @@ export const noteDaemonIdentity = (daemonId: string): void => {
     }
     if (endpoint.daemonId === null) {
         rekeyLastProject(endpoint.id, daemonId);
+        // The socket moves with the row: it is the one that just answered, and closing it would drop what is attached to it.
+        pool.rekey(endpoint.id, daemonId);
         useEndpoints.getState().rekeyEndpoint(endpoint.id, daemonId);
         return;
     }
