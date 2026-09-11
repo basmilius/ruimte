@@ -3,7 +3,7 @@ import { createCanvasStore, defaultCanvasStore, useCanvas } from './canvas';
 import { createDocumentStore } from './document';
 import { createDrawingStore } from './drawing';
 import { createProjectStore, useProject } from './project';
-import { currentStores, setCurrentStores, type WorkspaceStores } from './workspace-stores';
+import { currentStores, currentWorkspaceEndpointId, setCurrentWorkspace, type WorkspaceStores } from './workspace-stores';
 
 const workspace = (): WorkspaceStores => {
     const canvas = createCanvasStore();
@@ -12,7 +12,7 @@ const workspace = (): WorkspaceStores => {
 };
 
 afterEach(() => {
-    setCurrentStores(null);
+    setCurrentWorkspace(null);
 });
 
 describe('the stores of a workspace', () => {
@@ -55,19 +55,25 @@ describe('the hook over a slot', () => {
 
     test('it reads and writes the workspace that has the focus', () => {
         const here = workspace();
-        setCurrentStores(here);
+        setCurrentWorkspace({ stores: here, endpointId: 'daemon-a' });
         useProject.getState().setError('nothing saved');
 
         expect(here.project.getState().error).toBe('nothing saved');
         expect(useProject.getState().error).toBe('nothing saved');
     });
 
+    test('the focused workspace says which machine the code outside React is about', () => {
+        expect(currentWorkspaceEndpointId()).toBeNull();
+        setCurrentWorkspace({ stores: workspace(), endpointId: 'daemon-b' });
+        expect(currentWorkspaceEndpointId()).toBe('daemon-b');
+    });
+
     test('the focus moving takes every reader with it', () => {
         const here = workspace();
         const there = workspace();
-        setCurrentStores(here);
+        setCurrentWorkspace({ stores: here, endpointId: 'daemon-a' });
         useProject.getState().setError('on this machine');
-        setCurrentStores(there);
+        setCurrentWorkspace({ stores: there, endpointId: 'daemon-b' });
 
         expect(useProject.getState().error).toBeNull();
         expect(here.project.getState().error).toBe('on this machine');
@@ -75,11 +81,11 @@ describe('the hook over a slot', () => {
 
     test('a listener follows the store it was added to, not the one that comes after', () => {
         const here = workspace();
-        setCurrentStores(here);
+        setCurrentWorkspace({ stores: here, endpointId: 'daemon-a' });
         const seen: Array<string | null> = [];
         const off = useProject.subscribe((state) => seen.push(state.error));
         useProject.getState().setError('first');
-        setCurrentStores(workspace());
+        setCurrentWorkspace({ stores: workspace(), endpointId: 'daemon-b' });
         useProject.getState().setError('second');
         off();
 

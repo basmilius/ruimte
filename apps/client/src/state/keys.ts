@@ -1,4 +1,6 @@
 import { useEndpoints } from '@/state/endpoints';
+import { useOptionalConnection } from '@/transport/context';
+import { currentWorkspaceEndpointId } from '@/state/workspace-stores';
 
 /*
  * A row in a store is about one daemon, and its key says which. Node ids are random, so this is not
@@ -30,10 +32,17 @@ export const dropEndpoint = <T>(rows: Record<string, T>, endpointId: string): Re
 };
 
 /*
- * Which machine the code on screen is about. There is one active machine today; when a subtree
- * carries a connection of its own, this hook reads that and no reader of it changes.
+ * Which machine the code on screen is about: the daemon of the workspace it is rendered in, and the
+ * active one for the shell around it (the palette, the settings, a toast), which belongs to no project.
  */
-export const useEndpointId = (): string => useEndpoints((s) => s.activeId);
+export const useEndpointId = (): string => {
+    const connection = useOptionalConnection();
+    const activeId = useEndpoints((s) => s.activeId);
+    return connection?.endpointId ?? activeId;
+};
 
-/* The same answer outside a render. */
-export const currentEndpointId = (): string => useEndpoints.getState().activeId;
+/*
+ * The same answer outside a render, where there is no subtree to ask: the machine of the workspace
+ * that has the focus, and the active one before the first workspace is built.
+ */
+export const currentEndpointId = (): string => currentWorkspaceEndpointId() ?? useEndpoints.getState().activeId;
