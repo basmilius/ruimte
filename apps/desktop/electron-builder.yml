@@ -27,10 +27,22 @@ mac:
   category: public.app-category.developer-tools
   # The arch comes from the command line (`--arm64 --x64`), never from here, so a daemon is compiled for each one on purpose.
   target: [dmg, zip]
+  minimumSystemVersion: '26.0'
   hardenedRuntime: true
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
+  # The daemon is not a helper Electron knows about, so name it here or it ships unsigned and Apple refuses the notarization.
+  binaries:
+    - Contents/Resources/bin/ruimte
+  # `bun scripts/icon.ts` writes both out of `assets/AppIcon.icon`. The catalog is what macOS 26 reads
+  # for the light, dark, tinted and clear renderings; the icns only serves whoever asks for a file.
+  icon: build/icon/AppIcon.icns
+  extraResources:
+    - from: build/icon/Assets.car
+      to: Assets.car
+  extendInfo:
+    CFBundleIconName: AppIcon
   # Set to true by the release workflow once Apple credentials are in the secrets.
   notarize: false
 dmg:
