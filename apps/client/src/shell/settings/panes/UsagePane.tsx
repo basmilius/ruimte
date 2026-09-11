@@ -1,7 +1,7 @@
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Segmented } from '@/shell/settings/controls';
-import { useUsage } from '@/state/usage';
+import { useUsage, useUsageStore } from '@/state/usage';
 import type { UsageCurrency } from '@/shell/usage/format';
 
 const CURRENCIES: readonly { id: UsageCurrency; label: string }[] = [
@@ -25,7 +25,7 @@ export function UsagePane() {
                           ? 'No exchange rate yet, so the page stays in dollars until the daemon has one.'
                           : `At the ECB reference rate of ${rate.date}, which the daemon asks for once a day.`
                 }
-                control={<Segmented value={currency} options={CURRENCIES} onChange={(id) => useUsage.getState().setCurrency(id)} label="Currency" />}
+                control={<Segmented value={currency} options={CURRENCIES} onChange={(id) => useUsageStore.getState().setCurrency(id)} label="Currency" />}
             />
         </SettingsSection>
     );

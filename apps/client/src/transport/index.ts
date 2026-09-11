@@ -21,3 +21,12 @@ export const transport: Transport = new ActiveTransport({
             }
         })
 });
+
+/*
+ * The socket of one machine by id, opened if this client has none for it yet. Null for a machine
+ * this client does not know, which is what a row that was forgotten leaves behind.
+ */
+export const transportFor = (endpointId: string): Transport | null => {
+    const endpoint = useEndpoints.getState().endpoints.find((entry) => entry.id === endpointId);
+    return endpoint ? pool.require(endpoint) : null;
+};

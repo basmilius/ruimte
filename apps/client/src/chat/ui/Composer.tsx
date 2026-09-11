@@ -26,7 +26,7 @@ import { ContextMeter } from '@/chat/ui/ContextMeter';
 import { ApprovalDock, QuestionDock } from '@/chat/ui/PendingDock';
 import { ModelPicker, ModePicker, OptionsPicker, StashPicker } from '@/chat/ui/Pickers';
 import { isApplePlatform } from '@/desktop/bridge';
-import { useChats } from '@/state/chats';
+import { useChatRow } from '@/state/chats';
 import { useProviders } from '@/state/providers';
 import { isShellChord } from '@/terminal/keymap';
 import { BTN_GROUP, MENU_LABEL } from '@/ui/classes';
@@ -69,8 +69,8 @@ interface ComposerProps {
 }
 
 const usePendingRequests = (chatId: string) => {
-    const items = useChats((s) => s.byNodeId[chatId]?.items);
-    const order = useChats((s) => s.byNodeId[chatId]?.order);
+    const items = useChatRow(chatId, (row) => row?.items);
+    const order = useChatRow(chatId, (row) => row?.order);
     return useMemo(() => {
         const approvals: ChatApprovalItem[] = [];
         const questions: ChatQuestionItem[] = [];
@@ -112,8 +112,8 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
     const backdropRef = useRef<HTMLDivElement>(null);
     const providers = useProviders((s) => s.providers);
     const { approvals, questions } = usePendingRequests(chatId);
-    const order = useChats((s) => s.byNodeId[chatId]?.order);
-    const items = useChats((s) => s.byNodeId[chatId]?.items);
+    const order = useChatRow(chatId, (row) => row?.order);
+    const items = useChatRow(chatId, (row) => row?.items);
 
     // The dock shows one request at a time and says how many others are behind it.
     const question = questions[0] ?? null;

@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import { isSessionView, type AgentKind, type NodeKind, type NodeTitleSource, type ProjectView, type RuntimeMode } from '@ruimte/contracts';
 import { DEFAULT_TITLES, useCanvas, type CanvasNode } from '@/state/canvas';
 import { useDocument } from '@/state/document';
-import { useProviders } from '@/state/providers';
+import { currentEndpointId } from '@/state/keys';
+import { providersOf } from '@/state/providers';
 
 /*
  * What a body needs to run, wherever it is drawn. A node on a canvas and a view of its own are the
@@ -86,7 +87,7 @@ export const updateHost = (id: string, patch: Partial<Pick<NodeHost, 'url' | 'cw
 /* The name a node carries before anything names it: the CLI's own name for an agent, the name of
    its kind for anything else. */
 export const automaticTitleOf = (host: NodeHost): string => {
-    const provider = host.provider ? useProviders.getState().providers.find((each) => each.kind === host.provider) : undefined;
+    const provider = host.provider ? providersOf(currentEndpointId()).providers.find((each) => each.kind === host.provider) : undefined;
     return provider?.name ?? DEFAULT_TITLES[host.kind];
 };
 

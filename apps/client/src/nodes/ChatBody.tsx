@@ -5,7 +5,7 @@ import { defaultProvider, readChatPreferences, selectionFor } from '@/chat/prefe
 import { deriveNodeTitle } from '@/chat/title';
 import { Composer } from '@/chat/ui/Composer';
 import { Timeline } from '@/chat/ui/Timeline';
-import { useChats } from '@/state/chats';
+import { useChatRow } from '@/state/chats';
 import { useProject } from '@/state/project';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
@@ -16,7 +16,7 @@ const DiffPool = lazy(() => import('@/chat/ui/DiffPool'));
 
 /* The body of a chat, the same on a canvas inside a frame and filling a view of its own. */
 export function ChatBody({ id, focused }: { id: string; focused: boolean }) {
-    const info = useChats((s) => s.byNodeId[id]?.info);
+    const info = useChatRow(id, (row) => row?.info);
     const providerFixed = useNodeHost(id)?.providerFixed === true;
     const status = useTransportStatus();
     const [failure, setFailure] = useState<string | null>(null);

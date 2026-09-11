@@ -26,6 +26,7 @@ import { askDeleteView, askViewIcon, duplicateViewOf, putOnCanvas, revealNode, s
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
+import { useEndpointId } from '@/state/keys';
 import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
 import { useUi } from '@/state/ui';
 import {
@@ -388,8 +389,9 @@ export function Sidebar() {
     const canvasViewId = useCanvas((s) => s.viewId);
     const order = useCanvas(useShallow((s) => s.order));
     const nodes = useCanvas((s) => s.nodes);
-    const sessions = useSessions((s) => s.byNodeId);
-    const chats = useChats((s) => s.byNodeId);
+    const endpointId = useEndpointId();
+    const sessions = useSessions((s) => s.byKey);
+    const chats = useChats((s) => s.byKey);
     const drafts = useDrafts((s) => s.ids);
     const open = useUi((s) => s.sidebarOpen);
     const usageOpen = useUi((s) => s.page === 'usage');
@@ -414,7 +416,7 @@ export function Sidebar() {
                     title: node.title,
                     kind: node.kind,
                     provider: node.provider ?? null,
-                    status: nodeStatus(node, sessions, chats) ?? null,
+                    status: nodeStatus(node, sessions, chats, endpointId) ?? null,
                     draft: node.kind === 'chat' && drafts.includes(node.id)
                 });
                 const provider = view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : undefined;
@@ -429,7 +431,7 @@ export function Sidebar() {
                     self: isSessionView(view) ? asRow({ id: view.id, kind: view.kind, title: view.name, provider }) : null
                 };
             }),
-        [views, canvasViewId, order, nodes, sessions, chats, drafts]
+        [views, canvasViewId, order, nodes, sessions, chats, drafts, endpointId]
     );
 
     const expandedIds = useMemo(() => new Set(expanded ?? (activeViewId === null ? [] : [activeViewId])), [expanded, activeViewId]);

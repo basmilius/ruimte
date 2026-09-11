@@ -1,17 +1,20 @@
 import { browserRegistry } from '@/browser/registry';
-import { chatClient } from '@/chat';
-import { sessionClient } from '@/terminal';
+import { endpointKey } from '@/state/keys';
 import { watchNodes, type NodeEnder } from '@/terminal/lifecycle-watch';
 import { forgetScreen } from '@/terminal/registry';
+import { chatClientFor, sessionClientFor } from '@/transport/connections';
 
-const end: NodeEnder = (id, kind) => {
+const noop = (): void => undefined;
+
+/* The node names the machine it ran on, so a node that leaves is ended there and not on the machine that is active now. */
+const end: NodeEnder = (endpointId, id, kind) => {
     if (kind === 'terminal') {
-        forgetScreen(id);
-        sessionClient.kill(id).catch(() => undefined);
+        forgetScreen(endpointId, id);
+        void sessionClientFor(endpointId)?.kill(id).catch(noop);
     } else if (kind === 'chat') {
-        chatClient.kill(id).catch(() => undefined);
+        void chatClientFor(endpointId)?.kill(id).catch(noop);
     } else if (kind === 'browser') {
-        browserRegistry.destroy(id);
+        browserRegistry.destroy(endpointKey(endpointId, id));
     }
 };
 

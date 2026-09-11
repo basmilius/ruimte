@@ -25,11 +25,11 @@ import { NODE_ACCENTS } from '@/canvas/accents';
 import { DEFAULT_NOTE_COLOR, NOTE_COLORS } from '@/canvas/note-colors';
 import { EMPTY_DRAFT, writeDraft } from '@/chat/drafts';
 import { useCanvas } from '@/state/canvas';
-import { useChats } from '@/state/chats';
+import { useChatRow } from '@/state/chats';
 import { useProject } from '@/state/project';
 import { useProviders } from '@/state/providers';
 import { fileManagerName, useServer } from '@/state/server';
-import { useSessions } from '@/state/sessions';
+import { useSessionRow } from '@/state/sessions';
 import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
 import { MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
@@ -38,10 +38,10 @@ import { Icon } from '@/ui/Icon';
 /* The context menu of one node, the same from its frame and from its row in the sidebar. */
 export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }) {
     const node = useCanvas((s) => s.nodes[id]);
-    const agent = useSessions((s) => s.byNodeId[id]?.agent);
-    const chatSession = useChats((s) => s.byNodeId[id]?.info.agentSessionId);
-    const chatCwd = useChats((s) => s.byNodeId[id]?.info.cwd);
-    const chatProvider = useChats((s) => s.byNodeId[id]?.info.provider);
+    const agent = useSessionRow(id, (row) => row?.agent);
+    const chatSession = useChatRow(id, (row) => row?.info.agentSessionId);
+    const chatCwd = useChatRow(id, (row) => row?.info.cwd);
+    const chatProvider = useChatRow(id, (row) => row?.info.provider);
     const platform = useServer((s) => s.platform);
     const providers = useProviders((s) => s.providers);
     const projectFolder = useProject((s) => s.current?.folder ?? null);

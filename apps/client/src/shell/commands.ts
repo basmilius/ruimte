@@ -17,9 +17,10 @@ import { copyDrawingPng, copyDrawingSvg, saveDrawingPng, saveDrawingSvg } from '
 import { useCanvas, type AddNodeOptions, type NodeKind } from '@/state/canvas';
 import { useDrawing } from '@/state/drawing';
 import { activeViewOf, useDocument } from '@/state/document';
+import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
-import { useProviders } from '@/state/providers';
-import { fileManagerName, useServer } from '@/state/server';
+import { providersOf } from '@/state/providers';
+import { fileManagerName, serverInfoOf } from '@/state/server';
 import { useTheme } from '@/state/theme';
 import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
@@ -112,7 +113,7 @@ export const appCommands = (): Command[] => {
             ? [
                   {
                       id: 'reveal',
-                      label: `Open project in ${fileManagerName(useServer.getState().platform)}`,
+                      label: `Open project in ${fileManagerName(serverInfoOf(currentEndpointId()).platform)}`,
                       run: () => void transport.request('fs.reveal', { path: folder }).catch(() => undefined)
                   }
               ]
@@ -141,8 +142,8 @@ export const appCommands = (): Command[] => {
         ...moveNodeCommands(),
         { id: 'add-terminal', label: 'New terminal', shortcut: '⌥T', run: () => void addNodeAtCenter('terminal') },
         { id: 'add-chat', label: 'New chat', shortcut: '⌥C', run: () => void addNodeAtCenter('chat') },
-        ...agentCommands('chat', useProviders.getState().providers),
-        ...agentCommands('terminal', useProviders.getState().providers),
+        ...agentCommands('chat', providersOf(currentEndpointId()).providers),
+        ...agentCommands('terminal', providersOf(currentEndpointId()).providers),
         { id: 'add-browser', label: 'New browser', shortcut: '⌥B', run: () => void addNodeAtCenter('browser') },
         { id: 'add-group', label: 'New group', shortcut: '⌥G', run: () => void addNodeAtCenter('group') },
         { id: 'add-note', label: 'New note', shortcut: '⌥N', run: () => void addNodeAtCenter('note') },

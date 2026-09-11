@@ -2,8 +2,9 @@ import { create } from 'zustand';
 import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
 import type { CanvasNode } from '@/state/canvas';
 import type { ChatsById } from '@/state/chats';
+import { dropEndpoint, endpointKey, useEndpointId } from '@/state/keys';
 
-interface SessionState {
+export interface SessionState {
     /* True while this client holds a live attachment on the daemon. */
     attached: boolean;
     /* Exit code of the shell, once it has ended. Absent while it runs. */
@@ -12,6 +13,10 @@ interface SessionState {
     agent?: AgentInfo | null;
 }
 
+/* Rows keyed with `endpointKey`, so a session says which daemon it runs on. */
+export type SessionsByKey = Record<string, SessionState>;
+
+/* What a session client writes. It owns one machine's socket, so it speaks in node ids alone. */
 export interface SessionSink {
     setAttached(nodeId: string, attached: boolean): void;
     setExited(nodeId: string, exitCode: number | undefined): void;
@@ -19,41 +24,59 @@ export interface SessionSink {
     forget(nodeId: string): void;
 }
 
-interface SessionsStore extends SessionSink {
-    byNodeId: Record<string, SessionState>;
-    /* Drops every row. The sessions keep running on the daemon; this client is done looking at them. */
-    clear(): void;
+interface SessionsStore {
+    byKey: SessionsByKey;
+    setAttached(key: string, attached: boolean): void;
+    setExited(key: string, exitCode: number | undefined): void;
+    setAgent(key: string, agent: AgentInfo | null): void;
+    forget(key: string): void;
+    /* Drops one machine's rows. Its sessions keep running; this client is done looking at them. */
+    clear(endpointId: string): void;
 }
 
 export const useSessions = create<SessionsStore>((set) => ({
-    byNodeId: {},
-    setAttached(nodeId, attached) {
+    byKey: {},
+    setAttached(key, attached) {
         set((s) => {
-            const current = s.byNodeId[nodeId];
+            const current = s.byKey[key];
             // A detach of a node nobody tracks (killed, never attached) must not resurrect an entry.
             if (!current && !attached) {
                 return {};
             }
-            return { byNodeId: { ...s.byNodeId, [nodeId]: { ...current, attached } } };
+            return { byKey: { ...s.byKey, [key]: { ...current, attached } } };
         });
     },
-    setExited(nodeId, exitCode) {
-        set((s) => ({ byNodeId: { ...s.byNodeId, [nodeId]: { ...s.byNodeId[nodeId], attached: s.byNodeId[nodeId]?.attached ?? false, exited: exitCode } } }));
+    setExited(key, exitCode) {
+        set((s) => ({ byKey: { ...s.byKey, [key]: { ...s.byKey[key], attached: s.byKey[key]?.attached ?? false, exited: exitCode } } }));
     },
-    setAgent(nodeId, agent) {
-        set((s) => ({ byNodeId: { ...s.byNodeId, [nodeId]: { ...s.byNodeId[nodeId], attached: s.byNodeId[nodeId]?.attached ?? false, agent } } }));
+    setAgent(key, agent) {
+        set((s) => ({ byKey: { ...s.byKey, [key]: { ...s.byKey[key], attached: s.byKey[key]?.attached ?? false, agent } } }));
     },
-    forget(nodeId) {
+    forget(key) {
         set((s) => {
-            const next = { ...s.byNodeId };
-            delete next[nodeId];
-            return { byNodeId: next };
+            const next = { ...s.byKey };
+            delete next[key];
+            return { byKey: next };
         });
     },
-    clear() {
-        set({ byNodeId: {} });
+    clear(endpointId) {
+        set((s) => ({ byKey: dropEndpoint(s.byKey, endpointId) }));
     }
 }));
+
+/* The sink of one daemon's session client: it hands over node ids, this puts them under its machine. */
+export const sessionSinkFor = (endpointId: string): SessionSink => ({
+    setAttached: (nodeId, attached) => useSessions.getState().setAttached(endpointKey(endpointId, nodeId), attached),
+    setExited: (nodeId, exitCode) => useSessions.getState().setExited(endpointKey(endpointId, nodeId), exitCode),
+    setAgent: (nodeId, agent) => useSessions.getState().setAgent(endpointKey(endpointId, nodeId), agent),
+    forget: (nodeId) => useSessions.getState().forget(endpointKey(endpointId, nodeId))
+});
+
+/* One node's session on the machine in scope. The selector keeps a render tied to the field it reads. */
+export const useSessionRow = <T>(nodeId: string, select: (row: SessionState | undefined) => T): T => {
+    const endpointId = useEndpointId();
+    return useSessions((s) => select(s.byKey[endpointKey(endpointId, nodeId)]));
+};
 
 const sessionStatus = (state: SessionState | undefined): AgentStatus | undefined => {
     if (!state) {
@@ -77,12 +100,12 @@ const sessionStatus = (state: SessionState | undefined): AgentStatus | undefined
 export type StatusOf = Pick<CanvasNode, 'id' | 'kind' | 'status'>;
 
 /* A terminal's status comes from its session, a chat's from its thread; anything else still carries it on the node. */
-export const nodeStatus = (node: StatusOf, sessions: Record<string, SessionState>, chats: ChatsById): AgentStatus | undefined => {
+export const nodeStatus = (node: StatusOf, sessions: SessionsByKey, chats: ChatsById, endpointId: string): AgentStatus | undefined => {
     if (node.kind === 'terminal') {
-        return sessionStatus(sessions[node.id]);
+        return sessionStatus(sessions[endpointKey(endpointId, node.id)]);
     }
     if (node.kind === 'chat') {
-        return chats[node.id]?.info.status;
+        return chats[endpointKey(endpointId, node.id)]?.info.status;
     }
     return node.status;
 };

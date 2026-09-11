@@ -9,7 +9,7 @@ import { TimelineMenuPopup } from '@/chat/ui/TimelineMenu';
 import { AgentTurnRow, ApprovalHistoryRow, AssistantRow, CompactionRow, NoteRow, QuestionHistoryRow, ThinkingRow, UserRow } from '@/chat/ui/rows/MessageRows';
 import { SubagentRow } from '@/chat/ui/rows/SubagentRow';
 import { ChangedFilesRow, TurnFoldRow, WorkGroupRow, WorkLiveRow, WorkRow, WorkingRow } from '@/chat/ui/rows/WorkRows';
-import { useChats } from '@/state/chats';
+import { useChatRow } from '@/state/chats';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { EmptyState } from '@/ui/EmptyState';
 
@@ -77,10 +77,10 @@ const BLOCK_KINDS = new Set<TimelineRow['kind']>(['assistant', 'thinking', 'chan
 const isBlock = (row: TimelineRow): boolean => BLOCK_KINDS.has(row.kind);
 
 export function Timeline({ chatId }: { chatId: string }) {
-    const order = useChats((s) => s.byNodeId[chatId]?.order);
-    const items = useChats((s) => s.byNodeId[chatId]?.items);
-    const activeTurnId = useChats((s) => s.byNodeId[chatId]?.info.activeTurnId ?? null);
-    const info = useChats((s) => s.byNodeId[chatId]?.info ?? null);
+    const order = useChatRow(chatId, (row) => row?.order);
+    const items = useChatRow(chatId, (row) => row?.items);
+    const activeTurnId = useChatRow(chatId, (row) => row?.info.activeTurnId ?? null);
+    const info = useChatRow(chatId, (row) => row?.info ?? null);
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
     const [expandedTurns, setExpandedTurns] = useState<Set<string>>(() => new Set());
     const [expandedSubagents, setExpandedSubagents] = useState<Set<string>>(() => new Set());

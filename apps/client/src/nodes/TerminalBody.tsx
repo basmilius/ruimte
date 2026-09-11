@@ -5,7 +5,8 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { Terminal } from '@xterm/xterm';
 import { ClipboardPaste, Copy, Play, RotateCw, Scan } from 'lucide-react';
-import { useSessions } from '@/state/sessions';
+import { useEndpointId } from '@/state/keys';
+import { useSessionRow } from '@/state/sessions';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
@@ -40,13 +41,14 @@ const createTerminal = (): Terminal =>
 /* What the placeholder for an offscreen terminal shows: the text of its last screen. */
 export function TerminalPlate({ id }: { id: string }) {
     const ref = useRef<HTMLDivElement>(null);
+    const endpointId = useEndpointId();
     // Filled from a passive effect, not during render: the live node captures its screen in its own
     // passive cleanup, which React runs earlier in the same flush.
     useEffect(() => {
         if (ref.current) {
-            ref.current.textContent = lastScreenOf(id).join('\n');
+            ref.current.textContent = lastScreenOf(endpointId, id).join('\n');
         }
-    }, [id]);
+    }, [endpointId, id]);
     return <div ref={ref} className="term-host overflow-hidden whitespace-pre bg-term-bg font-mono text-code leading-[1.2] text-term-dim" aria-hidden="true" />;
 }
 
@@ -61,8 +63,9 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
     // Whether the terminal had a selection when its menu opened, which is what Copy goes on.
     const [selected, setSelected] = useState(false);
     const status = useTransportStatus();
-    const exited = useSessions((s) => s.byNodeId[id]?.exited);
-    const agentRecord = useSessions((s) => s.byNodeId[id]?.agent);
+    const endpointId = useEndpointId();
+    const exited = useSessionRow(id, (row) => row?.exited);
+    const agentRecord = useSessionRow(id, (row) => row?.agent);
     const resolvedTheme = useTheme((t) => t.resolved);
     const settingsVersion = useSettings((s) => s.version);
 
@@ -134,7 +137,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
         term.onData((data) => sessionClient.write(id, data));
 
         let cancelled = false;
-        const unregister = registerTerminal(id, term);
+        const unregister = registerTerminal(endpointId, id, term);
         const offOutput = sessionClient.onOutput(id, (data) => {
             term.write(data);
             // A terminal that is being written to outranks an idle one when contexts are scarce.
@@ -201,7 +204,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
             termRef.current = null;
             fitRef.current = null;
         };
-    }, [id, generation]);
+    }, [endpointId, id, generation]);
 
     useEffect(() => {
         const term = termRef.current;

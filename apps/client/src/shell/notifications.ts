@@ -2,6 +2,7 @@ import type { ChatTurnItem } from '@ruimte/contracts';
 import { agentTurnLabel } from '@/chat/logic/timeline';
 import { projectNodes, revealNode } from '@/project/views';
 import { useChats, type ChatsById } from '@/state/chats';
+import { currentEndpointId } from '@/state/keys';
 import { nodeStatus, useSessions } from '@/state/sessions';
 
 /* The newest turn a chat's agent started on its own, once it has settled; null while none has. */
@@ -49,8 +50,9 @@ export const startAgentNotifications = (): (() => void) => {
 
     const check = (): void => {
         const nodes = projectNodes();
-        const sessions = useSessions.getState().byNodeId;
-        const chats = useChats.getState().byNodeId;
+        const endpointId = currentEndpointId();
+        const sessions = useSessions.getState().byKey;
+        const chats = useChats.getState().byKey;
         const current = new Map<string, string | undefined>();
         for (const node of nodes) {
             const chat = chats[node.id];
@@ -66,7 +68,7 @@ export const startAgentNotifications = (): (() => void) => {
                     notify(node.id, node.title, agentTurnLabel(turn), `ruimte-turn-${turn.id}`);
                 }
             }
-            const status = nodeStatus(node, sessions, chats);
+            const status = nodeStatus(node, sessions, chats, endpointId);
             current.set(node.id, status);
             if (status !== 'needs-you') {
                 shown.get(node.id)?.close();

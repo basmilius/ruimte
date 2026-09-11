@@ -1,35 +1,42 @@
 import { useEffect, useState } from 'react';
 import type { UsageLimitsSnapshot } from '@ruimte/contracts';
-import { useEndpoints } from '@/state/endpoints';
-import { useUsage } from '@/state/usage';
-import { transport } from '@/transport';
+import { useEndpointId } from '@/state/keys';
+import { useUsage, useUsageStore } from '@/state/usage';
+import { transportFor } from '@/transport';
 
 const MINUTE = 60_000;
 
-/* Asking the CLIs is expensive, so the sidebar and the page share one read and one subscription. */
-let readers = 0;
-let held: { endpointId: string; release: () => void } | null = null;
+interface Hold {
+    /* How many things on screen show this machine's plan windows; at zero it lets go. */
+    readers: number;
+    release(): void;
+}
 
-const hold = (endpointId: string): { endpointId: string; release: () => void } => {
+/* Asking the CLIs is expensive, so the sidebar and the page share one read per machine. */
+const holds = new Map<string, Hold>();
+
+const hold = (endpointId: string): Hold => {
+    const link = transportFor(endpointId);
+    if (!link) {
+        return { readers: 0, release: () => undefined };
+    }
     const ask = (): void => {
-        transport
-            .request('usage.limits', {})
-            .then((snapshot) => useUsage.getState().setLimits(snapshot))
+        link.request('usage.limits', {})
+            .then((snapshot) => useUsageStore.getState().setLimits(endpointId, snapshot))
             .catch(() => undefined);
     };
-    if (transport.status === 'open') {
+    if (link.status === 'open') {
         ask();
     }
     // A running turn reports its own numbers, which is what keeps a bar moving between reads.
-    const offChanged = transport.on('usage.limitsChanged', (snapshot) => useUsage.getState().setLimits(snapshot));
-    // The move to another machine closes the socket first, so the new machine is asked when it answers.
-    const offStatus = transport.subscribeStatus((status) => {
+    const offChanged = link.on('usage.limitsChanged', (snapshot) => useUsageStore.getState().setLimits(endpointId, snapshot));
+    const offStatus = link.subscribeStatus((status) => {
         if (status === 'open') {
             ask();
         }
     });
     return {
-        endpointId,
+        readers: 0,
         release: () => {
             offChanged();
             offStatus();
@@ -37,22 +44,20 @@ const hold = (endpointId: string): { endpointId: string; release: () => void } =
     };
 };
 
-/* The snapshot, kept fresh for as long as anything shows it. */
+/* The snapshot of the machine in scope, kept fresh for as long as anything shows it. */
 export const useUsageLimits = (): UsageLimitsSnapshot | null => {
     const limits = useUsage((s) => s.limits);
-    const endpointId = useEndpoints((s) => s.activeId);
+    const endpointId = useEndpointId();
 
     useEffect(() => {
-        readers += 1;
-        if (held?.endpointId !== endpointId) {
-            held?.release();
-            held = hold(endpointId);
-        }
+        const held = holds.get(endpointId) ?? hold(endpointId);
+        held.readers += 1;
+        holds.set(endpointId, held);
         return () => {
-            readers -= 1;
-            if (readers === 0) {
-                held?.release();
-                held = null;
+            held.readers -= 1;
+            if (held.readers === 0) {
+                held.release();
+                holds.delete(endpointId);
             }
         };
     }, [endpointId]);

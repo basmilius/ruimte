@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { GitStatus } from '@ruimte/contracts';
-import { useEndpoints } from '@/state/endpoints';
-import { transport } from '@/transport';
+import { currentEndpointId, endpointKey, useEndpointId } from '@/state/keys';
+import { transportFor } from '@/transport';
 
 interface Watch {
     /* How many panels asked for this checkout; the daemon hears about the first and the last. */
@@ -19,10 +19,12 @@ const watches = new Map<string, Watch>();
  * what the first status read waits for so a write in between is reported instead of missed.
  */
 export const watchGit = (cwd: string): { ready: Promise<void>; release: () => void } => {
-    const key = `${useEndpoints.getState().activeId}:${cwd}`;
+    const endpointId = currentEndpointId();
+    const key = endpointKey(endpointId, cwd);
+    const link = transportFor(endpointId);
     const watch = watches.get(key) ?? {
         count: 0,
-        ready: transport.request('git.watch', { cwd }).then(
+        ready: (link?.request('git.watch', { cwd }) ?? Promise.reject(new Error('no socket'))).then(
             () => undefined,
             () => undefined
         )
@@ -40,7 +42,8 @@ export const watchGit = (cwd: string): { ready: Promise<void>; release: () => vo
             watch.count -= 1;
             if (watch.count === 0) {
                 watches.delete(key);
-                void transport.request('git.unwatch', { cwd }).catch(() => undefined);
+                // On the machine the watch was taken out on, never on the one that happens to be active now.
+                void link?.request('git.unwatch', { cwd }).catch(() => undefined);
             }
         }
     };
@@ -52,9 +55,9 @@ export const watchGit = (cwd: string): { ready: Promise<void>; release: () => vo
  * after an action of its own.
  */
 export const useGitStatus = (cwd: string | null): GitStatus | null => {
-    const endpointId = useEndpoints((s) => s.activeId);
+    const endpointId = useEndpointId();
     const [held, setHeld] = useState<{ key: string; status: GitStatus } | null>(null);
-    const key = `${endpointId}:${cwd}`;
+    const key = endpointKey(endpointId, String(cwd));
 
     useEffect(() => {
         if (cwd === null) {
@@ -63,7 +66,7 @@ export const useGitStatus = (cwd: string | null): GitStatus | null => {
         let cancelled = false;
         const watch = watchGit(cwd);
         void watch.ready
-            .then(() => transport.request('git.status', { cwd }))
+            .then(() => transportFor(endpointId)?.request('git.status', { cwd }) ?? Promise.reject(new Error('no socket')))
             .then((status) => {
                 if (!cancelled) {
                     setHeld({ key, status });
@@ -74,15 +77,15 @@ export const useGitStatus = (cwd: string | null): GitStatus | null => {
             cancelled = true;
             watch.release();
         };
-    }, [cwd, key]);
+    }, [cwd, endpointId, key]);
 
     useEffect(() => {
-        return transport.on('git.status', (payload) => {
+        return transportFor(endpointId)?.on('git.status', (payload) => {
             if (payload.cwd === cwd) {
                 setHeld({ key, status: payload.status });
             }
         });
-    }, [cwd, key]);
+    }, [cwd, endpointId, key]);
 
     // The path on the machine that left says nothing about the same path here.
     return held?.key === key ? held.status : null;

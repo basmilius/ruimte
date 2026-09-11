@@ -1,9 +1,13 @@
 import type { Terminal } from '@xterm/xterm';
 import { browserRegistry, useBrowser } from '@/browser/registry';
 import { useCanvas } from '@/state/canvas';
+import { currentEndpointId, endpointKey } from '@/state/keys';
 import { webglBudget } from '@/terminal/webgl-budget';
 
-/* Live xterm instances by node id, and the last screen of the ones that were unmounted. */
+/*
+ * Live xterm instances, and the last screen of the ones that were unmounted. Keyed on the machine
+ * as well as the node: a terminal of one daemon must never repaint with another daemon's screen.
+ */
 const live = new Map<string, Terminal>();
 const lastScreens = new Map<string, string[]>();
 
@@ -19,25 +23,27 @@ export const screenLines = (term: Terminal): string[] => {
     return lines;
 };
 
-export const registerTerminal = (nodeId: string, term: Terminal): (() => void) => {
-    live.set(nodeId, term);
+export const registerTerminal = (endpointId: string, nodeId: string, term: Terminal): (() => void) => {
+    const key = endpointKey(endpointId, nodeId);
+    live.set(key, term);
     return () => {
-        if (live.get(nodeId) === term) {
-            live.delete(nodeId);
+        if (live.get(key) === term) {
+            live.delete(key);
         }
-        lastScreens.set(nodeId, screenLines(term));
+        lastScreens.set(key, screenLines(term));
     };
 };
 
-export const lastScreenOf = (nodeId: string): string[] => lastScreens.get(nodeId) ?? [];
+export const lastScreenOf = (endpointId: string, nodeId: string): string[] => lastScreens.get(endpointKey(endpointId, nodeId)) ?? [];
 
-export const forgetScreen = (nodeId: string): void => {
-    lastScreens.delete(nodeId);
+export const forgetScreen = (endpointId: string, nodeId: string): void => {
+    lastScreens.delete(endpointKey(endpointId, nodeId));
 };
 
 export interface TerminalTestHooks {
-    terminalText(nodeId: string): string | null;
-    terminalSize(nodeId: string): { cols: number; rows: number } | null;
+    /* The machine defaults to the active one, which is the only one a canvas shows today. */
+    terminalText(nodeId: string, endpointId?: string): string | null;
+    terminalSize(nodeId: string, endpointId?: string): { cols: number; rows: number } | null;
     /* Node ids on the canvas, in stacking order. */
     nodeIds(): string[];
     /* Node ids holding a WebGL renderer, highest ranked first. */
@@ -58,12 +64,12 @@ declare global {
 /* The WebGL renderer leaves no text in the DOM, so an end-to-end test reads the buffer through here. */
 export const exposeTerminalTestHooks = (): void => {
     window.ruimte = {
-        terminalText(nodeId) {
-            const term = live.get(nodeId);
+        terminalText(nodeId, endpointId) {
+            const term = live.get(endpointKey(endpointId ?? currentEndpointId(), nodeId));
             return term ? screenLines(term).join('\n') : null;
         },
-        terminalSize(nodeId) {
-            const term = live.get(nodeId);
+        terminalSize(nodeId, endpointId) {
+            const term = live.get(endpointKey(endpointId ?? currentEndpointId(), nodeId));
             return term ? { cols: term.cols, rows: term.rows } : null;
         },
         nodeIds() {
@@ -73,10 +79,10 @@ export const exposeTerminalTestHooks = (): void => {
             return webglBudget.holders();
         },
         browserState(nodeId) {
-            return useBrowser.getState().byNodeId[nodeId] ?? null;
+            return useBrowser.getState().byKey[endpointKey(currentEndpointId(), nodeId)] ?? null;
         },
         browserNavigate(nodeId, url) {
-            browserRegistry.navigate(nodeId, url);
+            browserRegistry.navigate(endpointKey(currentEndpointId(), nodeId), url);
         },
         canvas() {
             return useCanvas.getState();
