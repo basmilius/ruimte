@@ -13,6 +13,7 @@ import { createWorkspaceStores, defaultWorkspaceStores } from '@/state/workspace
 import { setCurrentWorkspace, type WorkspaceStores } from '@/state/workspace-stores';
 import { SessionClient } from '@/terminal/session-client';
 import { pool } from '@/transport';
+import { useOptionalConnection } from '@/transport/context';
 import type { Transport } from '@/transport/transport';
 
 /*
@@ -243,6 +244,17 @@ export const useWorkspaceConnection = (workspace: Workspace): Connection => useS
 
 /* The workspace the app draws, kept on the active machine by `startConnections`. */
 export const useMainWorkspace = (): Workspace => useSyncExternalStore(subscribeWorkspaces, () => workspaces.get(MAIN_WORKSPACE_ID) ?? mainWorkspace());
+
+/*
+ * The daemon the person is working on, for a surface that belongs to no project: the palette, a
+ * global dialog. Inside a workspace it is that workspace's; outside one it is the workspace with the
+ * focus, which is the one the app draws until panes exist.
+ */
+export const useFocusedConnection = (): Connection => {
+    const inside = useOptionalConnection();
+    const main = useWorkspaceConnection(useMainWorkspace());
+    return inside ?? main;
+};
 
 /*
  * A stand-in for one of the active workspace's clients, so a call site keeps reading as "the daemon
