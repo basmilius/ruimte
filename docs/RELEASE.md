@@ -2,8 +2,9 @@
 
 `bun run dist` builds the client, compiles the daemon for this machine and packages the Electron
 shell into `apps/desktop/release`. A `v*` tag runs the same thing on GitHub Actions and uploads a
-draft release. Only macOS is built for now; `electron-builder.yml` still carries the Linux targets,
-but no workflow asks for them.
+draft release. Only macOS on Apple silicon is built: `minimumSystemVersion` is 26.0, and the four
+Intel Macs that reach macOS 26 are frozen there, because 27 is Apple silicon only.
+`electron-builder.yml` still carries the Linux targets, but no workflow asks for them.
 
 ## The icon
 
