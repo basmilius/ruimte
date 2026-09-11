@@ -3,12 +3,21 @@
 State of `main` on 2026-09-11, at `fe7427b`. Every path is relative to
 `/Users/bas/Development/Projects/ruimte`.
 
-This document has been rewritten once. The first version proposed a folder picker of its own, a
+This document has been rewritten twice. The first version proposed a folder picker of its own, a
 dialog with a shortcut rail, and that shipped in three commits. Bas saw it and said it looks nothing
 like the rest of the app: picking already happens in the palette, so the folder picker goes there, and it should work the
 same way. The rail and its recent folders are gone. What follows is a mirror of their browse mode
 inside our palette, deviating only where their design collides with something that is genuinely
 different here, and saying so each time it does.
+
+The second rewrite is smaller and is about one sentence that was wrong. The version built from it
+kept browse mode as a pure function of the query, which meant the only way to open it was to put a
+path in the field, so the command had to type `~/` for you. Bas: "Ik wil niet eerst ~/ invullen of
+iets." Nor should anyone have to, and the reason is 1.1: the browser is a **pushed step**
+with a view stack behind it, and the query only decides whether that step lists folders. So browse
+mode is a step of ours too (3.0), and everything that hung on the query being the mode follows from
+it: the command opens browsing with nothing typed, Backspace on an empty field has something to step
+back from, and the machine step can be the thing browsing opens on.
 
 Three commits stay and three come out; section 4.1 names them. Sections 1 and 2 are description and
 were only extended. Sections 3 and 4 are new.
@@ -22,20 +31,22 @@ symbol rather than trusting the number.
 - **No dialog of its own.** Folder browsing is a mode of the command palette, the way every other pick in the app is,
   and the way it was here before `58021c5`. The rail, the recent folders and the breadcrumb are
   gone.
-- Browse mode is still a pure function of the text: a query that starts with a path browses. It is
-  entered from Cmd+K, from the palette's own "Open a folder as a project" action and from "Open
-  folder" in the project menu, which stops opening a native dialog of its own.
+- Browse mode is a **step the palette is on**, not something the query says. "Open a folder as a
+  project" and "Open folder" in the project menu put it on that step with nothing typed, and a path
+  typed into the ordinary palette is the second way in. The project menu stops opening a native
+  dialog of its own.
 - The list is one group of folders, `..` first inside it, each row an icon and a name. The submit
   button moves out of the footer and into the right end of the input field, carrying its label and
   one key chip, and the footer becomes key hints plus one slot on the right.
 - A path that is not there flips that button to "Create and open" and creates the whole missing
   chain, which is reachable here: in a browser that only lists entries that message is dead code,
   because they cannot tell a missing folder from an empty one and we can.
-- **Machines.** Browsing starts on the active machine, never on a chooser. The input's leading slot
-  carries the machine's dot and label and is also the way into a Machines list, which is where they
-  put their back arrow. Switching machines resets the path to that machine's start folder. A machine
-  that is not connected is still selectable and gets dialed, because our sockets are lazy where
-  theirs are long-lived.
+- **Machines.** With one machine known, browsing opens on that machine's folders and the machines
+  are never asked about, since there is nothing to choose. With more than one it
+  opens on a Machines step, and picking one lands in its folders. The input's leading slot is the
+  way one step back and, on the folders of a machine, carries that machine's dot and label. Switching
+  machines resets the path to that machine's start folder. A machine that is not connected is still
+  selectable and gets dialed, because our sockets are lazy where theirs are long-lived.
 - The native Electron dialog is a button in the footer's right slot, shown only in the desktop build
   and only when the machine being browsed is the daemon that served the page.
 - Three commits come out (`58021c5`, `fc9ef57`, `fe7427b`) and three stay (`91d3fa1`, `f549b05`,
@@ -477,35 +488,63 @@ argued where it appears.
 Gone from the first version, on Bas's word: the dialog of its own, the shortcut rail, the recent
 folders, the breadcrumb. None of it belongs in a palette step.
 
+### 3.0 Browse mode is a step, not a query
+
+This is the correction the second rewrite is for, and everything after it leans on it.
+
+The palette holds a stack of views (`viewStack`). A view is an icon,
+a list of groups and an optional text to seed the field with. "Add project" pushes one, the sources
+step pushes another, and the folder browser is a third. Their `isBrowsing` flag really is derived
+from the query, but it only decides whether the **pushed** step lists folders instead of its own
+rows; the step itself is state, and that is why their field can be empty, why Backspace pops, and
+why picking a machine can be the first thing you see.
+
+The version built from the first rewrite of this document kept only the derived half. Browse mode
+was `isPathQuery(query)`, so the command had to seed the field with a path to open it, an empty
+field could not be browse mode, and Backspace on an empty field had nothing to step back from.
+
+So: the palette carries `browse: { endpointId, machines, path } | null`. Null is the ordinary
+palette. A step says which machine is being browsed, whether the machines themselves are up in place
+of the folders, and the folders path the machines step was opened from. The rules that come out of
+it are pure and live next to the rest in `palette-browse.ts`: `openBrowse(endpointId, machineCount,
+start)` for the step browsing opens on, `browseBack(step, machineCount)` for the step behind it.
+
+The query goes back to being what it always was: the text in the field. On the folders step it is
+the path, on the machines step it narrows the list of machines, and in the ordinary palette a path
+typed into it opens browse mode, which is the second way in and the one that has always worked.
+
 ### 3.1 Entering and leaving browse mode
 
-Unchanged from what is in the tree at `fc9ef57^`, because it is already what they do: browse mode is
-a pure function of the text. A query starting with `/`, `~`, `./` or `../` is a path
-(`isPathQuery`, `CommandPalette.tsx:61`), and there is no mode flag. Three things get you there:
+Three things get you there:
 
-- Cmd+K and typing a path, which is how it works today.
-- "Open a folder as a project" in the palette's own action list (`commands.ts:110`), which seeds the
-  field with `~/` on the active machine.
-- "Open folder" in the project menu (`ProjectMenu.tsx:151`), which does the same. Its desktop branch
-  is deleted: the native dialog moves into the palette footer (3.8). This mirrors their sidebar and
-  their empty states, which all fire the palette open on the add-project step rather than opening
-  something of their own.
+- "Open a folder as a project" in the palette's own action list, which opens browse mode with
+  **nothing typed**.
+- "Open folder" in the project menu, which does the same. Its desktop branch is deleted: the native
+  dialog moves into the palette footer (3.8). This mirrors their sidebar and their empty states,
+  which all fire the palette open on the add-project step rather than opening something of their own.
+- Cmd+K and typing a path, which is how it has always worked and still does.
 
-**Seed the field from a prefetch, not from an empty list.** They fetch the starting directory and
-only then push the step and set the text, so the first paint already has folders in it. Ours should
-do the same: ask `fs.browse` for the start path, then set the query. The start path is the open
+**Which step it opens on.** With more than one machine known it opens on the Machines step (3.6),
+with the field empty and the first row highlighted. With one machine there is nothing to choose, so
+it opens straight on that machine's folders, with the field carrying the start path: the open
 project's folder when there is one on that machine, else that machine's home, which is
-`startFolder(folder, home, sep)` from 4.2. They read a configured base directory first; we have no
-such setting and are not adding one.
+`startFolder(folder, home, sep)` from 4.2. The environment step is skipped in exactly that
+case. They read a configured base directory first; we have no such setting and are not adding one.
 
-Leaving mirrors them exactly, and two thirds of it already exists:
+**Every step fetches before it commits.** They fetch the starting directory and only then push the
+step and set the text, so the first paint already has folders in it. Stepping into a folder, going
+up and picking a machine all do the same here.
 
-- Deleting the path until the field is empty leaves browse mode on its own, because an empty query
-  is not a path query.
-- Backspace on an empty field steps back, which our palette already does for find-in-files
-  (`CommandPalette.tsx:383-387`, with a comment saying the mode leaves the way it was entered). In
-  browse mode it opens the machine list (3.6) when there is more than one machine, and otherwise
-  clears the field.
+Leaving:
+
+- Backspace on an empty field steps back one step, which our palette already does for find-in-files
+  (with a comment saying the mode leaves the way it was entered). `browseBack` decides: the machines
+  step returns to the folders it was opened from, or leaves browsing when browsing began on it; a
+  folders step goes to the machines when there is more than one, and otherwise leaves. The leading
+  slot of the field is the same control and the footer says `⌫ Back` in every step, as theirs does.
+- Emptying the field does **not** leave browse mode any more. It cannot: an empty field is what the
+  machines step has, and it is what Backspace needs something to step back from. The other option pops the
+  step the moment the field would go empty, which comes to the same thing one keystroke earlier.
 - Escape closes the whole palette. It does not step back. Their footer says "Esc Close" in every
   state and so does ours.
 
@@ -513,12 +552,21 @@ Leaving mirrors them exactly, and two thirds of it already exists:
 
 They have two. We need a version of one and none of the other.
 
-**Their machine step: yes, but not as a step.** They show it only when more than one environment
-exists and skip it when there is exactly one that is connected. Ours would be skipped in the same
-ordinary case, so the question is only what the other case looks like, and that is 3.6: the machine
-becomes a control in the input row rather than a gate in front of browsing. The argument is in 3.6
-and it comes down to this: their environment is something you choose for this task, ours is
-something the whole app already runs on.
+**Their machine step: yes, and as a step.** They show it when more than one environment exists and
+skip it when there is exactly one that is connected. Ours does the same, with one difference that
+follows from our sockets being lazy: the test is only how many machines are known, because "not
+connected" here means "nothing has asked yet" rather than "something is wrong" (3.6). One machine
+goes straight to its folders; more than one asks first. It is also the step browsing can come back
+to, which is 3.6, and the leading slot of the field is how you get there and back.
+
+The measured shape of theirs, which ours mirrors: the group is labeled "Environments" (ours reads
+**Machines**), the rows are the primary machine first and then the rest, each with a machine icon, a
+title and a subtitle that is either the machine's own name or its connection status, and a row that
+is not connected is dimmed and unclickable. Auto-highlight is on, so the first selectable row is
+already highlighted when the step opens, and typing narrows the rows the way typing narrows every
+other list in their palette. Ours keeps all of that except the dimming: our rows stay clickable and
+dial (3.6), and our order is the active machine first and then the endpoint list's own order, which
+is what `groupProjects` already does for the project menu.
 
 **Their source step: no.** Its three kinds of row are a local folder, a git URL and one row per git
 provider, and every one but the first is about cloning a remote repository (1.1). Ruimte has no
@@ -553,21 +601,23 @@ One group, one row per folder, nothing else, exactly as 1.9 describes it:
   without a caller (4.3).
 
 While browsing, the folder rows are the only rows: the commands, the views and the projects step
-aside, which is what the palette does today and what theirs does.
+aside, which is what the palette does today and what theirs does. On the machines step the machine
+rows take the same place.
 
 ### 3.4 Above and below the list
 
 **The input row** keeps its shape and gains their two ideas.
 
 The leading slot already swaps per mode (`CommandPalette.tsx:344-346`): a search icon normally, a
-folder icon while browsing. While browsing it becomes the machine control of 3.6, which is where
-they put their back arrow. The field stays in the normal sans font: today it switches to monospace
+folder icon while browsing. While browsing it becomes the back control, which is where they put
+theirs, and on the folders of a machine it carries that machine's dot and label as well (3.6). The
+field stays in the normal sans font: today it switches to monospace
 while browsing (`CommandPalette.tsx:439`), theirs does not, and a proportional font is what makes a
 path look like something you type rather than something you read. Drop the monospace on the field
 and on the rows.
 
-The placeholder changes while browsing, as theirs does, to name the thing being typed rather than
-the three modes at once.
+The placeholder changes per step, as theirs does: it names the path on the folders step and the
+machines on the machines step, rather than naming the three modes of the palette at once.
 
 **The submit button moves into the field.** This is the most visible difference between what we
 built and what they have. Theirs is a small outlined button floating over the right end of the input,
@@ -592,49 +642,47 @@ Their semantics, which our tree already has most of:
 
 | Key | What it does |
 | --- | --- |
-| Any character | Goes into the field; the list re-browses after the 60 ms debounce |
-| Down / Up | Move the highlight. Nothing is preselected while browsing, so the first Down takes the first row |
+| Any character | Goes into the field. On the folders step it re-browses after the 60 ms debounce, on the machines step it narrows the machines |
+| Down / Up | Move the highlight. On the folders step nothing is preselected, so the first Down takes the first row; on the machines step the first row is already highlighted, as theirs is |
 | Enter, nothing highlighted | Opens the typed path, creating it when it is not there |
-| Enter, a row highlighted | Steps into that folder and keeps the palette open |
+| Enter, a row highlighted | Steps into that folder, or picks that machine, and keeps the palette open |
 | Cmd+Enter | Opens the typed path whatever is highlighted |
-| Backspace, empty field | Steps back: the machine list, or out of browse mode |
+| Backspace, empty field | One step back, per `browseBack` (3.0): the machines, the folders they came from, or out of browsing |
 | Escape | Closes the palette |
 | Tab | Completes the field to the highlighted folder without stepping in |
 
-Every line of that is either already in `CommandPalette.tsx:449-472` or is 3.6. Two notes. Nothing
-being preselected while browsing is not a detail: it is what makes Enter mean "use what I typed",
-and our `reset` already does it (`setIndex(isPathQuery(next) ? -1 : 0)`). Tab is the one key they
-leave unused and we already use; it stays, because it is in the tree, it costs nothing, and removing
-a working completion to match an absence is not mirroring, it is copying.
+Two notes. Nothing being preselected on the folders step is not a detail: it is what makes Enter
+mean "use what I typed". Tab is the one key they leave unused and we already use; it stays, because
+it is in the tree, it costs nothing, and removing a working completion to match an absence is not
+mirroring, it is copying.
 
 ### 3.6 Machines: where browsing starts, and how you switch
 
-This is the one place where their answer cannot be ours, so here is one answer and the argument for
-it.
+**Browsing opens on the machines when there are several, and on the folders when there is one.**
+That is their rule, and the first rewrite of this document got it wrong by arguing that our active
+endpoint makes the question redundant. It does not: the active machine is where the app is pointed,
+but "open a folder" is exactly the moment a person may mean the other one, and asking costs one
+keypress because the first row is already highlighted. With one machine the question has one answer
+and is never asked, which is their skip and ours.
 
-**Browsing starts on the active machine.** Not on a chooser. Their environment is a thing you pick
-for the task at hand, and they still skip the step whenever one connected environment can be
-defaulted. Ours is not a per-task choice at all: an active endpoint is what the whole client is
-pointed at, what the open project belongs to, what the running sessions live on, and the client
-already restores it on boot (`restoreLastEndpoint`, `apps/client/src/project/open.ts:74-83`). Asking
-which machine before letting you type a path would be asking a question the app has already
-answered. So browse mode opens on the active machine, every time, exactly as their one-environment
-case does.
+The machine the step starts on is still the active one: its row is first and highlighted, so Enter
+alone goes where the first rewrite would have gone directly.
 
-**The machine is in view the whole time.** The leading slot of the input carries a 6 px dot in the
-connection color plus the machine's label, the same pair the project menu draws over a group of
-projects (`ProjectMenu.tsx:95-99`), and it collapses to the plain folder icon when the client knows
-only one machine, just as that menu collapses its label to the word "Projects". This is a deliberate
-choice: showing no machine at all while browsing (1.1), which is the half of their design
-worth avoiding rather than copying, because two machines browsing `~/projects/` look identical and
-we have two machines routinely.
+**The machine is in view the whole time.** On the folders of a machine, the leading slot of the
+input carries a 6 px dot in the connection color plus the machine's label, the same pair the project
+menu draws over a group of projects (`ProjectMenu.tsx:95-99`), and clicking it opens the machines.
+With one machine known there is nothing to name and it is the plain back arrow instead, which is
+what a back arrow usually is. This is a deliberate choice: showing no machine at all while browsing
+(1.1), which is the half of their design worth avoiding rather than copying, because two machines
+browsing `~/projects/` look identical and we have two machines routinely.
 
-**Switching is a step you enter from browsing, not one you pass through.** Clicking that slot, or
-pressing Backspace on an empty field, replaces the folder rows with a **Machines** group: one row per
-known endpoint, active machine first, then the order of `useEndpoints.endpoints`, each with the
-connection dot, the endpoint label as the title and the machine's own label or its status
-underneath. That is their environment step's content and shape, reached from the place they put
-their back arrow. Picking a row goes back to browsing on that machine.
+**The machines are a step you can come back to.** Clicking that slot, or pressing Backspace on an
+empty field, replaces the folder rows with a **Machines** group: one row per known endpoint, active
+machine first, then the order of `useEndpoints.endpoints`, each with the connection dot, the endpoint
+label as the title and the machine's own label or its status beside it. The field empties and
+narrows the rows rather than holding a path, as theirs does. Picking a row goes to that machine's
+folders; stepping back returns to the folders the step was opened from, or leaves browsing when it
+was opened on nothing (`browseBack`, 3.0).
 
 **The typed path resets on a switch.** It becomes that machine's start path, which is the open
 project's folder when that project is on that machine and its home otherwise. This is what they do:
@@ -772,6 +820,14 @@ they already have tests. Write them again in a new `apps/client/src/shell/palett
 - `startFolder(folder, home, sep)`, which is where browsing starts: the folder in hand, else that
   machine's home.
 
+The second rewrite adds two more to the same file, the rules of 3.0, because they are the part with
+the actual decisions in them and a component is the one place this project cannot test:
+
+- `openBrowse(endpointId, machineCount, start)`, the step browsing opens on and the text the field
+  opens with.
+- `browseBack(step, machineCount)`, the step behind the one browsing is on: `machines`, `folders`
+  with the path to go back to, or `palette` for out of browsing altogether.
+
 Do not bring back `breadcrumbOf`, `shortcutsFor`, `Crumb`, `Shortcut` or the recents limit. The
 breadcrumb and the rail are the two things Bas asked to remove.
 
@@ -819,9 +875,16 @@ Changed, all in `apps/client/src/shell/CommandPalette.tsx` unless noted:
 - The browse effect sends `fs.browse` through `transportFor(browseEndpointId)` instead of the
   `transport` facade, and keeps `cwd` only when the browsed machine is the active one, since a
   relative path counts from the open project's folder and that folder lives on one machine (3.6).
-- A `browseEndpointId` state next to `browse`, seeded from `useEndpoints.activeId`, plus the machine
-  step: a `Machines` section that replaces the folder rows while it is up (3.2).
-- The input row's start slot: the machine dot and label, which is also the back control (3.4).
+- `browse: BrowseStep | null` as the palette's own state (3.0), with the listing beside it under the
+  machine and path it was asked for. `browseEndpointId` and the machine step both read off it, and
+  `browsing` is `browse !== null` rather than a test on the query.
+- `apps/client/src/state/ui.ts`: `paletteBrowse` next to `paletteSeed`, and `openFolderBrowser()`.
+  Both are read once, when the palette opens, and say which step it opens on; which step it is on
+  after that is the palette's own business.
+- The machine step: a `Machines` section that replaces the folder rows while it is up, narrowed by
+  what is typed (3.2).
+- The input row's start slot: the back control, carrying the machine dot and label on the folders of
+  a machine (3.4).
 - The footer: the hints of 3.5, the native dialog button gated as in 3.8, and the primary button
   whose label follows `folderPresence` (3.7).
 - `submitPath` calls `openFolderOn(browseEndpointId, path, presence === 'missing')` instead of
@@ -830,12 +893,11 @@ Changed, all in `apps/client/src/shell/CommandPalette.tsx` unless noted:
 - `apps/client/src/shell/ProjectMenu.tsx`: `openFolder` drops the `desktop()` branch entirely and
   always opens the palette in browse mode. The native dialog lives in the palette's footer now, and
   only there.
-- `apps/client/src/shell/commands.ts:110`: unchanged in behavior, but the hint stops saying "Type a
-  path" once the palette does the browsing for you.
+- `apps/client/src/shell/commands.ts`: the open-folder command calls `openFolderBrowser()` and drops
+  its "Type a path" hint, because nothing has to be typed any more.
 
-Not changed: `apps/client/src/state/ui.ts` keeps only `paletteSeed`; the `folderPickerOpen` and
-`folderPickerSeed` members go with the revert and nothing replaces them. `apps/client/src/App.tsx`
-mounts nothing new. No Cmd+O: this needs no chord of its own and the palette is one
+Not changed: the `folderPickerOpen` and `folderPickerSeed` members go with the revert and nothing
+replaces them. `apps/client/src/App.tsx` mounts nothing new. No Cmd+O: this needs no chord of its own and the palette is one
 keystroke away already.
 
 ### 4.5 Order of work
@@ -878,7 +940,8 @@ keystroke away already.
   parent of a root, `joinPath` against a directory with and without a trailing separator, the three
   `folderPresence` answers over both branches of the rule (trailing separator, and an exact name
   match that is case-sensitive), `startFolder` with and without a folder in hand, and
-  `browseMachines` ordering the active machine first and marking one that is not connected.
+  `browseMachines` ordering the active machine first and marking one that is not connected, plus
+  `openBrowse` on one machine and on several and every branch of `browseBack` (3.0).
 - `apps/client/src/project/open.test.ts`: `openFolderOn` on the machine that is already active takes
   the short path, on another machine it activates first and waits for the socket, and on a machine
   that never answers it fails with the timeout's message rather than hanging.
@@ -888,8 +951,8 @@ keystroke away already.
 
 ## 5. Decisions
 
-Nothing here is open. The first three are Bas's; the rest follow from them or were settled earlier
-and still hold. Each one is a small edit if he wants it the other way.
+Nothing here is open. The first three and the fifth are Bas's; the rest follow from them or were
+settled earlier and still hold. Each one is a small edit if he wants it the other way.
 
 1. **It lives in the command palette.** Bas, after seeing the built version: if it is in the palette
    for every other choice, it is in the palette here, and it should work the same. That reverses the first
@@ -903,16 +966,19 @@ and still hold. Each one is a small edit if he wants it the other way.
 4. **Git repositories: none.** No group, no badge, no scan, no `hasGit` field
    (3.3). Their git rows are about cloning a remote repository, which is a separate feature and not
    this one (1.1).
-5. **Browsing starts on the active machine, and the machine is a control in the input row.** Not a
-   step in front of browsing and not a chip in a header of our own. The argument, the reset on
-   switch and the not-connected case are all in 3.6. This is the deviation with the most reasoning
-   behind it, because their model has one environment chosen up front and ours has an active machine
-   the whole app already runs on.
-6. **No source step.** Every row of theirs but one is about cloning, which Ruimte cannot do (3.2).
-7. **No hidden-folders toggle**, reversing the first version. None is needed, and the daemon's rule
+5. **Browse mode is a step, not a query.** Bas, after seeing the version the first rewrite built:
+   opening it should not mean typing `~/` first. The browser is a pushed step and the query
+   only decides what that step lists, which is 3.0 and what makes the rest of this work.
+6. **Browsing opens on the machines when there are several, on the folders when there is one.** As
+   decided with Bas, reversing the first rewrite, which argued that the active machine makes the question
+   redundant. The active machine is the first row and is highlighted, so the ordinary case is still
+   one keypress. The machine stays in view as the leading slot of the field, the path resets on a
+   switch, and a machine that is not connected is still clickable and gets dialed (3.6).
+7. **No source step.** Every row of theirs but one is about cloning, which Ruimte cannot do (3.2).
+8. **No hidden-folders toggle**, reversing the first version. None is needed, and the daemon's rule
    is already theirs. The `hidden` flag stays on the daemon without a caller (4.3).
-8. **No Cmd+O**, reversing the first version. This needs no chord of its own, the palette
+9. **No Cmd+O**, reversing the first version. This needs no chord of its own, the palette
    is one keystroke away, and the chord goes back to the browser.
-9. **The mark on a folder that already holds a canvas stays.** The one row-level thing we show that
+10. **The mark on a folder that already holds a canvas stays.** The one row-level thing we show that
    they do not, kept because it predates all of this and because it says what Enter will do (3.3).
-10. **Tab keeps completing.** The one key they leave unused and our palette already uses.
+11. **Tab keeps completing.** The one key they leave unused and our palette already uses.
