@@ -1,3 +1,4 @@
+import type { EndpointNameSource } from '@ruimte/contracts';
 import { noteDaemonIdentity } from '@/endpoint/identity';
 import { useEndpoints } from '@/state/endpoints';
 import { currentEndpointId } from '@/state/keys';
@@ -18,11 +19,28 @@ const load = (endpointId: string): void => {
         .request('endpoint.info', {})
         .then(async (info) => {
             const settled = noteDaemonIdentity(endpointId, info);
-            useServers.getState().setEndpoint(settled, { label: info.label, reachability: info.reachability });
+            useServers.getState().setEndpoint(settled, {
+                label: info.label,
+                nameSource: info.nameSource ?? null,
+                icon: info.icon ?? null,
+                reachability: info.reachability
+            });
+            adoptChosenName(settled, info.label, info.nameSource ?? null);
             const hello = await link.request('server.hello', {});
             useServers.getState().setInfo(settled, { platform: hello.platform, home: hello.home, version: hello.version });
         })
         .catch(() => undefined);
+};
+
+/*
+ * A name a person gave a machine is the machine's own, so the endpoint row this client keeps takes
+ * it and every list stops saying two things at once. A default name is a hostname, which the row's
+ * own label ("This machine", or what the pairing put there) reads better than.
+ */
+export const adoptChosenName = (endpointId: string, label: string, nameSource: EndpointNameSource | null): void => {
+    if (nameSource === 'chosen') {
+        useEndpoints.getState().setLabel(endpointId, label);
+    }
 };
 
 /* Asks the daemon who it is on every connection; the answer feeds platform-specific labels. */

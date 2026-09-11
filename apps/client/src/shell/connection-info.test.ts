@@ -49,19 +49,19 @@ describe('describeMachine', () => {
         expect(describeMachine({ endpointLabel: 'Studio', machineLabel: 'Studio', reachability: 'lan', platform: 'darwin' })).toBe('Studio');
     });
 
-    test('keeps the endpoint name before the daemon has answered', () => {
+    test('keeps the endpoint name before the machine has answered', () => {
         expect(describeMachine({ endpointLabel: 'Studio', machineLabel: null, reachability: null, platform: null })).toBe('Studio');
     });
 });
 
 describe('describeVersion and describePing', () => {
     test('shows a dash for what is not known yet', () => {
-        expect(describeVersion(null)).toBe('Daemon -');
+        expect(describeVersion(null)).toBe('Version -');
         expect(describePing(null)).toBe('Ping -');
     });
 
     test('rounds the round trip to whole milliseconds', () => {
-        expect(describeVersion('0.4.2')).toBe('Daemon 0.4.2');
+        expect(describeVersion('0.4.2')).toBe('Version 0.4.2');
         expect(describePing(11.6)).toBe('Ping 12 ms');
     });
 });

@@ -6,6 +6,7 @@ import { startServerInfo } from '@/transport/server-info';
 import { startPing } from '@/transport/ping';
 import { startContextSync } from '@/context/sync';
 import { startEndpointSelection } from '@/endpoint';
+import { startEndpointWatch } from '@/endpoint/watch';
 import { startProjectList } from '@/project/list';
 import { restoreLastEndpoint } from '@/project/open';
 import { startConnections } from '@/transport/connections';
@@ -27,6 +28,7 @@ startContextSync();
 /* Before anything opens a socket: the machine the work was left on decides which daemon boots. */
 restoreLastEndpoint();
 startEndpointSelection();
+startEndpointWatch();
 startConnections();
 startProjectList();
 startInputModality();
