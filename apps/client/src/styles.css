@@ -510,6 +510,13 @@ body {
     }
     .dialog-popup[data-starting-style], .dialog-popup[data-ending-style] { opacity: 0; scale: 0.97; }
 
+    /* A dialog opened from inside another dialog. Base UI leaves the nested backdrop out because the
+       one of the dialog underneath is still on screen, but that one lies under its own popup, so the
+       dialog you opened this from keeps taking clicks. `forceRender` on the backdrop plus these two
+       steps put the dim over it; both stay under `--z-popup`, so a menu in the nested dialog wins. */
+    .dialog-backdrop-nested { z-index: calc(var(--z-dialog) + 1); }
+    .dialog-popup-nested { z-index: calc(var(--z-dialog) + 2); }
+
     /* Tooltips. The positioner animates its position, so a tooltip slides to the next button
        instead of blinking; the popup fades and scales from its anchor side. Both drop the motion
        while Base UI says the tooltip is instant. */
