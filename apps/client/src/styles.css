@@ -498,7 +498,10 @@ body {
         position: fixed;
         left: 50%;
         z-index: var(--z-dialog);
-        transform: translateX(-50%);
+        /* The individual `translate` property, not `transform`, because the spec applies translate
+           before scale: a `-50%` inside `transform` would be scaled along with the popup and leave
+           it drifting sideways while it grows. */
+        translate: -50% 0;
         max-width: calc(100vw - 32px);
         border-radius: 14px;
         background: var(--surface-raised);
