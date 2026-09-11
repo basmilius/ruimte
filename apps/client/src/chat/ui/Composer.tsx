@@ -25,8 +25,10 @@ import { CHIP_BEHIND_TEXT, MENTION_TONE, SKILL_TONE } from '@/chat/ui/chips';
 import { ContextMeter } from '@/chat/ui/ContextMeter';
 import { ApprovalDock, QuestionDock } from '@/chat/ui/PendingDock';
 import { ModelPicker, ModePicker, OptionsPicker, StashPicker } from '@/chat/ui/Pickers';
+import { isApplePlatform } from '@/desktop/bridge';
 import { useChats } from '@/state/chats';
 import { useProviders } from '@/state/providers';
+import { isShellChord } from '@/terminal/keymap';
 import { BTN_GROUP, MENU_LABEL } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { FileIcon } from '@/ui/FileIcon';
@@ -453,7 +455,11 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
             }
             return;
         }
-        e.stopPropagation();
+        // The composer keeps the keyboard while you type, but the chords that move between views,
+        // panels and the palette stay the app's; the window listener never sees a stopped key.
+        if (!isShellChord(e, isApplePlatform())) {
+            e.stopPropagation();
+        }
         const el = e.currentTarget;
         if (e.key === 'PageUp' || e.key === 'PageDown') {
             // Reading back through a long answer should not mean leaving the box you are typing in.

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { isAppChord, isClearChord, isLeaveNodeChord, leaveNodeChordLabel, macMotionSequence, type KeyChord } from './keymap.ts';
+import { isAppChord, isClearChord, isLeaveNodeChord, isShellChord, leaveNodeChordLabel, macMotionSequence, type KeyChord } from './keymap.ts';
 
 const chord = (key: string, modifiers: Partial<Omit<KeyChord, 'key'>> = {}): KeyChord => ({
     key,
@@ -100,6 +100,30 @@ describe('isAppChord', () => {
     test('off macOS Ctrl+B is the tmux prefix, so the shell keeps it', () => {
         expect(isAppChord(key('KeyB', { ctrlKey: true }), false)).toBe(false);
         expect(isAppChord(key('KeyB', { ctrlKey: true, altKey: true }), false)).toBe(true);
+    });
+});
+
+describe('isShellChord', () => {
+    const key = (code: string, modifiers: Partial<Omit<KeyChord, 'key'>> = {}): KeyChord => chord('', { code, ...modifiers });
+
+    test('a text field that stops its own keys still hands back every app chord', () => {
+        expect(isShellChord(key('Digit1', { metaKey: true }), true)).toBe(true);
+        expect(isShellChord(key('Digit9', { metaKey: true }), true)).toBe(true);
+        expect(isShellChord(key('BracketRight', { metaKey: true, shiftKey: true }), true)).toBe(true);
+        expect(isShellChord(key('Digit1', { ctrlKey: true }), false)).toBe(true);
+    });
+
+    test("the palette and find in files are the app's here, unlike in a terminal", () => {
+        expect(isShellChord(key('KeyK', { metaKey: true }), true)).toBe(true);
+        expect(isShellChord(key('KeyF', { metaKey: true, shiftKey: true }), true)).toBe(true);
+        expect(isAppChord(key('KeyK', { metaKey: true }), true)).toBe(false);
+    });
+
+    test('the chords the composer answers itself stay in the composer', () => {
+        expect(isShellChord(key('KeyS', { metaKey: true }), true)).toBe(false);
+        expect(isShellChord(key('KeyF', { metaKey: true }), true)).toBe(false);
+        expect(isShellChord(key('KeyK', { metaKey: true, altKey: true }), true)).toBe(false);
+        expect(isShellChord(key('Enter', { metaKey: true }), true)).toBe(false);
     });
 });
 
