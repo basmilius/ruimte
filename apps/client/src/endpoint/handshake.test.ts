@@ -3,7 +3,7 @@ import { clientAuthMessage, daemonChallengeMessage } from '@ruimte/contracts';
 import { socketUrlFor, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useToasts } from '@/state/toasts';
 import { createClientKeyLoader, type ClientKey, type KeyStore } from './client-key';
-import { forgetTicket } from './credentials';
+import { forgetTicket, rememberTicket } from './credentials';
 import { signIn, socketAddressFor } from './handshake';
 
 const DAEMON_ID = 'daemon-xyz';
@@ -164,8 +164,11 @@ describe('signing in with a key pair', () => {
             '/auth/challenge': async () => Response.json(await daemon.challenge('nonce-5')),
             '/auth/ticket': () => new Response('gone', { status: 401 })
         });
+        rememberTicket(DAEMON_ID, 'a ticket from a connection before this');
         expect(await signIn(row({ daemonPublicKey: daemon.publicKey }), key)).toBeNull();
         expect(useToasts.getState().toasts[0]?.title).toContain('does not know this client');
+        // The ticket it was carrying is worth nothing either; sending it again would only be refused.
+        expect(socketUrlFor(row({ token: 'nothing-else-left' }))).toBe('ws://box:4210/ws?token=nothing-else-left');
     });
 });
 
