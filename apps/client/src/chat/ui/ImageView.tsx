@@ -65,8 +65,8 @@ function Lightbox({ src, alt, open, onOpenChange }: { src: string; alt: string; 
         <Dialog.Root open={open} onOpenChange={onOpenChange}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
-                {/* The shared popup centers itself with a transform; a lightbox fills the window instead. */}
-                <Dialog.Popup className="dialog-popup inset-4 flex transform-none flex-col">
+                {/* The shared popup centers itself by translating half its width; a lightbox fills the window instead. */}
+                <Dialog.Popup className="dialog-popup inset-4 flex translate-none flex-col">
                     <Dialog.Title className="sr-only">{alt}</Dialog.Title>
                     <div className="flex items-center gap-2 border-b border-border px-3 py-2">
                         <span className="min-w-0 truncate text-xs text-text-muted">{alt}</span>
