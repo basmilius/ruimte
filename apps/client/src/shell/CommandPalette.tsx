@@ -7,7 +7,6 @@ import {
     FileSearch,
     Folder,
     FolderCheck,
-    FolderPlus,
     Globe,
     LayoutGrid,
     MessageSquare,
@@ -20,26 +19,27 @@ import {
     Zap,
     type LucideIcon
 } from 'lucide-react';
-import { isCanvasView, isOpenableView, type FsBrowseEntry } from '@ruimte/contracts';
+import { isCanvasView, isOpenableView, type FsBrowseResult } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
-import { projectClient } from '@/project';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ViewGlyph } from '@/project/ViewGlyph';
-import { openProject } from '@/project/open';
+import { openFolderOn, openProject, reachEndpoint } from '@/project/open';
 import { revealNode, showView } from '@/project/views';
 import { appCommands, type Command } from '@/shell/commands';
+import { browseMachines, endsWithSeparator, folderPresence, parentOf, separatorFor, startFolder } from '@/shell/palette-browse';
 import { DEFAULT_GREP_OPTIONS, useGrepSearch, type GrepOptions } from '@/shell/palette-grep';
 import { PaletteGrepResults } from '@/shell/PaletteGrepResults';
 import { readRecents, rememberRecent, sortByRecency } from '@/shell/palette-recents';
 import { absoluteOf, basenameOf } from '@/shell/panels/files-tree';
 import { useCanvas, type NodeKind } from '@/state/canvas';
 import { useDocument } from '@/state/document';
-import { useEndpoints } from '@/state/endpoints';
+import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
+import { fileManagerName, serverInfoOf, useServers } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
-import { transport } from '@/transport';
+import { transport, transportFor } from '@/transport';
 import { useOpenEndpoints } from '@/transport/status';
 import { desktop } from '@/desktop/bridge';
 import { Button } from '@/ui/Button';
@@ -67,8 +67,45 @@ const FILE_RESULTS = 8;
 
 interface Entry extends Command {
     icon: React.ReactNode;
-    section: 'Recent' | 'Jump to' | 'Files' | 'Views' | 'Projects' | 'Actions' | 'Folders';
+    section: 'Recent' | 'Jump to' | 'Files' | 'Views' | 'Projects' | 'Actions' | 'Folders' | 'Machines';
+    /* The folder a browse row stands for: what Enter steps into, and what Tab completes the field
+       to without stepping in. Navigating is the palette's own business, so such a row has no `run`. */
+    browsePath?: string;
 }
+
+interface BrowseAnswer {
+    result: FsBrowseResult | null;
+    failure: string | null;
+}
+
+/*
+ * One listing from one machine, which is not always the machine the app is pointed at. A machine
+ * this client has forgotten mid-browse has no socket left, and falling back to the active one lists
+ * something rather than throwing.
+ */
+const requestBrowse = async (endpointId: string, partialPath: string, cwd: string | null): Promise<BrowseAnswer> => {
+    const socket = transportFor(endpointId) ?? transport;
+    try {
+        return { result: await socket.request('fs.browse', { partialPath, cwd: cwd ?? undefined }), failure: null };
+    } catch (e) {
+        return { result: null, failure: e instanceof Error ? e.message : 'That path cannot be read' };
+    }
+};
+
+/* What a machine row says beside its name: the machine's own label once it has said hello, or where
+   its socket is. Not connected is a machine nothing has asked for yet, not a machine that is broken. */
+const machineHint = (endpointId: string, connected: boolean, dialing: boolean): string => {
+    if (dialing) {
+        return 'Connecting';
+    }
+    if (!connected) {
+        return 'Not connected';
+    }
+    return serverInfoOf(endpointId).label ?? 'Connected';
+};
+
+/* What a listing is of. The separator is one no path can carry, so two of them never read as one. */
+const browseKey = (endpointId: string, path: string): string => `${endpointId}\u0000${path}`;
 
 const LIST_ID = 'palette-list';
 const optionId = (index: number): string => `palette-option-${index}`;
@@ -78,15 +115,6 @@ const matches = (query: string, text: string): boolean => {
     const words = query.toLowerCase().split(/\s+/).filter(Boolean);
     const haystack = text.toLowerCase();
     return words.every((word) => haystack.includes(word));
-};
-
-const parentOf = (path: string): string | null => {
-    const trimmed = path.replace(/\/+$/, '');
-    const cut = trimmed.lastIndexOf('/');
-    if (cut <= 0) {
-        return trimmed === '' || trimmed === '/' ? null : '/';
-    }
-    return `${trimmed.slice(0, cut)}/`;
 };
 
 /* One of the three switches that narrow a search in files, drawn as the pressed gray key every
@@ -122,9 +150,17 @@ export function CommandPalette() {
     const currentEndpointId = useProject((s) => s.currentEndpointId);
     const endpoints = useEndpoints((s) => s.endpoints);
     const connected = useOpenEndpoints();
+    const activeId = useEndpoints((s) => s.activeId);
     const [query, setQuery] = useState('');
     const [index, setIndex] = useState(0);
-    const [browse, setBrowse] = useState<{ parentPath: string; entries: FsBrowseEntry[] } | null>(null);
+    /* The listing on screen, under the machine and path it was asked for, so a navigation that
+       already fetched one does not have the typing effect ask for it a second time. */
+    const [browse, setBrowse] = useState<{ key: string; result: FsBrowseResult | null } | null>(null);
+    /* The machine being browsed, which is the active one until the machine step says otherwise. */
+    const [browseEndpointId, setBrowseEndpointId] = useState(activeId);
+    const [machineStep, setMachineStep] = useState(false);
+    /* The machine a socket is being opened for; ours are dialed lazily, so this takes a moment. */
+    const [dialing, setDialing] = useState<string | null>(null);
     const [failure, setFailure] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
     const [recents, setRecents] = useState<string[]>(readRecents);
@@ -136,12 +172,30 @@ export function CommandPalette() {
     const mode = useUi((s) => s.paletteMode);
     const grepping = mode === 'grep';
     const grep = useGrepSearch(grepping ? folder : null, grepping ? query : '', grepOptions);
+    const platform = useServers((s) => s.byEndpoint[browseEndpointId]?.platform ?? null);
+    const sep = separatorFor(platform);
+    const machines = useMemo(() => browseMachines(endpoints, activeId, connected), [endpoints, activeId, connected]);
 
+    /* A relative path counts from the open project's folder, and that folder is on one machine. */
+    const cwdFor = useCallback((endpointId: string): string | null => (currentEndpointId === endpointId ? folder : null), [currentEndpointId, folder]);
+
+    // The listing stays on screen while the next one is in flight, so typing never empties the list.
     const reset = (next: string): void => {
         setQuery(next);
         setIndex(isPathQuery(next) ? -1 : 0);
         setFailure(null);
+        // Typing is about a path, and the machine step has no field of its own to type into.
+        setMachineStep(false);
+    };
+
+    /* A palette that opens, or a mode that changes, starts on the machine the app is pointed at with
+       nothing of the last browse left on screen. */
+    const restart = (next: string): void => {
+        reset(next);
         setBrowse(null);
+        setBrowseEndpointId(activeId);
+        setMachineStep(false);
+        setDialing(null);
     };
 
     const [seenOpen, setSeenOpen] = useState(false);
@@ -150,7 +204,7 @@ export function CommandPalette() {
     if (open !== seenOpen) {
         setSeenOpen(open);
         if (open) {
-            reset(seed);
+            restart(seed);
         }
     }
 
@@ -159,36 +213,85 @@ export function CommandPalette() {
     // Switching modes with the palette already up is a fresh start as much as opening it is.
     if (mode !== seenMode) {
         setSeenMode(mode);
-        reset(seed);
+        restart(seed);
     }
 
     // A path is a folder to browse, but only while the palette is looking for one.
-    const browsing = !grepping && isPathQuery(query);
+    const browsing = !grepping && (isPathQuery(query) || machineStep);
 
     useEffect(() => {
-        if (!browsing) {
+        if (!browsing || machineStep) {
+            return;
+        }
+        const key = browseKey(browseEndpointId, query);
+        if (browse?.key === key) {
             return;
         }
         const mine = ++generation.current;
-        const timer = window.setTimeout(() => {
-            transport
-                .request('fs.browse', { partialPath: query, cwd: folder ?? undefined })
-                .then((result) => {
+        // Nothing on screen yet is nothing to hold back, so the first listing goes out without the wait.
+        const timer = window.setTimeout(
+            () => {
+                void requestBrowse(browseEndpointId, query, cwdFor(browseEndpointId)).then((answer) => {
                     // A later keystroke already asked again; this answer is stale.
-                    if (mine === generation.current) {
-                        setBrowse(result);
-                        setFailure(null);
+                    if (mine !== generation.current) {
+                        return;
                     }
-                })
-                .catch((e: unknown) => {
-                    if (mine === generation.current) {
-                        setBrowse({ parentPath: query, entries: [] });
-                        setFailure(e instanceof Error ? e.message : 'That path cannot be read');
-                    }
+                    setBrowse({ key, result: answer.result });
+                    setFailure(answer.failure);
                 });
-        }, BROWSE_DEBOUNCE_MS);
+            },
+            browse === null ? 0 : BROWSE_DEBOUNCE_MS
+        );
         return () => window.clearTimeout(timer);
-    }, [browsing, query, folder]);
+    }, [browse, browsing, machineStep, browseEndpointId, query, cwdFor]);
+
+    /*
+     * Every step fetches before it commits, so the path and the list change in the same frame and
+     * there is never an empty flash between a click and the folder it opens.
+     */
+    const navigateTo = useCallback(
+        async (path: string, endpointId: string): Promise<void> => {
+            const mine = ++generation.current;
+            const answer = await requestBrowse(endpointId, path, cwdFor(endpointId));
+            if (mine !== generation.current) {
+                return;
+            }
+            setBrowse({ key: browseKey(endpointId, path), result: answer.result });
+            setFailure(answer.failure);
+            setBrowseEndpointId(endpointId);
+            setMachineStep(false);
+            setQuery(path);
+            setIndex(-1);
+        },
+        [cwdFor]
+    );
+
+    /*
+     * A machine that is not connected is usually one nothing has asked for yet, so picking it dials
+     * rather than refusing. The path resets to that machine's start folder: a path from one machine
+     * rarely exists on the next, and landing on "create this folder" by accident helps nobody.
+     */
+    const pickMachine = useCallback(
+        async (endpointId: string): Promise<void> => {
+            if (endpointId === browseEndpointId) {
+                setMachineStep(false);
+                return;
+            }
+            setDialing(endpointId);
+            setFailure(null);
+            try {
+                await reachEndpoint(endpointId);
+            } catch (e) {
+                setFailure(e instanceof Error ? e.message : 'That machine is not answering');
+                setDialing(null);
+                return;
+            }
+            setDialing(null);
+            const info = serverInfoOf(endpointId);
+            await navigateTo(startFolder(cwdFor(endpointId), info.home, separatorFor(info.platform)), endpointId);
+        },
+        [browseEndpointId, cwdFor, navigateTo]
+    );
 
     useEffect(() => {
         const trimmed = query.trim();
@@ -223,11 +326,14 @@ export function CommandPalette() {
         [folder]
     );
 
+    /* What the daemon says about the path in the field: there, not there, or a daemon too old to say. */
+    const presence = browsing && !machineStep ? folderPresence(query, browse?.result ?? null, sep) : 'unknown';
+
     const submitPath = async (path: string): Promise<void> => {
         setBusy(true);
         setFailure(null);
         try {
-            await projectClient.openFolder(path);
+            await openFolderOn(browseEndpointId, path, presence === 'missing');
             setOpen(false);
         } catch (e) {
             setFailure(e instanceof Error ? e.message : 'That folder cannot be opened');
@@ -241,27 +347,41 @@ export function CommandPalette() {
         if (grepping) {
             return [];
         }
+        if (machineStep) {
+            return machines.map((row) => ({
+                id: `machine-${row.endpointId}`,
+                label: row.label,
+                hint: machineHint(row.endpointId, row.connected, dialing === row.endpointId),
+                icon: <span className={clsx('inline-block h-1.5 w-1.5 rounded-full', row.connected ? 'bg-status-idle' : 'bg-text-faint')} />,
+                section: 'Machines' as const,
+                run: () => void pickMachine(row.endpointId)
+            }));
+        }
         if (browsing) {
-            const up = parentOf(query);
+            const up = parentOf(query, sep);
             const list: Entry[] = [];
-            if (up !== null && query !== '/' && query !== '~/') {
+            // The row that goes up is the first item inside the group, not a row of its own above it.
+            if (up !== null) {
                 list.push({
                     id: 'browse-up',
                     label: '..',
-                    hint: 'Up one folder',
                     icon: <Icon icon={CornerLeftUp} size={14} />,
                     section: 'Folders',
-                    run: () => setQuery(up)
+                    browsePath: up,
+                    run: () => undefined
                 });
             }
-            for (const entry of browse?.entries ?? []) {
+            /* A folder row is an icon and a name. The check on a folder that already holds a canvas
+               is the one thing that stays, because it says what Enter will do: open that project
+               again rather than make a second one beside it. */
+            for (const entry of browse?.result?.entries ?? []) {
                 list.push({
                     id: `dir-${entry.fullPath}`,
                     label: entry.name,
-                    hint: entry.hasCanvas ? 'Has a canvas' : undefined,
                     icon: entry.hasCanvas ? <Icon icon={FolderCheck} size={14} /> : <Icon icon={Folder} size={14} />,
                     section: 'Folders',
-                    run: () => setQuery(`${entry.fullPath}/`)
+                    browsePath: entry.fullPath,
+                    run: () => undefined
                 });
             }
             return list;
@@ -301,7 +421,7 @@ export function CommandPalette() {
         }));
         /* One list with the machine on the row, rather than a section per machine: a project is
            looked for by its own name, and which daemon it is on is what tells two of them apart. */
-        const machines = new Set(projects.map((row) => row.endpointId));
+        const projectMachines = new Set(projects.map((row) => row.endpointId));
         const switches: Entry[] = projects
             .filter((row) => row.summary.available && !(row.summary.projectId === currentProjectId && row.endpointId === currentEndpointId))
             .map(({ endpointId, summary }) => {
@@ -311,7 +431,7 @@ export function CommandPalette() {
                 return {
                     id: `project-${endpointId}-${summary.projectId}`,
                     label: summary.name,
-                    hint: machines.size > 1 ? `${machine} · ${where}` : where,
+                    hint: projectMachines.size > 1 ? `${machine} · ${where}` : where,
                     icon: <ProjectGlyph projectId={summary.projectId} endpointId={endpointId} icon={summary.icon} color={summary.color} size={14} />,
                     section: 'Projects',
                     run: () => void openProject(endpointId, summary.projectId).catch(() => undefined)
@@ -363,12 +483,17 @@ export function CommandPalette() {
         browsing,
         browse,
         connected,
+        dialing,
         endpoints,
         fileMatches,
         grepping,
+        machines,
+        machineStep,
         nodes,
         openFile,
         order,
+        pickMachine,
+        sep,
         views,
         activeViewId,
         query,
@@ -393,13 +518,31 @@ export function CommandPalette() {
         openFile(match.path);
     };
 
+    const showMachines = (): void => {
+        setMachineStep(true);
+        setIndex(0);
+        setFailure(null);
+    };
+
+    const browseLabel = endpoints.find((endpoint) => endpoint.id === browseEndpointId)?.label ?? 'This machine';
+    const submitLabel = presence === 'missing' ? 'Create and open' : 'Open folder';
+    // Enter means "use what I typed" until a row is highlighted, and then the chord takes that over.
+    const submitChord = active === undefined ? '↵' : '⌘↵';
+    /* The shell's own picker, which only makes sense for the daemon that served this page: the word
+       on the button is the Electron machine's, because that is whose dialog opens. */
+    const nativeDialog = browseEndpointId === LOCAL_ENDPOINT_ID ? desktop() : null;
+
     const run = (entry: Entry | undefined): void => {
         if (!entry) {
             return;
         }
+        // A browse row steps somewhere and the palette stays open; only the rest of the list closes it.
         if (browsing) {
-            entry.run();
-            setIndex(-1);
+            if (entry.browsePath === undefined) {
+                entry.run();
+                return;
+            }
+            void navigateTo(endsWithSeparator(entry.browsePath) ? entry.browsePath : `${entry.browsePath}${sep}`, browseEndpointId);
             return;
         }
         // Jumping to a node, a file, a view or a project is not a command; only what "Actions" lists comes back.
@@ -417,11 +560,32 @@ export function CommandPalette() {
                 <Dialog.Popup
                     /* Wider while searching in files: a hit is read in the lines around it, and those
                        lines are source, which does not fold. */
-                    className={clsx('dialog-popup top-[18vh]', grepping ? 'w-[760px]' : 'w-[560px]')}
+                    className={clsx('dialog-popup top-[18vh]', grepping ? 'w-[760px]' : 'w-[576px]')}
                     initialFocus={inputRef}
                 >
                     <div className="flex items-center gap-2 border-b border-border px-3">
-                        {browsing && <Icon icon={FolderPlus} size={14} className="shrink-0 text-accent" />}
+                        {/* The machine is in view the whole time, and is also the way into the list of
+                            them. With one machine known there is nothing to say, so it collapses to
+                            the folder icon the mode had before. */}
+                        {browsing && machines.length < 2 && <Icon icon={Folder} size={14} className="shrink-0 text-accent" />}
+                        {browsing && machines.length > 1 && (
+                            <Tooltip label={machineStep ? 'Back to the folders' : 'Browse another machine'} kbd="⌫">
+                                <button
+                                    className="flex h-6 shrink-0 items-center gap-1.5 rounded-md px-1.5 text-xs text-text-muted hover:bg-surface-hover"
+                                    // The field keeps the keys; a control that takes focus would swallow the next arrow.
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => (machineStep ? setMachineStep(false) : showMachines())}
+                                >
+                                    <span
+                                        className={clsx(
+                                            'h-1.5 w-1.5 shrink-0 rounded-full',
+                                            connected.includes(browseEndpointId) ? 'bg-status-idle' : 'bg-text-faint'
+                                        )}
+                                    />
+                                    <span className="max-w-32 truncate">{browseLabel}</span>
+                                </button>
+                            </Tooltip>
+                        )}
                         {grepping && <Icon icon={FileSearch} size={14} className="shrink-0 text-accent" />}
                         {!browsing && !grepping && <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />}
                         <input
@@ -434,14 +598,18 @@ export function CommandPalette() {
                                 grepping ? (activeHit >= 0 ? optionId(activeHit) : undefined) : active ? optionId(entries.indexOf(active)) : undefined
                             }
                             aria-label={grepping ? 'Search through the files of this folder' : 'Jump to a node, run a command, or open a folder'}
+                            /* A path stays in the same sans font as everything else: monospace makes
+                               it read as something to be read rather than something to be typed. */
                             className={clsx(
                                 'h-11 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint',
-                                (browsing || grepping) && 'font-mono text-code'
+                                grepping && 'font-mono text-code'
                             )}
                             placeholder={
                                 grepping
                                     ? 'Search through the files of this folder'
-                                    : 'Jump to a node, run a command, or type a path like ~/projects to open a folder'
+                                    : browsing
+                                      ? 'Enter a folder path, for example ~/projects/my-app'
+                                      : 'Jump to a node, run a command, or type a path like ~/projects to open a folder'
                             }
                             value={query}
                             spellCheck={false}
@@ -457,18 +625,30 @@ export function CommandPalette() {
                                     e.preventDefault();
                                     if (grepping) {
                                         runHit(activeHit);
-                                    } else if (browsing && (active === undefined || e.metaKey || e.ctrlKey)) {
+                                    } else if (browsing && !machineStep && (active === undefined || e.metaKey || e.ctrlKey)) {
                                         void submitPath(query);
                                     } else {
                                         run(active);
                                     }
-                                } else if (e.key === 'Tab' && browsing && active) {
+                                } else if (e.key === 'Tab' && browsing && !machineStep && active?.browsePath) {
+                                    // Completes the field to the folder under the highlight, without stepping into it.
                                     e.preventDefault();
-                                    run(active);
-                                } else if (e.key === 'Backspace' && grepping && query === '') {
-                                    // The mode leaves the way it was entered: one key, nothing typed.
-                                    e.preventDefault();
-                                    useUi.getState().setPaletteMode('default');
+                                    setQuery(active.browsePath);
+                                    setIndex(-1);
+                                } else if (e.key === 'Backspace' && query === '') {
+                                    if (grepping) {
+                                        // The mode leaves the way it was entered: one key, nothing typed.
+                                        e.preventDefault();
+                                        useUi.getState().setPaletteMode('default');
+                                    } else if (machineStep) {
+                                        e.preventDefault();
+                                        setMachineStep(false);
+                                        setIndex(-1);
+                                    } else if (browse !== null && machines.length > 1) {
+                                        // An emptied field still has the folders of the last browse under it.
+                                        e.preventDefault();
+                                        showMachines();
+                                    }
                                 }
                             }}
                         />
@@ -494,14 +674,23 @@ export function CommandPalette() {
                                 />
                             </span>
                         )}
-                        <kbd className={TOOLTIP_KBD}>esc</kbd>
+                        {/* The button that opens what was typed sits in the field, at its right end,
+                            carrying the one chord that does the same thing. */}
+                        {browsing && !machineStep && (
+                            <Tooltip label={submitLabel} kbd={submitChord}>
+                                <Button size="sm" variant="secondary" disabled={busy || query.trim() === ''} onClick={() => void submitPath(query)}>
+                                    {submitLabel}
+                                    <kbd className={TOOLTIP_KBD}>{submitChord}</kbd>
+                                </Button>
+                            </Tooltip>
+                        )}
+                        {!browsing && <kbd className={TOOLTIP_KBD}>esc</kbd>}
                     </div>
                     <div id={LIST_ID} className="max-h-[50vh] overflow-auto p-1.5" role="listbox" aria-label="Results">
                         <div aria-live="polite">
                             {entries.length === 0 && !browsing && !grepping && (
                                 <div className="px-3 py-6 text-center text-xs text-text-faint">Nothing matches</div>
                             )}
-                            {entries.length === 0 && browsing && <div className="px-3 py-6 text-center text-xs text-text-faint">No folders here yet</div>}
                             {grepping && query.trim() !== '' && !grep.busy && grep.failure === null && grep.matches.length === 0 && (
                                 <div className="px-3 py-6 text-center text-xs text-text-faint">No line in this folder matches</div>
                             )}
@@ -518,6 +707,9 @@ export function CommandPalette() {
                                 onRun={(at) => runHit(at)}
                             />
                         )}
+                        {/* An empty folder is the label with nothing under it: no spinner, no message,
+                            and the previous listing stays up until the next one lands. */}
+                        {browsing && !machineStep && entries.length === 0 && <div className={`${SECTION_LABEL} px-2.5 pt-1.5 pb-1`}>Folders</div>}
                         {entries.map((entry, i) => {
                             const first = i === 0 || entries[i - 1]!.section !== entry.section;
                             return (
@@ -533,7 +725,7 @@ export function CommandPalette() {
                                         onClick={() => run(entry)}
                                     >
                                         <span className="shrink-0 text-text-faint">{entry.icon}</span>
-                                        <span className={clsx('min-w-0 truncate', browsing && 'font-mono text-code')}>{entry.label}</span>
+                                        <span className="min-w-0 truncate">{entry.label}</span>
                                         {entry.hint && <span className="text-xs text-text-faint">{entry.hint}</span>}
                                         <span className="grow" />
                                         {entry.shortcut && <kbd className={TOOLTIP_KBD}>{entry.shortcut}</kbd>}
@@ -541,6 +733,11 @@ export function CommandPalette() {
                                 </div>
                             );
                         })}
+                        {/* The one thing T3 Code's own browser cannot say, because it never learns
+                            whether a folder is there; ours does, so the offer is reachable. */}
+                        {presence === 'missing' && (
+                            <div className="px-3 py-6 text-center text-xs text-text-faint">Press Enter to create this folder and open it as a project</div>
+                        )}
                     </div>
                     {grepping && (
                         <div className="flex items-center gap-3 border-t border-border px-3 py-2 text-xs text-text-faint">
@@ -563,32 +760,43 @@ export function CommandPalette() {
                     )}
                     {browsing && (
                         <div className="flex items-center gap-3 border-t border-border px-3 py-2 text-xs text-text-faint">
-                            {failure ? (
-                                <span className="text-status-error" role="alert">
+                            <span className="flex shrink-0 items-center gap-1.5">
+                                <kbd className={TOOLTIP_KBD}>↑</kbd>
+                                <kbd className={TOOLTIP_KBD}>↓</kbd> Navigate
+                            </span>
+                            {/* The Enter hint is left out once the typed path can be opened, because
+                                the button in the field is already saying so. */}
+                            {(active !== undefined || query.trim() === '') && (
+                                <span className="flex shrink-0 items-center gap-1.5">
+                                    <kbd className={TOOLTIP_KBD}>↵</kbd> Select
+                                </span>
+                            )}
+                            {machines.length > 1 && (
+                                <span className="flex shrink-0 items-center gap-1.5">
+                                    <kbd className={TOOLTIP_KBD}>⌫</kbd> Back
+                                </span>
+                            )}
+                            <span className="flex shrink-0 items-center gap-1.5">
+                                <kbd className={TOOLTIP_KBD}>esc</kbd> Close
+                            </span>
+                            <span className="grow" />
+                            {failure && (
+                                <span className="truncate text-status-error" role="alert">
                                     {failure}
                                 </span>
-                            ) : (
-                                <span>
-                                    <kbd className={TOOLTIP_KBD}>↵</kbd> steps into a folder, <kbd className={TOOLTIP_KBD}>⌘↵</kbd> opens the typed path as a
-                                    project
-                                </span>
                             )}
-                            <span className="grow" />
-                            {desktop() && (
+                            {/* A native dialog can only see the file system of the machine it runs on. */}
+                            {!machineStep && nativeDialog !== null && (
                                 <Button
                                     size="sm"
+                                    variant="secondary"
                                     onClick={() =>
-                                        void desktop()
-                                            ?.pickFolder(browse?.parentPath)
-                                            .then((picked) => (picked ? submitPath(picked) : undefined))
+                                        void nativeDialog.pickFolder(browse?.result?.parentPath).then((picked) => (picked ? submitPath(picked) : undefined))
                                     }
                                 >
-                                    Browse…
+                                    Browse in {fileManagerName(nativeDialog.platform)}
                                 </Button>
                             )}
-                            <Button size="sm" variant="primary" disabled={busy || query.trim() === ''} onClick={() => void submitPath(query)}>
-                                <Icon icon={FolderPlus} size={12} /> Open as project
-                            </Button>
                         </div>
                     )}
                 </Dialog.Popup>

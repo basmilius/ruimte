@@ -14,9 +14,11 @@ import {
     showOnCanvas
 } from '@/project/views';
 import { copyDrawingPng, copyDrawingSvg, saveDrawingPng, saveDrawingSvg } from '@/drawing/export';
+import { separatorFor, startFolder } from '@/shell/palette-browse';
 import { useCanvas, type AddNodeOptions, type NodeKind } from '@/state/canvas';
 import { useDrawing } from '@/state/drawing';
 import { activeViewOf, useDocument } from '@/state/document';
+import { useEndpoints } from '@/state/endpoints';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { providersOf } from '@/state/providers';
@@ -35,6 +37,18 @@ export interface Command {
     agent?: AgentKind;
     run(): void;
 }
+
+/*
+ * The one way into browsing a folder: the palette, on the machine the app is pointed at, in the
+ * folder in hand or that machine's home. Every entry point lands here, the project menu included,
+ * because a native dialog cannot see the file system of another machine.
+ */
+export const openFolderBrowser = (): void => {
+    const endpointId = useEndpoints.getState().activeId;
+    const info = serverInfoOf(endpointId);
+    const { current, currentEndpointId: on } = useProject.getState();
+    useUi.getState().openPalette(startFolder(on === endpointId ? (current?.folder ?? null) : null, info.home, separatorFor(info.platform)));
+};
 
 /* Whichever surface is on screen owns the zoom rows in the palette. */
 const zoomTarget = (): Pick<ReturnType<typeof useCanvas.getState>, 'fitAll' | 'zoomToSelection' | 'zoomTo'> => {
@@ -107,7 +121,7 @@ export const appCommands = (): Command[] => {
     const selected = canvas.selection.length === 1 ? canvas.nodes[canvas.selection[0]!] : undefined;
     const drawing = activeView !== null && isDrawingView(activeView);
     return [
-        { id: 'open-folder', label: 'Open a folder as a project', hint: 'Type a path', run: () => useUi.getState().openPalette('~/') },
+        { id: 'open-folder', label: 'Open a folder as a project', run: openFolderBrowser },
         ...(folder ? [{ id: 'find-in-files', label: 'Find in files', shortcut: '⌘⇧F', run: () => useUi.getState().openFindInFiles() }] : []),
         ...(folder
             ? [
