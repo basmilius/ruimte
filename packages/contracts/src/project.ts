@@ -80,8 +80,10 @@ export const ProjectLayoutSchema = z.object({
 });
 export type ProjectLayout = z.infer<typeof ProjectLayoutSchema>;
 
-// The Lucide icons a project may pick from. Closed on purpose: the client maps a name to a
-// component, so a name it does not know would render nothing at all.
+// The Lucide icons a project, a view or a machine may pick from, grouped by subject so the picker's
+// grid reads in runs. Closed on purpose: the client maps a name to a component, so a name it does
+// not know would render nothing at all. A name in here is written into saved files, so the list only
+// ever grows: renaming or dropping one orphans whatever picked it.
 export const PROJECT_ICON_NAMES = [
     'box',
     'boxes',
@@ -90,8 +92,28 @@ export const PROJECT_ICON_NAMES = [
     'code',
     'terminal',
     'cpu',
+    'circuit-board',
+    'memory-stick',
+    'pc-case',
+    'laptop',
+    'monitor',
+    'smartphone',
+    'tablet',
+    'webcam',
+    'printer',
+    'hard-drive',
+    'usb',
     'database',
     'server',
+    'container',
+    'network',
+    'router',
+    'ethernet-port',
+    'cable',
+    'plug',
+    'wifi',
+    'radio-tower',
+    'satellite-dish',
     'cloud',
     'globe',
     'rocket',
