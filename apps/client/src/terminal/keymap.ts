@@ -46,6 +46,25 @@ export const isAppChord = (event: KeyChord, apple: boolean): boolean => {
     return /^Digit[1-9]$/.test(event.code) || event.code === 'KeyT' || event.key === ',' || (apple && event.code === 'KeyB');
 };
 
+/*
+ * Everything a focused terminal hands back, plus the chords only a terminal keeps for itself: the
+ * palette, find in files. A text field that stops its own keys (the chat composer) reads this one,
+ * so typing in it never costs you a shortcut the rest of the app answers.
+ */
+export const isShellChord = (event: KeyChord, apple: boolean): boolean => {
+    if (isAppChord(event, apple)) {
+        return true;
+    }
+    const mod = apple ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
+    if (!mod || event.altKey) {
+        return false;
+    }
+    if (event.shiftKey) {
+        return event.code === 'KeyF';
+    }
+    return event.code === 'KeyK';
+};
+
 /* Clearing is ⌘K, what every macOS terminal does; off macOS the shell owns Ctrl+K, so it is ⌃⇧K. */
 export const isClearChord = (event: KeyChord, apple: boolean): boolean => {
     if (event.code !== 'KeyK' || event.altKey) {
