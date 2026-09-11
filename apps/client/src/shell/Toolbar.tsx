@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { Search } from 'lucide-react';
+import { ArrowDownToLine, Search } from 'lucide-react';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { ConnectionDot } from '@/shell/ConnectionDot';
@@ -13,6 +13,7 @@ import { useDrawing } from '@/state/drawing';
 import { useProject } from '@/state/project';
 import { useServer } from '@/state/server';
 import { useUi } from '@/state/ui';
+import { hasUpdate, useUpdates } from '@/state/updates';
 import { BTN_GROUP } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
@@ -77,6 +78,7 @@ export function Toolbar() {
                 is what sits under the window controls on Windows and Linux and the inset lands here.
                 An open panel reaches the window's edge instead and its header takes the inset over. */}
             <div className={clsx(BTN_GROUP, !panel.open && !previewOpen && hasOverlayControls() && 'toolbar-overlay-inset')}>
+                <UpdateButton />
                 <Tooltip label="Search" kbd="⌘K" name>
                     <button className="icon-btn" onClick={() => useUi.getState().setPaletteOpen(true)}>
                         <Icon icon={Search} size={16} />
@@ -86,5 +88,22 @@ export function Toolbar() {
             {/* Opening another project takes a round trip to the daemon; the line says the wait is the app's. */}
             {switching && <div className="progress-line absolute inset-x-0 bottom-0" role="progressbar" aria-label="Opening the project" />}
         </header>
+    );
+}
+
+/* Only there when there is something to do about a new version, and green because it is good news
+   rather than a warning. It opens the Updates pane, which says what the state is and acts on it. */
+function UpdateButton() {
+    const state = useUpdates();
+    if (!hasUpdate(state)) {
+        return null;
+    }
+    const label = state.status === 'ready' ? `Version ${state.version ?? ''} is ready to install`.trim() : 'An update is on the way';
+    return (
+        <Tooltip label={label} name>
+            <button className="icon-btn text-positive hover:text-positive" onClick={() => useUi.getState().setSettings({ open: true, section: 'updates' })}>
+                <Icon icon={ArrowDownToLine} size={16} />
+            </button>
+        </Tooltip>
     );
 }

@@ -1,14 +1,15 @@
 import type { ButtonHTMLAttributes } from 'react';
 import clsx from 'clsx';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'positive';
 type ButtonSize = 'sm' | 'md';
 
 const VARIANT: Record<ButtonVariant, string> = {
     primary: 'bg-accent text-accent-text',
     secondary: 'border border-border bg-surface-raised text-text hover:bg-surface-hover disabled:hover:bg-surface-raised',
     ghost: 'text-text-muted hover:bg-surface-hover hover:text-text',
-    danger: 'bg-status-error text-accent-text'
+    danger: 'bg-status-error text-accent-text',
+    positive: 'bg-positive text-accent-text'
 };
 
 /* 28 and 32 pixels, the two heights the rest of the app already uses for a compact and a normal control. */

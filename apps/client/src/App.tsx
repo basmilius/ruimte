@@ -14,6 +14,8 @@ import { Sidebar } from '@/shell/Sidebar';
 import { Toasts } from '@/shell/Toasts';
 import { Toolbar } from '@/shell/Toolbar';
 import { useProject } from '@/state/project';
+import { useSettings } from '@/state/settings';
+import { startUpdates } from '@/state/updates';
 import { TooltipProvider } from '@/ui/Tooltip';
 
 export function App() {
@@ -23,6 +25,9 @@ export function App() {
     useEffect(() => {
         document.title = name ? `${name} - Ruimte` : 'Ruimte';
     }, [name]);
+
+    // Once, with the preference as it stands: the shell reads it again from the Updates pane.
+    useEffect(() => startUpdates(useSettings.getState().updatesAutoDownload) ?? undefined, []);
 
     return (
         <TooltipProvider>

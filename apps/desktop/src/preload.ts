@@ -21,5 +21,15 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
     },
     setTheme: (theme: { resolved: 'light' | 'dark'; followsSystem: boolean; background: string }): void => ipcRenderer.send('window:theme', theme),
     saveFile: (suggestedName: string, bytes: Uint8Array, mime: string): Promise<string | null> =>
-        ipcRenderer.invoke('dialog:save-file', suggestedName, bytes, mime)
+        ipcRenderer.invoke('dialog:save-file', suggestedName, bytes, mime),
+    updateState: (): Promise<unknown> => ipcRenderer.invoke('update:state'),
+    onUpdateState: (listener: (state: unknown) => void): (() => void) => {
+        const handler = (_event: unknown, state: unknown): void => listener(state);
+        ipcRenderer.on('update:state', handler);
+        return () => ipcRenderer.removeListener('update:state', handler);
+    },
+    configureUpdates: (autoDownload: boolean): Promise<void> => ipcRenderer.invoke('update:configure', autoDownload),
+    checkForUpdate: (): Promise<void> => ipcRenderer.invoke('update:check'),
+    downloadUpdate: (): Promise<void> => ipcRenderer.invoke('update:download'),
+    installUpdate: (): void => ipcRenderer.send('update:install')
 });
