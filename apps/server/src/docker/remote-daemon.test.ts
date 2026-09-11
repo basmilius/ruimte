@@ -2,8 +2,13 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { generateKeyPair, signMessage, verifySignature } from '../auth/keys.ts';
 import {
+    clientAuthMessage,
+    daemonChallengeMessage,
     parseServerFrame,
+    type AuthChallengeResult,
+    type AuthTicketResult,
     type EndpointInfo,
     type PairResult,
     type FsBrowseResult,
@@ -145,7 +150,7 @@ const inContainer = async (command: string[]): Promise<string> =>
  * the container. The URL it prints names the container, which nothing here resolves; only the
  * token behind the fragment travels back to the host.
  */
-const pair = async (): Promise<PairResult> => {
+const pair = async (publicKey?: string): Promise<PairResult> => {
     const printed = await inContainer(['bun', '/app/apps/server/src/main.ts', 'pair', '--port', String(PORT)]);
     const token = printed.split('\n').at(-1)?.split('#').at(-1) ?? '';
     if (!token) {
@@ -154,12 +159,37 @@ const pair = async (): Promise<PairResult> => {
     const response = await fetch(`${BASE_URL}/auth/pair`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ token, label: 'docker test' })
+        body: JSON.stringify({ token, label: 'docker test', ...(publicKey ? { publicKey } : {}) })
     });
     if (!response.ok) {
         throw new Error(`Pairing failed: ${response.status} ${await response.text()}`);
     }
     return (await response.json()) as PairResult;
+};
+
+/* The client half of the handshake: take the daemon's nonce, check who signed it, sign it back. */
+const signIn = async (key: { publicKey: string; privateKey: string }, daemonId: string): Promise<Response> => {
+    const challenge = (await (await fetch(`${BASE_URL}/auth/challenge`, { method: 'POST' })).json()) as AuthChallengeResult;
+    if (!verifySignature(challenge.daemon.publicKey, daemonChallengeMessage(challenge.daemon.id, challenge.challenge), challenge.daemon.signature)) {
+        throw new Error('The daemon did not sign its own challenge');
+    }
+    return fetch(`${BASE_URL}/auth/ticket`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+            publicKey: key.publicKey,
+            challenge: challenge.challenge,
+            signature: signMessage(key.privateKey, clientAuthMessage(daemonId, challenge.challenge, key.publicKey))
+        })
+    });
+};
+
+const ticketFor = async (key: { publicKey: string; privateKey: string }, daemonId: string): Promise<string> => {
+    const response = await signIn(key, daemonId);
+    if (!response.ok) {
+        throw new Error(`Signing in failed: ${response.status} ${await response.text()}`);
+    }
+    return ((await response.json()) as AuthTicketResult).ticket;
 };
 
 describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
@@ -177,7 +207,7 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         // A container started a second ago is still writing its repositories; anything longer is a container that is not there.
         await waitUntil(`a daemon on ${BASE_URL}; start one with \`bun run --cwd apps/server docker:up\``, answers, 5_000);
         paired = await pair();
-        sessionToken = paired.sessionToken;
+        sessionToken = paired.sessionToken!;
         client = await RemoteClient.connect(sessionToken);
     });
 
@@ -234,7 +264,10 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
 
     test('the daemon keeps its id in its home, so a restart finds the same machine', async () => {
         const info = await client.request<EndpointInfo>('endpoint.info', {});
-        expect(JSON.parse(await inContainer(['cat', `${HOME}/endpoint.json`]))).toEqual({ version: 1, id: info.id });
+        const written = JSON.parse(await inContainer(['cat', `${HOME}/endpoint.json`])) as { version: number; id: string; publicKey: string };
+        expect(written.version).toBe(1);
+        expect(written.id).toBe(info.id);
+        expect(written.publicKey).toBe(info.publicKey!);
         /*
          * What a second start would do, run against the home of the daemon that is up. A real
          * `docker restart` throws that home away (`docker/entrypoint.sh`, `RUIMTE_KEEP_STATE`), so
@@ -243,7 +276,7 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         const restarted = await inContainer([
             'bun',
             '-e',
-            `import { readOrCreateEndpointId } from '/app/apps/server/src/endpoint-id.ts'; console.log(await readOrCreateEndpointId('${HOME}'));`
+            `import { readOrCreateEndpointIdentity } from '/app/apps/server/src/endpoint-id.ts'; console.log((await readOrCreateEndpointIdentity('${HOME}')).id);`
         ]);
         expect(restarted).toBe(info.id);
     });
@@ -326,6 +359,111 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
     });
 });
 
+describe.skipIf(!ENABLED)('signing in instead of carrying a token', () => {
+    let daemonId: string;
+    let daemonKey: string;
+
+    beforeAll(async () => {
+        const answers = async (): Promise<boolean> => (await fetch(`${BASE_URL}/health`).catch(() => null))?.ok === true;
+        await waitUntil(`a daemon on ${BASE_URL}; start one with \`bun run --cwd apps/server docker:up\``, answers, 5_000);
+        const info = (await (await fetch(`${BASE_URL}/auth/challenge`, { method: 'POST' })).json()) as AuthChallengeResult;
+        daemonId = info.daemon.id;
+        daemonKey = info.daemon.publicKey;
+    });
+
+    test('pairing with a public key hands out nothing to carry around', async () => {
+        const key = generateKeyPair();
+        const result = await pair(key.publicKey);
+        expect(result.sessionToken).toBeUndefined();
+        expect(result.endpoint.publicKey).toBe(daemonKey);
+        expect(result.endpoint.id).toBe(daemonId);
+
+        const client = await RemoteClient.connect(await ticketFor(key, daemonId));
+        const info = await client.request<EndpointInfo>('endpoint.info', {});
+        expect(info.authenticated).toBe(true);
+        expect(info.publicKey).toBe(daemonKey);
+        client.close();
+    });
+
+    test('every connection carries a credential of its own', async () => {
+        const key = generateKeyPair();
+        await pair(key.publicKey);
+        const first = await ticketFor(key, daemonId);
+        const second = await ticketFor(key, daemonId);
+        expect(first).not.toBe(second);
+
+        const client = await RemoteClient.connect(second);
+        expect((await client.request<EndpointInfo>('endpoint.info', {})).authenticated).toBe(true);
+        client.close();
+    });
+
+    test('the daemon proves which machine it is, and its key is not the one next door', async () => {
+        const challenge = (await (await fetch(`${BASE_URL}/auth/challenge`, { method: 'POST' })).json()) as AuthChallengeResult;
+        expect(verifySignature(daemonKey, daemonChallengeMessage(daemonId, challenge.challenge), challenge.daemon.signature)).toBe(true);
+        // What a client sees when something else answers on the address it remembered.
+        expect(verifySignature(generateKeyPair().publicKey, daemonChallengeMessage(daemonId, challenge.challenge), challenge.daemon.signature)).toBe(false);
+    });
+
+    test('a wrong signature, a replayed challenge and a key nobody paired all get 401', async () => {
+        const key = generateKeyPair();
+        await pair(key.publicKey);
+
+        const challenge = (await (await fetch(`${BASE_URL}/auth/challenge`, { method: 'POST' })).json()) as AuthChallengeResult;
+        const signature = signMessage(key.privateKey, clientAuthMessage(daemonId, challenge.challenge, key.publicKey));
+        const redeem = (body: unknown) =>
+            fetch(`${BASE_URL}/auth/ticket`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+
+        expect((await redeem({ publicKey: key.publicKey, challenge: challenge.challenge, signature: 'nope' })).status).toBe(401);
+        // That attempt used the nonce up, so the signature that was right for it is too late now.
+        expect((await redeem({ publicKey: key.publicKey, challenge: challenge.challenge, signature })).status).toBe(401);
+
+        const response = await signIn(generateKeyPair(), daemonId);
+        expect(response.status).toBe(401);
+    });
+
+    test('a signature meant for another machine is refused here', async () => {
+        const key = generateKeyPair();
+        await pair(key.publicKey);
+        expect((await signIn(key, 'a-daemon-somewhere-else')).status).toBe(401);
+    });
+
+    test('revoking a signed-in client kills its ticket in the same breath', async () => {
+        const key = generateKeyPair();
+        await pair(key.publicKey);
+        const ticket = await ticketFor(key, daemonId);
+        const signed = await RemoteClient.connect(ticket);
+        const mine = (await signed.request<{ sessions: { id: string; current: boolean }[] }>('auth.sessions', {})).sessions.find((session) => session.current)!;
+
+        // From another client, because revoking a session closes its own sockets before it could hear the answer.
+        const other = await RemoteClient.connect((await pair()).sessionToken!);
+        await other.request('auth.revoke', { id: mine.id });
+        await waitUntil('the socket of a revoked client to close', () => signed.closed);
+
+        expect((await fetch(`${BASE_URL}/ws?token=${ticket}`)).status).toBe(401);
+        // Signing again is no way back in either: the key went with the session.
+        expect((await signIn(key, daemonId)).status).toBe(401);
+        other.close();
+    });
+
+    test('a client paired on a token moves onto a key over its own connection', async () => {
+        const token = (await pair()).sessionToken!;
+        const client = await RemoteClient.connect(token);
+        const key = generateKeyPair();
+
+        expect(await client.request<{ registered: boolean }>('auth.registerKey', { publicKey: key.publicKey })).toEqual({ registered: true });
+        // The token still works until the key has proved itself, so nothing is locked out mid-upgrade.
+        const stillFine = await RemoteClient.connect(token);
+        stillFine.close();
+
+        const ticket = await ticketFor(key, daemonId);
+        expect((await fetch(`${BASE_URL}/ws?token=${token}`)).status).toBe(401);
+        const signed = await RemoteClient.connect(ticket);
+        expect((await signed.request<EndpointInfo>('endpoint.info', {})).authenticated).toBe(true);
+        signed.close();
+        client.close();
+    });
+});
+
 /* Starts or stops the container itself, for the half of the pool that is about a daemon falling away. */
 const docker = async (args: string[]): Promise<void> => {
     const exit = await Bun.spawn(['docker', ...args], { stdout: 'ignore', stderr: 'inherit' }).exited;
@@ -361,7 +499,7 @@ describe.skipIf(!ENABLED)('two daemons at the same time', () => {
         await waitUntil(`the container on ${BASE_URL}`, () => answers(BASE_URL), 5_000);
         // A daemon on this machine needs no token; the one in the container does.
         here = await RemoteClient.connect(null, LOCAL_PORT);
-        there = await RemoteClient.connect((await pair()).sessionToken);
+        there = await RemoteClient.connect((await pair()).sessionToken!);
     }, 60_000);
 
     afterAll(async () => {
@@ -448,7 +586,7 @@ describe.skipIf(!ENABLED)('two daemons at the same time', () => {
         await docker(['start', CONTAINER]);
         await waitUntil(`the container on ${BASE_URL} again`, () => answers(BASE_URL), 60_000);
 
-        const back = await RemoteClient.connect((await pair()).sessionToken);
+        const back = await RemoteClient.connect((await pair()).sessionToken!);
         const info = await back.request<EndpointInfo>('endpoint.info', {});
         expect(info.platform).toBe('linux');
         expect(back.closed).toBe(false);
@@ -493,7 +631,7 @@ describe.skipIf(!ENABLED)('one id on two machines', () => {
         await waitUntil(`a second daemon on ${LOCAL_URL}`, () => answers(LOCAL_URL));
         await waitUntil(`the container on ${BASE_URL}`, () => answers(BASE_URL), 5_000);
         here = await RemoteClient.connect(null, LOCAL_PORT);
-        there = await RemoteClient.connect((await pair()).sessionToken);
+        there = await RemoteClient.connect((await pair()).sessionToken!);
         await seedRepo(async (command) => Bun.spawn(command, { stdout: 'ignore', stderr: 'inherit' }).exited, 'here', 'mine.txt');
         await seedRepo((command) => inContainer(command), 'there', 'theirs.txt');
     }, 60_000);
@@ -673,7 +811,7 @@ describe.skipIf(!ENABLED)('two projects side by side', () => {
         await waitUntil(`a second daemon on ${LOCAL_URL}`, () => answers(LOCAL_URL));
         await waitUntil(`the container on ${BASE_URL}`, () => answers(BASE_URL), 5_000);
         here = await RemoteClient.connect(null, LOCAL_PORT);
-        sessionToken = (await pair()).sessionToken;
+        sessionToken = (await pair()).sessionToken!;
         there = await RemoteClient.connect(sessionToken);
 
         const [opened, openedThere] = await Promise.all([

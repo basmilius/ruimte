@@ -13,6 +13,9 @@ services:
       - '127.0.0.1:4310:4310'
     environment:
       RUIMTE_LABEL: docker-linux
+      # Keeps $RUIMTE_HOME and /work across a restart, which is how a client that is already paired
+      # survives a rebuild; that is what checking an upgrade against an existing pairing needs.
+      RUIMTE_KEEP_STATE: ${RUIMTE_KEEP_STATE:-0}
     init: true
     stop_grace_period: 5s
     # `docker:up` waits on this, so the tests can talk to the daemon the moment it returns.
