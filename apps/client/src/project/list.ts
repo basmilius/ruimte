@@ -1,4 +1,4 @@
-import type { ProjectSummary } from '@ruimte/contracts';
+import { isRecentProject, type ProjectSummary } from '@ruimte/contracts';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProjectList, type ProjectRow } from '@/state/project-list';
 import { pool, transportFor } from '@/transport';
@@ -81,28 +81,45 @@ export const primeCachedLists = (storage: ListStorage | null = browserStorage())
 
 const openEndpointIds = (): string[] => pool.ids().filter((endpointId) => pool.statusOf(endpointId).status === 'open');
 
-export interface ProjectGroup {
+export interface ProjectMenuRow {
     endpointId: string;
-    label: string;
-    /* False when this client has no open socket to that machine: its rows are what it last answered. */
+    /* What the machine this project sits on is called; a flat list puts it behind the name. */
+    machineLabel: string;
+    /* False when this client has no open socket to that machine: the row is what it last answered. */
     connected: boolean;
-    rows: ProjectRow[];
+    summary: ProjectSummary;
+}
+
+export interface ProjectMenuRows {
+    /* The projects in use, most recently opened first. */
+    open: ProjectMenuRow[];
+    /* The ones a person closed, most recently closed first. */
+    recent: ProjectMenuRow[];
 }
 
 /*
- * The union as the menu draws it: the machine being worked on first, the rest in the order the
- * endpoint list has them. A machine without projects is left out, so one daemon reads as it always did.
+ * The union as the menu draws it. Machines used to be the outer order, so where a row landed was
+ * decided by which daemon it came from. With one flat list that order is gone and `lastOpenedAt`
+ * takes over, newest first: it is the one thing every row carries that a person can predict, so the
+ * project you were in last sits at the top whichever machine it lives on. Recent sorts on `closedAt`
+ * for the same reason, which puts the project you just closed first in line to come back.
+ *
+ * A row of a machine this client no longer knows is left out; without an endpoint there is nothing
+ * to open it on.
  */
-export const groupProjects = (rows: ProjectRow[], endpoints: Endpoint[], activeId: string, connected: readonly string[]): ProjectGroup[] => {
-    const ordered = [...endpoints].sort((a, b) => Number(b.id === activeId) - Number(a.id === activeId));
-    return ordered
-        .map((endpoint) => ({
-            endpointId: endpoint.id,
-            label: endpoint.label,
-            connected: connected.includes(endpoint.id),
-            rows: rows.filter((row) => row.endpointId === endpoint.id)
-        }))
-        .filter((group) => group.rows.length > 0);
+export const menuProjects = (rows: ProjectRow[], endpoints: Endpoint[], connected: readonly string[]): ProjectMenuRows => {
+    const known = new Map(endpoints.map((endpoint) => [endpoint.id, endpoint]));
+    const listed = rows.flatMap((row) => {
+        const endpoint = known.get(row.endpointId);
+        if (!endpoint) {
+            return [];
+        }
+        return [{ endpointId: row.endpointId, machineLabel: endpoint.label, connected: connected.includes(row.endpointId), summary: row.summary }];
+    });
+    return {
+        open: listed.filter((row) => !isRecentProject(row.summary)).sort((a, b) => b.summary.lastOpenedAt - a.summary.lastOpenedAt),
+        recent: listed.filter((row) => isRecentProject(row.summary)).sort((a, b) => (b.summary.closedAt ?? 0) - (a.summary.closedAt ?? 0))
+    };
 };
 
 /*

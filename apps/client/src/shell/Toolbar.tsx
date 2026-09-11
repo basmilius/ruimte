@@ -4,6 +4,7 @@ import { hasOverlayControls } from '@/desktop/bridge';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { ConnectionDot } from '@/shell/ConnectionDot';
 import { PanelControls } from '@/shell/PanelControls';
+import { ProjectActionsMenu } from '@/shell/ProjectActionsMenu';
 import { ProjectMenu } from '@/shell/ProjectMenu';
 import { ViewMenu } from '@/shell/ViewMenu';
 import { useHasViewToolbar, ViewToolbar } from '@/shell/ViewToolbar';
@@ -75,7 +76,10 @@ export function Toolbar() {
             <ViewToolbar />
             {hasViewToolbar && <Separator />}
             <ConnectionDot />
-            <PanelControls />
+            <div className={BTN_GROUP}>
+                <PanelControls />
+                <ProjectActionsMenu />
+            </div>
             <Separator />
             {/* The palette keeps the toolbar's right end, so with no panel beside it the search icon
                 is what sits under the window controls on Windows and Linux and the inset lands here.

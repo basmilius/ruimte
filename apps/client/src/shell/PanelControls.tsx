@@ -2,20 +2,20 @@ import { FileText } from 'lucide-react';
 import { PANELS } from '@/shell/panels';
 import { useFiles } from '@/state/files';
 import { useUi } from '@/state/ui';
-import { BTN_GROUP } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
 /* The panel toggles. They stay in the toolbar whether a panel is open or not, so a toggle never
    moves out from under the pointer; the panel's own header carries its title and its close button
-   and nothing that belongs to the toolbar. */
+   and nothing that belongs to the toolbar. The group around them is the toolbar's, so the project
+   menu that follows sits in the same row of buttons rather than a group of one. */
 export function PanelControls() {
     const panel = useUi((s) => s.panel);
     const previewOpen = useUi((s) => s.preview.open);
     const hasTabs = useFiles((s) => s.tabs.length > 0);
 
     return (
-        <div className={BTN_GROUP}>
+        <>
             {/* No open file means nothing to preview, so the toggle arrives with the first one. */}
             {hasTabs && (
                 <Tooltip label="Preview" name>
@@ -31,6 +31,6 @@ export function PanelControls() {
                     </button>
                 </Tooltip>
             ))}
-        </div>
+        </>
     );
 }
