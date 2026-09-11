@@ -5,6 +5,8 @@ interface EndpointIdentity {
     id: string;
     label: string;
     version: string;
+    // The daemon's ed25519 public key, so a client that paired before there were key pairs can pin it.
+    publicKey: string;
     // Mints a one-time pairing URL; what `ruimte pair` and the settings dialog hand to another machine.
     pairingUrl(): string;
     // Revoking must take effect now, not at the next connection, so the daemon drops that session's sockets here.
@@ -18,8 +20,22 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, i
         platform: process.platform,
         version: identity.version,
         reachability: client.access?.reachability ?? 'loopback',
-        authenticated: client.access?.sessionId !== null && client.access?.sessionId !== undefined
+        authenticated: client.access?.sessionId !== null && client.access?.sessionId !== undefined,
+        publicKey: identity.publicKey
     }));
+
+    /*
+     * The way over to a key pair for a client that paired when a session token was all there was.
+     * It proves nothing beyond the connection it arrives on, which is exactly as much as the token
+     * it already holds proves; what it buys is that the token stops being needed.
+     */
+    dispatcher.register('auth.registerKey', async (payload, client) => {
+        const sessionId = client.access?.sessionId ?? null;
+        if (sessionId === null) {
+            return { registered: false };
+        }
+        return { registered: await store.registerKey(sessionId, payload.publicKey) };
+    });
 
     dispatcher.register('auth.sessions', async (_payload, client) => ({ sessions: await store.list(client.access?.sessionId ?? null) }));
 

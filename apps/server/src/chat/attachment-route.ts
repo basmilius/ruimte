@@ -1,5 +1,5 @@
 import type { ChatAttachment } from '@ruimte/contracts';
-import { decideAccess } from '../auth/access.ts';
+import { decideAccess, type AccessOptions } from '../auth/access.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 
 export const ATTACHMENTS_PATH = '/attachments';
@@ -14,11 +14,6 @@ const SVG_CSP = "default-src 'none'; style-src 'unsafe-inline'";
 // What a browser may paint itself; anything else is handed over as a download instead.
 const INLINE_MIME = /^(image\/(png|jpeg|gif|webp|svg\+xml)|application\/pdf|text\/plain)$/;
 
-interface AttachmentRouteOptions {
-    allowedOrigins: string[];
-    requireToken: boolean;
-}
-
 /*
  * `GET /attachments/<chatId>/<id>`: a file someone attached to a message in that chat. Behind the
  * same access rules as the socket and the project icon, so a paired client sends the token it
@@ -30,7 +25,7 @@ export const handleAttachmentRequest = async (
     url: URL,
     remoteAddress: string,
     auth: AuthStore,
-    options: AttachmentRouteOptions,
+    options: AccessOptions,
     lookup: (chatId: string, id: string) => ChatAttachment | null
 ): Promise<Response> => {
     const parts = url.pathname.slice(ATTACHMENTS_PATH.length + 1).split('/');

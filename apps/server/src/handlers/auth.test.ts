@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ServerFrame } from '@ruimte/contracts';
 import { AuthStore } from '../auth/auth-store.ts';
+import { generateKeyPair } from '../auth/keys.ts';
 import { Dispatcher, type ClientAccess, type ClientConnection } from '../dispatcher.ts';
 import { registerAuthHandlers } from './auth.ts';
 
@@ -12,6 +13,8 @@ let store: AuthStore;
 let dispatcher: Dispatcher;
 let minted: number;
 let disconnected: string[];
+
+const DAEMON_KEY = generateKeyPair().publicKey;
 
 const client = (access?: ClientAccess): { connection: ClientConnection; frames: ServerFrame[] } => {
     const frames: ServerFrame[] = [];
@@ -43,6 +46,7 @@ beforeEach(async () => {
         id: 'daemon-1',
         label: 'box',
         version: '0.0.0',
+        publicKey: DAEMON_KEY,
         pairingUrl: () => `http://box:4210/pair#${store.issuePairingToken()}${minted++}`,
         disconnect: (sessionId) => disconnected.push(sessionId)
     });
@@ -65,7 +69,7 @@ describe('auth handlers', () => {
     });
 
     test('sessions list the asking client as current, and revoking an unknown one is an error', async () => {
-        const paired = await store.pair(store.issuePairingToken(), 'laptop');
+        const paired = await store.pair(store.issuePairingToken(), { label: 'laptop' });
         const listed = await ask({ reachability: 'lan', sessionId: paired!.id }, 'auth.sessions');
         expect(listed).toMatchObject({ ok: true, result: { sessions: [{ id: paired!.id, label: 'laptop', current: true }] } });
 
@@ -74,5 +78,28 @@ describe('auth handlers', () => {
         expect(await ask(loopback, 'auth.revoke', { id: paired!.id })).toMatchObject({ ok: true });
         expect(await store.list(null)).toEqual([]);
         expect(disconnected).toEqual([paired!.id]);
+    });
+
+    test('endpoint.info carries the key a client pins the machine on', async () => {
+        const info = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.info');
+        expect(info).toMatchObject({ ok: true, result: { id: 'daemon-1', publicKey: DAEMON_KEY, authenticated: true } });
+    });
+
+    test('a paired client hangs a key on its own session; a loopback one has no session to hang it on', async () => {
+        const paired = await store.pair(store.issuePairingToken(), { label: 'container' });
+        const { publicKey } = generateKeyPair();
+
+        const registered = await ask({ reachability: 'lan', sessionId: paired!.id }, 'auth.registerKey', { publicKey });
+        expect(registered).toMatchObject({ ok: true, result: { registered: true } });
+        expect(await store.sessionForPublicKey(publicKey)).toBe(paired!.id);
+
+        expect(await ask({ reachability: 'loopback', sessionId: null }, 'auth.registerKey', { publicKey: generateKeyPair().publicKey })).toMatchObject({
+            ok: true,
+            result: { registered: false }
+        });
+        expect(await ask({ reachability: 'lan', sessionId: paired!.id }, 'auth.registerKey', { publicKey: 'not-a-key' })).toMatchObject({
+            ok: true,
+            result: { registered: false }
+        });
     });
 });

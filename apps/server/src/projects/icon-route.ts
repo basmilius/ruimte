@@ -1,4 +1,4 @@
-import { decideAccess } from '../auth/access.ts';
+import { decideAccess, type AccessOptions } from '../auth/access.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import type { ProjectStore } from './project-store.ts';
 
@@ -11,11 +11,6 @@ const CACHE_CONTROL = 'private, max-age=31536000, immutable';
 // that page inert as well: no script, no network, no subresource, only the styles it carries.
 const SVG_CSP = "default-src 'none'; style-src 'unsafe-inline'";
 
-interface IconRouteOptions {
-    allowedOrigins: string[];
-    requireToken: boolean;
-}
-
 /*
  * `GET /projects/<projectId>/icon?v=<version>&theme=dark`: the image a project's folder declares.
  * Behind the same access rules as the socket, so a paired client sends the token it already has.
@@ -25,7 +20,7 @@ export const handleProjectRequest = async (
     url: URL,
     remoteAddress: string,
     auth: AuthStore,
-    options: IconRouteOptions,
+    options: AccessOptions,
     projects: ProjectStore
 ): Promise<Response> => {
     const parts = url.pathname.slice(PROJECTS_PATH.length + 1).split('/');

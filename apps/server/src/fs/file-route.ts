@@ -1,4 +1,4 @@
-import { decideAccess } from '../auth/access.ts';
+import { decideAccess, type AccessOptions } from '../auth/access.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import { readMedia } from './read.ts';
 
@@ -46,11 +46,6 @@ export const parseByteRange = (header: string | null, size: number): ByteRange |
     return { start, end };
 };
 
-interface FileRouteOptions {
-    allowedOrigins: string[];
-    requireToken: boolean;
-}
-
 /*
  * `GET /fs/file?path=<absolute>&v=<mtime>-<size>`: the bytes of an image or a video the viewer is
  * drawing. Behind the same access rules as the socket, so a paired client sends the token it already
@@ -58,7 +53,7 @@ interface FileRouteOptions {
  * socket, and a route that hands out arbitrary bytes to an `<img>` tag is a worse deal than one that
  * does not. A video answers ranges, without which a player can start a file and never seek in it.
  */
-export const handleFsFileRequest = async (request: Request, url: URL, remoteAddress: string, auth: AuthStore, options: FileRouteOptions): Promise<Response> => {
+export const handleFsFileRequest = async (request: Request, url: URL, remoteAddress: string, auth: AuthStore, options: AccessOptions): Promise<Response> => {
     if (url.pathname !== FS_FILE_PATH) {
         return new Response('Not found', { status: 404 });
     }
