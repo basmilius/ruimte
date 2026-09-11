@@ -191,7 +191,7 @@ export function FolderPicker() {
                                 aria-autocomplete="list"
                                 aria-activedescendant={active ? optionId(index) : undefined}
                                 aria-label="Folder to open"
-                                className="field h-8 font-mono text-code"
+                                className="field min-w-0 font-mono text-code"
                                 placeholder="Type a path"
                                 value={path}
                                 spellCheck={false}
@@ -216,7 +216,7 @@ export function FolderPicker() {
                                 <span key={crumb.path} className="flex shrink-0 items-center gap-px">
                                     {at > 0 && <Icon icon={ChevronRight} size={12} className="text-text-faint" />}
                                     <button
-                                        className="cursor-row rounded-sm px-1 py-px font-mono text-code text-text-muted hover:bg-surface-hover hover:text-text"
+                                        className="rounded-sm px-1 py-px font-mono text-code text-text-muted hover:bg-surface-hover hover:text-text"
                                         onClick={() => goTo(crumb.path)}
                                     >
                                         {crumb.label}
