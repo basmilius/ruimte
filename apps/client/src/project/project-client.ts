@@ -1,9 +1,46 @@
 import type { ProjectContent, ProjectDocument, ProjectIconChoice, ProjectLocal, ProjectSummary, ProjectView } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
+import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 import type { PanelsPort } from './panels-port';
 
 const LAST_PROJECT_KEY = 'ruimte.lastProject';
+
+type LastProjectStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
+
+const browserStorage = (): LastProjectStorage | null => (typeof localStorage === 'undefined' ? null : localStorage);
+
+/*
+ * What was open per endpoint. A project id belongs to the daemon that minted it, so the project of
+ * machine A is not in machine B's list and picking it up there would open whatever B lists first.
+ * `legacyEndpointId` takes the single id this key held before a client knew more than one daemon.
+ */
+const readLastProjects = (storage: LastProjectStorage | null, legacyEndpointId: string | null): Record<string, string> => {
+    const raw = storage?.getItem(LAST_PROJECT_KEY) ?? null;
+    if (raw === null) {
+        return {};
+    }
+    try {
+        const parsed = JSON.parse(raw) as unknown;
+        if (typeof parsed === 'object' && parsed !== null) {
+            return parsed as Record<string, string>;
+        }
+    } catch {
+        // A bare project id, written before this key was a record.
+    }
+    return legacyEndpointId === null ? {} : { [legacyEndpointId]: raw };
+};
+
+/* An endpoint that moves onto its daemon id keeps what was open on it (`rekeyEndpoint`). */
+export const rekeyLastProject = (oldId: string, newId: string, storage: LastProjectStorage | null = browserStorage()): void => {
+    const byEndpoint = readLastProjects(storage, oldId);
+    const projectId = byEndpoint[oldId];
+    if (projectId === undefined) {
+        return;
+    }
+    delete byEndpoint[oldId];
+    storage?.setItem(LAST_PROJECT_KEY, JSON.stringify({ ...byEndpoint, [newId]: projectId }));
+};
 
 /* The slice of the canvas store the client reads; the real store has more. */
 interface CanvasAccess {
@@ -63,7 +100,9 @@ interface DrawingAccess {
 interface ProjectClientOptions {
     saveDelayMs?: number;
     localDelayMs?: number;
-    storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
+    storage?: LastProjectStorage;
+    /* Which daemon the client is talking to; what it remembers about a project is that daemon's. */
+    endpointId?: () => string;
     drawing?: DrawingAccess;
     /* Runs before a project is swapped in, so the drawing on screen reaches its own file first. */
     beforeSwitch?: () => Promise<void>;
@@ -81,7 +120,8 @@ export class ProjectClient {
     private readonly documents: DocumentAccess;
     private readonly panels: PanelsPort;
     private readonly sink: ProjectSink;
-    private readonly storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null;
+    private readonly storage: LastProjectStorage | null;
+    private readonly endpointId: () => string;
     private readonly saveDelayMs: number;
     private readonly localDelayMs: number;
     private readonly beforeSwitch: () => Promise<void>;
@@ -103,7 +143,8 @@ export class ProjectClient {
         this.documents = documents;
         this.panels = panels;
         this.sink = sink;
-        this.storage = options.storage ?? (typeof localStorage === 'undefined' ? null : localStorage);
+        this.storage = options.storage ?? browserStorage();
+        this.endpointId = options.endpointId ?? (() => LOCAL_ENDPOINT_ID);
         this.saveDelayMs = options.saveDelayMs ?? 400;
         this.localDelayMs = options.localDelayMs ?? 1000;
         this.beforeSwitch = options.beforeSwitch ?? (() => Promise.resolve());
@@ -155,7 +196,7 @@ export class ProjectClient {
         if (current) {
             await this.transport.request('project.close', { projectId: current.projectId }).catch(() => undefined);
         }
-        this.storage?.removeItem(LAST_PROJECT_KEY);
+        this.remember(null);
         this.documents.getState().load(null, null);
         this.panels.load(null, undefined);
         this.sink.setCurrent(null, 0);
@@ -257,6 +298,17 @@ export class ProjectClient {
         this.unsubscribe.length = 0;
     }
 
+    /* What is open on this endpoint now; the other endpoints keep what they had. */
+    private remember(projectId: string | null): void {
+        const byEndpoint = readLastProjects(this.storage, this.endpointId());
+        if (projectId === null) {
+            delete byEndpoint[this.endpointId()];
+        } else {
+            byEndpoint[this.endpointId()] = projectId;
+        }
+        this.storage?.setItem(LAST_PROJECT_KEY, JSON.stringify(byEndpoint));
+    }
+
     private async boot(): Promise<void> {
         if (this.booted) {
             return;
@@ -264,7 +316,7 @@ export class ProjectClient {
         this.booted = true;
         try {
             const projects = await this.refreshList();
-            const remembered = this.storage?.getItem(LAST_PROJECT_KEY) ?? null;
+            const remembered = readLastProjects(this.storage, this.endpointId())[this.endpointId()] ?? null;
             // The daemon always lists at least one canvas; nothing to create from here.
             const target = projects.find((project) => project.projectId === remembered && project.available) ?? projects.find((project) => project.available);
             if (target) {
@@ -294,7 +346,7 @@ export class ProjectClient {
             this.panels.load(result.summary.projectId, result.local.panels);
             this.sink.setChosenIcon(result.document.icon ?? null);
             this.sink.setCurrent(result.summary, result.document.rev);
-            this.storage?.setItem(LAST_PROJECT_KEY, result.summary.projectId);
+            this.remember(result.summary.projectId);
             await this.refreshList();
         } finally {
             this.sink.setSwitching(false);

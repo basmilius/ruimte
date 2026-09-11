@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Check, Copy, Link2, Server, Trash } from 'lucide-react';
 import type { AuthSession } from '@ruimte/contracts';
-import { activateEndpoint, listPairedClients, pairEndpoint, requestPairingUrl, revokePairedClient } from '@/endpoint';
+import { activateEndpoint, forgetEndpoint, listPairedClients, pairEndpoint, requestPairingUrl, revokePairedClient } from '@/endpoint';
 import { useEndpoints, LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { useServer } from '@/state/server';
 import { transport } from '@/transport';
@@ -242,7 +242,7 @@ export function EndpointsSection() {
                         </button>
                         {endpoint.id !== LOCAL_ENDPOINT_ID && (
                             <Tooltip label="Forget this machine" name>
-                                <button className="icon-btn h-7 w-7" onClick={() => useEndpoints.getState().remove(endpoint.id)}>
+                                <button className="icon-btn h-7 w-7" onClick={() => void forgetEndpoint(endpoint.id)}>
                                     <Icon icon={Trash} size={16} />
                                 </button>
                             </Tooltip>

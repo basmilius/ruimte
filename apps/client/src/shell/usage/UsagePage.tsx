@@ -49,8 +49,18 @@ const useCloseOnEscape = (): void => {
  */
 const useSummary = (period: UsagePeriod): (() => void) => {
     useEffect(() => {
-        void transport.request('usage.subscribe', {}).catch(() => undefined);
+        const subscribe = (): void => void transport.request('usage.subscribe', {}).catch(() => undefined);
+        if (transport.status === 'open') {
+            subscribe();
+        }
+        // A daemon knows its followers per socket, so every connection has to be told again: a reconnect, and the move to another machine.
+        const off = transport.subscribeStatus((status) => {
+            if (status === 'open') {
+                subscribe();
+            }
+        });
         return () => {
+            off();
             void transport.request('usage.unsubscribe', {}).catch(() => undefined);
         };
     }, []);
@@ -66,9 +76,21 @@ const useSummary = (period: UsagePeriod): (() => void) => {
     }, [period]);
 
     useEffect(() => {
-        load();
+        if (transport.status === 'open') {
+            load();
+        }
         // A scan that found something is the sign to ask again; nothing else changes the numbers.
-        return transport.on('usage.changed', load);
+        const offChanged = transport.on('usage.changed', load);
+        // Until the other machine answers there is nothing to ask, and what is on screen is the machine that left.
+        const offStatus = transport.subscribeStatus((status) => {
+            if (status === 'open') {
+                load();
+            }
+        });
+        return () => {
+            offChanged();
+            offStatus();
+        };
     }, [load]);
 
     return load;

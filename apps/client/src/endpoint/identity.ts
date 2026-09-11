@@ -1,3 +1,4 @@
+import { rekeyLastProject } from '@/project/project-client';
 import { activeEndpoint, LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { useToasts } from '@/state/toasts';
 
@@ -18,6 +19,7 @@ export const noteDaemonIdentity = (daemonId: string): void => {
         return;
     }
     if (endpoint.daemonId === null) {
+        rekeyLastProject(endpoint.id, daemonId);
         useEndpoints.getState().rekeyEndpoint(endpoint.id, daemonId);
         return;
     }

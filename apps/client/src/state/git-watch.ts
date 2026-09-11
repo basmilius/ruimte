@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { GitStatus } from '@ruimte/contracts';
+import { useEndpoints } from '@/state/endpoints';
 import { transport } from '@/transport';
 
 interface Watch {
@@ -8,6 +9,7 @@ interface Watch {
     ready: Promise<void>;
 }
 
+/* Keyed on the endpoint as well: the same absolute path on two machines is two checkouts. */
 const watches = new Map<string, Watch>();
 
 /*
@@ -17,7 +19,8 @@ const watches = new Map<string, Watch>();
  * what the first status read waits for so a write in between is reported instead of missed.
  */
 export const watchGit = (cwd: string): { ready: Promise<void>; release: () => void } => {
-    const watch = watches.get(cwd) ?? {
+    const key = `${useEndpoints.getState().activeId}:${cwd}`;
+    const watch = watches.get(key) ?? {
         count: 0,
         ready: transport.request('git.watch', { cwd }).then(
             () => undefined,
@@ -25,7 +28,7 @@ export const watchGit = (cwd: string): { ready: Promise<void>; release: () => vo
         )
     };
     watch.count += 1;
-    watches.set(cwd, watch);
+    watches.set(key, watch);
     let released = false;
     return {
         ready: watch.ready,
@@ -36,7 +39,7 @@ export const watchGit = (cwd: string): { ready: Promise<void>; release: () => vo
             released = true;
             watch.count -= 1;
             if (watch.count === 0) {
-                watches.delete(cwd);
+                watches.delete(key);
                 void transport.request('git.unwatch', { cwd }).catch(() => undefined);
             }
         }
@@ -49,7 +52,9 @@ export const watchGit = (cwd: string): { ready: Promise<void>; release: () => vo
  * after an action of its own.
  */
 export const useGitStatus = (cwd: string | null): GitStatus | null => {
-    const [held, setHeld] = useState<{ cwd: string; status: GitStatus } | null>(null);
+    const endpointId = useEndpoints((s) => s.activeId);
+    const [held, setHeld] = useState<{ key: string; status: GitStatus } | null>(null);
+    const key = `${endpointId}:${cwd}`;
 
     useEffect(() => {
         if (cwd === null) {
@@ -61,7 +66,7 @@ export const useGitStatus = (cwd: string | null): GitStatus | null => {
             .then(() => transport.request('git.status', { cwd }))
             .then((status) => {
                 if (!cancelled) {
-                    setHeld({ cwd, status });
+                    setHeld({ key, status });
                 }
             })
             .catch(() => undefined);
@@ -69,15 +74,16 @@ export const useGitStatus = (cwd: string | null): GitStatus | null => {
             cancelled = true;
             watch.release();
         };
-    }, [cwd]);
+    }, [cwd, key]);
 
     useEffect(() => {
         return transport.on('git.status', (payload) => {
             if (payload.cwd === cwd) {
-                setHeld({ cwd, status: payload.status });
+                setHeld({ key, status: payload.status });
             }
         });
-    }, [cwd]);
+    }, [cwd, key]);
 
-    return held?.cwd === cwd ? held.status : null;
+    // The path on the machine that left says nothing about the same path here.
+    return held?.key === key ? held.status : null;
 };
