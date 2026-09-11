@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Check, Copy, Link2, Pencil, Plus, Trash } from 'lucide-react';
-import type { AuthSession } from '@ruimte/contracts';
+import type { AuthSession, ProjectIconChoice } from '@ruimte/contracts';
 import { forgetEndpoint, listPairedClients, pairEndpoint, requestPairingUrl, revokePairedClient } from '@/endpoint';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { LOCAL_ENDPOINT_ID, localMachineLabel, useEndpoints, type Endpoint } from '@/state/endpoints';
@@ -12,6 +12,9 @@ import { useLatency } from '@/transport/ping';
 import { useEndpointConnection } from '@/transport/status';
 import { describeConnection, describePing, REACHABILITY_LABELS } from '@/shell/connection-info';
 import { MachineIdentityDialog } from '@/shell/settings/MachineIdentityDialog';
+import { SettingsRow } from '@/shell/settings/SettingsRow';
+import { SettingsSection } from '@/shell/settings/SettingsSection';
+import { Skeleton } from '@/shell/settings/controls';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
@@ -61,10 +64,27 @@ function EndpointState({ endpoint }: { endpoint: Endpoint }) {
 
     return (
         <Tooltip label={tooltip}>
-            <span className="grid h-7 w-5 shrink-0 place-items-center" role="status" aria-label={`${endpoint.label}. ${describeConnection(connection, null)}`}>
+            <span className="grid h-8 w-5 shrink-0 place-items-center" role="status" aria-label={`${endpoint.label}. ${describeConnection(connection, null)}`}>
                 <span className={clsx('h-2 w-2 rounded-full', DOT[connection.status])} />
             </span>
         </Tooltip>
+    );
+}
+
+/*
+ * The name of a machine with its icon in front and a second line under it. The stack sits inside the
+ * row's label rather than in the row's own description, so the line lands under the name instead of
+ * under the glyph.
+ */
+function MachineName({ icon, name, note }: { icon: ProjectIconChoice | null; name: string; note?: ReactNode }) {
+    return (
+        <span className="flex items-center gap-2">
+            <MachineGlyph icon={icon} className="shrink-0 text-text-muted" />
+            <span className="flex min-w-0 flex-col">
+                <span className="truncate">{name}</span>
+                {note !== undefined && <span className="truncate text-xs text-text-faint">{note}</span>}
+            </span>
+        </span>
     );
 }
 
@@ -76,30 +96,38 @@ function EndpointRow({ endpoint }: { endpoint: Endpoint }) {
     const [identityOpen, setIdentityOpen] = useState(false);
 
     return (
-        <li className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-2">
-            <MachineGlyph icon={icon} className="text-text-muted" />
-            <span className="flex min-w-0 grow flex-col">
-                <span className="truncate text-sm text-text">{endpoint.label}</span>
-                {mismatch !== undefined && (
-                    <span className="text-xs text-status-error">This address answers as another machine; pair again to talk to it.</span>
-                )}
-            </span>
-            <EndpointState endpoint={endpoint} />
-            <span className={BTN_GROUP}>
-                {/* The name and the icon live on the machine, so a machine that is not answering cannot be given either. */}
-                <Tooltip label={connected ? 'Name and icon' : 'Not answering, so there is nothing to name'} name>
-                    <button className="icon-btn h-7 w-7" disabled={!connected} onClick={() => setIdentityOpen(true)}>
-                        <Icon icon={Pencil} size={16} />
-                    </button>
-                </Tooltip>
-                <Tooltip label="Forget this machine" name>
-                    <button className="icon-btn h-7 w-7" onClick={() => void forgetEndpoint(endpoint.id)}>
-                        <Icon icon={Trash} size={16} />
-                    </button>
-                </Tooltip>
-            </span>
-            <MachineIdentityDialog endpointId={endpoint.id} label={endpoint.label} open={identityOpen} onOpenChange={setIdentityOpen} />
-        </li>
+        <SettingsRow
+            label={
+                <MachineName
+                    icon={icon}
+                    name={endpoint.label}
+                    note={
+                        mismatch === undefined ? undefined : (
+                            <span className="text-status-error">This address answers as another machine; pair again to talk to it.</span>
+                        )
+                    }
+                />
+            }
+            control={
+                <>
+                    <EndpointState endpoint={endpoint} />
+                    <span className={BTN_GROUP}>
+                        {/* The name and the icon live on the machine, so a machine that is not answering cannot be given either. */}
+                        <Tooltip label={connected ? 'Name and icon' : 'Not answering, so there is nothing to name'} name>
+                            <button className="icon-btn h-8 w-8" disabled={!connected} onClick={() => setIdentityOpen(true)}>
+                                <Icon icon={Pencil} size={16} />
+                            </button>
+                        </Tooltip>
+                        <Tooltip label="Forget this machine" name>
+                            <button className="icon-btn h-8 w-8" onClick={() => void forgetEndpoint(endpoint.id)}>
+                                <Icon icon={Trash} size={16} />
+                            </button>
+                        </Tooltip>
+                    </span>
+                    <MachineIdentityDialog endpointId={endpoint.id} label={endpoint.label} open={identityOpen} onOpenChange={setIdentityOpen} />
+                </>
+            }
+        />
     );
 }
 
@@ -182,24 +210,27 @@ function PairedClients() {
     };
 
     return (
-        <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-                <span className="text-xs text-text-muted">Apps with access</span>
-                <span className="grow" />
-                {reachability === 'loopback' && (
-                    <Button size="sm" variant="secondary" disabled={busy} onClick={() => void showLink()}>
+        <SettingsSection
+            title="Apps with access"
+            description="Every browser and app that paired with this machine, until you revoke it."
+            action={
+                reachability === 'loopback' && (
+                    <Button variant="secondary" disabled={busy} onClick={() => void showLink()}>
                         <Icon icon={Link2} size={12} /> Show pairing link
                     </Button>
-                )}
-            </div>
-            <p className="text-xs text-text-faint">
-                {sessions !== null && sessions.length === 0
-                    ? 'Nothing else has access to this machine.'
-                    : 'Every browser and app that paired with this machine, until you revoke it.'}
-            </p>
+                )
+            }
+        >
             {link && (
-                <div className="flex flex-col gap-1.5 rounded-lg border border-border bg-surface-sunken p-2.5">
-                    <div className="flex items-center gap-2">
+                <SettingsRow
+                    label="Pairing link"
+                    description={
+                        onlyLoopback(link)
+                            ? 'This machine only listens on itself; start it with --host 0.0.0.0 before another machine can use a link.'
+                            : 'Paste it in the settings of Ruimte on the other machine. It works once, within ten minutes.'
+                    }
+                >
+                    <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-sunken p-2.5">
                         <code className="min-w-0 grow truncate font-mono text-code text-text select-text">{link}</code>
                         <Tooltip label={copied ? 'Copied' : 'Copy pairing link'} name>
                             <button className="icon-btn h-7 w-7 shrink-0" onClick={copyLink}>
@@ -207,32 +238,30 @@ function PairedClients() {
                             </button>
                         </Tooltip>
                     </div>
-                    <p className="text-xs text-text-faint">
-                        {onlyLoopback(link)
-                            ? 'This machine only listens on itself; start it with --host 0.0.0.0 before another machine can use a link.'
-                            : 'Paste it in the settings of Ruimte on the other machine. It works once, within ten minutes.'}
-                    </p>
-                </div>
+                </SettingsRow>
             )}
+            {sessions === null && failure === null && <SettingsRow label={<Skeleton className="w-40" />} control={<Skeleton className="w-8" />} />}
+            {sessions?.length === 0 && <SettingsRow muted label="Nothing else has access to this machine." />}
             {sessions?.map((session) => (
-                <div key={session.id} className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-1.5">
-                    <div className="flex min-w-0 grow flex-col">
-                        <span className="truncate text-xs text-text">
+                <SettingsRow
+                    key={session.id}
+                    label={
+                        <span className="truncate">
                             {session.label}
                             {session.current && <span className="ml-1.5 text-xs text-accent">this client</span>}
                         </span>
-                        <span className="truncate text-xs text-text-faint">
-                            paired {new Date(session.createdAt).toLocaleDateString()}, seen {ago(session.lastSeenAt)}
-                        </span>
-                    </div>
-                    <Tooltip label="Revoke access">
-                        <button className="icon-btn h-7 w-7 shrink-0" aria-label={`Revoke ${session.label}`} onClick={() => setTarget(session)}>
-                            <Icon icon={Trash} size={16} />
-                        </button>
-                    </Tooltip>
-                </div>
+                    }
+                    description={`paired ${new Date(session.createdAt).toLocaleDateString()}, seen ${ago(session.lastSeenAt)}`}
+                    control={
+                        <Tooltip label="Revoke access">
+                            <button className="icon-btn h-8 w-8 shrink-0" aria-label={`Revoke ${session.label}`} onClick={() => setTarget(session)}>
+                                <Icon icon={Trash} size={16} />
+                            </button>
+                        </Tooltip>
+                    }
+                />
             ))}
-            {failure && <p className="text-xs text-status-error">{failure}</p>}
+            {failure && <SettingsRow muted label={<span className="text-status-error">{failure}</span>} />}
             <Dialog.Root open={target !== null} onOpenChange={(open) => (open ? undefined : setTarget(null))}>
                 <Dialog.Portal>
                     <Dialog.Backdrop className="dialog-backdrop dialog-backdrop-nested" forceRender />
@@ -252,7 +281,7 @@ function PairedClients() {
                     </Dialog.Popup>
                 </Dialog.Portal>
             </Dialog.Root>
-        </div>
+        </SettingsSection>
     );
 }
 
@@ -343,24 +372,24 @@ function LocalRow({ endpoint }: { endpoint: Endpoint }) {
     const own = localMachineLabel(model);
 
     return (
-        <div className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-2">
-            <MachineGlyph icon={icon} className="text-text-muted" />
-            <span className="flex min-w-0 grow flex-col">
-                <span className="truncate text-sm text-text">{endpoint.label}</span>
-                {/* Only once it carries a name of its own, or the line would say what the one above it says. */}
-                {endpoint.label !== own && <span className="truncate text-xs text-text-faint">{own}</span>}
-            </span>
-            <Tooltip label={connected ? 'Name and icon' : 'Not answering, so there is nothing to name'} name>
-                <button className="icon-btn h-7 w-7" disabled={!connected} onClick={() => setIdentityOpen(true)}>
-                    <Icon icon={Pencil} size={16} />
-                </button>
-            </Tooltip>
-            <MachineIdentityDialog endpointId={endpoint.id} label={endpoint.label} open={identityOpen} onOpenChange={setIdentityOpen} />
-        </div>
+        <SettingsRow
+            /* The second line only once the machine carries a name of its own, or it would say what the one above it says. */
+            label={<MachineName icon={icon} name={endpoint.label} note={endpoint.label === own ? undefined : own} />}
+            control={
+                <>
+                    <Tooltip label={connected ? 'Name and icon' : 'Not answering, so there is nothing to name'} name>
+                        <button className="icon-btn h-8 w-8" disabled={!connected} onClick={() => setIdentityOpen(true)}>
+                            <Icon icon={Pencil} size={16} />
+                        </button>
+                    </Tooltip>
+                    <MachineIdentityDialog endpointId={endpoint.id} label={endpoint.label} open={identityOpen} onOpenChange={setIdentityOpen} />
+                </>
+            }
+        />
     );
 }
 
-/* The machines this client knows, one under the other, and the way to add one. */
+/* The machines this client knows, in the sections the rest of the settings screen is built from. */
 export function EndpointsSection() {
     const endpoints = useEndpoints((s) => s.endpoints);
     const activeId = useEndpoints((s) => s.activeId);
@@ -380,35 +409,37 @@ export function EndpointsSection() {
     const others = endpoints.filter((endpoint) => endpoint.id !== LOCAL_ENDPOINT_ID);
 
     return (
-        <div className="flex flex-col gap-5">
-            {local && <LocalRow endpoint={local} />}
-            <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                    {/* "Other" rather than "added", "paired" or "remote": it reads against the row above
-                        it, it says nothing about how a machine got here, and it stays true for one that
-                        is switched off. */}
-                    <span className="text-xs text-text-muted">Other machines</span>
-                    <span className="grow" />
+        <>
+            {/* Its own section rather than the first row of the list below: where you are is not one more
+                server, and a heading of the same kind as the rest is what keeps that clear on a screen
+                where every other group has one. */}
+            {local && (
+                <SettingsSection title="This machine" description="Where the app runs. Its name and its icon are what every client that pairs with it sees.">
+                    <LocalRow endpoint={local} />
+                </SettingsSection>
+            )}
+            {/* "Other" rather than "added", "paired" or "remote": it reads against the section above it,
+                it says nothing about how a machine got here, and it stays true for one that is switched off. */}
+            <SettingsSection
+                title="Other machines"
+                description="A machine you add keeps its own sessions, projects and files; opening a project on it is what moves the work there."
+                action={
                     <Tooltip label="Add a machine" name>
-                        <button className="icon-btn h-7 w-7" onClick={() => setAddOpen(true)}>
+                        <button className="icon-btn h-8 w-8" onClick={() => setAddOpen(true)}>
                             <Icon icon={Plus} size={16} />
                         </button>
                     </Tooltip>
-                </div>
-                {/* A list, not a set of radios: this pane keeps the machines, and which one the work is on
-                    is answered by opening a project on it. The row says what a machine is, it does not move the app. */}
-                {others.length === 0 ? (
-                    <p className="text-xs text-text-faint">Add a machine to open its projects, terminals and agents from here.</p>
-                ) : (
-                    <ul className="flex list-none flex-col gap-2">
-                        {others.map((endpoint) => (
-                            <EndpointRow key={endpoint.id} endpoint={endpoint} />
-                        ))}
-                    </ul>
+                }
+            >
+                {others.length === 0 && (
+                    <SettingsRow muted label="No other machines" description="Add one to open its projects, terminals and agents from here." />
                 )}
-            </div>
+                {others.map((endpoint) => (
+                    <EndpointRow key={endpoint.id} endpoint={endpoint} />
+                ))}
+            </SettingsSection>
             <PairedClients key={activeId} />
             <AddMachineDialog open={addOpen} onOpenChange={setAddOpen} />
-        </div>
+        </>
     );
 }
