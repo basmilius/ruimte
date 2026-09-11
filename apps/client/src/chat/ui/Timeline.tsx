@@ -118,11 +118,22 @@ export function Timeline({ chatId }: { chatId: string }) {
     // A change in what the last row says (a streaming delta) must also pull the view down.
     const lastRow = rows[rows.length - 1];
     const tail = lastRow?.kind === 'assistant' ? lastRow.item.text.length : rows.length;
+    /*
+     * The rows are measured as they render, so the end of the list moves while it is drawn: a diff
+     * that highlights, an image that loads, a tool row that grows a line of output. `scrollToIndex`
+     * aims at where the row was when it was asked, which is what left the thread short of the end.
+     * The scroller's own bottom is a fact rather than an estimate, and the total size changing is
+     * what says a row was measured again, so this runs for every one of those.
+     */
+    const totalSize = virtualizer.getTotalSize();
     useLayoutEffect(() => {
-        if (followRef.current && rows.length > 0) {
-            virtualizer.scrollToIndex(rows.length - 1, { align: 'end' });
+        const element = scrollRef.current;
+        if (!followRef.current || rows.length === 0 || element === null) {
+            return;
         }
-    }, [rows.length, tail, virtualizer]);
+        // `paddingEnd` holds the composer's room, so the last row lands above it and not under it.
+        element.scrollTop = element.scrollHeight;
+    }, [rows.length, tail, totalSize]);
 
     const toggle = (set: (update: (current: Set<string>) => Set<string>) => void, id: string): void => {
         set((current) => {
