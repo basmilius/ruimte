@@ -132,8 +132,7 @@ const activeMachine = (): Machine => machineFor(activeEndpoint().id)!;
  * is swapped in and the drawing on screen reaches its own file while the old project is still open.
  */
 const connect = (id: string, stores: WorkspaceStores, endpoint: Endpoint): Connection => {
-    const machine = machineOn(endpoint);
-    const transport = machine.transport;
+    const transport = machineOn(endpoint).transport;
     /* Asked again on every save: a machine switch replaces the connection under the same workspace. */
     const endpointId = (): string => workspaces.get(id)?.connection.endpointId ?? endpoint.id;
     const drawings = new DrawingClient(transport, stores.drawing, stores.document, stores.project, {
@@ -144,7 +143,20 @@ const connect = (id: string, stores: WorkspaceStores, endpoint: Endpoint): Conne
         beforeSwitch: (): Promise<void> => drawings.flush(),
         endpointId
     });
-    return { endpointId: endpoint.id, transport, sessions: machine.sessions, chats: machine.chats, projects, drawings };
+    return {
+        endpointId: endpoint.id,
+        transport,
+        /* Asked for rather than held: the sessions and the threads belong to the machine, and the
+           pool replacing its socket replaces them while this connection stays the same object. */
+        get sessions(): SessionClient {
+            return machineOn(endpoint).sessions;
+        },
+        get chats(): ChatClient {
+            return machineOn(endpoint).chats;
+        },
+        projects,
+        drawings
+    };
 };
 
 const disposeConnection = (connection: Connection): void => {
