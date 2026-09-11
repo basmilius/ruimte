@@ -1,6 +1,6 @@
 import { useServers } from '@/state/server';
 import { pool } from '@/transport';
-import { adoptChosenName } from '@/transport/server-info';
+import { adoptMachineName } from '@/transport/server-info';
 
 /*
  * A machine's name and its icon belong to the machine, not to the client that typed them: the daemon
@@ -31,7 +31,7 @@ export const startEndpointWatch = (): (() => void) => {
                 endpointId,
                 link.on('endpoint.changed', (payload) => {
                     useServers.getState().setIdentity(endpointId, { label: payload.label, nameSource: payload.nameSource, icon: payload.icon });
-                    adoptChosenName(endpointId, payload.label, payload.nameSource);
+                    adoptMachineName(endpointId, payload.label, payload.nameSource);
                 })
             );
         }

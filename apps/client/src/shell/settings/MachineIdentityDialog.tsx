@@ -7,7 +7,7 @@ import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
 import { useServers } from '@/state/server';
 import { transportFor } from '@/transport';
-import { adoptChosenName } from '@/transport/server-info';
+import { adoptMachineName } from '@/transport/server-info';
 import { Button } from '@/ui/Button';
 import { SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
@@ -50,7 +50,7 @@ function IdentityForm({ endpointId, label, onOpenChange }: MachineIdentityDialog
         try {
             const next = await link.request('endpoint.setIdentity', { name: name.trim() === '' ? null : name.trim(), icon });
             useServers.getState().setIdentity(endpointId, { label: next.label, nameSource: next.nameSource ?? null, icon: next.icon ?? null });
-            adoptChosenName(endpointId, next.label, next.nameSource ?? null);
+            adoptMachineName(endpointId, next.label, next.nameSource ?? null);
             onOpenChange(false);
         } catch (e) {
             setFailure(e instanceof Error ? e.message : 'That machine did not take the change');

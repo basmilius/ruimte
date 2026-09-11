@@ -29,6 +29,7 @@ import { registerGitHandlers } from './handlers/git.ts';
 import { registerDrawingHandlers } from './handlers/drawing.ts';
 import { registerProjectHandlers } from './handlers/project.ts';
 import { registerServerHandlers } from './handlers/server.ts';
+import { readMachineModel } from './machine-model.ts';
 import { registerSessionHandlers } from './handlers/session.ts';
 import { registerUsageHandlers } from './handlers/usage.ts';
 import { Checkpoints } from './git/checkpoints.ts';
@@ -114,7 +115,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const limits = new UsageMonitor({ providers });
 
     const dispatcher = new Dispatcher();
-    registerServerHandlers(dispatcher, { version: VERSION, home: config.home });
+    registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await readMachineModel() });
     registerSessionHandlers(dispatcher, manager);
     registerChatHandlers(dispatcher, chats, providers, context);
     registerProjectHandlers(dispatcher, projects);

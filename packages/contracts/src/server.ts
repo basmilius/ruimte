@@ -6,7 +6,10 @@ export type ServerHelloPayload = z.infer<typeof ServerHelloPayloadSchema>;
 export const ServerHelloResultSchema = z.object({
     version: z.string(),
     platform: z.string(),
-    home: z.string()
+    home: z.string(),
+    // What the hardware is called ("MacBook Pro", "XPS 15 9500"), read once when the daemon started.
+    // Absent when the machine keeps that to itself, and the client says "This machine" then.
+    model: z.string().optional()
 });
 export type ServerHelloResult = z.infer<typeof ServerHelloResultSchema>;
 

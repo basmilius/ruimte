@@ -7,6 +7,8 @@ export interface ServerInfo {
     platform: string | null;
     home: string | null;
     version: string | null;
+    /* What the machine's hardware is called ("MacBook Pro"); null when the daemon could not read it. */
+    model: string | null;
     /* How the daemon names itself and how far away it is, from `endpoint.info`. */
     label: string | null;
     /* Whether a person chose that name or it is the one the machine starts with; null until it answers. */
@@ -17,11 +19,11 @@ export interface ServerInfo {
 }
 
 /* One object for a machine that has not said hello yet, so a selector gets a stable snapshot. */
-const UNKNOWN: ServerInfo = { platform: null, home: null, version: null, label: null, nameSource: null, icon: null, reachability: null };
+const UNKNOWN: ServerInfo = { platform: null, home: null, version: null, model: null, label: null, nameSource: null, icon: null, reachability: null };
 
 interface ServersStore {
     byEndpoint: Record<string, ServerInfo>;
-    setInfo(endpointId: string, info: { platform: string; home: string; version: string }): void;
+    setInfo(endpointId: string, info: Pick<ServerInfo, 'platform' | 'home' | 'version' | 'model'>): void;
     setEndpoint(endpointId: string, info: Pick<ServerInfo, 'label' | 'nameSource' | 'icon' | 'reachability'>): void;
     /* A name or an icon someone gave this machine, from `endpoint.changed` or from setting it here. */
     setIdentity(endpointId: string, info: Pick<ServerInfo, 'label' | 'nameSource' | 'icon'>): void;

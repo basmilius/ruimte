@@ -5,7 +5,7 @@ import { Check, Copy, Link2, Pencil, Plus, Trash } from 'lucide-react';
 import type { AuthSession } from '@ruimte/contracts';
 import { forgetEndpoint, listPairedClients, pairEndpoint, requestPairingUrl, revokePairedClient } from '@/endpoint';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { LOCAL_ENDPOINT_ID, LOCAL_ENDPOINT_LABEL, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { LOCAL_ENDPOINT_ID, localMachineLabel, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServer, useServers } from '@/state/server';
 import { pool, transport, type TransportStatus } from '@/transport';
 import { useLatency } from '@/transport/ping';
@@ -337,8 +337,10 @@ function AddMachineDialog({ open, onOpenChange }: { open: boolean; onOpenChange(
  */
 function LocalRow({ endpoint }: { endpoint: Endpoint }) {
     const icon = useServers((s) => s.byEndpoint[endpoint.id]?.icon ?? null);
+    const model = useServers((s) => s.byEndpoint[endpoint.id]?.model ?? null);
     const connected = useEndpointConnection(endpoint.id).status === 'open';
     const [identityOpen, setIdentityOpen] = useState(false);
+    const own = localMachineLabel(model);
 
     return (
         <div className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-2">
@@ -346,7 +348,7 @@ function LocalRow({ endpoint }: { endpoint: Endpoint }) {
             <span className="flex min-w-0 grow flex-col">
                 <span className="truncate text-sm text-text">{endpoint.label}</span>
                 {/* Only once it carries a name of its own, or the line would say what the one above it says. */}
-                {endpoint.label !== LOCAL_ENDPOINT_LABEL && <span className="truncate text-xs text-text-faint">{LOCAL_ENDPOINT_LABEL}</span>}
+                {endpoint.label !== own && <span className="truncate text-xs text-text-faint">{own}</span>}
             </span>
             <Tooltip label={connected ? 'Name and icon' : 'Not answering, so there is nothing to name'} name>
                 <button className="icon-btn h-7 w-7" disabled={!connected} onClick={() => setIdentityOpen(true)}>

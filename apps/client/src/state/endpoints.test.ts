@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { forgetTicket, rememberTicket } from '@/endpoint/credentials';
-import { LOCAL_ENDPOINT_ID, endpointForDaemon, parsePairingUrl, parseStoredEndpoints, socketUrlFor, useEndpoints, type Endpoint } from './endpoints';
+import {
+    LOCAL_ENDPOINT_ID,
+    endpointForDaemon,
+    localMachineLabel,
+    parsePairingUrl,
+    parseStoredEndpoints,
+    socketUrlFor,
+    useEndpoints,
+    type Endpoint
+} from './endpoints';
 
 const row = (id: string, overrides: Partial<Endpoint> = {}): Endpoint => ({
     id,
@@ -15,6 +24,14 @@ const row = (id: string, overrides: Partial<Endpoint> = {}): Endpoint => ({
 });
 
 describe('endpoints', () => {
+    test('the row for this machine says what the machine is, and falls back to saying nothing more', () => {
+        expect(localMachineLabel('MacBook Pro')).toBe('This MacBook Pro');
+        expect(localMachineLabel('Raspberry Pi 4 Model B')).toBe('This Raspberry Pi 4 Model B');
+        expect(localMachineLabel('  Mac mini  ')).toBe('This Mac mini');
+        expect(localMachineLabel(null)).toBe('This machine');
+        expect(localMachineLabel('')).toBe('This machine');
+    });
+
     test('parsePairingUrl reads the origin and the token out of the daemon URL', () => {
         expect(parsePairingUrl('http://box.local:4210/pair#abc123')).toEqual({ httpBaseUrl: 'http://box.local:4210', token: 'abc123' });
         expect(parsePairingUrl('  https://ruimte.example/pair#t  ')).toEqual({ httpBaseUrl: 'https://ruimte.example', token: 't' });
