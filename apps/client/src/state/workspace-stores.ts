@@ -43,6 +43,14 @@ export const setCurrentWorkspace = (workspace: CurrentWorkspace | null): void =>
 
 export const currentStores = (): WorkspaceStores | null => current?.stores ?? null;
 
+/*
+ * Whether a subtree is the workspace the app means by "here". A chord that acts on a project is bound
+ * on the window, because it has to answer with the focus in the sidebar or a panel as well, and this
+ * is what keeps it off the project in the pane beside it. Outside every provider there is one
+ * workspace and it is this one.
+ */
+export const isFocusedWorkspace = (stores: WorkspaceStores | null): boolean => stores === null || current === null || current.stores === stores;
+
 export const currentWorkspaceEndpointId = (): string | null => current?.endpointId ?? null;
 
 /* The same shape zustand's `create` returns, so a store behind this hook reads like any other. */
