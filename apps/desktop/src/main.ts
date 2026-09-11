@@ -441,6 +441,22 @@ interface UpdateState {
 }
 
 /*
+ * electron-updater puts the whole HTTP exchange in the message of a failed check: every response
+ * header, the session cookie among them. None of that belongs in a settings pane, so only the first
+ * line travels, and a 404 on the feed gets the sentence that actually says what went wrong.
+ */
+const describeUpdateError = (message: string): string => {
+    const first = message.split('\n')[0]?.trim();
+    if (!first) {
+        return 'No reason given.';
+    }
+    if (first.startsWith('404')) {
+        return 'No release feed to read. Either there is no published release yet, or the repository it comes from is private.';
+    }
+    return first.length > 200 ? `${first.slice(0, 200)}...` : first;
+};
+
+/*
  * The updater is a state machine the client watches, not a dialog that interrupts. Every change is
  * pushed to the window, which draws the green button in the toolbar and the Updates pane. A
  * checkout has no feed (electron-updater reads `app-update.yml` from the bundle), so there the
@@ -473,7 +489,7 @@ const setupUpdates = (): void => {
         autoUpdater.on('update-not-available', () => setUpdateState({ status: 'current', version: undefined, error: null }));
         autoUpdater.on('download-progress', (progress) => setUpdateState({ status: 'downloading', percent: progress.percent }));
         autoUpdater.on('update-downloaded', (info) => setUpdateState({ status: 'ready', version: info.version, percent: 100 }));
-        autoUpdater.on('error', (e) => setUpdateState({ status: 'error', error: e.message }));
+        autoUpdater.on('error', (e) => setUpdateState({ status: 'error', error: describeUpdateError(e.message) }));
         setUpdateState({ status: 'idle' });
     } catch (e) {
         // electron-updater missing from the bundle is the only way here; the app stays as it is.

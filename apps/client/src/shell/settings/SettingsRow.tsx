@@ -19,7 +19,7 @@ export function SettingsRow({ label, description, control, children, muted = fal
             <div className="flex items-center gap-4">
                 <div className="min-w-0 grow">
                     <div className={clsx('text-sm', muted ? 'text-text-muted' : 'text-text')}>{label}</div>
-                    {description && <div className="mt-0.5 text-xs leading-snug text-text-muted">{description}</div>}
+                    {description && <div className="mt-0.5 text-xs leading-snug break-words text-text-muted">{description}</div>}
                 </div>
                 {control && <div className="flex shrink-0 items-center gap-2">{control}</div>}
             </div>
