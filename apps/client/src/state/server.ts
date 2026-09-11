@@ -10,6 +10,8 @@ interface ServerStore {
     reachability: 'loopback' | 'lan' | 'tunnel' | 'public' | null;
     setInfo(info: { platform: string; home: string; version: string }): void;
     setEndpoint(info: { label: string; reachability: 'loopback' | 'lan' | 'tunnel' | 'public' }): void;
+    /* Everything here is one machine's answer, so it goes the moment the client points at another. */
+    clear(): void;
 }
 
 export const useServer = create<ServerStore>((set) => ({
@@ -23,6 +25,9 @@ export const useServer = create<ServerStore>((set) => ({
     },
     setEndpoint(info) {
         set(info);
+    },
+    clear() {
+        set({ platform: null, home: null, version: null, label: null, reachability: null });
     }
 }));
 

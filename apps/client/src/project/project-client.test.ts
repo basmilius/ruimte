@@ -16,7 +16,7 @@ import { useFiles } from '../state/files';
 import { useUi } from '../state/ui';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 import { PanelsPort } from './panels-port';
-import { ProjectClient, type ProjectSink } from './project-client';
+import { ProjectClient, rekeyLastProject, type ProjectSink } from './project-client';
 
 type Call = { type: RequestType; payload: unknown };
 
@@ -166,22 +166,29 @@ const makeSink = () => {
 
 const tick = (ms = 5): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-const setup = () => {
+/* The three calls `ProjectClient` makes on the storage it is given, over a map a test can read. */
+const fakeStorage = (storage: Map<string, string>) => ({
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => void storage.set(key, value),
+    removeItem: (key: string) => void storage.delete(key)
+});
+
+const setup = (options: { endpointId?: string; storage?: Map<string, string>; projects?: ProjectSummary[] } = {}) => {
     useDocument.getState().load(null, null);
     useUi.setState({ panel: { open: false, kind: 'files' }, preview: { open: false }, panelWidth: null, previewWidth: null });
     useFiles.setState({ projectId: null, tabs: [], active: null, expandedDirs: [] });
     const transport = new FakeTransport();
+    if (options.projects) {
+        transport.projects = options.projects;
+    }
     const { sink, state } = makeSink();
-    const storage = new Map<string, string>();
+    const storage = options.storage ?? new Map<string, string>();
     const panels = new PanelsPort();
     const client = new ProjectClient(transport, useCanvas, useDocument, panels, sink, {
         saveDelayMs: 1,
         localDelayMs: 1,
-        storage: {
-            getItem: (key: string) => storage.get(key) ?? null,
-            setItem: (key: string, value: string) => void storage.set(key, value),
-            removeItem: (key: string) => void storage.delete(key)
-        }
+        endpointId: () => options.endpointId ?? 'daemon-a',
+        storage: fakeStorage(storage)
     });
     const dispose = (): void => {
         client.dispose();
@@ -289,7 +296,7 @@ describe('ProjectClient', () => {
         expect(transport.of('project.save')).toHaveLength(1);
         expect(transport.of('project.close').map((call) => call.payload)).toEqual([{ projectId: 'p1' }]);
         expect(state.current?.projectId).toBe('p2');
-        expect(storage.get('ruimte.lastProject')).toBe('p2');
+        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({ 'daemon-a': 'p2' });
         dispose();
     });
 
@@ -363,5 +370,55 @@ describe('a project with a drawing view', () => {
         const saved = transport.of('project.save').at(-1)?.payload as { content: { views: unknown[] } };
         expect(saved.content.views.at(-1)).toMatchObject({ kind: 'drawing', id: 'view-1', name: 'Plan' });
         dispose();
+    });
+});
+
+describe('the project each machine had open', () => {
+    test('a second daemon opens its own project and leaves the first one remembered', async () => {
+        const storage = new Map<string, string>();
+        const first = setup({ storage, endpointId: 'daemon-a', projects: [summary('p1', '/repo'), summary('p2')] });
+        await tick();
+        await first.client.openProject('p2');
+        first.dispose();
+
+        // The other machine lists projects of its own; p2 is not among them, and picking one of these for it would be wrong.
+        const second = setup({ storage, endpointId: 'daemon-b', projects: [summary('q1', '/other')] });
+        await tick();
+        expect(second.state.current?.projectId).toBe('q1');
+        second.dispose();
+
+        const back = setup({ storage, endpointId: 'daemon-a', projects: [summary('p1', '/repo'), summary('p2')] });
+        await tick();
+        expect(back.state.current?.projectId).toBe('p2');
+        back.dispose();
+        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({ 'daemon-a': 'p2', 'daemon-b': 'q1' });
+    });
+
+    test('closing a project forgets it on this machine only', async () => {
+        const storage = new Map<string, string>([['ruimte.lastProject', JSON.stringify({ 'daemon-a': 'p1', 'daemon-b': 'q1' })]]);
+        const { client, dispose } = setup({ storage, endpointId: 'daemon-a' });
+        await tick();
+        await client.closeProject();
+        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({ 'daemon-b': 'q1' });
+        dispose();
+    });
+
+    test('the single project id this key used to hold belongs to the endpoint that is active', async () => {
+        const storage = new Map<string, string>([['ruimte.lastProject', 'p2']]);
+        const { state, dispose } = setup({ storage, endpointId: 'daemon-a', projects: [summary('p1', '/repo'), summary('p2')] });
+        await tick();
+        expect(state.current?.projectId).toBe('p2');
+        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({ 'daemon-a': 'p2' });
+        dispose();
+    });
+
+    test('an endpoint that moves onto its daemon id takes what it had open along', () => {
+        const storage = new Map<string, string>([['ruimte.lastProject', JSON.stringify({ '10.0.0.4:4210': 'p7', 'daemon-b': 'q1' })]]);
+        rekeyLastProject('10.0.0.4:4210', 'daemon-x', fakeStorage(storage));
+        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({ 'daemon-x': 'p7', 'daemon-b': 'q1' });
+
+        const legacy = new Map<string, string>([['ruimte.lastProject', 'p7']]);
+        rekeyLastProject('10.0.0.4:4210', 'daemon-x', fakeStorage(legacy));
+        expect(JSON.parse(legacy.get('ruimte.lastProject')!)).toEqual({ 'daemon-x': 'p7' });
     });
 });

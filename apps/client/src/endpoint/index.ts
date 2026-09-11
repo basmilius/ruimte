@@ -3,7 +3,11 @@ import { projectClient } from '@/project';
 import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, activeEndpoint, parsePairingUrl, socketUrlFor, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProject } from '@/state/project';
+import { useProviders } from '@/state/providers';
+import { useServer } from '@/state/server';
+import { useUsage } from '@/state/usage';
 import { transport } from '@/transport';
+import { usePing } from '@/transport/ping';
 
 /*
  * Pairs with a daemon on another machine: the pasted URL names the daemon and carries the
@@ -37,6 +41,20 @@ export const pairEndpoint = async (pairingUrl: string): Promise<Endpoint> => {
     return record;
 };
 
+/*
+ * Everything one daemon answered goes, and the socket follows the choice. It hangs off the store
+ * rather than off the click, because the active endpoint also moves when a client revokes its own
+ * session, and later when a project on another machine is opened.
+ */
+const onActiveEndpointChanged = (): void => {
+    useProject.getState().setProjects([]);
+    useServer.getState().clear();
+    useProviders.getState().clear();
+    useUsage.getState().clear();
+    usePing.getState().setLatency(null);
+    transport.switchTo?.(socketUrlFor(activeEndpoint()));
+};
+
 /* Moves the whole client to another daemon: the canvas empties first, so nothing of the old one is recreated on the new. */
 export const activateEndpoint = async (id: string): Promise<void> => {
     if (id === useEndpoints.getState().activeId) {
@@ -45,9 +63,15 @@ export const activateEndpoint = async (id: string): Promise<void> => {
     await projectClient.flush();
     useDocument.getState().load(null, null);
     useProject.getState().setCurrent(null, 0);
-    useProject.getState().setProjects([]);
     useEndpoints.getState().setActive(id);
-    transport.switchTo?.(socketUrlFor(activeEndpoint()));
+};
+
+/* Forgetting the machine that is active goes home first, so the canvas is not left on a daemon nothing talks to. */
+export const forgetEndpoint = async (id: string): Promise<void> => {
+    if (id === useEndpoints.getState().activeId) {
+        await activateEndpoint(LOCAL_ENDPOINT_ID);
+    }
+    useEndpoints.getState().remove(id);
 };
 
 /* The clients paired with the daemon this client talks to right now. */
@@ -62,9 +86,7 @@ export const revokePairedClient = async (session: AuthSession): Promise<void> =>
     if (!session.current) {
         return;
     }
-    const revoked = activeEndpoint();
-    await activateEndpoint(LOCAL_ENDPOINT_ID);
-    useEndpoints.getState().remove(revoked.id);
+    await forgetEndpoint(activeEndpoint().id);
 };
 
 /* What the daemon lists this client as: the browser on this machine. */
@@ -74,9 +96,15 @@ const clientLabel = (): string => {
 };
 
 /* On startup the transport was built for the page's own daemon; a remembered remote endpoint takes over here. */
-export const startEndpointSelection = (): void => {
+export const startEndpointSelection = (): (() => void) => {
+    const off = useEndpoints.subscribe((state, before) => {
+        if (state.activeId !== before.activeId) {
+            onActiveEndpointChanged();
+        }
+    });
     const endpoint = activeEndpoint();
     if (endpoint.token) {
         transport.switchTo?.(socketUrlFor(endpoint));
     }
+    return off;
 };

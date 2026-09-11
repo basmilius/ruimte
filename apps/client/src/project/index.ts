@@ -1,6 +1,7 @@
 import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useDrawing } from '@/state/drawing';
+import { useEndpoints } from '@/state/endpoints';
 import { useProject } from '@/state/project';
 import { transport } from '@/transport';
 import { DrawingClient } from '@/drawing/drawing-client';
@@ -38,6 +39,7 @@ export const projectClient: ProjectClient = new ProjectClient(
     },
     {
         drawing: useDrawing,
-        beforeSwitch: (): Promise<void> => drawingClient.flush()
+        beforeSwitch: (): Promise<void> => drawingClient.flush(),
+        endpointId: (): string => useEndpoints.getState().activeId
     }
 );

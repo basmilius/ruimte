@@ -112,8 +112,17 @@ const setup = () => {
     const transport = new FakeTransport();
     const sink = new FakeSink();
     const providers: ProviderInfo[][] = [];
-    const client = new ChatClient(transport, sink, { setProviders: (list) => providers.push(list) });
-    return { transport, sink, client, providers };
+    let endpointId = 'daemon-a';
+    const client = new ChatClient(transport, sink, { setProviders: (list) => providers.push(list) }, () => endpointId);
+    return {
+        transport,
+        sink,
+        client,
+        providers,
+        moveTo: (id: string): void => {
+            endpointId = id;
+        }
+    };
 };
 
 describe('ChatClient', () => {
@@ -152,6 +161,20 @@ describe('ChatClient', () => {
         await flush();
         expect(transport.of('chat.attach').map((c) => c.payload)).toEqual([{ chatId: 'a' }]);
         expect(sink.resets.map((r) => r.chatId)).toEqual(['a', 'b', 'a']);
+    });
+
+    test('a socket that comes back pointed at another daemon leaves the first machine alone', async () => {
+        const { transport, client, moveTo } = setup();
+        await client.open('a', {});
+
+        transport.setStatus('closed');
+        transport.calls.length = 0;
+        moveTo('daemon-b');
+        transport.setStatus('open');
+        await flush();
+
+        expect(transport.of('chat.create')).toHaveLength(0);
+        expect(client.isMounted('a')).toBe(false);
     });
 
     test('opening while offline waits for the transport', async () => {

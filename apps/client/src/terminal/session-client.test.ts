@@ -126,8 +126,16 @@ const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 
 const setup = () => {
     const transport = new FakeTransport();
     const sink = new FakeSink();
-    const client = new SessionClient(transport, sink);
-    return { transport, sink, client };
+    let endpointId = 'daemon-a';
+    const client = new SessionClient(transport, sink, () => endpointId);
+    return {
+        transport,
+        sink,
+        client,
+        moveTo: (id: string): void => {
+            endpointId = id;
+        }
+    };
 };
 
 describe('SessionClient', () => {
@@ -211,6 +219,21 @@ describe('SessionClient', () => {
         transport.setStatus('open');
         await flush();
         expect(screens).toEqual(['screen']);
+    });
+
+    test('a socket that comes back pointed at another daemon leaves the first machine alone', async () => {
+        const { transport, client, moveTo } = setup();
+        await client.open('a', { cwd: '/x' }, 80, 24);
+
+        transport.setStatus('closed');
+        transport.calls.length = 0;
+        moveTo('daemon-b');
+        transport.setStatus('open');
+        await flush();
+
+        // Creating it here would be a second shell, on a machine the node was never on.
+        expect(transport.calls).toEqual([]);
+        expect(client.isMounted('a')).toBe(false);
     });
 
     test('a detached node is not brought back by a reconnect', async () => {
