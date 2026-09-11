@@ -56,5 +56,14 @@ container, asks both who they are, runs a shell on each, then stops the containe
 the daemon on this machine keeps answering and keeps streaming its shell. It starts the container
 again afterwards, with the fresh state every start gives it.
 
+A third block is about state that belongs to one machine: the same node id on both daemons is two
+shells with two screens, one absolute path is two checkouts whose watches do not touch each other,
+`fs.list` on that path answers about the machine it was asked of, and context set on a session of
+the container is read back from inside that session.
+
+`ruimte-context` is reached by its path in the image there, not by its name. Debian's `/etc/profile`
+writes PATH from scratch, so the directory the daemon puts in front of it is gone by the first
+prompt of a login shell; on macOS `path_helper` keeps what was already there.
+
 The suite skips itself unless `RUIMTE_DOCKER=1` is set, so `bun test` at the root, and CI, never
 tries to reach a container.
