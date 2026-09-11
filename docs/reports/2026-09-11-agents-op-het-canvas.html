@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Agents op het canvas</title>
+<style>
+:root {
+  color-scheme: light;
+  --accent: #3f38b5;
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --image-outline: rgb(0 0 0 / 10%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.diagram .faint { fill: var(--panel); stroke: var(--muted); }
+.diagram .faint-edge { fill: none; stroke: var(--muted); stroke-width: 2; }
+.diagram .faint-arrow { fill: var(--muted); }
+.diagram .label { font-size: 13px; fill: var(--muted); letter-spacing: .04em; }
+.plot { min-width: 480px; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--muted); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide, .plot { min-width: 0; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#samenvatting">Naar de samenvatting</a>
+<header>
+  <p class="eyebrow">Ruimte / Ontwerpvoorstel / 11 september 2026</p>
+  <h1>Agents op het canvas</h1>
+  <p class="intro">De lijntjes tussen de nodes werken al. Wat ontbreekt is de andere richting: een agent kan lezen wat er op het canvas staat, maar er niets aan toevoegen. Dit voorstel legt die schrijfweg in de daemon in plaats van in de client, en levert elf verbs die een agent over HTTP aanroept met de bearer die zijn sessie al heeft.</p>
+  <p class="status">Ontwerp, nog niets gebouwd · roadmap-punt 6 in <code>docs/DECISIONS.md</code></p>
+  <p class="caption">Gelezen op <code>ab3a1f6</code>. Geen metingen: dit is een leesronde door de codebase, geen benchmark.</p>
+  <nav aria-label="Inhoud">
+    <a href="#samenvatting">Samenvatting</a>
+    <a href="#alstaat">Wat al werkt</a>
+    <a href="#clientweg">De weg via de client</a>
+    <a href="#schrijfweg">De schrijfweg</a>
+    <a href="#verbs">De verbs</a>
+    <a href="#context">Context afmaken</a>
+    <a href="#skill">Geen skill</a>
+    <a href="#grenzen">Grenzen</a>
+    <a href="#plan">Plan</a>
+    <a href="#prompt">Startprompt</a>
+    <a href="#open">Open vragen</a>
+  </nav>
+</header>
+<main>
+  <section id="samenvatting" class="recommendation">
+    <h2>Samenvatting</h2>
+    <p>Twee dingen vallen op na het lezen van de codebase. Het eerste is dat Ruimte de context-sharing al heeft. Een edge naar een terminal- of chat-node maakt de bron leesbaar, de daemon serveert hem op <code>GET /context</code> met de bearer van die sessie, en <code>ruimte-context</code> staat op de PATH van elke shell. De leeskant staat dus, met weinig machinerie eromheen.</p>
+    <p>Het tweede is dat de schrijfkant er nul procent is. Er bestaat geen request die een node of een view maakt. <code>project.save</code> stuurt de complete <code>ProjectContent</code> en komt alleen van de client. Een agent kan dus lezen en niets terugleggen.</p>
+    <p>Mijn voorstel: zet de schrijfweg in de daemon, niet in de client. Via de client (HTTP naar het Electron-hoofdproces, IPC naar de renderer, de canvas-store muteert) stopt de besturing zodra er geen venster open is. Ruimte heeft die keuze niet nodig, want de daemon bezit <code>project.json</code> al en heeft al een watcher die een wijziging naar elke client duwt. Een agent die een node maakt terwijl er nul clients verbonden zijn hoort gewoon te werken.</p>
+    <div class="stats">
+      <div><strong>4</strong><span>contextsoorten die vandaag al werken</span></div>
+      <div><strong>0</strong><span>verbs waarmee een agent iets kan maken</span></div>
+      <div><strong>11</strong><span>verbs in dit voorstel</span></div>
+    </div>
+    <p><span class="badge confirmed">Geverifieerd</span> Edges voeden de context al: <code>apps/client/src/context/sources.ts</code> plus <code>apps/server/src/context/context-store.ts</code>.</p>
+    <p><span class="badge confirmed">Geverifieerd</span> Geen enkele schrijfweg buiten <code>project.save</code>: <code>REQUEST_SCHEMAS</code> in <code>packages/contracts/src/index.ts:159-170</code>.</p>
+    <p><span class="badge warning">Aanname</span> Dat de rev-discipline een agent-schrijf aankan zonder de mens een conflictdialoog te tonen. Dat hangt af van hoe vaak de client <code>dirty</code> is op het moment dat de agent schrijft, en dat heb ik niet gemeten.</p>
+  </section>
+
+  <section id="alstaat">
+    <h2>Wat al werkt</h2>
+    <p>De keten zit er helemaal in en ik zou er niets aan veranderen behalve waar hij woont. Een edge waarvan de <code>to</code> een terminal- of chat-node is wordt een <code>ContextSource</code>. De client leidt die af, stuurt <code>context.set</code>, en de daemon houdt hem vast achter de sessie-bearer.</p>
+    <div class="table" role="region" aria-label="Contextsoorten en hun herkomst" tabindex="0">
+      <table>
+        <caption>Wat een agent vandaag kan lezen via <code>ruimte-context read &lt;id&gt;</code></caption>
+        <thead><tr><th scope="col">Bron op het canvas</th><th scope="col">Wordt</th><th scope="col">Wat de agent krijgt</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Tekstelement</th><td><code>text</code></td><td>De tekst zelf, titel is de eerste regel</td></tr>
+          <tr><th scope="row">Note-node</th><td><code>text</code></td><td>De body van de note</td></tr>
+          <tr><th scope="row">Terminal-node</th><td><code>terminal</code></td><td>Live scherm, laatste 2000 regels</td></tr>
+          <tr><th scope="row">Chat-node</th><td><code>chat</code></td><td>Transcript als markdown, tool-output afgekapt op 2000 tekens</td></tr>
+          <tr><th scope="row">Drawing-node</th><td><code>drawing</code></td><td>Leesvolgorde plus de SVG</td></tr>
+          <tr><th scope="row">Browser-node</th><td><code>text</code></td><td>Alleen de URL</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Drie dingen staan in Ruimte al goed, en het is de moeite ze op te schrijven voordat we gaan bouwen.</p>
+    <p>De edge is de autorisatie en hij staat op het scherm. De lijn die de mens tekent is hetzelfde ding als het leesrecht. Er is geen tweede kopie, zoals een cache in het geheugen die uit een gedebouncede push herbouwd wordt en een net verwijderde lijn nog even leesbaar houdt, die kan verjaren.</p>
+    <p>De identiteit komt gratis. Een app-brede bearer bewijst alleen dat je op dezelfde machine zit, en vraagt dan een HMAC-regime eromheen (afgeleide per-node tokens, een beleidstabel met <code>verified | legacy | forged</code>, een trust-on-first-proof-latch). Ruimte geeft elke sessie een eigen token van 24 bytes in zijn eigen env, en <code>targetForToken</code> weet daarmee meteen welke node belt. Dat is dezelfde strengheid met minder onderdelen.</p>
+    <p>Lezen laat een spoor na. Zonder lijn zou een node het volledige transcript van een buurnode kunnen lezen, inclusief bestandspaden en commando's, zonder dat iemand het ziet. In Ruimte zie je de lijn liggen, dus een leesrecht is nooit onzichtbaar.</p>
+    <div class="note">
+      <p>Wat er wel mis is: de dimmed regel boven de eerste prompt van een verse shell kan de race met <code>session.create</code> verliezen bij een koude project-load, omdat <code>context.set</code> 300 ms debounced is. Staat als bekend gat in <code>docs/DECISIONS.md:459-462</code>. De oplossing hieronder laat die race als geheel verdwijnen.</p>
+    </div>
+  </section>
+
+  <section id="clientweg">
+    <h2>De weg via de client</h2>
+    <p>De andere route gebruikt geen MCP en geen CLI op de PATH. Een HTTP-server in het Electron-hoofdproces luistert op een unix socket, en de app schrijft bij elke boot een POSIX-sh script met curl erin naar <code>{userData}/canvas-control/canvas.sh</code>. Dat script is wat de agent aanroept. De credentials staan in een 0600-bestand dat het script sourcet, nooit in argv en nooit in de env, omdat een token in argv door elk proces van dezelfde gebruiker te lezen is.</p>
+    <p>Daarna: <code>POST /control/&lt;verb&gt;</code>, identiteitscontrole, IPC naar de renderer, en een <code>switch (verb)</code> van duizenden regels in <code>Canvas.tsx</code> muteert de store. Het antwoord gaat terug als proza omdat de shim <code>Accept: text/plain</code> stuurt.</p>
+    <div class="split">
+      <div class="panel">
+        <h3>Wat ik zou overnemen</h3>
+        <p>Eén registry als bron voor zowel de validatie als de helptekst, zodat de documentatie niet kan verouderen ten opzichte van de code.</p>
+        <p><code>--dry-run</code> op de dure verbs. Een <code>spawn-team</code> met acht rollen is goedkoop aan te roepen en duur terug te draaien, en een droge run verplaatst de fout naar de goedkope kant.</p>
+        <p>De set zelf: wat je een agent laat doen is grofweg maken, groeperen, linken en opruimen. Dat is de juiste verzameling.</p>
+      </div>
+      <div class="panel">
+        <h3>Wat ik niet zou overnemen</h3>
+        <p>De renderer als uitvoerder. Zonder venster is het antwoord <code>window unavailable</code>, en de bevestigingsdialogen zitten precies in de helft die het commentaar in de code zelf "the more attackable half" noemt.</p>
+        <p>Eén dialoog tegelijk. Een agent die een <code>write</code>-bevestiging laat hangen blokkeert 120 seconden lang elke andere gevoelige verb, voor alle andere agents.</p>
+        <p>Titels als selector. <code>sticky --node &lt;id|title&gt;</code> matcht case-insensitive op titel, terwijl <code>rename</code> elke node mag hernoemen. Een agent kan zijn node naar de titel van een ander noemen en zo een schrijf laten landen waar hij niet hoort.</p>
+        <p>Proza als antwoordformaat. In het tekstdialect vallen <code>error</code> en <code>message</code> samen, dus het model moet zinnen als <code>linked a ↔ b</code> parsen om te weten wat er gebeurd is. Voor een interface die expliciet voor modellen gemaakt is, is dat een rare besparing.</p>
+      </div>
+    </div>
+    <details open>
+      <summary>De beleidstabel die Ruimte niet nodig heeft</summary>
+      <pre><code>if (verdict === 'forged') return 'refuse'
+if (STRICT_CONTROL_VERBS.has(verb)) return verdict === 'verified' ? 'allow' : 'refuse'
+if (verdict === 'verified') return 'allow'
+if (override === false) return TOLERANT_CONTROL_VERBS.has(verb) ? 'allow' : 'allow-with-warning'
+if (proven) return 'refuse'                       // trust-on-first-proof latch
+if (TOLERANT_CONTROL_VERBS.has(verb)) return 'allow'
+return isStrictInstant(now) ? 'refuse' : 'allow-with-warning'</code></pre>
+      <p>Dit lost op dat de app-brede bearer niet zegt wie er belt. Ruimte's per-sessie token zegt dat wel, dus deze hele tabel valt weg. Wat blijft is de vraag welke verbs een mens moeten vragen, en dat antwoord is hieronder: geen, omdat er geen destructieve verb in de set zit.</p>
+    </details>
+  </section>
+
+  <section id="schrijfweg">
+    <h2>De schrijfweg</h2>
+    <p>De daemon bezit het project. Hij leest en schrijft <code>&lt;folder&gt;/.ruimte/project.json</code>, houdt de rev bij onder een lock, en kijkt naar de map zodat een schrijf van buiten als <code>project.changed</code> bij elke client landt. Die watcher is er al en is precies het mechanisme dat een agent-verb nodig heeft.</p>
+    <figure class="panel">
+      <div class="table" role="region" aria-label="Diagram van de schrijfweg, horizontaal scrollbaar" tabindex="0">
+        <svg class="diagram plot" viewBox="0 0 780 250" role="img" aria-labelledby="weg-title weg-desc">
+          <title id="weg-title">Twee schrijfwegen vergeleken</title>
+          <desc id="weg-desc">In het voorstel voor Ruimte gaat een verb van de agent-sessie naar de daemon, die project.json schrijft en de wijziging naar elke open client stuurt. Via de client gaat een verb van de sessie naar het Electron-hoofdproces, dan naar de renderer, die het canvas muteert en pas daarna het projectbestand schrijft.</desc>
+          <defs>
+            <marker id="weg-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0 0 L8 4 L0 8 Z"/></marker>
+            <marker id="weg-arrow-faint" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="faint-arrow" d="M0 0 L8 4 L0 8 Z"/></marker>
+          </defs>
+          <text class="label" x="10" y="14">RUIMTE, VOORSTEL</text>
+          <rect class="node" x="10" y="24" width="160" height="62" rx="12"/>
+          <rect class="node" x="212" y="24" width="160" height="62" rx="12"/>
+          <rect class="node" x="414" y="24" width="160" height="62" rx="12"/>
+          <rect class="node" x="616" y="24" width="160" height="62" rx="12"/>
+          <path class="edge" d="M170 55 H204" marker-end="url(#weg-arrow)"/>
+          <path class="edge" d="M372 55 H406" marker-end="url(#weg-arrow)"/>
+          <path class="edge" d="M574 55 H608" marker-end="url(#weg-arrow)"/>
+          <text x="90" y="50" text-anchor="middle">agent-sessie</text>
+          <text x="90" y="72" text-anchor="middle" font-size="13">ruimte node ...</text>
+          <text x="292" y="50" text-anchor="middle">daemon</text>
+          <text x="292" y="72" text-anchor="middle" font-size="13">ProjectStore</text>
+          <text x="494" y="61" text-anchor="middle">project.json</text>
+          <text x="696" y="50" text-anchor="middle">elke client</text>
+          <text x="696" y="72" text-anchor="middle" font-size="13">project.changed</text>
+          <text class="label" x="10" y="140">VIA DE CLIENT</text>
+          <rect class="faint" x="10" y="150" width="160" height="62" rx="12"/>
+          <rect class="faint" x="212" y="150" width="160" height="62" rx="12"/>
+          <rect class="faint" x="414" y="150" width="160" height="62" rx="12"/>
+          <rect class="faint" x="616" y="150" width="160" height="62" rx="12"/>
+          <path class="faint-edge" d="M170 181 H204" marker-end="url(#weg-arrow-faint)"/>
+          <path class="faint-edge" d="M372 181 H406" marker-end="url(#weg-arrow-faint)"/>
+          <path class="faint-edge" d="M574 181 H608" marker-end="url(#weg-arrow-faint)"/>
+          <text x="90" y="176" text-anchor="middle">agent-sessie</text>
+          <text x="90" y="198" text-anchor="middle" font-size="13">canvas.sh</text>
+          <text x="292" y="187" text-anchor="middle">Electron main</text>
+          <text x="494" y="176" text-anchor="middle">renderer</text>
+          <text x="494" y="198" text-anchor="middle" font-size="13">canvas-store</text>
+          <text x="696" y="187" text-anchor="middle">project.json</text>
+        </svg>
+      </div>
+      <figcaption>Het verschil zit in het derde blok. De weg via de client moet langs een open venster, de weg via de daemon niet. Dat maakt de verbs bruikbaar op een daemon op afstand, met nul clients, of met drie clients tegelijk.</figcaption>
+    </figure>
+
+    <h3>Het transport is er al</h3>
+    <p>Geen tweede server, geen endpoint-bestand, geen HMAC. De daemon serveert al <code>GET /context</code> op dezelfde poort met een bearer per sessie. Daar komt <code>POST /canvas/&lt;verb&gt;</code> naast, met dezelfde <code>targetForToken</code> die al weet of de token bij een terminal-sessie of bij een chat hoort. Die node-id is meteen ook de scoping: zoek hem op in de open projecten, en je hebt het project en de view waar de verb standaard in landt. Een sessie waarvan de node in geen enkel open project staat kan niets, zonder dat daar een regel code voor nodig is.</p>
+    <p>De CLI ernaast is <code>apps/server/bin/ruimte</code>, hetzelfde sh-scriptje van acht regels als <code>ruimte-context</code>: het gecompileerde binary als dat ernaast staat, anders <code>bun src/main.ts</code>. <code>binDir</code> staat al voorop de PATH van elke sessie.</p>
+
+    <h3>Wat er met de rev gebeurt</h3>
+    <p>De daemon past de verb toe op het document dat hij in geheugen heeft, onder dezelfde lock als <code>save</code>, bumpt de rev en schrijft. De client die niet <code>dirty</code> is laadt het nieuwe document en klaar. De client die wel dirty is parkeert het vandaag als conflict, en dat zou voor een agent-actie een dialoog betekenen die niemand gevraagd heeft.</p>
+    <div class="split">
+      <div class="panel">
+        <h3>Ops over de draad</h3>
+        <p>Naast het document draagt <code>project.changed</code> ook de toegepaste operaties. Een dirty client past die op zijn eigen state toe en schrijft zijn volgende save met de nieuwe baseRev.</p>
+        <p>Kost een nieuw berichtformaat, een reducer aan clientkant, en een tweede weg waarlangs de client-state kan veranderen.</p>
+      </div>
+      <div class="panel">
+        <h3>Additieve merge <span class="badge confirmed">Voorkeur</span></h3>
+        <p>De client kijkt bij een binnengekomen document of het verschil met zijn eigen state puur bestaat uit node-, edge- of view-id's die hij nog niet kent. Is dat zo, dan voegt hij ze toe en blijft dirty.</p>
+        <p>Kost geen nieuw berichttype. Dekt precies wat de verbs produceren, want alles behalve <code>rename</code> en <code>arrange</code> is toevoegen. Die twee vallen terug op de bestaande dialoog, en zijn zeldzaam genoeg.</p>
+      </div>
+    </div>
+
+    <h3>De prompt hoort niet in het projectbestand</h3>
+    <p>Een agent-node die begint te werken heeft een eerste prompt nodig, en daar zit een volgordeprobleem. De client start de sessie, niet de daemon: een terminal wacht op <code>session.create</code> met cols en rows, een chat spawnt pas een proces bij het eerste bericht. De daemon maakt dus een node die nog niemand draait.</p>
+    <p>De prompt als veld op de node in <code>project.json</code> zetten lost dat op en levert twee nieuwe problemen: de prompt staat in het gedeelde bestand, en met twee open clients levert hij twee keer af. Beter is dat de daemon hem zelf vasthoudt, gekoppeld aan de node-id, en aflevert op het moment dat de sessie of de chat voor die id ontstaat. Dat is precies waar <code>SessionManager.create</code> en <code>ChatManager.create</code> al staan, en de daemon is ook de enige plek waar "precies één keer" te garanderen valt.</p>
+
+    <h3>Maken is gedeeld, tonen is persoonlijk</h3>
+    <p>Ruimte scheidt het gedeelde document van de machine-lokale staat, en die scheiding valt precies samen met wat een agent wel en niet hoort te mogen. Een node of een view maken verandert het project en hoort in <code>project.json</code>. Een view openen verandert wat één mens op één scherm ziet, en staat in <code>&lt;projectId&gt;.local.json</code>.</p>
+    <p>Ik zou <code>ruimte open</code> toch geven, want je vraagt een agent nu eenmaal om iets te laten zien. Maar dan als event naar de clients van die ene workspace, niet als documentwijziging, en met een toast met "terug" zodat de camera van de mens nooit ergens heen springt zonder weg terug. Een agent die op de achtergrond werkt, hoort het beeld niet weg te trekken.</p>
+  </section>
+
+  <section id="verbs">
+    <h2>De verbs</h2>
+    <p>Elf. Het ontwerp zit bijna helemaal in wat ik eruit laat: geen <code>write</code>, geen <code>close</code>, geen <code>delete</code>, geen browserbesturing, geen kanban, geen worktrees in de eerste ronde.</p>
+    <div class="table" role="region" aria-label="De voorgestelde verbs" tabindex="0">
+      <table class="wide">
+        <caption>Alles landt in de view waar de aanroepende node zelf staat, tenzij <code>--view</code> iets anders zegt</caption>
+        <thead><tr><th scope="col">Verb</th><th scope="col">Argumenten</th><th scope="col">Wat het doet</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>help</code></th><td></td><td>De verb-lijst, gerenderd uit de registry zodat hij niet kan verouderen</td></tr>
+          <tr><th scope="row"><code>list</code></th><td><code>[--views]</code></td><td>De nodes van de eigen view, of de views van het project. Eén regel per rij, tab-gescheiden, net als <code>ruimte-context list</code></td></tr>
+          <tr><th scope="row"><code>node</code></th><td><code>&lt;note|browser|drawing|terminal|chat&gt; [--title T] [--text B] [--url U] [--cwd P] [--view V] [--beside N]</code></td><td>Eén node. <code>--beside</code> zet hem rechts van een bestaande node in plaats van op een vrije plek</td></tr>
+          <tr><th scope="row"><code>agent</code></th><td><code>&lt;claude|codex|gemini|copilot&gt; [--chat] [--prompt T|--prompt-file F] [--cwd P] [--view V] [--group G]</code></td><td>Een agent-node die begint te werken, en een edge terug naar de aanroeper</td></tr>
+          <tr><th scope="row"><code>team</code></th><td><code>--label L --roles '[{"title","prompt","provider","chat"}]'</code></td><td>Tot acht rollen, in een group, elk gelinkt aan de aanroeper</td></tr>
+          <tr><th scope="row"><code>view</code></th><td><code>&lt;naam&gt; [--kind canvas|drawing]</code></td><td>Een nieuwe view in het project</td></tr>
+          <tr><th scope="row"><code>open</code></th><td><code>&lt;viewId&gt;</code></td><td>Toont de view bij de mens. Geen documentwijziging, wel ongedaan te maken</td></tr>
+          <tr><th scope="row"><code>link</code></th><td><code>--to A,B [--from N] [--label L]</code></td><td>Een context-edge. Tussen twee agents standaard beide richtingen</td></tr>
+          <tr><th scope="row"><code>group</code></th><td><code>--nodes A,B [--label L] [--color C]</code></td><td>Een frame om nodes die al in dezelfde container staan</td></tr>
+          <tr><th scope="row"><code>arrange</code></th><td><code>--nodes A,B [--layout grid|row|column] [--cols N]</code></td><td>Opruimen zonder overlap</td></tr>
+          <tr><th scope="row"><code>rename</code></th><td><code>--node N --title T</code></td><td>Zet <code>titleSource: 'user'</code>, zodat de sessie de titel niet terugdraait</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><code>--dry-run</code> op <code>agent</code>, <code>team</code> en <code>node</code>: dezelfde validatie, niets gemaakt, en het antwoord zegt wat er zou gebeuren. De andere verbs weigeren de vlag, zodat een agent er niet uit gewoonte een droge run van maakt die stilletjes niets doet.</p>
+    <p>Waarom <code>write</code> en <code>close</code> ontbreken: ze vragen een bevestiging van de mens, de bevestiging blokkeert, en er kan er maar één tegelijk staan. Eén hangende dialoog zet dan alle andere gevoelige verbs stil. Zonder die twee heeft geen enkele verb in de tabel een dialoog nodig, en dat is de reden om ze weg te laten.</p>
+    <p>Browserbesturing hoort hier ook niet. Een browser-node in Ruimte is een webview in de client, en de daemon kan die niet aansturen. Dat is clientwerk voor later, niet iets om nu in de daemon te wringen.</p>
+    <h3>Het antwoord</h3>
+    <p>Geen proza. Eén regel per resultaat, tab-gescheiden, en een aparte exitcode voor een weigering, in dezelfde vorm als <code>ruimte-context list</code> nu al teruggeeft. Een agent die drie nodes maakt hoort drie id's terug te krijgen die hij meteen in een <code>link</code> kan stoppen, zonder een zin te ontleden.</p>
+  </section>
+
+  <section id="context">
+    <h2>Context afmaken</h2>
+    <p>De feature werkt, dus dit gaat over vier gaten, waarvan de eerste de andere drie makkelijker maakt.</p>
+    <h3>Laat de daemon de context zelf afleiden</h3>
+    <p><code>deriveContextSources</code> is een pure functie over een canvas-view, en hij staat in de client. De daemon heeft datzelfde canvas al in geheugen. Hij heeft ook de tekst van elk tekstelement en elke note, hij leest de drawing al van schijf, en terminal en chat las hij toch al live. Er is geen enkel stuk dat alleen de client heeft.</p>
+    <p>Verplaats die functie naar <code>packages/contracts</code> en laat de daemon hem draaien op het document dat hij bezit. Dan verdwijnt <code>context.set</code> als request, verdwijnt de debounce van 300 ms, verdwijnt de dedup-cache per target, en verdwijnt de race bij een koude project-load die vandaag in <code>DECISIONS.md</code> als bekend gat staat. Het verdwijnt allemaal omdat de vraag "welke client is de bron van waarheid voor de context" niet meer gesteld hoeft te worden.</p>
+    <p>Het maakt ook de verbs consistent: een agent die <code>ruimte link</code> doet en direct daarna <code>ruimte-context</code>, ziet zijn eigen lijn. Zou de context via de client lopen, dan zou hij moeten wachten tot een client hem heeft doorgegeven.</p>
+    <h3>De andere drie</h3>
+    <p>Een <code>--tail N</code> op <code>read</code>. De laatste vijftien regels van een buurnode zijn meestal alles wat je wilt weten, en het hele transcript is duur.</p>
+    <p>Een <code>notify</code>-verb voor terminals. Een chat hoort tussen twee turns al dat de context veranderd is, via <code>contextChangeNote</code>. Een terminal-agent hoort niets, want daar is geen moment tussen turns om iets in te schuiven. Dat is hetzelfde gat als roadmap-punt 16 over een lijn die getekend wordt terwijl de shell al draait.</p>
+    <p>Bidirectioneel linken. Vandaag is een edge een richting, en dat is goede informatie. Maar <code>link</code> tussen twee agents wil bijna altijd twee kanten op. Dat kunnen twee edges zijn, en dan moet <code>EdgeLayer</code> ze als één lijn met twee pijlpunten tekenen in plaats van als twee bezier-curves over elkaar.</p>
+  </section>
+
+  <section id="skill">
+    <h2>Geen skill, wel een hint</h2>
+    <p><span class="badge confirmed">Besloten</span> Ruimte schrijft geen <code>SKILL.md</code> en geen instructieblok naar de machine van de gebruiker.</p>
+    <p>Een instructiebestand dat bij elke start naar <code>~/.claude/skills/</code> gaat, plus markerblokken in <code>~/.codex/AGENTS.md</code>, <code>~/.gemini/GEMINI.md</code> en de instructiebestanden van andere CLI's, werkt, en het kost wat je verwacht. Op een host op afstand wordt zo'n bestand alleen bij connect geschreven, dus een verbetering aan de verb-set bereikt een lopend project nooit en niemand merkt dat. En met meerdere accountmappen moet elke map apart bijgewerkt worden, anders mist een sessie de uitleg.</p>
+    <p>Ruimte heeft twee kanalen die dat overbodig maken. Een chat krijgt al een system prompt van ons mee, via <code>--append-system-prompt</code> of vóór de eerste prompt bij een provider zonder die vlag. Een Claude-terminal krijgt al een antwoord op zijn <code>SessionStart</code>- en <code>UserPromptSubmit</code>-hook, waar vandaag de contexthint in zit. Daar past de regel over de verbs bij, en <code>ruimte help</code> is dan de documentatie.</p>
+    <p>Dat levert drie dingen op. De tekst kan niet verouderen, want hij komt uit de verb-registry. Hij kost niets in de system prompt tot het model hem opvraagt. En hij is er ook op een machine op afstand, omdat hij met de daemon meereist in plaats van met een installatiestap.</p>
+    <p>De hint moet het dan wel alleen doen. Een geïnstalleerde skill heeft een <code>description</code> die een model uit zichzelf laat kijken; een regel in de system prompt heeft die machinerie niet. Ik denk dat het genoeg is, omdat de regel bij elke turn aanwezig is en de verbs iets doen dat het model zelf al wil. Blijkt dat niet zo, dan is de reparatie de tekst van die ene regel, niet een bestand in iemands <code>$HOME</code>.</p>
+  </section>
+
+  <section id="grenzen">
+    <h2>Grenzen</h2>
+    <p>De set heeft geen enkele verb die iets weggooit, en dat is de belangrijkste grens. Alles is toevoegen of hernoemen, de mens heeft undo op het canvas, en er is geen pad waarlangs een agent werk kan vernietigen dat hij niet zelf gemaakt heeft.</p>
+    <div class="table" role="region" aria-label="Grenzen en wat ze tegenhouden" tabindex="0">
+      <table class="wide">
+        <thead><tr><th scope="col">Grens</th><th scope="col">Waar hij zit</th><th scope="col">Wat hij tegenhoudt</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Alleen id's, nooit titels</th><td>De verb-parser</td><td>Een agent die zijn node hernoemt naar de titel van een ander en zo een actie laat mislanden</td></tr>
+          <tr><th scope="row">Een <code>cwd</code> ligt binnen de projectmap of een worktree ervan</th><td>Waar de node gemaakt wordt</td><td>Een agent die zichzelf een sessie geeft buiten het project waar de mens hem voor opende</td></tr>
+          <tr><th scope="row">Alleen de eigen view, tenzij <code>--view</code> een view van het eigen project noemt</th><td>De opzoeking van de node-id in de open projecten</td><td>Schrijven in een ander project. Cross-project is nu geen feature, en ik zou hem pas toevoegen als iemand ernaar vraagt</td></tr>
+          <tr><th scope="row">Geen <code>write</code>, <code>close</code> of <code>delete</code></th><td>De verb-set</td><td>Zowel verlies als een blokkerende dialoog</td></tr>
+          <tr><th scope="row">Een cap op aantallen</th><td>Per verb: 8 rollen, een plafond op nodes per turn</td><td>Een agent in een lus die honderd nodes maakt voordat iemand kijkt</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>Waar ik niet gerust op ben</h3>
+    <p>De gelezen context is onvertrouwde invoer. Een agent leest het transcript van een buurnode, dat kan webinhoud bevatten, en diezelfde agent mag nu ook nodes maken. Dat is de bekende combinatie. Voor een terminal-agent is de extra macht klein, want die kon al elk commando draaien. Voor een chat-agent met beperkte tools is hij dat niet, en daar is de <code>cwd</code>-grens het enige dat echt houdt.</p>
+    <p>Een gat dat ik niet wil openen: een verb als <code>open-terminal --cmd</code> vraagt niemand iets, terwijl het een willekeurig commando start. Zo'n verb maakt van een lek in de tokens een uitvoering van code. Ik zou <code>--cmd</code> in de eerste ronde helemaal weglaten en <code>agent</code> de enige manier maken om iets te starten.</p>
+    <p>Een tweede punt: een agent die <code>team</code> gebruikt maakt agents die zelf weer <code>team</code> kunnen gebruiken. Een diepte-limiet hoort in de eerste versie, niet in een latere.</p>
+  </section>
+
+  <section id="plan">
+    <h2>Plan</h2>
+    <ol class="steps">
+      <li class="step"><div>
+        <h3>De context naar de daemon</h3>
+        <p><code>deriveContextSources</code> naar <code>packages/contracts</code>, de daemon leidt de bronnen af uit het document dat hij al heeft, <code>context.set</code> en de sync-module in de client verdwijnen.</p>
+        <p>Klaar als een verse project-load de contexthint boven de eerste prompt betrouwbaar toont, wat vandaag de race is die soms verloren wordt, en als de chip in de node-header hetzelfde blijft doen.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>De verb-registry en drie verbs</h3>
+        <p>Eén registry met de validatie en de helptekst in hetzelfde object, <code>POST /canvas/&lt;verb&gt;</code> naast <code>/context</code>, <code>apps/server/bin/ruimte</code>, en dan <code>help</code>, <code>list</code> en <code>node</code>.</p>
+        <p>Klaar als een agent in een terminal <code>ruimte node note --text "..."</code> draait en de note op het canvas van elke open client verschijnt, en ook als er geen client verbonden is.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>De additieve merge</h3>
+        <p>De client neemt onbekende node-, edge- en view-id's over zonder zijn eigen dirty state te verliezen, en valt alleen bij echte overlap terug op de conflictdialoog.</p>
+        <p>Klaar als een agent een node maakt terwijl de mens een andere node sleept, en niemand een dialoog ziet.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Agents openen agents</h3>
+        <p><code>agent</code> en <code>link</code>, met de pending prompt in de daemon en de edge terug naar de aanroeper. Daarna <code>team</code> met de diepte-limiet.</p>
+        <p>Klaar als een chat drie agents opent die elk beginnen te werken, en de aanroeper hun werk kan teruglezen met <code>ruimte-context</code> zonder dat er iets gelinkt hoefde te worden.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Views, en tonen</h3>
+        <p><code>view</code>, <code>open</code> als event naar de workspace van de aanroeper met een toast met "terug", <code>group</code>, <code>arrange</code> en <code>rename</code>.</p>
+        <p>Klaar als een agent een tweede canvas maakt, er werk op zet, en de mens dat te zien krijgt met een weg terug naar waar hij was.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>De gaten in de context</h3>
+        <p><code>--tail</code> op <code>read</code>, <code>notify</code> voor terminal-agents, en de bidirectionele link met één lijn en twee pijlpunten in <code>EdgeLayer</code>.</p>
+        <p>Klaar als een lijn die getekend wordt terwijl een shell al draait, in die shell te merken is.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <section id="prompt">
+    <h2>Startprompt</h2>
+    <p>Voor een schone sessie die fase 1 en 2 bouwt. De rest van het plan volgt daarna, met dezelfde vorm en een andere fase erin.</p>
+    <p><button type="button" class="interactive-only" id="copy-prompt" data-static>Kopieer de prompt</button> <span class="caption" id="copy-state" role="status"></span></p>
+    <pre id="prompt-text"><code>Je gaat in Ruimte de agent-besturing van het canvas bouwen. Lees eerst, in deze volgorde:
+
+- CLAUDE.md en README.md
+- docs/reports/2026-09-11-agents-op-het-canvas.html, het ontwerp dat je uitvoert
+- docs/DECISIONS.md, roadmap-punt 6
+- apps/server/src/context/ (context-store.ts, context-note.ts), apps/server/src/cli/context.ts,
+  apps/server/bin/ruimte-context
+- apps/client/src/context/sources.ts en sync.ts
+- apps/server/src/projects/project-store.ts en packages/contracts/src/project.ts
+
+Bouw fase 1 en fase 2, en stop daarna voor bevestiging.
+
+FASE 1, de context naar de daemon.
+Verplaats deriveContextSources naar packages/contracts. De daemon leidt de contextbronnen af
+uit het document dat hij al in geheugen heeft, in plaats van ze van de client te krijgen.
+context.set en apps/client/src/context/sync.ts verdwijnen. De chip in de node-header blijft
+hetzelfde doen. De contexthint boven de eerste prompt van een verse shell moet daarna
+betrouwbaar zijn; die race staat nu als bekend gat in docs/DECISIONS.md.
+
+FASE 2, de eerste verbs.
+Een verb-registry waarin de validatie en de helptekst in hetzelfde object staan.
+POST /canvas/&lt;verb&gt; naast /context, op dezelfde poort en met dezelfde bearer per sessie.
+apps/server/bin/ruimte als sh-shim naast ruimte-context, op dezelfde manier: het gecompileerde
+binary als dat ernaast staat, anders bun src/main.ts.
+De verbs help, list en node.
+
+INVARIANTEN, niet onderhandelbaar.
+- De daemon voert de verb uit, nooit de client. Het werkt met nul verbonden clients.
+- targetForToken geeft de node-id. Die node-id opzoeken in de open projecten geeft het project
+  en de view waar de verb in landt. Staat de node in geen open project, dan weigert de verb.
+- Alleen id's als selector, nooit titels.
+- Een cwd ligt binnen de projectmap of een worktree daarvan.
+- Het antwoord is tab-gescheiden regels, geen proza. Een weigering heeft een eigen exitcode.
+- help wordt gerenderd uit de registry, zodat hij niet kan verouderen.
+
+NIET BOUWEN: write, close, delete, browserbesturing, kanban, worktree-verbs, en geen --cmd
+waarmee een verb een willekeurig commando start.
+
+KLAAR IS: bun run format en bun run check schoon, tests naast de code die je aanraakt, en een
+handmatige controle waarin `ruimte node note --text "..."` vanuit een terminal-node een note op
+het canvas van elke open client zet, ook als je daarna een tweede client opent.
+
+Maak eerst een kort plan en wacht op mijn akkoord voordat je code schrijft.</code></pre>
+    <script>
+      document.getElementById('copy-prompt').addEventListener('click', async (event) => {
+          const button = event.currentTarget;
+          const state = document.getElementById('copy-state');
+          try {
+              await navigator.clipboard.writeText(document.getElementById('prompt-text').innerText);
+              state.textContent = 'Gekopieerd.';
+          } catch {
+              state.textContent = 'Kopieren lukte niet, selecteer de tekst hieronder.';
+          }
+      });
+    </script>
+  </section>
+
+  <section id="open">
+    <h2>Open vragen</h2>
+    <p>Hoe vaak is de client echt <code>dirty</code>? Daar hangt aan of stap 3 nodig is of dat de bestaande conflictafhandeling volstaat. Een teller op de save-lus tijdens normaal gebruik beantwoordt dat in een middag, en het antwoord kan stap 3 schrappen.</p>
+    <p>Moet <code>open</code> de view echt wisselen, of alleen een chip laten oplichten die de mens zelf aanklikt? Ik neig naar wisselen met undo, omdat je een agent nu eenmaal vraagt iets te laten zien. Maar met twee workspaces naast elkaar wordt dat een andere vraag, en die layout komt eraan.</p>
+    <p>Wat gebeurt er met een node die een agent maakt in een project dat daarna gesloten wordt? Sluiten beëindigt vandaag de sessies van de nodes van het project, achter een bevestiging die ze telt. Een agent die op dat moment nog aan het spawnen is, moet dat netjes te horen krijgen in plaats van een halve group achter te laten.</p>
+    <p>En de naam. <code>ruimte-context</code> blijft read-only en <code>ruimte</code> krijgt de verbs, wat betekent dat er twee namen op de PATH staan die verschillende dingen doen. Dat is te verdedigen, maar <code>ruimte context list</code> naast <code>ruimte node</code> is misschien eerlijker, met <code>ruimte-context</code> als het scriptje dat blijft bestaan voor wie het al gewend is.</p>
+  </section>
+</main>
+<footer><p>Geschreven na een leesronde door de codebase op 11 september 2026. De uitspraken over Ruimte zijn gecontroleerd tegen <code>ab3a1f6</code>, met bestandspaden in de tekst. Er is niets gemeten en niets gebouwd: de cijfers in de samenvatting zijn tellingen uit de code, geen prestaties.</p></footer>
+</body>
+</html>

@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Automatische titels voor chats</title>
+<style>
+:root {
+  color-scheme: light;
+  --accent: #3f38b5;
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --image-outline: rgb(0 0 0 / 10%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { min-width: 480px; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--muted); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide, .plot { min-width: 0; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#advies">Naar de aanbeveling</a>
+<header>
+  <p class="eyebrow">Ruimte / Onderzoek / 11 september 2026</p>
+  <h1>Automatische titels voor chats</h1>
+  <p class="intro">Claude Code genereert al een titel voor elke sessie, ook in de stream-json modus die Ruimte gebruikt, maar schrijft hem alleen naar zijn eigen transcript en nooit naar de stream. Die titel meelezen kost niets extra en staat er binnen zes seconden. Codex genereert ook een naam, maar alleen in zijn TUI en alleen in SQLite, dus voor de andere CLI's is een eigen one-shot call nodig.</p>
+  <p class="status">Onderzoek, niets gebouwd</p>
+  <p class="caption">Gemeten op deze machine tegen Claude Code 2.1.269 en codex-cli 0.154.0. Codebase op <code>e362c6b</code>. Alle metingen staan onder <a href="#metingen">Metingen</a>.</p>
+  <nav aria-label="Inhoud">
+    <a href="#advies">Aanbeveling</a>
+    <a href="#nu">Hoe het nu werkt</a>
+    <a href="#cli">Wat de CLI's doen</a>
+    <a href="#metingen">Metingen</a>
+    <a href="#routes">Drie routes</a>
+    <a href="#ontwerp">Voorgesteld ontwerp</a>
+    <a href="#prompt">Prompt</a>
+    <a href="#open">Open vragen</a>
+  </nav>
+</header>
+<main>
+  <section id="advies" class="recommendation">
+    <h2>Aanbeveling</h2>
+    <p>Combineer drie lagen, in deze volgorde van kosten.</p>
+    <ul>
+      <li><strong>Meteen:</strong> <code>deriveNodeTitle</code> uit de eerste prompt, zoals nu. Nul latency, nul kosten, en het antwoord als al het andere faalt.</li>
+      <li><strong>Na een paar seconden:</strong> de titel die Claude Code zelf al schrijft, gelezen uit zijn transcript. Geen extra tokens, geen tweede proces, en een reader die de daemon grotendeels al heeft staan voor usage.</li>
+      <li><strong>Op verzoek of voor CLI's zonder eigen titel:</strong> één one-shot call langs hetzelfde pad als <code>git.suggestMessage</code>. Kost ongeveer zeven seconden en een paar honderd tokens per titel.</li>
+    </ul>
+    <p>De regel uit <code>docs/DECISIONS.md</code> blijft staan: een titel die een mens typte (<code>titleSource: 'user'</code>) wordt nooit overschreven. Wat nu open is, is of een gegenereerde titel een eerder afgeleide titel mag vervangen. Dat vraagt een derde waarde naast <code>'auto'</code> en <code>'user'</code>, of een expliciete regel dat de laatste automatische bron wint.</p>
+    <p>Dezelfde transcript-reader lost meteen het punt op dat in <code>docs/DECISIONS.md</code> als niet gebouwd staat: een terminal-agent kan zijn naam niet volgen omdat de hooks geen naam dragen. De hook draagt wel <code>transcript_path</code>, en in dat bestand staat de titel.</p>
+  </section>
+
+  <section id="nu">
+    <h2>Hoe de titel nu ontstaat</h2>
+    <p>De titel is documentstate, geen chatstate. Hij staat in <code>project.json</code> op de node (<code>title</code>) of op de view (<code>name</code>), samen met <code>titleSource</code>, en nergens in <code>ChatInfo</code> of in een <code>chat.event</code>. De daemon schrijft hem niet, de client wel.</p>
+    <div class="table" role="region" aria-label="Bronnen van de huidige titel" tabindex="0">
+      <table class="wide">
+        <caption>De drie bronnen die vandaag een chattitel zetten, met de plek waar dat gebeurt</caption>
+        <thead><tr><th scope="col">Bron</th><th scope="col">Wat hij zet</th><th scope="col">Waar</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Aanmaken</th><td>De naam van de CLI uit de catalogus, of <code>New chat</code></td><td><code>apps/client/src/agents/nodes.ts:21</code>, <code>state/canvas.ts:205</code></td></tr>
+          <tr><th scope="row">Eerste prompt</th><td>Eerste regel van de prompt, afgekapt rond 48 tekens op een woordgrens, eenmalig, <code>titleSource: 'auto'</code></td><td><code>chat/title.ts:12</code>, aangeroepen in <code>nodes/ChatBody.tsx:56</code></td></tr>
+          <tr><th scope="row">Een mens</th><td>Vrije tekst, <code>titleSource: 'user'</code>, en niets overschrijft dat nog</td><td><code>canvas/NodeFrame.tsx:95</code>, <code>shell/Sidebar.tsx:160</code>, <code>shell/ViewDialogs.tsx:33</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Alle drie komen uit op één functie: <code>renameHost(id, title, source)</code> in <code>apps/client/src/nodes/node-host.ts:71</code>, die zelf kiest tussen <code>useCanvas.renameNode</code> en <code>useDocument.renameView</code>. Een node op het canvas en een standalone chatview lopen dus door hetzelfde gat, en dat is waar een gegenereerde titel binnen zou komen.</p>
+    <p>Wat er misgaat met de huidige regel is zichtbaar in echte sessies: een prompt die begint met "In dit project hebben we browsers en webviews. Kun je eens uitzoeken of ..." levert een titel op die de eerste 48 tekens van die aanloop toont, terwijl het gesprek over iets anders bleek te gaan.</p>
+  </section>
+
+  <section id="cli">
+    <h2>Wat de CLI's zelf genereren</h2>
+    <p>Het korte antwoord op de vraag: ja, Claude Code en Codex maken allebei een titel, en geen van beide zet hem op een stream die Ruimte al leest.</p>
+    <div class="table" role="region" aria-label="Titelgeneratie per CLI" tabindex="0">
+      <table class="wide">
+        <caption>Titelgeneratie per CLI, zoals aangetroffen op deze machine</caption>
+        <thead><tr><th scope="col">CLI</th><th scope="col">Genereert zelf?</th><th scope="col">Waar het terechtkomt</th><th scope="col">Bereikbaar voor Ruimte</th></tr></thead>
+        <tbody>
+          <tr>
+            <th scope="row">Claude Code</th>
+            <td><span class="badge confirmed">Ja</span></td>
+            <td>Record <code>{"type":"ai-title","aiTitle","sessionId"}</code> in het transcript onder <code>~/.claude/projects</code></td>
+            <td>Ja, door het transcript te lezen. De daemon kent de <code>agentSessionId</code> uit het init-frame en die is de bestandsnaam.</td>
+          </tr>
+          <tr>
+            <th scope="row">Codex</th>
+            <td><span class="badge warning">Alleen in de TUI</span></td>
+            <td><code>threads.name</code> in <code>~/.codex/state_5.sqlite</code> en <code>thread_name</code> in <code>session_index.jsonl</code></td>
+            <td>Onzeker. Niet in de rollout-jsonl en niet in <code>codex exec --json</code>. Of Ruimte's chatmodus die naam laat schrijven is niet gemeten.</td>
+          </tr>
+          <tr>
+            <th scope="row">Gemini, Copilot</th>
+            <td><span class="badge danger">Nee, of niet vast te stellen</span></td>
+            <td>Gemini CLI staat niet op deze machine; <code>~/.gemini</code> bevat alleen instellingen</td>
+            <td>Nee. Beide openen in Ruimte sowieso alleen als terminal.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p><span class="badge confirmed">Gemeten</span> Het oude <code>{"type":"summary"}</code>-record bestaat niet meer: nul treffers over 1232 transcripts. Wie ooit op dat formaat bouwde, bouwde op iets dat inmiddels weg is. Dat is meteen het grootste risico van deze route.</p>
+    <p><span class="badge info">Belangrijk onderscheid</span> Bij Codex is <code>threads.title</code> géén AI-titel maar de afgekapte eerste prompt, precies wat Ruimte nu zelf doet. Alleen <code>threads.name</code> is gegenereerd, en die staat bij 63 van de 326 threads.</p>
+    <details open>
+      <summary>Bewijs: het record dat Claude Code schrijft</summary>
+      <p class="caption">Uit transcripts onder <code>~/.claude/projects</code>, Claude Code 2.1.269.</p>
+      <pre><code>{"type":"ai-title","aiTitle":"Chat titels automatisch genereren","sessionId":"31ae8677-..."}
+{"type":"custom-title","customTitle":"worker","sessionId":"36bf3a3a-..."}</code></pre>
+      <p>Geen timestamp, geen <code>leafUuid</code>. Het record wordt bij elke prompt opnieuw toegevoegd, maar de waarde veranderde binnen een sessie in geen van de gecontroleerde bestanden. De positie in het bestand varieert: soms regel 1, soms ergens na de eerste prompt. Een lezer moet dus het hele bestand scannen en de laatste waarde nemen, niet de tail.</p>
+      <p>In de binary staan de symbolen <code>generateSessionTitle</code>, <code>saveAiGeneratedTitle</code> en <code>writeSessionTitleSidecar</code>, met een <code>json_schema</code> die één veld <code>title</code> vraagt, plus een minimumlengte-gate waardoor een heel korte prompt geen titel oplevert. Welk model dat doet is niet vastgesteld.</p>
+    </details>
+    <details open>
+      <summary>Bewijs: geen titel in het stream-json vocabulaire</summary>
+      <p class="caption"><code>apps/server/src/chat/claude-protocol.ts:77</code> en de system-subtypes uit de CLI-binary.</p>
+      <pre><code>frame.type:    system | stream_event | assistant | user | result
+               control_request | control_cancel_request | tool_progress | rate_limit_event
+system.subtype: init | task_started | task_progress | task_notification | compact_boundary
+                informational | status | notification | model_fallback | permission_denied
+                session_state_changed | turn_starting | turn_duration | task_summary | ...</code></pre>
+      <p>Geen subtype draagt een sessietitel; <code>task_summary</code> gaat over een subagent-taak. Ook de Codex-kant (<code>codex-protocol.ts</code>) kent alleen thread-, turn- en item-events. Dat betekent dat meelezen uit een bestand moet, of dat je zelf iets aanroept.</p>
+    </details>
+  </section>
+
+  <section id="metingen">
+    <h2>Metingen</h2>
+    <div class="stats">
+      <div><strong>313</strong><span>van 417 Claude-transcripts met een <code>ai-title</code></span></div>
+      <div><strong>5,9 s</strong><span>tot de titel op schijf stond, in een run van 30,9 s</span></div>
+      <div><strong>7,1 s</strong><span>gemiddelde van een eigen one-shot call, 3 runs</span></div>
+      <div><strong>0</strong><span>titel-events in het stream-json protocol</span></div>
+    </div>
+    <h3>Verschijnt de titel op tijd?</h3>
+    <p>Een <code>claude -p</code> proces met een prompt die 30,9 s aan werk opleverde, terwijl een pollende lus elke halve seconde naar het transcript keek. Het <code>ai-title</code>-record stond er na 5,9 s, ruim voordat het proces klaar was. De titel was "Canvas-applicatie sessietitels afleiden". Dit is één meting, geen serie.</p>
+    <h3>Geldt dat ook voor de modus die Ruimte gebruikt?</h3>
+    <p>Ja. Ruimte start chats als <code>claude -p --output-format stream-json --input-format stream-json</code> (<code>apps/server/src/providers/claude.ts:4</code>). Van de zeven chats in <code>~/.ruimte/chats</code> met een <code>agentSessionId</code> hebben er vijf een <code>ai-title</code> in hun transcript, met leesbare namen als "Agent bestandslinken file preview" en "Meerdere Claude/Codex accounts". De twee zonder titel zijn korte sessies van 9 en 10 september (37 en 38 regels). Ook drie losse <code>-p</code>-probes die ik startte kregen alle drie een titel.</p>
+    <details open>
+      <summary>Bewijs: titels van drie one-shot probes</summary>
+      <p class="caption">Drie <code>claude -p --model haiku</code> runs in een lege map, transcript daarna gelezen en de map opgeruimd.</p>
+      <pre><code>0fd38402  regel 1  'Automatisch genereren chattitels canvas-app'
+1e1b09ed  regel 1  'AI-chatsessies automatisch titelen'
+4d24240a  regel 1  'Chattitels automatisch genereren canvas'</code></pre>
+      <p>Dit weerlegt de aanname dat alleen interactieve sessies een titel krijgen. Het zegt niets over subagent-transcripts: van 815 bestanden onder <code>*/subagents/</code> heeft er geen één een titel.</p>
+    </details>
+    <h3>Wat kost een eigen call?</h3>
+    <p>Drie keer <code>claude -p "..." --model haiku --output-format text</code> vanaf een koude shell: 7,5 s, 7,4 s en 6,4 s wall clock, waarvan ongeveer 0,8 s CPU. De rest is procesopstart en API-latency. De antwoorden waren bruikbare titels van vier tot vijf woorden. Niet gemeten: hetzelfde met <code>--bare</code>, dat hooks, plugin-sync en CLAUDE.md-discovery overslaat en dus sneller hoort te zijn.</p>
+    <p class="note">De 7,1 s is de vertraging voor een titel die je zelf opvraagt, niet voor het gesprek. De gebruiker ziet in die tijd de afgeleide titel staan. Voor een hertitel-knop is dat prima; als achtergrondstap bij elke nieuwe chat is het een tweede proces van 200 MB naast het chatproces.</p>
+  </section>
+
+  <section id="routes">
+    <h2>Drie routes</h2>
+    <div class="split">
+      <div class="panel">
+        <h3>A. Transcript meelezen</h3>
+        <p>De daemon zoekt <code>~/.claude/projects/*/&lt;agentSessionId&gt;.jsonl</code>, leest de laatste <code>ai-title</code> en stuurt hem naar de client.</p>
+        <p><span class="badge confirmed">Gratis</span> Geen extra tokens, geen tweede proces. De titel bestaat al.</p>
+        <p><span class="badge warning">Ongedocumenteerd</span> Het formaat kan veranderen; <code>summary</code> is al verdwenen. Alleen Claude.</p>
+      </div>
+      <div class="panel">
+        <h3>B. Zelf een one-shot call</h3>
+        <p>Zoals <code>git.suggestMessage</code>: <code>registry.oneShotProvider</code>, <code>oneShotArgs(prompt)</code>, JSON terug, timeout en annuleren via <code>actionId</code>.</p>
+        <p><span class="badge confirmed">Werkt overal</span> Elke CLI met een print-modus, en het blijft binnen de regel "geen SDK".</p>
+        <p><span class="badge warning">Kost iets</span> Ongeveer 7 s en een paar honderd tokens, zichtbaar in de usage-cijfers.</p>
+      </div>
+    </div>
+    <h3>C. Laten zoals het is</h3>
+    <p>De eerste prompt afkappen kost niets en staat er meteen. Het faalt precies daar waar een titel het meest waard is: bij een lange aanloop, bij een prompt die begint met context, en bij een gesprek dat onderweg ergens anders over gaat.</p>
+    <div class="table" role="region" aria-label="Vergelijking van de routes" tabindex="0">
+      <table class="wide">
+        <caption>De routes naast elkaar, op de eigenschappen die de keuze bepalen</caption>
+        <thead><tr><th scope="col">Eigenschap</th><th scope="col">A. Meelezen</th><th scope="col">B. Eigen call</th><th scope="col">C. Huidig</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Tijd tot titel</th><td>ongeveer 6 s</td><td>ongeveer 7 s</td><td>direct</td></tr>
+          <tr><th scope="row">Tokenkosten</th><td>geen</td><td>een paar honderd per titel</td><td>geen</td></tr>
+          <tr><th scope="row">Kwaliteit</th><td>de titel van de CLI zelf, over het hele gesprek</td><td>stuurbaar via de prompt</td><td>de eerste regel van de eerste prompt</td></tr>
+          <tr><th scope="row">Dekking</th><td>Claude, en terminal-agents via <code>transcript_path</code></td><td>elke CLI met <code>oneShotArgs</code></td><td>elke chat</td></tr>
+          <tr><th scope="row">Breekbaarheid</th><td>hangt aan een ongedocumenteerd recordtype</td><td>hangt aan een CLI-vlag die al gebruikt wordt</td><td>geen</td></tr>
+          <tr><th scope="row">Nieuw op de wire</th><td>een veld of event van daemon naar client</td><td>een request en reply, zoals git</td><td>niets</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="ontwerp">
+    <h2>Voorgesteld ontwerp</h2>
+    <figure class="panel">
+      <div class="table" role="region" aria-label="Weg van de titel, horizontaal scrollbaar" tabindex="0">
+        <svg class="diagram plot" viewBox="0 0 900 190" role="img" aria-labelledby="flow-title flow-description">
+          <title id="flow-title">De weg van een gegenereerde titel</title>
+          <desc id="flow-description">Het CLI-proces schrijft een titel in zijn transcript. De daemon leest die op de sessie-id en stuurt hem als veld op de chat-info. De client zet hem via renameHost op de node of de view, waarna hij in het projectbestand staat.</desc>
+          <defs><marker id="flow-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0 0 L8 4 L0 8 Z"/></marker></defs>
+          <rect class="node" x="10" y="45" width="190" height="80" rx="12"/>
+          <rect class="node" x="245" y="45" width="190" height="80" rx="12"/>
+          <rect class="node" x="480" y="45" width="190" height="80" rx="12"/>
+          <rect class="node" x="715" y="45" width="175" height="80" rx="12"/>
+          <path class="edge" d="M200 85 H233" marker-end="url(#flow-arrow)"/>
+          <path class="edge" d="M435 85 H468" marker-end="url(#flow-arrow)"/>
+          <path class="edge" d="M670 85 H703" marker-end="url(#flow-arrow)"/>
+          <text x="105" y="80" text-anchor="middle">CLI-proces</text>
+          <text x="105" y="102" text-anchor="middle">schrijft ai-title</text>
+          <text x="340" y="80" text-anchor="middle">daemon leest</text>
+          <text x="340" y="102" text-anchor="middle">op sessie-id</text>
+          <text x="575" y="80" text-anchor="middle">chat.event info</text>
+          <text x="575" y="102" text-anchor="middle">suggestedTitle</text>
+          <text x="802" y="80" text-anchor="middle">renameHost</text>
+          <text x="802" y="102" text-anchor="middle">'auto'</text>
+          <text x="105" y="160" text-anchor="middle" font-size="13">transcript jsonl</text>
+          <text x="340" y="160" text-anchor="middle" font-size="13">usageRoots kent de map al</text>
+          <text x="575" y="160" text-anchor="middle" font-size="13">bestaand kanaal</text>
+          <text x="802" y="160" text-anchor="middle" font-size="13">project.json</text>
+        </svg>
+      </div>
+      <figcaption>De titel komt binnen op precies de plek waar <code>ChatBody.tsx</code> nu <code>deriveNodeTitle</code> aanroept, achter dezelfde poort die kijkt of iemand de node al genoemd heeft.</figcaption>
+    </figure>
+    <ol class="steps">
+      <li class="step"><div>
+        <h3>Een titel-lezer in de daemon</h3>
+        <p>Eén module die bij een <code>agentSessionId</code> het transcript vindt en het laatste <code>ai-title</code>-record teruggeeft, met <code>null</code> als er niets staat. <code>usageRoots()</code> in <code>apps/server/src/usage/roots.ts</code> weet al waar die map is, dus het pad hoeft niet opnieuw geraden te worden.</p>
+        <p>Klaar wanneer: een unit test met een transcript-fixture de laatste titel teruggeeft, en een bestand zonder record netjes <code>null</code> oplevert.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>De titel op de chat-info zetten</h3>
+        <p>Een veld op <code>ChatInfo</code> (bijvoorbeeld <code>suggestedTitle</code>), gevuld zodra het init-frame de sessie-id geeft en daarna bij het afsluiten van een turn opnieuw gecontroleerd. Dat rijdt mee op <code>chat.event</code> met <code>info</code> en vraagt geen nieuw event.</p>
+        <p>Klaar wanneer: een chat die een tweede turn draait een nieuwe waarde doorgeeft zonder dat de client opnieuw vraagt.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>De client laten hernoemen</h3>
+        <p>In <code>ChatBody.tsx</code>, naast de bestaande <code>deriveNodeTitle</code>-stap: is <code>titleSource</code> niet <code>'user'</code> en is er een voorstel, dan <code>renameHost(id, suggestion, 'auto')</code>. Een rename die niets verandert telt in de store al niet als bewerking, dus een herhaald voorstel maakt het project niet vuil.</p>
+        <p>Klaar wanneer: een nieuwe chat eerst de afgeleide titel toont en die binnen enkele seconden vervangt door de gegenereerde, terwijl een zelf getypte titel blijft staan.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Hetzelfde voor terminal-agents</h3>
+        <p>De hooks dragen <code>transcript_path</code>, dus de reader uit stap 1 werkt daar zonder te zoeken. Dat sluit het punt in <code>docs/DECISIONS.md</code> dat een terminal-agent zijn naam niet kan volgen.</p>
+        <p>Klaar wanneer: een Claude-node die als terminal draait na de eerste prompt een leesbare naam krijgt.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Pas daarna de eigen call</h3>
+        <p>Een <code>chat.suggestTitle</code>-request naar het model van <code>git.suggestMessage</code>, voor CLI's zonder eigen titel en voor een menu-item "Titel opnieuw genereren". Dit is de enige stap die tokens kost, en de enige die zonder de andere vier ook op zichzelf werkt.</p>
+        <p>Klaar wanneer: het menu-item op een Codex-chat een titel oplevert en een tweede klik tijdens het wachten de eerste netjes annuleert.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <section id="prompt">
+    <h2>Prompt voor een schone sessie</h2>
+    <p>Alles hieronder staat op zichzelf: het draagt de bevindingen mee die nodig zijn om te bouwen, zodat de sessie die dit oppakt niets opnieuw hoeft uit te zoeken. De laatste regel wijst terug naar dit rapport voor de metingen.</p>
+    <p><button id="copy-prompt" type="button" hidden>Prompt kopiëren</button></p>
+    <pre id="prompt-text"><code>Werk in /Users/bas/Development/Projects/ruimte (Bun workspaces, branch main).
+Lees eerst CLAUDE.md en docs/DECISIONS.md.
+
+Doel: een chatnode krijgt automatisch een leesbare titel uit de inhoud van de
+sessie, in plaats van de afgekapte eerste prompt.
+
+Wat al onderzocht is, niet opnieuw uitzoeken:
+- Claude Code schrijft zelf een titel in zijn transcript: een regel
+  {"type":"ai-title","aiTitle":"...","sessionId":"..."} in
+  ~/.claude/projects/&lt;map&gt;/&lt;sessionId&gt;.jsonl. Dat gebeurt ook in de
+  `-p --output-format stream-json` modus die Ruimte gebruikt. De titel staat er
+  ongeveer zes seconden na de eerste prompt. De positie in het bestand varieert
+  (soms regel 1) en het record herhaalt zich, dus scan het hele bestand en neem
+  de laatste waarde.
+- Het stream-json protocol draagt geen titel. Er is geen event om mee te lezen,
+  het moet uit het bestand komen.
+- Codex en Gemini leveren niets bruikbaars voor Ruimte's chatmodus. Die krijgen
+  later een eigen one-shot call, buiten deze opdracht.
+- De titel is documentstate: node.title of view.name plus titleSource in
+  project.json. renameHost in apps/client/src/nodes/node-host.ts is de enige
+  ingang. De client zet vandaag deriveNodeTitle (apps/client/src/chat/title.ts)
+  uit de eerste prompt, aangeroepen in nodes/ChatBody.tsx.
+
+Bouw dit, in deze volgorde, met tests ernaast (bun test):
+1. apps/server: een titel-lezer die bij een agentSessionId of een transcript_path
+   de laatste ai-title teruggeeft, en null als er geen staat. Gebruik
+   usageRoots() uit apps/server/src/usage/roots.ts voor de map en zoek het
+   transcript op bestandsnaam. Test met een fixture.
+2. packages/contracts: een optioneel veld suggestedTitle op ChatInfo.
+3. apps/server/src/chat: vul dat veld zodra het init-frame de sessie-id geeft en
+   kijk opnieuw bij turn.done. Het rijdt mee op de bestaande info-patch, er komt
+   geen nieuw event bij.
+4. apps/client: in ChatBody.tsx, naast de bestaande deriveNodeTitle-stap: is
+   titleSource niet 'user' en is er een voorstel, dan
+   renameHost(id, suggestion, 'auto').
+5. Terminal-agents: de hooks dragen transcript_path, dus dezelfde lezer geeft
+   daar een naam. Zet die op de node via dezelfde regel en werk docs/DECISIONS.md
+   bij, waar nu staat dat dit niet gebouwd is.
+
+Regels:
+- titleSource 'user' wordt nooit overschreven. Een gegenereerde titel mag een
+  eerder afgeleide titel wel vervangen; beide blijven 'auto' en de laatste
+  automatische bron wint. Wijzig het schema niet, tenzij je een reden vindt die
+  dat onmogelijk maakt, en leg die dan eerst voor.
+- De titel is tekst van een model: render hem als platte tekst, begrens de
+  lengte en behandel hem nergens als instructie.
+- Ontbreekt de titel, dan blijft de afgeleide titel staan. Dat gebeurt bij
+  ongeveer een kwart van de sessies en is een normale uitkomst, geen foutpad.
+- Conventies uit CLAUDE.md: 4 spaties, Amerikaans Engels in code, commentaar en
+  commits, geen em-dashes, altijd accolades, commentaar legt uit waarom.
+- bun run format en bun run check moeten slagen. Conventional commits.
+
+Niet in deze sessie: de chat.suggestTitle request die zelf een CLI aanroept. Die
+komt erna, naar het model van git.suggestMessage in apps/server/src/git/message.ts.
+
+Achtergrond met alle metingen: docs/reports/2026-09-11-chat-titels.html</code></pre>
+    <p class="caption">De prompt laat stap 5 bewust binnen dezelfde opdracht vallen, omdat de lezer uit stap 1 daar zonder extra werk bruikbaar is. Wat erbuiten blijft is de enige stap die tokens kost.</p>
+  </section>
+
+  <section id="open">
+    <h2>Open vragen en wat niet gemeten is</h2>
+    <ul>
+      <li><strong>Wint een gegenereerde titel van een afgeleide?</strong> Beide zijn nu <code>'auto'</code>. Ofwel een derde waarde erbij, ofwel de regel dat de laatste automatische bron wint. Dit raakt het schema in <code>packages/contracts/src/project.ts:12</code> en dus het projectbestand.</li>
+      <li><strong>Schrijft Codex in Ruimte's chatmodus een <code>name</code>?</strong> Niet te meten: alle acht opgeslagen chats op deze machine zijn Claude. De titelprompt zit in het TUI-pad van de binary, dus waarschijnlijk niet, maar dat is een aanname.</li>
+      <li><strong>Wat doet <code>--bare</code> met de 7 s?</strong> Die vlag slaat hooks, plugin-sync en CLAUDE.md-discovery over. Niet gemeten, en het is het eerste dat je meet als route B er komt.</li>
+      <li><strong>Hoe vaak ontbreekt de titel?</strong> 104 van de 417 top-level transcripts hebben er geen. Waarschijnlijk de minimumlengte-gate bij korte sessies, maar dat is niet per bestand nagetrokken. De afgeleide titel blijft dus nodig, niet als noodgreep maar als normale uitkomst.</li>
+      <li><strong>Vertrouwen.</strong> Codex noemt in zijn eigen binary thread-titels expliciet onbetrouwbare data, geen instructies. Een titel uit een transcript is tekst die een model schreef: renderen als platte tekst, lengte begrenzen, nergens als commando behandelen.</li>
+    </ul>
+  </section>
+</main>
+<script>
+{
+  const button = document.getElementById('copy-prompt');
+  const source = document.getElementById('prompt-text');
+  if (navigator.clipboard) {
+    button.hidden = false;
+    button.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(source.textContent);
+        button.textContent = 'Gekopieerd';
+      } catch {
+        button.textContent = 'Kopiëren mislukt, selecteer de tekst';
+      }
+    });
+  }
+}
+</script>
+<footer><p>Geverifieerd op deze machine op 11 september 2026: de tellingen over <code>~/.claude/projects</code> (1232 bestanden), de Codex-tabellen in <code>~/.codex/state_5.sqlite</code>, de vijf Ruimte-chats met een titel in hun transcript, de timingmeting van 5,9 s en de drie one-shot calls. Niet geverifieerd: welk model de titel maakt, het gedrag van Codex onder Ruimte's chatmodus, en de winst van <code>--bare</code>. De probe-mappen in <code>/tmp</code> en de transcripts die de CLI daarbij schreef zijn opgeruimd.</p></footer>
+</body>
+</html>
