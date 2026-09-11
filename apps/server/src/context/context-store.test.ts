@@ -35,6 +35,14 @@ const get = (path: string, token?: string) =>
     store.handle(new Request(`http://127.0.0.1${path}`, { headers: token ? { authorization: `Bearer ${token}` } : {} }), path);
 
 describe('ContextStore', () => {
+    test('a file answers its path and a line telling the agent to read it itself', async () => {
+        store.set('agent', [{ id: 'node-1', kind: 'file', title: 'README.md', text: '/home/bas/app/README.md' }]);
+        expect(store.list('agent')).toEqual([{ id: 'node-1', kind: 'file', title: 'README.md' }]);
+        const read = await store.read('agent', 'node-1');
+        expect(read).toContain('/home/bas/app/README.md');
+        expect(read).toContain('Read it with your own tools');
+    });
+
     test('lists what the client set, without the text bodies, and reads each kind', async () => {
         store.set('agent', [
             { id: 'note', kind: 'text', title: 'Sprint', text: 'ship it' },

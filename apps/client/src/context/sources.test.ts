@@ -19,9 +19,26 @@ describe('deriveContextSources', () => {
         shell: node('shell', 'terminal'),
         note: node('note', 'note', { title: 'Plan', body: '# Plan\n\nShip it.' }),
         page: node('page', 'browser', { url: 'https://ruimte.app' }),
+        readme: node('readme', 'file', { title: 'README.md', path: 'docs/README.md' }),
+        outside: node('outside', 'file', { title: 'hosts', path: '/etc/hosts' }),
         frame: node('frame', 'group')
     };
     const texts = { t1: { id: 't1', x: 0, y: 0, text: 'First line\nsecond', size: 18 } };
+
+    test('a file is its path on the daemon machine, never its contents', () => {
+        const sources = deriveContextSources(nodes, texts, [{ id: 'e1', from: 'readme', to: 'chat' }], '/home/bas/app');
+        expect(sources.get('chat')).toEqual([{ id: 'readme', kind: 'file', title: 'README.md', text: '/home/bas/app/docs/README.md' }]);
+    });
+
+    test('a file outside the folder keeps the absolute path it was stored with', () => {
+        const sources = deriveContextSources(nodes, texts, [{ id: 'e1', from: 'outside', to: 'chat' }], '/home/bas/app');
+        expect(sources.get('chat')).toEqual([{ id: 'outside', kind: 'file', title: 'hosts', text: '/etc/hosts' }]);
+    });
+
+    test('a file in a project with no folder falls back to what it stored', () => {
+        const sources = deriveContextSources(nodes, texts, [{ id: 'e1', from: 'readme', to: 'chat' }]);
+        expect(sources.get('chat')).toEqual([{ id: 'readme', kind: 'file', title: 'README.md', text: 'docs/README.md' }]);
+    });
 
     test('a note is a text source with its title and body', () => {
         const sources = deriveContextSources(nodes, texts, [{ id: 'e1', from: 'note', to: 'chat' }]);
