@@ -47,6 +47,13 @@ symbol rather than trusting the number.
   way one step back and, on the folders of a machine, carries that machine's dot and label. Switching
   machines resets the path to that machine's start folder. A machine that is not connected is still
   selectable and gets dialed, because our sockets are lazy where theirs are long-lived.
+- Every list opens with a row highlighted, the folders included, so the keyboard walks down without
+  a keystroke to start it. Enter steps into the highlight and Cmd+Enter opens what is in the field,
+  which is the one place this deviates from T3 Code on purpose (3.5).
+- **Where it starts.** In a folder set under Files in settings, one for every machine, and otherwise
+  in the home of the machine being browsed. Never in the folder of the open project: that one is on
+  one machine and is already open. A folder that is not on the machine being browsed falls back to
+  its home, which `fs.browse` answering `exists` is what makes possible.
 - The native Electron dialog is a button in the footer's right slot, shown only in the desktop build
   and only when the machine being browsed is the daemon that served the page.
 - Three commits come out (`58021c5`, `fc9ef57`, `fe7427b`) and three stay (`91d3fa1`, `f549b05`,
@@ -526,10 +533,28 @@ Three things get you there:
 
 **Which step it opens on.** With more than one machine known it opens on the Machines step (3.6),
 with the field empty and the first row highlighted. With one machine there is nothing to choose, so
-it opens straight on that machine's folders, with the field carrying the start path: the open
-project's folder when there is one on that machine, else that machine's home, which is
-`startFolder(folder, home, sep)` from 4.2. T3 Code skips their environment step in exactly that
-case. They read a configured base directory first; we have no such setting and are not adding one.
+it opens straight on that machine's folders. T3 Code skips their environment step in exactly that
+case.
+
+**Where the folders open.** In the folder set in settings, and otherwise in the home of the machine
+being browsed. Not in the folder of the open project, which is what the first two builds did: that
+folder is on one machine and is already open, and browsing is for finding another one. This is Bas's
+call and it lands where T3 Code already is: their browser opens in `addProjectBaseDirectory`, a
+setting described in their own UI as "Leave empty to use `~/`" (1.8), and we now have the same thing
+under Files in the settings dialog.
+
+It is **one setting for every machine**, not one per machine, because the folder people keep their
+work in tends to have the same name everywhere and a setting per machine would be a list to keep.
+The price is that it can name a folder that is not on the machine being browsed, and the answer to
+that is the field `91d3fa1` added: the first listing is asked for at the configured folder, and when
+`fs.browse` says `exists: false` the palette lists home instead. That is `browseStart` in 4.2 and
+`startBrowsing` in 4.4.
+
+**The field opens empty, and fills with the listing.** Browsing a machine is the one navigation with
+no path behind it, so the palette asks for the start folder itself rather than typing it into the
+field a frame before the folders arrive. The step carries no path, the effect sees that and asks,
+and the path and the first listing land together, which is the same rule every other navigation
+follows (3.7).
 
 **Every step fetches before it commits.** They fetch the starting directory and only then push the
 step and set the text, so the first paint already has folders in it. Stepping into a folder, going
@@ -580,7 +605,8 @@ One group, one row per folder, nothing else, exactly as 1.9 describes it:
 
 - The group label reads **Folders**, which is the word our palette already uses for this section
   (`CommandPalette.tsx:70`). Theirs says "Directories". Same thing, our word.
-- The `..` row is the **first item inside that group**, not above the label, titled exactly `..`
+- The `..` row is the **first item inside that group**, not above the label, and it is the row a
+  fresh list opens highlighted like any other (3.5). Titled exactly `..`
   with a corner-left-up icon in the same slot as the folder icons. Today it carries a trailing hint
   reading "Up one folder"; that hint goes, because their row has nothing in its right slots and this
   is one of the places where ours looks different for no reason.
@@ -638,23 +664,34 @@ already draws.
 
 ### 3.5 Keyboard
 
-Their semantics, which our tree already has most of:
+Their semantics, with one deliberate difference under the table:
 
 | Key | What it does |
 | --- | --- |
 | Any character | Goes into the field. On the folders step it re-browses after the 60 ms debounce, on the machines step it narrows the machines |
-| Down / Up | Move the highlight. On the folders step nothing is preselected, so the first Down takes the first row; on the machines step the first row is already highlighted, as theirs is |
-| Enter, nothing highlighted | Opens the typed path, creating it when it is not there |
-| Enter, a row highlighted | Steps into that folder, or picks that machine, and keeps the palette open |
+| Down / Up | Move the highlight, which every list already has on a row |
+| Enter | Steps into the highlighted folder, or picks the highlighted machine, and keeps the palette open |
+| Enter, nothing highlighted | Opens the typed path, creating it when it is not there. Only an empty list has nothing highlighted, which is exactly the folder that is not there |
 | Cmd+Enter | Opens the typed path whatever is highlighted |
 | Backspace, empty field | One step back, per `browseBack` (3.0): the machines, the folders they came from, or out of browsing |
 | Escape | Closes the palette |
 | Tab | Completes the field to the highlighted folder without stepping in |
 
-Two notes. Nothing being preselected on the folders step is not a detail: it is what makes Enter
-mean "use what I typed". Tab is the one key they leave unused and we already use; it stays, because
-it is in the tree, it costs nothing, and removing a working completion to match an absence is not
-mirroring, it is copying.
+**Every list opens with its first row highlighted, the folders included.** This is a deliberate
+deviation and it is Bas's: T3 Code switches auto-highlight off while browsing, so nothing is
+preselected and Enter means "use what I typed". Here the highlight is what makes the keyboard fast,
+so a fresh folder list always has its first row on, `..` included, and the first Enter steps rather
+than opens. What that costs is the meaning of Enter, and Cmd+Enter takes it over: the chip on the
+button in the field says which of the two it is, and it now reads Cmd+Enter whenever there is a
+folder to step into. The one list with nothing highlighted is an empty one, which is precisely the
+path that is not there, and there Enter creates it.
+
+The machines step opens on the machine the client is pointed at rather than on its first row, which
+is where the work is and usually where the folder being looked for is too.
+
+Tab is the one key they leave unused and we already use; it stays, because it is in the tree, it
+costs nothing, and removing a working completion to match an absence is not mirroring, it is
+copying.
 
 ### 3.6 Machines: where browsing starts, and how you switch
 
@@ -677,19 +714,22 @@ what theirs always is. This is a deliberate deviation: T3 Code shows nothing at 
 browsing `~/projects/` look identical and we have two machines routinely.
 
 **The machines are a step you can come back to.** Clicking that slot, or pressing Backspace on an
-empty field, replaces the folder rows with a **Machines** group: one row per known endpoint, active
-machine first, then the order of `useEndpoints.endpoints`, each with the connection dot, the endpoint
-label as the title and the machine's own label or its status beside it. The field empties and
+empty field, replaces the folder rows with a **Machines** group: one row per known endpoint, the
+daemon that served this page first and then the order of `useEndpoints.endpoints`, each with the
+connection dot, the endpoint label as the title and the machine's own label or its status beside it.
+This machine keeps its place whichever machine is active, because it is the one that is always there
+and the one the list is read against; which machine is active is carried on the row instead, as the
+one the step opens highlighted (3.5). The field empties and
 narrows the rows rather than holding a path, as theirs does. Picking a row goes to that machine's
 folders; stepping back returns to the folders the step was opened from, or leaves browsing when it
 was opened on nothing (`browseBack`, 3.0).
 
-**The typed path resets on a switch.** It becomes that machine's start path, which is the open
-project's folder when that project is on that machine and its home otherwise. This is what they do:
-each environment carries its own initial query and browsing starts there. The reason is stronger for
-us than for them: a path from machine A usually does not exist on machine B, and carrying it over
-would drop you into the "create this folder" state (3.7) on a machine you have just arrived at,
-which is the one state nobody wants by accident.
+**The typed path resets on a switch.** It becomes that machine's start folder (3.1), with the same
+fallback to home when the configured one is not there. This is what they do: each environment
+carries its own initial query and browsing starts there. The reason is stronger for us than for
+them: a path from machine A usually does not exist on machine B, and carrying it over would drop you
+into the "create this folder" state (3.7) on a machine you have just arrived at, which is the one
+state nobody wants by accident.
 
 **A machine that is not connected stays clickable.** They disable such a row and this is the second
 deliberate deviation. Their environments hold long-lived connections, so "not connected" means
@@ -817,8 +857,10 @@ they already have tests. Write them again in a new `apps/client/src/shell/palett
 - `folderPresence(path, result, sep)` and its `FolderPresence` type, the three-state answer
   (`there`, `missing`, `unknown`) that drives the button label in 3.7. `unknown` is what a daemon
   older than `exists` leaves behind.
-- `startFolder(folder, home, sep)`, which is where browsing starts: the folder in hand, else that
-  machine's home.
+- `browseStart(configured, home, sep)`, which is where browsing a machine opens: the folder set in
+  settings, else that machine's home. It answers both, because the caller needs home to fall back to
+  when the daemon says the configured one is not there (3.1). This replaces `startFolder`, which
+  answered the open project's folder first.
 
 The second rewrite adds two more to the same file, the rules of 3.0, because they are the part with
 the actual decisions in them and a component is the one place this project cannot test:
@@ -827,6 +869,8 @@ the actual decisions in them and a component is the one place this project canno
   opens with.
 - `browseBack(step, machineCount)`, the step behind the one browsing is on: `machines`, `folders`
   with the path to go back to, or `palette` for out of browsing altogether.
+- `paletteStart(now, seen)`, what a render has to do about the store: start the palette over, and
+  whether that start is a browse. It is the rule the command not firing turned out to be (4.6).
 
 Do not bring back `breadcrumbOf`, `shortcutsFor`, `Crumb`, `Shortcut` or the recents limit. The
 breadcrumb and the rail are the two things Bas asked to remove.
@@ -878,9 +922,14 @@ Changed, all in `apps/client/src/shell/CommandPalette.tsx` unless noted:
 - `browse: BrowseStep | null` as the palette's own state (3.0), with the listing beside it under the
   machine and path it was asked for. `browseEndpointId` and the machine step both read off it, and
   `browsing` is `browse !== null` rather than a test on the query.
-- `apps/client/src/state/ui.ts`: `paletteBrowse` next to `paletteSeed`, and `openFolderBrowser()`.
-  Both are read once, when the palette opens, and say which step it opens on; which step it is on
-  after that is the palette's own business.
+- `apps/client/src/state/ui.ts`: `paletteBrowseAt` next to `paletteSeed`, and `openFolderBrowser()`,
+  which counts it up. A count and not a flag, for the reason in 4.6. Which step browsing is on after
+  the palette has started is the palette's own business.
+- `startBrowsing(endpointId)` in the palette: the one navigation with no path behind it. It asks the
+  machine for `browseStart`'s `start`, and lists `home` instead when the answer says the start is
+  not there. `pickMachine` and the effect that opens a folders step both go through it.
+- `apps/client/src/state/settings.ts`: `browseStartFolder`, with a field under Files in the settings
+  dialog (3.1). Empty is home.
 - The machine step: a `Machines` section that replaces the folder rows while it is up, narrowed by
   what is typed (3.2).
 - The input row's start slot: the back control, carrying the machine dot and label on the folders of
@@ -931,6 +980,17 @@ keystroke away already.
 - **A daemon older than `exists`.** `folderPresence` answers `unknown`, the button keeps saying
   "Open folder" and a missing folder fails the way it always did. Keep that path; it is the only
   behavior a mixed pair of versions can have.
+- **A command chosen while the palette is already open.** This is the one that got through twice.
+  The palette derives its fresh start from the store while rendering, and the first build read the
+  browse command as a flag on that store. Choosing the command from the palette's own list changes
+  nothing else about the store, because the palette is already open and already in its default mode,
+  so the flag went up and no render ever looked at it again. A count fixes it, and `paletteStart`
+  (4.2) is the rule written down where a test can reach it: opening, a mode changing under an open
+  palette, and the count moving are three ways to start over, and the count moving is the one that
+  also browses.
+- **A start folder that is not on the machine being browsed.** One setting, several machines, so it
+  happens. The fallback to home hangs on `exists`, which a daemon older than `91d3fa1` does not
+  answer; there the start folder is simply listed and an empty one looks like an empty folder.
 - **Muscle memory.** Typing `~/` into Cmd+K has worked since before all of this. It keeps working,
   and now it browses in place instead of opening a second dialog.
 
@@ -940,8 +1000,11 @@ keystroke away already.
   parent of a root, `joinPath` against a directory with and without a trailing separator, the three
   `folderPresence` answers over both branches of the rule (trailing separator, and an exact name
   match that is case-sensitive), `startFolder` with and without a folder in hand, and
-  `browseMachines` ordering the active machine first and marking one that is not connected, plus
-  `openBrowse` on one machine and on several and every branch of `browseBack` (3.0).
+  `browseMachines` putting this machine first whichever one is active, marking the active one and
+  marking one that is not connected,
+  `openBrowse` on one machine and on several, every branch of `browseBack` (3.0), `browseStart` with
+  and without a folder set and without a home to fall back on, and every case of `paletteStart`,
+  the command chosen under an open palette and chosen twice in a row included (4.6).
 - `apps/client/src/project/open.test.ts`: `openFolderOn` on the machine that is already active takes
   the short path, on another machine it activates first and waits for the socket, and on a machine
   that never answers it fails with the timeout's message rather than hanging.
@@ -951,8 +1014,8 @@ keystroke away already.
 
 ## 5. Decisions
 
-Nothing here is open. The first three and the fifth are Bas's; the rest follow from them or were
-settled earlier and still hold. Each one is a small edit if he wants it the other way.
+Nothing here is open. The first three, the fifth and the sixth are Bas's; the rest follow from them
+or were settled earlier and still hold. Each one is a small edit if he wants it the other way.
 
 1. **It lives in the command palette.** Bas, after seeing the built version: if it is in the palette
    at T3 Code, it is in the palette here, and it should work the same. That reverses the first
@@ -969,16 +1032,21 @@ settled earlier and still hold. Each one is a small edit if he wants it the othe
 5. **Browse mode is a step, not a query.** Bas, after seeing the version the first rewrite built:
    opening it should not mean typing `~/` first. T3 Code's browser is a pushed step and the query
    only decides what that step lists, which is 3.0 and what makes the rest of this work.
-6. **Browsing opens on the machines when there are several, on the folders when there is one.** As
+6. **Browsing starts in a folder from settings, else in the home of the machine being browsed.**
+   Bas, after seeing it open in the folder of the project he already had open. One setting for every
+   machine, empty meaning home, and a folder that is not on the machine being browsed falling back
+   to home on the strength of `exists` (3.1). T3 Code has the same setting, per environment and
+   server-side; ours is one for the client, which is the smaller thing that does the same job.
+7. **Browsing opens on the machines when there are several, on the folders when there is one.** As
    T3 Code does, reversing the first rewrite, which argued that the active machine makes the question
    redundant. The active machine is the first row and is highlighted, so the ordinary case is still
    one keypress. The machine stays in view as the leading slot of the field, the path resets on a
    switch, and a machine that is not connected is still clickable and gets dialed (3.6).
-7. **No source step.** Every row of theirs but one is about cloning, which Ruimte cannot do (3.2).
-8. **No hidden-folders toggle**, reversing the first version. T3 Code has none and the daemon's rule
+8. **No source step.** Every row of theirs but one is about cloning, which Ruimte cannot do (3.2).
+9. **No hidden-folders toggle**, reversing the first version. T3 Code has none and the daemon's rule
    is already theirs. The `hidden` flag stays on the daemon without a caller (4.3).
-9. **No Cmd+O**, reversing the first version. T3 Code has no chord of its own for this, the palette
+10. **No Cmd+O**, reversing the first version. T3 Code has no chord of its own for this, the palette
    is one keystroke away, and the chord goes back to the browser.
-10. **The mark on a folder that already holds a canvas stays.** The one row-level thing we show that
+11. **The mark on a folder that already holds a canvas stays.** The one row-level thing we show that
    they do not, kept because it predates all of this and because it says what Enter will do (3.3).
-11. **Tab keeps completing.** The one key they leave unused and our palette already uses.
+12. **Tab keeps completing.** The one key they leave unused and our palette already uses.

@@ -30,12 +30,13 @@ import { appCommands, type Command } from '@/shell/commands';
 import {
     browseBack,
     browseMachines,
+    browseStart,
     endsWithSeparator,
     folderPresence,
     openBrowse,
+    paletteStart,
     parentOf,
     separatorFor,
-    startFolder,
     type BrowseStep
 } from '@/shell/palette-browse';
 import { DEFAULT_GREP_OPTIONS, useGrepSearch, type GrepOptions } from '@/shell/palette-grep';
@@ -162,7 +163,8 @@ export function CommandPalette() {
     const endpoints = useEndpoints((s) => s.endpoints);
     const connected = useOpenEndpoints();
     const activeId = useEndpoints((s) => s.activeId);
-    const wantsBrowse = useUi((s) => s.paletteBrowse);
+    const browseAt = useUi((s) => s.paletteBrowseAt);
+    const browseStartFolder = useSettings((s) => s.browseStartFolder);
     const [query, setQuery] = useState('');
     const [index, setIndex] = useState(0);
     /* Which step of browsing the palette is on, and null when it is not browsing at all. A step of
@@ -189,58 +191,53 @@ export function CommandPalette() {
     const platform = useServers((s) => s.byEndpoint[browseEndpointId]?.platform ?? null);
     const sep = separatorFor(platform);
     const machines = useMemo(() => browseMachines(endpoints, activeId, connected), [endpoints, activeId, connected]);
+    /* The machines list sorts this machine first but opens on the machine the client is pointed at,
+       which is where the work is and usually where the folder being looked for is too. */
+    const activeRow = Math.max(
+        0,
+        machines.findIndex((row) => row.active)
+    );
 
     /* A relative path counts from the open project's folder, and that folder is on one machine. */
     const cwdFor = useCallback((endpointId: string): string | null => (currentEndpointId === endpointId ? folder : null), [currentEndpointId, folder]);
 
-    /* Where browsing a machine opens: the folder of the project open on it, else that machine's home. */
-    const startFolderFor = useCallback(
-        (endpointId: string): string => {
-            const info = serverInfoOf(endpointId);
-            return startFolder(cwdFor(endpointId), info.home, separatorFor(info.platform));
-        },
-        [cwdFor]
-    );
-
     /* Typing never leaves browsing and never empties the list: the field says where you are, the
        step says what you are doing. A path typed in the ordinary palette is the second way in. */
     const reset = (next: string): void => {
-        const step = browse ?? (isPathQuery(next) ? { endpointId: activeId, machines: false, path: next } : null);
         setQuery(next);
-        setBrowse(step);
-        setIndex(step !== null && !step.machines ? -1 : 0);
+        setBrowse(browse ?? (isPathQuery(next) ? { endpointId: activeId, machines: false, path: next } : null));
+        setIndex(0);
         setFailure(null);
     };
 
-    /* A palette that opens, or a mode that changes, starts over: the machine the app is pointed at,
-       nothing of the last browse on screen, and the step whoever opened it asked for. */
+    /* A palette that opens, a mode that changes and the browse command being chosen all start it
+       over: the machine the app is pointed at, nothing of the last browse on screen, and the step
+       that was asked for. A browsing step opens with an empty field, and the effect below asks for
+       its start folder, so the path and the first listing land together. */
     const restart = (next: string, browseNow: boolean): void => {
         setListing(null);
         setFailure(null);
         setDialing(null);
-        const opened = browseNow ? openBrowse(activeId, machines.length, startFolderFor(activeId)) : null;
-        const step: BrowseStep | null = opened?.step ?? (isPathQuery(next) ? { endpointId: activeId, machines: false, path: next } : null);
+        const step: BrowseStep | null = browseNow
+            ? openBrowse(activeId, machines.length)
+            : isPathQuery(next)
+              ? { endpointId: activeId, machines: false, path: next }
+              : null;
         setBrowse(step);
-        setQuery(opened?.query ?? next);
-        setIndex(step !== null && !step.machines ? -1 : 0);
+        setQuery(browseNow ? '' : next);
+        setIndex(step?.machines === true ? activeRow : 0);
     };
 
-    const [seenOpen, setSeenOpen] = useState(false);
+    const signal = { open, mode, browseAt };
+    const [seen, setSeen] = useState(signal);
 
     // Opening is driven by the store, not by the dialog, so the fresh start is derived while rendering.
-    if (open !== seenOpen) {
-        setSeenOpen(open);
-        if (open) {
-            restart(seed, wantsBrowse);
+    const start = paletteStart(signal, seen);
+    if (start.changed) {
+        setSeen(signal);
+        if (start.restart) {
+            restart(seed, start.browse);
         }
-    }
-
-    const [seenMode, setSeenMode] = useState(mode);
-
-    // Switching modes with the palette already up is a fresh start as much as opening it is.
-    if (mode !== seenMode) {
-        setSeenMode(mode);
-        restart(seed, false);
     }
 
     const browsing = !grepping && browse !== null;
@@ -276,6 +273,14 @@ export function CommandPalette() {
      * Every step fetches before it commits, so the path and the list change in the same frame and
      * there is never an empty flash between a click and the folder it opens.
      */
+    const commitBrowse = useCallback((endpointId: string, path: string, answer: BrowseAnswer): void => {
+        setListing({ key: browseKey(endpointId, path), result: answer.result });
+        setFailure(answer.failure);
+        setBrowse({ endpointId, machines: false, path });
+        setQuery(path);
+        setIndex(0);
+    }, []);
+
     const navigateTo = useCallback(
         async (path: string, endpointId: string): Promise<void> => {
             const mine = ++generation.current;
@@ -283,14 +288,43 @@ export function CommandPalette() {
             if (mine !== generation.current) {
                 return;
             }
-            setListing({ key: browseKey(endpointId, path), result: answer.result });
-            setFailure(answer.failure);
-            setBrowse({ endpointId, machines: false, path });
-            setQuery(path);
-            setIndex(-1);
+            commitBrowse(endpointId, path, answer);
         },
-        [cwdFor]
+        [commitBrowse, cwdFor]
     );
+
+    /*
+     * Opening the folders of a machine, which is the one navigation with no path behind it. The
+     * start folder is one setting for every machine, so it may well not be on this one; home is, so
+     * that is where a start folder the daemon says is not there falls back to.
+     */
+    const startBrowsing = useCallback(
+        async (endpointId: string): Promise<void> => {
+            const info = serverInfoOf(endpointId);
+            const { start: from, home } = browseStart(browseStartFolder, info.home, separatorFor(info.platform));
+            const mine = ++generation.current;
+            const answer = await requestBrowse(endpointId, from, cwdFor(endpointId));
+            if (mine !== generation.current) {
+                return;
+            }
+            if (from !== home && answer.result?.exists === false) {
+                await navigateTo(home, endpointId);
+                return;
+            }
+            commitBrowse(endpointId, from, answer);
+        },
+        [browseStartFolder, commitBrowse, cwdFor, navigateTo]
+    );
+
+    useEffect(() => {
+        /* A folders step that has not been anywhere yet is one the palette still has to open. The
+           request goes out here rather than where the step was made, because that is a render.
+           oxlint reads the call as a setState in an effect; every write in it is behind an await. */
+        if (browse === null || browse.machines || query !== '' || listing !== null) {
+            return;
+        }
+        void startBrowsing(browse.endpointId);
+    }, [browse, listing, query, startBrowsing]);
 
     /*
      * A machine that is not connected is usually one nothing has asked for yet, so picking it dials
@@ -309,9 +343,9 @@ export function CommandPalette() {
                 return;
             }
             setDialing(null);
-            await navigateTo(startFolderFor(endpointId), endpointId);
+            await startBrowsing(endpointId);
         },
-        [navigateTo, startFolderFor]
+        [startBrowsing]
     );
 
     useEffect(() => {
@@ -527,8 +561,9 @@ export function CommandPalette() {
         currentEndpointId
     ]);
 
-    // While browsing nothing is highlighted until the arrows say so, so Enter opens what was typed.
-    const active = browsing ? (index >= 0 ? entries[index] : undefined) : entries[Math.min(index, entries.length - 1)];
+    /* Every list opens with its first row highlighted, browsing included, so Enter walks into the
+       folders without an arrow key first and Cmd+Enter is what opens the path in the field. */
+    const active = entries[Math.min(index, entries.length - 1)];
     // What the arrow keys walk: the hits while searching in files, the rows of the list otherwise.
     const count = grepping ? grep.matches.length : entries.length;
     const activeHit = grepping ? Math.min(index, count - 1) : -1;
@@ -550,7 +585,7 @@ export function CommandPalette() {
         }
         setBrowse({ ...browse, machines: true, path: query });
         setQuery('');
-        setIndex(0);
+        setIndex(activeRow);
         setFailure(null);
     };
 
@@ -678,10 +713,10 @@ export function CommandPalette() {
                             onKeyDown={(e) => {
                                 if (e.key === 'ArrowDown') {
                                     e.preventDefault();
-                                    setIndex((i) => (count === 0 ? -1 : (i + 1) % count));
+                                    setIndex((i) => (count === 0 ? 0 : (i + 1) % count));
                                 } else if (e.key === 'ArrowUp') {
                                     e.preventDefault();
-                                    setIndex((i) => (count === 0 ? -1 : (i - 1 + count) % count));
+                                    setIndex((i) => (count === 0 ? 0 : (i - 1 + count) % count));
                                 } else if (e.key === 'Enter') {
                                     e.preventDefault();
                                     if (grepping) {
@@ -695,7 +730,7 @@ export function CommandPalette() {
                                     // Completes the field to the folder under the highlight, without stepping into it.
                                     e.preventDefault();
                                     setQuery(active.browsePath);
-                                    setIndex(-1);
+                                    setIndex(0);
                                 } else if (e.key === 'Backspace' && query === '') {
                                     if (grepping) {
                                         // The mode leaves the way it was entered: one key, nothing typed.

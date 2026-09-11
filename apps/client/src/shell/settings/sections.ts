@@ -27,7 +27,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionMeta[] = [
     { id: 'appearance', label: 'Appearance', description: 'Theme, accent and the terminal font.', icon: Palette },
     { id: 'canvas', label: 'Canvas', description: 'Zoom presets and locks for the canvas you are looking at.', icon: LayoutGrid },
     { id: 'drawing', label: 'Drawing', description: 'How a drawing view behaves while you draw.', icon: PenTool },
-    { id: 'files', label: 'Files', description: 'What the Files panel shows and how many files it keeps open.', icon: Folder },
+    { id: 'files', label: 'Files', description: 'What the Files panel shows, and where browsing for a folder starts.', icon: Folder },
     { id: 'git', label: 'Git', description: 'How the Git panel lists what changed.', icon: GitBranch },
     { id: 'usage', label: 'Usage', description: 'The money the usage page counts in.', icon: ChartNoAxesColumn },
     { id: 'agents', label: 'Agents', description: 'What a new agent starts with, and which CLIs the daemon found.', icon: Bot },

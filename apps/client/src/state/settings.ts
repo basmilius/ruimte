@@ -29,6 +29,11 @@ export interface Settings {
     filesTabLimit: number;
     /* Whether the files tree shows dotfiles; the panel's eye button writes the same value. */
     filesShowHidden: boolean;
+    /* Where the palette starts when it browses for a folder to open. Empty is the home of whichever
+       machine is being browsed. One setting for every machine rather than one per machine, because
+       the folders people keep their work in have the same name everywhere; a path that is not on the
+       machine being browsed falls back to its home, which `fs.browse` answering `exists` can tell. */
+    browseStartFolder: string;
     /* Whether the git panel groups its changed files by folder instead of listing them flat. */
     gitTree: boolean;
     /* Whether a diff draws the two sides next to each other or one patch under the other. */
@@ -56,6 +61,7 @@ const DEFAULT_SETTINGS: Settings = {
     interfaceFontSize: 16,
     filesTabLimit: 5,
     filesShowHidden: false,
+    browseStartFolder: '',
     gitTree: true,
     diffLayout: 'stacked',
     diffWhitespace: true,
@@ -80,7 +86,9 @@ const read = (): Settings => {
             ...stored,
             fontSize: clampSize(stored.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize),
             interfaceFontSize: clampSize(stored.interfaceFontSize, INTERFACE_FONT_SIZE_RANGE, DEFAULT_SETTINGS.interfaceFontSize),
-            filesTabLimit: clampSize(stored.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit)
+            filesTabLimit: clampSize(stored.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit),
+            // A path is typed by hand and read back as one; anything else in the blob is no folder.
+            browseStartFolder: typeof stored.browseStartFolder === 'string' ? stored.browseStartFolder : DEFAULT_SETTINGS.browseStartFolder
         };
     } catch {
         return DEFAULT_SETTINGS;
@@ -123,6 +131,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 interfaceFontSize,
                 filesTabLimit,
                 filesShowHidden,
+                browseStartFolder,
                 gitTree,
                 diffLayout,
                 diffWhitespace,
@@ -137,6 +146,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 interfaceFontSize,
                 filesTabLimit,
                 filesShowHidden,
+                browseStartFolder,
                 gitTree,
                 diffLayout,
                 diffWhitespace,
