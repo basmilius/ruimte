@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { isCanvasView, isOpenableView, type FsBrowseResult } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
+import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { openFolderOn, openProject, reachEndpoint } from '@/project/open';
@@ -33,6 +34,8 @@ import {
     browseStart,
     endsWithSeparator,
     folderPresence,
+    machineDot,
+    machineHint,
     openBrowse,
     paletteStart,
     parentOf,
@@ -82,6 +85,8 @@ const FILE_RESULTS = 8;
 
 interface Entry extends Command {
     icon: React.ReactNode;
+    /* Pushed to the end of the row, where a state belongs: the hint next to a name is about the name. */
+    trailing?: React.ReactNode;
     section: 'Recent' | 'Jump to' | 'Files' | 'Views' | 'Projects' | 'Actions' | 'Folders' | 'Machines';
     /* The folder a browse row stands for: what Enter steps into, and what Tab completes the field
        to without stepping in. Navigating is the palette's own business, so such a row has no `run`. */
@@ -105,18 +110,6 @@ const requestBrowse = async (endpointId: string, partialPath: string, cwd: strin
     } catch (e) {
         return { result: null, failure: e instanceof Error ? e.message : 'That path cannot be read' };
     }
-};
-
-/* What a machine row says beside its name: the machine's own label once it has said hello, or where
-   its socket is. Not connected is a machine nothing has asked for yet, not a machine that is broken. */
-const machineHint = (endpointId: string, connected: boolean, dialing: boolean): string => {
-    if (dialing) {
-        return 'Connecting';
-    }
-    if (!connected) {
-        return 'Not connected';
-    }
-    return serverInfoOf(endpointId).label ?? 'Connected';
 };
 
 /* What a listing is of. The separator is one no path can carry, so two of them never read as one. */
@@ -194,6 +187,8 @@ export function CommandPalette() {
     const browseEndpointId = browse?.endpointId ?? activeId;
     const machineStep = browse?.machines === true;
     const platform = useServers((s) => s.byEndpoint[browseEndpointId]?.platform ?? null);
+    /* The whole map, because the machine rows draw an icon each and the icons arrive one machine at a time. */
+    const servers = useServers((s) => s.byEndpoint);
     const sep = separatorFor(platform);
     const machines = useMemo(() => browseMachines(endpoints, activeId, connected), [endpoints, activeId, connected]);
     /* The machines list sorts this machine first but opens on the machine the client is pointed at,
@@ -411,14 +406,24 @@ export function CommandPalette() {
             // Typing on this step narrows the machines, the way typing narrows every other list here.
             return machines
                 .filter((row) => matches(query, row.label))
-                .map((row) => ({
-                    id: `machine-${row.endpointId}`,
-                    label: row.label,
-                    hint: machineHint(row.endpointId, row.connected, dialing === row.endpointId),
-                    icon: <span className={clsx('inline-block h-1.5 w-1.5 rounded-full', row.connected ? 'bg-status-idle' : 'bg-text-faint')} />,
-                    section: 'Machines' as const,
-                    run: () => void pickMachine(row.endpointId)
-                }));
+                .map((row) => {
+                    const hint = machineHint(row.connected, dialing === row.endpointId);
+                    return {
+                        id: `machine-${row.endpointId}`,
+                        label: row.label,
+                        /* The icon a machine was given, the same one the settings page and every menu
+                           show; the daemon's own hostname behind the name said nothing the name did not. */
+                        icon: <MachineGlyph icon={servers[row.endpointId]?.icon ?? null} size={14} />,
+                        trailing: (
+                            <>
+                                {hint && <span className="text-xs text-text-faint">{hint}</span>}
+                                <span className={clsx('h-1.5 w-1.5 shrink-0 rounded-full', machineDot(row.connected, dialing === row.endpointId))} />
+                            </>
+                        ),
+                        section: 'Machines' as const,
+                        run: () => void pickMachine(row.endpointId)
+                    };
+                });
         }
         if (browsing) {
             const up = parentOf(query, sep);
@@ -562,6 +567,7 @@ export function CommandPalette() {
         query,
         recents,
         projects,
+        servers,
         currentProjectId,
         currentEndpointId
     ]);
@@ -673,12 +679,10 @@ export function CommandPalette() {
                                         <Icon icon={ArrowLeft} size={14} />
                                     ) : (
                                         <>
-                                            <span
-                                                className={clsx(
-                                                    'h-1.5 w-1.5 shrink-0 rounded-full',
-                                                    connected.includes(browseEndpointId) ? 'bg-status-idle' : 'bg-text-faint'
-                                                )}
-                                            />
+                                            {/* The icon, not a dot: it is the machine's own mark, the rows
+                                                behind this button carry the same one, and a machine whose
+                                                folders are on screen is answering by definition. */}
+                                            <MachineGlyph icon={servers[browseEndpointId]?.icon ?? null} size={14} />
                                             <span className="max-w-32 truncate">{browseLabel}</span>
                                         </>
                                     )}
@@ -825,6 +829,7 @@ export function CommandPalette() {
                                         <span className="min-w-0 truncate">{entry.label}</span>
                                         {entry.hint && <span className="text-xs text-text-faint">{entry.hint}</span>}
                                         <span className="grow" />
+                                        {entry.trailing}
                                         {entry.shortcut && <kbd className={TOOLTIP_KBD}>{entry.shortcut}</kbd>}
                                     </button>
                                 </div>

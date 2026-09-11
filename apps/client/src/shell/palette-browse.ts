@@ -114,6 +114,26 @@ export const browseMachines = (endpoints: readonly Endpoint[], activeId: string,
         }));
 
 /*
+ * What a machine row says at its end, beside the dot. A machine that answers says nothing: the dot
+ * is the whole of it. The other two states are worth a word, because a color alone is a thin thing
+ * to wait on, and neither is a machine that is broken: picking one dials it.
+ */
+export const machineHint = (connected: boolean, dialing: boolean): string | undefined => {
+    if (dialing) {
+        return 'Connecting';
+    }
+    return connected ? undefined : 'Not connected';
+};
+
+/* The same three states the settings page paints, in the same three colors. */
+export const machineDot = (connected: boolean, dialing: boolean): string => {
+    if (dialing) {
+        return 'bg-status-needs-you';
+    }
+    return connected ? 'bg-status-idle' : 'bg-text-faint';
+};
+
+/*
  * Where browsing is: which machine, whether the machines themselves are up instead of folders, and
  * the path the folders step was on. The machines step holds that path so stepping back returns to
  * it, and holds an empty one when browsing began on the machines and has no folders behind it.
