@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "rev": 247,
+  "rev": 257,
   "name": "Ruimte",
   "color": "#7c74ff",
   "views": [
@@ -100,6 +100,35 @@
         "kind": "lucide",
         "value": "bot"
       },
+      "kind": "chat",
+      "node": {
+        "provider": "claude",
+        "providerFixed": true
+      }
+    },
+    {
+      "id": "chat-x8jyyb35",
+      "name": "Ik heb lokaal een fork van T3 Code…",
+      "titleSource": "auto",
+      "kind": "chat",
+      "node": {
+        "provider": "claude",
+        "providerFixed": true
+      }
+    },
+    {
+      "id": "chat-7z52d2oq",
+      "name": "AI Agents (Chat & Terminal) moeten, net zoals…",
+      "titleSource": "auto",
+      "kind": "chat",
+      "node": {
+        "provider": "claude",
+        "providerFixed": true
+      }
+    },
+    {
+      "id": "chat-sbmwx2f0",
+      "name": "Claude Code",
       "kind": "chat",
       "node": {
         "provider": "claude",
