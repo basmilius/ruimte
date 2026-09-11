@@ -3,11 +3,8 @@ import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
 import {
     CaseSensitive,
-    CornerLeftUp,
     FileSearch,
-    Folder,
-    FolderCheck,
-    FolderPlus,
+    FolderOpen,
     Globe,
     LayoutGrid,
     MessageSquare,
@@ -20,9 +17,8 @@ import {
     Zap,
     type LucideIcon
 } from 'lucide-react';
-import { isCanvasView, isOpenableView, type FsBrowseEntry } from '@ruimte/contracts';
+import { isCanvasView, isOpenableView } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
-import { projectClient } from '@/project';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { openProject } from '@/project/open';
@@ -41,8 +37,6 @@ import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
 import { useOpenEndpoints } from '@/transport/status';
-import { desktop } from '@/desktop/bridge';
-import { Button } from '@/ui/Button';
 import { BTN_GROUP, SECTION_LABEL, TOOLTIP_KBD } from '@/ui/classes';
 import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
@@ -57,17 +51,16 @@ const KIND_ICON: Record<NodeKind, React.ReactNode> = {
     drawing: <Icon icon={PenTool} size={14} />
 };
 
-// Typing a path turns the palette into a folder browser; anything else searches nodes and actions.
+// A query that looks like a path is a folder to open, which the picker does; the palette only offers it.
 const isPathQuery = (query: string): boolean => query.startsWith('/') || query.startsWith('~') || query.startsWith('./') || query.startsWith('../');
 
-const BROWSE_DEBOUNCE_MS = 60;
 const FILE_DEBOUNCE_MS = 120;
 // Enough to recognize the file being looked for, few enough to leave room for what else matches.
 const FILE_RESULTS = 8;
 
 interface Entry extends Command {
     icon: React.ReactNode;
-    section: 'Recent' | 'Jump to' | 'Files' | 'Views' | 'Projects' | 'Actions' | 'Folders';
+    section: 'Recent' | 'Jump to' | 'Files' | 'Views' | 'Projects' | 'Actions';
 }
 
 const LIST_ID = 'palette-list';
@@ -78,15 +71,6 @@ const matches = (query: string, text: string): boolean => {
     const words = query.toLowerCase().split(/\s+/).filter(Boolean);
     const haystack = text.toLowerCase();
     return words.every((word) => haystack.includes(word));
-};
-
-const parentOf = (path: string): string | null => {
-    const trimmed = path.replace(/\/+$/, '');
-    const cut = trimmed.lastIndexOf('/');
-    if (cut <= 0) {
-        return trimmed === '' || trimmed === '/' ? null : '/';
-    }
-    return `${trimmed.slice(0, cut)}/`;
 };
 
 /* One of the three switches that narrow a search in files, drawn as the pressed gray key every
@@ -107,7 +91,7 @@ function SearchToggle({ icon, label, active, onClick }: { icon: LucideIcon; labe
     );
 }
 
-/* Cmd+K: jump to a node, run an action, or type a path to open a folder as a project. */
+/* Cmd+K: jump to a node, run an action, or hand a typed path to the folder picker. */
 export function CommandPalette() {
     const open = useUi((s) => s.paletteOpen);
     const seed = useUi((s) => s.paletteSeed);
@@ -124,14 +108,10 @@ export function CommandPalette() {
     const connected = useOpenEndpoints();
     const [query, setQuery] = useState('');
     const [index, setIndex] = useState(0);
-    const [browse, setBrowse] = useState<{ parentPath: string; entries: FsBrowseEntry[] } | null>(null);
-    const [failure, setFailure] = useState<string | null>(null);
-    const [busy, setBusy] = useState(false);
     const [recents, setRecents] = useState<string[]>(readRecents);
     const [fileMatches, setFileMatches] = useState<readonly string[]>([]);
     const [grepOptions, setGrepOptions] = useState<GrepOptions>(DEFAULT_GREP_OPTIONS);
     const inputRef = useRef<HTMLInputElement>(null);
-    const generation = useRef(0);
     const fileGeneration = useRef(0);
     const mode = useUi((s) => s.paletteMode);
     const grepping = mode === 'grep';
@@ -139,9 +119,7 @@ export function CommandPalette() {
 
     const reset = (next: string): void => {
         setQuery(next);
-        setIndex(isPathQuery(next) ? -1 : 0);
-        setFailure(null);
-        setBrowse(null);
+        setIndex(0);
     };
 
     const [seenOpen, setSeenOpen] = useState(false);
@@ -162,33 +140,8 @@ export function CommandPalette() {
         reset(seed);
     }
 
-    // A path is a folder to browse, but only while the palette is looking for one.
+    // A path names a folder to open, which is the picker's job and not a mode of this dialog.
     const browsing = !grepping && isPathQuery(query);
-
-    useEffect(() => {
-        if (!browsing) {
-            return;
-        }
-        const mine = ++generation.current;
-        const timer = window.setTimeout(() => {
-            transport
-                .request('fs.browse', { partialPath: query, cwd: folder ?? undefined })
-                .then((result) => {
-                    // A later keystroke already asked again; this answer is stale.
-                    if (mine === generation.current) {
-                        setBrowse(result);
-                        setFailure(null);
-                    }
-                })
-                .catch((e: unknown) => {
-                    if (mine === generation.current) {
-                        setBrowse({ parentPath: query, entries: [] });
-                        setFailure(e instanceof Error ? e.message : 'That path cannot be read');
-                    }
-                });
-        }, BROWSE_DEBOUNCE_MS);
-        return () => window.clearTimeout(timer);
-    }, [browsing, query, folder]);
 
     useEffect(() => {
         const trimmed = query.trim();
@@ -223,48 +176,22 @@ export function CommandPalette() {
         [folder]
     );
 
-    const submitPath = async (path: string): Promise<void> => {
-        setBusy(true);
-        setFailure(null);
-        try {
-            await projectClient.openFolder(path);
-            setOpen(false);
-        } catch (e) {
-            setFailure(e instanceof Error ? e.message : 'That folder cannot be opened');
-        } finally {
-            setBusy(false);
-        }
-    };
-
     const entries = useMemo<Entry[]>(() => {
         // Find in files draws its own results; the commands have no place among them.
         if (grepping) {
             return [];
         }
         if (browsing) {
-            const up = parentOf(query);
-            const list: Entry[] = [];
-            if (up !== null && query !== '/' && query !== '~/') {
-                list.push({
-                    id: 'browse-up',
-                    label: '..',
-                    hint: 'Up one folder',
-                    icon: <Icon icon={CornerLeftUp} size={14} />,
-                    section: 'Folders',
-                    run: () => setQuery(up)
-                });
-            }
-            for (const entry of browse?.entries ?? []) {
-                list.push({
-                    id: `dir-${entry.fullPath}`,
-                    label: entry.name,
-                    hint: entry.hasCanvas ? 'Has a canvas' : undefined,
-                    icon: entry.hasCanvas ? <Icon icon={FolderCheck} size={14} /> : <Icon icon={Folder} size={14} />,
-                    section: 'Folders',
-                    run: () => setQuery(`${entry.fullPath}/`)
-                });
-            }
-            return list;
+            return [
+                {
+                    id: 'open-folder-picker',
+                    label: 'Open a folder',
+                    hint: query,
+                    icon: <Icon icon={FolderOpen} size={14} />,
+                    section: 'Actions',
+                    run: () => useUi.getState().openFolderPicker(query)
+                }
+            ];
         }
         // Every view, not only the canvas on screen; a node elsewhere says where it lives.
         const jumps: Entry[] = views.flatMap((view) => {
@@ -361,7 +288,6 @@ export function CommandPalette() {
         ];
     }, [
         browsing,
-        browse,
         connected,
         endpoints,
         fileMatches,
@@ -378,8 +304,7 @@ export function CommandPalette() {
         currentEndpointId
     ]);
 
-    // While browsing nothing is highlighted until the arrows say so, so Enter opens what was typed.
-    const active = browsing ? (index >= 0 ? entries[index] : undefined) : entries[Math.min(index, entries.length - 1)];
+    const active = entries[Math.min(index, entries.length - 1)];
     // What the arrow keys walk: the hits while searching in files, the rows of the list otherwise.
     const count = grepping ? grep.matches.length : entries.length;
     const activeHit = grepping ? Math.min(index, count - 1) : -1;
@@ -395,11 +320,6 @@ export function CommandPalette() {
 
     const run = (entry: Entry | undefined): void => {
         if (!entry) {
-            return;
-        }
-        if (browsing) {
-            entry.run();
-            setIndex(-1);
             return;
         }
         // Jumping to a node, a file, a view or a project is not a command; only what "Actions" lists comes back.
@@ -421,7 +341,7 @@ export function CommandPalette() {
                     initialFocus={inputRef}
                 >
                     <div className="flex items-center gap-2 border-b border-border px-3">
-                        {browsing && <Icon icon={FolderPlus} size={14} className="shrink-0 text-accent" />}
+                        {browsing && <Icon icon={FolderOpen} size={14} className="shrink-0 text-accent" />}
                         {grepping && <Icon icon={FileSearch} size={14} className="shrink-0 text-accent" />}
                         {!browsing && !grepping && <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />}
                         <input
@@ -457,14 +377,9 @@ export function CommandPalette() {
                                     e.preventDefault();
                                     if (grepping) {
                                         runHit(activeHit);
-                                    } else if (browsing && (active === undefined || e.metaKey || e.ctrlKey)) {
-                                        void submitPath(query);
                                     } else {
                                         run(active);
                                     }
-                                } else if (e.key === 'Tab' && browsing && active) {
-                                    e.preventDefault();
-                                    run(active);
                                 } else if (e.key === 'Backspace' && grepping && query === '') {
                                     // The mode leaves the way it was entered: one key, nothing typed.
                                     e.preventDefault();
@@ -498,10 +413,7 @@ export function CommandPalette() {
                     </div>
                     <div id={LIST_ID} className="max-h-[50vh] overflow-auto p-1.5" role="listbox" aria-label="Results">
                         <div aria-live="polite">
-                            {entries.length === 0 && !browsing && !grepping && (
-                                <div className="px-3 py-6 text-center text-xs text-text-faint">Nothing matches</div>
-                            )}
-                            {entries.length === 0 && browsing && <div className="px-3 py-6 text-center text-xs text-text-faint">No folders here yet</div>}
+                            {entries.length === 0 && !grepping && <div className="px-3 py-6 text-center text-xs text-text-faint">Nothing matches</div>}
                             {grepping && query.trim() !== '' && !grep.busy && grep.failure === null && grep.matches.length === 0 && (
                                 <div className="px-3 py-6 text-center text-xs text-text-faint">No line in this folder matches</div>
                             )}
@@ -533,7 +445,7 @@ export function CommandPalette() {
                                         onClick={() => run(entry)}
                                     >
                                         <span className="shrink-0 text-text-faint">{entry.icon}</span>
-                                        <span className={clsx('min-w-0 truncate', browsing && 'font-mono text-code')}>{entry.label}</span>
+                                        <span className="min-w-0 truncate">{entry.label}</span>
                                         {entry.hint && <span className="text-xs text-text-faint">{entry.hint}</span>}
                                         <span className="grow" />
                                         {entry.shortcut && <kbd className={TOOLTIP_KBD}>{entry.shortcut}</kbd>}
@@ -559,36 +471,6 @@ export function CommandPalette() {
                             <span>
                                 <kbd className={TOOLTIP_KBD}>↵</kbd> opens the file, <kbd className={TOOLTIP_KBD}>⌫</kbd> on an empty search goes back
                             </span>
-                        </div>
-                    )}
-                    {browsing && (
-                        <div className="flex items-center gap-3 border-t border-border px-3 py-2 text-xs text-text-faint">
-                            {failure ? (
-                                <span className="text-status-error" role="alert">
-                                    {failure}
-                                </span>
-                            ) : (
-                                <span>
-                                    <kbd className={TOOLTIP_KBD}>↵</kbd> steps into a folder, <kbd className={TOOLTIP_KBD}>⌘↵</kbd> opens the typed path as a
-                                    project
-                                </span>
-                            )}
-                            <span className="grow" />
-                            {desktop() && (
-                                <Button
-                                    size="sm"
-                                    onClick={() =>
-                                        void desktop()
-                                            ?.pickFolder(browse?.parentPath)
-                                            .then((picked) => (picked ? submitPath(picked) : undefined))
-                                    }
-                                >
-                                    Browse…
-                                </Button>
-                            )}
-                            <Button size="sm" variant="primary" disabled={busy || query.trim() === ''} onClick={() => void submitPath(query)}>
-                                <Icon icon={FolderPlus} size={12} /> Open as project
-                            </Button>
                         </div>
                     )}
                 </Dialog.Popup>

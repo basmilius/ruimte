@@ -14,7 +14,6 @@ import { fileManagerName, useServer } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 import { useOpenEndpoints } from '@/transport/status';
-import { desktop } from '@/desktop/bridge';
 import { Button } from '@/ui/Button';
 import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
@@ -53,19 +52,6 @@ export function ProjectMenu() {
             setFailure(e instanceof Error ? e.message : 'That did not work');
         } finally {
             setBusy(false);
-        }
-    };
-
-    // The desktop app has a real dialog; a browser tab types the path in the palette instead.
-    const openFolder = async (): Promise<void> => {
-        const bridge = desktop();
-        if (!bridge) {
-            useUi.getState().openPalette('~/');
-            return;
-        }
-        const folder = await bridge.pickFolder(current?.folder ?? undefined);
-        if (folder) {
-            await projectClient.openFolder(folder).catch(() => undefined);
         }
     };
 
@@ -147,7 +133,7 @@ export function ProjectMenu() {
                             <Menu.Item className="menu-item" onClick={() => openDialog({ kind: 'new' })}>
                                 <Icon icon={Plus} size={14} /> New project
                             </Menu.Item>
-                            <Menu.Item className="menu-item" onClick={() => void openFolder()}>
+                            <Menu.Item className="menu-item" onClick={() => useUi.getState().openFolderPicker()}>
                                 <Icon icon={FolderOpen} size={14} /> Open folder
                             </Menu.Item>
                             {current && (
