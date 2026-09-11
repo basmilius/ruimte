@@ -1,4 +1,4 @@
-import { rekeyLastProject } from '@/project/project-client';
+import { rekeyLastProject } from '@/project/last-project';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { useToasts } from '@/state/toasts';
 import { pool } from '@/transport';

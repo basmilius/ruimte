@@ -1,15 +1,19 @@
-import { useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Menu } from '@base-ui-components/react/menu';
 import { Check, ChevronDown, ExternalLink, FolderOpen, Image, Pencil, Plus, Trash, X } from 'lucide-react';
 import { projectClient } from '@/project';
+import { groupProjects } from '@/project/list';
+import { openProject } from '@/project/open';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ProjectIconDialog } from '@/shell/ProjectIconDialog';
+import { useEndpoints } from '@/state/endpoints';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useUi } from '@/state/ui';
-import { transport } from '@/transport';
+import { transportFor } from '@/transport';
+import { useOpenEndpoints } from '@/transport/status';
 import { desktop } from '@/desktop/bridge';
 import { Button } from '@/ui/Button';
 import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
@@ -19,14 +23,19 @@ type DialogKind = { kind: 'new' } | { kind: 'rename' } | { kind: 'delete'; proje
 
 /* The project segment of the toolbar's breadcrumb: every known canvas, plus the ways to make, open, close and delete one. */
 export function ProjectMenu() {
-    const projects = useProject((s) => s.projects);
+    const rows = useProject((s) => s.projects);
     const current = useProject((s) => s.current);
+    const currentEndpointId = useProject((s) => s.currentEndpointId);
+    const endpoints = useEndpoints((s) => s.endpoints);
+    const activeId = useEndpoints((s) => s.activeId);
+    const connected = useOpenEndpoints();
     const platform = useServer((s) => s.platform);
     const [dialog, setDialog] = useState<DialogKind>(null);
     const [value, setValue] = useState('');
     const [busy, setBusy] = useState(false);
     const [failure, setFailure] = useState<string | null>(null);
     const [iconOpen, setIconOpen] = useState(false);
+    const groups = useMemo(() => groupProjects(rows, endpoints, activeId, connected), [rows, endpoints, activeId, connected]);
 
     const openDialog = (next: DialogKind, initial = ''): void => {
         setValue(initial);
@@ -60,6 +69,12 @@ export function ProjectMenu() {
         }
     };
 
+    const reveal = async (folder: string): Promise<void> => {
+        await transportFor(currentEndpointId ?? activeId)
+            ?.request('fs.reveal', { path: folder })
+            .catch(() => undefined);
+    };
+
     const submit = (): void => {
         if (!dialog) {
             return;
@@ -77,7 +92,7 @@ export function ProjectMenu() {
             <Menu.Root>
                 <Menu.Trigger className="flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-left hover:bg-surface-hover data-[popup-open]:bg-surface-active">
                     {current ? (
-                        <ProjectGlyph projectId={current.projectId} icon={current.icon} color={current.color} />
+                        <ProjectGlyph projectId={current.projectId} endpointId={currentEndpointId ?? undefined} icon={current.icon} color={current.color} />
                     ) : (
                         <span className="h-3 w-3 shrink-0 rounded-sm bg-text-faint" />
                     )}
@@ -87,31 +102,48 @@ export function ProjectMenu() {
                 <Menu.Portal>
                     <Menu.Positioner className="z-[var(--z-popup)]" side="bottom" sideOffset={6} align="start">
                         <Menu.Popup className="menu-popup min-w-60">
-                            {projects.length > 0 && <div className={MENU_LABEL}>Projects</div>}
-                            {projects.map((project) => (
-                                <Menu.Item
-                                    key={project.projectId}
-                                    className={clsx('menu-item items-start', !project.available && 'opacity-50')}
-                                    disabled={!project.available}
-                                    onClick={() => void projectClient.openProject(project.projectId).catch(() => undefined)}
-                                >
-                                    {/* The folder under the name makes this row two lines high, so the 20 pixel boxes
-                                        hold the glyph and the check on the name's line instead of between both lines. */}
-                                    <span className="flex h-5 shrink-0 items-center">
-                                        <ProjectGlyph projectId={project.projectId} icon={project.icon} color={project.color} />
-                                    </span>
-                                    <span className="flex min-w-0 flex-col">
-                                        <span className="truncate">{project.name}</span>
-                                        <span className="truncate text-xs text-text-faint">{project.folder ?? 'Not in a folder'}</span>
-                                    </span>
-                                    {project.projectId === current?.projectId && (
-                                        <span className="ml-auto flex h-5 shrink-0 items-center">
-                                            <Icon icon={Check} size={14} />
-                                        </span>
-                                    )}
-                                </Menu.Item>
+                            {groups.map((group) => (
+                                <Fragment key={group.endpointId}>
+                                    {/* One machine, one label: naming it only earns its place once there are two. */}
+                                    <div className={clsx(MENU_LABEL, 'flex items-center gap-1.5')}>
+                                        {groups.length > 1 && (
+                                            <span className={clsx('h-1.5 w-1.5 shrink-0 rounded-full', group.connected ? 'bg-status-idle' : 'bg-text-faint')} />
+                                        )}
+                                        <span className="truncate">{groups.length > 1 ? group.label : 'Projects'}</span>
+                                    </div>
+                                    {group.rows.map(({ summary }) => (
+                                        <Menu.Item
+                                            key={summary.projectId}
+                                            className={clsx('menu-item items-start', (!summary.available || !group.connected) && 'opacity-50')}
+                                            disabled={!summary.available}
+                                            onClick={() => void openProject(group.endpointId, summary.projectId).catch(() => undefined)}
+                                        >
+                                            {/* The folder under the name makes this row two lines high, so the 20 pixel boxes
+                                                hold the glyph and the check on the name's line instead of between both lines. */}
+                                            <span className="flex h-5 shrink-0 items-center">
+                                                <ProjectGlyph
+                                                    projectId={summary.projectId}
+                                                    endpointId={group.endpointId}
+                                                    icon={summary.icon}
+                                                    color={summary.color}
+                                                />
+                                            </span>
+                                            <span className="flex min-w-0 flex-col">
+                                                <span className="truncate">{summary.name}</span>
+                                                <span className="truncate text-xs text-text-faint">{summary.folder ?? 'Not in a folder'}</span>
+                                            </span>
+                                            {/* Not connected is about the machine, unavailable about the folder; a row can be either. */}
+                                            {!group.connected && <span className={MENU_HINT}>Not connected</span>}
+                                            {summary.projectId === current?.projectId && group.endpointId === currentEndpointId && (
+                                                <span className="ml-auto flex h-5 shrink-0 items-center">
+                                                    <Icon icon={Check} size={14} />
+                                                </span>
+                                            )}
+                                        </Menu.Item>
+                                    ))}
+                                </Fragment>
                             ))}
-                            {projects.length > 0 && <Menu.Separator className={MENU_SEPARATOR} />}
+                            {groups.length > 0 && <Menu.Separator className={MENU_SEPARATOR} />}
                             <Menu.Item className="menu-item" onClick={() => openDialog({ kind: 'new' })}>
                                 <Icon icon={Plus} size={14} /> New project
                             </Menu.Item>
@@ -124,7 +156,8 @@ export function ProjectMenu() {
                                     {current.folder && (
                                         <Menu.Item
                                             className="menu-item"
-                                            onClick={() => void transport.request('fs.reveal', { path: current.folder! }).catch(() => undefined)}
+                                            // The folder is on the machine the project came from, which is not the active one mid-switch.
+                                            onClick={() => void reveal(current.folder!)}
                                         >
                                             <Icon icon={ExternalLink} size={14} /> Open in {fileManagerName(platform)}
                                         </Menu.Item>

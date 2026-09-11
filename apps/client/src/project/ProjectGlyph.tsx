@@ -7,6 +7,8 @@ import { Icon } from '@/ui/Icon';
 
 interface ProjectGlyphProps {
     projectId: string;
+    /* The machine the project is on; without one the glyph asks the machine being worked on. */
+    endpointId?: string;
     icon: ProjectIcon;
     color: string;
     size?: number;
@@ -14,7 +16,7 @@ interface ProjectGlyphProps {
 }
 
 /* A project's icon at one size: what was picked, what the folder declares, or its initial. */
-export function ProjectGlyph({ projectId, icon, color, size = 16, className }: ProjectGlyphProps) {
+export function ProjectGlyph({ projectId, endpointId, icon, color, size = 16, className }: ProjectGlyphProps) {
     const theme = useTheme((s) => s.resolved);
     const box = { width: size, height: size };
 
@@ -31,7 +33,7 @@ export function ProjectGlyph({ projectId, icon, color, size = 16, className }: P
     if (icon.kind === 'image') {
         return (
             <img
-                src={projectIconUrl(projectId, icon.version, theme)}
+                src={projectIconUrl(projectId, icon.version, theme, endpointId)}
                 alt=""
                 width={size}
                 height={size}

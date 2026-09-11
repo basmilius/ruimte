@@ -25,6 +25,7 @@ import { AgentIcon } from '@/agents/AgentIcon';
 import { projectClient } from '@/project';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ViewGlyph } from '@/project/ViewGlyph';
+import { openProject } from '@/project/open';
 import { revealNode, showView } from '@/project/views';
 import { appCommands, type Command } from '@/shell/commands';
 import { DEFAULT_GREP_OPTIONS, useGrepSearch, type GrepOptions } from '@/shell/palette-grep';
@@ -33,11 +34,13 @@ import { readRecents, rememberRecent, sortByRecency } from '@/shell/palette-rece
 import { absoluteOf, basenameOf } from '@/shell/panels/files-tree';
 import { useCanvas, type NodeKind } from '@/state/canvas';
 import { useDocument } from '@/state/document';
+import { useEndpoints } from '@/state/endpoints';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { transport } from '@/transport';
+import { useOpenEndpoints } from '@/transport/status';
 import { desktop } from '@/desktop/bridge';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP, SECTION_LABEL, TOOLTIP_KBD } from '@/ui/classes';
@@ -116,6 +119,9 @@ export function CommandPalette() {
     const folder = useProject((s) => s.current?.folder ?? null);
     const projects = useProject((s) => s.projects);
     const currentProjectId = useProject((s) => s.current?.projectId ?? null);
+    const currentEndpointId = useProject((s) => s.currentEndpointId);
+    const endpoints = useEndpoints((s) => s.endpoints);
+    const connected = useOpenEndpoints();
     const [query, setQuery] = useState('');
     const [index, setIndex] = useState(0);
     const [browse, setBrowse] = useState<{ parentPath: string; entries: FsBrowseEntry[] } | null>(null);
@@ -293,16 +299,24 @@ export function CommandPalette() {
             section: 'Views' as const,
             run: () => showView(view.id)
         }));
+        /* One list with the machine on the row, rather than a section per machine: a project is
+           looked for by its own name, and which daemon it is on is what tells two of them apart. */
+        const machines = new Set(projects.map((row) => row.endpointId));
         const switches: Entry[] = projects
-            .filter((project) => project.available && project.projectId !== currentProjectId)
-            .map((project) => ({
-                id: `project-${project.projectId}`,
-                label: project.name,
-                hint: project.folder ?? 'Not in a folder',
-                icon: <ProjectGlyph projectId={project.projectId} icon={project.icon} color={project.color} size={14} />,
-                section: 'Projects',
-                run: () => void projectClient.openProject(project.projectId).catch(() => undefined)
-            }));
+            .filter((row) => row.summary.available && !(row.summary.projectId === currentProjectId && row.endpointId === currentEndpointId))
+            .map(({ endpointId, summary }) => {
+                const where = summary.folder ?? 'Not in a folder';
+                const label = endpoints.find((endpoint) => endpoint.id === endpointId)?.label ?? 'Another machine';
+                const machine = connected.includes(endpointId) ? label : `${label}, not connected`;
+                return {
+                    id: `project-${endpointId}-${summary.projectId}`,
+                    label: summary.name,
+                    hint: machines.size > 1 ? `${machine} · ${where}` : where,
+                    icon: <ProjectGlyph projectId={summary.projectId} endpointId={endpointId} icon={summary.icon} color={summary.color} size={14} />,
+                    section: 'Projects',
+                    run: () => void openProject(endpointId, summary.projectId).catch(() => undefined)
+                };
+            });
         /* What the last answer held stays out of a list it no longer belongs to; the effect above
            only fills it, so an empty query or a folder browse never shows yesterday's files. */
         const files: Entry[] = (query.trim() === '' ? [] : fileMatches).map((path) => {
@@ -345,7 +359,24 @@ export function CommandPalette() {
             ...switches.filter(keep),
             ...commands.map((command) => asEntry(command, 'Actions')).filter(keep)
         ];
-    }, [browsing, browse, fileMatches, grepping, nodes, openFile, order, views, activeViewId, query, recents, projects, currentProjectId]);
+    }, [
+        browsing,
+        browse,
+        connected,
+        endpoints,
+        fileMatches,
+        grepping,
+        nodes,
+        openFile,
+        order,
+        views,
+        activeViewId,
+        query,
+        recents,
+        projects,
+        currentProjectId,
+        currentEndpointId
+    ]);
 
     // While browsing nothing is highlighted until the arrows say so, so Enter opens what was typed.
     const active = browsing ? (index >= 0 ? entries[index] : undefined) : entries[Math.min(index, entries.length - 1)];

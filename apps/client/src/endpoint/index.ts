@@ -1,6 +1,7 @@
 import type { AuthSession, EndpointInfo } from '@ruimte/contracts';
 import { useBrowser } from '@/browser/registry';
 import { projectClient } from '@/project';
+import { forgetCachedList } from '@/project/list';
 import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, activeEndpoint, parsePairingUrl, socketUrlFor, useEndpoints, type Endpoint } from '@/state/endpoints';
@@ -58,16 +59,6 @@ const holdActive = (): void => {
     release?.();
 };
 
-/*
- * The machine that took over gets the socket it needs. What the machine that left answered stays
- * where it is: every store is keyed on the endpoint, so nothing of it can show up under the new one.
- * The project list is the exception, being one machine's list until it becomes a union.
- */
-const onActiveEndpointChanged = (): void => {
-    useProject.getState().setProjects([]);
-    holdActive();
-};
-
 /* Moves the whole client to another daemon: the canvas empties first, so nothing of the old one is recreated on the new. */
 export const activateEndpoint = async (id: string): Promise<void> => {
     if (id === useEndpoints.getState().activeId) {
@@ -75,7 +66,7 @@ export const activateEndpoint = async (id: string): Promise<void> => {
     }
     await projectClient.flush();
     useDocument.getState().load(null, null);
-    useProject.getState().setCurrent(null, 0);
+    useProject.getState().setCurrent(null, 0, null);
     useEndpoints.getState().setActive(id);
 };
 
@@ -92,6 +83,8 @@ export const forgetEndpoint = async (id: string): Promise<void> => {
 
 /* Everything this client kept about a machine it no longer knows. */
 const forgetEndpointState = (id: string): void => {
+    useProject.getState().forgetProjects(id);
+    forgetCachedList(id);
     useSessions.getState().clear(id);
     useChats.getState().clear(id);
     useBrowser.getState().clear(id);
@@ -123,9 +116,12 @@ const clientLabel = (): string => {
 
 /* Opens the sockets this client keeps up on its own: the daemon that served the page, and the machine that is active. */
 export const startEndpointSelection = (): (() => void) => {
+    /* The machine that took over gets the socket it needs. What the machine that left answered stays
+       where it is: every store is keyed on the endpoint, so nothing of it can show up under the new
+       one. Its projects stay listed too, under its own name, which is what makes the menu a union. */
     const off = useEndpoints.subscribe((state, before) => {
         if (state.activeId !== before.activeId) {
-            onActiveEndpointChanged();
+            holdActive();
         }
     });
     // The page's own daemon never closes: it is where the app lands when a machine is forgotten or stops answering.

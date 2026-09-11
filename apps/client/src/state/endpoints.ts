@@ -158,6 +158,9 @@ export const useEndpoints = create<EndpointsStore>((set, get) => ({
     }
 }));
 
+/* One machine by id, for code that is about a row rather than about the machine being worked on. */
+export const endpointById = (id: string): Endpoint | null => useEndpoints.getState().endpoints.find((entry) => entry.id === id) ?? null;
+
 export const activeEndpoint = (): Endpoint => {
     const { endpoints, activeId } = useEndpoints.getState();
     return endpoints.find((entry) => entry.id === activeId) ?? endpoints[0]!;

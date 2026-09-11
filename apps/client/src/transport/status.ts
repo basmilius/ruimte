@@ -30,3 +30,17 @@ export const useEndpointConnection = (endpointId: string): ConnectionState =>
 
 /* The machines this client holds a socket for, in the order the pool opened them. */
 export const useConnectedEndpoints = (): string[] => useSyncExternalStore(subscribePool, readPoolIds);
+
+// The same array until the set itself changes, or every render would hand React a new snapshot.
+let openIds: string[] = [];
+
+const readOpenIds = (): string[] => {
+    const next = pool.ids().filter((endpointId) => pool.statusOf(endpointId).status === 'open');
+    if (next.length !== openIds.length || next.some((id, i) => id !== openIds[i])) {
+        openIds = next;
+    }
+    return openIds;
+};
+
+/* The machines that are answering right now, for a list that spans them. */
+export const useOpenEndpoints = (): string[] => useSyncExternalStore(subscribePool, readOpenIds);

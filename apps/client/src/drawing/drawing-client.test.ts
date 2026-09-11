@@ -106,7 +106,7 @@ let flushes: number;
 
 const setup = (): void => {
     useDrawing.getState().unload();
-    useProject.getState().setCurrent(summary, 1);
+    useProject.getState().setCurrent(summary, 1, 'daemon-a');
     useDocument.getState().load(project(), {
         activeViewId: 'main',
         views: { 'view-1': { camera: { x: 3, y: 4, zoom: 2 }, focusedNodeId: null } }
@@ -145,14 +145,14 @@ describe('DrawingClient', () => {
         // What a reload does: the client is up, the document store fills, the project lands last.
         client.dispose();
         useDrawing.getState().unload();
-        useProject.getState().setCurrent(null, 0);
+        useProject.getState().setCurrent(null, 0, null);
         useDocument.getState().load(null, null);
         transport = new FakeTransport();
         client = new DrawingClient(transport, useDrawing, useDocument, useProject, { saveDelayMs: 1, window: null, document: null });
 
         useProject.getState().setSwitching(true);
         useDocument.getState().load(project(), { activeViewId: 'view-1', views: {} });
-        useProject.getState().setCurrent(summary, 1);
+        useProject.getState().setCurrent(summary, 1, 'daemon-a');
         useProject.getState().setSwitching(false);
         await tick();
 
