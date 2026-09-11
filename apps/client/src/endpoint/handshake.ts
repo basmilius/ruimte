@@ -2,7 +2,7 @@ import { AuthChallengeResultSchema, AuthTicketResultSchema, clientAuthMessage, d
 import { socketUrlFor, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useToasts } from '@/state/toasts';
 import { clientKey, type ClientKey } from './client-key';
-import { rememberTicket } from './credentials';
+import { forgetTicket, rememberTicket } from './credentials';
 
 /*
  * Verifying a daemon's signature needs no private key, so this side of ed25519 is enough of a
@@ -67,6 +67,7 @@ export const signIn = async (endpoint: Endpoint, key: ClientKey): Promise<string
     );
     if (!ticket.success) {
         // The daemon does the handshake and still said no, so this client's key is not one it knows any more.
+        forgetTicket(endpoint.id);
         reportUnknownKey(endpoint);
         return null;
     }
