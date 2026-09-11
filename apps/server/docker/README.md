@@ -45,8 +45,9 @@ prints into the app's settings within ten minutes. Nothing in the daemon was cha
 
 `apps/server/src/docker/remote-daemon.test.ts` pairs, opens a socket and walks the wire: `/health`,
 `server.hello` and `endpoint.info` (Linux, `lan`, authenticated), the daemon's own id in both the
-pairing answer and `endpoint.info` and kept in `endpoint.json`, a refused token, `project.list` on
-a daemon that knows no projects, a project opened on `/work/atlas`, a terminal session that answers
+pairing answer and `endpoint.info` and kept in `endpoint.json`, a refused token, `project.list` on a
+freshly paired daemon answering nothing and making nothing, a project opened on `/work/atlas`, a
+terminal session that answers
 `uname -s`, `git.status` on the outstanding work and `fs.browse` on `/work`. It cleans up the
 session and the project it made.
 
