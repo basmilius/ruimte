@@ -417,6 +417,14 @@ Also decided against for now: a scheduler, checkpoint restore and telemetry.
 
 ## Gotchas already paid for
 
+- **A dragged file has no path, and an effect the source did not allow kills the drop.** Two traps
+  in one gesture. `File.path` was taken out of Electron, so only the preload can name a dragged
+  file (`webUtils.getPathForFile`), and a browser cannot name one at all: that is a boundary, not
+  an omission. And setting `dropEffect` to something outside the source's `effectAllowed` makes the
+  browser call the drop refused and never fire it, which reads exactly like a handler that is not
+  bound: the files tree allows a move and nothing else, so the canvas asking for a copy silently
+  dropped every drag until `dropEffectFor`.
+
 - **A new node or view kind is not backward compatible.** `NodeKindSchema` is an enum and
   `ProjectViewSchema` a discriminated union, so a daemon older than the client that wrote the file
   refuses the whole document, not just the node it does not know. Since projects live on several
@@ -549,8 +557,8 @@ a day, several days. Each of the larger ones becomes a GitHub issue when it star
    Arrange, align and tidy as pure functions with palette entries; palette ranking (exact, prefix,
    substring), `>` for actions, recent nodes on an empty query, settings rows as entries. Images on
    the canvas from paste or drop, stored under `<folder>/.ruimte/images`. An image that is already
-   in the folder needs none of this: it is a file node. What is left is the half without a path,
-   which is the clipboard and a drag out of Finder.
+   in the folder needs none of this: it is a file node, dragged in from the file manager included.
+   What is left is the half with no path behind it, which is the clipboard.
 9. **Chat depth**, several days. A proposed plan card with "Implement" and "Implement in a new
    node" (a chat node beside it with a context edge, so the new agent reads the plan through
    `ruimte-context`), subagent rows that stay anchored, "Copy code" per block, citations from

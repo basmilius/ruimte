@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { carriesPaths, dropEffectFor, dropPoints, droppedPaths, PATHS_DRAG_TYPE, type DragPayload } from '@/canvas/drop';
+import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths, finderRefusal, PATHS_DRAG_TYPE, type DragPayload } from '@/canvas/drop';
 import { MENTION_DRAG_TYPE } from '@/chat/mentions';
 
 const drag = (values: Record<string, string>): DragPayload => ({
@@ -50,6 +50,33 @@ describe('droppedPaths', () => {
     test('drops the empty pieces of a payload with stray spaces', () => {
         expect(droppedPaths(drag({ [PATHS_DRAG_TYPE]: '  src/main.ts   a.txt ' }))).toEqual(['src/main.ts', 'a.txt']);
         expect(droppedPaths(drag({ [PATHS_DRAG_TYPE]: '' }))).toEqual([]);
+    });
+});
+
+describe('carriesFiles', () => {
+    test('takes a drag out of the file manager and nothing else', () => {
+        expect(carriesFiles(['Files'])).toBe(true);
+        expect(carriesFiles(['text/plain', 'Files'])).toBe(true);
+        expect(carriesFiles([PATHS_DRAG_TYPE])).toBe(false);
+        expect(carriesFiles([])).toBe(false);
+    });
+});
+
+describe('finderRefusal', () => {
+    test('takes the drag only in a shell that can name a path, on the machine the project runs on', () => {
+        expect(finderRefusal(true, 'loopback')).toBeNull();
+    });
+
+    test('refuses a browser, which never says where a file came from', () => {
+        expect(finderRefusal(false, 'loopback')).toBe('no-bridge');
+        expect(finderRefusal(false, null)).toBe('no-bridge');
+    });
+
+    test('refuses a project on another machine, where a path from this one means nothing', () => {
+        expect(finderRefusal(true, 'lan')).toBe('other-machine');
+        expect(finderRefusal(true, 'tunnel')).toBe('other-machine');
+        expect(finderRefusal(true, 'public')).toBe('other-machine');
+        expect(finderRefusal(true, null)).toBe('other-machine');
     });
 });
 

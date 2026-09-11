@@ -51,6 +51,9 @@ export interface DesktopBridge {
     onBrowserContextMenu?(listener: (params: BrowserContextParams) => void): () => void;
     /* The row that was picked, for the part of it the client cannot do itself. */
     browserContextAction?(action: BrowserContextAction): void;
+    /* Where a file dragged in from the file manager lives, which a browser never tells a page.
+       Optional for the same reason `onBrowserContextMenu` is; without it such a drag is refused. */
+    pathForFile?(file: File): string | null;
     isFullscreen(): Promise<boolean>;
     onFullscreen(listener: (fullscreen: boolean) => void): () => void;
     /* The app's theme, which the shell needs for the native window controls, for the

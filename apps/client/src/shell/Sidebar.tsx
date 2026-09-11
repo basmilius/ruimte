@@ -23,7 +23,8 @@ import clsx from 'clsx';
 import { isCanvasView, isSessionView, type AgentKind, type NodeKind } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { useDrafts } from '@/chat/drafts';
-import { carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
+import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
+import { finderPaths } from '@/canvas/finder-drop';
 import { askDeleteView, askViewIcon, duplicateViewOf, newFileView, putOnCanvas, revealNode, showView, showViewOnCanvas } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
@@ -511,12 +512,16 @@ export function Sidebar() {
      * into the project whose list took the drop, so that workspace takes the focus first, the way
      * pressing one of its rows would.
      */
-    const dropFilesAt = (workspaceId: string, index: number, paths: readonly string[]): void => {
+    const dropFilesAt = (workspaceId: string, index: number, transfer: DataTransfer): void => {
         setInsertAt(null);
+        focusWorkspace(workspaceId);
+        /* A drag out of the file manager is named by the shell of the machine the project runs on,
+           which is why the workspace takes the focus before the paths are read rather than after. */
+        const endpointId = workspaceById(workspaceId)?.connection.endpointId ?? '';
+        const paths = carriesPaths(transfer.types) ? droppedPaths(transfer) : finderPaths(transfer, endpointId);
         if (paths.length === 0) {
             return;
         }
-        focusWorkspace(workspaceId);
         for (const [at, path] of paths.entries()) {
             const id = newFileView(path);
             if (id !== null) {
@@ -571,7 +576,7 @@ export function Sidebar() {
                                     onDragOver={
                                         takesDrop
                                             ? (e) => {
-                                                  if (!reorderable && !carriesPaths(e.dataTransfer.types)) {
+                                                  if (!reorderable && !carriesPaths(e.dataTransfer.types) && !carriesFiles(e.dataTransfer.types)) {
                                                       return;
                                                   }
                                                   e.preventDefault();
@@ -601,7 +606,7 @@ export function Sidebar() {
                                                       dropAt(index);
                                                       return;
                                                   }
-                                                  dropFilesAt(workspaceId!, index, droppedPaths(e.dataTransfer));
+                                                  dropFilesAt(workspaceId!, index, e.dataTransfer);
                                               }
                                             : undefined
                                     }

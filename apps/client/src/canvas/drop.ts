@@ -1,3 +1,4 @@
+import type { Reachability } from '@ruimte/contracts';
 import type { Point } from '@/canvas/math';
 import { MENTION_DRAG_TYPE } from '@/chat/mentions';
 
@@ -40,6 +41,29 @@ export const droppedPaths = (data: DragPayload): string[] => {
         return splitPaths(marked).filter((path) => !path.endsWith('/') && !path.endsWith('\\'));
     }
     return splitPaths(data.getData(MENTION_DRAG_TYPE));
+};
+
+/*
+ * A drag out of the file manager, which carries bytes and a name. Whether there is a path behind
+ * them is a second question (`finderRefusal`), but the target has to say yes at `dragover` already,
+ * and refusing it there would leave a person dragging at a canvas that never answers.
+ */
+export const carriesFiles = (types: readonly string[]): boolean => types.includes('Files');
+
+/* Why a file out of the file manager cannot become a node. Null means it can. */
+export type FinderRefusal = 'no-bridge' | 'other-machine';
+
+/*
+ * A `File` out of an OS drag has no path in a browser, which is a boundary with no way around it:
+ * only the desktop shell can name the file it came from. And a path it names is a path on this
+ * machine, so a project running on a daemon elsewhere cannot read it either. Copying the bytes over
+ * is a feature about uploading rather than about the canvas, so both cases say so and stop.
+ */
+export const finderRefusal = (canNamePaths: boolean, reachability: Reachability | null): FinderRefusal | null => {
+    if (!canNamePaths) {
+        return 'no-bridge';
+    }
+    return reachability === 'loopback' ? null : 'other-machine';
 };
 
 /*

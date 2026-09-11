@@ -3,9 +3,11 @@ import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Plus } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { isCanvasView } from '@ruimte/contracts';
-import { carriesPaths, dropEffectFor, dropPoints, droppedPaths } from '@/canvas/drop';
+import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths } from '@/canvas/drop';
+import { finderPaths } from '@/canvas/finder-drop';
 import { GRID, intersects, snapToGrid, toWorld, type Point, type Rect } from '@/canvas/math';
 import { NODE_SIZE, useCanvas, type NodeKind } from '@/state/canvas';
+import { useEndpointId } from '@/state/keys';
 import { isFocusedWorkspace, WorkspaceStoresContext } from '@/state/workspace-stores';
 import { useUi } from '@/state/ui';
 import { newCanvasView, showFileOnCanvas, showView, stepView, viewAtIndex } from '@/project/views';
@@ -91,6 +93,7 @@ export function Canvas() {
     /* A drag carrying files is hanging over the canvas, which the border says so nobody has to
        guess whether letting go here does anything. */
     const [dropping, setDropping] = useState(false);
+    const endpointId = useEndpointId();
     // Where the last right-click landed, in world units, so the menu's "add here" knows where.
     const menuPoint = useRef<Point>({ x: 0, y: 0 });
 
@@ -585,7 +588,7 @@ export function Canvas() {
        marks a drop as refused unless both handlers say otherwise, hence the preventDefault on the
        drag as well as on the drop. */
     const onDragOver = (e: React.DragEvent): void => {
-        if (!carriesPaths(e.dataTransfer.types)) {
+        if (!carriesPaths(e.dataTransfer.types) && !carriesFiles(e.dataTransfer.types)) {
             return;
         }
         e.preventDefault();
@@ -602,11 +605,17 @@ export function Canvas() {
 
     const onDrop = (e: React.DragEvent): void => {
         setDropping(false);
-        const paths = droppedPaths(e.dataTransfer);
-        if (paths.length === 0) {
+        if (!carriesPaths(e.dataTransfer.types) && !carriesFiles(e.dataTransfer.types)) {
             return;
         }
         e.preventDefault();
+        /* A drag out of the file manager is read here and not in `droppedPaths`: naming its files
+           takes the desktop shell and the machine this project runs on, and it has to happen before
+           the event is over. */
+        const paths = carriesPaths(e.dataTransfer.types) ? droppedPaths(e.dataTransfer) : finderPaths(e.dataTransfer, endpointId);
+        if (paths.length === 0) {
+            return;
+        }
         const at = toWorld(useCanvas.getState().camera, screenPoint(e));
         // Several files at once are several nodes in a row, so none of them lands on top of another.
         const points = dropPoints(at, paths.length, DROP_STEP);
