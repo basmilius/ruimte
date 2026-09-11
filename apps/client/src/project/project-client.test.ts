@@ -14,6 +14,8 @@ import { useCanvas } from '../state/canvas';
 import { useDocument } from '../state/document';
 import { useFiles } from '../state/files';
 import { useUi } from '../state/ui';
+import { createWorkspaceStores, defaultWorkspaceStores } from '../state/workspace';
+import type { WorkspaceStores } from '../state/workspace-stores';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 import { PanelsPort } from './panels-port';
 import { rekeyLastProject } from './last-project';
@@ -182,8 +184,11 @@ const fakeStorage = (storage: Map<string, string>) => ({
  * now. A test that brings no storage of its own gets the first project listed, so a test about
  * saving or panels has a canvas without saying so; one that brings storage says it there instead.
  */
-const setup = (options: { endpointId?: string; storage?: Map<string, string>; projects?: ProjectSummary[]; open?: string | null } = {}) => {
-    useDocument.getState().load(null, null);
+const setup = (
+    options: { endpointId?: string; storage?: Map<string, string>; projects?: ProjectSummary[]; open?: string | null; stores?: WorkspaceStores } = {}
+) => {
+    const stores = options.stores ?? defaultWorkspaceStores;
+    stores.document.getState().load(null, null);
     useUi.setState({ panel: { open: false, kind: 'files' }, preview: { open: false }, panelWidth: null, previewWidth: null });
     useFiles.setState({ projectId: null, tabs: [], active: null, expandedDirs: [] });
     const transport = new FakeTransport();
@@ -202,7 +207,7 @@ const setup = (options: { endpointId?: string; storage?: Map<string, string>; pr
         storage.set('ruimte.lastProject', JSON.stringify({ ...stored, byEndpoint: { ...stored.byEndpoint, [endpointId]: open } }));
     }
     const panels = new PanelsPort();
-    const client = new ProjectClient(transport, useCanvas, useDocument, panels, sink, {
+    const client = new ProjectClient(transport, stores.canvas, stores.document, panels, sink, {
         saveDelayMs: 1,
         localDelayMs: 1,
         endpointId: () => endpointId,
@@ -212,7 +217,7 @@ const setup = (options: { endpointId?: string; storage?: Map<string, string>; pr
         client.dispose();
         panels.dispose();
     };
-    return { transport, sink, state, client, storage, panels, dispose };
+    return { transport, sink, state, client, storage, panels, stores, dispose };
 };
 
 describe('ProjectClient', () => {
@@ -476,5 +481,56 @@ describe('the project each machine had open', () => {
             last: { endpointId: 'daemon-x', projectId: 'p7' },
             byEndpoint: { 'daemon-x': 'p7' }
         });
+    });
+});
+
+/*
+ * What phase 6 is for: one client per workspace, each on its own daemon and its own stores. Nothing
+ * here is about the wire, it is about the client no longer having one canvas to boot a project into.
+ */
+describe('two workspaces side by side', () => {
+    test('each opens its own project on its own machine, into its own canvas', async () => {
+        const storage = new Map<string, string>();
+        const here = setup({ endpointId: 'daemon-a', stores: createWorkspaceStores(), storage, projects: [summary('p1', '/here')], open: 'p1' });
+        const there = setup({ endpointId: 'daemon-b', stores: createWorkspaceStores(), storage, projects: [summary('q1', '/there')], open: 'q1' });
+        await tick();
+
+        expect(here.state.current?.projectId).toBe('p1');
+        expect(there.state.current?.projectId).toBe('q1');
+        expect(here.transport.of('project.open')[0]?.payload).toEqual({ projectId: 'p1' });
+        expect(there.transport.of('project.open')[0]?.payload).toEqual({ projectId: 'q1' });
+        here.dispose();
+        there.dispose();
+    });
+
+    test('an edit in one saves to its own daemon and leaves the other alone', async () => {
+        const storage = new Map<string, string>();
+        const here = setup({ endpointId: 'daemon-a', stores: createWorkspaceStores(), storage, projects: [summary('p1', '/here')], open: 'p1' });
+        const there = setup({ endpointId: 'daemon-b', stores: createWorkspaceStores(), storage, projects: [summary('q1', '/there')], open: 'q1' });
+        await tick();
+
+        here.stores.canvas.getState().addText({ x: 0, y: 0 });
+        await tick(20);
+
+        expect(here.transport.of('project.save')).toHaveLength(1);
+        expect(there.transport.of('project.save')).toHaveLength(0);
+        expect(there.stores.canvas.getState().texts).toEqual({});
+        here.dispose();
+        there.dispose();
+    });
+
+    test('a document that arrives on one machine never lands on the other canvas', async () => {
+        const storage = new Map<string, string>();
+        const here = setup({ endpointId: 'daemon-a', stores: createWorkspaceStores(), storage, projects: [summary('p1', '/here')], open: 'p1' });
+        const there = setup({ endpointId: 'daemon-b', stores: createWorkspaceStores(), storage, projects: [summary('q1', '/there')], open: 'q1' });
+        await tick();
+
+        here.transport.emit('project.changed', { projectId: 'p1', document: document(9, [canvasView('main'), canvasView('notes')]) });
+        await tick();
+
+        expect(here.stores.document.getState().views.map((view) => view.id)).toEqual(['main', 'notes']);
+        expect(there.stores.document.getState().views.map((view) => view.id)).toEqual(['main']);
+        here.dispose();
+        there.dispose();
     });
 });

@@ -1,20 +1,33 @@
+import { useSyncExternalStore } from 'react';
 import { ChatClient } from '@/chat/chat-client';
 import { DrawingClient } from '@/drawing/drawing-client';
 import { foldList } from '@/project/list';
 import { panelsPort } from '@/project/panels-port';
 import { ProjectClient, type ProjectSink } from '@/project/project-client';
-import { useCanvas } from '@/state/canvas';
 import { chatSinkFor } from '@/state/chats';
-import { useDocument } from '@/state/document';
-import { useDrawing } from '@/state/drawing';
 import { activeEndpoint, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProjectList } from '@/state/project-list';
-import { useProject } from '@/state/project';
 import { providerSinkFor } from '@/state/providers';
 import { sessionSinkFor } from '@/state/sessions';
+import { createWorkspaceStores, defaultWorkspaceStores } from '@/state/workspace';
+import { setCurrentWorkspace, type WorkspaceStores } from '@/state/workspace-stores';
 import { SessionClient } from '@/terminal/session-client';
 import { pool } from '@/transport';
 import type { Transport } from '@/transport/transport';
+
+/*
+ * One daemon, as everything inside a workspace sees it. The address and the token are deliberately
+ * not in here: they live on the endpoint row, which a re-pair rewrites, and a copy taken when a
+ * workspace was built would keep making URLs with a token that has been revoked since.
+ */
+export interface Connection {
+    endpointId: string;
+    transport: Transport;
+    sessions: SessionClient;
+    chats: ChatClient;
+    projects: ProjectClient;
+    drawings: DrawingClient;
+}
 
 /* The clients of one daemon that write state keyed on that daemon, so several may be alive at once. */
 export interface Machine {
@@ -25,21 +38,31 @@ export interface Machine {
     dispose(): void;
 }
 
-/* The clients of the machine whose project is on screen; there is one project, so there is one of these. */
-interface Workspace {
-    endpointId: string;
-    transport: Transport;
-    projects: ProjectClient;
-    drawings: DrawingClient;
+/*
+ * One open project. The stores under it live as long as the workspace does; the clients over it are
+ * rebuilt whenever the daemon changes, which is what a machine switch is. Two workspaces on two
+ * machines are two of these, each saving to its own `project.json` over its own socket.
+ */
+export interface Workspace {
+    id: string;
+    stores: WorkspaceStores;
+    /* Replaced rather than patched on a switch, so React knows the daemon under it moved. */
+    connection: Connection;
     dispose(): void;
 }
 
-const machines = new Map<string, Machine>();
-let workspace: Workspace | null = null;
+/* The workspace the app draws today. A second one is a pane, which is a feature of its own. */
+export const MAIN_WORKSPACE_ID = 'main';
 
-/* The store as one machine's project client sees it: every write names the endpoint it came from. */
-const projectSink = (endpointId: () => string): ProjectSink => {
-    const actions = useProject.getState();
+const machines = new Map<string, Machine>();
+const workspaces = new Map<string, Workspace>();
+const listeners = new Set<() => void>();
+/* Which workspace the code outside React is about; the only one there is, until panes exist. */
+let focusedId: string | null = null;
+
+/* The store as one workspace's project client sees it: every write names the endpoint it came from. */
+const projectSink = (stores: WorkspaceStores, endpointId: () => string): ProjectSink => {
+    const actions = stores.project.getState();
     return {
         setProjects: (projects) => foldList(endpointId(), projects),
         patchProject: (summary) => useProjectList.getState().patchProject(endpointId(), summary),
@@ -51,7 +74,7 @@ const projectSink = (endpointId: () => string): ProjectSink => {
         setConflict: actions.setConflict,
         setError: actions.setError,
         setSwitching: actions.setSwitching,
-        getState: () => useProject.getState()
+        getState: () => stores.project.getState()
     };
 };
 
@@ -71,6 +94,18 @@ const buildMachine = (endpoint: Endpoint): Machine => {
     };
 };
 
+/* One machine's clients, kept until the pool replaces the socket they were built on. */
+const machineOn = (endpoint: Endpoint): Machine => {
+    const existing = machines.get(endpoint.id);
+    if (existing && existing.transport === pool.peek(endpoint.id)) {
+        return existing;
+    }
+    existing?.dispose();
+    const machine = buildMachine(endpoint);
+    machines.set(machine.endpointId, machine);
+    return machine;
+};
+
 /*
  * The sessions and the threads of one daemon, on that daemon's own socket. Every row they write
  * names their machine (`state/keys.ts`), so a second machine's clients paint nothing of this one's.
@@ -78,77 +113,139 @@ const buildMachine = (endpoint: Endpoint): Machine => {
  * must not land on whichever machine happens to be active.
  */
 export const machineFor = (endpointId: string): Machine | null => {
-    const existing = machines.get(endpointId);
-    if (existing && existing.transport === pool.peek(endpointId)) {
-        return existing;
-    }
-    existing?.dispose();
-    machines.delete(endpointId);
     const endpoint = useEndpoints.getState().endpoints.find((entry) => entry.id === endpointId);
     if (!endpoint) {
+        machines.get(endpointId)?.dispose();
+        machines.delete(endpointId);
         return null;
     }
-    const machine = buildMachine(endpoint);
-    machines.set(machine.endpointId, machine);
-    return machine;
+    return machineOn(endpoint);
 };
 
 /* The active machine always has a row in the endpoint list, so it always has clients. */
 const activeMachine = (): Machine => machineFor(activeEndpoint().id)!;
 
 /*
- * The project and the drawing on screen, on the socket of the machine that project came from. One
- * set at a time, because `state/project.ts`, `state/document.ts` and `state/canvas.ts` still hold
- * one open project: a second live set would boot a second project into the same canvas. The drawing
- * client is built first, so the project client can hand it the moment before a project is swapped in
- * and the drawing on screen reaches its own file while the old project is still open.
+ * The project and the drawing of one workspace, on the socket of the machine that project came from.
+ * The drawing client is built first, so the project client can hand it the moment before a project
+ * is swapped in and the drawing on screen reaches its own file while the old project is still open.
  */
-const buildWorkspace = (endpoint: Endpoint): Workspace => {
-    const transport = pool.require(endpoint);
-    const drawings = new DrawingClient(transport, useDrawing, useDocument, useProject, {
+const connect = (id: string, stores: WorkspaceStores, endpoint: Endpoint): Connection => {
+    const machine = machineOn(endpoint);
+    const transport = machine.transport;
+    /* Asked again on every save: a machine switch replaces the connection under the same workspace. */
+    const endpointId = (): string => workspaces.get(id)?.connection.endpointId ?? endpoint.id;
+    const drawings = new DrawingClient(transport, stores.drawing, stores.document, stores.project, {
         flushProject: (): Promise<void> => projects.flush()
     });
-    const projects = new ProjectClient(
-        transport,
-        useCanvas,
-        useDocument,
-        panelsPort,
-        projectSink(() => current.endpointId),
-        {
-            drawing: useDrawing,
-            beforeSwitch: (): Promise<void> => drawings.flush(),
-            endpointId: (): string => current.endpointId
-        }
-    );
-    const current: Workspace = {
-        endpointId: endpoint.id,
-        transport,
-        projects,
-        drawings,
-        dispose(): void {
-            projects.dispose();
-            drawings.dispose();
-        }
-    };
-    return current;
+    const projects = new ProjectClient(transport, stores.canvas, stores.document, panelsPort, projectSink(stores, endpointId), {
+        drawing: stores.drawing,
+        beforeSwitch: (): Promise<void> => drawings.flush(),
+        endpointId
+    });
+    return { endpointId: endpoint.id, transport, sessions: machine.sessions, chats: machine.chats, projects, drawings };
 };
 
-const activeWorkspace = (): Workspace => {
-    const endpoint = activeEndpoint();
-    if (workspace) {
-        if (workspace.transport === pool.peek(endpoint.id)) {
-            // A row that learned the id of its daemon is the same machine under another name; the socket stayed put.
-            workspace.endpointId = endpoint.id;
-            return workspace;
-        }
-        workspace.dispose();
-    }
-    workspace = buildWorkspace(endpoint);
-    return workspace;
+const disposeConnection = (connection: Connection): void => {
+    connection.projects.dispose();
+    connection.drawings.dispose();
 };
 
 /*
- * A stand-in for one of the active machine's clients, so a call site keeps reading as "the daemon
+ * A workspace on the daemon it belongs to, built on the first call. The stores are the module's own
+ * for the first workspace, because everything that renders outside a provider still means that one.
+ */
+const workspaceOn = (id: string, endpoint: Endpoint): Workspace => {
+    const existing = workspaces.get(id);
+    if (existing) {
+        moveTo(existing, endpoint);
+        return existing;
+    }
+    const stores = workspaces.size === 0 ? defaultWorkspaceStores : createWorkspaceStores();
+    const workspace: Workspace = {
+        id,
+        stores,
+        connection: connect(id, stores, endpoint),
+        dispose(): void {
+            disposeConnection(workspace.connection);
+            workspaces.delete(id);
+            if (focusedId === id) {
+                focusedId = workspaces.keys().next().value ?? null;
+            }
+            emit();
+        }
+    };
+    workspaces.set(id, workspace);
+    focusedId ??= id;
+    emit();
+    return workspace;
+};
+
+/* The daemon a workspace is on, after a machine switch or a row that learned its daemon's id. */
+const moveTo = (workspace: Workspace, endpoint: Endpoint): void => {
+    const { connection } = workspace;
+    const socket = pool.peek(endpoint.id);
+    if (connection.endpointId === endpoint.id && connection.transport === socket) {
+        return;
+    }
+    if (connection.transport === socket) {
+        // A row that learned the id of its daemon is the same machine under another name; the socket stayed put.
+        workspace.connection = { ...connection, endpointId: endpoint.id };
+        emit();
+        return;
+    }
+    disposeConnection(connection);
+    workspace.connection = connect(workspace.id, workspace.stores, endpoint);
+    emit();
+};
+
+/* The workspace the person is working in: the one the app draws, on the machine that is active. */
+export const mainWorkspace = (): Workspace => workspaceOn(MAIN_WORKSPACE_ID, activeEndpoint());
+
+/*
+ * A second project, on any machine, with stores and clients of its own. Nothing in the app opens one
+ * yet; the pane that would is a feature of its own, and this is what it will ask for.
+ */
+export const openWorkspace = (id: string, endpoint: Endpoint): Workspace => workspaceOn(id, endpoint);
+
+export const workspaceById = (id: string): Workspace | null => workspaces.get(id) ?? null;
+
+/* Which workspace everything outside React means: the one whose project was touched last. */
+export const focusWorkspace = (id: string): void => {
+    if (!workspaces.has(id) || focusedId === id) {
+        return;
+    }
+    focusedId = id;
+    emit();
+};
+
+/*
+ * Every change to a workspace passes here, because "the project in front of me" is what a keystroke,
+ * a menu and a watcher all mean, and a machine switch answers that differently under the same stores.
+ */
+const emit = (): void => {
+    const focused = focusedId === null ? null : (workspaces.get(focusedId) ?? null);
+    setCurrentWorkspace(focused === null ? null : { stores: focused.stores, endpointId: focused.connection.endpointId });
+    for (const listener of [...listeners]) {
+        listener();
+    }
+};
+
+const subscribeWorkspaces = (listener: () => void): (() => void) => {
+    listeners.add(listener);
+    return () => {
+        listeners.delete(listener);
+    };
+};
+
+/* The daemon a workspace is on, as React reads it: a switch replaces the object and the subtree follows. */
+export const useWorkspaceConnection = (workspace: Workspace): Connection => useSyncExternalStore(subscribeWorkspaces, () => workspace.connection);
+
+/* The workspace the app draws, kept on the active machine by `startConnections`. */
+export const useMainWorkspace = (): Workspace => useSyncExternalStore(subscribeWorkspaces, () => workspaces.get(MAIN_WORKSPACE_ID) ?? mainWorkspace());
+
+/*
+ * A stand-in for one of the active workspace's clients, so a call site keeps reading as "the daemon
  * this project is on" and holds on to nothing that a switch replaced.
  */
 const activeClient = <T extends object>(pick: () => T): T =>
@@ -162,8 +259,8 @@ const activeClient = <T extends object>(pick: () => T): T =>
 
 export const sessionClient = activeClient(() => activeMachine().sessions);
 export const chatClient = activeClient(() => activeMachine().chats);
-export const projectClient = activeClient(() => activeWorkspace().projects);
-export const drawingClient = activeClient(() => activeWorkspace().drawings);
+export const projectClient = activeClient(() => mainWorkspace().connection.projects);
+export const drawingClient = activeClient(() => mainWorkspace().connection.drawings);
 
 /* The session client of one machine, for a node that names the daemon it runs on. */
 export const sessionClientFor = (endpointId: string): SessionClient | null => machineFor(endpointId)?.sessions ?? null;
@@ -193,12 +290,12 @@ export const dropMachine = (endpointId: string): void => {
  */
 export const startConnections = (): (() => void) => {
     activeMachine();
-    activeWorkspace();
+    mainWorkspace();
     const offPool = pool.subscribe(prune);
     const offEndpoints = useEndpoints.subscribe((state, before) => {
         if (state.activeId !== before.activeId) {
             activeMachine();
-            activeWorkspace();
+            mainWorkspace();
         }
     });
     return () => {

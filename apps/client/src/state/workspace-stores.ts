@@ -24,17 +24,26 @@ export type WorkspaceSlot = keyof WorkspaceStores;
 /* The stores of the workspace a component sits in. Null outside one, which is what the fallback is for. */
 export const WorkspaceStoresContext = createContext<WorkspaceStores | null>(null);
 
-let current: WorkspaceStores | null = null;
+/* What the code outside React means by "here": the stores it reads and the daemon they are on. */
+export interface CurrentWorkspace {
+    stores: WorkspaceStores;
+    /* The machine this workspace is on now, which a switch changes under the same stores. */
+    endpointId: string;
+}
+
+let current: CurrentWorkspace | null = null;
 
 /*
  * Which workspace the code outside React means. Everything that runs off a keystroke, a menu or a
  * watcher says "the project in front of me", and with one pane on screen that is this one.
  */
-export const setCurrentStores = (stores: WorkspaceStores | null): void => {
-    current = stores;
+export const setCurrentWorkspace = (workspace: CurrentWorkspace | null): void => {
+    current = workspace;
 };
 
-export const currentStores = (): WorkspaceStores | null => current;
+export const currentStores = (): WorkspaceStores | null => current?.stores ?? null;
+
+export const currentWorkspaceEndpointId = (): string | null => current?.endpointId ?? null;
 
 /* The same shape zustand's `create` returns, so a store behind this hook reads like any other. */
 export interface WorkspaceHook<T> extends StoreApi<T> {
@@ -50,15 +59,16 @@ export interface WorkspaceHook<T> extends StoreApi<T> {
  */
 export const workspaceHook = <T>(slot: WorkspaceSlot, fallback: StoreApi<T>): WorkspaceHook<T> => {
     const resolve = (stores: WorkspaceStores | null): StoreApi<T> => (stores === null ? fallback : (stores[slot] as unknown as StoreApi<T>));
+    const focused = (): StoreApi<T> => resolve(currentStores());
     const useWorkspaceStore = <U>(selector?: (state: T) => U): T | U => {
-        const store = resolve(useContext(WorkspaceStoresContext) ?? current);
+        const store = resolve(useContext(WorkspaceStoresContext) ?? currentStores());
         return useStore(store, selector as (state: T) => U);
     };
     const hook = useWorkspaceStore as WorkspaceHook<T>;
-    hook.getState = () => resolve(current).getState();
-    hook.getInitialState = () => resolve(current).getInitialState();
+    hook.getState = () => focused().getState();
+    hook.getInitialState = () => focused().getInitialState();
     // `setState` is two overloads, and a forwarder can only be written as one of them; the cast is the seam.
-    hook.setState = ((partial: never, replace?: never): void => resolve(current).setState(partial, replace)) as StoreApi<T>['setState'];
-    hook.subscribe = (listener) => resolve(current).subscribe(listener);
+    hook.setState = ((partial: never, replace?: never): void => focused().setState(partial, replace)) as StoreApi<T>['setState'];
+    hook.subscribe = (listener) => focused().subscribe(listener);
     return hook;
 };

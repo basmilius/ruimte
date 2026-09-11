@@ -16,21 +16,19 @@ import { Toolbar } from '@/shell/Toolbar';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { startUpdates } from '@/state/updates';
+import { useMainWorkspace, useWorkspaceConnection } from '@/transport/connections';
+import { WorkspaceProvider } from '@/transport/context';
 import { TooltipProvider } from '@/ui/Tooltip';
 
-export function App() {
-    const name = useProject((s) => s.current?.name ?? null);
-
-    // The Electron window has no title of its own, so this names it as well.
-    useEffect(() => {
-        document.title = name ? `${name} - Ruimte` : 'Ruimte';
-    }, [name]);
-
-    // Once, with the preference as it stands: the shell reads it again from the Updates pane.
-    useEffect(() => startUpdates(useSettings.getState().updatesAutoDownload) ?? undefined, []);
-
+/*
+ * The project on screen, with the daemon it lives on under it. Everything inside reads its machine
+ * from here instead of from "the active endpoint", which is what a second project next to it needs.
+ */
+function Workspace() {
+    const workspace = useMainWorkspace();
+    const connection = useWorkspaceConnection(workspace);
     return (
-        <TooltipProvider>
+        <WorkspaceProvider connection={connection} stores={workspace.stores}>
             <div className="flex h-full w-full bg-bg">
                 <Sidebar />
                 <main className="flex min-w-0 grow">
@@ -47,6 +45,24 @@ export function App() {
                     <Panel />
                 </main>
             </div>
+        </WorkspaceProvider>
+    );
+}
+
+export function App() {
+    const name = useProject((s) => s.current?.name ?? null);
+
+    // The Electron window has no title of its own, so this names it as well.
+    useEffect(() => {
+        document.title = name ? `${name} - Ruimte` : 'Ruimte';
+    }, [name]);
+
+    // Once, with the preference as it stands: the shell reads it again from the Updates pane.
+    useEffect(() => startUpdates(useSettings.getState().updatesAutoDownload) ?? undefined, []);
+
+    return (
+        <TooltipProvider>
+            <Workspace />
             <CommandPalette />
             <SettingsDialog />
             <LayoutDialog />
