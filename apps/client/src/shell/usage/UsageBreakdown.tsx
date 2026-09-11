@@ -4,7 +4,7 @@ import { CircleHelp, Folder, Info } from 'lucide-react';
 import type { UsageModel, UsageProject, UsageProvider, UsageSummaryResult } from '@ruimte/contracts';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { Segmented } from '@/shell/settings/controls';
-import { useEndpointId } from '@/state/keys';
+import { useUsageEndpointId } from '@/state/usage';
 import { useProjectList } from '@/state/project-list';
 import type { UsageMetric } from '@/state/usage';
 import { SECTION_LABEL } from '@/ui/classes';
@@ -113,7 +113,7 @@ function ModelRows({ models, metric, total }: { models: readonly UsageModel[]; m
 
 function ProjectRows({ projects }: { projects: readonly UsageProject[] }) {
     const rows = useProjectList((s) => s.projects);
-    const endpointId = useEndpointId();
+    const endpointId = useUsageEndpointId();
     const money = useMoney();
     const top = Math.max(...projects.map((project) => project.costUsd), 0);
     return (
