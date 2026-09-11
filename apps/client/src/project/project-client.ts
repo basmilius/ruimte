@@ -151,7 +151,7 @@ export class ProjectClient {
         await this.open({ projectId });
     }
 
-    /* Creating is the folder picker's business: everywhere else a folder that is gone stays gone. */
+    /* Creating is browse mode's business: everywhere else a folder that is gone stays gone. */
     async openFolder(folder: string, createFolder = false): Promise<void> {
         await this.open({ folder, createFolder });
     }

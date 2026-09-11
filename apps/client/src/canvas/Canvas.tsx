@@ -241,11 +241,6 @@ export function Canvas() {
                 }
                 return;
             }
-            if (mod && !e.altKey && !e.shiftKey && e.code === 'KeyO') {
-                e.preventDefault();
-                useUi.getState().openFolderPicker();
-                return;
-            }
             // Shift makes the key uppercase, which is why this compares the code and not the key.
             if (mod && e.shiftKey && e.code === 'KeyF') {
                 e.preventDefault();

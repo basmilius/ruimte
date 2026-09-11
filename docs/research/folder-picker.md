@@ -1,43 +1,45 @@
 # Folder picker: research and design
 
-State of the working tree on 2026-09-11, on top of `1bf8ce7`. Every path is relative to
-`/Users/bas/Development/Projects/ruimte`. Line numbers are from the working tree, which has phase 5
-of `docs/research/multiple-daemons.md` half landed: `apps/client/src/state/project.ts` has already
-been rewritten around a `ProjectRow` while the store below it still has the old bodies, and another
-agent is in that file right now. Nothing in this document is implemented; this is the document an
-implementation agent executes.
+State of `main` on 2026-09-11, at `fe7427b`. Every path is relative to
+`/Users/bas/Development/Projects/ruimte`.
 
-One warning about the numbers: `CommandPalette.tsx`, `ProjectMenu.tsx` and `state/project.ts` are
-being edited while this was written, and they drifted by up to thirty lines during the writing of
-it. Every reference below was re-checked against the tree at the end, but grep for the symbol rather
-than trusting the number.
+This document has been rewritten once. The first version proposed a folder picker of its own, a
+dialog with a shortcut rail, and that shipped in three commits. Bas saw it and said it looks nothing
+like T3 Code: their picker lives in the command palette, so ours does too, and it should work the
+same way. The rail and its recent folders are gone. What follows is a mirror of their browse mode
+inside our palette, deviating only where their design collides with something that is genuinely
+different here, and saying so each time it does.
+
+Three commits stay and three come out; section 4.1 names them. Sections 1 and 2 are description and
+were only extended. Sections 3 and 4 are new.
+
+One warning about line numbers: `CommandPalette.tsx`, `ProjectMenu.tsx` and `state/project.ts` moved
+a lot while this was written, and the three commits that come out move them again. Grep for the
+symbol rather than trusting the number.
 
 ## 0. Summary of the recommendation
 
-- A `FolderPicker` dialog of its own (`apps/client/src/shell/FolderPicker.tsx`), opened from the
-  project menu, the `open-folder` command, Cmd+O, and a single row in the palette when what was
-  typed looks like a path. It is not a mode of anything.
-- Its layout: an editable path field plus a clickable breadcrumb in the header, a shortcut rail on
-  the left (Home, the open project's folder, recent projects on this machine), one scrolling list of
-  directories on the right, a hint and the Open button in the footer. One list, not Miller columns
-  and not a tree, because `fs.browse` answers one directory per request.
-- The header carries a chip naming the machine being browsed, from `describeMachine`. The picker
-  always browses the active endpoint, so the chip cannot lie.
-- The native Electron dialog stays, offered only when there is a desktop bridge **and** the active
-  endpoint is the daemon that served this page. Elsewhere it is absent without comment: it cannot
-  see a remote file system.
-- A path that does not exist is offered for creation inline, the way T3 Code does it: the button
-  reads "Create and open", it creates the whole missing chain, and there is no separate "New folder"
-  action. Git repositories get no list, no scan and no mark, also the way T3 Code does it.
-- Two optional fields on `fs.browse` (`packages/contracts/src/fs.ts:3-25`), `hidden` on the payload
-  and `exists` on the result, plus one optional `createFolder` on `project.open`. Optional because a
-  client can now be newer than the daemon it is talking to, and a required field an older daemon
-  does not send would fail the whole parse.
-- The palette loses its browse mode: roughly 90 lines out of `CommandPalette.tsx`, leaving one row
-  that hands a typed path to the picker.
-- T3 Code, for the record, does the thing this proposal moves away from: their picker is a wizard
-  inside the command palette. Where they are ahead is the missing-folder case (1.4), which this
-  copies as behavior. Section 5 lists every decision and who made it.
+- **No dialog of its own.** Folder browsing is a mode of the command palette, the way it is in T3
+  Code and the way it was here before `58021c5`. The rail, the recent folders and the breadcrumb are
+  gone.
+- Browse mode is still a pure function of the text: a query that starts with a path browses. It is
+  entered from Cmd+K, from the palette's own "Open a folder as a project" action and from "Open
+  folder" in the project menu, which stops opening a native dialog of its own.
+- The list is one group of folders, `..` first inside it, each row an icon and a name. The submit
+  button moves out of the footer and into the right end of the input field, carrying its label and
+  one key chip, and the footer becomes key hints plus one slot on the right.
+- A path that is not there flips that button to "Create and open" and creates the whole missing
+  chain, which is T3 Code's behavior made reachable: their own version of the message is dead code,
+  because they cannot tell a missing folder from an empty one and we can.
+- **Machines.** Browsing starts on the active machine, never on a chooser. The input's leading slot
+  carries the machine's dot and label and is also the way into a Machines list, which is where they
+  put their back arrow. Switching machines resets the path to that machine's start folder. A machine
+  that is not connected is still selectable and gets dialed, because our sockets are lazy where
+  theirs are long-lived.
+- The native Electron dialog is a button in the footer's right slot, shown only in the desktop build
+  and only when the machine being browsed is the daemon that served the page.
+- Three commits come out (`58021c5`, `fc9ef57`, `fe7427b`) and three stay (`91d3fa1`, `f549b05`,
+  `53205f3`). The daemon and the contracts are already done and need nothing. Section 4 is the plan.
 
 ## 1. What T3 Code does
 
@@ -82,6 +84,29 @@ WSL machine, and typing an absolute-looking path into the palette root, which sk
 Electron application menu item. Mobile is a separate screen with a path field and a browse list
 under it.
 
+**Step 1 in detail** (`CommandPalette.tsx:855-882`, `1515-1574`). It is shown when the catalog holds
+more than one environment, or when no connected one can be picked by default, and **skipped when
+exactly one environment exists and it is connected**, which is the ordinary case. The group is
+labeled "Environments". A row is the two-line shape: a machine-kind icon (a server, a cloud, a
+laptop, a Linux mark, a Mac mini glyph), the environment's label as the title, and a subtitle that
+is the words "This device" for the primary one, the environment id for a connected remote, or the
+connection's own status for anything else ("Available", "Offline", "Connecting...",
+"Reconnecting...", "Connection failed"). A machine that is not connected is **disabled**: dimmed to
+64 per cent and unclickable. The order is the primary machine first, then alphabetical by label.
+
+**Step 2 in detail** (`CommandPalette.tsx:1385-1477`). Group label "Sources", order: "Local folder",
+then "Git URL", then the providers with the ready ones first and alphabetical within that. Each is
+the two-line shape. The "Setup Required" affordance is a trailing pill on a disabled row, 20 px
+high, in the warning color, with a tooltip carrying the reason and a click that closes the palette
+and goes to the source control settings.
+
+**Going back** (`CommandPalette.tsx:1315-1332`, `2433-2436`, `2689-2703`). Three ways into the same
+pop: the back arrow that takes over the input's leading slot in any pushed step, Backspace on an
+empty field, and simply deleting the path until the field is empty, which pops on its own. Popping
+clears the query and the clone flow, and popping the last step forgets the chosen machine. There is
+no title anywhere in the palette, so the only thing that says which step you are in is the
+placeholder and the leading icon. **While browsing, nothing says which machine you chose.**
+
 ### 1.2 Navigating
 
 The input is the path field; there is no second box and no breadcrumb bar.
@@ -107,6 +132,16 @@ The input is the path field; there is no second box and no breadcrumb bar.
   the list never flashes stale contents. The visible cost is a pause between the click and the path
   changing.
 - One flat list. No Miller columns, no tree.
+- Escape closes the whole dialog from browse mode; it does not step back a level. The footer says
+  "Esc Close" in every state.
+- Entering browse mode is a pure function of the text: no mode flag, no explicit switch. The instant
+  the field starts with a path, the leading icon and the placeholder swap, the submit button appears,
+  auto-highlight turns off so no row is preselected, and the content remounts and re-focuses the
+  field.
+- Every navigation prefetches before it commits: choosing "Local folder", stepping into a folder and
+  stepping up all fetch the target directory first and only then change the text in the field, with
+  a generation counter dropping a stale answer. The list and the path therefore change together and
+  there is never an empty flash.
 
 ### 1.3 What a row shows
 
@@ -204,7 +239,7 @@ list is always the chosen machine's file system and local is not special-cased.
 
 **How they say which machine: weakly.** You pick the machine in step 1, and after that there is no
 chip, no title and no badge while browsing. Two machines browsing `~/projects/` look identical. The
-agent that read this calls it a real gap, and I agree; section 3.5 is the opposite choice.
+agent that read this calls it a real gap, and I agree; section 3.6 is the opposite choice.
 
 Their native dialog button is the interesting part, because they arrived at the same rule this
 document proposes. A trailing footer button, labeled after the file manager, appears only when
@@ -245,10 +280,67 @@ Nothing records which directories you browsed. What exists:
   collapses clones of one repository, and puts non-repository folders under "Other folders".
 
 That onboarding list is the only place in the product that shows folder recency, repository identity
-or an already-imported state, and the everyday folder browser shows none of it. Ruimte gets the same
-information for free from `project.list`, which is section 3.4.
+or an already-imported state, and the everyday folder browser shows none of it. Ruimte could build
+the same list for less, because `project.list` already answers a folder and a `lastOpenedAt` per
+project, and deliberately does not: the browser shows folders and nothing else, on both sides.
+
+### 1.9 The chrome, the row and the footer
+
+Measured rather than guessed, because section 3 mirrors it.
+
+**The popup.** One size for every mode: 576 px wide, capped at 420 px tall, top-anchored about a
+tenth of the way down, 16 px corners, a hairline border and a blurred glass background over a dimmed
+backdrop. Browse mode changes nothing about it. Inside, top to bottom: the input row, the scrolling
+list, the footer bar. No title, no header, no breadcrumb, anywhere.
+
+**The input row.** About 46 px tall, the field itself borderless and transparent so it reads as text
+on glass rather than a box, in the normal sans font and **not** monospace. A leading slot holds a
+search icon at the root, a folder-plus icon when a path is typed at the root, and a clickable back
+arrow in any pushed step, which is what browsing after "Add project" actually shows. A trailing slot
+holds the submit button, floating over the field, small and outlined, carrying its label and one key
+chip: "Add" or "Create & Add", with "Enter" or "Cmd Enter" depending on whether a row is highlighted.
+The field reserves trailing padding sized to the label so the text never runs under the button. The
+placeholder changes with the mode: at the root it is about searching commands and projects, while
+browsing it reads "Enter project path (e.g. ~/projects/my-app)".
+
+**A row.** 28 px minimum height, 8 px side padding, 6 px top and bottom, 8 px between slots, small
+corner radius, 14 px text. Left is a 16 px muted icon. Middle is the title, truncated; when an item
+has a description it becomes a two-line stack with the description under the title in 12 px muted
+text. Right holds, in order, a trailing pill, a timestamp, a key chip, and a chevron for a row that
+opens a step. **A folder row uses none of the right slots and has no description**: it is an icon and
+a name, nothing else. The highlighted row is a solid accent background with accent-colored text, and
+they deliberately switch off the underlying widget's own hover and selected styling so exactly one
+row is ever painted. Rows have no dividers.
+
+**Groups.** A label in 12 px medium muted text, aligned one pixel right of the row text, 6 px above
+the group that follows another, scrolling with the list rather than sticking. The folder list is one
+group labeled "Directories", and the `..` row is the first item **inside** it, titled exactly `..`
+with a corner-left-up icon in the same slot as the folder icons.
+
+**The footer.** Always present, a tinted bar with 16 px side padding and 10 px above and below, 14 px
+medium muted text. On the left, key hints in this order: up and down arrows with "Navigate"; then
+"Enter" with a word, which reads "Select" when a row is highlighted or the path cannot be submitted
+and **is left out entirely** when the typed path is submittable, because the button in the field is
+saying it already; then "Backspace" with "Back" in any pushed step; then "Esc" with "Close". On the
+right, one slot, which in browse mode on the desktop build holds the "Open in Finder" button.
+
+**States.** No spinner, no skeleton, no loading text anywhere in the browse path. While a request is
+in flight the previous listing stays on screen, and because every navigation prefetches before it
+commits, the path and the list change in the same frame. An empty directory shows the "Directories"
+label with nothing under it and no message. A directory that cannot be read is indistinguishable
+from an empty one, because the server swallows the permission error and answers with an empty list.
+The palette never reads the browse error at all: there is no banner and no toast for a listing that
+failed. One consequence worth recording, because it changes what is worth copying: their
+"Press Enter to create this folder and add it as a project" message is effectively **unreachable**,
+since the browse list always returns one group and the empty state only renders when there are no
+groups. What a person actually sees when a path does not exist is the button label changing to
+"Create & Add".
 
 ## 2. What Ruimte has today
+
+The state described here is the one the revert of section 4.1 returns to, which is why it is worth
+reading: it is the floor the rebuild starts from. Every line number below is from `fc9ef57^`, the
+commit the three UI commits sit on top of.
 
 ### 2.1 Two entry points, neither of them a picker
 
@@ -267,7 +359,8 @@ in `apps/client/src/desktop/bridge.ts:45` as `pickFolder(initialPath?): Promise<
 
 ### 2.2 The palette's browse mode
 
-`apps/client/src/shell/CommandPalette.tsx` is 567 lines and carries three modes. The folder one:
+`apps/client/src/shell/CommandPalette.tsx` is 598 lines at `fc9ef57^` and carries three modes. The
+folder one, which is most of what section 3 keeps and grows:
 
 - `isPathQuery` (L61): a query starting with `/`, `~`, `./` or `../` is a path. `browsing` (L166)
   is that test plus "not in find-in-files mode".
@@ -326,20 +419,32 @@ distinguishes `not-found` from `not-a-directory` (`list.ts:6,78,81`), which `fs.
 but it returns files as well as directories and says nothing about `.ruimte` or git. It is what the
 files panel tree is built on.
 
-### 2.5 The project list, mid phase 5
+### 2.5 The project list, and opening across machines
 
-Before phase 5, `useProject.projects` was a flat `ProjectSummary[]` from `project.list` on the
-active daemon only. In the working tree the interface has already moved to
-`ProjectRow { endpointId, summary }` (`apps/client/src/state/project.ts:9-12`), with
-`setProjects(endpointId, summaries)`, `patchProject`, `forgetProjects` and a `currentEndpointId`
-next to `current`. The store bodies under it are still the old ones, and `apps/client/src/project/`
-has no `list.ts` or `open.ts` yet, so the union is designed and not finished. Section 4.5 of
-`docs/research/multiple-daemons.md` is the plan; this document assumes it lands first.
+Phase 5 landed while the first version of this document was being written (`b73eb95`, `ac5d055`).
+`useProject.projects` is now a union: `ProjectRow { endpointId, summary }`
+(`apps/client/src/state/project.ts:9-12`), filled per machine by `setProjects(endpointId, ...)`, with
+`currentEndpointId` next to `current`.
 
-`ProjectSummary` itself (`packages/contracts/src/project.ts:368-381`) carries `projectId`, `name`,
-`color`, `folder` (nullable), `lastOpenedAt`, `available`, `icon` and `nameSource`. That is a recent
-folder list for free, per machine, already sorted by nothing in particular but sortable by
-`lastOpenedAt`.
+Three things from it that section 3 leans on:
+
+- `groupProjects(rows, endpoints, activeId, connected)` (`apps/client/src/project/list.ts:96-106`)
+  folds the union into one group per machine, active machine first, each group carrying a
+  `connected` flag. The project menu draws a group as a 6 px dot, filled `bg-status-idle` when the
+  machine answers and `bg-text-faint` when it does not, plus the endpoint's label, and it collapses
+  the label to the plain word "Projects" when there is only one machine
+  (`apps/client/src/shell/ProjectMenu.tsx:95-99`). That is the house style for "which machine", and
+  the palette's machine step in 3.2 reuses it rather than inventing a second one.
+- `openProject(endpointId, projectId)` (`apps/client/src/project/open.ts:42-68`) opens a project on
+  the machine that owns it: remember the choice, activate the endpoint, wait up to five seconds for
+  that socket (`CONNECT_TIMEOUT_MS`, L13), then open. A machine that does not answer fails with
+  "That machine is not answering" rather than hanging. **There is no `openFolder` counterpart**, and
+  3.6 adds one.
+- `useOpenEndpoints()` and `useEndpointConnection(endpointId)`
+  (`apps/client/src/transport/status.ts:25-46`) say which machines are answering right now.
+
+`ProjectSummary` (`packages/contracts/src/project.ts:368-381`) carries `projectId`, `name`, `color`,
+`folder` (nullable), `lastOpenedAt`, `available`, `icon` and `nameSource`.
 
 ### 2.6 What the client knows about the machine it is browsing
 
@@ -359,383 +464,455 @@ folder list for free, per machine, already sorted by nothing in particular but s
   `useEndpoints.getState().activeId === LOCAL_ENDPOINT_ID` (`apps/client/src/state/endpoints.ts:7`).
   The local row is the only one with `reachability: 'loopback'` (L50).
 
-## 3. The proposal
+## 3. The proposal: their browse mode, in our palette
 
-### 3.1 One dialog, opened from four places
+The rule for everything below: mirror T3 Code's behavior and layout, and deviate only where their
+design collides with something genuinely different here. Three things collide, and only three. We
+have several daemons at once where they have one environment chosen up front (3.2, 3.6). We have an
+`exists` answer where they have none, which is the whole of `91d3fa1`, so our states can be honest
+where theirs cannot (3.7). And our components follow `CLAUDE.md`: semantic tokens, Lucide through
+`Icon`, `Tooltip` instead of `title`, whole pixels. Every other difference below is marked and
+argued where it appears.
 
-A new `FolderPicker`, a Base UI `Dialog` like `WorktreeDialog` and `ProjectIconDialog`, mounted next
-to the others in `apps/client/src/App.tsx:50-54`. It opens from:
+Gone from the first version, on Bas's word: the dialog of its own, the shortcut rail, the recent
+folders, the breadcrumb. None of it has an equivalent in T3 Code.
 
-1. "Open folder" in the project menu (`ProjectMenu.tsx:150-152`), on desktop and in a browser tab alike.
-   The native dialog stops being the desktop branch and becomes a button inside the picker (3.6).
-2. The `open-folder` command (`commands.ts:110`), whose hint changes from "Type a path" to the
-   folder it would start in.
-3. Cmd+O. The app-wide chord block is `apps/client/src/canvas/Canvas.tsx:232-262`; `o` is free
-   there and free in `commands.ts`.
-4. A path typed into the palette, which hands the text over as a seed (3.7).
+### 3.1 Entering and leaving browse mode
 
-State goes next to the palette's in `apps/client/src/state/ui.ts` (fields at L112-121, actions at
-L208-218): `folderPickerOpen`, `folderPickerSeed`, `openFolderPicker(seed?)`,
-`setFolderPickerOpen(open)`.
+Unchanged from what is in the tree at `fc9ef57^`, because it is already what they do: browse mode is
+a pure function of the text. A query starting with `/`, `~`, `./` or `../` is a path
+(`isPathQuery`, `CommandPalette.tsx:61`), and there is no mode flag. Three things get you there:
 
-### 3.2 Layout: a path field, a shortcut rail, one list
+- Cmd+K and typing a path, which is how it works today.
+- "Open a folder as a project" in the palette's own action list (`commands.ts:110`), which seeds the
+  field with `~/` on the active machine.
+- "Open folder" in the project menu (`ProjectMenu.tsx:151`), which does the same. Its desktop branch
+  is deleted: the native dialog moves into the palette footer (3.8). This mirrors their sidebar and
+  their empty states, which all fire the palette open on the add-project step rather than opening
+  something of their own.
 
-Roughly 720 by 480, a fixed height so the list does not resize under the cursor. Three bands:
+**Seed the field from a prefetch, not from an empty list.** They fetch the starting directory and
+only then push the step and set the text, so the first paint already has folders in it. Ours should
+do the same: ask `fs.browse` for the start path, then set the query. The start path is the open
+project's folder when there is one on that machine, else that machine's home, which is
+`startFolder(folder, home, sep)` from 4.2. They read a configured base directory first; we have no
+such setting and are not adding one.
 
-**Header.** The path as an editable monospace field, the same `field` class the other dialogs use,
-autofocused, holding the full path being browsed. To its right, the machine chip (3.5). Under the
-field, a breadcrumb of the path's segments, each clickable, which is what replaces the `..` row for
-the mouse. The `..` row stays in the list for the keyboard.
+Leaving mirrors them exactly, and two thirds of it already exists:
 
-**Body.** A rail on the left, around 180 px, with the shortcuts of 3.4. A single scrolling list on
-the right: the `..` row, then one row per directory, each with a folder icon, the name, and a
-trailing mark when the folder already holds a canvas (`hasCanvas`, today's `FolderCheck` plus "Has a
-canvas") or is a git repository (3.4). Rows are directories only; files are not shown, because the
-thing being picked is a folder and a list with files in it invites clicking one.
+- Deleting the path until the field is empty leaves browse mode on its own, because an empty query
+  is not a path query.
+- Backspace on an empty field steps back, which our palette already does for find-in-files
+  (`CommandPalette.tsx:383-387`, with a comment saying the mode leaves the way it was entered). In
+  browse mode it opens the machine list (3.6) when there is more than one machine, and otherwise
+  clears the field.
+- Escape closes the whole palette. It does not step back. Their footer says "Esc Close" in every
+  state and so does ours.
 
-**Footer.** The keyboard hint on the left, then the hidden-folders toggle, then, when it applies,
-the native dialog button, then the primary button, which reads "Open folder" or "Create and open"
-depending on whether the folder is there. No separate "New folder" button. Under the field sits one
-line that says why a path cannot be opened, or that it will be created (3.8).
+### 3.2 The steps before browsing, and which of them we need
 
-**Rejected: Miller columns.** Three or four columns is the prettier picker, and it costs one
-`fs.browse` per column plus horizontal scrolling and a scroll position per column. `fs.browse`
-answers one directory per request, so a five-level path is five round trips on every keystroke that
-changes a middle segment. Not worth it for a dialog that is open for four seconds.
+They have two. We need a version of one and none of the other.
 
-**Rejected: a tree.** `apps/client/src/shell/panels/files-tree.ts` already builds one, on `fs.list`.
-Expanding in place is nice for a folder you are exploring and bad for a folder you are aiming at:
-the target scrolls as parents expand, and the tree's source has neither `hasCanvas` nor a
-directories-only mode. A single list plus a breadcrumb navigates a known path faster.
+**Their machine step: yes, but not as a step.** They show it only when more than one environment
+exists and skip it when there is exactly one that is connected. Ours would be skipped in the same
+ordinary case, so the question is only what the other case looks like, and that is 3.6: the machine
+becomes a control in the input row rather than a gate in front of browsing. The argument is in 3.6
+and it comes down to this: their environment is something you choose for this task, ours is
+something the whole app already runs on.
 
-### 3.3 Keyboard
+**Their source step: no.** Its three kinds of row are a local folder, a git URL and one row per git
+provider, and every one but the first is about cloning a remote repository (1.1). Ruimte has no
+provider settings, no repository lookup and no clone, so a step whose only enabled row says "Local
+folder" would be a question with one answer. "Open a folder" goes straight to browsing. If cloning
+is ever built, this step is where it goes and the shape is already described in 1.1.
 
-The field keeps focus the whole time and the list is driven through `aria-activedescendant`, exactly
-the arrangement `CommandPalette.tsx:449-472` uses today.
+### 3.3 The list
+
+One group, one row per folder, nothing else, exactly as 1.9 describes it:
+
+- The group label reads **Folders**, which is the word our palette already uses for this section
+  (`CommandPalette.tsx:70`). Theirs says "Directories". Same thing, our word.
+- The `..` row is the **first item inside that group**, not above the label, titled exactly `..`
+  with a corner-left-up icon in the same slot as the folder icons. Today it carries a trailing hint
+  reading "Up one folder"; that hint goes, because their row has nothing in its right slots and this
+  is one of the places where ours looks different for no reason.
+- A folder row is an icon and a name. No description line, no right slots.
+- One exception, argued: a folder that already holds a canvas keeps its mark, because `fs.browse`
+  has answered `hasCanvas` since long before any of this and it says what the Enter key will do.
+  Opening a folder that already has a project opens that project rather than making a second one, so
+  the mark is the difference between "make a project here" and "go back to this project". T3 Code
+  does the same thing and simply does not tell you. Keep the `FolderCheck` icon in the left slot and
+  drop the "Has a canvas" text from the right slot, so the row shape stays theirs.
+- Sorting is the daemon's: directories only, name compare, ascending
+  (`apps/server/src/fs/browse.ts:66-68`). The client does not re-sort. This already matches them.
+- Files are never listed, on either side.
+- Hidden folders follow the daemon's existing rule, which is theirs too: a dot folder appears once
+  the typed segment starts with a dot (`browse.ts:68`). **No toggle**, reversing what the first
+  version of this document decided. T3 Code has none, and the rule is the same rule on both sides.
+  The `hidden` flag that would have driven a toggle was shipped in `91d3fa1` and stays on the daemon
+  without a caller (4.3).
+
+While browsing, the folder rows are the only rows: the commands, the views and the projects step
+aside, which is what the palette does today and what theirs does.
+
+### 3.4 Above and below the list
+
+**The input row** keeps its shape and gains their two ideas.
+
+The leading slot already swaps per mode (`CommandPalette.tsx:344-346`): a search icon normally, a
+folder icon while browsing. While browsing it becomes the machine control of 3.6, which is where
+they put their back arrow. The field stays in the normal sans font: today it switches to monospace
+while browsing (`CommandPalette.tsx:439`), theirs does not, and a proportional font is what makes a
+path look like something you type rather than something you read. Drop the monospace on the field
+and on the rows.
+
+The placeholder changes while browsing, as theirs does, to name the thing being typed rather than
+the three modes at once.
+
+**The submit button moves into the field.** This is the most visible difference between what we
+built and what they have. Theirs is a small outlined button floating over the right end of the input,
+carrying its label and one key chip, with the field reserving trailing padding sized to that label.
+Ours lives in the footer with a second button beside it. Move it: one button in the field, labeled
+"Open folder" or "Create and open" (3.7), with a key chip reading Enter or Cmd+Enter depending on
+whether a row is highlighted, and a `Tooltip` repeating the label and the chord, since `CLAUDE.md`
+forbids a `title` attribute.
+
+**The footer becomes hints plus one slot.** Today it is a sentence and two buttons
+(`CommandPalette.tsx:564-595`). Mirror theirs: key chips on the left in their order, up and down
+with "Navigate"; Enter with "Select", **left out entirely** when the typed path is submittable and
+nothing is highlighted, because the button in the field already says it; Backspace with "Back" when
+there is a step to go back to; Esc with "Close". On the right, one slot, holding the native dialog
+button when it applies (3.8) and, unlike theirs, the error line when a browse or an open fails
+(3.7). Use the existing `TOOLTIP_KBD` class for the chips; it is the same 12 px chip the palette
+already draws.
+
+### 3.5 Keyboard
+
+Their semantics, which our tree already has most of:
 
 | Key | What it does |
 | --- | --- |
-| Any character | Goes into the path field; the list re-browses after the same 60 ms debounce |
-| Down / Up | Move the highlight; from nothing highlighted, Down takes the first row |
-| Enter | Steps into the highlighted folder (the field becomes its path plus a separator) |
-| Enter, nothing highlighted | Opens what the field says |
-| Cmd+Enter | Opens what the field says, whatever is highlighted |
-| Tab | Completes the field to the highlighted name without stepping in |
-| Cmd+Up | Up one level, the Finder chord; the `..` row does the same |
-| Escape | Closes the dialog |
+| Any character | Goes into the field; the list re-browses after the 60 ms debounce |
+| Down / Up | Move the highlight. Nothing is preselected while browsing, so the first Down takes the first row |
+| Enter, nothing highlighted | Opens the typed path, creating it when it is not there |
+| Enter, a row highlighted | Steps into that folder and keeps the palette open |
+| Cmd+Enter | Opens the typed path whatever is highlighted |
+| Backspace, empty field | Steps back: the machine list, or out of browse mode |
+| Escape | Closes the palette |
+| Tab | Completes the field to the highlighted folder without stepping in |
 
-The one rule that differs from the palette: because the field always holds a full path rather than a
-query, Enter on a highlighted row is unambiguous and Cmd+Enter is the only way to open a folder you
-are standing next to. That is the same pair of keys as today, with the ambiguity at L460 removed.
+Every line of that is either already in `CommandPalette.tsx:449-472` or is 3.6. Two notes. Nothing
+being preselected while browsing is not a detail: it is what makes Enter mean "use what I typed",
+and our `reset` already does it (`setIndex(isPathQuery(next) ? -1 : 0)`). Tab is the one key they
+leave unused and we already use; it stays, because it is in the tree, it costs nothing, and removing
+a working completion to match an absence is not mirroring, it is copying.
 
-### 3.4 The shortcut rail
+### 3.6 Machines: where browsing starts, and how you switch
 
-Three groups, all derived from state the client already holds, all of them a path the click writes
-into the field:
+This is the one place where their answer cannot be ours, so here is one answer and the argument for
+it.
 
-1. **Home.** `useServer((s) => s.home)` for the endpoint being browsed
-   (`apps/client/src/state/server.ts:8`). One row.
-2. **Recent projects.** The rows of `useProject.projects` that belong to this endpoint and have a
-   `folder`, newest `lastOpenedAt` first, capped at eight. After phase 5 that means filtering the
-   union on `endpointId`; before it, the list is the active daemon's anyway. A row shows the project
-   name with its folder underneath, the shape `ProjectMenu.tsx:127-134` already draws. Clicking one
-   points the field at the folder rather than opening the project, so the picker stays a picker.
-3. **The open project's folder**, when there is one and it is on this machine. One row, at the top.
+**Browsing starts on the active machine.** Not on a chooser. Their environment is a thing you pick
+for the task at hand, and they still skip the step whenever one connected environment can be
+defaulted. Ours is not a per-task choice at all: an active endpoint is what the whole client is
+pointed at, what the open project belongs to, what the running sessions live on, and the client
+already restores it on boot (`restoreLastEndpoint`, `apps/client/src/project/open.ts:74-83`). Asking
+which machine before letting you type a path would be asking a question the app has already
+answered. So browse mode opens on the active machine, every time, exactly as their one-environment
+case does.
 
-**Git repositories: nothing, which is what T3 Code does.** Decided with Bas. Their folder browser
-has no repository group, no repository badge and no repository sorting, and their browse entry
-carries only a name and a path, so the backend never even stats a `.git` while listing (1.3). The
-git rows in their second step are about cloning a remote repository, not about finding a local one
-(1.1). So "like T3 Code" means: no repository list, no repository scan, and **no `hasGit` mark
-either**. That drops one of the three contract fields this document first proposed.
+**The machine is in view the whole time.** The leading slot of the input carries a 6 px dot in the
+connection color plus the machine's label, the same pair the project menu draws over a group of
+projects (`ProjectMenu.tsx:95-99`), and it collapses to the plain folder icon when the client knows
+only one machine, just as that menu collapses its label to the word "Projects". This is a deliberate
+deviation: T3 Code shows nothing at all while browsing (1.1), which is the half of their design
+worth avoiding rather than copying, because two machines browsing `~/projects/` look identical and
+we have two machines routinely.
 
-The reasons hold up on Ruimte's side independently. There is no request that finds repositories:
-`git.worktree-list` (`apps/server/src/handlers/git.ts:30`) needs a repo path to start from, and
-nothing walks a home directory looking for `.git`. Such a walk over a real home directory takes
-seconds and needs its own ignore rules and its own cache, which is a feature of its own size. What
-Ruimte keeps that T3 Code does not have is the `hasCanvas` mark that `fs.browse` already returns
-(`apps/server/src/fs/browse.ts:72`), which answers the more useful question anyway: not "is this a
-repository" but "is this already a Ruimte project".
+**Switching is a step you enter from browsing, not one you pass through.** Clicking that slot, or
+pressing Backspace on an empty field, replaces the folder rows with a **Machines** group: one row per
+known endpoint, active machine first, then the order of `useEndpoints.endpoints`, each with the
+connection dot, the endpoint label as the title and the machine's own label or its status
+underneath. That is their environment step's content and shape, reached from the place they put
+their back arrow. Picking a row goes back to browsing on that machine.
 
-If a repository list is ever wanted, there is a better source than a walk, and T3 Code found it: the
-agent CLIs' own session histories, which they scan once during onboarding (1.8). Ruimte already
-reads them, in the usage scanner: `apps/server/src/usage/roots.ts:15` reads `~/.claude/projects`,
-and `aggregate` folds a directory onto a known project or leaves its `projectId` null when nothing
-claims it (`apps/server/src/usage/aggregate.test.ts:70-82`). So "the folders you have worked in,
-including the ones that are not projects yet" is a query away whenever someone wants it. Not here.
+**The typed path resets on a switch.** It becomes that machine's start path, which is the open
+project's folder when that project is on that machine and its home otherwise. This is what they do:
+each environment carries its own initial query and browsing starts there. The reason is stronger for
+us than for them: a path from machine A usually does not exist on machine B, and carrying it over
+would drop you into the "create this folder" state (3.7) on a machine you have just arrived at,
+which is the one state nobody wants by accident.
 
-Cloning a remote repository, which is the other half of their second step, is out of scope for a
-folder picker and for Ruimte today: it needs provider settings, a repository lookup and a clone,
-none of which exist. Worth knowing it is where their design goes; not worth starting here.
+**A machine that is not connected stays clickable.** They disable such a row and this is the second
+deliberate deviation. Their environments hold long-lived connections, so "not connected" means
+something is wrong. Ours are dialed lazily: `pool.require` opens a socket when something asks for
+one, so a known machine is usually not broken, only not yet asked. The row therefore shows its dot
+in the disconnected color, and choosing it dials with the same five second budget `openProject`
+already uses (`CONNECT_TIMEOUT_MS`, `open.ts:13`). While it dials, the row reads "Connecting". If it
+does not come up, the list stays on the machine step and the footer's right slot carries "That
+machine is not answering", which is the sentence `waitForOpen` already produces (`open.ts:24`).
 
-### 3.5 Saying which machine
+**What the browse request does with all this.** Two consequences, both small and both easy to get
+wrong:
 
-The header carries a chip: the connection dot (`apps/client/src/shell/ConnectionDot.tsx`) plus
-`describeMachine` (`connection-info.ts:38-49`), so the dialog reads "This Mac" or "work-laptop"
-above the path. It is a label, not a switcher. The picker browses through the `transport` facade
-(`apps/client/src/transport/index.ts:14-23`), which is the active endpoint by construction, so the
-chip cannot lie as long as nothing lets you change it.
+- `fs.browse` goes through `transportFor(browseEndpointId)`
+  (`apps/client/src/transport/index.ts:29-32`), not the `transport` facade, or it would list the
+  active machine no matter which one the palette says it is browsing.
+- `cwd` rides along only when the browsed machine is the active one. It exists so `./` and `../`
+  resolve against the open project's folder (`apps/server/src/fs/browse.ts:39-44`), and that folder
+  is on one machine. Sending it to another daemon would resolve a relative path against a directory
+  that is not there.
 
-Browsing another machine from inside the picker is possible today (`transportFor(endpointId)`,
-`transport/index.ts:29-32`) and opening a project there is not: that is phase 5's
-`openProject(endpointId, projectId)`. Leaving the chip inert keeps this step independent of that
-one. When phase 5 is done, turning the chip into a menu is a small follow-up and the rest of the
-picker does not change.
+**Opening.** `projectClient.openFolder` talks to the active machine, so opening a folder found on
+another one needs the same move `openProject` makes: activate the endpoint, wait for its socket,
+then open. That is `openFolderOn(endpointId, folder, createFolder)` in 4.4, the folder twin of the
+project one. Their flow ends by dropping you into a fresh thread; ours ends where opening a project
+has always ended, on its canvas.
 
-### 3.6 The native dialog
+### 3.7 Loading, empty, unreadable, missing
 
-Keep it, narrow it. The button appears only when both hold:
+Three of these are theirs unchanged. The fourth is where `exists` lets us be honest and they cannot.
 
-- `desktop() !== null`, so there is a bridge at all.
-- `useEndpoints.getState().activeId === LOCAL_ENDPOINT_ID`, so the daemon whose file system is being
-  browsed is the one on this machine.
+**Loading: nothing.** No spinner, no skeleton, no text. The previous listing stays on screen until
+the new one lands, and every navigation prefetches before it commits the new text, so the field and
+the list change together (1.9). Our browse effect already keeps the old list and already drops stale
+answers with a generation counter (`CommandPalette.tsx:168-190`); what it does not do is prefetch
+before committing, and stepping into a folder should start doing that.
 
-Anywhere else it is absent, with no explanation and no disabled button: a native dialog cannot see a
-remote file system, so there is nothing to offer and nothing to apologize for.
+**An empty folder: the label and nothing under it.** The group header stays, the list under it is
+empty, and there is no message. Same as theirs, and the button stays enabled: an empty folder is a
+perfectly good project folder.
 
-One known false negative: if someone pairs their own machine as a second endpoint row and makes that
-row active, the picker is browsing the local file system through a non-local endpoint id and the
-button is hidden. They lose a convenience, not correctness. Comparing `daemonId` against the local
-row's would close that hole (`apps/client/src/state/endpoints.ts:19-23`), but the local row learns
-its `daemonId` only after the first hello, so the button would flicker on a cold start. The id
-comparison is the simpler rule; take it.
+**A folder that cannot be read: the same picture.** The daemon answers an empty list for a directory
+it cannot read (`browse.ts:60-64`), so this looks like an empty folder, as it does for them. We
+could tell the two apart now that `exists` is there, and deliberately do not: an extra state for a
+case that almost never happens is more to build, more to explain and more to get wrong.
 
-The label uses `fileManagerName(desktop()!.platform)` (`apps/client/src/state/server.ts:53-61`,
-`apps/client/src/desktop/bridge.ts:44`), which is the Electron machine's platform and not the
-daemon's. Under the rule above the two always agree, but reading the right one keeps it true if the
-rule ever loosens. A folder that comes back opens straight away and closes the picker, which is what
-a native dialog implies.
+**A folder that is not there: the button says so.** This is the honest version of the case they
+cannot reach (1.9). `folderPresence` (4.2) answers `there`, `missing` or `unknown` from `exists` and
+the entries, and:
 
-### 3.7 What stays in the palette and what goes
+- `missing`: the button reads "Create and open" and stays enabled, and the empty area under the
+  group carries one line, "Press Enter to create this folder and open it as a project". Theirs says
+  almost exactly that and nobody ever sees it; ours is reachable because we know the difference
+  between a folder with no subfolders and a folder that is not there.
+- `there`: the button reads "Open folder".
+- `unknown`, which is what a daemon older than `exists` leaves behind: the button reads "Open
+  folder" and a path that is not there fails on Enter the way it always did.
 
-Goes, all in `apps/client/src/shell/CommandPalette.tsx`:
+The rule for `missing` is theirs, because it falls out of what `fs.browse` answers anyway: when the
+field ends in a separator, `exists` decides; otherwise the last segment is there only if some entry
+matches it exactly, case-sensitively. It carries the edge they live with, that `~/pro` reads as
+missing while `~/projects` sits in the list, and the guard is the same: the button label changed
+under the cursor before the key was pressed.
 
-- `BROWSE_DEBOUNCE_MS` (L63), `parentOf` (L83-90), the `browse` state (L127), `browsing` (L166), the
-  `fs.browse` effect (L168-190), `submitPath` (L226-238), the `Folders` branch of `entries`
-  (L244-268), the `Folders` member of the section union (L70), the browse footer with both buttons
-  (L564-595), the Cmd+Enter branch (L460-461) and the Tab branch (L465). The monospace class on the
-  input and the rows (L439, L536) loses its browse half and keeps its grep half.
+**Errors.** They put every failure in a toast and never read the browse error at all. We have a
+place for a sentence and should use it: the footer's right slot carries the daemon's own message for
+a browse that threw (`windows-path`, `cwd-required`) and for an open that failed
+(`folder-not-found`, `folder-create-failed`), in the error color. That is where the browse footer
+already puts a failure today (`CommandPalette.tsx:564-575`), so it is not a new idea, only a
+surviving one.
 
-Stays:
+### 3.8 The native dialog
 
-- `isPathQuery` (L61), reduced to one job. A query that looks like a path produces a single row,
-  "Open a folder", which calls `openFolderPicker(query)` and closes the palette. Typing `~/pro` in
-  the palette still ends in the right place; it just ends there in one keystroke instead of ten.
-- Everything else: jump to a node, the views, the projects (a union after phase 5), the actions,
-  find in files.
+Theirs is a footer button on the right, labeled after the file manager, shown only while browsing,
+only in the desktop build, and only when the machine being browsed is one the desktop process can
+actually open a picker on. Ours is the same button in the same place with the same rule, which the
+first version of this document already argued and which their code independently arrives at (1.6):
 
-That is roughly 90 lines out of `CommandPalette.tsx` and one mode fewer to reason about. It also
-removes the `Folders` section's claim on the arrow keys, which is what made the palette read as two
-different dialogs wearing one input.
+- there is a bridge (`desktop() !== null`), and
+- the machine being browsed is the daemon that served this page
+  (`browseEndpointId === LOCAL_ENDPOINT_ID`).
 
-### 3.8 A path that does not exist
-
-Today: nothing. `browseDirectories` returns an empty list for a path that is missing, unreadable or
-genuinely empty (`apps/server/src/fs/browse.ts:60-64`), so the palette shows an empty list and the
-person finds out by pressing Enter and reading `folder-not-found` from
-`apps/server/src/projects/project-store.ts:190-194`.
-
-The picker should say it before Enter, and then offer to create it, the way T3 Code does (1.4).
-Decided with Bas. Add `exists` to `FsBrowseResult` (4.1) and read it together with the entries:
-
-- **The folder is there.** "Open folder", enabled. An empty folder is a perfectly good project
-  folder, so an empty list is not an error; the list says "No folders in here".
-- **The folder is not there.** The button becomes "Create and open" and stays enabled. Under the
-  field, in the muted color rather than the error color, "This folder does not exist yet. Opening it
-  creates it." The list shows nothing.
-- A thrown `windows-path` or `cwd-required` (`browse.ts:33-42`) keeps showing the daemon's message
-  in the error color, which is already written for a person, and the button is disabled.
-
-**How the picker decides a folder is not there.** Two cases, following T3 Code's two tests (1.4)
-because they fall out of what `fs.browse` answers anyway:
-
-- The field ends in a separator, so `parentPath` is the folder itself: `exists` decides.
-- The field does not end in a separator, so `parentPath` is its parent: the last segment exists when
-  some entry's `name` equals it exactly, and does not when none does.
-
-Their exact-match test is case-sensitive and I would keep it that way even on a case-insensitive
-file system, because the folder that gets created should be the one that was typed. It carries the
-edge T3 Code lives with: typing `~/pro` while `~/projects` exists reads as "not there", so the
-button says "Create and open" while `projects` sits in the list. The breadcrumb and the list make
-that visible, and pressing Down once takes the real folder, so it stays recoverable.
-
-**What creating does.** No new request, the same shape T3 Code uses: `ProjectOpenPayload`
-(`packages/contracts/src/project.ts:389-395`) grows an optional `createFolder`, and `openUnlocked`
-does a recursive `mkdir` when the folder is absent, before the `isDirectory` check at
-`project-store.ts:190-194`. Recursive, so `~/a/b/c` with no `~/a` creates all three, which is what
-they do and what the field invites once you can type a whole path into it. Only the picker sends the
-flag; every other caller of `project.open` keeps today's behavior, which is the split T3 Code has
-too (their other two callers pass it as false).
-
-**When creating fails.** Two cases, and Ruimte already separates them:
-
-- Something is there and it is not a directory. The `mkdir` must not run: `isDirectory` already
-  returns false and `folder-not-found` already says "`<path>` is not a folder", which is the right
-  sentence for a file in the way. Keep it, and show it in the error color under the field rather
-  than in a toast. T3 Code puts the same case in a toast; inline is better and costs nothing here.
-- The `mkdir` itself fails, which is where a permission problem lands. A new `ProjectError` code,
-  `folder-create-failed`, with the path in the message, shown the same way.
-
-**No separate "New folder" button.** T3 Code has none and neither should this (1.4). The native
-dialog still carries the operating system's own New Folder button, because
-`apps/desktop/src/main.ts:396-398` asks for `['openDirectory', 'createDirectory']`, and with the
-inline create that difference between the two paths disappears.
+Anywhere else the button is absent, with no explanation and no disabled state, because a native
+dialog cannot see a remote file system. The label uses `fileManagerName(desktop()!.platform)`, the
+Electron machine's platform rather than the daemon's; under the rule above they agree, and reading
+the right one keeps it true if the rule ever loosens. A folder that comes back opens straight away.
+One thing theirs gets wrong and we should not: they derive the word "Finder" from the viewing
+machine even when the dialog opens on a WSL file system (1.6).
 
 ## 4. Implementation
 
-### 4.1 Contracts
+### 4.1 Three commits stay, three come out
 
-Two fields on `fs.browse`, both in `packages/contracts/src/fs.ts:3-25`, and both **optional**. The
-reason is new since the multi-daemon work: a client can be newer than the daemon it is talking to.
-Both sides validate with zod, so a required field an older daemon does not send makes the whole
-result fail to parse and the picker shows an error instead of a folder list. An optional field
-degrades into a missing mark instead.
+Checked against `main` at `fe7427b`. Oldest first, the six commits of the first version:
 
-- `FsBrowsePayload.hidden: z.boolean().optional()`. Today dot folders are only visible when the
-  typed prefix starts with a dot (`browse.ts:65-67`), which the picker's field never does once it
-  ends in a separator. `FsListPayload` already has exactly this flag
-  (`packages/contracts/src/fs.ts:115-120`); mirror it, default false.
-- `FsBrowseResult.exists: z.boolean().optional()`. Whether `parentPath` stats as a directory. An
-  older daemon leaves it `undefined`, which the picker reads as "do not know": the button keeps its
-  plain "Open folder" label and a missing folder fails the way it does today.
+| Commit | What it did | Verdict |
+| --- | --- | --- |
+| `91d3fa1` | `exists` on `fs.browse`, `createFolder` on `project.open`, the `folder-create-failed` code, daemon plus contracts plus their tests | **Stays.** Section 3 needs every bit of it. |
+| `58021c5` | `FolderPicker.tsx`, `folder-picker.ts` and its test, the `ui.ts` state, the `App.tsx` mount, `openFolder(folder, createFolder)` on `ProjectClient` | **Out**, except the last item, see 4.2. |
+| `fc9ef57` | Every entry point rerouted to the picker, the palette's browse mode deleted, Cmd+O added | **Out.** This is the one that gutted the browse mode; reverting it is what gives section 3 its floor back. |
+| `f549b05` | The two new answers exercised over a real socket in the Docker test | **Stays.** |
+| `53205f3` | `apps/server/README.md` on `fs.browse` and `createFolder` | **Stays.** |
+| `fe7427b` | A width fix inside `FolderPicker.tsx` | **Out**, it only touches a file that is going away. |
 
-`hasGit` on an entry was in an earlier draft of this document and is **out**, per 3.4: T3 Code does
-not mark repositories and neither will Ruimte. `hasCanvas` stays as it is.
+Revert them newest first, which is also the order that avoids conflicts, since the two that stay in
+between touch neither file: `fe7427b`, then `fc9ef57`, then `58021c5`. One commit, message in the
+usual form, saying the picker moves into the palette rather than that it was wrong.
 
-One field on `project.open`, in `packages/contracts/src/project.ts:389-395`:
+After the revert the tree is `fc9ef57^` plus the daemon work: the palette has its browse mode back
+(2.2), `ProjectMenu.openFolder` calls the native dialog on desktop again (2.1), `commands.ts:110`
+seeds the palette with `~/`, Cmd+O is gone, and `fs.browse` answers `exists` that nobody reads yet.
 
-- `ProjectOpenPayload.createFolder: z.boolean().optional()`. Only the picker sends it, and only when
-  the folder is not there (3.8). This is the same shape T3 Code uses: a flag on the command that
-  creates the project, not a filesystem request of its own. No `fs.mkdir` is added.
+### 4.2 What to keep out of the reverted code
 
-`ProjectError` (`apps/server/src/projects/project-store.ts:40`) grows one code,
-`folder-create-failed`. `fs.list` is untouched.
+The revert deletes `folder-picker.ts` and its test. Most of it was about the rail and the breadcrumb
+and is gone for good, but seven pure functions are exactly what the palette's browse mode needs and
+they already have tests. Write them again in a new `apps/client/src/shell/palette-browse.ts` with
+`palette-browse.test.ts` next to it, taking them from the reverted commit rather than from memory:
 
-### 4.2 Daemon
+- `separatorFor(platform)`, because a Windows daemon answers in backslashes and the client has no
+  `node:path`. The old `parentOf` in the palette (`CommandPalette.tsx:83-90` at `fc9ef57^`) splits on
+  `/` only and is wrong on such a daemon; it gets replaced by this pair.
+- `endsWithSeparator(path)`, `parentOf(path, sep)`, `joinPath(parent, name, sep)`,
+  `lastSegment(path, sep)`.
+- `folderPresence(path, result, sep)` and its `FolderPresence` type, the three-state answer
+  (`there`, `missing`, `unknown`) that drives the button label in 3.7. `unknown` is what a daemon
+  older than `exists` leaves behind.
+- `startFolder(folder, home, sep)`, which is where browsing starts: the folder in hand, else that
+  machine's home.
 
-- `apps/server/src/fs/browse.ts`: `BrowseOptions` grows `hidden`; `browseDirectories` takes it into
-  the filter at L65-67, and sets `exists` in both the success path and the catch at L60-64 (one
-  `stat` on `parentPath` when the `readdir` fails is enough to tell missing from unreadable). No
-  `.git` stat: the per-entry work stays exactly the one `hasCanvas` stat it is today.
-- `apps/server/src/handlers/fs.ts:21`: pass `payload.hidden` through.
-- `apps/server/src/projects/project-store.ts:190-194`: with `createFolder` and nothing at the path,
-  `mkdir` recursive, then fall through to the existing `isDirectory` check so a file in the way
-  still raises `folder-not-found` with its current message. A failing `mkdir` raises the new
-  `folder-create-failed`. Order matters: stat first, create only when absent, never create over
-  something that exists.
-- `apps/server/src/handlers/project.ts:17` needs no change: it hands the whole payload to
-  `store.openProject(payload)` already.
+Do not bring back `breadcrumbOf`, `shortcutsFor`, `Crumb`, `Shortcut` or the recents limit. The
+breadcrumb and the rail are the two things Bas asked to remove.
 
-### 4.3 Client
+One hunk of `58021c5` has to come back by hand after the revert, because the browse mode needs it as
+much as the picker did: `ProjectClient.openFolder(folder, createFolder = false)` and the
+`createFolder` field on its private `open` payload
+(`apps/client/src/project/project-client.ts:155` and `:312`). Without it nothing can send the flag the
+daemon already understands. Its comment stays true word for word: creating is the browse mode's
+business, and everywhere else a folder that is gone stays gone.
+
+### 4.3 Contracts and daemon: nothing left to do
+
+`91d3fa1` already did all of it and it stays as it is:
+
+- `FsBrowseResult.exists` (optional) in `packages/contracts/src/fs.ts`, set by
+  `apps/server/src/fs/browse.ts` in both the success path and the catch.
+- `ProjectOpenPayload.createFolder` (optional) in `packages/contracts/src/project.ts`, honored by
+  `apps/server/src/projects/project-store.ts`: stat first, recursive `mkdir` only when nothing is
+  there, never over something that exists, `folder-create-failed` when the `mkdir` fails and the
+  existing `folder-not-found` when a file is in the way.
+- `FsBrowsePayload.hidden` (optional) was built too, honored by `browseDirectories` and covered by
+  a test of its own (`apps/server/src/fs/browse.test.ts:72`). The palette does not send it and 3.3
+  says why, so it keeps no caller for now. Leave it: `fs.list` carries the same flag and the Files
+  panel uses it, so `fs.browse` having one is consistency rather than clutter, and pulling a shipped
+  and documented field back out of the contract, the daemon, its test and the README is more churn
+  than leaving it where it is.
+
+The one addition this rewrite needs is on the client only. No new request, no new field.
+
+### 4.4 Client
 
 New:
 
-- `apps/client/src/shell/FolderPicker.tsx`: the dialog.
-- `apps/client/src/shell/folder-picker.ts` plus `folder-picker.test.ts`: the pure parts, which are
-  the parts worth testing. Path joining, the parent of a path, the breadcrumb segments, and which
-  shortcut rows to build from `useProject.projects` and `ServerInfo`. **These take the separator as
-  an argument**, derived from the daemon's `platform` (`state/server.ts:7`), because the client has
-  no `node:path` and a Windows daemon answers with backslashes. The palette's `parentOf` (L83-90)
-  gets this wrong today and the picker should not inherit that.
+- `apps/client/src/shell/palette-browse.ts` plus its test: the seven functions of 4.2, plus
+  `browseMachines(endpoints, activeId, connected)` for the machine step's rows, shaped after
+  `groupProjects` (`apps/client/src/project/list.ts:96-106`) so both lists sort and dim a machine
+  the same way.
+- `apps/client/src/project/open.ts`: `openFolderOn(endpointId, folder, createFolder)`, the folder
+  twin of `openProject` (3.6). Same body: return early when the endpoint is already active, else
+  `activateEndpoint`, `transportFor`, `waitForOpen` with the same `CONNECT_TIMEOUT_MS`, then
+  `projectClient.openFolder(folder, createFolder)`. Reuse `waitForOpen` rather than copying it.
 
-Changed:
+Changed, all in `apps/client/src/shell/CommandPalette.tsx` unless noted:
 
-- `apps/client/src/state/ui.ts`: the four members of 3.1.
-- `apps/client/src/App.tsx:50-54`: mount `<FolderPicker />`.
-- `apps/client/src/shell/ProjectMenu.tsx:60-70`: `openFolder` becomes
-  `useUi.getState().openFolderPicker(current?.folder ?? undefined)`; the `desktop()` branch and the
-  `bridge.pickFolder` call move into the picker; the `desktop` import goes.
-- `apps/client/src/shell/commands.ts:110`: the command opens the picker.
-- `apps/client/src/canvas/Canvas.tsx:232-262`: a Cmd+O branch next to Cmd+K.
-- `apps/client/src/shell/CommandPalette.tsx`: the deletions of 3.7.
+- The browse effect sends `fs.browse` through `transportFor(browseEndpointId)` instead of the
+  `transport` facade, and keeps `cwd` only when the browsed machine is the active one, since a
+  relative path counts from the open project's folder and that folder lives on one machine (3.6).
+- A `browseEndpointId` state next to `browse`, seeded from `useEndpoints.activeId`, plus the machine
+  step: a `Machines` section that replaces the folder rows while it is up (3.2).
+- The input row's start slot: the machine dot and label, which is also the back control (3.4).
+- The footer: the hints of 3.5, the native dialog button gated as in 3.8, and the primary button
+  whose label follows `folderPresence` (3.7).
+- `submitPath` calls `openFolderOn(browseEndpointId, path, presence === 'missing')` instead of
+  `projectClient.openFolder(path)`.
+- The keys of 3.5: Backspace on an empty field, and the machine step's own Enter.
+- `apps/client/src/shell/ProjectMenu.tsx`: `openFolder` drops the `desktop()` branch entirely and
+  always opens the palette in browse mode. The native dialog lives in the palette's footer now, and
+  only there.
+- `apps/client/src/shell/commands.ts:110`: unchanged in behavior, but the hint stops saying "Type a
+  path" once the palette does the browsing for you.
 
-### 4.4 Order of work
+Not changed: `apps/client/src/state/ui.ts` keeps only `paletteSeed`; the `folderPickerOpen` and
+`folderPickerSeed` members go with the revert and nothing replaces them. `apps/client/src/App.tsx`
+mounts nothing new. No Cmd+O: T3 Code has no chord of its own for this and the palette is one
+keystroke away already.
 
-1. Contracts plus daemon plus tests (4.1, 4.2): `hidden` and `exists` on `fs.browse`, `createFolder`
-   on `project.open`, the `folder-create-failed` code. Shippable on its own, because the palette
-   ignores what it does not read and nobody sends the new flag yet.
-2. `folder-picker.ts` and its test, then `FolderPicker.tsx` with the path field, the breadcrumb, the
-   rail, the list, the keys, the exists-and-create button states and the error line. Wire
-   `openFolderPicker` and mount it. At the end of this step both paths exist and the palette still
-   browses.
-3. Point the three entry points at the picker (project menu, command, Cmd+O), move the native dialog
-   button in, and add the palette's single "Open a folder" row.
-4. Delete the palette's browse mode.
+### 4.5 Order of work
 
-Step 4 is the only one that touches `CommandPalette.tsx` heavily, and another agent is in that file
-for phase 5. Do step 4 last, and rebase rather than resolve.
+1. The revert of 4.1, on its own, so the diff that follows is readable.
+2. `palette-browse.ts` and its test (4.2), and swap the palette's `parentOf` for it. No visible
+   change yet; this is the step that makes a Windows daemon stop being wrong.
+3. `openFolderOn` in `project/open.ts`, with its cases added to the existing
+   `apps/client/src/project/open.test.ts`.
+4. The browse mode's own work, in one pass, because the states are entangled: the presence rule and
+   the button label, the footer hints, the loading and empty and unreadable states, the `..` row
+   wording (3.3, 3.5, 3.7).
+5. The machine step (3.2, 3.6): the `Machines` section, the start slot, Backspace and the switch
+   that resets the path. Last, because everything before it works with one machine and this is the
+   part that only shows itself with two.
+6. `ProjectMenu` and the command hint (4.4), and delete what the picker left behind.
 
-### 4.5 What can break
+### 4.6 What can break
 
-- **The palette's tests.** `apps/client/src/shell/palette-recents.test.ts` is about commands, not
-  folders, so it should survive. Check for any test that types a path into the palette before
-  deleting the mode.
-- **Muscle memory.** Typing `~/` into Cmd+K is how this works today and how `commands.ts:110`
-  advertises it. Keeping `isPathQuery` as a one-row shortcut is what keeps that working; dropping it
-  entirely would be the actual regression.
-- **A daemon older than the client.** Covered by making both browse fields optional (4.1). Worth an
-  explicit test: a `FsBrowseResult` without `exists` must still parse. `createFolder` is optional on
-  the payload side, so an older daemon ignores it and answers `folder-not-found`, which the picker
-  must still render rather than treat as impossible.
-- **Creating a folder nobody meant to create.** The rule of 3.8 says `~/pro` does not exist while
-  `~/projects` sits in the list, so a fast Enter makes `~/pro`. T3 Code lives with this. The guard
-  is that the button says "Create and open" rather than "Open folder", so the label changed under
-  the cursor before the key was pressed. Do not shorten that label.
-- **A new error code.** `folder-create-failed` is the first `ProjectError` the client has to render
-  that it has never seen; make sure the picker shows the message rather than a generic failure.
-- **Windows daemons.** The picker must never split a path on `/` in the client. See 4.3.
-- **Phase 5's moving floor.** `useProject.projects` changes shape underneath the shortcut rail. If
-  the picker lands before phase 5, the rail reads a flat `ProjectSummary[]`; after it, a
-  `ProjectRow[]` filtered on `endpointId`. Write the rail's selector in `folder-picker.ts` so the
-  change is one function, not a component edit.
-- **Two places that open a project.** After this, `projectClient.openFolder` is called from the
-  picker only, which is a simplification; make sure nothing else grew a call site while this was
-  being written.
+- **The Docker test.** `apps/server/src/docker/remote-daemon.test.ts` browses a second daemon over a
+  real socket and is the only automated proof that any of this works across machines. Do not let the
+  revert touch it; it came in `f549b05`, which stays.
+- **`transportFor` returning null.** It answers null for an endpoint this client no longer knows,
+  which is what a forgotten machine leaves behind mid-browse. The browse effect has to treat that as
+  "fall back to the active machine" rather than throwing.
+- **A relative path on another machine.** `./` and `../` resolve against the open project's folder,
+  which the daemon reads from `cwd`. Send `cwd` only for the active machine (4.4) or a browse on
+  machine B silently resolves against a folder on machine A.
+- **The five second connect timeout.** A machine that is asleep makes the browse hang until it
+  fires. Show the machine step's row as connecting rather than leaving the list blank (3.6).
+- **A daemon older than `exists`.** `folderPresence` answers `unknown`, the button keeps saying
+  "Open folder" and a missing folder fails the way it always did. Keep that path; it is the only
+  behavior a mixed pair of versions can have.
+- **Muscle memory.** Typing `~/` into Cmd+K has worked since before all of this. It keeps working,
+  and now it browses in place instead of opening a second dialog.
 
-### 4.6 Tests
+### 4.7 Tests
 
-- `apps/server/src/fs/browse.test.ts`: a missing directory (`exists` false), an unreadable one
-  (`exists` true, no entries), and a hidden folder with and without the flag.
-- `apps/server/src/projects/project-store.test.ts`: `createFolder` on a path that does not exist
-  creates the whole chain and opens; `createFolder` on a path that is a file still raises
-  `folder-not-found`; without the flag a missing folder still raises `folder-not-found`.
-- `apps/client/src/shell/folder-picker.test.ts`: parent of a POSIX path, parent of a Windows path,
-  parent of a root, breadcrumb segments for both, the shortcut rows built from a fake project list
-  with one folderless project and one project on another endpoint, and the "does this folder exist"
-  rule of 3.8 over both branches (trailing separator, and an exact name match that is
-  case-sensitive).
+- `apps/client/src/shell/palette-browse.test.ts`: parent of a POSIX path, parent of a Windows path,
+  parent of a root, `joinPath` against a directory with and without a trailing separator, the three
+  `folderPresence` answers over both branches of the rule (trailing separator, and an exact name
+  match that is case-sensitive), `startFolder` with and without a folder in hand, and
+  `browseMachines` ordering the active machine first and marking one that is not connected.
+- `apps/client/src/project/open.test.ts`: `openFolderOn` on the machine that is already active takes
+  the short path, on another machine it activates first and waits for the socket, and on a machine
+  that never answers it fails with the timeout's message rather than hanging.
+- `apps/server`: nothing new. `browse.test.ts`, `project-store.test.ts` and the Docker test already
+  cover the daemon side and they stay.
 - No component test; the client has none of those today.
 
 ## 5. Decisions
 
-Nothing here is open. Two of these are Bas's, answered as "the way T3 Code does it"; the rest are
-settled by this document and each one is a small edit if he wants it the other way.
+Nothing here is open. The first three are Bas's; the rest follow from them or were settled earlier
+and still hold. Each one is a small edit if he wants it the other way.
 
-1. **Git repositories in the picker: none.** Bas, as T3 Code does. Their folder browser has no
-   repository group, no badge and no sorting for them, and their browse entry carries only a name
-   and a path, so nothing stats a `.git` and nothing walks a tree (1.3). Ruimte does the same: no
-   list, no scan, and no `hasGit` field, which is one field out of 4.1. `hasCanvas` stays, because
-   it already exists and answers the better question. The clone half of their second step (git URL,
-   provider lookup, clone destination) is a separate feature and not part of this one (3.4).
-2. **A path that does not exist: offer to create it, inline.** Bas, as T3 Code does. The button
-   flips to "Create and open" and stays enabled, creating the whole missing chain on confirm, with
-   no separate "New folder" action anywhere, which is exactly their shape (1.4). Ruimte carries it
-   on a `createFolder` flag on `project.open` rather than a new filesystem request, and shows the
-   two failure cases inline rather than in a toast (3.8, 4.1, 4.2).
-3. **The picker opens a project.** It does not hand a path back to a caller. That is the only thing
-   a folder is asked for today, and T3 Code goes further still by dropping you into a fresh thread
-   (1.5). If a second purpose ever appears (a cwd for a terminal node, a worktree root), the dialog
-   takes a `purpose` prop and the footer button takes its label from the caller. Cheap then, so
-   there is no reason to carry it now.
-4. **The machine chip is a label, not a switcher.** T3 Code picks the machine as an explicit first
-   step and then shows nothing at all while you browse (1.6), which is the half of their design
-   worth avoiding rather than copying. A switcher needs phase 5's
-   `openProject(endpointId, projectId)` to be worth anything, so it waits for that and changes
-   nothing else in the picker (3.5).
-5. **Hidden folders get a toggle**, which is the one place this deliberately does not follow T3
-   Code. They have none: a dot folder appears only once the typed segment starts with a dot, a rule
-   that is invisible in a one-line palette and would be stranger still in a dialog with a footer.
-   The flag mirrors one `fs.list` already has and the toggle is one button (4.1).
-6. **Cmd+O opens the picker.** Free in the chord block and free in `commands.ts`. It is also the
-   chord a browser tab would give to its own open dialog if the page did not take it; taking it is
-   right here, and it is one line to give back.
+1. **It lives in the command palette.** Bas, after seeing the built version: if it is in the palette
+   at T3 Code, it is in the palette here, and it should work the same. That reverses the first
+   version of this document and takes three commits out with it (4.1).
+2. **No recents panel and no rail.** Bas. Nothing in T3 Code's browser shows recency or favorites
+   (1.3), and their one place that does is an onboarding scan we are not building (1.8).
+3. **A path that does not exist is offered for creation inline.** Bas, as T3 Code does. Already
+   built on the daemon in `91d3fa1` and kept. What changes from the first version is only where it
+   shows: the button in the field rather than a footer button, plus a line in the empty area that
+   they have and never reach (3.7).
+4. **Git repositories: none.** As T3 Code does. No group, no badge, no scan, no `hasGit` field
+   (3.3). Their git rows are about cloning a remote repository, which is a separate feature and not
+   this one (1.1).
+5. **Browsing starts on the active machine, and the machine is a control in the input row.** Not a
+   step in front of browsing and not a chip in a header of our own. The argument, the reset on
+   switch and the not-connected case are all in 3.6. This is the deviation with the most reasoning
+   behind it, because their model has one environment chosen up front and ours has an active machine
+   the whole app already runs on.
+6. **No source step.** Every row of theirs but one is about cloning, which Ruimte cannot do (3.2).
+7. **No hidden-folders toggle**, reversing the first version. T3 Code has none and the daemon's rule
+   is already theirs. The `hidden` flag stays on the daemon without a caller (4.3).
+8. **No Cmd+O**, reversing the first version. T3 Code has no chord of its own for this, the palette
+   is one keystroke away, and the chord goes back to the browser.
+9. **The mark on a folder that already holds a canvas stays.** The one row-level thing we show that
+   they do not, kept because it predates all of this and because it says what Enter will do (3.3).
+10. **Tab keeps completing.** The one key they leave unused and our palette already uses.
