@@ -17,13 +17,13 @@ canvas, against Ruimte, one verdict each.
 | Context links (agent to agent, sticky to terminal, drag from handles, delete by double-click) | Edges from any node or text to any other; into an agent they are context, "Connect to..." in the menu | Done, phase 12 |
 | Group frame with a bound worktree | Group node with collapse, nesting and a worktree | Done |
 | Browser node (navigable Chromium) and Web node (one page, fits content) | Browser node in the desktop app | Done; the fit-to-content web node is a browser node with a size, skip |
-| Editor node (Monaco, image and PDF preview, Cmd+S) | None | Later: an agent's edits already show as diffs in the chat; a file viewer is worth it once the daemon has an upload and file index (the composer's `@` picker is the start) |
+| Editor node (Monaco, image and PDF preview, Cmd+S) | File node and file view, read-only | Done as the viewer; the editor (Cmd+S) is still later, since there is no `fs.write` on the wire |
 | Diff node (HEAD vs index vs worktree per file) | Changed-files card with the turn's checkpoint diff | Done for a turn; a standalone diff node for a folder is still later |
-| Files node (folder listing pinned to one directory) | Folder browsing in the palette | Skip: the palette browses; a directory pane on the canvas invites a file manager, which is not the product |
+| Files node (folder listing pinned to one directory) | Folder browsing in the palette, one file at a time on the canvas | Skip: the palette browses; a directory pane on the canvas invites a file manager, which is not the product. A folder dropped on the canvas is left alone for the same reason |
 | Subagent node (live card per Claude subagent from hooks) | Subagent tool calls fold into the chat's work rows | Later, only if hooks carry enough: a card per subagent on the canvas is a status view, and the chat's folded rows already show it |
 | Loop node and Trigger node (cron and schedule into a terminal) | None | Skip: scheduling belongs to the agent's own tools or the OS; a canvas is not a scheduler |
 | Video node (local or remote file) | None | Skip: a browser node plays a file URL |
-| Image and PDF preview (inside the editor node) | None | Later, with the editor node |
+| Image and PDF preview (inside the editor node) | A file node draws what the preview draws: images and video today, PDF not yet | Partly done |
 | Dino minigame | None | Skip |
 | Kanban board (separate view, session cards in columns) | None | Skip, a decision in this file: no kanban, ever |
 | Spawn team (agents wired to their opener) | None | Later, phase 18: the chat backends, the edges and the worktrees it needs are there |
@@ -380,6 +380,32 @@ canvas, against Ruimte, one verdict each.
   them the state stays `unsupported`, no button appears, and the pane says where updates come from.
 
 
+### A file on the canvas
+
+- A file node and a file view hold a path and nothing else. The bytes are the file system's, so
+  there is no format, no store, no rev and no request on the wire that a drawing needed: two nodes
+  on one file are two independent readers with nothing between them. Read-only on purpose; saving
+  is a decision about what a client may change on a machine, with a conflict question under it.
+- The path is relative to the project folder, POSIX, because `.ruimte/project.json` goes into git
+  and an absolute path is wrong in every other checkout. A file outside the folder keeps its
+  absolute path, which is what `relativeTo` hands back for a path it cannot shorten
+  (`storedPathOf` and `resolveStoredPath` in `shell/panels/files-tree.ts`).
+- All three surfaces (a preview tab, a node, a view) are the preview's own reading layer:
+  `useFileRead` for the read and the re-read, `renderFile` for the renderer, `FileBody` for the one
+  loading state and the one error state. A path that is gone shows that error and stays where it
+  is: nothing follows a rename, because following one needs an index of inodes that does not exist.
+- `fs.watch` is counted in the client (`state/fs-watch.ts`). The files panel used to be the only
+  caller, so a node on a canvas with that panel closed never heard that its file changed. The
+  daemon skips a folder a recursive watch above it already covers, so releasing the folder above
+  makes the ones still held under it ask again.
+- A drag inside the app writes two types: the mention type the composer already reads, and
+  `application/x-ruimte-paths` with the trailing slash of a directory still on it. The canvas is
+  the side that has to tell a folder from a file, and it leaves the folder alone: a folder on a
+  canvas would be a file manager, which the parity table already says this is not.
+- `NodeKindSchema` is an enum, so a daemon older than this refuses a whole document that has a file
+  node in it, not just that node. That is the trade every new kind makes, and it only bites a
+  remote daemon that lags behind its client.
+
 ### Skipped on purpose
 
 Skipped: kanban, loop and trigger nodes, minimap, dictation, notch HUD, agent-to-agent
@@ -390,6 +416,14 @@ retry or edit-and-resend in a shape worth building yet.
 Also decided against for now: a scheduler, checkpoint restore and telemetry.
 
 ## Gotchas already paid for
+
+- **A new node or view kind is not backward compatible.** `NodeKindSchema` is an enum and
+  `ProjectViewSchema` a discriminated union, so a daemon older than the client that wrote the file
+  refuses the whole document, not just the node it does not know. Since projects live on several
+  machines this is real: pairing with a machine that runs an older daemon and opening a project
+  with a file node there fails to parse. It is the price of every kind that was ever added and
+  nothing about the file changed (it is still version 2), but it is the reason a kind is worth
+  adding once rather than twice.
 
 - React registers `wheel` listeners as passive. Pinch zoom needs the native, non-passive
   listener in `Canvas.tsx`, and the document-level guard keeps a pinch over the sidebar from
@@ -514,7 +548,9 @@ a day, several days. Each of the larger ones becomes a GitHub issue when it star
    maximize on Cmd+Shift+Enter, camera history on Cmd+[ and Cmd+] (Cmd+1..9 belongs to the views).
    Arrange, align and tidy as pure functions with palette entries; palette ranking (exact, prefix,
    substring), `>` for actions, recent nodes on an empty query, settings rows as entries. Images on
-   the canvas from paste or drop, stored under `<folder>/.ruimte/images`.
+   the canvas from paste or drop, stored under `<folder>/.ruimte/images`. An image that is already
+   in the folder needs none of this: it is a file node. What is left is the half without a path,
+   which is the clipboard and a drag out of Finder.
 9. **Chat depth**, several days. A proposed plan card with "Implement" and "Implement in a new
    node" (a chat node beside it with a context edge, so the new agent reads the plan through
    `ruimte-context`), subagent rows that stay anchored, "Copy code" per block, citations from
@@ -527,10 +563,12 @@ a day, several days. Each of the larger ones becomes a GitHub issue when it star
 11. **Per-project settings** in `.ruimte/settings.json` (the terminal agent mode first), worktree
     merge and removal from the group menu, shared paths (`node_modules`, `.env`) linked into a new
     worktree, clone a repository as a project.
-12. **Editor, image and diff nodes**, several days. An editor node with save, markdown preview,
-    image and PDF preview; an image node; a diff node that reuses the git panel's scopes. Plus
-    "open in editor": an editor probe and preference, `fs.open` with `path:line`, used from menus,
-    diff rows and paths in terminal output.
+12. **The editor and the diff node**, the half of this the file node does not cover. Saving is the
+    whole of it: there is no `fs.write` on the wire, and adding one is a decision about what a
+    client may change on a machine, with a conflict question under it (an agent rewrote the file
+    meanwhile). Plus a PDF renderer, a diff node that reuses the git panel's scopes, a line number
+    in a file node's path, and "open in editor": an editor probe and preference, `fs.open` with
+    `path:line`, used from menus, diff rows and paths in terminal output.
 13. **A test floor**: a 30-node harness (a dev-only palette command or a Playwright spec, out of
     CI) and whatever it finds; a DOM setup for `bun test` with first specs for the composer and the
     canvas wiring; a daemon-backed e2e job in CI for the terminal spec.

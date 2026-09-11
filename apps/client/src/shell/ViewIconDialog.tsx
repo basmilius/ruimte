@@ -23,7 +23,7 @@ export function ViewIconDialog({ view, onClose }: { view: ProjectView; onClose()
         <>
             <Dialog.Title className="text-base font-semibold text-text">View icon</Dialog.Title>
             <div className="mt-3 flex items-center gap-3">
-                <ViewGlyph id={view.id} kind={view.kind} icon={chosen} provider={provider} size={20} />
+                <ViewGlyph id={view.id} kind={view.kind} icon={chosen} provider={provider} path={view.kind === 'file' ? view.path : null} size={20} />
                 <div className="flex min-w-0 flex-col">
                     <span className="truncate text-sm text-text">{view.kind === 'separator' ? 'Separator' : view.name}</span>
                     <span className="truncate text-sm text-text-faint">{chosen ? 'Picked here' : 'The mark of what it is'}</span>

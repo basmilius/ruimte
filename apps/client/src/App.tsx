@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { WebviewParking } from '@/browser/WebviewParking';
 import { useAppChords } from '@/shell/app-chords';
 import { CommandPalette } from '@/shell/CommandPalette';
 import { LayoutDialog } from '@/shell/LayoutDialog';
 import { ViewDialogs } from '@/shell/ViewDialogs';
+import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { ViewHost } from '@/shell/ViewHost';
 import { WorktreeDialog } from '@/shell/WorktreeDialog';
 import { Dock } from '@/shell/Dock';
@@ -28,6 +29,9 @@ import { TooltipProvider } from '@/ui/Tooltip';
 function Workspace() {
     const workspace = useMainWorkspace();
     const connection = useWorkspaceConnection(workspace);
+    /* The window's toolbar is where a file view puts its controls, and the body that draws them sits
+       under the same column, so the element they portal into is held here. */
+    const [fileToolbarHost, setFileToolbarHost] = useState<HTMLElement | null>(null);
     return (
         <WorkspaceProvider connection={connection} stores={workspace.stores}>
             {/* A press anywhere in it makes this the workspace everything outside React means: the
@@ -35,15 +39,17 @@ function Workspace() {
             <div className="flex h-full w-full bg-bg" onPointerDownCapture={() => focusWorkspace(workspace.id)}>
                 <Sidebar />
                 <main className="flex min-w-0 grow">
-                    <div className="flex min-w-0 grow flex-col">
-                        <Toolbar />
-                        <div className="relative min-h-0 grow">
-                            <ViewHost />
-                            <WebviewParking />
-                            <ProjectBanner />
-                            <Dock />
+                    <FileToolbarSlotProvider value={{ host: fileToolbarHost, mount: setFileToolbarHost }}>
+                        <div className="flex min-w-0 grow flex-col">
+                            <Toolbar />
+                            <div className="relative min-h-0 grow">
+                                <ViewHost />
+                                <WebviewParking />
+                                <ProjectBanner />
+                                <Dock />
+                            </div>
                         </div>
-                    </div>
+                    </FileToolbarSlotProvider>
                     <PreviewPanel />
                     <Panel />
                 </main>

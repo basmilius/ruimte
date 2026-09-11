@@ -1,9 +1,10 @@
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Globe, LayoutGrid, Maximize, MessageSquare, Scan, Settings, SquareDashedMousePointer, StickyNote, Terminal, Type } from 'lucide-react';
+import { FileText, Globe, LayoutGrid, Maximize, MessageSquare, Scan, Settings, SquareDashedMousePointer, StickyNote, Terminal, Type } from 'lucide-react';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentNode } from '@/agents/nodes';
 import type { Point } from '@/canvas/math';
 import { useCanvas, type NodeKind } from '@/state/canvas';
+import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
@@ -11,6 +12,8 @@ import { Icon } from '@/ui/Icon';
 /* The menu for a right-click on empty canvas; everything it adds lands where the click was. */
 export function CanvasMenuPopup({ at }: { at: () => Point }) {
     const hasSelection = useCanvas((s) => s.selection.length > 0);
+    /* A file comes out of the open folder, so a project without one has nothing to pick from. */
+    const hasFolder = useProject((s) => s.current?.folder != null);
     const add = (kind: NodeKind): void => {
         useCanvas.getState().addNode(kind, at());
     };
@@ -35,6 +38,11 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                     <ContextMenu.Item className="menu-item" onClick={() => add('note')}>
                         <Icon icon={StickyNote} size={14} /> Note <kbd>⌥N</kbd>
                     </ContextMenu.Item>
+                    {hasFolder && (
+                        <ContextMenu.Item className="menu-item" onClick={() => useUi.getState().openFilePicker({ kind: 'node', at: at() })}>
+                            <Icon icon={FileText} size={14} /> File...
+                        </ContextMenu.Item>
+                    )}
                     <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().addText(at())}>
                         <Icon icon={Type} size={14} /> Text <span className={MENU_HINT}>dbl-click</span>
                     </ContextMenu.Item>

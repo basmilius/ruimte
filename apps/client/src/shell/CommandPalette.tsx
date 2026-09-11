@@ -6,6 +6,7 @@ import {
     CaseSensitive,
     CornerLeftUp,
     FileSearch,
+    FileText,
     Folder,
     FolderCheck,
     Globe,
@@ -26,7 +27,7 @@ import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { openFolderOn, openProject, reachEndpoint } from '@/project/open';
-import { revealNode, showView } from '@/project/views';
+import { newFileView, revealNode, showFileOnCanvas, showView } from '@/project/views';
 import { appCommands, OPENING_COMMAND_IDS, type Command } from '@/shell/commands';
 import {
     browseBack,
@@ -72,7 +73,8 @@ const KIND_ICON: Record<NodeKind, React.ReactNode> = {
     browser: <Icon icon={Globe} size={14} />,
     group: <Icon icon={LayoutGrid} size={14} />,
     note: <Icon icon={StickyNote} size={14} />,
-    drawing: <Icon icon={PenTool} size={14} />
+    drawing: <Icon icon={PenTool} size={14} />,
+    file: <Icon icon={FileText} size={14} />
 };
 
 // Typing a path turns the palette into a folder browser; anything else searches nodes and actions.
@@ -189,6 +191,10 @@ export function CommandPalette() {
     const fileGeneration = useRef(0);
     const mode = useUi((s) => s.paletteMode);
     const grepping = mode === 'grep';
+    /* Picking one file out of the folder, to make it a node or a view. The list is the file search
+       and nothing else, and it answers before anything is typed. */
+    const picking = mode === 'file';
+    const filePick = useUi((s) => s.filePick);
     const grep = useGrepSearch(grepping ? folder : null, grepping ? query : '', grepOptions);
     const browseEndpointId = browse?.endpointId ?? activeId;
     const machineStep = browse?.machines === true;
@@ -363,7 +369,7 @@ export function CommandPalette() {
     useEffect(() => {
         const trimmed = query.trim();
         const mine = ++fileGeneration.current;
-        if (grepping || browsing || folder === null || trimmed === '') {
+        if (grepping || browsing || folder === null || (trimmed === '' && !picking)) {
             return;
         }
         const timer = window.setTimeout(() => {
@@ -381,16 +387,27 @@ export function CommandPalette() {
                 });
         }, FILE_DEBOUNCE_MS);
         return () => window.clearTimeout(timer);
-    }, [transport, browsing, folder, grepping, query]);
+    }, [transport, browsing, folder, grepping, picking, query]);
 
+    /* A file row does what the palette was opened for: a node where the menu was clicked, a view of
+       its own, or the preview tab every other route here means. */
     const openFile = useCallback(
         (path: string): void => {
             if (folder === null) {
                 return;
             }
-            useFiles.getState().open(absoluteOf(folder, path), useSettings.getState().filesTabLimit);
+            const absolute = absoluteOf(folder, path);
+            if (filePick?.kind === 'node') {
+                showFileOnCanvas(absolute, filePick.at);
+                return;
+            }
+            if (filePick?.kind === 'view') {
+                newFileView(absolute);
+                return;
+            }
+            useFiles.getState().open(absolute, useSettings.getState().filesTabLimit);
         },
-        [folder]
+        [filePick, folder]
     );
 
     /* What the daemon says about the path in the field: there, not there, or a daemon too old to say. */
@@ -495,6 +512,7 @@ export function CommandPalette() {
                     kind={view.kind}
                     icon={view.kind === 'separator' ? null : view.icon}
                     provider={view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null}
+                    path={view.kind === 'file' ? view.path : null}
                 />
             ),
             section: 'Views' as const,
@@ -520,7 +538,7 @@ export function CommandPalette() {
             });
         /* What the last answer held stays out of a list it no longer belongs to; the effect above
            only fills it, so an empty query or a folder browse never shows yesterday's files. */
-        const files: Entry[] = (query.trim() === '' ? [] : fileMatches).map((path) => {
+        const files: Entry[] = (query.trim() === '' && !picking ? [] : fileMatches).map((path) => {
             const name = basenameOf(path);
             return {
                 id: `file-${path}`,
@@ -532,6 +550,10 @@ export function CommandPalette() {
                 run: () => openFile(path)
             };
         });
+        // Picking a file is a step with one list; the commands and the nodes have no place in it.
+        if (picking) {
+            return files;
+        }
         const commands = appCommands();
         const asEntry = (command: Command, section: Entry['section']): Entry => ({
             ...command,
@@ -574,6 +596,7 @@ export function CommandPalette() {
         machineStep,
         nodes,
         openFile,
+        picking,
         order,
         pickMachine,
         sep,
@@ -707,7 +730,8 @@ export function CommandPalette() {
                             </Tooltip>
                         )}
                         {grepping && <Icon icon={FileSearch} size={14} className="shrink-0 text-accent" />}
-                        {!browsing && !grepping && <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />}
+                        {picking && <Icon icon={FileText} size={14} className="shrink-0 text-accent" />}
+                        {!browsing && !grepping && !picking && <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />}
                         <input
                             ref={inputRef}
                             role="combobox"
@@ -717,7 +741,13 @@ export function CommandPalette() {
                             aria-activedescendant={
                                 grepping ? (activeHit >= 0 ? optionId(activeHit) : undefined) : active ? optionId(entries.indexOf(active)) : undefined
                             }
-                            aria-label={grepping ? 'Search through the files of this folder' : 'Jump to a node, run a command, or open a folder'}
+                            aria-label={
+                                grepping
+                                    ? 'Search through the files of this folder'
+                                    : picking
+                                      ? 'Pick a file from this folder'
+                                      : 'Jump to a node, run a command, or open a folder'
+                            }
                             /* A path stays in the same sans font as everything else: monospace makes
                                it read as something to be read rather than something to be typed. */
                             className={clsx(
@@ -727,11 +757,13 @@ export function CommandPalette() {
                             placeholder={
                                 grepping
                                     ? 'Search through the files of this folder'
-                                    : machineStep
-                                      ? 'Search machines'
-                                      : browsing
-                                        ? 'Enter a folder path, for example ~/projects/my-app'
-                                        : 'Jump to a node, run a command, or type a path like ~/projects to open a folder'
+                                    : picking
+                                      ? 'Pick a file from this folder'
+                                      : machineStep
+                                        ? 'Search machines'
+                                        : browsing
+                                          ? 'Enter a folder path, for example ~/projects/my-app'
+                                          : 'Jump to a node, run a command, or type a path like ~/projects to open a folder'
                             }
                             value={query}
                             spellCheck={false}
@@ -805,8 +837,13 @@ export function CommandPalette() {
                     </div>
                     <div id={LIST_ID} className="max-h-[50vh] overflow-auto p-1.5" role="listbox" aria-label="Results">
                         <div aria-live="polite">
-                            {entries.length === 0 && !browsing && !grepping && (
+                            {entries.length === 0 && !browsing && !grepping && !picking && (
                                 <div className="px-3 py-6 text-center text-xs text-text-faint">Nothing matches</div>
+                            )}
+                            {picking && entries.length === 0 && (
+                                <div className="px-3 py-6 text-center text-xs text-text-faint">
+                                    {folder === null ? 'This project has no folder, so there are no files to pick.' : 'No file in this folder matches'}
+                                </div>
                             )}
                             {grepping && query.trim() !== '' && !grep.busy && grep.failure === null && grep.matches.length === 0 && (
                                 <div className="px-3 py-6 text-center text-xs text-text-faint">No line in this folder matches</div>

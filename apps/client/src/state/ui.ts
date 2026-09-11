@@ -104,9 +104,14 @@ export type ViewDialog =
     | { kind: 'new-browser' }
     | null;
 
-/* What the palette is doing: jumping and running commands, or searching through the files of the
-   open folder. The mode is a step inside the same dialog, not a dialog of its own. */
-export type PaletteMode = 'default' | 'grep';
+/* What the palette is doing: jumping and running commands, searching through the files of the open
+   folder, or picking one file out of it. The mode is a step inside the same dialog, not a dialog of
+   its own. */
+export type PaletteMode = 'default' | 'grep' | 'file';
+
+/* What a picked file becomes. A node carries where it lands, in world units, because the menu that
+   asked knows the point that was right-clicked and the palette does not. */
+export type FilePick = { kind: 'node'; at: { x: number; y: number } } | { kind: 'view' };
 
 interface UiStore {
     paletteOpen: boolean;
@@ -124,6 +129,8 @@ interface UiStore {
        choosing it twice in a row has to start browsing twice. Which step browsing is on after that
        is the palette's own business. */
     paletteBrowseAt: number;
+    /* What the file mode does with the file that is chosen; null in every other mode. */
+    filePick: FilePick | null;
     settings: SettingsState;
     panel: PanelState;
     preview: PreviewState;
@@ -152,6 +159,8 @@ interface UiStore {
     /* The palette browsing folders, from its own command or from the project menu. Nothing is
        typed: with one machine it opens on that machine's start folder, with more on the machines. */
     openFolderBrowser(): void;
+    /* The palette listing the files of the open folder, to make one of them a node or a view. */
+    openFilePicker(pick: FilePick): void;
     setPaletteMode(mode: PaletteMode): void;
     setLayoutDialogOpen(open: boolean): void;
     setPaletteOpen(open: boolean): void;
@@ -179,6 +188,7 @@ export const useUi = create<UiStore>((set, get) => ({
     page: null,
     paletteSeed: '',
     paletteBrowseAt: 0,
+    filePick: null,
     sidebarOpen: readSidebarOpen(),
     sidebarExpanded: null,
     settings: { open: false, section: 'appearance' },
@@ -215,19 +225,22 @@ export const useUi = create<UiStore>((set, get) => ({
         set({ layoutDialogOpen: open });
     },
     openPalette(seed = '') {
-        set({ paletteOpen: true, paletteMode: 'default', paletteSeed: seed });
+        set({ paletteOpen: true, paletteMode: 'default', paletteSeed: seed, filePick: null });
     },
     openFindInFiles(seed = '') {
-        set({ paletteOpen: true, paletteMode: 'grep', paletteSeed: seed });
+        set({ paletteOpen: true, paletteMode: 'grep', paletteSeed: seed, filePick: null });
     },
     openFolderBrowser() {
-        set({ paletteOpen: true, paletteMode: 'default', paletteSeed: '', paletteBrowseAt: get().paletteBrowseAt + 1 });
+        set({ paletteOpen: true, paletteMode: 'default', paletteSeed: '', paletteBrowseAt: get().paletteBrowseAt + 1, filePick: null });
+    },
+    openFilePicker(pick) {
+        set({ paletteOpen: true, paletteMode: 'file', paletteSeed: '', filePick: pick });
     },
     setPaletteMode(mode) {
-        set({ paletteMode: mode, paletteSeed: '' });
+        set({ paletteMode: mode, paletteSeed: '', filePick: null });
     },
     setPaletteOpen(open) {
-        set(open ? { paletteOpen: true, paletteMode: 'default', paletteSeed: '' } : { paletteOpen: false });
+        set(open ? { paletteOpen: true, paletteMode: 'default', paletteSeed: '', filePick: null } : { paletteOpen: false, filePick: null });
     },
     setSettings(patch) {
         set({ settings: { ...get().settings, ...patch } });

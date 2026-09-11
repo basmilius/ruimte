@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
 import clsx from 'clsx';
 import { FolderOpen } from 'lucide-react';
-import { isCanvasView, type ProjectView } from '@ruimte/contracts';
+import { isCanvasView, isFileView, type ProjectView } from '@ruimte/contracts';
 import { Canvas } from '@/canvas/Canvas';
 import { DrawingView } from '@/drawing/DrawingView';
 import { drawingCanClear } from '@/drawing/use-drawing-keys';
 import { BrowserFallback, usePage } from '@/nodes/BrowserBody';
 import { ChatBody } from '@/nodes/ChatBody';
 import { TerminalBody } from '@/nodes/TerminalBody';
+import { FileSurface } from '@/shell/panels/FileSurface';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
@@ -69,6 +70,9 @@ function StandaloneView({ view }: { view: ProjectView }) {
             {view.kind === 'terminal' && <TerminalBody id={view.id} focused={focused} />}
             {view.kind === 'browser' && <BrowserViewSurface id={view.id} />}
             {view.kind === 'drawing' && <DrawingView id={view.id} />}
+            {/* No column around it: prose centers itself at 768px inside its own renderer, and
+                code wants every pixel the window has. */}
+            {isFileView(view) && <FileSurface path={view.path} on="view" />}
         </div>
     );
 }

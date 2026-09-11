@@ -1,9 +1,10 @@
 import clsx from 'clsx';
-import { Frame, Globe, MessageSquare, Minus, PenTool, Terminal, type LucideIcon } from 'lucide-react';
+import { FileText, Frame, Globe, MessageSquare, Minus, PenTool, Terminal, type LucideIcon } from 'lucide-react';
 import type { AgentKind, ProjectIconChoice, ProjectViewKind } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { Favicon } from '@/browser/Favicon';
 import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
+import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
 
 /* What a view wears when nobody picked anything: the mark of what it is. */
@@ -13,6 +14,7 @@ const VIEW_KIND_GLYPHS: Record<ProjectViewKind, LucideIcon> = {
     terminal: Terminal,
     browser: Globe,
     drawing: PenTool,
+    file: FileText,
     separator: Minus
 };
 
@@ -23,6 +25,8 @@ interface ViewGlyphProps {
     icon?: ProjectIconChoice | null;
     /* The CLI a chat or terminal view runs, whose mark it wears instead of its kind's. */
     provider?: AgentKind | null;
+    /* The file a file view reads, which wears the mark of its own name. */
+    path?: string | null;
     size?: number;
     className?: string;
 }
@@ -32,7 +36,7 @@ interface ViewGlyphProps {
  * least: what a person picked, then what a browser's own page says, then the CLI behind a session,
  * and the kind itself as the floor.
  */
-export function ViewGlyph({ id, kind, icon = null, provider = null, size = 14, className }: ViewGlyphProps) {
+export function ViewGlyph({ id, kind, icon = null, provider = null, path = null, size = 14, className }: ViewGlyphProps) {
     if (icon?.kind === 'lucide') {
         return <Icon icon={PROJECT_ICON_GLYPHS[icon.value]} size={size} className={clsx('shrink-0', className)} />;
     }
@@ -49,6 +53,10 @@ export function ViewGlyph({ id, kind, icon = null, provider = null, size = 14, c
     }
     if (kind === 'browser') {
         return <Favicon id={id} size={size} />;
+    }
+    // The one place the app steps outside Lucide, the way the files panel and the tabs do.
+    if (kind === 'file' && path) {
+        return <FileIcon path={path} size={size} className={className} />;
     }
     if (provider && (kind === 'chat' || kind === 'terminal')) {
         return <AgentIcon kind={provider} size={size} className={className} />;

@@ -139,8 +139,8 @@ export function CodeFile({ read, toolbarExtra }: CodeFileProps) {
     const theme = useTheme((t) => t.resolved);
     const [wrap, setWrap] = useState(false);
     const language = read.language ?? 'text';
-    // The viewer names the tab this file is drawn in, which is what says whether a jump is about it.
-    const tabKey = useFileActions()?.key ?? null;
+    // A jump to a line is asked of a tab, so a node or a view of its own never answers one.
+    const tabKey = useFileActions()?.tabKey ?? null;
     const reveal = useFiles((s) => (s.revealLine !== null && s.revealLine.key === tabKey ? s.revealLine : null));
 
     const chunks = useMemo(() => {

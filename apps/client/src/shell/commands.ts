@@ -148,6 +148,7 @@ export const appCommands = (): Command[] => {
                         ]
                       : []),
                   { id: 'view-new-drawing', label: 'New drawing view', run: () => void newDrawingView() },
+                  ...(folder ? [{ id: 'view-new-file', label: 'New file view', run: () => useUi.getState().openFilePicker({ kind: 'view' }) }] : []),
                   { id: 'view-new-terminal', label: 'New terminal view', run: () => void newTerminalView() },
                   { id: 'view-new-separator', label: 'New separator', run: () => void newSeparatorView() },
                   {
@@ -171,6 +172,16 @@ export const appCommands = (): Command[] => {
                             { id: 'add-browser', label: 'New browser', shortcut: '⌥B', run: () => void addNodeAtCenter('browser') },
                             { id: 'add-group', label: 'New group', shortcut: '⌥G', run: () => void addNodeAtCenter('group') },
                             { id: 'add-note', label: 'New note', shortcut: '⌥N', run: () => void addNodeAtCenter('note') },
+                            ...(folder
+                                ? [
+                                      {
+                                          id: 'add-file',
+                                          label: 'Show a file on the canvas',
+                                          hint: 'Read-only, straight off disk',
+                                          run: () => useUi.getState().openFilePicker({ kind: 'node', at: centerWorld() })
+                                      }
+                                  ]
+                                : []),
                             {
                                 id: 'group-selection',
                                 label: 'Group selection',

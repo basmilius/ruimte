@@ -6,7 +6,7 @@ import { RuntimeModeSchema } from './model.ts';
 export const ProjectIdSchema = z.string().min(1);
 export type ProjectId = z.infer<typeof ProjectIdSchema>;
 
-export const NodeKindSchema = z.enum(['terminal', 'chat', 'browser', 'group', 'note', 'drawing']);
+export const NodeKindSchema = z.enum(['terminal', 'chat', 'browser', 'group', 'note', 'drawing', 'file']);
 export type NodeKind = z.infer<typeof NodeKindSchema>;
 
 // Where the title of a node came from: the session named itself from its first prompt, or a person
@@ -50,7 +50,10 @@ export const ProjectNodeSchema = z.object({
     body: z.string().optional(),
     color: z.string().optional(),
     // Drawing only: the drawing view this node mirrors, which lives in the same project.
-    viewId: z.string().optional()
+    viewId: z.string().optional(),
+    /* File only: the file it reads. Relative to the project folder, POSIX, so the node still points
+       at the same file in another checkout; a file outside that folder keeps its absolute path. */
+    path: z.string().optional()
 });
 export type ProjectNode = z.infer<typeof ProjectNodeSchema>;
 
@@ -241,12 +244,18 @@ export type ProjectBrowserView = z.infer<typeof ProjectBrowserViewSchema>;
 export const ProjectDrawingViewSchema = ViewBaseSchema.extend({ kind: z.literal('drawing') });
 export type ProjectDrawingView = z.infer<typeof ProjectDrawingViewSchema>;
 
+/* One file on disk, read and never written. The path is the whole view: the bytes are the
+   file system's, so there is nothing here for Ruimte to own, migrate or save. */
+export const ProjectFileViewSchema = ViewBaseSchema.extend({ kind: z.literal('file'), path: z.string().min(1) });
+export type ProjectFileView = z.infer<typeof ProjectFileViewSchema>;
+
 export const ProjectViewSchema = z.discriminatedUnion('kind', [
     ProjectCanvasViewSchema,
     ProjectChatViewSchema,
     ProjectTerminalViewSchema,
     ProjectBrowserViewSchema,
     ProjectDrawingViewSchema,
+    ProjectFileViewSchema,
     ProjectSeparatorViewSchema
 ]);
 export type ProjectView = z.infer<typeof ProjectViewSchema>;
@@ -258,9 +267,12 @@ export const isSeparatorView = (view: ProjectView): view is ProjectSeparatorView
 
 export const isDrawingView = (view: ProjectView): view is ProjectDrawingView => view.kind === 'drawing';
 
+export const isFileView = (view: ProjectView): view is ProjectFileView => view.kind === 'file';
+
 /*
  * The views that are one session under their own id: what a node carries, without a canvas around
- * it. A separator holds nothing and a drawing is a file, so neither has a session to attach to.
+ * it. A separator holds nothing, and a drawing and a file are both read off disk, so none of the
+ * three has a session to attach to.
  */
 export const isSessionView = (view: ProjectView): view is ProjectChatView | ProjectTerminalView | ProjectBrowserView =>
     view.kind === 'chat' || view.kind === 'terminal' || view.kind === 'browser';

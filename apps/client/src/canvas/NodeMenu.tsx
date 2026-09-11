@@ -24,6 +24,8 @@ import { askOpenAsView, canOpenAsView } from '@/project/views';
 import { NODE_ACCENTS } from '@/canvas/accents';
 import { DEFAULT_NOTE_COLOR, NOTE_COLORS } from '@/canvas/note-colors';
 import { EMPTY_DRAFT, writeDraft } from '@/chat/drafts';
+import { FileActionItems } from '@/shell/panels/FileActionItems';
+import { resolveStoredPath } from '@/shell/panels/files-tree';
 import { useCanvas } from '@/state/canvas';
 import { useChatRow } from '@/state/chats';
 import { useProject } from '@/state/project';
@@ -91,6 +93,8 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
     };
     // The folder the node works in: its own, or the project's when it has none.
     const workingFolder = node.kind === 'terminal' || node.kind === 'chat' ? (node.cwd ?? chatCwd ?? projectFolder) : (node.worktree?.path ?? null);
+    // What the node holds is stored against the project folder; the menu acts on the daemon's path.
+    const filePath = node.kind === 'file' && node.path ? resolveStoredPath(projectFolder, node.path) : null;
 
     return (
         <ContextMenu.Portal>
@@ -150,6 +154,13 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                         >
                             <Icon icon={ExternalLink} size={14} /> Reveal in {fileManagerName(platform)}
                         </ContextMenu.Item>
+                    )}
+                    {node.kind === 'file' && filePath !== null && (
+                        <>
+                            <ContextMenu.Separator className={MENU_SEPARATOR} />
+                            <FileActionItems path={filePath} on="node" />
+                            <ContextMenu.Separator className={MENU_SEPARATOR} />
+                        </>
                     )}
                     {node.kind === 'note' && (
                         <>

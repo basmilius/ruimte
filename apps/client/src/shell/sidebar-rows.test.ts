@@ -13,11 +13,20 @@ import {
 
 const node = (id: string, status: AgentStatus | null = null): SidebarNode => ({ id, title: id, kind: 'terminal', provider: null, status, draft: false });
 
-const view = (id: string, nodes: SidebarNode[] = []): SidebarView => ({ id, name: id, kind: 'canvas', icon: null, provider: null, nodes, self: null });
+const view = (id: string, nodes: SidebarNode[] = []): SidebarView => ({
+    id,
+    name: id,
+    kind: 'canvas',
+    icon: null,
+    provider: null,
+    path: null,
+    nodes,
+    self: null
+});
 
-const separator = (id: string): SidebarView => ({ id, name: '', kind: 'separator', icon: null, provider: null, nodes: [], self: null });
+const separator = (id: string): SidebarView => ({ id, name: '', kind: 'separator', icon: null, provider: null, path: null, nodes: [], self: null });
 
-const drawing = (id: string): SidebarView => ({ id, name: id, kind: 'drawing', icon: null, provider: null, nodes: [], self: null });
+const drawing = (id: string): SidebarView => ({ id, name: id, kind: 'drawing', icon: null, provider: null, path: null, nodes: [], self: null });
 
 const standalone = (id: string, status: AgentStatus | null = null): SidebarView => ({
     id,
@@ -25,6 +34,7 @@ const standalone = (id: string, status: AgentStatus | null = null): SidebarView 
     name: id,
     kind: 'chat',
     provider: null,
+    path: null,
     nodes: [],
     self: { id, title: id, kind: 'chat', provider: null, status, draft: true }
 });

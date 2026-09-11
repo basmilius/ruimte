@@ -5,6 +5,7 @@ import {
     ChartNoAxesColumn,
     ChevronRight,
     Copy,
+    FileText,
     Frame,
     Globe,
     LayoutGrid,
@@ -22,7 +23,8 @@ import clsx from 'clsx';
 import { isCanvasView, isSessionView, type AgentKind, type NodeKind } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { useDrafts } from '@/chat/drafts';
-import { askDeleteView, askViewIcon, duplicateViewOf, putOnCanvas, revealNode, showOnCanvas, showView } from '@/project/views';
+import { carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
+import { askDeleteView, askViewIcon, duplicateViewOf, newFileView, putOnCanvas, revealNode, showView, showViewOnCanvas } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
@@ -75,7 +77,8 @@ const ROW_ICON: Record<NodeKind, typeof Terminal> = {
     browser: Globe,
     group: LayoutGrid,
     note: StickyNote,
-    drawing: PenTool
+    drawing: PenTool,
+    file: FileText
 };
 
 const ROW = 'flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm';
@@ -273,7 +276,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
         return (
             <div className={ROW}>
                 <span className={ICON_SLOT}>
-                    <ViewGlyph id={view.id} kind={view.kind} icon={view.icon} provider={view.provider} className="text-text-muted" />
+                    <ViewGlyph id={view.id} kind={view.kind} icon={view.icon} provider={view.provider} path={view.path} className="text-text-muted" />
                 </span>
                 <RenameField
                     value={view.name}
@@ -339,6 +342,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
                         kind={view.kind}
                         icon={view.icon}
                         provider={view.provider}
+                        path={view.path}
                         className={clsx('col-start-1 row-start-1', row.expandable && 'group-hover:hidden group-focus-visible:hidden')}
                     />
                     {row.expandable && (
@@ -373,14 +377,14 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
                                 <Icon icon={Copy} size={14} /> Duplicate
                             </ContextMenu.Item>
                         )}
-                        {view.kind !== 'canvas' && view.kind !== 'drawing' && (
+                        {view.kind !== 'canvas' && view.kind !== 'drawing' && view.kind !== 'file' && (
                             <ContextMenu.Item className="menu-item" onClick={() => putOnCanvas(view.id)}>
                                 <Icon icon={Frame} size={14} /> Put on canvas
                             </ContextMenu.Item>
                         )}
-                        {view.kind === 'drawing' && (
-                            <ContextMenu.Item className="menu-item" onClick={() => showOnCanvas(view.id)}>
-                                <Icon icon={Frame} size={14} /> Show on canvas
+                        {(view.kind === 'drawing' || view.kind === 'file') && (
+                            <ContextMenu.Item className="menu-item" onClick={() => showViewOnCanvas(view.id)}>
+                                <Icon icon={Frame} size={14} /> Show on the canvas
                             </ContextMenu.Item>
                         )}
                         <ContextMenu.Item className="menu-item text-status-error" onClick={onDelete}>
@@ -454,6 +458,7 @@ export function Sidebar() {
                         kind: view.kind,
                         icon: (view.kind === 'separator' ? null : view.icon) ?? null,
                         provider: provider ?? null,
+                        path: view.kind === 'file' ? view.path : null,
                         nodes: live.filter((node) => isSessionKind(node.kind)).map(asRow),
                         // Only a session view is a node of its own; a separator and a drawing have no status.
                         self: isSessionView(view) ? asRow({ id: view.id, kind: view.kind, title: view.name, provider }) : null
@@ -501,6 +506,25 @@ export function Sidebar() {
         }
     };
 
+    /*
+     * A file dragged onto the list becomes a view of its own, in the gap it was let go of. It writes
+     * into the project whose list took the drop, so that workspace takes the focus first, the way
+     * pressing one of its rows would.
+     */
+    const dropFilesAt = (workspaceId: string, index: number, paths: readonly string[]): void => {
+        setInsertAt(null);
+        if (paths.length === 0) {
+            return;
+        }
+        focusWorkspace(workspaceId);
+        for (const [at, path] of paths.entries()) {
+            const id = newFileView(path);
+            if (id !== null) {
+                useDocument.getState().moveView(id, index + at);
+            }
+        }
+    };
+
     const moveFocus = (delta: -1 | 1): void => {
         const next = rowAfterArrow(rows, roving, delta);
         if (next === null) {
@@ -536,23 +560,48 @@ export function Sidebar() {
                             // Only the list of views takes a drop, and only the one the row came out of; the
                             // nodes under a canvas are not places a view can go.
                             const reorderable = section.kind === 'views' && dragging?.sectionId === section.id;
+                            /* A file out of the files panel or off a preview tab lands here as a view
+                               of its own; the waiting list is not a place in any project's file. */
+                            const workspaceId = section.kind === 'views' ? section.workspaceId : null;
+                            const takesDrop = reorderable || workspaceId !== null;
                             return (
                                 <div
                                     key={section.id}
                                     className="mb-3 flex flex-col gap-px"
                                     onDragOver={
-                                        reorderable
+                                        takesDrop
                                             ? (e) => {
+                                                  if (!reorderable && !carriesPaths(e.dataTransfer.types)) {
+                                                      return;
+                                                  }
                                                   e.preventDefault();
+                                                  if (!reorderable) {
+                                                      e.dataTransfer.dropEffect = dropEffectFor(e.dataTransfer.effectAllowed);
+                                                  }
                                                   setInsertAt(insertionIndex(e.currentTarget, e.clientY));
                                               }
                                             : undefined
                                     }
-                                    onDrop={
-                                        reorderable
+                                    onDragLeave={
+                                        takesDrop
                                             ? (e) => {
+                                                  // A drag from outside the list has no drag end here to clear the gap.
+                                                  if (!reorderable && !e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                                                      setInsertAt(null);
+                                                  }
+                                              }
+                                            : undefined
+                                    }
+                                    onDrop={
+                                        takesDrop
+                                            ? (e) => {
+                                                  const index = insertionIndex(e.currentTarget, e.clientY);
                                                   e.preventDefault();
-                                                  dropAt(insertionIndex(e.currentTarget, e.clientY));
+                                                  if (reorderable) {
+                                                      dropAt(index);
+                                                      return;
+                                                  }
+                                                  dropFilesAt(workspaceId!, index, droppedPaths(e.dataTransfer));
                                               }
                                             : undefined
                                     }
@@ -587,7 +636,7 @@ export function Sidebar() {
                                         };
                                         return (
                                             <Fragment key={row.rowId}>
-                                                {reorderable && insertAt === row.index && <div className={INSERT_LINE} />}
+                                                {takesDrop && insertAt === row.index && <div className={INSERT_LINE} />}
                                                 <RowScope workspaceId={row.workspaceId}>
                                                     {row.view.kind === 'separator' ? (
                                                         <SeparatorRow {...shared} />
@@ -609,7 +658,7 @@ export function Sidebar() {
                                             </Fragment>
                                         );
                                     })}
-                                    {reorderable && insertAt === section.viewCount && <div className={INSERT_LINE} />}
+                                    {takesDrop && insertAt === section.viewCount && <div className={INSERT_LINE} />}
                                 </div>
                             );
                         })

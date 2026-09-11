@@ -38,6 +38,22 @@ export const absoluteOf = (root: string, treePath: string): string => {
 /* A path that names its own root, on either kind of machine: a leading separator, or a drive letter. */
 export const isAbsolutePath = (path: string): boolean => /^[\\/]/.test(path) || /^[a-zA-Z]:[\\/]/.test(path);
 
+/*
+ * A path the way a file node or a file view stores it, so the project file says the same thing in
+ * every checkout: relative to the project folder, POSIX. A file outside that folder keeps the
+ * absolute path it has, which is what `relativeTo` hands back for a path it cannot shorten.
+ */
+export const storedPathOf = (folder: string | null, path: string): string => (folder === null ? path : relativeTo(folder, path));
+
+/* The way back, to the path the daemon takes. Null for a stored path with no folder to resolve it
+   against, which is a project without one. */
+export const resolveStoredPath = (folder: string | null, path: string): string | null => {
+    if (isAbsolutePath(path)) {
+        return path;
+    }
+    return folder === null ? null : absoluteOf(folder, path);
+};
+
 /* A path the files panel can bring into view is one inside the folder that panel lists; a worktree
    or another checkout on the same machine is not. */
 export const revealableInFiles = (folder: string | null, path: string): boolean =>

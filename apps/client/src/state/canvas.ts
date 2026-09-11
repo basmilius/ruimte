@@ -47,6 +47,8 @@ export interface AddNodeOptions {
     runtimeMode?: RuntimeMode;
     // Drawings only: the drawing view this node mirrors.
     viewId?: string;
+    // Files only: the file it reads, relative to the project folder or absolute outside it.
+    path?: string;
 }
 
 export interface TextElement extends Point {
@@ -199,7 +201,8 @@ export const NODE_SIZE: Record<NodeKind, { w: number; h: number }> = {
     browser: { w: 720, h: 480 },
     group: { w: 800, h: 600 },
     note: { w: 320, h: 240 },
-    drawing: { w: 480, h: 360 }
+    drawing: { w: 480, h: 360 },
+    file: { w: 520, h: 420 }
 };
 
 /* What a node of each kind is called before anything names it. */
@@ -209,7 +212,8 @@ export const DEFAULT_TITLES: Record<NodeKind, string> = {
     browser: 'Browser',
     group: 'Group',
     drawing: 'Drawing',
-    note: 'Note'
+    note: 'Note',
+    file: 'File'
 };
 
 /* The kinds an agent lives in; an edge into one of these is readable context. */
@@ -501,7 +505,8 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 provider: options.provider,
                 providerFixed: options.providerFixed,
                 runtimeMode: options.runtimeMode,
-                viewId: options.viewId
+                viewId: options.viewId,
+                path: options.path
             };
             set((s) => ({ nodes: { ...s.nodes, [id]: node }, order: [...s.order, id], selection: [id], mode: { kind: 'canvas' }, ...remember(s) }));
             return id;

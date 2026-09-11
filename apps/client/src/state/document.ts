@@ -54,6 +54,8 @@ export interface DocumentState {
     addSeparatorView(): string;
     /* A sketch of its own. Its elements live in a file of their own, which the daemon keeps. */
     addDrawingView(name: string): string;
+    /* One file on disk, read and never written. The path is all it holds. */
+    addFileView(name: string, path: string): string;
     /* A chat, terminal or browser without a canvas under it. The id is the session id, as for a node. */
     addStandaloneView(view: StandaloneRequest): string;
     renameView(id: string, name: string, source?: NodeTitleSource | null): void;
@@ -202,6 +204,13 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
 
         addDrawingView(name) {
             const view: ProjectView = { kind: 'drawing', id: nextId('view'), name };
+            set((state) => ({ views: [...state.exportViews(), view], edits: state.edits + 1 }));
+            get().setActiveView(view.id);
+            return view.id;
+        },
+
+        addFileView(name, path) {
+            const view: ProjectView = { kind: 'file', id: nextId('view'), name, path };
             set((state) => ({ views: [...state.exportViews(), view], edits: state.edits + 1 }));
             get().setActiveView(view.id);
             return view.id;

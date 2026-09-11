@@ -1,6 +1,6 @@
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, ChevronDown, Frame, Globe, Minus, Pencil, PenTool, Smile, Terminal, Trash } from 'lucide-react';
-import { isDrawingView, isOpenableView, isSessionView } from '@ruimte/contracts';
+import { Check, ChevronDown, FileText, Frame, Globe, Minus, Pencil, PenTool, Smile, Terminal, Trash } from 'lucide-react';
+import { isDrawingView, isFileView, isOpenableView, isSessionView } from '@ruimte/contracts';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentView } from '@/agents/nodes';
 import {
@@ -12,8 +12,8 @@ import {
     newSeparatorView,
     newTerminalView,
     putOnCanvas,
-    showOnCanvas,
-    showView
+    showView,
+    showViewOnCanvas
 } from '@/project/views';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { useDocument } from '@/state/document';
@@ -29,6 +29,8 @@ import { Icon } from '@/ui/Icon';
  */
 export function NewViewItems() {
     const hasProject = useProject((s) => s.current !== null);
+    /* A file comes out of the open folder, so a project without one has nothing to pick from. */
+    const hasFolder = useProject((s) => s.current?.folder != null);
     if (!hasProject) {
         return null;
     }
@@ -47,6 +49,11 @@ export function NewViewItems() {
             <Menu.Item className="menu-item" onClick={() => useUi.getState().setViewDialog({ kind: 'new-browser' })}>
                 <Icon icon={Globe} size={14} /> Browser
             </Menu.Item>
+            {hasFolder && (
+                <Menu.Item className="menu-item" onClick={() => useUi.getState().openFilePicker({ kind: 'view' })}>
+                    <Icon icon={FileText} size={14} /> File...
+                </Menu.Item>
+            )}
             <Menu.Separator className={MENU_SEPARATOR} />
             <Menu.Item className="menu-item" onClick={() => void newSeparatorView()}>
                 <Icon icon={Minus} size={14} /> Separator
@@ -71,6 +78,7 @@ export function ViewMenu() {
                     kind={active.kind}
                     icon={active.kind === 'separator' ? null : active.icon}
                     provider={active.kind === 'chat' || active.kind === 'terminal' ? active.node.provider : null}
+                    path={active.kind === 'file' ? active.path : null}
                 />
                 <span className="truncate text-sm text-text">{active.name}</span>
                 <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
@@ -86,6 +94,7 @@ export function ViewMenu() {
                                     kind={view.kind}
                                     icon={view.kind === 'separator' ? null : view.icon}
                                     provider={view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null}
+                                    path={view.kind === 'file' ? view.path : null}
                                 />
                                 <span className="truncate">{view.name}</span>
                                 {view.id === activeViewId && (
@@ -108,9 +117,9 @@ export function ViewMenu() {
                                 <Icon icon={Frame} size={14} /> Put on canvas
                             </Menu.Item>
                         )}
-                        {isDrawingView(active) && (
-                            <Menu.Item className="menu-item" onClick={() => showOnCanvas(active.id)}>
-                                <Icon icon={Frame} size={14} /> Show on canvas
+                        {(isDrawingView(active) || isFileView(active)) && (
+                            <Menu.Item className="menu-item" onClick={() => showViewOnCanvas(active.id)}>
+                                <Icon icon={Frame} size={14} /> Show on the canvas
                             </Menu.Item>
                         )}
                         <Menu.Item className="menu-item" onClick={() => askRenameView(active.id)}>

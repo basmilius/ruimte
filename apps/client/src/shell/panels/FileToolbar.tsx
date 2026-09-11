@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Menu } from '@base-ui-components/react/menu';
 import { MoreHorizontal, WrapText, type LucideIcon } from 'lucide-react';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
+import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
+import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { useFileActions } from '@/shell/panels/file-actions';
 import { FileMenuItems } from '@/shell/panels/FileMenuItems';
 import { Icon } from '@/ui/Icon';
@@ -10,17 +13,28 @@ import { Tooltip } from '@/ui/Tooltip';
 
 /*
  * The bar above every file renderer: the controls that change how the file is drawn, at its right.
- * One component for all three renderers, so a control keeps its place when the open file changes
- * type, and the menu at its end is the same everywhere for the same reason.
+ * One component for all the renderers, so a control keeps its place when the open file changes
+ * type, and the menu at its end is the same everywhere for the same reason. Where the surface
+ * carries a bar already (`file-toolbar-slot.ts`) the controls go up into that one instead, since a
+ * second row under it would say the same thing twice.
  */
 export function FileToolbar({ children }: { children?: ReactNode }) {
-    return (
-        <div className={FILE_TOOLBAR}>
-            <span className="grow" />
+    const { host } = useFileToolbarSlot();
+    const controls = (
+        <>
             {children}
             {/* With no controls the menu is the only group there is, and a line would divide nothing. */}
             {children !== undefined && <Separator />}
             <FileMenu />
+        </>
+    );
+    if (host !== null) {
+        return createPortal(controls, host);
+    }
+    return (
+        <div className={FILE_TOOLBAR}>
+            <span className="grow" />
+            {controls}
         </div>
     );
 }
@@ -64,9 +78,10 @@ export function DisabledWrapToggle() {
 }
 
 /*
- * Everything the open file can be asked, in one menu at the end of the bar. The items are the ones
- * a right click on the tab offers as well; the file comes from the viewer through `useFileActions`,
- * so no renderer has to hand it over.
+ * Everything the file can be asked, in one menu at the end of the bar. On a tab the items are the
+ * ones a right click on it offers as well; a node and a view of its own have no tab to pin or
+ * close, so they get the half that is about the file. The file comes from `FileBody` through
+ * `useFileActions`, so no renderer has to hand it over.
  */
 function FileMenu() {
     const actions = useFileActions();
@@ -85,7 +100,11 @@ function FileMenu() {
             <Menu.Portal>
                 <Menu.Positioner className="z-[var(--z-popup)]" side="bottom" align="end" sideOffset={6}>
                     <Menu.Popup className="menu-popup">
-                        <FileMenuItems tabKey={actions.key} onRefresh={actions.refresh} />
+                        {actions.tabKey === undefined ? (
+                            <FileActionItems path={actions.path} on={actions.on} onRefresh={actions.refresh} />
+                        ) : (
+                            <FileMenuItems tabKey={actions.tabKey} onRefresh={actions.refresh} />
+                        )}
                     </Menu.Popup>
                 </Menu.Positioner>
             </Menu.Portal>

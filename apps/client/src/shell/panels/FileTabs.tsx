@@ -1,6 +1,8 @@
 import { useEffect, useRef, type WheelEvent as ReactWheelEvent } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { GitCommitHorizontal, GitCompare, Pin, X } from 'lucide-react';
+import { PATHS_DRAG_TYPE } from '@/canvas/drop';
+import { MENTION_DRAG_TYPE } from '@/chat/mentions';
 import { FileMenuItems } from '@/shell/panels/FileMenuItems';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useFiles } from '@/state/files';
@@ -68,6 +70,14 @@ export function FileTabs() {
                                 <button
                                     className={TAB_OPEN}
                                     aria-current={tab.key === active}
+                                    /* A diff is a tab about a comparison, not about a file, so there is
+                                       nothing for a canvas or a composer to take from it. */
+                                    draggable={tab.view === undefined}
+                                    onDragStart={(event) => {
+                                        event.dataTransfer.setData(PATHS_DRAG_TYPE, tab.path);
+                                        event.dataTransfer.setData(MENTION_DRAG_TYPE, tab.path);
+                                        event.dataTransfer.effectAllowed = 'copy';
+                                    }}
                                     onClick={() => useFiles.getState().activate(tab.key)}
                                     onDoubleClick={() => useFiles.getState().setPinned(tab.key, !tab.pinned)}
                                 >

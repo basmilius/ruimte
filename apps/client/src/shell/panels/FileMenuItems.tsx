@@ -1,14 +1,9 @@
 import { Menu } from '@base-ui-components/react/menu';
-import { Copy, CornerUpRight, FileText, Folder, Globe, ListX, Minus, Pin, PinOff, Plus, RefreshCw, SquareX, X } from 'lucide-react';
-import { isHtmlName } from '@/shell/panels/file-kind';
-import { localFileUrl } from '@/shell/panels/file-url';
-import { basenameOf, relativeTo, revealableInFiles } from '@/shell/panels/files-tree';
+import { Copy, FileText, ListX, Minus, Pin, PinOff, Plus, RefreshCw, SquareX, X } from 'lucide-react';
+import { FileActionItems } from '@/shell/panels/FileActionItems';
+import { relativeTo } from '@/shell/panels/files-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
-import { addNodeAtCenter } from '@/shell/commands';
-import { useCanvas } from '@/state/canvas';
 import { useFiles } from '@/state/files';
-import { useProject } from '@/state/project';
-import { fileManagerName, useServer } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useTransport } from '@/transport/context';
 import { MENU_SEPARATOR } from '@/ui/classes';
@@ -18,14 +13,13 @@ import { Icon } from '@/ui/Icon';
 /*
  * Everything an open tab can be asked, as menu items. The toolbar's overflow menu and the right
  * click on a tab offer the same things in the same order, so one list serves both; `ContextMenu`
- * draws `Menu.Item` as its own.
+ * draws `Menu.Item` as its own. What is about the file rather than the tab comes from
+ * `FileActionItems`, which a node and a view of its own show the same way.
  */
 export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh?: () => void }) {
     const tab = useFiles((s) => s.tabs.find((entry) => entry.key === tabKey) ?? null);
     const pinned = tab?.pinned ?? false;
     const hasOthers = useFiles((s) => s.tabs.some((entry) => entry.key !== tabKey));
-    const platform = useServer((s) => s.platform);
-    const folder = useProject((s) => s.current?.folder ?? null);
     const tabLimit = useSettings((s) => s.filesTabLimit);
     const transport = useTransport();
 
@@ -34,19 +28,11 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
     }
 
     const { path, view } = tab;
-    const name = basenameOf(path);
     const commit = view?.commit;
     /* A whole commit is about no file in particular, so the items that act on one say nothing here. */
     const aboutFile = commit === undefined;
     // Staging asks the index a question, which only the diff against the working tree answers.
     const stageable = aboutFile && view !== undefined && view.scope === 'worktree';
-
-    const openInBrowserNode = (): void => {
-        const id = addNodeAtCenter('browser');
-        if (id !== null) {
-            useCanvas.getState().updateNode(id, { url: localFileUrl(path) });
-        }
-    };
 
     const stage = (): void => {
         if (view === undefined) {
@@ -69,22 +55,8 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
                             <Icon icon={FileText} size={14} /> Open the file itself
                         </Menu.Item>
                     )}
-                    <Menu.Item className="menu-item" disabled={!revealableInFiles(folder, path)} onClick={() => useFiles.getState().revealInFiles(path)}>
-                        <Icon icon={Folder} size={14} /> Reveal in the Files panel
-                    </Menu.Item>
-                    <Menu.Item
-                        className="menu-item"
-                        onClick={() => {
-                            void transport.request('fs.reveal', { path }).catch(() => undefined);
-                        }}
-                    >
-                        <Icon icon={CornerUpRight} size={14} /> Reveal in {fileManagerName(platform)}
-                    </Menu.Item>
-                    {view === undefined && isHtmlName(name) && (
-                        <Menu.Item className="menu-item" onClick={openInBrowserNode}>
-                            <Icon icon={Globe} size={14} /> Open in a browser node
-                        </Menu.Item>
-                    )}
+                    {/* A diff tab is about a comparison, so it never offers to refresh the file itself. */}
+                    <FileActionItems path={path} on="tab" onRefresh={view === undefined ? onRefresh : undefined} />
                     <Menu.Separator className={MENU_SEPARATOR} />
                 </>
             )}
@@ -96,22 +68,15 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
                     <Menu.Separator className={MENU_SEPARATOR} />
                 </>
             )}
-            {aboutFile ? (
+            {!aboutFile && (
                 <>
-                    <Menu.Item className="menu-item" onClick={() => copyText(path)}>
-                        <Icon icon={Copy} size={14} /> Copy path
+                    <Menu.Item className="menu-item" onClick={() => copyText(commit)}>
+                        <Icon icon={Copy} size={14} /> Copy commit hash
                     </Menu.Item>
-                    <Menu.Item className="menu-item" disabled={folder === null} onClick={() => copyText(relativeTo(folder ?? '', path))}>
-                        <Icon icon={Copy} size={14} /> Copy relative path
-                    </Menu.Item>
+                    <Menu.Separator className={MENU_SEPARATOR} />
                 </>
-            ) : (
-                <Menu.Item className="menu-item" onClick={() => copyText(commit)}>
-                    <Icon icon={Copy} size={14} /> Copy commit hash
-                </Menu.Item>
             )}
-            <Menu.Separator className={MENU_SEPARATOR} />
-            {onRefresh !== undefined && (
+            {!aboutFile && onRefresh !== undefined && (
                 <>
                     <Menu.Item className="menu-item" onClick={onRefresh}>
                         <Icon icon={RefreshCw} size={14} /> Refresh

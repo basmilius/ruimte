@@ -69,7 +69,7 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
     }, [transport, asked, relative, tabKey, view.cwd, view.scope, view.staged, whitespace]);
 
     const refresh = useCallback(() => setNonce((count) => count + 1), []);
-    const actions = useMemo(() => ({ key: tabKey, path, name, refresh }), [tabKey, path, name, refresh]);
+    const actions = useMemo(() => ({ path, name, on: 'tab' as const, tabKey, refresh }), [tabKey, path, name, refresh]);
 
     const setScope = (scope: GitDiffScope): void => {
         useGit.getState().setScope(scope);

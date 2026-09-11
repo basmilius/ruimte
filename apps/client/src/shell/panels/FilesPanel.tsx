@@ -17,18 +17,22 @@ import {
     Check,
     ChevronsDownUp,
     ChevronsUpDown,
+    Columns2,
     Copy,
     CornerUpRight,
     FileDiff,
     FileSearch,
     Folder,
     FolderOpen,
+    Frame,
     LoaderCircle,
     MoreHorizontal,
     RefreshCw,
     Search
 } from 'lucide-react';
+import { PATHS_DRAG_TYPE } from '@/canvas/drop';
 import { MENTION_DRAG_TYPE } from '@/chat/mentions';
+import { newFileView, showFileOnCanvas } from '@/project/views';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
 import {
     LOADING_NAME,
@@ -46,7 +50,9 @@ import {
     type EntryCache
 } from '@/shell/panels/files-tree';
 import { useFiles } from '@/state/files';
+import { folderWatches } from '@/state/fs-watch';
 import { useGit } from '@/state/git';
+import { useEndpointId } from '@/state/keys';
 import { useGitStatus } from '@/state/git-watch';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
@@ -116,6 +122,7 @@ export function FilesPanel() {
     const reachability = useServer((s) => s.reachability);
     const machine = useServer((s) => s.label);
     const showHidden = useSettings((s) => s.filesShowHidden);
+    const endpointId = useEndpointId();
     /* Which file the preview has up; a diff tab points at the same file and counts as well. */
     const activeFile = useFiles((s) => s.tabs.find((tab) => tab.key === s.active)?.path ?? null);
     const tabLimit = useSettings((s) => s.filesTabLimit);
@@ -214,19 +221,15 @@ export function FilesPanel() {
             return;
         }
         // The watch goes up before the first listing, so a write in between is reported, not missed.
-        void transport
-            .request('fs.watch', { path: folder })
-            .catch(() => undefined)
-            .then(() => {
-                void load(folder);
-                for (const dir of expandedRef.current) {
-                    void load(absoluteOf(folder, dir));
-                }
-            });
-        return () => {
-            void transport.request('fs.unwatch', { path: folder }).catch(() => undefined);
-        };
-    }, [transport, folder, load]);
+        const watch = folderWatches.watch(endpointId, folder);
+        void watch.ready.then(() => {
+            void load(folder);
+            for (const dir of expandedRef.current) {
+                void load(absoluteOf(folder, dir));
+            }
+        });
+        return watch.release;
+    }, [endpointId, folder, load]);
 
     useEffect(() => {
         if (!folder) {
@@ -391,6 +394,8 @@ export function FilesPanel() {
         }
         const selected = selectionRef.current;
         const paths = selected.includes(path) && selected.length > 1 ? [...selected] : [path];
+        // The canvas needs the trailing slash to leave a directory alone; a mention has no use for it.
+        event.dataTransfer.setData(PATHS_DRAG_TYPE, paths.join(' '));
         event.dataTransfer.setData(MENTION_DRAG_TYPE, paths.map((entry) => (isDirectoryPath(entry) ? entry.slice(0, -1) : entry)).join(' '));
     };
 
@@ -576,6 +581,17 @@ export function FilesPanel() {
                                 >
                                     <Icon icon={CornerUpRight} size={14} /> Reveal in {fileManagerName(platform)}
                                 </ContextMenu.Item>
+                                {menuPath !== null && !isDirectoryPath(menuPath) && (
+                                    <>
+                                        <ContextMenu.Separator className={MENU_SEPARATOR} />
+                                        <ContextMenu.Item className="menu-item" onClick={onMenuPath((absolute) => showFileOnCanvas(absolute))}>
+                                            <Icon icon={Frame} size={14} /> Show on the canvas
+                                        </ContextMenu.Item>
+                                        <ContextMenu.Item className="menu-item" onClick={onMenuPath((absolute) => newFileView(absolute))}>
+                                            <Icon icon={Columns2} size={14} /> Open as a view
+                                        </ContextMenu.Item>
+                                    </>
+                                )}
                                 <ContextMenu.Separator className={MENU_SEPARATOR} />
                                 <ContextMenu.Item className="menu-item" onClick={onMenuPath((absolute) => copyText(basenameOf(absolute)))}>
                                     <Icon icon={Copy} size={14} /> Copy name

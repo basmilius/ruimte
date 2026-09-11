@@ -1,7 +1,21 @@
-import { memo, useState, type ReactNode } from 'react';
+import { memo, useMemo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { ChevronDown, ChevronRight, GitBranch, Globe, LayoutGrid, Link2, Maximize2, MessageSquare, PenTool, StickyNote, Terminal, X } from 'lucide-react';
+import {
+    ChevronDown,
+    ChevronRight,
+    FileText,
+    GitBranch,
+    Globe,
+    LayoutGrid,
+    Link2,
+    Maximize2,
+    MessageSquare,
+    PenTool,
+    StickyNote,
+    Terminal,
+    X
+} from 'lucide-react';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
@@ -17,8 +31,11 @@ import { ChatBody } from '@/nodes/ChatBody';
 import { BrowserBody } from '@/nodes/BrowserBody';
 import { NoteNode } from '@/canvas/nodes/NoteNode';
 import { DrawingNode } from '@/canvas/nodes/DrawingNode';
+import { FileNode } from '@/canvas/nodes/FileNode';
 import { noteColorClass } from '@/canvas/note-colors';
 import { Favicon } from '@/browser/Favicon';
+import { FileIcon } from '@/ui/FileIcon';
+import { fixedSlot, FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { resetTitle } from '@/nodes/node-host';
 import { Icon } from '@/ui/Icon';
 
@@ -28,7 +45,9 @@ const ICONS: Record<NodeKind, ReactNode> = {
     browser: <Icon icon={Globe} size={14} />,
     group: <Icon icon={LayoutGrid} size={14} />,
     note: <Icon icon={StickyNote} size={14} />,
-    drawing: <Icon icon={PenTool} size={14} />
+    drawing: <Icon icon={PenTool} size={14} />,
+    // The floor under a file node that has no path yet; with one it wears the mark of its own name.
+    file: <Icon icon={FileText} size={14} />
 };
 
 const STATUS_LABEL: Record<AgentStatus, string> = {
@@ -121,6 +140,10 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const inViewport = useNodeInViewport(id);
     const live = useHeldWhileVisible(inViewport);
     const [renaming, setRenaming] = useState(false);
+    /* Where a file node's controls go: its own header, so the body draws no second bar under it.
+       Every other node hands its body an empty slot, which keeps the canvas out of the window's. */
+    const [fileControls, setFileControls] = useState<HTMLElement | null>(null);
+    const toolbarSlot = useMemo(() => fixedSlot(fileControls), [fileControls]);
     const status = useNodeStatus(node);
     const hasContext = useHasContextLinks(id);
     const hidden = useCanvas((s) => s.hidden.has(id));
@@ -196,7 +219,15 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     )}
                     {accent && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: accent }} />}
                     <span className="flex shrink-0 items-center text-text-muted">
-                        {node.provider ? <AgentIcon kind={node.provider} /> : node.kind === 'browser' ? <Favicon id={id} /> : ICONS[node.kind]}
+                        {node.provider ? (
+                            <AgentIcon kind={node.provider} />
+                        ) : node.kind === 'browser' ? (
+                            <Favicon id={id} />
+                        ) : node.kind === 'file' && node.path ? (
+                            <FileIcon path={node.path} size={14} />
+                        ) : (
+                            ICONS[node.kind]
+                        )}
                     </span>
                     <span className="flex min-w-0 grow items-center" onDoubleClick={() => setRenaming(true)}>
                         <Title id={id} title={node.title} editing={renaming} onDone={() => setRenaming(false)} />
@@ -219,6 +250,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                             {STATUS_LABEL[status]}
                         </Pill>
                     )}
+                    {node.kind === 'file' && <span ref={setFileControls} className={`${BTN_GROUP} shrink-0`} />}
                     <div className={`${BTN_GROUP} shrink-0`}>
                         <Tooltip label="Zoom to node" name>
                             <button className="icon-btn h-7 w-7" onClick={() => useCanvas.getState().goToNode(id)}>
@@ -250,6 +282,11 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         {node.kind === 'browser' && <BrowserBody id={id} focused={focused} />}
                         {node.kind === 'note' && <NoteNode id={id} focused={focused} />}
                         {node.kind === 'drawing' && <DrawingNode id={id} />}
+                        {node.kind === 'file' && (
+                            <FileToolbarSlotProvider value={toolbarSlot}>
+                                <FileNode id={id} />
+                            </FileToolbarSlotProvider>
+                        )}
                         {!focused && <div className="absolute inset-0" aria-hidden="true" />}
                     </div>
                 )}

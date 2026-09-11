@@ -3,11 +3,12 @@ import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Plus } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { isCanvasView } from '@ruimte/contracts';
+import { carriesPaths, dropEffectFor, dropPoints, droppedPaths } from '@/canvas/drop';
 import { GRID, intersects, snapToGrid, toWorld, type Point, type Rect } from '@/canvas/math';
-import { useCanvas, type NodeKind } from '@/state/canvas';
+import { NODE_SIZE, useCanvas, type NodeKind } from '@/state/canvas';
 import { isFocusedWorkspace, WorkspaceStoresContext } from '@/state/workspace-stores';
 import { useUi } from '@/state/ui';
-import { newCanvasView, showView, stepView, viewAtIndex } from '@/project/views';
+import { newCanvasView, showFileOnCanvas, showView, stepView, viewAtIndex } from '@/project/views';
 import { activeViewOf, useDocument } from '@/state/document';
 import { addNodeAtCenter } from '@/shell/commands';
 import { CanvasMenuPopup } from '@/canvas/CanvasMenu';
@@ -33,6 +34,9 @@ type Gesture =
       };
 
 const ZOOM_SETTLE_MS = 160;
+/* World units between two files dropped at once: a node's own width and a gutter, so the second one
+   stands beside the first instead of over it. */
+const DROP_STEP = NODE_SIZE.file.w + 24;
 const MIN_NODE = { w: 240, h: 160 };
 
 // Option plus a letter adds a node; a bare letter would fight every text field on the canvas.
@@ -84,6 +88,9 @@ export function Canvas() {
     const zoomMoved = useRef(false);
     const [box, setBox] = useState<Rect | null>(null);
     const [activeGesture, setActiveGesture] = useState<Gesture['kind'] | null>(null);
+    /* A drag carrying files is hanging over the canvas, which the border says so nobody has to
+       guess whether letting go here does anything. */
+    const [dropping, setDropping] = useState(false);
     // Where the last right-click landed, in world units, so the menu's "add here" knows where.
     const menuPoint = useRef<Point>({ x: 0, y: 0 });
 
@@ -574,6 +581,40 @@ export function Canvas() {
         }
     };
 
+    /* The canvas takes a file dragged out of the files panel or off a preview tab. The browser
+       marks a drop as refused unless both handlers say otherwise, hence the preventDefault on the
+       drag as well as on the drop. */
+    const onDragOver = (e: React.DragEvent): void => {
+        if (!carriesPaths(e.dataTransfer.types)) {
+            return;
+        }
+        e.preventDefault();
+        e.dataTransfer.dropEffect = dropEffectFor(e.dataTransfer.effectAllowed);
+        setDropping(true);
+    };
+
+    const onDragLeave = (e: React.DragEvent): void => {
+        // Moving over a node inside the canvas is a leave of the canvas as far as the event goes.
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+            setDropping(false);
+        }
+    };
+
+    const onDrop = (e: React.DragEvent): void => {
+        setDropping(false);
+        const paths = droppedPaths(e.dataTransfer);
+        if (paths.length === 0) {
+            return;
+        }
+        e.preventDefault();
+        const at = toWorld(useCanvas.getState().camera, screenPoint(e));
+        // Several files at once are several nodes in a row, so none of them lands on top of another.
+        const points = dropPoints(at, paths.length, DROP_STEP);
+        for (const [index, path] of paths.entries()) {
+            showFileOnCanvas(path, points[index]!);
+        }
+    };
+
     const onDoubleClick = (e: React.MouseEvent): void => {
         const target = e.target as HTMLElement;
         if (target.closest('[data-node-id]') || target.closest('[data-text-id]') || isInFloatingLayer(target)) {
@@ -606,6 +647,9 @@ export function Canvas() {
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerUp}
                 onDoubleClick={onDoubleClick}
+                onDragOver={onDragOver}
+                onDragLeave={onDragLeave}
+                onDrop={onDrop}
                 onContextMenu={(e) => {
                     const s = useCanvas.getState();
                     menuPoint.current = toWorld(s.camera, screenPoint(e));
@@ -639,6 +683,7 @@ export function Canvas() {
                         </EmptyState>
                     </div>
                 )}
+                {dropping && <div className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-accent ring-inset" aria-hidden />}
                 {box && (
                     <div
                         className="pointer-events-none absolute rounded-sm border border-accent bg-accent/10"

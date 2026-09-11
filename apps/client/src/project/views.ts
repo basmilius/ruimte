@@ -1,5 +1,6 @@
-import { isCanvasView, isDrawingView, isOpenableView, isSessionView, MAIN_VIEW_NAME, type NodeKind, type ProjectView } from '@ruimte/contracts';
-import { toWorld } from '@/canvas/math';
+import { isCanvasView, isDrawingView, isFileView, isOpenableView, isSessionView, MAIN_VIEW_NAME, type NodeKind, type ProjectView } from '@ruimte/contracts';
+import { toWorld, type Point } from '@/canvas/math';
+import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { currentEndpointId } from '@/state/keys';
@@ -76,6 +77,49 @@ export const showOnCanvas = (viewId: string): string | null => {
     }
     canvas.goToNode(id);
     return id;
+};
+
+/* The canvas a file lands on: the one on screen, else the one that was up last. */
+const canvasForFile = (): string | null => {
+    const { views, activeViewId, lastCanvasViewId } = useDocument.getState();
+    const active = views.find((view) => view.id === activeViewId);
+    if (active && isCanvasView(active)) {
+        return active.id;
+    }
+    return lastCanvasViewId ?? views.find(isCanvasView)?.id ?? null;
+};
+
+/* The path a node or a view stores, from a path on the daemon's machine. */
+const storedFilePath = (path: string): string => storedPathOf(useProject.getState().current?.folder ?? null, path);
+
+/*
+ * A file as a node on the canvas. The path may be absolute on the daemon's machine or already
+ * stored the way a node holds one; both come out the same, since shortening a stored path is a
+ * no-op. `at` says where the node's middle goes, in world units, which a drop knows and a menu does
+ * not: without one it lands in the middle of the view and the camera travels to it.
+ */
+export const showFileOnCanvas = (path: string, at?: Point): string | null => {
+    const canvasViewId = canvasForFile();
+    if (canvasViewId === null) {
+        return null;
+    }
+    showView(canvasViewId);
+    const canvas = useCanvas.getState();
+    const point = at ?? toWorld(canvas.camera, { x: canvas.viewport.w / 2, y: canvas.viewport.h / 2 });
+    const id = canvas.addNode('file', point, { title: basenameOf(path), path: storedFilePath(path) });
+    if (id !== null && at === undefined) {
+        canvas.goToNode(id);
+    }
+    return id;
+};
+
+/* A file as a view of its own, a column beside the canvas rather than a frame on it. */
+export const newFileView = (path: string): string | null => (canAddView() ? useDocument.getState().addFileView(basenameOf(path), storedFilePath(path)) : null);
+
+/* "Show on the canvas" for either view that offers it: a drawing is mirrored, a file is read again. */
+export const showViewOnCanvas = (viewId: string): string | null => {
+    const view = useDocument.getState().views.find((candidate) => candidate.id === viewId);
+    return view && isFileView(view) ? showFileOnCanvas(view.path) : showOnCanvas(viewId);
 };
 
 /* Copies a canvas or a drawing view. A drawing's elements are copied by the daemon, not here. */
