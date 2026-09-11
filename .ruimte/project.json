@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "rev": 223,
+  "rev": 244,
   "name": "Ruimte",
   "color": "#7c74ff",
   "views": [
@@ -79,19 +79,13 @@
       "id": "separator-3fpm4hs6"
     },
     {
-      "id": "chat-d81bq1v4",
-      "name": "Wat kun je me vertellen over het project waar…",
-      "titleSource": "user",
-      "kind": "chat",
-      "node": {
-        "provider": "claude",
-        "providerFixed": true
-      }
-    },
-    {
       "id": "chat-pbkry64w",
       "name": "In dit project hebben we browsers en webviews…",
       "titleSource": "auto",
+      "icon": {
+        "kind": "lucide",
+        "value": "puzzle"
+      },
       "kind": "chat",
       "node": {
         "provider": "claude",
@@ -99,8 +93,13 @@
       }
     },
     {
-      "id": "chat-ebbonqyi",
-      "name": "Uitzoekwerk. maak aan het eind met $html-report…",
+      "id": "chat-e9a3mwsf",
+      "name": "Onderzoek in ~/Development/Projects/forks/nodete…",
+      "titleSource": "auto",
+      "icon": {
+        "kind": "lucide",
+        "value": "bot"
+      },
       "kind": "chat",
       "node": {
         "provider": "claude",
