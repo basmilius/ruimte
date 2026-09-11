@@ -22,8 +22,8 @@ export function UsagePane() {
                     currency === 'USD'
                         ? 'Model prices are published in dollars, which is what the page shows.'
                         : rate === null
-                          ? 'No exchange rate yet, so the page stays in dollars until the daemon has one.'
-                          : `At the ECB reference rate of ${rate.date}, which the daemon asks for once a day.`
+                          ? 'No exchange rate yet, so the page stays in dollars until the machine has one.'
+                          : `At the ECB reference rate of ${rate.date}, which the machine asks for once a day.`
                 }
                 control={<Segmented value={currency} options={CURRENCIES} onChange={(id) => useUsageStore.getState().setCurrency(id)} label="Currency" />}
             />

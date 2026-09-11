@@ -30,8 +30,8 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionMeta[] = [
     { id: 'files', label: 'Files', description: 'What the Files panel shows, and where browsing for a folder starts.', icon: Folder },
     { id: 'git', label: 'Git', description: 'How the Git panel lists what changed.', icon: GitBranch },
     { id: 'usage', label: 'Usage', description: 'The money the usage page counts in.', icon: ChartNoAxesColumn },
-    { id: 'agents', label: 'Agents', description: 'What a new agent starts with, and which CLIs the daemon found.', icon: Bot },
-    { id: 'machines', label: 'Machines', description: 'The daemons this client can talk to.', icon: Server },
+    { id: 'agents', label: 'Agents', description: 'What a new agent starts with, and which CLIs the machine found.', icon: Bot },
+    { id: 'machines', label: 'Machines', description: 'The machines this client can talk to, and what each one is called.', icon: Server },
     { id: 'keyboard', label: 'Keyboard', description: 'Every shortcut. Remapping comes later.', icon: Keyboard },
     { id: 'updates', label: 'Updates', description: 'The version you run, and what the app does when there is a newer one.', icon: ArrowDownToLine },
     { id: 'about', label: 'About', description: 'Version, the machine you are connected to, and where to find more.', icon: Info }

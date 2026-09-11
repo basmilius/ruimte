@@ -195,7 +195,7 @@ export const appCommands = (): Command[] => {
         {
             id: 'settings-machines',
             label: 'Machines',
-            hint: 'Pair with a daemon elsewhere',
+            hint: 'Pair with a machine elsewhere',
             run: () => useUi.getState().setSettings({ open: true, section: 'machines' })
         }
     ];

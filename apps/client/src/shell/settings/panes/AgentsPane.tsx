@@ -108,7 +108,7 @@ export function AgentsPane() {
             >
                 {withModels.length === 0 &&
                     (loaded ? (
-                        <SettingsRow muted label="No agent CLI with a chat backend was found on the daemon." />
+                        <SettingsRow muted label="No agent CLI with a chat backend was found on this machine." />
                     ) : (
                         <SettingsRow label={<Skeleton className="w-32" />} control={<Skeleton className="w-24" />} />
                     ))}
@@ -141,7 +141,7 @@ export function AgentsPane() {
                     }
                 />
             </SettingsSection>
-            <SettingsSection title="Providers" description="What the daemon found on its PATH. Install a CLI and restart the daemon to add one.">
+            <SettingsSection title="Providers" description="What the machine found on its PATH. Install a CLI and restart Ruimte there to add one.">
                 {providers.length === 0 &&
                     (loaded ? (
                         <SettingsRow muted label="No providers reported" />
@@ -158,7 +158,7 @@ export function AgentsPane() {
                         description={
                             provider.installed
                                 ? `${provider.version ? `Version ${provider.version}. ` : ''}${providerAbilities(provider)}`
-                                : 'Not found on the daemon.'
+                                : 'Not found on this machine.'
                         }
                         control={provider.installed ? <Badge tone="idle">Installed</Badge> : <Badge tone="muted">Missing</Badge>}
                     />
