@@ -15,6 +15,23 @@ afterEach(async () => {
 const create = (sessionId: string, cols = 80, rows = 24) => harness.manager.create({ sessionId, cols, rows, shell: SH, args: SH_ARGS, cwd: harness.home });
 
 describe('SessionManager', () => {
+    test('clear empties the buffer and hands every attached client the fresh screen', async () => {
+        const recorder = new Recorder();
+        harness.manager.subscribe('c1', recorder.sink());
+
+        await create('s1');
+        await harness.manager.attach('s1', 'c1', 80, 24);
+        harness.manager.write('s1', 'echo hel""lo\n');
+        await waitFor(() => recorder.output.includes('hello'), 'hello in the stream');
+
+        await harness.manager.clear('s1');
+        expect(recorder.resyncOf('s1')).toBeDefined();
+        expect(recorder.resyncOf('s1')).not.toContain('hello');
+        // The daemon owns the screen, so a reattach cannot bring the old one back either.
+        const attached = await harness.manager.attach('s1', 'c1', 80, 24);
+        expect(attached.screen).not.toContain('hello');
+    });
+
     test('streams output to an attached client and holds the screen for a reattach', async () => {
         const recorder = new Recorder();
         harness.manager.subscribe('c1', recorder.sink());

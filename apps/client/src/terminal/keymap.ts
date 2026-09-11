@@ -1,6 +1,7 @@
 /* What these helpers read from a key event. A real `KeyboardEvent` satisfies it, a test writes one by hand. */
 export interface KeyChord {
     key: string;
+    code: string;
     metaKey: boolean;
     altKey: boolean;
     ctrlKey: boolean;
@@ -24,6 +25,37 @@ export const isLeaveNodeChord = (event: KeyChord, apple: boolean): boolean => {
 
 /* The chord as a tooltip or a chip prints it. The Keyboard pane says ⌘ where Windows reads Ctrl; this one cannot. */
 export const leaveNodeChordLabel = (apple: boolean): string => (apple ? '⌘Esc' : '⌃⇧Esc');
+
+/*
+ * The chords a focused terminal hands back to the app: the ones that move between views, panels and
+ * settings, so you never have to leave the terminal to reach another view. Every other chord is the
+ * program's, which is why ⌘K clears the screen here instead of opening the palette.
+ */
+export const isAppChord = (event: KeyChord, apple: boolean): boolean => {
+    const mod = apple ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
+    if (!mod) {
+        return false;
+    }
+    if (event.altKey) {
+        return event.code === 'KeyB';
+    }
+    if (event.shiftKey) {
+        return event.code === 'BracketLeft' || event.code === 'BracketRight';
+    }
+    // Ctrl+B is readline's backward-char and tmux's prefix, so off macOS the shell keeps it.
+    return /^Digit[1-9]$/.test(event.code) || event.code === 'KeyT' || event.key === ',' || (apple && event.code === 'KeyB');
+};
+
+/* Clearing is ⌘K, what every macOS terminal does; off macOS the shell owns Ctrl+K, so it is ⌃⇧K. */
+export const isClearChord = (event: KeyChord, apple: boolean): boolean => {
+    if (event.code !== 'KeyK' || event.altKey) {
+        return false;
+    }
+    if (apple) {
+        return event.metaKey && !event.ctrlKey && !event.shiftKey;
+    }
+    return event.ctrlKey && event.shiftKey && !event.metaKey;
+};
 
 /* Home and End in both forms the application cursor keys mode (DECCKM) asks for. */
 const HOME_NORMAL = '\x1b[H';

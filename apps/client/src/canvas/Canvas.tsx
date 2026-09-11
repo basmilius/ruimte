@@ -230,7 +230,8 @@ export function Canvas() {
                 return;
             }
             const mod = e.metaKey || e.ctrlKey;
-            // App-wide chords work from anywhere, a focused node or text field included.
+            // App-wide chords work from anywhere, a focused node or text field included. A focused
+            // terminal is the exception: it stops every chord it owns before this listener (`keymap.ts`).
             if (mod && e.key === 'k') {
                 e.preventDefault();
                 if (useUi.getState().paletteOpen) {

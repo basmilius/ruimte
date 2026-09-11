@@ -161,6 +161,18 @@ export class Session {
         this.pty.write(data);
     }
 
+    /*
+     * What Terminal.app's Clear does: the buffer goes, the prompt line becomes the first, and the
+     * shell is never told. Pending output is flushed first, so bytes from before the clear cannot
+     * land on the fresh screen.
+     */
+    async clear(): Promise<string> {
+        this.flush();
+        await new Promise<void>((resolve) => this.terminal.write('', resolve));
+        this.terminal.clear();
+        return this.serializeScreen();
+    }
+
     resize(cols: number, rows: number): void {
         if (cols === this.cols && rows === this.rows) {
             return;

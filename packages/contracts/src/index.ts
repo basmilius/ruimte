@@ -127,6 +127,7 @@ export const REQUEST_SCHEMAS = {
     'session.write': { payload: SessionWritePayloadSchema, result: EmptySchema },
     'session.resize': { payload: SessionResizePayloadSchema, result: EmptySchema },
     'session.kill': { payload: SessionTargetPayloadSchema, result: EmptySchema },
+    'session.clear': { payload: SessionTargetPayloadSchema, result: EmptySchema },
     'session.list': { payload: EmptySchema, result: SessionListResultSchema },
     'agent.resume': { payload: AgentResumePayloadSchema, result: EmptySchema },
     'chat.create': { payload: ChatCreatePayloadSchema, result: ChatInfoSchema },

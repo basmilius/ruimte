@@ -96,12 +96,14 @@ describe('session requests', () => {
         expect(result.safeParse({ screen: '', cols: 120, rows: 40 }).success).toBe(false);
     });
 
-    test('session.write, resize, detach and kill', () => {
+    test('session.write, resize, detach, clear and kill', () => {
         expect(REQUEST_SCHEMAS['session.write'].payload.safeParse({ sessionId: 'n1', data: 'ls\r' }).success).toBe(true);
         expect(REQUEST_SCHEMAS['session.write'].payload.safeParse({ sessionId: 'n1' }).success).toBe(false);
         expect(REQUEST_SCHEMAS['session.resize'].payload.safeParse({ sessionId: 'n1', cols: 10, rows: 2 }).success).toBe(true);
         expect(REQUEST_SCHEMAS['session.resize'].payload.safeParse({ sessionId: 'n1', cols: 10.5, rows: 2 }).success).toBe(false);
         expect(REQUEST_SCHEMAS['session.detach'].payload.safeParse({ sessionId: 'n1' }).success).toBe(true);
+        expect(REQUEST_SCHEMAS['session.clear'].payload.safeParse({ sessionId: 'n1' }).success).toBe(true);
+        expect(REQUEST_SCHEMAS['session.clear'].payload.safeParse({}).success).toBe(false);
         expect(REQUEST_SCHEMAS['session.kill'].payload.safeParse({}).success).toBe(false);
     });
 

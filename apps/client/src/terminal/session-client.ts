@@ -145,6 +145,11 @@ export class SessionClient {
         void this.transport.request('session.write', { sessionId: nodeId, data }).catch(() => undefined);
     }
 
+    /* The daemon owns the screen, so it clears it and pushes the fresh one to every attached client. */
+    clear(nodeId: string): void {
+        void this.transport.request('session.clear', { sessionId: nodeId }).catch(() => undefined);
+    }
+
     resize(nodeId: string, cols: number, rows: number): void {
         const entry = this.mounted.get(nodeId);
         if (entry) {
