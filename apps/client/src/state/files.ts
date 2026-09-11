@@ -90,6 +90,9 @@ export const pinTab = (state: TabState, key: string, pinned: boolean): TabState 
 interface FilesStore extends TabState {
     /* Whose tabs these are; a canvas that is not open has none. */
     projectId: string | null;
+    /* Counts the files opened by hand. The preview watches it to take the keyboard, so the tab
+       that just opened answers to ⌘W. Restoring a project does not count: nothing was asked for. */
+    focusRequest: number;
     /* The directories the tree has open, the way the tree names one: relative, POSIX, trailing slash. */
     expandedDirs: string[];
     load(projectId: string | null, state: TabState & { expandedDirs: string[] }): void;
@@ -108,6 +111,7 @@ interface FilesStore extends TabState {
  */
 export const useFiles = create<FilesStore>((set, get) => ({
     projectId: null,
+    focusRequest: 0,
     tabs: [],
     active: null,
     expandedDirs: [],
@@ -117,7 +121,7 @@ export const useFiles = create<FilesStore>((set, get) => ({
     /* A tab and the panel that draws it are one thing to the person opening a file: the first open
        brings the preview up and the last close takes it away again. */
     open(path, limit, view) {
-        set(openTab(get(), path, limit, view));
+        set({ ...openTab(get(), path, limit, view), focusRequest: get().focusRequest + 1 });
         useUi.getState().setPreviewOpen(true);
     },
     close(key) {
