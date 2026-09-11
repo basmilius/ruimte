@@ -5,6 +5,8 @@ export const ReachabilitySchema = z.enum(['loopback', 'lan', 'tunnel', 'public']
 export type Reachability = z.infer<typeof ReachabilitySchema>;
 
 export const EndpointInfoSchema = z.object({
+    // The daemon's own id, minted once and kept in its home; a client keys a machine on this because an address moves.
+    id: z.string().min(1),
     // The daemon's own name for itself, the machine's hostname unless configured.
     label: z.string(),
     platform: z.string(),

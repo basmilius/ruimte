@@ -180,6 +180,7 @@ function PairedClients() {
 export function EndpointsSection() {
     const endpoints = useEndpoints((s) => s.endpoints);
     const activeId = useEndpoints((s) => s.activeId);
+    const mismatched = useEndpoints((s) => s.mismatched);
     const [link, setLink] = useState('');
     const [busy, setBusy] = useState(false);
     const [failure, setFailure] = useState<string | null>(null);
@@ -227,6 +228,9 @@ export function EndpointsSection() {
                                 <span className="truncate font-mono text-xs text-text-faint">
                                     {endpoint.id === LOCAL_ENDPOINT_ID ? 'loopback' : endpoint.httpBaseUrl}
                                 </span>
+                                {mismatched[endpoint.id] !== undefined && (
+                                    <span className="text-xs text-status-error">This address answers as another machine; pair again to talk to it.</span>
+                                )}
                             </span>
                             <span className="flex h-5 shrink-0 items-center">
                                 {endpoint.id === activeId ? (

@@ -17,6 +17,7 @@ import { CONTEXT_PATH, ContextStore } from './context/context-store.ts';
 import { ChatStore } from './chat/chat-store.ts';
 import type { ServerConfig } from './config.ts';
 import { Dispatcher, sendEvent, type ClientAccess, type ClientConnection } from './dispatcher.ts';
+import { readOrCreateEndpointId } from './endpoint-id.ts';
 import { VERSION } from './version.ts';
 import { registerAuthHandlers } from './handlers/auth.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
@@ -62,6 +63,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const binDir = compiled ? dirname(process.execPath) : resolve(import.meta.dir, '..', 'bin');
     const contextUrl = `http://127.0.0.1:${config.port}${CONTEXT_PATH}`;
 
+    const endpointId = await readOrCreateEndpointId(config.home);
     const auth = new AuthStore(config.home);
     const relay: Relay = new NoRelay();
     const access = { allowedOrigins: config.allowedOrigins, requireToken: config.requireToken };
@@ -111,6 +113,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerProjectHandlers(dispatcher, projects);
     registerDrawingHandlers(dispatcher, drawings);
     registerAuthHandlers(dispatcher, auth, {
+        id: endpointId,
         label: config.label,
         version: VERSION,
         pairingUrl: () => pairingUrl(config.host, server.port ?? config.port, auth.issuePairingToken()),
@@ -149,6 +152,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     let nextClientId = 1;
 
     const endpointInfo = (reachability: ClientAccess['reachability'], authenticated: boolean) => ({
+        id: endpointId,
         label: config.label,
         platform: process.platform,
         version: VERSION,

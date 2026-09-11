@@ -2,6 +2,7 @@ import { RequestError, type Dispatcher } from '../dispatcher.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 
 interface EndpointIdentity {
+    id: string;
     label: string;
     version: string;
     // Mints a one-time pairing URL; what `ruimte pair` and the settings dialog hand to another machine.
@@ -12,6 +13,7 @@ interface EndpointIdentity {
 
 export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, identity: EndpointIdentity): void => {
     dispatcher.register('endpoint.info', (_payload, client) => ({
+        id: identity.id,
         label: identity.label,
         platform: process.platform,
         version: identity.version,

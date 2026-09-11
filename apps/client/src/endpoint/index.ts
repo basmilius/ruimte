@@ -23,13 +23,15 @@ export const pairEndpoint = async (pairingUrl: string): Promise<Endpoint> => {
         throw new Error(await response.text().catch(() => 'The daemon refused the pairing'));
     }
     const { sessionToken, endpoint } = (await response.json()) as { sessionToken: string; endpoint: EndpointInfo };
+    // Keyed on the daemon's own id, so pairing with a machine that is already in the list under another address moves that row.
     const record: Endpoint = {
-        id: new URL(parsed.httpBaseUrl).host,
+        id: endpoint.id,
         label: endpoint.label,
         httpBaseUrl: parsed.httpBaseUrl,
         wsBaseUrl: parsed.httpBaseUrl.replace(/^http/, 'ws'),
         reachability: endpoint.reachability,
-        token: sessionToken
+        token: sessionToken,
+        daemonId: endpoint.id
     };
     useEndpoints.getState().add(record);
     return record;
