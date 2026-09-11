@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { Endpoint } from '@/state/endpoints';
-import { browseMachines, folderPresence, joinPath, parentOf, separatorFor, startFolder } from './palette-browse';
+import { browseBack, browseMachines, folderPresence, joinPath, openBrowse, parentOf, separatorFor, startFolder } from './palette-browse';
 
 describe('separatorFor', () => {
     test('a Windows daemon answers in backslashes, every other one in slashes', () => {
@@ -91,5 +91,30 @@ describe('browseMachines', () => {
     test('a machine without a socket is still a row, marked as one that has to be dialed', () => {
         const rows = browseMachines(endpoints, 'local', ['local']);
         expect(rows.map((row) => row.connected)).toEqual([true, false, false]);
+    });
+});
+
+describe('openBrowse', () => {
+    test('one machine goes straight to its folders, with the start path in the field', () => {
+        expect(openBrowse('local', 1, '/work/atlas/')).toEqual({ step: { endpointId: 'local', machines: false, path: '/work/atlas/' }, query: '/work/atlas/' });
+    });
+
+    test('more than one machine asks which, with an empty field to narrow them', () => {
+        expect(openBrowse('local', 3, '/work/atlas/')).toEqual({ step: { endpointId: 'local', machines: true, path: '' }, query: '' });
+    });
+});
+
+describe('browseBack', () => {
+    test('the machines return to the folders they were opened from', () => {
+        expect(browseBack({ endpointId: 'local', machines: true, path: '/work/' }, 2)).toEqual({ to: 'folders', path: '/work/' });
+    });
+
+    test('the machines leave browsing when there are no folders behind them', () => {
+        expect(browseBack({ endpointId: 'local', machines: true, path: '' }, 2)).toEqual({ to: 'palette' });
+    });
+
+    test('folders go to the machines, but only when there is more than one', () => {
+        expect(browseBack({ endpointId: 'local', machines: false, path: '/work/' }, 2)).toEqual({ to: 'machines' });
+        expect(browseBack({ endpointId: 'local', machines: false, path: '/work/' }, 1)).toEqual({ to: 'palette' });
     });
 });
