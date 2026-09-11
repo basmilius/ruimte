@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Check, Copy, Link2, Server, Trash } from 'lucide-react';
 import type { AuthSession } from '@ruimte/contracts';
-import { activateEndpoint, forgetEndpoint, listPairedClients, pairEndpoint, requestPairingUrl, revokePairedClient } from '@/endpoint';
+import { forgetEndpoint, listPairedClients, pairEndpoint, requestPairingUrl, revokePairedClient } from '@/endpoint';
 import { useEndpoints, LOCAL_ENDPOINT_ID, type Endpoint } from '@/state/endpoints';
 import { useServer } from '@/state/server';
 import { pool, transport, type TransportStatus } from '@/transport';
@@ -219,8 +219,7 @@ export function EndpointsSection() {
         setBusy(true);
         setFailure(null);
         try {
-            /* Pairing adds the machine and connects to it. Which machine the app is on is a choice
-               of its own, the radio beside every row, so it is not made here. */
+            // Pairing adds the machine and connects to it; where the work happens is decided by opening a project.
             await pairEndpoint(link);
             setLink('');
         } catch (e) {
@@ -232,49 +231,41 @@ export function EndpointsSection() {
 
     return (
         <div className="flex flex-col gap-2">
-            {/* Every row here has a socket while the pane is open, but one machine is the one projects
-                open on, so the list stays a set of radios; forgetting a machine is something else and
-                sits beside the radio, not inside it. */}
-            <div className="flex flex-col gap-2" role="radiogroup" aria-label="Machines this client talks to">
+            {/* A list, not a set of radios: this pane keeps the machines, and which one the work is on
+                is answered by opening a project on it. The row says where the app is, it does not move it. */}
+            <ul className="flex list-none flex-col gap-2">
                 {endpoints.map((endpoint) => (
-                    <div
+                    <li
                         key={endpoint.id}
                         className={clsx(
                             'flex items-center gap-2 rounded-lg border px-2.5 py-2',
                             endpoint.id === activeId ? 'border-accent bg-accent-soft' : 'border-border'
                         )}
                     >
-                        <button
-                            role="radio"
-                            aria-checked={endpoint.id === activeId}
-                            className="flex min-w-0 grow items-start gap-2 text-left"
-                            onClick={() => void activateEndpoint(endpoint.id)}
-                        >
-                            {/* The address under the label makes this row two lines high, so the 20 pixel
-                                boxes hold the icon and the trailing state on the label's line. */}
-                            <span className="flex h-5 shrink-0 items-center">
-                                <Icon icon={Server} size={14} className="text-text-muted" />
-                            </span>
-                            <span className="flex min-w-0 grow flex-col">
-                                <span className="truncate text-sm text-text">{endpoint.label}</span>
-                                <span className="flex items-center gap-1.5">
-                                    <EndpointState endpointId={endpoint.id} />
-                                    <span className="min-w-0 truncate font-mono text-xs text-text-faint">
-                                        {endpoint.id === LOCAL_ENDPOINT_ID ? 'loopback' : endpoint.httpBaseUrl}
-                                    </span>
+                        {/* The address under the label makes this row two lines high, so the 20 pixel
+                            boxes hold the icon and the trailing state on the label's line. */}
+                        <span className="flex h-5 shrink-0 items-center">
+                            <Icon icon={Server} size={14} className="text-text-muted" />
+                        </span>
+                        <span className="flex min-w-0 grow flex-col">
+                            <span className="truncate text-sm text-text">{endpoint.label}</span>
+                            <span className="flex items-center gap-1.5">
+                                <EndpointState endpointId={endpoint.id} />
+                                <span className="min-w-0 truncate font-mono text-xs text-text-faint">
+                                    {endpoint.id === LOCAL_ENDPOINT_ID ? 'loopback' : endpoint.httpBaseUrl}
                                 </span>
-                                {mismatched[endpoint.id] !== undefined && (
-                                    <span className="text-xs text-status-error">This address answers as another machine; pair again to talk to it.</span>
-                                )}
                             </span>
-                            <span className="flex h-5 shrink-0 items-center">
-                                {endpoint.id === activeId ? (
-                                    <Icon icon={Check} size={14} className="text-accent" />
-                                ) : (
-                                    <span className="text-xs text-text-muted">Switch</span>
-                                )}
-                            </span>
-                        </button>
+                            {mismatched[endpoint.id] !== undefined && (
+                                <span className="text-xs text-status-error">This address answers as another machine; pair again to talk to it.</span>
+                            )}
+                        </span>
+                        {endpoint.id === activeId && (
+                            <Tooltip label="The project that is open is on this machine">
+                                <span className="flex h-5 shrink-0 items-center gap-1 text-xs text-accent">
+                                    <Icon icon={Check} size={14} /> Working here
+                                </span>
+                            </Tooltip>
+                        )}
                         {endpoint.id !== LOCAL_ENDPOINT_ID && (
                             <Tooltip label="Forget this machine" name>
                                 <button className="icon-btn h-7 w-7" onClick={() => void forgetEndpoint(endpoint.id)}>
@@ -282,9 +273,9 @@ export function EndpointsSection() {
                                 </button>
                             </Tooltip>
                         )}
-                    </div>
+                    </li>
                 ))}
-            </div>
+            </ul>
             <PairedClients key={activeId} />
             <div className="flex items-center gap-2">
                 <input
