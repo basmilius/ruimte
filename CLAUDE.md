@@ -1,6 +1,6 @@
 # Ruimte
 
-Terminals, agents and browsers on one infinite canvas. Read `README.md` for the principles and `docs/HANDOFF.md` for the current state, the decisions that are not in the code, and what comes next. This file is for anyone (human or agent) changing code.
+Terminals, agents and browsers on one infinite canvas. Read `README.md` for the principles and `docs/DECISIONS.md` for the decisions that are not in the code, the traps already paid for, and what comes next. This file is for anyone (human or agent) changing code.
 
 ## Layout
 
