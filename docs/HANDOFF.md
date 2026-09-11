@@ -815,6 +815,14 @@ canvas, against Ruimte, one verdict each.
   A/5 arrow, L/6 line, P/7 freehand, T/8 text, E/0 eraser, Q keeps the tool). They fire only while
   no text is being typed and no dialog is up, and they are listed under "Drawing" in the Keyboard
   pane like every other chord.
+- A workspace is a React context, not a global. One open project means one daemon, one project and
+  drawing client and one set of the four stores that hold a canvas (`useCanvas`, `useDocument`,
+  `useDrawing`, `useProject`); a panel or a node inside it reads its machine from the subtree it is
+  in rather than from "the endpoint that is active". Contexts are rare in this app (the tooltip
+  provider, the panel header slot, the file actions), and this is the fourth on purpose: threading an
+  endpoint id through thirty files would have been worse in every way, and without it two projects
+  from two machines can never be edited at the same time. The app draws one workspace today; the
+  pane layout that draws two is a feature of its own.
 - Never highlight the canvas grid in the accent color. The dots stay neutral in every state.
 - A drawing keeps its elements beside `project.json`, in `<folder>/.ruimte/drawings/<viewId>.json`,
   and they go into git with it: a sketch that explains a repository belongs to that repository. The

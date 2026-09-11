@@ -1256,15 +1256,20 @@ Changed, per phase:
 
 ## 8. Open questions for Bas
 
-Bas answered questions 3, 4 and 5 on 2026-09-11, all three in favor of the proposal:
+Bas answered questions 3, 4, 5 and 6 on 2026-09-11:
 
 - **Question 3**: a machine that is not connected still lists its projects from a remembered list,
   shown as unavailable until it answers.
 - **Question 4**: one usage page with a machine picker.
 - **Question 5**: phase 6 turns `useCanvas`, `useDocument` and `useDrawing` into per-workspace
   stores, the larger refactor, so two projects are genuinely editable side by side.
+- **Question 6**: no. The Machines pane is not a radiogroup any more. It is there to keep machines:
+  pair one, forget one, see what its socket is doing, read the clients paired with it. Which machine
+  the work is on is said by opening a project (`openProject(endpointId, projectId)`) and by the
+  machine step of the palette's browse mode. The rest of Bas's opinion about that pane is still to
+  come and is mostly about its UI.
 
-Questions 1, 2 and 6 stand, and the proposal holds for each until he says otherwise.
+Questions 1 and 2 stand, and the proposal holds for each until he says otherwise.
 
 
 1. Does the local row keep the reserved id `local`, or does the client drop the concept and key even
