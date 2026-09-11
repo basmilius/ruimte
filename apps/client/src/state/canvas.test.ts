@@ -86,8 +86,8 @@ describe('edges', () => {
 
 describe('notes', () => {
     test('a note starts empty with the default title and keeps its body and color through updateNode', () => {
-        useCanvas.setState({ nodes: {}, texts: {}, order: [], edges: [], selection: [] });
-        const id = useCanvas.getState().addNode('note', { x: 0, y: 0 });
+        useCanvas.setState({ nodes: {}, texts: {}, order: [], edges: [], selection: [], viewId: 'main' });
+        const id = useCanvas.getState().addNode('note', { x: 0, y: 0 })!;
         expect(useCanvas.getState().nodes[id]).toMatchObject({ kind: 'note', title: 'Note' });
         useCanvas.getState().updateNode(id, { body: '# Hello', color: 'blue' });
         expect(useCanvas.getState().exportContent().nodes[0]).toMatchObject({ id, body: '# Hello', color: 'blue' });

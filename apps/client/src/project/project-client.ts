@@ -296,8 +296,9 @@ export class ProjectClient {
         try {
             const projects = await this.refreshList();
             const remembered = readLastProject(this.storage, this.endpointId()).byEndpoint[this.endpointId()] ?? null;
-            // The daemon always lists at least one canvas; nothing to create from here.
-            const target = projects.find((project) => project.projectId === remembered && project.available) ?? projects.find((project) => project.available);
+            /* Only what was open on this machine before. A machine with nothing remembered stays on
+               an empty canvas: opening a project is a choice, not something a boot makes for you. */
+            const target = projects.find((project) => project.projectId === remembered && project.available);
             if (target) {
                 await this.open({ projectId: target.projectId });
             }

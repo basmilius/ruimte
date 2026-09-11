@@ -4,6 +4,7 @@ import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { currentEndpointId } from '@/state/keys';
 import { useDocument, viewOfNode } from '@/state/document';
+import { useProject } from '@/state/project';
 import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
 import { useUi } from '@/state/ui';
 
@@ -39,15 +40,21 @@ const freeName = (views: readonly ProjectView[], base: string): string => {
     return `${base} ${counter}`;
 };
 
-export const newCanvasView = (): string => useDocument.getState().addCanvasView(freeName(useDocument.getState().views, MAIN_VIEW_NAME));
+/* A view belongs to a project file, so with no project open there is nothing to add it to and
+   nothing that would ever save it. Every menu, chord and palette row making a view comes past here. */
+export const canAddView = (): boolean => useProject.getState().current !== null;
+
+export const newCanvasView = (): string | null =>
+    canAddView() ? useDocument.getState().addCanvasView(freeName(useDocument.getState().views, MAIN_VIEW_NAME)) : null;
 
 /* A shell of its own, with no agent in it: the plain Terminal beside the agent submenus. */
-export const newTerminalView = (): string =>
-    useDocument.getState().addStandaloneView({ kind: 'terminal', name: freeName(useDocument.getState().views, 'Terminal'), node: {} });
+export const newTerminalView = (): string | null =>
+    canAddView() ? useDocument.getState().addStandaloneView({ kind: 'terminal', name: freeName(useDocument.getState().views, 'Terminal'), node: {} }) : null;
 
-export const newSeparatorView = (): string => useDocument.getState().addSeparatorView();
+export const newSeparatorView = (): string | null => (canAddView() ? useDocument.getState().addSeparatorView() : null);
 
-export const newDrawingView = (): string => useDocument.getState().addDrawingView(freeName(useDocument.getState().views, 'Drawing'));
+export const newDrawingView = (): string | null =>
+    canAddView() ? useDocument.getState().addDrawingView(freeName(useDocument.getState().views, 'Drawing')) : null;
 
 /*
  * Puts a mirror of a drawing view on the canvas that was open last. The drawing itself stays a view
@@ -64,6 +71,9 @@ export const showOnCanvas = (viewId: string): string | null => {
     const canvas = useCanvas.getState();
     const center = toWorld(canvas.camera, { x: canvas.viewport.w / 2, y: canvas.viewport.h / 2 });
     const id = canvas.addNode('drawing', center, { title: view.name, viewId });
+    if (id === null) {
+        return null;
+    }
     canvas.goToNode(id);
     return id;
 };

@@ -250,9 +250,9 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         await expect(client.request('auth.pairingToken', {})).rejects.toThrow(/forbidden/);
     });
 
-    test('a fresh daemon lists no projects', async () => {
-        const listed = await client.request<ProjectListResult>('project.list', {});
-        expect(listed.projects.some((project) => project.folder === REPO)).toBe(false);
+    test('a freshly paired daemon lists nothing at all, and asking twice still makes nothing', async () => {
+        expect((await client.request<ProjectListResult>('project.list', {})).projects).toEqual([]);
+        expect((await client.request<ProjectListResult>('project.list', {})).projects).toEqual([]);
     });
 
     test('a project opens on a repository in /work', async () => {

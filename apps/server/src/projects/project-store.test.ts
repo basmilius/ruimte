@@ -143,13 +143,14 @@ describe('ProjectStore', () => {
         expect(await readFile(documentPathInFolder(folder), 'utf8')).toContain('"version": 2');
     });
 
-    test('an empty daemon lists one default canvas, and two opens at once both end up registered', async () => {
-        const listed = await store.list();
-        expect(listed.map((project) => project.name)).toEqual(['Untitled project']);
+    test('a daemon nobody has opened a project on lists nothing, and listing makes nothing', async () => {
+        expect(await store.list()).toEqual([]);
+        expect(await store.list()).toEqual([]);
+    });
+
+    test('two opens at once both end up registered', async () => {
         const [a, b] = await Promise.all([store.openProject({ name: 'a' }), store.openProject({ name: 'b' })]);
-        expect((await store.list()).map((project) => project.projectId).sort()).toEqual(
-            [listed[0]!.projectId, a.summary.projectId, b.summary.projectId].sort()
-        );
+        expect((await store.list()).map((project) => project.projectId).sort()).toEqual([a.summary.projectId, b.summary.projectId].sort());
     });
 
     test('an icon dropped into .ruimte is announced as a summary, and setIcon writes and removes the file', async () => {

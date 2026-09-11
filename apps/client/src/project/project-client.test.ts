@@ -177,7 +177,12 @@ const fakeStorage = (storage: Map<string, string>) => ({
     removeItem: (key: string) => void storage.delete(key)
 });
 
-const setup = (options: { endpointId?: string; storage?: Map<string, string>; projects?: ProjectSummary[] } = {}) => {
+/*
+ * `open` is which project this machine had open last, because that is the only thing a boot opens
+ * now. A test that brings no storage of its own gets the first project listed, so a test about
+ * saving or panels has a canvas without saying so; one that brings storage says it there instead.
+ */
+const setup = (options: { endpointId?: string; storage?: Map<string, string>; projects?: ProjectSummary[]; open?: string | null } = {}) => {
     useDocument.getState().load(null, null);
     useUi.setState({ panel: { open: false, kind: 'files' }, preview: { open: false }, panelWidth: null, previewWidth: null });
     useFiles.setState({ projectId: null, tabs: [], active: null, expandedDirs: [] });
@@ -187,11 +192,20 @@ const setup = (options: { endpointId?: string; storage?: Map<string, string>; pr
     }
     const { sink, state } = makeSink();
     const storage = options.storage ?? new Map<string, string>();
+    const endpointId = options.endpointId ?? 'daemon-a';
+    const open = options.open === undefined ? (options.storage ? null : (transport.projects[0]?.projectId ?? null)) : options.open;
+    if (open !== null) {
+        const stored = JSON.parse(storage.get('ruimte.lastProject') ?? '{"last":null,"byEndpoint":{}}') as {
+            last: unknown;
+            byEndpoint: Record<string, string>;
+        };
+        storage.set('ruimte.lastProject', JSON.stringify({ ...stored, byEndpoint: { ...stored.byEndpoint, [endpointId]: open } }));
+    }
     const panels = new PanelsPort();
     const client = new ProjectClient(transport, useCanvas, useDocument, panels, sink, {
         saveDelayMs: 1,
         localDelayMs: 1,
-        endpointId: () => options.endpointId ?? 'daemon-a',
+        endpointId: () => endpointId,
         storage: fakeStorage(storage)
     });
     const dispose = (): void => {
@@ -202,13 +216,29 @@ const setup = (options: { endpointId?: string; storage?: Map<string, string>; pr
 };
 
 describe('ProjectClient', () => {
-    test('boots into the remembered or first project and loads its document and camera', async () => {
+    test('boots into the project this machine had open, and loads its document and camera', async () => {
         const { transport, state, dispose } = setup();
         await tick();
         expect(transport.of('project.open')[0]?.payload).toEqual({ projectId: 'p1' });
         expect(state.current?.projectId).toBe('p1');
         expect(state.rev).toBe(3);
         expect(useCanvas.getState().camera).toEqual({ x: 5, y: 6, zoom: 1 });
+        dispose();
+    });
+
+    test('a machine that has never had a project open boots into nothing, and opens nothing itself', async () => {
+        const { transport, state, dispose } = setup({ open: null });
+        await tick();
+        expect(transport.of('project.open')).toHaveLength(0);
+        expect(state.current).toBeNull();
+        dispose();
+    });
+
+    test('a project this machine had open that the daemon no longer lists opens nothing', async () => {
+        const { transport, state, dispose } = setup({ open: 'gone' });
+        await tick();
+        expect(transport.of('project.open')).toHaveLength(0);
+        expect(state.current).toBeNull();
         dispose();
     });
 
@@ -385,9 +415,11 @@ describe('the project each machine had open', () => {
         await first.client.openProject('p2');
         first.dispose();
 
-        // The other machine lists projects of its own; p2 is not among them, and picking one of these for it would be wrong.
+        // The other machine has never had anything open, and p2 is not its to open anyway.
         const second = setup({ storage, endpointId: 'daemon-b', projects: [summary('q1', '/other')] });
         await tick();
+        expect(second.state.current).toBeNull();
+        await second.client.openProject('q1');
         expect(second.state.current?.projectId).toBe('q1');
         second.dispose();
 

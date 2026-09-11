@@ -42,7 +42,9 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
 
     const openInBrowserNode = (): void => {
         const id = addNodeAtCenter('browser');
-        useCanvas.getState().updateNode(id, { url: localFileUrl(path) });
+        if (id !== null) {
+            useCanvas.getState().updateNode(id, { url: localFileUrl(path) });
+        }
     };
 
     const stage = (): void => {
