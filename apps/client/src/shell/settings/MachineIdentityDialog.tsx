@@ -153,8 +153,8 @@ export function MachineIdentityDialog(props: MachineIdentityDialogProps) {
     return (
         <Dialog.Root open={props.open} onOpenChange={props.onOpenChange}>
             <Dialog.Portal>
-                <Dialog.Backdrop className="dialog-backdrop" />
-                <Dialog.Popup className="dialog-popup top-[14vh] w-[420px] p-5">
+                <Dialog.Backdrop className="dialog-backdrop dialog-backdrop-nested" forceRender />
+                <Dialog.Popup className="dialog-popup dialog-popup-nested top-[14vh] w-[420px] p-5">
                     <Dialog.Title className="text-base font-semibold text-text">Machine</Dialog.Title>
                     <IdentityForm {...props} />
                 </Dialog.Popup>
