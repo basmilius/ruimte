@@ -7,6 +7,7 @@ import {
     type EndpointInfo,
     type PairResult,
     type FsBrowseResult,
+    type FsListResult,
     type GitStatus,
     type ProjectListResult,
     type ProjectOpenResult,
@@ -44,6 +45,7 @@ class RemoteClient {
     private readonly socket: WebSocket;
     private readonly pending = new Map<string, Pending>();
     private readonly output: string[] = [];
+    private readonly events = new Map<string, unknown[]>();
     private nextId = 1;
 
     private constructor(socket: WebSocket) {
@@ -88,6 +90,11 @@ class RemoteClient {
         return this.output.splice(0).join('');
     }
 
+    /* The payloads of one event since the last read; a client keeps only what a test asked about. */
+    takeEvents<T>(event: string): T[] {
+        return (this.events.get(event)?.splice(0) ?? []) as T[];
+    }
+
     private receive(raw: string): void {
         const parsed = parseServerFrame(JSON.parse(raw));
         if (!parsed.ok) {
@@ -97,7 +104,11 @@ class RemoteClient {
         if (!('ok' in frame)) {
             if (frame.event === 'session.output') {
                 this.output.push((frame.payload as { data: string }).data);
+                return;
             }
+            const seen = this.events.get(frame.event) ?? [];
+            seen.push(frame.payload);
+            this.events.set(frame.event, seen);
             return;
         }
         const pending = frame.id === null ? undefined : this.pending.get(frame.id);
@@ -408,4 +419,151 @@ describe.skipIf(!ENABLED)('two daemons at the same time', () => {
         expect(here.closed).toBe(false);
         back.close();
     }, 90_000);
+});
+
+/*
+ * The same node id, the same absolute path and the same request on two machines at once, which is
+ * what the client's stores are keyed for. Every answer here has to be about the daemon it was asked
+ * of and about nothing else; a client that mixed two of them would show one machine's screen on the
+ * other machine's node.
+ */
+describe.skipIf(!ENABLED)('one id on two machines', () => {
+    const LOCAL_PORT = Number(process.env.RUIMTE_LOCAL_PORT ?? 4312);
+    const LOCAL_URL = `http://127.0.0.1:${LOCAL_PORT}`;
+    /* A path that exists on both machines, so a key on the path alone would hold one checkout for two. */
+    const SHARED = '/tmp/ruimte-two-machines';
+    let daemon: ReturnType<typeof Bun.spawn> | null = null;
+    let home = '';
+    let here: RemoteClient;
+    let there: RemoteClient;
+    const startedSessions: string[] = [];
+
+    const seedRepo = async (run: (command: string[]) => Promise<unknown>, branch: string, file: string): Promise<void> => {
+        await run(['sh', '-c', `rm -rf ${SHARED} && mkdir -p ${SHARED}`]);
+        await run([
+            'sh',
+            '-c',
+            `cd ${SHARED} && git init -q -b ${branch} && git config user.email t@t && git config user.name t && ` +
+                `echo one > ${file} && git add -A && git commit -q -m first && echo two >> ${file}`
+        ]);
+    };
+
+    beforeAll(async () => {
+        home = await mkdtemp(join(tmpdir(), 'ruimte-scope-'));
+        daemon = Bun.spawn(
+            ['bun', join(import.meta.dir, '../main.ts'), '--host', '127.0.0.1', '--port', String(LOCAL_PORT), '--no-hooks', '--no-price-fetch'],
+            { env: { ...process.env, RUIMTE_HOME: home }, stdout: 'ignore', stderr: 'inherit' }
+        );
+        await waitUntil(`a second daemon on ${LOCAL_URL}`, () => answers(LOCAL_URL));
+        await waitUntil(`the container on ${BASE_URL}`, () => answers(BASE_URL), 5_000);
+        here = await RemoteClient.connect(null, LOCAL_PORT);
+        there = await RemoteClient.connect((await pair()).sessionToken);
+        await seedRepo(async (command) => Bun.spawn(command, { stdout: 'ignore', stderr: 'inherit' }).exited, 'here', 'mine.txt');
+        await seedRepo((command) => inContainer(command), 'there', 'theirs.txt');
+    }, 60_000);
+
+    afterAll(async () => {
+        for (const sessionId of startedSessions) {
+            await here?.request('session.kill', { sessionId }).catch(() => undefined);
+            await there?.request('session.kill', { sessionId }).catch(() => undefined);
+        }
+        here?.close();
+        there?.close();
+        daemon?.kill();
+        await daemon?.exited;
+        await rm(home, { recursive: true, force: true });
+        await rm(SHARED, { recursive: true, force: true });
+        await inContainer(['rm', '-rf', SHARED]).catch(() => undefined);
+    });
+
+    test('a node id on both machines is two shells, each with its own screen', async () => {
+        const sessionId = `scope-${Date.now()}`;
+        startedSessions.push(sessionId);
+        for (const [client, cwd] of [
+            [here, home],
+            [there, REPO]
+        ] as const) {
+            await client.request('session.create', { sessionId, cwd, cols: 80, rows: 24 });
+            await client.request('session.attach', { sessionId, cols: 80, rows: 24 });
+        }
+        await here.request('session.write', { sessionId, data: 'echo screen-of-here\n' });
+        await there.request('session.write', { sessionId, data: 'echo screen-of-there\n' });
+        await waitUntil('both shells to answer', async () => {
+            here.takeOutput();
+            there.takeOutput();
+            const [mine, theirs] = await Promise.all([
+                here.request<SessionAttachResult>('session.attach', { sessionId, cols: 80, rows: 24 }),
+                there.request<SessionAttachResult>('session.attach', { sessionId, cols: 80, rows: 24 })
+            ]);
+            return mine.screen.includes('screen-of-here') && theirs.screen.includes('screen-of-there');
+        });
+
+        // The screen of one machine never carries a line that was typed on the other.
+        const mine = await here.request<SessionAttachResult>('session.attach', { sessionId, cols: 80, rows: 24 });
+        const theirs = await there.request<SessionAttachResult>('session.attach', { sessionId, cols: 80, rows: 24 });
+        expect(mine.screen).not.toContain('screen-of-there');
+        expect(theirs.screen).not.toContain('screen-of-here');
+    }, 60_000);
+
+    test('one absolute path is two checkouts, each with its own status', async () => {
+        const [mine, theirs] = await Promise.all([
+            here.request<GitStatus>('git.status', { cwd: SHARED }),
+            there.request<GitStatus>('git.status', { cwd: SHARED })
+        ]);
+        expect(mine.branch).toBe('here');
+        expect(theirs.branch).toBe('there');
+        expect(mine.files.map((file) => file.path)).toEqual(['mine.txt']);
+        expect(theirs.files.map((file) => file.path)).toEqual(['theirs.txt']);
+    });
+
+    test('unwatching that path on one machine leaves the watch on the other standing', async () => {
+        await here.request('git.watch', { cwd: SHARED });
+        await there.request('git.watch', { cwd: SHARED });
+        await here.request('git.unwatch', { cwd: SHARED });
+        here.takeEvents('git.status');
+        there.takeEvents('git.status');
+
+        await inContainer(['sh', '-c', `echo three >> ${SHARED}/theirs.txt`]);
+        await waitUntil('the container to report its checkout changed', () => there.takeEvents('git.status').length > 0, 20_000);
+        expect(here.takeEvents('git.status')).toEqual([]);
+    }, 30_000);
+
+    test('fs.list on one path answers about the machine it was asked of', async () => {
+        const [mine, theirs] = await Promise.all([
+            here.request<FsListResult>('fs.list', { path: SHARED }),
+            there.request<FsListResult>('fs.list', { path: SHARED })
+        ]);
+        expect(mine.entries.map((entry) => entry.name)).toContain('mine.txt');
+        expect(mine.entries.map((entry) => entry.name)).not.toContain('theirs.txt');
+        expect(theirs.entries.map((entry) => entry.name)).toContain('theirs.txt');
+        expect(theirs.entries.map((entry) => entry.name)).not.toContain('mine.txt');
+    });
+
+    test('context set on a node of the container is read back inside that container', async () => {
+        const sessionId = `scope-context-${Date.now()}`;
+        startedSessions.push(sessionId);
+        await there.request('session.create', { sessionId, cwd: REPO, cols: 80, rows: 24 });
+        await there.request('session.attach', { sessionId, cols: 80, rows: 24 });
+        await there.request('context.set', {
+            targetId: sessionId,
+            sources: [{ id: 'note-1', kind: 'text', title: 'Sprint goals', text: 'ship the pool' }]
+        });
+
+        there.takeOutput();
+        /*
+         * By its path in the image, not by its name: Debian's `/etc/profile` writes PATH from
+         * scratch, so the directory the daemon puts in front of it is gone by the first prompt of a
+         * login shell. The script itself is what this is about, and it reads the address and the
+         * token out of the session's environment either way.
+         */
+        await there.request('session.write', {
+            sessionId,
+            data: '/app/apps/server/bin/ruimte-context && /app/apps/server/bin/ruimte-context read note-1\n'
+        });
+        let said = '';
+        await waitUntil('the shell in the container to read its own context', () => {
+            said += there.takeOutput();
+            return said.includes('Sprint goals') && said.includes('ship the pool');
+        });
+    }, 30_000);
 });
