@@ -5,7 +5,7 @@ import { Check, Copy, Link2, Pencil, Plus, Trash } from 'lucide-react';
 import type { AuthSession } from '@ruimte/contracts';
 import { forgetEndpoint, listPairedClients, pairEndpoint, requestPairingUrl, revokePairedClient } from '@/endpoint';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { LOCAL_ENDPOINT_ID, LOCAL_ENDPOINT_LABEL, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServer, useServers } from '@/state/server';
 import { pool, transport, type TransportStatus } from '@/transport';
 import { useLatency } from '@/transport/ping';
@@ -54,7 +54,7 @@ function EndpointState({ endpoint }: { endpoint: Endpoint }) {
         <span className="flex flex-col items-start gap-0.5">
             <span>{describeConnection(connection, null)}</span>
             <span className="text-text-muted">{REACHABILITY_LABELS[reachability]}</span>
-            <span className="font-mono text-text-muted">{endpoint.id === LOCAL_ENDPOINT_ID ? 'loopback' : endpoint.httpBaseUrl}</span>
+            <span className="font-mono text-text-muted">{endpoint.httpBaseUrl}</span>
             <span className="text-text-muted">{describePing(latency)}</span>
         </span>
     );
@@ -68,7 +68,7 @@ function EndpointState({ endpoint }: { endpoint: Endpoint }) {
     );
 }
 
-/* One machine: what it is called, whether it answers, and the two things that can be done to it. */
+/* A machine that was added here: what it is called, whether it answers, and what can be done to it. */
 function EndpointRow({ endpoint }: { endpoint: Endpoint }) {
     const mismatch = useEndpoints((s) => s.mismatched[endpoint.id]);
     const icon = useServers((s) => s.byEndpoint[endpoint.id]?.icon ?? null);
@@ -92,13 +92,11 @@ function EndpointRow({ endpoint }: { endpoint: Endpoint }) {
                         <Icon icon={Pencil} size={16} />
                     </button>
                 </Tooltip>
-                {endpoint.id !== LOCAL_ENDPOINT_ID && (
-                    <Tooltip label="Forget this machine" name>
-                        <button className="icon-btn h-7 w-7" onClick={() => void forgetEndpoint(endpoint.id)}>
-                            <Icon icon={Trash} size={16} />
-                        </button>
-                    </Tooltip>
-                )}
+                <Tooltip label="Forget this machine" name>
+                    <button className="icon-btn h-7 w-7" onClick={() => void forgetEndpoint(endpoint.id)}>
+                        <Icon icon={Trash} size={16} />
+                    </button>
+                </Tooltip>
             </span>
             <MachineIdentityDialog endpointId={endpoint.id} label={endpoint.label} open={identityOpen} onOpenChange={setIdentityOpen} />
         </li>
@@ -327,6 +325,35 @@ function AddMachineDialog({ open, onOpenChange }: { open: boolean; onOpenChange(
     );
 }
 
+/*
+ * The machine the app runs on: where you are, not something you connected to. It has no dot, no
+ * address and no way to forget it, because none of those are a choice anyone has here. What it does
+ * keep is its name and its icon: the moment a second machine is on the list, this is what tells the
+ * two apart, in the switcher and in every menu that names a machine.
+ */
+function LocalRow({ endpoint }: { endpoint: Endpoint }) {
+    const icon = useServers((s) => s.byEndpoint[endpoint.id]?.icon ?? null);
+    const connected = useEndpointConnection(endpoint.id).status === 'open';
+    const [identityOpen, setIdentityOpen] = useState(false);
+
+    return (
+        <div className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-2">
+            <MachineGlyph icon={icon} className="text-text-muted" />
+            <span className="flex min-w-0 grow flex-col">
+                <span className="truncate text-sm text-text">{endpoint.label}</span>
+                {/* Only once it carries a name of its own, or the line would say what the one above it says. */}
+                {endpoint.label !== LOCAL_ENDPOINT_LABEL && <span className="truncate text-xs text-text-faint">{LOCAL_ENDPOINT_LABEL}</span>}
+            </span>
+            <Tooltip label={connected ? 'Name and icon' : 'Not answering, so there is nothing to name'} name>
+                <button className="icon-btn h-7 w-7" disabled={!connected} onClick={() => setIdentityOpen(true)}>
+                    <Icon icon={Pencil} size={16} />
+                </button>
+            </Tooltip>
+            <MachineIdentityDialog endpointId={endpoint.id} label={endpoint.label} open={identityOpen} onOpenChange={setIdentityOpen} />
+        </div>
+    );
+}
+
 /* The machines this client knows, one under the other, and the way to add one. */
 export function EndpointsSection() {
     const endpoints = useEndpoints((s) => s.endpoints);
@@ -343,22 +370,37 @@ export function EndpointsSection() {
         };
     }, [endpoints]);
 
+    const local = endpoints.find((endpoint) => endpoint.id === LOCAL_ENDPOINT_ID) ?? null;
+    const others = endpoints.filter((endpoint) => endpoint.id !== LOCAL_ENDPOINT_ID);
+
     return (
-        <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-end">
-                <Tooltip label="Add a machine" name>
-                    <button className="icon-btn h-7 w-7" onClick={() => setAddOpen(true)}>
-                        <Icon icon={Plus} size={16} />
-                    </button>
-                </Tooltip>
+        <div className="flex flex-col gap-5">
+            {local && <LocalRow endpoint={local} />}
+            <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                    {/* "Other" rather than "added", "paired" or "remote": it reads against the row above
+                        it, it says nothing about how a machine got here, and it stays true for one that
+                        is switched off. */}
+                    <span className="text-xs text-text-muted">Other machines</span>
+                    <span className="grow" />
+                    <Tooltip label="Add a machine" name>
+                        <button className="icon-btn h-7 w-7" onClick={() => setAddOpen(true)}>
+                            <Icon icon={Plus} size={16} />
+                        </button>
+                    </Tooltip>
+                </div>
+                {/* A list, not a set of radios: this pane keeps the machines, and which one the work is on
+                    is answered by opening a project on it. The row says what a machine is, it does not move the app. */}
+                {others.length === 0 ? (
+                    <p className="text-xs text-text-faint">Add a machine to open its projects, terminals and agents from here.</p>
+                ) : (
+                    <ul className="flex list-none flex-col gap-2">
+                        {others.map((endpoint) => (
+                            <EndpointRow key={endpoint.id} endpoint={endpoint} />
+                        ))}
+                    </ul>
+                )}
             </div>
-            {/* A list, not a set of radios: this pane keeps the machines, and which one the work is on
-                is answered by opening a project on it. The row says what a machine is, it does not move the app. */}
-            <ul className="flex list-none flex-col gap-2">
-                {endpoints.map((endpoint) => (
-                    <EndpointRow key={endpoint.id} endpoint={endpoint} />
-                ))}
-            </ul>
             <PairedClients key={activeId} />
             <AddMachineDialog open={addOpen} onOpenChange={setAddOpen} />
         </div>
