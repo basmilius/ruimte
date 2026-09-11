@@ -120,7 +120,7 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
             </div>
             <div
                 className={clsx(
-                    'relative flex h-7 grow items-center gap-2 overflow-hidden rounded-md border border-border-soft bg-surface-sunken px-2.5 text-xs text-text-muted',
+                    'relative mx-[30px] flex h-7 grow items-center gap-2 overflow-hidden rounded-md border border-border-soft bg-surface-sunken px-2.5 text-xs text-text-muted',
                     focused && 'ring-1 ring-border-strong'
                 )}
             >
