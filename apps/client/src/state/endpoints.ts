@@ -6,6 +6,8 @@ const STORAGE_KEY = 'ruimte.endpoints';
 // Version 1 keyed a row on its address; version 2 keys it on the id the daemon answers with; version 3 pins its key.
 const STORAGE_VERSION = 3;
 export const LOCAL_ENDPOINT_ID = 'local';
+/* What the row for this machine says until someone gives the machine a name of its own. */
+export const LOCAL_ENDPOINT_LABEL = 'This machine';
 
 export interface Endpoint {
     /* The daemon's own id from `endpoint.info`, or `local` for the daemon that served this page. */
@@ -58,7 +60,7 @@ const localEndpoint = (): Endpoint => {
     const origin = typeof location === 'undefined' ? 'http://127.0.0.1:4210' : location.origin;
     return {
         id: LOCAL_ENDPOINT_ID,
-        label: 'This machine',
+        label: LOCAL_ENDPOINT_LABEL,
         httpBaseUrl: origin,
         wsBaseUrl: origin.replace(/^http/, 'ws'),
         reachability: 'loopback',
