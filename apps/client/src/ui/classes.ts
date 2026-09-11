@@ -11,11 +11,11 @@ export const FLOAT = 'border border-border bg-[color-mix(in_srgb,var(--surface-r
 /* Icon buttons that belong together sit 1px apart; groups keep the wider gap of their container. */
 export const BTN_GROUP = 'inline-flex items-center gap-px';
 
-/* The uppercase label above a group of menu rows. */
-export const MENU_LABEL = 'px-2.5 pt-1.5 pb-0.5 text-xs/[inherit] tracking-[0.04em] text-text-faint uppercase';
+/* The label above a group of menu rows. */
+export const MENU_LABEL = 'px-2.5 pt-1.5 pb-0.5 text-xs/[inherit] text-text-faint';
 
 /* The same label outside a popup: the sidebar's groups, the palette's sections. */
-export const SECTION_LABEL = 'text-xs/[inherit] font-medium tracking-[0.04em] text-text-faint uppercase';
+export const SECTION_LABEL = 'text-xs/[inherit] font-medium text-text-faint';
 
 /* A trailing hint in a menu row: what the item does to something else, never a chord. Chords stay
    `<kbd>`, which `.menu-item` already pushes to the right. */

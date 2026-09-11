@@ -22,7 +22,7 @@ export type SidebarScope = 'project' | 'window';
 export const SIDEBAR_SCOPES: readonly SidebarScope[] = ['project', 'window'];
 
 export const FONT_SIZE_RANGE = { min: 10, max: 20, step: 1 } as const;
-export const INTERFACE_FONT_SIZE_RANGE = { min: 12, max: 20, step: 1 } as const;
+export const INTERFACE_FONT_SIZE_RANGE = { min: 14, max: 24, step: 1 } as const;
 export const FILES_TAB_LIMIT_RANGE = { min: 1, max: 20, step: 1 } as const;
 
 export interface Settings {
@@ -69,7 +69,7 @@ const DEFAULT_SETTINGS: Settings = {
     accent: null,
     font: 'system',
     fontSize: 13,
-    interfaceFontSize: 16,
+    interfaceFontSize: 15,
     filesTabLimit: 5,
     filesShowHidden: false,
     sidebarScope: 'project',
