@@ -1,0 +1,196 @@
+import type { Endpoint } from '@/state/endpoints';
+import type { ConnectionState, Transport, TransportStatus } from './transport';
+
+/* How long a socket nobody holds stays up, so a switch there and back costs no round trip. */
+const IDLE_CLOSE_MS = 30_000;
+
+/* One object for "there is no socket", so a React store reading the pool gets a stable snapshot. */
+const NO_SOCKET: ConnectionState = { status: 'closed', attempts: 0, retryAt: null };
+
+/* What the pool needs of a socket on top of `Transport`: a way to move it and a way to end it. */
+export interface PooledTransport extends Transport {
+    switchTo(url: string): void;
+    dispose(): void;
+}
+
+export interface TransportPoolOptions {
+    /* Opens a socket for an endpoint. The pool builds no addresses, which is what lets a test hand it fakes. */
+    open(endpoint: Endpoint): PooledTransport;
+    idleMs?: number;
+}
+
+interface Entry {
+    endpointId: string;
+    transport: PooledTransport;
+    /* How many callers need this socket up; at zero the idle countdown starts. */
+    holds: number;
+    idleTimer: ReturnType<typeof setTimeout> | null;
+    offStatus: () => void;
+}
+
+/*
+ * The sockets this client holds, one per daemon. A daemon is a socket, a socket is never shared,
+ * and it never changes machines: picking another machine picks another entry. Only a daemon that
+ * answers on another address (a re-pair, a new port) moves the socket it already has.
+ */
+export class TransportPool {
+    private readonly open: (endpoint: Endpoint) => PooledTransport;
+    private readonly idleMs: number;
+    private readonly byId = new Map<string, Entry>();
+    private readonly listeners = new Set<() => void>();
+    private readonly statusListeners = new Map<string, Set<(status: TransportStatus) => void>>();
+    private snapshot: string[] = [];
+
+    constructor(options: TransportPoolOptions) {
+        this.open = options.open;
+        this.idleMs = options.idleMs ?? IDLE_CLOSE_MS;
+    }
+
+    /* The socket for an endpoint, opened on the first call. */
+    require(endpoint: Endpoint): Transport {
+        return this.entryFor(endpoint).transport;
+    }
+
+    /* The socket if there is one; null when nothing has asked for this endpoint yet. */
+    peek(endpointId: string): Transport | null {
+        return this.byId.get(endpointId)?.transport ?? null;
+    }
+
+    /* Takes a hold: the socket stays up until every holder releases it. */
+    hold(endpoint: Endpoint): () => void {
+        const entry = this.entryFor(endpoint);
+        entry.holds += 1;
+        this.arm(entry);
+        let released = false;
+        return () => {
+            if (released) {
+                return;
+            }
+            released = true;
+            entry.holds -= 1;
+            this.arm(entry);
+        };
+    }
+
+    /* The endpoints this client has a socket for. The array only changes when the set does. */
+    ids(): string[] {
+        return this.snapshot;
+    }
+
+    /* The address of an endpoint changed (a re-pair, another port); move the socket it already has. */
+    readdress(endpointId: string, url: string): void {
+        this.byId.get(endpointId)?.transport.switchTo(url);
+    }
+
+    /* The daemon behind a row turned out to be one this client already knows under another id. */
+    rekey(oldId: string, newId: string): void {
+        const entry = this.byId.get(oldId);
+        if (!entry || oldId === newId) {
+            return;
+        }
+        this.byId.get(newId)?.transport.dispose();
+        this.byId.delete(oldId);
+        this.byId.set(newId, entry);
+        entry.endpointId = newId;
+        entry.offStatus();
+        entry.offStatus = entry.transport.subscribeStatus(() => this.emit(newId));
+        this.resnapshot();
+        this.emit(oldId);
+        this.emit(newId);
+    }
+
+    /* Closes the socket and forgets it; what a forgotten or revoked endpoint gets. */
+    drop(endpointId: string): void {
+        this.close(endpointId);
+    }
+
+    statusOf(endpointId: string): ConnectionState {
+        return this.byId.get(endpointId)?.transport.connection ?? NO_SOCKET;
+    }
+
+    /* One endpoint's status, for a row in a list of machines. */
+    subscribeStatus(endpointId: string, handler: (status: TransportStatus) => void): () => void {
+        let handlers = this.statusListeners.get(endpointId);
+        if (!handlers) {
+            handlers = new Set();
+            this.statusListeners.set(endpointId, handlers);
+        }
+        handlers.add(handler);
+        return () => {
+            handlers.delete(handler);
+            if (handlers.size === 0) {
+                this.statusListeners.delete(endpointId);
+            }
+        };
+    }
+
+    /* Any endpoint's status changed, or the pool gained or lost one. */
+    subscribe(handler: () => void): () => void {
+        this.listeners.add(handler);
+        return () => {
+            this.listeners.delete(handler);
+        };
+    }
+
+    private entryFor(endpoint: Endpoint): Entry {
+        const existing = this.byId.get(endpoint.id);
+        if (existing) {
+            return existing;
+        }
+        const transport = this.open(endpoint);
+        const entry: Entry = { endpointId: endpoint.id, transport, holds: 0, idleTimer: null, offStatus: () => undefined };
+        this.byId.set(endpoint.id, entry);
+        entry.offStatus = transport.subscribeStatus(() => this.emit(endpoint.id));
+        this.resnapshot();
+        this.arm(entry);
+        this.emit(endpoint.id);
+        return entry;
+    }
+
+    /*
+     * A socket nothing holds is on a countdown. It is not closed straight away because the reason
+     * the last holder let go is usually a pane that closed or a switch, both of which come back.
+     */
+    private arm(entry: Entry): void {
+        if (entry.idleTimer) {
+            clearTimeout(entry.idleTimer);
+            entry.idleTimer = null;
+        }
+        if (entry.holds > 0) {
+            return;
+        }
+        entry.idleTimer = setTimeout(() => {
+            entry.idleTimer = null;
+            this.close(entry.endpointId);
+        }, this.idleMs);
+    }
+
+    private close(endpointId: string): void {
+        const entry = this.byId.get(endpointId);
+        if (!entry) {
+            return;
+        }
+        if (entry.idleTimer) {
+            clearTimeout(entry.idleTimer);
+        }
+        entry.offStatus();
+        this.byId.delete(endpointId);
+        entry.transport.dispose();
+        this.resnapshot();
+        this.emit(endpointId);
+    }
+
+    private resnapshot(): void {
+        this.snapshot = [...this.byId.keys()];
+    }
+
+    private emit(endpointId: string): void {
+        const status = this.statusOf(endpointId).status;
+        for (const handler of [...(this.statusListeners.get(endpointId) ?? [])]) {
+            handler(status);
+        }
+        for (const handler of [...this.listeners]) {
+            handler();
+        }
+    }
+}

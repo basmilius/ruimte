@@ -47,7 +47,7 @@ export class WebSocketTransport implements Transport {
         return this.url;
     }
 
-    /* Points the transport at another daemon; the socket closes and comes back on the new address. */
+    /* Points the socket at another address of the same daemon; it closes and comes back there. */
     switchTo(url: string): void {
         if (url === this.url) {
             return;

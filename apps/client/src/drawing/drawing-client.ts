@@ -130,11 +130,16 @@ export class DrawingClient {
         await this.flush();
     }
 
+    /* Lets go of the machine: no more events, and no timer that would write to a daemon the client left. */
     dispose(): void {
         for (const off of this.unsubscribe) {
             off();
         }
         this.unsubscribe.length = 0;
+        if (this.saveTimer) {
+            clearTimeout(this.saveTimer);
+            this.saveTimer = null;
+        }
     }
 
     private onDocument(state: ReturnType<DocumentAccess['getState']>, previous: ReturnType<DocumentAccess['getState']>): void {

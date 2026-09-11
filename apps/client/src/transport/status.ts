@@ -1,5 +1,5 @@
-import { useSyncExternalStore } from 'react';
-import { transport, type ConnectionState, type TransportStatus } from '@/transport';
+import { useCallback, useSyncExternalStore } from 'react';
+import { pool, transport, type ConnectionState, type TransportStatus } from '@/transport';
 
 const subscribe = (onChange: () => void): (() => void) => transport.subscribeStatus(onChange);
 const read = (): TransportStatus => transport.status;
@@ -14,6 +14,19 @@ const PLAIN: Record<TransportStatus, ConnectionState> = {
 
 const readConnection = (): ConnectionState => transport.connection ?? PLAIN[transport.status];
 
+const subscribePool = (onChange: () => void): (() => void) => pool.subscribe(onChange);
+const readPoolIds = (): string[] => pool.ids();
+
 export const useTransportStatus = (): TransportStatus => useSyncExternalStore(subscribe, read);
 
 export const useConnection = (): ConnectionState => useSyncExternalStore(subscribe, readConnection);
+
+/* The socket of one machine, for a list that shows a dot per row. */
+export const useEndpointConnection = (endpointId: string): ConnectionState =>
+    useSyncExternalStore(
+        useCallback((onChange: () => void) => pool.subscribeStatus(endpointId, onChange), [endpointId]),
+        useCallback(() => pool.statusOf(endpointId), [endpointId])
+    );
+
+/* The machines this client holds a socket for, in the order the pool opened them. */
+export const useConnectedEndpoints = (): string[] => useSyncExternalStore(subscribePool, readPoolIds);
