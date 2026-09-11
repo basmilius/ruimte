@@ -14,6 +14,7 @@ import {
     showOnCanvas
 } from '@/project/views';
 import { copyDrawingPng, copyDrawingSvg, saveDrawingPng, saveDrawingSvg } from '@/drawing/export';
+import { separatorFor, startFolder } from '@/shell/folder-picker';
 import { useCanvas, type AddNodeOptions, type NodeKind } from '@/state/canvas';
 import { useDrawing } from '@/state/drawing';
 import { activeViewOf, useDocument } from '@/state/document';
@@ -106,14 +107,22 @@ export const appCommands = (): Command[] => {
     const activeView = views.find((view) => view.id === activeViewId) ?? null;
     const selected = canvas.selection.length === 1 ? canvas.nodes[canvas.selection[0]!] : undefined;
     const drawing = activeView !== null && isDrawingView(activeView);
+    const server = serverInfoOf(currentEndpointId());
     return [
-        { id: 'open-folder', label: 'Open a folder as a project', hint: 'Type a path', run: () => useUi.getState().openPalette('~/') },
+        {
+            id: 'open-folder',
+            label: 'Open a folder as a project',
+            shortcut: '⌘O',
+            // Where the picker opens, so the row says which machine's disk is about to be browsed.
+            hint: startFolder(folder, server.home, separatorFor(server.platform)),
+            run: () => useUi.getState().openFolderPicker()
+        },
         ...(folder ? [{ id: 'find-in-files', label: 'Find in files', shortcut: '⌘⇧F', run: () => useUi.getState().openFindInFiles() }] : []),
         ...(folder
             ? [
                   {
                       id: 'reveal',
-                      label: `Open project in ${fileManagerName(serverInfoOf(currentEndpointId()).platform)}`,
+                      label: `Open project in ${fileManagerName(server.platform)}`,
                       run: () => void transport.request('fs.reveal', { path: folder }).catch(() => undefined)
                   }
               ]
