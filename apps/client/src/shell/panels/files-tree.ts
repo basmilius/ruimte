@@ -1,4 +1,5 @@
-import type { FsEntry } from '@ruimte/contracts';
+import type { GitStatus, GitStatusEntry } from '@pierre/trees';
+import type { FsEntry, GitFile } from '@ruimte/contracts';
 
 /* A directory whose children have not arrived yet gets one child nobody sees, so the row keeps the
    chevron that lets a person expand it. The rule that hides the row lives in `TREE_CSS`. */
@@ -151,4 +152,48 @@ export const compareRows = (left: SortRow, right: SortRow): number => {
     }
     // One path is the head of the other, so the shorter one is the directory the longer one sits in.
     return left.segments.length - right.segments.length;
+};
+
+/*
+ * A porcelain letter as the tree names the same thing. The tree knows five states and git writes
+ * more than five letters, so a type change, a copy and a conflict all read as a modification: the
+ * dot says the file differs from HEAD, and the git panel next to it says how.
+ */
+export const treeGitStatus = (status: string): GitStatus => {
+    if (status.startsWith('?')) {
+        return 'untracked';
+    }
+    if (status.startsWith('A')) {
+        return 'added';
+    }
+    if (status.startsWith('D')) {
+        return 'deleted';
+    }
+    if (status.startsWith('R')) {
+        return 'renamed';
+    }
+    return 'modified';
+};
+
+/*
+ * What git says about the checkout, in the rows the tree marks. Paths come from the repository
+ * root and the tree counts from the open folder, so a change above the folder (a repository the
+ * project is a subdirectory of) has no row here and is left out. The tree marks the directories
+ * on the way itself, from these entries.
+ */
+export const gitStatusEntries = (folder: string, root: string | null, files: readonly GitFile[]): GitStatusEntry[] => {
+    if (root === null) {
+        return [];
+    }
+    const entries: GitStatusEntry[] = [];
+    for (const file of files) {
+        const absolute = absoluteOf(root, file.path);
+        const treePath = relativeTo(folder, absolute);
+        // What `relativeTo` cannot make relative it hands back whole, and that is a path above the folder.
+        if (treePath === absolute) {
+            continue;
+        }
+        entries.push({ path: treePath, status: treeGitStatus(file.status) });
+    }
+    return entries;
 };

@@ -1,0 +1,83 @@
+import { useEffect, useState } from 'react';
+import type { GitStatus } from '@ruimte/contracts';
+import { transport } from '@/transport';
+
+interface Watch {
+    /* How many panels asked for this checkout; the daemon hears about the first and the last. */
+    count: number;
+    ready: Promise<void>;
+}
+
+const watches = new Map<string, Watch>();
+
+/*
+ * A git watch that more than one panel can hold. The daemon keeps a watch per client and per
+ * checkout with no count of its own, so the files panel unwatching what the git panel is still
+ * looking at would leave that panel blind. `ready` resolves once the daemon is watching, which is
+ * what the first status read waits for so a write in between is reported instead of missed.
+ */
+export const watchGit = (cwd: string): { ready: Promise<void>; release: () => void } => {
+    const watch = watches.get(cwd) ?? {
+        count: 0,
+        ready: transport.request('git.watch', { cwd }).then(
+            () => undefined,
+            () => undefined
+        )
+    };
+    watch.count += 1;
+    watches.set(cwd, watch);
+    let released = false;
+    return {
+        ready: watch.ready,
+        release: () => {
+            if (released) {
+                return;
+            }
+            released = true;
+            watch.count -= 1;
+            if (watch.count === 0) {
+                watches.delete(cwd);
+                void transport.request('git.unwatch', { cwd }).catch(() => undefined);
+            }
+        }
+    };
+};
+
+/*
+ * The status of a checkout, kept fresh while the caller is on screen. For a panel that only reads
+ * it; the git panel drives its own reads, because it also has to say why one failed and to refresh
+ * after an action of its own.
+ */
+export const useGitStatus = (cwd: string | null): GitStatus | null => {
+    const [held, setHeld] = useState<{ cwd: string; status: GitStatus } | null>(null);
+
+    useEffect(() => {
+        if (cwd === null) {
+            return;
+        }
+        let cancelled = false;
+        const watch = watchGit(cwd);
+        void watch.ready
+            .then(() => transport.request('git.status', { cwd }))
+            .then((status) => {
+                if (!cancelled) {
+                    setHeld({ cwd, status });
+                }
+            })
+            .catch(() => undefined);
+        return () => {
+            cancelled = true;
+            watch.release();
+        };
+    }, [cwd]);
+
+    useEffect(() => {
+        return transport.on('git.status', (payload) => {
+            if (payload.cwd === cwd) {
+                setHeld({ cwd, status: payload.status });
+            }
+        });
+    }, [cwd]);
+
+    return held?.cwd === cwd ? held.status : null;
+};

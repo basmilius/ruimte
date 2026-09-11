@@ -17,6 +17,7 @@ import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { useCanvas } from '@/state/canvas';
 import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
+import { watchGit } from '@/state/git-watch';
 import { gitTarget, gitTargets, type GitTarget } from '@/state/git-target';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
@@ -132,16 +133,14 @@ export function GitPanel() {
             return;
         }
         // The watch goes up before the first status, so a write in between is reported, not missed.
-        void transport
-            .request('git.watch', { cwd })
-            .catch(() => undefined)
-            .then(() => refresh());
+        const watch = watchGit(cwd);
+        void watch.ready.then(() => refresh());
         transport
             .request('git.capabilities', { cwd })
             .then(setCapabilities)
             .catch(() => setCapabilities(null));
         return () => {
-            void transport.request('git.unwatch', { cwd }).catch(() => undefined);
+            watch.release();
         };
     }, [cwd, refresh]);
 
