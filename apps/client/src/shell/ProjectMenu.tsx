@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { Menu } from '@base-ui-components/react/menu';
 import { Check, ChevronDown, ChevronRight, FolderOpen, History, Plus } from 'lucide-react';
+import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { projectClient } from '@/project';
 import { menuProjects, type ProjectMenuRow } from '@/project/list';
 import { openProject } from '@/project/open';
@@ -10,6 +11,7 @@ import { ProjectNameDialog } from '@/shell/ProjectNameDialog';
 import { useEndpoints } from '@/state/endpoints';
 import { useProjectList } from '@/state/project-list';
 import { useProject } from '@/state/project';
+import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { useOpenEndpoints } from '@/transport/status';
 import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
@@ -63,10 +65,15 @@ export function ProjectMenu() {
     const current = useProject((s) => s.current);
     const currentEndpointId = useProject((s) => s.currentEndpointId);
     const endpoints = useEndpoints((s) => s.endpoints);
+    const activeId = useEndpoints((s) => s.activeId);
     const connected = useOpenEndpoints();
     const [newOpen, setNewOpen] = useState(false);
     const { open, recent } = useMemo(() => menuProjects(rows, endpoints, connected), [rows, endpoints, connected]);
     const showMachine = endpoints.length > 1;
+    /* The project's own machine, or the one the shell is pointed at while no project is open. */
+    const machineId = currentEndpointId ?? activeId;
+    const machine = endpoints.find((endpoint) => endpoint.id === machineId) ?? null;
+    const machineIcon = useServers((s) => s.byEndpoint[machineId]?.icon ?? null);
 
     const isCurrent = (row: ProjectMenuRow): boolean => row.summary.projectId === current?.projectId && row.endpointId === currentEndpointId;
 
@@ -74,6 +81,23 @@ export function ProjectMenu() {
         <>
             <Menu.Root>
                 <Menu.Trigger className="flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-left hover:bg-surface-hover data-[popup-open]:bg-surface-active">
+                    {showMachine && machine && (
+                        <>
+                            {/* The name gives way long before the project's does: it is the same word for
+                                every project on that machine, and what is left when it has gone is the
+                                icon, which is the mark this machine carries everywhere else. The tooltip
+                                is what says the name once the room for it is gone. */}
+                            <Tooltip label={machine.label}>
+                                <span className="flex min-w-0 shrink-[9999] items-center gap-2">
+                                    <MachineGlyph icon={machineIcon} size={14} className="text-text-muted" />
+                                    <span className="min-w-0 truncate text-sm text-text-muted">{machine.label}</span>
+                                </span>
+                            </Tooltip>
+                            <span className="shrink-0 text-text-faint">/</span>
+                        </>
+                    )}
+                    {/* No project is the state that is on its way out: a splash page is to take that
+                        screen over, so nothing is designed around the placeholder here. */}
                     {current ? (
                         <ProjectGlyph projectId={current.projectId} endpointId={currentEndpointId ?? undefined} icon={current.icon} color={current.color} />
                     ) : (

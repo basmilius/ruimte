@@ -13,7 +13,6 @@ import { SidebarToggle } from '@/shell/SidebarToggle';
 import { useDrawing } from '@/state/drawing';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
-import { useServer } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { hasUpdate, useUpdates } from '@/state/updates';
 import { BTN_GROUP } from '@/ui/classes';
@@ -31,7 +30,6 @@ export function Toolbar() {
     const drawingDirty = useDrawing((s) => s.dirty);
     const dirty = projectDirty || drawingDirty;
     const switching = useProject((s) => s.switching);
-    const machine = useServer((s) => (s.reachability && s.reachability !== 'loopback' ? s.label : null));
     const panel = useUi((s) => s.panel);
     const previewOpen = useUi((s) => s.preview.open);
     const sidebarOpen = useUi((s) => s.sidebarOpen);
@@ -48,12 +46,8 @@ export function Toolbar() {
             {/* With the view putting something in the bar, the slack belongs to that part, so the
                 breadcrumb stops at its own width and the address field of a page can run. */}
             <div className={clsx('flex min-w-0 items-center gap-2', !hasViewToolbar && 'grow')}>
-                {machine && (
-                    <>
-                        <span>{machine}</span>
-                        <span className="text-text-faint">/</span>
-                    </>
-                )}
+                {/* The machine sits inside the switcher's own trigger, so the pill is one breadcrumb
+                    rather than a label with a button behind it. */}
                 <ProjectMenu />
                 {/* The open sidebar is the view switcher already; the segment comes back with it
                     closed, and only when there is a view for it to name. */}
