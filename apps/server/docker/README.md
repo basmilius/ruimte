@@ -62,6 +62,13 @@ shells with two screens, one absolute path is two checkouts whose watches do not
 `fs.list` on that path answers about the machine it was asked of, and context set on a session of
 the container is read back from inside that session.
 
+A fourth block opens a project on each machine at once, which is what a workspace carrying its own
+connection is for: each saves its own canvas into its own `project.json`, neither list holds the
+other's project, each browses its own file system and its own checkout, the bytes of an image come
+from the daemon of the workspace that draws it (and the container refuses the same URL without its
+token), and the container going down leaves the other project saving. That last test stops the
+container; it is started again in the block's teardown, so a failure never leaves it down.
+
 `ruimte-context` is reached by its path in the image there, not by its name. Debian's `/etc/profile`
 writes PATH from scratch, so the directory the daemon puts in front of it is gone by the first
 prompt of a login shell; on macOS `path_helper` keeps what was already there.

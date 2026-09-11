@@ -1,6 +1,6 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import {
     parseServerFrame,
@@ -11,6 +11,8 @@ import {
     type GitStatus,
     type ProjectListResult,
     type ProjectOpenResult,
+    type ProjectSaveResult,
+    type ProjectView,
     type ServerHelloResult,
     type SessionAttachResult,
     type SessionInfo
@@ -627,4 +629,172 @@ describe.skipIf(!ENABLED)('one id on two machines', () => {
         await here.request('project.delete', { projectId: mine.summary.projectId, removeFiles: true });
         await there.request('project.delete', { projectId: theirs.summary.projectId, removeFiles: true });
     }, 30_000);
+});
+
+/*
+ * Two projects open at once, one per machine, which is what a workspace carrying its own connection
+ * is for. Every request here is made twice, once per daemon, and neither answer may know about the
+ * other: the canvas each saves, the bytes each serves and the shell each runs stay on their own side.
+ */
+describe.skipIf(!ENABLED)('two projects side by side', () => {
+    const LOCAL_PORT = Number(process.env.RUIMTE_SIDE_PORT ?? 4313);
+    const LOCAL_URL = `http://127.0.0.1:${LOCAL_PORT}`;
+    let daemon: ReturnType<typeof Bun.spawn> | null = null;
+    let home = '';
+    let folder = '';
+    let here: RemoteClient;
+    let there: RemoteClient;
+    let sessionToken = '';
+    let mine = '';
+    let theirs = '';
+    /* The rev each file is at; a save names the one it was based on and the daemon refuses any other. */
+    let mineRev = 0;
+    let theirsRev = 0;
+
+    const canvas = (name: string): ProjectView[] => [
+        {
+            kind: 'canvas',
+            id: 'main',
+            name: 'Main',
+            nodes: [],
+            texts: [{ id: 'text-1', x: 0, y: 0, text: name, size: 18 }],
+            edges: [],
+            layouts: []
+        }
+    ];
+
+    beforeAll(async () => {
+        home = await mkdtemp(join(tmpdir(), 'ruimte-side-'));
+        folder = await mkdtemp(join(tmpdir(), 'ruimte-side-project-'));
+        daemon = Bun.spawn(
+            ['bun', join(import.meta.dir, '../main.ts'), '--host', '127.0.0.1', '--port', String(LOCAL_PORT), '--no-hooks', '--no-price-fetch'],
+            { env: { ...process.env, RUIMTE_HOME: home }, stdout: 'ignore', stderr: 'inherit' }
+        );
+        await waitUntil(`a second daemon on ${LOCAL_URL}`, () => answers(LOCAL_URL));
+        await waitUntil(`the container on ${BASE_URL}`, () => answers(BASE_URL), 5_000);
+        here = await RemoteClient.connect(null, LOCAL_PORT);
+        sessionToken = (await pair()).sessionToken;
+        there = await RemoteClient.connect(sessionToken);
+
+        const [opened, openedThere] = await Promise.all([
+            here.request<ProjectOpenResult>('project.open', { folder, name: 'Here' }),
+            there.request<ProjectOpenResult>('project.open', { folder: REPO, name: 'There' })
+        ]);
+        mine = opened.summary.projectId;
+        theirs = openedThere.summary.projectId;
+        mineRev = opened.document.rev;
+        theirsRev = openedThere.document.rev;
+    }, 60_000);
+
+    afterAll(async () => {
+        await here?.request('project.delete', { projectId: mine, removeFiles: true }).catch(() => undefined);
+        // The last test stops the container, so it is put back here rather than there: a failure must not leave it down.
+        await docker(['start', CONTAINER]).catch(() => undefined);
+        await waitUntil(`the container on ${BASE_URL} again`, () => answers(BASE_URL), 60_000).catch(() => undefined);
+        // Its socket went with the stop, so what it opened is cleared from inside it.
+        await inContainer(['rm', '-rf', `${REPO}/.ruimte`]).catch(() => undefined);
+        here?.close();
+        there?.close();
+        daemon?.kill();
+        await daemon?.exited;
+        await rm(home, { recursive: true, force: true });
+        await rm(folder, { recursive: true, force: true });
+    });
+
+    test('each workspace saves its own canvas into its own project file', async () => {
+        const [mineSaved, theirsSaved] = await Promise.all([
+            here.request<ProjectSaveResult>('project.save', {
+                projectId: mine,
+                baseRev: mineRev,
+                content: { name: 'Here', color: '#000', views: canvas('written here') }
+            }),
+            there.request<ProjectSaveResult>('project.save', {
+                projectId: theirs,
+                baseRev: theirsRev,
+                content: { name: 'There', color: '#000', views: canvas('written there') }
+            })
+        ]);
+        expect(mineSaved.rev).toBe(mineRev + 1);
+        expect(theirsSaved.rev).toBe(theirsRev + 1);
+        mineRev = mineSaved.rev;
+        theirsRev = theirsSaved.rev;
+
+        const onDisk = await Bun.file(join(folder, '.ruimte/project.json')).text();
+        expect(onDisk).toContain('written here');
+        expect(onDisk).not.toContain('written there');
+        const overThere = await inContainer(['cat', `${REPO}/.ruimte/project.json`]);
+        expect(overThere).toContain('written there');
+        expect(overThere).not.toContain('written here');
+    }, 30_000);
+
+    test('a project opened on one machine is not in the other machine list', async () => {
+        const [listedHere, listedThere] = await Promise.all([
+            here.request<ProjectListResult>('project.list', {}),
+            there.request<ProjectListResult>('project.list', {})
+        ]);
+        expect(listedHere.projects.map((project) => project.projectId)).toEqual([mine]);
+        expect(listedThere.projects.map((project) => project.projectId)).toContain(theirs);
+        expect(listedThere.projects.map((project) => project.projectId)).not.toContain(mine);
+    });
+
+    test('each files panel browses its own file system, at the same time', async () => {
+        const [mineList, theirsList] = await Promise.all([
+            here.request<FsListResult>('fs.list', { path: folder, hidden: true }),
+            there.request<FsListResult>('fs.list', { path: REPO })
+        ]);
+        expect(mineList.entries.map((entry) => entry.name)).toContain('.ruimte');
+        expect(theirsList.entries.map((entry) => entry.name)).toContain('README.md');
+        expect(theirsList.entries.map((entry) => entry.name)).not.toContain(basename(folder));
+    });
+
+    test('each git panel reads the checkout of its own machine', async () => {
+        const [mineStatus, theirsStatus] = await Promise.all([
+            here.request<GitStatus>('git.status', { cwd: folder }),
+            there.request<GitStatus>('git.status', { cwd: REPO })
+        ]);
+        // A folder that is no checkout has no branch; the container's repository has one and its outstanding work.
+        expect(mineStatus.branch).toBeNull();
+        expect(mineStatus.files).toEqual([]);
+        expect(theirsStatus.branch).toBe('main');
+        expect(theirsStatus.files.map((file) => file.path)).toContain('README.md');
+    });
+
+    /*
+     * The bytes of an image never travel over the socket, so the viewer of each workspace builds a
+     * URL against its own daemon with its own token. The token of one machine opens nothing on the
+     * other, which is the half that has to hold.
+     */
+    test('the bytes a viewer draws come from the daemon of its own workspace', async () => {
+        /* A one pixel GIF, because the route serves images and video and nothing else. The two
+           differ in one byte of the palette, which is what tells the answers apart. */
+        const here_gif = 'R0lGODlhAQABAIABAP8AAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+        const there_gif = 'R0lGODlhAQABAIABAAD/AAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+        await Bun.write(join(folder, 'here.gif'), Buffer.from(here_gif, 'base64'));
+        await inContainer(['sh', '-c', `echo ${there_gif} | base64 -d > ${REPO}/there.gif`]);
+
+        const mineBytes = await fetch(`${LOCAL_URL}/fs/file?path=${encodeURIComponent(join(folder, 'here.gif'))}&v=1-1`);
+        expect(Buffer.from(await mineBytes.arrayBuffer()).toString('base64')).toBe(here_gif);
+        const theirsBytes = await fetch(`${BASE_URL}/fs/file?path=${encodeURIComponent(`${REPO}/there.gif`)}&v=1-1&token=${encodeURIComponent(sessionToken)}`);
+        expect(Buffer.from(await theirsBytes.arrayBuffer()).toString('base64')).toBe(there_gif);
+
+        // The same URL without this machine's token: a workspace only reaches the daemon it paired with.
+        const withoutToken = await fetch(`${BASE_URL}/fs/file?path=${encodeURIComponent(`${REPO}/there.gif`)}&v=1-1`);
+        expect(withoutToken.status).toBe(401);
+    }, 30_000);
+
+    /* Last of this block: the container goes down and only comes back for the tests after it. */
+    test('the container going down leaves the other workspace saving', async () => {
+        await docker(['stop', '--time', '5', CONTAINER]);
+        await waitUntil('the socket to the container to notice', () => there.closed);
+
+        expect(here.closed).toBe(false);
+        const saved = await here.request<ProjectSaveResult>('project.save', {
+            projectId: mine,
+            baseRev: mineRev,
+            content: { name: 'Here', color: '#000', views: canvas('saved while the other machine is gone') }
+        });
+        expect(saved.rev).toBe(mineRev + 1);
+        mineRev = saved.rev;
+        expect(await Bun.file(join(folder, '.ruimte/project.json')).text()).toContain('saved while the other machine is gone');
+    }, 120_000);
 });
