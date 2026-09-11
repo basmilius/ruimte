@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { Endpoint } from '@/state/endpoints';
-import { browseBack, browseMachines, folderPresence, joinPath, openBrowse, parentOf, separatorFor, startFolder } from './palette-browse';
+import { browseBack, browseMachines, browseStart, folderPresence, joinPath, openBrowse, paletteStart, parentOf, separatorFor } from './palette-browse';
 
 describe('separatorFor', () => {
     test('a Windows daemon answers in backslashes, every other one in slashes', () => {
@@ -60,12 +60,19 @@ describe('folderPresence', () => {
     });
 });
 
-describe('startFolder', () => {
-    test('the folder in hand, else the home of that machine, else the tilde the daemon expands', () => {
-        expect(startFolder('/work/atlas', '/home/bas', '/')).toBe('/work/atlas/');
-        expect(startFolder(null, '/home/bas', '/')).toBe('/home/bas/');
-        expect(startFolder(null, null, '/')).toBe('~/');
-        expect(startFolder(null, 'C:\\Users\\bas', '\\')).toBe('C:\\Users\\bas\\');
+describe('browseStart', () => {
+    test('nothing set is the home of the machine being browsed, whatever its separator', () => {
+        expect(browseStart('', '/home/bas', '/')).toEqual({ start: '/home/bas/', home: '/home/bas/' });
+        expect(browseStart('   ', 'C:\\Users\\bas', '\\')).toEqual({ start: 'C:\\Users\\bas\\', home: 'C:\\Users\\bas\\' });
+    });
+
+    test('a daemon that has not said where home is leaves the tilde for it to expand', () => {
+        expect(browseStart('', null, '/')).toEqual({ start: '~/', home: '~/' });
+    });
+
+    test('the folder that was set is listed whole, with home behind it to fall back to', () => {
+        expect(browseStart('~/projects', '/home/bas', '/')).toEqual({ start: '~/projects/', home: '/home/bas/' });
+        expect(browseStart('~/projects/', '/home/bas', '/')).toEqual({ start: '~/projects/', home: '/home/bas/' });
     });
 });
 
@@ -80,12 +87,16 @@ const endpoint = (id: string, label: string): Endpoint => ({
 });
 
 describe('browseMachines', () => {
-    const endpoints = [endpoint('local', 'This machine'), endpoint('daemon-b', 'Studio'), endpoint('daemon-c', 'Attic')];
+    const endpoints = [endpoint('daemon-b', 'Studio'), endpoint('local', 'This machine'), endpoint('daemon-c', 'Attic')];
 
-    test('the machine being worked on comes first, the rest keep the list order', () => {
+    test('this machine comes first whichever machine is active, the rest keep the list order', () => {
         const rows = browseMachines(endpoints, 'daemon-b', ['local', 'daemon-b']);
-        expect(rows.map((row) => row.endpointId)).toEqual(['daemon-b', 'local', 'daemon-c']);
-        expect(rows.map((row) => row.active)).toEqual([true, false, false]);
+        expect(rows.map((row) => row.endpointId)).toEqual(['local', 'daemon-b', 'daemon-c']);
+    });
+
+    test('the machine being worked on is marked rather than moved, so the step can highlight it', () => {
+        expect(browseMachines(endpoints, 'daemon-b', []).map((row) => row.active)).toEqual([false, true, false]);
+        expect(browseMachines(endpoints, 'local', []).map((row) => row.active)).toEqual([true, false, false]);
     });
 
     test('a machine without a socket is still a row, marked as one that has to be dialed', () => {
@@ -95,12 +106,46 @@ describe('browseMachines', () => {
 });
 
 describe('openBrowse', () => {
-    test('one machine goes straight to its folders, with the start path in the field', () => {
-        expect(openBrowse('local', 1, '/work/atlas/')).toEqual({ step: { endpointId: 'local', machines: false, path: '/work/atlas/' }, query: '/work/atlas/' });
+    test('one machine goes straight to its folders, which have no path behind them yet', () => {
+        expect(openBrowse('local', 1)).toEqual({ endpointId: 'local', machines: false, path: '' });
     });
 
-    test('more than one machine asks which, with an empty field to narrow them', () => {
-        expect(openBrowse('local', 3, '/work/atlas/')).toEqual({ step: { endpointId: 'local', machines: true, path: '' }, query: '' });
+    test('more than one machine asks which', () => {
+        expect(openBrowse('local', 3)).toEqual({ endpointId: 'local', machines: true, path: '' });
+    });
+});
+
+describe('paletteStart', () => {
+    const shut = { open: false, mode: 'default', browseAt: 0 };
+    const up = { open: true, mode: 'default', browseAt: 0 };
+
+    test('a store that did not move leaves the palette alone', () => {
+        expect(paletteStart(up, up)).toEqual({ changed: false, restart: false, browse: false });
+    });
+
+    test('opening plainly starts over without browsing', () => {
+        expect(paletteStart(up, shut)).toEqual({ changed: true, restart: true, browse: false });
+    });
+
+    test('opening through the browse command starts over and browses', () => {
+        expect(paletteStart({ ...up, browseAt: 1 }, shut)).toEqual({ changed: true, restart: true, browse: true });
+    });
+
+    test('the command chosen while the palette is already open still browses', () => {
+        expect(paletteStart({ ...up, browseAt: 1 }, up)).toEqual({ changed: true, restart: true, browse: true });
+    });
+
+    test('the command chosen again, while browsing, starts browsing over', () => {
+        const browsing = { ...up, browseAt: 1 };
+        expect(paletteStart({ ...up, browseAt: 2 }, browsing)).toEqual({ changed: true, restart: true, browse: true });
+    });
+
+    test('a mode that changes under an open palette starts over, but does not browse', () => {
+        expect(paletteStart({ ...up, mode: 'grep' }, up)).toEqual({ changed: true, restart: true, browse: false });
+    });
+
+    test('closing changes what was seen and starts nothing', () => {
+        expect(paletteStart(shut, up)).toEqual({ changed: true, restart: false, browse: false });
     });
 });
 

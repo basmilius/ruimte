@@ -119,9 +119,11 @@ interface UiStore {
     sidebarExpanded: string[] | null;
     /* Text the palette opens with; a path puts it straight into folder browsing. */
     paletteSeed: string;
-    /* Whether the palette opens in folder browsing, with nothing typed. Read once, when it opens,
-       the way the seed is: which step browsing is on after that is the palette's own business. */
-    paletteBrowse: boolean;
+    /* How often the folder browser has been asked for. A count and not a flag: the command can be
+       chosen while the palette is already open, which changes nothing else about this store, and
+       choosing it twice in a row has to start browsing twice. Which step browsing is on after that
+       is the palette's own business. */
+    paletteBrowseAt: number;
     settings: SettingsState;
     panel: PanelState;
     preview: PreviewState;
@@ -176,7 +178,7 @@ export const useUi = create<UiStore>((set, get) => ({
     paletteMode: 'default',
     page: null,
     paletteSeed: '',
-    paletteBrowse: false,
+    paletteBrowseAt: 0,
     sidebarOpen: readSidebarOpen(),
     sidebarExpanded: null,
     settings: { open: false, section: 'appearance' },
@@ -213,19 +215,19 @@ export const useUi = create<UiStore>((set, get) => ({
         set({ layoutDialogOpen: open });
     },
     openPalette(seed = '') {
-        set({ paletteOpen: true, paletteMode: 'default', paletteSeed: seed, paletteBrowse: false });
+        set({ paletteOpen: true, paletteMode: 'default', paletteSeed: seed });
     },
     openFindInFiles(seed = '') {
-        set({ paletteOpen: true, paletteMode: 'grep', paletteSeed: seed, paletteBrowse: false });
+        set({ paletteOpen: true, paletteMode: 'grep', paletteSeed: seed });
     },
     openFolderBrowser() {
-        set({ paletteOpen: true, paletteMode: 'default', paletteSeed: '', paletteBrowse: true });
+        set({ paletteOpen: true, paletteMode: 'default', paletteSeed: '', paletteBrowseAt: get().paletteBrowseAt + 1 });
     },
     setPaletteMode(mode) {
-        set({ paletteMode: mode, paletteSeed: '', paletteBrowse: false });
+        set({ paletteMode: mode, paletteSeed: '' });
     },
     setPaletteOpen(open) {
-        set(open ? { paletteOpen: true, paletteMode: 'default', paletteSeed: '', paletteBrowse: false } : { paletteOpen: false });
+        set(open ? { paletteOpen: true, paletteMode: 'default', paletteSeed: '' } : { paletteOpen: false });
     },
     setSettings(patch) {
         set({ settings: { ...get().settings, ...patch } });
