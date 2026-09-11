@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Meerdere Claude- en Codex-accounts naast elkaar</title>
+<style>
+:root {
+  color-scheme: light;
+  --accent: #3f38b5;
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --image-outline: rgb(0 0 0 / 10%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+table { font-variant-numeric: tabular-nums; }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 15px; }
+.diagram .small { font-size: 12px; fill: var(--muted); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .file { fill: var(--paper); stroke: var(--accent); stroke-dasharray: 4 3; }
+.diagram .edge { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow { fill: var(--accent); }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; line-height: 1.5; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media (max-width: 900px) { .split.three { grid-template-columns: 1fr; } }
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+}
+@media (max-width: 420px) { .step { grid-template-columns: 30px 1fr; } }
+@media print {
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide, .plot { min-width: 0; }
+  th, td { overflow-wrap: anywhere; }
+  .split, .split.three { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#kern">Naar de kern</a>
+<header>
+  <p class="eyebrow">Ruimte / Onderzoek / 10 september 2026</p>
+  <h1>Meerdere Claude- en Codex-accounts naast elkaar</h1>
+  <p class="intro">Nodeterm lost dit op met precies één truc: een account is een eigen configuratiemap, en die map wordt bij het starten van een sessie als omgevingsvariabele meegegeven. <code>CLAUDE_CONFIG_DIR</code> voor Claude, <code>CODEX_HOME</code> voor Codex. De CLI logt daar zelf in en beheert daar zijn eigen tokens; nodeterm schrijft nooit een credential. Alles daarboven, de loginflow, de chips op een node, de kleur per account en de account-switch van een lopende Codex-sessie, hangt aan die ene variabele.</p>
+  <p class="status">Onderzoek in nodeterm, nog niets gebouwd in Ruimte</p>
+  <p class="caption">Bron: nodeterm op <code>323931ea</code> (9 september 2026) en Ruimte op <code>1ae7f86</code>. Alles hieronder komt uit de broncode van nodeterm; er is niets in een draaiende app nagemeten. Zie <a href="#open">Wat we niet weten</a>. Ruimte neemt geen code over uit nodeterm; dit rapport beschrijft het mechanisme, niet de regels.</p>
+  <nav aria-label="Inhoud">
+    <a href="#kern">De kern</a>
+    <a href="#anatomie">Wat een account is</a>
+    <a href="#toevoegen">Een account toevoegen</a>
+    <a href="#spawn">Hoe een sessie zijn account krijgt</a>
+    <a href="#wisselen">Wisselen</a>
+    <a href="#ui">Wat de gebruiker ziet</a>
+    <a href="#randen">Wat de code afvangt</a>
+    <a href="#ruimte">Wat dit voor Ruimte betekent</a>
+    <a href="#open">Wat we niet weten</a>
+  </nav>
+</header>
+<main>
+
+<section id="kern">
+  <h2>De kern</h2>
+  <p>Claude Code en Codex bewaren hun login in een map die ze uit een omgevingsvariabele lezen. Wie die variabele per sessie anders zet, heeft meerdere logins naast elkaar zonder ooit een token aan te raken. Nodeterm bouwt daar drie dingen omheen: een lijst met accounts in de instellingen, een terminal waarin de CLI zijn eigen loginflow doet, en een pollend wachtmoment dat de rij pas als klaar markeert zodra er echt een credential op schijf staat.</p>
+  <div class="split three">
+    <div class="panel">
+      <h3>De accountlijst is config</h3>
+      <p>Een rij is een id, een label, een e-mail, een kleur en een <code>pending</code>-vlag. Meer niet. Het bestand met de lijst mag met de hand bewerkt worden, dus elke waarde eruit wordt opnieuw gevalideerd voordat er een pad of een kleur van gemaakt wordt.</p>
+    </div>
+    <div class="panel">
+      <h3>De CLI bezit de login</h3>
+      <p><code>claude /login</code> en <code>codex login</code> draaien in een gewone terminal-node die de env-var al draagt. De browser-OAuth is die van de CLI. Nodeterm leest achteraf alleen de e-mail terug uit de map.</p>
+    </div>
+    <div class="panel">
+      <h3>Een node kiest bij creatie</h3>
+      <p>Het gekozen account gaat als <code>accountId</code> op de node en verandert daarna niet meer. Voor Claude bestaat er geen switch; voor Codex wel, en die is opvallend duur gebouwd.</p>
+    </div>
+  </div>
+  <figure>
+    <svg class="diagram" viewBox="0 0 920 320" role="img" aria-labelledby="flow-title flow-desc">
+      <title id="flow-title">De weg van een nieuw account</title>
+      <desc id="flow-desc">De instellingen vragen de daemon om een map, de daemon zet een login-terminal op het canvas, de CLI schrijft zijn credential in die map, en elke volgende sessie krijgt dezelfde map als omgevingsvariabele mee.</desc>
+      <defs>
+        <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path class="arrow" d="M0 0 L10 5 L0 10 z"></path>
+        </marker>
+      </defs>
+      <rect class="node" x="10" y="20" width="200" height="70" rx="12"></rect>
+      <text x="110" y="50" text-anchor="middle">Instellingen</text>
+      <text class="small" x="110" y="72" text-anchor="middle">rij met pending: true</text>
+      <rect class="node" x="245" y="20" width="200" height="70" rx="12"></rect>
+      <text x="345" y="50" text-anchor="middle">Daemon mint</text>
+      <text class="small" x="345" y="72" text-anchor="middle">lege map, mode 0700</text>
+      <rect class="node" x="480" y="20" width="200" height="70" rx="12"></rect>
+      <text x="580" y="50" text-anchor="middle">Login-terminal</text>
+      <text class="small" x="580" y="72" text-anchor="middle">env-var wijst naar de map</text>
+      <rect class="node" x="715" y="20" width="195" height="70" rx="12"></rect>
+      <text x="812" y="50" text-anchor="middle">CLI logt in</text>
+      <text class="small" x="812" y="72" text-anchor="middle">browser-OAuth</text>
+      <path class="edge" d="M210 55 H240" marker-end="url(#a)"></path>
+      <path class="edge" d="M445 55 H475" marker-end="url(#a)"></path>
+      <path class="edge" d="M680 55 H710" marker-end="url(#a)"></path>
+      <rect class="file" x="480" y="150" width="430" height="70" rx="12"></rect>
+      <text x="695" y="180" text-anchor="middle">De configuratiemap van dit account</text>
+      <text class="small" x="695" y="202" text-anchor="middle">credential, transcripts, gesymlinkte instellingen</text>
+      <path class="edge" d="M812 90 V145" marker-end="url(#a)"></path>
+      <path class="edge" d="M580 145 V95" marker-end="url(#a)"></path>
+      <rect class="node" x="10" y="150" width="430" height="70" rx="12"></rect>
+      <text x="225" y="180" text-anchor="middle">Wachten op bewijs</text>
+      <text class="small" x="225" y="202" text-anchor="middle">pollen tot er een echt credentialbestand ligt</text>
+      <path class="edge" d="M475 185 H445" marker-end="url(#a)"></path>
+      <path class="edge" d="M225 150 V95 H240" marker-end="url(#a)"></path>
+      <rect class="node" x="10" y="250" width="900" height="60" rx="12"></rect>
+      <text x="460" y="286" text-anchor="middle">Elke volgende sessie op dit account krijgt dezelfde map als omgevingsvariabele mee</text>
+    </svg>
+    <figcaption>Toevoegen loopt eenmalig linksom; daarna doet alleen de onderste balk nog werk.</figcaption>
+  </figure>
+</section>
+
+<section id="anatomie">
+  <h2>Wat een account is</h2>
+  <p>Beide CLI's krijgen dezelfde behandeling, maar de paden en de details verschillen genoeg om ze naast elkaar te zetten.</p>
+  <div class="table">
+    <table class="wide">
+      <caption>Waar een account woont</caption>
+      <thead>
+        <tr><th scope="col">&nbsp;</th><th scope="col">Claude</th><th scope="col">Codex</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">Omgevingsvariabele</th><td><code>CLAUDE_CONFIG_DIR</code></td><td><code>CODEX_HOME</code>, plus een eigen variabele met het account-id</td></tr>
+        <tr><th scope="row">Systeemaccount</th><td><code>~/.claude</code></td><td><code>$CODEX_HOME</code> als die absoluut is, anders <code>~/.codex</code></td></tr>
+        <tr><th scope="row">Beheerd account</th><td><code>&lt;userData&gt;/claude-accounts/&lt;uuid&gt;</code></td><td><code>~/.nodeterm/cx/&lt;16 hex&gt;</code>, een sha256 over de userData-map en het id</td></tr>
+        <tr><th scope="row">Op een SSH-host</th><td><code>~/.nodeterm/claude-accounts/&lt;id&gt;</code></td><td>pad bestaat, maar toevoegen en inloggen op de host is nog niet gebouwd</td></tr>
+        <tr><th scope="row">Gekoppelde map</th><td>elke bestaande map van de gebruiker, bijvoorbeeld <code>~/.claude-2</code></td><td>niet ondersteund</td></tr>
+        <tr><th scope="row">Extra proces</th><td>geen</td><td>één <code>codex app-server</code>-daemon per account, op een socket in die map</td></tr>
+        <tr><th scope="row">Gedeelde instellingen</th><td>hook en skill worden in de nieuwe map geïnstalleerd</td><td><code>config.toml</code>, <code>AGENTS.md</code>, <code>skills</code> en meer worden uit de systeemmap gesymlinkt</td></tr>
+        <tr><th scope="row">Nooit gedeeld</th><td>credential en <code>.claude.json</code></td><td><code>auth.json</code> en de thread-database</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>Waarom de Codex-map een hash is</h3>
+  <p>De control-socket van de per-account daemon ligt twee niveaus onder die map. Een Unix-socketpad heeft op macOS een harde lengtelimiet, dus het pad moet kort blijven. De userData-map zit in de hash zodat twee installaties van de app elkaars accounts niet raken.</p>
+  <h3>Waarom dit op macOS überhaupt werkt</h3>
+  <p>Claude Code bewaart zijn credential in de keychain. Sinds versie 2.1 hangt de keychain-service aan de configuratiemap, via een korte hash van dat pad. Daaronder deelt elke map één service en botsen twee accounts dus alsnog. Nodeterm draait daarom bij het toevoegen een versiecheck en waarschuwt als de CLI te oud is.</p>
+  <div class="note">
+    <p>De accountlijst staat in het instellingenbestand, dat met de hand te bewerken is. Elk account-id komt langs een regex voordat er een pad van gemaakt wordt, ook aan de kant van de UI. Een id als <code>../escape</code> wordt geweigerd, zelfs als er een keurige rij voor bestaat.</p>
+  </div>
+</section>
+
+<section id="toevoegen">
+  <h2>Een account toevoegen</h2>
+  <ol class="steps">
+    <li class="step">
+      <h3>De map wordt gemint</h3>
+      <p>De UI vraagt de daemon om een nieuw account. Die maakt een lege map met een willekeurig id, zet de rechten op 0700, installeert de statushook in de instellingen van die map en, bij Codex, symlinkt de niet-geheime bestanden uit de systeemmap zodat je je eigen configuratie en skills niet kwijtraakt. Er wordt geen CLI gestart. De rij verschijnt meteen in de lijst met <code>pending: true</code>.</p>
+    </li>
+    <li class="step">
+      <h3>Er verschijnt een login-terminal op het canvas</h3>
+      <p>Geen dialoogvenster, maar een gewone terminal-node met de titel <em>Claude login</em> of <em>Codex login</em>, met het nieuwe account-id erop en met <code>claude /login</code> of <code>codex login</code> als eerste regel. Omdat de node het account-id draagt, krijgt de PTY de env-var, dus de CLI schrijft zijn credential in de nieuwe map in plaats van in de systeemmap. De werkmap is het project en niet je home, anders vraagt Claude Code vertrouwen voor je hele homedirectory inclusief je SSH-sleutels.</p>
+    </li>
+    <li class="step">
+      <h3>De daemon wacht op bewijs, niet op een melding</h3>
+      <p>Elke twee seconden wordt gekeken of er een credential ligt, maximaal vijf minuten. Claude leest de e-mail uit het JSON-bestand in de map. Codex is strenger: het bestand moet een echt bestand zijn en geen symlink (anders zou de gesymlinkte systeemlogin als succes tellen) en de e-mail wordt daarna aan de eigen daemon gevraagd via een JSON-RPC-call.</p>
+    </li>
+    <li class="step">
+      <h3>De rij promoveert</h3>
+      <p><code>pending</code> gaat uit en het label wordt de e-mail, tenzij de gebruiker zelf al een naam typte. Codex heeft hiervoor een tweede route: een reconcile-lus die elke twee seconden alleen de pending-rijen naloopt. Die is nodig omdat de wachtbelofte verloren kan gaan als de app herstart, het instellingenpaneel sluit of de vijf minuten verlopen terwijl je later alsnog inlogt. De merge gebeurt tegen de verse lijst, zodat een intussen verwijderde rij nooit terugkeert.</p>
+    </li>
+  </ol>
+  <h3>Een bestaande map koppelen</h3>
+  <p>Claude kent een tweede route: een map die je zelf al gebruikt, bijvoorbeeld omdat je met een shell-alias tussen logins wisselt, koppel je als account zonder dat nodeterm hem aanmaakt. Verwijderen betekent dan alleen vergeten, nooit wissen. De systeemmap koppelen wordt geweigerd; die is het standaardaccount al. Nodeterm laat daarnaast zien welke configuratiemappen het via hooks heeft zien langskomen maar nog geen rij hebben, met een knop om ze in één klik te koppelen.</p>
+  <h3>Verwijderen</h3>
+  <p>Bij een beheerd account gaat de map weg, bij een gekoppeld account alleen de rij. Daarna wordt het account-id van alle nodes gewist en het projectdefault opgeschoond. De login-nodes worden vernietigd: een node die na een herstart opnieuw <code>claude /login</code> zou typen zonder env-var, logt je systeemaccount opnieuw in.</p>
+</section>
+
+<section id="spawn">
+  <h2>Hoe een sessie zijn account krijgt</h2>
+  <p>Alles komt samen op één plek in de PTY-laag. Het account-id op de node wordt een pad, dat pad wordt een omgevingsvariabele, en een paar variabelen worden juist verwijderd.</p>
+  <div class="split">
+    <div class="panel">
+      <h3>Wat erin gaat</h3>
+      <p>De configuratiemap van het gekozen account. Bij Codex ook expliciet een lege waarde voor het systeemaccount, zodat een gedeelde terminalserver geen account laat lekken naar een sessie die er niet om vroeg.</p>
+    </div>
+    <div class="panel">
+      <h3>Wat eruit gaat</h3>
+      <p>De API-sleutels en OAuth-tokens uit de omgeving. Een geërfde sleutel zou de login van het account overschaduwen en je zou dat pas merken aan de rekening. Projectinstellingen mogen deze variabelen ook niet zetten; die namen zijn gereserveerd.</p>
+    </div>
+  </div>
+  <h3>Twee verschillende antwoorden op een ontbrekende map</h3>
+  <p>Claude valt terug op het systeemaccount, logt een waarschuwing en stuurt een vlag terug naar de UI die de chip oranje kleurt. Codex weigert en start niets. De code zegt er zelf bij waarom: stilletjes onder de verkeerde login doorwerken is een ergere fout bij een expliciete keuze dan bij een eerste start. Dat verschil is het duidelijkste ontwerpsignaal in de hele feature.</p>
+  <h3>Twee lijsten, één alfabet</h3>
+  <p>Claude- en Codex-ids zien er hetzelfde uit, dus uit een id alleen valt niet af te leiden welke CLI erbij hoort. De PTY-laag vraagt het aan de actuele instellingen. Toen dat nog geraden werd, belandden Claude-nodes in de Codex-controle en startten ze helemaal niet meer.</p>
+  <p>Nodeterm draait lokale sessies in een gedeelde tmux-server, wat een eigen probleem oplevert: een variabele uit de ene sessie kan naar de volgende overwaaien. De oplossing is de variabele expliciet in de lijst te zetten die tmux per client bijwerkt, zodat hij wordt gestript bij een client die hem niet heeft. Ruimte heeft dat probleem niet, zie hieronder.</p>
+</section>
+
+<section id="wisselen">
+  <h2>Wisselen van account</h2>
+  <p>Hier lopen de twee CLI's het verst uiteen.</p>
+  <h3>Claude: er is geen switch</h3>
+  <p>Het account van een node wordt bij creatie gekozen en verandert daarna niet. Wat er wel is:</p>
+  <ul>
+    <li>Opnieuw inloggen op het systeemaccount, via een login-terminal zonder account-id. Dat herschrijft de systeemmap, dus alle sessies op het systeemaccount volgen de nieuwe identiteit.</li>
+    <li>Observatie in plaats van sturing. De hooks melden het transcriptpad van een lopende sessie, en daaruit leidt nodeterm af onder welk account die sessie feitelijk draait. Typ je zelf in een kale terminal een commando met een eigen configuratiemap, dan krijgt die node alsnog de juiste chip en lezen de transcript- en usage-lezers uit de juiste map.</li>
+  </ul>
+  <h3>Codex: een switch in drie fasen</h3>
+  <p>Een lopende Codex-node kan wel naar een ander account, met behoud van hetzelfde gesprek. Dat kan doordat het gesprek in een rollout-bestand in de accountmap staat: nodeterm maakt een hardlink van dat bestand op dezelfde relatieve plek in de doelmap. Zelfde inode, dus zelfde gespreks-id, en beide mappen blijven los verwijderbaar.</p>
+  <ol>
+    <li><strong>Reserveren en plannen.</strong> Eerst wordt het account vastgehouden, pas daarna wordt het pad opgezocht en gevalideerd. Andersom zou het account tijdens die opzoekactie verwijderd kunnen worden.</li>
+    <li><strong>Committen.</strong> De hardlink wordt gelegd, met controle op inode en device vóór en ná, met een link die nooit overschrijft en met geweigerde symlinks in elk padsegment. Ligt er al een ander bestand voor hetzelfde gesprek, dan volgt een fout in plaats van een overschrijving. Staan bron en doel op verschillende volumes, dan volgt een benoemde fout in plaats van een stille bytekopie.</li>
+    <li><strong>Afronden.</strong> De reservering gaat vrij. Er is een expliciete rollback, een timeout van een minuut, en een automatische vrijgave als het venster dat de switch begon verdwijnt.</li>
+  </ol>
+  <p>Alleen het venster dat de switch reserveerde mag hem committen. Verwijderen en switchen sluiten elkaar wederzijds uit. Vlak voor het committen wordt bovendien opnieuw gecontroleerd of de node intussen niet is veranderd; is dat wel zo, dan volgt een rollback met de melding dat de sessie tijdens het voorbereiden veranderde.</p>
+  <p>Het is geen live migratie. De agent wordt afgesloten en opnieuw gestart met een resume-commando, nu onder de nieuwe map. Lukt die herstart niet, dan blijft de switch staan en wordt de gebruiker gevraagd de agent zelf te herstarten.</p>
+</section>
+
+<section id="ui">
+  <h2>Wat de gebruiker ziet</h2>
+  <p>Het instellingenpaneel groepeert accounts per machine, met een aparte lijst voor Claude en voor Codex. Het systeemaccount staat er als vaste rij tussen, met een hernoembaar label. Per rij: het label, de e-mail, een herkomstpil, een kleurkiezer en een verwijderknop met bevestiging.</p>
+  <div class="split three">
+    <div class="panel">
+      <h3>De chip op een node</h3>
+      <p>Vier soorten, elk met een eigen rand: beheerd, systeem, gekoppeld en niet-gekoppeld. Plus een oranje variant als de map bij het starten ontbrak. Het systeemaccount krijgt alleen een chip als er meer dan één identiteit in het spel is, want anders is er niets te onderscheiden.</p>
+    </div>
+    <div class="panel">
+      <h3>Het label</h3>
+      <p>Het deel voor de apenstaart, afgekapt op tien tekens. De tooltip geeft het volledige label met de e-mail. Automatisch gegenereerde labels tellen niet als een naam die de gebruiker koos, dus die wijken voor de e-mail zodra die bekend is.</p>
+    </div>
+    <div class="panel">
+      <h3>De kleur</h3>
+      <p>Een account mag een standaardkleur hebben voor nieuwe nodes, die de merkkleur van de agent overschrijft. De kleur wordt bij creatie in de node gebakken, dus bestaande nodes verkleuren niet als je later iets anders kiest.</p>
+    </div>
+  </div>
+  <p>Kiezen doe je op drie plekken: het contextmenu van het canvas, het dock en de tabbalk (voor het projectdefault). Alle drie tonen alleen accounts die bij de machine van het project horen en laten pending-rijen weg. Er zijn geen avatars. Een identiteit is een label, een e-mail, een kleur en een herkomst.</p>
+  <p>Opvallend genoeg is de opslagvorm bewust niet zichtbaar. De code zegt het met zoveel woorden: een gebruiker kiest een persoon en een machine, geen implementatiemap.</p>
+</section>
+
+<section id="randen">
+  <h2>Wat de code afvangt</h2>
+  <p>Dit is de lijst die het meest waard is als Ruimte hetzelfde gaat bouwen, want deze randgevallen zijn duur om zelf te ontdekken.</p>
+  <div class="table">
+    <table class="wide">
+      <caption>Randgevallen en hun antwoord</caption>
+      <thead><tr><th scope="col">Risico</th><th scope="col">Antwoord in de code</th></tr></thead>
+      <tbody>
+        <tr><td>Een handbewerkt instellingenbestand levert een account-id dat een pad ontsnapt</td><td>Eén regex op elke plek waar een id een padsegment wordt, ook in de UI en ook voor remote paden</td></tr>
+        <tr><td>Een API-sleutel in de omgeving overschaduwt de login van het account</td><td>Die variabelen worden uit de child-omgeving verwijderd zodra er een account gekozen is</td></tr>
+        <tr><td>De gesymlinkte systeeminstellingen laten een niet-ingelogd account als ingelogd tellen</td><td>Het credentialbestand moet een echt bestand zijn, gecontroleerd zonder de symlink te volgen</td></tr>
+        <tr><td>Een account lekt naar een sessie die er niet om vroeg</td><td>Expliciet een lege waarde schrijven, plus de variabele laten strippen door de terminalserver</td></tr>
+        <tr><td>Een switch levert een fork in plaats van hetzelfde gesprek</td><td>Hardlink op dezelfde inode, plus controle dat de CLI hetzelfde gespreks-id teruggeeft</td></tr>
+        <tr><td>Een switch overschrijft een bestaand gesprek in het doelaccount</td><td>Een link die niet overschrijft; een bestaand bestand met een andere inode is een fout</td></tr>
+        <tr><td>Een account wordt verwijderd terwijl een switch loopt</td><td>Beide bewerkingen sluiten elkaar uit, en reserveren gebeurt vóór het opzoekwerk</td></tr>
+        <tr><td>Een tweede venster commit andermans switch</td><td>Alleen het venster dat reserveerde mag committen, met een timeout en automatische vrijgave</td></tr>
+        <tr><td>De login vraagt vertrouwen voor je hele homedirectory</td><td>De login-terminal start in de projectmap, nooit in de home</td></tr>
+        <tr><td>Een oude CLI deelt één keychain-service tussen alle mappen</td><td>Versiecheck bij het toevoegen, met een waarschuwing in plaats van een stille botsing</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="ruimte" class="recommendation">
+  <h2>Wat dit voor Ruimte betekent</h2>
+  <p>Ruimte kent vandaag geen accountbegrip: er komt nergens een <code>accountId</code> of een <code>CLAUDE_CONFIG_DIR</code> voor. De omgeving van een sessie wordt op één plek opgebouwd, en dat is precies de plek waar dit inhaakt.</p>
+  <h3>Waar het zou landen</h3>
+  <div class="table">
+    <table class="wide">
+      <caption>De aanknopingspunten in Ruimte</caption>
+      <thead><tr><th scope="col">Plek</th><th scope="col">Wat er moet gebeuren</th></tr></thead>
+      <tbody>
+        <tr><td><code>apps/server/src/sessions/manager.ts</code>, rond regel 265</td><td>De env van een PTY wordt hier gebouwd, met alleen de eigen variabelen erbij. Eén account-map erbij zetten is een paar regels.</td></tr>
+        <tr><td><code>apps/server/src/chat/chat-manager.ts</code>, regel 152</td><td>Een chat-node deelt nu één env voor alle chats. Die moet per chat kunnen verschillen, anders werkt een account alleen in een terminal-node.</td></tr>
+        <tr><td><code>packages/contracts/src/session.ts</code></td><td><code>AgentLaunch</code> is de plek voor een account-id. Let op: het is een omgevingsvariabele, geen vlag, dus het hoort niet in <code>launch.ts</code> bij de commandoregel.</td></tr>
+        <tr><td><code>apps/server/src/agents/install.ts</code>, regel 127</td><td>De hooks worden nu in één instellingenbestand per CLI geïnstalleerd. Per account is dat een bestand per map, anders meldt een account zijn status niet.</td></tr>
+        <tr><td><code>apps/server/src/usage/roots.ts</code></td><td>De scanner leest nu één map per CLI. Met meerdere accounts moet hij meerdere mappen aflopen en per record onthouden welk account het was, anders telt de usage-pagina twee identiteiten bij elkaar op.</td></tr>
+        <tr><td><code>apps/server/src/usage/limits/probe.ts</code></td><td>De limietprobe start de CLI zonder omgeving mee te geven, dus die leest altijd het systeemaccount. Met accounts wordt dat een probe per account.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>Drie dingen die in Ruimte anders liggen</h3>
+  <ul>
+    <li><strong>Geen tmux.</strong> Ruimte spawnt elke PTY zelf met een eigen omgeving. Het hele lekprobleem van een gedeelde terminalserver, en de reparatie eromheen, bestaat hier niet.</li>
+    <li><strong>Het projectbestand is gedeeld.</strong> Nodeterm zet het account-id van een node in het projectbestand. In Ruimte staat dat bestand in de repository, dus een account-id van de ene machine zou bij een ander terechtkomen. De keuze hoort in <code>&lt;projectId&gt;.local.json</code>, bij de camera en de panelen. Dat kost wel iets: een node op een andere machine valt dan terug op het systeemaccount, wat precies het gedrag is dat je wilt.</li>
+    <li><strong>Chat-nodes praten stream-json.</strong> Nodeterm's accounts hangen aan een terminal. Ruimte heeft daarnaast chat-nodes die de CLI als subproces draaien. Die krijgen dezelfde omgeving mee, dus in principe werkt dezelfde truc, maar de loginflow past niet: er is geen terminal om <code>claude /login</code> in te typen. Een login-terminal openen naast de chat is de voor de hand liggende uitweg.</li>
+  </ul>
+  <h3>Wat ik zou overnemen en wat niet</h3>
+  <p>Overnemen: de omgevingsvariabele als enige mechanisme, de login in een echte terminal, het wachten op een credentialbestand in plaats van op een melding, het strippen van API-sleutels, en de keuze om een ontbrekende map te weigeren in plaats van stil terug te vallen. Dat laatste is bij Claude in nodeterm anders opgelost, en de code zegt zelf dat de strengere variant de betere is.</p>
+  <p>Laten liggen, in elk geval eerst: de hardlink-switch van een lopend gesprek. Dat is verreweg het duurste onderdeel, het is in nodeterm zelf nog niet tegen een draaiende app geverifieerd, en het levert alleen iets op als je regelmatig midden in een gesprek van identiteit wisselt. Een nieuwe node onder het andere account is bijna altijd genoeg.</p>
+</section>
+
+<section id="open">
+  <h2>Wat we niet weten</h2>
+  <ul>
+    <li>Alles hierboven komt uit de broncode van nodeterm op één revisie. Er is geen draaiende app bekeken, geen tweede account aangemaakt en geen login gedaan.</li>
+    <li>Nodeterm's eigen acceptatiedocument voor de Codex-accounts staat nog open op de onderdelen die alleen tegen een echte daemon te testen zijn: of een draaiende app-server een gehardlinkt gesprek zonder herindexering terugvindt, of het gespreks-id een tweede login overleeft, en de volledige flow over een echte SSH-verbinding.</li>
+    <li>De keychain-scoping per configuratiemap vanaf Claude Code 2.1 komt uit nodeterm's documentatie en code, niet uit eigen meting tegen de CLI.</li>
+    <li>Of Codex zonder tmux precies hetzelfde doet, is niet nagegaan. Ruimte spawnt anders, dus dat zou een van de eerste dingen zijn om te proberen.</li>
+    <li>Wat een tweede account doet met Ruimte's usage-index is niet doorgerekend. Het indexbestand kent nu geen account per record, dus een migratie is waarschijnlijk nodig.</li>
+  </ul>
+</section>
+
+</main>
+<footer>
+  <p>Ruimte, 10 september 2026. Onderzoek naar het accountmechanisme van nodeterm op <code>323931ea</code>, gelezen vanuit de broncode. Ruimte staat op <code>1ae7f86</code>.</p>
+</footer>
+</body>
+</html>
