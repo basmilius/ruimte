@@ -1,6 +1,18 @@
 import { describe, expect, test } from 'bun:test';
 import type { Endpoint } from '@/state/endpoints';
-import { browseBack, browseMachines, browseStart, folderPresence, joinPath, openBrowse, paletteStart, parentOf, separatorFor } from './palette-browse';
+import {
+    browseBack,
+    browseMachines,
+    browseStart,
+    folderPresence,
+    joinPath,
+    machineDot,
+    machineHint,
+    openBrowse,
+    paletteStart,
+    parentOf,
+    separatorFor
+} from './palette-browse';
 
 describe('separatorFor', () => {
     test('a Windows daemon answers in backslashes, every other one in slashes', () => {
@@ -162,5 +174,22 @@ describe('browseBack', () => {
     test('folders go to the machines, but only when there is more than one', () => {
         expect(browseBack({ endpointId: 'local', machines: false, path: '/work/' }, 2)).toEqual({ to: 'machines' });
         expect(browseBack({ endpointId: 'local', machines: false, path: '/work/' }, 1)).toEqual({ to: 'palette' });
+    });
+});
+
+describe('a machine row', () => {
+    test('says nothing beside the dot while the machine answers, and says what it is doing otherwise', () => {
+        expect(machineHint(true, false)).toBeUndefined();
+        expect(machineHint(false, true)).toBe('Connecting');
+        expect(machineHint(false, false)).toBe('Not connected');
+        // Dialing wins: a socket that is closing and reopening is on its way, not gone.
+        expect(machineHint(true, true)).toBe('Connecting');
+    });
+
+    test('the dot carries the three states in the colors the settings page uses', () => {
+        expect(machineDot(true, false)).toBe('bg-status-idle');
+        expect(machineDot(false, true)).toBe('bg-status-needs-you');
+        expect(machineDot(true, true)).toBe('bg-status-needs-you');
+        expect(machineDot(false, false)).toBe('bg-text-faint');
     });
 });
