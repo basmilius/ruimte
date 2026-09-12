@@ -45,8 +45,10 @@
     --text: #18181b;
     --text-muted: #6f6f78;
     --text-faint: #a1a1aa;
-    --accent: #4f46e5;
-    --accent-soft: #eef0ff;
+    --accent: #155dfc;
+    /* The same accent as channels, for the tokens that carry it with an alpha. */
+    --accent-rgb: 21 93 252;
+    --accent-soft: color-mix(in srgb, var(--accent) 16%, var(--surface));
     --accent-text: #ffffff;
     /* Skills read as a second kind of token next to a file mention, so they get their own hue. */
     --skill: #9333ea;
@@ -55,7 +57,7 @@
     --brand-back: var(--color-iron-900);
     --canvas-bg: #eeeef1;
     --canvas-dot: #cfcfd6;
-    --selection: rgb(79 70 229 / 0.55);
+    --selection: rgb(var(--accent-rgb) / 0.55);
     --shadow-node: 0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px rgb(0 0 0 / 0.08);
     --shadow-float: 0 1px 2px rgb(0 0 0 / 0.08), 0 12px 32px rgb(0 0 0 / 0.14);
     --status-running: #2563eb;
@@ -71,7 +73,7 @@
     --term-blue: #1d4ed8;
     --term-yellow: #b45309;
     --term-red: #b91c1c;
-    --term-cursor: #4f46e5;
+    --term-cursor: #155dfc;
     --term-ansi-black: #3f3f46;
     --term-ansi-red: #b91c1c;
     --term-ansi-green: #15803d;
@@ -170,8 +172,10 @@
     --text: #ececf1;
     --text-muted: #9a9aa6;
     --text-faint: #5f5f6b;
-    --accent: #7c74ff;
-    --accent-soft: #26244a;
+    --accent: #155dfc;
+    /* The same accent as channels, for the tokens that carry it with an alpha. */
+    --accent-rgb: 21 93 252;
+    --accent-soft: color-mix(in srgb, var(--accent) 16%, var(--surface));
     --accent-text: #ffffff;
     --skill: #c084fc;
     --skill-soft: #2f2350;
@@ -181,7 +185,7 @@
     --brand-back: var(--color-iron-700);
     --canvas-bg: #0e0e11;
     --canvas-dot: #26262d;
-    --selection: rgb(124 116 255 / 0.6);
+    --selection: rgb(var(--accent-rgb) / 0.6);
     --shadow-node: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 30px rgb(0 0 0 / 0.45);
     --shadow-float: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 36px rgb(0 0 0 / 0.6);
     --status-running: #60a5fa;
@@ -199,7 +203,7 @@
     --term-blue: #7dd3fc;
     --term-yellow: #fbbf24;
     --term-red: #f87171;
-    --term-cursor: #7c74ff;
+    --term-cursor: #155dfc;
     --term-ansi-black: #2a2a31;
     --term-ansi-red: #f87171;
     --term-ansi-green: #4ade80;

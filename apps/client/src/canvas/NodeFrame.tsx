@@ -20,7 +20,7 @@ import { AgentIcon } from '@/agents/AgentIcon';
 import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
 import { useHasContextLinks } from '@/context/sync';
-import { NODE_ACCENTS } from '@/canvas/accents';
+import { accentColor } from '@/canvas/accents';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { BTN_GROUP } from '@/ui/classes';
 import { Pill } from '@/ui/Pill';
@@ -153,7 +153,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
         return null;
     }
 
-    const accent = NODE_ACCENTS.find((a) => a.id === node.accent)?.color;
+    const accent = accentColor(node.accent);
     const isGroup = node.kind === 'group';
     const isNote = node.kind === 'note';
     const collapsed = isGroup && node.collapsed === true;

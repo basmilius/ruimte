@@ -1,11 +1,13 @@
 import clsx from 'clsx';
-import { Check } from 'lucide-react';
-import { NODE_ACCENTS } from '@/canvas/accents';
+import { Menu } from '@base-ui-components/react/menu';
+import { Check, Ellipsis } from 'lucide-react';
+import { accentColor, FEATURED_ACCENTS, isFeatured, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Segmented, Stepper, Toggle } from '@/shell/settings/controls';
 import { FONT_SIZE_RANGE, INTERFACE_FONT_SIZE_RANGE, MONO_FONTS, useSettings, type SidebarScope } from '@/state/settings';
 import { useTheme, type Theme } from '@/state/theme';
+import { ACCENT_SWATCH, ACCENT_SWATCH_PICKED } from '@/ui/classes';
 import { Select } from '@/ui/Select';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
@@ -21,37 +23,64 @@ const THEMES: Array<{ id: Theme; label: string }> = [
     { id: 'dark', label: 'Dark' }
 ];
 
+/*
+ * The accent, five colors at a time. Every Tailwind hue is on offer, which is more than a settings
+ * row can carry, so the wheel past the five sits in a menu behind them; the trigger wears the
+ * chosen color itself whenever that color is one of the ones it hides.
+ */
 function AccentSwatches() {
     const accent = useSettings((s) => s.accent);
     const update = useSettings((s) => s.update);
     const ring = 'ring-2 ring-accent ring-offset-2 ring-offset-surface';
+    const featured = NODE_ACCENTS.filter((entry) => isFeatured(entry.id)).sort((a, b) => FEATURED_ACCENTS.indexOf(a.id) - FEATURED_ACCENTS.indexOf(b.id));
+    const rest = NODE_ACCENTS.filter((entry) => !isFeatured(entry.id));
+    const hidden = isFeatured(accent) ? null : accent;
+    const pick = (id: AccentId): void => update({ accent: id });
     return (
         <div className="flex items-center gap-2" role="radiogroup" aria-label="Accent">
-            <Tooltip label="Theme default">
-                <button
-                    role="radio"
-                    aria-checked={accent === null}
-                    aria-label="Theme default"
-                    className={clsx('grid h-6 w-6 place-items-center rounded-full border border-border-strong text-text-muted', accent === null && ring)}
-                    onClick={() => update({ accent: null })}
-                >
-                    {accent === null && <Icon icon={Check} size={12} />}
-                </button>
-            </Tooltip>
-            {NODE_ACCENTS.map((entry) => (
+            {featured.map((entry) => (
                 <Tooltip key={entry.id} label={entry.label}>
                     <button
                         role="radio"
                         aria-checked={accent === entry.id}
                         aria-label={entry.label}
-                        className={clsx('grid h-6 w-6 place-items-center rounded-full text-accent-text', accent === entry.id && ring)}
+                        className={clsx(ACCENT_SWATCH, accent === entry.id && ring)}
                         style={{ background: entry.color }}
-                        onClick={() => update({ accent: entry.id })}
+                        onClick={() => pick(entry.id)}
                     >
                         {accent === entry.id && <Icon icon={Check} size={12} />}
                     </button>
                 </Tooltip>
             ))}
+            <Menu.Root>
+                <Tooltip label="More colors">
+                    <Menu.Trigger
+                        aria-label="More colors"
+                        className={clsx(ACCENT_SWATCH, hidden ? ring : 'border border-border-strong text-text-muted')}
+                        style={hidden ? { background: accentColor(hidden) } : undefined}
+                    >
+                        <Icon icon={hidden ? Check : Ellipsis} size={12} />
+                    </Menu.Trigger>
+                </Tooltip>
+                <Menu.Portal>
+                    <Menu.Positioner className="z-[var(--z-popup)]" side="bottom" align="end" sideOffset={6}>
+                        <Menu.Popup className="menu-popup grid min-w-0 grid-cols-6 gap-1 p-2">
+                            {rest.map((entry) => (
+                                <Tooltip key={entry.id} label={entry.label}>
+                                    <Menu.Item
+                                        aria-label={entry.label}
+                                        className={clsx(ACCENT_SWATCH, accent === entry.id && ACCENT_SWATCH_PICKED)}
+                                        style={{ background: entry.color }}
+                                        onClick={() => pick(entry.id)}
+                                    >
+                                        {accent === entry.id && <Icon icon={Check} size={12} />}
+                                    </Menu.Item>
+                                </Tooltip>
+                            ))}
+                        </Menu.Popup>
+                    </Menu.Positioner>
+                </Menu.Portal>
+            </Menu.Root>
         </div>
     );
 }
@@ -76,7 +105,7 @@ export function AppearancePane() {
                 />
                 <SettingsRow
                     label="Accent"
-                    description="Selection rings, focus and the terminal cursor. The default is the theme's own."
+                    description="Selection rings, focus and the terminal cursor. Blue is the one Ruimte carries."
                     control={<AccentSwatches />}
                 />
             </SettingsSection>

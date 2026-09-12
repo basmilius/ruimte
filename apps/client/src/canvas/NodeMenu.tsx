@@ -1,3 +1,4 @@
+import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import {
     Check,
@@ -34,8 +35,9 @@ import { fileManagerName, useServer } from '@/state/server';
 import { useSessionRow } from '@/state/sessions';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
-import { MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
+import { ACCENT_SWATCH, ACCENT_SWATCH_PICKED, MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
+import { Tooltip } from '@/ui/Tooltip';
 
 /* The context menu of one node, the same from its frame and from its row in the sidebar. */
 export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }) {
@@ -196,17 +198,29 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                         </ContextMenu.SubmenuTrigger>
                         <ContextMenu.Portal>
                             <ContextMenu.Positioner className="z-[var(--z-popup)]" sideOffset={4} alignOffset={-4}>
-                                <ContextMenu.Popup className="menu-popup min-w-40">
-                                    <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().setNodeAccent(id, null)}>
-                                        <span className="h-3 w-3 rounded-full border border-border-strong" /> None
-                                        {!node.accent && <Icon icon={Check} size={14} className="ml-auto" />}
-                                    </ContextMenu.Item>
-                                    <ContextMenu.Separator className={MENU_SEPARATOR} />
-                                    {NODE_ACCENTS.map((a) => (
-                                        <ContextMenu.Item key={a.id} className="menu-item" onClick={() => useCanvas.getState().setNodeAccent(id, a.id)}>
-                                            <span className="h-3 w-3 rounded-full" style={{ background: a.color }} /> {a.label}
-                                            {node.accent === a.id && <Icon icon={Check} size={14} className="ml-auto" />}
+                                {/* Every hue at once, so the labels give way to a grid the eye
+                                    reads in one pass; the name of a color lives in its tooltip. */}
+                                <ContextMenu.Popup className="menu-popup grid min-w-0 grid-cols-6 gap-1 p-2">
+                                    <Tooltip label="None">
+                                        <ContextMenu.Item
+                                            aria-label="None"
+                                            className={clsx(ACCENT_SWATCH, 'border border-border-strong text-text-muted')}
+                                            onClick={() => useCanvas.getState().setNodeAccent(id, null)}
+                                        >
+                                            {!node.accent && <Icon icon={Check} size={12} />}
                                         </ContextMenu.Item>
+                                    </Tooltip>
+                                    {NODE_ACCENTS.map((a) => (
+                                        <Tooltip key={a.id} label={a.label}>
+                                            <ContextMenu.Item
+                                                aria-label={a.label}
+                                                className={clsx(ACCENT_SWATCH, node.accent === a.id && ACCENT_SWATCH_PICKED)}
+                                                style={{ background: a.color }}
+                                                onClick={() => useCanvas.getState().setNodeAccent(id, a.id)}
+                                            >
+                                                {node.accent === a.id && <Icon icon={Check} size={12} />}
+                                            </ContextMenu.Item>
+                                        </Tooltip>
                                     ))}
                                 </ContextMenu.Popup>
                             </ContextMenu.Positioner>

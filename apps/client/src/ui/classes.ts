@@ -26,3 +26,10 @@ export const MENU_SEPARATOR = 'mx-1.5 my-1 h-px bg-border';
 
 /* A chord next to a label: in a tooltip, in the palette and on the buttons of a pending question. */
 export const TOOLTIP_KBD = 'rounded-sm bg-surface-sunken px-[5px] py-px font-sans text-xs/[inherit] text-text-muted';
+
+/* One accent, drawn as the color itself: in the Appearance row, in its overflow and in the Color
+   submenu of a node. The name of the color is a tooltip, so the circle carries the tick alone. */
+export const ACCENT_SWATCH = 'grid h-6 w-6 place-items-center rounded-full text-accent-text';
+
+/* The same swatch, picked, inside a popup rather than on the surface behind it. */
+export const ACCENT_SWATCH_PICKED = 'ring-2 ring-accent ring-offset-1 ring-offset-surface-raised';

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { NODE_ACCENTS } from '@/canvas/accents';
+import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
 
 const STORAGE_KEY = 'ruimte.settings';
 
@@ -26,8 +26,8 @@ export const INTERFACE_FONT_SIZE_RANGE = { min: 14, max: 24, step: 1 } as const;
 export const FILES_TAB_LIMIT_RANGE = { min: 1, max: 20, step: 1 } as const;
 
 export interface Settings {
-    /* One of the node accents, or null for the theme's own accent. */
-    accent: string | null;
+    /* One of the node accents. Blue is the brand's own and the one a fresh client starts on. */
+    accent: AccentId;
     font: MonoFontId;
     /* Terminal font size in px; every terminal refits when it changes. */
     fontSize: number;
@@ -66,7 +66,7 @@ interface SettingsStore extends Settings {
 }
 
 const DEFAULT_SETTINGS: Settings = {
-    accent: null,
+    accent: 'blue',
     font: 'system',
     fontSize: 13,
     interfaceFontSize: 15,
@@ -101,26 +101,32 @@ const read = (): Settings => {
             filesTabLimit: clampSize(stored.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit),
             // A path is typed by hand and read back as one; anything else in the blob is no folder.
             browseStartFolder: typeof stored.browseStartFolder === 'string' ? stored.browseStartFolder : DEFAULT_SETTINGS.browseStartFolder,
-            sidebarScope: SIDEBAR_SCOPES.find((scope) => scope === stored.sidebarScope) ?? DEFAULT_SETTINGS.sidebarScope
+            sidebarScope: SIDEBAR_SCOPES.find((scope) => scope === stored.sidebarScope) ?? DEFAULT_SETTINGS.sidebarScope,
+            // A client that stored null for the theme's own accent, or an id that has since gone, lands on the brand's.
+            accent: NODE_ACCENTS.find((entry) => entry.id === stored.accent)?.id ?? DEFAULT_SETTINGS.accent
         };
     } catch {
         return DEFAULT_SETTINGS;
     }
 };
 
+/* The accent as channels: a token that needs it with an alpha writes `rgb(var(--accent-rgb) / a)`,
+   which still computes to a literal color for the reader that wants one, the terminal above all. */
+const channelsOf = (hex: string): string => {
+    const value = Number.parseInt(hex.slice(1), 16);
+    return `${(value >> 16) & 255} ${(value >> 8) & 255} ${value & 255}`;
+};
+
 /* The few tokens a person may change are set on the root, over the theme's own values. */
 const apply = (settings: Settings): void => {
     const root = document.documentElement.style;
     root.setProperty('font-size', `${settings.interfaceFontSize}px`);
-    const accent = NODE_ACCENTS.find((entry) => entry.id === settings.accent)?.color;
+    const accent = accentColor(settings.accent);
     if (accent) {
         root.setProperty('--accent', accent);
+        root.setProperty('--accent-rgb', channelsOf(accent));
         root.setProperty('--accent-soft', `color-mix(in srgb, ${accent} 16%, var(--surface))`);
         root.setProperty('--term-cursor', accent);
-    } else {
-        root.removeProperty('--accent');
-        root.removeProperty('--accent-soft');
-        root.removeProperty('--term-cursor');
     }
     const font = MONO_FONTS.find((entry) => entry.id === settings.font);
     if (font && font.id !== 'system') {
