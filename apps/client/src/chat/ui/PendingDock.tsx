@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import { Check, ChevronLeft, ChevronRight, MessageCircleQuestionMark, X } from 'lucide-react';
 import type { ChatApprovalItem, ChatQuestionItem } from '@ruimte/contracts';
 import { chatClient } from '@/chat';
+import { type PickedAnswers, answersToWire, toggleChoice } from '@/chat/logic/answers';
 import { approvalChanges, fileChanges, toolSummary } from '@/chat/logic/tools';
 import { DOCK_ICON_SIZE, toolIcon } from '@/chat/ui/icons';
 import { Button } from '@/ui/Button';
@@ -151,34 +152,28 @@ export function ApprovalDock({
 /* The agent's questions, one at a time, with the choices as buttons and room for a written answer. */
 export function QuestionDock({ chatId, item, more, focused }: { chatId: string; item: ChatQuestionItem; more: number; focused: boolean }) {
     const [index, setIndex] = useState(0);
-    const [answers, setAnswers] = useState<Record<string, string>>({});
+    const [answers, setAnswers] = useState<PickedAnswers>({});
     const [custom, setCustom] = useState('');
     const ref = useRef<HTMLDivElement>(null);
     const question = item.questions[Math.min(index, item.questions.length - 1)]!;
     const last = index >= item.questions.length - 1;
-    const answer = answers[question.id] ?? '';
+    const answer = answers[question.id] ?? [];
 
     const pick = (label: string): void => {
         if (!question.multiSelect) {
-            setAnswers((a) => ({ ...a, [question.id]: label }));
+            setAnswers((current) => ({ ...current, [question.id]: [label] }));
             return;
         }
-        const chosen = new Set(answer ? answer.split(', ') : []);
-        if (chosen.has(label)) {
-            chosen.delete(label);
-        } else {
-            chosen.add(label);
-        }
-        setAnswers((a) => ({ ...a, [question.id]: [...chosen].join(', ') }));
+        setAnswers((current) => ({ ...current, [question.id]: toggleChoice(current[question.id] ?? [], label) }));
     };
 
     const commit = (): void => {
-        const value = custom.trim() || answer;
-        const next = { ...answers, [question.id]: value };
+        const written = custom.trim();
+        const next = { ...answers, [question.id]: written ? [written] : answer };
         setAnswers(next);
         setCustom('');
         if (last) {
-            void chatClient.answer(chatId, item.requestId, next).catch(() => undefined);
+            void chatClient.answer(chatId, item.requestId, answersToWire(next)).catch(() => undefined);
         } else {
             setIndex(index + 1);
         }
@@ -192,11 +187,11 @@ export function QuestionDock({ chatId, item, more, focused }: { chatId: string; 
 
     /* Escape hands an empty answer back: the agent gets a reply either way, and the dock goes. */
     const dismiss = (): void => {
-        void chatClient.answer(chatId, item.requestId, { ...answers, [question.id]: answers[question.id] ?? '' }).catch(() => undefined);
+        void chatClient.answer(chatId, item.requestId, answersToWire({ ...answers, [question.id]: answers[question.id] ?? [] })).catch(() => undefined);
     };
 
-    const selected = new Set(answer ? answer.split(', ') : []);
-    const canCommit = custom.trim() !== '' || answer !== '';
+    const selected = new Set(answer);
+    const canCommit = custom.trim() !== '' || answer.length > 0;
     return (
         <div
             ref={ref}
@@ -267,7 +262,7 @@ export function QuestionDock({ chatId, item, more, focused }: { chatId: string; 
                     onChange={(e) => setCustom(e.target.value)}
                     onKeyDown={(e) => {
                         e.stopPropagation();
-                        if (e.key === 'Enter' && (custom.trim() || answer)) {
+                        if (e.key === 'Enter' && canCommit) {
                             commit();
                         }
                     }}
