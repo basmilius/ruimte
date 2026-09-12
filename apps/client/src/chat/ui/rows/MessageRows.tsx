@@ -139,7 +139,7 @@ export function NoteRow({ level, text }: { level: 'info' | 'warning' | 'error'; 
     return (
         <div
             className={clsx(
-                '-mx-1 mb-0.5 flex h-7 items-center gap-2 px-1 text-xs',
+                '-mx-1 mb-0.5 flex min-h-7 items-start gap-2 px-1 py-1 text-xs',
                 level === 'error' ? 'text-status-error' : level === 'warning' ? 'text-status-needs-you' : 'text-text-faint'
             )}
         >
@@ -215,7 +215,7 @@ export function QuestionHistoryRow({ item }: { item: ChatQuestionItem }) {
     return (
         <div>
             {item.questions.map((question) => (
-                <div key={question.id} className="-mx-1 mb-0.5 flex min-h-7 items-center gap-2 px-1 text-xs text-text-faint">
+                <div key={question.id} className="-mx-1 mb-0.5 flex min-h-7 items-start gap-2 px-1 py-1 text-xs text-text-faint">
                     <span className={ROW_GUTTER}>
                         <Icon icon={MessageCircleQuestionMark} size={12} />
                     </span>
