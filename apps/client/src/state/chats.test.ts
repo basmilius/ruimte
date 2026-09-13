@@ -22,6 +22,15 @@ const info = (patch: Partial<ChatInfo> = {}): ChatInfo => ({
 const user = (id: string, text: string): ChatItem => ({ id, kind: 'user', createdAt: 0, turnId: null, text });
 
 describe('applyEvent', () => {
+    test('a delta grows the text of a thinking item as it does an assistant one', () => {
+        const thinking: ChatItem = { id: 't', kind: 'thinking', createdAt: 0, turnId: null, text: 'Let me', streaming: true, endedAt: null };
+        const state: ChatState = { info: info(), items: { t: thinking }, order: ['t'] };
+
+        const next = applyEvent(state, { type: 'delta', itemId: 't', text: ' think' });
+
+        expect(next.items.t).toEqual({ ...thinking, text: 'Let me think' });
+    });
+
     test('a reset replaces the items and their order along with the info', () => {
         const state: ChatState = { info: info(), items: { a: user('a', 'old'), b: user('b', 'older') }, order: ['a', 'b'] };
         const cleared = info({

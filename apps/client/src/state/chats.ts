@@ -46,7 +46,7 @@ export const applyEvent = (state: ChatState, event: ChatEvent): ChatState => {
         }
         case 'delta': {
             const item = state.items[event.itemId];
-            if (item?.kind === 'assistant') {
+            if (item?.kind === 'assistant' || item?.kind === 'thinking') {
                 return { ...state, items: { ...state.items, [event.itemId]: { ...item, text: item.text + event.text } } };
             }
             if (item?.kind === 'tool' && item.state === 'running') {
