@@ -21,6 +21,7 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
         label: identity.label,
         nameSource: identity.nameSource,
         icon: identity.icon,
+        agentsDeleteAnyView: identity.agentsDeleteAnyView,
         platform: process.platform,
         version: host.version,
         reachability: access?.reachability ?? 'loopback',
@@ -35,7 +36,7 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
      * machines apart, so they belong to the machine and not to whichever client typed them.
      */
     dispatcher.register('endpoint.setIdentity', async (payload, client) => {
-        await identity.setIdentity(payload.name, payload.icon);
+        await identity.setIdentity(payload.name, payload.icon, payload.agentsDeleteAnyView);
         return info(client.access);
     });
 

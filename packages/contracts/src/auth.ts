@@ -21,6 +21,11 @@ export const EndpointInfoSchema = z.object({
        from a daemon that knows nothing of machine icons. An image is not among the kinds: a machine
        has no folder to keep one in. */
     icon: ProjectIconChoiceSchema.nullish(),
+    /* Whether an agent's `ruimte-context view delete` may remove any view of a project on this
+       machine, instead of only the views it made itself. The daemon enforces it, so it lives in
+       `endpoint.json` and not in a client's settings; a client only shows what it stands at.
+       Absent from a daemon that predates the canvas view verbs, which is the same as false. */
+    agentsDeleteAnyView: z.boolean().optional(),
     platform: z.string(),
     version: z.string(),
     reachability: ReachabilitySchema,
@@ -55,7 +60,10 @@ export type PairResult = z.infer<typeof PairResultSchema>;
  */
 export const EndpointSetIdentityPayloadSchema = z.object({
     name: z.string().min(1).max(80).nullable(),
-    icon: ProjectIconChoiceSchema.nullable()
+    icon: ProjectIconChoiceSchema.nullable(),
+    /* What an agent may delete, set from the same pane. Optional rather than nullable: the dialog
+       that names a machine does not touch it, so leaving it out leaves the machine as it stands. */
+    agentsDeleteAnyView: z.boolean().optional()
 });
 export type EndpointSetIdentityPayload = z.infer<typeof EndpointSetIdentityPayloadSchema>;
 
@@ -64,7 +72,8 @@ export const EndpointChangedEventSchema = z.object({
     id: z.string().min(1),
     label: z.string(),
     nameSource: EndpointNameSourceSchema,
-    icon: ProjectIconChoiceSchema.nullable()
+    icon: ProjectIconChoiceSchema.nullable(),
+    agentsDeleteAnyView: z.boolean().optional()
 });
 export type EndpointChangedEvent = z.infer<typeof EndpointChangedEventSchema>;
 

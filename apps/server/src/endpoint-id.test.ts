@@ -110,13 +110,32 @@ describe('readOrCreateEndpointIdentity', () => {
         const unsubscribe = identity.subscribe('c2', (event) => second.push(event));
 
         await identity.setIdentity('Studio', null);
-        expect(first).toEqual([{ event: 'endpoint.changed', payload: { id: identity.id, label: 'Studio', nameSource: 'chosen', icon: null } }]);
+        expect(first).toEqual([
+            { event: 'endpoint.changed', payload: { id: identity.id, label: 'Studio', nameSource: 'chosen', icon: null, agentsDeleteAnyView: false } }
+        ]);
         expect(second).toHaveLength(1);
 
         unsubscribe();
         await identity.setIdentity('Studio again', null);
         expect(first).toHaveLength(2);
         expect(second).toHaveLength(1);
+    });
+
+    test('what an agent may delete is off on a fresh machine and survives a restart', async () => {
+        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        expect(identity.agentsDeleteAnyView).toBe(false);
+
+        await identity.setIdentity('Studio', null, true);
+        expect(identity.agentsDeleteAnyView).toBe(true);
+        expect((await readOrCreateEndpointIdentity(home, 'the-hostname')).agentsDeleteAnyView).toBe(true);
+
+        // Naming the machine is a different control, so it leaves this one where it stands.
+        await identity.setIdentity('Studio again', null);
+        expect(identity.agentsDeleteAnyView).toBe(true);
+
+        await identity.setIdentity('Studio again', null, false);
+        const written = JSON.parse(await readFile(join(home, 'endpoint.json'), 'utf8')) as Record<string, unknown>;
+        expect(written.agentsDeleteAnyView).toBeUndefined();
     });
 
     test('a name or an icon that will not read is dropped, and the machine keeps its id', async () => {

@@ -23,7 +23,11 @@ const FileSchema = z.object({
        Both are dropped rather than refused when they will not read: an id and a key pair every
        client pairs on are worth more than a name, which a person can simply type again. */
     name: z.string().min(1).optional().catch(undefined),
-    icon: ProjectIconChoiceSchema.optional().catch(undefined)
+    icon: ProjectIconChoiceSchema.optional().catch(undefined),
+    /* Whether an agent's `view delete` may remove any view of a project on this machine instead of
+       only the ones it made. It is here rather than in a client's settings because the daemon is
+       what enforces it, and a client setting would hold nothing back. Absent is off. */
+    agentsDeleteAnyView: z.boolean().optional().catch(undefined)
 });
 
 interface IdentityOptions {
@@ -35,6 +39,7 @@ interface IdentityOptions {
     defaultName: string;
     name: string | null;
     icon: ProjectIconChoice | null;
+    agentsDeleteAnyView: boolean;
 }
 
 /*
@@ -53,6 +58,7 @@ export class EndpointIdentity {
     private readonly sinks = new Map<string, SessionSink>();
     private chosenName: string | null;
     private chosenIcon: ProjectIconChoice | null;
+    private deleteAnyView: boolean;
 
     constructor(options: IdentityOptions) {
         this.path = options.path;
@@ -62,6 +68,7 @@ export class EndpointIdentity {
         this.defaultName = options.defaultName;
         this.chosenName = options.name;
         this.chosenIcon = options.icon;
+        this.deleteAnyView = options.agentsDeleteAnyView;
     }
 
     /* What clients call this machine: the name a person gave it, or the one it started with. */
@@ -75,6 +82,12 @@ export class EndpointIdentity {
 
     get icon(): ProjectIconChoice | null {
         return this.chosenIcon;
+    }
+
+    /* What a canvas verb asks before it removes a view somebody else made. Off on a fresh machine:
+       an agent destroys only what it made until a person says otherwise. */
+    get agentsDeleteAnyView(): boolean {
+        return this.deleteAnyView;
     }
 
     /* Signs a message with the daemon's private key; the private half never leaves this object. */
@@ -91,14 +104,19 @@ export class EndpointIdentity {
         };
     }
 
-    /* A null name hands the machine back to the one it starts with; a null icon leaves it without one. */
-    async setIdentity(name: string | null, icon: ProjectIconChoice | null): Promise<void> {
+    /*
+     * A null name hands the machine back to the one it starts with; a null icon leaves it without
+     * one. What an agent may delete is left as it stands when it is not passed, since the dialog
+     * that names a machine is not the control that sets it.
+     */
+    async setIdentity(name: string | null, icon: ProjectIconChoice | null, agentsDeleteAnyView?: boolean): Promise<void> {
         this.chosenName = name;
         this.chosenIcon = icon;
+        this.deleteAnyView = agentsDeleteAnyView ?? this.deleteAnyView;
         await this.persist();
         const event: SessionEvent = {
             event: 'endpoint.changed',
-            payload: { id: this.id, label: this.label, nameSource: this.nameSource, icon: this.chosenIcon }
+            payload: { id: this.id, label: this.label, nameSource: this.nameSource, icon: this.chosenIcon, agentsDeleteAnyView: this.deleteAnyView }
         };
         for (const sink of this.sinks.values()) {
             sink(event);
@@ -113,7 +131,8 @@ export class EndpointIdentity {
             publicKey: this.publicKey,
             privateKey: this.privateKey,
             ...(this.chosenName === null ? {} : { name: this.chosenName }),
-            ...(this.chosenIcon === null ? {} : { icon: this.chosenIcon })
+            ...(this.chosenIcon === null ? {} : { icon: this.chosenIcon }),
+            ...(this.deleteAnyView ? { agentsDeleteAnyView: true } : {})
         };
         await mkdir(dirname(this.path), { recursive: true, mode: 0o700 });
         await writeAtomic(this.path, `${JSON.stringify(file, null, 2)}\n`, 0o600);
@@ -142,7 +161,8 @@ export const readOrCreateEndpointIdentity = async (home: string, defaultName: st
         ...(keys ?? generateKeyPair()),
         defaultName,
         name: file?.name ?? null,
-        icon: file?.icon ?? null
+        icon: file?.icon ?? null,
+        agentsDeleteAnyView: file?.agentsDeleteAnyView ?? false
     });
     if (!keys) {
         await identity.persist();

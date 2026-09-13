@@ -101,7 +101,13 @@ describe('auth handlers', () => {
         expect(heard).toEqual([
             {
                 event: 'endpoint.changed',
-                payload: { id: identity.id, label: 'The one under the desk', nameSource: 'chosen', icon: { kind: 'lucide', value: 'server' } }
+                payload: {
+                    id: identity.id,
+                    label: 'The one under the desk',
+                    nameSource: 'chosen',
+                    icon: { kind: 'lucide', value: 'server' },
+                    agentsDeleteAnyView: false
+                }
             }
         ]);
 
@@ -114,6 +120,15 @@ describe('auth handlers', () => {
         await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: 'Renamed', icon: null });
         const cleared = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: null, icon: null });
         expect(cleared).toMatchObject({ ok: true, result: { label: 'box', nameSource: 'default' } });
+    });
+
+    test('what an agent may delete travels with the machine and is left alone by a rename', async () => {
+        const freed = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: null, icon: null, agentsDeleteAnyView: true });
+        expect(freed).toMatchObject({ ok: true, result: { agentsDeleteAnyView: true } });
+
+        const renamed = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: 'Renamed', icon: null });
+        expect(renamed).toMatchObject({ ok: true, result: { agentsDeleteAnyView: true } });
+        expect(await ask({ reachability: 'loopback', sessionId: null }, 'endpoint.info')).toMatchObject({ ok: true, result: { agentsDeleteAnyView: true } });
     });
 
     test('a name nobody could read is refused before it reaches the file', async () => {
