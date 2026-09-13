@@ -76,6 +76,23 @@ describe('migrateLocal', () => {
         expect(migrateLocal(undefined)).toEqual({ activeViewId: null, views: {} });
         expect(migrateLocal({ camera: 'nope' })).toEqual({ activeViewId: null, views: {} });
     });
+
+    test('a split layout rides along, and a file without one is the one cell it always was', () => {
+        const layout = {
+            columns: [
+                { size: 0.5, cells: [{ viewId: 'backend', size: 1 }] },
+                { size: 0.5, cells: [{ viewId: 'notes', size: 1 }] }
+            ],
+            focus: { column: 1, cell: 0 }
+        };
+        const local = { activeViewId: 'notes', views: {}, layout };
+        expect(migrateLocal(local)).toEqual(local);
+        expect(migrateLocal({ activeViewId: 'notes', views: {} }).layout).toBeUndefined();
+    });
+
+    test('a layout that is not a layout loses the whole local file rather than half of it', () => {
+        expect(migrateLocal({ activeViewId: 'a', views: {}, layout: { columns: [] } })).toEqual({ activeViewId: null, views: {} });
+    });
 });
 
 describe('the invariants over a project', () => {

@@ -379,15 +379,45 @@ export const ProjectViewLocalSchema = z.object({
 });
 export type ProjectViewLocal = z.infer<typeof ProjectViewLocalSchema>;
 
+/* One cell shows exactly one view, and a view stands in at most one cell. */
+export const SplitCellSchema = z.object({
+    viewId: z.string().min(1),
+    // Share of its column's height; the cells of a column sum to 1.
+    size: z.number().positive()
+});
+export type SplitCell = z.infer<typeof SplitCellSchema>;
+
+export const SplitColumnSchema = z.object({
+    cells: z.array(SplitCellSchema).min(1),
+    // Share of the width; the columns sum to 1.
+    size: z.number().positive()
+});
+export type SplitColumn = z.infer<typeof SplitColumnSchema>;
+
+/*
+ * How the views of one project stood next to each other on this machine: columns of cells, never a
+ * free tree. The two limits live in the client's `shell/split.ts` and not here, so a file that was
+ * hand-edited past them parses and is trimmed on the way in rather than throwing the layout away.
+ */
+export const SplitLayoutSchema = z.object({
+    columns: z.array(SplitColumnSchema).min(1),
+    // Which cell has the focus; the sidebar reads the view in it as the active row.
+    focus: z.object({ column: z.number().int().nonnegative(), cell: z.number().int().nonnegative() })
+});
+export type SplitLayout = z.infer<typeof SplitLayoutSchema>;
+
 /*
  * Per machine, never in the shared file: which view was open, where its camera was and what had
- * focus, and how the panels stood. The panels are per project, not per view: they are about the
- * folder, so they stay put while you switch views.
+ * focus, how the views stood next to each other and how the panels stood. The panels are per
+ * project, not per view: they are about the folder, so they stay put while you switch views.
  */
 export const ProjectLocalSchema = z.object({
     activeViewId: z.string().nullable(),
     views: z.record(z.string(), ProjectViewLocalSchema),
-    panels: ProjectPanelsSchema.optional()
+    panels: ProjectPanelsSchema.optional(),
+    /* Absent means one column with one cell on `activeViewId`, which is every file written before
+       views could stand side by side and every project that has never been split. */
+    layout: SplitLayoutSchema.optional()
 });
 export type ProjectLocal = z.infer<typeof ProjectLocalSchema>;
 

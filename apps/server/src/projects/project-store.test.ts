@@ -124,13 +124,25 @@ describe('ProjectStore', () => {
             activeTab: '/scratch/notes.md',
             expandedDirs: ['src/']
         };
-        const local = { activeViewId: 'main', views: { main: { camera: { x: 1, y: 2, zoom: 0.5 }, focusedNodeId: 'n1' } }, panels };
+        /* The split is machine state like the camera and the panel widths: a grid built on one
+           screen has no business appearing on another, so it rides in this file and not in the project. */
+        const layout = {
+            columns: [
+                { size: 0.6, cells: [{ viewId: 'main', size: 1 }] },
+                { size: 0.4, cells: [{ viewId: 'notes', size: 1 }] }
+            ],
+            focus: { column: 1, cell: 0 }
+        };
+        const local = { activeViewId: 'main', views: { main: { camera: { x: 1, y: 2, zoom: 0.5 }, focusedNodeId: 'n1' } }, panels, layout };
         await store.saveLocal(opened.summary.projectId, local);
         const again = await store.openProject({ projectId: opened.summary.projectId });
         expect(again.local).toEqual(local);
         // A local file from before the panels lived in it still opens, on the defaults.
         await store.saveLocal(opened.summary.projectId, { activeViewId: null, views: {} });
-        expect((await store.openProject({ projectId: opened.summary.projectId })).local.panels).toBeUndefined();
+        const plain = (await store.openProject({ projectId: opened.summary.projectId })).local;
+        expect(plain.panels).toBeUndefined();
+        // A file from before the grid reads as the one cell it always was.
+        expect(plain.layout).toBeUndefined();
         const files = await readdir(join(home, 'projects'));
         expect(files).toContain(`${opened.summary.projectId}.local.json`);
 
