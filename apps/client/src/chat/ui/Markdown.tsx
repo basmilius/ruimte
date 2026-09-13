@@ -1,8 +1,10 @@
-import { memo, useEffect, useState, type ReactNode } from 'react';
+import { memo, useEffect, useMemo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import ReactMarkdown from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
+import { splitMarkdownBlocks } from '@/chat/ui/markdown-blocks';
+import { rehypeFadeWords } from '@/chat/ui/rehype-fade';
 import { openFileLink, useFileLinkCwd, useFileLinkTarget, type FileRef } from '@/shell/panels/file-links';
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
@@ -147,9 +149,57 @@ const components = {
     }
 };
 
+/* The same elements with a fence that is still open drawn as plain code: highlighting it again on
+   every delta is what made a code block lag behind the text around it. */
+const plainComponents = {
+    ...components,
+    code({ className, children }: { className?: string; children?: ReactNode }) {
+        const text = String(children ?? '');
+        if (className?.startsWith('language-') || text.includes('\n')) {
+            return (
+                <div className="chat-code">
+                    <pre>
+                        <code>{text.replace(/\n$/, '')}</code>
+                    </pre>
+                </div>
+            );
+        }
+        return <InlineCode text={text} />;
+    }
+};
+
 // Module constants, so a render never hands react-markdown a fresh array and makes it parse again.
 const PLUGINS = [remarkGfm];
 const PLUGINS_WITH_BREAKS = [remarkGfm, remarkBreaks];
+const FADE_PLUGINS = [rehypeFadeWords];
+const NO_PLUGINS: typeof FADE_PLUGINS = [];
+
+/* One block of a reply. It renders no element of its own, so prose still sees the paragraphs as
+   direct children and keeps its first and last margins. */
+const ReplyBlock = memo(function ReplyBlock({ text, fade, plain }: { text: string; fade: boolean; plain: boolean }) {
+    return (
+        <ReactMarkdown remarkPlugins={PLUGINS} rehypePlugins={fade ? FADE_PLUGINS : NO_PLUGINS} components={plain ? plainComponents : components}>
+            {text}
+        </ReactMarkdown>
+    );
+});
+
+/*
+ * A reply in a chat thread, parsed a block at a time so a delta only parses the block that grows.
+ * While it streams every new word fades in, and a fence that has not closed yet waits for shiki
+ * until it has.
+ */
+export const ReplyMarkdown = memo(function ReplyMarkdown({ text, streaming }: { text: string; streaming: boolean }) {
+    const blocks = useMemo(() => splitMarkdownBlocks(text), [text]);
+    return (
+        <div className="chat-markdown prose prose-sm max-w-none text-sm">
+            {blocks.map((block, index) => (
+                // Blocks only ever grow at the end, so the place of a block is a stable key.
+                <ReplyBlock key={index} text={block.text} fade={streaming} plain={streaming && block.openFence} />
+            ))}
+        </div>
+    );
+});
 
 /*
  * Assistant text as the model wrote it: GitHub-flavored markdown, code highlighted off the main

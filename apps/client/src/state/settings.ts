@@ -55,6 +55,9 @@ export interface Settings {
     drawingSnap: boolean;
     /* Whether the dock of a canvas or a drawing waits below the edge until the pointer comes near. */
     dockAutoHide: boolean;
+    /* Whether a reply in a chat appears word by word as it streams, or in one piece once it is done.
+       Only how this client draws it: the daemon sends the deltas either way. */
+    chatStreaming: boolean;
     /* Whether the desktop shell downloads an update as soon as it finds one, or waits to be asked. */
     updatesAutoDownload: boolean;
     /* Whether a view an agent asks for takes the place of the one you are working in. Off, which is
@@ -101,6 +104,7 @@ const DEFAULT_SETTINGS: Settings = {
     diffWhitespace: true,
     drawingSnap: false,
     dockAutoHide: false,
+    chatStreaming: true,
     updatesAutoDownload: true,
     agentsShowViews: false,
     agentsApprovals: true,
@@ -136,6 +140,7 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     // The two that start on, so only a stored `false` turns either of them off.
     agentsApprovals: stored.agentsApprovals !== false,
     agentsTurnNotify: stored.agentsTurnNotify !== false,
+    chatStreaming: stored.chatStreaming !== false,
     // Same rule as the block: nothing makes a sound unless a stored `true` asked for it.
     agentsTurnSound: stored.agentsTurnSound === true
 });
@@ -200,6 +205,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 diffWhitespace,
                 drawingSnap,
                 dockAutoHide,
+                chatStreaming,
                 updatesAutoDownload,
                 agentsShowViews,
                 agentsApprovals,
@@ -221,6 +227,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 diffWhitespace,
                 drawingSnap,
                 dockAutoHide,
+                chatStreaming,
                 updatesAutoDownload,
                 agentsShowViews,
                 agentsApprovals,

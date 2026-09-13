@@ -56,6 +56,14 @@ describe('being told a turn ended', () => {
     });
 });
 
+describe('streaming replies', () => {
+    test('starts on, and only a stored false turns it off', () => {
+        expect(settingsFrom({}).chatStreaming).toBe(true);
+        expect(settingsFrom({ chatStreaming: false }).chatStreaming).toBe(false);
+        expect(settingsFrom({ chatStreaming: 0 as unknown as boolean }).chatStreaming).toBe(true);
+    });
+});
+
 describe('the rest of a stored blob', () => {
     test('a key that is there is kept, and a size out of range is pulled back into it', () => {
         const settings = settingsFrom({ fontSize: 99, filesShowHidden: true, browseStartFolder: '/Users/bas' });

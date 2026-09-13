@@ -1024,6 +1024,27 @@ decided.
   Cmd+, as the menu's accelerator macOS takes the key before the page sees it; both do the same thing,
   and the chord in `app-chords.ts` stays for the browser.
 
+### Streaming in chats
+
+- Replies came in chunks although every delta already arrived on its own: a delta often holds several
+  tokens and was on screen the moment it landed, half-written markdown changed shape, and every delta
+  parsed the whole reply again (and highlighted an open code block again). The deltas stay as they
+  are and nothing changes on the wire; the client spreads what arrived over the frames after it (a
+  sixth of the gap per frame, at least two characters) and fades every new word in over 220 ms.
+- The fade needs no keys of its own. `hast-util-to-jsx-runtime` keys an element by its tag and its
+  place among the siblings with the same tag, and words only arrive at the end, so a span on screen
+  keeps its element and its animation; `rehype-fade.test.ts` holds that down. Once the item is done
+  it renders without spans, which looks the same because every fade is over by then.
+- A reply is cut into blocks at blank lines outside a fence, and not before a list item or an
+  indented line, so a loose list or a paragraph inside a list item stays one piece; a text with a
+  reference definition stays whole. The split is the same while streaming and after, so the end of a
+  stream moves nothing.
+- The client ignored deltas on thinking items, so the thought stood still until it closed. It now
+  grows like a reply, under the same switch.
+- "Stream replies" is one switch for everything an agent writes, the thought included, and it is the
+  client's: the daemon keeps sending deltas either way. Off, a reply fades in whole only on a row that
+  saw it being written, so scrolling back through an old thread does not animate it.
+
 ### Skipped on purpose
 
 Skipped: kanban, loop and trigger nodes, minimap, dictation, notch HUD, agent-to-agent

@@ -106,6 +106,7 @@ export function AgentsPane() {
     const agentsKeepAwake = useSettings((s) => s.agentsKeepAwake);
     const agentsTurnNotify = useSettings((s) => s.agentsTurnNotify);
     const agentsTurnSound = useSettings((s) => s.agentsTurnSound);
+    const chatStreaming = useSettings((s) => s.chatStreaming);
     const update = useSettings((s) => s.update);
     const withModels = providers.filter((provider) => provider.models.length > 0);
 
@@ -209,6 +210,13 @@ export function AgentsPane() {
                         }
                     />
                 )}
+            </SettingsSection>
+            <SettingsSection title="Chats" description="How a chat node on this client draws what an agent writes.">
+                <SettingsRow
+                    label="Stream replies"
+                    description="On, a reply appears word by word as the agent writes it. Off, it appears in one piece once it is done."
+                    control={<Toggle checked={chatStreaming} onChange={(checked) => update({ chatStreaming: checked })} label="Stream replies" />}
+                />
             </SettingsSection>
             <SettingsSection title="Providers" description="What the machine found on its PATH. Install a CLI and restart Ruimte there to add one.">
                 {providers.length === 0 &&
