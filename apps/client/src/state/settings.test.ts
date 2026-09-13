@@ -13,6 +13,18 @@ describe('a view an agent asks for', () => {
     });
 });
 
+describe('keeping the machine awake', () => {
+    test('is off until a person turns it on, since a laptop that never sleeps is a decision', () => {
+        expect(settingsFrom({}).agentsKeepAwake).toBe(false);
+        expect(settingsFrom({ agentsShowViews: true }).agentsKeepAwake).toBe(false);
+    });
+
+    test('is on only for a stored true, never for whatever else is under the key', () => {
+        expect(settingsFrom({ agentsKeepAwake: true }).agentsKeepAwake).toBe(true);
+        expect(settingsFrom({ agentsKeepAwake: 1 as unknown as boolean }).agentsKeepAwake).toBe(false);
+    });
+});
+
 describe('the rest of a stored blob', () => {
     test('a key that is there is kept, and a size out of range is pulled back into it', () => {
         const settings = settingsFrom({ fontSize: 99, filesShowHidden: true, browseStartFolder: '/Users/bas' });

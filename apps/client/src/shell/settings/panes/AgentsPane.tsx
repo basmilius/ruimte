@@ -8,6 +8,7 @@ import {
     type ChatPreferences
 } from '@/chat/preferences';
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
+import { canKeepAwake } from '@/desktop/bridge';
 import { DeleteAnyViewSection } from '@/shell/settings/DeleteAnyViewSection';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -101,6 +102,7 @@ export function AgentsPane() {
     const loaded = useProviders((s) => s.loaded);
     const preferences = useChatPreferences();
     const agentsShowViews = useSettings((s) => s.agentsShowViews);
+    const agentsKeepAwake = useSettings((s) => s.agentsKeepAwake);
     const update = useSettings((s) => s.update);
     const withModels = providers.filter((provider) => provider.models.length > 0);
 
@@ -158,6 +160,25 @@ export function AgentsPane() {
                 />
             </SettingsSection>
             <DeleteAnyViewSection />
+            {/* A browser cannot keep anything awake, so it is told nothing about a switch it has no way to honor. */}
+            {canKeepAwake() && (
+                <SettingsSection
+                    title="While an agent works"
+                    description="About the computer this window runs on, so it stays with this app and travels nowhere."
+                >
+                    <SettingsRow
+                        label="Keep this machine awake"
+                        description="Off, the computer sleeps as it always does and an agent running on it stops until you come back. On, it stays awake from the first agent that starts until the last one settles. The display still goes dark."
+                        control={
+                            <Toggle
+                                checked={agentsKeepAwake}
+                                onChange={(checked) => update({ agentsKeepAwake: checked })}
+                                label="Keep this machine awake while an agent works"
+                            />
+                        }
+                    />
+                </SettingsSection>
+            )}
             <SettingsSection title="Providers" description="What the machine found on its PATH. Install a CLI and restart Ruimte there to add one.">
                 {providers.length === 0 &&
                     (loaded ? (

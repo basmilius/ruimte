@@ -62,6 +62,10 @@ export interface Settings {
        Making is shared and the daemon enforces it; looking is one person at one screen, so moving
        someone's eyes is the one thing that is asked rather than done. */
     agentsShowViews: boolean;
+    /* Whether this machine stays awake while an agent works. About the computer this window runs on
+       and nothing else, which is why it sits with the client and not with a project or a daemon.
+       Off to start with: a laptop that never sleeps is not something to arrange behind someone. */
+    agentsKeepAwake: boolean;
 }
 
 interface SettingsStore extends Settings {
@@ -85,7 +89,8 @@ const DEFAULT_SETTINGS: Settings = {
     drawingSnap: false,
     dockAutoHide: false,
     updatesAutoDownload: true,
-    agentsShowViews: false
+    agentsShowViews: false,
+    agentsKeepAwake: false
 };
 
 // Rounded as well as clamped: the stepper used to move in halves, so a browser can still hand back
@@ -109,7 +114,9 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     // A client that stored null for the theme's own accent, or an id that has since gone, lands on the brand's.
     accent: NODE_ACCENTS.find((entry) => entry.id === stored.accent)?.id ?? DEFAULT_SETTINGS.accent,
     // Nothing moves a person's eyes unless that person said so, so only a stored `true` turns it on.
-    agentsShowViews: stored.agentsShowViews === true
+    agentsShowViews: stored.agentsShowViews === true,
+    // Same rule: nothing keeps a laptop from sleeping unless a stored `true` asked for it.
+    agentsKeepAwake: stored.agentsKeepAwake === true
 });
 
 const read = (): Settings => {
@@ -173,7 +180,8 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 drawingSnap,
                 dockAutoHide,
                 updatesAutoDownload,
-                agentsShowViews
+                agentsShowViews,
+                agentsKeepAwake
             } = get();
             const next: Settings = {
                 accent,
@@ -191,6 +199,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 dockAutoHide,
                 updatesAutoDownload,
                 agentsShowViews,
+                agentsKeepAwake,
                 ...patch
             };
             next.fontSize = clampSize(next.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize);
