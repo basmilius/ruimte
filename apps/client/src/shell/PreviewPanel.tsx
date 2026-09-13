@@ -139,7 +139,7 @@ export function PreviewPanel() {
                         window controls' inset when it is the rightmost column on its own. */}
                     <header
                         className={clsx(
-                            'app-drag flex h-12 shrink-0 items-center gap-2 border-b border-border pr-3',
+                            'app-drag flex h-12 shrink-0 items-center gap-2 border-b border-border pr-2',
                             open && !panelOpen && hasOverlayControls() && 'toolbar-overlay-inset'
                         )}
                     >

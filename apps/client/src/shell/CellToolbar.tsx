@@ -92,7 +92,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                 draggable={grabbable}
                 aria-label={`${view.name ?? 'View'}, drag to move it to another cell`}
                 className={clsx(
-                    'flex h-10 shrink-0 cursor-grab items-center gap-2 overflow-hidden border-b border-border px-2 text-xs active:cursor-grabbing',
+                    'flex h-10 shrink-0 cursor-grab items-center gap-2 overflow-hidden border-b border-border pr-1.5 pl-2 text-xs active:cursor-grabbing',
                     focused ? 'bg-surface text-text' : 'bg-surface-idle text-text-muted'
                 )}
                 onPointerDown={(event) => setGrabbable(!(event.target as HTMLElement | null)?.closest(CONTROLS))}

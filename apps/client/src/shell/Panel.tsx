@@ -100,7 +100,7 @@ export function Panel() {
                         would land under the native window controls; the inset keeps their width free. */}
                     <header
                         className={clsx(
-                            'app-drag flex h-12 shrink-0 items-center gap-2 border-b border-border px-3',
+                            'app-drag flex h-12 shrink-0 items-center gap-2 border-b border-border pr-2 pl-3',
                             open && hasOverlayControls() && 'toolbar-overlay-inset'
                         )}
                     >
