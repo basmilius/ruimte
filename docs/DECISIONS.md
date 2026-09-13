@@ -808,6 +808,36 @@ follows is what the report left open and what the build decided.
   the way the Updates pane hides auto-download where there is no updater: a switch that cannot do
   what it says is worse than no switch.
 
+### Attention
+
+- **Unseen is about the window, the cell and the camera, and not about which cell has the focus.** A
+  turn that ends counts as seen when this window has the keyboard, the node's view stands in a cell
+  of the grid, and (on a canvas) the node falls inside what the camera has in front of it at a zoom
+  of `READABLE_ZOOM` or more. Nine cells are all in front of the same pair of eyes, so the cell with
+  the focus is no part of it: marking the eight beside it would make a mark out of every turn that
+  ends in a split. The renderer's culling margin is no part of it either. It keeps a node alive half
+  a screen past the edge so a pan does not thrash, which is not the same as a person having read it.
+- **Marking and clearing are one rule read twice.** `nextUnseen` takes the marks, adds what just
+  ended, and subtracts everything in sight, so a turn that ends in front of somebody never leaves a
+  mark and a marked node loses it the moment it comes into sight. Nothing is on a timer, and nothing
+  has to remember to clear: every pass counts the project from scratch, so a subscription that misses
+  a change delays a clear by one event instead of leaving a stale mark behind.
+- **A turn that stopped to ask did not end.** `needs-you` is a person's turn and the needs-you count
+  is already about it, so it never becomes a finished mark. That is also what keeps the dock badge
+  from counting one node twice.
+- **The client counts, the shell displays.** One push (`setAgentActivity`) carries the working count
+  and the attention count, and the shell keeps the last one for its dock badge and its quit dialog.
+  A pull would have had `before-quit` waiting on a renderer that may be busy or gone, and counting in
+  the shell would have meant a second answer to "is this an agent or a shell somebody left open".
+  The badge is macOS and Linux; Windows has no dock to put a number on.
+- **The notification starts on and its sound starts off.** It only ever fires while this window is
+  not the one in front, which is to say after somebody walked away, so it cannot land on top of what
+  they were doing and there is nothing to protect them from by default. A sound can: it arrives in
+  whatever they walked away to, which may be a call. The same sound setting covers the needs-you
+  notification, so a person has one answer to "should this machine make noise" rather than two.
+- **Quitting asks once.** `before-quit` fires again for the same quit, so the answer is remembered;
+  a window that is already closed is never asked, since the client that would have counted is gone.
+
 ### Skipped on purpose
 
 Skipped: kanban, loop and trigger nodes, minimap, dictation, notch HUD, agent-to-agent
@@ -819,13 +849,16 @@ Also decided against for now: a scheduler, checkpoint restore and telemetry.
 
 ## Gotchas already paid for
 
-- **`nodeStatus` calls an attached terminal "running", and a power block may not.** A terminal node
-  with no agent in it reports `running` the moment this client is attached, which every open
-  terminal is, so the status summary's "N agents working" counts shells waiting at a prompt too.
-  Reusing that for "keep this machine awake" would have pinned a laptop open for the length of
-  every session. `agentsWorking` therefore reads the agent record itself and only while it is
-  `live`: a CLI that went down with its shell leaves the status it had behind, and `needs-you` is a
-  person's turn rather than work. And of Electron's two blockers only `prevent-app-suspension` stops
+- **`nodeStatus` calls an attached terminal "running", and nothing about agents may.** A terminal
+  node with no agent in it reports `running` the moment this client is attached, which every open
+  terminal is, so the status summary's "N agents working" used to count shells waiting at a prompt.
+  Reusing that for "keep this machine awake" would have pinned a laptop open for the length of every
+  session. `state/agent-work.ts` is the honest answer and now the only one: it reads the agent record
+  itself and only while it is `live`, since a CLI that went down with its shell leaves the status it
+  had behind, and `needs-you` is a person's turn rather than work. The pill, the dock badge and the
+  quit dialog all count through it, which is also what stopped the pill from saying three where the
+  quit dialog said one. `nodeStatus` keeps its meaning for the dot on a node, which is about the
+  session and not about an agent. And of Electron's two blockers only `prevent-app-suspension` stops
   the system from sleeping; `prevent-display-sleep` keeps the screen lit, which an agent does not
   need and a person did not ask for.
 
@@ -990,9 +1023,11 @@ a day, several days. Each of the larger ones becomes a GitHub issue when it star
 
    What is left of this entry is the half that was always behind the verbs. Hook-reply approvals
    for terminal agents: hold Claude's `PermissionRequest` on the daemon and answer it from the node
-   header or the notification. And attention: an unseen dot on a node whose turn settled while it
-   was not focused, a "Finished" count in the status summary, a turn-done notification with a sound
-   toggle, a dock badge, confirm before quitting. Keeping the machine awake is built and is below.
+   header or the notification. Of attention, everything but the dot itself is built and is below: the
+   state behind the mark is `apps/client/src/state/attention.ts`, and what is left is a node header
+   drawing it, which is `useUnseen(nodeId)` and nothing more. The "Finished" count, the turn-done
+   notification with its sound toggle, the dock badge and the quit guard are done, and so is keeping
+   the machine awake.
 7. **Terminal basics**, about two days. Search on Cmd+F, clickable file paths and URLs across
    wrapped rows, OSC 52 clipboard, a dropped file types its quoted path, Unicode 11 widths on both
    xterms, "Clear" in the node menu. Then "Send to linked chat" (a terminal selection lands as a
