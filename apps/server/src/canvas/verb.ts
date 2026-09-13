@@ -253,6 +253,10 @@ export const lengthOf = (input: unknown): number => {
 /* Said wherever a verb takes a name, since neither half of it can be read off the canvas. */
 export const TITLE_LINE = `titles\tA name is at most ${MAX_TITLE_LENGTH} characters and is never unique: two nodes may carry the same one, and an id is what names a node`;
 
+/* A flag a verb cannot do without: the same sentence whether it was left out or left empty, since
+   zod's own ("expected string, received undefined") names neither the flag nor what goes in it. */
+export const requiredField = (needs: string): z.ZodString => z.string({ error: needs }).min(1, needs);
+
 /* One title schema for every verb that takes one, so the same limit is refused in the same sentence. */
 export const titleField = (name: string, needs: string): z.ZodString =>
     z

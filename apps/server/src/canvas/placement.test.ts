@@ -1,6 +1,19 @@
 import { describe, expect, test } from 'bun:test';
 import { GROUP_HEADER, GROUP_PADDING, type ProjectNode } from '@ruimte/contracts';
-import { PLACEMENT_GAP, TEAM_COLUMNS, groupMembers, placeBeside, placeFree, placeInGroup, placeTeam } from './placement.ts';
+import {
+    ARRANGE_LAYOUTS,
+    PLACEMENT_GAP,
+    TEAM_COLUMNS,
+    arrangeRects,
+    containersOf,
+    gridColumns,
+    groupMembers,
+    placeBeside,
+    placeFree,
+    placeInGroup,
+    placeTeam,
+    type Rect
+} from './placement.ts';
 
 const size = { w: 320, h: 240 };
 
@@ -134,5 +147,84 @@ describe('placeTeam', () => {
         const { rects, frame } = placeTeam([chat]);
         expect(rects[0]).toEqual({ x: GROUP_PADDING, y: GROUP_HEADER + GROUP_PADDING, ...chat });
         expect(frame).toEqual({ w: GROUP_PADDING * 2 + 480, h: GROUP_HEADER + GROUP_PADDING * 2 + 520 });
+    });
+});
+
+describe('arrangeRects', () => {
+    const rect = (x: number, y: number, w = 200, h = 100): Rect => ({ x, y, w, h });
+
+    const overlapping = (rects: readonly Rect[]): boolean =>
+        rects.some((one, index) =>
+            rects.some(
+                (other, otherIndex) =>
+                    index !== otherIndex && one.x < other.x + other.w && other.x < one.x + one.w && one.y < other.y + other.h && other.y < one.y + one.h
+            )
+        );
+
+    test('a grid without --cols is as square as the count allows and starts where the nodes already stood', () => {
+        const rects = [rect(400, 300), rect(-20, 1000), rect(900, 20), rect(50, 50)];
+        const placed = arrangeRects(rects, 'grid');
+        expect(gridColumns(4)).toBe(2);
+        expect(placed.map((one) => one.x)).toEqual([-20, 220, -20, 220]);
+        expect(placed.map((one) => one.y)).toEqual([20, 20, 160, 160]);
+        expect(overlapping(placed)).toBe(false);
+    });
+
+    test('--cols is how many go on a row, and the last row is as short as what is left', () => {
+        const rects = Array.from({ length: 5 }, () => rect(0, 0));
+        const placed = arrangeRects(rects, 'grid', 3);
+        expect(placed.map((one) => one.x)).toEqual([0, 240, 480, 0, 240]);
+        expect(placed.map((one) => one.y)).toEqual([0, 0, 0, 140, 140]);
+    });
+
+    test('a row is one row and a column is one column, whatever --cols would have said', () => {
+        const rects = Array.from({ length: 3 }, () => rect(10, 10));
+        expect(arrangeRects(rects, 'row').map((one) => one.y)).toEqual([10, 10, 10]);
+        expect(arrangeRects(rects, 'row').map((one) => one.x)).toEqual([10, 250, 490]);
+        expect(arrangeRects(rects, 'column').map((one) => one.x)).toEqual([10, 10, 10]);
+        expect(arrangeRects(rects, 'column').map((one) => one.y)).toEqual([10, 150, 290]);
+    });
+
+    test('one node stays exactly where it is, in every layout', () => {
+        for (const layout of ARRANGE_LAYOUTS) {
+            expect(arrangeRects([rect(123, 456)], layout)).toEqual([rect(123, 456)]);
+        }
+        expect(arrangeRects([], 'grid')).toEqual([]);
+    });
+
+    test('a column is as wide as its widest node and a row as tall as its tallest', () => {
+        const placed = arrangeRects([rect(0, 0, 560, 360), rect(0, 0, 320, 240), rect(0, 0, 200, 520), rect(0, 0, 480, 100)], 'grid', 2);
+        expect(placed.map((one) => one.x)).toEqual([0, 600, 0, 600]);
+        expect(placed.map((one) => one.y)).toEqual([0, 0, 400, 400]);
+        expect(overlapping(placed)).toBe(false);
+    });
+
+    test('the corner it starts from is the top left of the box the nodes already occupy', () => {
+        const placed = arrangeRects([rect(1000, 40), rect(-300.4, 700.6)], 'row');
+        expect(placed.map((one) => one.x)).toEqual([-300, -60]);
+        expect(placed.map((one) => one.y)).toEqual([40, 40]);
+    });
+});
+
+describe('containersOf', () => {
+    const outer: ProjectNode = { id: 'outer', kind: 'group', title: 'Outer', x: 0, y: 0, w: 1000, h: 1000 };
+    const inner: ProjectNode = { id: 'inner', kind: 'group', title: 'Inner', x: 100, y: 100, w: 400, h: 400 };
+    const deep: ProjectNode = { id: 'deep', kind: 'note', title: 'deep', x: 150, y: 150, w: 100, h: 100 };
+    const loose: ProjectNode = { id: 'loose', kind: 'note', title: 'loose', x: 600, y: 600, w: 100, h: 100 };
+    const away: ProjectNode = { id: 'away', kind: 'note', title: 'away', x: 5000, y: 0, w: 100, h: 100 };
+
+    test('nested frames resolve to the innermost one and a node on the canvas is in none', () => {
+        const containers = containersOf([outer, inner, deep, loose, away]);
+        expect(containers.get('deep')?.id).toBe('inner');
+        expect(containers.get('inner')?.id).toBe('outer');
+        expect(containers.get('loose')?.id).toBe('outer');
+        expect(containers.has('away')).toBe(false);
+    });
+
+    test('a collapsed frame is what the file says it holds', () => {
+        const folded: ProjectNode = { ...inner, collapsed: true, h: 39, expandedHeight: 400, memberIds: ['away'] };
+        const containers = containersOf([folded, deep, away]);
+        expect(containers.get('away')?.id).toBe('inner');
+        expect(containers.has('deep')).toBe(false);
     });
 });

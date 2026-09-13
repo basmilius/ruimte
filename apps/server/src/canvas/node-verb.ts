@@ -104,6 +104,27 @@ export const nodeLines = (canvas: ProjectCanvasView): string[] => {
     );
 };
 
+/*
+ * The ids of a comma-separated flag, in the order they were written and without the repeats: naming
+ * a node twice is one node, the way a person's selection holds it once.
+ */
+export const idList = (raw: string, flag: string): string[] => {
+    const ids = [...new Set(raw.split(',').map((id) => id.trim()))];
+    if (ids.some((id) => id === '')) {
+        throw new VerbRefusal('bad-arguments', `${flag} has an empty id in it; write the ids separated by commas, as a,b,c`);
+    }
+    return ids;
+};
+
+/* The nodes those ids name on this canvas, refused with what is on it when one of them names none. */
+export const nodesNamed = (canvas: ProjectCanvasView, ids: readonly string[]): ProjectNode[] => {
+    const missing = ids.filter((id) => !canvas.nodes.some((node) => node.id === id));
+    if (missing.length > 0) {
+        throw new VerbRefusal('unknown-node', `${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} not a node on ${canvas.id}`, nodeLines(canvas));
+    }
+    return ids.map((id) => canvas.nodes.find((node) => node.id === id)!);
+};
+
 /* Every id the project already uses, since a node id is also a session id and a view id is too. */
 const idsIn = (content: ProjectContent): Set<string> => {
     const ids = new Set<string>();

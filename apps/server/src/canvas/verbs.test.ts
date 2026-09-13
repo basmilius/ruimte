@@ -3,13 +3,18 @@ import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promis
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+    CANVAS_GRID,
     ContextSourceSchema,
+    GROUP_HEADER,
+    GROUP_PADDING,
+    NODE_ACCENT_NAMES,
     NODE_SIZE,
     PROJECT_ICON_NAMES,
     type AgentKind,
     type ProjectCanvasView,
     type ProjectContent,
     type ProjectDocument,
+    type ProjectNode,
     type ProjectView
 } from '@ruimte/contracts';
 import { SESSION_VARIABLES } from '../config.ts';
@@ -1513,5 +1518,214 @@ describe('open', () => {
     test('a session that is in no project of this machine shows nobody anything', async () => {
         expect((await post('open', ['board'], 'stray')).lines[0]).toStartWith('refused\tnot-in-project\t');
         expect(watching).toEqual([]);
+    });
+});
+
+/* Nodes put on the main canvas beside the two the fixture has, for the verbs that move what is there. */
+const seed = async (...nodes: ProjectNode[]): Promise<void> => {
+    const next = content();
+    (next.views[0] as ProjectCanvasView).nodes.push(...nodes);
+    await store.mutate(projectId, () => ({ content: next, result: null }));
+};
+
+const box = (id: string, x: number, y: number, extra: Partial<ProjectNode> = {}): ProjectNode => ({
+    id,
+    kind: 'note',
+    title: id,
+    x,
+    y,
+    w: 200,
+    h: 100,
+    ...extra
+});
+
+const nodeOnDisk = async (id: string): Promise<ProjectNode | undefined> => (await canvasOnDisk()).nodes.find((node) => node.id === id);
+
+describe('group', () => {
+    test('draws the frame a person grouping the same selection would have drawn', async () => {
+        await seed(box('a', 400, 400), box('b', 800, 600));
+        const { status, lines } = await post('group', ['--nodes', 'a,b']);
+        expect(status).toBe(200);
+        const [id, kind, title, view, members] = lines[0]!.split('\t');
+        expect([kind, title, view, members]).toEqual(['group', 'Group', 'main', '2']);
+        // The client's own arithmetic (`groupSelection` in apps/client/src/state/canvas.ts), written out.
+        const snap = (value: number): number => Math.round(value / CANVAS_GRID) * CANVAS_GRID;
+        expect(await nodeOnDisk(id!)).toEqual({
+            id: id!,
+            kind: 'group',
+            title: 'Group',
+            x: snap(400 - GROUP_PADDING),
+            y: snap(400 - GROUP_PADDING - GROUP_HEADER),
+            w: snap(600 + GROUP_PADDING * 2),
+            h: snap(300 + GROUP_PADDING * 2 + GROUP_HEADER)
+        });
+    });
+
+    test('--label and --color are the ones the client offers', async () => {
+        await seed(box('a', 400, 400), box('b', 800, 600));
+        const { lines } = await post('group', ['--nodes', 'a,b', '--label', 'Parser work', '--color', 'violet']);
+        expect(lines[0]!.split('\t')[2]).toBe('Parser work');
+        expect(await nodeOnDisk(lines[0]!.split('\t')[0]!)).toMatchObject({ title: 'Parser work', accent: 'violet' });
+
+        const bad = await post('group', ['--nodes', 'a', '--color', '#ff0000']);
+        expect(bad.status).toBe(422);
+        expect(bad.lines[0]).toBe(`refused\tunknown-color\t#ff0000 is not one of the ${NODE_ACCENT_NAMES.length} colors a frame takes`);
+        expect(bad.lines[1]).toBe(['colors', ...NODE_ACCENT_NAMES].join('\t'));
+    });
+
+    test('says which nodes it caught that were not named', async () => {
+        await seed(box('a', 400, 400), box('b', 800, 600), box('between', 600, 500));
+        const { lines } = await post('group', ['--nodes', 'a,b']);
+        expect(lines[0]!.split('\t')[4]).toBe('3');
+        expect(lines.slice(1)).toEqual(['also\tbetween\tnote\tbetween']);
+    });
+
+    test('refuses a group, since the client leaves one out of a selection too', async () => {
+        await seed(box('a', 400, 400), box('frame', 300, 300, { kind: 'group', w: 800, h: 800 }));
+        const { status, lines } = await post('group', ['--nodes', 'a,frame']);
+        expect(status).toBe(422);
+        expect(lines[0]).toStartWith('refused\tnot-groupable\tframe is a group');
+        expect((await canvasOnDisk()).nodes.filter((node) => node.kind === 'group')).toHaveLength(1);
+    });
+
+    test('refuses nodes that do not stand in the same place already', async () => {
+        await seed(box('inside', 400, 400), box('outside', 4000, 4000), box('frame', 300, 300, { kind: 'group', w: 800, h: 800 }));
+        const { status, lines } = await post('group', ['--nodes', 'inside,outside']);
+        expect(status).toBe(422);
+        expect(lines[0]).toBe(
+            'refused\tdifferent-groups\tinside stands in group frame and outside stands on the canvas itself; a frame goes around nodes that are already in the same place'
+        );
+    });
+
+    test('inside a folded group the new frame joins its members in the file', async () => {
+        await seed(
+            box('one', 400, 400),
+            box('two', 700, 400),
+            box('frame', 300, 300, { kind: 'group', w: 800, h: 39, collapsed: true, expandedHeight: 800, memberIds: ['one', 'two'] })
+        );
+        const { lines } = await post('group', ['--nodes', 'one,two']);
+        const id = lines[0]!.split('\t')[0]!;
+        expect((await nodeOnDisk('frame'))!.memberIds).toEqual(['one', 'two', id]);
+    });
+
+    test('refuses an id that is not on the canvas, and says nothing about titles', async () => {
+        await seed(box('a', 400, 400));
+        const missing = await post('group', ['--nodes', 'a,ghost']);
+        expect(missing.lines[0]).toBe('refused\tunknown-node\tghost is not a node on main');
+        expect(missing.lines.slice(1)).toContain('node\ta\tnote\ta');
+        expect((await post('group', ['--nodes', 'a,'])).lines[0]).toStartWith('refused\tbad-arguments\t');
+        expect((await post('group', [])).lines[0]).toBe('refused\tbad-arguments\t--nodes needs one or more node ids, separated by commas');
+        expect((await post('group', ['--nodes', 'a', '--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
+    });
+
+    test('works on another canvas than the caller is on, and only through --view', async () => {
+        await store.mutate(projectId, (current) => {
+            const next = structuredClone(current);
+            (next.views[2] as ProjectCanvasView).nodes.push(box('far', 0, 0));
+            return { content: next, result: null };
+        });
+        expect((await post('group', ['--nodes', 'far'])).lines[0]).toBe('refused\tunknown-node\tfar is not a node on main');
+        const { lines } = await post('group', ['--nodes', 'far', '--view', 'board']);
+        expect(lines[0]!.split('\t')[3]).toBe('board');
+    });
+});
+
+describe('arrange', () => {
+    test('lays the nodes out from the corner they already occupied and prints where each one went', async () => {
+        await seed(box('a', 1000, 1000), box('b', 4000, 2000), box('c', 2000, 3000));
+        expect((await post('nodes', [])).lines).toContain('b\tnote\tb\t4000\t2000\t200\t100');
+
+        const { status, lines } = await post('arrange', ['--nodes', 'a,b,c']);
+        expect(status).toBe(200);
+        // Two columns for three nodes, 40 px apart, starting at the top left of the box they filled.
+        expect(lines).toEqual(['a\t1000\t1000', `b\t${1000 + 200 + PLACEMENT_GAP}\t1000`, `c\t1000\t${1000 + 100 + PLACEMENT_GAP}`]);
+        expect(await nodeOnDisk('b')).toMatchObject({ x: 1240, y: 1000, w: 200, h: 100 });
+    });
+
+    test('--layout row and column are one row and one column', async () => {
+        await seed(box('a', 0, 0), box('b', 500, 500));
+        expect((await post('arrange', ['--nodes', 'a,b', '--layout', 'row'])).lines).toEqual(['a\t0\t0', 'b\t240\t0']);
+        expect((await post('arrange', ['--nodes', 'a,b', '--layout', 'column'])).lines).toEqual(['a\t0\t0', 'b\t0\t140']);
+    });
+
+    test('--cols is the grid and nothing else', async () => {
+        await seed(box('a', 0, 0), box('b', 500, 500), box('c', 900, 100));
+        expect((await post('arrange', ['--nodes', 'a,b,c', '--cols', '3'])).lines).toEqual(['a\t0\t0', 'b\t240\t0', 'c\t480\t0']);
+
+        const wrongLayout = await post('arrange', ['--nodes', 'a,b,c', '--layout', 'row', '--cols', '2']);
+        expect(wrongLayout.status).toBe(422);
+        expect(wrongLayout.lines[0]).toBe('refused\tflag-not-for-layout\t--cols does not go with row; a row is one row and a column is one column');
+
+        const tooMany = await post('arrange', ['--nodes', 'a,b', '--cols', '5']);
+        expect(tooMany.lines[0]).toBe('refused\ttoo-many-columns\t--cols is 5 and you named 2 nodes; a grid holds at most one column per node');
+        expect((await post('arrange', ['--nodes', 'a', '--cols', 'two'])).lines[0]).toStartWith('refused\tbad-arguments\t--cols needs a whole number');
+        expect((await post('arrange', ['--nodes', 'a', '--layout', 'circle'])).lines[0]).toStartWith('refused\tbad-arguments\t--layout takes one of');
+    });
+
+    test('keeps the sizes and never lets two of them touch', async () => {
+        await seed(box('wide', 0, 0, { w: 560, h: 360 }), box('tall', 100, 100, { w: 200, h: 520 }), box('small', 50, 50));
+        await post('arrange', ['--nodes', 'wide,tall,small', '--layout', 'row']);
+        const nodes = await Promise.all(['wide', 'tall', 'small'].map(nodeOnDisk));
+        expect(nodes.map((node) => [node!.w, node!.h])).toEqual([
+            [560, 360],
+            [200, 520],
+            [200, 100]
+        ]);
+        const gaps = nodes.slice(1).map((node, index) => node!.x - (nodes[index]!.x + nodes[index]!.w));
+        expect(gaps).toEqual([PLACEMENT_GAP, PLACEMENT_GAP]);
+    });
+
+    test('a group carries what stands in it, so it is not something to arrange', async () => {
+        await seed(box('a', 0, 0), box('frame', 300, 300, { kind: 'group', w: 800, h: 800 }));
+        const { status, lines } = await post('arrange', ['--nodes', 'a,frame']);
+        expect(status).toBe(422);
+        expect(lines[0]).toStartWith('refused\tnot-arrangeable\tframe is a group and carries whatever stands inside it');
+        expect(await nodeOnDisk('a')).toMatchObject({ x: 0, y: 0 });
+    });
+
+    test('nodes that already stand where this would put them are reported and nothing is written', async () => {
+        await seed(box('a', 0, 0), box('b', 240, 0));
+        await post('arrange', ['--nodes', 'a,b', '--layout', 'row']);
+        const rev = (await onDisk()).rev;
+        const { lines } = await post('arrange', ['--nodes', 'a,b', '--layout', 'row']);
+        expect(lines).toEqual(['a\t0\t0', 'b\t240\t0']);
+        expect((await onDisk()).rev).toBe(rev);
+    });
+
+    test('refuses an id that is not on the canvas and takes no dry run', async () => {
+        expect((await post('arrange', ['--nodes', 'ghost'])).lines[0]).toBe('refused\tunknown-node\tghost is not a node on main');
+        expect((await post('arrange', ['--nodes', 'note-1', '--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
+        expect((await post('arrange', [])).lines[0]).toBe('refused\tbad-arguments\t--nodes needs one or more node ids, separated by commas');
+    });
+});
+
+describe('rename', () => {
+    test('names a node for good, so the session never renames over it', async () => {
+        const { status, lines } = await post('rename', ['--node', 'term-1', '--title', 'Build the parser']);
+        expect(status).toBe(200);
+        expect(lines).toEqual(['term-1\tterminal\tBuild the parser']);
+        expect(await nodeOnDisk('term-1')).toMatchObject({ title: 'Build the parser', titleSource: 'user' });
+    });
+
+    test('the title it already carries writes nothing', async () => {
+        await post('rename', ['--node', 'note-1', '--title', 'Plan']);
+        const rev = (await onDisk()).rev;
+        const { lines } = await post('rename', ['--node', 'note-1', '--title', 'Plan']);
+        expect(lines).toEqual(['note-1\tnote\tPlan']);
+        expect((await onDisk()).rev).toBe(rev);
+    });
+
+    test('one node per call, by id, with the same cap on a name as everywhere else', async () => {
+        const missing = await post('rename', ['--node', 'shell', '--title', 'x']);
+        expect(missing.status).toBe(422);
+        expect(missing.lines[0]).toBe('refused\tunknown-node\tshell is not a node on main');
+        expect(missing.lines.slice(1)).toContain('node\tterm-1\tterminal\tshell');
+        expect((await post('rename', ['--node', 'term-1', '--title', 'x'.repeat(MAX_TITLE_LENGTH + 1)])).lines[0]).toBe(
+            `refused\tbad-arguments\t--title is ${MAX_TITLE_LENGTH + 1} characters and at most ${MAX_TITLE_LENGTH} fit in a name on the canvas`
+        );
+        expect((await post('rename', ['--node', 'term-1'])).lines[0]).toBe('refused\tbad-arguments\t--title needs a title');
+        expect((await post('rename', ['--title', 'x'])).lines[0]).toBe('refused\tbad-arguments\t--node needs the id of a node');
+        expect((await post('rename', ['term-1', '--title', 'x'])).lines[0]).toStartWith('refused\tbad-arguments\trename takes no arguments');
+        expect((await onDisk()).rev).toBe(1);
     });
 });

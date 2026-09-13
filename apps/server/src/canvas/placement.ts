@@ -46,6 +46,55 @@ export const placeFree = (existing: readonly Rect[], size: { w: number; h: numbe
     };
 };
 
+export const ARRANGE_LAYOUTS = ['grid', 'row', 'column'] as const;
+export type ArrangeLayout = (typeof ARRANGE_LAYOUTS)[number];
+
+/* How many columns a grid takes without being told: as square as the count allows. */
+export const gridColumns = (count: number): number => Math.ceil(Math.sqrt(count));
+
+/*
+ * The same rectangles tidied into a block, in the order they came in. The origin is the top left of
+ * the box they already occupy, so a canvas is straightened where it stands and nothing jumps off
+ * screen; a single node therefore never moves at all. A column is as wide as the widest node in it
+ * and a row as tall as the tallest, which is what keeps nodes of different sizes from touching
+ * without resizing any of them.
+ */
+export const arrangeRects = (rects: readonly Rect[], layout: ArrangeLayout, cols?: number): Rect[] => {
+    if (rects.length === 0) {
+        return [];
+    }
+    const columns = layout === 'row' ? rects.length : layout === 'column' ? 1 : Math.min(cols ?? gridColumns(rects.length), rects.length);
+    const origin = {
+        x: Math.round(Math.min(...rects.map((rect) => rect.x))),
+        y: Math.round(Math.min(...rects.map((rect) => rect.y)))
+    };
+    const columnOf = (index: number): number => index % columns;
+    const rowOf = (index: number): number => Math.floor(index / columns);
+    const widths: number[] = [];
+    const heights: number[] = [];
+    for (const [index, rect] of rects.entries()) {
+        widths[columnOf(index)] = Math.max(widths[columnOf(index)] ?? 0, rect.w);
+        heights[rowOf(index)] = Math.max(heights[rowOf(index)] ?? 0, rect.h);
+    }
+    const offsets = (sizes: readonly number[]): number[] => {
+        const places: number[] = [];
+        let at = 0;
+        for (const size of sizes) {
+            places.push(at);
+            at += size + PLACEMENT_GAP;
+        }
+        return places;
+    };
+    const left = offsets(widths);
+    const top = offsets(heights);
+    return rects.map((rect, index) => ({
+        x: Math.round(origin.x + left[columnOf(index)]!),
+        y: Math.round(origin.y + top[rowOf(index)]!),
+        w: rect.w,
+        h: rect.h
+    }));
+};
+
 /* What placing inside a group needs to know about it, so a frame that is not a node yet also fits. */
 type GroupFrame = Pick<ProjectNode, 'x' | 'y' | 'w' | 'h' | 'collapsed' | 'expandedHeight'>;
 
@@ -80,6 +129,28 @@ export const groupMembers = (group: ProjectNode, nodes: readonly ProjectNode[]):
             node.y + node.h / 2 >= rect.y &&
             node.y + node.h / 2 <= rect.y + rect.h
     );
+};
+
+/*
+ * The group each node stands in, by node id, with nested frames resolved to the innermost one: a
+ * node inside a group inside a group is in both by geometry, and the smaller frame is the one a
+ * person would say it is in. A node on the canvas itself is not in the map.
+ */
+export const containersOf = (nodes: readonly ProjectNode[]): Map<string, ProjectNode> => {
+    const containers = new Map<string, ProjectNode>();
+    const area = (group: ProjectNode): number => {
+        const rect = groupRect(group);
+        return rect.w * rect.h;
+    };
+    for (const group of nodes.filter((node) => node.kind === 'group')) {
+        for (const member of groupMembers(group, nodes)) {
+            const current = containers.get(member.id);
+            if (!current || area(group) < area(current)) {
+                containers.set(member.id, group);
+            }
+        }
+    }
+    return containers;
 };
 
 /*
