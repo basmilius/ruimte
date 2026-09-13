@@ -206,6 +206,35 @@ canvas, against Ruimte, one verdict each.
   setting itself, which is what makes the switch act at once on a request that is already open.
   `--no-approvals` stays what it was, one level up: the machine's own answer, for every client,
   which is what an operator reaches for and not what a person clicks.
+- **A permission notifies on the approvals switch, not on the turn switch.** A turn that ended is
+  news; a permission is the agent standing still with a clock running, and a notification is the
+  only thing that reaches somebody who walked away before the hold runs out. So it fires while
+  `agentsApprovals` is on, the switch that says this person wants to answer permissions away from
+  the terminal, and "Tell me when a turn ends" does not govern it: that switch says "do not tell me
+  when work ends", not "do not tell me when work stops for me". Nor is it always on the way the
+  needs-you notification is, since a person who turned the strip off asked for the CLI's own prompt
+  to be the only place, and announcing a request that cannot be answered here would send them to a
+  node with nothing on it. No toggle of its own, which would be asking the same question a third
+  time. The sound stays `agentsTurnSound`, and its row is no longer hidden when the turn switch is
+  off: two of the three notifications never obeyed that switch, so the one answer to "may this make
+  noise" has to be reachable whatever it says.
+- **One notification per node that waits, whatever it waits for.** The `PermissionRequest` hook
+  sets the node to `needs-you` and opens the request in the same breath, so both watchers see the
+  same node. The permission carries the node's own tag (`ruimte-<nodeId>`), the plain "Needs you"
+  is not raised beside a node with a request open, and one that got there first is withdrawn, so
+  nobody collects two cards about one wait. Only the front request of a node becomes one, which is
+  the request the strip offers; the ones behind it are one question at a time and get their own
+  notification when they reach the front. It says the node, the machine when the workspace is not
+  on this one, the tool with the line the strip shows, and when it expires. When a hold runs out
+  with the node still waiting, the card goes and no plain one takes its place: "Needs you" fired
+  110 seconds after the fact is noise, and the mark on the node and the sidebar row still say it.
+- **A notification with a clock has to be taken back by a clock.** `session.approvals` withdraws it
+  the moment the request settles anywhere, this client, another client or the CLI's own prompt,
+  which is the same event the strip goes away on. Nothing arrives when the hold simply runs out on
+  a daemon this client is no longer hearing from, so the watcher also sets a timer on `expiresAt`
+  and looks again. A card that sends a person to a node where there is nothing left to answer is
+  worse than no card. `shell/approval-notices.ts` holds the pure half of it (what stands, what it
+  says, what is raised and what is withdrawn), which is what can be tested without a DOM.
 - **The daemon says what a permission answer means for the status, because the CLI will not.** A
   CLI has no reason to report anything when its own prompt is settled from the outside: the next
   hook is the PostToolUse of the tool that just started, which for a command running for minutes
@@ -901,7 +930,8 @@ follows is what the report left open and what the build decided.
   not the one in front, which is to say after somebody walked away, so it cannot land on top of what
   they were doing and there is nothing to protect them from by default. A sound can: it arrives in
   whatever they walked away to, which may be a call. The same sound setting covers the needs-you
-  notification, so a person has one answer to "should this machine make noise" rather than two.
+  and permission notifications, so a person has one answer to "should this machine make noise"
+  rather than three.
 - **Quitting asks once.** `before-quit` fires again for the same quit, so the answer is remembered;
   a window that is already closed is never asked, since the client that would have counted is gone.
 
@@ -1110,9 +1140,9 @@ a day, several days. Each of the larger ones becomes a GitHub issue when it star
    Hook-reply approvals for terminal agents are built: Claude's `PermissionRequest` is held on the
    daemon and answered from the node header (the decision above, the hook's real contract among the
    gotchas), with "Ask me for permission in the node" in the Agents pane saying whether this client
-   wants them at all. What is left of that entry is the notification, which would let a person
-   answer a permission without looking at the canvas; it waits until the one for a turn that ended
-   has been lived with, since they arrive at the same desk.
+   wants them at all. The notification is there too: a request that arrives while this window is
+   behind something else says so, and goes again the moment the request is answered or the hold
+   runs out, on the approvals switch rather than the turn switch (the decisions above).
    Attention is done, including the mark itself: `state/attention.ts` counts, `attention/UnseenMark.tsx`
    draws it on the node header and the sidebar row, and the "Finished" count, the turn-done
    notification with its sound toggle, the dock badge, the quit guard and keeping the machine awake
