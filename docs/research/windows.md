@@ -4,11 +4,11 @@ State of the working tree on 2026-09-11, `4c5d417`, with only `.ruimte/project.j
 path is relative to `/Users/bas/Development/Projects/ruimte`. Line numbers are from the working
 tree. Nothing here is implemented; this is the document an implementation agent executes.
 
-Phase 6 of `docs/research/multiple-daemons.md` made two workspaces possible: the four stores of an
+Phase 6 of the multiple daemons work made two workspaces possible: the four stores of an
 open project are factories behind a React context (`apps/client/src/state/workspace.ts`,
 `apps/client/src/state/workspace-stores.ts`), and `openWorkspace` and `focusWorkspace` are there
-(`apps/client/src/transport/connections.ts:224,229`). Section 4.6 of that document left the layout
-open and section 6 put the split panes out of scope. Bas chose the other direction on 2026-09-11: a
+(`apps/client/src/transport/connections.ts:224,229`). That design left the layout open and put the
+split panes out of scope. Bas chose the other direction on 2026-09-11: a
 project opens in a window of its own. A split layout grows too large inside one window, but the
 option has to stay open. This design gives several windows without welding the seam a split would
 need shut.
@@ -390,8 +390,7 @@ the window coming forward.
 
 Three corollaries worth writing down:
 
-- The same folder on two machines is two projects with two ids (`project-store.ts:79`, and
-  `docs/research/multiple-daemons.md` section 0). The rule never fires across machines.
+- The same folder on two machines is two projects with two ids (`project-store.ts:79`). The rule never fires across machines.
 - Two windows on two projects of one machine is the normal case and needs nothing: they are two
   clients of one daemon, which the daemon already supports.
 - A window whose boot target is held elsewhere lands on an empty canvas and says why. It does not
@@ -926,7 +925,7 @@ component around the map. Nothing else in the tree learns about it.
 **What the split will still have to solve, unchanged by this work.** The app chords bound on `window`
 in `apps/client/src/canvas/Canvas.tsx:330` reach whichever workspace `setCurrentWorkspace` last
 named. With one workspace per page that is always right. With two panes it is a real question, and it
-is already noted as open in `docs/research/multiple-daemons.md` section 4.6 point 3. Windows do not
+was already left open by the multiple daemons design. Windows do not
 make it worse: each page has its own listener and its own focused workspace.
 
 ## 8. What can break
@@ -985,7 +984,7 @@ a cross-window toast bus.
 every standalone view, per the comment at ViewHost.tsx:122-123). The chord table is at Canvas.tsx
 232-322. Per page, the OS delivers the key to the focused window only, so two windows are two
 independent chord tables and `Cmd+K` opens the palette of the window in front. That is correct with
-no change. The open question from `multiple-daemons.md` 4.6 point 3 is about panes, not windows, and
+no change. The open question about chords is about panes, not windows, and
 stays open.
 
 **`startContextSync`.** `context/sync.ts:42-112` keeps `sent` per page (line 46) and pushes
@@ -1100,7 +1099,7 @@ the wire protocol, which nothing before it does.
 
 - **The split layout.** Section 7 says what stays possible and what is deliberately not done. The
   panes, the divider, what the sidebar and the breadcrumb become, and which pane a chord goes to are
-  a design of their own, still open from `docs/research/multiple-daemons.md` section 4.6.
+  a design of their own, still open from the multiple daemons design.
 - **Dragging a project out of a window to make one.** A good gesture, a feature of its own (5.1).
 - **A window that is not a project.** A usage window, a settings window, a standalone terminal window.
   The plumbing here would carry them (`?page=usage` is one line), but each needs its own chrome
@@ -1118,8 +1117,8 @@ the wire protocol, which nothing before it does.
 - **A second daemon per window.** A window is a page on one origin, and the origin's daemon is the
   one that served it. Which machine a window works on is the endpoint it opened a project from,
   exactly as today.
-- **Cross-window drag and drop of a node.** Same answer as cross-machine drag and drop in
-  `multiple-daemons.md` section 6: interesting, not designed.
+- **Cross-window drag and drop of a node.** Same answer as cross-machine drag and drop:
+  interesting, not designed.
 
 ## 11. File index for the implementation agent
 

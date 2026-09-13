@@ -789,8 +789,8 @@ canvas, against Ruimte, one verdict each.
 
 ### Views side by side
 
-The grid landed on 2026-09-12 from `docs/reports/2026-09-12-split-views.html`; what follows is
-what the report left open and what the build decided differently.
+The grid landed on 2026-09-12; what follows is what the design left open and what the build
+decided differently.
 
 - **Columns of cells, not a tree.** A layout is at most three columns of at most three cells, so
   "3x3" is a property of the model rather than a counter laid over one. Both limits live in
@@ -842,8 +842,8 @@ what the report left open and what the build decided differently.
 
 ### Processes
 
-The panel landed on 2026-09-13 from `docs/reports/2026-09-13-processen.html`, phases 1 to 3; what
-follows is what the report left open and what the build decided.
+The panel landed on 2026-09-13; what follows is what the design left open and what the build
+decided.
 
 - **Warn, never act.** A stuck agent is a warning with the button that fits the signal (Interrupt,
   Terminate, Show process, Resume) and a dismiss. An opt-in "interrupt an agent that is silent for X
