@@ -1,3 +1,5 @@
+import { CANVAS_GRID } from '@ruimte/contracts';
+
 export interface Camera {
     x: number;
     y: number;
@@ -18,7 +20,7 @@ export interface Point {
 
 const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 4;
-export const GRID = 8;
+export const GRID = CANVAS_GRID;
 
 export const clampZoom = (zoom: number): number => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom));
 

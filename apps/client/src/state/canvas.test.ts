@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { groupFrame } from '@ruimte/contracts';
 import { carriedByGroups, useCanvas, type CanvasNode } from './canvas';
 
 const node = (id: string, x: number, y: number, kind: CanvasNode['kind'] = 'terminal'): CanvasNode => ({ id, kind, title: id, x, y, w: 200, h: 100 });
@@ -29,6 +30,8 @@ describe('groups', () => {
         expect(group.x).toBeLessThan(100);
         expect(group.x + group.w).toBeGreaterThan(600);
         expect(useCanvas.getState().selection).toEqual([groupId!]);
+        // The frame the daemon's `group` verb draws around the same nodes, which is the point of sharing it.
+        expect(group).toMatchObject(groupFrame([node('a', 100, 100), node('b', 400, 100)])!);
 
         useCanvas.getState().moveSelected(16, 8);
         const after = useCanvas.getState().nodes;

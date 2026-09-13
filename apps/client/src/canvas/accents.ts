@@ -1,29 +1,38 @@
+import { NODE_ACCENT_NAMES, type NodeAccent } from '@ruimte/contracts';
+
+export type AccentId = NodeAccent;
+
 /*
  * Tailwind's 600 ramp without the grays, in sRGB hex rather than the oklch Tailwind writes them in:
- * an accent reaches xterm as a literal color and its parser knows no oklch. The order is Tailwind's
- * own, which is the hue wheel, so a grid of these reads as one.
+ * an accent reaches xterm as a literal color and its parser knows no oklch. The names and their
+ * order (Tailwind's own, which is the hue wheel) come from contracts, because the daemon refuses a
+ * `--color` against the same set; only the paint is the client's.
  */
-export const NODE_ACCENTS = [
-    { id: 'red', label: 'Red', color: '#e7000b' },
-    { id: 'orange', label: 'Orange', color: '#f54900' },
-    { id: 'amber', label: 'Amber', color: '#e17100' },
-    { id: 'yellow', label: 'Yellow', color: '#d08700' },
-    { id: 'lime', label: 'Lime', color: '#5ea500' },
-    { id: 'green', label: 'Green', color: '#00a63e' },
-    { id: 'emerald', label: 'Emerald', color: '#009966' },
-    { id: 'teal', label: 'Teal', color: '#009689' },
-    { id: 'cyan', label: 'Cyan', color: '#0092b8' },
-    { id: 'sky', label: 'Sky', color: '#0084d1' },
-    { id: 'blue', label: 'Blue', color: '#155dfc' },
-    { id: 'indigo', label: 'Indigo', color: '#4f39f6' },
-    { id: 'violet', label: 'Violet', color: '#7f22fe' },
-    { id: 'purple', label: 'Purple', color: '#9810fa' },
-    { id: 'fuchsia', label: 'Fuchsia', color: '#c800de' },
-    { id: 'pink', label: 'Pink', color: '#e60076' },
-    { id: 'rose', label: 'Rose', color: '#ec003f' }
-] as const;
+const ACCENT_COLORS: Record<AccentId, string> = {
+    red: '#e7000b',
+    orange: '#f54900',
+    amber: '#e17100',
+    yellow: '#d08700',
+    lime: '#5ea500',
+    green: '#00a63e',
+    emerald: '#009966',
+    teal: '#009689',
+    cyan: '#0092b8',
+    sky: '#0084d1',
+    blue: '#155dfc',
+    indigo: '#4f39f6',
+    violet: '#7f22fe',
+    purple: '#9810fa',
+    fuchsia: '#c800de',
+    pink: '#e60076',
+    rose: '#ec003f'
+};
 
-export type AccentId = (typeof NODE_ACCENTS)[number]['id'];
+export const NODE_ACCENTS: readonly { id: AccentId; label: string; color: string }[] = NODE_ACCENT_NAMES.map((id) => ({
+    id,
+    label: `${id[0]!.toUpperCase()}${id.slice(1)}`,
+    color: ACCENT_COLORS[id]
+}));
 
 /* The five a settings row shows in the open, blue (the one Ruimte carries) first. The rest of the
    wheel sits behind the overflow beside them, which wears the accent itself once one is picked. */

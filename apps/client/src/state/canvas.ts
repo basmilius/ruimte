@@ -27,7 +27,7 @@ import type {
     ProjectViewLocal,
     RuntimeMode
 } from '@ruimte/contracts';
-import { DEFAULT_TITLES, GROUP_HEADER, GROUP_PADDING, NODE_SIZE, isAgentKind } from '@ruimte/contracts';
+import { DEFAULT_TITLES, NODE_SIZE, groupFrame, isAgentKind } from '@ruimte/contracts';
 
 export type { AgentStatus, NodeKind } from '@ruimte/contracts';
 
@@ -496,20 +496,13 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
         groupSelection() {
             const { nodes, selection } = get();
             const members = selection.map((id) => nodes[id]).filter((node): node is CanvasNode => Boolean(node) && node!.kind !== 'group');
-            const bounds = unionRect(members);
-            if (!bounds) {
+            // The same frame the daemon's `group` verb draws, so the two ways to group cannot drift.
+            const frame = groupFrame(members);
+            if (!frame) {
                 return null;
             }
             const id = nextId('group');
-            const group: CanvasNode = {
-                id,
-                kind: 'group',
-                title: DEFAULT_TITLES.group,
-                x: snapToGrid(bounds.x - GROUP_PADDING),
-                y: snapToGrid(bounds.y - GROUP_PADDING - GROUP_HEADER),
-                w: snapToGrid(bounds.w + GROUP_PADDING * 2),
-                h: snapToGrid(bounds.h + GROUP_PADDING * 2 + GROUP_HEADER)
-            };
+            const group: CanvasNode = { id, kind: 'group', title: DEFAULT_TITLES.group, ...frame };
             set((s) => ({ nodes: { ...s.nodes, [id]: group }, order: [...s.order, id], selection: [id], mode: { kind: 'canvas' }, ...remember(s) }));
             return id;
         },
