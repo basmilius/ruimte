@@ -345,13 +345,22 @@ canvas, against Ruimte, one verdict each.
   `ruimte-context` sentence goes in front of the first prompt instead of on a flag.
 - The composer guards a long prompt: past 100k characters a counter appears, past 120k the send
   is refused, which is the size where a turn gets slower than the answer is worth. Commands only
-  the CLI's own terminal can run (`/clear`, `/login`, `/theme`, `/doctor`, ...) are filtered out of
-  the slash menu even though the init frame lists them (`chat/guards.ts`); `/clear` is in that list
-  for a reason of its own, since it would empty the CLI's context while the thread still shows
-  every item. PageUp and PageDown page the thread from the composer, through a scroller the
+  the CLI's own terminal can run (`/login`, `/theme`, `/doctor`, ...) are filtered out of the slash
+  menu even though the init frame lists them (`chat/guards.ts`). PageUp and PageDown page the thread from the composer, through a scroller the
   timeline registers per chat (`chat/timeline-scroll.ts`), and a chat node with an unsent draft
   gets a dot on its sidebar row (`useHasDraft` in `chat/drafts.ts`, the store next to the
   localStorage the composer already wrote).
+- `/clear` in a chat is a command of the daemon, never text for the CLI (`chat.clear`): sent
+  through, it would only empty the model's memory while the thread kept every item. The daemon
+  kills the CLI, drops its session id, empties the items, the queue and the attachments, writes
+  the empty thread and sends a `reset` event, so the next prompt starts Claude without `--resume`
+  and Codex with `thread/start`, the same for both whatever the CLI itself does with `/clear` in
+  stream-json mode. The thread is emptied rather than kept above a divider, so what a person reads
+  is what the model knows. Whether a turn is in the way is the daemon's call (`busy`, so a turn the
+  CLI opened itself is not): the composer only asks after a `chat-busy` refusal and then sends
+  `force`, which disposes the process without an interrupt or a wait for the turn to end, since
+  that turn goes with the thread anyway. Cost and the turn count keep counting; the context tokens
+  and the slash commands start over, and the drafts and the notices other nodes left stay.
 - Cmd+S in the composer stashes the draft and clears the box; on an empty box the same key takes
   the newest one back. The shelf is one list for the whole app in localStorage, twenty entries
   deep, because a stashed prompt usually moves to another node on the canvas. A stashed entry
