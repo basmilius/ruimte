@@ -15,7 +15,6 @@ import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
 const DEFAULT_WIDTH = 540;
-const MIN_WIDTH = 240;
 // A drag stops here instead of squeezing the canvas away.
 const MIN_CANVAS_WIDTH = 360;
 // How long the open and close motion takes; the same number as `.panel-shell` in `styles.css`.
@@ -57,7 +56,8 @@ export function Panel() {
     }
     const present = open || !settled;
     const ref = useRef<HTMLElement>(null);
-    const bounds = { min: MIN_WIDTH, max: () => window.innerWidth - MIN_CANVAS_WIDTH };
+    const entry = PANELS.find((candidate) => candidate.kind === panel.kind);
+    const bounds = { min: entry?.minWidth ?? 240, max: () => window.innerWidth - MIN_CANVAS_WIDTH };
     // The project may have been on a wider window than this one, so its width is clamped on the way in.
     const width = clampColumnWidth(bounds, stored ?? DEFAULT_WIDTH);
     const { startResize } = useColumnResize(ref, {
@@ -78,7 +78,7 @@ export function Panel() {
         };
     }, [open, settled]);
 
-    const label = PANELS.find((entry) => entry.kind === panel.kind)?.label ?? 'Panel';
+    const label = entry?.label ?? 'Panel';
 
     return (
         <aside
