@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
-const daemon = process.env.RUIMTE_DAEMON ?? 'ws://localhost:4210';
+// The dev daemon sits on 4211 so an installed Ruimte can keep 4210.
+const daemon = process.env.RUIMTE_DAEMON ?? 'ws://localhost:4211';
 
 export default defineConfig({
     plugins: [react(), tailwindcss()],

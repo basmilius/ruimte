@@ -1,6 +1,7 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { existsSync, mkdirSync, openSync, writeFileSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
@@ -11,7 +12,13 @@ const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, screen, session,
  * IPC that the WebSocket already carries; only window chrome, native dialogs and guest devtools.
  */
 
-const DEFAULT_PORT = 4210;
+// A checkout keeps its own port, name and profile, so it runs beside an installed Ruimte instead of
+// quitting on that app's single instance lock or talking to its daemon.
+const DEFAULT_PORT = app.isPackaged ? 4210 : 4211;
+if (!app.isPackaged) {
+    app.setName('Ruimte Dev');
+    app.setPath('userData', join(app.getPath('appData'), 'Ruimte Dev'));
+}
 // The bundler inlines __dirname as the source path; the app path is where the built files are.
 const here = join(app.getAppPath(), 'dist');
 const repoRoot = resolve(app.getAppPath(), '..', '..');
@@ -79,6 +86,8 @@ const startDaemon = (): void => {
             env.PATH = path;
             process.env.PATH = path;
         }
+    } else {
+        env.RUIMTE_HOME ??= join(homedir(), '.ruimte-dev');
     }
     // A packaged app has no terminal; the daemon's output goes to the app's log directory instead.
     let stdio: 'inherit' | ['ignore', number, number] = 'inherit';

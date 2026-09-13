@@ -7,8 +7,10 @@ The daemon. It owns terminal sessions and serves them to the UI over one WebSock
 ```sh
 bun run --cwd apps/server start            # ws://127.0.0.1:4210/ws
 bun run --cwd apps/server start -- --host 0.0.0.0 --port 4300
-bun run --cwd apps/server dev              # same, restarts on file changes
+bun run --cwd apps/server dev              # ws://127.0.0.1:4211/ws, home ~/.ruimte-dev, restarts on file changes
 ```
+
+The `dev` script runs on port `4211` with `RUIMTE_HOME` defaulting to `~/.ruimte-dev`, so a checkout runs beside an installed Ruimte (`4210`, `~/.ruimte`) without sharing its id, its projects or its sessions. Pairing in dev therefore asks the dev daemon: `bun src/main.ts pair --port 4211`.
 
 | Flag | Default | Meaning |
 | --- | --- | --- |
@@ -41,7 +43,7 @@ A name typed in a client wins over `--label` and `RUIMTE_LABEL`. Those two say w
 
 ## `RUIMTE_HOME`
 
-Where the daemon keeps its state. Defaults to `~/.ruimte`. Layout:
+Where the daemon keeps its state. Defaults to `~/.ruimte` (`~/.ruimte-dev` under the `dev` script and in an unpackaged desktop app). Layout:
 
 ```
 $RUIMTE_HOME/

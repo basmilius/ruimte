@@ -506,6 +506,20 @@ Also decided against for now: a scheduler, checkpoint restore and telemetry.
   only a process that is gone marks it failed.
 - `@pierre/diffs` marks itself side-effect free, so `import '@pierre/diffs/worker/worker.js'`
   in a worker entry is tree-shaken to nothing. The pool uses Vite's `?worker` import instead.
+- **Dev runs beside the installed app, never on top of it.** Both used to take port 4210,
+  `~/.ruimte` and the Electron name "Ruimte": whichever started second crashed on the port or
+  quietly talked to the other daemon, shared its machine id and key pair (so a client could not
+  tell the two apart), and an unpackaged shell lost the single instance lock and just focused the
+  installed app. So dev has its own port (4211), its own home (`~/.ruimte-dev`, `RUIMTE_HOME`
+  still wins) and, unpackaged, its own name and `userData` ("Ruimte Dev"). The packaged app is
+  unchanged. A dev client on `localhost:5173` that paired with the old dev daemon holds that id in
+  localStorage and needs it cleared once.
+- **A daemon inherits the session it was started from.** Started from a terminal node, the daemon
+  has that node's `RUIMTE_HOOK_URL`, `RUIMTE_HOOK_TOKEN`, `RUIMTE_CONTEXT_URL`,
+  `RUIMTE_CONTEXT_TOKEN` and `RUIMTE_SESSION_ID`. Sessions pass `process.env` on (and never set
+  `RUIMTE_CONTEXT_TOKEN` themselves), and the usage limit probes spawn `claude -p` and codex with
+  it, so their hooks reported into the other daemon's node. `main.ts` drops them before the daemon
+  starts, after the CLI commands, because `ruimte context` is the one caller that needs them.
 - `bun --watch` restarts the daemon on every file change and the daemon installs hooks at
   startup, so editing the server while `bun dev` runs also rewrites the hook settings (idempotent).
 - A `bun --watch` reload does run the SIGTERM handler in the same pid, but the module restarts
