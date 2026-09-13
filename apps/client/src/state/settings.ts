@@ -57,9 +57,10 @@ export interface Settings {
     dockAutoHide: boolean;
     /* Whether the desktop shell downloads an update as soon as it finds one, or waits to be asked. */
     updatesAutoDownload: boolean;
-    /* Whether a view an agent asks for takes the place of the one you are working in. Off, nothing
-       moves and the toast carries a button instead. Making is shared and the daemon enforces it;
-       looking is one person at one screen, so this one is the client's. */
+    /* Whether a view an agent asks for takes the place of the one you are working in. Off, which is
+       where everyone starts, nothing moves and the request waits in the banner over the views.
+       Making is shared and the daemon enforces it; looking is one person at one screen, so moving
+       someone's eyes is the one thing that is asked rather than done. */
     agentsShowViews: boolean;
 }
 
@@ -84,7 +85,7 @@ const DEFAULT_SETTINGS: Settings = {
     drawingSnap: false,
     dockAutoHide: false,
     updatesAutoDownload: true,
-    agentsShowViews: true
+    agentsShowViews: false
 };
 
 // Rounded as well as clamped: the stepper used to move in halves, so a browser can still hand back
@@ -94,22 +95,27 @@ const clampSize = (value: unknown, range: { min: number; max: number }, fallback
     return Math.min(range.max, Math.max(range.min, size));
 };
 
+/* What a stored blob means, key by key: everything a client wrote before a setting existed, or wrote
+   as something else, reads as what a fresh client gets. */
+export const settingsFrom = (stored: Partial<Settings>): Settings => ({
+    ...DEFAULT_SETTINGS,
+    ...stored,
+    fontSize: clampSize(stored.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize),
+    interfaceFontSize: clampSize(stored.interfaceFontSize, INTERFACE_FONT_SIZE_RANGE, DEFAULT_SETTINGS.interfaceFontSize),
+    filesTabLimit: clampSize(stored.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit),
+    // A path is typed by hand and read back as one; anything else in the blob is no folder.
+    browseStartFolder: typeof stored.browseStartFolder === 'string' ? stored.browseStartFolder : DEFAULT_SETTINGS.browseStartFolder,
+    sidebarScope: SIDEBAR_SCOPES.find((scope) => scope === stored.sidebarScope) ?? DEFAULT_SETTINGS.sidebarScope,
+    // A client that stored null for the theme's own accent, or an id that has since gone, lands on the brand's.
+    accent: NODE_ACCENTS.find((entry) => entry.id === stored.accent)?.id ?? DEFAULT_SETTINGS.accent,
+    // Nothing moves a person's eyes unless that person said so, so only a stored `true` turns it on.
+    agentsShowViews: stored.agentsShowViews === true
+});
+
 const read = (): Settings => {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        const stored = raw ? (JSON.parse(raw) as Partial<Settings>) : {};
-        return {
-            ...DEFAULT_SETTINGS,
-            ...stored,
-            fontSize: clampSize(stored.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize),
-            interfaceFontSize: clampSize(stored.interfaceFontSize, INTERFACE_FONT_SIZE_RANGE, DEFAULT_SETTINGS.interfaceFontSize),
-            filesTabLimit: clampSize(stored.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit),
-            // A path is typed by hand and read back as one; anything else in the blob is no folder.
-            browseStartFolder: typeof stored.browseStartFolder === 'string' ? stored.browseStartFolder : DEFAULT_SETTINGS.browseStartFolder,
-            sidebarScope: SIDEBAR_SCOPES.find((scope) => scope === stored.sidebarScope) ?? DEFAULT_SETTINGS.sidebarScope,
-            // A client that stored null for the theme's own accent, or an id that has since gone, lands on the brand's.
-            accent: NODE_ACCENTS.find((entry) => entry.id === stored.accent)?.id ?? DEFAULT_SETTINGS.accent
-        };
+        return settingsFrom(raw ? (JSON.parse(raw) as Partial<Settings>) : {});
     } catch {
         return DEFAULT_SETTINGS;
     }
@@ -124,6 +130,10 @@ const channelsOf = (hex: string): string => {
 
 /* The few tokens a person may change are set on the root, over the theme's own values. */
 const apply = (settings: Settings): void => {
+    // The tokens are written on the document, and a test that reads this module for its defaults has none.
+    if (typeof document === 'undefined') {
+        return;
+    }
     const root = document.documentElement.style;
     root.setProperty('font-size', `${settings.interfaceFontSize}px`);
     const accent = accentColor(settings.accent);
