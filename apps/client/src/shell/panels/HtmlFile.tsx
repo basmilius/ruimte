@@ -29,10 +29,30 @@ const PREVIEW_PARTITION = 'preview';
 // A load the page itself cancelled (a redirect, a new navigation) is not an error worth a banner.
 const ABORTED = -3;
 
+/*
+ * Where each previewed page was scrolled, by path, for as long as the app runs. A tab switch throws
+ * the webview away and Chromium reads nothing out of a guest that has left the DOM, so the page
+ * reports its position while it scrolls, over the console: the preview partition gets no preload.
+ */
+const scrollPositions = new Map<string, { x: number; y: number }>();
+const SCROLL_MESSAGE = 'ruimte:preview-scroll:';
+
+const scrollScript = (restore: { x: number; y: number } | undefined): string => `(() => {
+    ${restore ? `scrollTo(${restore.x}, ${restore.y});` : ''}
+    if (window.__ruimteScroll) { return; }
+    window.__ruimteScroll = true;
+    let timer;
+    addEventListener('scroll', () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => console.debug(${JSON.stringify(SCROLL_MESSAGE)} + Math.round(scrollX) + ',' + Math.round(scrollY)), 50);
+    }, { passive: true });
+})()`;
+
 // Electron's <webview> as far as this panel uses it; the tag has no DOM typings of its own.
 interface PreviewWebview extends HTMLElement {
     src: string;
     reload(): void;
+    executeJavaScript(code: string): Promise<unknown>;
 }
 
 interface FailedLoad {
@@ -79,7 +99,23 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
             setLoading(true);
             setError(null);
         });
-        element.addEventListener('did-stop-loading', () => setLoading(false));
+        element.addEventListener('did-stop-loading', () => {
+            // Only the first load goes back to where the tab was; a reload keeps its own scroll.
+            const restore = element.dataset.loaded === undefined ? scrollPositions.get(path) : undefined;
+            element.dataset.loaded = '';
+            setLoading(false);
+            element.executeJavaScript(scrollScript(restore)).catch(() => {});
+        });
+        element.addEventListener('console-message', (event) => {
+            const message = (event as unknown as { message: string }).message;
+            if (!message.startsWith(SCROLL_MESSAGE)) {
+                return;
+            }
+            const [x, y] = message.slice(SCROLL_MESSAGE.length).split(',').map(Number);
+            if (Number.isFinite(x) && Number.isFinite(y)) {
+                scrollPositions.set(path, { x, y });
+            }
+        });
         element.addEventListener('did-fail-load', (event) => {
             const detail = event as unknown as FailedLoad;
             if (detail.errorCode === ABORTED || !detail.isMainFrame) {
@@ -97,7 +133,7 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
             page.current = null;
             element.remove();
         };
-    }, [canPreview, url, cell]);
+    }, [canPreview, url, path, cell]);
 
     useEffect(() => {
         if (!canPreview) {

@@ -762,9 +762,11 @@ body {
 
     /* The page an HTML file is drawn as. A <webview> needs a size in both directions of its own, and
        the white is the ground a browser gives a document that brings no background: a themed surface
-       would put the page's own dark text on a dark panel. The element is made by hand, so its class
-       is the only way in. */
-    .file-preview-page { width: 100%; height: 100%; border: 0; background: #ffffff; }
+       would put the page's own dark text on a dark panel. It waits for the first load, or a dark
+       page in a dark theme opens with a white flash. The element is made by hand, so its class is
+       the only way in. */
+    .file-preview-page { width: 100%; height: 100%; border: 0; background: transparent; }
+    .file-preview-page[data-loaded] { background: #ffffff; }
 
     /* ---------------------------------------------------------------- Motion */
 
