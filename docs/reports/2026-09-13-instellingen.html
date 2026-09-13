@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Instellingen, About en streaming in chats</title>
+<style>
+:root {
+  color-scheme: light;
+  --accent: #3f38b5;
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --image-outline: rgb(0 0 0 / 10%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; font-variant-numeric: tabular-nums; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figcaption { margin-top: 10px; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+button { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover { background: var(--highlight); }
+button:active:not([data-static]) { scale: 0.96; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+
+.prompt-box { position: relative; }
+.prompt-box pre { white-space: pre-wrap; font-size: 13px; line-height: 1.55; padding-top: 56px; }
+.prompt-box button { position: absolute; top: 8px; right: 8px; }
+
+.mock-nav { list-style: none; margin: 0; padding: 12px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; font-size: 14px; }
+.mock-nav li { margin: 0; padding: 5px 10px; border-radius: 6px; display: flex; justify-content: space-between; gap: 12px; }
+.mock-nav li span { color: var(--muted); font-size: 12px; }
+.mock-nav li.sep { padding: 0; height: 1px; background: var(--line); margin: 6px 4px; }
+.mock-nav li.active { background: var(--highlight); font-weight: 600; }
+.swatches { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0 16px; }
+.swatch { width: 24px; height: 24px; border-radius: 50%; display: inline-block; outline: 1px solid rgb(0 0 0 / 10%); outline-offset: -1px; }
+.swatch.more { background: var(--paper); border: 1px solid var(--line); outline: 0; text-align: center; line-height: 20px; font-size: 13px; color: var(--muted); }
+.list-menu { list-style: none; margin: 0; padding: 6px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; font-size: 14px; max-width: 220px; }
+.list-menu li { margin: 0; padding: 4px 8px; display: flex; align-items: center; gap: 10px; }
+.list-menu .swatch { width: 14px; height: 14px; }
+.about-mock { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 28px; text-align: center; }
+.about-mock .mark { width: 56px; height: 56px; border-radius: 14px; background: var(--accent); margin: 0 auto 12px; }
+.about-mock strong { display: block; font-size: 24px; letter-spacing: -.02em; }
+.about-mock dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; text-align: left; font-size: 13px; margin: 20px auto 0; max-width: 360px; }
+.about-mock dt { color: var(--muted); }
+.about-mock dd { margin: 0; font-variant-numeric: tabular-nums; }
+.fade-demo { font-size: 16px; min-height: 84px; }
+.fade-demo span { animation: fade-in 220ms ease-out both; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, .interactive-only, .prompt-box button { display: none; }
+  .prompt-box pre { padding-top: 18px; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .split { grid-template-columns: 1fr; }
+  tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .badge, .swatch { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#advies">Naar de inhoud</a>
+<header>
+  <p class="eyebrow">RUIMTE / VOORSTEL / 13 SEPTEMBER 2026</p>
+  <h1>Instellingen opruimen, een echte About en tekst die invloeit</h1>
+  <p class="intro">Van de elf panes in de instellingen blijven er acht over. De Canvas-pane verdwijnt, Updates gaat op in About, Files en Git worden er één, en Drawing heet voortaan Canvas. De acht staan in vijf groepen met separators. About wordt een pagina met versies, updates en licentie, en "About Ruimte" in het macOS-menu opent die pagina. Chattekst verschijnt per stuk dat de CLI stuurt, zonder overgang. Een reveal per frame met een korte fade lost dat op, en een nieuwe instelling zet het uit.</p>
+  <p class="status">Voorstel, nog geen regel code</p>
+  <p class="caption">Gebaseerd op Ruimte main bij <code>11e53fa</code>. <span class="badge confirmed">Geverifieerd</span> betekent in de broncode gecontroleerd. <span class="badge info">Afgeleid</span> betekent een verwachting die nog niet gemeten of in de app bekeken is.</p>
+  <nav aria-label="Inhoud">
+    <a href="#advies">Advies</a>
+    <a href="#nu">Hoe het nu is</a>
+    <a href="#indeling">Nieuwe indeling</a>
+    <a href="#about">About</a>
+    <a href="#accenten">Accentkleuren</a>
+    <a href="#streaming">Streaming</a>
+    <a href="#fasen">Fasen</a>
+    <a href="#beslissingen">Beslissingen</a>
+    <a href="#startprompt">Startprompt</a>
+  </nav>
+</header>
+<main>
+
+<section id="advies" class="recommendation">
+  <h2>Advies</h2>
+  <ol>
+    <li>De Canvas-pane verdwijnt helemaal. Zoom, locks en layouts doen iets met het canvas dat open is. Ze zijn geen voorkeuren, en de dock en het command palette hebben ze alle drie al.</li>
+    <li>Drawing heet voortaan Canvas. Daar komen de echte canvasvoorkeuren, zoals snap to grid en straks de lettergrootte voor chat en tekst uit punt 10 van de roadmap.</li>
+    <li>Files en Git worden één pane, Updates gaat op in About, en de navigatie krijgt vijf groepen met separators.</li>
+    <li>About wordt een pagina met een kop, versies, updates en licentie. Het macOS-appmenu wordt een eigen template met "About Ruimte…" en "Settings…" die de client aansturen.</li>
+    <li>De uitgelichte accenten worden blue, orange, lime, indigo en pink. De overflow wordt een lijst met naam en stip.</li>
+    <li>Tekst in chats loopt per animation frame bij tot wat binnen is, en elk nieuw woord fadet in 220 ms in. Een schakelaar "Stream replies" (standaard aan) toont bij uit een schrijf-indicator en daarna het hele antwoord in één fade.</li>
+  </ol>
+  <p>De drie fasen raken grotendeels verschillende bestanden en kunnen los van elkaar. Fase 1 raakt wel <code>sections.ts</code> en <code>SettingsDialog.tsx</code>, waar fase 2 op voortbouwt. Doe 1 dus vóór 2. Fase 3 kan parallel.</p>
+</section>
+
+<section id="nu">
+  <h2>Hoe het nu is</h2>
+  <p><span class="badge confirmed">Geverifieerd</span> De dialog (<code>shell/SettingsDialog.tsx</code>) tekent een platte lijst uit <code>SETTINGS_SECTIONS</code> in <code>shell/settings/sections.ts:26</code>. Groepen of separators kent die lijst niet. Instellingen staan in <code>localStorage</code> onder <code>ruimte.settings</code> (<code>state/settings.ts</code>). Thema, valuta en agentvoorkeuren hebben elk een eigen sleutel.</p>
+  <div class="table" role="region" aria-label="Huidige panes" tabindex="0">
+    <table class="wide">
+      <caption>De elf panes van nu en wat erop staat</caption>
+      <thead><tr><th scope="col">Pane</th><th scope="col">Inhoud</th><th scope="col">Waarneming</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Appearance</th><td>Thema, accent, interfacegrootte, sidebar-scope, dock verbergen, terminalfont en -grootte</td><td>Sidebar en dock zijn gedrag, geen uiterlijk. Wel klein genoeg om te laten staan.</td></tr>
+        <tr><th scope="row">Canvas</th><td>Zoompresets, fit, frame, vier locks, opgeslagen layouts</td><td>Alleen acties op het open canvas, niets wordt als voorkeur bewaard (<code>CanvasPane.tsx:15</code>). Alles staat al in de dock (<code>Dock.tsx:43</code>) en in het palette (<code>commands.ts:192-217</code>).</td></tr>
+        <tr><th scope="row">Drawing</th><td>Snap to grid</td><td>Eén rij</td></tr>
+        <tr><th scope="row">Files</th><td>Aantal open tabs, verborgen bestanden, startmap bij bladeren</td><td>Drie rijen</td></tr>
+        <tr><th scope="row">Git</th><td>Groeperen per map, diff-layout, witruimte</td><td>Drie rijen, zelfde soort panel als Files</td></tr>
+        <tr><th scope="row">Usage</th><td>Valuta</td><td>Eén rij</td></tr>
+        <tr><th scope="row">Agents</th><td>Standaardmodel en opties per provider, permissies, providers met versie</td><td>Hier hoort de nieuwe streaming-schakelaar</td></tr>
+        <tr><th scope="row">Machines</th><td>Deze machine, andere machines, apps met toegang</td><td>Groot en op zichzelf staand</td></tr>
+        <tr><th scope="row">Keyboard</th><td>Zoeken, alle sneltoetsen alleen-lezen</td><td>Wordt later bewerkbaar (roadmap 10)</td></tr>
+        <tr><th scope="row">Updates</th><td>Status plus knop, geïnstalleerde versie, automatisch downloaden</td><td>Laat de appversie zien, About de versie van de daemon. Twee versies op twee plekken.</td></tr>
+        <tr><th scope="row">About</th><td>Daemonversie, machine, platform, datamap, drie links</td><td>Geen appversie, licentie of Electron-versies</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><span class="badge confirmed">Geverifieerd</span> Het appmenu is <code>{ role: 'appMenu' }</code> (<code>apps/desktop/src/main.ts:633</code>), dus "About Ruimte" opent het native paneel van Electron. <code>app.setAboutPanelOptions</code> wordt nergens aangeroepen. Het menu heeft geen "Settings…": ⌘, werkt alleen omdat de renderer die toets zelf opvangt (<code>app-chords.ts:44</code>).</p>
+</section>
+
+<section id="indeling">
+  <h2>Nieuwe indeling</h2>
+  <div class="split">
+    <figure>
+      <ul class="mock-nav" aria-label="Voorgestelde navigatie">
+        <li class="active">Appearance <span>thema, accent, fonts</span></li>
+        <li>Keyboard <span>sneltoetsen</span></li>
+        <li class="sep" role="separator"></li>
+        <li>Canvas <span>was Drawing</span></li>
+        <li>Files and Git <span>samengevoegd</span></li>
+        <li class="sep" role="separator"></li>
+        <li>Agents <span>plus Chats</span></li>
+        <li>Usage <span>valuta</span></li>
+        <li class="sep" role="separator"></li>
+        <li>Machines</li>
+        <li class="sep" role="separator"></li>
+        <li>About <span>plus Updates</span></li>
+      </ul>
+      <figcaption>Acht panes in vijf groepen: hoe de app eruitziet en reageert, de panels waarin je werkt, de agents en wat ze kosten, de machines, en de app zelf.</figcaption>
+    </figure>
+    <div>
+      <h3>Wat er schuift</h3>
+      <ul>
+        <li><strong>Canvas (oud) weg.</strong> Layouts gaan uit de instellingen, zoals gevraagd. Zoom en locks gaan ook weg, want de dock en het palette hebben ze al. <code>LayoutDialog</code> blijft, want de dock opent hem.</li>
+        <li><strong>Drawing wordt Canvas.</strong> Id <code>canvas</code>, section "Drawing" met snap to grid. Nieuwe canvasvoorkeuren komen hier.</li>
+        <li><strong>Files and Git.</strong> Twee sections in één pane, id <code>files</code>. De id <code>git</code> verdwijnt uit <code>SettingsSectionId</code>.</li>
+        <li><strong>Updates gaat op in About.</strong> Zie <a href="#about">About</a>. De updateknop in de toolbar (<code>Toolbar.tsx:111</code>) opent voortaan <code>about</code>.</li>
+        <li><strong>Usage onder Agents.</strong> De valuta gaat over wat agents kosten.</li>
+      </ul>
+      <h3>Hoe</h3>
+      <p><code>SETTINGS_SECTIONS</code> wordt een lijst van groepen (<code>readonly (readonly SettingsSectionMeta[])[]</code>). <code>SettingsNav</code> zet een <code>Separator</code> (<code>ui/Separator.tsx</code>) tussen twee groepen. Base UI Tabs laat het pijltjestoetsen tussen de tabs met rust, omdat de separator geen tab is. <span class="badge info">Afgeleid</span></p>
+    </div>
+  </div>
+</section>
+
+<section id="about">
+  <h2>About</h2>
+  <div class="split">
+    <figure>
+      <div class="about-mock" aria-label="Schets van de About-pagina">
+        <div class="mark" aria-hidden="true"></div>
+        <strong>Ruimte</strong>
+        <p class="caption">Terminals, agents and browsers on one infinite canvas.</p>
+        <p>Version 0.9.2 · <span class="badge confirmed">Up to date</span></p>
+        <button type="button" data-static tabindex="-1">Check for updates</button>
+        <dl>
+          <dt>Machine</dt><dd>MacBook Pro, 0.9.2</dd>
+          <dt>Electron</dt><dd>38.1.0</dd>
+          <dt>Chromium</dt><dd>140.0.7339.41</dd>
+          <dt>Node</dt><dd>22.19.0</dd>
+          <dt>Platform</dt><dd>macOS, arm64</dd>
+          <dt>Data folder</dt><dd>~/.ruimte</dd>
+        </dl>
+      </div>
+      <figcaption>Schets, de versienummers zijn voorbeelden. Onder de details volgen "Download updates automatically", de links en "FSL-1.1-MIT · Copyright 2026 Bas Milius".</figcaption>
+    </figure>
+    <div>
+      <h3>Opbouw</h3>
+      <ol>
+        <li><strong>Kop, gecentreerd.</strong> <code>BrandSymbol</code> groot, de naam en de tagline uit de README. Daaronder de appversie (<code>useUpdates().currentVersion</code>) met status en de ene knop uit <code>UpdatesPane</code> (<code>describeUpdate</code>). In een browser zonder shell toont de kop de versie van de machine en geen knop.</li>
+        <li><strong>Details.</strong> De versie en naam van de machine van de workspace met focus, Electron, Chromium en Node, het platform en de datamap. Plus "Copy details" voor een bugmelding.</li>
+        <li><strong>Updates.</strong> De schakelaar voor automatisch downloaden, alleen als <code>supported</code>.</li>
+        <li><strong>Links en licentie.</strong> De drie links die er nu al staan, plus "FSL-1.1-MIT" en de copyrightregel uit <code>LICENSE</code>.</li>
+      </ol>
+      <h3>Wat nieuw moet</h3>
+      <ul>
+        <li><span class="badge confirmed">Geverifieerd</span> De versies van Electron, Chromium en Node staan nergens in de client. De preload kan <code>process.versions</code> doorgeven als optioneel veld <code>versions?</code> op <code>DesktopBridge</code>. Optioneel, omdat een draaiende shell de preload houdt waarmee hij startte (<code>bridge.ts:48-50</code>).</li>
+        <li><strong>Appmenu.</strong> In <code>main.ts</code> vervangt een template <code>role: 'appMenu'</code> op macOS: <code>About Ruimte…</code>, separator, <code>Settings…</code> (⌘,), separator, Services, Hide, Hide Others, Show All, separator, Quit. Beide items sturen <code>webContents.send('menu:settings', section)</code>. De preload krijgt <code>onOpenSettings?(listener)</code> en de client roept daarop <code>setSettings({ open: true, section })</code> aan, bijvoorbeeld in <code>App.tsx</code> naast de update-listener.</li>
+        <li><span class="badge info">Afgeleid</span> Met ⌘, als menu-accelerator vangt macOS de toets af voordat de pagina hem ziet. Beide doen hetzelfde, dus dat is geen probleem. De chord in <code>app-chords.ts</code> blijft nodig voor de browser.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="accenten">
+  <h2>Accentkleuren</h2>
+  <div class="split">
+    <div>
+      <h3>Uitgelicht</h3>
+      <div class="swatches" aria-label="Voorgestelde uitgelichte accenten">
+        <span class="swatch" style="background:#155dfc" title="Blue"></span>
+        <span class="swatch" style="background:#f54900" title="Orange"></span>
+        <span class="swatch" style="background:#5ea500" title="Lime"></span>
+        <span class="swatch" style="background:#4f39f6" title="Indigo"></span>
+        <span class="swatch" style="background:#e60076" title="Pink"></span>
+        <span class="swatch more" aria-hidden="true">…</span>
+      </div>
+      <p>Het gaat om één regel: <code>FEATURED_ACCENTS = ['blue', 'orange', 'lime', 'indigo', 'pink']</code> in <code>canvas/accents.ts:30</code>. De pane sorteert al op die volgorde (<code>AppearancePane.tsx:35</code>). Wie nu violet, rose, amber of teal heeft, houdt die kleur. De overflow-knop draagt dan die kleur met een vinkje, zoals nu al.</p>
+      <p><span class="badge info">Afgeleid</span> Blue (<code>#155dfc</code>) en indigo (<code>#4f39f6</code>) liggen dicht bij elkaar. Naast elkaar in een rij van vijf is dat zichtbaar, maar het verschil blijft klein.</p>
+    </div>
+    <figure>
+      <ul class="list-menu" aria-label="Voorgestelde overflowlijst">
+        <li><span class="swatch" style="background:#e7000b"></span>Red</li>
+        <li><span class="swatch" style="background:#e17100"></span>Amber</li>
+        <li><span class="swatch" style="background:#d08700"></span>Yellow</li>
+        <li><span class="swatch" style="background:#00a63e"></span>Green</li>
+        <li><span class="swatch" style="background:#009966"></span>Emerald</li>
+        <li><span class="swatch" style="background:#009689"></span>Teal</li>
+        <li class="caption">… Cyan, Sky, Violet, Purple, Fuchsia, Rose</li>
+      </ul>
+      <figcaption>De overflow als lijst met <code>Menu.RadioGroup</code>: stip, naam en een vinkje bij de gekozen kleur. De twaalf niet-uitgelichte kleuren staan in de volgorde van het kleurwiel. De labels bestaan al in <code>NODE_ACCENTS</code>.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="streaming">
+  <h2>Streaming in chats</h2>
+  <h3>Waarom tekst in blokken verschijnt</h3>
+  <p><span class="badge confirmed">Geverifieerd</span> De deltas komen al echt binnen. Claude start met <code>--include-partial-messages</code> (<code>providers/claude.ts</code>), en elke <code>text_delta</code> wordt één <code>chat.event</code> (<code>claude-protocol.ts:267-277</code>). Codex doet hetzelfde met <code>item/agentMessage/delta</code>. Nergens wordt samengevoegd of vertraagd, want <code>backpressure.ts</code> houdt alleen terminaloutput tegen. De client past elke delta direct toe met één zustand-<code>set</code> (<code>state/chats.ts:41-54</code>). Daarna parset <code>Markdown</code> de hele tekst opnieuw, want de <code>memo</code> op <code>text</code> helpt tijdens streamen niet.</p>
+  <p><span class="badge info">Afgeleid</span> Dat het in blokken oogt, heeft drie oorzaken. Elke delta verschijnt meteen in zijn geheel, en een delta bevat vaak meerdere tokens (de grootte bij Claude Code is niet gemeten). Markdown die half binnen is springt van vorm, zoals een fence die nog niet dicht is of een lijst die net begint. En de kosten per delta groeien met de thread: rijen afleiden, alles opnieuw parsen, opnieuw meten en scrollen. Daardoor vallen op lange threads frames weg en komen meerdere deltas in één keer in beeld. Code blocks lopen extra achter, omdat shiki bij elke wijziging asynchroon opnieuw kleurt (<code>Markdown.tsx:25-56</code>).</p>
+  <p class="note"><strong>Bijvangst:</strong> de client negeert deltas voor <code>thinking</code>-items (<code>state/chats.ts:43</code> kent alleen <code>assistant</code> en draaiende tools), terwijl de daemon ze wel stuurt (<code>projector.ts:374</code>). De denktekst onder "Thinking..." staat dus stil tot het item sluit. Dat gaat mee in fase 3.</p>
+
+  <h3>Voorstel</h3>
+  <ol class="steps">
+    <li class="step"><div>
+      <h3>Reveal per frame</h3>
+      <p>Een hook <code>useRevealedText(text, streaming)</code> houdt bij hoeveel tekens er in beeld zijn, en loopt per <code>requestAnimationFrame</code> bij tot de ontvangen tekst. De snelheid past zich aan de achterstand aan: elk frame komt een zesde van de achterstand erbij, minimaal twee tekens. Een losse delta staat dan binnen ongeveer 100 ms in beeld, en een grote brok loopt vloeiend in in plaats van in één sprong. Zodra <code>streaming</code> false wordt, staat alles er meteen. Het pure deel (volgende lengte uit achterstand en frametijd) krijgt een eigen functie met tests. De startwaarden stellen we in de app bij.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Fade per woord</h3>
+      <p>Een rehype-plugin die alleen draait zolang het item streamt, knipt tekstnodes op woordgrenzen en zet elk woord in een <code>&lt;span class="chat-fade"&gt;</code> met een fade van 220 ms (<code>opacity</code> 0 naar 1, <code>ease-out</code>). Er komen alleen woorden achteraan bij, dus React houdt de bestaande spans vast en start hun animatie niet opnieuw. Na de laatste delta rendert het item zonder spans. Dat oogt gelijk, want elke fade is dan voorbij. Bij <code>prefers-reduced-motion</code> zet de globale regel in <code>styles.css:771</code> de animatie uit en staat de tekst er gewoon.</p>
+      <p><span class="badge warning">Te controleren</span> Of de keys van react-markdown de spans echt stabiel houden, moet in de app blijken. Zo niet, dan krijgt de plugin een eigen key op basis van de offset in de bron.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Minder werk per delta</h3>
+      <p>Dit maakt het sneller. <code>Markdown</code> splitst de tekst in blokken op lege regels buiten een fence, en memoiseert elk blok op zijn eigen tekst, zodat alleen het laatste blok opnieuw parset. Een fence die nog open is, rendert als platte code zonder shiki en krijgt kleur zodra hij sluit. <span class="badge info">Afgeleid</span> Of dit genoeg is voor lange threads, meten we met de React Profiler op een thread van een paar honderd rijen, vóór en na.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Instelling "Stream replies"</h3>
+      <p>Een boolean <code>chatStreaming</code> (standaard <code>true</code>) in <code>state/settings.ts</code>, op dezelfde vier plekken als <code>dockAutoHide</code>. In de Agents-pane komt een nieuwe section "Chats" met de rij "Stream replies": "On, a reply appears word by word as the agent writes it. Off, it appears in one piece once it is done." Bij uit tekent een assistant-item dat nog streamt de bestaande <code>chat-live-text</code>-shimmer met "Writing...". Is het item klaar, dan fadet het hele antwoord in één keer in. De denktekst volgt dezelfde schakelaar. Er verandert niets op de wire: de daemon blijft deltas sturen, want de keuze hoort bij deze client.</p>
+    </div></li>
+  </ol>
+  <figure class="panel">
+    <div class="fade-demo" id="fade-demo" aria-live="off">De daemon stuurt elke delta meteen door, en de client laat elk nieuw woord kort infaden.</div>
+    <p class="interactive-only"><button type="button" id="fade-replay">Speel opnieuw af</button></p>
+    <figcaption>Een benadering van het idee in deze pagina: woorden komen er in brokken van één tot vier bij, elk met een fade van 220 ms. Zonder JavaScript of met reduced motion staat de zin er direct.</figcaption>
+  </figure>
+</section>
+
+<section id="fasen">
+  <h2>Fasen</h2>
+  <div class="table" role="region" aria-label="Fasen" tabindex="0">
+    <table class="wide">
+      <thead><tr><th scope="col">Fase</th><th scope="col">Bestanden</th><th scope="col">Klaar als</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">1. Indeling en accenten</th><td><code>shell/settings/sections.ts</code>, <code>SettingsNav.tsx</code>, <code>SettingsDialog.tsx</code>, <code>state/ui.ts</code>, panes Canvas, Drawing, Files en Git, <code>canvas/accents.ts</code>, <code>AppearancePane.tsx</code>, <code>commands.ts</code> en <code>Toolbar.tsx</code> voor de ids</td><td>Acht panes in vijf groepen met separators en pijltjes die over de separators heen springen. Geen layouts, zoom of locks meer in de instellingen, de dock werkt nog. Vijf nieuwe uitgelichte kleuren en een overflowlijst met namen.</td></tr>
+        <tr><th scope="row">2. About en appmenu</th><td><code>panes/AboutPane.tsx</code>, <code>UpdatesPane.tsx</code> weg, <code>apps/desktop/src/main.ts</code>, <code>preload.ts</code>, <code>desktop/bridge.ts</code>, <code>App.tsx</code></td><td>"About Ruimte…" en "Settings…" in het macOS-menu openen de goede pane, ook met de dialog al open op een andere pane. About toont de app-, machine-, Electron-, Chromium- en Node-versie, updates en licentie. Een browser zonder shell krijgt een nette About zonder updateknop.</td></tr>
+        <tr><th scope="row">3. Streaming</th><td><code>state/chats.ts</code>, <code>state/settings.ts</code>, <code>chat/ui/Markdown.tsx</code>, <code>chat/ui/rows/MessageRows.tsx</code>, een nieuwe hook en rehype-plugin met tests, <code>styles.css</code>, <code>AgentsPane.tsx</code></td><td>Een Claude- en een Codex-antwoord lopen vloeiend in zonder zichtbare brokken. Denktekst streamt mee. Code blocks springen niet. Met de schakelaar uit verschijnt het antwoord in één fade. <code>bun test</code>, <code>bun run format</code> en <code>bun run check</code> slagen.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Fase 1 verplaatst Usage alleen in de navigatie en laat <code>AgentsPane.tsx</code> met rust, dus fase 3 botst daar niet mee. Botsingen met werk dat nu loopt kan ik niet uitsluiten: ik weet niet welke bestanden dat werk raakt.</p>
+</section>
+
+<section id="beslissingen">
+  <h2>Beslissingen voor jou</h2>
+  <p>Achter elke vraag staat het advies. Geef je niets aan, dan geldt dat advies.</p>
+  <ol>
+    <li><strong>Updates in About?</strong> Advies: ja. Eén plek voor "welke versie draai ik". De updateknop in de toolbar opent About.</li>
+    <li><strong>Files en Git samen?</strong> Advies: ja, als "Files and Git". Het alternatief is ze los laten in dezelfde groep.</li>
+    <li><strong>Zoom en locks ook uit de instellingen?</strong> Advies: ja, samen met layouts, want de dock heeft ze. Anders blijft een Canvas-pane met alleen acties over.</li>
+    <li><strong>Overflowlijst: alleen de twaalf andere, of alle zeventien?</strong> Advies: de twaalf andere, zodat geen kleur twee keer in beeld staat.</li>
+    <li><strong>Geldt "Stream replies" ook voor denktekst?</strong> Advies: ja, één schakelaar voor alle tekst die een agent schrijft.</li>
+    <li><strong>"Settings…" ook in het appmenu?</strong> Advies: ja. Het menu wordt toch opnieuw opgebouwd, en ⌘, hoort daar op macOS.</li>
+  </ol>
+</section>
+
+<section id="startprompt">
+  <h2>Startprompt voor een schone sessie</h2>
+  <p>Plak dit in een nieuwe sessie. Pas eerst de regel met beslissingen aan als je van het advies afwijkt.</p>
+  <div class="prompt-box">
+    <button type="button" id="copy-prompt">Kopieer</button>
+<pre><code id="prompt-text">We gaan de instellingen van Ruimte opruimen, About een echte pagina maken en streaming in AI-chats laten invloeien.
+
+Lees eerst:
+- docs/reports/2026-09-13-instellingen.html (het voorstel: huidige panes, nieuwe indeling, About, accenten, oorzaak van de blokken bij streaming, fasen en beslissingen)
+- CLAUDE.md en docs/DECISIONS.md
+
+Beslissingen: het advies in de sectie "Beslissingen voor jou" van het rapport geldt, tenzij hier anders staat: (geen afwijkingen)
+
+Fase 1, indeling en accenten:
+- SETTINGS_SECTIONS wordt een lijst van groepen, SettingsNav tekent een Separator ertussen. Volgorde: Appearance, Keyboard | Canvas, Files and Git | Agents, Usage | Machines | About.
+- De huidige Canvas-pane (zoom, locks, layouts) verdwijnt; de dock en het palette houden die functies. Drawing wordt de pane "Canvas" (id canvas) met een section "Drawing". Files en Git worden één pane (id files); de id git en de id updates verdwijnen uit SettingsSectionId, en elke aanroeper (commands.ts, Toolbar.tsx, ...) wijst naar de nieuwe id.
+- FEATURED_ACCENTS wordt ['blue', 'orange', 'lime', 'indigo', 'pink']. De overflow wordt een lijst (Menu.RadioGroup) met stip, naam en vinkje, de twaalf overige in wiel-volgorde.
+
+Fase 2, About en appmenu:
+- AboutPane: kop met BrandSymbol, naam, tagline, appversie met updatestatus en de actieknop uit UpdatesPane; details (machine met versie, Electron, Chromium, Node, platform, datamap) met "Copy details"; de schakelaar voor automatisch downloaden; links; licentie FSL-1.1-MIT en "Copyright 2026 Bas Milius". UpdatesPane gaat weg.
+- Preload geeft process.versions door als optioneel veld op DesktopBridge.
+- Op macOS vervangt een eigen template role 'appMenu': About Ruimte…, Settings… (⌘,), Services, Hide, Hide Others, Show All, Quit. Beide items sturen 'menu:settings' met een section; de client opent daarop de dialog op die pane.
+
+Fase 3, streaming:
+- Fix: state/chats.ts past deltas voor thinking-items niet toe; laat ze meelopen.
+- Een pure functie plus hook die de zichtbare tekst per requestAnimationFrame laat bijlopen (een zesde van de achterstand per frame, minimaal 2 tekens), een rehype-plugin die tijdens streamen elk woord in een span met een fade van 220 ms zet, Markdown per blok gememoiseerd, en een open fence zonder shiki tot hij sluit.
+- Setting chatStreaming (standaard true) in state/settings.ts, als rij "Stream replies" in een nieuwe section "Chats" in de Agents-pane. Uit: "Writing..." met de chat-live-text-shimmer tijdens het streamen, daarna het hele antwoord in één fade. Geldt ook voor denktekst. Geen wijziging op de wire.
+- Controleer in de Electron dev-app (bun dev draait al) met een Claude- en een Codex-chat, en meet met de React Profiler op een lange thread vóór en na.
+
+Werkwijze: tests met bun test voor de pure delen, bun run format en bun run check vóór elke commit, conventional commits in het Engels, geen Co-Authored-By. Maak per fase eerst een kort plan en wacht op mijn akkoord. Meld na elke fase wat er veranderd is en wat je niet kon controleren.</code></pre>
+  </div>
+</section>
+
+</main>
+<footer><p>Bronnen: de code op <code>11e53fa</code>, gelezen door twee verkenners en op de belangrijkste punten zelf nagelopen (<code>sections.ts</code>, <code>accents.ts</code>, <code>state/chats.ts</code>, <code>projector.ts</code>, <code>main.ts</code>, <code>UpdatesPane.tsx</code>, <code>LICENSE</code>). Niet gedaan: de app bekijken, de grootte van deltas meten, of de fade prototypen. De versienummers in de schets van About zijn voorbeelden.</p></footer>
+<script>
+{
+    const button = document.getElementById('copy-prompt');
+    const text = document.getElementById('prompt-text');
+    button.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(text.textContent);
+            button.textContent = 'Gekopieerd';
+        } catch {
+            button.textContent = 'Kopiëren mislukt';
+        }
+        setTimeout(() => {
+            button.textContent = 'Kopieer';
+        }, 2000);
+    });
+}
+{
+    const demo = document.getElementById('fade-demo');
+    const replay = document.getElementById('fade-replay');
+    const sentence = demo.textContent;
+    const words = sentence.split(' ');
+    let timer = null;
+    const play = () => {
+        clearTimeout(timer);
+        demo.textContent = '';
+        let index = 0;
+        const tick = () => {
+            const count = 1 + Math.floor(Math.random() * 4);
+            for (let i = 0; i < count && index < words.length; i++, index++) {
+                const span = document.createElement('span');
+                span.textContent = (index > 0 ? ' ' : '') + words[index];
+                demo.appendChild(span);
+            }
+            if (index < words.length) {
+                timer = setTimeout(tick, 90);
+            }
+        };
+        tick();
+    };
+    replay.addEventListener('click', play);
+}
+</script>
+</body>
+</html>

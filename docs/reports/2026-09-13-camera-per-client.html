@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Camera per client</title>
+<style>
+:root {
+  color-scheme: light;
+  --accent: #3f38b5;
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --image-outline: rgb(0 0 0 / 10%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { min-width: 480px; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--muted); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide, .plot { min-width: 0; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+
+.prompt-box { position: relative; }
+.prompt-box pre { white-space: pre-wrap; font-size: 13px; line-height: 1.55; padding-top: 56px; }
+.prompt-box button { position: absolute; top: 8px; right: 8px; }
+.diagram .label-small { font-size: 13px; fill: var(--muted); }
+@media print {
+  .prompt-box button { display: none; }
+  .prompt-box pre { padding-top: 18px; }
+}
+.mock { background: var(--panel); border-radius: 12px; padding: 20px; }
+.mock .diagram { max-width: 420px; min-width: 0; margin: auto; }
+.mock .diagram text { font-size: 13px; }
+.diagram .spark { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .spark-area { fill: var(--highlight); }
+.diagram .warn { fill: var(--warning-bg); stroke: var(--warning); }
+.diagram .warn-text { fill: var(--warning); }
+</style>
+</head>
+<body>
+<a class="skip" href="#advies">Naar de inhoud</a>
+<header>
+  <p class="eyebrow">RUIMTE / VOORWERK / 13 SEPTEMBER 2026</p>
+  <h1>Camera per client: zoom, positie en raster van elk project onthouden</h1>
+  <p class="intro">Ruimte onthoudt camera, raster, panels en de open view al, maar per machine: alle clients van één daemon schrijven hetzelfde <code>&lt;projectId&gt;.local.json</code> en de laatste wint. Per client onthouden past in één naad, <code>ProjectClient</code>, met localStorage ernaast en de daemon als startpunt. De camera wordt voortaan als middelpunt en zoom opgeslagen. Eerst moet er een fit op mount weg die een opgeslagen camera vermoedelijk meteen overschrijft.</p>
+  <p class="status">Voorwerk, besluiten genomen, nog geen regel code</p>
+  <p class="caption">Gebaseerd op Ruimte main bij <code>d1807e7</code>. <span class="badge confirmed">Geverifieerd</span> betekent in de broncode gecontroleerd. <span class="badge info">Afgeleid</span> betekent gelezen maar niet in de app nagespeeld.</p>
+  <nav aria-label="Inhoud">
+    <a href="#advies">Advies</a>
+    <a href="#beslissingen">Besluiten</a>
+    <a href="#nu">Hoe het nu werkt</a>
+    <a href="#fit">Eerst: de fit op mount</a>
+    <a href="#ontwerp">Ontwerp</a>
+    <a href="#alternatief">Alternatief</a>
+    <a href="#fasen">Fasen</a>
+    <a href="#risicos">Risico's</a>
+    <a href="#startprompt">Startprompt</a>
+    <a href="#bronnen">Bronnen</a>
+  </nav>
+</header>
+<main>
+
+<section id="advies" class="recommendation">
+  <h2>Advies</h2>
+  <p>Alles wat nu in <code>&lt;projectId&gt;.local.json</code> staat, gaat per client: de camera en de focus per view, het raster, de panels en <code>activeViewId</code>. De client bewaart het in localStorage onder <code>ruimte.local</code>, per machine en project. Eén uitzondering: <code>panels.favicons</code> is een cache van pagina's, niet van een scherm, en blijft alleen op de machine.</p>
+  <p>Bij het openen van een project legt <code>ProjectClient</code> wat deze client weet over wat de daemon terugstuurt, vóór <code>documents.load</code>. De regel is overal dezelfde: wat deze client heeft, wint; wat hij nooit zag, komt van de machine; wat de machine ook niet heeft, begint leeg of met een fit. De daemon blijft alles ontvangen, zodat een nieuwe client begint waar de vorige ophield.</p>
+  <p>De camera gaat op disk en in localStorage als wereldpunt in het midden plus zoom. In het geheugen blijft hij <code>{ x, y, zoom }</code>, omdat alle rekenwerk daarop leunt. Omrekenen kan alleen met een viewport, dus herstel wacht tot de cel een maat heeft. Dat is dezelfde wachtstand die de fit-bug toch al nodig heeft.</p>
+  <div class="stats">
+    <div><strong>1</strong><span>naad: <code>ProjectClient.open</code> en <code>saveLocal</code></span></div>
+    <div><strong>1</strong><span>schemawijziging: de camera als middelpunt</span></div>
+    <div><strong>2</strong><span>bestaande bugs die eerst weg moeten</span></div>
+    <div><strong>3</strong><span>fasen</span></div>
+  </div>
+  <p><span class="badge warning">Let op</span> "Client" betekent hier een browserprofiel of de desktop-app: alle vensters en tabbladen van één origin delen localStorage. De dev-app heeft een eigen <code>userData</code> en dus een eigen geheugen.</p>
+</section>
+
+<section id="beslissingen">
+  <h2>Besluiten</h2>
+  <ol>
+    <li><span class="badge confirmed">Besloten</span> <strong>De daemon blijft het startpunt.</strong> Een client die een project of view nooit zag, neemt over wat de machine heeft. De client blijft daarom alles naar <code>project.save-local</code> sturen.</li>
+    <li><span class="badge confirmed">Besloten</span> <strong>Alles per client, meteen.</strong> Raster, panels en <code>activeViewId</code> gaan mee met de camera. Alleen <code>panels.favicons</code> blijft op de machine.</li>
+    <li><span class="badge confirmed">Besloten</span> <strong>Vanuit het midden.</strong> Opgeslagen wordt het wereldpunt in het midden van de cel plus zoom, zodat een ander formaat venster of cel hetzelfde stuk canvas centraal houdt.</li>
+    <li><span class="badge confirmed">Besloten</span> <strong>Camerageschiedenis per client.</strong> Cmd+[ en Cmd+] (roadmap, punt 8) houden hun geschiedenis in de editor van deze client en slaan niets op.</li>
+  </ol>
+</section>
+
+<section id="nu">
+  <h2>Hoe het nu werkt</h2>
+  <h3>De camera zelf</h3>
+  <p><code>{ x, y, zoom }</code>, waarbij <code>x</code> en <code>y</code> de schermpositie van de wereldoorsprong zijn (<code>canvas/math.ts:30</code>). Het schema staat in <code>packages/contracts/src/project.ts:383</code>. Elke view op het scherm heeft een eigen editor met een eigen camera (<code>state/editors.ts</code>), dus in een raster zijn er tot negen tegelijk. Tekeningen hebben dezelfde vorm in <code>state/drawing.ts:69</code>.</p>
+  <h3>Opslag</h3>
+  <div class="table">
+    <table class="wide">
+      <thead><tr><th>Stap</th><th>Waar</th><th>Wat</th></tr></thead>
+      <tbody>
+        <tr><td>Trigger</td><td><code>project-client.ts:143</code>, <code>:152</code>, <code>:367</code></td><td>Camera of mode van een canvas, camera van een tekening, <code>activeViewId</code>, panels</td></tr>
+        <tr><td>Debounce</td><td><code>project-client.ts:399</code></td><td>1000 ms, flush voor openen en sluiten</td></tr>
+        <tr><td>Snapshot</td><td><code>document.ts:646</code>, <code>:166</code></td><td>Opgeslagen <code>viewLocal</code> plus de live camera van elke open editor, het raster, de panels</td></tr>
+        <tr><td>Wire</td><td><code>project.save-local</code></td><td>Het hele <code>ProjectLocal</code>-object, gevalideerd met <code>ProjectLocalSchema</code>, geen event naar andere clients</td></tr>
+        <tr><td>Daemon</td><td><code>project-store.ts:388</code>, <code>:562</code></td><td>Atomisch naar <code>$RUIMTE_HOME/projects/&lt;id&gt;.local.json</code>; onleesbaar wordt <code>EMPTY_LOCAL</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>Herstel</h3>
+  <p><code>open</code> haalt <code>local</code> op (<code>project-client.ts:346</code>), zet de panels (<code>:369</code>), <code>document.load</code> bewaart <code>views</code> als <code>viewLocal</code>, rekent het raster uit en <code>openEditors</code> roept per canvas <code>loadView(view, viewLocal[viewId])</code> aan (<code>document.ts:147</code>). <code>loadView</code> neemt de opgeslagen camera over en doet anders <code>fitAll</code> (<code>canvas.ts:669</code>). Een view die het raster verlaat, schrijft zijn camera eerst terug in <code>viewLocal</code> (<code>document.ts:259</code>). Tekeningen lopen via <code>DrawingClient.openOne</code> en <code>fitPending</code>.</p>
+  <h3>Wat er misgaat met twee clients</h3>
+  <p><span class="badge confirmed">Geverifieerd</span> Laptop en desktop op dezelfde daemon overschrijven elkaars hele local-bestand: camera, raster, panels en <code>activeViewId</code>. Er gaat geen event uit, dus de andere client merkt het pas bij de volgende <code>project.open</code>. Twee workspaces in één venster op hetzelfde project doen hetzelfde.</p>
+  <p><span class="badge info">Afgeleid</span> <code>focusedNodeId</code> wordt geschreven maar nergens teruggelezen.</p>
+</section>
+
+<section id="fit">
+  <h2>Eerst: de fit op mount</h2>
+  <p><span class="badge danger">Vermoedelijke bug</span> <code>Canvas.tsx:120-132</code> roept bij het mounten altijd <code>fitAll()</code> aan, direct als de viewport al een maat heeft en anders bij de eerste viewport groter dan nul. Het kijkt niet of er een camera is opgeslagen. De editor voor een view wordt in <code>openEditors</code> gemaakt en geladen terwijl zijn viewport nog 0 breed is, dus de opgeslagen camera staat er even en wordt daarna door de fit vervangen. Dat was onschuldig met de ene store van vroeger, die zijn viewport hield. Sinds elke view een eigen editor heeft (<code>3132a66</code>), is het vermoedelijk bij elke boot en elke view die terugkomt raak.</p>
+  <p><span class="badge info">Afgeleid</span> De <code>ResizeObserver</code> op <code>Canvas.tsx:110</code> schrijft de viewport naar <code>useCanvas.getState()</code>. Buiten een render is dat de editor met de focus, niet <code>canvasStore</code> van deze cel. In een raster krijgt een cel zonder focus dan geen viewport, en de cel met focus de maat van een andere cel. Zoomen rond het midden, de fit en straks het omrekenen vanuit het midden rekenen dan met de verkeerde maat.</p>
+  <p>Beide eerst oplossen. De tekening heeft het goede patroon al: <code>fitPending</code> in de store, gezet door <code>load</code> als er geen camera is, en een fit zodra de viewport er is (<code>DrawingView.tsx:167</code>). Met besluit 3 wordt dat breder: niet alleen een fit wacht op de viewport, maar ook het herstel van een middelpunt.</p>
+</section>
+
+<section id="ontwerp">
+  <h2>Ontwerp</h2>
+
+  <h3>De camera op disk: middelpunt en zoom</h3>
+<pre><code>// packages/contracts/src/project.ts
+export const ViewCameraSchema = z.object({
+    center: z.object({ x: z.number(), y: z.number() }),
+    zoom: z.number().positive()
+});
+
+export const ProjectViewLocalSchema = z.object({
+    camera: ViewCameraSchema.nullable(),
+    focusedNodeId: z.string().nullable()
+});</code></pre>
+  <p><code>CameraSchema</code> met <code>{ x, y, zoom }</code> blijft bestaan voor wat alleen in het geheugen leeft. Twee pure functies naast <code>cameraToFit</code> in <code>canvas/math.ts</code>:</p>
+<pre><code>viewCameraOf(camera, viewport)  // center = toWorld(camera, { x: w / 2, y: h / 2 })
+cameraOfView(view, viewport)    // x = w / 2 - center.x * zoom, y = h / 2 - center.y * zoom</code></pre>
+  <p>Een bestaand bestand met een camera in de oude vorm leest als <code>camera: null</code> en krijgt dus een fit. Exact omrekenen kan niet zonder de viewport waarin hij is opgeslagen, en door de fit-bug kwam die camera toch al niet terug. Het schema van de payload accepteert de oude vorm ook, zodat een oudere client die nog <code>{ x, y, zoom }</code> stuurt niet zijn hele local-bestand geweigerd ziet (<code>project-migrate.test.ts:93</code>).</p>
+
+  <h3>Herstel wacht op de viewport</h3>
+  <p>Canvas en tekening krijgen dezelfde wachtstand in plaats van <code>fitPending</code>:</p>
+<pre><code>pendingCamera: { kind: 'fit' } | { kind: 'view'; view: ViewCamera } | null</code></pre>
+  <p><code>loadView</code> en <code>load</code> zetten hem. <code>setViewport</code> lost hem op bij de eerste maat groter dan nul, in de store zelf, zodat geen component er een effect voor nodig heeft. Het effect op <code>Canvas.tsx:120</code> verdwijnt. Exporteren gaat andersom: een editor met viewport rekent zijn camera om; een editor die nog wacht, geeft zijn <code>pendingCamera</code> terug zoals hij hem kreeg, zodat een cel die nog nooit getekend is zijn opgeslagen camera niet kwijtraakt.</p>
+
+  <h3>Opslag in de client</h3>
+<pre><code>// localStorage "ruimte.local"
+{
+    "&lt;endpointId&gt;:&lt;projectId&gt;": {
+        "at": 1789300000000,
+        "local": {
+            "activeViewId": "main",
+            "views": { "main": { "camera": { "center": { "x": 420, "y": 180 }, "zoom": 0.75 }, "focusedNodeId": null } },
+            "layout": { "columns": [...], "focus": { "column": 0, "cell": 0 } },
+            "panels": { ... }   // zonder favicons
+        }
+    }
+}</code></pre>
+  <p>Een module <code>project/client-local.ts</code> naar het model van <code>last-project.ts</code>: pure functies met een geïnjecteerde <code>Pick&lt;Storage, ...&gt;</code>. Wat er staat, gaat door <code>migrateLocal</code>; onleesbaar telt als niets. De sleutel komt uit <code>state/keys.ts</code>. <code>ProjectClient</code> heeft <code>storage</code> en <code>endpointId()</code> al.</p>
+
+  <h3>Lezen: wat de client heeft, wint</h3>
+<pre><code>overlayLocal(machine: ProjectLocal, client: ProjectLocal | null): ProjectLocal
+    activeViewId  client ?? machine
+    layout        client ?? machine          // document.load trimt views die weg zijn al
+    panels        { ...(client ?? machine), favicons: machine.favicons }
+    views[id]     client.views[id] ?? machine.views[id]</code></pre>
+  <p>Heeft de client een record voor dit project, dan komen raster en panels uit dat record, ook als het raster daar leeg is. Per view valt het terug op de machine, want een view die iemand op een ander apparaat aanmaakte, heeft deze client nooit gezien. Views die niet meer in het document staan, vallen bij de volgende schrijf weg. <code>overlayLocal</code> is puur en zit in de client, niet in contracts.</p>
+
+  <h3>Schrijven</h3>
+  <ol>
+    <li>In <code>saveLocal</code>: <code>localOfScreen()</code> zonder favicons naar localStorage, met <code>at = Date.now()</code>, en daarna zoals nu naar de daemon.</li>
+    <li>Op <code>pagehide</code>: <code>flushLocal</code>. localStorage is synchroon, dus dat haalt het. De daemon misschien niet, maar die is alleen het startpunt.</li>
+    <li>Bij <code>QuotaExceededError</code>: de oudste projecten eruit en één keer opnieuw proberen, daarna opgeven zonder te gooien.</li>
+  </ol>
+
+  <h3>Opruimen</h3>
+  <ul>
+    <li>Hoogstens 100 projecten; de oudste <code>at</code> gaat eruit.</li>
+    <li><code>forgetEndpointState</code> (<code>endpoint/index.ts:147</code>) laat alle rijen van die machine vallen, net als de andere state per machine.</li>
+    <li><code>rekeyEndpoint</code> (<code>endpoint/identity.ts:55</code>) verhuist ze mee, zoals <code>rekeyLastProject</code>.</li>
+    <li>Een verwijderd project (<code>project.delete</code>) laat zijn rij vallen.</li>
+  </ul>
+
+  <h3>Camerageschiedenis</h3>
+  <p>Niet in deze build, wel voorbereid: de geschiedenis hoort in de editor-store naast <code>camera</code> en gaat nooit door <code>exportLocal</code>. Een sprong (<code>goToNode</code>, <code>fitAll</code>, <code>zoomToSelection</code>) legt de camera ervoor erop; pannen en zoomen niet.</p>
+</section>
+
+<section id="alternatief">
+  <h2>Alternatief: per client op de daemon</h2>
+  <div class="split">
+    <div class="panel">
+      <h3>localStorage (gekozen)</h3>
+      <ul>
+        <li>Geen nieuwe request, geen groeiend bestand op de daemon.</li>
+        <li>Werkt meteen voor loopback-clients, die geen sleutel nodig hebben.</li>
+        <li>Weg als iemand de browseropslag wist; dan valt het terug op de machine.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3><code>local.json</code> met een sleutel per client</h3>
+      <ul>
+        <li>Sleutel is de publieke ed25519-sleutel uit IndexedDB, de enige stabiele client-id die er is.</li>
+        <li>Overleeft het wissen van localStorage, zolang IndexedDB blijft.</li>
+        <li>Nieuw schema, nieuwe payload, een bestand dat groeit met elk apparaat dat ooit keek.</li>
+        <li><span class="badge info">Niet gecontroleerd</span> of een loopback-client altijd een sleutelpaar heeft.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="fasen">
+  <h2>Fasen</h2>
+  <ol class="steps">
+    <li class="step"><div><h3>De camera komt terug, vanuit het midden</h3><p><code>ViewCameraSchema</code> in contracts met de oude vorm als <code>null</code>, <code>viewCameraOf</code> en <code>cameraOfView</code> in <code>canvas/math.ts</code>, <code>pendingCamera</code> in canvas- en tekening-store, opgelost in <code>setViewport</code>. Het fit-effect in <code>Canvas.tsx</code> gaat weg en de <code>ResizeObserver</code> schrijft naar <code>canvasStore</code>. Exporteren rekent om, of geeft de wachtende camera terug.</p><p>Tests: heen en terug omrekenen; een geladen camera overleeft de eerste viewport; zonder camera volgt precies één fit; een editor zonder viewport exporteert wat hij kreeg; twee editors krijgen elk hun eigen viewport; de oude vorm leest als <code>null</code> en de payload accepteert hem.</p><p><strong>Klaar als</strong> een reload van de dev-app op hetzelfde stuk canvas landt, ook in een raster van twee cellen, en een kleiner venster hetzelfde punt in het midden houdt.</p></div></li>
+    <li class="step"><div><h3>Local-state per client</h3><p><code>project/client-local.ts</code> met <code>overlayLocal</code>, lezen, schrijven, de limiet en de quota-afhandeling, ingehaakt in <code>ProjectClient.open</code>, <code>saveLocal</code> en een <code>pagehide</code>-flush.</p><p>Tests in <code>client-local.test.ts</code> en <code>project-client.test.ts</code>: raster, panels en <code>activeViewId</code> van de client winnen; favicons komen van de machine; een view zonder camera bij de client neemt die van de machine; een project dat de client nooit zag, opent zoals de machine het had; verwijderde views vallen weg; de limiet van 100.</p><p><strong>Klaar als</strong> twee clients op één daemon (dev-app en een browser op de Vite-server) elk hun eigen camera, raster en panels terugkrijgen, en een derde client begint waar de laatste ophield.</p></div></li>
+    <li class="step"><div><h3>Opruimen en documentatie</h3><p>Vergeten en herkeyen van een machine, verwijderen van een project. <code>CLAUDE.md</code> (de zinnen over machine state bij projecten en het raster), <code>apps/server/README.md:56</code> en <code>:78</code>, en een entry in <code>docs/DECISIONS.md</code> die de vier besluiten vastlegt. De regel "the layout is machine state" in DECISIONS wordt "client state, with the machine as the starting point".</p></div></li>
+  </ol>
+</section>
+
+<section id="risicos">
+  <h2>Risico's</h2>
+  <ul>
+    <li>De fit-bug is uit de code afgeleid en niet in de app nagespeeld. Blijkt de camera nu wel terug te komen, dan is fase 1 kleiner, maar de <code>ResizeObserver</code> blijft verdacht.</li>
+    <li>Een oudere daemon weigert een payload met een camera in de nieuwe vorm. De client vangt die fout al af, en het geheugen van de client dekt het; alleen het startpunt voor een nieuwe client blijft dan achter.</li>
+    <li>Wie nu een camera in <code>local.json</code> heeft, krijgt één keer een fit. Door de fit-bug is dat vermoedelijk wat er al gebeurde.</li>
+    <li>De panels bevatten per project ingeklapte mappen van git. Veel grote projecten kunnen samen richting het quotum van localStorage (ongeveer 5 MB per origin) gaan; vandaar de limiet en de quota-afhandeling.</li>
+    <li>Twee workspaces in één venster op hetzelfde project delen één rij in localStorage. Dat is hetzelfde gedrag als nu op de daemon, alleen lokaal.</li>
+    <li>localStorage is per origin. Een browser die op een ander adres naar dezelfde Vite-server wijst (<code>localhost</code> tegen <code>127.0.0.1</code>), is voor dit geheugen een andere client.</li>
+  </ul>
+</section>
+
+<section id="startprompt">
+  <h2>Startprompt voor een schone sessie</h2>
+  <p>Plak dit in een nieuwe sessie. De prompt stopt na fase 1, omdat fase 2 pas te testen is als de camera überhaupt terugkomt.</p>
+  <div class="prompt-box">
+    <button type="button" id="copy-prompt">Kopieer</button>
+<pre><code id="prompt-text">We gaan in Ruimte de local-state van een project (camera en focus per view, het raster, de panels en activeViewId) per client onthouden in plaats van per machine, met de camera opgeslagen als middelpunt plus zoom.
+
+Lees eerst:
+- docs/reports/2026-09-13-camera-per-client.html (hoe het nu werkt, de vermoedelijke fit-bug, het ontwerp, de besluiten en de fasen)
+- CLAUDE.md en docs/DECISIONS.md
+
+Besluiten:
+- De daemon blijft het startpunt: de client stuurt alles naar project.save-local, en wat een client nooit zag komt van de machine.
+- Alles in local.json gaat per client, behalve panels.favicons.
+- De camera wordt opgeslagen als wereldpunt in het midden plus zoom. In het geheugen blijft hij { x, y, zoom }.
+- Camerageschiedenis (later) blijft in de editor van de client en wordt niet opgeslagen.
+
+Stap 1 is fase 1 uit het rapport:
+1. Controleer eerst met een test of een opgeslagen canvascamera de mount van Canvas.tsx overleeft. Het rapport vermoedt dat het effect op Canvas.tsx:120-132 altijd fitAll aanroept en hem overschrijft.
+2. ViewCameraSchema ({ center: { x, y }, zoom }) in packages/contracts voor ProjectViewLocal.camera. Een camera in de oude vorm leest als null, en het payload-schema accepteert de oude vorm zodat een oudere client niet zijn hele local-bestand verliest.
+3. viewCameraOf en cameraOfView in canvas/math.ts.
+4. pendingCamera ({ kind: 'fit' } | { kind: 'view', view } | null) in de canvas-store en de tekening-store in plaats van fitPending, opgelost in setViewport bij de eerste maat groter dan nul. Het fit-effect in Canvas.tsx verdwijnt.
+5. De ResizeObserver in Canvas.tsx schrijft naar canvasStore in plaats van useCanvas.getState().
+6. Exporteren (localOfView in state/document.ts) rekent om met de viewport, of geeft de wachtende camera terug als de editor nog geen maat had.
+7. Tests naast de code, bun run format en bun run check.
+
+Meld wat je vond en wat je veranderde, en stop dan. Ik test de reload in de dev-app voordat fase 2 begint. Commit niet zonder dat ik erom vraag.</code></pre>
+  </div>
+</section>
+
+<section id="bronnen">
+  <h2>Bronnen</h2>
+  <ul>
+    <li>Client: <code>canvas/Canvas.tsx:105-132</code>, <code>canvas/math.ts</code>, <code>state/canvas.ts:115,280,302-347,660-675,723</code>, <code>state/drawing.ts:69,88,229,266,297</code>, <code>state/document.ts:147-174,259-288,646-657</code>, <code>state/editors.ts</code>, <code>state/panel-state.ts</code>, <code>project/panels-port.ts</code>, <code>project/project-client.ts:129,143-152,317-369,399-449</code>, <code>project/last-project.ts</code>, <code>transport/connections.ts:137-157</code>, <code>endpoint/index.ts:135-147</code>, <code>endpoint/identity.ts:55</code>, <code>endpoint/client-key.ts</code>, <code>drawing/DrawingView.tsx:167-177</code></li>
+    <li>Contracts: <code>packages/contracts/src/project.ts:383-430,499</code>, <code>project-migrate.ts:41-58</code></li>
+    <li>Daemon: <code>apps/server/src/handlers/project.ts:28</code>, <code>apps/server/src/projects/project-store.ts:289,388,562-566</code></li>
+    <li>Tests: <code>project-client.test.ts:235,261,374</code>, <code>document.test.ts:31,70,216,249</code>, <code>drawing.test.ts:31-63,201</code>, <code>drawing-client.test.ts:143</code>, <code>project-store.test.ts:116</code>, <code>project-migrate.test.ts:62,93</code></li>
+    <li>Docs: <code>CLAUDE.md</code> (machine state, het raster), <code>apps/server/README.md:56,78</code>, <code>docs/DECISIONS.md:467-472,729</code>, <code>README.md:20</code></li>
+  </ul>
+</section>
+
+</main>
+<footer>
+  <p>Een subagent doorzocht Ruimte op <code>d1807e7</code>; de kernpunten zijn daarna in de code nagelezen. De vier besluiten zijn op 13 september 2026 genomen. Niet geverifieerd: de fit-bug en de viewport van de <code>ResizeObserver</code> in de draaiende app, of een loopback-client altijd een sleutelpaar heeft, en hoe groot de panels van een groot project in localStorage worden. Er is nog geen regel code geschreven.</p>
+</footer>
+<script>
+{
+    const button = document.getElementById('copy-prompt');
+    const text = document.getElementById('prompt-text');
+    button.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(text.textContent);
+            button.textContent = 'Gekopieerd';
+        } catch {
+            button.textContent = 'Kopiëren mislukt';
+        }
+        setTimeout(() => {
+            button.textContent = 'Kopieer';
+        }, 2000);
+    });
+}
+</script>
+</body>
+</html>
