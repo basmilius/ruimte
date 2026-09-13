@@ -36,11 +36,15 @@ interface VerbHelp {
     name: string;
     usage: string;
     summary: string;
+    /* The tab-separated lines `help <verb>` prints: everything the one-line summary has no room for. */
+    detail: readonly string[];
 }
 
 /* A verb `POST /canvas/<verb>` runs. */
 export interface Verb extends VerbHelp {
     served: 'canvas';
+    /* The flags the parser takes, from the schema validation runs, so help and a test see the same list. */
+    flagNames: readonly string[];
     run(argv: readonly string[], call: VerbCall): Promise<string[]>;
 }
 
@@ -55,6 +59,7 @@ interface VerbSpec<Positionals extends z.ZodType, Flags extends z.ZodObject> {
     name: string;
     usage: string;
     summary: string;
+    detail: readonly string[];
     positionals: Positionals;
     /* Every flag is a string that takes a value; the keys of this object are the flags the parser knows. */
     flags: Flags;
@@ -66,14 +71,17 @@ interface VerbSpec<Positionals extends z.ZodType, Flags extends z.ZodObject> {
  * `help` renders from what validation runs and the two cannot drift apart.
  */
 export const defineVerb = <Positionals extends z.ZodType, Flags extends z.ZodObject>(spec: VerbSpec<Positionals, Flags>): Verb => {
-    const usageLines = [`usage\t${spec.name}\t${spec.usage}`];
+    const usageLines = [`usage\t${spec.name}\t${spec.usage}`, `detail\truimte-context help ${spec.name}`];
+    const flagNames = Object.keys(spec.flags.shape);
     return {
         served: 'canvas',
         name: spec.name,
         usage: spec.usage,
         summary: spec.summary,
+        detail: spec.detail,
+        flagNames,
         async run(argv, call) {
-            const parsed = parseArgv(argv, Object.keys(spec.flags.shape));
+            const parsed = parseArgv(argv, flagNames);
             if (!parsed.ok) {
                 throw new VerbRefusal(parsed.code, parsed.message, usageLines);
             }

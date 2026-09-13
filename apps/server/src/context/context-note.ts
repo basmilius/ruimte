@@ -1,7 +1,8 @@
 import type { ContextSource } from '@ruimte/contracts';
 
 /* Said once to every agent, linked or not, so it knows the verbs exist before anyone links a thing. */
-export const VERBS_NOTE = 'Ruimte: `ruimte-context` reads context linked to you and places nodes on the canvas; `ruimte-context help` lists what it does.';
+export const VERBS_NOTE =
+    'Ruimte: `ruimte-context` reads context linked to you and places nodes on the canvas; `ruimte-context help` lists what it does and `ruimte-context help <verb>` details one.';
 
 const CONTEXT_PROMPT =
     'The person linked context to this chat on their canvas. Run `ruimte-context` to list it and `ruimte-context read <id>` to read one item, whenever it could help.';

@@ -377,7 +377,9 @@ canvas, against Ruimte, one verdict each.
 - The daemon parses a verb's arguments, not `ruimte-context`. The CLI posts the raw words after
   the verb (`{ argv }`), so a `ruimte-context` from an older build, a copy left on a remote
   machine or a script that calls the route itself can never disagree with the daemon about which
-  verbs and flags exist; `help` comes from the same registry for the same reason.
+  verbs and flags exist; `help` comes from the same registry for the same reason. `help <verb>`
+  renders the same entry the parse runs from, with the kind and flag columns derived from the
+  tables the verb refuses against, so the detail cannot promise a pairing the daemon says no to.
 - A refusal exits 3, apart from 1 for a daemon that failed or could not be reached and 2 for
   running outside a session. An agent has to tell "you asked for something this project does not
   allow" (fix the arguments, pick one of the canvases listed) from "try again later", and an

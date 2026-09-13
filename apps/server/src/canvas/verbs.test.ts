@@ -118,12 +118,63 @@ describe('the route', () => {
 });
 
 describe('help', () => {
-    test('renders one line per verb from the registry', async () => {
+    test('renders one line per verb from the registry, then the one line about refusals', async () => {
         const { status, lines } = await post('help', []);
         expect(status).toBe(200);
-        expect(lines).toEqual(VERBS.map((verb) => `${verb.name}\t${verb.usage}\t${verb.summary}`));
-        expect(lines.map((line) => line.split('\t')[0])).toEqual(['help', 'list', 'read', 'nodes', 'views', 'node']);
+        expect(lines.slice(0, -1)).toEqual(VERBS.map((verb) => `${verb.name}\t${verb.usage}\t${verb.summary}`));
+        expect(lines.map((line) => line.split('\t')[0])).toEqual(['help', 'list', 'read', 'nodes', 'views', 'node', 'refusal']);
         expect(lines[2]).toBe('read\t<id>\tPrints one linked source');
+        expect(lines.at(-1)).toBe(
+            'refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a Ruimte session, 3 refused'
+        );
+    });
+
+    test('help <verb> details one verb, synopsis first and refusals last', async () => {
+        for (const verb of VERBS) {
+            const { status, lines } = await post('help', [verb.name]);
+            expect(status).toBe(200);
+            expect(lines[0]).toBe(`usage\t${verb.name}\t${verb.usage}`);
+            expect(lines[1]).toBe(`about\t${verb.summary}`);
+            expect(lines.slice(2, -1)).toEqual([...verb.detail]);
+            expect(lines.at(-1)).toStartWith('refusal\t');
+            // Tab-separated rows, never a paragraph.
+            expect(lines.every((line) => line.includes('\t'))).toBe(true);
+        }
+    });
+
+    test('every flag a verb takes is a line of its own detail', async () => {
+        for (const verb of VERBS) {
+            if (verb.served !== 'canvas') {
+                continue;
+            }
+            const { lines } = await post('help', [verb.name]);
+            for (const flag of verb.flagNames) {
+                expect(lines.some((line) => line.startsWith(`flag\t--${flag} `) || line.startsWith(`flag\t--${flag}\t`))).toBe(true);
+            }
+        }
+    });
+
+    test('help node says what it prints, which flag goes with which kind, and where a node lands', async () => {
+        const { lines } = await post('help', ['node']);
+        expect(lines).toContain('prints\tid\tkind\tview\tthe id of the new node, its kind, and the canvas it landed on');
+        expect(lines).toContain('kind\tnote\t--text\tcalled "Note" without --title');
+        expect(lines).toContain('kind\tbrowser\t--url\tcalled "Browser" without --title');
+        expect(lines).toContain('flag\t--url U\tbrowser (required)\tAn http or https address');
+        expect(lines).toContain('flag\t--cwd P\tterminal, chat\tThe directory the shell starts in');
+        expect(lines.filter((line) => line.startsWith('where\t')).length).toBe(2);
+        expect(lines.filter((line) => line.startsWith('paths\t')).length).toBe(2);
+        expect(lines.some((line) => line.includes('--text - takes the body from stdin'))).toBe(true);
+    });
+
+    test('help views says a separator has no name', async () => {
+        expect((await post('help', ['views'])).lines).toContain('note\tA separator is a line in the sidebar and has an empty name');
+    });
+
+    test('a verb it does not have is refused with the list', async () => {
+        const { status, lines } = await post('help', ['agent']);
+        expect(status).toBe(422);
+        expect(lines[0]).toBe('refused\tunknown-verb\tagent is not a verb');
+        expect(lines.slice(1)).toEqual(VERBS.map((verb) => `${verb.name}\t${verb.usage}\t${verb.summary}`));
     });
 
     test('list and read are named there but not run by the canvas route', async () => {
@@ -136,9 +187,12 @@ describe('help', () => {
 
     test('refuses arguments it does not take', async () => {
         expect((await post('help', ['--view', 'main'])).lines[0]).toStartWith('refused\tunknown-flag\t');
-        const extra = await post('help', ['more']);
-        expect(extra.lines[0]).toStartWith('refused\tbad-arguments\t');
-        expect(extra.lines[1]).toBe('usage\thelp\t');
+        const extra = await post('help', ['nodes', 'node']);
+        expect(extra.lines).toEqual([
+            'refused\tbad-arguments\thelp takes one verb name and nothing else',
+            'usage\thelp\t[verb]',
+            'detail\truimte-context help help'
+        ]);
     });
 });
 

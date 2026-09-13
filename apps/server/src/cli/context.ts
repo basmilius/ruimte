@@ -6,6 +6,7 @@
  *   ruimte-context              lists the linked sources
  *   ruimte-context read <id>    prints one of them
  *   ruimte-context help         lists all of the above and every canvas verb
+ *   ruimte-context help <verb>  everything that one verb takes
  *   ruimte-context <verb> ...   runs one; the daemon parses the arguments
  *
  * Exit codes: 0 done, 1 the daemon could not be reached or failed, 2 not inside a session, 3 the

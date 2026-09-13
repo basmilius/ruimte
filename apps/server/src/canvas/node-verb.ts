@@ -26,6 +26,42 @@ const KIND_FLAGS: Record<NodeVerbKind, readonly KindFlag[]> = {
 
 const REQUIRED_FLAG: Partial<Record<NodeVerbKind, KindFlag>> = { browser: 'url', drawing: 'source', file: 'path' };
 
+/* Which kinds a flag goes with, from the same table `run` refuses against, so help cannot claim another pairing. */
+const kindsFor = (flag: KindFlag): string =>
+    NODE_VERB_KINDS.filter((kind) => KIND_FLAGS[kind].includes(flag))
+        .map((kind) => (REQUIRED_FLAG[kind] === flag ? `${kind} (required)` : kind))
+        .join(', ');
+
+/* What the title falls back to without `--title`, in the order `run` picks it. */
+const untitled = (kind: NodeVerbKind): string => {
+    if (kind === 'drawing') {
+        return 'the name of the drawing view';
+    }
+    if (kind === 'file') {
+        return "the file's own name";
+    }
+    return `"${DEFAULT_TITLES[kind]}"`;
+};
+
+const NODE_DETAIL: readonly string[] = [
+    `argument\t<kind>\trequired\t${NODE_VERB_KINDS.join(', ')}`,
+    'prints\tid\tkind\tview\tthe id of the new node, its kind, and the canvas it landed on',
+    ...NODE_VERB_KINDS.map((kind) => `kind\t${kind}\t${KIND_FLAGS[kind].map((flag) => `--${flag}`).join(', ')}\tcalled ${untitled(kind)} without --title`),
+    "flag\t--title T\tevery kind\tThe title; one set here is the node's for good, the session never renames over it",
+    'flag\t--view V\tevery kind\tThe canvas to add to, by view id; ruimte-context views lists them',
+    'flag\t--beside N\tevery kind\tPuts the node directly right of node N, top edges level, whatever is there already',
+    `flag\t--text B\t${kindsFor('text')}\tThe body; \\n, \\t and \\\\ are read as escapes, and --text - takes the body from stdin, byte for byte`,
+    `flag\t--url U\t${kindsFor('url')}\tAn http or https address`,
+    `flag\t--source V\t${kindsFor('source')}\tThe id of a drawing view of this project; ruimte-context views lists them`,
+    `flag\t--path P\t${kindsFor('path')}\tThe file to show; it has to exist`,
+    `flag\t--cwd P\t${kindsFor('cwd')}\tThe directory the shell starts in`,
+    'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one',
+    'where\tWithout --beside the first free spot right of the caller, or right of everything when the caller is not on that canvas',
+    'paths\t--path and --cwd are resolved against the project folder, never against your own directory; both may also be absolute',
+    'paths\t--cwd has to stay inside the project folder or a worktree of its repository; --path may point outside and is then stored absolute',
+    `limit\tA canvas holds at most ${MAX_CANVAS_NODES} nodes; a terminal or chat starts no process until a client shows it`
+];
+
 const isInside = (root: string, path: string): boolean => {
     const rel = relative(root, path);
     return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
@@ -110,7 +146,8 @@ const checkUrl = (url: string): string => {
 export const nodeVerb = defineVerb({
     name: 'node',
     usage: `<${NODE_VERB_KINDS.join('|')}> [--title T] [--text B] [--url U] [--path P] [--source V] [--cwd P] [--view V] [--beside N]`,
-    summary: 'Adds one node to a canvas and prints its id; a terminal or chat starts when a client shows it',
+    summary: 'Adds one node to a canvas and prints id, kind, view; a terminal or chat starts when a client shows it',
+    detail: NODE_DETAIL,
     positionals: z.tuple([z.enum(NODE_VERB_KINDS)]),
     flags: z.object({
         title: z.string().trim().min(1).optional(),
