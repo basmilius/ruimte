@@ -1,3 +1,4 @@
+import { ContextSourceSchema } from '@ruimte/contracts';
 import { z } from 'zod';
 import { nodeVerb } from './node-verb.ts';
 import { VerbRefusal, canvasFor, defineVerb, field, placeOf, type ContextVerb, type VerbEntry } from './verb.ts';
@@ -6,7 +7,8 @@ import { VerbRefusal, canvasFor, defineVerb, field, placeOf, type ContextVerb, t
 const REFUSAL_LINE =
     'refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a Ruimte session, 3 refused';
 
-const summaryLines = (): string[] => VERBS.map((verb) => `${verb.name}\t${verb.usage}\t${verb.summary}`);
+/* Every row says what it is in its first field, so the lines under the list are never read as verbs. */
+export const verbSummaryLines = (): string[] => VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`);
 
 const detailLines = (verb: VerbEntry): string[] => [`usage\t${verb.name}\t${verb.usage}`, `about\t${verb.summary}`, ...verb.detail, REFUSAL_LINE];
 
@@ -16,17 +18,17 @@ const helpVerb = defineVerb({
     summary: 'Lists every verb: name, arguments, what it does; with a verb, everything that one verb takes',
     detail: [
         'argument\t<verb>\toptional\tThe verb to detail; without one every verb is listed',
-        'prints\tname\targuments\tsummary\tone line per verb, or the detail of the verb you named'
+        'prints\tverb\tname\targuments\tsummary\tone row per verb; a row that does not start with verb is not one'
     ],
     positionals: z.array(z.string()).max(1, 'help takes one verb name and nothing else'),
     flags: z.object({}),
     run: async ({ positionals: [name] }) => {
         if (name === undefined) {
-            return [...summaryLines(), REFUSAL_LINE];
+            return [...verbSummaryLines(), 'detail\truimte-context help <verb>\tone verb in full', REFUSAL_LINE];
         }
         const verb = verbNamed(name);
         if (!verb) {
-            throw new VerbRefusal('unknown-verb', `${name} is not a verb`, summaryLines());
+            throw new VerbRefusal('unknown-verb', `${name} is not a verb`, verbSummaryLines());
         }
         return detailLines(verb);
     }
@@ -39,7 +41,8 @@ const listVerb: ContextVerb = {
     summary: 'Lists the context linked to this session: id, kind, title (also what ruimte-context prints without a verb)',
     detail: [
         'prints\tid\tkind\ttitle\tone line per linked source, nothing when the person linked none',
-        'note\tAnswered by GET /context, so the CLI runs it; POST /canvas/list is refused'
+        `kinds\t${ContextSourceSchema.shape.kind.options.join('\t')}\ta note and a browser address both arrive as text`,
+        'note\tThe id is what ruimte-context read takes; this list is the whole of what you may read'
     ]
 };
 
@@ -51,7 +54,8 @@ const readVerb: ContextVerb = {
     detail: [
         'argument\t<id>\trequired\tThe id of a source, from ruimte-context list',
         'prints\tThe source itself, as text, not as tab-separated lines',
-        'note\tAnswered by GET /context, so the CLI runs it; POST /canvas/read is refused'
+        'note\tA text or a browser address is what the person wrote; a terminal, a chat and a drawing are read the moment you ask',
+        'note\tA file arrives as its path and a line telling you to read it yourself, since your own tools see a fresher copy'
     ]
 };
 
@@ -61,7 +65,8 @@ const nodesVerb = defineVerb({
     summary: 'Lists the nodes of a canvas: id, kind, title, x, y, w, h',
     detail: [
         'flag\t--view V\toptional\tThe canvas to list, by view id; ruimte-context views lists them',
-        'prints\tid\tkind\ttitle\tx\ty\tw\th\tone line per node, coordinates rounded to whole pixels',
+        'prints\tid\tkind\ttitle\tx\ty\tw\th\tone line per node, rounded to whole pixels',
+        'units\tx and y are the top left corner of the node in canvas pixels, w and h its size; the canvas has no edges and x or y may be negative',
         'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one',
         'note\tA tab or a newline in a title is printed as a space, so a node is always one row'
     ],

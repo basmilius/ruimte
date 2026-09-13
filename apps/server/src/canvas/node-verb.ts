@@ -44,12 +44,20 @@ const untitled = (kind: NodeVerbKind): string => {
     return `"${DEFAULT_TITLES[kind]}"`;
 };
 
+/* The line about one kind, in help and in a refusal about that kind, so both name the same flags. */
+const kindLine = (kind: NodeVerbKind): string =>
+    `kind\t${kind}\t${KIND_FLAGS[kind].map((flag) => `--${flag}${REQUIRED_FLAG[kind] === flag ? ' (required)' : ''}`).join(', ')}\tcalled ${untitled(kind)} without --title`;
+
+/* The three flags no kind is without; a refusal about one kind would otherwise read as if they were gone. */
+const EVERY_KIND_LINE = 'kind\tevery kind\t--title T, --view V, --beside N';
+
 const KIND_MESSAGE = `node needs a kind: ${NODE_VERB_KINDS.join(', ')}`;
 
 const NODE_DETAIL: readonly string[] = [
     `argument\t<kind>\trequired\t${NODE_VERB_KINDS.join(', ')}`,
     'prints\tid\tkind\tview\tthe id of the new node, its kind, and the canvas it landed on',
-    ...NODE_VERB_KINDS.map((kind) => `kind\t${kind}\t${KIND_FLAGS[kind].map((flag) => `--${flag}`).join(', ')}\tcalled ${untitled(kind)} without --title`),
+    ...NODE_VERB_KINDS.map(kindLine),
+    EVERY_KIND_LINE,
     "flag\t--title T\tevery kind\tThe title; one set here is the node's for good, the session never renames over it",
     'flag\t--view V\tevery kind\tThe canvas to add to, by view id; ruimte-context views lists them',
     'flag\t--beside N\tevery kind\tPuts the node directly right of node N, top edges level, whatever is there already',
@@ -149,7 +157,10 @@ const checkUrl = (url: string): string => {
 export const nodeVerb = defineVerb({
     name: 'node',
     usage: `<${NODE_VERB_KINDS.join('|')}> [--title T] [--text B] [--url U] [--path P] [--source V] [--cwd P] [--view V] [--beside N]`,
-    summary: 'Adds one node to a canvas and prints id, kind, view; a terminal or chat starts when a client shows it',
+    // The required flags are in the summary too: without them the first thing a first-time caller meets is a refusal.
+    summary: `Adds one node to a canvas and prints id, kind, view; ${Object.entries(REQUIRED_FLAG)
+        .map(([kind, flag]) => `a ${kind} needs --${flag}`)
+        .join(', ')}`,
     detail: NODE_DETAIL,
     positionals: z.tuple([z.enum(NODE_VERB_KINDS, { error: KIND_MESSAGE })], {
         error: (issue) => (issue.code === 'too_big' ? 'node takes one kind and nothing else; a title goes in --title' : KIND_MESSAGE)

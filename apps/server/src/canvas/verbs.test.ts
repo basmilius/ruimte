@@ -118,12 +118,13 @@ describe('the route', () => {
 });
 
 describe('help', () => {
-    test('renders one line per verb from the registry, then the one line about refusals', async () => {
+    test('renders one row per verb from the registry, with what is not a verb marked as such', async () => {
         const { status, lines } = await post('help', []);
         expect(status).toBe(200);
-        expect(lines.slice(0, -1)).toEqual(VERBS.map((verb) => `${verb.name}\t${verb.usage}\t${verb.summary}`));
-        expect(lines.map((line) => line.split('\t')[0])).toEqual(['help', 'list', 'read', 'nodes', 'views', 'node', 'refusal']);
-        expect(lines[2]).toBe('read\t<id>\tPrints one linked source');
+        expect(lines.slice(0, -2)).toEqual(VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`));
+        expect(lines.map((line) => line.split('\t')[0])).toEqual([...VERBS.map(() => 'verb'), 'detail', 'refusal']);
+        expect(lines[2]).toBe('verb\tread\t<id>\tPrints one linked source');
+        expect(lines.at(-2)).toBe('detail\truimte-context help <verb>\tone verb in full');
         expect(lines.at(-1)).toBe(
             'refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a Ruimte session, 3 refused'
         );
@@ -158,7 +159,8 @@ describe('help', () => {
         const { lines } = await post('help', ['node']);
         expect(lines).toContain('prints\tid\tkind\tview\tthe id of the new node, its kind, and the canvas it landed on');
         expect(lines).toContain('kind\tnote\t--text\tcalled "Note" without --title');
-        expect(lines).toContain('kind\tbrowser\t--url\tcalled "Browser" without --title');
+        expect(lines).toContain('kind\tbrowser\t--url (required)\tcalled "Browser" without --title');
+        expect(lines).toContain('kind\tevery kind\t--title T, --view V, --beside N');
         expect(lines).toContain('flag\t--url U\tbrowser (required)\tAn http or https address');
         expect(lines).toContain('flag\t--cwd P\tterminal, chat\tThe directory the shell starts in');
         expect(lines.filter((line) => line.startsWith('where\t')).length).toBe(2);
@@ -174,7 +176,7 @@ describe('help', () => {
         const { status, lines } = await post('help', ['agent']);
         expect(status).toBe(422);
         expect(lines[0]).toBe('refused\tunknown-verb\tagent is not a verb');
-        expect(lines.slice(1)).toEqual(VERBS.map((verb) => `${verb.name}\t${verb.usage}\t${verb.summary}`));
+        expect(lines.slice(1)).toEqual(VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`));
     });
 
     test('list and read are named there but not run by the canvas route', async () => {
