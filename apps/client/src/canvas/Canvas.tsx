@@ -107,28 +107,17 @@ export function Canvas() {
         if (!el) {
             return;
         }
+        /* The editor of this cell, never `useCanvas`: that one is whichever cell has the focus, and
+           handing it a size measured somewhere else leaves both of them with a viewport that is not
+           theirs. The store decides what to do with it, which is where a waiting camera move runs. */
         const observer = new ResizeObserver(([entry]) => {
-            useCanvas.getState().setViewport({
+            canvasStore.getState().setViewport({
                 w: entry.contentRect.width,
                 h: entry.contentRect.height
             });
         });
         observer.observe(el);
         return () => observer.disconnect();
-    }, []);
-
-    useEffect(() => {
-        const state = canvasStore.getState();
-        if (state.viewport.w > 0) {
-            state.fitAll();
-        } else {
-            const unsub = canvasStore.subscribe((s, prev) => {
-                if (prev.viewport.w === 0 && s.viewport.w > 0) {
-                    s.fitAll();
-                    unsub();
-                }
-            });
-        }
     }, [canvasStore]);
 
     /* React registers wheel listeners as passive, so preventDefault there cannot stop the

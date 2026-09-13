@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { groupFrame } from '@ruimte/contracts';
-import { carriedByGroups, useCanvas, type CanvasNode } from './canvas';
+import { groupFrame, type ProjectCanvasView } from '@ruimte/contracts';
+import { toWorld } from '@/canvas/math';
+import { carriedByGroups, createCanvasStore, useCanvas, type CanvasNode } from './canvas';
 
 const node = (id: string, x: number, y: number, kind: CanvasNode['kind'] = 'terminal'): CanvasNode => ({ id, kind, title: id, x, y, w: 200, h: 100 });
 
@@ -84,6 +85,69 @@ describe('edges', () => {
         expect(useCanvas.getState().linkDraft).toMatchObject({ from: 'page', aiming: true, to: { x: 500, y: 50 } });
         useCanvas.getState().addEdge('page', 'shell');
         expect(useCanvas.getState().linkDraft).toBeNull();
+    });
+});
+
+describe('the camera of an editor that has not been measured', () => {
+    const viewWith = (...nodes: CanvasNode[]): ProjectCanvasView => ({
+        kind: 'canvas',
+        id: 'view',
+        name: 'Canvas',
+        nodes,
+        texts: [],
+        edges: [],
+        layouts: []
+    });
+
+    /* A view that goes into a cell gets an editor a frame before the element holding it has a size,
+       so revealing a node on another view lands here. Without the wait the node ends up in the
+       corner, which is the whole of the bug: the middle of a viewport of zero is (0, 0). */
+    test('goToNode waits for the size instead of parking the node in the top left', () => {
+        const store = createCanvasStore();
+        store.getState().loadView(viewWith(node('a', 1000, 600)), { camera: { x: 0, y: 0, zoom: 1 }, focusedNodeId: null });
+
+        store.getState().goToNode('a');
+        expect(store.getState().pendingCamera).toEqual({ kind: 'node', id: 'a' });
+        expect(store.getState().camera).toEqual({ x: 0, y: 0, zoom: 1 });
+        expect(store.getState().selection).toEqual(['a']);
+
+        store.getState().setViewport({ w: 1200, h: 800 });
+        expect(store.getState().pendingCamera).toBeNull();
+        const { camera } = store.getState();
+        expect(toWorld(camera, { x: 600, y: 400 })).toEqual({ x: 1100, y: 650 });
+    });
+
+    test('a measured editor centers on the spot and leaves nothing waiting', () => {
+        const store = createCanvasStore();
+        store.getState().loadView(viewWith(node('a', 1000, 600)), { camera: { x: 0, y: 0, zoom: 1 }, focusedNodeId: null });
+        store.getState().setViewport({ w: 1200, h: 800 });
+
+        store.getState().goToNode('a');
+        expect(store.getState().pendingCamera).toBeNull();
+        expect(toWorld(store.getState().camera, { x: 600, y: 400 })).toEqual({ x: 1100, y: 650 });
+    });
+
+    test('a view with no camera of its own fits itself once there is room, and an empty one waits for nothing', () => {
+        const store = createCanvasStore();
+        store.getState().loadView(viewWith(node('a', 0, 0), node('b', 800, 400)), null);
+        expect(store.getState().pendingCamera).toEqual({ kind: 'fit' });
+
+        store.getState().setViewport({ w: 1200, h: 800 });
+        expect(store.getState().pendingCamera).toBeNull();
+        expect(toWorld(store.getState().camera, { x: 600, y: 400 })).toEqual({ x: 500, y: 250 });
+
+        const empty = createCanvasStore();
+        empty.getState().loadView(viewWith(), null);
+        expect(empty.getState().pendingCamera).toBeNull();
+    });
+
+    test('a camera stored for the view is what it opens on, with nothing left waiting', () => {
+        const store = createCanvasStore();
+        store.getState().loadView(viewWith(node('a', 0, 0)), { camera: { x: -40, y: -80, zoom: 0.5 }, focusedNodeId: null });
+        expect(store.getState().pendingCamera).toBeNull();
+
+        store.getState().setViewport({ w: 1200, h: 800 });
+        expect(store.getState().camera).toEqual({ x: -40, y: -80, zoom: 0.5 });
     });
 });
 

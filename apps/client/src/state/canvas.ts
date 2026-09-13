@@ -6,6 +6,7 @@ import {
     cameraToFit,
     clampZoom,
     intersects,
+    isMeasured,
     snapToGrid,
     snapZoom,
     unionRect,
@@ -106,6 +107,9 @@ interface Viewport {
     h: number;
 }
 
+/* A camera move that needs a size to be worked out: everything the canvas has, or one node of it. */
+export type CameraRequest = { kind: 'fit' } | { kind: 'node'; id: string };
+
 export interface CanvasState {
     /*
      * The view whose content this store is holding. The document store flips `activeViewId` before
@@ -115,6 +119,14 @@ export interface CanvasState {
     viewId: string | null;
     camera: Camera;
     viewport: Viewport;
+    /*
+     * Where the camera has to go the moment this editor has a size. Every view on screen has an
+     * editor of its own, made when the view goes into a cell, and the element that holds it is
+     * measured a frame later: a fit or a jump to a node asked for in between has no viewport to be
+     * about. It waits here instead of being worked out against nothing, which would park the camera
+     * at the origin and leave what it was aimed at in the top left corner.
+     */
+    pendingCamera: CameraRequest | null;
     nodes: Record<string, CanvasNode>;
     order: string[];
     texts: Record<string, TextElement>;
@@ -282,6 +294,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
         viewId: null,
         camera: { x: 0, y: 0, zoom: 1 },
         viewport: { w: 0, h: 0 },
+        pendingCamera: null,
         nodes: {},
         order: [],
         texts: {},
@@ -300,7 +313,14 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
         future: [],
 
         setViewport(viewport) {
+            // The size is the answer to whatever was waiting for one, so the wait ends here.
+            const waiting = isMeasured(viewport) ? get().pendingCamera : null;
             set({ viewport });
+            if (waiting?.kind === 'fit') {
+                get().fitAll();
+            } else if (waiting?.kind === 'node') {
+                get().goToNode(waiting.id);
+            }
         },
         setCamera(camera) {
             set({ camera });
@@ -329,9 +349,13 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
             const { nodes, texts, viewport } = get();
             const rects: Rect[] = [...Object.values(nodes), ...Object.values(texts).map((t) => ({ x: t.x, y: t.y, w: t.size * 12, h: t.size * 1.4 }))];
             const bounds = unionRect(rects);
-            if (bounds && viewport.w > 0) {
-                set({ camera: cameraToFit(bounds, viewport) });
+            // An empty canvas has nothing to fit, so the wait ends rather than standing forever.
+            if (!bounds) {
+                set({ pendingCamera: null });
+                return;
             }
+            const camera = cameraToFit(bounds, viewport);
+            set(camera === null ? { pendingCamera: { kind: 'fit' } } : { camera, pendingCamera: null });
         },
         zoomToSelection() {
             const { nodes, texts, selection, viewport } = get();
@@ -343,8 +367,10 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 return t ? [{ x: t.x, y: t.y, w: t.size * 12, h: t.size * 1.4 }] : [];
             });
             const bounds = unionRect(rects);
-            if (bounds) {
-                set({ camera: cameraToFit(bounds, viewport, 96, 1.5) });
+            const camera = bounds === null ? null : cameraToFit(bounds, viewport, 96, 1.5);
+            // A chord on a canvas nobody can see yet is worth nothing later, so this one does not wait.
+            if (camera !== null) {
+                set({ camera, pendingCamera: null });
             }
         },
         goToNode(id) {
@@ -353,7 +379,14 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
             if (!node) {
                 return;
             }
-            set({ camera: cameraCenteredOn(node, viewport, Math.max(camera.zoom, 0.75)), selection: [id], mode: { kind: 'canvas' } });
+            const next = cameraCenteredOn(node, viewport, Math.max(camera.zoom, 0.75));
+            /* Revealing a node on another view switches to it first, which makes the editor this
+               runs on one frame old: it waits for the size rather than landing in the corner. */
+            set({
+                ...(next === null ? { pendingCamera: { kind: 'node', id } } : { camera: next, pendingCamera: null }),
+                selection: [id],
+                mode: { kind: 'canvas' }
+            });
         },
 
         select(ids, additive = false) {
@@ -662,9 +695,11 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 resizing: null,
                 past: [],
                 future: [],
+                pendingCamera: null,
                 ...(local?.camera ? { camera: local.camera } : {})
             });
             set({ loading: false });
+            // No camera for this view on this machine: it opens on everything it holds, once there is room.
             if (!local?.camera) {
                 get().fitAll();
             }

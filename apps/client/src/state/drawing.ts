@@ -325,13 +325,15 @@ export const createDrawingStore = (): StoreApi<DrawingState> =>
                 return;
             }
             const bounds = boundsOf(elements);
-            set({ fitPending: false, ...(bounds ? { camera: cameraToFit(bounds, viewport) } : {}) });
+            const camera = bounds === null ? null : cameraToFit(bounds, viewport);
+            set({ fitPending: false, ...(camera === null ? {} : { camera }) });
         },
         zoomToSelection() {
             const { elements, selection, viewport } = get();
             const bounds = boundsOf(elements.filter((element) => selection.includes(element.id)));
-            if (bounds && viewport.w > 0) {
-                set({ camera: cameraToFit(bounds, viewport, 96, 1.5) });
+            const camera = bounds === null ? null : cameraToFit(bounds, viewport, 96, 1.5);
+            if (camera !== null) {
+                set({ camera });
             }
         },
 

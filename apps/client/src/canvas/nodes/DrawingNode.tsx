@@ -62,10 +62,11 @@ export function DrawingNode({ id }: { id: string }) {
         canvas.height = Math.round(size.h * dpr);
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (!bounds) {
+        const camera = bounds === null ? null : cameraToFit(bounds, size, PADDING);
+        if (camera === null) {
             return;
         }
-        applyCamera(ctx, cameraToFit(bounds, size, PADDING), dpr);
+        applyCamera(ctx, camera, dpr);
         paintElements(ctx, elements, paintOptions());
     }, [elements, size, theme, fontReady]);
 

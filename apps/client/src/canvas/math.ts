@@ -64,7 +64,18 @@ export const unionRect = (rects: Rect[]): Rect | null => {
 
 export const intersects = (a: Rect, b: Rect): boolean => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
-export const cameraToFit = (bounds: Rect, viewport: { w: number; h: number }, padding = 96, maxZoom = 1): Camera => {
+/*
+ * Whether an element has been measured. An editor exists from the moment its view goes into a cell,
+ * which is a frame before the element that holds it has a size, and the middle of nothing is the
+ * corner: a camera worked out against a zero viewport parks what it was aimed at in the top left.
+ * The two builders below answer null there, so a caller has to say what it does with "not yet".
+ */
+export const isMeasured = (viewport: { w: number; h: number }): boolean => viewport.w > 0 && viewport.h > 0;
+
+export const cameraToFit = (bounds: Rect, viewport: { w: number; h: number }, padding = 96, maxZoom = 1): Camera | null => {
+    if (!isMeasured(viewport)) {
+        return null;
+    }
     const zoom = clampZoom(Math.min((viewport.w - padding * 2) / bounds.w, (viewport.h - padding * 2) / bounds.h, maxZoom));
     return {
         zoom,
@@ -73,11 +84,14 @@ export const cameraToFit = (bounds: Rect, viewport: { w: number; h: number }, pa
     };
 };
 
-export const cameraCenteredOn = (rect: Rect, viewport: { w: number; h: number }, zoom: number): Camera => ({
-    zoom,
-    x: viewport.w / 2 - (rect.x + rect.w / 2) * zoom,
-    y: viewport.h / 2 - (rect.y + rect.h / 2) * zoom
-});
+export const cameraCenteredOn = (rect: Rect, viewport: { w: number; h: number }, zoom: number): Camera | null =>
+    isMeasured(viewport)
+        ? {
+              zoom,
+              x: viewport.w / 2 - (rect.x + rect.w / 2) * zoom,
+              y: viewport.h / 2 - (rect.y + rect.h / 2) * zoom
+          }
+        : null;
 
 export const ZOOM_PRESETS = [25, 50, 75, 100, 150, 200] as const;
 
