@@ -156,7 +156,7 @@ export function AgentsPane() {
             >
                 <SettingsRow
                     label="Ask me for permission in the node"
-                    description="On, a permission a terminal agent asks for appears in the node's header with the choices the CLI offers, and the first answer settles it. Off, nothing is asked here and the CLI's own prompt in the terminal is the only place to answer; a second client that wants them still gets asked."
+                    description="On, a permission a terminal agent asks for appears in the node's header with the choices the CLI offers, and the first answer settles it. One that arrives while this window is not in front also comes as a notification, since the machine only holds the question for a couple of minutes. Off, nothing is asked here and the CLI's own prompt in the terminal is the only place to answer; a second client that wants them still gets asked."
                     control={
                         <Toggle
                             checked={agentsApprovals}
@@ -182,19 +182,19 @@ export function AgentsPane() {
                         <Toggle checked={agentsTurnNotify} onChange={(checked) => update({ agentsTurnNotify: checked })} label="Tell me when a turn ends" />
                     }
                 />
-                {agentsTurnNotify && (
-                    <SettingsRow
-                        label="Play a sound with it"
-                        description="Off, notifications arrive quietly, which is what you want in whatever you walked away to do."
-                        control={
-                            <Toggle
-                                checked={agentsTurnSound}
-                                onChange={(checked) => update({ agentsTurnSound: checked })}
-                                label="Play a sound with a notification"
-                            />
-                        }
-                    />
-                )}
+                {/* Not hidden with the switch above it any more: a question and a permission notify
+                    whatever that one says, so this is the only answer to "may this make noise". */}
+                <SettingsRow
+                    label="Play a sound with a notification"
+                    description="Off, every notification arrives quietly, which is what you want in whatever you walked away to do."
+                    control={
+                        <Toggle
+                            checked={agentsTurnSound}
+                            onChange={(checked) => update({ agentsTurnSound: checked })}
+                            label="Play a sound with a notification"
+                        />
+                    }
+                />
                 {/* A browser cannot keep anything awake, so it is told nothing about a switch it has no way to honor. */}
                 {canKeepAwake() && (
                     <SettingsRow
