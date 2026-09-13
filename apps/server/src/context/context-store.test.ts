@@ -21,7 +21,9 @@ const items: ChatItem[] = [
 
 const drawing: DrawingElement[] = [
     { kind: 'rect', id: 'el-1', x: 0, y: 0, w: 120, h: 60, stroke: 'ink', strokeWidth: 2, seed: 4 },
-    { kind: 'text', id: 'el-2', x: 10, y: 20, w: 80, h: 24, stroke: 'ink', strokeWidth: 1, seed: 5, text: 'Client', size: 20 }
+    { kind: 'text', id: 'el-2', x: 10, y: 20, w: 80, h: 24, stroke: 'ink', strokeWidth: 1, seed: 5, text: 'Client', size: 20 },
+    { kind: 'text', id: 'el-3', x: 10, y: 220, w: 80, h: 24, stroke: 'ink', strokeWidth: 1, seed: 6, text: 'Daemon', size: 20 },
+    { kind: 'text', id: 'el-4', x: 10, y: 420, w: 80, h: 24, stroke: 'ink', strokeWidth: 1, seed: 7, text: 'Disk', size: 20 }
 ];
 
 // Stands in for the project index: what each target's document links into it.
@@ -68,24 +70,37 @@ describe('ContextStore', () => {
         expect(await store.read('agent', 'nope')).toBeNull();
     });
 
-    test('--tail is the last lines of each kind, and the screen cap stays the ceiling', async () => {
+    test('--tail is the last lines of each kind, and every kind really gets shorter', async () => {
         linked.set('agent', [
-            { id: 'note', kind: 'text', title: 'Sprint', text: 'one\ntwo\nthree' },
+            { id: 'note', kind: 'text', title: 'Sprint', text: Array.from({ length: 10 }, (_, i) => `note line ${i}`).join('\n') },
             { id: 'term', kind: 'terminal', title: 'dev server' },
             { id: 'chat', kind: 'chat', title: 'planner' },
             { id: 'view-1', kind: 'drawing', title: 'Sketch' }
         ]);
-        expect(await store.read('agent', 'note', 2)).toBe('two\nthree');
-        const screen = (await store.read('agent', 'term', 15)) ?? '';
-        expect(screen.split('\n')).toHaveLength(15);
-        expect(screen.endsWith('line 2499')).toBe(true);
+        /* Every kind is read whole first, so the tail is held against a source that really is
+           longer than it: a source of two lines would pass a tail that does nothing at all. */
+        const whole = async (id: string): Promise<string[]> => ((await store.read('agent', id)) ?? '').split('\n');
+        const tail = async (id: string, count: number): Promise<string[]> => ((await store.read('agent', id, count)) ?? '').split('\n');
+
+        expect(await whole('note')).toHaveLength(10);
+        expect(await tail('note', 3)).toEqual(['note line 7', 'note line 8', 'note line 9']);
+
+        expect(await whole('term')).toHaveLength(MAX_SCREEN_LINES);
+        const screen = await tail('term', 15);
+        expect(screen).toHaveLength(15);
+        expect(screen.at(-1)).toBe('line 2499');
         // Past the cap it reads what the daemon keeps, not what was asked for.
-        expect(((await store.read('agent', 'term', 9000)) ?? '').split('\n')).toHaveLength(MAX_SCREEN_LINES);
-        expect(await store.read('agent', 'chat', 1)).toBe('Done.');
+        expect(await tail('term', 9000)).toHaveLength(MAX_SCREEN_LINES);
+
+        const thread = await whole('chat');
+        expect(thread.length).toBeGreaterThan(3);
+        expect(await tail('chat', 3)).toEqual(thread.slice(-3));
+
         // A drawing tails its reading order; the picture is the expensive half and stays behind.
-        const sketch = (await store.read('agent', 'view-1', 5)) ?? '';
-        expect(sketch).toContain('Client');
-        expect(sketch).not.toContain('<svg');
+        const reading = ['Client', 'Daemon', 'Disk'];
+        expect(await whole('view-1')).toContain('## SVG');
+        expect(await tail('view-1', 2)).toEqual(reading.slice(-2));
+        expect((await store.read('agent', 'view-1', 2)) ?? '').not.toContain('<svg');
     });
 
     test('the HTTP face checks the token and answers list and read', async () => {
