@@ -180,6 +180,20 @@ canvas, against Ruimte, one verdict each.
 - Status hooks are `command` hooks with curl, not Claude Code's `http` hooks: the http kind
   cannot read the daemon's port from the environment and reports an error whenever Ruimte is
   not running. The command hook is a no-op without `RUIMTE_HOOK_URL`.
+- A terminal agent's permission is answered over the wire, and the CLI's own prompt keeps asking
+  beside it. Claude Code fires `PermissionRequest` and puts its prompt on the screen in the same
+  breath, so holding that hook open is a second way to answer one question rather than the only
+  way: whoever is first wins and the loser's answer is refused. That is what makes this safe to
+  build at all. The daemon holds the request for 110 seconds (`APPROVAL_HOLD_MS` in
+  `apps/server/src/agents/approvals.ts`), under curl's 120 and the CLI's own 125 in the settings
+  file, so the daemon is always the first of the three to give up and the CLI never has to cut
+  anything off. Letting go prints nothing at all, which leaves the TUI prompt exactly where it
+  was: nobody watching, the feature off (`--no-approvals`), the session gone and the hold running
+  out all end the same way, and an agent in bypass mode is never asked in the first place. The
+  request travels as `session.approvals` (the whole pending list of one session, so a client that
+  arrives late and one that missed a settle agree) and comes back as `agent.answerApproval`, which
+  answers whether it was in time. The choices are the CLI's own `permission_suggestions`, held on
+  the daemon and handed back verbatim, so a client never learns a CLI's permission vocabulary.
 - A chat process is not started when the node mounts, only on the first message, so a canvas
   full of chat nodes costs nothing until used.
 - A turn's checkpoint diff compares two trees of ours, not the tree against the working tree:
@@ -987,6 +1001,22 @@ Also decided against for now: a scheduler, checkpoint restore and telemetry.
   Both are question items; the session answers the first by id and steers for the second.
 - The decisions the real binary takes differ from its `availableDecisions` hint: `decline` is
   accepted even when the hint lists only `accept`, the amendment and `cancel`.
+- **A `PermissionRequest` hook does not gate anything; it races the TUI.** Everything about this
+  hook is a trap for anyone who reads it as "the CLI waits for my answer". Measured against
+  Claude Code 2.1.270 in a real PTY: the prompt appears on screen at the same moment the hook
+  starts, both stay live, and the first answer settles it (the transcript then says "Allowed by
+  PermissionRequest hook"). Answering in the TUI kills the running hook mid-sleep, which arrives
+  on the daemon as an aborted request and is the signal to withdraw the request from every client.
+  A hook that outlives its `timeout` is cancelled and its output discarded, and the prompt simply
+  stays up, so a hold that runs out costs nothing. The reply shape is not what the published docs
+  say either: for `PermissionRequest` it is `hookSpecificOutput.decision` as an *object*,
+  `{"behavior":"allow"}` or `{"behavior":"deny","message":"..."}` (the binary says so in as many
+  words, and a string is rejected), with `updatedPermissions` beside an allow carrying the CLI's
+  own `permission_suggestions` back. `PreToolUse` is the one with a string `permissionDecision`,
+  and its `defer` is print-mode only ("ignoring (defer is print-mode only)"), so it is no use for
+  this. The suggestions come in three shapes: `addRules` (`rules[].toolName` plus `ruleContent`),
+  `addDirectories` and `setMode`; the last widens the whole session rather than one call and is
+  deliberately not offered as a button.
 
 
 ## Next
@@ -1021,9 +1051,12 @@ a day, several days. Each of the larger ones becomes a GitHub issue when it star
    (`docs/reports/2026-09-12-diagram-view.html`) hangs its write verb on the same registry and is
    still a proposal.
 
-   What is left of this entry is the half that was always behind the verbs. Hook-reply approvals
-   for terminal agents: hold Claude's `PermissionRequest` on the daemon and answer it from the node
-   header or the notification. Of attention, everything but the dot itself is built and is below: the
+   Hook-reply approvals for terminal agents are built: Claude's `PermissionRequest` is held on the
+   daemon and answered from the node header (the decision above, the hook's real contract among the
+   gotchas). Two things that entry named are still open: the notification that would let a person
+   answer without looking at the canvas, and a client setting for it, since the daemon has
+   `--no-approvals` and nothing in the Settings pane says so.
+   Of attention, everything but the dot itself is built and is below: the
    state behind the mark is `apps/client/src/state/attention.ts`, and what is left is a node header
    drawing it, which is `useUnseen(nodeId)` and nothing more. The "Finished" count, the turn-done
    notification with its sound toggle, the dock badge and the quit guard are done, and so is keeping
