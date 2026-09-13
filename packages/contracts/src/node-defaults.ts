@@ -17,6 +17,67 @@ export const NODE_SIZE: Record<NodeKind, { w: number; h: number }> = {
 export const GROUP_PADDING = 32;
 export const GROUP_HEADER = 40;
 
+/* The pixels a canvas snaps to, the client's own grid, shared for the same reason. */
+export const CANVAS_GRID = 8;
+
+export interface NodeRect {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+}
+
+const snap = (value: number): number => Math.round(value / CANVAS_GRID) * CANVAS_GRID;
+
+/*
+ * The frame a group takes around what it holds: room on every side and the title band above it,
+ * snapped to the grid. Both the client's own grouping and the daemon's `group` verb run this, so a
+ * frame an agent draws sits where a person's drag would have put it. Nothing to hold is no frame.
+ */
+export const groupFrame = (members: readonly NodeRect[]): NodeRect | null => {
+    if (members.length === 0) {
+        return null;
+    }
+    const left = Math.min(...members.map((member) => member.x));
+    const top = Math.min(...members.map((member) => member.y));
+    const width = Math.max(...members.map((member) => member.x + member.w)) - left;
+    const height = Math.max(...members.map((member) => member.y + member.h)) - top;
+    return {
+        x: snap(left - GROUP_PADDING),
+        y: snap(top - GROUP_PADDING - GROUP_HEADER),
+        w: snap(width + GROUP_PADDING * 2),
+        h: snap(height + GROUP_PADDING * 2 + GROUP_HEADER)
+    };
+};
+
+/*
+ * The colors a node's accent and a group's frame pick from, in the hue order the picker draws them
+ * in. Shared because both sides need the same closed set: the client paints the swatches and the
+ * daemon refuses a `--color` that is not one of them. The hex per name stays in the client
+ * (`canvas/accents.ts`), which is the only side that paints.
+ */
+export const NODE_ACCENT_NAMES = [
+    'red',
+    'orange',
+    'amber',
+    'yellow',
+    'lime',
+    'green',
+    'emerald',
+    'teal',
+    'cyan',
+    'sky',
+    'blue',
+    'indigo',
+    'violet',
+    'purple',
+    'fuchsia',
+    'pink',
+    'rose'
+] as const;
+
+export type NodeAccent = (typeof NODE_ACCENT_NAMES)[number];
+
 /* What a node of each kind is called before anything names it. */
 export const DEFAULT_TITLES: Record<NodeKind, string> = {
     terminal: 'Terminal',
