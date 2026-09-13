@@ -1,5 +1,6 @@
 import { isCanvasView, type AgentKind, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
 import { z } from 'zod';
+import type { NoticeDelivery, Notice } from '../context/notices.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { ProjectMutation } from '../projects/project-store.ts';
 import { parseArgv } from './argv.ts';
@@ -40,6 +41,8 @@ export interface CanvasHost {
     showView(projectId: string, viewId: string, by: string): boolean;
     /* Ends the shell or the CLI behind a node; a canvas that is removed takes its sessions with it. */
     endSession(kind: 'terminal' | 'chat', nodeId: string): Promise<void>;
+    /* Puts a message in front of another node's agent, and says whether it landed or is waiting. */
+    notify(notice: Omit<Notice, 'createdAt'>): Promise<NoticeDelivery>;
 }
 
 export interface VerbCall {

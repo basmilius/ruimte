@@ -31,6 +31,8 @@ import { MAX_CANVAS_NODES } from './node-verb.ts';
 import { PLACEMENT_GAP } from './placement.ts';
 import { MAX_ROLES, ROLES_SHAPE } from './team-verb.ts';
 import { MAX_PROJECT_VIEWS, VIEW_KINDS, viewVerb } from './view-verb.ts';
+import { MAX_NOTICE_LENGTH } from '../context/notices.ts';
+import type { Notice, NoticeDelivery } from '../context/notices.ts';
 import { MAX_TITLE_LENGTH, type CanvasHost } from './verb.ts';
 import { VERBS } from './verbs.ts';
 
@@ -49,6 +51,8 @@ let lineage: AgentLineageStore;
 let deleteAnyView: boolean;
 let ended: string[];
 let watching: Array<{ projectId: string; viewId: string; by: string }>;
+let notified: Array<Omit<Notice, 'createdAt'>>;
+let delivery: NoticeDelivery;
 
 const TOKENS: Record<string, string> = { term: 'term-1', chat: 'chat-1', stray: 'nobody' };
 
@@ -91,6 +95,8 @@ beforeEach(async () => {
     deleteAnyView = false;
     ended = [];
     watching = [];
+    notified = [];
+    delivery = { at: 'waiting', detail: 'nothing runs in that node yet; it reads the message when it starts (1 waiting)' };
     lineage = new AgentLineageStore(join(root, 'home'));
     await lineage.load();
     store = new ProjectStore(join(root, 'home'));
@@ -128,6 +134,10 @@ const host = (): CanvasHost => ({
     showView: (projectId, viewId, by) => store.showView(projectId, viewId, by),
     endSession: async (kind, nodeId) => {
         ended.push(`${kind}\t${nodeId}`);
+    },
+    notify: async (notice) => {
+        notified.push(notice);
+        return delivery;
     }
 });
 
@@ -1727,5 +1737,63 @@ describe('rename', () => {
         expect((await post('rename', ['--title', 'x'])).lines[0]).toBe('refused\tbad-arguments\t--node needs the id of a node');
         expect((await post('rename', ['term-1', '--title', 'x'])).lines[0]).toStartWith('refused\tbad-arguments\trename takes no arguments');
         expect((await onDisk()).rev).toBe(1);
+    });
+});
+
+describe('notify', () => {
+    test('a message travels along a line from the caller and nowhere else', async () => {
+        const target = (await post('node', ['terminal', '--title', 'builder'])).lines[0]!.split('\t')[0]!;
+        const refused = await post('notify', [target, '--text', 'the build is green']);
+        expect(refused.status).toBe(422);
+        expect(refused.lines[0]).toBe(
+            `refused\tnot-linked\tNo line runs from you into ${target}, so it cannot be notified; a message travels the way a read does, and only that way`
+        );
+        expect(refused.lines).toContain('note\tNo line runs from you into a terminal or a chat; ruimte-context link --to <id> draws one');
+        expect(refused.lines).toContain(`see\truimte-context link --to ${target}\tdraws the line this needs`);
+        expect(notified).toEqual([]);
+
+        await post('link', ['--to', target]);
+        const sent = await post('notify', [target, '--text', 'the build is green']);
+        expect(sent.status).toBe(200);
+        expect(sent.lines).toEqual([`notified\t${target}\twaiting\t${delivery.detail}`]);
+        // The sender goes along by id, with its title only so the receiver can read the line.
+        expect(notified).toEqual([{ projectId, targetId: target, from: 'term-1', fromTitle: 'shell', text: 'the build is green' }]);
+    });
+
+    test('says where the message landed, in the words the daemon gave it', async () => {
+        const target = (await post('node', ['terminal'])).lines[0]!.split('\t')[0]!;
+        await post('link', ['--to', target]);
+        delivery = { at: 'now', detail: 'printed on the screen of that terminal' };
+        expect((await post('notify', [target, '--text', 'look at the log'])).lines).toEqual([
+            `notified\t${target}\tnow\tprinted on the screen of that terminal`
+        ]);
+    });
+
+    test('refuses a node that is not there, is not an agent, or is the caller itself', async () => {
+        const unknown = await post('notify', ['nowhere', '--text', 'hi']);
+        expect(unknown.lines[0]).toBe('refused\tunknown-node\tnowhere is not a node on main');
+        const plain = await post('notify', ['note-1', '--text', 'hi']);
+        expect(plain.lines[0]).toBe('refused\tnot-an-agent\tnote-1 is a note node; only a terminal or a chat has an agent that could read a message');
+        const self = await post('notify', ['term-1', '--text', 'hi']);
+        expect(self.lines[0]).toBe('refused\tself-notify\tterm-1 is you; a node needs no message to itself');
+        expect(notified).toEqual([]);
+    });
+
+    test('a caller that is a view of its own has no line to travel', async () => {
+        const { status, lines } = await post('notify', ['term-1', '--text', 'hi'], 'chat');
+        expect(status).toBe(422);
+        expect(lines[0]).toBe('refused\tnot-on-a-canvas\tYou are a view of your own, not a node on a canvas, so no line runs from you into anything');
+    });
+
+    test('the message is one argument, present, and short enough to read in a turn', async () => {
+        expect((await post('notify', ['note-1'])).lines[0]).toBe('refused\tbad-arguments\t--text needs the message to leave, in quotes');
+        expect((await post('notify', ['--text', 'hi'])).lines[0]).toBe('refused\tbad-arguments\tnotify takes the id of the node to notify');
+        expect((await post('notify', ['a', 'b', '--text', 'hi'])).lines[0]).toBe(
+            'refused\tbad-arguments\tnotify takes one id and nothing else; the message goes in --text'
+        );
+        expect((await post('notify', ['note-1', '--text', 'x'.repeat(MAX_NOTICE_LENGTH + 1)])).lines[0]).toStartWith(
+            `refused\tbad-arguments\t--text is ${MAX_NOTICE_LENGTH + 1} characters and a message is at most ${MAX_NOTICE_LENGTH}`
+        );
+        expect(notified).toEqual([]);
     });
 });

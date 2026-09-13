@@ -19,6 +19,7 @@ import { CANVAS_PATH, handleCanvasRequest } from './canvas/canvas-route.ts';
 import { ChatManager } from './chat/chat-manager.ts';
 import { hookContext } from './context/context-note.ts';
 import { CONTEXT_PATH, ContextStore } from './context/context-store.ts';
+import { deliverNotice, NoticeStore, renderNotice, type Notice } from './context/notices.ts';
 import { ChatStore } from './chat/chat-store.ts';
 import type { ServerConfig } from './config.ts';
 import { Dispatcher, sendEvent, type ClientAccess, type ClientConnection } from './dispatcher.ts';
@@ -90,6 +91,12 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     // The same for the chain of agents that opened agents: a restart must not start the count over.
     const lineage = new AgentLineageStore(config.home);
     await lineage.load();
+    // And for the messages one node left for another: they outlive the CLI they are waiting for.
+    const notices = new NoticeStore(config.home);
+    await notices.load();
+    /* What a node hears the moment it can: taken here, so whichever channel gets there first is the
+       only one that delivers it. */
+    const messagesFor = (targetId: string): string[] => notices.take(targetId).map(renderNotice);
     const manager = new SessionManager({
         adapter: new BunPtyAdapter(),
         snapshots,
@@ -97,7 +104,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         contextUrl,
         binDir,
         contextFor: (sessionId) => context.list(sessionId),
-        firstPrompt: (sessionId) => prompts.take(sessionId)
+        firstPrompt: (sessionId) => prompts.take(sessionId),
+        firstNotices: messagesFor
     });
     const snapshotSchedule = scheduleSnapshots(manager, snapshots);
     const providers = new ProviderRegistry();
@@ -120,6 +128,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         binDir,
         hasContext: (chatId) => context.has(chatId),
         contextSources: (chatId) => context.list(chatId),
+        messages: messagesFor,
         firstPrompt: (chatId) => prompts.take(chatId),
         // A turn reports what is left of its plan in passing; that belongs to the machine's numbers.
         onLimits: (update) => limits.applyLive(update)
@@ -129,6 +138,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     projects.index.onPlaces = (projectId, ids) => {
         void prompts.prune(projectId, ids).catch((e) => console.error('Pruning pending prompts failed', e));
         void lineage.prune(projectId, ids).catch((e) => console.error('Pruning agent lineage failed', e));
+        void notices.prune(projectId, ids).catch((e) => console.error('Pruning waiting messages failed', e));
     };
     const drawings = new DrawingStore(projects);
     projects.attachDrawings(drawings);
@@ -170,7 +180,21 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
            to fail over one, so an id neither manager knows is already ended as far as the verb goes. */
         endSession: async (kind: 'terminal' | 'chat', nodeId: string) => {
             await (kind === 'terminal' ? manager.kill(nodeId) : chats.kill(nodeId)).catch(() => undefined);
-        }
+        },
+        notify: (notice: Omit<Notice, 'createdAt'>) =>
+            deliverNotice(
+                notices,
+                {
+                    /* An exited session still lists its last screen, but nobody is reading it; its
+                   message waits for the shell that takes the id over. */
+                    terminal: (id) => {
+                        const session = manager.get(id);
+                        return session && !session.exited ? { agent: session.agent, notice: (text: string) => session.notice(text) } : null;
+                    },
+                    hasChat: (id) => chats.get(id) !== undefined
+                },
+                notice
+            )
     };
 
     const dispatcher = new Dispatcher();
@@ -338,7 +362,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                     // Asked on every event that can carry an answer, so the memory of what this
                     // agent was told keeps up with its turns even where nothing is printed.
                     const changed = context.changeSince(sessionId);
-                    return hookContext(event, context.list(sessionId), { changed });
+                    return hookContext(event, context.list(sessionId), { changed, messages: messagesFor(sessionId) });
                 });
             }
 

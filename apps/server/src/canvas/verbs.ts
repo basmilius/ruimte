@@ -5,6 +5,7 @@ import { agentVerb } from './agent-verb.ts';
 import { arrangeVerb } from './arrange-verb.ts';
 import { groupVerb } from './group-verb.ts';
 import { linkVerb } from './link-verb.ts';
+import { notifyVerb } from './notify-verb.ts';
 import { renameVerb } from './rename-verb.ts';
 import { nodeVerb } from './node-verb.ts';
 import { openVerb } from './open-verb.ts';
@@ -18,7 +19,7 @@ const REFUSAL_LINE =
 
 /* Two things an agent keeps mixing up, so the line is in the list and in the detail of each verb it is about. */
 const SCOPE_LINE =
-    'scope\tlist and read are what a person linked into this session; nodes, edges, views, node, agent, team, link, view, open, group, arrange and rename are the project itself\ta node you add is readable through read only once a line runs from it into you';
+    'scope\tlist and read are what a person linked into this session; nodes, edges, views, node, agent, team, link, notify, view, open, group, arrange and rename are the project itself\ta node you add is readable through read only once a line runs from it into you';
 
 /* Said once under the list, since the flag is on some verbs and refused by name on the rest. */
 const dryRunLine = (): string => `dry run\t--${DRY_RUN_FLAG}\t${dryRunVerbNames().join(', ')}\tsame checks, nothing made; every other verb refuses the flag`;
@@ -179,6 +180,7 @@ export const VERBS: readonly VerbEntry[] = [
     agentVerb,
     teamVerb,
     linkVerb,
+    notifyVerb,
     viewVerb,
     openVerb,
     groupVerb,

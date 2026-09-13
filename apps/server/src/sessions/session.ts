@@ -15,6 +15,13 @@ const KILL_ESCALATION_MS = 2000;
 export const RESTORED_TEXT = '[session restored, previous shell ended]';
 const RESTORED_MARKER = `\r\n\x1b[2m${RESTORED_TEXT}\x1b[0m\r\n`;
 
+/* What Ruimte itself puts on a screen, line by line, so it never reads as output of the shell. */
+const dimmed = (text: string): string =>
+    text
+        .split('\n')
+        .map((line) => `\x1b[2m${line}\x1b[0m\r\n`)
+        .join('');
+
 interface SessionOptions {
     id: string;
     shell: string;
@@ -82,7 +89,7 @@ export class Session {
         }
         if (options.motd) {
             // Written to the screen only, never to the PTY: the shell has not read a byte yet and must not.
-            this.terminal.write(`\x1b[2m${options.motd}\x1b[0m\r\n`);
+            this.terminal.write(dimmed(options.motd));
         }
 
         this.pty = options.adapter.spawn({
@@ -163,6 +170,23 @@ export class Session {
 
     write(data: string): void {
         this.pty.write(data);
+    }
+
+    /*
+     * A line from Ruimte on a screen that is already running: a message another node left for this
+     * one. Written to the emulator and to whoever is watching, never into the PTY, since the shell
+     * must not read a byte nobody typed. It starts on a line of its own, because a prompt is
+     * usually half drawn where this lands.
+     */
+    notice(text: string): void {
+        const data = `\r\n${dimmed(text)}`;
+        this.terminal.write(data);
+        for (const [clientId, buffered] of this.pending) {
+            this.pending.set(clientId, buffered + data);
+        }
+        if (this.flushTimer === null && this.pending.size > 0) {
+            this.flushTimer = setTimeout(() => this.flush(), OUTPUT_TICK_MS);
+        }
     }
 
     /*

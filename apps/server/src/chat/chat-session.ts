@@ -30,6 +30,8 @@ interface ChatSessionOptions {
     hasContext(): boolean;
     // The links as they are now; a change between two turns is put in front of the next prompt.
     contextSources?(): ContextSource[];
+    // What another node left for this chat, taken as it is handed over: delivered once, in front of the next prompt.
+    messages?(): string[];
     // Git trees per turn, so a settled turn can show what the working tree holds against its start.
     checkpoints?: CheckpointService;
     emit(event: ChatEvent): void;
@@ -391,16 +393,22 @@ export class ChatSession {
             .catch(() => undefined);
     }
 
-    /* A link made or removed between turns; the agent hears about it once, in front of the next prompt. */
+    /*
+     * What the agent has to hear before this prompt: a link made or removed between turns, and any
+     * message another node left for it. Each is said once, and only in front of a real prompt.
+     */
     private contextNote(text: string): string | null {
-        // A slash command must stay the first thing the CLI reads; the change waits for a real prompt.
+        // A slash command must stay the first thing the CLI reads; the rest waits for a real prompt.
         if (text.startsWith('/')) {
             return null;
         }
         const current = this.options.contextSources?.() ?? [];
         const previous = this.lastSources;
         this.lastSources = current;
-        return previous === null ? null : contextChangeNote(previous, current);
+        const parts = [...(previous === null ? [] : [contextChangeNote(previous, current)]), ...(this.options.messages?.() ?? [])].filter(
+            (part): part is string => part !== null
+        );
+        return parts.length === 0 ? null : parts.join('\n\n');
     }
 
     /* Runs one turn against the backend; a backend that will not start ends the turn with the reason. */

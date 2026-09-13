@@ -1,6 +1,6 @@
 import { AgentKindSchema, type AgentKind } from '@ruimte/contracts';
 import type { HookResult } from '../sessions/manager.ts';
-import { hasHooks } from './hooks.ts';
+import { hasHooks, takesHookContext } from './hooks.ts';
 
 interface HookTarget {
     applyHook(kind: AgentKind, token: string, body: unknown): Promise<HookResult>;
@@ -62,7 +62,7 @@ export const handleHookRequest = async (
         return new Response('Unknown token', { status: 401 });
     }
     const event = eventOf(body);
-    if (kind.data === 'claude' && event !== null && CONTEXT_EVENTS.has(event)) {
+    if (takesHookContext(kind.data) && event !== null && CONTEXT_EVENTS.has(event)) {
         const hint = contextHintForToken?.(token, event) ?? null;
         if (hint !== null) {
             return Response.json({ hookSpecificOutput: { hookEventName: event, additionalContext: hint } });

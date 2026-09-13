@@ -66,6 +66,13 @@ export const HOOK_EVENTS: Partial<Record<AgentKind, string[]>> = {
 /* Whether the daemon understands this CLI's hooks at all; the receiver turns the others away. */
 export const hasHooks = (kind: AgentKind): boolean => HOOK_EVENTS[kind] !== undefined;
 
+/*
+ * Whether a hook's answer reaches this CLI's model. Only Claude Code folds one back into the turn
+ * (`hookSpecificOutput.additionalContext`); every other CLI's hooks are one way, so anything meant
+ * for the agent itself has to go on the screen instead of waiting for a turn that cannot carry it.
+ */
+export const takesHookContext = (kind: AgentKind): boolean => kind === 'claude';
+
 /* Turns one hook payload into a status; null when the payload says nothing about status or is not a hook at all. */
 export const normalizeHook = (body: unknown): HookOutcome | null => {
     if (typeof body !== 'object' || body === null) {

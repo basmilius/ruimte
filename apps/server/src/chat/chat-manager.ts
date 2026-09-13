@@ -35,6 +35,8 @@ interface ChatManagerOptions {
     hasContext?: (chatId: string) => boolean;
     // The sources themselves, so a chat can tell its agent what came and went between turns.
     contextSources?: (chatId: string) => ContextSource[];
+    // What another node left for this chat, taken once and put in front of the next prompt.
+    messages?: (chatId: string) => string[];
     // The prompt an agent node was made with, taken once; it becomes the thread's first message.
     firstPrompt?: (chatId: string) => Promise<string | null>;
     // Put in front of PATH, so `ruimte-context` is there for the CLI's shell.
@@ -75,6 +77,7 @@ export class ChatManager {
     private readonly contextUrl: string | null;
     private readonly hasContext: (chatId: string) => boolean;
     private readonly contextSources: (chatId: string) => ContextSource[];
+    private readonly messages: (chatId: string) => string[];
     private readonly firstPrompt: (chatId: string) => Promise<string | null>;
 
     constructor(options: ChatManagerOptions) {
@@ -87,6 +90,7 @@ export class ChatManager {
         this.contextUrl = options.contextUrl ?? null;
         this.hasContext = options.hasContext ?? (() => false);
         this.contextSources = options.contextSources ?? (() => []);
+        this.messages = options.messages ?? (() => []);
         this.firstPrompt = options.firstPrompt ?? (() => Promise.resolve(null));
         this.commands = {
             ...(options.command ? { claude: options.command } : {}),
@@ -158,6 +162,7 @@ export class ChatManager {
             env: this.contextUrl ? { ...this.env, RUIMTE_CONTEXT_URL: this.contextUrl, RUIMTE_CONTEXT_TOKEN: token } : this.env,
             hasContext: () => this.hasContext(payload.chatId),
             contextSources: () => this.contextSources(payload.chatId),
+            messages: () => this.messages(payload.chatId),
             ...(this.checkpoints ? { checkpoints: this.checkpoints } : {}),
             emit: (event: ChatEvent) => this.emit(payload.chatId, event),
             ...(this.onLimits ? { onLimits: this.onLimits } : {}),

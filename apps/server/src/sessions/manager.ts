@@ -18,6 +18,13 @@ type SessionErrorCode = 'session-exists' | 'session-not-found' | 'session-exited
  */
 const RESUME_GRACE_MS = 15_000;
 
+/* What a fresh screen says before the shell has printed anything: the linked context, then whatever
+   was left for this node while it did not exist. Undefined when there is nothing to say. */
+const motdOf = (hint: string | null, notices: readonly string[]): string | undefined => {
+    const lines = [...(hint === null ? [] : [hint]), ...notices];
+    return lines.length === 0 ? undefined : lines.join('\n');
+};
+
 export class SessionError extends Error {
     readonly code: SessionErrorCode;
 
@@ -60,6 +67,8 @@ export interface SessionManagerOptions {
     contextFor?: (sessionId: string) => ContextSource[];
     // The prompt an agent node was made with, taken once: the CLI starts on it instead of on an empty turn.
     firstPrompt?: (sessionId: string) => Promise<string | null>;
+    // Messages another node left for this one before it started, taken once and shown above the first prompt.
+    firstNotices?: (sessionId: string) => string[];
     // Lets a test move the clock the resume guard reads.
     now?: () => number;
 }
@@ -87,6 +96,7 @@ export class SessionManager {
     private readonly binDir: string | null;
     private readonly contextFor: (sessionId: string) => ContextSource[];
     private readonly firstPrompt: (sessionId: string) => Promise<string | null>;
+    private readonly firstNotices: (sessionId: string) => string[];
     // Told when the process tree of a session is about to change or just did: the end of a turn, an exit, a kill.
     onProcessChange: ((sessionId: string, phase: ProcessChangePhase) => void) | null = null;
     // Whether the process monitor found the agent of a session gone while its status still says it runs.
@@ -102,6 +112,7 @@ export class SessionManager {
         this.binDir = options.binDir ?? null;
         this.contextFor = options.contextFor ?? (() => []);
         this.firstPrompt = options.firstPrompt ?? (() => Promise.resolve(null));
+        this.firstNotices = options.firstNotices ?? (() => []);
         this.now = options.now ?? Date.now;
     }
 
@@ -376,7 +387,7 @@ export class SessionManager {
                 ...options,
                 env,
                 hookToken,
-                motd: contextHint(this.contextFor(options.id)) ?? undefined,
+                motd: motdOf(contextHint(this.contextFor(options.id)), this.firstNotices(options.id)),
                 adapter: this.adapter,
                 deliver: (clientId, data) => this.emit(clientId, { event: 'session.output', payload: { sessionId: options.id, data } }),
                 onExit: (exitCode) => this.handleExit(options.id, exitCode)
