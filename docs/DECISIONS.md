@@ -791,6 +791,23 @@ follows is what the report left open and what the build decided.
   footprint with `top` within 5%, and the sampler works in a `bun build --compile` binary signed ad
   hoc.
 
+### Staying awake while an agent works
+
+- It is a client setting (`agentsKeepAwake`, `apps/client/src/state/settings.ts`), not a project
+  setting and not a daemon one. The thing being kept awake is the computer this window runs on, and
+  that is the one machine a project cannot name: a project lives on several, and a daemon has no
+  say over the laptop someone is looking at it from. It starts off, because a laptop that no longer
+  sleeps is a decision about somebody's battery and not a default worth taking for them.
+- The client decides when an agent is working and the shell only holds what it is told. That keeps
+  the seam at one boolean and leaves the hooks, which already know, as the single source of it.
+  `state/keep-awake.ts` subscribes to the session and chat stores rather than polling, so the block
+  starts with the first agent that goes to `running` and ends with the last one that settles.
+- Every machine this window watches counts, not only the one the project runs on. The laptop on the
+  desk is what falls asleep, and a socket it was streaming a remote turn into goes with it.
+- There is no browser half. `canKeepAwake()` is false without the bridge and the row is not drawn,
+  the way the Updates pane hides auto-download where there is no updater: a switch that cannot do
+  what it says is worse than no switch.
+
 ### Skipped on purpose
 
 Skipped: kanban, loop and trigger nodes, minimap, dictation, notch HUD, agent-to-agent
@@ -801,6 +818,16 @@ retry or edit-and-resend in a shape worth building yet.
 Also decided against for now: a scheduler, checkpoint restore and telemetry.
 
 ## Gotchas already paid for
+
+- **`nodeStatus` calls an attached terminal "running", and a power block may not.** A terminal node
+  with no agent in it reports `running` the moment this client is attached, which every open
+  terminal is, so the status summary's "N agents working" counts shells waiting at a prompt too.
+  Reusing that for "keep this machine awake" would have pinned a laptop open for the length of
+  every session. `agentsWorking` therefore reads the agent record itself and only while it is
+  `live`: a CLI that went down with its shell leaves the status it had behind, and `needs-you` is a
+  person's turn rather than work. And of Electron's two blockers only `prevent-app-suspension` stops
+  the system from sleeping; `prevent-display-sleep` keeps the screen lit, which an agent does not
+  need and a person did not ask for.
 
 - **libproc lies by omission.** `proc_pid_rusage` gives CPU time in Mach ticks (125/3 ns on Apple
   silicon), so a number read as nanoseconds is 40 times too low. `PROC_PIDTBSDINFO` refuses the
@@ -965,7 +992,7 @@ a day, several days. Each of the larger ones becomes a GitHub issue when it star
    for terminal agents: hold Claude's `PermissionRequest` on the daemon and answer it from the node
    header or the notification. And attention: an unseen dot on a node whose turn settled while it
    was not focused, a "Finished" count in the status summary, a turn-done notification with a sound
-   toggle, a dock badge, keep awake while an agent runs, confirm before quitting.
+   toggle, a dock badge, confirm before quitting. Keeping the machine awake is built and is below.
 7. **Terminal basics**, about two days. Search on Cmd+F, clickable file paths and URLs across
    wrapped rows, OSC 52 clipboard, a dropped file types its quoted path, Unicode 11 widths on both
    xterms, "Clear" in the node menu. Then "Send to linked chat" (a terminal selection lands as a
