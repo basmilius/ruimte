@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
         return () => ipcRenderer.removeListener('window:fullscreen', handler);
     },
     setTheme: (theme: { resolved: 'light' | 'dark'; followsSystem: boolean; background: string }): void => ipcRenderer.send('window:theme', theme),
+    setKeepAwake: (keep: boolean): void => ipcRenderer.send('power:keep-awake', keep),
     saveFile: (suggestedName: string, bytes: Uint8Array, mime: string): Promise<string | null> =>
         ipcRenderer.invoke('dialog:save-file', suggestedName, bytes, mime),
     updateState: (): Promise<unknown> => ipcRenderer.invoke('update:state'),

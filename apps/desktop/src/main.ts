@@ -5,7 +5,8 @@ import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
-const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, screen, session, shell, webContents } = require('electron') as typeof import('electron');
+const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, powerSaveBlocker, screen, session, shell, webContents } =
+    require('electron') as typeof import('electron');
 
 /*
  * The desktop shell: one window, the client inside it, the daemon next to it. Nothing crosses
@@ -192,6 +193,32 @@ const sealPreviewSession = (): void => {
     preview.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
 };
 
+/* The blocker in flight, or null. One window, so one id; holding it here is what keeps a second
+   request from leaking the first. */
+let keepAwakeId: number | null = null;
+
+/*
+ * Keeps the machine from suspending while an agent works. `prevent-app-suspension` is the one that
+ * matters: `prevent-display-sleep` only keeps the screen lit, and an agent runs fine with the
+ * display off. The client asks for this and never the shell, so the block ends with the last
+ * request, with a reload or with the window.
+ */
+const setKeepAwake = (keep: boolean): void => {
+    if (keep === (keepAwakeId !== null)) {
+        return;
+    }
+    if (keep) {
+        keepAwakeId = powerSaveBlocker.start('prevent-app-suspension');
+        return;
+    }
+    if (keepAwakeId !== null && powerSaveBlocker.isStarted(keepAwakeId)) {
+        powerSaveBlocker.stop(keepAwakeId);
+    }
+    keepAwakeId = null;
+};
+
+ipcMain.on('power:keep-awake', (_event, keep: boolean) => setKeepAwake(keep));
+
 const createWindow = (): Electron.BrowserWindow => {
     const window = new BrowserWindow({
         width: 1440,
@@ -211,7 +238,11 @@ const createWindow = (): Electron.BrowserWindow => {
     window.once('ready-to-show', () => window.show());
     window.on('closed', () => {
         mainWindow = null;
+        setKeepAwake(false);
     });
+    // A reload throws away the client that asked to stay awake, so the block goes with it and the
+    // client that comes up asks again for whatever is still running.
+    window.webContents.on('did-start-loading', () => setKeepAwake(false));
     // In fullscreen macOS hides the traffic lights, so the client can take the room back.
     window.on('enter-full-screen', () => window.webContents.send('window:fullscreen', true));
     window.on('leave-full-screen', () => window.webContents.send('window:fullscreen', false));

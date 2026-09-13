@@ -63,6 +63,10 @@ export interface DesktopBridge {
        `prefers-color-scheme` every page it hosts asks for, and for the ground a page paints on
        before it has one. Optional for the same reason `onBrowserContextMenu` is. */
     setTheme?(theme: { resolved: 'light' | 'dark'; followsSystem: boolean; background: string }): void;
+    /* Keeps the machine from sleeping while an agent works. The client decides when that is and says
+       so; the shell holds the block and drops it on a reload or when the window goes. Optional for
+       the same reason `onBrowserContextMenu` is; without it the setting is not offered. */
+    setKeepAwake?(keep: boolean): void;
     /* A native save dialog for bytes the client made (an exported drawing). Optional for the same
        reason `onBrowserContextMenu` is; without it the client falls back to a browser download. */
     saveFile?(suggestedName: string, bytes: Uint8Array, mime: string): Promise<string | null>;
@@ -88,6 +92,10 @@ declare global {
 export const desktop = (): DesktopBridge | null => (typeof window === 'undefined' ? null : (window.ruimteDesktop ?? null));
 
 export const isDesktop = (): boolean => desktop() !== null;
+
+/* True where the shell can hold the machine awake. A browser cannot, so the setting is not offered
+   there rather than shown as a switch that promises something the page has no way to do. */
+export const canKeepAwake = (): boolean => typeof desktop()?.setKeepAwake === 'function';
 
 /* True when the window chrome leaves room for the traffic lights, which only macOS does. */
 export const hasTrafficLights = (): boolean => desktop()?.platform === 'darwin';
