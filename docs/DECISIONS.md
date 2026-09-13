@@ -1140,25 +1140,16 @@ a day, several days. Each of the larger ones becomes a GitHub issue when it star
 5. **The rest of the git panel**: commit, push and a PR through `gh` as one stacked action with
    its progress as a toast, the branch chip with a ref picker, pull when behind, and a commit
    message written by the chat CLI when the field is left empty.
-6. **Agents on the canvas** is built, in 66 commits between `323d4dd` and `fd202cd` on 2026-09-13.
-   Fourteen verbs sit on `ruimte-context` beside `list` and `read`, posted to
-   `POST /canvas/<verb>` and applied by the daemon to `project.json`, so a verb lands with nothing
-   connected and on a project a client just released. The design and what the build changed about
-   it are in `docs/reports/2026-09-11-agents-op-het-canvas.html`; every decision is above, from
-   "The daemon parses a verb's arguments" onward. The diagram view
-   (`docs/reports/2026-09-12-diagram-view.html`) hangs its write verb on the same registry and is
-   still a proposal.
-
-   Hook-reply approvals for terminal agents are built: Claude's `PermissionRequest` is held on the
-   daemon and answered from the node header (the decision above, the hook's real contract among the
-   gotchas), with "Ask me for permission in the node" in the Agents pane saying whether this client
-   wants them at all. The notification is there too: a request that arrives while this window is
-   behind something else says so, and goes again the moment the request is answered or the hold
-   runs out, on the approvals switch rather than the turn switch (the decisions above).
-   Attention is done, including the mark itself: `state/attention.ts` counts, `attention/UnseenMark.tsx`
-   draws it on the node header and the sidebar row, and the "Finished" count, the turn-done
-   notification with its sound toggle, the dock badge, the quit guard and keeping the machine awake
-   were already there.
+6. **Agents on the canvas** is done, and what is left of it is one verb and three CLIs. The diagram
+   view (`docs/reports/2026-09-12-diagram-view.html`) hangs its write verb on the same registry and
+   is still a proposal. Hook-reply approvals are Claude Code's alone, because it is the only
+   terminal CLI with a hook that offers one: Codex waits on the contract in 1 above, Gemini and
+   Copilot on their hooks in 4. Everything else of it stands: the verbs in 66 commits between
+   `323d4dd` and `fd202cd`, then keeping the machine awake, attention and the approvals in 28 more
+   up to `6313ae8`. The design and what the build changed about it are in
+   `docs/reports/2026-09-11-agents-op-het-canvas.html`; every decision is above, from "The daemon
+   parses a verb's arguments" onward for the verbs, and under "Staying awake while an agent works",
+   "Attention" and the permission bullets for the rest.
 7. **Terminal basics**, about two days. Search on Cmd+F, clickable file paths and URLs across
    wrapped rows, OSC 52 clipboard, a dropped file types its quoted path, Unicode 11 widths on both
    xterms, "Clear" in the node menu. Then "Send to linked chat" (a terminal selection lands as a
