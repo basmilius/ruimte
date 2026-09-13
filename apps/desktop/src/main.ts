@@ -202,6 +202,11 @@ let keepAwakeId: number | null = null;
  * matters: `prevent-display-sleep` only keeps the screen lit, and an agent runs fine with the
  * display off. The client asks for this and never the shell, so the block ends with the last
  * request, with a reload or with the window.
+ *
+ * On macOS this takes an IOKit assertion Chromium still creates under the name it had before 10.7,
+ * so `pmset -g assertions` prints it as `NoIdleSleepAssertion` and not as the
+ * `PreventUserIdleSystemSleep` it counts as, owned by "Electron" rather than by the app's name.
+ * Grep the type, not the product: `pmset -g assertions | grep NoIdleSleepAssertion`.
  */
 const setKeepAwake = (keep: boolean): void => {
     if (keep === (keepAwakeId !== null)) {
@@ -268,8 +273,13 @@ const createWindow = (): Electron.BrowserWindow => {
         setAgentActivity({ working: 0, attention: 0 });
     });
     // A reload throws away the client that asked to stay awake and the counts it sent, so both go
-    // with it and the client that comes up says again what is still running.
+    // with it and the client that comes up says again what is still running. Only a main frame
+    // counts: this event fires for a subframe as well, and dropping the block for a page the client
+    // loaded inside itself would put out a block nothing asks for again until the turn after it.
     window.webContents.on('did-start-loading', () => {
+        if (!window.webContents.isLoadingMainFrame()) {
+            return;
+        }
         setKeepAwake(false);
         setAgentActivity({ working: 0, attention: 0 });
     });

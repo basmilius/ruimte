@@ -833,6 +833,20 @@ follows is what the report left open and what the build decided.
 - There is no browser half. `canKeepAwake()` is false without the bridge and the row is not drawn,
   the way the Updates pane hides auto-download where there is no updater: a switch that cannot do
   what it says is worse than no switch.
+- **The mode is `prevent-app-suspension`, measured rather than read.** On macOS that mode takes an
+  IOKit assertion and `prevent-display-sleep` takes another one, so the two are not a matter of
+  precedence: app suspension is `NoIdleSleepAssertion`, which keeps the machine running and lets the
+  screen go dark, and display sleep is `NoDisplaySleepAssertion`, which lights the screen a laptop
+  with its lid open should be allowed to put out. The first is what the setting promises.
+- **Grep the assertion's type, never Ruimte.** `NoIdleSleepAssertion` is the name the type had
+  before 10.7, which Chromium still creates it under, and `pmset` prints the name it was created
+  with rather than the `PreventUserIdleSystemSleep` it counts as. The owner it prints is "Electron"
+  as well, since that name is compiled into Chromium and no app of ours reaches it. So
+  `pmset -g assertions | grep -i preventuseridlesystemsleep` finds nothing, twice over, and the
+  feature reads as dead while it is working. What shows it is
+  `pmset -g assertions | grep NoIdleSleepAssertion`: it appears within a second of a turn starting
+  and is gone within a second of the last one settling, sample for sample against the statuses
+  `session.list` reports.
 
 ### Attention
 
