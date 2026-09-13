@@ -187,8 +187,8 @@
        shape; iron-700 keeps the same relation to the surface that iron-900 has in the light theme. */
     --brand-front: var(--color-iron-300);
     --brand-back: var(--color-iron-700);
-    --canvas-bg: #08080a;
-    --canvas-dot: #1c1c21;
+    --canvas-bg: #0d0d10;
+    --canvas-dot: #202024;
     --selection: rgb(var(--accent-rgb) / 0.6);
     --shadow-node: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 30px rgb(0 0 0 / 0.45);
     --shadow-float: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 36px rgb(0 0 0 / 0.6);

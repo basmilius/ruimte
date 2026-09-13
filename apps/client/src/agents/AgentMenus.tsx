@@ -29,14 +29,14 @@ function Submenu({ label, icon, children }: { label: string; icon: ReactNode; ch
 
 /*
  * The agent rows of one submenu, straight from the daemon's catalog so the dock, the canvas menu
- * and the palette can never drift apart. A CLI the daemon did not find is disabled with a hint
- * instead of hidden, so "where did Gemini go" answers itself.
+ * and the palette can never drift apart. A CLI the daemon did not find is left out entirely: the
+ * Agents settings pane is where "where did Gemini go" gets answered, not a disabled row here.
  */
 function AgentRows({ target, onPick }: { target: AgentTarget; onPick(target: AgentTarget, provider: ProviderInfo): void }) {
     const providers = useProviders((s) => s.providers);
     const loaded = useProviders((s) => s.loaded);
     const runtimeMode = useChatPreferences((s) => s.terminalRuntimeMode);
-    const rows = providers.filter((provider) => provider.capabilities[target]);
+    const rows = providers.filter((provider) => provider.installed && provider.capabilities[target]);
     const modeLabel = RUNTIME_MODES.find((mode) => mode.id === runtimeMode)?.label;
 
     if (rows.length === 0) {
@@ -49,10 +49,10 @@ function AgentRows({ target, onPick }: { target: AgentTarget; onPick(target: Age
     return (
         <>
             {rows.map((provider) => (
-                <Menu.Item key={provider.kind} className="menu-item" disabled={!provider.installed} onClick={() => onPick(target, provider)}>
+                <Menu.Item key={provider.kind} className="menu-item" onClick={() => onPick(target, provider)}>
                     <AgentIcon kind={provider.kind} />
                     {provider.name}
-                    <span className={MENU_HINT}>{!provider.installed ? 'Not installed' : target === 'terminal' ? modeLabel : null}</span>
+                    <span className={MENU_HINT}>{target === 'terminal' ? modeLabel : null}</span>
                 </Menu.Item>
             ))}
         </>

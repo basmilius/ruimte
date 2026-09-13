@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Plus } from 'lucide-react';
+import { Menu } from '@base-ui-components/react/menu';
+import { ChevronDown, Globe, MessageSquare, Plus, Terminal } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths } from '@/canvas/drop';
 import { finderPaths } from '@/canvas/finder-drop';
@@ -9,7 +10,8 @@ import { isSpaceDown } from '@/canvas/canvas-chords';
 import { NODE_SIZE, useCanvas, useCanvasStore } from '@/state/canvas';
 import { useEndpointId } from '@/state/keys';
 import { showFileOnCanvas } from '@/project/views';
-import { addNodeAtCenter } from '@/shell/commands';
+import { addAgentNodeAtCenter, addNodeAtCenter } from '@/shell/commands';
+import { AgentSubmenus } from '@/agents/AgentMenus';
 import { CanvasMenuPopup } from '@/canvas/CanvasMenu';
 import { EdgeLayer } from '@/canvas/EdgeLayer';
 import { NodeFrame } from '@/canvas/NodeFrame';
@@ -327,6 +329,11 @@ export function Canvas() {
             return;
         }
 
+        /* A button floating over the empty canvas (its "Add a terminal" action) must not lose its
+           click to a box-select gesture that captures the pointer before the click fires. */
+        if (target.closest('button')) {
+            return;
+        }
         if (s.mode.kind === 'node') {
             s.exitNode();
         }
@@ -548,9 +555,28 @@ export function Canvas() {
                         <EmptyState
                             className="pointer-events-auto"
                             action={
-                                <Button variant="secondary" onClick={() => addNodeAtCenter('terminal')}>
-                                    <Icon icon={Plus} size={12} /> Add a terminal
-                                </Button>
+                                <Menu.Root>
+                                    <Menu.Trigger render={<Button variant="secondary" />}>
+                                        <Icon icon={Plus} size={12} /> Add
+                                        <Icon icon={ChevronDown} size={12} />
+                                    </Menu.Trigger>
+                                    <Menu.Portal>
+                                        <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={6} align="center">
+                                            <Menu.Popup className="menu-popup">
+                                                <Menu.Item className="menu-item" onClick={() => addNodeAtCenter('terminal')}>
+                                                    <Icon icon={Terminal} size={14} /> Terminal <kbd>⌥T</kbd>
+                                                </Menu.Item>
+                                                <Menu.Item className="menu-item" onClick={() => addNodeAtCenter('chat')}>
+                                                    <Icon icon={MessageSquare} size={14} /> Chat <kbd>⌥C</kbd>
+                                                </Menu.Item>
+                                                <AgentSubmenus onPick={(target, provider) => addAgentNodeAtCenter(target, provider)} />
+                                                <Menu.Item className="menu-item" onClick={() => addNodeAtCenter('browser')}>
+                                                    <Icon icon={Globe} size={14} /> Browser <kbd>⌥B</kbd>
+                                                </Menu.Item>
+                                            </Menu.Popup>
+                                        </Menu.Positioner>
+                                    </Menu.Portal>
+                                </Menu.Root>
                             }
                         >
                             This canvas is empty. Right-click anywhere to add a node, or press ⌘K.

@@ -49,36 +49,34 @@ const centerWorld = () => {
 
 export const addNodeAtCenter = (kind: NodeKind, options?: AddNodeOptions): string | null => useCanvas.getState().addNode(kind, centerWorld(), options);
 
+export const addAgentNodeAtCenter = (target: AgentTarget, provider: ProviderInfo): string | null => addAgentNode(target, provider, centerWorld());
+
 /*
- * One command per agent CLI per kind of node, from the daemon's catalog. A CLI that is not there
- * keeps its row and opens the Agents settings, so the palette explains instead of failing.
+ * One command per agent CLI per kind of node, from the daemon's catalog. A CLI that is not
+ * installed is left out: the Agents settings pane is where that gets fixed, not the palette.
  */
 const agentCommands = (target: AgentTarget, providers: ProviderInfo[], onCanvas: boolean): Command[] =>
     providers
-        .filter((provider) => provider.capabilities[target])
-        .flatMap((provider) => {
-            const missing = (): void => useUi.getState().setSettings({ open: true, section: 'agents' });
-            return [
-                ...(onCanvas
-                    ? [
-                          {
-                              id: `agent-${target}-${provider.kind}`,
-                              label: `New ${provider.name} ${target}`,
-                              hint: provider.installed ? undefined : 'Not installed',
-                              agent: provider.kind,
-                              run: () => (provider.installed ? void addAgentNode(target, provider, centerWorld()) : missing())
-                          }
-                      ]
-                    : []),
-                {
-                    id: `agent-view-${target}-${provider.kind}`,
-                    label: `New ${provider.name} ${target} view`,
-                    hint: provider.installed ? 'Without a canvas' : 'Not installed',
-                    agent: provider.kind,
-                    run: () => (provider.installed ? void addAgentView(target, provider) : missing())
-                }
-            ];
-        });
+        .filter((provider) => provider.installed && provider.capabilities[target])
+        .flatMap((provider) => [
+            ...(onCanvas
+                ? [
+                      {
+                          id: `agent-${target}-${provider.kind}`,
+                          label: `New ${provider.name} ${target}`,
+                          agent: provider.kind,
+                          run: () => void addAgentNode(target, provider, centerWorld())
+                      }
+                  ]
+                : []),
+            {
+                id: `agent-view-${target}-${provider.kind}`,
+                label: `New ${provider.name} ${target} view`,
+                hint: 'Without a canvas',
+                agent: provider.kind,
+                run: () => void addAgentView(target, provider)
+            }
+        ]);
 
 /*
  * Moving a node to another view is one command per target: the palette has no second step, and a
