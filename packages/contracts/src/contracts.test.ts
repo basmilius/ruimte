@@ -146,6 +146,40 @@ describe('agent and chat', () => {
         expect(EVENT_SCHEMAS['session.status'].safeParse({ sessionId: 'node-1', agent: { ...agent, status: 'busy' } }).success).toBe(false);
     });
 
+    test('a permission request carries its choices, and the whole pending list travels per session', () => {
+        const request = {
+            requestId: 'r1',
+            sessionId: 'node-1',
+            toolName: 'Bash',
+            summary: 'rm -rf build',
+            choices: [
+                { id: 'allow', kind: 'allow', label: 'Allow once' },
+                { id: 'remember-0', kind: 'remember', label: 'Always allow rm -rf build' },
+                { id: 'deny', kind: 'deny', label: 'Deny' }
+            ],
+            createdAt: 1,
+            expiresAt: 2
+        };
+        expect(EVENT_SCHEMAS['session.approvals'].safeParse({ sessionId: 'node-1', approvals: [request] }).success).toBe(true);
+        // An empty list is how a client hears that the request it was showing is settled.
+        expect(EVENT_SCHEMAS['session.approvals'].safeParse({ sessionId: 'node-1', approvals: [] }).success).toBe(true);
+        expect(EVENT_SCHEMAS['session.approvals'].safeParse({ sessionId: 'node-1', approvals: [{ ...request, choices: [] }] }).success).toBe(false);
+        expect(
+            EVENT_SCHEMAS['session.approvals'].safeParse({
+                sessionId: 'node-1',
+                approvals: [{ ...request, choices: [{ id: 'maybe', kind: 'maybe', label: 'Maybe' }] }]
+            }).success
+        ).toBe(false);
+        expect(SessionInfoSchema.safeParse({ ...info, approvals: [request] }).success).toBe(true);
+    });
+
+    test('an answer names the session, the request and the choice, and says whether it was in time', () => {
+        const schema = REQUEST_SCHEMAS['agent.answerApproval'];
+        expect(schema.payload.safeParse({ sessionId: 'node-1', requestId: 'r1', choiceId: 'allow' }).success).toBe(true);
+        expect(schema.payload.safeParse({ sessionId: 'node-1', requestId: 'r1' }).success).toBe(false);
+        expect(schema.result.safeParse({ accepted: false }).success).toBe(true);
+    });
+
     test('chat events are one of item, delta or info', () => {
         const item = { id: 'i1', createdAt: 1, turnId: null, kind: 'user', text: 'hi' };
         expect(EVENT_SCHEMAS['chat.event'].safeParse({ chatId: 'c1', event: { type: 'item', item } }).success).toBe(true);

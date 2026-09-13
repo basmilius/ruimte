@@ -33,3 +33,52 @@ export const AgentResumePayloadSchema = z.object({
     sessionId: SessionIdSchema
 });
 export type AgentResumePayload = z.infer<typeof AgentResumePayloadSchema>;
+
+/*
+ * One button under a permission request. `allow` and `deny` are always there; a `remember` choice
+ * only exists when the CLI offered a rule to widen, and the daemon holds that rule rather than the
+ * client, so a client never has to know a CLI's permission vocabulary.
+ */
+export const ApprovalChoiceSchema = z.object({
+    id: z.string().min(1),
+    kind: z.enum(['allow', 'remember', 'deny']),
+    label: z.string().min(1)
+});
+export type ApprovalChoice = z.infer<typeof ApprovalChoiceSchema>;
+
+/*
+ * A permission the agent in a terminal is waiting on. The CLI is asking in its own TUI at the same
+ * moment, so this is a second way to answer the same question, never the only one: whoever is first
+ * wins and `expiresAt` is when the daemon stops holding and leaves the TUI to it.
+ */
+export const ApprovalRequestSchema = z.object({
+    requestId: z.string().min(1),
+    sessionId: SessionIdSchema,
+    toolName: z.string().min(1),
+    // The one line a person reads: the command for a shell call, the path for a file tool.
+    summary: z.string(),
+    choices: z.array(ApprovalChoiceSchema).min(1),
+    createdAt: z.number(),
+    expiresAt: z.number()
+});
+export type ApprovalRequest = z.infer<typeof ApprovalRequestSchema>;
+
+// The whole pending list of one session, so a client that arrives late and one that missed a settle agree.
+export const SessionApprovalsEventSchema = z.object({
+    sessionId: SessionIdSchema,
+    approvals: z.array(ApprovalRequestSchema)
+});
+export type SessionApprovalsEvent = z.infer<typeof SessionApprovalsEventSchema>;
+
+export const ApprovalAnswerPayloadSchema = z.object({
+    sessionId: SessionIdSchema,
+    requestId: z.string().min(1),
+    choiceId: z.string().min(1)
+});
+export type ApprovalAnswerPayload = z.infer<typeof ApprovalAnswerPayloadSchema>;
+
+// False when the request was already settled: another client was first, the person used the TUI, or it expired.
+export const ApprovalAnswerResultSchema = z.object({
+    accepted: z.boolean()
+});
+export type ApprovalAnswerResult = z.infer<typeof ApprovalAnswerResultSchema>;

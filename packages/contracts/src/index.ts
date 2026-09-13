@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { AgentResumePayloadSchema, SessionStatusEventSchema } from './agent.ts';
+import {
+    AgentResumePayloadSchema,
+    ApprovalAnswerPayloadSchema,
+    ApprovalAnswerResultSchema,
+    SessionApprovalsEventSchema,
+    SessionStatusEventSchema
+} from './agent.ts';
 import {
     ChatAnswerPayloadSchema,
     ChatApprovePayloadSchema,
@@ -154,6 +160,7 @@ export const REQUEST_SCHEMAS = {
     'session.clear': { payload: SessionTargetPayloadSchema, result: EmptySchema },
     'session.list': { payload: EmptySchema, result: SessionListResultSchema },
     'agent.resume': { payload: AgentResumePayloadSchema, result: EmptySchema },
+    'agent.answerApproval': { payload: ApprovalAnswerPayloadSchema, result: ApprovalAnswerResultSchema },
     'chat.create': { payload: ChatCreatePayloadSchema, result: ChatInfoSchema },
     'chat.attach': { payload: ChatTargetPayloadSchema, result: ChatAttachResultSchema },
     'chat.detach': { payload: ChatTargetPayloadSchema, result: EmptySchema },
@@ -238,6 +245,7 @@ export const EVENT_SCHEMAS = {
     'session.resync': SessionResyncEventSchema,
     'session.exit': SessionExitEventSchema,
     'session.status': SessionStatusEventSchema,
+    'session.approvals': SessionApprovalsEventSchema,
     'session.list-changed': EmptySchema,
     'chat.event': ChatEventEnvelopeSchema,
     'endpoint.changed': EndpointChangedEventSchema,

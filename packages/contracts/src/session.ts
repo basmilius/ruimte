@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AgentInfoSchema, AgentKindSchema } from './agent.ts';
+import { AgentInfoSchema, AgentKindSchema, ApprovalRequestSchema } from './agent.ts';
 import { SessionIdSchema } from './ids.ts';
 import { RuntimeModeSchema } from './model.ts';
 
@@ -30,7 +30,10 @@ export const SessionInfoSchema = z.object({
     // Only present once the shell has ended; a signal death is reported shell-style as 128 plus the signal number.
     exitCode: z.number().int().optional(),
     // The agent CLI last seen in this shell, if any.
-    agent: AgentInfoSchema.nullable().optional()
+    agent: AgentInfoSchema.nullable().optional(),
+    // What the agent is waiting on right now; the snapshot a client that arrives mid-request needs,
+    // after which `session.approvals` keeps it up to date.
+    approvals: z.array(ApprovalRequestSchema).optional()
 });
 export type SessionInfo = z.infer<typeof SessionInfoSchema>;
 
