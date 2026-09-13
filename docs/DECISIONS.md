@@ -602,6 +602,39 @@ canvas, against Ruimte, one verdict each.
   row per machine there, each with the machine's name and icon, because a bare "Agents may delete any
   view" says nothing about which machine it is about, and a machine that is not answering shows the
   switch dead rather than guessing at its value.
+- The frame a group takes around what it holds is one function in `packages/contracts`
+  (`groupFrame`), which the client's `groupSelection` and the daemon's `group` verb both run. It is
+  four lines of arithmetic, which is exactly the size of thing that gets copied and then drifts, and
+  the padding, the title band and the snap to the grid are what tell a frame a person drew from one
+  an agent drew. `GROUP_PADDING` and `GROUP_HEADER` were already shared for the same reason; the
+  grid (8 px) followed them, so the client's `GRID` now comes from contracts as well.
+- `group` refuses what the client silently drops. A person's selection with a group in it is grouped
+  without that group, because there is no way to say so in a click; an agent named it in `--nodes`
+  and has to hear that a frame goes around nodes (`not-groupable`). For the same reason the nodes
+  have to stand in the same place already (`different-groups`, naming both nodes and where each one
+  stands): a frame drawn half inside another frame would belong to neither, and membership on this
+  canvas is geometry, so nothing would be wrong in the file and everything would be wrong on screen.
+  Inside a group that is folded shut the new frame joins its `memberIds`, the rule `--group` on
+  `agent` already follows, since nothing reads geometry while a group is collapsed.
+- What lands inside a frame is not only what was named: a node standing between two of them goes in
+  too, because that is what a group means once it is drawn. So `group` counts the members in its
+  first line and prints an `also` row per node it caught, rather than refusing or moving anything.
+- `arrange` starts at the top left of the box the nodes already occupy. The alternatives are the
+  caller (which drags a tidy-up across the canvas towards one node) and the origin (which throws the
+  work of somebody who put it where it is); this one only ever shrinks the space between the nodes,
+  so a person looking at that corner still sees them. A column is as wide as the widest node in it
+  and a row as tall as the tallest, which is what keeps nodes of different sizes apart without
+  resizing anything, and one node therefore never moves at all. A group is not something to arrange
+  (`not-arrangeable`): it carries whatever stands inside it, and a verb that moved a frame without
+  its members would empty it.
+- None of the three takes `--dry-run`, which keeps the flag on the verbs whose cost is not the write:
+  `agent` and `team` start CLIs that spend somebody's money, and `node` may open a shell. A frame, a
+  layout and a title cost a rev, and the answer already says what they did; a dry run there would be
+  a second round trip for what the next `nodes` prints anyway.
+- The node accents are a closed set in contracts (`NODE_ACCENT_NAMES`), and the hex per name stays in
+  the client. The daemon has to refuse a `--color` that is not one and has no business knowing what
+  red looks like; the client is the only side that paints, and the swatches it draws now come out of
+  the same list in the same order.
 
 ### Updating
 
