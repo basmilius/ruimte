@@ -22,6 +22,19 @@ describe('terminalCommand', () => {
         expect(terminalCommand({ kind: 'gemini', runtimeMode: 'supervised', model: 'gemini-3-pro' })).toBe('gemini');
     });
 
+    test("a first prompt rides on the line as the CLI's own prompt argument, quoted", () => {
+        expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised' }, 'say hello')).toBe("claude 'say hello'");
+        expect(terminalCommand({ kind: 'codex', runtimeMode: 'supervised' }, "it's here")).toBe(
+            "codex --ask-for-approval on-request --sandbox workspace-write 'it'\\''s here'"
+        );
+        expect(terminalCommand({ kind: 'gemini', runtimeMode: 'supervised' }, 'go')).toBe("gemini '-i' 'go'");
+        expect(terminalCommand({ kind: 'copilot', runtimeMode: 'supervised' }, 'go')).toBe("copilot '-p' 'go'");
+    });
+
+    test('a resume never carries a first prompt: the session it picks up has its own history', () => {
+        expect(terminalCommand({ kind: 'claude', resume: 'abc-123' }, 'say hello')).toBe("claude --resume 'abc-123'");
+    });
+
     test('a resume continues that session and ignores the mode', () => {
         expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised', resume: 'abc-123' })).toBe("claude --resume 'abc-123'");
         expect(terminalCommand({ kind: 'codex', resume: 'abc-123' })).toBe("codex resume 'abc-123'");

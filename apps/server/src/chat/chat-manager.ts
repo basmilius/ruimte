@@ -35,6 +35,8 @@ interface ChatManagerOptions {
     hasContext?: (chatId: string) => boolean;
     // The sources themselves, so a chat can tell its agent what came and went between turns.
     contextSources?: (chatId: string) => ContextSource[];
+    // The prompt an agent node was made with, taken once; it becomes the thread's first message.
+    firstPrompt?: (chatId: string) => Promise<string | null>;
     // Put in front of PATH, so `ruimte-context` is there for the CLI's shell.
     binDir?: string;
     codexCommand?: string[];
@@ -73,6 +75,7 @@ export class ChatManager {
     private readonly contextUrl: string | null;
     private readonly hasContext: (chatId: string) => boolean;
     private readonly contextSources: (chatId: string) => ContextSource[];
+    private readonly firstPrompt: (chatId: string) => Promise<string | null>;
 
     constructor(options: ChatManagerOptions) {
         this.providers = options.providers;
@@ -84,6 +87,7 @@ export class ChatManager {
         this.contextUrl = options.contextUrl ?? null;
         this.hasContext = options.hasContext ?? (() => false);
         this.contextSources = options.contextSources ?? (() => []);
+        this.firstPrompt = options.firstPrompt ?? (() => Promise.resolve(null));
         this.commands = {
             ...(options.command ? { claude: options.command } : {}),
             ...(options.codexCommand ? { codex: options.codexCommand } : {})
@@ -161,6 +165,18 @@ export class ChatManager {
             persistSoon: () => this.persistSoon(payload.chatId)
         });
         this.chats.set(session.id, session);
+        // Sent before the info goes back, so the client's attach already carries it: a prompt an
+        // agent was made with has to read as the first message of the thread, not as a turn out of
+        // nowhere. The send is what spawns the process, which is the CLI's own rule for a chat.
+        const prompt = await this.firstPrompt(payload.chatId);
+        if (prompt !== null) {
+            try {
+                session.send(prompt);
+            } catch (e) {
+                // A CLI that will not start must not take chat.create down with it: the node is there either way.
+                console.error(`The first prompt of chat ${payload.chatId} failed`, e);
+            }
+        }
         return session.info;
     }
 

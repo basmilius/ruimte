@@ -23,6 +23,9 @@ interface IndexedProject {
  */
 export class ProjectIndex {
     private readonly projects = new Map<string, IndexedProject>();
+    /* Told which ids a project still places, so state the daemon holds against a node id (a first
+       prompt waiting for its session) goes the moment the node does. */
+    onPlaces: ((projectId: string, ids: ReadonlySet<string>) => void) | null = null;
 
     /* The content in its daemon-side form: cwds absolute, file paths still as stored. */
     set(projectId: string, folder: string | null, content: Pick<ProjectContent, 'views'>): void {
@@ -37,10 +40,12 @@ export class ProjectIndex {
             }
         }
         this.projects.set(projectId, { folder, content, sources: deriveProjectContextSources(content.views, folder), places });
+        this.onPlaces?.(projectId, new Set(places.keys()));
     }
 
     remove(projectId: string): void {
         this.projects.delete(projectId);
+        this.onPlaces?.(projectId, new Set());
     }
 
     has(projectId: string): boolean {

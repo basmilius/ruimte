@@ -2,6 +2,7 @@ import { dirname, join, normalize, resolve } from 'node:path';
 import type { ServerWebSocket } from 'bun';
 import { AuthTicketPayloadSchema, PairPayloadSchema, type AgentKind, type ServerFrame } from '@ruimte/contracts';
 import { AgentStore } from './agents/agent-store.ts';
+import { PendingPromptStore } from './agents/pending-prompts.ts';
 import { OutputGate } from './backpressure.ts';
 import { decideAccess, isLoopbackAddress, reachabilityOf } from './auth/access.ts';
 import { pairingUrl } from './cli/pairing.ts';
@@ -82,13 +83,17 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const access = { allowedOrigins: config.allowedOrigins, requireToken: config.requireToken, tickets: handshake };
 
     const snapshots = new SnapshotStore(config.home);
+    // Loaded before anything can take one: a node made just before a restart still starts on its prompt.
+    const prompts = new PendingPromptStore(config.home);
+    await prompts.load();
     const manager = new SessionManager({
         adapter: new BunPtyAdapter(),
         snapshots,
         agents: new AgentStore(config.home),
         contextUrl,
         binDir,
-        contextFor: (sessionId) => context.list(sessionId)
+        contextFor: (sessionId) => context.list(sessionId),
+        firstPrompt: (sessionId) => prompts.take(sessionId)
     });
     const snapshotSchedule = scheduleSnapshots(manager, snapshots);
     const providers = new ProviderRegistry();
@@ -111,10 +116,13 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         binDir,
         hasContext: (chatId) => context.has(chatId),
         contextSources: (chatId) => context.list(chatId),
+        firstPrompt: (chatId) => prompts.take(chatId),
         // A turn reports what is left of its plan in passing; that belongs to the machine's numbers.
         onLimits: (update) => limits.applyLive(update)
     });
     const projects = new ProjectStore(config.home);
+    // A node deleted before anyone ran it takes its prompt with it.
+    projects.index.onPlaces = (projectId, ids) => void prompts.prune(projectId, ids).catch((e) => console.error('Pruning pending prompts failed', e));
     const drawings = new DrawingStore(projects);
     projects.attachDrawings(drawings);
     // Before the socket answers, so an agent whose project nobody opened since the restart still reads its links.

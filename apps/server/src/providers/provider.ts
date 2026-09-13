@@ -20,6 +20,9 @@ export interface ChatProvider {
     /* The arguments for one prompt in and one answer out, no session and no chat, which is how the
        daemon asks for a commit message. Absent on a CLI that only runs interactively. */
     oneShotArgs?(prompt: string): string[];
+    /* The arguments that start this CLI on a first prompt and then keep the session, which is what
+       an agent node made with `ruimte-context agent --prompt` is launched with. */
+    firstPromptArgs(prompt: string): string[];
     detect(command: string, env: Record<string, string | undefined>): Promise<CliDetection>;
     createBackend(launch: BackendLaunch, host: BackendHost): ChatBackend;
 }

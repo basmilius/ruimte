@@ -58,6 +58,8 @@ export interface SessionManagerOptions {
     binDir?: string;
     // What a session may read the moment it starts; a shell with links gets one line about the CLI above its first prompt.
     contextFor?: (sessionId: string) => ContextSource[];
+    // The prompt an agent node was made with, taken once: the CLI starts on it instead of on an empty turn.
+    firstPrompt?: (sessionId: string) => Promise<string | null>;
     // Lets a test move the clock the resume guard reads.
     now?: () => number;
 }
@@ -84,6 +86,7 @@ export class SessionManager {
     contextUrl: string | null;
     private readonly binDir: string | null;
     private readonly contextFor: (sessionId: string) => ContextSource[];
+    private readonly firstPrompt: (sessionId: string) => Promise<string | null>;
     // Told when the process tree of a session is about to change or just did: the end of a turn, an exit, a kill.
     onProcessChange: ((sessionId: string, phase: ProcessChangePhase) => void) | null = null;
     // Whether the process monitor found the agent of a session gone while its status still says it runs.
@@ -98,6 +101,7 @@ export class SessionManager {
         this.contextUrl = options.contextUrl ?? null;
         this.binDir = options.binDir ?? null;
         this.contextFor = options.contextFor ?? (() => []);
+        this.firstPrompt = options.firstPrompt ?? (() => Promise.resolve(null));
         this.now = options.now ?? Date.now;
     }
 
@@ -141,7 +145,7 @@ export class SessionManager {
             cwd: options.cwd ?? this.env.HOME ?? homedir(),
             cols: options.cols,
             rows: options.rows,
-            command: options.command ?? this.startLine(options.agent, restoredAgent !== undefined),
+            command: options.command ?? (await this.startLine(options.sessionId, options.agent, restoredAgent !== undefined)),
             restoredScreen,
             restoredAgent,
             launch: options.agent
@@ -302,11 +306,15 @@ export class SessionManager {
      * the node itself asked for is the caller's memory and not evidence, so the shell keeps the
      * fresh launch behind it.
      */
-    private startLine(launch: AgentLaunch | undefined, restored: boolean): string | undefined {
+    private async startLine(sessionId: string, launch: AgentLaunch | undefined, restored: boolean): Promise<string | undefined> {
         if (!launch || restored) {
             return undefined;
         }
-        return launch.resume ? resumeOrFreshCommand(launch, launch.resume) : terminalCommand(launch);
+        if (launch.resume) {
+            return resumeOrFreshCommand(launch, launch.resume);
+        }
+        // Taken only here: a prompt that is not put on a line is a prompt nobody would ever see.
+        return terminalCommand(launch, (await this.firstPrompt(sessionId)) ?? undefined);
     }
 
     /*

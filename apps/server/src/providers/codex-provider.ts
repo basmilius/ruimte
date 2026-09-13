@@ -15,5 +15,7 @@ export const codexProvider: ChatProvider = {
     detect: detectCli,
     // Read-only and without an approval to wait for: the run only has to read the patch it is handed.
     oneShotArgs: (prompt) => ['exec', '--color', 'never', '--sandbox', 'read-only', prompt],
+    // `codex [OPTIONS] [PROMPT]`: the positional starts the interactive session on that prompt.
+    firstPromptArgs: (prompt) => [prompt],
     createBackend: (launch, host) => new CodexBackend(launch, host)
 };

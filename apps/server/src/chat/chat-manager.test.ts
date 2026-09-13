@@ -514,3 +514,66 @@ describe('ChatManager', () => {
         expect(recorder.ofKind('user').map((item) => item.text)).toEqual(['slow', 'urgent', 'waiting']);
     });
 });
+
+describe('the first prompt of an agent node', () => {
+    const withPrompt = (prompt: string | null) => {
+        let left = prompt;
+        const taken = () =>
+            new ChatManager({
+                providers,
+                store,
+                attachments,
+                checkpoints: new Checkpoints(home),
+                command: FAKE,
+                env: { PATH: process.env.PATH, HOME: home, RUIMTE_HOOK_URL: 'x' },
+                firstPrompt: async () => {
+                    const value = left;
+                    left = null;
+                    return value;
+                }
+            });
+        return { taken, left: () => left };
+    };
+
+    test('becomes the first message of the thread, so the person reads it as one', async () => {
+        const held = withPrompt('start on the parser');
+        manager = held.taken();
+        manager.subscribe('c1', recorder.sink());
+
+        const info = await manager.create({ chatId: 'chat-p', cwd: home });
+        // The prompt is in the thread before create answers, so an attach right after it shows the turn.
+        const items = manager.attach('chat-p', 'c1').items;
+        expect(items.filter((item) => item.kind === 'user').map((item) => item.kind === 'user' && item.text)).toEqual(['start on the parser']);
+        expect(info.chatId).toBe('chat-p');
+        await waitFor(idle, 'the turn to end');
+        expect(recorder.deltas).toBe('echo: start on the parser');
+        expect(held.left()).toBeNull();
+    });
+
+    test('a second create of the same chat sends nothing again', async () => {
+        const held = withPrompt('only once');
+        manager = held.taken();
+        manager.subscribe('c1', recorder.sink());
+
+        const userTexts = () =>
+            manager
+                .attach('chat-p', 'c1')
+                .items.filter((item) => item.kind === 'user')
+                .map((item) => item.text);
+        await manager.create({ chatId: 'chat-p', cwd: home });
+        await waitFor(() => manager.get('chat-p')?.info.activeTurnId === null && manager.get('chat-p')?.info.running === true, 'the turn to end');
+        expect(userTexts()).toEqual(['only once']);
+
+        // The client of a second window mounts the same node; the prompt is gone, so nothing is sent.
+        await manager.create({ chatId: 'chat-p', cwd: home });
+        expect(userTexts()).toEqual(['only once']);
+        expect(held.left()).toBeNull();
+    });
+
+    test('without a prompt, create still spawns nothing', async () => {
+        manager = withPrompt(null).taken();
+        manager.subscribe('c1', recorder.sink());
+        await manager.create({ chatId: 'chat-q', cwd: home });
+        expect(manager.get('chat-q')?.running).toBe(false);
+    });
+});

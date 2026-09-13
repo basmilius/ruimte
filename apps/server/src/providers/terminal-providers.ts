@@ -25,7 +25,13 @@ const TERMINAL_ONLY_CAPABILITIES: ProviderCapabilities = {
 // No models over the wire: the catalog is a chat concern and these CLIs pick their own model.
 const EMPTY_CATALOG = { defaultModel: '', profiles: {}, models: [] };
 
-const terminalProvider = (kind: AgentKind, name: string, command: string, resumeCommand: string): ChatProvider => ({
+const terminalProvider = (
+    kind: AgentKind,
+    name: string,
+    command: string,
+    resumeCommand: string,
+    firstPromptArgs: (prompt: string) => string[]
+): ChatProvider => ({
     kind,
     name,
     catalog: new ModelCatalog(EMPTY_CATALOG),
@@ -33,14 +39,16 @@ const terminalProvider = (kind: AgentKind, name: string, command: string, resume
     command: [command],
     resumeCommand,
     detect: detectCli,
+    firstPromptArgs,
     createBackend: () => {
         throw new Error(`${name} has no chat backend; it runs as a terminal agent.`);
     }
 });
 
 export const geminiProvider: ChatProvider = {
-    ...terminalProvider('gemini', 'Gemini', 'gemini', 'gemini --resume {id}'),
+    // `--prompt` answers and exits; `-i` (`--prompt-interactive`) runs the prompt and stays.
+    ...terminalProvider('gemini', 'Gemini', 'gemini', 'gemini --resume {id}', (prompt) => ['-i', prompt]),
     oneShotArgs: (prompt) => ['--prompt', prompt]
 };
 
-export const copilotProvider = terminalProvider('copilot', 'GitHub Copilot', 'copilot', 'copilot --resume={id}');
+export const copilotProvider = terminalProvider('copilot', 'GitHub Copilot', 'copilot', 'copilot --resume={id}', (prompt) => ['-p', prompt]);
