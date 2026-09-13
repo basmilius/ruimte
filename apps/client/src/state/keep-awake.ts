@@ -1,29 +1,8 @@
 import { desktop } from '@/desktop/bridge';
+import { agentsWorking } from '@/state/agent-work';
 import { useChats, type ChatsById } from '@/state/chats';
 import { useSessions, type SessionsByKey } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
-
-/*
- * Whether an agent is in the middle of a turn, over every machine this window is watching. Not
- * `nodeStatus`: that calls a terminal running the moment it is attached, which every terminal is,
- * and a shell waiting at its prompt is no reason to keep a laptop from sleeping. So a session
- * counts only through the agent its hooks reported, and only while that agent is `live`, since a
- * record left behind by a CLI that went down with its shell keeps whatever status it had. Chats
- * carry the same status on their thread. `needs-you` is a person's turn, not work.
- */
-export const agentsWorking = (sessions: SessionsByKey, chats: ChatsById): boolean => {
-    for (const session of Object.values(sessions)) {
-        if (session.agent?.live && session.agent.status === 'running') {
-            return true;
-        }
-    }
-    for (const chat of Object.values(chats)) {
-        if (chat.info.status === 'running') {
-            return true;
-        }
-    }
-    return false;
-};
 
 /* The whole decision: the setting first, so nothing is counted for someone who never asked. */
 export const keepAwakeWanted = (enabled: boolean, sessions: SessionsByKey, chats: ChatsById): boolean => enabled && agentsWorking(sessions, chats);
