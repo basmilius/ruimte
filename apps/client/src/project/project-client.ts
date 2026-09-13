@@ -2,6 +2,7 @@ import type { ProjectContent, ProjectDocument, ProjectIconChoice, ProjectLocal, 
 import type { StoreApi } from 'zustand';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
+import { overlayLocal, readClientLocal, writeClientLocal } from './client-local';
 import { browserStorage, readLastProject, rememberProject, type LastProjectStorage } from './last-project';
 import { mergeProject, type CanvasAddition } from './merge';
 import type { PanelsPort } from './panels-port';
@@ -64,7 +65,7 @@ export interface ProjectSink {
     };
 }
 
-/* The slice of a drawing editor the client watches: its camera is machine state like the canvas's. */
+/* The slice of a drawing editor the client watches: its camera is local state like the canvas's. */
 interface DrawingSlice {
     camera: { x: number; y: number; zoom: number };
     loading: boolean;
@@ -88,6 +89,8 @@ interface ProjectClientOptions {
      * project reaches this: switching away releases the project and leaves its sessions running.
      */
     endSessions?: (endpointId: string, views: readonly ProjectView[]) => void;
+    /* Left out in tests, where there is no window to listen on. */
+    window?: Pick<Window, 'addEventListener' | 'removeEventListener'> | null;
 }
 
 /* A document without what wraps it: the version and the rev are the daemon's, not the person's. */
@@ -100,7 +103,8 @@ const isConnectionError = (e: unknown): boolean => e instanceof TransportError &
 
 /*
  * Keeps the canvas on screen and the project file in step. Edits save after a short pause;
- * the camera and the panels go to the machine-local file on their own, slower clock. A change that
+ * the camera and the panels go to this client's storage and the machine-local file on their own,
+ * slower clock. A change that
  * arrives from disk replaces the canvas when nothing is unsaved, and otherwise waits for a decision.
  */
 export class ProjectClient {
@@ -160,6 +164,13 @@ export class ProjectClient {
                   ]
                 : [])
         );
+        const host = options.window === undefined ? (typeof window === 'undefined' ? null : window) : options.window;
+        if (host) {
+            // localStorage is synchronous, so a page on its way out still keeps where it stood.
+            const onLeave = (): void => this.flushLocal();
+            host.addEventListener('pagehide', onLeave);
+            this.unsubscribe.push(() => host.removeEventListener('pagehide', onLeave));
+        }
         if (transport.status === 'open') {
             this.boot();
         }
@@ -364,9 +375,10 @@ export class ProjectClient {
             }
             const result = await this.transport.request('project.open', payload);
             this.base = contentOf(result.document);
-            this.documents.getState().load(result.document, result.local);
+            const local = overlayLocal(result.local, readClientLocal(this.storage, this.endpointId(), result.summary.projectId));
+            this.documents.getState().load(result.document, local);
             // In the same tick as the canvas, so the panels never paint the project that just left.
-            this.panels.load(result.summary.projectId, result.local.panels);
+            this.panels.load(result.summary.projectId, local.panels);
             this.sink.setChosenIcon(result.document.icon ?? null);
             this.sink.setCurrent(result.summary, result.document.rev);
             this.remember(result.summary.projectId);
@@ -391,7 +403,7 @@ export class ProjectClient {
 
     /*
      * Views coming and going are edits; switching between them is not, which is why the store counts
-     * the first kind. The view that is open and where its camera stood belong to this machine.
+     * the first kind. The view that is open and where its camera stood belong to this client.
      */
     private onDocument(state: ReturnType<DocumentAccess['getState']>, previous: ReturnType<DocumentAccess['getState']>): void {
         if (state.loading || previous.loading || !this.sink.getState().current) {
@@ -441,10 +453,13 @@ export class ProjectClient {
         if (!current) {
             return;
         }
-        void this.transport.request('project.save-local', { projectId: current.projectId, local: this.localOfScreen() }).catch(() => undefined);
+        const local = this.localOfScreen();
+        // This client's own copy first: the machine only has to be where a client that never saw the project starts.
+        writeClientLocal(this.storage, this.endpointId(), current.projectId, local);
+        void this.transport.request('project.save-local', { projectId: current.projectId, local }).catch(() => undefined);
     }
 
-    /* What this machine would remember about the project right now: the panels, and every view's camera. */
+    /* What this client would remember about the project right now: the panels, and every view's camera. */
     private localOfScreen(): ProjectLocal {
         return { ...this.documents.getState().exportLocal(), panels: this.panels.export() };
     }

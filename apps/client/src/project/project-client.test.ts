@@ -199,7 +199,14 @@ const fakeStorage = (storage: Map<string, string>) => ({
  * saving or panels has a canvas without saying so; one that brings storage says it there instead.
  */
 const setup = (
-    options: { endpointId?: string; storage?: Map<string, string>; projects?: ProjectSummary[]; open?: string | null; stores?: WorkspaceStores } = {}
+    options: {
+        endpointId?: string;
+        storage?: Map<string, string>;
+        projects?: ProjectSummary[];
+        open?: string | null;
+        stores?: WorkspaceStores;
+        window?: Pick<Window, 'addEventListener' | 'removeEventListener'>;
+    } = {}
 ) => {
     const stores = options.stores ?? defaultWorkspaceStores;
     stores.document.getState().load(null, null);
@@ -228,7 +235,8 @@ const setup = (
         localDelayMs: 1,
         endpointId: () => endpointId,
         endSessions: (machine, views) => ended.push({ endpointId: machine, nodes: sessionNodesOf(views).map((node) => `${node.kind}:${node.id}`) }),
-        storage: fakeStorage(storage)
+        storage: fakeStorage(storage),
+        window: options.window ?? null
     });
     const dispose = (): void => {
         client.dispose();
@@ -246,6 +254,83 @@ describe('ProjectClient', () => {
         expect(state.rev).toBe(3);
         expect(focusedCanvas().getState().viewCamera()).toEqual({ center: { x: 5, y: 6 }, zoom: 1 });
         dispose();
+    });
+
+    test("what this client had of a project wins over the machine, and the favicons stay the machine's", async () => {
+        const storage = new Map<string, string>();
+        const layout = {
+            columns: [
+                { size: 0.5, cells: [{ viewId: 'main', size: 1 }] },
+                { size: 0.5, cells: [{ viewId: 'second', size: 1 }] }
+            ],
+            focus: { column: 1, cell: 0 }
+        };
+        const mine: ProjectLocal = {
+            activeViewId: 'second',
+            views: { second: { camera: { center: { x: 40, y: 50 }, zoom: 2 }, focusedNodeId: null }, gone: { camera: null, focusedNodeId: null } },
+            panels: { panel: { open: true, kind: 'git' } },
+            layout
+        };
+        storage.set('ruimte.local', JSON.stringify({ 'daemon-a:p1': { at: 1, local: mine } }));
+        const { transport, dispose } = setup({ storage, open: 'p1' });
+        transport.views = [canvasView('main'), canvasView('second')];
+        transport.panels = { panel: { open: false, kind: 'files' }, favicons: { 'browser-1': 'icon' } };
+        await tick();
+
+        expect(useDocument.getState().activeViewId).toBe('second');
+        expect(useDocument.getState().layout).toEqual(layout);
+        expect(useUi.getState().panel).toEqual({ open: true, kind: 'git' });
+        // The main view has no camera on this client, so it keeps the machine's.
+        expect(useDocument.getState().viewLocal.main).toEqual({ camera: { center: { x: 5, y: 6 }, zoom: 1 }, focusedNodeId: null });
+        expect(useDocument.getState().viewLocal.gone).toBeUndefined();
+
+        useUi.getState().togglePanel('files');
+        await tick(10);
+        const written = JSON.parse(storage.get('ruimte.local')!) as Record<string, { local: ProjectLocal }>;
+        expect(written['daemon-a:p1']!.local.views.gone).toBeUndefined();
+        expect(written['daemon-a:p1']!.local.panels?.favicons).toBeUndefined();
+        const sent = transport.of('project.save-local').at(-1)?.payload as { local: ProjectLocal };
+        expect(sent.local.panels?.favicons).toEqual({ 'browser-1': 'icon' });
+        dispose();
+    });
+
+    test('a project this client never saw opens the way the machine had it, and the client keeps it from then on', async () => {
+        const storage = new Map<string, string>();
+        const { transport, dispose } = setup({ storage, open: 'p1' });
+        transport.panels = { panel: { open: true, kind: 'files' } };
+        await tick();
+        expect(focusedCanvas().getState().viewCamera()).toEqual({ center: { x: 5, y: 6 }, zoom: 1 });
+        expect(useUi.getState().panel).toEqual({ open: true, kind: 'files' });
+        expect(storage.get('ruimte.local')).toBeUndefined();
+
+        focusedCanvas().getState().setViewport({ w: 800, h: 600 });
+        focusedCanvas().getState().panBy(10, 0);
+        await tick(10);
+        const written = JSON.parse(storage.get('ruimte.local')!) as Record<string, { local: ProjectLocal }>;
+        expect(written['daemon-a:p1']!.local.views.main!.camera).toEqual({ center: { x: -5, y: 6 }, zoom: 1 });
+        dispose();
+    });
+
+    test('a page on its way out writes where it stood before the pause runs out', async () => {
+        const storage = new Map<string, string>();
+        const listeners = new Map<string, () => void>();
+        const host = {
+            addEventListener: (type: string, listener: () => void) => void listeners.set(type, listener),
+            removeEventListener: (type: string) => void listeners.delete(type)
+        } as unknown as Pick<Window, 'addEventListener' | 'removeEventListener'>;
+        const { client, transport, dispose } = setup({ storage, open: 'p1', window: host });
+        await tick();
+        await client.settled();
+        // Synchronous from here on, so the pause of the local write cannot have run out.
+        useUi.getState().togglePanel('git');
+        expect(storage.get('ruimte.local')).toBeUndefined();
+
+        listeners.get('pagehide')!();
+        const written = JSON.parse(storage.get('ruimte.local')!) as Record<string, { local: ProjectLocal }>;
+        expect(written['daemon-a:p1']!.local.panels?.panel).toEqual({ open: true, kind: 'git' });
+        expect(transport.of('project.save-local')).toHaveLength(1);
+        dispose();
+        expect(listeners.has('pagehide')).toBe(false);
     });
 
     test('a machine that has never had a project open boots into nothing, and opens nothing itself', async () => {

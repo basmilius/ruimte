@@ -328,7 +328,8 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
 
             load(document, local) {
                 const views = document?.views ?? [];
-                const viewLocal = local?.views ?? {};
+                // A view deleted since the local state was written has nothing left to stand for.
+                const viewLocal = Object.fromEntries(Object.entries(local?.views ?? {}).filter(([viewId]) => views.some((view) => view.id === viewId)));
                 // A file written before views could stand side by side reads as one cell on the view it named.
                 const layout = layoutOf(local ?? { activeViewId: null, layout: undefined }, views);
                 const settled = settledOn(views, viewLocal, layout, { lastCanvasViewId: views.find(isCanvasView)?.id ?? null });

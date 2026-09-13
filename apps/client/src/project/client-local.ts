@@ -1,0 +1,127 @@
+import { ProjectLocalSchema, type ProjectLocal, type ProjectViewLocal } from '@ruimte/contracts';
+import { endpointKey } from '@/state/keys';
+
+const CLIENT_LOCAL_KEY = 'ruimte.local';
+
+/* Every project this client ever looked at would otherwise stay, and the panels of a big repository are not small. */
+export const CLIENT_LOCAL_LIMIT = 100;
+
+export type ClientLocalStorage = Pick<Storage, 'getItem' | 'setItem'>;
+
+interface ClientLocalRow {
+    at: number;
+    local: ProjectLocal;
+}
+
+type ClientLocalRows = Record<string, ClientLocalRow>;
+
+const readRows = (storage: ClientLocalStorage | null): ClientLocalRows => {
+    const raw = storage?.getItem(CLIENT_LOCAL_KEY) ?? null;
+    if (raw === null) {
+        return {};
+    }
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(raw);
+    } catch {
+        return {};
+    }
+    if (typeof parsed !== 'object' || parsed === null) {
+        return {};
+    }
+    const rows: ClientLocalRows = {};
+    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+        const row = value as Partial<ClientLocalRow> | null;
+        const local = ProjectLocalSchema.safeParse(row?.local);
+        if (typeof row?.at === 'number' && local.success) {
+            rows[key] = { at: row.at, local: local.data };
+        }
+    }
+    return rows;
+};
+
+const isQuotaError = (e: unknown): boolean => (e as { name?: unknown } | null)?.name === 'QuotaExceededError';
+
+const oldestKey = (rows: ClientLocalRows, except: string | null): string | null => {
+    let oldest: string | null = null;
+    for (const [key, row] of Object.entries(rows)) {
+        if (key !== except && (oldest === null || row.at < rows[oldest]!.at)) {
+            oldest = key;
+        }
+    }
+    return oldest;
+};
+
+/*
+ * A full storage drops the oldest project and tries once more. What this client remembers is a
+ * convenience on top of what the machine keeps, so after that it gives up without a word.
+ */
+const writeRows = (storage: ClientLocalStorage | null, rows: ClientLocalRows, keep: string | null = null): void => {
+    if (storage === null) {
+        return;
+    }
+    try {
+        storage.setItem(CLIENT_LOCAL_KEY, JSON.stringify(rows));
+    } catch (e) {
+        const oldest = isQuotaError(e) ? oldestKey(rows, keep) : null;
+        if (oldest === null) {
+            return;
+        }
+        delete rows[oldest];
+        try {
+            storage.setItem(CLIENT_LOCAL_KEY, JSON.stringify(rows));
+        } catch {
+            // Given up: the machine still has it.
+        }
+    }
+};
+
+/* The favicons are a cache of pages the machine loaded, not something about this screen. */
+const withoutFavicons = (local: ProjectLocal): ProjectLocal => {
+    if (!local.panels?.favicons) {
+        return local;
+    }
+    const { favicons: _favicons, ...panels } = local.panels;
+    return { ...local, panels };
+};
+
+/* What this client last had of one project on one machine, or null when it never saw it. */
+export const readClientLocal = (storage: ClientLocalStorage | null, endpointId: string, projectId: string): ProjectLocal | null =>
+    readRows(storage)[endpointKey(endpointId, projectId)]?.local ?? null;
+
+export const writeClientLocal = (storage: ClientLocalStorage | null, endpointId: string, projectId: string, local: ProjectLocal, now = Date.now()): void => {
+    const rows = readRows(storage);
+    const key = endpointKey(endpointId, projectId);
+    rows[key] = { at: now, local: withoutFavicons(local) };
+    while (Object.keys(rows).length > CLIENT_LOCAL_LIMIT) {
+        delete rows[oldestKey(rows, key)!];
+    }
+    writeRows(storage, rows, key);
+};
+
+/*
+ * What this client has wins, and what it never saw comes from the machine. A record for the project
+ * brings the grid, the panels and the open view along, even a grid that is one cell; a view is
+ * looked up on its own, because one made on another screen has no camera here. The favicons are
+ * always the machine's.
+ */
+export const overlayLocal = (machine: ProjectLocal, client: ProjectLocal | null): ProjectLocal => {
+    if (client === null) {
+        return machine;
+    }
+    const views: Record<string, ProjectViewLocal> = { ...machine.views };
+    for (const [viewId, view] of Object.entries(client.views)) {
+        if (view.camera !== null || machine.views[viewId] === undefined) {
+            views[viewId] = view;
+        }
+    }
+    const { favicons: _favicons, ...clientPanels } = client.panels ?? {};
+    const favicons = machine.panels?.favicons;
+    const panels = client.panels || favicons ? { ...clientPanels, ...(favicons ? { favicons } : {}) } : undefined;
+    return {
+        activeViewId: client.activeViewId,
+        views,
+        ...(panels ? { panels } : {}),
+        ...(client.layout ? { layout: client.layout } : {})
+    };
+};
