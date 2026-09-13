@@ -1,70 +1,89 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useShallow } from 'zustand/react/shallow';
+import { CircleCheck } from 'lucide-react';
 import { projectNodes, revealNode } from '@/project/views';
+import { groupAttention, useAttention } from '@/state/attention';
 import { useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useDocument } from '@/state/document';
-import { nodeStatus, useSessions } from '@/state/sessions';
+import { useSessions } from '@/state/sessions';
 import { StatusDot } from '@/canvas/NodeFrame';
+import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
 
-/* How many nodes need you and how many are working, over the whole project; the first is a button
-   that walks through them, across views. */
+/* A count that walks through the nodes behind it, across views, one per click. */
+function Walker({ label, count, ids, children }: { label: string; count: number; ids: string[]; children: ReactNode }) {
+    const selection = useCanvas((s) => s.selection);
+    const next = (): void => {
+        // Starts after the selected node, so repeated clicks visit every node in the list.
+        const at = ids.findIndex((id) => selection.includes(id));
+        const target = ids[(at + 1) % ids.length];
+        if (target) {
+            revealNode(target);
+        }
+    };
+    return (
+        <Tooltip label={label} name>
+            <button
+                className="flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs tabular-nums text-text-muted hover:bg-surface-hover hover:text-text"
+                onClick={next}
+            >
+                {children}
+                {count}
+            </button>
+        </Tooltip>
+    );
+}
+
+/*
+ * What the project still wants from a person: how many nodes are waiting on you, how many agents are
+ * working, and how many finished while you were not looking. Every one of them is counted in
+ * `state/attention.ts`, which is also what the dock badge and the shell's quit guard read.
+ */
 export function StatusSummary() {
     const views = useDocument((s) => s.views);
     const activeViewId = useDocument((s) => s.activeViewId);
     const order = useCanvas(useShallow((s) => s.order));
     const canvasNodes = useCanvas((s) => s.nodes);
-    const selection = useCanvas((s) => s.selection);
     const endpointId = useEndpointId();
     const sessions = useSessions((s) => s.byKey);
     const chats = useChats((s) => s.byKey);
+    const unseen = useAttention((s) => s.unseen);
 
     // The dependencies are what `projectNodes` reads; the call itself takes the stores as they are.
     const nodes = useMemo(() => projectNodes(), [views, activeViewId, order, canvasNodes]);
 
-    const needsYou = nodes.filter((node) => nodeStatus(node, sessions, chats, endpointId) === 'needs-you');
-    const running = nodes.filter((node) => nodeStatus(node, sessions, chats, endpointId) === 'running').length;
-    if (needsYou.length === 0 && running === 0) {
+    const groups = groupAttention(nodes, sessions, chats, endpointId, unseen);
+    if (groups.needsYou.length === 0 && groups.working.length === 0 && groups.finished.length === 0) {
         return null;
     }
-
-    const next = (): void => {
-        // Starts after the selected node, so repeated clicks visit every node that waits.
-        const at = needsYou.findIndex((node) => selection.includes(node.id));
-        const target = needsYou[(at + 1) % needsYou.length];
-        if (target) {
-            revealNode(target.id);
-        }
-    };
 
     return (
         <>
             <div className="flex items-center gap-1">
-                {needsYou.length > 0 && (
-                    <Tooltip label="Go to the next node that needs you, in any view" name>
-                        <button
-                            className="flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs tabular-nums text-text-muted hover:bg-surface-hover hover:text-text"
-                            onClick={next}
-                        >
-                            <StatusDot status="needs-you" plain />
-                            {needsYou.length}
-                        </button>
-                    </Tooltip>
+                {groups.needsYou.length > 0 && (
+                    <Walker label="Go to the next node that needs you, in any view" count={groups.needsYou.length} ids={groups.needsYou}>
+                        <StatusDot status="needs-you" plain />
+                    </Walker>
                 )}
-                {running > 0 && (
+                {groups.working.length > 0 && (
                     <Tooltip label="Agents working">
                         <span
                             role="status"
-                            aria-label={`${running} agents working`}
+                            aria-label={`${groups.working.length} agents working`}
                             className="flex h-8 items-center gap-1.5 px-2 text-xs tabular-nums text-text-muted"
                         >
                             <StatusDot status="running" plain />
-                            {running}
+                            {groups.working.length}
                         </span>
                     </Tooltip>
+                )}
+                {groups.finished.length > 0 && (
+                    <Walker label="Go to the next agent that finished while you were away" count={groups.finished.length} ids={groups.finished}>
+                        <Icon icon={CircleCheck} size={12} className="text-status-idle" />
+                    </Walker>
                 )}
             </div>
             <Separator />
