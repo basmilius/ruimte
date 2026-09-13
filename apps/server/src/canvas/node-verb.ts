@@ -95,14 +95,26 @@ export const canvasFull = (canvas: ProjectCanvasView, adding: number): VerbRefus
 // What a caller may pick instead of a --beside that is nowhere; a full canvas would bury the refusal, so it says where to look.
 const BESIDE_LINES_MAX = 20;
 
-export const nodeLines = (canvas: ProjectCanvasView): string[] => {
-    if (canvas.nodes.length > BESIDE_LINES_MAX) {
+/*
+ * What a refusal about a node id may offer instead. `takes` is what the verb that refused would
+ * actually accept, since an alternative that is refused a line later is worse than no list at all,
+ * and `empty` is what to say when that leaves nothing.
+ */
+export const nodeLines = (canvas: ProjectCanvasView, options: { takes?: (node: ProjectNode) => boolean; empty?: string } = {}): string[] => {
+    const nodes = options.takes === undefined ? canvas.nodes : canvas.nodes.filter(options.takes);
+    if (nodes.length > BESIDE_LINES_MAX) {
         return [`detail\truimte-context nodes\tthe ${canvas.nodes.length} nodes of ${canvas.id}`];
     }
     return orNote(
-        canvas.nodes.map((node) => `node\t${node.id}\t${node.kind}\t${field(node.title)}`),
-        `${canvas.id} has no nodes on it yet`
+        nodes.map((node) => `node\t${node.id}\t${node.kind}\t${field(node.title)}`),
+        options.empty ?? `${canvas.id} has no nodes on it yet`
     );
+};
+
+/* A group is never one of --nodes: `group` and `arrange` both refuse one, so neither offers one. */
+export const NOT_A_GROUP = {
+    takes: (node: ProjectNode): boolean => node.kind !== 'group',
+    empty: 'This canvas holds nothing but frames, and a frame is never one of --nodes'
 };
 
 /*
@@ -117,11 +129,19 @@ export const idList = (raw: string, flag: string): string[] => {
     return ids;
 };
 
-/* The nodes those ids name on this canvas, refused with what is on it when one of them names none. */
-export const nodesNamed = (canvas: ProjectCanvasView, ids: readonly string[]): ProjectNode[] => {
+/* The nodes those ids name on this canvas, refused with what this verb takes when one of them names none. */
+export const nodesNamed = (
+    canvas: ProjectCanvasView,
+    ids: readonly string[],
+    options: { takes?: (node: ProjectNode) => boolean; empty?: string } = {}
+): ProjectNode[] => {
     const missing = ids.filter((id) => !canvas.nodes.some((node) => node.id === id));
     if (missing.length > 0) {
-        throw new VerbRefusal('unknown-node', `${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} not a node on ${canvas.id}`, nodeLines(canvas));
+        throw new VerbRefusal(
+            'unknown-node',
+            `${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} not a node on ${canvas.id}`,
+            nodeLines(canvas, options)
+        );
     }
     return ids.map((id) => canvas.nodes.find((node) => node.id === id)!);
 };
@@ -263,13 +283,24 @@ const addVerb = defineVerb({
     }
 });
 
-/* What a refusal about a node id can offer instead: the caller's own canvas, or where to look. */
-const whereToLook = (content: ProjectContent, place: IndexedPlace): string[] => {
+/*
+ * What this refusal may offer: the nodes on the caller's own canvas that this same call would
+ * actually remove. The caller's own node is left out, since `deletes-caller` refuses it two lines
+ * later, and so is every node the caller did not make unless the machine frees them.
+ */
+const deletableLines = (
+    content: ProjectContent,
+    place: IndexedPlace,
+    call: { caller: string; madeBy(id: string): string | null; anyNode: boolean }
+): string[] => {
     const canvas = place.canvasId === null ? undefined : content.views.find((view) => view.id === place.canvasId);
     if (canvas === undefined || !isCanvasView(canvas)) {
         return ['detail\truimte-context nodes --view <id>\tthe nodes of a canvas, which is where an id comes from'];
     }
-    return nodeLines(canvas);
+    return nodeLines(canvas, {
+        takes: (node) => node.id !== call.caller && (call.anyNode || call.madeBy(node.id) === call.caller),
+        empty: `You have no node on ${canvas.id} to remove; node delete takes a node you made yourself`
+    });
 };
 
 const deleteSub = defineSubVerb('node', {
@@ -301,7 +332,11 @@ const deleteSub = defineSubVerb('node', {
             const canvas = content.views.filter(isCanvasView).find((view) => view.nodes.some((node) => node.id === id));
             const node = canvas?.nodes.find((candidate) => candidate.id === id);
             if (!canvas || !node) {
-                throw new VerbRefusal('unknown-node', `${id} is not a node on any canvas of this project`, whereToLook(content, place));
+                throw new VerbRefusal(
+                    'unknown-node',
+                    `${id} is not a node on any canvas of this project`,
+                    deletableLines(content, place, { caller: call.caller, madeBy: (candidate) => call.host.madeBy(candidate), anyNode })
+                );
             }
             if (id === call.caller) {
                 throw new VerbRefusal('deletes-caller', `You are ${id}, so removing it would end the session asking`);

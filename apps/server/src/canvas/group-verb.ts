@@ -1,6 +1,6 @@
 import { DEFAULT_TITLES, NODE_ACCENT_NAMES, groupFrame, type ProjectNode } from '@ruimte/contracts';
 import { z } from 'zod';
-import { MAX_CANVAS_NODES, canvasFull, idList, newId, nodesNamed } from './node-verb.ts';
+import { MAX_CANVAS_NODES, NOT_A_GROUP, canvasFull, idList, newId, nodesNamed } from './node-verb.ts';
 import { containersOf, groupMembers } from './placement.ts';
 import { MAX_TITLE_LENGTH, TITLE_LINE, VerbRefusal, canvasFor, defineVerb, field, placeOf, requiredField, titleField } from './verb.ts';
 
@@ -54,7 +54,7 @@ export const groupVerb = defineVerb({
             if (canvas.nodes.length + 1 > MAX_CANVAS_NODES) {
                 throw canvasFull(canvas, 1);
             }
-            const members = nodesNamed(canvas, ids);
+            const members = nodesNamed(canvas, ids, NOT_A_GROUP);
             const framed = members.find((node) => node.kind === 'group');
             if (framed) {
                 throw new VerbRefusal(

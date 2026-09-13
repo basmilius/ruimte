@@ -1,6 +1,6 @@
 import type { ProjectNode } from '@ruimte/contracts';
 import { z } from 'zod';
-import { idList, nodesNamed } from './node-verb.ts';
+import { NOT_A_GROUP, idList, nodesNamed } from './node-verb.ts';
 import { ARRANGE_LAYOUTS, PLACEMENT_GAP, arrangeRects, gridColumns, type ArrangeLayout } from './placement.ts';
 import { VerbRefusal, canvasFor, defineVerb, placeOf, requiredField } from './verb.ts';
 
@@ -54,7 +54,7 @@ export const arrangeVerb = defineVerb({
 
         return call.host.mutate(place.projectId, (content) => {
             const canvas = canvasFor(content, place, flags.view);
-            const moving = nodesNamed(canvas, ids);
+            const moving = nodesNamed(canvas, ids, NOT_A_GROUP);
             const carrier = moving.find((node) => node.kind === 'group');
             if (carrier) {
                 throw new VerbRefusal(

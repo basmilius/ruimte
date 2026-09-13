@@ -1147,8 +1147,8 @@ describe('link', () => {
     test('draws a line from the caller into a node and prints what it made', async () => {
         const { status, lines } = await post('link', ['--to', 'note-1']);
         expect(status).toBe(200);
-        const [id, from, to, state] = lines[0]!.split('\t');
-        expect([from, to, state]).toEqual(['term-1', 'note-1', 'new']);
+        const [id, from, to, state, way] = lines[0]!.split('\t');
+        expect([from, to, state, way]).toEqual(['term-1', 'note-1', 'new', 'out']);
         expect((await canvasOnDisk()).edges).toEqual([{ id: id!, from: 'term-1', to: 'note-1' }]);
     });
 
@@ -1158,9 +1158,10 @@ describe('link', () => {
         await store.mutate(projectId, () => ({ content: pair, result: null }));
 
         const { lines } = await post('link', ['--to', 'term-2']);
+        // The last column is what tells one --to answering in two rows from a mistake.
         expect(lines.map((line) => line.split('\t').slice(1))).toEqual([
-            ['term-1', 'term-2', 'new'],
-            ['term-2', 'term-1', 'new']
+            ['term-1', 'term-2', 'new', 'out'],
+            ['term-2', 'term-1', 'new', 'back']
         ]);
         expect((await canvasOnDisk()).edges.map((edge) => [edge.from, edge.to, edge.label])).toEqual([
             ['term-1', 'term-2', 'context'],
@@ -1179,7 +1180,8 @@ describe('link', () => {
     test('refuses ids that are not on the canvas and a line to itself', async () => {
         const missing = await post('link', ['--to', 'note-1,ghost,other']);
         expect(missing.lines[0]).toBe('refused\tunknown-node\tghost, other are not a node on main');
-        expect(missing.lines.slice(1)).toEqual(['node\tterm-1\tterminal\tshell', 'node\tnote-1\tnote\tPlan with a tab']);
+        // Never the node the line starts from: --to itself is refused as a self-link.
+        expect(missing.lines.slice(1)).toEqual(['node\tnote-1\tnote\tPlan with a tab']);
         expect((await post('link', ['--to', 'term-1'])).lines[0]).toStartWith('refused\tself-link\t');
         expect((await post('link', ['--to', 'note-1', '--view', 'main'], 'chat')).lines[0]).toStartWith(
             'refused\tunknown-node\tYou are not a node on main, so a line has nowhere to start'
@@ -1189,7 +1191,7 @@ describe('link', () => {
 
     test('--from, --label and --view say where the line goes and what it is called', async () => {
         const { lines } = await post('link', ['--to', 'term-1', '--from', 'note-1', '--label', 'plan']);
-        expect(lines[0]!.split('\t').slice(1)).toEqual(['note-1', 'term-1', 'new']);
+        expect(lines[0]!.split('\t').slice(1)).toEqual(['note-1', 'term-1', 'new', 'out']);
         expect((await canvasOnDisk()).edges[0]!.label).toBe('plan');
     });
 
@@ -1629,6 +1631,16 @@ describe('group', () => {
         expect((await canvasOnDisk()).nodes.filter((node) => node.kind === 'group')).toHaveLength(1);
     });
 
+    test('a refusal over an id never offers the frame this verb refuses a line later', async () => {
+        await seed(box('a', 400, 400), box('frame', 300, 300, { kind: 'group', w: 800, h: 800 }));
+        for (const verb of ['group', 'arrange']) {
+            const { lines } = await post(verb, ['--nodes', 'a,ghost']);
+            expect(lines[0]).toBe('refused\tunknown-node\tghost is not a node on main');
+            expect(lines.slice(1)).not.toContain('node\tframe\tgroup\tframe');
+            expect(lines.slice(1)).toContain('node\ta\tnote\ta');
+        }
+    });
+
     test('refuses nodes that do not stand in the same place already', async () => {
         await seed(box('inside', 400, 400), box('outside', 4000, 4000), box('frame', 300, 300, { kind: 'group', w: 800, h: 800 }));
         const { status, lines } = await post('group', ['--nodes', 'inside,outside']);
@@ -1777,9 +1789,11 @@ describe('notify', () => {
         const refused = await post('notify', [target, '--text', 'the build is green']);
         expect(refused.status).toBe(422);
         expect(refused.lines[0]).toBe(
-            `refused\tnot-linked\tNo line runs from you into ${target}, so it cannot be notified; a message travels the way a read does, and only that way`
+            `refused\tnot-linked\t${target} is a terminal node on main, but no line runs from you into it: draw that line and it can be notified`
         );
-        expect(refused.lines).toContain('note\tNo line runs from you into a terminal or a chat; ruimte-context link --to <id> draws one');
+        expect(refused.lines).toContain(
+            `note\tNothing on main has a line from you into it yet; ruimte-context link --to ${target} draws the one this call needs`
+        );
         expect(refused.lines).toContain(`see\truimte-context link --to ${target}\tdraws the line this needs`);
         expect(notified).toEqual([]);
 
@@ -1814,6 +1828,21 @@ describe('notify', () => {
         const { status, lines } = await post('notify', ['term-1', '--text', 'hi'], 'chat');
         expect(status).toBe(422);
         expect(lines[0]).toBe('refused\tnot-on-a-canvas\tYou are a view of your own, not a node on a canvas, so no line runs from you into anything');
+    });
+
+    test('help notify names the whole set of refusals it can answer with, and what it cannot promise', async () => {
+        const lines = (await post('help', ['notify'])).lines;
+        const refusals = lines
+            .find((line) => line.startsWith('refusals\t'))!
+            .split('\t')
+            .slice(1);
+        for (const code of ['not-linked', 'self-notify', 'not-an-agent', 'unknown-node', 'not-on-a-canvas']) {
+            expect(refusals).toContain(code);
+        }
+        expect(lines.some((line) => line.startsWith('not\t') && line.includes('never hear that it was read'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('reply\t') && line.includes('no reply channel'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('who\t') && line.includes('draws both ways at once'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('terminal\t') && line.includes('wrapped across lines'))).toBe(true);
     });
 
     test('the message is one argument, present, and short enough to read in a turn', async () => {
@@ -1865,7 +1894,10 @@ describe('node delete', () => {
         expect(self.lines[0]).toBe('refused\tdeletes-caller\tYou are term-1, so removing it would end the session asking');
         const nowhere = await post('node', ['delete', 'nope']);
         expect(nowhere.lines[0]).toBe('refused\tunknown-node\tnope is not a node on any canvas of this project');
-        expect(nowhere.lines.slice(1)).toContain('node\tterm-1\tterminal\tshell');
+        // Nothing it could not delete anyway: the caller's own node and a person's note are both out.
+        expect(nowhere.lines.slice(1)).toEqual(['note\tYou have no node on main to remove; node delete takes a node you made yourself']);
+        const mine = (await post('node', ['note', '--title', 'Mine'])).lines[0]!.split('\t')[0]!;
+        expect((await post('node', ['delete', 'nope'])).lines.slice(1)).toEqual([`node\t${mine}\tnote\tMine`]);
     });
 
     test('a group loses its frame and keeps its nodes where they stand', async () => {

@@ -11,13 +11,16 @@ const LINK_DETAIL: readonly string[] = [
     'flag\t--from N\toptional\tWhere the line starts; without it, you',
     `flag\t--label L\toptional\tWhat the line is called on the canvas, at most ${MAX_TITLE_LENGTH} characters; a line into an agent is called "context" without one`,
     'flag\t--view V\toptional\tThe canvas both ends are on, by view id; without it the one you are on',
-    'prints\tid\tfrom\tto\tstate\tone line per edge, where state is new for one that was drawn and existing for one that was there already',
+    'prints\tid\tfrom\tto\tstate\tway\tone line per edge, where state is new for one that was drawn and existing for one that was there already',
+    'way\tout for the line you asked for, back for the one this verb drew the other way by itself, so two rows for one --to is not a mistake',
     'context\tAn edge into a terminal or a chat node is what lets that agent read the other end with ruimte-context read; a line between two other nodes is only a line',
-    'both ways\tBetween two agent nodes the line is drawn in both directions, since each of them then reads the other',
+    'both ways\tA --to that names a terminal or a chat, from a terminal or a chat, is two edges and two rows: each of them then reads the other, and either may notify the other',
+    'both ways\tInto anything else it is one edge and one row, since only an agent node reads what a line brings it',
     'again\tAn edge that is already there is left alone and reported as existing, so running the same link twice changes nothing',
     `limit\tAt most ${MAX_LINKS} ids in --to`,
     'ids\tOnly ids, never titles; ruimte-context nodes lists the nodes of a canvas with theirs',
-    'see\truimte-context edges\twhat is drawn on that canvas now, so you can tell a line that is missing from one that is only the other way round'
+    'see\truimte-context edges\twhat is drawn on that canvas now, so you can tell a line that is missing from one that is only the other way round',
+    'see\truimte-context notify\tleaving a message for the agent at the other end, which takes a line running that way'
 ];
 
 const pickId = (edge: ProjectEdge): string => edge.id;
@@ -25,7 +28,7 @@ const pickId = (edge: ProjectEdge): string => edge.id;
 export const linkVerb = defineVerb({
     name: 'link',
     usage: '--to A,B [--from N] [--label L] [--view V]',
-    summary: 'Draws a context line between nodes of one canvas, in both directions between two agents',
+    summary: 'Draws a context line between nodes of one canvas; between two agents it draws both ways, which is two rows',
     detail: LINK_DETAIL,
     positionals: z.tuple([], { error: 'link takes no arguments, only flags; the nodes go in --to' }),
     flags: z.object({
@@ -59,11 +62,13 @@ export const linkVerb = defineVerb({
             }
             const missing = targets.filter((id) => !canvas.nodes.some((node) => node.id === id));
             if (missing.length > 0) {
-                throw new VerbRefusal(
-                    'unknown-node',
-                    `${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} not a node on ${canvas.id}`,
-                    nodeLines(canvas)
-                );
+                throw new VerbRefusal('unknown-node', `${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} not a node on ${canvas.id}`, [
+                    // Never the node the line starts from: a line into itself is refused a moment later.
+                    ...nodeLines(canvas, {
+                        takes: (node) => node.id !== from,
+                        empty: `${canvas.id} holds no other node for a line to run into`
+                    })
+                ]);
             }
             if (targets.includes(from)) {
                 throw new VerbRefusal('self-link', `${from} is both ends of the line; a node reads itself without one`);
@@ -71,10 +76,12 @@ export const linkVerb = defineVerb({
 
             const made: ProjectEdge[] = [];
             const lines: string[] = [];
-            const draw = (start: string, end: ProjectNode): void => {
+            /* `way` is what tells the two rows of one --to apart: the line that was asked for, and
+               the one this verb draws back by itself between two agents. */
+            const draw = (start: string, end: ProjectNode, way: 'out' | 'back'): void => {
                 const already = [...canvas.edges, ...made].find((edge) => edge.from === start && edge.to === end.id);
                 if (already) {
-                    lines.push([already.id, start, end.id, 'existing'].join('\t'));
+                    lines.push([already.id, start, end.id, 'existing', way].join('\t'));
                     return;
                 }
                 // The label a person's own drag gives it: named only where the line means something.
@@ -86,15 +93,15 @@ export const linkVerb = defineVerb({
                     ...(label === undefined ? {} : { label })
                 };
                 made.push(edge);
-                lines.push([edge.id, start, end.id, 'new'].join('\t'));
+                lines.push([edge.id, start, end.id, 'new', way].join('\t'));
             };
 
             for (const id of targets) {
                 const target = canvas.nodes.find((node) => node.id === id)!;
-                draw(from, target);
+                draw(from, target, 'out');
                 // Both ways between two agents: each of them is then something the other can read.
                 if (isAgentKind(source.kind) && isAgentKind(target.kind)) {
-                    draw(id, source);
+                    draw(id, source, 'back');
                 }
             }
             if (made.length === 0) {
