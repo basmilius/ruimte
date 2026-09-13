@@ -531,6 +531,47 @@ canvas, against Ruimte, one verdict each.
 - A `view icon` value made of letters, digits and dashes that is not one of the 60 Lucide names is a
   typo, not an emoji, so it is refused with all of them rather than written into the file as a mark
   nothing can draw. The names print in rows of ten: sixty lines under a refusal would bury it.
+- `open` is the one verb that writes nothing. Making a view is shared and belongs in `project.json`;
+  looking at one is a person at a screen and belongs in `<projectId>.local.json`, which no agent may
+  reach. So it is an event, `project.showView { projectId, viewId, by }`, and the daemon's part ends
+  there. `by` is the caller's id like every other id in these verbs, never a title: what the person
+  reads is the node's own title, looked up by the client in the document it already holds, which also
+  means a client that has not merged that node yet says "An agent" instead of showing a raw id.
+- It is the only event the daemon aims rather than broadcasts. `project.changed` goes to every socket
+  because a client that released a project may still hold its document, but being shown a view happens
+  to a person, and a client with the project nowhere on screen has nothing to do with it. The store
+  keeps who is watching per socket (`addViewer` on `project.open`, `removeViewer` on `project.release`
+  and `project.close`, the lot dropped when the socket goes). Nobody watching is not a failure: the
+  answer says `sent no`, nothing is held for later, and the same call a minute later reaches whoever
+  is there then. Holding it would be a message queue, and a view shown ten minutes after the agent
+  meant it is worse than one never shown.
+- The client follows by default and a client setting turns that off, because this is the one verb a
+  person can refuse. Everywhere else the daemon executes and asks nobody; here what would be asked is
+  not permission to change the project but permission to move someone's eyes, and that answer is the
+  same every time, so it is a setting rather than a dialog. On, the view takes the cell that has the
+  focus and a toast puts it back. Off, nothing moves and the toast waits with "Go there". Which is why
+  `agentsShowViews` sits in the client's settings while `agentsDeleteAnyView` sits on the machine: the
+  daemon enforces one and cannot enforce the other.
+- Showing reuses what `setActiveView` always did, lifted into `showViewIn` in `shell/split.ts`: the
+  view takes the focused cell, and one already standing somewhere takes the focus instead of appearing
+  twice. The way back is `undoShowView`, and it runs against the grid as it stands when the button is
+  pressed rather than against a copy from the moment of the toast. Between the two a person may have
+  split a cell or closed one, and handing them a layout from before that would take away work they did
+  themselves; a cell that is gone leaves everything where it is.
+- Every workspace with that project acts, on its own focused cell, and the machine has to match as
+  well as the project id: the same folder may be open on two machines at once, and the event is about
+  one of them. One toast per workspace, keyed on its id, so an agent showing three views in a row
+  leaves the last one on screen instead of a stack.
+- The toast gained a fourth kind, `notice`. A success takes itself away after four seconds, which is
+  right for "the view moved, here is the way back" and wrong for a card whose button is the whole
+  point: with the setting off the person has to act, so it waits like a failure does, without the
+  failure's mark.
+- The Machines pane writes `agentsDeleteAnyView` over the same `endpoint.setIdentity` the name and the
+  icon go through, sending both back unchanged, since the wire takes the three together. A machine
+  nobody named sends `null` for the name rather than the name it answers to, or reading a setting
+  would quietly make its default name a chosen one. With more than one machine on the list the row
+  names the machine, because a bare "Agents may delete any view" under four rows says nothing about
+  which one it is about.
 
 ### Updating
 
