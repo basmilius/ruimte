@@ -354,6 +354,21 @@ canvas, against Ruimte, one verdict each.
 - The chart is 150 lines of SVG rather than a library. Recharts is 7.4 MB unpacked, chart.js 6.2 MB,
   and the only arithmetic a library would bring is a nice scale of ten lines. It draws in real
   pixels from a `ResizeObserver` instead of a stretched view box, so a bar lands on whole pixels.
+- The daemon parses a verb's arguments, not `ruimte-context`. The CLI posts the raw words after
+  the verb (`{ argv }`), so a `ruimte-context` from an older build, a copy left on a remote
+  machine or a script that calls the route itself can never disagree with the daemon about which
+  verbs and flags exist; `help` comes from the same registry for the same reason.
+- A refusal exits 3, apart from 1 for a daemon that failed or could not be reached and 2 for
+  running outside a session. An agent has to tell "you asked for something this project does not
+  allow" (fix the arguments, pick one of the canvases listed) from "try again later", and an
+  unknown verb counts as a refusal, since to the agent it is the same mistake as a bad flag.
+- `ProjectStore.mutate` sends `project.changed` to every socket, also when no client has the
+  project open in the daemon. `project.release` only means one client switched away; another
+  workspace, or the same client a moment later, may still have the canvas on screen, and the
+  daemon has no other way to tell it the file moved on.
+- A verb reads the project file itself rather than through `readDocument`: that one sets a file
+  that will not parse aside, which is right when a person opens a project and wrong when an agent
+  in the background happens to find a broken merge. The verb refuses and leaves the file alone.
 
 ### Updating
 
