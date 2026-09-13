@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { ProjectDocumentSchema, ProjectLocalSchema, type ProjectCanvasView } from './project.ts';
+import { ProjectDocumentSchema, ProjectLocalSchema, ProjectSaveLocalPayloadSchema, type ProjectCanvasView } from './project.ts';
 import { duplicateIdIn, migrateDocument, migrateLocal, withoutCrossViewEdges } from './project-migrate.ts';
 
 /* A copy of `.ruimte/project.json` of this repository, the way version 1 wrote it. */
@@ -59,12 +59,12 @@ describe('migrateDocument', () => {
 });
 
 describe('migrateLocal', () => {
-    test('the camera and focus of version 1 land under the view they belonged to', () => {
+    test('the focus of version 1 lands under the view it belonged to, and its screen-offset camera as none', () => {
         const panels = { panel: { open: true, kind: 'git' as const } };
         const migrated = migrateLocal({ camera: { x: 1, y: 2, zoom: 0.5 }, focusedNodeId: 'n1', panels });
         expect(migrated).toEqual({
             activeViewId: 'main',
-            views: { main: { camera: { x: 1, y: 2, zoom: 0.5 }, focusedNodeId: 'n1' } },
+            views: { main: { camera: null, focusedNodeId: 'n1' } },
             panels
         });
         expect(ProjectLocalSchema.safeParse(migrated).success).toBe(true);
@@ -75,6 +75,30 @@ describe('migrateLocal', () => {
         expect(migrateLocal(local)).toEqual(local);
         expect(migrateLocal(undefined)).toEqual({ activeViewId: null, views: {} });
         expect(migrateLocal({ camera: 'nope' })).toEqual({ activeViewId: null, views: {} });
+    });
+
+    test('a camera is the middle of the cell and the zoom, and one in the old screen-offset shape reads as none', () => {
+        const centered = { activeViewId: 'a', views: { a: { camera: { center: { x: 420, y: -180 }, zoom: 0.75 }, focusedNodeId: null } } };
+        expect(migrateLocal(centered)).toEqual(centered);
+        const old = {
+            activeViewId: 'a',
+            views: { a: { camera: { x: 1, y: 2, zoom: 0.5 }, focusedNodeId: 'n1' } },
+            panels: { panel: { open: true, kind: 'git' as const } }
+        };
+        expect(migrateLocal(old)).toEqual({ ...old, views: { a: { camera: null, focusedNodeId: 'n1' } } });
+        expect(migrateLocal({ activeViewId: 'a', views: { a: { camera: { center: { x: 1 }, zoom: 1 }, focusedNodeId: null } } })).toEqual({
+            activeViewId: null,
+            views: {}
+        });
+    });
+
+    test('a save-local from an older client with the old camera is taken, the camera dropped', () => {
+        const parsed = ProjectSaveLocalPayloadSchema.safeParse({
+            projectId: 'p1',
+            local: { activeViewId: 'a', views: { a: { camera: { x: 1, y: 2, zoom: 0.5 }, focusedNodeId: null } } }
+        });
+        expect(parsed.success).toBe(true);
+        expect(parsed.data?.local.views.a).toEqual({ camera: null, focusedNodeId: null });
     });
 
     test('a split layout rides along, and a file without one is the one cell it always was', () => {

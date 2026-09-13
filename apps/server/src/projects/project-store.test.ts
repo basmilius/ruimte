@@ -133,7 +133,7 @@ describe('ProjectStore', () => {
             ],
             focus: { column: 1, cell: 0 }
         };
-        const local = { activeViewId: 'main', views: { main: { camera: { x: 1, y: 2, zoom: 0.5 }, focusedNodeId: 'n1' } }, panels, layout };
+        const local = { activeViewId: 'main', views: { main: { camera: { center: { x: 1, y: 2 }, zoom: 0.5 }, focusedNodeId: 'n1' } }, panels, layout };
         await store.saveLocal(opened.summary.projectId, local);
         const again = await store.openProject({ projectId: opened.summary.projectId });
         expect(again.local).toEqual(local);

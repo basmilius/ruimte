@@ -3,6 +3,7 @@ import { createEditorRegistry, type EditorRegistry } from '@/state/editors';
 import { currentStores, editorHook, focusedEditor, subscribeCurrentWorkspace, useEditorStoreOf } from '@/state/workspace-stores';
 import {
     cameraCenteredOn,
+    cameraOfView,
     cameraToFit,
     clampZoom,
     intersects,
@@ -10,6 +11,7 @@ import {
     snapToGrid,
     snapZoom,
     unionRect,
+    viewCameraOf,
     zoomAround,
     type Camera,
     type Point,
@@ -26,7 +28,8 @@ import type {
     ProjectLayout,
     ProjectNode,
     ProjectViewLocal,
-    RuntimeMode
+    RuntimeMode,
+    ViewCamera
 } from '@ruimte/contracts';
 import { DEFAULT_TITLES, NODE_SIZE, groupFrame, isAgentKind } from '@ruimte/contracts';
 
@@ -107,8 +110,8 @@ interface Viewport {
     h: number;
 }
 
-/* A camera move that needs a size to be worked out: everything the canvas has, or one node of it. */
-export type CameraRequest = { kind: 'fit' } | { kind: 'node'; id: string };
+/* A camera move that needs a size to be worked out: everything the canvas has, one node of it, or a stored middle. */
+export type CameraRequest = { kind: 'fit' } | { kind: 'node'; id: string } | { kind: 'view'; view: ViewCamera };
 
 export interface CanvasState {
     /*
@@ -157,6 +160,8 @@ export interface CanvasState {
     fitAll(): void;
     zoomToSelection(): void;
     goToNode(id: string): void;
+    /* The camera the way it is stored. An editor still waiting for its size hands back the one it was given. */
+    viewCamera(): ViewCamera | null;
 
     select(ids: string[], additive?: boolean): void;
     clearSelection(): void;
@@ -320,6 +325,8 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 get().fitAll();
             } else if (waiting?.kind === 'node') {
                 get().goToNode(waiting.id);
+            } else if (waiting?.kind === 'view') {
+                set({ camera: cameraOfView(waiting.view, viewport)!, pendingCamera: null });
             }
         },
         setCamera(camera) {
@@ -387,6 +394,10 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 selection: [id],
                 mode: { kind: 'canvas' }
             });
+        },
+        viewCamera() {
+            const { camera, viewport, pendingCamera } = get();
+            return pendingCamera?.kind === 'view' ? pendingCamera.view : viewCameraOf(camera, viewport);
         },
 
         select(ids, additive = false) {
@@ -695,12 +706,16 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 resizing: null,
                 past: [],
                 future: [],
-                pendingCamera: null,
-                ...(local?.camera ? { camera: local.camera } : {})
+                pendingCamera: null
             });
+            const stored = local?.camera ?? null;
+            const camera = stored === null ? null : cameraOfView(stored, get().viewport);
+            if (stored !== null) {
+                set(camera === null ? { pendingCamera: { kind: 'view', view: stored } } : { camera });
+            }
             set({ loading: false });
             // No camera for this view on this machine: it opens on everything it holds, once there is room.
-            if (!local?.camera) {
+            if (stored === null) {
                 get().fitAll();
             }
         },

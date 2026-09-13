@@ -47,10 +47,11 @@ export const migrateLocal = (value: unknown): ProjectLocal => {
     if (!legacy.success) {
         return EMPTY_LOCAL;
     }
-    const { camera, focusedNodeId, panels } = legacy.data;
+    // Its camera is the screen-offset shape, which cannot be read without the viewport it was taken in.
+    const { focusedNodeId, panels } = legacy.data;
     return {
         activeViewId: MAIN_VIEW_ID,
-        views: { [MAIN_VIEW_ID]: { camera, focusedNodeId } },
+        views: { [MAIN_VIEW_ID]: { camera: null, focusedNodeId } },
         ...(panels ? { panels } : {})
     };
 };

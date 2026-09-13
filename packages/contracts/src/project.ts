@@ -383,9 +383,25 @@ export type ProjectPanels = z.infer<typeof ProjectPanelsSchema>;
 export const CameraSchema = z.object({ x: z.number(), y: z.number(), zoom: z.number().positive() });
 export type Camera = z.infer<typeof CameraSchema>;
 
+/*
+ * A camera the way it is stored: the world point in the middle of the cell and the zoom. The screen
+ * offset a `Camera` holds only means something against the size of the cell it was taken in, so a
+ * smaller window or another cell would put a different part of the canvas in front.
+ */
+export const ViewCameraSchema = z.object({
+    center: z.object({ x: z.number(), y: z.number() }),
+    zoom: z.number().positive()
+});
+export type ViewCamera = z.infer<typeof ViewCameraSchema>;
+
+/* A camera in the old screen-offset shape cannot be turned around without the viewport it was taken
+   in, so it reads as none and the view is fitted once. Accepting it at all keeps an older client
+   from having its whole local file refused over one field. */
+const StoredViewCameraSchema = z.union([ViewCameraSchema, CameraSchema.transform((): null => null)]).nullable();
+
 // Where one view stood when it was last on screen. Per machine, like everything around it.
 export const ProjectViewLocalSchema = z.object({
-    camera: CameraSchema.nullable(),
+    camera: StoredViewCameraSchema,
     focusedNodeId: z.string().nullable()
 });
 export type ProjectViewLocal = z.infer<typeof ProjectViewLocalSchema>;

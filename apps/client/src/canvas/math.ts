@@ -1,4 +1,4 @@
-import { CANVAS_GRID } from '@ruimte/contracts';
+import { CANVAS_GRID, type ViewCamera } from '@ruimte/contracts';
 
 export interface Camera {
     x: number;
@@ -105,6 +105,19 @@ export const cameraCenteredOn = (rect: Rect, viewport: { w: number; h: number },
               zoom,
               x: viewport.w / 2 - (rect.x + rect.w / 2) * zoom,
               y: viewport.h / 2 - (rect.y + rect.h / 2) * zoom
+          }
+        : null;
+
+/* The camera the way it is stored: the world point in the middle of the viewport, so a cell of another size keeps that point in front. */
+export const viewCameraOf = (camera: Camera, viewport: { w: number; h: number }): ViewCamera | null =>
+    isMeasured(viewport) ? { center: toWorld(camera, { x: viewport.w / 2, y: viewport.h / 2 }), zoom: camera.zoom } : null;
+
+export const cameraOfView = (view: ViewCamera, viewport: { w: number; h: number }): Camera | null =>
+    isMeasured(viewport)
+        ? {
+              zoom: view.zoom,
+              x: viewport.w / 2 - view.center.x * view.zoom,
+              y: viewport.h / 2 - view.center.y * view.zoom
           }
         : null;
 

@@ -23,7 +23,6 @@ import {
     type ProjectViewLocal,
     type StandaloneNode
 } from '@ruimte/contracts';
-import { toWorld } from '@/canvas/math';
 import type { CanvasAddition } from '@/project/merge';
 import { NODE_SIZE, defaultCanvases, nextId, type CanvasState } from '@/state/canvas';
 import { defaultDrawings, type DrawingState } from '@/state/drawing';
@@ -196,18 +195,17 @@ const openEditors = (views: ProjectView[], viewLocal: Record<string, ProjectView
 /* Where a view on screen stands. A drawing keeps its camera in its own editor, a canvas in its own. */
 const localOfView = (view: ProjectView | undefined, peers: DocumentPeers): ProjectViewLocal => {
     if (view && isDrawingView(view)) {
-        return { camera: peers.drawings.peek(view.id)?.getState().camera ?? null, focusedNodeId: null };
+        return { camera: peers.drawings.peek(view.id)?.getState().viewCamera() ?? null, focusedNodeId: null };
     }
     const canvas = canvasOf(view?.id, peers);
     return canvas === null
         ? { camera: null, focusedNodeId: null }
-        : { camera: canvas.camera, focusedNodeId: canvas.mode.kind === 'node' ? canvas.mode.nodeId : null };
+        : { camera: canvas.viewCamera(), focusedNodeId: canvas.mode.kind === 'node' ? canvas.mode.nodeId : null };
 };
 
 /*
- * Where a node lands when it moves to another view: the middle of what that view last looked at. The
- * window it is measured against is that view's own cell when it has one, and otherwise any canvas on
- * screen, because a view that is not up has no size of its own to place anything in.
+ * Where a node lands when it moves to another view: the middle of what that view looks at, live when
+ * it stands in a cell and as it was stored otherwise.
  */
 const centerOfView = (
     viewId: string,
@@ -215,12 +213,11 @@ const centerOfView = (
     node: { w: number; h: number },
     peers: DocumentPeers
 ): { x: number; y: number } | null => {
-    const viewport = (canvasOf(viewId, peers) ?? peers.canvases.live()[0]?.[1].getState())?.viewport;
-    if (!local?.camera || !viewport || viewport.w === 0) {
+    const camera = canvasOf(viewId, peers)?.viewCamera() ?? local?.camera ?? null;
+    if (camera === null) {
         return null;
     }
-    const middle = toWorld(local.camera, { x: viewport.w / 2, y: viewport.h / 2 });
-    return { x: Math.round(middle.x - node.w / 2), y: Math.round(middle.y - node.h / 2) };
+    return { x: Math.round(camera.center.x - node.w / 2), y: Math.round(camera.center.y - node.h / 2) };
 };
 
 /*
@@ -574,7 +571,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 if (editor) {
                     // The canvas it left is on screen, so it has to lose the node without losing its camera.
                     const after = moved.views.find((view) => view.id === source.id);
-                    editor.getState().loadView(after && isCanvasView(after) ? after : null, { camera: editor.getState().camera, focusedNodeId: null });
+                    editor.getState().loadView(after && isCanvasView(after) ? after : null, { camera: editor.getState().viewCamera(), focusedNodeId: null });
                 }
             },
 
@@ -605,7 +602,9 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 const editor = peers.canvases.peek(source.id);
                 if (editor) {
                     const stripped = promoted.views.find((view) => view.id === source.id);
-                    editor.getState().loadView(stripped && isCanvasView(stripped) ? stripped : null, { camera: editor.getState().camera, focusedNodeId: null });
+                    editor
+                        .getState()
+                        .loadView(stripped && isCanvasView(stripped) ? stripped : null, { camera: editor.getState().viewCamera(), focusedNodeId: null });
                 }
                 get().setActiveView(promoted.view.id);
                 return promoted.view.id;

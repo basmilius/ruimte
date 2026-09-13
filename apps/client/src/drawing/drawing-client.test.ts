@@ -119,7 +119,7 @@ const setup = (): void => {
     useProject.getState().setCurrent(summary, 1, 'daemon-a');
     useDocument.getState().load(project(), {
         activeViewId: 'main',
-        views: { 'view-1': { camera: { x: 3, y: 4, zoom: 2 }, focusedNodeId: null } }
+        views: { 'view-1': { camera: { center: { x: 3, y: 4 }, zoom: 2 }, focusedNodeId: null } }
     });
     transport = new FakeTransport();
     flushes = 0;
@@ -148,7 +148,8 @@ describe('DrawingClient', () => {
         expect(flushes).toBe(1);
         expect(drawing().elements.map((element) => element.id)).toEqual(['a']);
         expect(drawing().rev).toBe(5);
-        expect(drawing().camera).toEqual({ x: 3, y: 4, zoom: 2 });
+        // Nothing has measured the drawing yet, so the camera waits and is handed back as it came.
+        expect(drawing().viewCamera()).toEqual({ center: { x: 3, y: 4 }, zoom: 2 });
     });
 
     test('a page that gets the views before the project still opens the drawing', async () => {

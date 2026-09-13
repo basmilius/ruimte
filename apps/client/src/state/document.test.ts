@@ -20,12 +20,18 @@ const document = (views: ProjectCanvasView[]): ProjectDocument => ({ version: 2,
 
 const canvasAt = (at: number): ProjectCanvasView => useDocument.getState().views[at] as ProjectCanvasView;
 
+/* An editor is made when its view goes into a cell and gets its size a frame later, from the cell. */
+const measure = (): void => focusedCanvas().getState().setViewport({ w: 800, h: 600 });
+
 beforeEach(() => {
-    focusedCanvas().getState().setViewport({ w: 800, h: 600 });
     useDocument.getState().load(document([view('a', [node('n1', 40, 40)]), view('b', [node('n2', 900, 900)])]), {
         activeViewId: 'a',
-        views: { a: { camera: { x: 1, y: 2, zoom: 1 }, focusedNodeId: null }, b: { camera: { x: 7, y: 8, zoom: 2 }, focusedNodeId: null } }
+        views: {
+            a: { camera: { center: { x: 399, y: 298 }, zoom: 1 }, focusedNodeId: null },
+            b: { camera: { center: { x: 196.5, y: 146 }, zoom: 2 }, focusedNodeId: null }
+        }
     });
+    measure();
 });
 
 describe('loading a project', () => {
@@ -71,10 +77,12 @@ describe('switching views', () => {
     test('the camera of a view comes back, and the undo history does not travel with it', () => {
         focusedCanvas().getState().panBy(10, 10);
         useDocument.getState().setActiveView('b');
+        measure();
         expect(focusedCanvas().getState().camera).toEqual({ x: 7, y: 8, zoom: 2 });
         expect(focusedCanvas().getState().past).toEqual([]);
 
         useDocument.getState().setActiveView('a');
+        measure();
         expect(focusedCanvas().getState().camera).toEqual({ x: 11, y: 12, zoom: 1 });
     });
 
@@ -323,8 +331,8 @@ describe('what a save would write', () => {
         focusedCanvas().getState().panBy(4, 4);
         const local = useDocument.getState().exportLocal();
         expect(local.activeViewId).toBe('a');
-        expect(local.views.a).toEqual({ camera: { x: 5, y: 6, zoom: 1 }, focusedNodeId: null });
-        expect(local.views.b).toEqual({ camera: { x: 7, y: 8, zoom: 2 }, focusedNodeId: null });
+        expect(local.views.a).toEqual({ camera: { center: { x: 395, y: 294 }, zoom: 1 }, focusedNodeId: null });
+        expect(local.views.b).toEqual({ camera: { center: { x: 196.5, y: 146 }, zoom: 2 }, focusedNodeId: null });
     });
 });
 

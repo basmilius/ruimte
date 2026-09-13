@@ -107,11 +107,10 @@ describe('the camera of an editor that has not been measured', () => {
        corner, which is the whole of the bug: the middle of a viewport of zero is (0, 0). */
     test('goToNode waits for the size instead of parking the node in the top left', () => {
         const store = createCanvasStore();
-        store.getState().loadView(viewWith(node('a', 1000, 600)), { camera: { x: 0, y: 0, zoom: 1 }, focusedNodeId: null });
+        store.getState().loadView(viewWith(node('a', 1000, 600)), { camera: { center: { x: 600, y: 400 }, zoom: 1 }, focusedNodeId: null });
 
         store.getState().goToNode('a');
         expect(store.getState().pendingCamera).toEqual({ kind: 'node', id: 'a' });
-        expect(store.getState().camera).toEqual({ x: 0, y: 0, zoom: 1 });
         expect(store.getState().selection).toEqual(['a']);
 
         store.getState().setViewport({ w: 1200, h: 800 });
@@ -122,7 +121,7 @@ describe('the camera of an editor that has not been measured', () => {
 
     test('a measured editor centers on the spot and leaves nothing waiting', () => {
         const store = createCanvasStore();
-        store.getState().loadView(viewWith(node('a', 1000, 600)), { camera: { x: 0, y: 0, zoom: 1 }, focusedNodeId: null });
+        store.getState().loadView(viewWith(node('a', 1000, 600)), { camera: { center: { x: 600, y: 400 }, zoom: 1 }, focusedNodeId: null });
         store.getState().setViewport({ w: 1200, h: 800 });
 
         store.getState().goToNode('a');
@@ -144,13 +143,54 @@ describe('the camera of an editor that has not been measured', () => {
         expect(empty.getState().pendingCamera).toBeNull();
     });
 
-    test('a camera stored for the view is what it opens on, with nothing left waiting', () => {
+    test('a stored camera survives the first viewport and keeps its middle in any size of cell', () => {
         const store = createCanvasStore();
-        store.getState().loadView(viewWith(node('a', 0, 0)), { camera: { x: -40, y: -80, zoom: 0.5 }, focusedNodeId: null });
-        expect(store.getState().pendingCamera).toBeNull();
+        const stored = { center: { x: 420, y: -180 }, zoom: 0.5 };
+        store.getState().loadView(viewWith(node('a', 0, 0)), { camera: stored, focusedNodeId: null });
+        expect(store.getState().pendingCamera).toEqual({ kind: 'view', view: stored });
 
         store.getState().setViewport({ w: 1200, h: 800 });
-        expect(store.getState().camera).toEqual({ x: -40, y: -80, zoom: 0.5 });
+        expect(store.getState().pendingCamera).toBeNull();
+        expect(toWorld(store.getState().camera, { x: 600, y: 400 })).toEqual(stored.center);
+        expect(store.getState().viewCamera()).toEqual(stored);
+
+        const small = createCanvasStore();
+        small.getState().setViewport({ w: 400, h: 300 });
+        small.getState().loadView(viewWith(node('a', 0, 0)), { camera: stored, focusedNodeId: null });
+        expect(small.getState().pendingCamera).toBeNull();
+        expect(toWorld(small.getState().camera, { x: 200, y: 150 })).toEqual(stored.center);
+    });
+
+    test('without a stored camera the view is fitted exactly once, not again on every resize', () => {
+        const store = createCanvasStore();
+        store.getState().loadView(viewWith(node('a', 0, 0), node('b', 800, 400)), null);
+        store.getState().setViewport({ w: 1200, h: 800 });
+        store.getState().panBy(30, 40);
+        const moved = store.getState().camera;
+
+        store.getState().setViewport({ w: 1000, h: 700 });
+        expect(store.getState().camera).toEqual(moved);
+        expect(store.getState().pendingCamera).toBeNull();
+    });
+
+    test('an editor that was never measured exports the camera it was given, and nothing while it waits for a fit', () => {
+        const stored = { center: { x: 10, y: 20 }, zoom: 2 };
+        const store = createCanvasStore();
+        store.getState().loadView(viewWith(node('a', 0, 0)), { camera: stored, focusedNodeId: null });
+        expect(store.getState().viewCamera()).toBe(stored);
+
+        const fitting = createCanvasStore();
+        fitting.getState().loadView(viewWith(node('a', 0, 0)), null);
+        expect(fitting.getState().viewCamera()).toBeNull();
+    });
+
+    test('two editors each keep the size of their own cell', () => {
+        const left = createCanvasStore();
+        const right = createCanvasStore();
+        left.getState().setViewport({ w: 600, h: 800 });
+        right.getState().setViewport({ w: 900, h: 400 });
+        expect(left.getState().viewport).toEqual({ w: 600, h: 800 });
+        expect(right.getState().viewport).toEqual({ w: 900, h: 400 });
     });
 });
 

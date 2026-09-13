@@ -12,11 +12,25 @@ import type {
     DrawingRoughness,
     DrawingStrokeStyle,
     DrawingStrokeWidth,
-    ProjectViewLocal
+    ProjectViewLocal,
+    ViewCamera
 } from '@ruimte/contracts';
-import { cameraToFit, clampZoom, intersects, snapZoom, unionRect, zoomAround, type Camera, type Point, type Rect } from '@/canvas/math';
+import {
+    cameraOfView,
+    cameraToFit,
+    clampZoom,
+    intersects,
+    isMeasured,
+    snapZoom,
+    unionRect,
+    viewCameraOf,
+    zoomAround,
+    type Camera,
+    type Point,
+    type Rect
+} from '@/canvas/math';
 import { fitTextBox } from '@/drawing/paint';
-import { nextId } from '@/state/canvas';
+import { nextId, type CameraRequest } from '@/state/canvas';
 
 /* Every tool in the dock, in the order the dock lists them. */
 export type DrawingTool = 'select' | 'hand' | 'rect' | 'diamond' | 'ellipse' | 'arrow' | 'line' | 'freehand' | 'text' | 'note' | 'eraser';
@@ -85,8 +99,8 @@ export interface DrawingState {
     /* Counts changes to the elements, which is what the client saves on. */
     edits: number;
     loading: boolean;
-    /* No camera was stored for this drawing, so it still has to be fitted once there is a viewport. */
-    fitPending: boolean;
+    /* Where the camera goes the moment the drawing has a size, the way the canvas waits for one. */
+    pendingCamera: Extract<CameraRequest, { kind: 'fit' | 'view' }> | null;
     conflict: DrawingDocument | null;
     error: string | null;
     past: DrawingElement[][];
@@ -107,6 +121,8 @@ export interface DrawingState {
     zoomTo(zoom: number, anchor?: Point): void;
     fitAll(): void;
     zoomToSelection(): void;
+    /* The camera the way it is stored. A drawing still waiting for its size hands back the one it was given. */
+    viewCamera(): ViewCamera | null;
 
     select(ids: string[], additive?: boolean): void;
     selectAll(): void;
@@ -240,7 +256,7 @@ export const createDrawingStore = (): StoreApi<DrawingState> =>
         dirty: false,
         edits: 0,
         loading: false,
-        fitPending: false,
+        pendingCamera: null,
         conflict: null,
         error: null,
         past: [],
@@ -263,11 +279,15 @@ export const createDrawingStore = (): StoreApi<DrawingState> =>
                 editingTextId: null,
                 past: [],
                 future: [],
-                fitPending: !local?.camera,
-                ...(local?.camera ? { camera: local.camera } : {})
+                pendingCamera: null
             });
+            const stored = local?.camera ?? null;
+            const camera = stored === null ? null : cameraOfView(stored, get().viewport);
+            if (stored !== null) {
+                set(camera === null ? { pendingCamera: { kind: 'view', view: stored } } : { camera });
+            }
             set({ loading: false });
-            if (!local?.camera) {
+            if (stored === null) {
                 get().fitAll();
             }
         },
@@ -295,7 +315,13 @@ export const createDrawingStore = (): StoreApi<DrawingState> =>
         },
 
         setViewport(viewport) {
+            const waiting = isMeasured(viewport) ? get().pendingCamera : null;
             set({ viewport });
+            if (waiting?.kind === 'fit') {
+                get().fitAll();
+            } else if (waiting?.kind === 'view') {
+                set({ camera: cameraOfView(waiting.view, viewport)!, pendingCamera: null });
+            }
         },
         setCamera(camera) {
             set({ camera });
@@ -321,12 +347,14 @@ export const createDrawingStore = (): StoreApi<DrawingState> =>
         },
         fitAll() {
             const { elements, viewport } = get();
-            if (viewport.w === 0) {
+            const bounds = boundsOf(elements);
+            // An empty drawing has nothing to fit, so the wait ends rather than standing forever.
+            if (bounds === null) {
+                set({ pendingCamera: null });
                 return;
             }
-            const bounds = boundsOf(elements);
-            const camera = bounds === null ? null : cameraToFit(bounds, viewport);
-            set({ fitPending: false, ...(camera === null ? {} : { camera }) });
+            const camera = cameraToFit(bounds, viewport);
+            set(camera === null ? { pendingCamera: { kind: 'fit' } } : { camera, pendingCamera: null });
         },
         zoomToSelection() {
             const { elements, selection, viewport } = get();
@@ -335,6 +363,10 @@ export const createDrawingStore = (): StoreApi<DrawingState> =>
             if (camera !== null) {
                 set({ camera });
             }
+        },
+        viewCamera() {
+            const { camera, viewport, pendingCamera } = get();
+            return pendingCamera?.kind === 'view' ? pendingCamera.view : viewCameraOf(camera, viewport);
         },
 
         select(ids, additive = false) {

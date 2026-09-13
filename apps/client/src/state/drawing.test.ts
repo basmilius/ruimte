@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { DrawingDocument, DrawingElement } from '@ruimte/contracts';
-import { focusedDrawing } from './drawing';
+import { createDrawingStore, focusedDrawing } from './drawing';
 
 /* Every test here is about one editor, and with no workspace open that is the module's own. */
 const drawing = () => focusedDrawing().getState();
@@ -27,7 +27,7 @@ const ids = (): string[] => drawing().elements.map((element) => element.id);
 
 beforeEach(() => {
     drawing().setViewport({ w: 800, h: 600 });
-    drawing().load('view-1', document([rect('a'), rect('b', 200)]), { camera: { x: 10, y: 20, zoom: 1 }, focusedNodeId: null });
+    drawing().load('view-1', document([rect('a'), rect('b', 200)]), { camera: { center: { x: 390, y: 280 }, zoom: 1 }, focusedNodeId: null });
 });
 
 describe('loading', () => {
@@ -41,6 +41,25 @@ describe('loading', () => {
     test('without a stored camera the elements are fitted into view', () => {
         drawing().load('view-1', document([rect('a', 4000, 4000)]), null);
         expect(drawing().camera).not.toEqual({ x: 10, y: 20, zoom: 1 });
+    });
+
+    test('a drawing without a size waits with its stored camera, and fits once when it has none', () => {
+        const stored = { center: { x: 50, y: 30 }, zoom: 2 };
+        const waiting = createDrawingStore();
+        waiting.getState().load('view-1', document([rect('a')]), { camera: stored, focusedNodeId: null });
+        expect(waiting.getState().viewCamera()).toBe(stored);
+        waiting.getState().setViewport({ w: 400, h: 300 });
+        expect(waiting.getState().pendingCamera).toBeNull();
+        expect(waiting.getState().camera).toEqual({ x: 100, y: 90, zoom: 2 });
+
+        const fitting = createDrawingStore();
+        fitting.getState().load('view-1', document([rect('a', 4000, 4000)]), null);
+        expect(fitting.getState().pendingCamera).toEqual({ kind: 'fit' });
+        fitting.getState().setViewport({ w: 800, h: 600 });
+        fitting.getState().panBy(10, 10);
+        const moved = fitting.getState().camera;
+        fitting.getState().setViewport({ w: 700, h: 500 });
+        expect(fitting.getState().camera).toEqual(moved);
     });
 
     test('unloading empties the drawing without touching the camera', () => {

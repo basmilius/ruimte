@@ -170,18 +170,6 @@ export function DrawingView({ id }: { id: string }) {
         // The theme and the font change what the same elements look like, so both force a repaint.
     }, [drawingStore, theme, fontReady, id]);
 
-    /* A drawing this machine has no camera for opens on everything it holds, once there is room. */
-    useEffect(() => {
-        const fit = (): void => {
-            const state = drawingStore.getState();
-            if (state.fitPending && state.viewport.w > 0) {
-                state.fitAll();
-            }
-        };
-        fit();
-        return drawingStore.subscribe(fit);
-    }, [drawingStore]);
-
     /* React makes wheel listeners passive, so the browser's own pinch zoom needs a native one. */
     useEffect(() => {
         const root = rootRef.current;

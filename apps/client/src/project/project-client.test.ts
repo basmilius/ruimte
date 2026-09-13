@@ -82,7 +82,7 @@ class FakeTransport implements Transport {
                 const target = this.projects.find((project) => project.projectId === wanted) ?? summary((payload as { name?: string }).name ?? 'new');
                 const local: ProjectLocal = {
                     activeViewId: 'main',
-                    views: { main: { camera: { x: 5, y: 6, zoom: 1 }, focusedNodeId: null } },
+                    views: { main: { camera: { center: { x: 5, y: 6 }, zoom: 1 }, focusedNodeId: null } },
                     panels: this.panels
                 };
                 return Promise.resolve({ summary: target, document: document(this.rev, this.views), local } as RequestMap[T]['result']);
@@ -244,7 +244,7 @@ describe('ProjectClient', () => {
         expect(transport.of('project.open')[0]?.payload).toEqual({ projectId: 'p1' });
         expect(state.current?.projectId).toBe('p1');
         expect(state.rev).toBe(3);
-        expect(focusedCanvas().getState().camera).toEqual({ x: 5, y: 6, zoom: 1 });
+        expect(focusedCanvas().getState().viewCamera()).toEqual({ center: { x: 5, y: 6 }, zoom: 1 });
         dispose();
     });
 
@@ -276,12 +276,13 @@ describe('ProjectClient', () => {
         expect(state.rev).toBe(4);
         expect(state.dirty).toBe(false);
 
+        focusedCanvas().getState().setViewport({ w: 800, h: 600 });
         focusedCanvas().getState().panBy(10, 10);
         await tick(10);
         expect(transport.of('project.save')).toHaveLength(1);
         expect(transport.of('project.save-local').at(-1)?.payload).toMatchObject({
             projectId: 'p1',
-            local: { activeViewId: 'main', views: { main: { camera: { x: 15, y: 16, zoom: 1 } } } }
+            local: { activeViewId: 'main', views: { main: { camera: { center: { x: -5, y: -4 }, zoom: 1 } } } }
         });
         dispose();
     });
