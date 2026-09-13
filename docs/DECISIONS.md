@@ -449,6 +449,50 @@ what the report left open and what the build decided differently.
   contexts, LRU), but the React trees, pointer handlers and resize observers scale with the cells.
   If a full grid stutters, lowering the limit is two numbers in `split.ts`.
 
+### Processes
+
+The panel landed on 2026-09-13 from `docs/reports/2026-09-13-processen.html`, phases 1 to 3; what
+follows is what the report left open and what the build decided.
+
+- **Warn, never act.** A stuck agent is a warning with the button that fits the signal (Interrupt,
+  Terminate, Show process, Resume) and a dismiss. An opt-in "interrupt an agent that is silent for X
+  minutes" can come later; nothing in the daemon sends a signal a person did not press.
+- **Disk on macOS is per process.** The machine's number is the sum of every readable process, so
+  root's processes are missing from it and the line undercounts; a real system counter is IOKit and
+  phase 4. The free space is `statfs` of the daemon's home, not of a project volume: the monitor is
+  per machine and a project folder is per workspace.
+- **Windows gets an empty state**, from `platform` in `server.hello` or `supported: false` in the
+  answer to `processes.subscribe`. No `tasklist` fallback.
+- **Warnings sit on the row in the panel and as a mark on the node and its sidebar row**, never as a
+  toast. With no panel open a warning can take up to five minutes to show, except after a hook, a
+  shell exit or a kill, which read out of rhythm.
+- **An agent outside Ruimte** is visible in "All" (the family comes from the path, the name and, for
+  Ruimte's own tree, the script a runtime was given, and is inherited down to the root of a group but
+  never through the daemon), and no signal judges it: without hooks there is nothing to disagree with.
+- **History lives in memory**, empty after a restart. A sleep clears it too, the report's rule, which
+  takes the coarse day with it after a night with the lid closed. If that hurts, a gap marker instead
+  of a reset is a small change in `monitor.ts`.
+- **Orphans after a restart work.** `KERN_PROCARGS2` reads the environment of a process of the same
+  user, so a process under launchd whose `RUIMTE_SESSION_ID` names a session this daemon no longer
+  runs is an orphan, as long as its `RUIMTE_CONTEXT_URL` is this daemon's: dev beside production is
+  two daemons on one machine with two ports. The environment is read once per process. Inside one
+  life of the daemon the members of every node's tree are remembered as well, which also covers chats.
+- **Resume after "agent gone".** The warning is the daemon's evidence that the CLI died without a
+  SessionEnd, so `agent.resume` accepts a live agent when the monitor says it is gone
+  (`SessionManager.isAgentGone`). Once dismissed, the warning no longer counts as that evidence.
+- **Interrupt on a chat is `chat.cancel`**, not SIGINT to its CLI: the turn is what hangs, and a
+  cancel is what that protocol understands.
+- **The thresholds are the report's starting values, not calibrated.** Phase 1 asked for an hour of
+  real Claude and Codex sessions before phase 3; the script that logs them is there, the hour is not.
+- **Not built:** the sparkline of a hovered row in the charts; Electron's renderer and guest pages as
+  pids of their own (phase 4, so a browser node stays under "Ruimte app"); a `devices` panel kind
+  beside `processes`, which the report suggested adding at once but which nothing uses yet.
+- **Measured** on this Mac (macOS 27, 16 cores, about 1,600 processes): a warm reading of the whole
+  table costs 3 ms (0.15 ms to list, about 2 ms of FFI, the rest decoding), 9 to 15 ms when the CPU
+  has been idle; a subscription answers in 2 to 10 ms. CPU time agrees with `ps` within 0.1 s, the
+  footprint with `top` within 5%, and the sampler works in a `bun build --compile` binary signed ad
+  hoc.
+
 ### Skipped on purpose
 
 Skipped: kanban, loop and trigger nodes, minimap, dictation, notch HUD, agent-to-agent
@@ -459,6 +503,14 @@ retry or edit-and-resend in a shape worth building yet.
 Also decided against for now: a scheduler, checkpoint restore and telemetry.
 
 ## Gotchas already paid for
+
+- **libproc lies by omission.** `proc_pid_rusage` gives CPU time in Mach ticks (125/3 ns on Apple
+  silicon), so a number read as nanoseconds is 40 times too low. `PROC_PIDTBSDINFO` refuses the
+  processes of other users, where `PROC_PIDT_SHORTBSDINFO` still names them but without a start
+  time, so they are listed dimmed and can never be signaled. A `BigInt` per counter was most of the
+  cost of a reading at 1,600 processes. A fresh process gives pages back during its first moments,
+  so a footprint read right after a spawn disagrees with `top`. And `bun test` runs in UTC while `ps`
+  writes `lstart` in local time, which is why the test compares `etime`.
 
 - **A dragged file has no path, and an effect the source did not allow kills the drop.** Two traps
   in one gesture. `File.path` was taken out of Electron, so only the preload can name a dragged

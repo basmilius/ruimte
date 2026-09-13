@@ -201,7 +201,7 @@ export class DarwinSampler implements ProcessSampler {
 
     /*
      * A process of another user: the kernel names it and its parent but gives no start time and no
-     * counters. It is listed dimmed; without a start time it can never be signalled, which is right.
+     * counters. It is listed dimmed; without a start time it can never be signaled, which is right.
      */
     private readForeign(pid: number): RawProcess | null {
         if (this.proc.symbols.proc_pidinfo(pid, PROC_PIDT_SHORTBSDINFO, 0n, this.shortPointer, PROC_BSDSHORTINFO_SIZE) !== PROC_BSDSHORTINFO_SIZE) {
