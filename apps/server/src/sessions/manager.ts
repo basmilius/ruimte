@@ -437,7 +437,7 @@ export class SessionManager {
             return resumeOrFreshCommand(launch, agent.agentSessionId);
         }
         if (existsSync(agent.transcriptPath)) {
-            return resumeCommand(agent.kind, agent.agentSessionId);
+            return resumeCommand(launch, agent.agentSessionId);
         }
         return freshCommand(launch);
     }

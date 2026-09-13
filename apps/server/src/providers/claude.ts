@@ -78,7 +78,8 @@ export const CLAUDE_CAPABILITIES: ProviderCapabilities = {
     slashCommands: true
 };
 
-export const CLAUDE_RESUME_COMMAND = 'claude --resume {id}';
+// Claude Code takes its flags before `--resume`, which takes the id.
+export const CLAUDE_RESUME_COMMAND = 'claude {flags} --resume {id}';
 
 /* Words the model reads as instructions, prepended to the prompt for options the CLI has no flag for. */
 export const promptPrefix = (selection: ModelSelection): string => (selection.options.effort === 'ultrathink' ? 'ultrathink\n\n' : '');

@@ -16,7 +16,7 @@ describe('ProviderRegistry', () => {
         const registry = new ProviderRegistry({ detect: async (command) => ({ installed: command === 'gemini', version: null }) });
         const providers = await registry.list();
         const gemini = providers.find((provider) => provider.kind === 'gemini');
-        expect(gemini).toMatchObject({ installed: true, models: [], defaultModel: null, resumeCommand: 'gemini --resume {id}' });
+        expect(gemini).toMatchObject({ installed: true, models: [], defaultModel: null, resumeCommand: 'gemini {flags} --resume {id}' });
         expect(providers.find((provider) => provider.kind === 'copilot')?.installed).toBe(false);
     });
 });

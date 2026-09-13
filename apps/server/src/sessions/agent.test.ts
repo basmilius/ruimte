@@ -38,7 +38,7 @@ const codeOf = (work: () => void): string => {
     return 'nothing-was-thrown';
 };
 
-const resumes = (output: string): number => output.split("claude --resume 'claude-1'").length - 1;
+const resumes = (output: string): number => output.split("--resume 'claude-1'").length - 1;
 
 const hook = (event: string, extra: Record<string, unknown> = {}) => ({
     session_id: 'claude-1',
@@ -125,7 +125,8 @@ describe('agent status via hooks', () => {
         expect(recorder.output).not.toContain('permission-mode');
 
         harness.manager.resumeAgent('s6');
-        await waitFor(() => recorder.output.includes("claude --resume 'claude-1'"), 'the resume line');
+        // The mode the node was made in rides on the resume too, so it comes back the way it started.
+        await waitFor(() => recorder.output.includes("claude --permission-mode bypassPermissions --resume 'claude-1'"), 'the resume line');
         expect(codeOf(() => harness.manager.resumeAgent('s6'))).toBe('agent-resuming');
 
         // The CLI never came up (it is not installed here), so the next try is allowed after the grace period.
@@ -171,21 +172,82 @@ describe('agent status via hooks', () => {
         await harness.manager.attach('s8', 'c1', 80, 24);
         harness.manager.resumeAgent('s8');
         await waitFor(
-            () => recorder.output.includes("codex resume 'codex-1' || codex --ask-for-approval never --sandbox danger-full-access"),
+            () =>
+                recorder.output.includes(
+                    "codex resume --ask-for-approval never --sandbox danger-full-access 'codex-1' || codex --ask-for-approval never --sandbox danger-full-access"
+                ),
             'the resume with its fallback'
         );
     });
 
     test('a node that asks to resume a session id gets one line that falls back to a fresh CLI', async () => {
-        await createAgent('s9', { kind: 'claude', runtimeMode: 'full-access', resume: 'claude-9' });
+        // Wide enough that the line stands on one row of the screen this reads back.
+        await harness.manager.create({
+            sessionId: 's9',
+            cols: 200,
+            rows: 24,
+            shell: SH,
+            args: SH_ARGS,
+            cwd: harness.home,
+            agent: { kind: 'claude', runtimeMode: 'full-access', resume: 'claude-9' }
+        });
         const session = harness.manager.get('s9')!;
-        const line = "claude --resume 'claude-9' || claude --permission-mode bypassPermissions";
+        const line = "claude --permission-mode bypassPermissions --resume 'claude-9' || claude --permission-mode bypassPermissions";
         await waitForAsync(async () => (await session.plainText()).includes(line), 'the resume with its fallback');
         harness.manager.write('s9', 'echo ma""rk\n');
         await waitForAsync(async () => (await session.plainText()).includes('mark'), 'the echo');
         // One shell, one line: the prompt ran a single command for this agent, fallback and all.
         const prompted = (await session.plainText()).split('\n').filter((row) => row.startsWith('$ claude'));
         expect(prompted).toEqual([`$ ${line}`]);
+    });
+
+    /*
+     * The bug this holds shut: a node started in accept-edits came back on the daemon's own default
+     * after a restart, because the resume line named only the session id. Claude Code 2.1.270 reads
+     * the mode and the model back out of the transcript it resumes (measured against the real CLI),
+     * but the daemon is not going to lean on that: Codex takes both from the line alone.
+     */
+    test('a node restored after a daemon restart resumes in the mode and on the model it was started in', async () => {
+        const launch: AgentLaunch = { kind: 'claude', runtimeMode: 'auto-accept-edits', model: 'claude-opus-5' };
+        await createAgent('s10', launch);
+        await harness.manager.applyHook('claude', harness.manager.get('s10')!.hookToken, hook('UserPromptSubmit'));
+        const { home } = harness;
+
+        // The daemon goes down with its shells and comes back over the same directory.
+        harness.manager.killAll();
+        const restarted = await makeHarness({ env: { PATH: CLEAN_PATH, PS1: '$ ' } }, home);
+        const recorder = new Recorder();
+        restarted.manager.subscribe('c1', recorder.sink());
+        const info = await restarted.manager.create({ sessionId: 's10', cols: 80, rows: 24, shell: SH, args: SH_ARGS, cwd: home, agent: launch });
+        expect(info.agent).toMatchObject({ agentSessionId: 'claude-1', live: false });
+        await restarted.manager.attach('s10', 'c1', 80, 24);
+        // Nothing is typed at create: the client answers the restored agent with `agent.resume`.
+        expect(recorder.output).not.toContain('claude');
+
+        restarted.manager.resumeAgent('s10');
+        await waitFor(
+            () => recorder.output.includes("claude --permission-mode acceptEdits --model 'claude-opus-5' --resume 'claude-1'"),
+            'the resume line with the mode and the model'
+        );
+        // Still one line for one shell: the fallback of the line before it must not have been typed too.
+        expect(resumes(recorder.output)).toBe(1);
+        await restarted.cleanup();
+    });
+
+    /* A CLI a person started by hand is nobody's node, so there is no mode to put back on its line. */
+    test('a resume of an agent the session was not launched with stays bare', async () => {
+        const recorder = new Recorder();
+        harness.manager.subscribe('c1', recorder.sink());
+        await createAgent('s11', { kind: 'codex', runtimeMode: 'supervised' });
+        await harness.manager.applyHook('claude', harness.manager.get('s11')!.hookToken, hook('UserPromptSubmit'));
+        harness.manager.write('s11', 'exit 0\n');
+        await waitFor(() => harness.manager.get('s11')?.exited === true, 'the shell to end');
+
+        await createAgent('s11', { kind: 'codex', runtimeMode: 'supervised' });
+        await harness.manager.attach('s11', 'c1', 80, 24);
+        harness.manager.resumeAgent('s11');
+        await waitFor(() => recorder.output.includes("claude --resume 'claude-1'"), 'the bare resume line');
+        expect(recorder.output).not.toContain('--permission-mode');
     });
 
     test('a command given at create runs as the first line', async () => {

@@ -47,8 +47,8 @@ const terminalProvider = (
 
 export const geminiProvider: ChatProvider = {
     // `--prompt` answers and exits; `-i` (`--prompt-interactive`) runs the prompt and stays.
-    ...terminalProvider('gemini', 'Gemini', 'gemini', 'gemini --resume {id}', (prompt) => ['-i', prompt]),
+    ...terminalProvider('gemini', 'Gemini', 'gemini', 'gemini {flags} --resume {id}', (prompt) => ['-i', prompt]),
     oneShotArgs: (prompt) => ['--prompt', prompt]
 };
 
-export const copilotProvider = terminalProvider('copilot', 'GitHub Copilot', 'copilot', 'copilot --resume={id}', (prompt) => ['-p', prompt]);
+export const copilotProvider = terminalProvider('copilot', 'GitHub Copilot', 'copilot', 'copilot {flags} --resume={id}', (prompt) => ['-p', prompt]);

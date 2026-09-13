@@ -81,8 +81,10 @@ export const SH_ARGS: string[] = [];
 // Claude Code, and one that asserts a failing resume would be reading that CLI's answer instead.
 export const CLEAN_PATH = '/usr/bin:/bin';
 
-export const makeHarness = async (extra: Partial<SessionManagerOptions> = {}): Promise<Harness> => {
-    const home = await mkdtemp(join(tmpdir(), 'ruimte-test-'));
+// A daemon over its own fresh directory, or over the one an earlier harness left behind, which is a
+// daemon restarting: the same sessions, the same stores on disk, nothing kept in memory.
+export const makeHarness = async (extra: Partial<SessionManagerOptions> = {}, over?: string): Promise<Harness> => {
+    const home = over ?? (await mkdtemp(join(tmpdir(), 'ruimte-test-')));
     const snapshots = new SnapshotStore(home);
     const agents = new AgentStore(home);
     const manager = new SessionManager({

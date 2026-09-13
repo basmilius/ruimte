@@ -35,17 +35,38 @@ describe('terminalCommand', () => {
         expect(terminalCommand({ kind: 'claude', resume: 'abc-123' }, 'say hello')).toBe("claude --resume 'abc-123'");
     });
 
-    test('a resume continues that session and ignores the mode', () => {
+    test('a resume continues that session in the mode the node asked for', () => {
         expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised', resume: 'abc-123' })).toBe("claude --resume 'abc-123'");
-        expect(terminalCommand({ kind: 'codex', resume: 'abc-123' })).toBe("codex resume 'abc-123'");
+        expect(terminalCommand({ kind: 'claude', runtimeMode: 'auto-accept-edits', resume: 'abc-123' })).toBe(
+            "claude --permission-mode acceptEdits --resume 'abc-123'"
+        );
+        expect(terminalCommand({ kind: 'codex', runtimeMode: 'full-access', resume: 'abc-123' })).toBe(
+            "codex resume --ask-for-approval never --sandbox danger-full-access 'abc-123'"
+        );
         expect(terminalCommand({ kind: 'copilot', resume: 'abc-123' })).toBe("copilot --resume='abc-123'");
     });
 });
 
 describe('resumeCommand', () => {
     test('quotes the id for the shell', () => {
-        expect(resumeCommand('claude', 'abc-123')).toBe("claude --resume 'abc-123'");
-        expect(resumeCommand('codex', "a'b")).toBe("codex resume 'a'\\''b'");
+        expect(resumeCommand({ kind: 'claude' }, 'abc-123')).toBe("claude --resume 'abc-123'");
+        expect(resumeCommand({ kind: 'codex' }, "a'b")).toBe("codex resume 'a'\\''b'");
+    });
+
+    test('carries the mode and the model of the node, so a resumed CLI comes back the way it started', () => {
+        expect(resumeCommand({ kind: 'claude', runtimeMode: 'auto-accept-edits', model: 'claude-opus-5' }, 'abc-123')).toBe(
+            "claude --permission-mode acceptEdits --model 'claude-opus-5' --resume 'abc-123'"
+        );
+        expect(resumeCommand({ kind: 'codex', runtimeMode: 'full-access' }, 'abc-123')).toBe(
+            "codex resume --ask-for-approval never --sandbox danger-full-access 'abc-123'"
+        );
+    });
+
+    /* A launch with no mode is a CLI somebody started by hand, which nobody chose a mode for; putting
+       the fresh default on that line would hand it full access it was never asked to have. */
+    test('a launch that names no mode adds no mode flag', () => {
+        expect(resumeCommand({ kind: 'claude' }, 'abc-123')).toBe("claude --resume 'abc-123'");
+        expect(resumeCommand({ kind: 'gemini' }, 'abc-123')).toBe("gemini --resume 'abc-123'");
     });
 });
 
@@ -58,7 +79,7 @@ describe('freshCommand', () => {
 describe('resumeOrFreshCommand', () => {
     test('is one line the shell falls back in', () => {
         expect(resumeOrFreshCommand({ kind: 'claude', runtimeMode: 'full-access' }, 'abc-123')).toBe(
-            "claude --resume 'abc-123' || claude --permission-mode bypassPermissions"
+            "claude --permission-mode bypassPermissions --resume 'abc-123' || claude --permission-mode bypassPermissions"
         );
     });
 });

@@ -87,7 +87,8 @@ export const ProviderInfoSchema = z.object({
     models: z.array(ModelInfoSchema),
     defaultModel: z.string().nullable(),
     capabilities: ProviderCapabilitiesSchema,
-    // What a terminal runs to continue one of this CLI's sessions; `{id}` stands for the session id.
+    // What a terminal runs to continue one of this CLI's sessions. `{id}` stands for the session id
+    // and `{flags}` for the flags the launch carries, which is where in the line each CLI takes them.
     resumeCommand: z.string()
 });
 export type ProviderInfo = z.infer<typeof ProviderInfoSchema>;
@@ -97,5 +98,15 @@ export const ProviderListResultSchema = z.object({
 });
 export type ProviderListResult = z.infer<typeof ProviderListResultSchema>;
 
-/* Fills a provider's resume template; the id is quoted so a shell takes it as one word. */
-export const resumeCommandFor = (template: string, agentSessionId: string): string => template.replace('{id}', `'${agentSessionId.replaceAll("'", `'\\''`)}'`);
+/*
+ * Fills a provider's resume template; the id is quoted so a shell takes it as one word. `{flags}` is
+ * a word of its own rather than a substring, since it stands for none, one or several words and a
+ * substitution would leave a double space behind where a launch carries no flags at all.
+ */
+export const resumeCommandFor = (template: string, agentSessionId: string, flags: string[] = []): string => {
+    const id = `'${agentSessionId.replaceAll("'", `'\\''`)}'`;
+    return template
+        .split(' ')
+        .flatMap((word) => (word === '{flags}' ? flags : [word.replace('{id}', id)]))
+        .join(' ');
+};

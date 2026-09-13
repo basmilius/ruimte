@@ -53,4 +53,5 @@ export const CODEX_CAPABILITIES: ProviderCapabilities = {
     slashCommands: false
 };
 
-export const CODEX_RESUME_COMMAND = 'codex resume {id}';
+// `codex resume` is a subcommand that reads `[OPTIONS] [SESSION_ID]`, so the flags go after it.
+export const CODEX_RESUME_COMMAND = 'codex resume {flags} {id}';

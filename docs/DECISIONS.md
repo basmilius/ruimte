@@ -416,6 +416,18 @@ canvas, against Ruimte, one verdict each.
   either way, so there the shell decides: `<resume> || <launch>` is one line that ends with the CLI
   running, whichever way the resume went. That composed line is also what a node's own `resume` gets at
   `session.create`, where the record the daemon could have looked at went with the previous shell.
+- A resume carries the mode and the model the node was started with, rather than trusting the CLI to
+  remember them. The line used to be the bare `claude --resume <id>`, so a node started in accept
+  edits came back on whatever the CLI defaults to. Measured against the CLIs themselves: Claude Code
+  2.1.270 does read both back out of the transcript it resumes (a session started with
+  `--permission-mode acceptEdits --model haiku` resumes as accept edits on Haiku, while a fresh
+  `claude` in the same folder opens on the machine's own default), but Codex 0.154 does not (a
+  rollout recorded with `danger-full-access` and approval `never` opens under the default policy on
+  `codex resume <id>`, and under YOLO again once the flags are back on the line). So the rule is the
+  daemon's, not the CLI's: `{flags}` is part of every provider's resume template, beside `{id}`,
+  which is also where each CLI wants them (`claude {flags} --resume {id}`, `codex resume {flags}
+  {id}`). A launch that names no mode still adds no mode flag, because that is a CLI a person
+  started by hand and `DEFAULT_RUNTIME_MODE` would hand it full access it was never given.
 - A note starts an agent: "Start agent from note" in a note's context menu makes a chat node beside
   it, fixed to the CLI you picked, seeds the note's body as the composer's draft (never sent, the
   person presses Enter) and draws the edge from the note into the chat, so the note stays readable

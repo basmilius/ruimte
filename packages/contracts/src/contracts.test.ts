@@ -13,7 +13,8 @@ import {
     isEventType,
     isRequestType,
     parseRequest,
-    parseServerFrame
+    parseServerFrame,
+    resumeCommandFor
 } from './index.ts';
 
 const info = {
@@ -133,6 +134,20 @@ describe('type guards', () => {
         expect(isRequestType('toString')).toBe(false);
         expect(isEventType('session.exit')).toBe(true);
         expect(isEventType('constructor')).toBe(false);
+    });
+});
+
+describe('resumeCommandFor', () => {
+    test('quotes the id and puts the flags where the template asks for them', () => {
+        expect(resumeCommandFor('claude {flags} --resume {id}', 'abc-123')).toBe("claude --resume 'abc-123'");
+        expect(resumeCommandFor('claude {flags} --resume {id}', 'abc-123', ['--permission-mode', 'acceptEdits'])).toBe(
+            "claude --permission-mode acceptEdits --resume 'abc-123'"
+        );
+        expect(resumeCommandFor('codex resume {flags} {id}', "a'b", ['--sandbox', 'danger-full-access'])).toBe(
+            "codex resume --sandbox danger-full-access 'a'\\''b'"
+        );
+        // The id is not always a word of its own, and a template may want no flags at all.
+        expect(resumeCommandFor('copilot --resume={id}', 'abc-123', ['--ignored'])).toBe("copilot --resume='abc-123'");
     });
 });
 

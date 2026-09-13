@@ -48,6 +48,21 @@ const DEFAULT_RUNTIME_MODE: RuntimeMode = 'full-access';
 const quote = (value: string): string => `'${value.replaceAll("'", `'\\''`)}'`;
 
 /*
+ * What a launch puts on a CLI's line beside the command itself: the permission mode and, where the
+ * CLI takes one, the model. A launch that names no mode gets no mode flag; only a fresh launch fills
+ * that gap with `DEFAULT_RUNTIME_MODE`, because a resume of a CLI nobody chose a mode for would
+ * otherwise be handed full access.
+ */
+const launchFlags = (launch: AgentLaunch, runtimeMode: RuntimeMode | undefined): string[] => {
+    const flags = runtimeMode === undefined ? [] : [...RUNTIME_FLAGS[launch.kind][runtimeMode]];
+    const modelFlag = MODEL_FLAG[launch.kind];
+    if (launch.model && modelFlag) {
+        flags.push(modelFlag, quote(launch.model));
+    }
+    return flags;
+};
+
+/*
  * The line a terminal types to start one agent CLI. The daemon builds it, so every client (and a
  * node restored from a project file) launches a CLI the same way and a flag never travels the wire.
  *
@@ -60,22 +75,25 @@ const quote = (value: string): string => `'${value.replaceAll("'", `'\\''`)}'`;
 export const terminalCommand = (launch: AgentLaunch, firstPrompt?: string): string => {
     const provider = providerFor(launch.kind);
     if (launch.resume) {
-        return resumeCommandFor(provider.resumeCommand, launch.resume);
+        return resumeCommandFor(provider.resumeCommand, launch.resume, launchFlags(launch, launch.runtimeMode));
     }
     // Only the executable: the arguments on a provider are the ones its chat backend needs.
-    const parts = [provider.command[0]!, ...RUNTIME_FLAGS[launch.kind][launch.runtimeMode ?? DEFAULT_RUNTIME_MODE]];
-    const modelFlag = MODEL_FLAG[launch.kind];
-    if (launch.model && modelFlag) {
-        parts.push(modelFlag, quote(launch.model));
-    }
+    const parts = [provider.command[0]!, ...launchFlags(launch, launch.runtimeMode ?? DEFAULT_RUNTIME_MODE)];
     if (firstPrompt) {
         parts.push(...provider.firstPromptArgs(firstPrompt).map(quote));
     }
     return parts.join(' ');
 };
 
-/* How each CLI is told to pick its session up again; the template is the provider's own. */
-export const resumeCommand = (kind: AgentKind, agentSessionId: string): string => resumeCommandFor(providerFor(kind).resumeCommand, agentSessionId);
+/*
+ * How each CLI is told to pick its session up again; the template is the provider's own. The mode
+ * and the model ride along, so a node comes back the way it was started whether its CLI resumes or
+ * starts fresh. Claude Code 2.1.270 reads both out of the transcript it resumes (measured), and is
+ * then told the same thing twice; Codex takes its sandbox and its approval policy from the line
+ * alone, so without this a `full-access` node would come back sandboxed.
+ */
+export const resumeCommand = (launch: AgentLaunch, agentSessionId: string): string =>
+    resumeCommandFor(providerFor(launch.kind).resumeCommand, agentSessionId, launchFlags(launch, launch.runtimeMode));
 
 /* The line a CLI starts fresh with, whatever the launch it was recorded with asked to resume. */
 export const freshCommand = (launch: AgentLaunch): string => terminalCommand({ ...launch, resume: undefined });
@@ -86,4 +104,4 @@ export const freshCommand = (launch: AgentLaunch): string => terminalCommand({ .
  * either way and the shell still reads a single line, which is what typing two of them cost before.
  */
 export const resumeOrFreshCommand = (launch: AgentLaunch, agentSessionId: string): string =>
-    `${resumeCommand(launch.kind, agentSessionId)} || ${freshCommand(launch)}`;
+    `${resumeCommand(launch, agentSessionId)} || ${freshCommand(launch)}`;
