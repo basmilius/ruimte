@@ -9,6 +9,7 @@ let stdout: string;
 let stderr: string;
 let restore: Array<() => void>;
 let seen: { verb: string; argv: unknown; authorization: string | null }[];
+let sources: { id: string; kind: string; title: string }[];
 
 beforeAll(() => {
     server = Bun.serve({
@@ -17,10 +18,13 @@ beforeAll(() => {
         async fetch(request) {
             const url = new URL(request.url);
             if (url.pathname === '/context') {
-                return Response.json({ sources: [{ id: 'n1', kind: 'text', title: 'Plan' }] });
+                return Response.json({ sources });
             }
             if (url.pathname === '/context/n1') {
                 return new Response('the plan');
+            }
+            if (url.pathname === '/context/boom') {
+                return new Response('no', { status: 500 });
             }
             if (!url.pathname.startsWith('/canvas/')) {
                 return new Response('Not found', { status: 404 });
@@ -51,6 +55,7 @@ beforeEach(() => {
     stdout = '';
     stderr = '';
     seen = [];
+    sources = [{ id: 'n1', kind: 'text', title: 'Plan' }];
     const out = spyOn(process.stdout, 'write').mockImplementation((chunk) => {
         stdout += String(chunk);
         return true;
@@ -89,8 +94,39 @@ describe('runContext', () => {
     test('read prints one source from /context and never posts to /canvas', async () => {
         expect(await runContext(['read', 'n1'], env)).toBe(0);
         expect(stdout).toBe('the plan\n');
-        expect(await runContext(['read'], env)).toBe(1);
         expect(seen).toEqual([]);
+    });
+
+    test('read without an id is a refusal that lists what there is to read', async () => {
+        expect(await runContext(['read'], env)).toBe(3);
+        expect(stderr).toBe(
+            ['refused\tbad-arguments\tread takes the id of a linked source', 'usage\tread\t<id>', 'detail\truimte-context help read', 'n1\ttext\tPlan'].join(
+                '\n'
+            ) + '\n'
+        );
+        expect(stdout).toBe('');
+        expect(seen).toEqual([]);
+    });
+
+    test('a source that is not linked is a refusal that names the ones that are', async () => {
+        expect(await runContext(['read', 'nonsense'], env)).toBe(3);
+        expect(stderr).toBe(['refused\tunknown-source\tnonsense is not linked to this session', 'n1\ttext\tPlan'].join('\n') + '\n');
+        expect(stdout).toBe('');
+    });
+
+    test('a refusal with nothing linked says so instead of listing nothing', async () => {
+        sources = [];
+        expect(await runContext(['read', 'nonsense'], env)).toBe(3);
+        expect(stderr).toBe(['refused\tunknown-source\tnonsense is not linked to this session', 'note\tNothing is linked to this session'].join('\n') + '\n');
+    });
+
+    test('a daemon that fails or is not there stays a failure, not a refusal', async () => {
+        expect(await runContext(['read', 'boom'], env)).toBe(1);
+        const gone = { ...env, RUIMTE_CONTEXT_URL: 'http://127.0.0.1:1/context' };
+        expect(await runContext(['read', 'n1'], gone)).toBe(1);
+        expect(await runContext(['list'], gone)).toBe(1);
+        expect(stderr).toInclude('Could not reach the daemon');
+        expect(stdout).toBe('');
     });
 
     test('a verb posts its argv to /canvas/<verb> and prints the answer', async () => {

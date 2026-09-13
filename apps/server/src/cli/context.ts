@@ -11,8 +11,8 @@ import { escapeText } from '../canvas/text-escapes.ts';
  *   ruimte-context help <verb>  everything that one verb takes
  *   ruimte-context <verb> ...   runs one; the daemon parses the arguments
  *
- * Exit codes: 0 done, 1 the daemon could not be reached or failed, 2 not inside a session, 3 the
- * daemon refused (an unknown verb, bad arguments, or a rule of the project).
+ * Exit codes: 0 done, 1 the daemon could not be reached or failed, 2 not inside a session, 3 a
+ * refusal (an unknown verb, bad arguments, a rule of the project, or a `read` of nothing linked).
  */
 export const runContext = async (
     args: string[],
@@ -30,12 +30,13 @@ export const runContext = async (
     const headers = { authorization: `Bearer ${token}` };
 
     if (command === 'list') {
-        const response = await fetch(url, { headers });
-        if (!response.ok) {
-            console.error(`The daemon answered ${response.status}`);
+        let sources: ContextRow[];
+        try {
+            sources = await fetchSources(url, headers);
+        } catch (e) {
+            console.error(e instanceof Error ? e.message : 'The daemon failed');
             return 1;
         }
-        const { sources } = (await response.json()) as { sources: Array<{ id: string; kind: string; title: string }> };
         if (sources.length === 0) {
             console.log('Nothing is linked to this session.');
         }
@@ -47,12 +48,24 @@ export const runContext = async (
 
     if (command === 'read') {
         if (!id) {
-            console.error('Usage: ruimte-context [list | read <id> | help | <verb> ...]');
+            return refuse('bad-arguments', 'read takes the id of a linked source', [
+                'usage\tread\t<id>',
+                'detail\truimte-context help read',
+                ...(await linkedLines(url, headers))
+            ]);
+        }
+        let response: Response;
+        try {
+            response = await fetch(`${url}/${encodeURIComponent(id)}`, { headers });
+        } catch (e) {
+            console.error(unreachable(e));
             return 1;
         }
-        const response = await fetch(`${url}/${encodeURIComponent(id)}`, { headers });
+        if (response.status === 404) {
+            return refuse('unknown-source', `${id} is not linked to this session`, await linkedLines(url, headers));
+        }
         if (!response.ok) {
-            console.error(response.status === 404 ? `No linked source ${id}` : `The daemon answered ${response.status}`);
+            console.error(`The daemon answered ${response.status}`);
             return 1;
         }
         process.stdout.write(`${await response.text()}\n`);
@@ -61,6 +74,50 @@ export const runContext = async (
 
     return runVerb(url.replace(/\/context\/?$/, '/canvas'), command, await withStdinText(args.slice(1), stdin), headers);
 };
+
+interface ContextRow {
+    id: string;
+    kind: string;
+    title: string;
+}
+
+const fetchSources = async (url: string, headers: Record<string, string>): Promise<ContextRow[]> => {
+    let response: Response;
+    try {
+        response = await fetch(url, { headers });
+    } catch (e) {
+        throw new Error(unreachable(e));
+    }
+    if (!response.ok) {
+        throw new Error(`The daemon answered ${response.status}`);
+    }
+    const { sources } = (await response.json()) as { sources: ContextRow[] };
+    return sources;
+};
+
+/*
+ * What `list` would have printed, under a refusal about a source. A daemon that cannot answer this
+ * second question leaves the refusal without a list rather than turning it into a failure: the first
+ * answer already said what the refusal is.
+ */
+const linkedLines = async (url: string, headers: Record<string, string>): Promise<string[]> => {
+    const sources = await fetchSources(url, headers).catch(() => null);
+    if (sources === null) {
+        return [];
+    }
+    if (sources.length === 0) {
+        return ['note\tNothing is linked to this session'];
+    }
+    return sources.map((source) => `${source.id}\t${source.kind}\t${source.title}`);
+};
+
+/* `list` and `read` are the CLI's own, so it writes the refusal the daemon would have written for a verb. */
+const refuse = (code: string, message: string, lines: string[]): number => {
+    process.stderr.write(`${[`refused\t${code}\t${message.replace(/[\t\r\n]+/g, ' ')}`, ...lines].join('\n')}\n`);
+    return 3;
+};
+
+const unreachable = (e: unknown): string => `Could not reach the daemon: ${e instanceof Error ? e.message : 'unknown error'}`;
 
 /*
  * `--text -` is the CLI's own step: it puts what is on stdin in the argument, so a heredoc gives a
@@ -95,7 +152,7 @@ const runVerb = async (canvasUrl: string, verb: string, argv: string[], headers:
         });
         body = await response.text();
     } catch (e) {
-        console.error(`Could not reach the daemon: ${e instanceof Error ? e.message : 'unknown error'}`);
+        console.error(unreachable(e));
         return 1;
     }
     if (response.ok) {
