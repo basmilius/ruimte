@@ -4,11 +4,26 @@ const separatorOf = (root: string): string => (/^[a-zA-Z]:\\|^\\\\/.test(root) ?
 
 const withoutTrailingSeparator = (path: string): string => (path.endsWith('/') || path.endsWith('\\') ? path.slice(0, -1) : path);
 
+/*
+ * Whether a path is the folder itself or something under it. A bare `startsWith` also said yes to
+ * `/repo-old` for a root of `/repo`, and what came out of that was `old/src/a.ts`, which resolves
+ * back to a file in `/repo` that nobody meant. Only a separator right after the root makes one
+ * folder part of the other. Both separators count: contracts has no node:path, and the daemon at
+ * the other end may speak Windows.
+ */
+const isUnder = (base: string, path: string): boolean => path === base || (path.startsWith(base) && (path[base.length] === '/' || path[base.length] === '\\'));
+
 /* An absolute path from the daemon as a folder-relative one: POSIX and relative to the folder. */
 export const relativeTo = (root: string, path: string): string => {
     const base = withoutTrailingSeparator(root);
-    const relative = path.startsWith(base) ? path.slice(base.length + 1) : path;
-    return relative.split('\\').join('/');
+    if (!isUnder(base, path)) {
+        // Outside the folder there is nothing to shorten, so the path keeps the form it arrived in.
+        return path;
+    }
+    return path
+        .slice(base.length + 1)
+        .split('\\')
+        .join('/');
 };
 
 /* The way back, so a row can be revealed, copied or opened on the daemon's machine. */

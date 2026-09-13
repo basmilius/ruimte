@@ -10,6 +10,28 @@ describe('relativeTo and absoluteOf', () => {
         expect(absoluteOf('/repo', 'src/')).toBe('/repo/src');
         expect(absoluteOf('C:\\repo', 'src/index.ts')).toBe('C:\\repo\\src\\index.ts');
     });
+
+    /* A bare `startsWith` read the sibling as inside and answered `old/src/a.ts`, which resolves back
+       to a file in the folder that was never the one meant. */
+    test('a folder beside the root is not in it', () => {
+        expect(relativeTo('/repo', '/repo-old/src/a.ts')).toBe('/repo-old/src/a.ts');
+        expect(relativeTo('/repo', '/repository/src/a.ts')).toBe('/repository/src/a.ts');
+        expect(relativeTo('/repo/', '/repo-old/src/a.ts')).toBe('/repo-old/src/a.ts');
+        expect(relativeTo('C:\\repo', 'C:\\repo-old\\src\\a.ts')).toBe('C:\\repo-old\\src\\a.ts');
+    });
+
+    test('the root itself is the empty path, and comes back whole', () => {
+        expect(relativeTo('/repo', '/repo')).toBe('');
+        expect(relativeTo('/repo/', '/repo')).toBe('');
+        expect(relativeTo('C:\\repo', 'C:\\repo')).toBe('');
+        expect(absoluteOf('/repo', relativeTo('/repo', '/repo'))).toBe('/repo');
+    });
+
+    test('a trailing separator on the root changes nothing', () => {
+        expect(relativeTo('/repo/', '/repo/src/index.ts')).toBe('src/index.ts');
+        expect(relativeTo('C:\\repo\\', 'C:\\repo\\src\\index.ts')).toBe('src/index.ts');
+        expect(relativeTo('/', '/etc/hosts')).toBe('etc/hosts');
+    });
 });
 
 describe('storedPathOf', () => {
@@ -21,6 +43,15 @@ describe('storedPathOf', () => {
 
     test('speaks POSIX about a Windows folder', () => {
         expect(storedPathOf('C:\\code\\app', 'C:\\code\\app\\src\\main.ts')).toBe('src/main.ts');
+    });
+
+    /* The whole point of the promise: what a file outside the folder stores has to resolve back to
+       the file itself, and a sibling folder read as inside resolved to a path in the project. */
+    test('a file in a folder beside the project keeps its absolute path, both ways', () => {
+        expect(storedPathOf('/Users/bas/repo', '/Users/bas/repo-old/src/a.ts')).toBe('/Users/bas/repo-old/src/a.ts');
+        expect(resolveStoredPath('/Users/bas/repo', storedPathOf('/Users/bas/repo', '/Users/bas/repo-old/src/a.ts'))).toBe('/Users/bas/repo-old/src/a.ts');
+        expect(storedPathOf('C:\\code\\app', 'C:\\code\\app-old\\src\\main.ts')).toBe('C:\\code\\app-old\\src\\main.ts');
+        expect(resolveStoredPath('C:\\code\\app', storedPathOf('C:\\code\\app', 'C:\\code\\app-old\\src\\main.ts'))).toBe('C:\\code\\app-old\\src\\main.ts');
     });
 });
 
