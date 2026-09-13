@@ -15,18 +15,31 @@ export interface ServerInfo {
     nameSource: EndpointNameSource | null;
     /* The icon a person gave this machine, from the set a project and a view pick from. */
     icon: ProjectIconChoice | null;
+    /* Whether an agent on this machine may remove a view it did not make. The daemon enforces it, so
+       this is only what the Machines pane stands at; false for a daemon that predates the setting. */
+    agentsDeleteAnyView: boolean;
     reachability: Reachability | null;
 }
 
 /* One object for a machine that has not said hello yet, so a selector gets a stable snapshot. */
-const UNKNOWN: ServerInfo = { platform: null, home: null, version: null, model: null, label: null, nameSource: null, icon: null, reachability: null };
+const UNKNOWN: ServerInfo = {
+    platform: null,
+    home: null,
+    version: null,
+    model: null,
+    label: null,
+    nameSource: null,
+    icon: null,
+    agentsDeleteAnyView: false,
+    reachability: null
+};
 
 interface ServersStore {
     byEndpoint: Record<string, ServerInfo>;
     setInfo(endpointId: string, info: Pick<ServerInfo, 'platform' | 'home' | 'version' | 'model'>): void;
-    setEndpoint(endpointId: string, info: Pick<ServerInfo, 'label' | 'nameSource' | 'icon' | 'reachability'>): void;
-    /* A name or an icon someone gave this machine, from `endpoint.changed` or from setting it here. */
-    setIdentity(endpointId: string, info: Pick<ServerInfo, 'label' | 'nameSource' | 'icon'>): void;
+    setEndpoint(endpointId: string, info: Pick<ServerInfo, 'label' | 'nameSource' | 'icon' | 'agentsDeleteAnyView' | 'reachability'>): void;
+    /* What someone set on this machine, from `endpoint.changed` or from setting it here. */
+    setIdentity(endpointId: string, info: Pick<ServerInfo, 'label' | 'nameSource' | 'icon' | 'agentsDeleteAnyView'>): void;
     /* A machine that is forgotten takes what it said about itself with it. */
     forget(endpointId: string): void;
 }

@@ -23,6 +23,7 @@ const load = (endpointId: string): void => {
                 label: info.label,
                 nameSource: info.nameSource ?? null,
                 icon: info.icon ?? null,
+                agentsDeleteAnyView: info.agentsDeleteAnyView === true,
                 reachability: info.reachability
             });
             adoptMachineName(settled, info.label, info.nameSource ?? null);

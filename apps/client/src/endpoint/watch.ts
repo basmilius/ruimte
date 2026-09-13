@@ -30,7 +30,12 @@ export const startEndpointWatch = (): (() => void) => {
             watching.set(
                 endpointId,
                 link.on('endpoint.changed', (payload) => {
-                    useServers.getState().setIdentity(endpointId, { label: payload.label, nameSource: payload.nameSource, icon: payload.icon });
+                    useServers.getState().setIdentity(endpointId, {
+                        label: payload.label,
+                        nameSource: payload.nameSource,
+                        icon: payload.icon,
+                        agentsDeleteAnyView: payload.agentsDeleteAnyView === true
+                    });
                     adoptMachineName(endpointId, payload.label, payload.nameSource);
                 })
             );

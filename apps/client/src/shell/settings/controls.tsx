@@ -44,13 +44,14 @@ export function Segmented<T extends string>({
     );
 }
 
-export function Toggle({ checked, onChange, label }: { checked: boolean; onChange(checked: boolean): void; label: string }) {
+export function Toggle({ checked, onChange, label, disabled }: { checked: boolean; onChange(checked: boolean): void; label: string; disabled?: boolean }) {
     return (
         <Switch.Root
             checked={checked}
             onCheckedChange={onChange}
             aria-label={label}
-            className="relative h-5 w-9 shrink-0 rounded-full bg-border-strong p-0.5 transition-colors data-checked:bg-accent"
+            disabled={disabled}
+            className="relative h-5 w-9 shrink-0 rounded-full bg-border-strong p-0.5 transition-colors data-checked:bg-accent data-disabled:opacity-50"
         >
             <Switch.Thumb className="block h-4 w-4 rounded-full bg-surface-raised shadow-sm transition-transform data-checked:translate-x-4" />
         </Switch.Root>

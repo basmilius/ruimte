@@ -49,7 +49,12 @@ function IdentityForm({ endpointId, label, onOpenChange }: MachineIdentityDialog
         setFailure(null);
         try {
             const next = await link.request('endpoint.setIdentity', { name: name.trim() === '' ? null : name.trim(), icon });
-            useServers.getState().setIdentity(endpointId, { label: next.label, nameSource: next.nameSource ?? null, icon: next.icon ?? null });
+            useServers.getState().setIdentity(endpointId, {
+                label: next.label,
+                nameSource: next.nameSource ?? null,
+                icon: next.icon ?? null,
+                agentsDeleteAnyView: next.agentsDeleteAnyView === true
+            });
             adoptMachineName(endpointId, next.label, next.nameSource ?? null);
             onOpenChange(false);
         } catch (e) {
