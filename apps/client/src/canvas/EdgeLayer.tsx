@@ -1,48 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { isAgentKind, useCanvas } from '@/state/canvas';
+import { anchors, curve, edgeLines, selectedLine, textRect, type EdgeLine } from '@/canvas/edge-lines';
 import type { Point, Rect } from '@/canvas/math';
 
-/* Anchor on the facing sides, so an edge takes the short way round. */
-const anchors = (a: Rect, b: Rect): { ax: number; ay: number; bx: number; by: number; horizontal: boolean } => {
-    const acx = a.x + a.w / 2,
-        acy = a.y + a.h / 2;
-    const bcx = b.x + b.w / 2,
-        bcy = b.y + b.h / 2;
-    const horizontal = Math.abs(bcx - acx) >= Math.abs(bcy - acy);
-    if (horizontal) {
-        const right = bcx >= acx;
-        return {
-            ax: right ? a.x + a.w : a.x,
-            ay: acy,
-            bx: right ? b.x : b.x + b.w,
-            by: bcy,
-            horizontal
-        };
-    }
-    const below = bcy >= acy;
-    return {
-        ax: acx,
-        ay: below ? a.y + a.h : a.y,
-        bx: bcx,
-        by: below ? b.y : b.y + b.h,
-        horizontal
-    };
-};
-
-const curve = (p: ReturnType<typeof anchors>): string =>
-    p.horizontal
-        ? `M ${p.ax} ${p.ay} C ${(p.ax + p.bx) / 2} ${p.ay}, ${(p.ax + p.bx) / 2} ${p.by}, ${p.bx} ${p.by}`
-        : `M ${p.ax} ${p.ay} C ${p.ax} ${(p.ay + p.by) / 2}, ${p.bx} ${(p.ay + p.by) / 2}, ${p.bx} ${p.by}`;
-
-// A text has no box of its own; this is close enough to aim an edge at.
-const textRect = (text: { x: number; y: number; size: number; text: string }): Rect => ({
-    x: text.x,
-    y: text.y,
-    w: Math.max(40, text.text.length * text.size * 0.55),
-    h: text.size * 1.4
-});
-
-function EdgeLabel({ id, label, at, editing, onEdit }: { id: string; label: string | undefined; at: Point; editing: boolean; onEdit(editing: boolean): void }) {
+function EdgeLabel({
+    ids,
+    label,
+    at,
+    editing,
+    onEdit
+}: {
+    ids: string[];
+    label: string | undefined;
+    at: Point;
+    editing: boolean;
+    onEdit(editing: boolean): void;
+}) {
     if (editing) {
         return (
             <foreignObject x={at.x - 60} y={at.y - 14} width="120" height="28">
@@ -52,7 +25,10 @@ function EdgeLabel({ id, label, at, editing, onEdit }: { id: string; label: stri
                     className="h-7 w-full rounded-full border border-accent bg-surface-raised px-2 text-center text-xs text-text outline-none"
                     onPointerDown={(e) => e.stopPropagation()}
                     onBlur={(e) => {
-                        useCanvas.getState().setEdgeLabel(id, e.currentTarget.value);
+                        // Both directions carry the name: to a person this is one line, and one line has one name.
+                        for (const id of ids) {
+                            useCanvas.getState().setEdgeLabel(id, e.currentTarget.value);
+                        }
                         onEdit(false);
                     }}
                     onKeyDown={(e) => {
@@ -91,11 +67,13 @@ export function EdgeLayer() {
     const [hovered, setHovered] = useState<string | null>(null);
     const [editing, setEditing] = useState<string | null>(null);
 
-    // A selected edge answers Enter the way a selected node does: it opens what you can edit on it.
-    const single = selection.length === 1 ? selection[0]! : null;
-    const selectedEdge = single !== null && edges.some((edge) => edge.id === single) ? single : null;
+    const lines = useMemo(() => edgeLines(edges), [edges]);
+
+    // A selected line answers Enter the way a selected node does: it opens what you can edit on it.
+    const selected = selectedLine(lines, selection);
+    const selectedKey = selected === null ? null : selected.edge.id;
     useEffect(() => {
-        if (selectedEdge === null) {
+        if (selectedKey === null) {
             return;
         }
         const onKeyDown = (e: KeyboardEvent): void => {
@@ -107,32 +85,39 @@ export function EdgeLayer() {
                 return;
             }
             e.preventDefault();
-            setEditing(selectedEdge);
+            setEditing(selectedKey);
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
-    }, [selectedEdge]);
+    }, [selectedKey]);
 
     const rectOf = (id: string): Rect | null => (hidden.has(id) ? null : nodes[id] ? nodes[id] : texts[id] ? textRect(texts[id]) : null);
 
+    /* Into an agent the line carries context and shows it in the accent; anywhere else it is a plain
+       line. A pair between two agents is one either way round. */
+    const carriesContext = (line: EdgeLine): boolean =>
+        [line.edge.to, ...(line.back === null ? [] : [line.back.to])].some((id) => {
+            const target = nodes[id];
+            return target !== undefined && isAgentKind(target.kind);
+        });
+
     return (
         <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" width="1" height="1">
-            {edges.map((edge) => {
-                const a = rectOf(edge.from);
-                const b = rectOf(edge.to);
+            {lines.map((line) => {
+                const a = rectOf(line.edge.from);
+                const b = rectOf(line.edge.to);
                 if (!a || !b) {
                     return null;
                 }
+                const key = line.edge.id;
                 const p = anchors(a, b);
                 const d = curve(p);
                 const mid = { x: (p.ax + p.bx) / 2, y: (p.ay + p.by) / 2 };
-                const active = hovered === edge.id || selection.includes(edge.id);
-                // Into an agent the line carries context and shows it in the accent; anywhere else it is a plain line.
-                const target = nodes[edge.to];
-                const context = target !== undefined && isAgentKind(target.kind);
+                const active = hovered === key || line.ids.some((id) => selection.includes(id));
+                const context = carriesContext(line);
                 const stroke = context ? 'var(--accent)' : active ? 'var(--text-muted)' : 'var(--border-strong)';
                 return (
-                    <g key={edge.id} onPointerEnter={() => setHovered(edge.id)} onPointerLeave={() => setHovered((h) => (h === edge.id ? null : h))}>
+                    <g key={key} onPointerEnter={() => setHovered(key)} onPointerLeave={() => setHovered((h) => (h === key ? null : h))}>
                         {/* A wide invisible stroke gives the thin line something to hover and click; a double-click names it. */}
                         <path
                             d={d}
@@ -142,11 +127,12 @@ export function EdgeLayer() {
                             className="pointer-events-auto cursor-pointer"
                             onPointerDown={(e) => {
                                 e.stopPropagation();
-                                useCanvas.getState().select([edge.id], e.shiftKey);
+                                // One line is one thing to click, so both of its directions are selected together.
+                                useCanvas.getState().select(line.ids, e.shiftKey);
                             }}
                             onDoubleClick={(e) => {
                                 e.stopPropagation();
-                                setEditing(edge.id);
+                                setEditing(key);
                             }}
                         />
                         <path
@@ -158,14 +144,18 @@ export function EdgeLayer() {
                             strokeDasharray={context ? '6 6' : undefined}
                         />
                         <circle cx={p.bx} cy={p.by} r="4" fill={stroke} />
-                        <EdgeLabel id={edge.id} label={edge.label} at={mid} editing={editing === edge.id} onEdit={(on) => setEditing(on ? edge.id : null)} />
-                        {active && editing !== edge.id && (
+                        {/* A head at the tail too: the pair reads at a glance as both nodes reading each other. */}
+                        {line.back !== null && <circle cx={p.ax} cy={p.ay} r="4" fill={stroke} />}
+                        <EdgeLabel ids={line.ids} label={line.label} at={mid} editing={editing === key} onEdit={(on) => setEditing(on ? key : null)} />
+                        {active && editing !== key && (
                             <g
-                                transform={`translate(${mid.x + (edge.label ? 40 : 0)}, ${mid.y})`}
+                                transform={`translate(${mid.x + (line.label ? 40 : 0)}, ${mid.y})`}
                                 className="pointer-events-auto cursor-pointer"
                                 onPointerDown={(e) => {
                                     e.stopPropagation();
-                                    useCanvas.getState().removeEdge(edge.id);
+                                    for (const id of line.ids) {
+                                        useCanvas.getState().removeEdge(id);
+                                    }
                                 }}
                             >
                                 <circle r="9" fill="var(--surface-raised)" stroke="var(--border-strong)" />
