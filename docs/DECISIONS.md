@@ -429,6 +429,35 @@ canvas, against Ruimte, one verdict each.
   made again against the rev the merge took in rather than dropping into the dialog. The daemon
   emits `project.changed` from inside the same lock it refuses the save under, so the document is
   always at the client before the refusal is.
+- The first prompt of an agent node is held by the daemon against the node id, not written into
+  `project.json` (`apps/server/src/agents/pending-prompts.ts`). It is not part of the canvas two
+  people share, and a project open in two windows would deliver it twice; the daemon is the only
+  place where "exactly once" can be promised, and it already owns both moments a node comes alive
+  (`SessionManager.create`, `ChatManager.create`). On disk under `$RUIMTE_HOME/prompts`, because
+  the node is made whether or not a client is looking and the daemon may well restart first. The
+  in-memory map is emptied before the first await of `take`, so two clients mounting the same node
+  cannot both get it, and the file is gone before the caller is answered.
+- A terminal agent gets its prompt on the line the daemon types into the shell, as the CLI's own
+  prompt argument, rather than typed in after the CLI is up. Nothing can tell when a CLI is ready
+  for input, and the line is built at `session.create` anyway, so a node made before a restart
+  still starts on its prompt. The person also sees the prompt in the shell as a line they could
+  have typed. It costs a cap of 2000 characters: that line waits in the tty's canonical buffer
+  until the shell reads its first byte, and a longer line is cut off there without a word. A chat
+  agent gets the prompt as the first message of its thread, which is both how it reads to the
+  person and what spawns the process.
+- The edge `agent` draws runs from the caller into the new node, which is what makes the caller
+  readable to the agent it just opened (`deriveContextSources` keys on `edge.to`). `link` adds the
+  way back when both ends are agents, so the two directions are two edges and each one means what
+  an edge already meant. An edge that is already there is a no-op reported as `existing`, never a
+  refusal: a link that ran twice has the state the caller asked for.
+- `--dry-run` is only on the verbs that make something, and every other verb refuses it by name
+  with the list of the ones that do. A flag an agent writes out of habit must not turn a real call
+  into a silent nothing. A dry run runs under the same lock a write takes and returns a mutation
+  with no content, so `ProjectStore.mutate` writes nothing and the rev stays where it was.
+- `--group G` takes a group by id, and the node lands inside the frame: geometry is what membership
+  is for an open group, so nothing else would make it a member. A collapsed group keeps its members
+  in the file, so the id joins `memberIds` there as well, and the frame grows when it has no room,
+  since a refusal over pixels is a puzzle nobody can solve from a terminal.
 
 ### Updating
 
