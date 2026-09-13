@@ -44,6 +44,9 @@ export class SessionClient {
     private readonly exitHandlers = new Map<string, Set<ExitHandler>>();
     private readonly screenHandlers = new Map<string, Set<ScreenHandler>>();
     private readonly unsubscribe: Array<() => void> = [];
+    // What this client last told the daemon about permission requests. A fresh socket is a fresh
+    // client over there, which knows nothing about the one before it, so it is told again.
+    private approvals = true;
 
     constructor(transport: Transport, sink: SessionSink) {
         this.transport = transport;
@@ -194,6 +197,16 @@ export class SessionClient {
         }
     }
 
+    /*
+     * Tells the daemon whether this client offers a permission request to a person. Off, it holds
+     * none for this socket, so no hook waits out its 110 seconds on an answer that will never come;
+     * another client that wants them is asked exactly as before.
+     */
+    setApprovals(enabled: boolean): void {
+        this.approvals = enabled;
+        this.sendApprovals();
+    }
+
     onOutput(nodeId: string, handler: OutputHandler): () => void {
         return this.listen(this.outputHandlers, nodeId, handler);
     }
@@ -248,8 +261,13 @@ export class SessionClient {
         }
     }
 
+    private sendApprovals(): void {
+        void this.transport.request('agent.setApprovals', { enabled: this.approvals }).catch(() => undefined);
+    }
+
     private onStatus(status: TransportStatus): void {
         if (status === 'open') {
+            this.sendApprovals();
             void this.reattachAll();
             return;
         }

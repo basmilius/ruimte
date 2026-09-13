@@ -25,6 +25,18 @@ describe('keeping the machine awake', () => {
     });
 });
 
+describe('answering a permission here', () => {
+    test('starts on: the terminal you would have answered in is the one thing the canvas moved away', () => {
+        expect(settingsFrom({}).agentsApprovals).toBe(true);
+        expect(settingsFrom({ agentsShowViews: true }).agentsApprovals).toBe(true);
+    });
+
+    test('is off for a stored false and for nothing else', () => {
+        expect(settingsFrom({ agentsApprovals: false }).agentsApprovals).toBe(false);
+        expect(settingsFrom({ agentsApprovals: 0 as unknown as boolean }).agentsApprovals).toBe(true);
+    });
+});
+
 describe('being told a turn ended', () => {
     test('starts on: it only ever fires while you are elsewhere, which is when it is worth having', () => {
         expect(settingsFrom({}).agentsTurnNotify).toBe(true);

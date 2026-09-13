@@ -143,6 +143,20 @@ describe('SessionClient', () => {
         expect(transport.of('session.create')).toHaveLength(1);
     });
 
+    test('tells the daemon what this client does with permission requests, and says it again on a fresh socket', () => {
+        const { transport, client } = setup();
+        client.setApprovals(false);
+        expect(transport.of('agent.setApprovals').map((call) => call.payload)).toEqual([{ enabled: false }]);
+
+        // A reconnect is a new client over there, so the answer this one gave has to travel again.
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        expect(transport.of('agent.setApprovals').map((call) => call.payload)).toEqual([{ enabled: false }, { enabled: false }]);
+
+        client.setApprovals(true);
+        expect(transport.of('agent.setApprovals')).toHaveLength(3);
+    });
+
     test('open creates, attaches and reports the screen', async () => {
         const { transport, sink, client } = setup();
         const result = await client.open('a', { cwd: '/tmp', command: 'ls' }, 100, 30);
@@ -244,7 +258,8 @@ describe('SessionClient', () => {
         transport.calls.length = 0;
         transport.setStatus('open');
         await flush();
-        expect(transport.calls).toEqual([]);
+        // Not a word about a session. What a fresh socket does hear is what this client wants asked of it.
+        expect(transport.calls.filter((call) => call.type !== 'agent.setApprovals')).toEqual([]);
     });
 
     test('attaching an exited session records its exit code from the list', async () => {

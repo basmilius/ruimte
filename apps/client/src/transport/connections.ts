@@ -9,6 +9,7 @@ import { activeEndpoint, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProjectList } from '@/state/project-list';
 import { providerSinkFor } from '@/state/providers';
 import { sessionSinkFor } from '@/state/sessions';
+import { useSettings } from '@/state/settings';
 import { createWorkspaceStores, defaultWorkspaceStores } from '@/state/workspace';
 import { setCurrentWorkspace, type WorkspaceStores } from '@/state/workspace-stores';
 import { endProjectSessions } from '@/terminal/lifecycle';
@@ -85,6 +86,8 @@ const projectSink = (stores: WorkspaceStores, endpointId: () => string): Project
 const buildMachine = (endpoint: Endpoint): Machine => {
     const transport = pool.require(endpoint);
     const sessions = new SessionClient(transport, sessionSinkFor(endpoint.id));
+    // Every machine hears the same answer, since the switch is about this client and not about one of them.
+    sessions.setApprovals(useSettings.getState().agentsApprovals);
     const chats = new ChatClient(transport, chatSinkFor(endpoint.id), providerSinkFor(endpoint.id));
     return {
         endpointId: endpoint.id,
@@ -332,8 +335,16 @@ export const startConnections = (): (() => void) => {
             mainWorkspace();
         }
     });
+    const offSettings = useSettings.subscribe((state, before) => {
+        if (state.agentsApprovals !== before.agentsApprovals) {
+            for (const machine of machines.values()) {
+                machine.sessions.setApprovals(state.agentsApprovals);
+            }
+        }
+    });
     return () => {
         offPool();
         offEndpoints();
+        offSettings();
     };
 };

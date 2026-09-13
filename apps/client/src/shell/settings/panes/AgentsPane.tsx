@@ -102,6 +102,7 @@ export function AgentsPane() {
     const loaded = useProviders((s) => s.loaded);
     const preferences = useChatPreferences();
     const agentsShowViews = useSettings((s) => s.agentsShowViews);
+    const agentsApprovals = useSettings((s) => s.agentsApprovals);
     const agentsKeepAwake = useSettings((s) => s.agentsKeepAwake);
     const agentsTurnNotify = useSettings((s) => s.agentsTurnNotify);
     const agentsTurnSound = useSettings((s) => s.agentsTurnSound);
@@ -151,8 +152,19 @@ export function AgentsPane() {
             </SettingsSection>
             <SettingsSection
                 title="What an agent may do here"
-                description="This one is about this client alone: what an agent makes is shared, what you look at is not."
+                description="These are about this client: what an agent makes is shared, what it may ask of you at this screen is not."
             >
+                <SettingsRow
+                    label="Ask me for permission in the node"
+                    description="On, a permission a terminal agent asks for appears in the node's header with the choices the CLI offers, and the first answer settles it. Off, nothing is asked here and the CLI's own prompt in the terminal is the only place to answer; a second client that wants them still gets asked."
+                    control={
+                        <Toggle
+                            checked={agentsApprovals}
+                            onChange={(checked) => update({ agentsApprovals: checked })}
+                            label="Ask me for permission in the node"
+                        />
+                    }
+                />
                 <SettingsRow
                     label="Let an agent show you a view"
                     description="Off, a view an agent asks for waits in the banner over the ones you have open, with a button to go there. On, it takes the place of the view you are working in and the same banner offers the way back."

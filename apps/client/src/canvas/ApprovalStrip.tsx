@@ -3,6 +3,7 @@ import { Check, X } from 'lucide-react';
 import type { ApprovalChoice } from '@ruimte/contracts';
 import { useSessionRow } from '@/state/sessions';
 import { useEndpointId } from '@/state/keys';
+import { useSettings } from '@/state/settings';
 import { sessionClientFor } from '@/transport/connections';
 import { DOCK_ICON_SIZE, toolIcon } from '@/chat/ui/icons';
 import { Button } from '@/ui/Button';
@@ -20,9 +21,12 @@ export function ApprovalStrip({ id }: { id: string }) {
     const endpointId = useEndpointId();
     const request = useSessionRow(id, (row) => row?.approvals?.[0]);
     const more = useSessionRow(id, (row) => Math.max((row?.approvals?.length ?? 0) - 1, 0));
+    // The daemon is told as well, so it holds nothing for this client; this is what takes a strip off
+    // the moment the switch flips, including one another client is still being asked in its own window.
+    const offered = useSettings((s) => s.agentsApprovals);
     const [answering, setAnswering] = useState(false);
 
-    if (!request) {
+    if (!offered || !request) {
         return null;
     }
 
