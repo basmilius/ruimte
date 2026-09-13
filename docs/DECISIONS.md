@@ -26,7 +26,7 @@ canvas, against Ruimte, one verdict each.
 | Image and PDF preview (inside the editor node) | A file node draws what the preview draws: images and video today, PDF not yet | Partly done |
 | Dino minigame | None | Skip |
 | Kanban board (separate view, session cards in columns) | None | Skip, a decision in this file: no kanban, ever |
-| Spawn team (agents wired to their opener) | None | Later, phase 18: the chat backends, the edges and the worktrees it needs are there |
+| Spawn team (agents wired to their opener) | `ruimte-context team`: up to eight roles in one write, in a group, each linked back to the caller | Done |
 | Remote pairing and relay | Endpoints with pairing, tokens and origin checks | Done, relay is a seam |
 
 ## Decisions that are not in the code
@@ -670,6 +670,14 @@ canvas, against Ruimte, one verdict each.
   and an absolute path is wrong in every other checkout. A file outside the folder keeps its
   absolute path, which is what `relativeTo` hands back for a path it cannot shorten
   (`storedPathOf` and `resolveStoredPath` in `packages/contracts/src/stored-path.ts`).
+- **Open:** `relativeTo` decides "inside the folder" with a bare `startsWith`, so a sibling whose
+  name begins with the folder's name passes. A project at `/Users/bas/repo` stores a file from
+  `/Users/bas/repo-old/src/a.ts` as `old/src/a.ts`, and `resolveStoredPath` turns that back into
+  `/Users/bas/repo/old/src/a.ts`: a node quietly pointing at the wrong file, or at none. The
+  daemon's verbs do not hit it, since they check with `isInside` (`node:path`'s `relative`) before
+  they call `storedPathOf`; the client calls it bare (`storedFilePath` in `project/views.ts`, and
+  every `relativeTo` in `shell/panels`). The fix is a separator check inside `relativeTo`, which
+  is the one place that has the root and the path together.
 - All three surfaces (a preview tab, a node, a view) are the preview's own reading layer:
   `useFileRead` for the read and the re-read, `renderFile` for the renderer, `FileBody` for the one
   loading state and the one error state. A path that is gone shows that error and stays where it
@@ -725,6 +733,16 @@ what the report left open and what the build decided differently.
 - **Not done:** the report's plan to fold `useColumnResize` and the git panel's log resize into one
   axis-agnostic hook. Those two drag pixels and the grid drags shares of an axis; there is nothing
   worth sharing. The grid's own splitter is `splitDrag` in `shell/SplitGrid.tsx`.
+- **Open: `useDrawing.getState()` means the focused cell, not this one.** An editor hook has two
+  halves and they resolve differently. `useDrawing(selector)` reads the cell the component is drawn
+  in (`CellViewContext`); `useDrawing.getState()`, `.setState()` and `.subscribe()` go through
+  `asStore` in `state/workspace-stores.ts`, which resolves the cell that has the focus, because
+  outside React that is what every call site meant. `DrawingView.tsx` uses the second half eleven
+  times over, for the viewport, the pointer handlers, the zoom and the fit, so a drawing in a cell
+  without the focus measures, pans and draws against the store of another cell. Same family as the
+  camera bug `fd202cd` fixed: a component per cell reaching for a singleton that has moved on. The
+  fix is to take the store once (`useEditorStoreOf`) and use that handle everywhere in the
+  component, rather than the module-level hook.
 - **Not measured:** nine cells at once. The WebGL budget already spreads itself over them (ten
   contexts, LRU), but the React trees, pointer handlers and resize observers scale with the cells.
   If a full grid stutters, lowering the limit is two numbers in `split.ts`.
@@ -888,13 +906,16 @@ Also decided against for now: a scheduler, checkpoint restore and telemetry.
   (Codex), with the sentence about the links behind it when the chat has links at that moment; a
   Claude Code agent inside a shell gets it as `additionalContext` from its `SessionStart` hook,
   which is why the hook command prints curl's reply now. Everything after that is about links
-  only: `UserPromptSubmit` answers with the linked-context hint and nothing else, a chat whose
-  set of links changed between turns gets a note in front of the next prompt (also shown as an
-  info note in the thread), and a plain shell keeps one dimmed line above its first prompt when
-  it has links and stays silent when it has none (on the screen only, never typed into the PTY):
-  a shell is not an agent, and a line about verbs above every `cd` would be noise. A link made
-  while a shell is already running is only visible as the "context" chip in the node header and
-  to the hooks.
+  only: `UserPromptSubmit` answers with the linked-context hint plus whatever only this turn has
+  to hear (`hookContext`), a chat whose set of links changed between turns gets a note in front of
+  the next prompt (also shown as an info note in the thread), and a plain shell keeps one dimmed
+  line above its first prompt when it has links and stays silent when it has none (on the screen
+  only, never typed into the PTY): a shell is not an agent, and a line about verbs above every
+  `cd` would be noise. A link drawn while a Claude Code agent is already running reaches it the
+  same way: the daemon remembers the links it last told that agent about and hands the difference
+  to the prompt hook, quiet when nothing moved and silent at a `SessionStart`, which carries the
+  whole list anyway. A shell with no hooks still only shows it as the "context" chip in the node
+  header.
 - The app-server frames have no `jsonrpc` field: `{ id, method, params }` out, `{ id, result }`
   or `{ id, error }` back, `{ method, params }` for notifications, and the server's own requests
   (approvals, questions) arrive with an `id` that starts at 0 for every process. Approval item
@@ -931,15 +952,20 @@ a day, several days. Each of the larger ones becomes a GitHub issue when it star
 5. **The rest of the git panel**: commit, push and a PR through `gh` as one stacked action with
    its progress as a toast, the branch chip with a ref picker, pull when behind, and a commit
    message written by the chat CLI when the field is left empty.
-6. **Agents on the canvas**, several days. This is where Ruimte earns its name.
-   Verbs on `ruimte-context` (`list`, `open`, `note`, `link`, `group`, `spawn-team`) that the
-   daemon applies to `project.json` so the watcher carries them to the client; every verb takes a
-   view and defaults to the one its own session sits in, and there are no write or close verbs.
-   Spawn team on top: up to eight roles, opened in a group and linked back. Then hook-reply
-   approvals for terminal agents (hold Claude's `PermissionRequest` on the daemon, answer it from
-   the node header or the notification), and attention: an unseen dot on a node whose turn settled
-   while it was not focused, a "Finished" count in the status summary, a turn-done notification
-   with a sound toggle, a dock badge, keep awake while an agent runs, confirm before quitting.
+6. **Agents on the canvas** is built, in 66 commits between `323d4dd` and `fd202cd` on 2026-09-13.
+   Fourteen verbs sit on `ruimte-context` beside `list` and `read`, posted to
+   `POST /canvas/<verb>` and applied by the daemon to `project.json`, so a verb lands with nothing
+   connected and on a project a client just released. The design and what the build changed about
+   it are in `docs/reports/2026-09-11-agents-op-het-canvas.html`; every decision is above, from
+   "The daemon parses a verb's arguments" onward. The diagram view
+   (`docs/reports/2026-09-12-diagram-view.html`) hangs its write verb on the same registry and is
+   still a proposal.
+
+   What is left of this entry is the half that was always behind the verbs. Hook-reply approvals
+   for terminal agents: hold Claude's `PermissionRequest` on the daemon and answer it from the node
+   header or the notification. And attention: an unseen dot on a node whose turn settled while it
+   was not focused, a "Finished" count in the status summary, a turn-done notification with a sound
+   toggle, a dock badge, keep awake while an agent runs, confirm before quitting.
 7. **Terminal basics**, about two days. Search on Cmd+F, clickable file paths and URLs across
    wrapped rows, OSC 52 clipboard, a dropped file types its quoted path, Unicode 11 widths on both
    xterms, "Clear" in the node menu. Then "Send to linked chat" (a terminal selection lands as a

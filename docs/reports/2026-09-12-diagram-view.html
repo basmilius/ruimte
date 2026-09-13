@@ -155,8 +155,8 @@ th[scope="row"] .caption { display: block; }
   <p class="eyebrow">RUIMTE / FEATUREVOORSTEL / 12 SEPTEMBER 2026</p>
   <h1>Diagrammen die een agent schrijft</h1>
   <p class="intro">Een diagram wordt de tweede burger naast een drawing: een view met een bestand in <code>.ruimte/diagrams/</code>, een node die hem spiegelt, en een agent die hem schrijft met één verb. Het idee komt van archify, de code niet. De weg waarlangs die agent schrijft is al ontworpen, in <a href="2026-09-11-agents-op-het-canvas.html">Agents op het canvas</a>.</p>
-  <p class="status">Voorstel, nog geen regel code</p>
-  <p class="caption">Gebaseerd op main bij 5df6e69, archify op main (MIT, 12 september 2026), en op het ontwerp van 11 september voor roadmap-punt 6. Schattingen in fasen, niet in uren.</p>
+  <p class="status">Voorstel, nog geen regel code · bijgewerkt 13 september</p>
+  <p class="caption">Gebaseerd op main bij 5df6e69, archify op main (MIT, 12 september 2026), en op het ontwerp van 11 september voor roadmap-punt 6. Op 13 september naast main bij 323d4dd gelegd en in lijn gebracht met de besluiten die toen in dat ontwerp zijn genomen. Schattingen in fasen, niet in uren.</p>
   <nav aria-label="Inhoud">
     <a href="#advies">Advies</a>
     <a href="#archify">Archify</a>
@@ -177,7 +177,7 @@ th[scope="row"] .caption { display: block; }
   <section id="advies" class="recommendation">
     <h2>Advies</h2>
     <p>Bouw een <strong>diagram</strong> als een eigen view-kind, precies langs de tien lagen die een drawing al aflegt. De inhoud is een getypeerd document (knopen, groepen, kanten) in <code>&lt;folder&gt;/.ruimte/diagrams/&lt;viewId&gt;.json</code>, onder dezelfde rev-discipline en watcher als een drawing. Een canvas-node van kind <code>diagram</code> spiegelt die view read-only, zoals <code>DrawingNode</code> dat vandaag doet.</p>
-    <p>De agent-kant hoeft niet uitgevonden te worden. <a href="2026-09-11-agents-op-het-canvas.html">Agents op het canvas</a> legt er al een neer: <code>POST /canvas/&lt;verb&gt;</code> naast <code>/context</code> met de bearer die elke sessie al heeft, een <code>ruimte</code>-shim op de PATH, en een registry waarin de validatie en de helptekst in hetzelfde object staan. Een diagram is dan geen nieuw transport maar drie regels in die registry: <code>diagram</code> als kind bij <code>ruimte node</code> en <code>ruimte view</code>, plus één verb <code>ruimte diagram</code> die een document op stdin aanneemt. Zonder dat fundament is de schrijfkant nul, want <code>ruimte-context</code> kent alleen <code>list</code> en <code>read</code> en <code>ContextStore.handle</code> weigert alles wat geen GET is.</p>
+    <p>De agent-kant hoeft niet uitgevonden te worden. <a href="2026-09-11-agents-op-het-canvas.html">Agents op het canvas</a> legt er al een neer: <code>POST /canvas/&lt;verb&gt;</code> naast <code>/context</code> met de bearer die elke sessie al heeft, de verbs achter het bestaande <code>ruimte-context</code>, en een registry waarin de validatie en de helptekst in hetzelfde object staan. Een diagram is dan geen nieuw transport maar drie regels in die registry: <code>diagram</code> als kind bij <code>ruimte-context node</code> en <code>ruimte-context view new</code>, plus één verb <code>ruimte-context diagram</code> die een document op stdin aanneemt. Zonder dat fundament is de schrijfkant nul, want <code>ruimte-context</code> kent alleen <code>list</code> en <code>read</code> en <code>ContextStore.handle</code> weigert alles wat geen GET is.</p>
     <p>Coördinaten zijn de tweede keuze die afwijkt van archify. Daar bepaalt de agent de layout; hier rekent de daemon hem uit met een deterministische laagverdeling, en pas als een mens een knoop versleept krijgt die knoop een vaste positie. Dat scheelt de agent het moeilijkste deel van het werk en scheelt Ruimte een layout-library.</p>
     <div class="stats">
       <div><strong>10</strong><span>lagen die een view-kind raakt</span></div>
@@ -222,16 +222,16 @@ th[scope="row"] .caption { display: block; }
         <caption>De tien lagen, met wat de drawing er vandaag doet en wat een diagram er vraagt.</caption>
         <thead><tr><th scope="col">Laag</th><th scope="col">Drawing vandaag</th><th scope="col">Diagram</th></tr></thead>
         <tbody>
-          <tr><th scope="row"><code>project.ts</code><br><span class="caption">contracts</span></th><td><code>ProjectDrawingViewSchema</code>, de union, <code>isDrawingView</code>, <code>drawing</code> in <code>NodeKindSchema</code></td><td>Hetzelfde, plus <code>diagram</code> in <code>NodeKindSchema</code>. Het veld <code>viewId</code> op een node bestaat al en wordt hergebruikt.</td></tr>
+          <tr><th scope="row"><code>project.ts</code><br><span class="caption">contracts</span></th><td><code>ProjectDrawingViewSchema</code>, de union, <code>isDrawingView</code>, <code>drawing</code> in <code>NodeKindSchema</code>, en de predicaten <code>isOpenableView</code> en <code>isSessionView</code></td><td>Hetzelfde, plus <code>diagram</code> in <code>NodeKindSchema</code>. Het veld <code>viewId</code> op een node bestaat al en wordt hergebruikt. Een diagram kan open in een cel en heeft geen sessie, dus hij valt in beide predicaten net als een drawing. <code>createdBy</code> komt op <code>ViewBaseSchema</code> en geldt dus vanzelf.</td></tr>
           <tr><th scope="row"><code>diagram.ts</code><br><span class="caption">contracts</span></th><td><code>drawing.ts</code>, 170 regels: elementen, document, migratie, vijf payloads</td><td>Nieuw bestand van vergelijkbare omvang. Graaf in plaats van elementen.</td></tr>
           <tr><th scope="row"><code>index.ts</code><br><span class="caption">contracts</span></th><td>Vier regels in <code>REQUEST_SCHEMAS</code>, één in <code>EVENT_SCHEMAS</code></td><td>Idem. De test die eist dat elk request in de tabel staat, dekt dit af.</td></tr>
           <tr><th scope="row"><code>packages/</code><br><code>diagram</code></th><td><code>packages/drawing</code>, 1.067 regels: geometrie, paden, SVG, reading order</td><td>Nieuw package: layout, SVG-painter, reading order. Geen DOM, geen roughjs.</td></tr>
           <tr><th scope="row">daemon-store</th><td><code>drawing-store.ts</code>, 250 regels: watcher, rev, orphans, copy</td><td>Bijna een kopie. Watcher op <code>.ruimte/diagrams</code>, dezelfde settle van 150 ms.</td></tr>
           <tr><th scope="row">handlers + daemon</th><td><code>handlers/drawing.ts</code> (34 regels) en drie regels in <code>daemon.ts</code></td><td>Idem, plus de POST-route voor het schrijven (zie hieronder).</td></tr>
           <tr><th scope="row">context</th><td><code>context-drawing.ts</code> (13 regels), <code>ContextReaders</code>, <code>ContextSourceSchema</code></td><td><code>context-diagram.ts</code> en een <code>diagram</code>-kind in de bronsoorten.</td></tr>
-          <tr><th scope="row">client-store</th><td><code>state/drawing.ts</code> (627 regels) en een slot in <code>workspace.ts</code></td><td>Kleiner: er is geen tekengereedschap, geen undo van streken, geen draft.</td></tr>
+          <tr><th scope="row">client-store</th><td><code>state/drawing.ts</code> (627 regels), een registry in <code>state/editors.ts</code> met één editor per view die in een cel staat, en een slot in <code>workspace.ts</code></td><td>Kleiner: er is geen tekengereedschap, geen undo van streken, geen draft. Wel een eigen registry, want drie cellen kunnen drie diagrammen tegelijk tonen.</td></tr>
           <tr><th scope="row">client-map</th><td><code>apps/client/src/drawing</code>, 13 bestanden, 2.697 regels</td><td>Minder: client, view, mirror, export. Geen dock met tools, geen gestures, geen letterchords.</td></tr>
-          <tr><th scope="row">UI-aanhechting</th><td><code>ViewHost</code>, <code>ViewMenu</code>, <code>Sidebar</code>, <code>ViewGlyph</code>, <code>commands.ts</code>, <code>NodeFrame</code>, <code>state/canvas.ts</code></td><td>Een regel per plek. <code>NodeFrame</code> krijgt een icoon en een body-tak.</td></tr>
+          <tr><th scope="row">UI-aanhechting</th><td><code>ViewHost</code>, <code>ViewMenu</code>, <code>Sidebar</code>, <code>ViewGlyph</code>, <code>commands.ts</code>, <code>NodeFrame</code>, <code>state/canvas.ts</code>, en sinds views naast elkaar staan <code>SplitGrid</code>, <code>CellToolbar</code> en <code>ViewToolbar</code></td><td>Een regel per plek. <code>NodeFrame</code> krijgt een icoon en een body-tak. De knoppen van een diagram (JSON openen, export) gaan in de balk van de cel of de node, zoals een file dat doet via <code>file-toolbar-slot.ts</code>.</td></tr>
         </tbody>
       </table>
     </div>
@@ -282,7 +282,7 @@ th[scope="row"] .caption { display: block; }
       <div class="table" role="region" aria-label="De weg van agent naar scherm" tabindex="0">
         <svg class="diagram plot" viewBox="0 0 940 200" role="img" aria-labelledby="weg-titel weg-uitleg">
           <title id="weg-titel">Van agent naar scherm</title>
-          <desc id="weg-uitleg">Een agent roept ruimte diagram write aan. De daemon valideert het document, verhoogt de rev en schrijft het bestand. De watcher ziet de wijziging en stuurt diagram.changed naar de clients, die de view en elke spiegelende node hertekenen.</desc>
+          <desc id="weg-uitleg">Een agent roept ruimte-context diagram aan. De daemon valideert het document, verhoogt de rev en schrijft het bestand. De watcher ziet de wijziging en stuurt diagram.changed naar de clients, die de view en elke spiegelende node hertekenen.</desc>
           <defs><marker id="weg-pijl" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0 0 L8 4 L0 8 Z"/></marker></defs>
           <rect class="node" x="12" y="58" width="170" height="72" rx="12"/>
           <rect class="node" x="252" y="58" width="170" height="72" rx="12"/>
@@ -292,7 +292,7 @@ th[scope="row"] .caption { display: block; }
           <path class="edge" d="M422 94 H480" marker-end="url(#weg-pijl)"/>
           <path class="edge" d="M662 94 H720" marker-end="url(#weg-pijl)"/>
           <text x="97" y="88" text-anchor="middle">Agent</text>
-          <text x="97" y="112" text-anchor="middle" font-size="13">ruimte diagram write</text>
+          <text x="97" y="112" text-anchor="middle" font-size="13">ruimte-context diagram</text>
           <text x="337" y="88" text-anchor="middle">Daemon</text>
           <text x="337" y="112" text-anchor="middle" font-size="13">valideert, rev + 1</text>
           <text x="577" y="88" text-anchor="middle">Bestand</text>
@@ -320,18 +320,20 @@ th[scope="row"] .caption { display: block; }
         <caption>De verb-set uit <a href="2026-09-11-agents-op-het-canvas.html#verbs">Agents op het canvas</a>, met wat een diagram eraan toevoegt.</caption>
         <thead><tr><th scope="col">Verb</th><th scope="col">Nu voorgesteld</th><th scope="col">Met een diagram erbij</th></tr></thead>
         <tbody>
-          <tr><th scope="row"><code>node</code></th><td><code>note|browser|drawing|terminal|chat</code></td><td><code>diagram</code> erbij, met <code>--view</code> als het diagram dat hij spiegelt</td></tr>
-          <tr><th scope="row"><code>view</code></th><td><code>--kind canvas|drawing</code></td><td><code>diagram</code> erbij. Een agent kan dus zelf de view maken die hij daarna vult</td></tr>
-          <tr><th scope="row"><code>diagram</code></th><td>bestaat niet</td><td>Nieuw. Leest een document op stdin, de daemon valideert, zet de rev en schrijft</td></tr>
+          <tr><th scope="row"><code>node</code></th><td><code>note|browser|drawing|file|terminal|chat</code></td><td><code>diagram</code> erbij, met <code>--source</code> als het diagram dat hij spiegelt. <code>--view</code> blijft het canvas waar de node op landt, en is verplicht als de aanroeper zelf niet op een canvas staat</td></tr>
+          <tr><th scope="row"><code>view new</code></th><td><code>--kind canvas|drawing|file|browser|terminal|chat|separator</code></td><td><code>diagram</code> erbij. Een agent kan dus zelf de view maken die hij daarna vult, en hem met <code>view delete</code> weer opruimen omdat hij <code>createdBy</code> draagt</td></tr>
+          <tr><th scope="row"><code>diagram</code></th><td>bestaat niet</td><td>Nieuw. <code>ruimte-context diagram &lt;viewId&gt;</code> leest een document op stdin, de daemon valideert, zet de rev en schrijft</td></tr>
         </tbody>
       </table>
     </div>
     <p>De derde is de enige echt nieuwe. Hij past in de vorm die het andere rapport vastlegt: het antwoord is tab-gescheiden regels en geen proza, een weigering heeft een eigen exitcode, en de helptekst komt uit dezelfde registry-entry als de validatie, zodat hij niet kan verouderen. Een <code>--dry-run</code> heeft hij niet nodig, want hij is niet duur om terug te draaien.</p>
     <h3>Waarom deze write geen dialoog vraagt</h3>
     <p>Het andere rapport laat <code>write</code> bewust uit de set, met een goed argument: een write naar een terminal typt in de shell van een ander, dat vraagt een bevestiging, en één hangende bevestiging blokkeert twee minuten lang elke andere gevoelige verb. Deze verb is een ander dier. Hij schrijft een bestand in de projectmap dat de agent net zo goed met zijn eigen Write-tool had kunnen schrijven, en dat bestand staat in git. Er is geen sessie van iemand anders bij betrokken en er is een weg terug.</p>
-    <p>De naam moet dat verschil dragen. <code>ruimte diagram</code> met het document op stdin, niet <code>ruimte write</code>, zodat de verb die het andere rapport weglaat vrij blijft.</p>
+    <p>De naam moet dat verschil dragen. <code>ruimte-context diagram</code> met het document op stdin, niet <code>ruimte-context write</code>, zodat de verb die het andere rapport weglaat vrij blijft.</p>
     <h3>Wat de agent mag</h3>
-    <p>Precies wat het andere rapport al regelt. <code>targetForToken</code> geeft de node-id van de aanroepende sessie, die node-id opzoeken in de open projecten geeft het project, en daarmee is de scoping klaar zonder een regel extra. Een sessie waarvan de node in geen open project staat kan niets. Een agent kan met deze verb dus niets wat hij niet al kon; het verschil is dat de daemon het ziet en valideert.</p>
+    <p>Precies wat het andere rapport al regelt. <code>targetForToken</code> geeft de id van de aanroepende sessie, die id opzoeken in het register van de daemon geeft het project, en daarmee is de scoping klaar. Een sessie die in geen project staat kan niets.</p>
+    <p class="note">Het register, niet de open projecten. Een client die naar een ander project wisselt stuurt <code>project.release</code>, en dan sluit de daemon ook de drawings van dat project. Een diagram-store die alleen op open projecten werkt, weigert dus een agent die doorwerkt terwijl de mens even elders kijkt. De diagram-store moet een document kunnen schrijven van een project dat niemand open heeft: laden, onder de lock schrijven, loslaten. Dat is een verschil met de drawing-store van vandaag.</p>
+    <p>Een agent kan met deze verb dus niets wat hij niet al kon; het verschil is dat de daemon het ziet en valideert.</p>
     <h3>Het bestand blijft ook gewoon een bestand</h3>
     <p>De verb is de nette weg, niet de enige. Een agent die één label wil wijzigen gebruikt zijn Edit-tool op het bestand, en de watcher van de diagram-store stuurt <code>diagram.changed</code> zoals hij dat voor een drawing doet. Wat hij daarmee mist is de validatie en de rev, en dat is precies waarom het herschrijven van een heel diagram via de verb hoort te gaan.</p>
   </section>
@@ -343,8 +345,8 @@ th[scope="row"] .caption { display: block; }
       <table class="wide">
         <thead><tr><th scope="col">Dit voorstel zei</th><th scope="col">Punt 6 zegt</th><th scope="col">Uitkomst</th></tr></thead>
         <tbody>
-          <tr><th scope="row">Een <code>SKILL.md</code> leert de agent het schema</th><td>Geen skill, wel een hint. Een skill in <code>~/.claude/skills/</code> plus markerblokken in andere instructiebestanden veroudert stil op een host op afstand.</td><td>Het schema staat in de registry-entry van de verb. <code>ruimte help</code> is de documentatie, en de system prompt van een chat en het hook-antwoord van een Claude-terminal dragen de regel die ernaar wijst.</td></tr>
-          <tr><th scope="row">Een agent kan geen view maken, dus een mens maakt hem eerst</th><td><code>view</code> staat gewoon in de verb-set. Er zit geen destructieve verb in, dus er is geen dialoog nodig.</td><td>Een agent maakt de view zelf met <code>ruimte view --kind diagram</code> en vult hem daarna. De open vraag die ik hierover had, is beantwoord.</td></tr>
+          <tr><th scope="row">Een <code>SKILL.md</code> leert de agent het schema</th><td>Geen skill, wel een hint. Een skill in <code>~/.claude/skills/</code> plus markerblokken in andere instructiebestanden veroudert stil op een host op afstand.</td><td>Het schema staat in de registry-entry van de verb. <code>ruimte-context help</code> is de documentatie, en de system prompt van een chat en het hook-antwoord van een Claude-terminal dragen de regel die ernaar wijst.</td></tr>
+          <tr><th scope="row">Een agent kan geen view maken, dus een mens maakt hem eerst</th><td><code>view new</code> staat gewoon in de verb-set. Verwijderen kan alleen bij een view die de agent zelf maakte, dus er is geen dialoog nodig.</td><td>Een agent maakt de view zelf met <code>ruimte-context view new --kind diagram</code> en vult hem daarna. De open vraag die ik hierover had, is beantwoord.</td></tr>
           <tr><th scope="row">De rev is het argument voor de verb</th><td>Voor <code>project.json</code> is de oplossing een additieve merge aan clientkant: onbekende id's erbij, dirty state behouden.</td><td>Voor een diagram werkt dat niet, want een agent die herschrijft is niet additief. Zie hieronder.</td></tr>
         </tbody>
       </table>
@@ -419,8 +421,8 @@ Daemon wraps: SessionManager, ProjectStore
       </div></li>
       <li class="step"><div>
         <h3>De agent-weg <span class="badge warning">na fase 2 van punt 6</span></h3>
-        <p>De leeskant kan meteen: <code>context-diagram.ts</code> en het <code>diagram</code>-kind in <code>ContextSourceSchema</code>. De schrijfkant wacht op de verb-registry en <code>POST /canvas/&lt;verb&gt;</code>, en is daarna <code>diagram</code> bij de kinds van <code>node</code> en <code>view</code>, plus de verb <code>ruimte diagram</code> met het schema in zijn eigen registry-entry. Geen <code>SKILL.md</code>: punt 6 heeft dat besloten en <code>ruimte help</code> is de documentatie.</p>
-        <p><strong>Klaar als:</strong> een Claude-node in een project met <code>ruimte view --kind diagram</code> een view maakt en hem in dezelfde turn vult, een fout in het document een melding geeft waar de agent zich aan repareert, en een sessie waarvan de node in geen open project staat wordt geweigerd.</p>
+        <p>De leeskant kan meteen: <code>context-diagram.ts</code> en het <code>diagram</code>-kind in <code>ContextSourceSchema</code>. De schrijfkant wacht op de verb-registry en <code>POST /canvas/&lt;verb&gt;</code>, en is daarna <code>diagram</code> bij de kinds van <code>node</code> en <code>view</code>, plus de verb <code>ruimte-context diagram</code> met het schema in zijn eigen registry-entry. Geen <code>SKILL.md</code>: punt 6 heeft dat besloten en <code>ruimte-context help</code> is de documentatie.</p>
+        <p><strong>Klaar als:</strong> een Claude-node in een project met <code>ruimte-context view new --kind diagram</code> een view maakt en hem in dezelfde turn vult, ook als de mens net naar een ander project wisselde, een fout in het document een melding geeft waar de agent zich aan repareert, en een sessie die in geen project staat wordt geweigerd.</p>
       </div></li>
       <li class="step"><div>
         <h3>De node en de handgrepen</h3>
@@ -433,7 +435,7 @@ Daemon wraps: SessionManager, ProjectStore
   <section id="vragen">
     <h2>Open vragen</h2>
     <p><span class="badge warning">Beslissen voor fase 1</span> <strong>Eén view-kind of twee?</strong> Een diagram kan ook een tweede soort binnen de drawing-view worden, met dezelfde map en hetzelfde bestand. Dat scheelt de helft van de tien lagen. Het kost dat elke drawing-tak in de client een "welke soort is dit" vraag krijgt, en dat een diagram de kale-lettertoetsen van een drawing erft. Het advies hierboven kiest twee kinds; dit is de plek om daar anders over te denken.</p>
-    <p><span class="badge warning">Beslissen voor fase 4</span> <strong>Wat doet een diagram-node op het canvas als het diagram nog leeg is?</strong> Een agent die <code>ruimte node diagram</code> doet en daarna gaat schrijven, laat een lege kaart staan zolang hij bezig is. Een drawing heeft daar een empty state voor. Voor een agent-gevulde node zou een "wordt geschreven" prettiger zijn, maar dan moet de daemon weten dat er een schrijf aankomt, en dat weet hij niet.</p>
+    <p><span class="badge warning">Beslissen voor fase 4</span> <strong>Wat doet een diagram-node op het canvas als het diagram nog leeg is?</strong> Een agent die <code>ruimte-context node diagram</code> doet en daarna gaat schrijven, laat een lege kaart staan zolang hij bezig is. Een drawing heeft daar een empty state voor. Voor een agent-gevulde node zou een "wordt geschreven" prettiger zijn, maar dan moet de daemon weten dat er een schrijf aankomt, en dat weet hij niet.</p>
     <p><span class="badge info">Meten</span> <strong>Hoe groot wordt een diagram?</strong> De laagverdeling is lineair in knopen en kanten, dus veertig knopen is niets. Wat onbekend is: of veertig knopen op een canvas-node nog leesbaar is, en of een agent een diagram van die omvang in één keer goed schrijft. Een echt voorbeeld uit deze repository is de eerste test.</p>
     <p><span class="badge info">Later</span> <strong>Bronverwijzingen.</strong> Archify laat een knoop naar een pad en een regel wijzen. In Ruimte zou dat een klik zijn die het bestand opent in de preview die er sinds 149eadd is. Dat is een klein veld en een grote winst, maar pas als de rest staat.</p>
   </section>
@@ -484,9 +486,14 @@ volgende begint:
    drie regels in daemon.ts. Neem de negen scenario's uit
    drawing-store.test.ts over.
 4. client: state/diagram.ts, diagram-client.ts, DiagramView.tsx (SVG in de
-   DOM, geen canvas), het slot in workspace.ts en workspace-stores.ts, en de
-   regel per plek in ViewHost, ViewMenu, Sidebar, ViewGlyph, commands.ts,
+   DOM, geen canvas), een registry in state/editors.ts naast die van de
+   drawings (meerdere cellen tonen meerdere diagrammen), het slot in
+   workspace.ts en workspace-stores.ts, en de regel per plek in ViewHost,
+   ViewMenu, Sidebar, ViewGlyph, commands.ts, SplitGrid, CellToolbar,
    state/document.ts en project/views.ts.
+   De diagram-store in de daemon moet ook schrijven naar een project dat
+   geen client open heeft (project.release laat het los); zie "Wat de agent
+   mag" in het rapport.
 
 Wat je niet bouwt in deze sessie
 Geen canvas-node, geen CLI-verb, geen context-bron, geen MCP, geen tekengereed-
@@ -501,7 +508,8 @@ Werkwijze
 Stel je vragen voordat je begint, niet halverwege. bun run format en
 bun run check moeten groen zijn voor je klaar meldt. Werk de alinea over
 drawing in CLAUDE.md bij en zet de keuzes die niet in de code te lezen zijn in
-docs/DECISIONS.md. Commit per stap, conventional commits, niet pushen.</code></pre>
+docs/DECISIONS.md. Commit per stap, conventional commits, zonder
+Co-Authored-By of andere attributie, niet pushen.</code></pre>
     <noscript><p class="caption">De prompt staat hierboven en is met de hand te selecteren.</p></noscript>
   </section>
 </main>
