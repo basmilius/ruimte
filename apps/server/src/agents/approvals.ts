@@ -104,7 +104,8 @@ export interface ApprovalSink {
 interface HoldOptions {
     sessionId: string;
     ask: PermissionAsk;
-    // Fires when the CLI kills the hook because the person answered in the TUI instead.
+    // Fires when the CLI dies under the hook. Answering in the TUI does not abort it: Claude Code
+    // 2.1.270 leaves the hook running, so that path is closed by the end of the turn instead.
     signal: AbortSignal;
 }
 
