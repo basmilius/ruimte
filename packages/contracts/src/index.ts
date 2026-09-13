@@ -93,6 +93,14 @@ import {
     ProjectSummaryResultSchema,
     ProjectTargetPayloadSchema
 } from './project.ts';
+import {
+    ProcessesAlertsSchema,
+    ProcessesDismissPayloadSchema,
+    ProcessesSampleEventSchema,
+    ProcessesSignalPayloadSchema,
+    ProcessesSubscribePayloadSchema,
+    ProcessesSubscribeResultSchema
+} from './processes.ts';
 import { ServerHelloPayloadSchema, ServerHelloResultSchema, ServerPingPayloadSchema, ServerPingResultSchema } from './server.ts';
 import {
     SessionAttachPayloadSchema,
@@ -119,6 +127,7 @@ export * from './fs.ts';
 export * from './git.ts';
 export * from './ids.ts';
 export * from './model.ts';
+export * from './processes.ts';
 export * from './project.ts';
 export * from './project-migrate.ts';
 export * from './server.ts';
@@ -196,6 +205,11 @@ export const REQUEST_SCHEMAS = {
     'usage.unsubscribe': { payload: EmptySchema, result: EmptySchema },
     'usage.limits': { payload: EmptySchema, result: UsageLimitsSnapshotSchema },
     'usage.refreshLimits': { payload: EmptySchema, result: UsageLimitsSnapshotSchema },
+    'processes.subscribe': { payload: ProcessesSubscribePayloadSchema, result: ProcessesSubscribeResultSchema },
+    'processes.unsubscribe': { payload: EmptySchema, result: EmptySchema },
+    'processes.signal': { payload: ProcessesSignalPayloadSchema, result: EmptySchema },
+    'processes.listAlerts': { payload: EmptySchema, result: ProcessesAlertsSchema },
+    'processes.dismiss': { payload: ProcessesDismissPayloadSchema, result: EmptySchema },
     'context.set': { payload: ContextSetPayloadSchema, result: EmptySchema },
     'endpoint.info': { payload: EmptySchema, result: EndpointInfoSchema },
     'endpoint.setIdentity': { payload: EndpointSetIdentityPayloadSchema, result: EndpointInfoSchema },
@@ -231,7 +245,9 @@ export const EVENT_SCHEMAS = {
     'git.status': GitStatusEventSchema,
     'git.progress': GitProgressEventSchema,
     'usage.changed': UsageChangedEventSchema,
-    'usage.limitsChanged': UsageLimitsSnapshotSchema
+    'usage.limitsChanged': UsageLimitsSnapshotSchema,
+    'processes.sample': ProcessesSampleEventSchema,
+    'processes.alerts': ProcessesAlertsSchema
 } as const satisfies Record<string, z.ZodType>;
 
 export type EventType = keyof typeof EVENT_SCHEMAS;

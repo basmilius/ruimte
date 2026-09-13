@@ -313,7 +313,7 @@ export const ProjectDocumentV1Schema = z.object({
 export type ProjectDocumentV1 = z.infer<typeof ProjectDocumentV1Schema>;
 
 // The surfaces beside the canvas that can be up; the toolbar has a button per kind.
-export const ProjectPanelKindSchema = z.enum(['files', 'git']);
+export const ProjectPanelKindSchema = z.enum(['files', 'git', 'processes']);
 export type ProjectPanelKind = z.infer<typeof ProjectPanelKindSchema>;
 
 // A tab that shows the file's diff instead of the file itself, so both can be open at once.
