@@ -23,7 +23,7 @@ bun install
 bun dev
 ```
 
-`bun dev` starts the daemon on `localhost:4211` with its state in `~/.ruimte-dev` (set `RUIMTE_HOME` to pick another) and the Vite client, which proxies `/ws` to it. An installed Ruimte keeps `4210` and `~/.ruimte`, so both run on one machine. `bun run dev:client` and `bun run dev:server` start one side. `bun run dev:desktop` opens the Electron shell against the running dev server as "Ruimte Dev", with a profile of its own; browser nodes only work there. `bun run check` typechecks every package and lints, `bun run build` builds the client, `bun test` runs the tests of all packages.
+`bun dev` starts the daemon on `localhost:4211` with its state in `~/.ruimte-dev` (set `RUIMTE_HOME` to pick another) the Vite client, which proxies `/ws` to it, and the Electron shell. An installed Ruimte keeps `4210` and `~/.ruimte`, so both run on one machine. `bun run dev:client` and `bun run dev:server` start one side. `bun run dev:desktop` opens the Electron shell against the running dev server as "Ruimte Dev", with a profile of its own; browser nodes only work there. `bun run check` typechecks every package and lints, `bun run build` builds the client, `bun test` runs the tests of all packages.
 
 The repo is a Bun workspace: `apps/client` (React UI), `apps/server` (the daemon), `apps/desktop` (the Electron shell), `packages/contracts` (zod 4 schemas for the wire, the only place a message shape is defined) and `packages/drawing` (the geometry, the SVG painter and the reading order of a drawing, without a DOM). `docs/DECISIONS.md` says why the code is the way it is and what comes next.
 
