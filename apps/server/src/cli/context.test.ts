@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import type { Server } from 'bun';
+import { unescapeText } from '../canvas/text-escapes.ts';
 import { runContext } from './context.ts';
 
 let server: Server<undefined>;
@@ -96,6 +97,24 @@ describe('runContext', () => {
         expect(await runContext(['node', 'note', '--text', 'hello'], env)).toBe(0);
         expect(seen).toEqual([{ verb: 'node', argv: ['note', '--text', 'hello'], authorization: 'Bearer tok' }]);
         expect(stdout).toBe('note-12345678\tnote\tmain\n');
+    });
+
+    test('--text - takes the body from stdin, escaped so the daemon reads it back byte for byte', async () => {
+        const body = 'Line one\nLine two\\n still one line\n';
+        expect(await runContext(['node', 'note', '--text', '-'], env, async () => body)).toBe(0);
+        expect(await runContext(['node', 'note', '--text=-'], env, async () => body)).toBe(0);
+        const sent = seen.map((call) => call.argv);
+        expect(sent[0]).toEqual(['note', '--text=Line one\nLine two\\\\n still one line\n']);
+        expect(sent[1]).toEqual(sent[0]);
+        expect(unescapeText((sent[0] as string[])[1]!.slice('--text='.length))).toBe(body);
+    });
+
+    test('a --text that is not a dash is passed on untouched, and stdin is never read', async () => {
+        const stdin = async (): Promise<string> => {
+            throw new Error('stdin was read');
+        };
+        expect(await runContext(['node', 'note', '--text', 'a\\nb', '--title', '-'], env, stdin)).toBe(0);
+        expect(seen[0]!.argv).toEqual(['note', '--text', 'a\\nb', '--title', '-']);
     });
 
     test('a refusal exits 3 and goes to stderr', async () => {

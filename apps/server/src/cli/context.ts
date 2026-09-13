@@ -1,3 +1,5 @@
+import { escapeText } from '../canvas/text-escapes.ts';
+
 /*
  * `ruimte context`, reached through the `ruimte-context` script on every session's PATH. Reads
  * what the person linked to this agent on the canvas, and changes the canvas through the verbs the
@@ -12,7 +14,11 @@
  * Exit codes: 0 done, 1 the daemon could not be reached or failed, 2 not inside a session, 3 the
  * daemon refused (an unknown verb, bad arguments, or a rule of the project).
  */
-export const runContext = async (args: string[], env: Record<string, string | undefined> = process.env): Promise<number> => {
+export const runContext = async (
+    args: string[],
+    env: Record<string, string | undefined> = process.env,
+    stdin: () => Promise<string> = () => Bun.stdin.text()
+): Promise<number> => {
     const url = env.RUIMTE_CONTEXT_URL;
     const token = env.RUIMTE_CONTEXT_TOKEN ?? env.RUIMTE_HOOK_TOKEN;
     if (!url || !token) {
@@ -53,7 +59,29 @@ export const runContext = async (args: string[], env: Record<string, string | un
         return 0;
     }
 
-    return runVerb(url.replace(/\/context\/?$/, '/canvas'), command, args.slice(1), headers);
+    return runVerb(url.replace(/\/context\/?$/, '/canvas'), command, await withStdinText(args.slice(1), stdin), headers);
+};
+
+/*
+ * `--text -` is the CLI's own step: it puts what is on stdin in the argument, so a heredoc gives a
+ * body with newlines and quotes in it. Escaped on the way out, because the daemon reads `\n` in a
+ * `--text` it is handed, and these bytes have to arrive as they were typed.
+ */
+const withStdinText = async (argv: string[], stdin: () => Promise<string>): Promise<string[]> => {
+    const words: string[] = [];
+    for (let i = 0; i < argv.length; i++) {
+        const word = argv[i]!;
+        const pair = word === '--text' && argv[i + 1] === '-';
+        if (!pair && word !== '--text=-') {
+            words.push(word);
+            continue;
+        }
+        words.push(`--text=${escapeText(await stdin())}`);
+        if (pair) {
+            i++;
+        }
+    }
+    return words;
 };
 
 const runVerb = async (canvasUrl: string, verb: string, argv: string[], headers: Record<string, string>): Promise<number> => {

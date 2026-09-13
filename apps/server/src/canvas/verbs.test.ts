@@ -329,6 +329,12 @@ describe('node', () => {
         expect([node.x, node.y]).toEqual([-4000 + 320 + PLACEMENT_GAP, 2400]);
     });
 
+    test('--text reads \\n, \\t and \\\\ and leaves every other backslash alone', async () => {
+        const { lines } = await post('node', ['note', '--text', 'Line one\\nLine two\\tend\\\\d\\s']);
+        const node = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === lines[0]!.split('\t')[0])!;
+        expect(node.body).toBe('Line one\nLine two\tend\\d\\s');
+    });
+
     test('needs a kind it knows', async () => {
         expect((await post('node', [])).lines[0]).toStartWith('refused\tbad-arguments\t');
         expect((await post('node', ['group'])).lines[0]).toStartWith('refused\tbad-arguments\t');

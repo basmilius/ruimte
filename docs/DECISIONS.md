@@ -380,6 +380,15 @@ canvas, against Ruimte, one verdict each.
   verbs and flags exist; `help` comes from the same registry for the same reason. `help <verb>`
   renders the same entry the parse runs from, with the kind and flag columns derived from the
   tables the verb refuses against, so the detail cannot promise a pairing the daemon says no to.
+- The daemon reads `\n`, `\t` and `\\` in `--text`, not the CLI: a shell hands the backslash
+  through untouched, and a note of two lines has to be one argument. Nothing else is an escape, so
+  a regex in a note stays a regex. Bytes that must arrive exactly go through `--text -`, which is
+  the CLI's own step: it reads stdin, escapes the backslashes back and sends one finished string,
+  so the daemon keeps parsing words and never learns about a pipe.
+- A relative `--path` or `--cwd` is resolved against the project folder, never against the
+  directory the agent is standing in. The daemon cannot know that directory, and a CLI that sent
+  it would make one command mean two things in two sessions of the same project. An absolute path
+  still works; `--cwd` must still land inside the folder or a worktree of it.
 - A refusal exits 3, apart from 1 for a daemon that failed or could not be reached and 2 for
   running outside a session. An agent has to tell "you asked for something this project does not
   allow" (fix the arguments, pick one of the canvases listed) from "try again later", and an

@@ -4,6 +4,7 @@ import { basename, isAbsolute, relative, resolve } from 'node:path';
 import { DEFAULT_TITLES, NODE_SIZE, isCanvasView, isDrawingView, storedPathOf, type ProjectContent, type ProjectNode } from '@ruimte/contracts';
 import { z } from 'zod';
 import { placeBeside, placeFree } from './placement.ts';
+import { unescapeText } from './text-escapes.ts';
 import { VerbRefusal, canvasFor, defineVerb, field, placeOf } from './verb.ts';
 
 export const NODE_VERB_KINDS = ['note', 'browser', 'drawing', 'file', 'terminal', 'chat'] as const;
@@ -155,7 +156,7 @@ export const nodeVerb = defineVerb({
     }),
     flags: z.object({
         title: z.string().trim().min(1, '--title needs a title').optional(),
-        text: z.string().optional(),
+        text: z.string().transform(unescapeText).optional(),
         url: z.string().min(1, '--url needs an http or https address').optional(),
         path: z.string().min(1, '--path needs the path of a file').optional(),
         source: z.string().min(1, '--source needs the id of a drawing view').optional(),
