@@ -18,6 +18,11 @@ describe('hookCommand', () => {
         expect(command.endsWith('; exit 0')).toBe(true);
         expect(hookCommand('codex')).toContain('"$RUIMTE_HOOK_URL/codex"');
     });
+
+    test('gives the permission hook room to wait for a person and leaves the others quick', () => {
+        expect(hookCommand('claude', 'PermissionRequest')).toContain('curl -sf -m 120 ');
+        expect(hookCommand('claude', 'Stop')).toContain('curl -sf -m 3 ');
+    });
 });
 
 describe('mergeHooks', () => {
@@ -56,6 +61,15 @@ describe('mergeHooks', () => {
         const stop = (config.hooks as Record<string, Array<{ hooks: Array<{ command: string }> }>>).Stop;
         expect(stop).toHaveLength(1);
         expect(stop[0]?.hooks.map((h) => h.command)).toEqual(['echo other', hookCommand('claude')]);
+    });
+
+    test('writes the permission hook with a timeout wide enough to hold a request', () => {
+        const { config } = mergeHooks({}, 'claude');
+        const hooks = config.hooks as Record<string, Array<{ hooks: Array<{ command: string; timeout: number }> }>>;
+        // Laddered above the daemon's own hold and above curl's, so the CLI is never the one to cut it off.
+        expect(hooks.PermissionRequest[0]?.hooks[0]?.timeout).toBe(125);
+        expect(hooks.PermissionRequest[0]?.hooks[0]?.command).toBe(hookCommand('claude', 'PermissionRequest'));
+        expect(hooks.Stop[0]?.hooks[0]?.timeout).toBe(5);
     });
 
     test('removes our hook from an event the daemon no longer listens for', () => {

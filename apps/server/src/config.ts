@@ -18,6 +18,8 @@ export interface ServerConfig {
     requireToken: boolean;
     // Whether the daemon may ask LiteLLM for the price table; off leaves it on the bundled snapshot.
     priceFetch: boolean;
+    // Whether a terminal agent's permission request may be answered from a client; off leaves every one to the CLI's own prompt.
+    approvals: boolean;
     // `pair` asks the running daemon for a pairing URL; `context` is the agent-side CLI (`ruimte-context`).
     command: 'serve' | 'pair' | 'context';
     // What follows the command, for `context`.
@@ -53,7 +55,8 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
             label: { type: 'string' },
             'allow-origin': { type: 'string', multiple: true, default: [] },
             'require-token': { type: 'boolean', default: false },
-            'no-price-fetch': { type: 'boolean', default: false }
+            'no-price-fetch': { type: 'boolean', default: false },
+            'no-approvals': { type: 'boolean', default: false }
         },
         strict: true,
         allowPositionals: true
@@ -78,6 +81,7 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
         allowedOrigins: values['allow-origin'],
         requireToken: values['require-token'],
         priceFetch: !values['no-price-fetch'],
+        approvals: !values['no-approvals'],
         command,
         args: cli ? argv.slice(1) : positionals.slice(1)
     };

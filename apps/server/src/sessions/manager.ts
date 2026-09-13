@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import type { AgentInfo, AgentKind, AgentLaunch, ContextSource, EventMap, EventType, SessionInfo } from '@ruimte/contracts';
 import type { AgentStore } from '../agents/agent-store.ts';
+import { ApprovalStore, parsePermissionAsk, type ApprovalDecision } from '../agents/approvals.ts';
 import { normalizeHook } from '../agents/hooks.ts';
 import { freshCommand, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
 import { contextHint } from '../context/context-note.ts';
@@ -71,6 +72,10 @@ export interface SessionManagerOptions {
     firstNotices?: (sessionId: string) => string[];
     // Lets a test move the clock the resume guard reads.
     now?: () => number;
+    // Whether a permission request may be held for a client; off leaves every one to the CLI's own prompt.
+    approvals?: boolean;
+    // Lets a test shorten how long a request is held.
+    approvalHoldMs?: number;
 }
 
 export type HookResult = 'applied' | 'ignored' | 'unknown-token';
@@ -91,6 +96,7 @@ export class SessionManager {
     // When a resume was typed into a session, until its agent reports in; the guard against typing a second one.
     private readonly resuming = new Map<string, number>();
     private readonly now: () => number;
+    private readonly approvals: ApprovalStore | null;
     hookUrl: string | null;
     contextUrl: string | null;
     private readonly binDir: string | null;
@@ -114,6 +120,14 @@ export class SessionManager {
         this.firstPrompt = options.firstPrompt ?? (() => Promise.resolve(null));
         this.firstNotices = options.firstNotices ?? (() => []);
         this.now = options.now ?? Date.now;
+        this.approvals =
+            options.approvals === false
+                ? null
+                : new ApprovalStore((sessionId, approvals) => {
+                      for (const sink of this.sinks.values()) {
+                          sink({ event: 'session.approvals', payload: { sessionId, approvals } });
+                      }
+                  }, options.approvalHoldMs);
     }
 
     /* The session a hook or context token belongs to. */
@@ -198,6 +212,29 @@ export class SessionManager {
             this.onProcessChange?.(session.id, 'changed');
         }
         return 'applied';
+    }
+
+    /*
+     * Holds a permission hook open while a person decides, and answers with what they chose. Null is
+     * the daemon staying out of it, which is what happens with the feature off, with nobody watching,
+     * and when the hold runs out: in all three the CLI's own prompt is what asks, exactly as without
+     * Ruimte. Never hold for a client that is not there, or a turn would stall for nothing.
+     */
+    holdApproval(token: string, body: unknown, signal: AbortSignal): Promise<ApprovalDecision | null> {
+        const sessionId = this.tokens.get(token);
+        if (!this.approvals || sessionId === undefined || this.sinks.size === 0) {
+            return Promise.resolve(null);
+        }
+        const ask = parsePermissionAsk(body);
+        if (ask === null) {
+            return Promise.resolve(null);
+        }
+        return this.approvals.hold({ sessionId, ask, signal });
+    }
+
+    /* A client's answer to a held request. False when it was already settled, here or in the CLI's prompt. */
+    answerApproval(sessionId: string, requestId: string, choiceId: string): boolean {
+        return this.approvals?.answer(sessionId, requestId, choiceId) ?? false;
     }
 
     /* Types the CLI's resume command into the shell of a session whose agent is known but not running. */
@@ -403,6 +440,8 @@ export class SessionManager {
         if (!session) {
             return;
         }
+        // The shell is gone and every hook that was waiting in it with it, so nothing is left to answer.
+        this.approvals?.dropSession(sessionId);
         for (const clientId of session.attachedClients()) {
             this.emit(clientId, { event: 'session.exit', payload: { sessionId, exitCode } });
         }
@@ -436,6 +475,7 @@ export class SessionManager {
         this.sessions.delete(session.id);
         this.resuming.delete(session.id);
         this.tokens.delete(session.hookToken);
+        this.approvals?.dropSession(session.id);
         session.dispose();
     }
 
@@ -458,7 +498,8 @@ export class SessionManager {
             attached: session.attachedCount,
             exited: session.exited,
             ...(session.exitCode !== null ? { exitCode: session.exitCode } : {}),
-            agent: session.agent
+            agent: session.agent,
+            approvals: this.approvals?.forSession(session.id) ?? []
         };
     }
 
