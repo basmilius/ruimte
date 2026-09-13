@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatItem, ContextSource, DrawingElement } from '@ruimte/contracts';
-import { ContextStore, renderTranscript } from './context-store.ts';
+import { ContextStore, MAX_SCREEN_LINES, renderTranscript } from './context-store.ts';
 
 const items: ChatItem[] = [
     { id: 'u', kind: 'user', createdAt: 1, turnId: 't', text: 'fix the bug' },
@@ -35,8 +35,10 @@ const store = new ContextStore({
     targetForToken: (token) => (token === 'tok' ? 'agent' : null)
 });
 
-const get = (path: string, token?: string) =>
-    store.handle(new Request(`http://127.0.0.1${path}`, { headers: token ? { authorization: `Bearer ${token}` } : {} }), path);
+const get = (path: string, token?: string) => {
+    const url = new URL(`http://127.0.0.1${path}`);
+    return store.handle(new Request(url, { headers: token ? { authorization: `Bearer ${token}` } : {} }), url.pathname);
+};
 
 describe('ContextStore', () => {
     test('a file answers its path and a line telling the agent to read it itself', async () => {
@@ -66,6 +68,26 @@ describe('ContextStore', () => {
         expect(await store.read('agent', 'nope')).toBeNull();
     });
 
+    test('--tail is the last lines of each kind, and the screen cap stays the ceiling', async () => {
+        linked.set('agent', [
+            { id: 'note', kind: 'text', title: 'Sprint', text: 'one\ntwo\nthree' },
+            { id: 'term', kind: 'terminal', title: 'dev server' },
+            { id: 'chat', kind: 'chat', title: 'planner' },
+            { id: 'view-1', kind: 'drawing', title: 'Sketch' }
+        ]);
+        expect(await store.read('agent', 'note', 2)).toBe('two\nthree');
+        const screen = (await store.read('agent', 'term', 15)) ?? '';
+        expect(screen.split('\n')).toHaveLength(15);
+        expect(screen.endsWith('line 2499')).toBe(true);
+        // Past the cap it reads what the daemon keeps, not what was asked for.
+        expect(((await store.read('agent', 'term', 9000)) ?? '').split('\n')).toHaveLength(MAX_SCREEN_LINES);
+        expect(await store.read('agent', 'chat', 1)).toBe('Done.');
+        // A drawing tails its reading order; the picture is the expensive half and stays behind.
+        const sketch = (await store.read('agent', 'view-1', 5)) ?? '';
+        expect(sketch).toContain('Client');
+        expect(sketch).not.toContain('<svg');
+    });
+
     test('the HTTP face checks the token and answers list and read', async () => {
         linked.set('agent', [{ id: 'note', kind: 'text', title: 'Sprint', text: 'ship it' }]);
         expect((await get('/context')).status).toBe(401);
@@ -73,6 +95,10 @@ describe('ContextStore', () => {
         expect(await (await get('/context', 'tok')).json()).toEqual({ sources: [{ id: 'note', kind: 'text', title: 'Sprint' }] });
         expect(await (await get('/context/note', 'tok')).text()).toBe('ship it');
         expect((await get('/context/other', 'tok')).status).toBe(404);
+        linked.set('agent', [{ id: 'note', kind: 'text', title: 'Sprint', text: 'one\ntwo' }]);
+        expect(await (await get('/context/note?tail=1', 'tok')).text()).toBe('two');
+        expect((await get('/context/note?tail=0', 'tok')).status).toBe(400);
+        expect((await get('/context/note?tail=two', 'tok')).status).toBe(400);
     });
 
     test('a file answers with its path and never with its bytes', async () => {

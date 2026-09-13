@@ -11,6 +11,7 @@ let stderr: string;
 let restore: Array<() => void>;
 let seen: { verb: string; argv: unknown; authorization: string | null }[];
 let sources: { id: string; kind: string; title: string }[];
+let tails: string[];
 
 beforeAll(() => {
     server = Bun.serve({
@@ -22,7 +23,12 @@ beforeAll(() => {
                 return Response.json({ sources });
             }
             if (url.pathname === '/context/n1') {
-                return new Response('the plan');
+                const tail = url.searchParams.get('tail');
+                if (tail === null) {
+                    return new Response('the plan');
+                }
+                tails.push(tail);
+                return new Response('the last lines');
             }
             if (url.pathname === '/context/boom') {
                 return new Response('no', { status: 500 });
@@ -57,6 +63,7 @@ beforeEach(() => {
     stderr = '';
     seen = [];
     sources = [{ id: 'n1', kind: 'text', title: 'Plan' }];
+    tails = [];
     const out = spyOn(process.stdout, 'write').mockImplementation((chunk) => {
         stdout += String(chunk);
         return true;
@@ -101,12 +108,38 @@ describe('runContext', () => {
     test('read without an id is a refusal that lists what there is to read', async () => {
         expect(await runContext(['read'], env)).toBe(3);
         expect(stderr).toBe(
-            ['refused\tbad-arguments\tread takes the id of a linked source', 'usage\tread\t<id>', 'detail\truimte-context help read', 'n1\ttext\tPlan'].join(
-                '\n'
-            ) + '\n'
+            [
+                'refused\tbad-arguments\tread takes the id of a linked source',
+                'usage\tread\t<id> [--tail N]',
+                'detail\truimte-context help read',
+                'n1\ttext\tPlan'
+            ].join('\n') + '\n'
         );
         expect(stdout).toBe('');
         expect(seen).toEqual([]);
+    });
+
+    test('--tail rides along as a query the daemon counts, written either way', async () => {
+        expect(await runContext(['read', 'n1', '--tail', '15'], env)).toBe(0);
+        expect(await runContext(['read', 'n1', '--tail=15'], env)).toBe(0);
+        expect(tails).toEqual(['15', '15']);
+        expect(stdout).toBe('the last lines\nthe last lines\n');
+    });
+
+    test('a --tail that is not a positive whole number is refused before anything is asked', async () => {
+        for (const argv of [
+            ['read', 'n1', '--tail'],
+            ['read', 'n1', '--tail', 'two'],
+            ['read', 'n1', '--tail', '0'],
+            ['read', 'n1', '--tail=-3'],
+            ['read', 'n1', '--tail', '1.5']
+        ]) {
+            stderr = '';
+            tails = [];
+            expect(await runContext(argv, env)).toBe(3);
+            expect(stderr).toStartWith('refused\tbad-arguments\t--tail needs a positive whole number of lines');
+            expect(tails).toEqual([]);
+        }
     });
 
     test('a source that is not linked is a refusal that names the ones that are', async () => {

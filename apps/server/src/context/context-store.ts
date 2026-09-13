@@ -6,6 +6,12 @@ export const CONTEXT_PATH = '/context';
 // A screen is read live; this keeps a long scrollback from flooding an agent's context.
 export const MAX_SCREEN_LINES = 2000;
 
+/* The last `count` lines of a text, which is what `--tail` asks for. */
+const lastLines = (text: string, count: number): string => {
+    const lines = text.split('\n');
+    return lines.slice(Math.max(0, lines.length - count)).join('\n');
+};
+
 interface ContextReaders {
     /* What the agent under this id may read, derived from the project documents the daemon knows. */
     sources(targetId: string): ContextSource[];
@@ -75,42 +81,52 @@ export class ContextStore {
         return this.readers.sources(targetId).map(({ text: _text, ...source }) => source);
     }
 
-    async read(targetId: string, sourceId: string): Promise<string | null> {
+    /*
+     * One source as text. `tail` is the cheap read: the last lines of it, counted here rather than
+     * in the CLI, because only this side knows what a line of each kind is (a chat and a drawing
+     * are rendered here) and because the wire then carries fifteen lines instead of two thousand.
+     */
+    async read(targetId: string, sourceId: string, tail: number | null = null): Promise<string | null> {
         const source = this.readers.sources(targetId).find((entry) => entry.id === sourceId);
         if (!source) {
             return null;
         }
         switch (source.kind) {
             case 'text':
-                return source.text ?? '';
+                return tail === null ? (source.text ?? '') : lastLines(source.text ?? '', tail);
             case 'terminal': {
                 const text = await this.readers.terminalText(source.id);
                 if (text === null) {
                     return null;
                 }
-                const lines = text.split('\n');
-                return lines.slice(Math.max(0, lines.length - MAX_SCREEN_LINES)).join('\n');
+                // The screen cap stays the ceiling: a --tail past it cannot reach further back than the daemon keeps.
+                return lastLines(text, Math.min(tail ?? MAX_SCREEN_LINES, MAX_SCREEN_LINES));
             }
             case 'chat': {
                 const items = this.readers.chatItems(source.id);
-                return items ? renderTranscript(items) : null;
+                if (!items) {
+                    return null;
+                }
+                const transcript = renderTranscript(items);
+                return tail === null ? transcript : lastLines(transcript, tail);
             }
             case 'drawing': {
                 const elements = await this.readers.drawingElements(source.id);
-                return elements ? renderDrawing(elements) : null;
+                return elements ? renderDrawing(elements, tail) : null;
             }
             /*
              * The path, never the bytes. An agent has file tools of its own, so reading it there is
              * fresher than whatever this answered, it does not count twice against the window, and a
              * file of a megabyte cannot push the rest of the context out. A drawing is the opposite
              * case, which is why that one is rendered here: an agent can read it nowhere else.
+             * Three lines is the whole answer, so `--tail` has nothing to leave out here.
              */
             case 'file':
                 return source.text ? `This is a file on disk. Read it with your own tools.\n\n${source.text}` : null;
         }
     }
 
-    /* `GET /context` lists, `GET /context/<id>` reads; the bearer token names the agent asking. */
+    /* `GET /context` lists, `GET /context/<id>[?tail=N]` reads; the bearer token names the agent asking. */
     async handle(request: Request, pathname: string): Promise<Response> {
         if (request.method !== 'GET') {
             return new Response('Method not allowed', { status: 405 });
@@ -125,7 +141,12 @@ export class ContextStore {
         if (rest === '') {
             return Response.json({ sources: this.list(targetId) });
         }
-        const text = await this.read(targetId, decodeURIComponent(rest));
+        const asked = new URL(request.url).searchParams.get('tail');
+        const tail = asked === null ? null : Number(asked);
+        if (tail !== null && (!Number.isInteger(tail) || tail < 1)) {
+            return new Response('tail takes a positive whole number of lines', { status: 400 });
+        }
+        const text = await this.read(targetId, decodeURIComponent(rest), tail);
         if (text === null) {
             return new Response('No such source', { status: 404 });
         }

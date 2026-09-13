@@ -5,11 +5,12 @@ import { escapeText } from '../canvas/text-escapes.ts';
  * what the person linked to this agent on the canvas, and changes the canvas through the verbs the
  * daemon knows, with the address and the token from the environment the daemon gave the session.
  *
- *   ruimte-context              lists the linked sources
- *   ruimte-context read <id>    prints one of them
- *   ruimte-context help         lists all of the above and every canvas verb
- *   ruimte-context help <verb>  everything that one verb takes
- *   ruimte-context <verb> ...   runs one; the daemon parses the arguments
+ *   ruimte-context                      lists the linked sources
+ *   ruimte-context read <id>            prints one of them
+ *   ruimte-context read <id> --tail N   prints its last N lines
+ *   ruimte-context help                 lists all of the above and every canvas verb
+ *   ruimte-context help <verb>          everything that one verb takes
+ *   ruimte-context <verb> ...           runs one; the daemon parses the arguments
  *
  * Exit codes: 0 done, 1 the daemon could not be reached or failed, 2 not inside a session, 3 a
  * refusal (an unknown verb, bad arguments, a rule of the project, or a `read` of nothing linked).
@@ -49,14 +50,18 @@ export const runContext = async (
     if (command === 'read') {
         if (!id) {
             return refuse('bad-arguments', 'read takes the id of a linked source', [
-                'usage\tread\t<id>',
+                READ_USAGE,
                 'detail\truimte-context help read',
                 ...(await linkedLines(url, headers))
             ]);
         }
+        const tail = tailOf(args.slice(2));
+        if (tail === 'bad') {
+            return refuse('bad-arguments', '--tail needs a positive whole number of lines', [READ_USAGE, 'detail\truimte-context help read']);
+        }
         let response: Response;
         try {
-            response = await fetch(`${url}/${encodeURIComponent(id)}`, { headers });
+            response = await fetch(`${url}/${encodeURIComponent(id)}${tail === null ? '' : `?tail=${tail}`}`, { headers });
         } catch (e) {
             console.error(unreachable(e));
             return 1;
@@ -80,6 +85,27 @@ interface ContextRow {
     kind: string;
     title: string;
 }
+
+const READ_USAGE = 'usage\tread\t<id> [--tail N]';
+
+/*
+ * The `--tail N` of a read: the number, null when it was not asked for, and 'bad' for anything that
+ * is not a positive whole number. The daemon does the counting, so this only has to be sure it is
+ * sending a number at all rather than letting `--tail two` arrive as a query nobody can read.
+ */
+const tailOf = (argv: readonly string[]): number | null | 'bad' => {
+    const index = argv.findIndex((word) => word === '--tail' || word.startsWith('--tail='));
+    if (index === -1) {
+        return null;
+    }
+    const word = argv[index]!;
+    const value = word === '--tail' ? argv[index + 1] : word.slice('--tail='.length);
+    const count = Number(value);
+    if (value === undefined || value === '' || !Number.isInteger(count) || count < 1) {
+        return 'bad';
+    }
+    return count;
+};
 
 const fetchSources = async (url: string, headers: Record<string, string>): Promise<ContextRow[]> => {
     let response: Response;

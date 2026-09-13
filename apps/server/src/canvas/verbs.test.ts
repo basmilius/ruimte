@@ -200,7 +200,7 @@ describe('help', () => {
         expect(status).toBe(200);
         expect(lines.slice(0, -4)).toEqual(VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`));
         expect(lines.map((line) => line.split('\t')[0])).toEqual([...VERBS.map(() => 'verb'), 'scope', 'dry run', 'detail', 'refusal']);
-        expect(lines[2]).toBe('verb\tread\t<id>\tPrints one linked source');
+        expect(lines[2]).toBe('verb\tread\t<id> [--tail N]\tPrints one linked source, whole or its last N lines');
         expect(lines.at(-4)).toStartWith('scope\tlist and read are what a person linked into this session;');
         expect(lines.at(-3)).toBe('dry run\t--dry-run\tnode, agent, team\tsame checks, nothing made; every other verb refuses the flag');
         expect(lines.at(-2)).toBe('detail\truimte-context help <verb>\tone verb in full');

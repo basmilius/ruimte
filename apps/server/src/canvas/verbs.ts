@@ -79,16 +79,18 @@ const listVerb: ContextVerb = {
 const readVerb: ContextVerb = {
     served: 'context',
     name: 'read',
-    usage: '<id>',
-    summary: 'Prints one linked source',
+    usage: '<id> [--tail N]',
+    summary: 'Prints one linked source, whole or its last N lines',
     detail: [
         'argument\t<id>\trequired\tThe id of a source, from ruimte-context list',
+        'flag\t--tail N\toptional\tOnly the last N lines, N a positive whole number; without it the whole source',
         'prints\tThe source itself, as text, not as tab-separated lines',
-        'kind\ttext\tThe text the person wrote: a note, a text on the canvas or a browser address',
-        `kind\tterminal\tThe screen of that session, its last ${MAX_SCREEN_LINES} lines, read the moment you ask`,
-        'kind\tchat\tThe whole thread as markdown: who said what, and what every tool ran',
-        'kind\tdrawing\tThe text of the drawing in reading order, and the picture itself as SVG under it',
-        'kind\tfile\tIts path and a line telling you to read it yourself, since your own tools see a fresher copy',
+        'kind\ttext\tThe text the person wrote: a note, a text on the canvas or a browser address\t--tail counts its lines',
+        `kind\tterminal\tThe screen of that session, its last ${MAX_SCREEN_LINES} lines, read the moment you ask\t--tail counts screen lines and cannot reach past those ${MAX_SCREEN_LINES}`,
+        'kind\tchat\tThe whole thread as markdown: who said what, and what every tool ran\t--tail counts lines of that markdown, so it ends on the latest turn',
+        'kind\tdrawing\tThe text of the drawing in reading order, and the picture itself as SVG under it\t--tail counts lines of the reading order and leaves the SVG out',
+        'kind\tfile\tIts path and a line telling you to read it yourself, since your own tools see a fresher copy\t--tail does nothing here',
+        'cheap\tThe last fifteen lines of a neighbour is usually the whole answer; read the source whole only when it is not',
         SCOPE_LINE
     ]
 };
