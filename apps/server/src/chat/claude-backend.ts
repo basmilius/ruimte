@@ -1,5 +1,5 @@
 import type { Subprocess } from 'bun';
-import { CONTEXT_PROMPT } from '../context/context-note.ts';
+import { chatPrompt } from '../context/context-note.ts';
 import { claudeArgs, promptPrefix } from '../providers/claude.ts';
 import type { ApprovalDecision, BackendHost, BackendLaunch, ChatBackend, TurnInput } from './backend.ts';
 import { ClaudeProtocol } from './claude-protocol.ts';
@@ -45,9 +45,7 @@ export class ClaudeBackend implements ChatBackend {
         }
         const { selection, runtimeMode, resume } = this.launch;
         const args = [...this.launch.command, ...claudeArgs({ selection, runtimeMode, resume })];
-        if (this.launch.hasContext) {
-            args.push('--append-system-prompt', CONTEXT_PROMPT);
-        }
+        args.push('--append-system-prompt', chatPrompt(this.launch.hasContext));
         this.stdinClosed = false;
         const process: ChatProcess = Bun.spawn(args, {
             cwd: this.launch.cwd,

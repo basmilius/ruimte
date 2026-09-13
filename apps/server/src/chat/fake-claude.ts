@@ -6,7 +6,8 @@
  * `background: <seconds> <summary>` launches a subagent and wakes the main agent when it settles,
  * the way the CLI does that on its own, `delegate: <description>` runs one in the foreground and
  * answers the call with its report, `slow` waits for an interrupt, `crash` dies. The init frame
- * carries the argument list as `argv`, so a test can see which flags a session started with.
+ * carries the argument list as `argv`, so a test can see which flags a session started with, and
+ * `system?` answers with the `--append-system-prompt` the session was started with.
  */
 import { writeFileSync } from 'node:fs';
 
@@ -352,6 +353,12 @@ const handleUser = (text: string): void => {
                 ]
             }
         });
+        return;
+    }
+    if (text === 'system?') {
+        const at = args.indexOf('--append-system-prompt');
+        assistantText(at >= 0 ? args[at + 1]! : 'none');
+        result();
         return;
     }
     assistantText(`echo: ${text}`);

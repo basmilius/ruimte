@@ -1,12 +1,17 @@
 import type { ContextSource } from '@ruimte/contracts';
 
-/*
- * What a linked agent is told once at the start of a chat, so it knows the CLI exists without
- * being nagged every turn. A provider with a system prompt flag passes it there; one without it
- * puts it in front of the first prompt.
- */
-export const CONTEXT_PROMPT =
+/* Said once to every agent, linked or not, so it knows the verbs exist before anyone links a thing. */
+export const VERBS_NOTE = 'Ruimte: `ruimte-context` reads context linked to you and places nodes on the canvas; `ruimte-context help` lists what it does.';
+
+const CONTEXT_PROMPT =
     'The person linked context to this chat on their canvas. Run `ruimte-context` to list it and `ruimte-context read <id>` to read one item, whenever it could help.';
+
+/*
+ * What an agent is told once at the start of a chat process, so it knows the CLI without being
+ * nagged every turn. A provider with a system prompt flag passes it there; one without it puts it
+ * in front of the first prompt.
+ */
+export const chatPrompt = (hasContext: boolean): string => (hasContext ? `${VERBS_NOTE} ${CONTEXT_PROMPT}` : VERBS_NOTE);
 
 // Past this many, a busy canvas would flood a prompt line; the rest becomes a count.
 const MAX_NAMED = 5;
@@ -29,6 +34,18 @@ export const contextHint = (sources: ContextSource[]): string | null => {
         return null;
     }
     return `Ruimte: linked context is available with ruimte-context (list, read <id>): ${nameSources(sources)}.`;
+};
+
+/*
+ * What Claude Code's hooks fold into the model's context. `SessionStart` always carries the verbs,
+ * once per CLI life; a prompt only hears about links, so a turn is never nagged.
+ */
+export const hookContext = (event: string, sources: ContextSource[]): string | null => {
+    const hint = contextHint(sources);
+    if (event !== 'SessionStart') {
+        return hint;
+    }
+    return hint === null ? VERBS_NOTE : `${VERBS_NOTE} ${hint}`;
 };
 
 /*

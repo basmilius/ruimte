@@ -6,6 +6,7 @@ import type { ChatEvent, ChatInfo, ChatItem } from '@ruimte/contracts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { waitFor, waitForAsync } from '../sessions/test-helpers.ts';
+import { VERBS_NOTE } from '../context/context-note.ts';
 import { AttachmentStore } from './attachment-store.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatStore } from './chat-store.ts';
@@ -263,6 +264,13 @@ describe('ChatManager with Codex', () => {
         expect(other.info?.usage.turns).toBe(2);
         await again.shutdown();
         again.get('chat-5')?.dispose();
+    });
+
+    test('the first prompt of a process carries the note about the verbs', async () => {
+        await open('chat-note');
+        await manager.send('chat-note', 'note?');
+        await waitFor(idle, 'the turn to end');
+        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual([VERBS_NOTE]);
     });
 
     test('a thread Codex no longer has starts fresh with a warning', async () => {

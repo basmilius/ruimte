@@ -6,6 +6,7 @@ import type { ChatEvent, ChatInfo, ChatItem, ContextSource } from '@ruimte/contr
 import { ProviderRegistry } from '../providers/registry.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { waitFor, waitForAsync } from '../sessions/test-helpers.ts';
+import { VERBS_NOTE } from '../context/context-note.ts';
 import { Checkpoints } from '../git/checkpoints.ts';
 import { AttachmentStore } from './attachment-store.ts';
 import { ChatManager } from './chat-manager.ts';
@@ -268,6 +269,31 @@ describe('ChatManager', () => {
         await manager.send('chat-k', 'compact');
         await waitFor(idle, 'the turn to end');
         expect(recorder.ofKind('compaction')[0]).toMatchObject({ preTokens: 5000 });
+    });
+
+    test('the system prompt names the verbs always and the links only when there are some', async () => {
+        await manager.create({ chatId: 'chat-sys', cwd: home });
+        manager.attach('chat-sys', 'c1');
+        await manager.send('chat-sys', 'system?');
+        await waitFor(idle, 'the turn to end');
+        expect(recorder.ofKind('assistant')[0]?.text).toBe(VERBS_NOTE);
+
+        await manager.shutdown();
+        manager = new ChatManager({
+            providers,
+            store,
+            attachments,
+            command: FAKE,
+            env: { PATH: process.env.PATH, HOME: home },
+            hasContext: () => true
+        });
+        const linked = new ChatRecorder();
+        manager.subscribe('c2', linked.sink());
+        await manager.create({ chatId: 'chat-sys-2', cwd: home });
+        manager.attach('chat-sys-2', 'c2');
+        await manager.send('chat-sys-2', 'system?');
+        await waitFor(() => linked.ofKind('assistant').length === 1, 'the turn to end');
+        expect(linked.ofKind('assistant')[0]?.text).toStartWith(`${VERBS_NOTE} The person linked context to this chat on their canvas.`);
     });
 
     test('a link made between turns is put in front of the next prompt, once, as a note', async () => {

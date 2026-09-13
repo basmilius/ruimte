@@ -2,9 +2,12 @@
  * Stands in for `codex app-server` in tests: the same JSON-RPC methods and notifications, no
  * network. `tool: <cmd>` asks approval for a command, `edit: <path>` for a file change, `ask: <q>`
  * asks a blocking question, `async: <q>` asks through an agent message and waits for a steer,
- * `slow` waits for an interrupt, `fail` ends the turn failed, `crash` dies. The thread echoes the
+ * `slow` waits for an interrupt, `fail` ends the turn failed, `crash` dies, `note?` answers with
+ * what Ruimte put in front of the first prompt. The thread echoes the
  * model and the sandbox it was started with, so a test can see what a session asked for.
  */
+import { VERBS_NOTE } from '../context/context-note.ts';
+
 type Frame = Record<string, unknown>;
 
 const out = (frame: unknown): void => {
@@ -19,6 +22,7 @@ let threadSandbox = '';
 let threadApproval = '';
 let turnId = '';
 let turnEffort: string | null = null;
+let firstPromptNote: string | null = null;
 
 const notify = (method: string, params: unknown): void => {
     out({ method, params, emittedAtMs: Date.now() });
@@ -93,7 +97,19 @@ const askApproval = (kind: 'command' | 'fileChange', entry: Frame, params: Frame
 const handleTurnStart = (params: Frame): void => {
     turnEffort = typeof params.effort === 'string' ? params.effort : null;
     const input = Array.isArray(params.input) ? (params.input[0] as { text?: string } | undefined) : undefined;
-    const text = input?.text ?? '';
+    const raw = input?.text ?? '';
+    // Codex has no system prompt, so Ruimte puts its note in front of the first prompt; `note?` asks for it back.
+    const noted = raw.startsWith(`${VERBS_NOTE}\n\n`);
+    if (noted) {
+        firstPromptNote = VERBS_NOTE;
+    }
+    const text = noted ? raw.slice(VERBS_NOTE.length + 2) : raw;
+    if (text === 'note?') {
+        turnStarted();
+        agentMessage(firstPromptNote ?? 'nothing');
+        turnCompleted('completed');
+        return;
+    }
     turnStarted();
     const user = item('userMessage', { clientId: null, content: [{ type: 'text', text, text_elements: [] }] });
     started(user);

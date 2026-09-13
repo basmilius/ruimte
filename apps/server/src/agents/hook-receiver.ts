@@ -33,7 +33,7 @@ export const handleHookRequest = async (
     request: Request,
     pathname: string,
     target: HookTarget,
-    contextHintForToken?: (token: string) => string | null
+    contextHintForToken?: (token: string, event: string) => string | null
 ): Promise<Response> => {
     if (request.method !== 'POST') {
         return new Response('Method not allowed', { status: 405 });
@@ -63,7 +63,7 @@ export const handleHookRequest = async (
     }
     const event = eventOf(body);
     if (kind.data === 'claude' && event !== null && CONTEXT_EVENTS.has(event)) {
-        const hint = contextHintForToken?.(token) ?? null;
+        const hint = contextHintForToken?.(token, event) ?? null;
         if (hint !== null) {
             return Response.json({ hookSpecificOutput: { hookEventName: event, additionalContext: hint } });
         }

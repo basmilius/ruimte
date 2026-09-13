@@ -15,7 +15,7 @@ import { ATTACHMENTS_PATH, handleAttachmentRequest } from './chat/attachment-rou
 import { AttachmentStore } from './chat/attachment-store.ts';
 import { CANVAS_PATH, handleCanvasRequest } from './canvas/canvas-route.ts';
 import { ChatManager } from './chat/chat-manager.ts';
-import { contextHint } from './context/context-note.ts';
+import { hookContext } from './context/context-note.ts';
 import { CONTEXT_PATH, ContextStore } from './context/context-store.ts';
 import { ChatStore } from './chat/chat-store.ts';
 import type { ServerConfig } from './config.ts';
@@ -302,9 +302,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }
 
             if (url.pathname.startsWith(`${HOOKS_PATH}/`)) {
-                return handleHookRequest(request, url.pathname, manager, (token) => {
+                return handleHookRequest(request, url.pathname, manager, (token, event) => {
                     const sessionId = manager.sessionIdForToken(token);
-                    return sessionId ? contextHint(context.list(sessionId)) : null;
+                    return sessionId ? hookContext(event, context.list(sessionId)) : null;
                 });
             }
 

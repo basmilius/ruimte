@@ -54,6 +54,24 @@ describe('handleHookRequest', () => {
         expect(((await start.json()) as { hookSpecificOutput: { hookEventName: string } }).hookSpecificOutput.hookEventName).toBe('SessionStart');
     });
 
+    test('hands the hint callback the event it answers', async () => {
+        const seen: string[] = [];
+        const hint = (_token: string, event: string) => {
+            seen.push(event);
+            return event === 'SessionStart' ? 'verbs' : null;
+        };
+        const start = await handleHookRequest(post('/hooks/claude', '{"hook_event_name":"SessionStart"}', 'tok'), '/hooks/claude', target('applied'), hint);
+        expect(await start.json()).toEqual({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: 'verbs' } });
+        const prompt = await handleHookRequest(
+            post('/hooks/claude', '{"hook_event_name":"UserPromptSubmit"}', 'tok'),
+            '/hooks/claude',
+            target('applied'),
+            hint
+        );
+        expect(prompt.status).toBe(204);
+        expect(seen).toEqual(['SessionStart', 'UserPromptSubmit']);
+    });
+
     test('stays empty without links, on other events, and for Codex', async () => {
         const hint = () => 'hint';
         const none = () => null;

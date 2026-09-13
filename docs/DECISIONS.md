@@ -615,13 +615,20 @@ Also decided against for now: a scheduler, checkpoint restore and telemetry.
   read without a token; the repository goes public with the first release, or the feed moves to
   ruimte.app (`publish.provider: generic`).
 - How an agent learns that `ruimte-context` exists (`apps/server/src/context/context-note.ts`):
-  a chat gets a sentence in its system prompt when it has links at process start and a note in
-  front of the next prompt when the set changed between turns (also shown as an info note in
-  the thread); a shell that has links when it is created gets one dimmed line above its first
-  prompt (on the screen only, never typed into the PTY); a Claude Code agent inside a shell
-  gets the hint as `additionalContext` from its `SessionStart` and `UserPromptSubmit` hooks,
-  which is why the hook command prints curl's reply now. A link made while a shell is already
-  running is only visible as the "context" chip in the node header and to the hooks.
+  one sentence names the verbs (`VERBS_NOTE`) and goes out whether or not anything is linked,
+  once per CLI life, so an agent knows the canvas is there before the first edge is drawn and is
+  not nagged with it every turn. A chat gets it at process start, in the system prompt where the
+  CLI has a flag for one (Claude Code) and in front of the first prompt where it has none
+  (Codex), with the sentence about the links behind it when the chat has links at that moment; a
+  Claude Code agent inside a shell gets it as `additionalContext` from its `SessionStart` hook,
+  which is why the hook command prints curl's reply now. Everything after that is about links
+  only: `UserPromptSubmit` answers with the linked-context hint and nothing else, a chat whose
+  set of links changed between turns gets a note in front of the next prompt (also shown as an
+  info note in the thread), and a plain shell keeps one dimmed line above its first prompt when
+  it has links and stays silent when it has none (on the screen only, never typed into the PTY):
+  a shell is not an agent, and a line about verbs above every `cd` would be noise. A link made
+  while a shell is already running is only visible as the "context" chip in the node header and
+  to the hooks.
 - The app-server frames have no `jsonrpc` field: `{ id, method, params }` out, `{ id, result }`
   or `{ id, error }` back, `{ method, params }` for notifications, and the server's own requests
   (approvals, questions) arrive with an `id` that starts at 0 for every process. Approval item

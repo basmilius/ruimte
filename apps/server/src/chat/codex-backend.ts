@@ -1,5 +1,5 @@
 import type { ChatSkill } from '@ruimte/contracts';
-import { CONTEXT_PROMPT } from '../context/context-note.ts';
+import { chatPrompt } from '../context/context-note.ts';
 import { codexServiceTier, codexThreadOptions } from '../providers/codex.ts';
 import type { ApprovalDecision, BackendEvent, BackendHost, BackendLaunch, ChatBackend, TurnInput } from './backend.ts';
 import { CodexProtocol } from './codex-protocol.ts';
@@ -49,15 +49,14 @@ export class CodexBackend implements ChatBackend {
     private transport: CodexTransport | null = null;
     private threadId = '';
     private exitTimer: ReturnType<typeof setTimeout> | null = null;
-    // Linked context is told once per process, in front of the first prompt it takes.
-    private hintPending: boolean;
+    // The note about ruimte-context is told once per process, in front of the first prompt it takes.
+    private hintPending = true;
 
     constructor(launch: BackendLaunch, host: BackendHost) {
         this.launch = launch;
         this.host = host;
         this.protocol = new CodexProtocol(launch.generation);
         this.threadId = launch.resume ?? '';
-        this.hintPending = launch.hasContext;
     }
 
     get running(): boolean {
@@ -113,7 +112,7 @@ export class CodexBackend implements ChatBackend {
         const parts: string[] = [];
         if (this.hintPending) {
             this.hintPending = false;
-            parts.push(`${CONTEXT_PROMPT}\n\n`);
+            parts.push(`${chatPrompt(this.launch.hasContext)}\n\n`);
         }
         if (input.preamble !== null) {
             parts.push(`${input.preamble}\n\n`);

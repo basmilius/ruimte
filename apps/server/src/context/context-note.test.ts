@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ContextSource } from '@ruimte/contracts';
-import { contextChangeNote, contextHint } from './context-note.ts';
+import { chatPrompt, contextChangeNote, contextHint, hookContext, VERBS_NOTE } from './context-note.ts';
 
 const text: ContextSource = { id: 'text-1', kind: 'text', title: 'Sprint goals' };
 const terminal: ContextSource = { id: 'term-1', kind: 'terminal', title: 'dev server' };
@@ -19,6 +19,22 @@ describe('contextHint', () => {
         const hint = contextHint(many);
         expect(hint).toContain('"Note 4" (text) and 3 more.');
         expect(hint).not.toContain('Note 5');
+    });
+});
+
+describe('chatPrompt', () => {
+    test('always names the verbs, and the links only when there are some', () => {
+        expect(chatPrompt(false)).toBe(VERBS_NOTE);
+        expect(chatPrompt(true)).toStartWith(`${VERBS_NOTE} The person linked context to this chat`);
+    });
+});
+
+describe('hookContext', () => {
+    test('SessionStart always carries the verbs, a prompt only the links', () => {
+        expect(hookContext('SessionStart', [])).toBe(VERBS_NOTE);
+        expect(hookContext('SessionStart', [text])).toBe(`${VERBS_NOTE} ${contextHint([text])}`);
+        expect(hookContext('UserPromptSubmit', [])).toBeNull();
+        expect(hookContext('UserPromptSubmit', [text])).toBe(contextHint([text]));
     });
 });
 
