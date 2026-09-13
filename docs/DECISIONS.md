@@ -979,9 +979,8 @@ a day, several days. Each of the larger ones becomes a GitHub issue when it star
 15. **Two projects side by side**: `openWorkspace` and the four stores per workspace are there, the
     layout is not. `docs/research/windows.md` is the design: a project opens in a window of its own
     rather than in a split pane.
-16. **Smaller ones**: a link made while a shell already runs is only visible in the header and
-    to the hooks (a `precmd` probe was judged too invasive); a color or an arrowhead per plain
-    line; a note's title as the first heading of its body.
+16. **Smaller ones**: a color or an arrowhead per plain line; a note's title as the first heading
+    of its body.
 
 Known gaps to keep in mind: the WebGL budget is a fixed 10 contexts, not a setting and not
 measured against what a given machine really keeps alive; the 30-node performance target is
