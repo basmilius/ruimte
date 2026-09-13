@@ -194,6 +194,18 @@ canvas, against Ruimte, one verdict each.
   arrives late and one that missed a settle agree) and comes back as `agent.answerApproval`, which
   answers whether it was in time. The choices are the CLI's own `permission_suggestions`, held on
   the daemon and handed back verbatim, so a client never learns a CLI's permission vocabulary.
+- **Who wants to be asked is a question about the clients, and only then about the daemon.** The
+  switch a person sees is a client setting (`agentsApprovals`, on), and the client tells every
+  machine it holds a socket to with `agent.setApprovals`. The daemon already asked "is anybody
+  there" before it held anything; the preference makes that question honest instead of assuming
+  every attached client will offer the request to somebody. Nothing is held while every attached
+  client has said no, so a client with the switch off costs a turn nothing rather than parking a
+  hook for 110 seconds nobody can answer, and a second client that does want them is asked exactly
+  as before. Silence means yes, so a client written before the switch keeps working; the
+  preference lives with the socket, so a reconnect says it again. The strip also checks the
+  setting itself, which is what makes the switch act at once on a request that is already open.
+  `--no-approvals` stays what it was, one level up: the machine's own answer, for every client,
+  which is what an operator reaches for and not what a person clicks.
 - A chat process is not started when the node mounts, only on the first message, so a canvas
   full of chat nodes costs nothing until used.
 - A turn's checkpoint diff compares two trees of ours, not the tree against the working tree:
@@ -836,6 +848,16 @@ follows is what the report left open and what the build decided.
   mark and a marked node loses it the moment it comes into sight. Nothing is on a timer, and nothing
   has to remember to clear: every pass counts the project from scratch, so a subscription that misses
   a change delays a clear by one event instead of leaving a stale mark behind.
+- **The mark is the finished count's own glyph, and it is nothing to press.** A node whose turn
+  ended out of sight wears the check the toolbar wears (`attention/UnseenMark.tsx`), in the idle
+  color and not in the warning one a stuck agent gets: a turn that finished is good news, and the
+  two marks stand beside each other in the same header, so they had better not read alike. It is
+  drawn on the node header and on the sidebar row, the two places the process warning is already
+  drawn, and not in the processes panel, whose rows are about a machine's process table and have
+  nothing to say about who looked at what. Up close the mark is already gone, since looking clears
+  it: what it is for is the canvas zoomed out over everything and the window standing beside
+  another app. `clearUnseen` is still there for a dismiss and still has no caller, because a
+  button would be a second answer to a question the camera already answers.
 - **A turn that stopped to ask did not end.** `needs-you` is a person's turn and the needs-you count
   is already about it, so it never becomes a finished mark. That is also what keeps the dock badge
   from counting one node twice.
@@ -1053,14 +1075,14 @@ a day, several days. Each of the larger ones becomes a GitHub issue when it star
 
    Hook-reply approvals for terminal agents are built: Claude's `PermissionRequest` is held on the
    daemon and answered from the node header (the decision above, the hook's real contract among the
-   gotchas). Two things that entry named are still open: the notification that would let a person
-   answer without looking at the canvas, and a client setting for it, since the daemon has
-   `--no-approvals` and nothing in the Settings pane says so.
-   Of attention, everything but the dot itself is built and is below: the
-   state behind the mark is `apps/client/src/state/attention.ts`, and what is left is a node header
-   drawing it, which is `useUnseen(nodeId)` and nothing more. The "Finished" count, the turn-done
-   notification with its sound toggle, the dock badge and the quit guard are done, and so is keeping
-   the machine awake.
+   gotchas), with "Ask me for permission in the node" in the Agents pane saying whether this client
+   wants them at all. What is left of that entry is the notification, which would let a person
+   answer a permission without looking at the canvas; it waits until the one for a turn that ended
+   has been lived with, since they arrive at the same desk.
+   Attention is done, including the mark itself: `state/attention.ts` counts, `attention/UnseenMark.tsx`
+   draws it on the node header and the sidebar row, and the "Finished" count, the turn-done
+   notification with its sound toggle, the dock badge, the quit guard and keeping the machine awake
+   were already there.
 7. **Terminal basics**, about two days. Search on Cmd+F, clickable file paths and URLs across
    wrapped rows, OSC 52 clipboard, a dropped file types its quoted path, Unicode 11 widths on both
    xterms, "Clear" in the node menu. Then "Send to linked chat" (a terminal selection lands as a
