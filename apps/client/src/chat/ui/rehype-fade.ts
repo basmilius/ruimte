@@ -19,6 +19,9 @@ interface HastParent {
 
 export const FADE_CLASS = 'chat-fade';
 
+// A reply written out of sight, which appears in one piece rather than a word at a time.
+export const WHOLE_FADE_CLASS = 'chat-fade-whole';
+
 // Code is read as one string by the renderer, so a span inside it would come out as "[object Object]".
 const SKIPPED = new Set(['code', 'pre']);
 

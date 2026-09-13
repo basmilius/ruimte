@@ -9,7 +9,7 @@ import { tokenizeChips } from '@/chat/mentions';
 import { CHIP_IN_MESSAGE, MENTION_TONE, SKILL_TONE } from '@/chat/ui/chips';
 import { ImageThumb } from '@/chat/ui/ImageView';
 import { ReplyMarkdown } from '@/chat/ui/Markdown';
-import { FADE_CLASS, isWhitespace, wordSegments } from '@/chat/ui/rehype-fade';
+import { FADE_CLASS, WHOLE_FADE_CLASS, isWhitespace, wordSegments } from '@/chat/ui/rehype-fade';
 import { useRevealedText } from '@/chat/ui/reveal';
 import { formatDuration } from '@/chat/logic/timeline';
 import { toolSummary } from '@/chat/logic/tools';
@@ -103,7 +103,7 @@ export function AssistantRow({ item }: { item: ChatAssistantItem }) {
     const stream = useSettings((s) => s.chatStreaming);
     const [sawWriting] = useState(item.streaming);
     const live = stream && item.streaming;
-    const text = useRevealedText(item.text, live);
+    const reveal = useRevealedText(item.text, live);
 
     if (!stream && item.streaming) {
         return (
@@ -113,8 +113,8 @@ export function AssistantRow({ item }: { item: ChatAssistantItem }) {
         );
     }
     return (
-        <div className={clsx('-mx-1 px-1 pb-2', !stream && sawWriting && FADE_CLASS)}>
-            <ReplyMarkdown text={text} streaming={live} />
+        <div className={clsx('-mx-1 px-1 pb-2', !stream && sawWriting && WHOLE_FADE_CLASS)}>
+            <ReplyMarkdown text={reveal.text} streaming={reveal.active} />
             {live && item.text === '' && <span className="inline-block h-3.5 w-1.5 animate-pulse rounded-sm bg-text-faint align-middle" />}
         </div>
     );
@@ -145,10 +145,9 @@ function FadingWords({ text }: { text: string }) {
 export function ThinkingRow({ item }: { item: ChatThinkingItem }) {
     const stream = useSettings((s) => s.chatStreaming);
     const [open, setOpen] = useState(false);
-    const live = stream && item.streaming;
-    const text = useRevealedText(item.text, live);
+    const reveal = useRevealedText(item.text, stream && item.streaming);
     // Not streamed, the thought stays behind "Thinking..." until it is done and then folds like any other.
-    const shown = open || live;
+    const shown = open || reveal.active;
     return (
         <div className="-mx-1 px-1 pb-2">
             <button className="flex items-center gap-2 text-xs text-text-muted hover:text-text" disabled={item.streaming} onClick={() => setOpen((o) => !o)}>
@@ -164,9 +163,9 @@ export function ThinkingRow({ item }: { item: ChatThinkingItem }) {
                     </>
                 )}
             </button>
-            {shown && text !== '' && (
+            {shown && reveal.text !== '' && (
                 <div className="mt-1 border-l border-border pl-2.5 text-sm whitespace-pre-wrap text-text-faint select-text">
-                    {live ? <FadingWords text={text} /> : text}
+                    {reveal.active ? <FadingWords text={reveal.text} /> : reveal.text}
                 </div>
             )}
         </div>

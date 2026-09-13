@@ -1029,12 +1029,23 @@ decided.
 - Replies came in chunks although every delta already arrived on its own: a delta often holds several
   tokens and was on screen the moment it landed, half-written markdown changed shape, and every delta
   parsed the whole reply again (and highlighted an open code block again). The deltas stay as they
-  are and nothing changes on the wire; the client spreads what arrived over the frames after it (a
-  sixth of the gap per frame, at least two characters) and fades every new word in over 220 ms.
+  are and nothing changes on the wire; the client spreads what arrived over the time after it and
+  fades every new word in over 300 ms (`chat/ui/reveal.ts`, where the constants live).
+- The first version closed a sixth of the gap per frame and revealed a character at a time, and it
+  looked like a fade that started at half and trailed, with the text still coming in steps. Three
+  causes: a span made with half a word showed its later letters at the opacity it had already
+  reached, `ease-out` jumps up and then trails, and a step per frame closed a delta in about 100 ms
+  (twice as fast on a 120 Hz screen) and then stood still until the next one. The reveal is now a
+  position in time, `lag * (1 - exp(-dt / 250 ms))` with a floor of 40 characters a second (120
+  once the item is done) and a frame capped at 100 ms. Only whole words are drawn, the last one of
+  a text still arriving waiting for the whitespace after it (a word over 32 characters goes through,
+  or a URL would hold everything behind it). The fade is `ease-in-out`.
 - The fade needs no keys of its own. `hast-util-to-jsx-runtime` keys an element by its tag and its
   place among the siblings with the same tag, and words only arrive at the end, so a span on screen
-  keeps its element and its animation; `rehype-fade.test.ts` holds that down. Once the item is done
-  it renders without spans, which looks the same because every fade is over by then.
+  keeps its element and its animation; `rehype-fade.test.ts` holds that down. An item that is done
+  is not shown whole at once: the reveal runs on until it caught up, and the spans stay until the
+  last fade is over. Only then does it render without spans, which looks the same. An item that was
+  already done on mount is shown whole.
 - A reply is cut into blocks at blank lines outside a fence, and not before a list item or an
   indented line, so a loose list or a paragraph inside a list item stays one piece; a text with a
   reference definition stays whole. The split is the same while streaming and after, so the end of a
