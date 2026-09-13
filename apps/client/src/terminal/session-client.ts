@@ -57,6 +57,8 @@ export class SessionClient {
                 this.fanOut(this.exitHandlers, sessionId, exitCode);
             }),
             transport.on('session.status', ({ sessionId, agent }) => this.sink.setAgent(sessionId, agent)),
+            // The whole pending list of that session, so a request another client answered disappears here too.
+            transport.on('session.approvals', ({ sessionId, approvals }) => this.sink.setApprovals(sessionId, approvals)),
             transport.subscribeStatus((status) => this.onStatus(status))
         );
     }
@@ -74,6 +76,7 @@ export class SessionClient {
             });
             this.sink.setExited(nodeId, undefined);
             this.sink.setAgent(nodeId, info.agent ?? null);
+            this.sink.setApprovals(nodeId, info.approvals ?? []);
         } catch (e) {
             // The shell of a previous mount (or a previous tab) is still running; that is the whole point.
             if (!(e instanceof TransportError && e.code === 'session-exists')) {
@@ -174,6 +177,20 @@ export class SessionClient {
             await this.transport.request('agent.resume', { sessionId: nodeId });
         } catch {
             // Nothing to resume, or the shell is gone; the status stays as the daemon reported it.
+        }
+    }
+
+    /*
+     * Answers a permission request the agent in this shell is waiting on. False when it was already
+     * settled: another client was first, the person answered in the CLI's own prompt, or it expired.
+     * The daemon's `session.approvals` is what takes the row off the screen either way.
+     */
+    async answerApproval(nodeId: string, requestId: string, choiceId: string): Promise<boolean> {
+        try {
+            const result = await this.transport.request('agent.answerApproval', { sessionId: nodeId, requestId, choiceId });
+            return result.accepted;
+        } catch {
+            return false;
         }
     }
 

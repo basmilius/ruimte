@@ -67,3 +67,32 @@ describe('forgetting one node', () => {
         expect(useSessions.getState().byKey).toEqual({});
     });
 });
+
+describe('the approvals of a node', () => {
+    const request = (requestId: string) => ({
+        requestId,
+        sessionId: 't1',
+        toolName: 'Bash',
+        summary: 'rm -rf build',
+        choices: [{ id: 'allow', kind: 'allow' as const, label: 'Allow once' }],
+        createdAt: 1,
+        expiresAt: 2
+    });
+
+    test('stay under the machine the shell runs on', () => {
+        sessionSinkFor(LOCAL).setApprovals('t1', [request('r1')]);
+        expect(useSessions.getState().byKey[endpointKey(LOCAL, 't1')]?.approvals).toHaveLength(1);
+        expect(useSessions.getState().byKey[endpointKey(REMOTE, 't1')]).toBeUndefined();
+    });
+
+    test('are replaced rather than merged, because the daemon sends the whole list', () => {
+        sessionSinkFor(LOCAL).setApprovals('t1', [request('r1'), request('r2')]);
+        sessionSinkFor(LOCAL).setApprovals('t1', [request('r2')]);
+        expect(useSessions.getState().byKey[endpointKey(LOCAL, 't1')]?.approvals?.map((a) => a.requestId)).toEqual(['r2']);
+    });
+
+    test('never make a row for a node nobody tracks', () => {
+        sessionSinkFor(LOCAL).setApprovals('t1', []);
+        expect(useSessions.getState().byKey).toEqual({});
+    });
+});

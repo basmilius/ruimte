@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
+import type { AgentInfo, AgentStatus, ApprovalRequest } from '@ruimte/contracts';
 import type { CanvasNode } from '@/state/canvas';
 import type { ChatsById } from '@/state/chats';
 import { dropEndpoint, endpointKey, useEndpointId } from '@/state/keys';
@@ -11,6 +11,8 @@ export interface SessionState {
     exited?: number;
     /* The agent CLI the daemon last saw in this shell, reported through its hooks. */
     agent?: AgentInfo | null;
+    /* What the agent in this shell is waiting on. The daemon sends the whole list, so it replaces, never merges. */
+    approvals?: ApprovalRequest[];
 }
 
 /* Rows keyed with `endpointKey`, so a session says which daemon it runs on. */
@@ -21,6 +23,7 @@ export interface SessionSink {
     setAttached(nodeId: string, attached: boolean): void;
     setExited(nodeId: string, exitCode: number | undefined): void;
     setAgent(nodeId: string, agent: AgentInfo | null): void;
+    setApprovals(nodeId: string, approvals: ApprovalRequest[]): void;
     forget(nodeId: string): void;
 }
 
@@ -29,6 +32,7 @@ interface SessionsStore {
     setAttached(key: string, attached: boolean): void;
     setExited(key: string, exitCode: number | undefined): void;
     setAgent(key: string, agent: AgentInfo | null): void;
+    setApprovals(key: string, approvals: ApprovalRequest[]): void;
     forget(key: string): void;
     /* Drops one machine's rows. Its sessions keep running; this client is done looking at them. */
     clear(endpointId: string): void;
@@ -52,6 +56,16 @@ export const useSessions = create<SessionsStore>((set) => ({
     setAgent(key, agent) {
         set((s) => ({ byKey: { ...s.byKey, [key]: { ...s.byKey[key], attached: s.byKey[key]?.attached ?? false, agent } } }));
     },
+    setApprovals(key, approvals) {
+        set((s) => {
+            const current = s.byKey[key];
+            // Nothing pending on a node this client never tracked is not news; an entry for it would be.
+            if (!current && approvals.length === 0) {
+                return {};
+            }
+            return { byKey: { ...s.byKey, [key]: { ...current, attached: current?.attached ?? false, approvals } } };
+        });
+    },
     forget(key) {
         set((s) => {
             const next = { ...s.byKey };
@@ -69,6 +83,7 @@ export const sessionSinkFor = (endpointId: string): SessionSink => ({
     setAttached: (nodeId, attached) => useSessions.getState().setAttached(endpointKey(endpointId, nodeId), attached),
     setExited: (nodeId, exitCode) => useSessions.getState().setExited(endpointKey(endpointId, nodeId), exitCode),
     setAgent: (nodeId, agent) => useSessions.getState().setAgent(endpointKey(endpointId, nodeId), agent),
+    setApprovals: (nodeId, approvals) => useSessions.getState().setApprovals(endpointKey(endpointId, nodeId), approvals),
     forget: (nodeId) => useSessions.getState().forget(endpointKey(endpointId, nodeId))
 });
 

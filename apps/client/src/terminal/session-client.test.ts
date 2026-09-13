@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { AgentInfo, EventMap, EventType, RequestMap, RequestType, SessionInfo } from '@ruimte/contracts';
+import type { AgentInfo, ApprovalRequest, EventMap, EventType, RequestMap, RequestType, SessionInfo } from '@ruimte/contracts';
 import type { SessionSink } from '../state/sessions';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 import { SessionClient } from './session-client';
@@ -102,6 +102,7 @@ class FakeSink implements SessionSink {
     readonly attached = new Map<string, boolean>();
     readonly exited = new Map<string, number | undefined>();
     readonly agents = new Map<string, AgentInfo | null>();
+    readonly approvals = new Map<string, ApprovalRequest[]>();
     readonly forgotten: string[] = [];
 
     setAttached(nodeId: string, attached: boolean): void {
@@ -110,6 +111,10 @@ class FakeSink implements SessionSink {
 
     setExited(nodeId: string, exitCode: number | undefined): void {
         this.exited.set(nodeId, exitCode);
+    }
+
+    setApprovals(nodeId: string, approvals: ApprovalRequest[]): void {
+        this.approvals.set(nodeId, approvals);
     }
 
     setAgent(nodeId: string, agent: AgentInfo | null): void {

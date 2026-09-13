@@ -22,6 +22,7 @@ import { useNodeStatus } from '@/state/chats';
 import { ProcessAlertMark, useNodeAlerts } from '@/processes/ProcessAlertMark';
 import { useHasContextLinks } from '@/context/sources';
 import { accentColor } from '@/canvas/accents';
+import { ApprovalStrip } from '@/canvas/ApprovalStrip';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { BTN_GROUP } from '@/ui/classes';
 import { Pill } from '@/ui/Pill';
@@ -270,6 +271,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         </Tooltip>
                     </div>
                 </header>
+                {node.kind === 'terminal' && !collapsed && <ApprovalStrip id={id} />}
                 {isGroup ? (
                     // No body attribute: a press anywhere on the frame drags it, together with what it holds.
                     <div className="grow" />
