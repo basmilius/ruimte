@@ -8,6 +8,7 @@ import {
     type ChatPreferences
 } from '@/chat/preferences';
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
+import { DeleteAnyViewSection } from '@/shell/settings/DeleteAnyViewSection';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Badge, Skeleton, Toggle } from '@/shell/settings/controls';
@@ -150,12 +151,13 @@ export function AgentsPane() {
             >
                 <SettingsRow
                     label="Let an agent show you a view"
-                    description="On, a view an agent asks for takes the place of the one you are working in, and a toast puts it back. Off, nothing moves and the toast names the view with a button to go there."
+                    description="Off, a view an agent asks for waits in a banner over the ones you have open, with a button to go there. On, it takes the place of the view you are working in and a toast puts it back."
                     control={
                         <Toggle checked={agentsShowViews} onChange={(checked) => update({ agentsShowViews: checked })} label="Let an agent show you a view" />
                     }
                 />
             </SettingsSection>
+            <DeleteAnyViewSection />
             <SettingsSection title="Providers" description="What the machine found on its PATH. Install a CLI and restart Ruimte there to add one.">
                 {providers.length === 0 &&
                     (loaded ? (

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Check, Copy, Link2, Pencil, Plus, Trash } from 'lucide-react';
@@ -7,15 +7,14 @@ import { forgetEndpoint, listPairedClients, pairEndpoint, requestPairingUrl, rev
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { LOCAL_ENDPOINT_ID, localMachineLabel, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServer, useServers } from '@/state/server';
-import { useToasts } from '@/state/toasts';
-import { pool, transport, transportFor, type TransportStatus } from '@/transport';
+import { pool, transport, type TransportStatus } from '@/transport';
 import { useLatency } from '@/transport/ping';
 import { useEndpointConnection } from '@/transport/status';
 import { describeConnection, describePing, REACHABILITY_LABELS } from '@/shell/connection-info';
 import { MachineIdentityDialog } from '@/shell/settings/MachineIdentityDialog';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Skeleton, Toggle } from '@/shell/settings/controls';
+import { Skeleton } from '@/shell/settings/controls';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
@@ -86,65 +85,6 @@ function MachineName({ icon, name, note }: { icon: ProjectIconChoice | null; nam
                 {note !== undefined && <span className="truncate text-xs text-text-faint">{note}</span>}
             </span>
         </span>
-    );
-}
-
-/*
- * What an agent on that machine may take away. It is the machine's own setting, in `endpoint.json`
- * beside the name and the icon, because the daemon is what enforces it and a client's own setting
- * would hold nothing back. The wire takes name, icon and this together, so the switch sends the name
- * and the icon the machine already carries back unchanged.
- */
-function DeleteAnyViewRow({ endpoint, named }: { endpoint: Endpoint; named: boolean }) {
-    const info = useServers((s) => s.byEndpoint[endpoint.id]);
-    const connected = useEndpointConnection(endpoint.id).status === 'open';
-    const [busy, setBusy] = useState(false);
-    // With more than one machine on the list a bare label would not say which row it belongs to.
-    const label = named ? `Agents on ${endpoint.label} may delete any view` : 'Agents may delete any view';
-
-    const set = async (checked: boolean): Promise<void> => {
-        const link = transportFor(endpoint.id);
-        if (!link) {
-            return;
-        }
-        setBusy(true);
-        try {
-            const next = await link.request('endpoint.setIdentity', {
-                // A machine nobody named answers to its own default, and sending that name back would make it chosen.
-                name: info?.nameSource === 'chosen' ? (info.label ?? null) : null,
-                icon: info?.icon ?? null,
-                agentsDeleteAnyView: checked
-            });
-            useServers.getState().setIdentity(endpoint.id, {
-                label: next.label,
-                nameSource: next.nameSource ?? null,
-                icon: next.icon ?? null,
-                agentsDeleteAnyView: next.agentsDeleteAnyView === true
-            });
-        } catch (e) {
-            useToasts.getState().show({
-                id: `endpoint-delete-any-view-${endpoint.id}`,
-                kind: 'error',
-                title: `${endpoint.label} did not take the change`,
-                description: failureText(e, 'What an agent may delete is still what it was.')
-            });
-        } finally {
-            setBusy(false);
-        }
-    };
-
-    return (
-        <SettingsRow
-            label={label}
-            description={
-                connected
-                    ? `Off, an agent only removes the views it made itself. On, it may remove any view of any project on ${named ? 'that' : 'this'} machine, yours as well.`
-                    : 'Not answering, so what an agent may delete there cannot be read or changed.'
-            }
-            control={
-                <Toggle checked={info?.agentsDeleteAnyView === true} onChange={(checked) => void set(checked)} label={label} disabled={busy || !connected} />
-            }
-        />
     );
 }
 
@@ -484,7 +424,6 @@ export function EndpointsSection() {
             {local && (
                 <SettingsSection title="This machine" description="Where the app runs. Its name and its icon are what every client that pairs with it sees.">
                     <LocalRow endpoint={local} />
-                    <DeleteAnyViewRow endpoint={local} named={false} />
                 </SettingsSection>
             )}
             {/* "Other" rather than "added", "paired" or "remote": it reads against the section above it,
@@ -504,10 +443,7 @@ export function EndpointsSection() {
                     <SettingsRow muted label="No other machines" description="Add one to open its projects, terminals and agents from here." />
                 )}
                 {others.map((endpoint) => (
-                    <Fragment key={endpoint.id}>
-                        <EndpointRow endpoint={endpoint} />
-                        <DeleteAnyViewRow endpoint={endpoint} named />
-                    </Fragment>
+                    <EndpointRow key={endpoint.id} endpoint={endpoint} />
                 ))}
             </SettingsSection>
             <PairedClients key={activeId} />
