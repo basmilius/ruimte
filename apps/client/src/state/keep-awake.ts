@@ -10,14 +10,13 @@ export const keepAwakeWanted = (enabled: boolean, sessions: SessionsByKey, chats
 /*
  * Holds the shell's power block for as long as an agent works. Driven by the two stores the hooks
  * write into, so it moves with the first agent that starts and the last one that settles and never
- * polls. Returns the unsubscribe, or null in a browser, which has no shell to ask.
+ * polls. Takes the call to make, which a test hands a spy, so the only untested step is the IPC send
+ * itself. Returns the unsubscribe, or null in a browser, which has no shell to ask.
  */
-export const startKeepAwake = (): (() => void) | null => {
-    const bridge = desktop();
-    if (!bridge?.setKeepAwake) {
+export const startKeepAwake = (tell: ((keep: boolean) => void) | undefined = desktop()?.setKeepAwake): (() => void) | null => {
+    if (!tell) {
         return null;
     }
-    const tell = bridge.setKeepAwake;
     // What the shell was last told. Turning the setting off mid-turn has to reach it as well.
     let held = false;
 

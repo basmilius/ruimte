@@ -1,8 +1,9 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
 import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
-import type { ChatState } from '@/state/chats';
-import type { SessionState } from '@/state/sessions';
-import { keepAwakeWanted } from '@/state/keep-awake';
+import { useChats, type ChatState } from '@/state/chats';
+import { useSessions, type SessionState } from '@/state/sessions';
+import { useSettings } from '@/state/settings';
+import { keepAwakeWanted, startKeepAwake } from '@/state/keep-awake';
 
 const agent = (status: AgentStatus, live = true): AgentInfo => ({
     kind: 'claude',
@@ -48,5 +49,61 @@ describe('the block itself', () => {
 
     test('is dropped again once the last agent settles', () => {
         expect(keepAwakeWanted(true, { 'local:t1': session(agent('idle')) }, {})).toBe(false);
+    });
+});
+
+describe('what the shell is told', () => {
+    const working = (status: AgentStatus): void => {
+        useSessions.setState({ byKey: { 'local:t1': session(agent(status)) } });
+    };
+
+    afterEach(() => {
+        useSessions.setState({ byKey: {} });
+        useChats.setState({ byKey: {} });
+        useSettings.setState({ agentsKeepAwake: false });
+    });
+
+    test('nothing at all in a browser, which has no shell to ask', () => {
+        expect(startKeepAwake(undefined)).toBeNull();
+    });
+
+    test('true when an agent starts and false when it settles', () => {
+        const told: boolean[] = [];
+        const stop = startKeepAwake((keep) => told.push(keep));
+        useSettings.setState({ agentsKeepAwake: true });
+        working('running');
+        working('idle');
+        stop?.();
+        expect(told).toEqual([true, false]);
+    });
+
+    test('once per change, not once per event the stores see', () => {
+        const told: boolean[] = [];
+        const stop = startKeepAwake((keep) => told.push(keep));
+        useSettings.setState({ agentsKeepAwake: true });
+        working('running');
+        useChats.setState({ byKey: { 'local:c1': chat('running') } });
+        working('running');
+        stop?.();
+        expect(told).toEqual([true, false]);
+    });
+
+    test('the setting turned off mid-turn reaches the shell', () => {
+        const told: boolean[] = [];
+        useSettings.setState({ agentsKeepAwake: true });
+        const stop = startKeepAwake((keep) => told.push(keep));
+        working('running');
+        useSettings.setState({ agentsKeepAwake: false });
+        stop?.();
+        expect(told).toEqual([true, false]);
+    });
+
+    test('the block goes with the watcher, so a teardown never leaves one behind', () => {
+        const told: boolean[] = [];
+        useSettings.setState({ agentsKeepAwake: true });
+        const stop = startKeepAwake((keep) => told.push(keep));
+        working('running');
+        stop?.();
+        expect(told).toEqual([true, false]);
     });
 });
