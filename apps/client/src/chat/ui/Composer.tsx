@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { Dialog } from '@base-ui-components/react/dialog';
 import clsx from 'clsx';
 import { ArrowUp, ChevronDown, Clock, FastForward, Paperclip, Square, SquareSlash, X, Zap } from 'lucide-react';
 import type { AgentKind, ChatApprovalItem, ChatInfo, ChatQuestionItem, ChatSkill, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
@@ -29,6 +30,8 @@ import { isApplePlatform } from '@/desktop/bridge';
 import { useChatRow } from '@/state/chats';
 import { useProviders } from '@/state/providers';
 import { isShellChord } from '@/terminal/keymap';
+import { TransportError } from '@/transport';
+import { Button } from '@/ui/Button';
 import { BTN_GROUP, FLOAT, MENU_LABEL } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { FileIcon } from '@/ui/FileIcon';
@@ -45,7 +48,8 @@ const PROMPT_HISTORY = 50;
 // Commands the composer handles itself; the CLI's own ones are sent through as text.
 const LOCAL_COMMANDS = [
     { name: 'model', hint: 'Switch the model' },
-    { name: 'compact', hint: 'Fold the context' }
+    { name: 'compact', hint: 'Fold the context' },
+    { name: 'clear', hint: 'Start a new context' }
 ];
 
 /*
@@ -108,6 +112,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
     const [notice, setNotice] = useState<string | null>(null);
     const [dragging, setDragging] = useState(false);
     const [modelPickerOpen, setModelPickerOpen] = useState(false);
+    const [confirmClear, setConfirmClear] = useState(false);
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const backdropRef = useRef<HTMLDivElement>(null);
     const providers = useProviders((s) => s.providers);
@@ -278,6 +283,20 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
         configure({ selection });
     };
 
+    /* The daemon decides whether a turn is in the way; only its refusal asks the person first. */
+    const clearThread = async (force: boolean): Promise<void> => {
+        setConfirmClear(false);
+        try {
+            await chatClient.clear(chatId, force);
+        } catch (e) {
+            if (!force && e instanceof TransportError && e.code === 'chat-busy') {
+                setConfirmClear(true);
+                return;
+            }
+            setNotice('The thread could not be cleared');
+        }
+    };
+
     const runCommand = (name: string): boolean => {
         switch (name) {
             case 'model':
@@ -285,6 +304,9 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                 return true;
             case 'compact':
                 void chatClient.compact(chatId).catch(() => undefined);
+                return true;
+            case 'clear':
+                void clearThread(false);
                 return true;
             default:
                 return false;
@@ -836,6 +858,21 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                     )}
                 </div>
             </div>
+            <Dialog.Root open={confirmClear} onOpenChange={(next) => !next && setConfirmClear(false)}>
+                <Dialog.Portal>
+                    <Dialog.Backdrop className="dialog-backdrop" />
+                    <Dialog.Popup className="dialog-popup w-[420px] p-5">
+                        <Dialog.Title className="text-base font-semibold text-text">Clear the thread?</Dialog.Title>
+                        <p className="mt-1 text-xs text-text-muted">A turn is running. Stop it and clear the thread?</p>
+                        <div className="mt-4 flex items-center justify-end gap-2">
+                            <Button onClick={() => setConfirmClear(false)}>Cancel</Button>
+                            <Button variant="danger" onClick={() => void clearThread(true)}>
+                                Stop and clear
+                            </Button>
+                        </div>
+                    </Dialog.Popup>
+                </Dialog.Portal>
+            </Dialog.Root>
         </div>
     );
 }

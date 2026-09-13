@@ -28,7 +28,13 @@ interface ChatsStore {
     clear(endpointId: string): void;
 }
 
-const applyEvent = (state: ChatState, event: ChatEvent): ChatState => {
+const stateOf = (info: ChatInfo, items: ChatItem[]): ChatState => ({
+    info,
+    items: Object.fromEntries(items.map((item) => [item.id, item])),
+    order: items.map((item) => item.id)
+});
+
+export const applyEvent = (state: ChatState, event: ChatEvent): ChatState => {
     switch (event.type) {
         case 'item': {
             const known = event.item.id in state.items;
@@ -54,6 +60,8 @@ const applyEvent = (state: ChatState, event: ChatEvent): ChatState => {
         }
         case 'info':
             return { ...state, info: event.info };
+        case 'reset':
+            return stateOf(event.info, event.items);
     }
 };
 
@@ -63,7 +71,7 @@ export const useChats = create<ChatsStore>((set) => ({
         set((s) => ({
             byKey: {
                 ...s.byKey,
-                [key]: { info, items: Object.fromEntries(items.map((item) => [item.id, item])), order: items.map((item) => item.id) }
+                [key]: stateOf(info, items)
             }
         }));
     },

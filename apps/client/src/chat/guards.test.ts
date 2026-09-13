@@ -12,9 +12,10 @@ describe('promptGuard', () => {
 });
 
 describe('usableSlashCommands', () => {
-    test('drops what only the CLI terminal can do and keeps the rest', () => {
+    test('drops what only the CLI terminal can do and keeps the rest, clear included', () => {
         expect(usableSlashCommands(['compact', 'clear', 'context', 'doctor', 'theme', 'security-review', 'vim'])).toEqual([
             'compact',
+            'clear',
             'context',
             'security-review'
         ]);

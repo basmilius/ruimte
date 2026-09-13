@@ -20,12 +20,10 @@ export const promptGuard = (text: string): PromptGuard => ({
 
 /*
  * Commands the CLI lists because its own terminal has them: they change the terminal, the login or
- * the config, or they end a session the chat node does not own. `/clear` is in here for a reason of
- * its own: it would empty the CLI's context while the thread still shows every item.
+ * the config, or they end a session the chat node does not own.
  */
 const TUI_ONLY = new Set([
     'bug',
-    'clear',
     'color',
     'config',
     'doctor',

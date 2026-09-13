@@ -148,6 +148,11 @@ export class ChatClient {
         await this.transport.request('chat.compact', { chatId });
     }
 
+    /* Starts the chat over; refused with `chat-busy` while a turn runs, unless `force` stops that turn. */
+    async clear(chatId: string, force = false): Promise<void> {
+        await this.transport.request('chat.clear', { chatId, ...(force ? { force: true } : {}) });
+    }
+
     async cancel(chatId: string): Promise<void> {
         await this.transport.request('chat.cancel', { chatId });
     }
