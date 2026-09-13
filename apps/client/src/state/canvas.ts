@@ -15,6 +15,7 @@ import {
     type Rect
 } from '@/canvas/math';
 
+import type { CanvasAddition } from '@/project/merge';
 import type {
     AgentKind,
     AgentStatus,
@@ -191,6 +192,12 @@ export interface CanvasState {
 
     /* Replaces the canvas with one view of the project; the camera comes from the machine-local state. */
     loadView(view: ProjectCanvasView | null, local: ProjectViewLocal | null): void;
+    /*
+     * What another writer (an agent through the daemon) added to this canvas, put in beside what the
+     * person is doing: no history step, no selection and no camera move, so a drag in progress and
+     * an undo stack both survive it.
+     */
+    addExternal(addition: CanvasAddition): void;
     exportContent(): Pick<ProjectCanvasView, 'nodes' | 'texts' | 'edges' | 'layouts'>;
     undo(): void;
     redo(): void;
@@ -672,6 +679,43 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
             if (!local?.camera) {
                 get().fitAll();
             }
+        },
+        addExternal(addition) {
+            const { nodes: arriving, texts: arrivingTexts, edges: arrivingEdges, members } = addition;
+            // Marked as a load, like a project swapping in: these are already on disk, so they are no edit.
+            set((s) => {
+                const nodes: Record<string, CanvasNode> = { ...s.nodes };
+                const order = [...s.order];
+                for (const [id, grown] of Object.entries(members)) {
+                    const group = nodes[id];
+                    if (group) {
+                        const held = group.memberIds ?? [];
+                        nodes[id] = { ...group, memberIds: [...held, ...grown.filter((member) => !held.includes(member))] };
+                    }
+                }
+                for (const node of arriving) {
+                    if (!nodes[node.id]) {
+                        nodes[node.id] = node;
+                        order.push(node.id);
+                    }
+                }
+                const texts = { ...s.texts };
+                for (const text of arrivingTexts) {
+                    if (!texts[text.id]) {
+                        texts[text.id] = text;
+                    }
+                }
+                const held = new Set(s.edges.map((edge) => edge.id));
+                return {
+                    loading: true,
+                    nodes,
+                    order,
+                    texts,
+                    edges: [...s.edges, ...arrivingEdges.filter((edge) => !held.has(edge.id))],
+                    hidden: hiddenIn(nodes)
+                };
+            });
+            set({ loading: false });
         },
         exportContent() {
             const { nodes, order, texts, edges, layouts } = get();

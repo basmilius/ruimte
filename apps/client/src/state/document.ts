@@ -18,6 +18,7 @@ import {
     type StandaloneNode
 } from '@ruimte/contracts';
 import { toWorld } from '@/canvas/math';
+import type { CanvasAddition } from '@/project/merge';
 import { NODE_SIZE, defaultCanvases, nextId, type CanvasState } from '@/state/canvas';
 import { defaultDrawings, type DrawingState } from '@/state/drawing';
 import type { EditorRegistry } from '@/state/editors';
@@ -73,6 +74,12 @@ export interface DocumentState {
     loading: boolean;
 
     load(document: ProjectDocument | null, local: ProjectLocal | null): void;
+    /*
+     * What another writer added, taken in beside what this machine is editing: the views it does not
+     * have, and what the canvases it does have gained. Not an edit, since it is already on disk, and
+     * no view opens by itself: a person's grid only moves when the person moves it.
+     */
+    applyAdditions(views: ProjectView[], canvases: Record<string, CanvasAddition>): void;
     /* Puts a view in the cell that has the focus, or moves the focus to the cell it already stands in. */
     setActiveView(id: string): void;
     /* A view into a cell's zone: the four edges split, the middle takes the place of what is there. */
@@ -285,6 +292,13 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 peers.canvases.keep([]);
                 openEditors(views, viewLocal, layout === null ? [] : viewIdsIn(layout), settled.activeViewId, peers);
                 set({ loading: false });
+            },
+
+            applyAdditions(views, canvases) {
+                set({ views });
+                for (const [viewId, addition] of Object.entries(canvases)) {
+                    peers.canvases.peek(viewId)?.getState().addExternal(addition);
+                }
             },
 
             setActiveView(id) {

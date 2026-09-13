@@ -67,6 +67,8 @@ class FakeTransport implements Transport {
     views: ProjectDocument['views'] = [canvasView('main')];
     rev = 3;
     panels: ProjectPanels | undefined = undefined;
+    /* Set to keep a save on the wire, so a test can let something else reach the daemon first. */
+    holdSave: Promise<void> | null = null;
     private readonly statusHandlers = new Set<(status: TransportStatus) => void>();
     private readonly eventHandlers = new Map<string, Set<(payload: unknown) => void>>();
 
@@ -87,11 +89,15 @@ class FakeTransport implements Transport {
             }
             case 'project.save': {
                 const { baseRev } = payload as { baseRev: number };
-                if (baseRev !== this.rev) {
-                    return Promise.reject(new TransportError('rev-conflict', 'stale'));
-                }
-                this.rev += 1;
-                return Promise.resolve({ rev: this.rev } as RequestMap[T]['result']);
+                // The rev is read when the daemon gets to the write, not when the client sent it.
+                const write = (): Promise<RequestMap[T]['result']> => {
+                    if (baseRev !== this.rev) {
+                        return Promise.reject(new TransportError('rev-conflict', 'stale'));
+                    }
+                    this.rev += 1;
+                    return Promise.resolve({ rev: this.rev } as RequestMap[T]['result']);
+                };
+                return this.holdSave ? this.holdSave.then(write) : write();
             }
             default:
                 return Promise.resolve({} as RequestMap[T]['result']);
@@ -327,13 +333,74 @@ describe('ProjectClient', () => {
         await tick();
         useCanvas.getState().addNode('chat', { x: 0, y: 0 });
         transport.rev = 12;
-        transport.emit('project.changed', { projectId: 'p1', document: document(12) });
+        // A rename is nothing a merge can take in, so this is the dialog and not the additive path.
+        transport.emit('project.changed', { projectId: 'p1', document: { ...document(12), name: 'renamed' } });
         await tick(10);
         expect(state.conflict?.rev).toBe(12);
         await client.resolveConflict('mine');
         expect(transport.of('project.save').at(-1)?.payload).toMatchObject({ baseRev: 12 });
         expect(state.rev).toBe(13);
         expect(useCanvas.getState().order).toHaveLength(1);
+        dispose();
+    });
+
+    test('a node the daemon added lands on a canvas with unsaved edits, and the next save carries the new rev', async () => {
+        const { transport, state, client, dispose } = setup();
+        await tick();
+        const mine = useCanvas.getState().addNode('chat', { x: 0, y: 0 })!;
+
+        transport.rev = 4;
+        transport.emit('project.changed', {
+            projectId: 'p1',
+            document: document(4, [canvasView('main', [{ id: 'agent', kind: 'note', title: 'from an agent', x: 0, y: 0, w: 10, h: 10 }]), canvasView('made')])
+        });
+
+        expect(state.conflict).toBeNull();
+        expect(client.mergeRefusal).toBeNull();
+        expect(useCanvas.getState().order).toEqual([mine, 'agent']);
+        // A view an agent made is in the list, and did not take the cell the person is looking at.
+        expect(useDocument.getState().views.map((view) => view.id)).toEqual(['main', 'made']);
+        expect(useDocument.getState().activeViewId).toBe('main');
+        expect(state.rev).toBe(4);
+
+        await tick(10);
+        const save = transport.of('project.save').at(-1)?.payload as { baseRev: number; content: { views: ProjectCanvasView[] } };
+        expect(save.baseRev).toBe(4);
+        expect(save.content.views[0]!.nodes.map((node) => node.id)).toEqual([mine, 'agent']);
+        expect(state.rev).toBe(5);
+        expect(state.dirty).toBe(false);
+        dispose();
+    });
+
+    test('a save the daemon refuses is made again against the document that came in behind it', async () => {
+        const { transport, state, dispose } = setup();
+        await tick();
+        let release = (): void => undefined;
+        transport.holdSave = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        const mine = useCanvas.getState().addNode('chat', { x: 0, y: 0 })!;
+        await tick(10);
+        expect(transport.of('project.save')).toHaveLength(1);
+
+        // The agent's node reaches the file while this client's save is still on the wire.
+        transport.rev = 4;
+        transport.emit('project.changed', {
+            projectId: 'p1',
+            document: document(4, [canvasView('main', [{ id: 'agent', kind: 'note', title: 'from an agent', x: 0, y: 0, w: 10, h: 10 }])])
+        });
+        expect(state.conflict).toBeNull();
+
+        transport.holdSave = null;
+        release();
+        await tick(20);
+
+        const saves = transport.of('project.save').map((call) => (call.payload as { baseRev: number }).baseRev);
+        expect(saves).toEqual([3, 4]);
+        expect(state.conflict).toBeNull();
+        expect(state.rev).toBe(5);
+        expect(state.dirty).toBe(false);
+        expect(useCanvas.getState().order).toEqual([mine, 'agent']);
         dispose();
     });
 

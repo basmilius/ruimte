@@ -3,6 +3,7 @@ import type { StoreApi } from 'zustand';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 import { browserStorage, readLastProject, rememberProject, type LastProjectStorage } from './last-project';
+import { mergeProject, type CanvasAddition } from './merge';
 import type { PanelsPort } from './panels-port';
 
 /* The slice of a canvas editor the client reads; the real store has more. */
@@ -33,6 +34,7 @@ interface DocumentAccess {
         edits: number;
         loading: boolean;
         load(document: ProjectDocument | null, local: ProjectLocal | null): void;
+        applyAdditions(views: ProjectView[], canvases: Record<string, CanvasAddition>): void;
         exportViews(): ProjectView[];
         exportLocal(): Pick<ProjectLocal, 'activeViewId' | 'views' | 'layout'>;
     };
@@ -88,6 +90,12 @@ interface ProjectClientOptions {
     endSessions?: (endpointId: string, views: readonly ProjectView[]) => void;
 }
 
+/* A document without what wraps it: the version and the rev are the daemon's, not the person's. */
+const contentOf = (document: ProjectDocument): ProjectContent => {
+    const { version: _version, rev: _rev, ...content } = document;
+    return content;
+};
+
 const isConnectionError = (e: unknown): boolean => e instanceof TransportError && (e.code === 'not-connected' || e.code === 'disconnected');
 
 /*
@@ -112,6 +120,10 @@ export class ProjectClient {
     private saving: Promise<void> | null = null;
     private booted = false;
     private bootTask: Promise<void> | null = null;
+    /* What the daemon's file holds at the rev this client is on, which a merge measures against. */
+    private base: ProjectContent | null = null;
+    /* Why the last incoming document went to the person instead of being merged in. */
+    private refusal: string | null = null;
 
     constructor(
         transport: Transport,
@@ -153,6 +165,11 @@ export class ProjectClient {
         }
     }
 
+    /* Why the last conflict was one; the id in it is what a person needs to make sense of the dialog. */
+    get mergeRefusal(): string | null {
+        return this.refusal;
+    }
+
     /* Waits for the project this endpoint remembered, so a caller that wants another one does not race it. */
     async settled(): Promise<void> {
         await this.bootTask?.catch(() => undefined);
@@ -191,6 +208,7 @@ export class ProjectClient {
             await this.transport.request('project.close', { projectId: current.projectId }).catch(() => undefined);
         }
         this.remember(null);
+        this.base = null;
         this.documents.getState().load(null, null);
         this.panels.load(null, undefined);
         this.sink.setCurrent(null, 0);
@@ -261,6 +279,7 @@ export class ProjectClient {
             return;
         }
         this.sink.setConflict(null);
+        this.base = contentOf(conflict);
         if (choice === 'theirs') {
             this.documents.getState().load(conflict, this.localOfScreen());
             this.sink.setChosenIcon(conflict.icon ?? null);
@@ -344,6 +363,7 @@ export class ProjectClient {
                 await this.transport.request('project.release', { projectId: previous.projectId }).catch(() => undefined);
             }
             const result = await this.transport.request('project.open', payload);
+            this.base = contentOf(result.document);
             this.documents.getState().load(result.document, result.local);
             // In the same tick as the canvas, so the panels never paint the project that just left.
             this.panels.load(result.summary.projectId, result.local.panels);
@@ -434,27 +454,29 @@ export class ProjectClient {
             // One write at a time; the edits made meanwhile ride the next one.
             return this.saving.then(() => (this.sink.getState().dirty ? this.save() : undefined));
         }
-        const { current, rev, conflict, chosenIcon } = this.sink.getState();
+        const { current, rev, conflict } = this.sink.getState();
         if (!current || conflict) {
             return Promise.resolve();
         }
-        const content: ProjectContent = {
-            name: current.name,
-            color: current.color,
-            ...(chosenIcon ? { icon: chosenIcon } : {}),
-            views: this.documents.getState().exportViews()
-        };
+        const content = this.contentOfScreen();
         this.sink.setDirty(false);
         this.saving = this.transport
             .request('project.save', { projectId: current.projectId, baseRev: rev, content })
             .then((result) => {
+                // The file now holds what went out, which is what the next merge measures against.
+                this.base = content;
                 this.sink.setRev(result.rev);
                 this.sink.setError(null);
             })
             .catch((e: unknown) => {
                 this.sink.setDirty(true);
                 if (e instanceof TransportError && e.code === 'rev-conflict') {
-                    // The watcher's event carries the newer document; nothing to do until it arrives.
+                    /* A change that landed while this save was on its way has already been merged in,
+                       rev and all, so the write only has to be made again against it. If the rev has
+                       not moved the watcher's event is still coming, and carries what to merge with. */
+                    if (this.sink.getState().rev !== rev) {
+                        this.scheduleSave();
+                    }
                     return;
                 }
                 if (!isConnectionError(e)) {
@@ -473,12 +495,48 @@ export class ProjectClient {
             return;
         }
         if (dirty || this.saving) {
-            this.sink.setConflict(document);
+            if (!this.adopt(document)) {
+                this.sink.setConflict(document);
+            }
             return;
         }
+        this.base = contentOf(document);
         this.documents.getState().load(document, this.localOfScreen());
         this.sink.setChosenIcon(document.icon ?? null);
         this.sink.setCurrent({ ...current, name: document.name, color: document.color, icon: document.icon ?? current.icon }, document.rev);
+    }
+
+    /*
+     * Takes what the daemon added while this client had edits of its own: an agent writing a node is
+     * not something to ask a person about. The rev goes along, so the next save is made against the
+     * file as it now stands; anything that is not an addition answers false and gets the dialog.
+     */
+    private adopt(document: ProjectDocument): boolean {
+        if (!this.base) {
+            return false;
+        }
+        const merge = mergeProject(this.base, this.contentOfScreen(), contentOf(document));
+        if (!merge.ok) {
+            this.refusal = merge.reason;
+            console.debug(`[project] the canvas could not take in rev ${document.rev}: ${merge.reason}`);
+            return false;
+        }
+        this.refusal = null;
+        this.base = contentOf(document);
+        this.sink.setRev(document.rev);
+        this.documents.getState().applyAdditions(merge.content.views, merge.additions.canvases);
+        return true;
+    }
+
+    /* The project as it stands on this screen, unsaved edits and all: what a save writes and a merge holds. */
+    private contentOfScreen(): ProjectContent {
+        const { current, chosenIcon } = this.sink.getState();
+        return {
+            name: current?.name ?? '',
+            color: current?.color ?? '',
+            ...(chosenIcon ? { icon: chosenIcon } : {}),
+            views: this.documents.getState().exportViews()
+        };
     }
 
     /* The daemon saw a project's icon, name or color change; only the breadcrumb has to follow. */
