@@ -11,7 +11,7 @@ import { AgentLineageStore } from '../agents/lineage.ts';
 import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
 import { CANVAS_PATH, handleCanvasRequest } from './canvas-route.ts';
 import { MAX_AGENT_DEPTH, MAX_OPENED_PER_CALLER, MAX_TEAM_DEPTH } from './depth.ts';
-import { AGENT_KINDS } from './agent-verb.ts';
+import { AGENT_KINDS, NEW_NODE } from './agent-verb.ts';
 import { MAX_LINKS } from './link-verb.ts';
 import { MAX_CANVAS_NODES } from './node-verb.ts';
 import { PLACEMENT_GAP } from './placement.ts';
@@ -129,6 +129,16 @@ describe('the route', () => {
         expect(lines.slice(1)).toEqual(VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`));
     });
 
+    test('a verb and its arguments quoted into one name is told what went wrong', async () => {
+        const { status, lines } = await post('help agent', []);
+        expect(status).toBe(404);
+        expect(lines[0]).toBe('refused\tunknown-verb\thelp agent is not a verb');
+        expect(lines[1]).toBe('note\tA verb and its arguments are separate words, so this is ruimte-context help agent, not one name');
+        expect(lines.slice(2)).toEqual(VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`));
+        // A name that starts with nothing this daemon knows gets the list and no guess.
+        expect((await post('spawn team', [])).lines[1]).toStartWith('verb\t');
+    });
+
     test('a body without argv is refused', async () => {
         const path = `${CANVAS_PATH}/help`;
         const response = await handleCanvasRequest(
@@ -191,6 +201,30 @@ describe('help', () => {
         expect(lines.filter((line) => line.startsWith('where\t')).length).toBe(2);
         expect(lines.filter((line) => line.startsWith('paths\t')).length).toBe(2);
         expect(lines.some((line) => line.includes('--text - takes the body from stdin'))).toBe(true);
+    });
+
+    test('help agent covers what a first-time caller cannot see from the canvas', async () => {
+        const { lines } = await post('help', ['agent']);
+        expect(lines).toContain(
+            'prints\tid\tkind\tview\tcli\tedge\tthe new node, its kind (terminal or chat), the canvas it landed on, the CLI it runs and the id of the edge drawn into it'
+        );
+        // Which CLIs take --chat, from the registry rather than from a sentence that can drift.
+        expect(lines.some((line) => line.startsWith('flag\t--chat\t') && line.includes('claude, codex'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('flag\t--prompt T\t') && line.includes(String(MAX_PROMPT_LENGTH)))).toBe(true);
+        expect(lines.some((line) => line.startsWith('paths\t') && line.includes('worktree'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('without a prompt\t'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('edge\t') && line.includes('One way only') && line.includes('ruimte-context link'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('groups\t') && line.includes('ruimte-context nodes'))).toBe(true);
+    });
+
+    test('every verb that draws or lists a line points at edges', async () => {
+        for (const verb of ['agent', 'team', 'link', 'nodes']) {
+            const { lines } = await post('help', [verb]);
+            expect(lines.some((line) => line.includes('ruimte-context edges'))).toBe(true);
+        }
+        const { lines } = await post('help', ['team']);
+        expect(lines.some((line) => line.startsWith('edges\t') && line.includes('One way only'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('example\t') && line.includes('--roles'))).toBe(true);
     });
 
     test('the verbs about linked context and the verbs about the canvas are told apart wherever they meet', async () => {
@@ -345,6 +379,37 @@ describe('refusals', () => {
     });
 });
 
+describe('a closed set that is empty', () => {
+    test('says so instead of listing nothing', async () => {
+        const noGroups = await post('agent', ['claude', '--group', 'note-1']);
+        expect(noGroups.lines[0]).toBe('refused\tunknown-group\tnote-1 is not a group on main');
+        expect(noGroups.lines.slice(1)).toEqual(['note\tmain has no groups on it yet; team opens one of its own, and a person groups nodes on the canvas']);
+
+        const noNodes = await post('node', ['note', '--text', 'x', '--view', 'board', '--beside', 'ghost']);
+        expect(noNodes.lines).toEqual(['refused\tunknown-node\tghost is not a node on board', 'note\tboard has no nodes on it yet']);
+
+        const empty = content();
+        empty.views = [{ kind: 'chat', id: 'chat-1', name: 'Planner', node: {} }];
+        await store.mutate(projectId, () => ({ content: empty, result: null }));
+        const noCanvas = await post('node', ['note', '--text', 'x'], 'chat');
+        expect(noCanvas.lines).toEqual([
+            'refused\tview-required\tThis session is not on a canvas; name one with --view',
+            'note\tThis project has no canvas; a node only ever lands on one'
+        ]);
+    });
+
+    test('a --source with no drawing view in the project says that too', async () => {
+        const noDrawings = content();
+        noDrawings.views = noDrawings.views.filter((view) => view.kind !== 'drawing');
+        await store.mutate(projectId, () => ({ content: noDrawings, result: null }));
+        const { lines } = await post('node', ['drawing', '--source', 'nowhere']);
+        expect(lines).toEqual([
+            'refused\tnot-a-drawing\tnowhere is not a drawing view of this project',
+            'note\tThis project has no drawing views; a person makes one in the sidebar'
+        ]);
+    });
+});
+
 describe('scoping', () => {
     test('a caller no project places is refused', async () => {
         expect((await post('views', [], 'stray')).lines).toEqual([
@@ -390,6 +455,30 @@ describe('views', () => {
             'chat-1\tchat\tPlanner',
             'sketch-1\tdrawing\tSketch'
         ]);
+    });
+});
+
+describe('edges', () => {
+    test('lists the lines of a canvas, id, from, to and label', async () => {
+        await post('link', ['--to', 'note-1', '--label', 'plan']);
+        await post('link', ['--to', 'note-1', '--from', 'note-1']).catch(() => null);
+        const { status, lines } = await post('edges', []);
+        expect(status).toBe(200);
+        const edges = (await canvasOnDisk()).edges;
+        expect(lines).toEqual(edges.map((edge) => [edge.id, edge.from, edge.to, edge.label ?? ''].join('\t')));
+        expect(lines[0]!.split('\t').slice(1)).toEqual(['term-1', 'note-1', 'plan']);
+    });
+
+    test('a canvas with no lines on it prints nothing, and --view says which canvas', async () => {
+        expect((await post('edges', [])).lines).toEqual([]);
+        expect((await post('edges', ['--view', 'board'])).lines).toEqual([]);
+        expect((await post('edges', ['--view', 'sketch-1'])).lines[0]).toBe('refused\tnot-a-canvas\tsketch-1 is not a canvas of this project');
+        expect((await post('edges', ['--view', 'main'], 'chat')).lines).toEqual([]);
+        expect((await post('edges', [], 'chat')).lines[0]).toStartWith('refused\tview-required\t');
+    });
+
+    test('reads only, so it takes no --dry-run', async () => {
+        expect((await post('edges', ['--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
     });
 });
 
@@ -674,9 +763,9 @@ describe('team', () => {
 
         const [groupId, ...group] = lines[0]!.split('\t');
         expect(groupId).toMatch(/^group-[0-9a-z]{8}$/);
-        expect(group).toEqual(['group', 'main', 'Crew']);
+        expect(group).toEqual(['group', 'main', 'Crew', '-']);
         const members = lines.slice(1).map((line) => line.split('\t'));
-        expect(members.map((fields) => fields.slice(1))).toEqual([
+        expect(members.map((fields) => fields.slice(1, 4))).toEqual([
             ['terminal', 'main', 'claude'],
             ['chat', 'main', 'codex'],
             ['terminal', 'main', 'gemini']
@@ -696,7 +785,9 @@ describe('team', () => {
         const chat = canvas.nodes.find((node) => node.id === ids[1])!;
         expect([chat.title, chat.titleSource, chat.provider, chat.providerFixed]).toEqual(['Parser', 'user', 'codex', true]);
 
-        expect(canvas.edges.map((edge) => [edge.from, edge.to, edge.label])).toEqual(ids.map((id) => ['term-1', id, 'context']));
+        expect(canvas.edges.map((edge) => [edge.id, edge.from, edge.to, edge.label])).toEqual(
+            ids.map((id, index) => [members[index]![4], 'term-1', id, 'context'])
+        );
         expect(held).toEqual(ids.map((id, index) => ({ projectId, nodeId: id, prompt: THREE[index]!.prompt })));
     });
 
@@ -775,6 +866,8 @@ describe('team', () => {
     test('a caller that is not a node on the canvas gets a team without edges', async () => {
         const { lines } = await post('team', [...args(THREE), '--view', 'board'], 'chat');
         expect(lines.every((line) => line.split('\t')[2] === 'board')).toBe(true);
+        // No caller on that canvas, so no edge to name in the last column either.
+        expect(lines.every((line) => line.split('\t')[4] === '-')).toBe(true);
         expect((await canvasOnDisk('board')).edges).toEqual([]);
         expect(held).toHaveLength(3);
     });
@@ -783,10 +876,10 @@ describe('team', () => {
         const { status, lines } = await post('team', [...args(THREE), '--dry-run']);
         expect(status).toBe(200);
         expect(lines).toEqual([
-            'dry-run\tgroup\tmain\tCrew',
-            'dry-run\tterminal\tmain\tclaude',
-            'dry-run\tchat\tmain\tcodex',
-            'dry-run\tterminal\tmain\tgemini'
+            'dry-run\tgroup\tmain\tCrew\t-',
+            `dry-run\tterminal\tmain\tclaude\tterm-1 -> ${NEW_NODE}`,
+            `dry-run\tchat\tmain\tcodex\tterm-1 -> ${NEW_NODE}`,
+            `dry-run\tterminal\tmain\tgemini\tterm-1 -> ${NEW_NODE}`
         ]);
         expect((await onDisk()).rev).toBe(1);
         expect(held).toEqual([]);
@@ -920,7 +1013,7 @@ describe('--dry-run', () => {
     test('agent checks everything, prints what it would make and writes nothing', async () => {
         const { status, lines } = await post('agent', ['claude', '--prompt', 'hi', '--dry-run']);
         expect(status).toBe(200);
-        expect(lines).toEqual(['dry-run\tterminal\tmain\tclaude\tedge']);
+        expect(lines).toEqual([`dry-run\tterminal\tmain\tclaude\tterm-1 -> ${NEW_NODE}`]);
         expect((await onDisk()).rev).toBe(1);
         expect(held).toEqual([]);
     });

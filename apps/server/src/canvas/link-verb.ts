@@ -16,7 +16,8 @@ const LINK_DETAIL: readonly string[] = [
     'both ways\tBetween two agent nodes the line is drawn in both directions, since each of them then reads the other',
     'again\tAn edge that is already there is left alone and reported as existing, so running the same link twice changes nothing',
     `limit\tAt most ${MAX_LINKS} ids in --to`,
-    'ids\tOnly ids, never titles; ruimte-context nodes lists the nodes of a canvas with theirs'
+    'ids\tOnly ids, never titles; ruimte-context nodes lists the nodes of a canvas with theirs',
+    'see\truimte-context edges\twhat is drawn on that canvas now, so you can tell a line that is missing from one that is only the other way round'
 ];
 
 const pickId = (edge: ProjectEdge): string => edge.id;

@@ -13,7 +13,7 @@ const REFUSAL_LINE =
 
 /* Two things an agent keeps mixing up, so the line is in the list and in the detail of each verb it is about. */
 const SCOPE_LINE =
-    'scope\tlist and read are what a person linked into this session; nodes, views, node, agent, team and link are the canvas itself\ta node you add is readable through read only once a line runs from it into you';
+    'scope\tlist and read are what a person linked into this session; nodes, edges, views, node, agent, team and link are the canvas itself\ta node you add is readable through read only once a line runs from it into you';
 
 /* Said once under the list, since the flag is on some verbs and refused by name on the rest. */
 const dryRunLine = (): string => `dry run\t--${DRY_RUN_FLAG}\t${dryRunVerbNames().join(', ')}\tsame checks, nothing made; every other verb refuses the flag`;
@@ -85,6 +85,8 @@ const nodesVerb = defineVerb({
         'units\tx and y are the top left corner of the node in canvas pixels, w and h its size; the canvas has no edges and x or y may be negative',
         'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one',
         'self\tYour own row is the one whose id is $RUIMTE_SESSION_ID, the variable every terminal session gets; a chat backend is given none',
+        'groups\tA group is a row of kind group; its id is what --group takes on agent',
+        'see\truimte-context edges\tthe lines of the same canvas, which this list does not show',
         'note\tA tab or a newline in a title is printed as a space, so a node is always one row',
         SCOPE_LINE
     ],
@@ -96,6 +98,28 @@ const nodesVerb = defineVerb({
         return canvas.nodes.map((node) =>
             [node.id, node.kind, field(node.title), ...[node.x, node.y, node.w, node.h].map((value) => String(Math.round(value)))].join('\t')
         );
+    }
+});
+
+const edgesVerb = defineVerb({
+    name: 'edges',
+    usage: '[--view V]',
+    summary: 'Lists the lines of a canvas: id, from, to, label',
+    detail: [
+        'flag\t--view V\toptional\tThe canvas to list, by view id; ruimte-context views lists them',
+        'prints\tid\tfrom\tto\tlabel\tone line per line on the canvas, the label empty where it has none',
+        'direction\tA line runs from the first id into the second; into an agent node that is what makes the first readable to it, and never the other way round',
+        'both ways\tTwo agents that read each other are two lines, one each way; ruimte-context link draws the second',
+        'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one',
+        'note\tA canvas with no lines on it prints nothing at all',
+        SCOPE_LINE
+    ],
+    positionals: z.tuple([], { error: 'edges takes no arguments, only flags' }),
+    flags: z.object({ view: z.string().min(1, '--view needs the id of a canvas').optional() }),
+    async run({ flags }, call) {
+        const place = placeOf(call);
+        const canvas = canvasFor(await call.host.read(place.projectId), place, flags.view);
+        return canvas.edges.map((edge) => [edge.id, edge.from, edge.to, field(edge.label ?? '')].join('\t'));
     }
 });
 
@@ -117,6 +141,6 @@ const viewsVerb = defineVerb({
 });
 
 /* In the order `help` lists them: everything `ruimte-context` does, whichever route serves it. */
-export const VERBS: readonly VerbEntry[] = [helpVerb, listVerb, readVerb, nodesVerb, viewsVerb, nodeVerb, agentVerb, teamVerb, linkVerb];
+export const VERBS: readonly VerbEntry[] = [helpVerb, listVerb, readVerb, nodesVerb, edgesVerb, viewsVerb, nodeVerb, agentVerb, teamVerb, linkVerb];
 
 export const verbNamed = (name: string): VerbEntry | undefined => VERBS.find((verb) => verb.name === name);

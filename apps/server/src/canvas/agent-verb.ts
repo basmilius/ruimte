@@ -7,9 +7,12 @@ import { MAX_CANVAS_NODES, newId, nodeLines } from './node-verb.ts';
 import { groupMembers, placeBeside, placeFree, placeInGroup, type Rect } from './placement.ts';
 import { checkCwd, readPromptFile } from './project-paths.ts';
 import { unescapeText } from './text-escapes.ts';
-import { VerbRefusal, canvasFor, defineVerb, field, placeOf, type VerbCall } from './verb.ts';
+import { VerbRefusal, canvasFor, defineVerb, field, orNote, placeOf, type VerbCall } from './verb.ts';
 
 export const AGENT_KINDS = AgentKindSchema.options;
+
+/* What a dry run calls the node it is not making, so the edge it names still has two ends. */
+export const NEW_NODE = '<new node>';
 
 /* The CLIs with a chat backend; the rest only ever runs in a shell, which is what `--chat` refuses. */
 export const chatKinds = (): AgentKind[] => AGENT_KINDS.filter((kind) => providerFor(kind).capabilities.chat);
@@ -20,8 +23,8 @@ const KIND_MESSAGE = `agent needs a CLI: ${AGENT_KINDS.join(', ')}`;
 
 const AGENT_DETAIL: readonly string[] = [
     `argument\t<cli>\trequired\t${AGENT_KINDS.join(', ')}`,
-    'prints\tid\tkind\tview\tcli\tedge\tthe new node, the canvas it landed on, the CLI it runs and the edge drawn into it',
-    'flag\t--chat\tno value\tMakes a chat node instead of a terminal node; only a CLI with a chat backend takes it',
+    'prints\tid\tkind\tview\tcli\tedge\tthe new node, its kind (terminal or chat), the canvas it landed on, the CLI it runs and the id of the edge drawn into it',
+    `flag\t--chat\tno value\tMakes a chat node instead of a terminal node; only a CLI with a chat backend takes it (${chatKinds().join(', ')})`,
     `flag\t--prompt T\toptional\tWhat the agent starts working on; \\n, \\t and \\\\ are read as escapes, at most ${MAX_PROMPT_LENGTH} characters`,
     'flag\t--prompt-file F\toptional\tThe same prompt out of a file, for one with exact bytes; not together with --prompt',
     'flag\t--cwd P\toptional\tThe directory the agent starts in',
@@ -29,8 +32,14 @@ const AGENT_DETAIL: readonly string[] = [
     'flag\t--beside N\toptional\tPuts the node directly right of node N, top edges level',
     'flag\t--group G\toptional\tPuts the node inside group node G of that canvas; not together with --beside',
     'flag\t--title T\toptional\tThe title; without one the node is called after the CLI, and the session may rename it',
-    'flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field is dry-run and the edge column says edge when one would be drawn',
+    'flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field is dry-run and the last names the edge it would draw, as <from> -> <new node>',
+    'kinds\tterminal\tThat CLI running in a shell, which is what the person sees and can type in',
+    'kinds\tchat\tThe CLI as a thread in the node, fixed to that CLI, with no model picker on the composer',
     'edge\tThe edge runs from you into the new node, which is the direction that makes you readable to it: it can run ruimte-context read on your id',
+    'edge\tOne way only: you do not read the new agent through it. ruimte-context link --to <its id> draws the line back when you want that too',
+    'edge\truimte-context edges lists what is drawn on the canvas now',
+    'without a prompt\tLeave --prompt out and the node opens with the CLI waiting, so the person types the first thing themselves',
+    'groups\truimte-context nodes lists the nodes of a canvas; a row of kind group is what --group takes',
     'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one',
     'where\tWithout --beside and --group the first free spot right of the caller, or right of everything when the caller is not on that canvas',
     'group\tThe node lands in a row under the title bar of the group, which grows when it has no room; a collapsed group also takes the id into its members',
@@ -66,7 +75,10 @@ export const agentNode = (spec: AgentNodeSpec): ProjectNode => ({
 });
 
 const groupLines = (canvas: ProjectCanvasView): string[] =>
-    canvas.nodes.filter((node) => node.kind === 'group').map((node) => `group\t${node.id}\t${field(node.title)}`);
+    orNote(
+        canvas.nodes.filter((node) => node.kind === 'group').map((node) => `group\t${node.id}\t${field(node.title)}`),
+        `${canvas.id} has no groups on it yet; team opens one of its own, and a person groups nodes on the canvas`
+    );
 
 /* The prompt, from whichever flag carried it, checked against the one length a line into a shell survives. */
 const promptOf = async (flags: { prompt?: string; 'prompt-file'?: string }, call: VerbCall, folder: string | null): Promise<string | null> => {
@@ -164,7 +176,9 @@ export const agentVerb = defineVerb({
             const rect = inGroup?.rect ?? (anchor ? placeBeside(anchor, size) : placeFree(canvas.nodes, size, caller));
 
             if (dryRun) {
-                return { content: null, result: [['dry-run', chat ? 'chat' : 'terminal', canvas.id, kind, caller ? 'edge' : '-'].join('\t')] };
+                // The ends rather than the word "edge": the direction is the thing to check before anything is made.
+                const edge = caller ? `${caller.id} -> ${NEW_NODE}` : '-';
+                return { content: null, result: [['dry-run', chat ? 'chat' : 'terminal', canvas.id, kind, edge].join('\t')] };
             }
 
             const id = newId(chat ? 'chat' : 'terminal', content);

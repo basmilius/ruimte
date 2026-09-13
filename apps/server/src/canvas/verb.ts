@@ -155,7 +155,18 @@ export const placeOf = (call: VerbCall): IndexedPlace => {
 /* A field that goes into a tab-separated line; a tab or a newline in a title would split the row. */
 export const field = (value: string): string => value.replace(/[\t\r\n]+/g, ' ');
 
-export const canvasLines = (content: ProjectContent): string[] => content.views.filter(isCanvasView).map((view) => `canvas\t${view.id}\t${field(view.name)}`);
+/*
+ * What a refusal lists, or one line saying the set is empty. A refusal that promises the groups of a
+ * canvas and then prints nothing reads as a daemon that lost them, where the truth is that there are
+ * none, which is a different thing to do something about.
+ */
+export const orNote = (lines: string[], note: string): string[] => (lines.length === 0 ? [`note\t${note}`] : lines);
+
+export const canvasLines = (content: ProjectContent): string[] =>
+    orNote(
+        content.views.filter(isCanvasView).map((view) => `canvas\t${view.id}\t${field(view.name)}`),
+        'This project has no canvas; a node only ever lands on one'
+    );
 
 /*
  * The canvas a verb works on: the one `--view` names, else the one the caller is a node on. Ids

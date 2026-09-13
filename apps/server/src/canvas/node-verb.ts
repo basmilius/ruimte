@@ -14,7 +14,7 @@ import { z } from 'zod';
 import { placeBeside, placeFree } from './placement.ts';
 import { checkCwd, checkPath, isInside } from './project-paths.ts';
 import { unescapeText } from './text-escapes.ts';
-import { VerbRefusal, canvasFor, defineVerb, field, placeOf } from './verb.ts';
+import { VerbRefusal, canvasFor, defineVerb, field, orNote, placeOf } from './verb.ts';
 
 export const NODE_VERB_KINDS = ['note', 'browser', 'drawing', 'file', 'terminal', 'chat'] as const;
 type NodeVerbKind = (typeof NODE_VERB_KINDS)[number];
@@ -90,7 +90,10 @@ export const nodeLines = (canvas: ProjectCanvasView): string[] => {
     if (canvas.nodes.length > BESIDE_LINES_MAX) {
         return [`detail\truimte-context nodes\tthe ${canvas.nodes.length} nodes of ${canvas.id}`];
     }
-    return canvas.nodes.map((node) => `node\t${node.id}\t${node.kind}\t${field(node.title)}`);
+    return orNote(
+        canvas.nodes.map((node) => `node\t${node.id}\t${node.kind}\t${field(node.title)}`),
+        `${canvas.id} has no nodes on it yet`
+    );
 };
 
 /* Every id the project already uses, since a node id is also a session id and a view id is too. */
@@ -187,7 +190,10 @@ export const nodeVerb = defineVerb({
                     throw new VerbRefusal(
                         'not-a-drawing',
                         `${flags.source} is not a drawing view of this project`,
-                        content.views.filter(isDrawingView).map((view) => `drawing\t${view.id}\t${field(view.name)}`)
+                        orNote(
+                            content.views.filter(isDrawingView).map((view) => `drawing\t${view.id}\t${field(view.name)}`),
+                            'This project has no drawing views; a person makes one in the sidebar'
+                        )
                     );
                 }
                 sourceName = source.name;

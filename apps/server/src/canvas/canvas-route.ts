@@ -14,6 +14,18 @@ const text = (lines: string[], status = 200): Response => new Response(lines.len
 const refusal = (code: string, message: string, lines: string[] = [], status = 422): Response =>
     text([`refused\t${code}\t${message.replace(/[\t\r\n]+/g, ' ')}`, ...lines], status);
 
+/*
+ * A name with a space in it is a caller that quoted the whole line ("help agent"), which otherwise
+ * only gets the verb list back and no hint of what went wrong.
+ */
+const joinedWordsLines = (name: string): string[] => {
+    const [first, ...rest] = name.split(/\s+/).filter((word) => word !== '');
+    if (rest.length === 0 || !first || !verbNamed(first)) {
+        return [];
+    }
+    return [`note\tA verb and its arguments are separate words, so this is ruimte-context ${first} ${rest.join(' ')}, not one name`];
+};
+
 interface CanvasRouteDeps {
     /* The session or chat a bearer token speaks for. */
     targetForToken(token: string): string | null;
@@ -42,7 +54,7 @@ export const handleCanvasRequest = async (request: Request, pathname: string, de
     }
     const verb = verbNamed(name);
     if (!verb) {
-        return refusal('unknown-verb', `${name || '(none)'} is not a verb`, verbSummaryLines(), 404);
+        return refusal('unknown-verb', `${name || '(none)'} is not a verb`, [...joinedWordsLines(name), ...verbSummaryLines()], 404);
     }
     if (verb.served === 'context') {
         return refusal('not-a-canvas-verb', `${name} is answered by GET /context; run ruimte-context ${name}`, [], 404);

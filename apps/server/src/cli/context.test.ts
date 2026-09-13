@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import type { Server } from 'bun';
 import { unescapeText } from '../canvas/text-escapes.ts';
+import { VERBS } from '../canvas/verbs.ts';
 import { runContext } from './context.ts';
 
 let server: Server<undefined>;
@@ -133,6 +134,15 @@ describe('runContext', () => {
         expect(await runContext(['node', 'note', '--text', 'hello'], env)).toBe(0);
         expect(seen).toEqual([{ verb: 'node', argv: ['note', '--text', 'hello'], authorization: 'Bearer tok' }]);
         expect(stdout).toBe('note-12345678\tnote\tmain\n');
+    });
+
+    /* The top-level help and every refusal over arguments point at `ruimte-context help <verb>`, so
+       a verb and its argument arriving as one name would make all of them dead ends. */
+    test('help <verb> travels as the verb help with the name as its argument, for every verb there is', async () => {
+        for (const verb of VERBS) {
+            await runContext(['help', verb.name], env);
+        }
+        expect(seen.map((call) => [call.verb, call.argv])).toEqual(VERBS.map((verb) => ['help', [verb.name]]));
     });
 
     test('--text - takes the body from stdin, escaped so the daemon reads it back byte for byte', async () => {

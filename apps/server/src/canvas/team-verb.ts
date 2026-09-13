@@ -2,7 +2,7 @@ import { NODE_SIZE, type AgentKind, type ProjectEdge, type ProjectNode } from '@
 import { z } from 'zod';
 import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
 import { providerFor } from '../providers/registry.ts';
-import { AGENT_KINDS, agentNode, chatKinds, nameOf } from './agent-verb.ts';
+import { AGENT_KINDS, NEW_NODE, agentNode, chatKinds, nameOf } from './agent-verb.ts';
 import { DEPTH_LIMIT_LINES, depthForOpening } from './depth.ts';
 import { MAX_CANVAS_NODES, newId } from './node-verb.ts';
 import { placeFree, placeTeam, TEAM_COLUMNS } from './placement.ts';
@@ -50,11 +50,13 @@ const TEAM_DETAIL: readonly string[] = [
     ...ROLES_LINES,
     'json\tA prompt is a JSON string, so a line break in it is \\n of JSON itself and nothing is escaped twice',
     `example\truimte-context team --label "Parser work" --roles '[{"title":"Lexer","prompt":"Fix the tokenizer in src/lex.ts","provider":"claude"},{"title":"Reviewer","prompt":"Read the Lexer node and review its work","provider":"codex","chat":true}]'`,
-    'prints\tid\tkind\tview\tcli\tthe group first, with its label where a role has its CLI, then one line per role in the order of --roles',
+    'prints\tid\tkind\tview\tcli\tedge\tthe group first, with its label where a role has its CLI and a dash where it has an edge, then one line per role in the order of --roles',
     'flag\t--cwd P\toptional\tThe directory every agent starts in; a directory per role is not a thing',
     'flag\t--view V\toptional\tThe canvas to add to, by view id; ruimte-context views lists them',
-    'flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field of every line is dry-run',
+    'flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field of every line is dry-run and the last names the edge it would draw, as <from> -> <new node>',
     'edges\tOne edge per role, from you into that agent, so each of them can read you with ruimte-context read',
+    'edges\tOne way only: you do not read them through it, and the roles do not read each other. ruimte-context link draws any line you want on top of that',
+    'edges\truimte-context edges lists what is drawn on the canvas now',
     'where\tThe group lands on the first free spot right of you, or right of everything when you are not on that canvas',
     `group\tThe agents stand in rows of at most ${TEAM_COLUMNS} inside the frame, and the frame is sized to hold them`,
     'refusal\tA role that is wrong is named by its place in the array, counting from 0',
@@ -156,11 +158,13 @@ export const teamVerb = defineVerb({
             const label = flags.label;
 
             if (dryRun) {
+                // The ends rather than the word "edge": the direction is the thing to check before anything is made.
+                const edge = caller ? `${caller.id} -> ${NEW_NODE}` : '-';
                 return {
                     content: null,
                     result: [
-                        ['dry-run', 'group', canvas.id, field(label)].join('\t'),
-                        ...roles.map((role) => ['dry-run', kindOf(role), canvas.id, role.provider].join('\t'))
+                        ['dry-run', 'group', canvas.id, field(label), '-'].join('\t'),
+                        ...roles.map((role) => ['dry-run', kindOf(role), canvas.id, role.provider, edge].join('\t'))
                     ]
                 };
             }
@@ -178,7 +182,7 @@ export const teamVerb = defineVerb({
             const group: ProjectNode = { id: groupId, kind: 'group', title: label, ...origin };
             const nodes: ProjectNode[] = [group];
             const edges: ProjectEdge[] = [];
-            const lines = [[groupId, 'group', canvas.id, field(label)].join('\t')];
+            const lines = [[groupId, 'group', canvas.id, field(label), '-'].join('\t')];
 
             for (const [index, role] of roles.entries()) {
                 const chat = kindOf(role) === 'chat';
@@ -194,14 +198,16 @@ export const teamVerb = defineVerb({
                         cwd
                     })
                 );
+                let edgeId = '-';
                 if (caller) {
-                    edges.push({ id: mint('edge'), from: caller.id, to: id, label: 'context' });
+                    edgeId = mint('edge');
+                    edges.push({ id: edgeId, from: caller.id, to: id, label: 'context' });
                 }
                 // Written under the project's own lock, before the nodes are on disk, so a client that
                 // reacts to project.changed can never mount one while its prompt or its depth is still coming.
                 await call.host.recordOpened(place.projectId, id, call.caller, depth);
                 await call.host.holdPrompt(place.projectId, id, role.prompt);
-                lines.push([id, chat ? 'chat' : 'terminal', canvas.id, role.provider].join('\t'));
+                lines.push([id, chat ? 'chat' : 'terminal', canvas.id, role.provider, edgeId].join('\t'));
             }
 
             return {
