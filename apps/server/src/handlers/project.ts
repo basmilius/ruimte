@@ -14,7 +14,14 @@ const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
 export const registerProjectHandlers = (dispatcher: Dispatcher, store: ProjectStore): void => {
     dispatcher.register('project.list', () => translate(async () => ({ projects: await store.list() })));
 
-    dispatcher.register('project.open', (payload) => translate(() => store.openProject(payload)));
+    dispatcher.register('project.open', (payload, client) =>
+        translate(async () => {
+            const opened = await store.openProject(payload);
+            // Told after the open, so a client is only counted as watching a project it really got.
+            store.addViewer(client.id, opened.summary.projectId);
+            return opened;
+        })
+    );
 
     dispatcher.register('project.save', (payload) => translate(async () => ({ rev: await store.save(payload.projectId, payload.baseRev, payload.content) })));
 
@@ -25,16 +32,18 @@ export const registerProjectHandlers = (dispatcher: Dispatcher, store: ProjectSt
         })
     );
 
-    dispatcher.register('project.close', (payload) =>
+    dispatcher.register('project.close', (payload, client) =>
         translate(async () => {
+            store.removeViewer(client.id, payload.projectId);
             await store.closeProject(payload.projectId);
             return {};
         })
     );
 
     // Switching to another project on the same machine: the daemon lets go, the list does not move.
-    dispatcher.register('project.release', (payload) =>
+    dispatcher.register('project.release', (payload, client) =>
         translate(() => {
+            store.removeViewer(client.id, payload.projectId);
             store.release(payload.projectId);
             return {};
         })

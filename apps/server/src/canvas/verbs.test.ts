@@ -43,6 +43,7 @@ let held: Array<{ projectId: string; nodeId: string; prompt: string }>;
 let lineage: AgentLineageStore;
 let deleteAnyView: boolean;
 let ended: string[];
+let watching: Array<{ projectId: string; viewId: string; by: string }>;
 
 const TOKENS: Record<string, string> = { term: 'term-1', chat: 'chat-1', stray: 'nobody' };
 
@@ -84,9 +85,16 @@ beforeEach(async () => {
     held = [];
     deleteAnyView = false;
     ended = [];
+    watching = [];
     lineage = new AgentLineageStore(join(root, 'home'));
     await lineage.load();
     store = new ProjectStore(join(root, 'home'));
+    // A client on its socket, which is what `open` asks the store to tell.
+    store.subscribe('client-1', (event) => {
+        if (event.event === 'project.showView') {
+            watching.push(event.payload);
+        }
+    });
     const opened = await store.openProject({ folder });
     projectId = opened.summary.projectId;
     await store.save(projectId, opened.document.rev, content());
@@ -112,6 +120,7 @@ const host = (): CanvasHost => ({
     openedCount: (callerId) => lineage.openedCount(callerId),
     recordOpened: (projectId, nodeId, openedBy, depth) => lineage.put(projectId, nodeId, openedBy, depth),
     agentsDeleteAnyView: () => deleteAnyView,
+    showView: (projectId, viewId, by) => store.showView(projectId, viewId, by),
     endSession: async (kind, nodeId) => {
         ended.push(`${kind}\t${nodeId}`);
     }
@@ -1440,5 +1449,69 @@ describe('the view verb itself', () => {
     test('a session that is in no project of this machine changes nothing', async () => {
         expect((await post('view', ['new', 'Plan'], 'stray')).lines[0]).toStartWith('refused\tnot-in-project\t');
         expect((await post('view', ['delete', 'board'], 'stray')).lines[0]).toStartWith('refused\tnot-in-project\t');
+    });
+});
+
+describe('open', () => {
+    const VIEW_LINES = [
+        'view\tmain\tcanvas\tCanvas',
+        'view\tsep-1\tseparator\t',
+        'view\tboard\tcanvas\tBoard',
+        'view\tchat-1\tchat\tPlanner',
+        'view\tsketch-1\tdrawing\tSketch'
+    ];
+
+    test('tells the clients that have the project on screen, and writes nothing', async () => {
+        await store.openProject({ projectId });
+        store.addViewer('client-1', projectId);
+        const { status, lines } = await post('open', ['board']);
+        expect(status).toBe(200);
+        expect(lines).toEqual(['showing\tboard\tcanvas\tBoard', 'sent\tyes\tEveryone with this project on screen was told']);
+        expect(watching).toEqual([{ projectId, viewId: 'board', by: 'term-1' }]);
+        // Showing is personal, so the shared file stands where the last write left it.
+        expect((await onDisk()).rev).toBe(1);
+    });
+
+    test('a project nobody has on screen is not a failure, and the client is not told', async () => {
+        const { status, lines } = await post('open', ['sketch-1']);
+        expect(status).toBe(200);
+        expect(lines).toEqual(['showing\tsketch-1\tdrawing\tSketch', 'sent\tno\tNobody has this project on screen right now, so nothing was showing it']);
+        expect(watching).toEqual([]);
+    });
+
+    test('a client that let the project go stops being told', async () => {
+        store.addViewer('client-1', projectId);
+        expect((await post('open', ['board'])).lines[1]).toStartWith('sent\tyes\t');
+        store.removeViewer('client-1', projectId);
+        expect((await post('open', ['board'])).lines[1]).toStartWith('sent\tno\t');
+        expect(watching).toHaveLength(1);
+    });
+
+    test('a separator never opens', async () => {
+        const { status, lines } = await post('open', ['sep-1']);
+        expect(status).toBe(422);
+        expect(lines[0]).toBe('refused\tnever-opens\tsep-1 is a separator, a line in the sidebar with nothing to show');
+        expect(lines.slice(1)).toEqual(VIEW_LINES);
+        expect(watching).toEqual([]);
+    });
+
+    test('an id the project does not have is refused with the views it does', async () => {
+        const { status, lines } = await post('open', ['Board']);
+        expect(status).toBe(422);
+        expect(lines[0]).toBe('refused\tunknown-view\tBoard is not a view of this project');
+        expect(lines.slice(1)).toEqual([...VIEW_LINES, 'note\topen takes a view id, never a name']);
+        expect(watching).toEqual([]);
+    });
+
+    test('takes one id, and nothing that would make it a dry run', async () => {
+        expect((await post('open', [])).lines[0]).toBe('refused\tbad-arguments\topen needs the id of a view');
+        expect((await post('open', ['board', 'main'])).lines[0]).toBe('refused\tbad-arguments\topen takes one view id and nothing else');
+        expect((await post('open', ['board', '--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
+        expect(watching).toEqual([]);
+    });
+
+    test('a session that is in no project of this machine shows nobody anything', async () => {
+        expect((await post('open', ['board'], 'stray')).lines[0]).toStartWith('refused\tnot-in-project\t');
+        expect(watching).toEqual([]);
     });
 });

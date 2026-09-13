@@ -36,6 +36,8 @@ export interface CanvasHost {
     recordOpened(projectId: string, nodeId: string, openedBy: string, depth: number): Promise<void>;
     /* Whether this machine lets an agent remove a view it did not make (`agentsDeleteAnyView` in `endpoint.json`). */
     agentsDeleteAnyView(): boolean;
+    /* Tells every client to show this view of this project; false when nobody had it on screen to tell. */
+    showView(projectId: string, viewId: string, by: string): boolean;
     /* Ends the shell or the CLI behind a node; a canvas that is removed takes its sessions with it. */
     endSession(kind: 'terminal' | 'chat', nodeId: string): Promise<void>;
 }

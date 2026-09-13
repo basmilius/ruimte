@@ -165,6 +165,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         openedCount: (callerId: string) => lineage.openedCount(callerId),
         recordOpened: (projectId: string, nodeId: string, openedBy: string, depth: number) => lineage.put(projectId, nodeId, openedBy, depth),
         agentsDeleteAnyView: () => identity.agentsDeleteAnyView,
+        showView: (projectId: string, viewId: string, by: string) => projects.showView(projectId, viewId, by),
         /* A node that has never been shown has no session, and a canvas going down is not the place
            to fail over one, so an id neither manager knows is already ended as far as the verb goes. */
         endSession: async (kind: 'terminal' | 'chat', nodeId: string) => {

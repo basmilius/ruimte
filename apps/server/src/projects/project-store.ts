@@ -126,6 +126,10 @@ export class ProjectStore {
     readonly index = new ProjectIndex();
     private readonly sinks = new Map<string, SessionSink>();
     private readonly open = new Map<string, OpenProject>();
+    /* Which client has which project on screen. `project.changed` goes to every socket, since a
+       client that let go of a project may still hold its document, but showing a view is aimed at a
+       person: a client without the project in a workspace has nothing to do with it and is not told. */
+    private readonly viewers = new Map<string, Set<string>>();
     private registry: RegistryEntry[] | null = null;
     private readonly identity = new IdentityCache();
     private drawings: ProjectDrawings | null = null;
@@ -146,8 +150,24 @@ export class ProjectStore {
         return () => {
             if (this.sinks.get(clientId) === sink) {
                 this.sinks.delete(clientId);
+                this.viewers.delete(clientId);
             }
         };
+    }
+
+    /* This client put the project on screen, which is what makes it one `showView` reaches. */
+    addViewer(clientId: string, projectId: string): void {
+        const held = this.viewers.get(clientId);
+        if (held) {
+            held.add(projectId);
+            return;
+        }
+        this.viewers.set(clientId, new Set([projectId]));
+    }
+
+    /* This client let the project go; its sessions keep running, but it is not watching any more. */
+    removeViewer(clientId: string, projectId: string): void {
+        this.viewers.get(clientId)?.delete(projectId);
     }
 
     /* Every project in the registry, without opening or resolving anything: what a folder is called
@@ -361,6 +381,22 @@ export class ProjectStore {
             this.emit({ event: 'project.changed', payload: { projectId, document: daemonSide } });
             return mutation.result;
         });
+    }
+
+    /*
+     * Asks the clients that have this project on screen to show a view of it. Nothing is written:
+     * what a person looks at is theirs, so this is an event a client may still ignore. False when
+     * nobody was watching, which is what the verb reports back rather than failing over.
+     */
+    showView(projectId: string, viewId: string, by: string): boolean {
+        let told = 0;
+        for (const [clientId, sink] of this.sinks) {
+            if (this.viewers.get(clientId)?.has(projectId) === true) {
+                sink({ event: 'project.showView', payload: { projectId, viewId, by } });
+                told += 1;
+            }
+        }
+        return told > 0;
     }
 
     /* Deliberately not `readDocument`: a verb that finds a broken file refuses, it does not move a person's file aside. */
