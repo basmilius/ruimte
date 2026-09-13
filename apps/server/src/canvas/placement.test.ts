@@ -8,6 +8,11 @@ describe('placeBeside', () => {
         expect(placeBeside({ x: 10, y: 20, w: 100, h: 50 }, size)).toEqual({ x: 110 + PLACEMENT_GAP, y: 20, ...size });
     });
 
+    test('follows the anchor wherever it is, never the row the others are on', () => {
+        const anchor = { x: -4000, y: 2400, w: 320, h: 240 };
+        expect(placeBeside(anchor, size)).toEqual({ x: -4000 + 320 + PLACEMENT_GAP, y: 2400, ...size });
+    });
+
     test('rounds to whole pixels', () => {
         expect(placeBeside({ x: 0.4, y: 7.6, w: 99.3, h: 50 }, size)).toEqual({ x: 140, y: 8, ...size });
     });

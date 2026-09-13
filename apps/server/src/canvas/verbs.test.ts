@@ -317,6 +317,18 @@ describe('node', () => {
         expect((await post('node', ['note', '--beside', 'chat-1'])).lines[0]).toStartWith('refused\tunknown-node\t');
     });
 
+    test('--beside wins over the row beside the caller, wherever the anchor sits', async () => {
+        // Far left of everything and well below the caller: the first free spot on the caller's row is nowhere near it.
+        const moved = content();
+        (moved.views[0] as ProjectCanvasView).nodes[1]!.x = -4000;
+        (moved.views[0] as ProjectCanvasView).nodes[1]!.y = 2400;
+        await store.mutate(projectId, () => ({ content: moved, result: null }));
+
+        const { lines } = await post('node', ['note', '--beside', 'note-1']);
+        const node = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === lines[0]!.split('\t')[0])!;
+        expect([node.x, node.y]).toEqual([-4000 + 320 + PLACEMENT_GAP, 2400]);
+    });
+
     test('needs a kind it knows', async () => {
         expect((await post('node', [])).lines[0]).toStartWith('refused\tbad-arguments\t');
         expect((await post('node', ['group'])).lines[0]).toStartWith('refused\tbad-arguments\t');
