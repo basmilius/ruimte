@@ -1,5 +1,22 @@
 import { describe, expect, test } from 'bun:test';
-import { DEFAULT_HOST, DEFAULT_PORT, parseServerArgs } from './config.ts';
+import { DEFAULT_HOST, DEFAULT_PORT, forgetInheritedSession, parseServerArgs } from './config.ts';
+
+describe('forgetInheritedSession', () => {
+    test('drops the session variables and keeps the rest', () => {
+        const env: Record<string, string | undefined> = {
+            RUIMTE_HOOK_URL: 'http://127.0.0.1:4210/hooks',
+            RUIMTE_HOOK_TOKEN: 'hook',
+            RUIMTE_CONTEXT_URL: 'http://127.0.0.1:4210/context',
+            RUIMTE_CONTEXT_TOKEN: 'context',
+            RUIMTE_SESSION_ID: 'node-1',
+            RUIMTE_HOME: '/tmp/ruimte-dev',
+            RUIMTE_LABEL: 'box',
+            PATH: '/usr/bin'
+        };
+        forgetInheritedSession(env);
+        expect(env).toEqual({ RUIMTE_HOME: '/tmp/ruimte-dev', RUIMTE_LABEL: 'box', PATH: '/usr/bin' });
+    });
+});
 
 describe('parseServerArgs', () => {
     test('defaults', () => {

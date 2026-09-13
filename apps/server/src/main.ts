@@ -1,4 +1,4 @@
-import { parseServerArgs } from './config.ts';
+import { forgetInheritedSession, parseServerArgs } from './config.ts';
 
 /*
  * One binary, three jobs: `ruimte` serves, `ruimte pair` prints a pairing URL, `ruimte context`
@@ -16,6 +16,9 @@ if (config.command === 'context') {
     const { runContext } = await import('./cli/context.ts');
     process.exit(await runContext(config.args));
 }
+
+// Only after the CLI commands: `ruimte context` runs inside a session and needs these to find it.
+forgetInheritedSession(process.env);
 
 const { startDaemon } = await import('./daemon.ts');
 await startDaemon(config);

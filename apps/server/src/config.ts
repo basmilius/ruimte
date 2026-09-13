@@ -24,6 +24,19 @@ export interface ServerConfig {
     args: string[];
 }
 
+/*
+ * What a session hands its shell. A daemon started from inside another daemon's terminal inherits
+ * them, and its own sessions and usage probes would then report into that other daemon's node.
+ */
+export const SESSION_VARIABLES = ['RUIMTE_HOOK_URL', 'RUIMTE_HOOK_TOKEN', 'RUIMTE_CONTEXT_URL', 'RUIMTE_CONTEXT_TOKEN', 'RUIMTE_SESSION_ID'] as const;
+
+/** Removes the variables of a session this process was started from; a daemon never belongs to one. */
+export const forgetInheritedSession = (env: Record<string, string | undefined>): void => {
+    for (const name of SESSION_VARIABLES) {
+        delete env[name];
+    }
+};
+
 export const DEFAULT_HOST = '127.0.0.1';
 export const DEFAULT_PORT = 4210;
 
