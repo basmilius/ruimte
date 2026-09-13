@@ -111,6 +111,14 @@ export class ThreadProjector {
         this.now = options.now ?? Date.now;
     }
 
+    /* Forgets what it kept about items of a thread that was just emptied. */
+    reset(): void {
+        this.taskSummary = null;
+        this.taskToolUseId = null;
+        this.budgets.clear();
+        this.thinking = null;
+    }
+
     project(generation: number, event: BackendEvent): ChatEvent[] {
         const events: ChatEvent[] = [];
         // The CLI talks outside a turn when it wakes the agent itself: a background task it launched

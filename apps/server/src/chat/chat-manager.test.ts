@@ -33,6 +33,9 @@ class ChatRecorder {
                 if (item?.kind === 'assistant') {
                     this.items.set(item.id, { ...item, text: item.text + chatEvent.text });
                 }
+            } else if (chatEvent.type === 'reset') {
+                this.items.clear();
+                this.info = chatEvent.info;
             } else {
                 this.info = chatEvent.info;
             }
@@ -512,6 +515,70 @@ describe('ChatManager', () => {
 
         await waitFor(() => recorder.ofKind('user').length === 3, 'the interrupted turn to give way');
         expect(recorder.ofKind('user').map((item) => item.text)).toEqual(['slow', 'urgent', 'waiting']);
+    });
+});
+
+describe('clearing a chat', () => {
+    test('empties the thread on disk and the next send starts the CLI without resuming', async () => {
+        await manager.create({ chatId: 'chat-clear', cwd: home, selection: { model: 'opus', options: {} } });
+        manager.attach('chat-clear', 'c1');
+        await manager.send('chat-clear', 'first');
+        await waitFor(idle, 'the first turn');
+        const first = recorder.info!;
+
+        await manager.clear('chat-clear');
+        expect(recorder.events.at(-1)).toMatchObject({ type: 'reset', items: [] });
+        expect(recorder.info).toMatchObject({
+            agentSessionId: null,
+            running: false,
+            status: 'idle',
+            activeTurnId: null,
+            queue: [],
+            slashCommands: [],
+            usage: { contextTokens: 0, turns: 1, costUsd: first.usage.costUsd }
+        });
+        const stored = await store.read('chat-clear');
+        expect(stored?.items).toEqual([]);
+        expect(stored?.info).toMatchObject({ provider: 'claude', selection: first.selection, agentSessionId: null, queue: [] });
+
+        await manager.send('chat-clear', 'second');
+        await waitFor(() => recorder.info?.usage.turns === 2 && idle(), 'the second turn');
+        // The fake takes the id after `--resume` when it is given one, so a new id means it was not.
+        expect(recorder.info?.agentSessionId?.startsWith('fake-')).toBe(true);
+        expect(recorder.info?.agentSessionId).not.toBe(first.agentSessionId);
+        expect(manager.attach('chat-clear', 'c1').items.map((item) => item.kind)).toEqual(['turn', 'user', 'thinking', 'assistant']);
+        expect(recorder.ofKind('user').map((item) => item.text)).toEqual(['second']);
+    });
+
+    test('a running turn is refused without force; with force the CLI goes and nothing of the turn comes back', async () => {
+        const repo = await mkdtemp(join(tmpdir(), 'ruimte-chat-clear-'));
+        await Bun.spawn(['git', 'init', '-q'], { cwd: repo, stdout: 'ignore', stderr: 'ignore' }).exited;
+        await writeFile(join(repo, 'seed.txt'), 'seed\n');
+
+        await manager.create({ chatId: 'chat-busy', cwd: repo });
+        manager.attach('chat-busy', 'c1');
+        await manager.send('chat-busy', 'tool: date');
+        await manager.send('chat-busy', 'queued');
+        await waitFor(() => recorder.info?.status === 'needs-you', 'needs-you');
+        await waitFor(() => recorder.ofKind('turn')[0]?.checkpoint !== undefined, 'the checkpoint');
+
+        await expect(manager.clear('chat-busy')).rejects.toMatchObject({ code: 'chat-busy' });
+        expect(recorder.ofKind('approval')).toHaveLength(1);
+        expect(manager.get('chat-busy')?.info.queue).toHaveLength(1);
+
+        await manager.clear('chat-busy', true);
+        expect(manager.get('chat-busy')?.running).toBe(false);
+        expect(manager.get('chat-busy')?.pid).toBeNull();
+        expect(manager.attach('chat-busy', 'c1').items).toEqual([]);
+        expect(recorder.info).toMatchObject({ status: 'idle', activeTurnId: null, queue: [] });
+
+        // Whatever the killed CLI or the settled checkpoint still had on its way must not bring the turn back.
+        await Bun.sleep(300);
+        expect(recorder.items.size).toBe(0);
+        expect(manager.attach('chat-busy', 'c1').items).toEqual([]);
+        expect((await store.read('chat-busy'))?.items).toEqual([]);
+        await manager.kill('chat-busy');
+        await rm(repo, { recursive: true, force: true });
     });
 });
 

@@ -63,6 +63,14 @@ export class ChatThread {
         return { type: 'info', info: this.info };
     }
 
+    /* Empties the thread; the info carries on with the patch on top. */
+    reset(patch: Partial<ChatInfo>): ChatEvent {
+        this.items.clear();
+        this.order.length = 0;
+        this.info = { ...this.info, ...patch };
+        return { type: 'reset', info: this.info, items: [] };
+    }
+
     setStatus(status: AgentStatus): ChatEvent {
         return this.patchInfo({ status });
     }

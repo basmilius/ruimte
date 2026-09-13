@@ -269,6 +269,37 @@ export class ChatSession {
         return true;
     }
 
+    /*
+     * Starts the chat over: the CLI goes, and the next send starts one without a session to resume.
+     * A turn in the way is refused unless forced, and a forced clear does not wait for it to end,
+     * since the turn disappears with the thread anyway. Writing the empty thread is the caller's.
+     */
+    clear(force: boolean): void {
+        if (this.busy && !force) {
+            throw new ChatError('chat-busy', `Chat ${this.id} is still working on the previous message`);
+        }
+        this.dispose();
+        this.generation += 1;
+        this.projector.reset();
+        // Null again, so the fresh CLI hears about its links at launch as it would on a first turn.
+        this.lastSources = null;
+        this.staleResults = 0;
+        this.restartPending = false;
+        this.turnReady = Promise.resolve();
+        const usage = this.thread.info.usage;
+        this.emit([
+            this.thread.reset({
+                agentSessionId: null,
+                running: false,
+                status: 'idle',
+                activeTurnId: null,
+                queue: [],
+                slashCommands: [],
+                usage: { ...usage, contextTokens: 0 }
+            })
+        ]);
+    }
+
     /* Ends the process; the thread stays as it is. */
     stop(): void {
         this.backend?.stop();

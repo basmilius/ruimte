@@ -267,6 +267,15 @@ export class ChatManager {
         session.compact();
     }
 
+    /* Empties the thread and drops the CLI's session; `force` stops a turn that is in the way. */
+    async clear(chatId: string, force = false): Promise<void> {
+        const session = this.require(chatId);
+        session.clear(force);
+        // A debounced write still waiting holds the old thread and must not land after the empty one.
+        this.cancelWaiting(chatId);
+        await Promise.all([this.persistNow(chatId), this.attachments.removeAll(chatId)]);
+    }
+
     cancel(chatId: string): void {
         this.require(chatId).cancel();
     }

@@ -32,6 +32,9 @@ class ChatRecorder {
                 if (item?.kind === 'assistant') {
                     this.items.set(item.id, { ...item, text: item.text + chatEvent.text });
                 }
+            } else if (chatEvent.type === 'reset') {
+                this.items.clear();
+                this.info = chatEvent.info;
             } else {
                 this.info = chatEvent.info;
             }
@@ -264,6 +267,25 @@ describe('ChatManager with Codex', () => {
         expect(other.info?.usage.turns).toBe(2);
         await again.shutdown();
         again.get('chat-5')?.dispose();
+    });
+
+    test('after a clear the next send starts a new Codex thread instead of resuming', async () => {
+        await open('chat-clear');
+        await manager.send('chat-clear', 'first');
+        await waitFor(idle, 'the first turn');
+        const threadId = recorder.info?.agentSessionId;
+        expect(threadId?.startsWith('fake-')).toBe(true);
+
+        await manager.clear('chat-clear');
+        expect(recorder.info).toMatchObject({ agentSessionId: null, running: false, activeTurnId: null });
+        expect(manager.attach('chat-clear', 'c1').items).toEqual([]);
+
+        await manager.send('chat-clear', 'second');
+        await waitFor(() => recorder.info?.usage.turns === 2 && idle(), 'the second turn');
+        // `thread/resume` hands the fake its old id back; `thread/start` makes a new one.
+        expect(recorder.info?.agentSessionId?.startsWith('fake-')).toBe(true);
+        expect(recorder.info?.agentSessionId).not.toBe(threadId);
+        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: second (medium)']);
     });
 
     test('the first prompt of a process carries the note about the verbs', async () => {
