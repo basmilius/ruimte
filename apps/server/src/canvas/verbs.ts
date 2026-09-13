@@ -1,11 +1,16 @@
 import { ContextSourceSchema } from '@ruimte/contracts';
 import { z } from 'zod';
+import { MAX_SCREEN_LINES } from '../context/context-store.ts';
 import { nodeVerb } from './node-verb.ts';
 import { VerbRefusal, canvasFor, defineVerb, field, placeOf, type ContextVerb, type VerbEntry } from './verb.ts';
 
 /* The one line about failure every help output ends with; the codes are the CLI's, which is what runs the verb. */
 const REFUSAL_LINE =
     'refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a Ruimte session, 3 refused';
+
+/* Two things an agent keeps mixing up, so the line is in the list and in the detail of each verb it is about. */
+const SCOPE_LINE =
+    'scope\tlist and read are what a person linked into this session; nodes, views and node are the canvas itself\ta node you add is readable through read only once someone draws a line into you';
 
 /* Every row says what it is in its first field, so the lines under the list are never read as verbs. */
 export const verbSummaryLines = (): string[] => VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`);
@@ -24,7 +29,7 @@ const helpVerb = defineVerb({
     flags: z.object({}),
     run: async ({ positionals: [name] }) => {
         if (name === undefined) {
-            return [...verbSummaryLines(), 'detail\truimte-context help <verb>\tone verb in full', REFUSAL_LINE];
+            return [...verbSummaryLines(), SCOPE_LINE, 'detail\truimte-context help <verb>\tone verb in full', REFUSAL_LINE];
         }
         const verb = verbNamed(name);
         if (!verb) {
@@ -42,7 +47,8 @@ const listVerb: ContextVerb = {
     detail: [
         'prints\tid\tkind\ttitle\tone line per linked source, nothing when the person linked none',
         `kinds\t${ContextSourceSchema.shape.kind.options.join('\t')}\ta note and a browser address both arrive as text`,
-        'note\tThe id is what ruimte-context read takes; this list is the whole of what you may read'
+        'note\tThe id is what ruimte-context read takes; this list is the whole of what you may read',
+        SCOPE_LINE
     ]
 };
 
@@ -54,8 +60,12 @@ const readVerb: ContextVerb = {
     detail: [
         'argument\t<id>\trequired\tThe id of a source, from ruimte-context list',
         'prints\tThe source itself, as text, not as tab-separated lines',
-        'note\tA text or a browser address is what the person wrote; a terminal, a chat and a drawing are read the moment you ask',
-        'note\tA file arrives as its path and a line telling you to read it yourself, since your own tools see a fresher copy'
+        'kind\ttext\tThe text the person wrote: a note, a text on the canvas or a browser address',
+        `kind\tterminal\tThe screen of that session, its last ${MAX_SCREEN_LINES} lines, read the moment you ask`,
+        'kind\tchat\tThe whole thread as markdown: who said what, and what every tool ran',
+        'kind\tdrawing\tThe text of the drawing in reading order, and the picture itself as SVG under it',
+        'kind\tfile\tIts path and a line telling you to read it yourself, since your own tools see a fresher copy',
+        SCOPE_LINE
     ]
 };
 
@@ -68,7 +78,9 @@ const nodesVerb = defineVerb({
         'prints\tid\tkind\ttitle\tx\ty\tw\th\tone line per node, rounded to whole pixels',
         'units\tx and y are the top left corner of the node in canvas pixels, w and h its size; the canvas has no edges and x or y may be negative',
         'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one',
-        'note\tA tab or a newline in a title is printed as a space, so a node is always one row'
+        'self\tYour own row is the one whose id is $RUIMTE_SESSION_ID, the variable every terminal session gets; a chat backend is given none',
+        'note\tA tab or a newline in a title is printed as a space, so a node is always one row',
+        SCOPE_LINE
     ],
     positionals: z.tuple([], { error: 'nodes takes no arguments, only flags' }),
     flags: z.object({ view: z.string().min(1, '--view needs the id of a canvas').optional() }),

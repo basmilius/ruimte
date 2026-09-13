@@ -4,7 +4,7 @@ import { renderDrawing } from './context-drawing.ts';
 export const CONTEXT_PATH = '/context';
 
 // A screen is read live; this keeps a long scrollback from flooding an agent's context.
-const MAX_LINES = 2000;
+export const MAX_SCREEN_LINES = 2000;
 
 interface ContextReaders {
     /* What the agent under this id may read, derived from the project documents the daemon knows. */
@@ -89,7 +89,7 @@ export class ContextStore {
                     return null;
                 }
                 const lines = text.split('\n');
-                return lines.slice(Math.max(0, lines.length - MAX_LINES)).join('\n');
+                return lines.slice(Math.max(0, lines.length - MAX_SCREEN_LINES)).join('\n');
             }
             case 'chat': {
                 const items = this.readers.chatItems(source.id);

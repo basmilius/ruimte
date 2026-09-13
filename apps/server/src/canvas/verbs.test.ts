@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { NODE_SIZE, type ProjectCanvasView, type ProjectContent, type ProjectDocument } from '@ruimte/contracts';
+import { ContextSourceSchema, NODE_SIZE, type ProjectCanvasView, type ProjectContent, type ProjectDocument } from '@ruimte/contracts';
+import { SESSION_VARIABLES } from '../config.ts';
+import { MAX_SCREEN_LINES } from '../context/context-store.ts';
 import { documentPathInFolder } from '../projects/project-files.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { CANVAS_PATH, handleCanvasRequest } from './canvas-route.ts';
@@ -122,9 +124,10 @@ describe('help', () => {
     test('renders one row per verb from the registry, with what is not a verb marked as such', async () => {
         const { status, lines } = await post('help', []);
         expect(status).toBe(200);
-        expect(lines.slice(0, -2)).toEqual(VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`));
-        expect(lines.map((line) => line.split('\t')[0])).toEqual([...VERBS.map(() => 'verb'), 'detail', 'refusal']);
+        expect(lines.slice(0, -3)).toEqual(VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`));
+        expect(lines.map((line) => line.split('\t')[0])).toEqual([...VERBS.map(() => 'verb'), 'scope', 'detail', 'refusal']);
         expect(lines[2]).toBe('verb\tread\t<id>\tPrints one linked source');
+        expect(lines.at(-3)).toStartWith('scope\tlist and read are what a person linked into this session;');
         expect(lines.at(-2)).toBe('detail\truimte-context help <verb>\tone verb in full');
         expect(lines.at(-1)).toBe(
             'refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a Ruimte session, 3 refused'
@@ -167,6 +170,32 @@ describe('help', () => {
         expect(lines.filter((line) => line.startsWith('where\t')).length).toBe(2);
         expect(lines.filter((line) => line.startsWith('paths\t')).length).toBe(2);
         expect(lines.some((line) => line.includes('--text - takes the body from stdin'))).toBe(true);
+    });
+
+    test('the verbs about linked context and the verbs about the canvas are told apart wherever they meet', async () => {
+        for (const verb of ['list', 'read', 'nodes']) {
+            const scope = (await post('help', [verb])).lines.filter((line) => line.startsWith('scope\t'));
+            expect(scope).toHaveLength(1);
+            expect(scope[0]).toInclude('a node you add is readable through read only once someone draws a line into you');
+        }
+    });
+
+    test('help read says what comes back for every kind a source can be', async () => {
+        const { lines } = await post('help', ['read']);
+        for (const kind of ContextSourceSchema.shape.kind.options) {
+            expect(lines.some((line) => line.startsWith(`kind\t${kind}\t`))).toBe(true);
+        }
+        expect(lines.some((line) => line.startsWith('kind\tterminal\t') && line.includes(String(MAX_SCREEN_LINES)))).toBe(true);
+        expect(lines.some((line) => line.startsWith('kind\tfile\t') && line.includes('read it yourself'))).toBe(true);
+    });
+
+    test('help nodes says which row the caller is, by a variable the session really sets', async () => {
+        const self = (await post('help', ['nodes'])).lines.filter((line) => line.startsWith('self\t'));
+        expect(self).toHaveLength(1);
+        expect(self[0]).toInclude('$RUIMTE_SESSION_ID');
+        expect(SESSION_VARIABLES).toContain('RUIMTE_SESSION_ID');
+        // A chat backend is spawned without it, and help must not send one looking for what it never got.
+        expect(self[0]).toInclude('a chat backend is given none');
     });
 
     test('help views says a separator has no name', async () => {
