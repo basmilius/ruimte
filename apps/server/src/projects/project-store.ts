@@ -6,7 +6,9 @@ import {
     EMPTY_LOCAL,
     MAIN_VIEW_ID,
     MAIN_VIEW_NAME,
+    ProjectDocumentSchema,
     ProjectIconChoiceSchema,
+    duplicateIdIn,
     migrateLocal,
     type ProjectContent,
     type ProjectDocument,
@@ -88,6 +90,12 @@ export interface ProjectDrawings {
     /* Every drawing file whose view left the project is deleted, but only when a person saved. */
     removeOrphans(projectId: string, keep: Set<string>): Promise<void>;
     closeProject(projectId: string): void;
+}
+
+/* What a change hands back: the whole new content, and whatever the caller wants to answer with. */
+export interface ProjectMutation<T> {
+    content: ProjectContent;
+    result: T;
 }
 
 interface OpenProject {
@@ -310,6 +318,71 @@ export class ProjectStore {
             this.publish(state.entry);
         }
         return document.rev;
+    }
+
+    /* The document as it stands on disk, open or not, in its daemon-side form. */
+    read(projectId: string): Promise<ProjectContent> {
+        return this.locked(async () => (await this.readCurrent(projectId)).content);
+    }
+
+    /*
+     * Applies a change to the document on disk, whether a client has the project open or not: an
+     * agent keeps working after the person switched away, and `project.release` let go of the file
+     * then. Throwing from `apply` writes nothing.
+     */
+    mutate<T>(projectId: string, apply: (content: ProjectContent) => ProjectMutation<T> | Promise<ProjectMutation<T>>): Promise<T> {
+        return this.locked(async () => {
+            const { entry, path, rev, content } = await this.readCurrent(projectId);
+            const mutation = await apply(content);
+            const parsed = ProjectDocumentSchema.safeParse({ version: 2, rev: rev + 1, ...toPortable(mutation.content, entry.folder) });
+            if (!parsed.success) {
+                throw new ProjectError('project-invalid', `The change would not make a valid canvas: ${parsed.error.issues[0]?.message ?? 'unknown'}`);
+            }
+            const document = parsed.data;
+            const duplicate = duplicateIdIn(document.views);
+            if (duplicate) {
+                throw new ProjectError('project-invalid', `The change would give two things the id "${duplicate}"`);
+            }
+            const text = await writeDocument(path, document);
+            const state = this.open.get(projectId);
+            if (state) {
+                state.lastText = text;
+                state.rev = document.rev;
+                state.drawingIds = drawingIdsIn(document.views);
+            }
+            const daemonSide = fromPortable(document, entry.folder);
+            this.index.set(projectId, entry.folder, daemonSide);
+            // Every sink, open or not: a client that released the project may still have it on screen in another workspace.
+            this.emit({ event: 'project.changed', payload: { projectId, document: daemonSide } });
+            return mutation.result;
+        });
+    }
+
+    /* Deliberately not `readDocument`: a verb that finds a broken file refuses, it does not move a person's file aside. */
+    private async readCurrent(projectId: string): Promise<{ entry: RegistryEntry; path: string; rev: number; content: ProjectContent }> {
+        const entry = (await this.loadRegistry()).find((candidate) => candidate.projectId === projectId);
+        if (!entry) {
+            throw new ProjectError('project-not-found', `No project ${projectId}`);
+        }
+        const path = this.documentPath(entry);
+        let text: string;
+        try {
+            text = await readFile(path, 'utf8');
+        } catch (e) {
+            if (isNotFound(e)) {
+                throw new ProjectError('project-missing', `The canvas of ${entry.name} is gone from ${path}`);
+            }
+            throw e;
+        }
+        const parsed = parseDocument(text);
+        if (parsed.kind === 'invalid') {
+            throw new ProjectError('project-invalid', parsed.message);
+        }
+        if (parsed.kind !== 'ok') {
+            throw new ProjectError('project-invalid', `${path} does not parse as a canvas`);
+        }
+        const { version: _version, rev, ...content } = parsed.document;
+        return { entry, path, rev, content: fromPortable(content, entry.folder) };
     }
 
     async saveLocal(projectId: string, local: ProjectLocal): Promise<void> {

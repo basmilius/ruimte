@@ -13,6 +13,7 @@ import { HOOK_EVENTS } from './agents/hooks.ts';
 import { defaultHookPaths, installHooks } from './agents/install.ts';
 import { ATTACHMENTS_PATH, handleAttachmentRequest } from './chat/attachment-route.ts';
 import { AttachmentStore } from './chat/attachment-store.ts';
+import { CANVAS_PATH, handleCanvasRequest } from './canvas/canvas-route.ts';
 import { ChatManager } from './chat/chat-manager.ts';
 import { contextHint } from './context/context-note.ts';
 import { CONTEXT_PATH, ContextStore } from './context/context-store.ts';
@@ -91,12 +92,14 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     });
     const snapshotSchedule = scheduleSnapshots(manager, snapshots);
     const providers = new ProviderRegistry();
+    // A bearer token speaks for a terminal session or a chat, for reading context and for canvas verbs alike.
+    const targetForToken = (token: string): string | null => manager.sessionIdForToken(token) ?? chats.chatIdForToken(token);
     const context: ContextStore = new ContextStore({
         sources: (targetId) => projects.index.sourcesFor(targetId),
         terminalText: (sessionId) => manager.get(sessionId)?.plainText() ?? Promise.resolve(null),
         chatItems: (chatId) => chats.get(chatId)?.thread.list() ?? null,
         drawingElements: (viewId) => drawings.elementsOf(viewId),
-        targetForToken: (token) => manager.sessionIdForToken(token) ?? chats.chatIdForToken(token)
+        targetForToken
     });
     const attachments = new AttachmentStore(config.home);
     const chats: ChatManager = new ChatManager({
@@ -131,6 +134,18 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     manager.onProcessChange = (_sessionId, phase) => (phase === 'before-kill' ? processes.beforeKill() : processes.nudge());
     manager.isAgentGone = (sessionId) => processes.isAgentGone(sessionId);
 
+    const worktrees = new Worktrees(config.home);
+    const canvasHost = {
+        locate: (id: string) => projects.index.locate(id),
+        read: (projectId: string) => projects.read(projectId),
+        mutate: projects.mutate.bind(projects),
+        worktreePaths: (folder: string) =>
+            worktrees
+                .list(folder)
+                .then((list) => list.map((worktree) => worktree.path))
+                .catch(() => [])
+    };
+
     const dispatcher = new Dispatcher();
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await readMachineModel() });
     registerSessionHandlers(dispatcher, manager);
@@ -153,7 +168,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerFsHandlers(dispatcher, folders);
     registerUsageHandlers(dispatcher, usage, limits);
     registerProcessHandlers(dispatcher, processes);
-    registerGitHandlers(dispatcher, new Worktrees(config.home), statuses, providers);
+    registerGitHandlers(dispatcher, worktrees, statuses, providers);
 
     if (config.installHooks) {
         // Only the CLIs the daemon has a normalizer for are listed; the others run without status.
@@ -291,6 +306,10 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                     const sessionId = manager.sessionIdForToken(token);
                     return sessionId ? contextHint(context.list(sessionId)) : null;
                 });
+            }
+
+            if (url.pathname.startsWith(`${CANVAS_PATH}/`)) {
+                return handleCanvasRequest(request, url.pathname, { targetForToken, host: canvasHost });
             }
 
             if (url.pathname === CONTEXT_PATH || url.pathname.startsWith(`${CONTEXT_PATH}/`)) {

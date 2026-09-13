@@ -492,3 +492,69 @@ describe('portable paths', () => {
         expect(back.views[1]).toMatchObject({ node: { cwd: '/repo/apps/server' } });
     });
 });
+
+describe('mutate', () => {
+    const addNote = (id: string) => (current: ProjectContent) => {
+        const [first, ...rest] = current.views;
+        const view = first as ProjectCanvasView;
+        const note = { id, kind: 'note' as const, title: 'Note', x: 0, y: 400, w: 320, h: 240, body: 'hello' };
+        return { content: { ...current, views: [{ ...view, nodes: [...view.nodes, note] }, ...rest] }, result: id };
+    };
+
+    test('writes a released project to disk, tells every sink, and updates the index', async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        await store.save(projectId, opened.document.rev, content());
+        store.release(projectId);
+        changed = [];
+
+        expect(await store.mutate(projectId, addNote('note-1'))).toBe('note-1');
+
+        const onDisk = JSON.parse(await readFile(documentPathInFolder(folder), 'utf8')) as ProjectDocument;
+        expect(onDisk.rev).toBe(2);
+        expect(canvas(onDisk).nodes.map((node) => node.id)).toEqual(['n1', 'note-1']);
+        // The terminal's cwd went through the portable form and back, like a save.
+        expect(canvas(onDisk).nodes[0]!.cwd).toBe('./apps/server');
+        expect(changed).toHaveLength(1);
+        expect(changed[0]).toMatchObject({ event: 'project.changed', payload: { projectId, document: { rev: 2 } } });
+        expect(store.index.locate('note-1')).toEqual({ projectId, folder, canvasId: 'main' });
+
+        const reopened = await store.openProject({ projectId });
+        expect(reopened.document.rev).toBe(2);
+        expect(canvas(reopened.document).nodes.map((node) => node.id)).toEqual(['n1', 'note-1']);
+        expect(canvas(reopened.document).nodes[0]!.cwd).toBe(join(folder, 'apps', 'server'));
+    });
+
+    test('an open project takes the new rev, so the next save and the watcher agree with it', async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        changed = [];
+        await store.mutate(projectId, addNote('note-1'));
+        await Bun.sleep(400);
+        // Our own write, not an outside edit: the watcher does not send it a second time.
+        expect(changed).toHaveLength(1);
+        await expect(store.save(projectId, opened.document.rev, content())).rejects.toMatchObject({ code: 'rev-conflict' });
+        expect(await store.save(projectId, 1, content())).toBe(2);
+    });
+
+    test('a throw from apply writes nothing', async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        changed = [];
+        await expect(
+            store.mutate(projectId, () => {
+                throw new Error('no');
+            })
+        ).rejects.toThrow('no');
+        expect((JSON.parse(await readFile(documentPathInFolder(folder), 'utf8')) as ProjectDocument).rev).toBe(opened.document.rev);
+        expect(changed).toEqual([]);
+    });
+
+    test('refuses a project whose file is gone or unknown', async () => {
+        const opened = await store.openProject({ folder });
+        store.release(opened.summary.projectId);
+        await rm(documentPathInFolder(folder));
+        await expect(store.mutate(opened.summary.projectId, addNote('x'))).rejects.toMatchObject({ code: 'project-missing' });
+        await expect(store.mutate('nope', addNote('x'))).rejects.toMatchObject({ code: 'project-not-found' });
+    });
+});
