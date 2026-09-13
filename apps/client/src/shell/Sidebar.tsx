@@ -24,6 +24,7 @@ import clsx from 'clsx';
 import { isCanvasView, isSessionView, type AgentKind, type NodeKind } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { useDrafts } from '@/chat/drafts';
+import { isUnseen, useAttention } from '@/state/attention';
 import { useProcessWarnings } from '@/state/processes';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
 import { finderPaths } from '@/canvas/finder-drop';
@@ -49,6 +50,7 @@ import {
 } from '@/shell/sidebar-rows';
 import { useSidebarSources } from '@/shell/sidebar-source';
 import { AgentIcon } from '@/agents/AgentIcon';
+import { UnseenMark } from '@/attention/UnseenMark';
 import { Favicon } from '@/browser/Favicon';
 import { resetTitle } from '@/nodes/node-host';
 import { StatusDot } from '@/canvas/NodeFrame';
@@ -231,6 +233,7 @@ function NodeRow({ row, tabbable, onFocus, onArrow }: RowProps & { row: SidebarN
                         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-faint" />
                     </Tooltip>
                 )}
+                {node.finished && <UnseenMark />}
                 {node.alert && <ProcessWarningMark />}
                 {node.status && <StatusDot status={node.status} plain />}
             </ContextMenu.Trigger>
@@ -442,6 +445,7 @@ export function Sidebar() {
     const chats = useChats((s) => s.byKey);
     const drafts = useDrafts((s) => s.ids);
     const warnings = useProcessWarnings((s) => s.byEndpoint);
+    const unseen = useAttention((s) => s.unseen);
     const open = useUi((s) => s.sidebarOpen);
     const usageOpen = useUi((s) => s.page === 'usage');
     const hasProject = useProject((s) => s.current !== null);
@@ -476,7 +480,8 @@ export function Sidebar() {
                         provider: node.provider ?? null,
                         status: nodeStatus(node, sessions, chats, source.endpointId) ?? null,
                         draft: node.kind === 'chat' && drafts.includes(node.id),
-                        alert: (warnings[source.endpointId] ?? []).some((alert) => alert.nodeId === node.id)
+                        alert: (warnings[source.endpointId] ?? []).some((alert) => alert.nodeId === node.id),
+                        finished: isUnseen(unseen, source.endpointId, node.id)
                     });
                     const provider = view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : undefined;
                     return {
@@ -492,7 +497,7 @@ export function Sidebar() {
                     };
                 })
             })),
-        [sources, sessions, chats, drafts, warnings, usageOpen]
+        [sources, sessions, chats, drafts, warnings, unseen, usageOpen]
     );
 
     const activeViewId = workspaces.find((workspace) => workspace.focused)?.activeViewId ?? null;

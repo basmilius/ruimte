@@ -12,6 +12,8 @@ export interface SidebarNode {
     draft: boolean;
     /* The machine warns about the processes of this node. */
     alert?: boolean;
+    /* Its turn ended while nobody was looking, and nobody has looked since. */
+    finished?: boolean;
 }
 
 export interface SidebarView {

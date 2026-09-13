@@ -17,6 +17,8 @@ import {
     X
 } from 'lucide-react';
 import { AgentIcon } from '@/agents/AgentIcon';
+import { UnseenMark } from '@/attention/UnseenMark';
+import { useUnseen } from '@/state/attention';
 import { isNodeFocused, useCanvas, useCanvasStore, type AgentStatus, type NodeKind } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
 import { ProcessAlertMark, useNodeAlerts } from '@/processes/ProcessAlertMark';
@@ -150,6 +152,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const [fileControls, setFileControls] = useState<HTMLElement | null>(null);
     const toolbarSlot = useMemo(() => fixedSlot(fileControls), [fileControls]);
     const status = useNodeStatus(node);
+    const unseen = useUnseen(id);
     const processAlerts = useNodeAlerts(id);
     const hasContext = useHasContextLinks(id);
     const hidden = useCanvas((s) => s.hidden.has(id));
@@ -256,6 +259,9 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                             {STATUS_LABEL[status]}
                         </Pill>
                     )}
+                    {/* Up close this is already gone, since looking clears it. It is for the canvas
+                        zoomed out over everything and for the window standing beside another app. */}
+                    {unseen && !renaming && <UnseenMark />}
                     {!renaming && <ProcessAlertMark alerts={processAlerts} />}
                     {node.kind === 'file' && <span ref={setFileControls} className={`${BTN_GROUP} shrink-0`} />}
                     <div className={`${BTN_GROUP} shrink-0`}>

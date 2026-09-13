@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
-import { attentionTotal, groupAttention, nextUnseen, readableNodes, seenNodes, settledSince, type AttentionPass } from '@/state/attention';
+import { attentionTotal, groupAttention, isUnseen, nextUnseen, readableNodes, seenNodes, settledSince, type AttentionPass } from '@/state/attention';
 import type { ChatState } from '@/state/chats';
 import type { SessionState, StatusOf } from '@/state/sessions';
 
@@ -126,6 +126,13 @@ describe('the marks', () => {
 
     test('a node that left the project takes its mark with it', () => {
         expect(nextUnseen(pass({ unseen: new Set(['local:gone']) })).size).toBe(0);
+    });
+
+    test('a mark is about one node on one machine, which is what the row that draws it asks', () => {
+        const unseen = { 'local:a': true } as const;
+        expect(isUnseen(unseen, 'local', 'a')).toBe(true);
+        expect(isUnseen(unseen, 'other', 'a')).toBe(false);
+        expect(isUnseen(unseen, 'local', 'b')).toBe(false);
     });
 });
 

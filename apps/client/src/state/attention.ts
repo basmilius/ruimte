@@ -152,10 +152,17 @@ export const useAttention = create<AttentionStore>((set) => ({
     }
 }));
 
+/*
+ * Whether this node carries a mark. Takes the machine rather than reading the active one, for a list
+ * that draws a row per machine (the sidebar) and for a test with no React around it.
+ */
+export const isUnseen = (unseen: Readonly<Record<string, true>>, endpointId: string, nodeId: string): boolean =>
+    unseen[endpointKey(endpointId, nodeId)] === true;
+
 /* Whether this node's turn ended while nobody was looking. What a node header draws its mark from. */
 export const useUnseen = (nodeId: string): boolean => {
     const endpointId = useEndpointId();
-    return useAttention((s) => s.unseen[endpointKey(endpointId, nodeId)] === true);
+    return useAttention((s) => isUnseen(s.unseen, endpointId, nodeId));
 };
 
 /*
