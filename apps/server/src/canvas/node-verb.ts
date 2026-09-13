@@ -1,7 +1,16 @@
 import { randomBytes } from 'node:crypto';
 import { realpath, stat } from 'node:fs/promises';
 import { basename, isAbsolute, relative, resolve } from 'node:path';
-import { DEFAULT_TITLES, NODE_SIZE, isCanvasView, isDrawingView, storedPathOf, type ProjectContent, type ProjectNode } from '@ruimte/contracts';
+import {
+    DEFAULT_TITLES,
+    NODE_SIZE,
+    isCanvasView,
+    isDrawingView,
+    storedPathOf,
+    type ProjectCanvasView,
+    type ProjectContent,
+    type ProjectNode
+} from '@ruimte/contracts';
 import { z } from 'zod';
 import { placeBeside, placeFree } from './placement.ts';
 import { unescapeText } from './text-escapes.ts';
@@ -73,6 +82,16 @@ const NODE_DETAIL: readonly string[] = [
     `limit\tA canvas holds at most ${MAX_CANVAS_NODES} nodes; a terminal or chat starts no process until a client shows it`
 ];
 
+// What a caller may pick instead of a --beside that is nowhere; a full canvas would bury the refusal, so it says where to look.
+const BESIDE_LINES_MAX = 20;
+
+const nodeLines = (canvas: ProjectCanvasView): string[] => {
+    if (canvas.nodes.length > BESIDE_LINES_MAX) {
+        return [`detail\truimte-context nodes\tthe ${canvas.nodes.length} nodes of ${canvas.id}`];
+    }
+    return canvas.nodes.map((node) => `node\t${node.id}\t${node.kind}\t${field(node.title)}`);
+};
+
 const isInside = (root: string, path: string): boolean => {
     const rel = relative(root, path);
     return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
@@ -116,7 +135,7 @@ const checkCwd = async (folder: string | null, cwd: string, worktreePaths: (fold
     const resolved = resolve(folder, cwd);
     const real = await realOrNull(resolved);
     if (real === null || !(await stat(real)).isDirectory()) {
-        throw new VerbRefusal('bad-cwd', `${resolved} is not a folder`);
+        throw new VerbRefusal('bad-cwd', `${resolved} is not a folder; --cwd is resolved against the project folder unless it is absolute`);
     }
     const realFolder = await realOrNull(folder);
     if (realFolder !== null && isInside(realFolder, real)) {
@@ -136,7 +155,7 @@ const checkPath = async (folder: string | null, path: string): Promise<string> =
     const resolved = folder === null ? path : resolve(folder, path);
     const info = await stat(resolved).catch(() => null);
     if (!info?.isFile()) {
-        throw new VerbRefusal('bad-path', `${resolved} is not a file`);
+        throw new VerbRefusal('bad-path', `${resolved} is not a file; --path is resolved against the project folder unless it is absolute`);
     }
     return resolved;
 };
@@ -146,10 +165,10 @@ const checkUrl = (url: string): string => {
     try {
         parsed = new URL(url);
     } catch {
-        throw new VerbRefusal('bad-url', `${url} is not a URL`);
+        throw new VerbRefusal('bad-url', `${url} is not a URL; --url takes a whole http or https address, scheme and all`);
     }
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-        throw new VerbRefusal('bad-url', `${url} is not an http or https address`);
+        throw new VerbRefusal('bad-url', `${url} is not an http or https address; a browser node opens nothing else`);
     }
     return parsed.href;
 };
@@ -177,14 +196,15 @@ export const nodeVerb = defineVerb({
     }),
     async run({ positionals: [kind], flags }, call) {
         const place = placeOf(call);
+        const kindLines = [kindLine(kind), EVERY_KIND_LINE];
         for (const flag of ['text', 'url', 'path', 'source', 'cwd'] as const) {
             if (flags[flag] !== undefined && !KIND_FLAGS[kind].includes(flag)) {
-                throw new VerbRefusal('flag-not-for-kind', `--${flag} does not go with a ${kind} node`);
+                throw new VerbRefusal('flag-not-for-kind', `--${flag} does not go with a ${kind} node`, kindLines);
             }
         }
         const required = REQUIRED_FLAG[kind];
         if (required && flags[required] === undefined) {
-            throw new VerbRefusal('missing-flag', `A ${kind} node needs --${required}`);
+            throw new VerbRefusal('missing-flag', `A ${kind} node needs --${required}`, kindLines);
         }
 
         // Everything that touches the disk or git runs before the lock, so a slow repository holds up no save.
@@ -212,7 +232,7 @@ export const nodeVerb = defineVerb({
             const size = NODE_SIZE[kind];
             const anchor = flags.beside === undefined ? undefined : canvas.nodes.find((node) => node.id === flags.beside);
             if (flags.beside !== undefined && !anchor) {
-                throw new VerbRefusal('unknown-node', `${flags.beside} is not a node on ${canvas.id}`);
+                throw new VerbRefusal('unknown-node', `${flags.beside} is not a node on ${canvas.id}`, nodeLines(canvas));
             }
             const rect = anchor ? placeBeside(anchor, size) : placeFree(canvas.nodes, size, canvas.nodes.find((node) => node.id === call.caller) ?? null);
 

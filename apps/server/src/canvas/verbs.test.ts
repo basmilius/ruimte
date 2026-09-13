@@ -100,10 +100,11 @@ describe('the route', () => {
         expect((await post('help', [], 'nope')).status).toBe(401);
     });
 
-    test('an unknown verb is a 404 refusal', async () => {
+    test('an unknown verb is a 404 refusal that lists the verbs', async () => {
         const { status, lines } = await post('agent', ['claude']);
         expect(status).toBe(404);
-        expect(lines[0]).toStartWith('refused\tunknown-verb\t');
+        expect(lines[0]).toBe('refused\tunknown-verb\tagent is not a verb');
+        expect(lines.slice(1)).toEqual(VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`));
     });
 
     test('a body without argv is refused', async () => {
@@ -228,6 +229,52 @@ describe('refusals', () => {
             const { status, lines } = await post(verb, argv);
             expect({ argv, status, line: lines[0] }).toEqual({ argv, status: 422, line: `refused\t${code}\t${message}` });
             expect(lines).toContain(`detail\truimte-context help ${verb}`);
+        }
+    });
+
+    test('name what can be picked instead wherever the set is closed', async () => {
+        const missing = await post('node', ['browser']);
+        expect(missing.lines).toEqual([
+            'refused\tmissing-flag\tA browser node needs --url',
+            'kind\tbrowser\t--url (required)\tcalled "Browser" without --title',
+            'kind\tevery kind\t--title T, --view V, --beside N'
+        ]);
+        expect((await post('node', ['note', '--url', 'https://example.com'])).lines.slice(1)).toEqual([
+            'kind\tnote\t--text\tcalled "Note" without --title',
+            'kind\tevery kind\t--title T, --view V, --beside N'
+        ]);
+        expect((await post('node', ['note', '--beside', 'nope'])).lines).toEqual([
+            'refused\tunknown-node\tnope is not a node on main',
+            'node\tterm-1\tterminal\tshell',
+            'node\tnote-1\tnote\tPlan with a tab'
+        ]);
+    });
+
+    test('a canvas too full to list points at the verb that lists it', async () => {
+        const full = content();
+        const board = full.views[2] as ProjectCanvasView;
+        board.nodes = Array.from({ length: 30 }, (_, i) => ({ id: `n-${i}`, kind: 'note' as const, title: 'n', x: i * 400, y: 0, w: 320, h: 240 }));
+        await store.mutate(projectId, () => ({ content: full, result: null }));
+        expect((await post('node', ['note', '--view', 'board', '--beside', 'nope'])).lines).toEqual([
+            'refused\tunknown-node\tnope is not a node on board',
+            'detail\truimte-context nodes\tthe 30 nodes of board'
+        ]);
+    });
+
+    test('say what is allowed where no set can be listed', async () => {
+        const cases: Array<{ argv: string[]; code: string; says: string }> = [
+            { argv: ['browser', '--url', 'not a url'], code: 'bad-url', says: 'http or https address' },
+            { argv: ['browser', '--url', 'file:///etc/passwd'], code: 'bad-url', says: 'browser node opens nothing else' },
+            { argv: ['file', '--path', 'src/missing.ts'], code: 'bad-path', says: 'resolved against the project folder' },
+            { argv: ['terminal', '--cwd', 'nope'], code: 'bad-cwd', says: 'resolved against the project folder' },
+            { argv: ['terminal', '--cwd', outside], code: 'cwd-outside-project', says: 'outside the project folder and its worktrees' }
+        ];
+        for (const { argv, code, says } of cases) {
+            const { lines } = await post('node', argv);
+            expect(lines[0]).toStartWith(`refused\t${code}\t`);
+            expect(lines[0]).toInclude(says);
+            // Nothing is invented: a path or an address has no list to pick from.
+            expect(lines).toHaveLength(1);
         }
     });
 

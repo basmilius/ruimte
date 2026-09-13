@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ProjectError } from '../projects/project-store.ts';
 import { VerbRefusal, type CanvasHost } from './verb.ts';
-import { verbNamed } from './verbs.ts';
+import { verbNamed, verbSummaryLines } from './verbs.ts';
 
 export const CANVAS_PATH = '/canvas';
 
@@ -42,7 +42,7 @@ export const handleCanvasRequest = async (request: Request, pathname: string, de
     }
     const verb = verbNamed(name);
     if (!verb) {
-        return refusal('unknown-verb', `${name || '(none)'} is not a verb; ruimte-context help lists them`, [], 404);
+        return refusal('unknown-verb', `${name || '(none)'} is not a verb`, verbSummaryLines(), 404);
     }
     if (verb.served === 'context') {
         return refusal('not-a-canvas-verb', `${name} is answered by GET /context; run ruimte-context ${name}`, [], 404);
