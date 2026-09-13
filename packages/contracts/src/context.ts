@@ -10,10 +10,3 @@ export const ContextSourceSchema = z.object({
     text: z.string().optional()
 });
 export type ContextSource = z.infer<typeof ContextSourceSchema>;
-
-// The client owns the edges, so it tells the daemon what each agent node may read.
-export const ContextSetPayloadSchema = z.object({
-    targetId: z.string().min(1),
-    sources: z.array(ContextSourceSchema)
-});
-export type ContextSetPayload = z.infer<typeof ContextSetPayloadSchema>;

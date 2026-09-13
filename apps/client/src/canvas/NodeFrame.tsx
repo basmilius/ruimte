@@ -20,7 +20,7 @@ import { AgentIcon } from '@/agents/AgentIcon';
 import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
 import { ProcessAlertMark, useNodeAlerts } from '@/processes/ProcessAlertMark';
-import { useHasContextLinks } from '@/context/sync';
+import { useHasContextLinks } from '@/context/sources';
 import { accentColor } from '@/canvas/accents';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { BTN_GROUP } from '@/ui/classes';

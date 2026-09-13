@@ -69,7 +69,6 @@ import {
     EndpointSetIdentityPayloadSchema,
     PairingTokenResultSchema
 } from './auth.ts';
-import { ContextSetPayloadSchema } from './context.ts';
 import {
     DrawingChangedEventSchema,
     DrawingCopyPayloadSchema,
@@ -212,7 +211,6 @@ export const REQUEST_SCHEMAS = {
     'processes.signal': { payload: ProcessesSignalPayloadSchema, result: EmptySchema },
     'processes.listAlerts': { payload: EmptySchema, result: ProcessesAlertsSchema },
     'processes.dismiss': { payload: ProcessesDismissPayloadSchema, result: EmptySchema },
-    'context.set': { payload: ContextSetPayloadSchema, result: EmptySchema },
     'endpoint.info': { payload: EmptySchema, result: EndpointInfoSchema },
     'endpoint.setIdentity': { payload: EndpointSetIdentityPayloadSchema, result: EndpointInfoSchema },
     'auth.sessions': { payload: EmptySchema, result: AuthSessionsResultSchema },

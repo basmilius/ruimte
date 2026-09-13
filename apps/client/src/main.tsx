@@ -4,7 +4,6 @@ import { startAgentNotifications } from '@/shell/notifications';
 import { startSessionLifecycle } from '@/terminal/lifecycle';
 import { startServerInfo } from '@/transport/server-info';
 import { startPing } from '@/transport/ping';
-import { startContextSync } from '@/context/sync';
 import { startEndpointSelection } from '@/endpoint';
 import { startEndpointWatch } from '@/endpoint/watch';
 import { startProcessWarnings } from '@/processes/watch';
@@ -25,7 +24,6 @@ startSessionLifecycle();
 startAgentNotifications();
 startServerInfo();
 startPing();
-startContextSync();
 /* Before anything opens a socket: the machine the work was left on decides which daemon boots. */
 restoreLastEndpoint();
 startEndpointSelection();
