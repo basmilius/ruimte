@@ -182,6 +182,15 @@ export type ProjectNameSource = z.infer<typeof ProjectNameSourceSchema>;
 export const MAIN_VIEW_ID = 'main';
 export const MAIN_VIEW_NAME = 'Canvas';
 
+/*
+ * The node that made this view with a canvas verb; absent on one a person made. It is in the shared
+ * file on purpose, unlike the depth of a node, which is daemon state: a maker is a fact both sides
+ * read (`ruimte-context view delete` only removes a view whose maker is the caller, and the sidebar
+ * can say who made a row), and nothing has to be defended with it, since a person deleting a view
+ * of their own is not something the rule is about.
+ */
+const CreatedBySchema = z.string().min(1).optional();
+
 const ViewBaseSchema = z.object({
     id: z.string().min(1),
     name: z.string().min(1),
@@ -190,7 +199,8 @@ const ViewBaseSchema = z.object({
     titleSource: NodeTitleSourceSchema.optional(),
     // Absent means the row wears the mark of what it is: its kind, its CLI, or a page's favicon.
     // Present means a person overruled that, so nothing the view hosts changes it again.
-    icon: ProjectIconChoiceSchema.optional()
+    icon: ProjectIconChoiceSchema.optional(),
+    createdBy: CreatedBySchema
 });
 
 /*
@@ -227,7 +237,8 @@ export type ProjectCanvasView = z.infer<typeof ProjectCanvasViewSchema>;
 export const ProjectSeparatorViewSchema = z.object({
     kind: z.literal('separator'),
     id: z.string().min(1),
-    name: z.string().min(1).optional()
+    name: z.string().min(1).optional(),
+    createdBy: CreatedBySchema
 });
 export type ProjectSeparatorView = z.infer<typeof ProjectSeparatorViewSchema>;
 

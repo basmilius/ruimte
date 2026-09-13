@@ -131,6 +131,7 @@ export * from './node-defaults.ts';
 export * from './processes.ts';
 export * from './project.ts';
 export * from './project-migrate.ts';
+export * from './project-views.ts';
 export * from './server.ts';
 export * from './session.ts';
 export * from './stored-path.ts';
