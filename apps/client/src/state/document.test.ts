@@ -213,6 +213,13 @@ describe('what a save would write', () => {
         expect(views[1]!.nodes.map((each) => each.id)).toEqual(['n2']);
     });
 
+    test('who made a view survives the trip through the editor, so a save never drops it', () => {
+        const views: ProjectCanvasView[] = [{ ...view('a', [node('n1')]), createdBy: 'term-1' }, view('b')];
+        useDocument.getState().load(document(views), { activeViewId: 'a', views: {} });
+        useCanvas.getState().addNode('note', { x: 0, y: 0 });
+        expect(useDocument.getState().exportViews()[0]).toMatchObject({ createdBy: 'term-1' });
+    });
+
     test('the local file carries every view that was visited, with the live camera for the open one', () => {
         useCanvas.getState().panBy(4, 4);
         const local = useDocument.getState().exportLocal();

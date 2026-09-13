@@ -1,34 +1,12 @@
-import { isCanvasView, isSessionView, type NodeKind, type ProjectView } from '@ruimte/contracts';
-
-/* A node with a session behind it: the id the machine knows it by, and the kind that says how to end it. */
-export interface SessionNode {
-    id: string;
-    kind: NodeKind;
-}
-
-/*
- * The kinds that keep something alive on the machine the project was opened on: a shell for a
- * terminal, a CLI for a chat. A browser is a page inside this client, and a group, a note or a
- * drawing is canvas and nothing else, so none of them is a session anybody has to be warned about.
- */
-const SESSION_KINDS: readonly NodeKind[] = ['terminal', 'chat'];
+import { sessionNodesOfView, type ProjectView, type ViewSessionNode } from '@ruimte/contracts';
 
 /*
  * Every session a project holds, over every view it has. The views have to be the exported ones
  * (`exportViews`), so the view on screen is counted with what the canvas store has of it rather
- * than with the copy the document was loaded with.
+ * than with the copy the document was loaded with. What one view holds is the daemon's rule too,
+ * since `ruimte-context view delete` ends the same sessions on a canvas it removes.
  */
-export const sessionNodesOf = (views: readonly ProjectView[]): SessionNode[] =>
-    views.flatMap<SessionNode>((view) => {
-        // A standalone view is one node without a canvas, under the same id as its session.
-        if (isSessionView(view)) {
-            return SESSION_KINDS.includes(view.kind) ? [{ id: view.id, kind: view.kind }] : [];
-        }
-        if (!isCanvasView(view)) {
-            return [];
-        }
-        return view.nodes.filter((node) => SESSION_KINDS.includes(node.kind)).map((node) => ({ id: node.id, kind: node.kind }));
-    });
+export const sessionNodesOf = (views: readonly ProjectView[]): ViewSessionNode[] => views.flatMap(sessionNodesOfView);
 
 /*
  * What the confirmation says before a project closes. It counts rather than hedges: a person who is

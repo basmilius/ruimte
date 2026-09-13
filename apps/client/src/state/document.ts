@@ -1,18 +1,24 @@
 import { createStore, type StoreApi } from 'zustand';
 import type { SplitLayout } from '@ruimte/contracts';
 import {
-    MAIN_VIEW_ID,
-    MAIN_VIEW_NAME,
+    emptyCanvasView,
     isCanvasView,
     isDrawingView,
     isOpenableView,
     isSessionView,
+    withDuplicatedView,
+    withMovedView,
+    withNodeAsView,
+    withNodeOnView,
+    withRenamedView,
+    withView,
+    withViewAsNode,
+    withViewIcon,
+    withoutView,
     type NodeTitleSource,
-    type ProjectCanvasView,
     type ProjectDocument,
     type ProjectIconChoice,
     type ProjectLocal,
-    type ProjectNode,
     type ProjectView,
     type ProjectViewLocal,
     type StandaloneNode
@@ -40,16 +46,6 @@ import {
     type SplitZone
 } from '@/shell/split';
 import { workspaceHook } from '@/state/workspace-stores';
-
-export const emptyCanvasView = (id: string, name: string): ProjectCanvasView => ({
-    kind: 'canvas',
-    id,
-    name,
-    nodes: [],
-    texts: [],
-    edges: [],
-    layouts: []
-});
 
 export interface DocumentState {
     /* In sidebar order. The active canvas view is stale here: the canvas store is the editor of that one. */
@@ -199,33 +195,6 @@ const centerOfView = (
     return { x: Math.round(middle.x - node.w / 2), y: Math.round(middle.y - node.h / 2) };
 };
 
-/* A copy is a new node with a new session, so every id inside the view is renamed along with it. */
-const copyOfCanvas = (view: ProjectCanvasView, name: string): ProjectCanvasView => {
-    const renamed = new Map<string, string>();
-    for (const node of view.nodes) {
-        renamed.set(node.id, nextId(node.kind));
-    }
-    for (const text of view.texts) {
-        renamed.set(text.id, nextId('text'));
-    }
-    const idOf = (id: string): string => renamed.get(id) ?? id;
-    const remap = <T>(record: Record<string, T>): Record<string, T> => Object.fromEntries(Object.entries(record).map(([id, value]) => [idOf(id), value]));
-    return {
-        kind: 'canvas',
-        id: nextId('view'),
-        name,
-        nodes: view.nodes.map((node) => ({
-            ...node,
-            id: idOf(node.id),
-            resume: undefined,
-            memberIds: node.memberIds?.map(idOf)
-        })),
-        texts: view.texts.map((text) => ({ ...text, id: idOf(text.id) })),
-        edges: view.edges.map((edge) => ({ ...edge, id: nextId('edge'), from: idOf(edge.from), to: idOf(edge.to) })),
-        layouts: view.layouts.map((layout) => ({ ...layout, nodes: remap(layout.nodes), texts: remap(layout.texts) }))
-    };
-};
-
 /*
  * What the document holds beside its views once the grid moved: the layout itself and everything
  * derived from which cell has the focus. Every mutation of the grid goes through here, so the
@@ -269,6 +238,23 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             const viewLocal = { ...state.viewLocal, ...state.exportLocal().views };
             set(settledOn(views, viewLocal, layout, state));
             openEditors(views, viewLocal, layout === null ? [] : viewIdsIn(layout), layout === null ? null : focusedViewId(layout), peers);
+        };
+
+        /* What the pure operations in contracts hand back: a new list, or null for a call that asked
+           for what is already there, which claims no edit and so does not make the project dirty. */
+        const write = (views: ProjectView[] | null): void => {
+            if (views !== null) {
+                set((state) => ({ views, edits: state.edits + 1 }));
+            }
+        };
+
+        /* A new view goes last in the list; everything but a separator opens on the spot. */
+        const addView = (view: ProjectView, opens: boolean): string => {
+            set((state) => ({ views: withView(state.exportViews(), view), edits: state.edits + 1 }));
+            if (opens) {
+                get().setActiveView(view.id);
+            }
+            return view.id;
         };
 
         return {
@@ -393,84 +379,48 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             },
 
             addCanvasView(name) {
-                const view = emptyCanvasView(nextId('view'), name);
-                set((state) => ({ views: [...state.exportViews(), view], edits: state.edits + 1 }));
-                get().setActiveView(view.id);
-                return view.id;
+                return addView(emptyCanvasView(nextId('view'), name), true);
             },
 
             addSeparatorView() {
-                const view: ProjectView = { kind: 'separator', id: nextId('separator') };
-                set((state) => ({ views: [...state.exportViews(), view], edits: state.edits + 1 }));
-                return view.id;
+                // A line in the list, not a place to go, so nothing opens on it.
+                return addView({ kind: 'separator', id: nextId('separator') }, false);
             },
 
             addDrawingView(name) {
-                const view: ProjectView = { kind: 'drawing', id: nextId('view'), name };
-                set((state) => ({ views: [...state.exportViews(), view], edits: state.edits + 1 }));
-                get().setActiveView(view.id);
-                return view.id;
+                return addView({ kind: 'drawing', id: nextId('view'), name }, true);
             },
 
             addFileView(name, path) {
-                const view: ProjectView = { kind: 'file', id: nextId('view'), name, path };
-                set((state) => ({ views: [...state.exportViews(), view], edits: state.edits + 1 }));
-                get().setActiveView(view.id);
-                return view.id;
+                return addView({ kind: 'file', id: nextId('view'), name, path }, true);
             },
 
             addStandaloneView(request) {
                 const id = request.id ?? nextId(request.kind);
-                const view: ProjectView =
+                return addView(
                     request.kind === 'browser'
                         ? { kind: 'browser', id, name: request.name, url: request.url }
-                        : { kind: request.kind, id, name: request.name, node: request.node };
-                set((state) => ({ views: [...state.exportViews(), view], edits: state.edits + 1 }));
-                get().setActiveView(id);
-                return id;
+                        : { kind: request.kind, id, name: request.name, node: request.node },
+                    true
+                );
             },
 
             renameView(id, name, source = 'user') {
-                const current = get().views.find((view) => view.id === id);
-                // A separator is a bare line and wears no name, so there is nothing a rename could change.
-                if (current?.kind === 'separator') {
-                    return;
-                }
-                // A rename that changes nothing claims nothing, so a page that reopens on its own name is no edit.
-                if (current && current.name === name && (current.titleSource ?? null) === source) {
-                    return;
-                }
-                set((state) => ({
-                    views: state.views.map((view) => (view.id === id ? { ...view, name, titleSource: source ?? undefined } : view)),
-                    edits: state.edits + 1
-                }));
+                write(withRenamedView(get().views, id, name, source));
             },
 
             setViewIcon(id, icon) {
-                const current = get().views.find((view) => view.id === id);
-                // A separator is a bare line with no room for a mark, so there is nothing to override.
-                if (!current || current.kind === 'separator') {
-                    return;
-                }
-                if ((current.icon ?? null) === null && icon === null) {
-                    return;
-                }
-                set((state) => ({
-                    views: state.views.map((view) => (view.id === id ? { ...view, icon: icon ?? undefined } : view)),
-                    edits: state.edits + 1
-                }));
+                write(withViewIcon(get().views, id, icon));
             },
 
             deleteView(id) {
                 const state = get();
                 const at = state.views.findIndex((view) => view.id === id);
-                if (at === -1) {
+                const result = withoutView(state.exportViews(), id);
+                if (result === null) {
                     return;
                 }
-                const rest = state.exportViews().filter((view) => view.id !== id);
-                // A project always has a view to open, so taking the last one leaves an empty canvas behind;
-                // separators alone are a list of lines with nowhere to go.
-                const views = rest.some(isOpenableView) ? rest : [...rest, emptyCanvasView(MAIN_VIEW_ID, MAIN_VIEW_NAME)];
+                const { views } = result;
                 const { [id]: _gone, ...viewLocal } = state.viewLocal;
                 set({ views, viewLocal, edits: state.edits + 1 });
                 const standing = state.layout === null ? null : locateView(state.layout, id);
@@ -484,62 +434,35 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             },
 
             duplicateView(id) {
-                const state = get();
-                const source = state.exportViews().find((view) => view.id === id);
-                if (!source || (!isCanvasView(source) && !isDrawingView(source))) {
+                const copy = withDuplicatedView(get().exportViews(), id, nextId);
+                if (copy === null) {
                     return null;
                 }
-                // A drawing view holds nothing itself; the daemon copies the file it points at.
-                const copy: ProjectView = isCanvasView(source)
-                    ? copyOfCanvas(source, `${source.name} copy`)
-                    : { kind: 'drawing', id: nextId('view'), name: `${source.name} copy` };
-                const at = state.views.findIndex((view) => view.id === id);
-                const views = state.exportViews();
-                set({ views: [...views.slice(0, at + 1), copy, ...views.slice(at + 1)], edits: state.edits + 1 });
+                write(copy.views);
                 return copy.id;
             },
 
             moveView(id, toIndex) {
-                const state = get();
-                const views = state.exportViews();
-                const at = views.findIndex((view) => view.id === id);
-                if (at === -1 || toIndex === at) {
-                    return;
-                }
-                const rest = views.filter((view) => view.id !== id);
-                rest.splice(Math.max(0, Math.min(rest.length, toIndex)), 0, views[at]!);
-                set({ views: rest, edits: state.edits + 1 });
+                write(withMovedView(get().exportViews(), id, toIndex));
             },
 
             moveNodeToView(nodeId, viewId) {
                 const state = get();
-                const target = state.views.find((view) => view.id === viewId);
-                if (!target || !isCanvasView(target) || viewId === state.activeViewId) {
+                if (viewId === state.activeViewId) {
                     return;
                 }
                 const views = state.exportViews();
                 const source = views.find((view) => isCanvasView(view) && view.nodes.some((node) => node.id === nodeId));
-                if (!source || !isCanvasView(source)) {
+                const size = source && isCanvasView(source) ? source.nodes.find((candidate) => candidate.id === nodeId) : undefined;
+                const moved = withNodeOnView(views, nodeId, viewId, centerOfView(viewId, state.viewLocal[viewId], size ?? { w: 0, h: 0 }, peers) ?? undefined);
+                if (moved === null || !source) {
                     return;
                 }
-                const node = source.nodes.find((candidate) => candidate.id === nodeId)!;
-                const placed = { ...node, ...(centerOfView(viewId, state.viewLocal[viewId], node, peers) ?? {}) };
-                const next = views.map((view) => {
-                    if (view.id === source.id && isCanvasView(view)) {
-                        // The lines it was part of stay behind: an edge lives on one canvas.
-                        return {
-                            ...view,
-                            nodes: view.nodes.filter((candidate) => candidate.id !== nodeId),
-                            edges: view.edges.filter((edge) => edge.from !== nodeId && edge.to !== nodeId)
-                        };
-                    }
-                    return view.id === viewId && isCanvasView(view) ? { ...view, nodes: [...view.nodes, placed] } : view;
-                });
-                set({ views: next, edits: state.edits + 1 });
+                write(moved.views);
                 const editor = peers.canvases.peek(source.id);
                 if (editor) {
                     // The canvas it left is on screen, so it has to lose the node without losing its camera.
-                    const after = next.find((view) => view.id === source.id);
+                    const after = moved.views.find((view) => view.id === source.id);
                     editor.getState().loadView(after && isCanvasView(after) ? after : null, { camera: editor.getState().camera, focusedNodeId: null });
                 }
             },
@@ -561,72 +484,33 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             },
 
             openAsView(nodeId) {
-                const state = get();
-                const views = state.exportViews();
+                const views = get().exportViews();
                 const source = views.find((view) => isCanvasView(view) && view.nodes.some((node) => node.id === nodeId));
-                if (!source || !isCanvasView(source)) {
+                const promoted = withNodeAsView(views, nodeId);
+                if (promoted === null || !source) {
                     return null;
                 }
-                const node = source.nodes.find((candidate) => candidate.id === nodeId)!;
-                if (node.kind !== 'chat' && node.kind !== 'terminal' && node.kind !== 'browser') {
-                    return null;
-                }
-                const view: ProjectView =
-                    node.kind === 'browser'
-                        ? { kind: 'browser', id: node.id, name: node.title, url: node.url ?? '' }
-                        : {
-                              kind: node.kind,
-                              id: node.id,
-                              name: node.title,
-                              node: {
-                                  cwd: node.cwd,
-                                  command: node.command,
-                                  resume: node.resume,
-                                  provider: node.provider,
-                                  providerFixed: node.providerFixed,
-                                  runtimeMode: node.runtimeMode,
-                                  accent: node.accent
-                              }
-                          };
-                const at = views.findIndex((candidate) => candidate.id === source.id);
-                // The lines it was part of stay behind: an edge lives on one canvas, and this leaves that canvas.
-                const stripped = {
-                    ...source,
-                    nodes: source.nodes.filter((candidate) => candidate.id !== nodeId),
-                    edges: source.edges.filter((edge) => edge.from !== nodeId && edge.to !== nodeId)
-                };
-                const next = views.map((candidate) => (candidate.id === source.id ? stripped : candidate));
-                next.splice(at + 1, 0, view);
-                set({ views: next, edits: state.edits + 1 });
+                write(promoted.views);
                 const editor = peers.canvases.peek(source.id);
                 if (editor) {
-                    editor.getState().loadView(stripped, { camera: editor.getState().camera, focusedNodeId: null });
+                    const stripped = promoted.views.find((view) => view.id === source.id);
+                    editor.getState().loadView(stripped && isCanvasView(stripped) ? stripped : null, { camera: editor.getState().camera, focusedNodeId: null });
                 }
-                get().setActiveView(view.id);
-                return view.id;
+                get().setActiveView(promoted.view.id);
+                return promoted.view.id;
             },
 
             putOnCanvas(viewId, canvasViewId) {
                 const state = get();
                 const views = state.exportViews();
                 const source = views.find((view) => view.id === viewId);
-                const target = views.find((view) => view.id === canvasViewId);
-                // A drawing is a file, not a session, so it is mirrored onto a canvas instead of moved there.
-                if (!source || !isSessionView(source) || !target || !isCanvasView(target)) {
+                const size = source && isSessionView(source) ? NODE_SIZE[source.kind] : { w: 0, h: 0 };
+                const at = centerOfView(canvasViewId, state.viewLocal[canvasViewId], size, peers) ?? { x: 0, y: 0 };
+                const landed = withViewAsNode(views, viewId, canvasViewId, at);
+                if (landed === null) {
                     return false;
                 }
-                const size = NODE_SIZE[source.kind];
-                const node: ProjectNode = {
-                    id: source.id,
-                    kind: source.kind,
-                    title: source.name,
-                    ...(centerOfView(canvasViewId, state.viewLocal[canvasViewId], size, peers) ?? { x: 0, y: 0 }),
-                    ...size,
-                    ...(source.kind === 'browser' ? { url: source.url } : source.node)
-                };
-                const next = views
-                    .filter((view) => view.id !== viewId)
-                    .map((view) => (view.id === canvasViewId && isCanvasView(view) ? { ...view, nodes: [...view.nodes, node] } : view));
+                const { views: next, node } = landed;
                 const { [viewId]: _gone, ...viewLocal } = state.viewLocal;
                 set({ views: next, viewLocal, edits: state.edits + 1 });
                 /* The view it was is gone from the list, so the cell it stood in takes the canvas it
