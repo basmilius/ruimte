@@ -27,7 +27,7 @@ export const useUpdates = create<UpdatesStore>(() => ({
 /* The green button in the toolbar: there is something to do, and one click leads to it. */
 export const hasUpdate = (state: UpdateState): boolean => state.status === 'available' || state.status === 'downloading' || state.status === 'ready';
 
-/* The line the Updates pane leads with. The detail is empty where the headline says it all. */
+/* The line About leads with. The detail is empty where the headline says it all. */
 export const describeUpdate = (state: UpdateState): { headline: string; detail: string } => {
     switch (state.status) {
         case 'unsupported':

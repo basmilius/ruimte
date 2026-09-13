@@ -1014,6 +1014,15 @@ decided.
 - The five accents in the open are blue, orange, lime, indigo and pink, spread around the wheel. The
   twelve others are a list with a dot, a name and a check, in the order of the wheel, and never repeat
   one of the five. Someone who picked a color that left the five keeps it: the overflow wears it.
+- Updates went into About, so "which version do I run" has one place, and the green button in the
+  toolbar opens it. The header carries the app's version with the update state and its one button; in
+  a browser there is no app version of its own, so it shows the machine's and no button. The details
+  (the machine of the workspace with the focus, Electron, Chromium, Node, platform, data folder) copy
+  as plain lines for a bug report.
+- About and Settings in the macOS application menu open the client's dialog rather than Electron's
+  About panel, which knew nothing about the machine or updates and had no Settings next to it. With
+  Cmd+, as the menu's accelerator macOS takes the key before the page sees it; both do the same thing,
+  and the chord in `app-chords.ts` stays for the browser.
 
 ### Skipped on purpose
 

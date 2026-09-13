@@ -99,7 +99,7 @@ export function Toolbar() {
 }
 
 /* Only there when there is something to do about a new version, and green because it is good news
-   rather than a warning. It opens the Updates pane, which says what the state is and acts on it. */
+   rather than a warning. It opens About, which says what the state is and acts on it. */
 function UpdateButton() {
     const state = useUpdates();
     if (!hasUpdate(state)) {

@@ -50,6 +50,9 @@ export interface AgentActivity {
 /* The shell's API, present only inside the desktop app. Mirrors `apps/desktop/src/preload.ts`. */
 export interface DesktopBridge {
     platform: string;
+    /* What the shell is built on, for About and a bug report. Optional for the same reason
+       `onBrowserContextMenu` is. */
+    versions?: { electron: string; chrome: string; node: string };
     pickFolder(initialPath?: string): Promise<string | null>;
     openExternal(url: string): Promise<void>;
     openGuestDevTools(webContentsId: number): void;
@@ -65,6 +68,10 @@ export interface DesktopBridge {
     /* Where a file dragged in from the file manager lives, which a browser never tells a page.
        Optional for the same reason `onBrowserContextMenu` is; without it such a drag is refused. */
     pathForFile?(file: File): string | null;
+    /* About and Settings in the macOS application menu, naming the pane to open. A section this
+       client does not know opens the settings where they were. Optional for the same reason
+       `onBrowserContextMenu` is. */
+    onOpenSettings?(listener: (section: string) => void): () => void;
     isFullscreen(): Promise<boolean>;
     onFullscreen(listener: (fullscreen: boolean) => void): () => void;
     /* The app's theme, which the shell needs for the native window controls, for the
@@ -85,7 +92,7 @@ export interface DesktopBridge {
     saveFile?(suggestedName: string, bytes: Uint8Array, mime: string): Promise<string | null>;
     /* Updating, which only the shell can do. Optional for the same reason `onBrowserContextMenu`
        is: a shell that is already running carries the preload it started with. Without them the
-       client shows no update button and the Updates pane says where updates come from instead. */
+       client shows no update button and About says where updates come from instead. */
     updateState?(): Promise<UpdateState>;
     onUpdateState?(listener: (state: UpdateState) => void): () => void;
     /* Whether the shell downloads an update as soon as it sees one. The client owns the setting and

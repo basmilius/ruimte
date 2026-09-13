@@ -4,6 +4,7 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron') as typeof i
 /* What the client may ask the shell for. The shape is mirrored in `apps/client/src/desktop/bridge.ts`. */
 contextBridge.exposeInMainWorld('ruimteDesktop', {
     platform: process.platform,
+    versions: { electron: process.versions.electron, chrome: process.versions.chrome, node: process.versions.node },
     pickFolder: (initialPath?: string): Promise<string | null> => ipcRenderer.invoke('dialog:pick-folder', initialPath),
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
     /* Only this side can say where a dragged file came from: `File.path` was taken out of Electron
@@ -20,6 +21,11 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
         const handler = (_event: unknown, webContentsId: number): void => listener(webContentsId);
         ipcRenderer.on('guest:focus', handler);
         return () => ipcRenderer.removeListener('guest:focus', handler);
+    },
+    onOpenSettings: (listener: (section: string) => void): (() => void) => {
+        const handler = (_event: unknown, section: string): void => listener(section);
+        ipcRenderer.on('menu:settings', handler);
+        return () => ipcRenderer.removeListener('menu:settings', handler);
     },
     isFullscreen: (): Promise<boolean> => ipcRenderer.invoke('window:is-fullscreen'),
     onFullscreen: (listener: (fullscreen: boolean) => void): (() => void) => {

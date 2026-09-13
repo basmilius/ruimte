@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { WebviewParking } from '@/browser/WebviewParking';
 import { useCanvasChords } from '@/canvas/canvas-chords';
+import { desktop } from '@/desktop/bridge';
 import { useAppChords } from '@/shell/app-chords';
 import { CommandPalette } from '@/shell/CommandPalette';
 import { LayoutDialog } from '@/shell/LayoutDialog';
@@ -9,6 +10,7 @@ import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { ViewHost } from '@/shell/ViewHost';
 import { WorktreeDialog } from '@/shell/WorktreeDialog';
 import { SettingsDialog } from '@/shell/SettingsDialog';
+import { ALL_SETTINGS_SECTIONS } from '@/shell/settings/sections';
 import { Panel } from '@/shell/Panel';
 import { PreviewPanel } from '@/shell/PreviewPanel';
 import { ProjectBanner } from '@/shell/ProjectBanner';
@@ -17,6 +19,7 @@ import { Toasts } from '@/shell/Toasts';
 import { Toolbar } from '@/shell/Toolbar';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
+import { useUi, type SettingsSectionId } from '@/state/ui';
 import { startUpdates } from '@/state/updates';
 import { focusWorkspace, useMainWorkspace, useWorkspaceConnection } from '@/transport/connections';
 import { WorkspaceProvider } from '@/transport/context';
@@ -72,8 +75,18 @@ export function App() {
         document.title = name ? `${name} - Ruimte` : 'Ruimte';
     }, [name]);
 
-    // Once, with the preference as it stands: the shell reads it again from the Updates pane.
+    // Once, with the preference as it stands: the shell reads it again from About.
     useEffect(() => startUpdates(useSettings.getState().updatesAutoDownload) ?? undefined, []);
+
+    // The macOS application menu names a pane, and switches to it when the dialog is already open.
+    useEffect(
+        () =>
+            desktop()?.onOpenSettings?.((section) => {
+                const known = ALL_SETTINGS_SECTIONS.some((entry) => entry.id === section);
+                useUi.getState().setSettings(known ? { open: true, section: section as SettingsSectionId } : { open: true });
+            }),
+        []
+    );
 
     return (
         <TooltipProvider>

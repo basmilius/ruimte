@@ -538,7 +538,7 @@ const describeUpdateError = (message: string): string => {
 
 /*
  * The updater is a state machine the client watches, not a dialog that interrupts. Every change is
- * pushed to the window, which draws the green button in the toolbar and the Updates pane. A
+ * pushed to the window, which draws the green button in the toolbar and About in the settings. A
  * checkout has no feed (electron-updater reads `app-update.yml` from the bundle), so there the
  * state stays `unsupported` and nothing in the client offers to update.
  */
@@ -617,6 +617,38 @@ ipcMain.handle('update:download', async () => {
 });
 
 ipcMain.on('update:install', () => updater?.quitAndInstall());
+
+/*
+ * The application menu's first column. On macOS the stock `appMenu` role opens Electron's own About
+ * panel and has no Settings at all, so both lead into the client's settings instead. Everything else
+ * keeps its role: Quit in particular, whose `before-quit` is where the dialog about working agents
+ * lives. Elsewhere that column is the File menu, which has neither item.
+ */
+function appMenu(): Electron.MenuItemConstructorOptions {
+    if (process.platform !== 'darwin') {
+        return { role: 'appMenu' };
+    }
+    const openSettings = (section: string): void => {
+        mainWindow?.show();
+        mainWindow?.webContents.send('menu:settings', section);
+    };
+    return {
+        label: app.name,
+        submenu: [
+            { label: `About ${app.name}…`, click: () => openSettings('about') },
+            { type: 'separator' },
+            { label: 'Settings…', accelerator: 'CommandOrControl+,', click: () => openSettings('appearance') },
+            { type: 'separator' },
+            { role: 'services' },
+            { type: 'separator' },
+            { role: 'hide' },
+            { role: 'hideOthers' },
+            { role: 'unhide' },
+            { type: 'separator' },
+            { role: 'quit' }
+        ]
+    };
+}
 
 /*
  * Writes the left end of the title bar band to a PNG in device pixels, which is how its geometry
@@ -701,7 +733,7 @@ if (!app.requestSingleInstanceLock()) {
     });
 
     void app.whenReady().then(async () => {
-        Menu.setApplicationMenu(Menu.buildFromTemplate([{ role: 'appMenu' }, { role: 'editMenu' }, { role: 'viewMenu' }, { role: 'windowMenu' }]));
+        Menu.setApplicationMenu(Menu.buildFromTemplate([appMenu(), { role: 'editMenu' }, { role: 'viewMenu' }, { role: 'windowMenu' }]));
         sealPreviewSession();
         startDaemon();
         try {
