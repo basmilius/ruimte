@@ -74,9 +74,9 @@ function ToastCard({ toast }: { toast: Toast }) {
 
 /*
  * Bottom right, over everything: what a git action is doing while it runs and how it went when it
- * is over. A success takes itself away after four seconds, a failure waits to be read and carries
- * the output of the command that failed, and a notice (an agent that asked for a view) waits too,
- * because the button on it is the whole point of the card.
+ * is over. A success and a notice (a view an agent showed you) take themselves away after four
+ * seconds, and a failure waits to be read and carries the output of the command that failed. What
+ * waits for an answer is not here but in the banner over the views.
  */
 export function Toasts() {
     const toasts = useToasts((s) => s.toasts);

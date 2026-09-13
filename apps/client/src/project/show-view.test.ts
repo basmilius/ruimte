@@ -31,23 +31,25 @@ describe('showViewNotice', () => {
     test('following says what moved and offers the way back', () => {
         const notice = showViewNotice({ agent: 'Refactor', view: 'Board', follow: true, alreadyThere: false });
         expect(notice.title).toBe('Refactor showed Board');
-        expect(notice.action).toBe('back');
-        expect(notice.stays).toBe(false);
+        expect(notice.where).toBe('toast');
+        expect(notice.back).toBe(true);
     });
 
-    test('with the setting off nothing moves, so the card waits with a way over', () => {
+    test('with the setting off nothing moves, so it is the banner that asks', () => {
         const notice = showViewNotice({ agent: 'Refactor', view: 'Board', follow: false, alreadyThere: false });
-        expect(notice.title).toBe('Refactor asked for Board');
-        expect(notice.action).toBe('go-there');
-        expect(notice.stays).toBe(true);
+        expect(notice.title).toBe('Refactor asked you to look at Board');
+        expect(notice.where).toBe('banner');
+        expect(notice.back).toBe(false);
+        // The banner is one row, so everything it says has to be in that one line.
+        expect(notice.description).toBeUndefined();
     });
 
     test('the view already in front reads the same either way, and carries no button at all', () => {
         for (const follow of [true, false]) {
             const notice = showViewNotice({ agent: 'Refactor', view: 'Board', follow, alreadyThere: true });
             expect(notice.title).toBe('Refactor pointed at Board');
-            expect(notice.action).toBeNull();
-            expect(notice.stays).toBe(false);
+            expect(notice.where).toBe('toast');
+            expect(notice.back).toBe(false);
         }
     });
 });

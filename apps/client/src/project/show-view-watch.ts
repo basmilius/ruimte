@@ -24,21 +24,31 @@ const showInWorkspace = (workspace: Workspace, payload: ProjectShowViewEvent): v
         follow,
         alreadyThere: state.activeViewId === payload.viewId
     });
+    if (notice.where === 'banner') {
+        documents.getState().askView({ viewId: payload.viewId, message: notice.title });
+        return;
+    }
     const shown = follow ? documents.getState().showView(payload.viewId) : null;
+    /* One card per workspace: an agent that shows three views in a row leaves the last of them on
+       screen, not a stack nobody asked for. */
+    const id = `show-view:${workspace.id}`;
     /* Nothing to go back to when the grid was empty, which is a project whose views all went. */
     const button: ToastAction | null =
-        notice.action === 'go-there'
-            ? { label: 'Go there', run: () => documents.getState().setActiveView(payload.viewId) }
-            : notice.action === 'back' && shown !== null
-              ? { label: 'Back', run: () => documents.getState().undoShowView(shown) }
-              : null;
+        notice.back && shown !== null
+            ? {
+                  label: 'Back',
+                  run: () => {
+                      documents.getState().undoShowView(shown);
+                      // The card has said all it had to say once the button on it has been pressed.
+                      useToasts.getState().dismiss(id);
+                  }
+              }
+            : null;
     useToasts.getState().show({
-        /* One card per workspace: an agent that shows three views in a row leaves the last of them
-           on screen, not a stack nobody asked for. */
-        id: `show-view:${workspace.id}`,
-        kind: notice.stays ? 'notice' : 'success',
+        id,
+        kind: 'notice',
         title: notice.title,
-        description: notice.description,
+        ...(notice.description === undefined ? {} : { description: notice.description }),
         ...(button === null ? {} : { action: button })
     });
 };

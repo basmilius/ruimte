@@ -25,25 +25,31 @@ export const callerName = (views: readonly ProjectView[], by: string): string | 
 
 export interface ShowViewNotice {
     title: string;
-    description: string;
-    /* Which button the card carries: back to where you were, over to the view, or neither. */
-    action: 'back' | 'go-there' | null;
-    /* A card the person has to act on stays; one that only reports something takes itself away. */
-    stays: boolean;
+    /* The line under it, which only a toast has room for. */
+    description?: string;
+    /*
+     * Where it lands. Something that already happened is a card in the corner and takes itself away;
+     * a request that waits for an answer is the banner over the views, which is where this app puts
+     * every other decision (the save conflict, the failure) and where a person looks for one.
+     */
+    where: 'toast' | 'banner';
+    /* Whether that toast carries the way back; the banner's own buttons are the banner's. */
+    back: boolean;
 }
 
 /*
- * What the toast says. Three cases, and the middle one is why `alreadyThere` is asked before
+ * What the message says. Three cases, and the middle one is why `alreadyThere` is asked before
  * anything moves: a view that is already in front is the same story in both settings, and offering
  * to go somewhere the person is standing reads as a bug.
  */
 export const showViewNotice = (input: { agent: string | null; view: string; follow: boolean; alreadyThere: boolean }): ShowViewNotice => {
     const who = input.agent ?? SOMEONE;
     if (input.alreadyThere) {
-        return { title: `${who} pointed at ${input.view}`, description: 'You were already looking at it.', action: null, stays: false };
+        return { title: `${who} pointed at ${input.view}`, description: 'You were already looking at it.', where: 'toast', back: false };
     }
     if (input.follow) {
-        return { title: `${who} showed ${input.view}`, description: 'It took the place of the view you were in.', action: 'back', stays: false };
+        return { title: `${who} showed ${input.view}`, description: 'It took the place of the view you were in.', where: 'toast', back: true };
     }
-    return { title: `${who} asked for ${input.view}`, description: 'Nothing moved, because you turned that off.', action: 'go-there', stays: true };
+    // One line and no second one: the banner is a single row, and what is left to say the buttons say.
+    return { title: `${who} asked you to look at ${input.view}`, where: 'banner', back: false };
 };

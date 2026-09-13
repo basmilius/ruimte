@@ -122,6 +122,38 @@ describe('a view an agent asked for', () => {
     });
 });
 
+describe('a view an agent asked for while nothing may move', () => {
+    test('the banner names it, the button goes there and the banner is done', () => {
+        useDocument.getState().askView({ viewId: 'b', message: 'Refactor asked you to look at b' });
+        expect(useDocument.getState().askedView?.viewId).toBe('b');
+        useDocument.getState().goToAskedView();
+        expect(useDocument.getState().activeViewId).toBe('b');
+        expect(useDocument.getState().askedView).toBeNull();
+    });
+
+    test('staying where you are leaves the grid alone', () => {
+        useDocument.getState().askView({ viewId: 'b', message: 'Refactor asked you to look at b' });
+        useDocument.getState().dismissAskedView();
+        expect(useDocument.getState().askedView).toBeNull();
+        expect(useDocument.getState().activeViewId).toBe('a');
+    });
+
+    test('a second request replaces the one on screen, since the last one is the one worth acting on', () => {
+        useDocument.getState().askView({ viewId: 'a', message: 'first' });
+        useDocument.getState().askView({ viewId: 'b', message: 'second' });
+        expect(useDocument.getState().askedView).toEqual({ viewId: 'b', message: 'second' });
+    });
+
+    test('a view that is deleted or a project that is swapped out takes its banner with it', () => {
+        useDocument.getState().askView({ viewId: 'b', message: 'second' });
+        useDocument.getState().deleteView('b');
+        expect(useDocument.getState().askedView).toBeNull();
+        useDocument.getState().askView({ viewId: 'a', message: 'first' });
+        useDocument.getState().load(document([view('c')]), { activeViewId: 'c', views: {} });
+        expect(useDocument.getState().askedView).toBeNull();
+    });
+});
+
 describe('changing the list of views', () => {
     test('deleting the view that is open opens its neighbor', () => {
         useDocument.getState().deleteView('a');

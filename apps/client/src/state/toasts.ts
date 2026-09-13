@@ -3,8 +3,9 @@ import { create } from 'zustand';
 // How long a toast that went well stays up; a failure waits for the person instead.
 export const SUCCESS_MS = 4000;
 
-/* `notice` is something that happened elsewhere and waits to be read: it carries no verdict, so it
-   neither spins nor warns, and like a failure it stays until the person has done something with it. */
+/* `notice` is something that happened elsewhere: it carries no verdict, so it neither spins nor
+   warns, and like a success it takes itself away. Nothing that waits for an answer is a toast at
+   all; that is the banner over the views, where a person already looks for a decision. */
 export type ToastKind = 'progress' | 'success' | 'error' | 'notice';
 
 export interface ToastAction {
@@ -43,14 +44,14 @@ const timers = new Map<string, ReturnType<typeof setTimeout>>();
  * a person never watches two cards for one push.
  */
 export const useToasts = create<ToastStore>((set, get) => {
-    /* A toast that went well takes itself away; a failure and a running action stay. */
+    /* A toast that went well or only reports takes itself away; a failure and a running action stay. */
     const schedule = (id: string, kind: ToastKind): void => {
         const running = timers.get(id);
         if (running !== undefined) {
             clearTimeout(running);
             timers.delete(id);
         }
-        if (kind !== 'success') {
+        if (kind !== 'success' && kind !== 'notice') {
             return;
         }
         timers.set(
