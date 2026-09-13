@@ -511,7 +511,7 @@ canvas, against Ruimte, one verdict each.
   (`applyAdditions`, `CanvasState.addExternal`). It is marked as a load, like a project swapping in,
   so it takes no step on the undo stack, moves no camera and changes no selection: the person's drag
   runs on. A view an agent made is put in the list and opens itself nowhere. Which view a person
-  looks at is machine state, and `open` (phase 5) is the verb that asks for it.
+  looks at is client state, and `open` (phase 5) is the verb that asks for it.
 - A group that only gained members merges, anything else about a node the client already has does
   not. While a group is open its membership is read off the positions and the file says nothing, so
   the field only moves for a collapsed group, and there the node the agent just made would be
@@ -799,9 +799,10 @@ decided differently.
 - **One view, one cell.** A view already on screen moves instead of appearing twice, and a drop on
   the middle of a cell swaps the two views rather than pushing one off the grid. Two cameras on the
   same nodes is a feature nobody asked for and a bug everybody runs into.
-- **The layout is machine state.** It rides in `<projectId>.local.json` beside the camera and the
-  panel widths, never in `project.json`: a grid built on a 32 inch screen has no business appearing
-  on a laptop. `activeViewId` is still written beside it, so an older client reads such a file as
+- **The layout is client state, with the machine as the starting point.** It is kept per client
+  beside the camera and the panel widths and still sent to `<projectId>.local.json` (see "Local
+  state per client"), never in `project.json`: a grid built on a 32 inch screen has no business
+  appearing on a laptop. `activeViewId` is still written beside it, so an older client reads such a file as
   the project with that one view open.
 - **The chords hang on the workspace, not on a canvas.** `canvas/canvas-chords.ts` binds once per
   workspace. Nine cells would otherwise be nine window listeners that all resolve to the focused
@@ -839,6 +840,49 @@ decided differently.
 - **Not measured:** nine cells at once. The WebGL budget already spreads itself over them (ten
   contexts, LRU), but the React trees, pointer handlers and resize observers scale with the cells.
   If a full grid stutters, lowering the limit is two numbers in `split.ts`.
+
+### Local state per client
+
+Landed on 2026-09-14. Everything in `<projectId>.local.json` used to be per machine, so a laptop and
+a desktop on one daemon overwrote each other's camera, grid, panels and open view, without an event
+to tell the other. Four decisions, taken on 2026-09-13:
+
+- **The daemon stays the starting point.** A client still sends everything to `project.save-local`,
+  and a project or a view a client never saw opens the way the machine has it. A third client
+  starts where the last one stopped.
+- **Everything per client, at once.** The camera and focus per view, the grid, the panels and
+  `activeViewId`. The one exception is `panels.favicons`, a cache of pages rather than of a screen,
+  which is never kept by the client and always read from the machine.
+- **The camera is stored from the middle.** On disk and in localStorage it is the world point in
+  the middle of the cell plus the zoom (`ViewCameraSchema`), so a smaller window or another cell
+  keeps the same stretch of canvas in front. In memory it stays `{ x, y, zoom }`, because every
+  calculation leans on that. A camera in the old shape cannot be turned around without the viewport
+  it was taken in, so it reads as none and the view is fitted once; the payload of
+  `project.save-local` accepts it, so an older client does not see its whole local file refused.
+- **Camera history stays in the editor.** Cmd+[ and Cmd+] (roadmap point 8) keep their history in
+  the editor of this client and store nothing.
+
+How it came out:
+
+- The copy is `ruimte.local` in localStorage, a row per `${endpointId}:${projectId}` with `at` and
+  the local state (`project/client-local.ts`). A "client" is therefore an origin: every window of
+  the desktop app shares one, the dev app has its own `userData`, and a browser on `localhost` and
+  one on `127.0.0.1` are two. Two workspaces on one project in one window share a row, the same as
+  they shared the file before.
+- `overlayLocal` lays the row over what `project.open` returns before the document loads. A row
+  brings its grid, panels and open view even when its grid is one cell; a view is looked up on its
+  own and takes the machine's camera when the client has none for it. Views that are no longer in
+  the document are dropped on load, so they go from both copies at the next write.
+- A save writes the row first and then the daemon; `pagehide` flushes, because localStorage is
+  synchronous and makes it where the socket may not. At most 100 projects, the oldest `at` goes; a
+  full storage drops the oldest and tries once more, then gives up without a word.
+- Forgetting a machine drops its rows, the rekey onto a daemon id moves them like
+  `rekeyLastProject`, and deleting a project drops its row after the close wrote it.
+- Restoring waits for a size: `loadView` and a drawing's `load` put a stored camera in
+  `pendingCamera` (`{ kind: 'view' }`) until `setViewport` measures the cell, the same wait a fit
+  and a jump to a node already had, which also removed the fit effect from `DrawingView.tsx`. An
+  editor that was never measured exports the camera it was given, so a cell nobody drew yet does
+  not lose it.
 
 ### Processes
 
@@ -1164,7 +1208,7 @@ a day, several days. Each of the larger ones becomes a GitHub issue when it star
    xterms, "Clear" in the node menu. Then "Send to linked chat" (a terminal selection lands as a
    fenced block in the composer of the chat the node has an edge to) and port discovery: an `lsof`
    poll tied to the owning session, an "Open :5173" chip that adds a browser node with an edge.
-8. **Canvas ergonomics**, about two days, all machine state. Directional focus on Cmd+Arrow,
+8. **Canvas ergonomics**, about two days, all client state. Directional focus on Cmd+Arrow,
    maximize on Cmd+Shift+Enter, camera history on Cmd+[ and Cmd+] (Cmd+1..9 belongs to the views).
    Arrange, align and tidy as pure functions with palette entries; palette ranking (exact, prefix,
    substring), `>` for actions, recent nodes on an empty query, settings rows as entries. Images on

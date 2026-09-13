@@ -1,4 +1,6 @@
 import { AuthChallengeResultSchema, type AuthSession, type EndpointInfo } from '@ruimte/contracts';
+import { dropClientLocalOf } from '@/project/client-local';
+import { browserStorage } from '@/project/last-project';
 import { useBrowser } from '@/browser/registry';
 import { projectClient } from '@/project';
 import { forgetCachedList } from '@/project/list';
@@ -155,6 +157,7 @@ const forgetEndpointState = (id: string): void => {
     useUsageStore.getState().forget(id);
     useProcesses.getState().forget(id);
     useProcessWarnings.getState().forget(id);
+    dropClientLocalOf(browserStorage(), id);
 };
 
 /* The clients paired with the daemon this client talks to right now. */

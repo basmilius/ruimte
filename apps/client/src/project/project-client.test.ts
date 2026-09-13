@@ -594,6 +594,16 @@ describe('ProjectClient', () => {
         expect(ended).toEqual([{ endpointId: 'daemon-a', nodes: [`terminal:${terminal}`] }]);
         dispose();
     });
+
+    test('a deleted project leaves no local state behind on this client', async () => {
+        const storage = new Map<string, string>([['ruimte.local', JSON.stringify({ 'daemon-b:p1': { at: 1, local: { activeViewId: null, views: {} } } })]]);
+        const { client, dispose } = setup({ storage, open: 'p1' });
+        await tick();
+        useUi.getState().togglePanel('git');
+        await client.deleteProject('p1', false);
+        expect(Object.keys(JSON.parse(storage.get('ruimte.local')!))).toEqual(['daemon-b:p1']);
+        dispose();
+    });
 });
 
 describe('a project with a drawing view', () => {

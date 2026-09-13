@@ -1,6 +1,7 @@
 import type { EndpointInfo } from '@ruimte/contracts';
 import { forgetEndpoint } from '@/endpoint';
-import { rekeyLastProject } from '@/project/last-project';
+import { rekeyClientLocal } from '@/project/client-local';
+import { browserStorage, rekeyLastProject } from '@/project/last-project';
 import { LOCAL_ENDPOINT_ID, endpointById, endpointForDaemon, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useToasts } from '@/state/toasts';
 import { pool, transportFor } from '@/transport';
@@ -53,6 +54,7 @@ const settleId = (endpointId: string, daemonId: string): string => {
     }
     if (endpoint.daemonId === null) {
         rekeyLastProject(endpoint.id, daemonId);
+        rekeyClientLocal(browserStorage(), endpoint.id, daemonId);
         // The socket moves with the row: it is the one that just answered, and closing it would drop what is attached to it.
         pool.rekey(endpoint.id, daemonId, () => socketAddressFor(daemonId));
         rekeyTicket(endpoint.id, daemonId);

@@ -1,6 +1,15 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProjectLocal } from '@ruimte/contracts';
-import { CLIENT_LOCAL_LIMIT, overlayLocal, readClientLocal, writeClientLocal, type ClientLocalStorage } from './client-local';
+import {
+    CLIENT_LOCAL_LIMIT,
+    dropClientLocal,
+    dropClientLocalOf,
+    overlayLocal,
+    readClientLocal,
+    rekeyClientLocal,
+    writeClientLocal,
+    type ClientLocalStorage
+} from './client-local';
 
 const memory = (map = new Map<string, string>()): ClientLocalStorage & { map: Map<string, string> } => ({
     map,
@@ -116,5 +125,35 @@ describe("the client's own copy", () => {
         refusals = 2;
         expect(() => writeClientLocal(storage, 'daemon-a', 'p2', machine, 4)).not.toThrow();
         expect(readClientLocal(storage, 'daemon-a', 'p2')).toBeNull();
+    });
+});
+
+describe('cleaning up', () => {
+    const filled = () => {
+        const storage = memory();
+        writeClientLocal(storage, '10.0.0.4:4210', 'p1', machine, 1);
+        writeClientLocal(storage, '10.0.0.4:4210', 'p2', machine, 2);
+        writeClientLocal(storage, 'daemon-b', 'p1', machine, 3);
+        return storage;
+    };
+    const keys = (storage: ReturnType<typeof memory>): string[] => Object.keys(JSON.parse(storage.map.get('ruimte.local')!)).sort();
+
+    test('a forgotten machine takes every project with it and leaves the others', () => {
+        const storage = filled();
+        dropClientLocalOf(storage, '10.0.0.4:4210');
+        expect(keys(storage)).toEqual(['daemon-b:p1']);
+    });
+
+    test('a machine that moves onto its daemon id keeps where it stood', () => {
+        const storage = filled();
+        rekeyClientLocal(storage, '10.0.0.4:4210', 'daemon-x');
+        expect(keys(storage)).toEqual(['daemon-b:p1', 'daemon-x:p1', 'daemon-x:p2']);
+        expect(readClientLocal(storage, 'daemon-x', 'p2')?.activeViewId).toBe('a');
+    });
+
+    test('a deleted project goes on its own machine only', () => {
+        const storage = filled();
+        dropClientLocal(storage, 'daemon-b', 'p1');
+        expect(keys(storage)).toEqual(['10.0.0.4:4210:p1', '10.0.0.4:4210:p2']);
     });
 });

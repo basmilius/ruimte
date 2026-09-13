@@ -2,7 +2,7 @@ import type { ProjectContent, ProjectDocument, ProjectIconChoice, ProjectLocal, 
 import type { StoreApi } from 'zustand';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
-import { overlayLocal, readClientLocal, writeClientLocal } from './client-local';
+import { dropClientLocal, overlayLocal, readClientLocal, writeClientLocal } from './client-local';
 import { browserStorage, readLastProject, rememberProject, type LastProjectStorage } from './last-project';
 import { mergeProject, type CanvasAddition } from './merge';
 import type { PanelsPort } from './panels-port';
@@ -230,6 +230,8 @@ export class ProjectClient {
             await this.closeProject();
         }
         await this.transport.request('project.delete', { projectId, removeFiles });
+        // After the close, which wrote this client's copy on its way out.
+        dropClientLocal(this.storage, this.endpointId(), projectId);
         await this.refreshList();
     }
 

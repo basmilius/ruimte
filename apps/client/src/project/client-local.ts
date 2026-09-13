@@ -1,5 +1,5 @@
 import { ProjectLocalSchema, type ProjectLocal, type ProjectViewLocal } from '@ruimte/contracts';
-import { endpointKey } from '@/state/keys';
+import { endpointKey, isOfEndpoint } from '@/state/keys';
 
 const CLIENT_LOCAL_KEY = 'ruimte.local';
 
@@ -97,6 +97,45 @@ export const writeClientLocal = (storage: ClientLocalStorage | null, endpointId:
         delete rows[oldestKey(rows, key)!];
     }
     writeRows(storage, rows, key);
+};
+
+/* A deleted project leaves nothing behind to come back to. */
+export const dropClientLocal = (storage: ClientLocalStorage | null, endpointId: string, projectId: string): void => {
+    const rows = readRows(storage);
+    const key = endpointKey(endpointId, projectId);
+    if (rows[key] === undefined) {
+        return;
+    }
+    delete rows[key];
+    writeRows(storage, rows);
+};
+
+/* A forgotten machine takes its projects with it, like every other row about it. */
+export const dropClientLocalOf = (storage: ClientLocalStorage | null, endpointId: string): void => {
+    const rows = readRows(storage);
+    const kept = Object.fromEntries(Object.entries(rows).filter(([key]) => !isOfEndpoint(key, endpointId)));
+    if (Object.keys(kept).length !== Object.keys(rows).length) {
+        writeRows(storage, kept);
+    }
+};
+
+/* An endpoint that moves onto its daemon id keeps where it stood in every project (`rekeyEndpoint`). */
+export const rekeyClientLocal = (storage: ClientLocalStorage | null, oldId: string, newId: string): void => {
+    const rows = readRows(storage);
+    let moved = false;
+    const next: ClientLocalRows = {};
+    for (const [key, row] of Object.entries(rows)) {
+        if (isOfEndpoint(key, oldId)) {
+            // Sliced rather than split: an id from before daemon ids was an address, colon and all.
+            next[endpointKey(newId, key.slice(oldId.length + 1))] = row;
+            moved = true;
+        } else {
+            next[key] = row;
+        }
+    }
+    if (moved) {
+        writeRows(storage, next);
+    }
 };
 
 /*

@@ -399,7 +399,7 @@ export type ViewCamera = z.infer<typeof ViewCameraSchema>;
    from having its whole local file refused over one field. */
 const StoredViewCameraSchema = z.union([ViewCameraSchema, CameraSchema.transform((): null => null)]).nullable();
 
-// Where one view stood when it was last on screen. Per machine, like everything around it.
+// Where one view stood when it was last on screen. Per client, like everything around it.
 export const ProjectViewLocalSchema = z.object({
     camera: StoredViewCameraSchema,
     focusedNodeId: z.string().nullable()
@@ -422,7 +422,7 @@ export const SplitColumnSchema = z.object({
 export type SplitColumn = z.infer<typeof SplitColumnSchema>;
 
 /*
- * How the views of one project stood next to each other on this machine: columns of cells, never a
+ * How the views of one project stood next to each other on this client: columns of cells, never a
  * free tree. The two limits live in the client's `shell/split.ts` and not here, so a file that was
  * hand-edited past them parses and is trimmed on the way in rather than throwing the layout away.
  */
@@ -434,7 +434,7 @@ export const SplitLayoutSchema = z.object({
 export type SplitLayout = z.infer<typeof SplitLayoutSchema>;
 
 /*
- * Per machine, never in the shared file: which view was open, where its camera was and what had
+ * Per client, never in the shared file: which view was open, where its camera was and what had
  * focus, how the views stood next to each other and how the panels stood. The panels are per
  * project, not per view: they are about the folder, so they stay put while you switch views.
  */
