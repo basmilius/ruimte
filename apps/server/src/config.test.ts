@@ -52,6 +52,10 @@ describe('parseServerArgs', () => {
         expect(parseServerArgs([], { RUIMTE_LABEL: 'named' }).label).toBe('named');
         expect(() => parseServerArgs(['dance'], {})).toThrow('Unknown command');
         expect(parseServerArgs(['context', 'read', 'abc'], {})).toMatchObject({ command: 'context', args: ['read', 'abc'] });
+        expect(parseServerArgs(['context', 'node', 'note', '--text', 'hi', '--port=1'], {})).toMatchObject({
+            command: 'context',
+            args: ['node', 'note', '--text', 'hi', '--port=1']
+        });
     });
 
     test('rejects a port that is not a number', () => {

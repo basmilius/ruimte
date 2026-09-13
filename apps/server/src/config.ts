@@ -41,8 +41,10 @@ export const DEFAULT_HOST = '127.0.0.1';
 export const DEFAULT_PORT = 4210;
 
 export const parseServerArgs = (argv: string[], env: Record<string, string | undefined> = process.env): ServerConfig => {
+    // Everything after `context` belongs to the agent's CLI (`node note --text ...`), whose flags the daemon parses, not this.
+    const cli = argv[0] === 'context';
     const { values, positionals } = parseArgs({
-        args: argv,
+        args: cli ? argv.slice(0, 1) : argv,
         options: {
             host: { type: 'string', default: DEFAULT_HOST },
             port: { type: 'string', default: String(DEFAULT_PORT) },
@@ -77,6 +79,6 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
         requireToken: values['require-token'],
         priceFetch: !values['no-price-fetch'],
         command,
-        args: positionals.slice(1)
+        args: cli ? argv.slice(1) : positionals.slice(1)
     };
 };
