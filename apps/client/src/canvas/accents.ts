@@ -34,9 +34,10 @@ export const NODE_ACCENTS: readonly { id: AccentId; label: string; color: string
     color: ACCENT_COLORS[id]
 }));
 
-/* The five a settings row shows in the open, blue (the one Ruimte carries) first. The rest of the
-   wheel sits behind the overflow beside them, which wears the accent itself once one is picked. */
-export const FEATURED_ACCENTS: readonly AccentId[] = ['blue', 'violet', 'rose', 'amber', 'teal'];
+/* The five a settings row shows in the open, blue (the one Ruimte carries) first and the others
+   spread around the wheel. The rest sits behind the overflow beside them, which wears the accent
+   itself once one is picked. */
+export const FEATURED_ACCENTS: readonly AccentId[] = ['blue', 'orange', 'lime', 'indigo', 'pink'];
 
 export const accentColor = (id: string | null | undefined): string | undefined => NODE_ACCENTS.find((entry) => entry.id === id)?.color;
 

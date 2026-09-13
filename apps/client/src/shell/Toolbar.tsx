@@ -108,7 +108,7 @@ function UpdateButton() {
     const label = state.status === 'ready' ? `Version ${state.version ?? ''} is ready to install`.trim() : 'An update is on the way';
     return (
         <Tooltip label={label} name>
-            <button className="icon-btn text-positive hover:text-positive" onClick={() => useUi.getState().setSettings({ open: true, section: 'updates' })}>
+            <button className="icon-btn text-positive hover:text-positive" onClick={() => useUi.getState().setSettings({ open: true, section: 'about' })}>
                 <Icon icon={ArrowDownToLine} size={16} />
             </button>
         </Tooltip>

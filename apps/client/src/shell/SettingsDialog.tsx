@@ -6,28 +6,22 @@ import { AboutPane } from '@/shell/settings/panes/AboutPane';
 import { AgentsPane } from '@/shell/settings/panes/AgentsPane';
 import { AppearancePane } from '@/shell/settings/panes/AppearancePane';
 import { CanvasPane } from '@/shell/settings/panes/CanvasPane';
-import { DrawingPane } from '@/shell/settings/panes/DrawingPane';
 import { FilesPane } from '@/shell/settings/panes/FilesPane';
-import { GitPane } from '@/shell/settings/panes/GitPane';
 import { KeyboardPane } from '@/shell/settings/panes/KeyboardPane';
 import { MachinesPane } from '@/shell/settings/panes/MachinesPane';
-import { UpdatesPane } from '@/shell/settings/panes/UpdatesPane';
 import { UsagePane } from '@/shell/settings/panes/UsagePane';
-import { SETTINGS_SECTIONS } from '@/shell/settings/sections';
+import { ALL_SETTINGS_SECTIONS } from '@/shell/settings/sections';
 import { useUi, type SettingsSectionId } from '@/state/ui';
 import { Icon } from '@/ui/Icon';
 
 const PANES: Record<SettingsSectionId, () => React.JSX.Element> = {
     appearance: AppearancePane,
     canvas: CanvasPane,
-    drawing: DrawingPane,
     files: FilesPane,
-    git: GitPane,
     usage: UsagePane,
     agents: AgentsPane,
     machines: MachinesPane,
     keyboard: KeyboardPane,
-    updates: UpdatesPane,
     about: AboutPane
 };
 
@@ -36,7 +30,7 @@ export function SettingsDialog() {
     const open = useUi((s) => s.settings.open);
     const section = useUi((s) => s.settings.section);
     const setSettings = useUi((s) => s.setSettings);
-    const meta = SETTINGS_SECTIONS.find((entry) => entry.id === section) ?? SETTINGS_SECTIONS[0]!;
+    const meta = ALL_SETTINGS_SECTIONS.find((entry) => entry.id === section) ?? ALL_SETTINGS_SECTIONS[0]!;
 
     return (
         <Dialog.Root open={open} onOpenChange={(next) => setSettings({ open: next })}>
@@ -65,7 +59,7 @@ export function SettingsDialog() {
                                     <Icon icon={X} size={16} />
                                 </Dialog.Close>
                             </div>
-                            {SETTINGS_SECTIONS.map((entry) => {
+                            {ALL_SETTINGS_SECTIONS.map((entry) => {
                                 const Pane = PANES[entry.id];
                                 return (
                                     <Tabs.Panel

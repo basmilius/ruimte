@@ -1,7 +1,7 @@
 import type { ProjectPanelKind } from '@ruimte/contracts';
 import { create } from 'zustand';
 
-export type SettingsSectionId = 'appearance' | 'canvas' | 'drawing' | 'files' | 'git' | 'usage' | 'agents' | 'machines' | 'keyboard' | 'updates' | 'about';
+export type SettingsSectionId = 'appearance' | 'keyboard' | 'canvas' | 'files' | 'agents' | 'usage' | 'machines' | 'about';
 
 export type PanelKind = ProjectPanelKind;
 

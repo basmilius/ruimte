@@ -1000,6 +1000,21 @@ decided.
 - **Quitting asks once.** `before-quit` fires again for the same quit, so the answer is remembered;
   a window that is already closed is never asked, since the client that would have counted is gone.
 
+### Settings
+
+- Eight panes in five groups, with a separator between two groups: Appearance and Keyboard, Canvas
+  and Files and Git, Agents and Usage, Machines, About. `SETTINGS_SECTIONS` is the list of groups;
+  the separator is no tab, so the arrow keys of Base UI Tabs pass over it.
+- A pane is a preference or it is not in the settings. Zoom, the locks and the layouts act on the
+  canvas that is open and nothing about them is stored, so the old Canvas pane went: the dock and the
+  palette have all three, and `LayoutDialog` stays because the dock opens it. The name Canvas went to
+  what used to be Drawing, which is where canvas preferences (a font size for chat and text) land.
+- Files and Git are one pane because they are the two panels beside the canvas and hold three rows
+  each. Usage sits beside Agents because the only thing it sets is what agents cost.
+- The five accents in the open are blue, orange, lime, indigo and pink, spread around the wheel. The
+  twelve others are a list with a dot, a name and a check, in the order of the wheel, and never repeat
+  one of the five. Someone who picked a color that left the five keeps it: the overflow wears it.
+
 ### Skipped on purpose
 
 Skipped: kanban, loop and trigger nodes, minimap, dictation, notch HUD, agent-to-agent

@@ -7,7 +7,7 @@ import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Segmented, Stepper, Toggle } from '@/shell/settings/controls';
 import { FONT_SIZE_RANGE, INTERFACE_FONT_SIZE_RANGE, MONO_FONTS, useSettings, type SidebarScope } from '@/state/settings';
 import { useTheme, type Theme } from '@/state/theme';
-import { ACCENT_SWATCH, ACCENT_SWATCH_PICKED } from '@/ui/classes';
+import { ACCENT_SWATCH } from '@/ui/classes';
 import { Select } from '@/ui/Select';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
@@ -25,8 +25,8 @@ const THEMES: Array<{ id: Theme; label: string }> = [
 
 /*
  * The accent, five colors at a time. Every Tailwind hue is on offer, which is more than a settings
- * row can carry, so the wheel past the five sits in a menu behind them; the trigger wears the
- * chosen color itself whenever that color is one of the ones it hides.
+ * row can carry, so the other twelve sit in a list behind them, in the order of the wheel; the trigger
+ * wears the chosen color itself whenever that color is one of the ones it hides.
  */
 function AccentSwatches() {
     const accent = useSettings((s) => s.accent);
@@ -64,19 +64,20 @@ function AccentSwatches() {
                 </Tooltip>
                 <Menu.Portal>
                     <Menu.Positioner className="z-[var(--z-popup)]" side="bottom" align="end" sideOffset={6}>
-                        <Menu.Popup className="menu-popup grid min-w-0 grid-cols-6 gap-1 p-2">
-                            {rest.map((entry) => (
-                                <Tooltip key={entry.id} label={entry.label}>
-                                    <Menu.Item
-                                        aria-label={entry.label}
-                                        className={clsx(ACCENT_SWATCH, accent === entry.id && ACCENT_SWATCH_PICKED)}
-                                        style={{ background: entry.color }}
-                                        onClick={() => pick(entry.id)}
-                                    >
-                                        {accent === entry.id && <Icon icon={Check} size={12} />}
-                                    </Menu.Item>
-                                </Tooltip>
-                            ))}
+                        <Menu.Popup className="menu-popup max-h-96 overflow-y-auto">
+                            <Menu.RadioGroup value={accent} onValueChange={(value: AccentId) => pick(value)}>
+                                {rest.map((entry) => (
+                                    <Menu.RadioItem key={entry.id} value={entry.id} className="menu-item">
+                                        <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: entry.color }} aria-hidden />
+                                        <span className="grow">{entry.label}</span>
+                                        <span className="grid h-5 w-4 shrink-0 place-items-center">
+                                            <Menu.RadioItemIndicator>
+                                                <Icon icon={Check} size={14} />
+                                            </Menu.RadioItemIndicator>
+                                        </span>
+                                    </Menu.RadioItem>
+                                ))}
+                            </Menu.RadioGroup>
                         </Menu.Popup>
                     </Menu.Positioner>
                 </Menu.Portal>
