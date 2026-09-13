@@ -26,7 +26,7 @@ import type {
     ProjectViewLocal,
     RuntimeMode
 } from '@ruimte/contracts';
-import { isAgentKind } from '@ruimte/contracts';
+import { DEFAULT_TITLES, NODE_SIZE, isAgentKind } from '@ruimte/contracts';
 
 export type { AgentStatus, NodeKind } from '@ruimte/contracts';
 
@@ -196,29 +196,7 @@ export interface CanvasState {
     redo(): void;
 }
 
-/* What a node of each kind starts out as, also when it comes back from a view of its own. */
-export const NODE_SIZE: Record<NodeKind, { w: number; h: number }> = {
-    terminal: { w: 560, h: 360 },
-    chat: { w: 480, h: 520 },
-    browser: { w: 720, h: 480 },
-    group: { w: 800, h: 600 },
-    note: { w: 320, h: 240 },
-    drawing: { w: 480, h: 360 },
-    file: { w: 520, h: 420 }
-};
-
-/* What a node of each kind is called before anything names it. */
-export const DEFAULT_TITLES: Record<NodeKind, string> = {
-    terminal: 'Terminal',
-    chat: 'New chat',
-    browser: 'Browser',
-    group: 'Group',
-    drawing: 'Drawing',
-    note: 'Note',
-    file: 'File'
-};
-
-export { isAgentKind };
+export { DEFAULT_TITLES, NODE_SIZE, isAgentKind };
 
 // Room a group keeps around the nodes it was made for.
 const GROUP_PADDING = 32;

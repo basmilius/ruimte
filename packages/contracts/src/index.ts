@@ -127,6 +127,7 @@ export * from './fs.ts';
 export * from './git.ts';
 export * from './ids.ts';
 export * from './model.ts';
+export * from './node-defaults.ts';
 export * from './processes.ts';
 export * from './project.ts';
 export * from './project-migrate.ts';
