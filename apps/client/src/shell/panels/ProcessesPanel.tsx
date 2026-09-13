@@ -442,11 +442,9 @@ export function ProcessesPanel() {
                                             )}
                                             style={{ paddingLeft: INDENT_BASE + process.depth * INDENT_STEP }}
                                         >
-                                            <Tooltip label={process.path ?? process.name}>
-                                                <span className={clsx('min-w-0 truncate text-xs', process.readable ? 'text-text' : 'text-text-faint')}>
-                                                    {process.name}
-                                                </span>
-                                            </Tooltip>
+                                            <span className={clsx('min-w-0 truncate text-xs', process.readable ? 'text-text' : 'text-text-faint')}>
+                                                {process.name}
+                                            </span>
                                             <span className="shrink-0 text-xs text-text-faint tabular-nums">{process.pid}</span>
                                             {process.family !== null && <span className="shrink-0 text-xs text-text-faint">{process.family}</span>}
                                             <span className="grow" />
