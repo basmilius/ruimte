@@ -39,6 +39,14 @@ export interface UpdateState {
     error?: string | null;
 }
 
+/* What the agents of this window add up to, as the shell needs it. Mirrors `apps/desktop/src/main.ts`. */
+export interface AgentActivity {
+    /* Agents in the middle of a turn. What the quit dialog names, and never an attached shell. */
+    working: number;
+    /* Nodes waiting to be looked at: the ones that need you plus the ones that finished out of sight. */
+    attention: number;
+}
+
 /* The shell's API, present only inside the desktop app. Mirrors `apps/desktop/src/preload.ts`. */
 export interface DesktopBridge {
     platform: string;
@@ -67,6 +75,11 @@ export interface DesktopBridge {
        so; the shell holds the block and drops it on a reload or when the window goes. Optional for
        the same reason `onBrowserContextMenu` is; without it the setting is not offered. */
     setKeepAwake?(keep: boolean): void;
+    /* How much of the work still wants a person. The client counts it (`state/attention.ts`): only
+       it knows which node holds an agent and which holds a shell somebody left attached. The shell
+       badges the dock with `attention` and asks before quitting on `working`. Optional for the same
+       reason `onBrowserContextMenu` is; without it there is no badge and no question at quit. */
+    setAgentActivity?(activity: AgentActivity): void;
     /* A native save dialog for bytes the client made (an exported drawing). Optional for the same
        reason `onBrowserContextMenu` is; without it the client falls back to a browser download. */
     saveFile?(suggestedName: string, bytes: Uint8Array, mime: string): Promise<string | null>;

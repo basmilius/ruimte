@@ -219,6 +219,32 @@ const setKeepAwake = (keep: boolean): void => {
 
 ipcMain.on('power:keep-awake', (_event, keep: boolean) => setKeepAwake(keep));
 
+/* What the agents of the window add up to. Mirrors `AgentActivity` in `apps/client/src/desktop/bridge.ts`. */
+interface AgentActivity {
+    working: number;
+    attention: number;
+}
+
+/*
+ * What the client last said about its agents. The shell counts nothing itself: which node holds an
+ * agent and which holds a shell somebody left attached is the client's own question, and asking it
+ * twice is how the badge and the quit dialog would end up disagreeing with the toolbar.
+ */
+let agentActivity: AgentActivity = { working: 0, attention: 0 };
+
+const setAgentActivity = (activity: AgentActivity): void => {
+    agentActivity = activity;
+    // A dock badge is macOS and Linux; Windows has none and Electron's call does nothing there.
+    if (process.platform !== 'win32') {
+        app.setBadgeCount(activity.attention);
+    }
+};
+
+ipcMain.on('agents:activity', (_event, activity: AgentActivity) => setAgentActivity(activity));
+
+/* Set once a person has said to quit with agents still working, so the question is asked once. */
+let quitConfirmed = false;
+
 const createWindow = (): Electron.BrowserWindow => {
     const window = new BrowserWindow({
         width: 1440,
@@ -239,10 +265,14 @@ const createWindow = (): Electron.BrowserWindow => {
     window.on('closed', () => {
         mainWindow = null;
         setKeepAwake(false);
+        setAgentActivity({ working: 0, attention: 0 });
     });
-    // A reload throws away the client that asked to stay awake, so the block goes with it and the
-    // client that comes up asks again for whatever is still running.
-    window.webContents.on('did-start-loading', () => setKeepAwake(false));
+    // A reload throws away the client that asked to stay awake and the counts it sent, so both go
+    // with it and the client that comes up says again what is still running.
+    window.webContents.on('did-start-loading', () => {
+        setKeepAwake(false);
+        setAgentActivity({ working: 0, attention: 0 });
+    });
     // In fullscreen macOS hides the traffic lights, so the client can take the room back.
     window.on('enter-full-screen', () => window.webContents.send('window:fullscreen', true));
     window.on('leave-full-screen', () => window.webContents.send('window:fullscreen', false));
@@ -694,7 +724,24 @@ if (!app.requestSingleInstanceLock()) {
         }
     });
 
-    app.on('before-quit', () => {
+    app.on('before-quit', (event) => {
+        // Quitting takes the daemon and every session with it, so a turn in flight is work thrown
+        // away. Asked once: a quit that a person confirmed must not ask again on its second pass.
+        if (!quitConfirmed && agentActivity.working > 0 && mainWindow !== null && !mainWindow.isDestroyed()) {
+            const choice = dialog.showMessageBoxSync(mainWindow, {
+                type: 'question',
+                buttons: ['Quit anyway', 'Keep working'],
+                defaultId: 1,
+                cancelId: 1,
+                message: agentActivity.working === 1 ? 'An agent is still working.' : `${agentActivity.working} agents are still working.`,
+                detail: 'Quitting ends their sessions on this machine.'
+            });
+            if (choice !== 0) {
+                event.preventDefault();
+                return;
+            }
+            quitConfirmed = true;
+        }
         // The daemon belongs to the app here; sessions end with it until the background service of a later phase.
         daemon?.kill('SIGTERM');
     });
