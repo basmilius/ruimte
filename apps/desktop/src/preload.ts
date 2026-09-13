@@ -22,8 +22,8 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
         ipcRenderer.on('guest:focus', handler);
         return () => ipcRenderer.removeListener('guest:focus', handler);
     },
-    onOpenSettings: (listener: (section: string) => void): (() => void) => {
-        const handler = (_event: unknown, section: string): void => listener(section);
+    onOpenSettings: (listener: (section: string | null) => void): (() => void) => {
+        const handler = (_event: unknown, section: string | null): void => listener(section);
         ipcRenderer.on('menu:settings', handler);
         return () => ipcRenderer.removeListener('menu:settings', handler);
     },

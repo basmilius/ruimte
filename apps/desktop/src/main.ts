@@ -622,13 +622,14 @@ ipcMain.on('update:install', () => updater?.quitAndInstall());
  * The application menu's first column. On macOS the stock `appMenu` role opens Electron's own About
  * panel and has no Settings at all, so both lead into the client's settings instead. Everything else
  * keeps its role: Quit in particular, whose `before-quit` is where the dialog about working agents
- * lives. Elsewhere that column is the File menu, which has neither item.
+ * lives. Settings names no pane, so Cmd+, (which the menu now takes before the page) still opens the
+ * dialog where it was. Elsewhere that column is the File menu, which has neither item.
  */
 function appMenu(): Electron.MenuItemConstructorOptions {
     if (process.platform !== 'darwin') {
         return { role: 'appMenu' };
     }
-    const openSettings = (section: string): void => {
+    const openSettings = (section: string | null): void => {
         mainWindow?.show();
         mainWindow?.webContents.send('menu:settings', section);
     };
@@ -637,7 +638,7 @@ function appMenu(): Electron.MenuItemConstructorOptions {
         submenu: [
             { label: `About ${app.name}…`, click: () => openSettings('about') },
             { type: 'separator' },
-            { label: 'Settings…', accelerator: 'CommandOrControl+,', click: () => openSettings('appearance') },
+            { label: 'Settings…', accelerator: 'CommandOrControl+,', click: () => openSettings(null) },
             { type: 'separator' },
             { role: 'services' },
             { type: 'separator' },

@@ -68,10 +68,10 @@ export interface DesktopBridge {
     /* Where a file dragged in from the file manager lives, which a browser never tells a page.
        Optional for the same reason `onBrowserContextMenu` is; without it such a drag is refused. */
     pathForFile?(file: File): string | null;
-    /* About and Settings in the macOS application menu, naming the pane to open. A section this
-       client does not know opens the settings where they were. Optional for the same reason
-       `onBrowserContextMenu` is. */
-    onOpenSettings?(listener: (section: string) => void): () => void;
+    /* About and Settings in the macOS application menu. About names its pane; Settings names none
+       (null), and neither does a section this client does not know, which open the settings where
+       they were. Optional for the same reason `onBrowserContextMenu` is. */
+    onOpenSettings?(listener: (section: string | null) => void): () => void;
     isFullscreen(): Promise<boolean>;
     onFullscreen(listener: (fullscreen: boolean) => void): () => void;
     /* The app's theme, which the shell needs for the native window controls, for the
