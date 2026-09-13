@@ -82,3 +82,14 @@ export const ApprovalAnswerResultSchema = z.object({
     accepted: z.boolean()
 });
 export type ApprovalAnswerResult = z.infer<typeof ApprovalAnswerResultSchema>;
+
+/*
+ * Whether this client offers permission requests to a person at all. One socket's answer, not the
+ * daemon's: with it off the daemon holds nothing for this client, while a second client that still
+ * wants them is asked as before. A client that never sends this wants them, which is what every
+ * client written before the switch existed meant.
+ */
+export const ApprovalPreferencePayloadSchema = z.object({
+    enabled: z.boolean()
+});
+export type ApprovalPreferencePayload = z.infer<typeof ApprovalPreferencePayloadSchema>;

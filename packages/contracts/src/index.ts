@@ -3,6 +3,7 @@ import {
     AgentResumePayloadSchema,
     ApprovalAnswerPayloadSchema,
     ApprovalAnswerResultSchema,
+    ApprovalPreferencePayloadSchema,
     SessionApprovalsEventSchema,
     SessionStatusEventSchema
 } from './agent.ts';
@@ -161,6 +162,7 @@ export const REQUEST_SCHEMAS = {
     'session.list': { payload: EmptySchema, result: SessionListResultSchema },
     'agent.resume': { payload: AgentResumePayloadSchema, result: EmptySchema },
     'agent.answerApproval': { payload: ApprovalAnswerPayloadSchema, result: ApprovalAnswerResultSchema },
+    'agent.setApprovals': { payload: ApprovalPreferencePayloadSchema, result: EmptySchema },
     'chat.create': { payload: ChatCreatePayloadSchema, result: ChatInfoSchema },
     'chat.attach': { payload: ChatTargetPayloadSchema, result: ChatAttachResultSchema },
     'chat.detach': { payload: ChatTargetPayloadSchema, result: EmptySchema },

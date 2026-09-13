@@ -180,6 +180,13 @@ describe('agent and chat', () => {
         expect(schema.result.safeParse({ accepted: false }).success).toBe(true);
     });
 
+    test('a client says whether it wants permission requests at all, and nothing else', () => {
+        const schema = REQUEST_SCHEMAS['agent.setApprovals'];
+        expect(schema.payload.safeParse({ enabled: false }).success).toBe(true);
+        expect(schema.payload.safeParse({}).success).toBe(false);
+        expect(schema.payload.safeParse({ enabled: 'yes' }).success).toBe(false);
+    });
+
     test('chat events are one of item, delta or info', () => {
         const item = { id: 'i1', createdAt: 1, turnId: null, kind: 'user', text: 'hi' };
         expect(EVENT_SCHEMAS['chat.event'].safeParse({ chatId: 'c1', event: { type: 'item', item } }).success).toBe(true);
