@@ -1,6 +1,6 @@
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { Terminal } from '@xterm/headless';
-import type { AgentInfo } from '@ruimte/contracts';
+import type { AgentInfo, AgentLaunch } from '@ruimte/contracts';
 import type { PtyAdapter, PtyProcess } from '../pty/pty.ts';
 
 const SCROLLBACK_LINES = 10_000;
@@ -28,6 +28,8 @@ interface SessionOptions {
     restoredScreen?: string;
     // The agent a previous life of this id ran; offered for resume, never started on its own.
     restoredAgent?: AgentInfo;
+    // The CLI this session was opened for, kept so a resume that cannot work can still launch it.
+    launch?: AgentLaunch;
     // First line typed into the shell, so a node can open straight into a program.
     command?: string;
     // Shown dimmed above the first prompt, for what the shell cannot tell on its own (the linked context).
@@ -47,6 +49,7 @@ export class Session {
     exitCode: number | null = null;
     // What a hook POST must carry to speak for this session; only the shell's environment knows it.
     readonly hookToken: string;
+    readonly launch: AgentLaunch | null;
     agent: AgentInfo | null;
     private readonly terminal: Terminal;
     private readonly serializer: SerializeAddon;
@@ -68,6 +71,7 @@ export class Session {
         this.deliver = options.deliver;
         this.onExit = options.onExit;
         this.hookToken = options.hookToken;
+        this.launch = options.launch ?? null;
         this.agent = options.restoredAgent ? { ...options.restoredAgent, live: false } : null;
 
         this.terminal = new Terminal({ cols: options.cols, rows: options.rows, scrollback: SCROLLBACK_LINES, allowProposedApi: true });

@@ -1,11 +1,22 @@
+import { rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { SessionError } from './manager.ts';
-import { Recorder, SH, SH_ARGS, makeHarness, waitFor, waitForAsync, type Harness } from './test-helpers.ts';
+import type { AgentLaunch } from '@ruimte/contracts';
+import { SessionError, type SessionManagerOptions } from './manager.ts';
+import { CLEAN_PATH, Recorder, SH, SH_ARGS, makeHarness, waitFor, waitForAsync, type Harness } from './test-helpers.ts';
 
 let harness: Harness;
+// The transcript of the agent the hooks below report; the daemon resumes only what is still on disk.
+let transcript: string;
+
+const freshHarness = async (extra: Partial<SessionManagerOptions> = {}): Promise<void> => {
+    harness = await makeHarness({ env: { PATH: CLEAN_PATH, PS1: '$ ' }, ...extra });
+    transcript = join(harness.home, 'transcript.jsonl');
+    await writeFile(transcript, '');
+};
 
 beforeEach(async () => {
-    harness = await makeHarness();
+    await freshHarness();
 });
 
 afterEach(async () => {
@@ -14,6 +25,9 @@ afterEach(async () => {
 
 const create = (sessionId: string, command?: string) =>
     harness.manager.create({ sessionId, cols: 80, rows: 24, shell: SH, args: SH_ARGS, cwd: harness.home, command });
+
+const createAgent = (sessionId: string, agent: AgentLaunch) =>
+    harness.manager.create({ sessionId, cols: 80, rows: 24, shell: SH, args: SH_ARGS, cwd: harness.home, agent });
 
 const codeOf = (work: () => void): string => {
     try {
@@ -28,7 +42,7 @@ const resumes = (output: string): number => output.split("claude --resume 'claud
 
 const hook = (event: string, extra: Record<string, unknown> = {}) => ({
     session_id: 'claude-1',
-    transcript_path: '/tmp/t.jsonl',
+    transcript_path: transcript,
     hook_event_name: event,
     ...extra
 });
@@ -87,8 +101,7 @@ describe('agent status via hooks', () => {
     test('a session the daemon has an agent for starts no CLI of its own, and a resume is typed once', async () => {
         let clock = 1_000;
         await harness.cleanup();
-        // A PATH without any agent CLI on it: the resume line is then only ever an echo on the screen.
-        harness = await makeHarness({ now: () => clock, env: { PATH: '/usr/bin:/bin', PS1: '$ ' } });
+        await freshHarness({ now: () => clock });
         const recorder = new Recorder();
         harness.manager.subscribe('c1', recorder.sink());
         await create('s6');
@@ -122,6 +135,57 @@ describe('agent status via hooks', () => {
 
         await harness.manager.applyHook('claude', harness.manager.get('s6')!.hookToken, hook('SessionStart'));
         expect(codeOf(() => harness.manager.resumeAgent('s6'))).toBe('agent-live');
+    });
+
+    test('a restored agent whose transcript is gone launches the CLI fresh instead of resuming it', async () => {
+        const recorder = new Recorder();
+        harness.manager.subscribe('c1', recorder.sink());
+        await createAgent('s7', { kind: 'claude', runtimeMode: 'full-access' });
+        await harness.manager.applyHook('claude', harness.manager.get('s7')!.hookToken, hook('UserPromptSubmit'));
+        harness.manager.write('s7', 'exit 0\n');
+        await waitFor(() => harness.manager.get('s7')?.exited === true, 'the shell to end');
+        // Claude Code persists a conversation only once it has had a prompt, and a transcript can be
+        // deleted; either way the recorded id cannot be resumed any more.
+        await rm(transcript);
+
+        await createAgent('s7', { kind: 'claude', runtimeMode: 'full-access' });
+        await harness.manager.attach('s7', 'c1', 80, 24);
+        harness.manager.resumeAgent('s7');
+        await waitFor(() => recorder.output.includes('claude --permission-mode bypassPermissions'), 'the fresh launch line');
+        expect(recorder.output).not.toContain('--resume');
+    });
+
+    test('a resume for a kind whose hooks name no transcript carries its own fallback', async () => {
+        const recorder = new Recorder();
+        harness.manager.subscribe('c1', recorder.sink());
+        await createAgent('s8', { kind: 'codex', runtimeMode: 'full-access' });
+        await harness.manager.applyHook(
+            'codex',
+            harness.manager.get('s8')!.hookToken,
+            hook('UserPromptSubmit', { session_id: 'codex-1', transcript_path: undefined })
+        );
+        harness.manager.write('s8', 'exit 0\n');
+        await waitFor(() => harness.manager.get('s8')?.exited === true, 'the shell to end');
+
+        await createAgent('s8', { kind: 'codex', runtimeMode: 'full-access' });
+        await harness.manager.attach('s8', 'c1', 80, 24);
+        harness.manager.resumeAgent('s8');
+        await waitFor(
+            () => recorder.output.includes("codex resume 'codex-1' || codex --ask-for-approval never --sandbox danger-full-access"),
+            'the resume with its fallback'
+        );
+    });
+
+    test('a node that asks to resume a session id gets one line that falls back to a fresh CLI', async () => {
+        await createAgent('s9', { kind: 'claude', runtimeMode: 'full-access', resume: 'claude-9' });
+        const session = harness.manager.get('s9')!;
+        const line = "claude --resume 'claude-9' || claude --permission-mode bypassPermissions";
+        await waitForAsync(async () => (await session.plainText()).includes(line), 'the resume with its fallback');
+        harness.manager.write('s9', 'echo ma""rk\n');
+        await waitForAsync(async () => (await session.plainText()).includes('mark'), 'the echo');
+        // One shell, one line: the prompt ran a single command for this agent, fallback and all.
+        const prompted = (await session.plainText()).split('\n').filter((row) => row.startsWith('$ claude'));
+        expect(prompted).toEqual([`$ ${line}`]);
     });
 
     test('a command given at create runs as the first line', async () => {

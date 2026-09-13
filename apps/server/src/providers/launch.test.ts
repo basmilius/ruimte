@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { resumeCommand, terminalCommand } from './launch.ts';
+import { freshCommand, resumeCommand, resumeOrFreshCommand, terminalCommand } from './launch.ts';
 
 describe('terminalCommand', () => {
     test('starts a CLI in the runtime mode the node asked for', () => {
@@ -33,5 +33,19 @@ describe('resumeCommand', () => {
     test('quotes the id for the shell', () => {
         expect(resumeCommand('claude', 'abc-123')).toBe("claude --resume 'abc-123'");
         expect(resumeCommand('codex', "a'b")).toBe("codex resume 'a'\\''b'");
+    });
+});
+
+describe('freshCommand', () => {
+    test('drops the resume of a launch and keeps the rest of it', () => {
+        expect(freshCommand({ kind: 'claude', runtimeMode: 'supervised', model: 'claude-opus-5', resume: 'abc-123' })).toBe("claude --model 'claude-opus-5'");
+    });
+});
+
+describe('resumeOrFreshCommand', () => {
+    test('is one line the shell falls back in', () => {
+        expect(resumeOrFreshCommand({ kind: 'claude', runtimeMode: 'full-access' }, 'abc-123')).toBe(
+            "claude --resume 'abc-123' || claude --permission-mode bypassPermissions"
+        );
     });
 });

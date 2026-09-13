@@ -76,6 +76,11 @@ export interface Harness {
 export const SH = '/bin/sh';
 export const SH_ARGS: string[] = [];
 
+// A PATH with no agent CLI on it: every line the daemon types is then an echo on the screen and
+// nothing else. With the machine's own PATH a test that asserts a launch line would start a real
+// Claude Code, and one that asserts a failing resume would be reading that CLI's answer instead.
+export const CLEAN_PATH = '/usr/bin:/bin';
+
 export const makeHarness = async (extra: Partial<SessionManagerOptions> = {}): Promise<Harness> => {
     const home = await mkdtemp(join(tmpdir(), 'ruimte-test-'));
     const snapshots = new SnapshotStore(home);

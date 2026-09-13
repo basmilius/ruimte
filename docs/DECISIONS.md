@@ -329,6 +329,17 @@ canvas, against Ruimte, one verdict each.
   hook has reported the agent live, for 15 seconds; after that a retry is allowed again, because a
   CLI that is not installed reports nothing at all and its session must stay retryable. The client
   swallows that refusal.
+- A resume is typed only for a conversation the daemon can still see. The recorded `agentSessionId`
+  is no proof there is one: Claude Code persists a conversation once it has had a prompt, so a CLI
+  that was started and never used leaves an id that answers `No conversation found`, and a deleted
+  or moved transcript ends the same way. With the launch line gone from `session.create` that left
+  the node on a bare shell with no agent at all. The evidence is `transcriptPath` from the hooks:
+  the file is there and `resumeAgent` types the resume line, the file is gone and it types the fresh
+  launch line of the session's own `AgentLaunch`, which `Session` keeps from the create that started
+  it. A hook that names no transcript (only Claude Code's is known to carry one) leaves no evidence
+  either way, so there the shell decides: `<resume> || <launch>` is one line that ends with the CLI
+  running, whichever way the resume went. That composed line is also what a node's own `resume` gets at
+  `session.create`, where the record the daemon could have looked at went with the previous shell.
 - A note starts an agent: "Start agent from note" in a note's context menu makes a chat node beside
   it, fixed to the CLI you picked, seeds the note's body as the composer's draft (never sent, the
   person presses Enter) and draws the edge from the note into the chat, so the note stays readable

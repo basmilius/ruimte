@@ -67,3 +67,14 @@ export const terminalCommand = (launch: AgentLaunch): string => {
 
 /* How each CLI is told to pick its session up again; the template is the provider's own. */
 export const resumeCommand = (kind: AgentKind, agentSessionId: string): string => resumeCommandFor(providerFor(kind).resumeCommand, agentSessionId);
+
+/* The line a CLI starts fresh with, whatever the launch it was recorded with asked to resume. */
+export const freshCommand = (launch: AgentLaunch): string => terminalCommand({ ...launch, resume: undefined });
+
+/*
+ * A resume the daemon has no evidence for, in one line. The CLI exits non-zero when the session it
+ * was handed is not there, so the shell starts a fresh one itself: the node ends up with its CLI
+ * either way and the shell still reads a single line, which is what typing two of them cost before.
+ */
+export const resumeOrFreshCommand = (launch: AgentLaunch, agentSessionId: string): string =>
+    `${resumeCommand(launch.kind, agentSessionId)} || ${freshCommand(launch)}`;

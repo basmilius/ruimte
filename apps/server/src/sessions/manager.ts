@@ -1,9 +1,10 @@
 import { randomBytes } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import type { AgentInfo, AgentKind, AgentLaunch, ContextSource, EventMap, EventType, SessionInfo } from '@ruimte/contracts';
 import type { AgentStore } from '../agents/agent-store.ts';
 import { normalizeHook } from '../agents/hooks.ts';
-import { terminalCommand, resumeCommand } from '../providers/launch.ts';
+import { freshCommand, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
 import { contextHint } from '../context/context-note.ts';
 import { defaultShell, defaultShellArgs, type PtyAdapter } from '../pty/pty.ts';
 import { Session } from './session.ts';
@@ -140,11 +141,10 @@ export class SessionManager {
             cwd: options.cwd ?? this.env.HOME ?? homedir(),
             cols: options.cols,
             rows: options.rows,
-            // An agent the daemon remembers is picked up by `agent.resume` after the attach; starting
-            // the CLI here as well would type a second command into the one already coming up.
-            command: options.command ?? (options.agent && !restoredAgent ? terminalCommand(options.agent) : undefined),
+            command: options.command ?? this.startLine(options.agent, restoredAgent !== undefined),
             restoredScreen,
-            restoredAgent
+            restoredAgent,
+            launch: options.agent
         });
         this.sessions.set(session.id, session);
         this.tokens.set(session.hookToken, session.id);
@@ -202,7 +202,7 @@ export class SessionManager {
         if (typedAt !== undefined && this.now() - typedAt < RESUME_GRACE_MS) {
             throw new SessionError('agent-resuming', `A resume for ${sessionId} was typed already and its agent has not reported back yet`);
         }
-        session.write(`${resumeCommand(session.agent.kind, session.agent.agentSessionId)}\n`);
+        session.write(`${this.resumeLine(session, session.agent)}\n`);
         this.resuming.set(sessionId, this.now());
     }
 
@@ -295,6 +295,40 @@ export class SessionManager {
         }
     }
 
+    /*
+     * The one line a fresh shell gets for its agent. Nothing is typed when the daemon remembers an
+     * agent for this id: the client answers a non-live agent on attach with `agent.resume`, and a
+     * launch line here would land in the input box of the CLI that line had just started. A resume
+     * the node itself asked for is the caller's memory and not evidence, so the shell keeps the
+     * fresh launch behind it.
+     */
+    private startLine(launch: AgentLaunch | undefined, restored: boolean): string | undefined {
+        if (!launch || restored) {
+            return undefined;
+        }
+        return launch.resume ? resumeOrFreshCommand(launch, launch.resume) : terminalCommand(launch);
+    }
+
+    /*
+     * What a resume types. A recorded session id is no proof that the conversation is still there:
+     * Claude Code writes a transcript only once a CLI has had a prompt, so one that was started and
+     * never used leaves an id that cannot be resumed, and a transcript can be deleted or moved. The
+     * transcript file is the evidence; without it the CLI answers "No conversation found" and the
+     * node is left with a bare shell. A kind whose hooks name no transcript at all has no evidence
+     * either way, so there the shell decides, with the fresh launch behind a `||`.
+     */
+    private resumeLine(session: Session, agent: AgentInfo): string {
+        // A person who started another CLI by hand in this shell is resumed as that CLI, not as the node's.
+        const launch: AgentLaunch = session.launch?.kind === agent.kind ? session.launch : { kind: agent.kind };
+        if (agent.transcriptPath === null) {
+            return resumeOrFreshCommand(launch, agent.agentSessionId);
+        }
+        if (existsSync(agent.transcriptPath)) {
+            return resumeCommand(agent.kind, agent.agentSessionId);
+        }
+        return freshCommand(launch);
+    }
+
     private spawn(options: {
         id: string;
         shell: string;
@@ -305,6 +339,7 @@ export class SessionManager {
         command?: string;
         restoredScreen?: string;
         restoredAgent?: AgentInfo;
+        launch?: AgentLaunch;
     }): Session {
         const env: Record<string, string> = {};
         for (const [key, value] of Object.entries(this.env)) {
