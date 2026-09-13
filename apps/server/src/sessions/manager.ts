@@ -9,7 +9,13 @@ import { defaultShell, defaultShellArgs, type PtyAdapter } from '../pty/pty.ts';
 import { Session } from './session.ts';
 import type { SnapshotStore } from './snapshot-store.ts';
 
-type SessionErrorCode = 'session-exists' | 'session-not-found' | 'session-exited' | 'spawn-failed' | 'agent-not-found' | 'agent-live';
+type SessionErrorCode = 'session-exists' | 'session-not-found' | 'session-exited' | 'spawn-failed' | 'agent-not-found' | 'agent-live' | 'agent-resuming';
+
+/*
+ * How long a typed resume has to produce a live agent before another one is allowed. A CLI that is
+ * not installed prints "command not found" and reports nothing, and that session must stay retryable.
+ */
+const RESUME_GRACE_MS = 15_000;
 
 export class SessionError extends Error {
     readonly code: SessionErrorCode;
@@ -51,6 +57,8 @@ export interface SessionManagerOptions {
     binDir?: string;
     // What a session may read the moment it starts; a shell with links gets one line about the CLI above its first prompt.
     contextFor?: (sessionId: string) => ContextSource[];
+    // Lets a test move the clock the resume guard reads.
+    now?: () => number;
 }
 
 export type HookResult = 'applied' | 'ignored' | 'unknown-token';
@@ -68,6 +76,9 @@ export class SessionManager {
     private readonly tokens = new Map<string, string>();
     // Ids whose kill is in flight: the exit that follows removes the session instead of parking it.
     private readonly killing = new Set<string>();
+    // When a resume was typed into a session, until its agent reports in; the guard against typing a second one.
+    private readonly resuming = new Map<string, number>();
+    private readonly now: () => number;
     hookUrl: string | null;
     contextUrl: string | null;
     private readonly binDir: string | null;
@@ -86,6 +97,7 @@ export class SessionManager {
         this.contextUrl = options.contextUrl ?? null;
         this.binDir = options.binDir ?? null;
         this.contextFor = options.contextFor ?? (() => []);
+        this.now = options.now ?? Date.now;
     }
 
     /* The session a hook or context token belongs to. */
@@ -128,7 +140,9 @@ export class SessionManager {
             cwd: options.cwd ?? this.env.HOME ?? homedir(),
             cols: options.cols,
             rows: options.rows,
-            command: options.command ?? (options.agent ? terminalCommand(options.agent) : undefined),
+            // An agent the daemon remembers is picked up by `agent.resume` after the attach; starting
+            // the CLI here as well would type a second command into the one already coming up.
+            command: options.command ?? (options.agent && !restoredAgent ? terminalCommand(options.agent) : undefined),
             restoredScreen,
             restoredAgent
         });
@@ -160,6 +174,10 @@ export class SessionManager {
                       live: true,
                       updatedAt: Date.now()
                   };
+        if (agent !== null) {
+            // The CLI is up and speaking for itself, so the resume it answers to is done.
+            this.resuming.delete(session.id);
+        }
         await this.setAgent(session, agent);
         if (agent === null || agent.status === 'idle' || agent.status === 'error') {
             this.onProcessChange?.(session.id, 'changed');
@@ -180,7 +198,12 @@ export class SessionManager {
         if (session.agent.live && !this.isAgentGone(sessionId)) {
             throw new SessionError('agent-live', `The agent in ${sessionId} is still running`);
         }
+        const typedAt = this.resuming.get(sessionId);
+        if (typedAt !== undefined && this.now() - typedAt < RESUME_GRACE_MS) {
+            throw new SessionError('agent-resuming', `A resume for ${sessionId} was typed already and its agent has not reported back yet`);
+        }
         session.write(`${resumeCommand(session.agent.kind, session.agent.agentSessionId)}\n`);
+        this.resuming.set(sessionId, this.now());
     }
 
     get(sessionId: string): Session | undefined {
@@ -357,6 +380,7 @@ export class SessionManager {
 
     private remove(session: Session): void {
         this.sessions.delete(session.id);
+        this.resuming.delete(session.id);
         this.tokens.delete(session.hookToken);
         session.dispose();
     }

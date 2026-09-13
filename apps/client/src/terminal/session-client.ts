@@ -248,7 +248,7 @@ export class SessionClient {
                 continue;
             }
             try {
-                await this.ensure(nodeId, { cwd: entry.cwd, command: entry.command }, entry.cols, entry.rows);
+                await this.ensure(nodeId, { cwd: entry.cwd, command: entry.command, agent: entry.agent }, entry.cols, entry.rows);
                 if (!this.mounted.has(nodeId)) {
                     continue;
                 }

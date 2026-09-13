@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { SessionError } from './manager.ts';
 import { Recorder, SH, SH_ARGS, makeHarness, waitFor, waitForAsync, type Harness } from './test-helpers.ts';
 
 let harness: Harness;
@@ -13,6 +14,17 @@ afterEach(async () => {
 
 const create = (sessionId: string, command?: string) =>
     harness.manager.create({ sessionId, cols: 80, rows: 24, shell: SH, args: SH_ARGS, cwd: harness.home, command });
+
+const codeOf = (work: () => void): string => {
+    try {
+        work();
+    } catch (e) {
+        return e instanceof SessionError ? e.code : 'not-a-session-error';
+    }
+    return 'nothing-was-thrown';
+};
+
+const resumes = (output: string): number => output.split("claude --resume 'claude-1'").length - 1;
 
 const hook = (event: string, extra: Record<string, unknown> = {}) => ({
     session_id: 'claude-1',
@@ -70,6 +82,46 @@ describe('agent status via hooks', () => {
         harness.manager.resumeAgent('s2');
         await waitFor(() => recorder.output.includes("claude --resume 'claude-1'"), 'resume command echoed');
         expect(() => harness.manager.resumeAgent('s3')).toThrow('No session');
+    });
+
+    test('a session the daemon has an agent for starts no CLI of its own, and a resume is typed once', async () => {
+        let clock = 1_000;
+        await harness.cleanup();
+        // A PATH without any agent CLI on it: the resume line is then only ever an echo on the screen.
+        harness = await makeHarness({ now: () => clock, env: { PATH: '/usr/bin:/bin', PS1: '$ ' } });
+        const recorder = new Recorder();
+        harness.manager.subscribe('c1', recorder.sink());
+        await create('s6');
+        await harness.manager.applyHook('claude', harness.manager.get('s6')!.hookToken, hook('UserPromptSubmit'));
+        harness.manager.write('s6', 'exit 0\n');
+        await waitFor(() => harness.manager.get('s6')?.exited === true, 'the shell to end');
+
+        await harness.manager.create({
+            sessionId: 's6',
+            cols: 80,
+            rows: 24,
+            shell: SH,
+            args: SH_ARGS,
+            cwd: harness.home,
+            agent: { kind: 'claude', runtimeMode: 'full-access' }
+        });
+        await harness.manager.attach('s6', 'c1', 80, 24);
+        harness.manager.write('s6', 'echo ma""rk\n');
+        await waitFor(() => recorder.output.includes('mark'), 'the echo');
+        // Starting the CLI here would land beside the resume the attach asks for: two commands for one agent.
+        expect(recorder.output).not.toContain('permission-mode');
+
+        harness.manager.resumeAgent('s6');
+        await waitFor(() => recorder.output.includes("claude --resume 'claude-1'"), 'the resume line');
+        expect(codeOf(() => harness.manager.resumeAgent('s6'))).toBe('agent-resuming');
+
+        // The CLI never came up (it is not installed here), so the next try is allowed after the grace period.
+        clock += 15_000;
+        harness.manager.resumeAgent('s6');
+        await waitFor(() => resumes(recorder.output) === 2, 'the second resume line');
+
+        await harness.manager.applyHook('claude', harness.manager.get('s6')!.hookToken, hook('SessionStart'));
+        expect(codeOf(() => harness.manager.resumeAgent('s6'))).toBe('agent-live');
     });
 
     test('a command given at create runs as the first line', async () => {

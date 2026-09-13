@@ -320,6 +320,15 @@ canvas, against Ruimte, one verdict each.
   (`resume`) and starts a fresh shell, which the daemon launches with the CLI's resume line; the
   status is no longer `running`, so the sidebar and the dock's summary stop counting it. This is the
   daemon's own reading, the one thing the hooks structurally cannot report.
+- One resume per session, counted by the daemon. `session.create` with an `agent` skips the launch
+  line when it restored an agent record for that id, because the client answers a non-live agent
+  on attach with `agent.resume`: the two together typed `claude` and, a moment later,
+  `claude --resume <id>` into the CLI that first line had just started, which is where the second
+  line ended up, in its input box. Every fresh page onto a daemon that had restarted did this. On
+  top of that `resumeAgent` refuses a second resume (`agent-resuming`) while one was typed and no
+  hook has reported the agent live, for 15 seconds; after that a retry is allowed again, because a
+  CLI that is not installed reports nothing at all and its session must stay retryable. The client
+  swallows that refusal.
 - A note starts an agent: "Start agent from note" in a note's context menu makes a chat node beside
   it, fixed to the CLI you picked, seeds the note's body as the composer's draft (never sent, the
   person presses Enter) and draws the edge from the note into the chat, so the note stays readable

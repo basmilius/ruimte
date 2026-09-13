@@ -179,7 +179,7 @@ describe('SessionClient', () => {
         const { transport, sink, client } = setup();
         const screens: string[] = [];
         client.onScreen('a', (result) => screens.push(result.screen));
-        await client.open('a', { cwd: '/x' }, 80, 24);
+        await client.open('a', { cwd: '/x', agent: { kind: 'claude' } }, 80, 24);
         await client.open('b', {}, 80, 24);
         await client.detach('b');
         client.resize('a', 120, 40);
@@ -192,7 +192,10 @@ describe('SessionClient', () => {
         transport.setStatus('open');
         await flush();
 
-        expect(transport.of('session.create').map((c) => c.payload)).toEqual([{ sessionId: 'a', cwd: '/x', command: undefined, cols: 120, rows: 40 }]);
+        // The agent rides along: a daemon that came back must start the CLI this node is, not a bare shell.
+        expect(transport.of('session.create').map((c) => c.payload)).toEqual([
+            { sessionId: 'a', cwd: '/x', command: undefined, agent: { kind: 'claude' }, cols: 120, rows: 40 }
+        ]);
         expect(transport.of('session.attach').map((c) => c.payload)).toEqual([{ sessionId: 'a', cols: 120, rows: 40 }]);
         expect(screens).toEqual(['after']);
         expect(sink.attached.get('a')).toBe(true);
