@@ -66,6 +66,13 @@ export interface Settings {
        and nothing else, which is why it sits with the client and not with a project or a daemon.
        Off to start with: a laptop that never sleeps is not something to arrange behind someone. */
     agentsKeepAwake: boolean;
+    /* Whether a turn that ends while this window is not the one in front says so, as a notification
+       of the operating system. On: the point of the whole thing is the moment somebody walked away,
+       and it never fires while the window is in front, so it cannot land on top of what you are doing. */
+    agentsTurnNotify: boolean;
+    /* Whether those notifications make a sound. Off, because a sound arrives in whatever the person
+       walked away to do, which may be a call. */
+    agentsTurnSound: boolean;
 }
 
 interface SettingsStore extends Settings {
@@ -90,7 +97,9 @@ const DEFAULT_SETTINGS: Settings = {
     dockAutoHide: false,
     updatesAutoDownload: true,
     agentsShowViews: false,
-    agentsKeepAwake: false
+    agentsKeepAwake: false,
+    agentsTurnNotify: true,
+    agentsTurnSound: false
 };
 
 // Rounded as well as clamped: the stepper used to move in halves, so a browser can still hand back
@@ -116,7 +125,11 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     // Nothing moves a person's eyes unless that person said so, so only a stored `true` turns it on.
     agentsShowViews: stored.agentsShowViews === true,
     // Same rule: nothing keeps a laptop from sleeping unless a stored `true` asked for it.
-    agentsKeepAwake: stored.agentsKeepAwake === true
+    agentsKeepAwake: stored.agentsKeepAwake === true,
+    // The one that starts on, so only a stored `false` turns it off.
+    agentsTurnNotify: stored.agentsTurnNotify !== false,
+    // Same rule as the block: nothing makes a sound unless a stored `true` asked for it.
+    agentsTurnSound: stored.agentsTurnSound === true
 });
 
 const read = (): Settings => {
@@ -181,7 +194,9 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 dockAutoHide,
                 updatesAutoDownload,
                 agentsShowViews,
-                agentsKeepAwake
+                agentsKeepAwake,
+                agentsTurnNotify,
+                agentsTurnSound
             } = get();
             const next: Settings = {
                 accent,
@@ -200,6 +215,8 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 updatesAutoDownload,
                 agentsShowViews,
                 agentsKeepAwake,
+                agentsTurnNotify,
+                agentsTurnSound,
                 ...patch
             };
             next.fontSize = clampSize(next.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize);

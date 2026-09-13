@@ -1,32 +1,70 @@
 import type { ChatTurnItem } from '@ruimte/contracts';
-import { agentTurnLabel } from '@/chat/logic/timeline';
+import { agentTurnLabel, turnLabel } from '@/chat/logic/timeline';
 import { projectNodes, revealNode } from '@/project/views';
 import { useChats, type ChatsById } from '@/state/chats';
-import { currentEndpointId } from '@/state/keys';
+import { currentEndpointId, endpointKey } from '@/state/keys';
 import { nodeStatus, useSessions } from '@/state/sessions';
+import { useSettings } from '@/state/settings';
 
-/* The newest turn a chat's agent started on its own, once it has settled; null while none has. */
-const settledAgentTurn = (chat: ChatsById[string]): ChatTurnItem | null => {
+/* Nothing is announced to somebody who is already looking: the node itself says it there. */
+const canNotify = (): boolean => !document.hasFocus() && 'Notification' in window && Notification.permission === 'granted';
+
+/* Clicking any of these brings the window up and goes to the node, in whichever view it lives. */
+const notify = (nodeId: string, title: string, body: string, tag: string, silent: boolean): Notification => {
+    const notification = new Notification(title, { body, tag, silent });
+    notification.onclick = () => {
+        window.focus();
+        revealNode(nodeId);
+        notification.close();
+    };
+    return notification;
+};
+
+/* The newest turn of a chat, once it has settled; null while one is running and for a thread with none. */
+const settledTurn = (chat: ChatsById[string] | undefined): ChatTurnItem | null => {
+    if (chat === undefined) {
+        return null;
+    }
     for (let i = chat.order.length - 1; i >= 0; i--) {
         const item = chat.items[chat.order[i]!];
-        if (item?.kind === 'turn' && item.origin === 'agent') {
+        if (item?.kind === 'turn') {
             return item.state === 'running' ? null : item;
         }
     }
     return null;
 };
 
+/* What a turn that ended did, as far as anything outside the thread can say. */
+const turnBody = (nodeId: string): string => {
+    const turn = settledTurn(useChats.getState().byKey[endpointKey(currentEndpointId(), nodeId)]);
+    if (turn === null) {
+        return 'Finished';
+    }
+    return turn.origin === 'agent' ? agentTurnLabel(turn) : turnLabel(turn);
+};
+
 /*
- * One OS notification when a node turns to needs-you while the window is not focused, and one when
- * an agent finished a turn it started itself (a background subagent that settled), since nobody was
- * waiting on that one either. Clicking brings the window up and goes to the node.
+ * A turn that ended while this window was not the one in front. `state/attention.ts` decides when a
+ * turn ended and calls this, so what is announced, what is marked and what is counted are the same
+ * event. Silent unless somebody asked for the sound: a notification arrives while a person is doing
+ * something else, and that is the moment to be quiet about it.
+ */
+export const notifyTurnDone = (nodeId: string, title: string): void => {
+    const { agentsTurnNotify, agentsTurnSound } = useSettings.getState();
+    if (!agentsTurnNotify || !canNotify()) {
+        return;
+    }
+    notify(nodeId, title, turnBody(nodeId), `ruimte-turn-${nodeId}`, !agentsTurnSound);
+};
+
+/*
+ * One OS notification per node that turns to needs-you while the window is not focused, taken back
+ * the moment the node stops waiting. A question has no setting of its own: it is the agent standing
+ * still until somebody answers, which is worth a notification whatever else is switched off.
  */
 export const startAgentNotifications = (): (() => void) => {
     const shown = new Map<string, Notification>();
     let previous = new Map<string, string | undefined>();
-    // Chats already looked at, and the last turn announced per chat: what is on disk at startup is not news.
-    const seenChats = new Set<string>();
-    const announced = new Map<string, string>();
 
     const askOnce = (): void => {
         if ('Notification' in window && Notification.permission === 'default') {
@@ -36,18 +74,6 @@ export const startAgentNotifications = (): (() => void) => {
     // Browsers only grant permission from a gesture; the first click anywhere is that gesture.
     window.addEventListener('pointerdown', askOnce, { once: true });
 
-    const canNotify = (): boolean => !document.hasFocus() && 'Notification' in window && Notification.permission === 'granted';
-
-    const notify = (nodeId: string, title: string, body: string, tag: string): Notification => {
-        const notification = new Notification(title, { body, tag });
-        notification.onclick = () => {
-            window.focus();
-            revealNode(nodeId);
-            notification.close();
-        };
-        return notification;
-    };
-
     const check = (): void => {
         const nodes = projectNodes();
         const endpointId = currentEndpointId();
@@ -55,19 +81,6 @@ export const startAgentNotifications = (): (() => void) => {
         const chats = useChats.getState().byKey;
         const current = new Map<string, string | undefined>();
         for (const node of nodes) {
-            const chat = chats[node.id];
-            if (chat) {
-                const turn = settledAgentTurn(chat);
-                const first = !seenChats.has(node.id);
-                const last = announced.get(node.id);
-                seenChats.add(node.id);
-                if (turn) {
-                    announced.set(node.id, turn.id);
-                }
-                if (turn && !first && turn.id !== last && canNotify()) {
-                    notify(node.id, node.title, agentTurnLabel(turn), `ruimte-turn-${turn.id}`);
-                }
-            }
             const status = nodeStatus(node, sessions, chats, endpointId);
             current.set(node.id, status);
             if (status !== 'needs-you') {
@@ -78,7 +91,7 @@ export const startAgentNotifications = (): (() => void) => {
             if (previous.get(node.id) === 'needs-you' || !canNotify()) {
                 continue;
             }
-            shown.set(node.id, notify(node.id, node.title, 'Needs you', `ruimte-${node.id}`));
+            shown.set(node.id, notify(node.id, node.title, 'Needs you', `ruimte-${node.id}`, !useSettings.getState().agentsTurnSound));
         }
         previous = current;
     };

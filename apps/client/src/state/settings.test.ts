@@ -25,6 +25,25 @@ describe('keeping the machine awake', () => {
     });
 });
 
+describe('being told a turn ended', () => {
+    test('starts on: it only ever fires while you are elsewhere, which is when it is worth having', () => {
+        expect(settingsFrom({}).agentsTurnNotify).toBe(true);
+        expect(settingsFrom({ agentsKeepAwake: true }).agentsTurnNotify).toBe(true);
+    });
+
+    test('is off for a stored false and for nothing else', () => {
+        expect(settingsFrom({ agentsTurnNotify: false }).agentsTurnNotify).toBe(false);
+        expect(settingsFrom({ agentsTurnNotify: 0 as unknown as boolean }).agentsTurnNotify).toBe(true);
+    });
+
+    test('makes no sound until somebody asks for one', () => {
+        expect(settingsFrom({}).agentsTurnSound).toBe(false);
+        expect(settingsFrom({ agentsTurnNotify: true }).agentsTurnSound).toBe(false);
+        expect(settingsFrom({ agentsTurnSound: true }).agentsTurnSound).toBe(true);
+        expect(settingsFrom({ agentsTurnSound: 1 as unknown as boolean }).agentsTurnSound).toBe(false);
+    });
+});
+
 describe('the rest of a stored blob', () => {
     test('a key that is there is kept, and a size out of range is pulled back into it', () => {
         const settings = settingsFrom({ fontSize: 99, filesShowHidden: true, browseStartFolder: '/Users/bas' });

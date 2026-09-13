@@ -103,6 +103,8 @@ export function AgentsPane() {
     const preferences = useChatPreferences();
     const agentsShowViews = useSettings((s) => s.agentsShowViews);
     const agentsKeepAwake = useSettings((s) => s.agentsKeepAwake);
+    const agentsTurnNotify = useSettings((s) => s.agentsTurnNotify);
+    const agentsTurnSound = useSettings((s) => s.agentsTurnSound);
     const update = useSettings((s) => s.update);
     const withModels = providers.filter((provider) => provider.models.length > 0);
 
@@ -160,12 +162,29 @@ export function AgentsPane() {
                 />
             </SettingsSection>
             <DeleteAnyViewSection />
-            {/* A browser cannot keep anything awake, so it is told nothing about a switch it has no way to honor. */}
-            {canKeepAwake() && (
-                <SettingsSection
-                    title="While an agent works"
-                    description="About the computer this window runs on, so it stays with this app and travels nowhere."
-                >
+            <SettingsSection title="While an agent works" description="About the computer this window runs on, so these stay with this app and travel nowhere.">
+                <SettingsRow
+                    label="Tell me when a turn ends"
+                    description="A notification when an agent finishes while this window is not the one in front. A node that finished out of sight keeps a mark until you look at it either way."
+                    control={
+                        <Toggle checked={agentsTurnNotify} onChange={(checked) => update({ agentsTurnNotify: checked })} label="Tell me when a turn ends" />
+                    }
+                />
+                {agentsTurnNotify && (
+                    <SettingsRow
+                        label="Play a sound with it"
+                        description="Off, notifications arrive quietly, which is what you want in whatever you walked away to do."
+                        control={
+                            <Toggle
+                                checked={agentsTurnSound}
+                                onChange={(checked) => update({ agentsTurnSound: checked })}
+                                label="Play a sound with a notification"
+                            />
+                        }
+                    />
+                )}
+                {/* A browser cannot keep anything awake, so it is told nothing about a switch it has no way to honor. */}
+                {canKeepAwake() && (
                     <SettingsRow
                         label="Keep this machine awake"
                         description="Off, the computer sleeps as it always does and an agent running on it stops until you come back. On, it stays awake from the first agent that starts until the last one settles. The display still goes dark."
@@ -177,8 +196,8 @@ export function AgentsPane() {
                             />
                         }
                     />
-                </SettingsSection>
-            )}
+                )}
+            </SettingsSection>
             <SettingsSection title="Providers" description="What the machine found on its PATH. Install a CLI and restart Ruimte there to add one.">
                 {providers.length === 0 &&
                     (loaded ? (
