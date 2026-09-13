@@ -3,16 +3,19 @@ import { z } from 'zod';
 import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
 import { providerFor } from '../providers/registry.ts';
 import { DEPTH_LIMIT_LINES, depthForOpening } from './depth.ts';
-import { MAX_CANVAS_NODES, newId, nodeLines } from './node-verb.ts';
+import { MAX_CANVAS_NODES, canvasFull, newId, nodeLines } from './node-verb.ts';
 import { groupMembers, placeBeside, placeFree, placeInGroup, type Rect } from './placement.ts';
 import { checkCwd, readPromptFile } from './project-paths.ts';
 import { unescapeText } from './text-escapes.ts';
-import { VerbRefusal, canvasFor, defineVerb, field, orNote, placeOf, type VerbCall } from './verb.ts';
+import { MAX_TITLE_LENGTH, TITLE_LINE, VerbRefusal, canvasFor, defineVerb, field, orNote, placeOf, titleField, type VerbCall } from './verb.ts';
 
 export const AGENT_KINDS = AgentKindSchema.options;
 
-/* What a dry run calls the node it is not making, so the edge it names still has two ends. */
-export const NEW_NODE = '<new node>';
+/* What a dry run calls the node it is not making, so the edge it names still has two ends; a team
+   puts the role's title in it, since its rows are otherwise the same for two roles of one CLI. */
+export const newNode = (name = 'new node'): string => `<${name}>`;
+
+export const NEW_NODE = newNode();
 
 /* The CLIs with a chat backend; the rest only ever runs in a shell, which is what `--chat` refuses. */
 export const chatKinds = (): AgentKind[] => AGENT_KINDS.filter((kind) => providerFor(kind).capabilities.chat);
@@ -31,7 +34,7 @@ const AGENT_DETAIL: readonly string[] = [
     'flag\t--view V\toptional\tThe canvas to add to, by view id; ruimte-context views lists them',
     'flag\t--beside N\toptional\tPuts the node directly right of node N, top edges level',
     'flag\t--group G\toptional\tPuts the node inside group node G of that canvas; not together with --beside',
-    'flag\t--title T\toptional\tThe title; without one the node is called after the CLI, and the session may rename it',
+    `flag\t--title T\toptional\tThe title, at most ${MAX_TITLE_LENGTH} characters; without one the node is called after the CLI, and the session may rename it`,
     'flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field is dry-run and the last names the edge it would draw, as <from> -> <new node>',
     'kinds\tterminal\tThat CLI running in a shell, which is what the person sees and can type in',
     'kinds\tchat\tThe CLI as a thread in the node, fixed to that CLI, with no model picker on the composer',
@@ -46,7 +49,9 @@ const AGENT_DETAIL: readonly string[] = [
     'paths\t--cwd and --prompt-file are resolved against the project folder, never against your own directory; both may also be absolute',
     'paths\tBoth have to stay inside the project folder or a worktree of its repository',
     'prompt\tA terminal agent gets it on the line its CLI is started with, a chat agent as the first message of the thread; it is delivered once and never written into project.json',
+    `quoting\tThe prompt is one shell word: an apostrophe in it ends a single-quoted argument early, so write it as '\\'' or put the prompt in --prompt-file`,
     `limit\tA canvas holds at most ${MAX_CANVAS_NODES} nodes`,
+    TITLE_LINE,
     ...DEPTH_LIMIT_LINES,
     'note\tThe node starts working the moment a client shows it; with nobody looking, the daemon holds the prompt until one does'
 ];
@@ -124,7 +129,7 @@ export const agentVerb = defineVerb({
         view: z.string().min(1, '--view needs the id of a canvas').optional(),
         beside: z.string().min(1, '--beside needs the id of a node on that canvas').optional(),
         group: z.string().min(1, '--group needs the id of a group node on that canvas').optional(),
-        title: z.string().trim().min(1, '--title needs a title').optional()
+        title: titleField('--title', '--title needs a title').optional()
     }),
     async run({ positionals: [kind], flags, switches, dryRun }, call) {
         const place = placeOf(call);
@@ -158,8 +163,8 @@ export const agentVerb = defineVerb({
 
         return call.host.mutate(place.projectId, async (content) => {
             const canvas = canvasFor(content, place, flags.view);
-            if (canvas.nodes.length >= MAX_CANVAS_NODES) {
-                throw new VerbRefusal('canvas-full', `${canvas.name} already holds ${MAX_CANVAS_NODES} nodes`);
+            if (canvas.nodes.length + 1 > MAX_CANVAS_NODES) {
+                throw canvasFull(canvas, 1);
             }
             const anchor = flags.beside === undefined ? undefined : canvas.nodes.find((node) => node.id === flags.beside);
             if (flags.beside !== undefined && !anchor) {

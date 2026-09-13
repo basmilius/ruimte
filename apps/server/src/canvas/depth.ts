@@ -27,6 +27,7 @@ const depthLines = (mine: number): string[] => [
 
 export const DEPTH_LIMIT_LINES: readonly string[] = [
     `depth\tA node a person opened is depth 0 and one an agent opens is one deeper; agent opens up to depth ${MAX_AGENT_DEPTH}, team up to depth ${MAX_TEAM_DEPTH}`,
+    `depth\tAt depth ${MAX_TEAM_DEPTH} you may open a single agent with agent and no team of your own; at depth ${MAX_AGENT_DEPTH} neither verb opens anything`,
     `depth\tThe daemon writes the depth down beside the node, outside the project, so a restart does not start the count over`,
     `limit\tOne caller may have ${MAX_OPENED_PER_CALLER} agent nodes open at a time; removing one frees the count`
 ];

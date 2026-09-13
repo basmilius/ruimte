@@ -14,7 +14,7 @@ import { z } from 'zod';
 import { placeBeside, placeFree } from './placement.ts';
 import { checkCwd, checkPath, isInside } from './project-paths.ts';
 import { unescapeText } from './text-escapes.ts';
-import { VerbRefusal, canvasFor, defineVerb, field, orNote, placeOf } from './verb.ts';
+import { MAX_TITLE_LENGTH, TITLE_LINE, VerbRefusal, canvasFor, defineVerb, field, orNote, placeOf, titleField } from './verb.ts';
 
 export const NODE_VERB_KINDS = ['note', 'browser', 'drawing', 'file', 'terminal', 'chat'] as const;
 type NodeVerbKind = (typeof NODE_VERB_KINDS)[number];
@@ -67,7 +67,7 @@ const NODE_DETAIL: readonly string[] = [
     'prints\tid\tkind\tview\tthe id of the new node, its kind, and the canvas it landed on',
     ...NODE_VERB_KINDS.map(kindLine),
     EVERY_KIND_LINE,
-    "flag\t--title T\tevery kind\tThe title; one set here is the node's for good, the session never renames over it",
+    `flag\t--title T\tevery kind\tThe title, at most ${MAX_TITLE_LENGTH} characters; one set here is the node's for good, the session never renames over it`,
     'flag\t--view V\tevery kind\tThe canvas to add to, by view id; ruimte-context views lists them',
     'flag\t--beside N\tevery kind\tPuts the node directly right of node N, top edges level, whatever is there already',
     'flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field is dry-run instead of the id the node would have got',
@@ -80,8 +80,16 @@ const NODE_DETAIL: readonly string[] = [
     'where\tWithout --beside the first free spot right of the caller, or right of everything when the caller is not on that canvas',
     'paths\t--path and --cwd are resolved against the project folder, never against your own directory; both may also be absolute',
     'paths\t--cwd has to stay inside the project folder or a worktree of its repository; --path may point outside and is then stored absolute',
-    `limit\tA canvas holds at most ${MAX_CANVAS_NODES} nodes; a terminal or chat starts no process until a client shows it`
+    `limit\tA canvas holds at most ${MAX_CANVAS_NODES} nodes; a terminal or chat starts no process until a client shows it`,
+    TITLE_LINE
 ];
+
+/* The same sentence wherever a canvas is full: what is on it, what this call needs, and the cap. */
+export const canvasFull = (canvas: ProjectCanvasView, adding: number): VerbRefusal =>
+    new VerbRefusal(
+        'canvas-full',
+        `${canvas.name} holds ${canvas.nodes.length} nodes and this would add ${adding} more; a canvas holds at most ${MAX_CANVAS_NODES}`
+    );
 
 // What a caller may pick instead of a --beside that is nowhere; a full canvas would bury the refusal, so it says where to look.
 const BESIDE_LINES_MAX = 20;
@@ -151,7 +159,7 @@ export const nodeVerb = defineVerb({
         error: (issue) => (issue.code === 'too_big' ? 'node takes one kind and nothing else; a title goes in --title' : KIND_MESSAGE)
     }),
     flags: z.object({
-        title: z.string().trim().min(1, '--title needs a title').optional(),
+        title: titleField('--title', '--title needs a title').optional(),
         text: z.string().transform(unescapeText).optional(),
         url: z.string().min(1, '--url needs an http or https address').optional(),
         path: z.string().min(1, '--path needs the path of a file').optional(),
@@ -180,8 +188,8 @@ export const nodeVerb = defineVerb({
 
         return call.host.mutate(place.projectId, (content) => {
             const canvas = canvasFor(content, place, flags.view);
-            if (canvas.nodes.length >= MAX_CANVAS_NODES) {
-                throw new VerbRefusal('canvas-full', `${canvas.name} already holds ${MAX_CANVAS_NODES} nodes`);
+            if (canvas.nodes.length + 1 > MAX_CANVAS_NODES) {
+                throw canvasFull(canvas, 1);
             }
             let sourceName: string | undefined;
             if (flags.source !== undefined) {

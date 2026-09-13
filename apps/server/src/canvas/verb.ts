@@ -1,5 +1,5 @@
 import { isCanvasView, type AgentKind, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
-import type { z } from 'zod';
+import { z } from 'zod';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { ProjectMutation } from '../projects/project-store.ts';
 import { parseArgv } from './argv.ts';
@@ -154,6 +154,35 @@ export const placeOf = (call: VerbCall): IndexedPlace => {
 
 /* A field that goes into a tab-separated line; a tab or a newline in a title would split the row. */
 export const field = (value: string): string => value.replace(/[\t\r\n]+/g, ' ');
+
+/*
+ * What a name on the canvas fits in: a node title, the label of a group, the word on a line. Past
+ * this it is not a name any more but a paragraph in a header, in every list that prints it and in
+ * the sidebar. Nothing about it is unique: two nodes may carry the same title, since an id is what
+ * names a node and a title is what a person reads.
+ */
+export const MAX_TITLE_LENGTH = 120;
+
+/* How much came in, for a refusal that counts: zod hands its error function the input it rejected. */
+export const lengthOf = (input: unknown): number => {
+    if (typeof input === 'string' || Array.isArray(input)) {
+        return input.length;
+    }
+    return 0;
+};
+
+/* Said wherever a verb takes a name, since neither half of it can be read off the canvas. */
+export const TITLE_LINE = `titles\tA name is at most ${MAX_TITLE_LENGTH} characters and is never unique: two nodes may carry the same one, and an id is what names a node`;
+
+/* One title schema for every verb that takes one, so the same limit is refused in the same sentence. */
+export const titleField = (name: string, needs: string): z.ZodString =>
+    z
+        .string({ error: needs })
+        .trim()
+        .min(1, needs)
+        .max(MAX_TITLE_LENGTH, {
+            error: (issue) => `${name} is ${lengthOf(issue.input)} characters and at most ${MAX_TITLE_LENGTH} fit in a name on the canvas`
+        });
 
 /*
  * What a refusal lists, or one line saying the set is empty. A refusal that promises the groups of a

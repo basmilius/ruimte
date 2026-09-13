@@ -16,7 +16,7 @@ import { MAX_LINKS } from './link-verb.ts';
 import { MAX_CANVAS_NODES } from './node-verb.ts';
 import { PLACEMENT_GAP } from './placement.ts';
 import { MAX_ROLES, ROLES_SHAPE } from './team-verb.ts';
-import type { CanvasHost } from './verb.ts';
+import { MAX_TITLE_LENGTH, type CanvasHost } from './verb.ts';
 import { VERBS } from './verbs.ts';
 
 let root: string;
@@ -215,6 +215,33 @@ describe('help', () => {
         expect(lines.some((line) => line.startsWith('without a prompt\t'))).toBe(true);
         expect(lines.some((line) => line.startsWith('edge\t') && line.includes('One way only') && line.includes('ruimte-context link'))).toBe(true);
         expect(lines.some((line) => line.startsWith('groups\t') && line.includes('ruimte-context nodes'))).toBe(true);
+        // An apostrophe in a prompt is where a shell eats the argument, which no refusal can explain afterwards.
+        expect(lines.some((line) => line.startsWith('quoting\t') && line.includes("'\\''"))).toBe(true);
+        expect(lines.some((line) => line.startsWith('flag\t--title T\t') && line.includes(String(MAX_TITLE_LENGTH)))).toBe(true);
+    });
+
+    test('help team answers what its own output cannot say', async () => {
+        const { lines } = await post('help', ['team']);
+        expect(lines).toContain(
+            'prints\tid\tkind\ttitle\tview\tcli\tedge\tthe group first, its label in the title column and a dash for the CLI and the edge, then one line per role in the order of --roles; the title is what tells two rows of one CLI apart'
+        );
+        // The way back into a role's work, which agent says and team did not.
+        expect(lines.some((line) => line.startsWith('edges\t') && line.includes('ruimte-context link --to'))).toBe(true);
+        // Which CLIs take a chat role, from the registry rather than from a phrase that can drift.
+        expect(lines.some((line) => line.startsWith('roles\tchat\t') && line.includes('(claude, codex)'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('depth\t') && line.includes(`A role lands at depth ${MAX_TEAM_DEPTH}`) && line.includes('agent'))).toBe(
+            true
+        );
+        expect(lines.some((line) => line.startsWith('flag\t--label L\t') && line.includes(String(MAX_TITLE_LENGTH)))).toBe(true);
+        expect(lines.some((line) => line.startsWith('roles\ttitle\t') && line.includes(String(MAX_TITLE_LENGTH)))).toBe(true);
+        expect(lines.some((line) => line.startsWith('titles\t') && line.includes('never unique'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('quoting\t') && line.includes("'\\''") && line.includes('\\u0027'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('flag\t--dry-run\t') && line.includes("<from> -> <the role's title>"))).toBe(true);
+    });
+
+    test('help link says what its label may be', async () => {
+        const { lines } = await post('help', ['link']);
+        expect(lines.some((line) => line.startsWith('flag\t--label L\t') && line.includes(String(MAX_TITLE_LENGTH)))).toBe(true);
     });
 
     test('every verb that draws or lists a line points at edges', async () => {
@@ -629,13 +656,25 @@ describe('node', () => {
         expect(ids.size).toBe(20);
     });
 
-    test('a full canvas is refused and nothing is written', async () => {
+    test('a full canvas is refused with what is on it and what was asked, and nothing is written', async () => {
         const full = content();
         const board = full.views[2] as ProjectCanvasView;
         board.nodes = Array.from({ length: MAX_CANVAS_NODES }, (_, i) => ({ id: `n-${i}`, kind: 'note' as const, title: 'n', x: i * 10, y: 0, w: 10, h: 10 }));
         await store.mutate(projectId, () => ({ content: full, result: null }));
         const before = await onDisk();
-        expect((await post('node', ['note', '--view', 'board'])).lines[0]).toStartWith('refused\tcanvas-full\t');
+        for (const argv of [
+            ['node', 'note'],
+            ['agent', 'claude']
+        ]) {
+            expect((await post(argv[0]!, [argv[1]!, '--view', 'board'])).lines[0]).toBe(
+                `refused\tcanvas-full\tBoard holds ${MAX_CANVAS_NODES} nodes and this would add 1 more; a canvas holds at most ${MAX_CANVAS_NODES}`
+            );
+        }
+        // A team counts its group in with its roles, so the number it names is what it would really add.
+        const roles = JSON.stringify([{ title: 'Lexer', prompt: 'go', provider: 'claude' }]);
+        expect((await post('team', ['--label', 'Crew', '--roles', roles, '--view', 'board'])).lines[0]).toBe(
+            `refused\tcanvas-full\tBoard holds ${MAX_CANVAS_NODES} nodes and this would add 2 more; a canvas holds at most ${MAX_CANVAS_NODES}`
+        );
         expect((await onDisk()).rev).toBe(before.rev);
     });
 });
@@ -763,12 +802,13 @@ describe('team', () => {
 
         const [groupId, ...group] = lines[0]!.split('\t');
         expect(groupId).toMatch(/^group-[0-9a-z]{8}$/);
-        expect(group).toEqual(['group', 'main', 'Crew', '-']);
+        expect(group).toEqual(['group', 'Crew', 'main', '-', '-']);
         const members = lines.slice(1).map((line) => line.split('\t'));
-        expect(members.map((fields) => fields.slice(1, 4))).toEqual([
-            ['terminal', 'main', 'claude'],
-            ['chat', 'main', 'codex'],
-            ['terminal', 'main', 'gemini']
+        // The title is the column that tells two roles of one CLI apart, which the order alone cannot.
+        expect(members.map((fields) => fields.slice(1, 5))).toEqual([
+            ['terminal', 'Lexer', 'main', 'claude'],
+            ['chat', 'Parser', 'main', 'codex'],
+            ['terminal', 'Docs', 'main', 'gemini']
         ]);
 
         const ids = members.map((fields) => fields[0]!);
@@ -786,7 +826,7 @@ describe('team', () => {
         expect([chat.title, chat.titleSource, chat.provider, chat.providerFixed]).toEqual(['Parser', 'user', 'codex', true]);
 
         expect(canvas.edges.map((edge) => [edge.id, edge.from, edge.to, edge.label])).toEqual(
-            ids.map((id, index) => [members[index]![4], 'term-1', id, 'context'])
+            ids.map((id, index) => [members[index]![5], 'term-1', id, 'context'])
         );
         expect(held).toEqual(ids.map((id, index) => ({ projectId, nodeId: id, prompt: THREE[index]!.prompt })));
     });
@@ -817,7 +857,10 @@ describe('team', () => {
         expect(broken.lines[0]).toStartWith('refused\tbad-roles-json\t--roles is not JSON: ');
         expect(broken.lines[1]).toBe(`roles\tshape\t${ROLES_SHAPE}`);
 
-        expect((await post('team', args(many(MAX_ROLES + 1)))).lines[0]).toBe(`refused\tbad-roles\t--roles has more than the ${MAX_ROLES} roles a team takes`);
+        // The number that came in, not only the one that fits: a refusal that counts is one a caller can act on.
+        expect((await post('team', args(many(MAX_ROLES + 1)))).lines[0]).toBe(
+            `refused\tbad-roles\t--roles has ${MAX_ROLES + 1} roles and a team takes at most ${MAX_ROLES}`
+        );
         expect((await post('team', args([]))).lines[0]).toBe('refused\tbad-roles\t--roles has no roles in it; a team is between 1 and 8 of them');
         expect((await post('team', args('claude'))).lines[0]).toBe('refused\tbad-roles\t--roles is a JSON array of roles');
         expect((await onDisk()).rev).toBe(1);
@@ -832,7 +875,11 @@ describe('team', () => {
             [[{ title: 'Lexer', prompt: 'go', provider: 'claude', cwd: 'src' }], 'role 0: Unrecognized key: "cwd"'],
             [
                 [{ title: 'Lexer', prompt: 'x'.repeat(MAX_PROMPT_LENGTH + 1), provider: 'claude' }],
-                `role 0 (prompt): prompt is longer than the ${MAX_PROMPT_LENGTH} characters a launch line carries`
+                `role 0 (prompt): prompt is ${MAX_PROMPT_LENGTH + 1} characters and at most ${MAX_PROMPT_LENGTH} fit on the line a CLI is started with`
+            ],
+            [
+                [{ title: 'L'.repeat(MAX_TITLE_LENGTH + 1), prompt: 'go', provider: 'claude' }],
+                `role 0 (title): title is ${MAX_TITLE_LENGTH + 1} characters and at most ${MAX_TITLE_LENGTH} fit in a name on the canvas`
             ]
         ];
         for (const [roles, message] of cases) {
@@ -865,25 +912,62 @@ describe('team', () => {
 
     test('a caller that is not a node on the canvas gets a team without edges', async () => {
         const { lines } = await post('team', [...args(THREE), '--view', 'board'], 'chat');
-        expect(lines.every((line) => line.split('\t')[2] === 'board')).toBe(true);
+        expect(lines.every((line) => line.split('\t')[3] === 'board')).toBe(true);
         // No caller on that canvas, so no edge to name in the last column either.
-        expect(lines.every((line) => line.split('\t')[4] === '-')).toBe(true);
+        expect(lines.every((line) => line.split('\t')[5] === '-')).toBe(true);
         expect((await canvasOnDisk('board')).edges).toEqual([]);
         expect(held).toHaveLength(3);
     });
 
-    test('--dry-run says what it would open and writes nothing', async () => {
+    test('--dry-run names every role it would open and writes nothing', async () => {
         const { status, lines } = await post('team', [...args(THREE), '--dry-run']);
         expect(status).toBe(200);
         expect(lines).toEqual([
-            'dry-run\tgroup\tmain\tCrew\t-',
-            `dry-run\tterminal\tmain\tclaude\tterm-1 -> ${NEW_NODE}`,
-            `dry-run\tchat\tmain\tcodex\tterm-1 -> ${NEW_NODE}`,
-            `dry-run\tterminal\tmain\tgemini\tterm-1 -> ${NEW_NODE}`
+            'dry-run\tgroup\tCrew\tmain\t-\t-',
+            'dry-run\tterminal\tLexer\tmain\tclaude\tterm-1 -> <Lexer>',
+            'dry-run\tchat\tParser\tmain\tcodex\tterm-1 -> <Parser>',
+            'dry-run\tterminal\tDocs\tmain\tgemini\tterm-1 -> <Docs>'
         ]);
         expect((await onDisk()).rev).toBe(1);
         expect(held).toEqual([]);
         expect(lineage.openedCount('term-1')).toBe(0);
+    });
+
+    test('two roles of one CLI are two rows a reader can tell apart', async () => {
+        const pair = [
+            { title: 'Lexer', prompt: 'fix the tokenizer', provider: 'claude' },
+            { title: 'Reviewer', prompt: 'review the Lexer', provider: 'claude' }
+        ];
+        const dry = await post('team', [...args(pair), '--dry-run']);
+        expect(dry.lines.slice(1)).toEqual([
+            'dry-run\tterminal\tLexer\tmain\tclaude\tterm-1 -> <Lexer>',
+            'dry-run\tterminal\tReviewer\tmain\tclaude\tterm-1 -> <Reviewer>'
+        ]);
+        const { lines } = await post('team', args(pair));
+        expect(lines.slice(1).map((line) => line.split('\t')[2])).toEqual(['Lexer', 'Reviewer']);
+    });
+
+    test('a label is not unique and a label or a title past the cap is refused', async () => {
+        const first = await post('team', args(THREE, 'Crew'));
+        const again = await post('team', args(THREE, 'Crew'));
+        expect([first.status, again.status]).toEqual([200, 200]);
+        expect((await canvasOnDisk()).nodes.filter((node) => node.kind === 'group' && node.title === 'Crew')).toHaveLength(2);
+
+        const long = 'L'.repeat(MAX_TITLE_LENGTH + 1);
+        expect((await post('team', args(THREE, long))).lines[0]).toBe(
+            `refused\tbad-arguments\t--label is ${MAX_TITLE_LENGTH + 1} characters and at most ${MAX_TITLE_LENGTH} fit in a name on the canvas`
+        );
+        for (const verb of ['node', 'agent']) {
+            const argv = verb === 'node' ? ['note'] : ['claude'];
+            expect((await post(verb, [...argv, '--title', long])).lines[0]).toBe(
+                `refused\tbad-arguments\t--title is ${MAX_TITLE_LENGTH + 1} characters and at most ${MAX_TITLE_LENGTH} fit in a name on the canvas`
+            );
+        }
+        expect((await post('link', ['--to', 'note-1', '--label', long])).lines[0]).toStartWith(
+            `refused\tbad-arguments\t--label is ${MAX_TITLE_LENGTH + 1} characters`
+        );
+        // A name of exactly the cap is a name, not a refusal.
+        expect((await post('node', ['note', '--title', 'L'.repeat(MAX_TITLE_LENGTH)])).status).toBe(200);
     });
 });
 

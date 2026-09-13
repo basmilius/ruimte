@@ -1,7 +1,7 @@
 import { isAgentKind, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
 import { z } from 'zod';
 import { newId, nodeLines } from './node-verb.ts';
-import { VerbRefusal, canvasFor, defineVerb, placeOf } from './verb.ts';
+import { MAX_TITLE_LENGTH, VerbRefusal, canvasFor, defineVerb, placeOf, titleField } from './verb.ts';
 
 // Lines drawn per call. Past this it is not linking any more, it is an agent in a loop.
 export const MAX_LINKS = 20;
@@ -9,7 +9,7 @@ export const MAX_LINKS = 20;
 const LINK_DETAIL: readonly string[] = [
     'flag\t--to A,B\trequired\tThe nodes the line runs into, by id, separated by commas',
     'flag\t--from N\toptional\tWhere the line starts; without it, you',
-    'flag\t--label L\toptional\tWhat the line is called on the canvas; a line into an agent is called "context" without one',
+    `flag\t--label L\toptional\tWhat the line is called on the canvas, at most ${MAX_TITLE_LENGTH} characters; a line into an agent is called "context" without one`,
     'flag\t--view V\toptional\tThe canvas both ends are on, by view id; without it the one you are on',
     'prints\tid\tfrom\tto\tstate\tone line per edge, where state is new for one that was drawn and existing for one that was there already',
     'context\tAn edge into a terminal or a chat node is what lets that agent read the other end with ruimte-context read; a line between two other nodes is only a line',
@@ -31,7 +31,7 @@ export const linkVerb = defineVerb({
     flags: z.object({
         to: z.string().min(1, '--to needs one or more node ids, separated by commas'),
         from: z.string().min(1, '--from needs the id of a node on that canvas').optional(),
-        label: z.string().trim().min(1, '--label needs a word').optional(),
+        label: titleField('--label', '--label needs a word').optional(),
         view: z.string().min(1, '--view needs the id of a canvas').optional()
     }),
     async run({ flags }, call) {
