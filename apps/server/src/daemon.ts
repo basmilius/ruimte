@@ -332,7 +332,13 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             if (url.pathname.startsWith(`${HOOKS_PATH}/`)) {
                 return handleHookRequest(request, url.pathname, manager, (token, event) => {
                     const sessionId = manager.sessionIdForToken(token);
-                    return sessionId ? hookContext(event, context.list(sessionId)) : null;
+                    if (!sessionId) {
+                        return null;
+                    }
+                    // Asked on every event that can carry an answer, so the memory of what this
+                    // agent was told keeps up with its turns even where nothing is printed.
+                    const changed = context.changeSince(sessionId);
+                    return hookContext(event, context.list(sessionId), { changed });
                 });
             }
 

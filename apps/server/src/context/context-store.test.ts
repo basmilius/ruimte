@@ -109,6 +109,19 @@ describe('ContextStore', () => {
         expect(answer.split('\n')).toHaveLength(3);
     });
 
+    test('remembers what an agent was told, so the next turn hears what moved', () => {
+        linked.set('agent', [{ id: 'note', kind: 'text', title: 'Sprint', text: 'ship it' }]);
+        // The first answer carries the whole list, so there is nothing to report as a change.
+        expect(store.changeSince('agent')).toBeNull();
+        expect(store.changeSince('agent')).toBeNull();
+        linked.set('agent', [
+            { id: 'note', kind: 'text', title: 'Sprint', text: 'ship it' },
+            { id: 'term', kind: 'terminal', title: 'dev server' }
+        ]);
+        expect(store.changeSince('agent')).toContain('Added: "dev server" (terminal).');
+        expect(store.changeSince('agent')).toBeNull();
+    });
+
     test('a target has context only while something is linked into it', () => {
         linked.set('agent', [{ id: 'x', kind: 'text', title: 'x', text: '' }]);
         expect(store.has('agent')).toBe(true);

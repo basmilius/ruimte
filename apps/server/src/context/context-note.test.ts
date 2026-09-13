@@ -36,6 +36,20 @@ describe('hookContext', () => {
         expect(hookContext('UserPromptSubmit', [])).toBeNull();
         expect(hookContext('UserPromptSubmit', [text])).toBe(contextHint([text]));
     });
+
+    test('a line drawn while the agent ran is named at its next prompt and not at a start', () => {
+        const changed = contextChangeNote([], [terminal]);
+        expect(hookContext('UserPromptSubmit', [terminal], { changed })).toBe(`${contextHint([terminal])} ${changed}`);
+        // The start is handed the whole list, so the same note there would only say it twice.
+        expect(hookContext('SessionStart', [terminal], { changed })).toBe(`${VERBS_NOTE} ${contextHint([terminal])}`);
+        expect(hookContext('UserPromptSubmit', [terminal], { changed: null })).toBe(contextHint([terminal]));
+    });
+
+    test('a message from another node rides along with a prompt and with a start', () => {
+        const message = 'Ruimte: node term-2 ("builder") sent you a message: the build is green.';
+        expect(hookContext('UserPromptSubmit', [], { messages: [message] })).toBe(message);
+        expect(hookContext('SessionStart', [], { messages: [message] })).toBe(`${VERBS_NOTE} ${message}`);
+    });
 });
 
 describe('contextChangeNote', () => {

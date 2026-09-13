@@ -1,4 +1,5 @@
 import type { ChatItem, ContextSource, DrawingElement } from '@ruimte/contracts';
+import { contextChangeNote } from './context-note.ts';
 import { renderDrawing } from './context-drawing.ts';
 
 export const CONTEXT_PATH = '/context';
@@ -68,6 +69,8 @@ export const renderTranscript = (items: ChatItem[]): string => {
  */
 export class ContextStore {
     private readonly readers: ContextReaders;
+    /* The last set of links each agent was told about, so the next turn can be told what moved. */
+    private readonly told = new Map<string, ContextSource[]>();
 
     constructor(readers: ContextReaders) {
         this.readers = readers;
@@ -75,6 +78,19 @@ export class ContextStore {
 
     has(targetId: string): boolean {
         return this.readers.sources(targetId).length > 0;
+    }
+
+    /*
+     * What changed since this agent was last told, and remembers what it is being told now. A chat
+     * hears this between two turns of its own (`ChatSession`); a terminal agent has no such moment
+     * and hears it through its hooks, which is the only way a line drawn while the shell runs
+     * reaches the model at all. Null the first time, since the first answer carries the whole list.
+     */
+    changeSince(targetId: string): string | null {
+        const current = this.readers.sources(targetId);
+        const previous = this.told.get(targetId) ?? null;
+        this.told.set(targetId, current);
+        return previous === null ? null : contextChangeNote(previous, current);
     }
 
     list(targetId: string): ContextSource[] {
