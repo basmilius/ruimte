@@ -404,6 +404,31 @@ canvas, against Ruimte, one verdict each.
 - A verb reads the project file itself rather than through `readDocument`: that one sets a file
   that will not parse aside, which is right when a person opens a project and wrong when an agent
   in the background happens to find a broken merge. The verb refuses and leaves the file alone.
+- A document that arrives while the client has edits of its own is merged when the difference is
+  nothing but additions (`apps/client/src/project/merge.ts`), and only then. Everything the verbs
+  make is an addition, so the dialog stays for what it was written for: a node that moved, a
+  deletion, a rename, another arrangement, another order. The alternative in the design was to put
+  the applied operations on the wire beside the document, which costs a message format and a second
+  way client state can change; a merge costs one pure function and no protocol.
+- The merge is three-way, so the client keeps the document the daemon's file held at the rev it is
+  on (`base` in `ProjectClient`, set on open, on a change it took in and on every save that landed).
+  Without it a view the person just made and a view another client just deleted look the same from
+  here, and one of the two would come back from the dead on the next save.
+- An addition lands in the editor of the view it belongs to, not only in the document
+  (`applyAdditions`, `CanvasState.addExternal`). It is marked as a load, like a project swapping in,
+  so it takes no step on the undo stack, moves no camera and changes no selection: the person's drag
+  runs on. A view an agent made is put in the list and opens itself nowhere. Which view a person
+  looks at is machine state, and `open` (phase 5) is the verb that asks for it.
+- A group that only gained members merges, anything else about a node the client already has does
+  not. While a group is open its membership is read off the positions and the file says nothing, so
+  the field only moves for a collapsed group, and there the node the agent just made would be
+  invisible without it. An added edge needs both of its ends: one running to a node this client
+  deleted would be written away by the next save, and dropping a line an agent drew is worse than
+  asking.
+- A save that was already on the wire when the verb landed is refused with `rev-conflict`, and is
+  made again against the rev the merge took in rather than dropping into the dialog. The daemon
+  emits `project.changed` from inside the same lock it refuses the save under, so the document is
+  always at the client before the refusal is.
 
 ### Updating
 
