@@ -324,10 +324,12 @@ export type ChatCompactionItem = z.infer<typeof ChatCompactionItemSchema>;
 // Every change to a thread is one of these; `item` is an upsert by id so a client can rebuild
 // its view from any prefix of the stream after `chat.attach` handed it the current state.
 // A `delta` appends to an assistant item's text or to a running tool item's partial output.
+// A `reset` replaces the whole thread, which is how a cleared chat reaches a client that was looking.
 export const ChatEventSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal('item'), item: ChatItemSchema }),
     z.object({ type: z.literal('delta'), itemId: z.string(), text: z.string() }),
-    z.object({ type: z.literal('info'), info: ChatInfoSchema })
+    z.object({ type: z.literal('info'), info: ChatInfoSchema }),
+    z.object({ type: z.literal('reset'), info: ChatInfoSchema, items: z.array(ChatItemSchema) })
 ]);
 export type ChatEvent = z.infer<typeof ChatEventSchema>;
 
@@ -357,6 +359,10 @@ export type ChatConfigurePayload = z.infer<typeof ChatConfigurePayloadSchema>;
 
 export const ChatTargetPayloadSchema = z.object({ chatId: ChatIdSchema });
 export type ChatTargetPayload = z.infer<typeof ChatTargetPayloadSchema>;
+
+// Without `force` a chat in the middle of a turn is refused, so a person is asked before that turn is thrown away.
+export const ChatClearPayloadSchema = ChatTargetPayloadSchema.extend({ force: z.boolean().optional() });
+export type ChatClearPayload = z.infer<typeof ChatClearPayloadSchema>;
 
 export const ChatAttachResultSchema = z.object({
     info: ChatInfoSchema,
