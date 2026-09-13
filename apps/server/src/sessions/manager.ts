@@ -90,6 +90,8 @@ export class SessionManager {
     private readonly env: Record<string, string | undefined>;
     private readonly sessions = new Map<string, Session>();
     private readonly sinks = new Map<string, SessionSink>();
+    // The clients that said they never offer a permission request to a person, keyed like the sinks.
+    private readonly withoutApprovals = new Set<string>();
     private readonly tokens = new Map<string, string>();
     // Ids whose kill is in flight: the exit that follows removes the session instead of parking it.
     private readonly killing = new Set<string>();
@@ -140,8 +142,27 @@ export class SessionManager {
         return () => {
             if (this.sinks.get(clientId) === sink) {
                 this.sinks.delete(clientId);
+                this.withoutApprovals.delete(clientId);
             }
         };
+    }
+
+    /*
+     * A client saying whether it offers permission requests to a person at all. Saying nothing means
+     * it does, which is what every client written before the switch existed meant, and the answer is
+     * this socket's alone: a second client that wants them is still asked.
+     */
+    setApprovalPreference(clientId: string, enabled: boolean): void {
+        if (enabled) {
+            this.withoutApprovals.delete(clientId);
+        } else {
+            this.withoutApprovals.add(clientId);
+        }
+    }
+
+    /* Whether anybody attached would show a permission request. The question `holdApproval` asks. */
+    wantsApprovals(): boolean {
+        return [...this.sinks.keys()].some((clientId) => !this.withoutApprovals.has(clientId));
     }
 
     async create(options: CreateSessionOptions): Promise<SessionInfo> {
@@ -216,13 +237,14 @@ export class SessionManager {
 
     /*
      * Holds a permission hook open while a person decides, and answers with what they chose. Null is
-     * the daemon staying out of it, which is what happens with the feature off, with nobody watching,
-     * and when the hold runs out: in all three the CLI's own prompt is what asks, exactly as without
-     * Ruimte. Never hold for a client that is not there, or a turn would stall for nothing.
+     * the daemon staying out of it, which is what happens with the feature off, with nobody who wants
+     * to be asked, and when the hold runs out: in all three the CLI's own prompt is what asks, exactly
+     * as without Ruimte. Never hold for a client that is not there or has said it will not ask, or a
+     * request would sit here for its whole life with nobody able to answer it.
      */
     holdApproval(token: string, body: unknown, signal: AbortSignal): Promise<ApprovalDecision | null> {
         const sessionId = this.tokens.get(token);
-        if (!this.approvals || sessionId === undefined || this.sinks.size === 0) {
+        if (!this.approvals || sessionId === undefined || !this.wantsApprovals()) {
             return Promise.resolve(null);
         }
         const ask = parsePermissionAsk(body);

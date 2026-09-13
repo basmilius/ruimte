@@ -65,4 +65,10 @@ export const registerSessionHandlers = (dispatcher: Dispatcher, manager: Session
     dispatcher.register('agent.answerApproval', (payload) => ({
         accepted: manager.answerApproval(payload.sessionId, payload.requestId, payload.choiceId)
     }));
+
+    // A client that will not show a permission request says so, and this daemon stops holding one for it.
+    dispatcher.register('agent.setApprovals', (payload, client) => {
+        manager.setApprovalPreference(client.id, payload.enabled);
+        return {};
+    });
 };

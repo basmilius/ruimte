@@ -15,6 +15,35 @@ afterEach(async () => {
 const create = (sessionId: string, cols = 80, rows = 24) => harness.manager.create({ sessionId, cols, rows, shell: SH, args: SH_ARGS, cwd: harness.home });
 
 describe('SessionManager', () => {
+    test('a permission request is held only while some client still wants to be asked', () => {
+        expect(harness.manager.wantsApprovals()).toBe(false);
+
+        harness.manager.subscribe('c1', new Recorder().sink());
+        const leave = harness.manager.subscribe('c2', new Recorder().sink());
+        expect(harness.manager.wantsApprovals()).toBe(true);
+
+        // One client turning the switch off says nothing about the other one.
+        harness.manager.setApprovalPreference('c1', false);
+        expect(harness.manager.wantsApprovals()).toBe(true);
+        harness.manager.setApprovalPreference('c2', false);
+        expect(harness.manager.wantsApprovals()).toBe(false);
+        harness.manager.setApprovalPreference('c2', true);
+        expect(harness.manager.wantsApprovals()).toBe(true);
+
+        // The one that still wanted them left, so only the client that said no is here.
+        leave();
+        expect(harness.manager.wantsApprovals()).toBe(false);
+    });
+
+    test('a socket that comes back is asked again, since its preference left with it', () => {
+        const leave = harness.manager.subscribe('c1', new Recorder().sink());
+        harness.manager.setApprovalPreference('c1', false);
+        leave();
+
+        harness.manager.subscribe('c1', new Recorder().sink());
+        expect(harness.manager.wantsApprovals()).toBe(true);
+    });
+
     test('clear empties the buffer and hands every attached client the fresh screen', async () => {
         const recorder = new Recorder();
         harness.manager.subscribe('c1', recorder.sink());
