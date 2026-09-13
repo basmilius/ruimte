@@ -129,7 +129,8 @@ const host = (): CanvasHost => ({
     },
     depthOf: (nodeId) => lineage.depthOf(nodeId),
     openedCount: (callerId) => lineage.openedCount(callerId),
-    recordOpened: (projectId, nodeId, openedBy, depth) => lineage.put(projectId, nodeId, openedBy, depth),
+    recordMade: (record) => lineage.put(record),
+    madeBy: (nodeId) => lineage.madeBy(nodeId),
     agentsDeleteAnyView: () => deleteAnyView,
     showView: (projectId, viewId, by) => store.showView(projectId, viewId, by),
     endSession: async (kind, nodeId) => {
@@ -164,7 +165,21 @@ const made = async (name: string, argv: string[] = [], token = 'term'): Promise<
 
 /* The last column of `views`, per view id: whether `view delete` would remove it for this caller. */
 const deleteColumn = async (token = 'term'): Promise<Record<string, string>> =>
-    Object.fromEntries((await post('views', [], token)).lines.map((line) => line.split('\t')).map(([id, , , may]) => [id!, may!]));
+    Object.fromEntries(
+        (await post('views', [], token)).lines
+            .filter((line) => !line.startsWith('self\t'))
+            .map((line) => line.split('\t'))
+            .map(([id, , , may]) => [id!, may!])
+    );
+
+/* The reason column beside it, which is what makes a yes or a no read as more than an opinion. */
+const deleteWhy = async (token = 'term'): Promise<Record<string, string>> =>
+    Object.fromEntries(
+        (await post('views', [], token)).lines
+            .filter((line) => !line.startsWith('self\t'))
+            .map((line) => line.split('\t'))
+            .map(([id, , , , why]) => [id!, why!])
+    );
 
 const viewOnDisk = async (id: string): Promise<ProjectView | undefined> => (await onDisk()).views.find((view) => view.id === id);
 
@@ -329,13 +344,14 @@ describe('help', () => {
         expect(lines.some((line) => line.startsWith('kind\tfile\t') && line.includes('read it yourself'))).toBe(true);
     });
 
-    test('help nodes says which row the caller is, by a variable the session really sets', async () => {
+    test('help nodes says which row the caller is, and names the variable that says it too', async () => {
         const self = (await post('help', ['nodes'])).lines.filter((line) => line.startsWith('self\t'));
-        expect(self).toHaveLength(1);
-        expect(self[0]).toInclude('$RUIMTE_SESSION_ID');
+        expect(self).toHaveLength(2);
+        expect(self[0]).toInclude('self and your own id');
+        expect(self[1]).toInclude('$RUIMTE_SESSION_ID');
         expect(SESSION_VARIABLES).toContain('RUIMTE_SESSION_ID');
         // A chat backend is spawned without it, and help must not send one looking for what it never got.
-        expect(self[0]).toInclude('a chat backend is given none');
+        expect(self[1]).toInclude('a chat backend is given none');
     });
 
     test('help views says a separator has no name', async () => {
@@ -505,11 +521,11 @@ describe('scoping', () => {
     test('a node on a canvas works on that canvas by default', async () => {
         const { status, lines } = await post('nodes', []);
         expect(status).toBe(200);
-        expect(lines).toEqual(['term-1\tterminal\tshell\t0\t0\t560\t360', 'note-1\tnote\tPlan with a tab\t0\t601\t320\t240']);
+        expect(lines).toEqual(['term-1\tterminal\tshell\t0\t0\t560\t360\t', 'note-1\tnote\tPlan with a tab\t0\t601\t320\t240\t', 'self\tterm-1']);
     });
 
-    test('--view picks another canvas', async () => {
-        expect(await post('nodes', ['--view', 'board'])).toEqual({ status: 200, lines: [] });
+    test('--view picks another canvas, where the caller is nobody', async () => {
+        expect(await post('nodes', ['--view', 'board'])).toEqual({ status: 200, lines: ['self\t-\tyou are not a node on this canvas'] });
     });
 
     test('a chat that is a view of its own needs --view, and hears which canvases there are', async () => {
@@ -534,12 +550,15 @@ describe('scoping', () => {
 describe('views', () => {
     test('lists every view in sidebar order, a separator with an empty name', async () => {
         expect((await post('views', [])).lines).toEqual([
-            'main\tcanvas\tCanvas\tno',
-            'sep-1\tseparator\t\tno',
-            'board\tcanvas\tBoard\tno',
-            'chat-1\tchat\tPlanner\tno',
-            'sketch-1\tdrawing\tSketch\tno'
+            'main\tcanvas\tCanvas\tno\tyou are in it',
+            'sep-1\tseparator\t\tno\ta person made it',
+            'board\tcanvas\tBoard\tno\ta person made it',
+            'chat-1\tchat\tPlanner\tno\ta person made it',
+            'sketch-1\tdrawing\tSketch\tno\ta person made it',
+            // The last row is the view the caller stands in, which it can read nowhere else.
+            'self\tmain'
         ]);
+        expect((await post('views', [], 'chat')).lines.at(-1)).toBe('self\tchat-1');
     });
 
     test('the last column is whether view delete would remove that view for the caller', async () => {
@@ -551,6 +570,20 @@ describe('views', () => {
         deleteAnyView = true;
         // The caller is a node on main, so removing main would end the session that is asking.
         expect(await deleteColumn()).toEqual({ main: 'no', 'sep-1': 'yes', board: 'yes', 'chat-1': 'yes', 'sketch-1': 'yes' });
+        // And the reason beside it, or a caller that made none of them reads its own yes as a mistake.
+        expect(await deleteWhy()).toEqual({
+            main: 'you are in it',
+            'sep-1': 'this machine frees every view',
+            board: 'this machine frees every view',
+            'chat-1': 'this machine frees every view',
+            'sketch-1': 'this machine frees every view'
+        });
+    });
+
+    test('the reason names the maker of a view another caller made', async () => {
+        const theirs = await made('Theirs', [], 'chat');
+        expect((await deleteWhy())[theirs]).toBe('chat-1 made it');
+        expect((await deleteWhy('chat'))[theirs]).toBe('yours');
     });
 
     test('a caller that is a view of its own may not remove the view it is', async () => {
@@ -1094,7 +1127,7 @@ describe('the depth limit', () => {
 
     test('one caller may not run away with a canvas, however deep it sits', async () => {
         for (let index = 0; index < MAX_OPENED_PER_CALLER; index += 1) {
-            await lineage.put(projectId, `stub-${index}`, 'term-1', 1);
+            await lineage.put({ projectId, nodeId: `stub-${index}`, openedBy: 'term-1', depth: 1, agent: true });
         }
         const refused = await post('agent', ['claude']);
         expect(refused.lines[0]).toBe(
@@ -1403,7 +1436,10 @@ describe('view delete', () => {
         await post('node', ['note', '--text', 'x', '--view', id]);
 
         const { lines } = await post('view', ['delete', id]);
-        expect(lines).toEqual([`deleted\t${id}\tcanvas\tCrew`, `ended\t${shell}\tterminal`, `ended\t${chat}\tchat`]);
+        expect(lines.slice(0, 3)).toEqual([`deleted\t${id}\tcanvas\tCrew`, `ended\t${shell}\tterminal`, `ended\t${chat}\tchat`]);
+        // What went with it, named the way the sessions are: a bare deleted line leaves the note a mystery.
+        expect(lines[3]).toBe('nodes\t3');
+        expect(lines.filter((line) => line.startsWith('node\t')).map((line) => line.split('\t')[1])).toEqual([shell, chat, expect.any(String)]);
         // The daemon ends them itself, which is what makes the verb work with no client connected.
         expect(ended).toEqual([`terminal\t${shell}`, `chat\t${chat}`]);
     });
@@ -1468,13 +1504,8 @@ describe('the view verb itself', () => {
 });
 
 describe('open', () => {
-    const VIEW_LINES = [
-        'view\tmain\tcanvas\tCanvas',
-        'view\tsep-1\tseparator\t',
-        'view\tboard\tcanvas\tBoard',
-        'view\tchat-1\tchat\tPlanner',
-        'view\tsketch-1\tdrawing\tSketch'
-    ];
+    /* What open itself would take: the separator is left out, since open refuses it a line later. */
+    const VIEW_LINES = ['view\tmain\tcanvas\tCanvas', 'view\tboard\tcanvas\tBoard', 'view\tchat-1\tchat\tPlanner', 'view\tsketch-1\tdrawing\tSketch'];
 
     test('tells the clients that have the project on screen, and writes nothing', async () => {
         await store.openProject({ projectId });
@@ -1643,7 +1674,7 @@ describe('group', () => {
 describe('arrange', () => {
     test('lays the nodes out from the corner they already occupied and prints where each one went', async () => {
         await seed(box('a', 1000, 1000), box('b', 4000, 2000), box('c', 2000, 3000));
-        expect((await post('nodes', [])).lines).toContain('b\tnote\tb\t4000\t2000\t200\t100');
+        expect((await post('nodes', [])).lines).toContain('b\tnote\tb\t4000\t2000\t200\t100\t');
 
         const { status, lines } = await post('arrange', ['--nodes', 'a,b,c']);
         expect(status).toBe(200);
@@ -1795,5 +1826,57 @@ describe('notify', () => {
             `refused\tbad-arguments\t--text is ${MAX_NOTICE_LENGTH + 1} characters and a message is at most ${MAX_NOTICE_LENGTH}`
         );
         expect(notified).toEqual([]);
+    });
+});
+
+describe('node delete', () => {
+    test('removes a node the caller made, with the lines that ran into it', async () => {
+        const note = (await post('node', ['note', '--title', 'Scratch'])).lines[0]!.split('\t')[0]!;
+        await post('link', ['--to', note]);
+        const { status, lines } = await post('node', ['delete', note]);
+        expect(status).toBe(200);
+        expect(lines).toEqual([`deleted\t${note}\tnote\tScratch`, 'edges\t1']);
+        const canvas = await canvasOnDisk();
+        expect(canvas.nodes.some((node) => node.id === note)).toBe(false);
+        expect(canvas.edges).toEqual([]);
+    });
+
+    test('a terminal node it made stops before the canvas lets go of it', async () => {
+        const made = (await post('node', ['terminal', '--title', 'runner'])).lines[0]!.split('\t')[0]!;
+        const { lines } = await post('node', ['delete', made]);
+        expect(lines).toEqual([`deleted\t${made}\tterminal\trunner`, `ended\t${made}\tterminal`, 'edges\t0']);
+        expect(ended).toEqual([`terminal\t${made}`]);
+    });
+
+    test('a node the caller did not make stays, unless the machine frees every one', async () => {
+        const refused = await post('node', ['delete', 'note-1']);
+        expect(refused.status).toBe(422);
+        expect(refused.lines[0]).toBe('refused\tnot-yours\tnote-1 was made by a person and node delete only removes a node you made yourself');
+        expect(refused.lines).toContain('made by\ta person');
+        expect(refused.lines[3]).toStartWith("setting\tagentsDeleteAnyView in this machine's endpoint.json frees every node and view");
+        expect((await canvasOnDisk()).nodes.some((node) => node.id === 'note-1')).toBe(true);
+
+        deleteAnyView = true;
+        expect((await post('node', ['delete', 'note-1'])).lines[0]).toBe('deleted\tnote-1\tnote\tPlan with a tab');
+    });
+
+    test('never the caller itself, and never an id no canvas has', async () => {
+        const self = await post('node', ['delete', 'term-1']);
+        expect(self.lines[0]).toBe('refused\tdeletes-caller\tYou are term-1, so removing it would end the session asking');
+        const nowhere = await post('node', ['delete', 'nope']);
+        expect(nowhere.lines[0]).toBe('refused\tunknown-node\tnope is not a node on any canvas of this project');
+        expect(nowhere.lines.slice(1)).toContain('node\tterm-1\tterminal\tshell');
+    });
+
+    test('a group loses its frame and keeps its nodes where they stand', async () => {
+        const first = (await post('node', ['note', '--title', 'One'])).lines[0]!.split('\t')[0]!;
+        const second = (await post('node', ['note', '--title', 'Two'])).lines[0]!.split('\t')[0]!;
+        const group = (await post('group', ['--nodes', `${first},${second}`, '--label', 'Work'])).lines[0]!.split('\t')[0]!;
+        const { lines } = await post('node', ['delete', group]);
+        expect(lines).toEqual([`deleted\t${group}\tgroup\tWork`, 'edges\t0', 'members\t2\tleft where they stand']);
+        const nodes = (await canvasOnDisk()).nodes.map((node) => node.id);
+        expect(nodes).toContain(first);
+        expect(nodes).toContain(second);
+        expect(nodes).not.toContain(group);
     });
 });

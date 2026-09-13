@@ -49,7 +49,7 @@ export const groupVerb = defineVerb({
             throw new VerbRefusal('unknown-color', `${accent} is not one of the ${NODE_ACCENT_NAMES.length} colors a frame takes`, [...COLOR_LINES]);
         }
 
-        return call.host.mutate(place.projectId, (content) => {
+        return call.host.mutate(place.projectId, async (content) => {
             const canvas = canvasFor(content, place, flags.view);
             if (canvas.nodes.length + 1 > MAX_CANVAS_NODES) {
                 throw canvasFull(canvas, 1);
@@ -75,6 +75,8 @@ export const groupVerb = defineVerb({
 
             const frame = groupFrame(members)!;
             const id = newId('group', content);
+            // The frame is a node like any other, and who made it is what node delete asks about.
+            await call.host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: call.caller, depth: 0, agent: false });
             const group: ProjectNode = {
                 id,
                 kind: 'group',

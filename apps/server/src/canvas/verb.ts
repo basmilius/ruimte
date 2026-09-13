@@ -33,8 +33,10 @@ export interface CanvasHost {
     depthOf(nodeId: string): number;
     /* The agent nodes this caller has opened and not lost, which is what caps one caller in a loop. */
     openedCount(callerId: string): number;
-    /* Writes down who opened a node and how deep it sits, outside the project and across a restart. */
-    recordOpened(projectId: string, nodeId: string, openedBy: string, depth: number): Promise<void>;
+    /* Writes down who made a node and how deep it sits, outside the project and across a restart. */
+    recordMade(record: { projectId: string; nodeId: string; openedBy: string; depth: number; agent: boolean }): Promise<void>;
+    /* Who made a node, or null for one a person made; what `node delete` asks before it removes one. */
+    madeBy(nodeId: string): string | null;
     /* Whether this machine lets an agent remove a view it did not make (`agentsDeleteAnyView` in `endpoint.json`). */
     agentsDeleteAnyView(): boolean;
     /* Tells every client to show this view of this project; false when nobody had it on screen to tell. */

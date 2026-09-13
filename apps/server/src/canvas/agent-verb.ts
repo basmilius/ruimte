@@ -193,7 +193,7 @@ export const agentVerb = defineVerb({
 
             // Written under the project's own lock, before the node is on disk, so a client that
             // reacts to project.changed can never mount the node while its depth is still coming.
-            await call.host.recordOpened(place.projectId, id, call.caller, depth);
+            await call.host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: call.caller, depth, agent: true });
             if (prompt !== null) {
                 await call.host.holdPrompt(place.projectId, id, prompt);
             }

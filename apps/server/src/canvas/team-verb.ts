@@ -217,7 +217,7 @@ export const teamVerb = defineVerb({
                 }
                 // Written under the project's own lock, before the nodes are on disk, so a client that
                 // reacts to project.changed can never mount one while its prompt or its depth is still coming.
-                await call.host.recordOpened(place.projectId, id, call.caller, depth);
+                await call.host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: call.caller, depth, agent: true });
                 await call.host.holdPrompt(place.projectId, id, role.prompt);
                 lines.push([id, chat ? 'chat' : 'terminal', field(role.title), canvas.id, role.provider, edgeId].join('\t'));
             }

@@ -20,7 +20,7 @@ function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
     const connected = useEndpointConnection(endpoint.id).status === 'open';
     const [busy, setBusy] = useState(false);
     // The row is one of several machines, so the switch says which one it speaks for.
-    const label = `Agents on ${endpoint.label} may delete any view`;
+    const label = `Agents on ${endpoint.label} may delete any view or node`;
 
     const set = async (checked: boolean): Promise<void> => {
         const link = transportFor(endpoint.id);
@@ -63,7 +63,7 @@ function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
             }
             description={
                 connected
-                    ? 'Off, an agent only removes the views it made itself. On, it may remove any view of any project there, yours as well.'
+                    ? 'Off, an agent only removes the views and nodes it made itself. On, it may remove any view and any node of any project there, yours as well.'
                     : 'Not answering, so what an agent may delete there cannot be read or changed.'
             }
             control={

@@ -173,7 +173,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         holdPrompt: (projectId: string, nodeId: string, prompt: string) => prompts.put(projectId, nodeId, prompt),
         depthOf: (nodeId: string) => lineage.depthOf(nodeId),
         openedCount: (callerId: string) => lineage.openedCount(callerId),
-        recordOpened: (projectId: string, nodeId: string, openedBy: string, depth: number) => lineage.put(projectId, nodeId, openedBy, depth),
+        recordMade: (record: { projectId: string; nodeId: string; openedBy: string; depth: number; agent: boolean }) => lineage.put(record),
+        madeBy: (nodeId: string) => lineage.madeBy(nodeId),
         agentsDeleteAnyView: () => identity.agentsDeleteAnyView,
         showView: (projectId: string, viewId: string, by: string) => projects.showView(projectId, viewId, by),
         /* A node that has never been shown has no session, and a canvas going down is not the place

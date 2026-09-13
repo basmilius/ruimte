@@ -11,10 +11,11 @@ import {
     type ProjectNode
 } from '@ruimte/contracts';
 import { z } from 'zod';
-import { placeBeside, placeFree } from './placement.ts';
+import type { IndexedPlace } from '../projects/project-index.ts';
+import { groupMembers, placeBeside, placeFree } from './placement.ts';
 import { checkCwd, checkPath, isInside } from './project-paths.ts';
 import { unescapeText } from './text-escapes.ts';
-import { MAX_TITLE_LENGTH, TITLE_LINE, VerbRefusal, canvasFor, defineVerb, field, orNote, placeOf, titleField } from './verb.ts';
+import { MAX_TITLE_LENGTH, TITLE_LINE, VerbRefusal, canvasFor, defineSubVerb, defineVerb, field, orNote, placeOf, titleField, type Verb } from './verb.ts';
 
 export const NODE_VERB_KINDS = ['note', 'browser', 'drawing', 'file', 'terminal', 'chat'] as const;
 type NodeVerbKind = (typeof NODE_VERB_KINDS)[number];
@@ -167,7 +168,7 @@ export const checkUrl = (url: string): string => {
     return parsed.href;
 };
 
-export const nodeVerb = defineVerb({
+const addVerb = defineVerb({
     name: 'node',
     usage: `<${NODE_VERB_KINDS.join('|')}> [--title T] [--text B] [--url U] [--path P] [--source V] [--cwd P] [--view V] [--beside N] [--dry-run]`,
     // The required flags are in the summary too: without them the first thing a first-time caller meets is a refusal.
@@ -207,7 +208,7 @@ export const nodeVerb = defineVerb({
         const path = flags.path === undefined ? undefined : await checkPath(place.folder, flags.path);
         const cwd = flags.cwd === undefined ? undefined : await checkCwd(place.folder, flags.cwd, (folder) => call.host.worktreePaths(folder));
 
-        return call.host.mutate(place.projectId, (content) => {
+        return call.host.mutate(place.projectId, async (content) => {
             const canvas = canvasFor(content, place, flags.view);
             if (canvas.nodes.length + 1 > MAX_CANVAS_NODES) {
                 throw canvasFull(canvas, 1);
@@ -238,6 +239,9 @@ export const nodeVerb = defineVerb({
             }
 
             const id = newId(kind, content);
+            /* Written down under the project's lock, before the node is on disk: who made a node is
+               the whole of the rule `node delete` follows, and it may not arrive after the node does. */
+            await call.host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: call.caller, depth: 0, agent: false });
             const node: ProjectNode = {
                 id,
                 kind,
@@ -258,3 +262,93 @@ export const nodeVerb = defineVerb({
         });
     }
 });
+
+/* What a refusal about a node id can offer instead: the caller's own canvas, or where to look. */
+const whereToLook = (content: ProjectContent, place: IndexedPlace): string[] => {
+    const canvas = place.canvasId === null ? undefined : content.views.find((view) => view.id === place.canvasId);
+    if (canvas === undefined || !isCanvasView(canvas)) {
+        return ['detail\truimte-context nodes --view <id>\tthe nodes of a canvas, which is where an id comes from'];
+    }
+    return nodeLines(canvas);
+};
+
+const deleteSub = defineSubVerb('node', {
+    name: 'delete',
+    usage: '<nodeId>',
+    summary: 'Removes a node you made, with the session it holds and the lines that ran into it',
+    detail: [
+        'argument\t<nodeId>\trequired\tThe node to remove, by id; ruimte-context nodes lists them',
+        'prints\tdeleted\tid\tkind\ttitle\tthe node that went',
+        'prints\tended\tid\tkind\tthe session it took with it, for a terminal or a chat',
+        'prints\tedges\tcount\thow many lines ran into or out of it and went with it',
+        'prints\tmembers\tcount\tfor a group: how many nodes stood in the frame and stayed where they are',
+        'rule\tOnly a node whose maker is you, which is every node you made with node, agent or team',
+        'rule\tA machine can free every node and view of every project on it; a refusal says whether this one does',
+        'rule\tNever your own node, since that would end the session asking',
+        'group\tRemoving a group takes the frame and nothing else: the nodes inside it stay where they stand, because they are not yours to remove with it',
+        'note\tThe node is found on any canvas of this project, so this takes no --view',
+        'see\truimte-context nodes\tthe nodes of a canvas, with the ids this takes'
+    ],
+    positionals: z.tuple([z.string().min(1, 'node delete needs the id of a node')], {
+        error: (issue) => (issue.code === 'too_big' ? 'node delete takes one node id and nothing else' : 'node delete needs the id of a node')
+    }),
+    flags: z.object({}),
+    async run({ positionals: [id] }, call) {
+        const place = placeOf(call);
+        const anyNode = call.host.agentsDeleteAnyView();
+        const madeBy = call.host.madeBy(id);
+        return call.host.mutate(place.projectId, async (content) => {
+            const canvas = content.views.filter(isCanvasView).find((view) => view.nodes.some((node) => node.id === id));
+            const node = canvas?.nodes.find((candidate) => candidate.id === id);
+            if (!canvas || !node) {
+                throw new VerbRefusal('unknown-node', `${id} is not a node on any canvas of this project`, whereToLook(content, place));
+            }
+            if (id === call.caller) {
+                throw new VerbRefusal('deletes-caller', `You are ${id}, so removing it would end the session asking`);
+            }
+            if (!anyNode && madeBy !== call.caller) {
+                throw new VerbRefusal('not-yours', `${id} was made by ${madeBy ?? 'a person'} and node delete only removes a node you made yourself`, [
+                    `made by\t${madeBy ?? 'a person'}`,
+                    `you\t${call.caller}`,
+                    "setting\tagentsDeleteAnyView in this machine's endpoint.json frees every node and view; a person turns it on from the Machines pane"
+                ]);
+            }
+
+            const edges = canvas.edges.filter((edge) => edge.from !== id && edge.to !== id);
+            /* A collapsed frame keeps its members by id, so a node that goes has to leave those lists
+               too; nothing reads geometry while a group is shut. */
+            const nodes = canvas.nodes
+                .filter((candidate) => candidate.id !== id)
+                .map((candidate) =>
+                    candidate.memberIds?.includes(id) ? { ...candidate, memberIds: candidate.memberIds.filter((member) => member !== id) } : candidate
+                );
+            const members = node.kind === 'group' ? groupMembers(node, canvas.nodes).length : 0;
+            if (node.kind === 'terminal' || node.kind === 'chat') {
+                // Before the write, the rule view delete follows: a shell that outlived its node would answer to nothing.
+                await call.host.endSession(node.kind, node.id);
+            }
+            return {
+                content: { ...content, views: content.views.map((view) => (view.id === canvas.id ? { ...canvas, nodes, edges } : view)) },
+                result: [
+                    `deleted\t${id}\t${node.kind}\t${field(node.title)}`,
+                    ...(node.kind === 'terminal' || node.kind === 'chat' ? [`ended\t${id}\t${node.kind}`] : []),
+                    `edges\t${canvas.edges.length - edges.length}`,
+                    ...(node.kind === 'group' ? [`members\t${members}\tleft where they stand`] : [])
+                ]
+            };
+        });
+    }
+});
+
+/*
+ * One verb with one word after it that is not a kind. `node delete` is not a group of its own
+ * because everything else `node` does is `node <kind>`, and a registry entry that dispatches on the
+ * first word keeps both shapes on one verb, with the sub rendered by the same `help` as `view`'s.
+ */
+export const nodeVerb: Verb = {
+    ...addVerb,
+    usage: `${addVerb.usage} | delete <nodeId>`,
+    flagNames: [...new Set([...addVerb.flagNames, ...deleteSub.flagNames])],
+    subcommands: [deleteSub],
+    run: (argv, call) => (argv[0] === deleteSub.word ? deleteSub.run(argv.slice(1), call) : addVerb.run(argv, call))
+};

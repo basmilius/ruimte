@@ -9,6 +9,9 @@ const LineageSchema = z.object({
     /* The node that ran the verb; a caller is counted against this to cap one runaway agent. */
     openedBy: z.string().min(1),
     depth: z.number().int().nonnegative(),
+    /* Whether this is an agent node, which is what the depth and the per-caller cap are about. A
+       record written before a plain node was written down at all is one of those, hence the default. */
+    agent: z.boolean().default(true),
     createdAt: z.number()
 });
 
@@ -65,11 +68,11 @@ export class AgentLineageStore {
         }
     }
 
-    async put(projectId: string, nodeId: string, openedBy: string, depth: number): Promise<void> {
-        const entry: Lineage = { projectId, nodeId, openedBy, depth, createdAt: Date.now() };
+    async put(record: Omit<Lineage, 'createdAt'>): Promise<void> {
+        const entry: Lineage = { ...record, createdAt: Date.now() };
         await mkdir(this.dir, { recursive: true, mode: 0o700 });
-        await writeAtomic(join(this.dir, fileName(nodeId)), JSON.stringify(entry));
-        this.opened.set(nodeId, entry);
+        await writeAtomic(join(this.dir, fileName(record.nodeId)), JSON.stringify(entry));
+        this.opened.set(record.nodeId, entry);
     }
 
     /* How deep a node sits. A node nobody wrote down is one a person made, which is where a chain starts. */
@@ -77,15 +80,23 @@ export class AgentLineageStore {
         return this.opened.get(nodeId)?.depth ?? 0;
     }
 
-    /* The agent nodes this caller opened that are still on a canvas; a deleted node is pruned away. */
+    /*
+     * The agent nodes this caller opened that are still on a canvas; a deleted node is pruned away.
+     * Only the agent ones: a caller that makes notes would otherwise use up the room it has for agents.
+     */
     openedCount(callerId: string): number {
         let count = 0;
         for (const entry of this.opened.values()) {
-            if (entry.openedBy === callerId) {
+            if (entry.openedBy === callerId && entry.agent) {
                 count += 1;
             }
         }
         return count;
+    }
+
+    /* Who made this node, or null for one a person made: the whole of the rule node delete follows. */
+    madeBy(nodeId: string): string | null {
+        return this.opened.get(nodeId)?.openedBy ?? null;
     }
 
     /* Drops what this project wrote down for ids it no longer has: the node was deleted. */
