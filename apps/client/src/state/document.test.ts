@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectDocument } from '@ruimte/contracts';
 import { viewIdsIn } from '@/shell/split';
-import { useCanvas } from './canvas';
+import { focusedCanvas } from './canvas';
 import { useDocument } from './document';
 
 const view = (id: string, nodes: ProjectCanvasView['nodes'] = []): ProjectCanvasView => ({
@@ -21,7 +21,7 @@ const document = (views: ProjectCanvasView[]): ProjectDocument => ({ version: 2,
 const canvasAt = (at: number): ProjectCanvasView => useDocument.getState().views[at] as ProjectCanvasView;
 
 beforeEach(() => {
-    useCanvas.getState().setViewport({ w: 800, h: 600 });
+    focusedCanvas().getState().setViewport({ w: 800, h: 600 });
     useDocument.getState().load(document([view('a', [node('n1', 40, 40)]), view('b', [node('n2', 900, 900)])]), {
         activeViewId: 'a',
         views: { a: { camera: { x: 1, y: 2, zoom: 1 }, focusedNodeId: null }, b: { camera: { x: 7, y: 8, zoom: 2 }, focusedNodeId: null } }
@@ -31,8 +31,8 @@ beforeEach(() => {
 describe('loading a project', () => {
     test('the first view is on the canvas with its own camera, and the rest waits in the document', () => {
         expect(useDocument.getState().activeViewId).toBe('a');
-        expect(useCanvas.getState().order).toEqual(['n1']);
-        expect(useCanvas.getState().camera).toEqual({ x: 1, y: 2, zoom: 1 });
+        expect(focusedCanvas().getState().order).toEqual(['n1']);
+        expect(focusedCanvas().getState().camera).toEqual({ x: 1, y: 2, zoom: 1 });
         expect(useDocument.getState().views.map((each) => each.id)).toEqual(['a', 'b']);
     });
 
@@ -57,25 +57,25 @@ describe('loading a project', () => {
 
 describe('switching views', () => {
     test('the canvas is written back before the next one loads, and nothing moves', () => {
-        useCanvas.getState().select(['n1']);
-        useCanvas.getState().moveSelected(16, 16);
+        focusedCanvas().getState().select(['n1']);
+        focusedCanvas().getState().moveSelected(16, 16);
         useDocument.getState().setActiveView('b');
 
-        expect(useCanvas.getState().order).toEqual(['n2']);
+        expect(focusedCanvas().getState().order).toEqual(['n2']);
         expect(canvasAt(0).nodes[0]).toMatchObject({ id: 'n1', x: 56, y: 56 });
 
         useDocument.getState().setActiveView('a');
-        expect(useCanvas.getState().nodes.n1).toMatchObject({ x: 56, y: 56 });
+        expect(focusedCanvas().getState().nodes.n1).toMatchObject({ x: 56, y: 56 });
     });
 
     test('the camera of a view comes back, and the undo history does not travel with it', () => {
-        useCanvas.getState().panBy(10, 10);
+        focusedCanvas().getState().panBy(10, 10);
         useDocument.getState().setActiveView('b');
-        expect(useCanvas.getState().camera).toEqual({ x: 7, y: 8, zoom: 2 });
-        expect(useCanvas.getState().past).toEqual([]);
+        expect(focusedCanvas().getState().camera).toEqual({ x: 7, y: 8, zoom: 2 });
+        expect(focusedCanvas().getState().past).toEqual([]);
 
         useDocument.getState().setActiveView('a');
-        expect(useCanvas.getState().camera).toEqual({ x: 11, y: 12, zoom: 1 });
+        expect(focusedCanvas().getState().camera).toEqual({ x: 11, y: 12, zoom: 1 });
     });
 
     test('a switch is no edit of the document, adding a view is', () => {
@@ -191,7 +191,7 @@ describe('changing the list of views', () => {
         useDocument.getState().deleteView('a');
         expect(useDocument.getState().views.map((each) => each.id)).toEqual(['b']);
         expect(useDocument.getState().activeViewId).toBe('b');
-        expect(useCanvas.getState().order).toEqual(['n2']);
+        expect(focusedCanvas().getState().order).toEqual(['n2']);
     });
 
     test('deleting the last view leaves an empty canvas behind, because a project always has one', () => {
@@ -202,7 +202,7 @@ describe('changing the list of views', () => {
     });
 
     test('a duplicate lands next to its original with new ids and no session to resume', () => {
-        useCanvas.getState().updateNode('n1', { resume: 'session-1' });
+        focusedCanvas().getState().updateNode('n1', { resume: 'session-1' });
         const copyId = useDocument.getState().duplicateView('a');
         expect(useDocument.getState().views.map((each) => each.id)).toEqual(['a', copyId!, 'b']);
         const copy = canvasAt(1);
@@ -233,22 +233,22 @@ describe('changing the list of views', () => {
     });
 
     test('a node moved to another view keeps its id and leaves its lines behind', () => {
-        useCanvas.getState().addText({ x: 0, y: 0 });
-        const textId = useCanvas.getState().selection[0]!;
-        useCanvas.getState().addEdge('n1', textId);
+        focusedCanvas().getState().addText({ x: 0, y: 0 });
+        const textId = focusedCanvas().getState().selection[0]!;
+        focusedCanvas().getState().addEdge('n1', textId);
         useDocument.getState().moveNodeToView('n1', 'b');
 
-        expect(useCanvas.getState().order).toEqual([]);
-        expect(useCanvas.getState().edges).toEqual([]);
+        expect(focusedCanvas().getState().order).toEqual([]);
+        expect(focusedCanvas().getState().edges).toEqual([]);
         expect(canvasAt(1).nodes.map((each) => each.id)).toEqual(['n2', 'n1']);
     });
 });
 
 describe('a node and a view of its own', () => {
     test('a promoted node keeps its id and loses the lines it was part of', () => {
-        useCanvas.getState().addText({ x: 0, y: 0 });
-        const textId = useCanvas.getState().selection[0]!;
-        useCanvas.getState().addEdge('n1', textId);
+        focusedCanvas().getState().addText({ x: 0, y: 0 });
+        const textId = focusedCanvas().getState().selection[0]!;
+        focusedCanvas().getState().addEdge('n1', textId);
 
         const viewId = useDocument.getState().openAsView('n1');
         expect(viewId).toBe('n1');
@@ -274,22 +274,22 @@ describe('a node and a view of its own', () => {
         expect(useDocument.getState().putOnCanvas('n1', 'a')).toBe(true);
         expect(useDocument.getState().views.map((each) => each.id)).toEqual(['a', 'b']);
         expect(useDocument.getState().activeViewId).toBe('a');
-        expect(useCanvas.getState().order).toEqual(['n1']);
-        expect(useCanvas.getState().selection).toEqual(['n1']);
-        expect(useCanvas.getState().nodes.n1).toMatchObject({ id: 'n1', kind: 'terminal', title: 'n1' });
+        expect(focusedCanvas().getState().order).toEqual(['n1']);
+        expect(focusedCanvas().getState().selection).toEqual(['n1']);
+        expect(focusedCanvas().getState().nodes.n1).toMatchObject({ id: 'n1', kind: 'terminal', title: 'n1' });
     });
 
     test('what a node carries travels both ways', () => {
-        useCanvas.getState().updateNode('n1', { cwd: '/repo/apps', command: 'bun dev' });
+        focusedCanvas().getState().updateNode('n1', { cwd: '/repo/apps', command: 'bun dev' });
         useDocument.getState().openAsView('n1');
         expect(useDocument.getState().views[1]).toMatchObject({ node: { cwd: '/repo/apps', command: 'bun dev' } });
         useDocument.getState().putOnCanvas('n1', 'a');
-        expect(useCanvas.getState().nodes.n1).toMatchObject({ cwd: '/repo/apps', command: 'bun dev' });
+        expect(focusedCanvas().getState().nodes.n1).toMatchObject({ cwd: '/repo/apps', command: 'bun dev' });
     });
 
     test('only a session can leave the canvas, and a view of its own is not duplicated', () => {
-        useCanvas.getState().addNode('group', { x: 0, y: 0 });
-        const groupId = useCanvas.getState().selection[0]!;
+        focusedCanvas().getState().addNode('group', { x: 0, y: 0 });
+        const groupId = focusedCanvas().getState().selection[0]!;
         expect(useDocument.getState().openAsView(groupId)).toBeNull();
         useDocument.getState().openAsView('n1');
         expect(useDocument.getState().duplicateView('n1')).toBeNull();
@@ -306,7 +306,7 @@ describe('a node and a view of its own', () => {
 
 describe('what a save would write', () => {
     test('the canvas on screen is folded back into the view it belongs to', () => {
-        useCanvas.getState().addNode('chat', { x: 0, y: 0 });
+        focusedCanvas().getState().addNode('chat', { x: 0, y: 0 });
         const views = useDocument.getState().exportViews() as ProjectCanvasView[];
         expect(views[0]!.nodes).toHaveLength(2);
         expect(views[1]!.nodes.map((each) => each.id)).toEqual(['n2']);
@@ -315,12 +315,12 @@ describe('what a save would write', () => {
     test('who made a view survives the trip through the editor, so a save never drops it', () => {
         const views: ProjectCanvasView[] = [{ ...view('a', [node('n1')]), createdBy: 'term-1' }, view('b')];
         useDocument.getState().load(document(views), { activeViewId: 'a', views: {} });
-        useCanvas.getState().addNode('note', { x: 0, y: 0 });
+        focusedCanvas().getState().addNode('note', { x: 0, y: 0 });
         expect(useDocument.getState().exportViews()[0]).toMatchObject({ createdBy: 'term-1' });
     });
 
     test('the local file carries every view that was visited, with the live camera for the open one', () => {
-        useCanvas.getState().panBy(4, 4);
+        focusedCanvas().getState().panBy(4, 4);
         const local = useDocument.getState().exportLocal();
         expect(local.activeViewId).toBe('a');
         expect(local.views.a).toEqual({ camera: { x: 5, y: 6, zoom: 1 }, focusedNodeId: null });
@@ -334,7 +334,7 @@ describe('a drawing view', () => {
         expect(useDocument.getState().activeViewId).toBe(id);
         expect(useDocument.getState().views.at(-1)).toEqual({ kind: 'drawing', id, name: 'Sketch' });
         // It is not a canvas, so the canvas store lets go of the view it had.
-        expect(useCanvas.getState().viewId).toBeNull();
+        expect(focusedCanvas().getState().viewId).toBeNull();
         expect(useDocument.getState().bodyFocused).toBe(true);
     });
 

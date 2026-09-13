@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectDocument, SplitLayout } from '@ruimte/contracts';
-import { liveCanvases, useCanvas } from './canvas';
+import { focusedCanvas, liveCanvases } from './canvas';
 import { useDocument } from './document';
 
 const view = (id: string, nodes: ProjectCanvasView['nodes'] = []): ProjectCanvasView => ({
@@ -22,7 +22,7 @@ const shape = (): string[][] => (useDocument.getState().layout?.columns ?? []).m
 const openEditors = (): string[] => liveCanvases().map(([viewId]) => viewId);
 
 beforeEach(() => {
-    useCanvas.getState().setViewport({ w: 800, h: 600 });
+    focusedCanvas().getState().setViewport({ w: 800, h: 600 });
     useDocument.getState().load(document([view('a', [node('n1')]), view('b', [node('n2')]), view('c'), view('d')]), {
         activeViewId: 'a',
         views: {}
@@ -90,7 +90,7 @@ describe('splitting', () => {
         const [, editor] = liveCanvases().find(([viewId]) => viewId === 'a')!;
         expect(editor.order).toEqual(['n1']);
         useDocument.getState().focusCellAt({ column: 0, cell: 0 });
-        useCanvas.getState().addText({ x: 0, y: 0 });
+        focusedCanvas().getState().addText({ x: 0, y: 0 });
         useDocument.getState().focusCellAt({ column: 1, cell: 0 });
         const saved = useDocument
             .getState()
@@ -167,7 +167,7 @@ describe('closing a cell', () => {
 
     test('what the closing cell held is written back first', () => {
         useDocument.getState().splitFocused('right', 'b');
-        useCanvas.getState().addText({ x: 0, y: 0 });
+        focusedCanvas().getState().addText({ x: 0, y: 0 });
         useDocument.getState().closeCellAt({ column: 1, cell: 0 });
         const saved = useDocument.getState().views.find((each) => each.id === 'b') as ProjectCanvasView;
         expect(saved.texts).toHaveLength(1);

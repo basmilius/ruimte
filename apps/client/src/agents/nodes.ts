@@ -1,7 +1,7 @@
 import type { ProviderInfo } from '@ruimte/contracts';
 import type { Point } from '@/canvas/math';
 import { readChatPreferences } from '@/chat/preferences';
-import { useCanvas } from '@/state/canvas';
+import { focusedCanvas } from '@/state/canvas';
 import { canAddView } from '@/project/views';
 import { useDocument } from '@/state/document';
 
@@ -20,11 +20,13 @@ export const AGENT_TARGET_LABEL: Record<AgentTarget, string> = {
  */
 export const addAgentNode = (target: AgentTarget, provider: ProviderInfo, at: Point): string | null => {
     const runtimeMode = readChatPreferences().terminalRuntimeMode;
-    return useCanvas.getState().addNode(target, at, {
-        title: provider.name,
-        provider: provider.kind,
-        ...(target === 'terminal' ? { runtimeMode } : { providerFixed: true })
-    });
+    return focusedCanvas()
+        .getState()
+        .addNode(target, at, {
+            title: provider.name,
+            provider: provider.kind,
+            ...(target === 'terminal' ? { runtimeMode } : { providerFixed: true })
+        });
 };
 
 /* The same agent as a view of its own: no canvas under it, the same session rules on the daemon. */

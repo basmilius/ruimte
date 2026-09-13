@@ -23,7 +23,8 @@ import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentNode } from '@/agents/nodes';
 import { activeZoomPreset, toWorld, ZOOM_PRESETS } from '@/canvas/math';
 import { LOCK_ROWS } from '@/canvas/locks';
-import { useCanvas, type NodeKind } from '@/state/canvas';
+import type { StoreApi } from 'zustand';
+import { useCanvas, useCanvasStore, type CanvasState, type NodeKind } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { ModeChip } from '@/shell/ModeChip';
@@ -34,8 +35,8 @@ import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
 
-const centerWorld = () => {
-    const s = useCanvas.getState();
+const centerWorld = (store: StoreApi<CanvasState>) => {
+    const s = store.getState();
     return toWorld(s.camera, { x: s.viewport.w / 2, y: s.viewport.h / 2 });
 };
 
@@ -45,6 +46,9 @@ const centerWorld = () => {
  * section, and the way out of a body is Escape, the chord a terminal uses, or its row in the list.
  */
 export function Dock() {
+    /* The canvas under this dock. It is drawn in the focused cell only, so the focused editor would
+       answer the same today, but reading the cell keeps that a coincidence rather than a rule. */
+    const canvasStore = useCanvasStore();
     const page = useUi((s) => s.page);
     /* No view at all is no canvas either: with no project open the column holds the empty state and
        these controls would act on a canvas nothing saves. */
@@ -66,7 +70,7 @@ export function Dock() {
     const preset = activeZoomPreset(zoom);
 
     const add = (kind: NodeKind) => {
-        useCanvas.getState().addNode(kind, centerWorld());
+        canvasStore.getState().addNode(kind, centerWorld(canvasStore));
     };
 
     // A page fills the column: the canvas under it is inert and its controls have nothing to act on.
@@ -94,7 +98,7 @@ export function Dock() {
                             <Menu.Item className="menu-item" onClick={() => add('chat')}>
                                 <Icon icon={MessageSquare} size={14} /> Chat <kbd>⌥C</kbd>
                             </Menu.Item>
-                            <AgentSubmenus onPick={(target, provider) => addAgentNode(target, provider, centerWorld())} />
+                            <AgentSubmenus onPick={(target, provider) => addAgentNode(target, provider, centerWorld(canvasStore))} />
                             <Menu.Item className="menu-item" onClick={() => add('browser')}>
                                 <Icon icon={Globe} size={14} /> Browser <kbd>⌥B</kbd>
                             </Menu.Item>
@@ -105,7 +109,7 @@ export function Dock() {
                                 <Icon icon={StickyNote} size={14} /> Note <kbd>⌥N</kbd>
                             </Menu.Item>
                             <Menu.Separator className={MENU_SEPARATOR} />
-                            <Menu.Item className="menu-item" onClick={() => useCanvas.getState().addText(centerWorld())}>
+                            <Menu.Item className="menu-item" onClick={() => canvasStore.getState().addText(centerWorld(canvasStore))}>
                                 <Icon icon={Type} size={14} /> Text <span className={MENU_HINT}>dbl-click</span>
                             </Menu.Item>
                         </Menu.Popup>
@@ -116,7 +120,7 @@ export function Dock() {
             <Separator />
             <div className={BTN_GROUP}>
                 <Tooltip label="Zoom out" name>
-                    <button className="icon-btn" onClick={() => useCanvas.getState().zoomTo(Math.round(zoom * 100 - 10) / 100)}>
+                    <button className="icon-btn" onClick={() => canvasStore.getState().zoomTo(Math.round(zoom * 100 - 10) / 100)}>
                         <Icon icon={Minus} size={16} />
                     </button>
                 </Tooltip>
@@ -129,7 +133,7 @@ export function Dock() {
                     <Menu.Portal>
                         <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={10} align="center">
                             <Menu.Popup className="menu-popup min-w-44">
-                                <Menu.RadioGroup value={preset} onValueChange={(value: number) => useCanvas.getState().zoomTo(value / 100)}>
+                                <Menu.RadioGroup value={preset} onValueChange={(value: number) => canvasStore.getState().zoomTo(value / 100)}>
                                     {ZOOM_PRESETS.map((pct) => (
                                         <Menu.RadioItem key={pct} value={pct} className="menu-item">
                                             <span className="grid h-4 w-4 place-items-center">
@@ -143,13 +147,13 @@ export function Dock() {
                                     ))}
                                 </Menu.RadioGroup>
                                 <Menu.Separator className={MENU_SEPARATOR} />
-                                <Menu.Item className="menu-item" onClick={() => useCanvas.getState().fitAll()}>
+                                <Menu.Item className="menu-item" onClick={() => canvasStore.getState().fitAll()}>
                                     <span className="grid h-4 w-4 place-items-center">
                                         <Icon icon={Maximize} size={14} />
                                     </span>{' '}
                                     Zoom to fit <kbd>⇧1</kbd>
                                 </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={!hasSelection} onClick={() => useCanvas.getState().zoomToSelection()}>
+                                <Menu.Item className="menu-item" disabled={!hasSelection} onClick={() => canvasStore.getState().zoomToSelection()}>
                                     <span className="grid h-4 w-4 place-items-center">
                                         <Icon icon={Scan} size={14} />
                                     </span>{' '}
@@ -161,12 +165,12 @@ export function Dock() {
                 </Menu.Root>
 
                 <Tooltip label="Zoom in" name>
-                    <button className="icon-btn" onClick={() => useCanvas.getState().zoomTo(Math.round(zoom * 100 + 10) / 100)}>
+                    <button className="icon-btn" onClick={() => canvasStore.getState().zoomTo(Math.round(zoom * 100 + 10) / 100)}>
                         <Icon icon={Plus} size={16} />
                     </button>
                 </Tooltip>
                 <Tooltip label="Fit everything" kbd="Shift+1" name>
-                    <button className="icon-btn" onClick={() => useCanvas.getState().fitAll()}>
+                    <button className="icon-btn" onClick={() => canvasStore.getState().fitAll()}>
                         <Icon icon={Maximize} size={16} />
                     </button>
                 </Tooltip>
@@ -189,7 +193,7 @@ export function Dock() {
                                         key={row.key}
                                         className="menu-item"
                                         checked={locks[row.key]}
-                                        onCheckedChange={() => useCanvas.getState().toggleLock(row.key)}
+                                        onCheckedChange={() => canvasStore.getState().toggleLock(row.key)}
                                         closeOnClick={false}
                                     >
                                         <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
@@ -204,7 +208,7 @@ export function Dock() {
                                     </Menu.CheckboxItem>
                                 ))}
                                 <Menu.Separator className={MENU_SEPARATOR} />
-                                <Menu.Item className="menu-item" onClick={() => useCanvas.getState().setAllLocks(!allLocked)}>
+                                <Menu.Item className="menu-item" onClick={() => canvasStore.getState().setAllLocks(!allLocked)}>
                                     {allLocked ? <Icon icon={LockOpen} size={14} /> : <Icon icon={Lock} size={14} />}
                                     {allLocked ? 'Unlock everything' : 'Lock everything'}
                                 </Menu.Item>
@@ -226,7 +230,7 @@ export function Dock() {
                                 <div className={MENU_LABEL}>Saved layouts</div>
                                 {layouts.length === 0 && <div className="px-2.5 pb-1.5 text-xs text-text-faint">Nothing saved yet.</div>}
                                 {layouts.map((layout) => (
-                                    <Menu.Item key={layout.name} className="menu-item group" onClick={() => useCanvas.getState().applyLayout(layout.name)}>
+                                    <Menu.Item key={layout.name} className="menu-item group" onClick={() => canvasStore.getState().applyLayout(layout.name)}>
                                         <Icon icon={LayoutTemplate} size={14} className="text-text-faint" />
                                         <span className="truncate">{layout.name}</span>
                                         <Tooltip label="Delete" name>
@@ -236,7 +240,7 @@ export function Dock() {
                                                 onClick={(e) => {
                                                     // The row applies; only the corner deletes.
                                                     e.stopPropagation();
-                                                    useCanvas.getState().deleteLayout(layout.name);
+                                                    canvasStore.getState().deleteLayout(layout.name);
                                                 }}
                                             >
                                                 <Icon icon={X} size={14} />

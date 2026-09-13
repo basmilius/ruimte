@@ -1,8 +1,9 @@
 import { memo, useEffect, useRef } from 'react';
 import clsx from 'clsx';
-import { useCanvas } from '@/state/canvas';
+import { useCanvas, useCanvasStore } from '@/state/canvas';
 
 export const TextElementView = memo(function TextElementView({ id }: { id: string }) {
+    const canvasStore = useCanvasStore();
     const text = useCanvas((s) => s.texts[id]);
     const selected = useCanvas((s) => s.selection.includes(id));
     const editing = useCanvas((s) => s.editingTextId === id);
@@ -26,11 +27,11 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
 
     const commit = (): void => {
         const value = ref.current?.innerText.trim() ?? '';
-        useCanvas.getState().updateText(id, value);
-        useCanvas.getState().setEditingText(null);
+        canvasStore.getState().updateText(id, value);
+        canvasStore.getState().setEditingText(null);
         if (value === '') {
-            useCanvas.getState().select([id]);
-            useCanvas.getState().deleteSelected();
+            canvasStore.getState().select([id]);
+            canvasStore.getState().deleteSelected();
         }
     };
 
@@ -49,7 +50,7 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
             suppressContentEditableWarning
             onDoubleClick={(e) => {
                 e.stopPropagation();
-                useCanvas.getState().setEditingText(id);
+                canvasStore.getState().setEditingText(id);
             }}
             onBlur={editing ? commit : undefined}
             onKeyDown={(e) => {

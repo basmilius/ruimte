@@ -28,7 +28,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { DRAWING_COLORS, type DrawingColor } from '@ruimte/contracts';
 import { activeZoomPreset, ZOOM_PRESETS } from '@/canvas/math';
 import { copyDrawingPng, copyDrawingSvg, saveDrawingPng, saveDrawingSvg } from '@/drawing/export';
-import { useDrawing, type DrawingStyle, type DrawingTool } from '@/state/drawing';
+import { useDrawing, useDrawingStore, type DrawingStyle, type DrawingTool } from '@/state/drawing';
 import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { DockShell } from '@/ui/DockShell';
 import { Icon } from '@/ui/Icon';
@@ -116,6 +116,7 @@ function RadioRow({ label, value }: { label: string; value: string | number }) {
  * canvas dock returns null on a view of its own, so the two never share the bottom of the screen.
  */
 export function DrawingDock() {
+    const drawingStore = useDrawingStore();
     const { tool, toolLocked, style, zoom, hasSelection, canUndo, canRedo, anyLocked, exportBackground, empty } = useDrawing(
         useShallow((s) => ({
             tool: s.tool,
@@ -130,7 +131,7 @@ export function DrawingDock() {
             empty: s.elements.length === 0
         }))
     );
-    const set = (patch: Partial<DrawingStyle>): void => useDrawing.getState().setStyle(patch);
+    const set = (patch: Partial<DrawingStyle>): void => drawingStore.getState().setStyle(patch);
     const preset = activeZoomPreset(zoom);
 
     return (
@@ -138,13 +139,13 @@ export function DrawingDock() {
             <div className={BTN_GROUP}>
                 {TOOLS.map((row) => (
                     <Tooltip key={row.tool} label={row.label} kbd={row.kbd} name>
-                        <button className="icon-btn" data-active={tool === row.tool} onClick={() => useDrawing.getState().setTool(row.tool)}>
+                        <button className="icon-btn" data-active={tool === row.tool} onClick={() => drawingStore.getState().setTool(row.tool)}>
                             <Icon icon={row.icon} size={16} />
                         </button>
                     </Tooltip>
                 ))}
                 <Tooltip label="Keep the tool" kbd="Q" name>
-                    <button className="icon-btn" data-active={toolLocked} onClick={() => useDrawing.getState().toggleToolLock()}>
+                    <button className="icon-btn" data-active={toolLocked} onClick={() => drawingStore.getState().toggleToolLock()}>
                         <Icon icon={toolLocked ? Lock : LockOpen} size={16} />
                     </button>
                 </Tooltip>
@@ -231,7 +232,7 @@ export function DrawingDock() {
                                 {anyLocked && (
                                     <>
                                         <Menu.Separator className={MENU_SEPARATOR} />
-                                        <Menu.Item className="menu-item" onClick={() => useDrawing.getState().unlockAll()}>
+                                        <Menu.Item className="menu-item" onClick={() => drawingStore.getState().unlockAll()}>
                                             <span className="grid h-4 w-4 place-items-center">
                                                 <Icon icon={LockOpen} size={14} />
                                             </span>
@@ -249,7 +250,7 @@ export function DrawingDock() {
 
             <div className={BTN_GROUP}>
                 <Tooltip label="Zoom out" name>
-                    <button className="icon-btn" onClick={() => useDrawing.getState().zoomTo(Math.round(zoom * 100 - 10) / 100)}>
+                    <button className="icon-btn" onClick={() => drawingStore.getState().zoomTo(Math.round(zoom * 100 - 10) / 100)}>
                         <Icon icon={Minus} size={16} />
                     </button>
                 </Tooltip>
@@ -262,7 +263,7 @@ export function DrawingDock() {
                     <Menu.Portal>
                         <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={10} align="center">
                             <Menu.Popup className="menu-popup min-w-44">
-                                <Menu.RadioGroup value={preset} onValueChange={(value: number) => useDrawing.getState().zoomTo(value / 100)}>
+                                <Menu.RadioGroup value={preset} onValueChange={(value: number) => drawingStore.getState().zoomTo(value / 100)}>
                                     {ZOOM_PRESETS.map((pct) => (
                                         <Menu.RadioItem key={pct} value={pct} className="menu-item">
                                             <span className="grid h-4 w-4 place-items-center">
@@ -276,13 +277,13 @@ export function DrawingDock() {
                                     ))}
                                 </Menu.RadioGroup>
                                 <Menu.Separator className={MENU_SEPARATOR} />
-                                <Menu.Item className="menu-item" onClick={() => useDrawing.getState().fitAll()}>
+                                <Menu.Item className="menu-item" onClick={() => drawingStore.getState().fitAll()}>
                                     <span className="grid h-4 w-4 place-items-center">
                                         <Icon icon={Maximize} size={14} />
                                     </span>
                                     Zoom to fit <kbd>⇧1</kbd>
                                 </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={!hasSelection} onClick={() => useDrawing.getState().zoomToSelection()}>
+                                <Menu.Item className="menu-item" disabled={!hasSelection} onClick={() => drawingStore.getState().zoomToSelection()}>
                                     <span className="grid h-4 w-4 place-items-center">
                                         <Icon icon={Scan} size={14} />
                                     </span>
@@ -293,12 +294,12 @@ export function DrawingDock() {
                     </Menu.Portal>
                 </Menu.Root>
                 <Tooltip label="Zoom in" name>
-                    <button className="icon-btn" onClick={() => useDrawing.getState().zoomTo(Math.round(zoom * 100 + 10) / 100)}>
+                    <button className="icon-btn" onClick={() => drawingStore.getState().zoomTo(Math.round(zoom * 100 + 10) / 100)}>
                         <Icon icon={Plus} size={16} />
                     </button>
                 </Tooltip>
                 <Tooltip label="Fit everything" kbd="Shift+1" name>
-                    <button className="icon-btn" onClick={() => useDrawing.getState().fitAll()}>
+                    <button className="icon-btn" onClick={() => drawingStore.getState().fitAll()}>
                         <Icon icon={Maximize} size={16} />
                     </button>
                 </Tooltip>
@@ -317,16 +318,16 @@ export function DrawingDock() {
                         <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={10} align="end">
                             <Menu.Popup className="menu-popup min-w-52">
                                 <div className={MENU_LABEL}>{hasSelection ? 'Export the selection' : 'Export the drawing'}</div>
-                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDrawingPng()}>
+                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDrawingPng(drawingStore)}>
                                     <Icon icon={Copy} size={14} /> Copy as PNG
                                 </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDrawingPng()}>
+                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDrawingPng(drawingStore)}>
                                     <Icon icon={Download} size={14} /> Save PNG
                                 </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDrawingSvg()}>
+                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDrawingSvg(drawingStore)}>
                                     <Icon icon={Copy} size={14} /> Copy as SVG
                                 </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDrawingSvg()}>
+                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDrawingSvg(drawingStore)}>
                                     <Icon icon={Download} size={14} /> Save SVG
                                 </Menu.Item>
                                 <Menu.Separator className={MENU_SEPARATOR} />
@@ -334,7 +335,7 @@ export function DrawingDock() {
                                     className="menu-item"
                                     checked={exportBackground}
                                     closeOnClick={false}
-                                    onCheckedChange={(checked) => useDrawing.getState().setExportBackground(checked)}
+                                    onCheckedChange={(checked) => drawingStore.getState().setExportBackground(checked)}
                                 >
                                     <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
                                         <Menu.CheckboxItemIndicator>
@@ -348,12 +349,12 @@ export function DrawingDock() {
                     </Menu.Portal>
                 </Menu.Root>
                 <Tooltip label="Undo" kbd="Cmd+Z" name>
-                    <button className="icon-btn" disabled={!canUndo} onClick={() => useDrawing.getState().undo()}>
+                    <button className="icon-btn" disabled={!canUndo} onClick={() => drawingStore.getState().undo()}>
                         <Icon icon={Undo2} size={16} />
                     </button>
                 </Tooltip>
                 <Tooltip label="Redo" kbd="Shift+Cmd+Z" name>
-                    <button className="icon-btn" disabled={!canRedo} onClick={() => useDrawing.getState().redo()}>
+                    <button className="icon-btn" disabled={!canRedo} onClick={() => drawingStore.getState().redo()}>
                         <Icon icon={Redo2} size={16} />
                     </button>
                 </Tooltip>

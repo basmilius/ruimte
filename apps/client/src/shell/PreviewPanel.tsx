@@ -6,7 +6,7 @@ import { FileTabs } from '@/shell/panels/FileTabs';
 import { FileViewer } from '@/shell/panels/FileViewer';
 import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
 import { useInstantWidth } from '@/shell/useInstantWidth';
-import { useCanvas } from '@/state/canvas';
+import { focusedCanvas } from '@/state/canvas';
 import { useFiles } from '@/state/files';
 import { useUi } from '@/state/ui';
 import { Icon } from '@/ui/Icon';
@@ -23,7 +23,7 @@ const TRANSITION_MS = 200;
 
 /* Half of the room the canvas had, which is what the preview opens with until a drag says otherwise. */
 const halfOfCanvas = (): number => {
-    const canvas = useCanvas.getState().viewport.w || window.innerWidth;
+    const canvas = focusedCanvas().getState().viewport.w || window.innerWidth;
     return Math.max(MIN_WIDTH, Math.min(MAX_DEFAULT_WIDTH, Math.floor(canvas / 2)));
 };
 

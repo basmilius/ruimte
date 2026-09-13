@@ -10,7 +10,7 @@ import type {
     RequestMap,
     RequestType
 } from '@ruimte/contracts';
-import { useCanvas, type CanvasState } from '../state/canvas';
+import { focusedCanvas, type CanvasState } from '../state/canvas';
 import { useDocument } from '../state/document';
 import { useFiles } from '../state/files';
 import { useUi } from '../state/ui';
@@ -244,7 +244,7 @@ describe('ProjectClient', () => {
         expect(transport.of('project.open')[0]?.payload).toEqual({ projectId: 'p1' });
         expect(state.current?.projectId).toBe('p1');
         expect(state.rev).toBe(3);
-        expect(useCanvas.getState().camera).toEqual({ x: 5, y: 6, zoom: 1 });
+        expect(focusedCanvas().getState().camera).toEqual({ x: 5, y: 6, zoom: 1 });
         dispose();
     });
 
@@ -267,7 +267,7 @@ describe('ProjectClient', () => {
     test('an edit saves after the pause against the loaded rev, and a camera move only touches the local file', async () => {
         const { transport, state, dispose } = setup();
         await tick();
-        useCanvas.getState().addNode('terminal', { x: 0, y: 0 });
+        focusedCanvas().getState().addNode('terminal', { x: 0, y: 0 });
         expect(state.dirty).toBe(true);
         await tick(10);
         const save = transport.of('project.save')[0]?.payload as { baseRev: number; content: { views: ProjectCanvasView[] } };
@@ -276,7 +276,7 @@ describe('ProjectClient', () => {
         expect(state.rev).toBe(4);
         expect(state.dirty).toBe(false);
 
-        useCanvas.getState().panBy(10, 10);
+        focusedCanvas().getState().panBy(10, 10);
         await tick(10);
         expect(transport.of('project.save')).toHaveLength(1);
         expect(transport.of('project.save-local').at(-1)?.payload).toMatchObject({
@@ -312,17 +312,17 @@ describe('ProjectClient', () => {
             document: document(9, [canvasView('main', [{ id: 'n', kind: 'browser', title: 'b', x: 0, y: 0, w: 10, h: 10 }])])
         });
         expect(state.rev).toBe(9);
-        expect(useCanvas.getState().order).toEqual(['n']);
+        expect(focusedCanvas().getState().order).toEqual(['n']);
         expect(state.conflict).toBeNull();
 
         transport.rev = 9;
-        useCanvas.getState().addNode('chat', { x: 0, y: 0 });
+        focusedCanvas().getState().addNode('chat', { x: 0, y: 0 });
         transport.emit('project.changed', { projectId: 'p1', document: document(10) });
         expect(state.conflict?.rev).toBe(10);
-        expect(useCanvas.getState().order).toHaveLength(2);
+        expect(focusedCanvas().getState().order).toHaveLength(2);
 
         await client.resolveConflict('theirs');
-        expect(useCanvas.getState().order).toEqual([]);
+        expect(focusedCanvas().getState().order).toEqual([]);
         expect(state.rev).toBe(10);
         expect(state.conflict).toBeNull();
         dispose();
@@ -331,7 +331,7 @@ describe('ProjectClient', () => {
     test('keeping mine after a conflict writes over the newer rev', async () => {
         const { transport, state, client, dispose } = setup();
         await tick();
-        useCanvas.getState().addNode('chat', { x: 0, y: 0 });
+        focusedCanvas().getState().addNode('chat', { x: 0, y: 0 });
         transport.rev = 12;
         // A rename is nothing a merge can take in, so this is the dialog and not the additive path.
         transport.emit('project.changed', { projectId: 'p1', document: { ...document(12), name: 'renamed' } });
@@ -340,14 +340,14 @@ describe('ProjectClient', () => {
         await client.resolveConflict('mine');
         expect(transport.of('project.save').at(-1)?.payload).toMatchObject({ baseRev: 12 });
         expect(state.rev).toBe(13);
-        expect(useCanvas.getState().order).toHaveLength(1);
+        expect(focusedCanvas().getState().order).toHaveLength(1);
         dispose();
     });
 
     test('a node the daemon added lands on a canvas with unsaved edits, and the next save carries the new rev', async () => {
         const { transport, state, client, dispose } = setup();
         await tick();
-        const mine = useCanvas.getState().addNode('chat', { x: 0, y: 0 })!;
+        const mine = focusedCanvas().getState().addNode('chat', { x: 0, y: 0 })!;
 
         transport.rev = 4;
         transport.emit('project.changed', {
@@ -357,7 +357,7 @@ describe('ProjectClient', () => {
 
         expect(state.conflict).toBeNull();
         expect(client.mergeRefusal).toBeNull();
-        expect(useCanvas.getState().order).toEqual([mine, 'agent']);
+        expect(focusedCanvas().getState().order).toEqual([mine, 'agent']);
         // A view an agent made is in the list, and did not take the cell the person is looking at.
         expect(useDocument.getState().views.map((view) => view.id)).toEqual(['main', 'made']);
         expect(useDocument.getState().activeViewId).toBe('main');
@@ -379,7 +379,7 @@ describe('ProjectClient', () => {
         transport.holdSave = new Promise<void>((resolve) => {
             release = resolve;
         });
-        const mine = useCanvas.getState().addNode('chat', { x: 0, y: 0 })!;
+        const mine = focusedCanvas().getState().addNode('chat', { x: 0, y: 0 })!;
         await tick(10);
         expect(transport.of('project.save')).toHaveLength(1);
 
@@ -400,7 +400,7 @@ describe('ProjectClient', () => {
         expect(state.conflict).toBeNull();
         expect(state.rev).toBe(5);
         expect(state.dirty).toBe(false);
-        expect(useCanvas.getState().order).toEqual([mine, 'agent']);
+        expect(focusedCanvas().getState().order).toEqual([mine, 'agent']);
         dispose();
     });
 
@@ -408,7 +408,7 @@ describe('ProjectClient', () => {
         const { transport, state, client, storage, dispose } = setup();
         await tick();
         transport.projects = [summary('p1', '/repo'), summary('p2')];
-        useCanvas.getState().addText({ x: 0, y: 0 });
+        focusedCanvas().getState().addText({ x: 0, y: 0 });
         await client.openProject('p2');
         expect(transport.of('project.save')).toHaveLength(1);
         // Released and not closed: the project switched away from stays in the list, not under Recent.
@@ -469,19 +469,19 @@ describe('ProjectClient', () => {
     test('closing leaves an empty canvas and no current project', async () => {
         const { state, client, dispose } = setup();
         await tick();
-        useCanvas.getState().addNode('terminal', { x: 0, y: 0 });
+        focusedCanvas().getState().addNode('terminal', { x: 0, y: 0 });
         await client.closeProject();
         expect(state.current).toBeNull();
-        expect(useCanvas.getState().order).toEqual([]);
+        expect(focusedCanvas().getState().order).toEqual([]);
         dispose();
     });
 
     test('closing ends every session the project holds, on the machine it was opened on', async () => {
         const { client, ended, dispose } = setup();
         await tick();
-        const terminal = useCanvas.getState().addNode('terminal', { x: 0, y: 0 })!;
-        const chat = useCanvas.getState().addNode('chat', { x: 0, y: 0 })!;
-        useCanvas.getState().addNode('note', { x: 0, y: 0 });
+        const terminal = focusedCanvas().getState().addNode('terminal', { x: 0, y: 0 })!;
+        const chat = focusedCanvas().getState().addNode('chat', { x: 0, y: 0 })!;
+        focusedCanvas().getState().addNode('note', { x: 0, y: 0 });
         // A view of its own is a session as much as a node on the canvas, and it is not on screen.
         const view = useDocument.getState().addStandaloneView({ kind: 'terminal', name: 'Shell', node: {} });
         useDocument.getState().setActiveView('main');
@@ -494,7 +494,7 @@ describe('ProjectClient', () => {
         const { transport, client, ended, dispose } = setup();
         await tick();
         transport.projects = [summary('p1', '/repo'), summary('p2')];
-        useCanvas.getState().addNode('terminal', { x: 0, y: 0 });
+        focusedCanvas().getState().addNode('terminal', { x: 0, y: 0 });
         await client.openProject('p2');
         expect(ended).toEqual([]);
         dispose();
@@ -503,7 +503,7 @@ describe('ProjectClient', () => {
     test('deleting the open project ends its sessions on the way out', async () => {
         const { client, ended, dispose } = setup();
         await tick();
-        const terminal = useCanvas.getState().addNode('terminal', { x: 0, y: 0 })!;
+        const terminal = focusedCanvas().getState().addNode('terminal', { x: 0, y: 0 })!;
         await client.deleteProject('p1', true);
         expect(ended).toEqual([{ endpointId: 'daemon-a', nodes: [`terminal:${terminal}`] }]);
         dispose();

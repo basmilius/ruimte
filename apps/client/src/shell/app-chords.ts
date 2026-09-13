@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { isApplePlatform } from '@/desktop/bridge';
-import { useCanvas } from '@/state/canvas';
+import { focusedCanvas } from '@/state/canvas';
 import { useUi } from '@/state/ui';
 
 /*
@@ -76,7 +76,7 @@ const run = (chord: AppChord): void => {
 export const useAppChords = (): void => {
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent): void => {
-            const chord = appChordFor(e, { inNode: useCanvas.getState().mode.kind === 'node', apple: isApplePlatform() });
+            const chord = appChordFor(e, { inNode: focusedCanvas().getState().mode.kind === 'node', apple: isApplePlatform() });
             if (chord === null) {
                 return;
             }

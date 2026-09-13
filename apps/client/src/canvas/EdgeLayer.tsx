@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { isAgentKind, useCanvas } from '@/state/canvas';
+import { isAgentKind, useCanvas, useCanvasStore } from '@/state/canvas';
 import { anchors, curve, edgeLines, selectedLine, textRect, type EdgeLine } from '@/canvas/edge-lines';
 import type { Point, Rect } from '@/canvas/math';
 
@@ -16,6 +16,7 @@ function EdgeLabel({
     editing: boolean;
     onEdit(editing: boolean): void;
 }) {
+    const canvasStore = useCanvasStore();
     if (editing) {
         return (
             <foreignObject x={at.x - 60} y={at.y - 14} width="120" height="28">
@@ -27,7 +28,7 @@ function EdgeLabel({
                     onBlur={(e) => {
                         // Both directions carry the name: to a person this is one line, and one line has one name.
                         for (const id of ids) {
-                            useCanvas.getState().setEdgeLabel(id, e.currentTarget.value);
+                            canvasStore.getState().setEdgeLabel(id, e.currentTarget.value);
                         }
                         onEdit(false);
                     }}
@@ -58,6 +59,7 @@ function EdgeLabel({
 }
 
 export function EdgeLayer() {
+    const canvasStore = useCanvasStore();
     const edges = useCanvas((s) => s.edges);
     const nodes = useCanvas((s) => s.nodes);
     const texts = useCanvas((s) => s.texts);
@@ -128,7 +130,7 @@ export function EdgeLayer() {
                             onPointerDown={(e) => {
                                 e.stopPropagation();
                                 // One line is one thing to click, so both of its directions are selected together.
-                                useCanvas.getState().select(line.ids, e.shiftKey);
+                                canvasStore.getState().select(line.ids, e.shiftKey);
                             }}
                             onDoubleClick={(e) => {
                                 e.stopPropagation();
@@ -154,7 +156,7 @@ export function EdgeLayer() {
                                 onPointerDown={(e) => {
                                     e.stopPropagation();
                                     for (const id of line.ids) {
-                                        useCanvas.getState().removeEdge(id);
+                                        canvasStore.getState().removeEdge(id);
                                     }
                                 }}
                             >

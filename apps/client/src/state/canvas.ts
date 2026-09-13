@@ -1,6 +1,6 @@
 import { createStore, type StoreApi } from 'zustand';
 import { createEditorRegistry, type EditorRegistry } from '@/state/editors';
-import { currentStores, editorHook, subscribeCurrentWorkspace, useEditorStoreOf } from '@/state/workspace-stores';
+import { currentStores, editorHook, focusedEditor, subscribeCurrentWorkspace, useEditorStoreOf } from '@/state/workspace-stores';
 import {
     cameraCenteredOn,
     cameraToFit,
@@ -788,17 +788,35 @@ export const defaultCanvasStore = createCanvasStore();
 /* The registry of no workspace at all; its blank editor is the store this module made. */
 export const defaultCanvases = createEditorRegistry(createCanvasStore, defaultCanvasStore);
 
+/* What a component reads while it renders: the canvas of the cell it is drawn in. */
 export const useCanvas = editorHook('canvases', defaultCanvases);
 
 /*
  * The canvas store of the cell a component is drawn in, as the store itself. A component that
- * subscribes rather than reads needs this: `useCanvas.subscribe` is the cell that has the focus at
- * the moment of the call, and stays with that editor after the focus and the view have moved on.
+ * subscribes or writes rather than reads needs this: the hook above has no `getState`, because a
+ * component holding one that answers for the cell beside it is the bug this is here to make hard.
  */
 export const useCanvasStore = (): StoreApi<CanvasState> => useEditorStoreOf('canvases', defaultCanvases);
 
+/*
+ * The canvas of the cell that has the focus. This is "the canvas in front of me", which is what a
+ * chord, a window menu, a palette row or anything else with no cell of its own means. Inside a cell
+ * it is the wrong store as often as not: use `useCanvasStore`.
+ */
+export const focusedCanvas = (): StoreApi<CanvasState> => focusedEditor('canvases', defaultCanvases);
+
 /* The canvas editors of the workspace in front of us, which outside one is the default registry. */
 const canvases = (): EditorRegistry<CanvasState> => currentStores()?.canvases ?? defaultCanvases;
+
+/*
+ * The editor of the view a node stands on, out of every canvas on screen. What arrives for one node
+ * (a title from its CLI, a close, a page's url) is about that node's own view, which in a split is
+ * not always the one with the focus.
+ */
+export const canvasOfNode = (nodeId: string): StoreApi<CanvasState> | null =>
+    canvases()
+        .live()
+        .find(([, store]) => store.getState().nodes[nodeId] !== undefined)?.[1] ?? null;
 
 /*
  * What a view holds right now. A view on screen is held by its editor, which is fresher than the

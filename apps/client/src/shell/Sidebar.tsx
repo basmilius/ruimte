@@ -28,7 +28,7 @@ import { useProcessWarnings } from '@/state/processes';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
 import { finderPaths } from '@/canvas/finder-drop';
 import { askDeleteView, askViewIcon, duplicateViewOf, newFileView, putOnCanvas, revealNode, showView, showViewOnCanvas } from '@/project/views';
-import { useCanvas } from '@/state/canvas';
+import { focusedCanvas, useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
@@ -183,7 +183,7 @@ function NodeRow({ row, tabbable, onFocus, onArrow }: RowProps & { row: SidebarN
                     value={node.title}
                     onDone={(next) => {
                         if (next) {
-                            useCanvas.getState().renameNode(node.id, next);
+                            focusedCanvas().getState().renameNode(node.id, next);
                         } else {
                             resetTitle(node.id);
                         }

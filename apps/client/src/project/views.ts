@@ -2,7 +2,7 @@ import { isCanvasView, isDrawingView, isFileView, isOpenableView, isSessionView,
 import { toWorld, type Point } from '@/canvas/math';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
 import { viewIdsIn, type SplitDirection } from '@/shell/split';
-import { liveCanvas, useCanvas } from '@/state/canvas';
+import { focusedCanvas, liveCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { currentEndpointId } from '@/state/keys';
 import { useDocument, viewOfNode, type DocumentState } from '@/state/document';
@@ -53,7 +53,7 @@ export const revealNode = (nodeId: string): void => {
     if (view && view.id !== activeViewId) {
         showView(view.id);
     }
-    useCanvas.getState().goToNode(nodeId);
+    focusedCanvas().getState().goToNode(nodeId);
 };
 
 /* "Canvas", then "Canvas 2": a new view is named after what it is until someone renames it. */
@@ -97,7 +97,7 @@ export const showOnCanvas = (viewId: string): string | null => {
         return null;
     }
     showView(canvasViewId);
-    const canvas = useCanvas.getState();
+    const canvas = focusedCanvas().getState();
     const center = toWorld(canvas.camera, { x: canvas.viewport.w / 2, y: canvas.viewport.h / 2 });
     const id = canvas.addNode('drawing', center, { title: view.name, viewId });
     if (id === null) {
@@ -132,7 +132,7 @@ export const showFileOnCanvas = (path: string, at?: Point): string | null => {
         return null;
     }
     showView(canvasViewId);
-    const canvas = useCanvas.getState();
+    const canvas = focusedCanvas().getState();
     const point = at ?? toWorld(canvas.camera, { x: canvas.viewport.w / 2, y: canvas.viewport.h / 2 });
     const id = canvas.addNode('file', point, { title: basenameOf(path), path: storedFilePath(path) });
     if (id !== null && at === undefined) {
@@ -184,11 +184,9 @@ export const nodesOfView = (view: ProjectView): StatusOf[] => {
     if (!isCanvasView(view)) {
         return [];
     }
-    if (view.id === useDocument.getState().activeViewId) {
-        const canvas = useCanvas.getState();
-        return canvas.order.map((id) => canvas.nodes[id]!);
-    }
-    return view.nodes;
+    // A view on screen is held by its editor, wherever in the grid it stands, and that is newer.
+    const canvas = liveCanvas(view.id);
+    return canvas === null ? view.nodes : canvas.order.map((id) => canvas.nodes[id]!);
 };
 
 /* A node as the whole project sees it: enough to have a status and a name, never a place. */
@@ -235,8 +233,9 @@ export const canOpenAsView = (kind: NodeKind): boolean => kind === 'chat' || kin
  * behind, because an edge lives on a canvas, so a node that has any asks before it goes.
  */
 export const askOpenAsView = (nodeId: string): void => {
-    const canvas = useCanvas.getState();
-    if (canvas.edges.some((edge) => edge.from === nodeId || edge.to === nodeId)) {
+    const view = viewOfNode(useDocument.getState().views, nodeId);
+    const canvas = view === null ? null : liveCanvas(view.id);
+    if (canvas !== null && canvas.edges.some((edge) => edge.from === nodeId || edge.to === nodeId)) {
         useUi.getState().setViewDialog({ kind: 'promote', nodeId });
         return;
     }

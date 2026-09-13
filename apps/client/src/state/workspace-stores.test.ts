@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { createCanvasStore, defaultCanvasStore, useCanvas } from './canvas';
+import { createCanvasStore, defaultCanvasStore, focusedCanvas } from './canvas';
 import { createEditorRegistry } from './editors';
 import { createDocumentStore, useDocument } from './document';
 import { createDrawingStore } from './drawing';
 import { createProjectStore, useProject } from './project';
-import { currentStores, currentWorkspaceEndpointId, isFocusedWorkspace, setCurrentWorkspace, type WorkspaceStores } from './workspace-stores';
+import { currentStores, currentWorkspaceEndpointId, isFocusedWorkspace, resolveEditor, setCurrentWorkspace, type WorkspaceStores } from './workspace-stores';
 
 const workspace = (): WorkspaceStores => {
     const canvases = createEditorRegistry(createCanvasStore);
@@ -58,12 +58,59 @@ describe('the stores of a workspace', () => {
     });
 });
 
+describe('which editor a cell resolves to', () => {
+    test('the cell it was asked about, even while another cell has the focus', () => {
+        const registry = createEditorRegistry(createCanvasStore);
+        registry.of('left');
+        registry.of('right');
+        registry.focus('right');
+
+        expect(resolveEditor(registry, 'left')).toBe(registry.peek('left')!);
+        expect(resolveEditor(registry, 'right')).toBe(registry.peek('right')!);
+    });
+
+    /* The bug this answers: a component drawn in one cell wrote into the cell that had the focus,
+       so two drawings side by side edited the same elements. Naming the cell is what settles it. */
+    test('two cells resolve to two editors, and neither is the other', () => {
+        const registry = createEditorRegistry(createCanvasStore);
+        registry.of('left');
+        registry.of('right');
+        registry.focus('right');
+        resolveEditor(registry, 'left').getState().addText({ x: 0, y: 0 });
+
+        expect(Object.keys(resolveEditor(registry, 'left').getState().texts)).toHaveLength(1);
+        expect(Object.keys(resolveEditor(registry, 'right').getState().texts)).toHaveLength(0);
+    });
+
+    test('no cell means the one with the focus', () => {
+        const registry = createEditorRegistry(createCanvasStore);
+        registry.of('left');
+        registry.of('right');
+        registry.focus('left');
+        expect(resolveEditor(registry, null)).toBe(registry.peek('left')!);
+
+        registry.focus('right');
+        expect(resolveEditor(registry, null)).toBe(registry.peek('right')!);
+    });
+
+    test('a view with no editor of this kind reads the blank one, and so does a grid with no focus', () => {
+        const registry = createEditorRegistry(createCanvasStore);
+        registry.of('canvas');
+        registry.focus('canvas');
+
+        // A chat cell asking for a canvas: there is none, and the blank editor is what it reads.
+        expect(resolveEditor(registry, 'chat')).toBe(registry.blank);
+        registry.focus(null);
+        expect(resolveEditor(registry, null)).toBe(registry.blank);
+    });
+});
+
 describe('the hook over a slot', () => {
     test('with no workspace and no view open it is the blank editor the module made', () => {
         // Said out loud, because a project left open by another test would resolve to its editor instead.
         useDocument.getState().load(null, null);
         expect(currentStores()).toBeNull();
-        useCanvas.setState({ viewport: { w: 640, h: 480 } });
+        focusedCanvas().setState({ viewport: { w: 640, h: 480 } });
         expect(defaultCanvasStore.getState().viewport).toEqual({ w: 640, h: 480 });
     });
 

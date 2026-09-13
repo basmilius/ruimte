@@ -5,7 +5,7 @@ import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Keys, Segmented, Toggle } from '@/shell/settings/controls';
 import { Button } from '@/ui/Button';
-import { useCanvas } from '@/state/canvas';
+import { focusedCanvas, useCanvas } from '@/state/canvas';
 import { useUi } from '@/state/ui';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
@@ -31,7 +31,11 @@ export function CanvasPane() {
                             value={preset === null ? '' : String(preset)}
                             options={PRESET_OPTIONS}
                             label="Zoom level"
-                            onChange={(value) => useCanvas.getState().zoomTo(Number(value) / 100)}
+                            onChange={(value) =>
+                                focusedCanvas()
+                                    .getState()
+                                    .zoomTo(Number(value) / 100)
+                            }
                         />
                     }
                 />
@@ -41,7 +45,7 @@ export function CanvasPane() {
                     control={
                         <>
                             <Keys keys="⇧ 1" />
-                            <Button variant="secondary" onClick={() => useCanvas.getState().fitAll()}>
+                            <Button variant="secondary" onClick={() => focusedCanvas().getState().fitAll()}>
                                 <Icon icon={Maximize} size={12} /> Fit
                             </Button>
                         </>
@@ -53,7 +57,7 @@ export function CanvasPane() {
                     control={
                         <>
                             <Keys keys="⇧ 2" />
-                            <Button variant="secondary" disabled={!hasSelection} onClick={() => useCanvas.getState().zoomToSelection()}>
+                            <Button variant="secondary" disabled={!hasSelection} onClick={() => focusedCanvas().getState().zoomToSelection()}>
                                 <Icon icon={Scan} size={12} /> Frame
                             </Button>
                         </>
@@ -70,7 +74,7 @@ export function CanvasPane() {
                             <Toggle
                                 checked={locks[row.key]}
                                 label={`Lock ${row.label.toLowerCase()}`}
-                                onChange={() => useCanvas.getState().toggleLock(row.key)}
+                                onChange={() => focusedCanvas().getState().toggleLock(row.key)}
                             />
                         }
                     />
@@ -95,14 +99,14 @@ export function CanvasPane() {
                         description={`${Object.keys(layout.nodes).length} nodes`}
                         control={
                             <>
-                                <Button variant="secondary" onClick={() => useCanvas.getState().applyLayout(layout.name)}>
+                                <Button variant="secondary" onClick={() => focusedCanvas().getState().applyLayout(layout.name)}>
                                     Apply
                                 </Button>
                                 <Tooltip label="Delete layout">
                                     <button
                                         className="icon-btn h-8 w-8"
                                         aria-label={`Delete layout ${layout.name}`}
-                                        onClick={() => useCanvas.getState().deleteLayout(layout.name)}
+                                        onClick={() => focusedCanvas().getState().deleteLayout(layout.name)}
                                     >
                                         <Icon icon={Trash} size={16} />
                                     </button>

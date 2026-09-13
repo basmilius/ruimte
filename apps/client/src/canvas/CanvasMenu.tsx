@@ -3,7 +3,7 @@ import { FileText, Globe, LayoutGrid, Maximize, MessageSquare, Scan, Settings, S
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentNode } from '@/agents/nodes';
 import type { Point } from '@/canvas/math';
-import { useCanvas, type NodeKind } from '@/state/canvas';
+import { useCanvas, useCanvasStore, type NodeKind } from '@/state/canvas';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
@@ -11,11 +11,12 @@ import { Icon } from '@/ui/Icon';
 
 /* The menu for a right-click on empty canvas; everything it adds lands where the click was. */
 export function CanvasMenuPopup({ at }: { at: () => Point }) {
+    const canvasStore = useCanvasStore();
     const hasSelection = useCanvas((s) => s.selection.length > 0);
     /* A file comes out of the open folder, so a project without one has nothing to pick from. */
     const hasFolder = useProject((s) => s.current?.folder != null);
     const add = (kind: NodeKind): void => {
-        useCanvas.getState().addNode(kind, at());
+        canvasStore.getState().addNode(kind, at());
     };
     return (
         <ContextMenu.Portal>
@@ -43,23 +44,23 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                             <Icon icon={FileText} size={14} /> File...
                         </ContextMenu.Item>
                     )}
-                    <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().addText(at())}>
+                    <ContextMenu.Item className="menu-item" onClick={() => canvasStore.getState().addText(at())}>
                         <Icon icon={Type} size={14} /> Text <span className={MENU_HINT}>dbl-click</span>
                     </ContextMenu.Item>
                     <ContextMenu.Separator className={MENU_SEPARATOR} />
-                    <ContextMenu.Item className="menu-item" disabled={!hasSelection} onClick={() => useCanvas.getState().groupSelection()}>
+                    <ContextMenu.Item className="menu-item" disabled={!hasSelection} onClick={() => canvasStore.getState().groupSelection()}>
                         <Icon icon={SquareDashedMousePointer} size={14} /> Group selection <kbd>⌘G</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Item
                         className="menu-item"
                         onClick={() => {
-                            const s = useCanvas.getState();
+                            const s = canvasStore.getState();
                             s.select([...s.order, ...Object.keys(s.texts)]);
                         }}
                     >
                         <Icon icon={Scan} size={14} /> Select all <kbd>⌘A</kbd>
                     </ContextMenu.Item>
-                    <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().fitAll()}>
+                    <ContextMenu.Item className="menu-item" onClick={() => canvasStore.getState().fitAll()}>
                         <Icon icon={Maximize} size={14} /> Zoom to fit <kbd>⇧1</kbd>
                     </ContextMenu.Item>
                     <ContextMenu.Separator className={MENU_SEPARATOR} />

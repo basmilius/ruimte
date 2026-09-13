@@ -14,8 +14,8 @@ import {
     showOnCanvas
 } from '@/project/views';
 import { copyDrawingPng, copyDrawingSvg, saveDrawingPng, saveDrawingSvg } from '@/drawing/export';
-import { useCanvas, type AddNodeOptions, type NodeKind } from '@/state/canvas';
-import { useDrawing } from '@/state/drawing';
+import { focusedCanvas, type AddNodeOptions, type CanvasState, type NodeKind } from '@/state/canvas';
+import { focusedDrawing } from '@/state/drawing';
 import { activeViewOf, useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
@@ -37,17 +37,17 @@ export interface Command {
 }
 
 /* Whichever surface is on screen owns the zoom rows in the palette. */
-const zoomTarget = (): Pick<ReturnType<typeof useCanvas.getState>, 'fitAll' | 'zoomToSelection' | 'zoomTo'> => {
+const zoomTarget = (): Pick<CanvasState, 'fitAll' | 'zoomToSelection' | 'zoomTo'> => {
     const view = activeViewOf(useDocument.getState());
-    return view && isDrawingView(view) ? useDrawing.getState() : useCanvas.getState();
+    return view && isDrawingView(view) ? focusedDrawing().getState() : focusedCanvas().getState();
 };
 
 const centerWorld = () => {
-    const s = useCanvas.getState();
+    const s = focusedCanvas().getState();
     return toWorld(s.camera, { x: s.viewport.w / 2, y: s.viewport.h / 2 });
 };
 
-export const addNodeAtCenter = (kind: NodeKind, options?: AddNodeOptions): string | null => useCanvas.getState().addNode(kind, centerWorld(), options);
+export const addNodeAtCenter = (kind: NodeKind, options?: AddNodeOptions): string | null => focusedCanvas().getState().addNode(kind, centerWorld(), options);
 
 export const addAgentNodeAtCenter = (target: AgentTarget, provider: ProviderInfo): string | null => addAgentNode(target, provider, centerWorld());
 
@@ -83,7 +83,7 @@ const agentCommands = (target: AgentTarget, providers: ProviderInfo[], onCanvas:
  * project rarely has enough views for that to grow long.
  */
 const moveNodeCommands = (): Command[] => {
-    const { selection, nodes } = useCanvas.getState();
+    const { selection, nodes } = focusedCanvas().getState();
     const node = selection.length === 1 ? nodes[selection[0]!] : undefined;
     if (!node || node.kind === 'group') {
         return [];
@@ -108,7 +108,7 @@ export const OPENING_COMMAND_IDS: readonly string[] = ['add-chat', 'add-terminal
 
 /* Everything the palette can do besides jumping to a node. One list, so the dock and the keys agree. */
 export const appCommands = (): Command[] => {
-    const canvas = useCanvas.getState();
+    const canvas = focusedCanvas().getState();
     const anyLocked = Object.values(canvas.locks).some(Boolean);
     const folder = useProject.getState().current?.folder ?? null;
     const { activeViewId, views } = useDocument.getState();
@@ -185,9 +185,9 @@ export const appCommands = (): Command[] => {
                                 label: 'Group selection',
                                 hint: canvas.selection.length === 0 ? 'Select nodes first' : undefined,
                                 shortcut: '⌘G',
-                                run: () => void useCanvas.getState().groupSelection()
+                                run: () => void focusedCanvas().getState().groupSelection()
                             },
-                            { id: 'add-text', label: 'New text', run: () => void useCanvas.getState().addText(centerWorld()) },
+                            { id: 'add-text', label: 'New text', run: () => void focusedCanvas().getState().addText(centerWorld()) },
                             {
                                 id: 'layout-save',
                                 label: 'Save layout as',
@@ -198,15 +198,19 @@ export const appCommands = (): Command[] => {
                                 {
                                     id: `layout-apply-${layout.name}`,
                                     label: `Apply layout: ${layout.name}`,
-                                    run: () => useCanvas.getState().applyLayout(layout.name)
+                                    run: () => focusedCanvas().getState().applyLayout(layout.name)
                                 },
                                 {
                                     id: `layout-delete-${layout.name}`,
                                     label: `Delete layout: ${layout.name}`,
-                                    run: () => useCanvas.getState().deleteLayout(layout.name)
+                                    run: () => focusedCanvas().getState().deleteLayout(layout.name)
                                 }
                             ]),
-                            { id: 'lock', label: anyLocked ? 'Unlock everything' : 'Lock everything', run: () => useCanvas.getState().setAllLocks(!anyLocked) }
+                            {
+                                id: 'lock',
+                                label: anyLocked ? 'Unlock everything' : 'Lock everything',
+                                run: () => focusedCanvas().getState().setAllLocks(!anyLocked)
+                            }
                         ]
                       : []),
                   // A drawing has a camera of its own, so the same three rows act on whichever is on screen.
@@ -220,10 +224,10 @@ export const appCommands = (): Command[] => {
                   ...(drawing && activeView
                       ? [
                             { id: 'drawing-show-on-canvas', label: 'Show the drawing on canvas', run: () => void showOnCanvas(activeView.id) },
-                            { id: 'drawing-copy-png', label: 'Copy the drawing as PNG', run: () => void copyDrawingPng() },
-                            { id: 'drawing-save-png', label: 'Save the drawing as PNG', run: () => void saveDrawingPng() },
-                            { id: 'drawing-copy-svg', label: 'Copy the drawing as SVG', run: () => void copyDrawingSvg() },
-                            { id: 'drawing-save-svg', label: 'Save the drawing as SVG', run: () => void saveDrawingSvg() }
+                            { id: 'drawing-copy-png', label: 'Copy the drawing as PNG', run: () => void copyDrawingPng(focusedDrawing()) },
+                            { id: 'drawing-save-png', label: 'Save the drawing as PNG', run: () => void saveDrawingPng(focusedDrawing()) },
+                            { id: 'drawing-copy-svg', label: 'Copy the drawing as SVG', run: () => void copyDrawingSvg(focusedDrawing()) },
+                            { id: 'drawing-save-svg', label: 'Save the drawing as SVG', run: () => void saveDrawingSvg(focusedDrawing()) }
                         ]
                       : [])
               ]

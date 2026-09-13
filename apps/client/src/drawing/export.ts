@@ -1,9 +1,10 @@
+import type { StoreApi } from 'zustand';
 import type { DrawingElement } from '@ruimte/contracts';
 import { DEFAULT_SVG_MARGIN, approximateMeasure, boundsOfElements, toSvg } from '@ruimte/drawing';
 import { desktop } from '@/desktop/bridge';
 import { measureLineIn, paintElements, paintOptions } from '@/drawing/paint';
 import { readCanvasBackground, readFontStacks, readPaper, readPalette } from '@/drawing/palette';
-import { useDrawing } from '@/state/drawing';
+import type { DrawingState } from '@/state/drawing';
 
 /* A PNG is written at twice the size, so it still reads when it is dropped into a document. */
 const PNG_SCALE = 2;
@@ -11,24 +12,31 @@ const PNG_SCALE = 2;
 /* What the clipboard carries between two drawings of this app; anything else pastes as nothing. */
 export const CLIPBOARD_TYPE = 'application/x-ruimte-drawing';
 
+/*
+ * Which drawing an export is about. Every one of these takes the store rather than reaching for the
+ * focused one: the dock that offers them is drawn inside a cell, and in a split that cell is not
+ * always the one with the focus.
+ */
+type DrawingSource = StoreApi<DrawingState>;
+
 /* The selection if there is one, else the whole drawing: what every export acts on. */
-export const exportTargets = (): DrawingElement[] => {
-    const { elements, selection } = useDrawing.getState();
+export const exportTargets = (store: DrawingSource): DrawingElement[] => {
+    const { elements, selection } = store.getState();
     const selected = elements.filter((element) => selection.includes(element.id));
     return selected.length > 0 ? selected : elements;
 };
 
-export const drawingSvg = (elements: readonly DrawingElement[] = exportTargets()): string =>
+export const drawingSvg = (store: DrawingSource, elements: readonly DrawingElement[] = exportTargets(store)): string =>
     toSvg(elements, {
         palette: readPalette(),
         paper: readPaper(),
-        background: useDrawing.getState().exportBackground ? readCanvasBackground() : null,
+        background: store.getState().exportBackground ? readCanvasBackground() : null,
         // Wrapped where the screen wraps, so the file shows the lines the person saw.
         measure: (element) => measureLineIn(element, readFontStacks()) ?? approximateMeasure(element.size, element.font)
     });
 
 /* The same painter the screen uses, on a canvas of its own, at the size the file is written in. */
-export const drawingPng = async (elements: readonly DrawingElement[] = exportTargets()): Promise<Blob | null> => {
+export const drawingPng = async (store: DrawingSource, elements: readonly DrawingElement[] = exportTargets(store)): Promise<Blob | null> => {
     const bounds = boundsOfElements(elements);
     if (!bounds) {
         return null;
@@ -42,7 +50,7 @@ export const drawingPng = async (elements: readonly DrawingElement[] = exportTar
     if (!ctx) {
         return null;
     }
-    if (useDrawing.getState().exportBackground) {
+    if (store.getState().exportBackground) {
         ctx.fillStyle = readCanvasBackground();
         ctx.fillRect(0, 0, width, height);
     }
@@ -68,31 +76,31 @@ const download = async (blob: Blob, name: string, mime: string): Promise<void> =
 
 const fileName = (extension: string): string => `drawing-${new Date().toISOString().slice(0, 10)}.${extension}`;
 
-export const copyDrawingPng = async (): Promise<void> => {
-    const blob = await drawingPng();
+export const copyDrawingPng = async (store: DrawingSource): Promise<void> => {
+    const blob = await drawingPng(store);
     if (blob) {
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
     }
 };
 
-export const saveDrawingPng = async (): Promise<void> => {
-    const blob = await drawingPng();
+export const saveDrawingPng = async (store: DrawingSource): Promise<void> => {
+    const blob = await drawingPng(store);
     if (blob) {
         await download(blob, fileName('png'), 'image/png');
     }
 };
 
-export const copyDrawingSvg = async (): Promise<void> => {
-    await navigator.clipboard.writeText(drawingSvg());
+export const copyDrawingSvg = async (store: DrawingSource): Promise<void> => {
+    await navigator.clipboard.writeText(drawingSvg(store));
 };
 
-export const saveDrawingSvg = async (): Promise<void> => {
-    await download(new Blob([drawingSvg()], { type: 'image/svg+xml' }), fileName('svg'), 'image/svg+xml');
+export const saveDrawingSvg = async (store: DrawingSource): Promise<void> => {
+    await download(new Blob([drawingSvg(store)], { type: 'image/svg+xml' }), fileName('svg'), 'image/svg+xml');
 };
 
 /* Copies the selection as elements, so a paste in another drawing brings the shapes, not a picture. */
-export const copyDrawingElements = async (): Promise<void> => {
-    const { elements, selection } = useDrawing.getState();
+export const copyDrawingElements = async (store: DrawingSource): Promise<void> => {
+    const { elements, selection } = store.getState();
     const selected = elements.filter((element) => selection.includes(element.id));
     if (selected.length === 0) {
         return;

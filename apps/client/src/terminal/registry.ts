@@ -1,6 +1,6 @@
 import type { Terminal } from '@xterm/xterm';
 import { browserRegistry, useBrowser } from '@/browser/registry';
-import { useCanvas } from '@/state/canvas';
+import { focusedCanvas, type CanvasState } from '@/state/canvas';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { webglBudget } from '@/terminal/webgl-budget';
 
@@ -52,7 +52,7 @@ export interface TerminalTestHooks {
     browserState(nodeId: string): unknown;
     browserNavigate(nodeId: string, url: string): void;
     /* The canvas store itself, for driving the app from a test. */
-    canvas(): ReturnType<typeof useCanvas.getState>;
+    canvas(): CanvasState;
 }
 
 declare global {
@@ -73,7 +73,7 @@ export const exposeTerminalTestHooks = (): void => {
             return term ? { cols: term.cols, rows: term.rows } : null;
         },
         nodeIds() {
-            return useCanvas.getState().order;
+            return focusedCanvas().getState().order;
         },
         webglContexts() {
             return webglBudget.holders();
@@ -85,7 +85,7 @@ export const exposeTerminalTestHooks = (): void => {
             browserRegistry.navigate(endpointKey(currentEndpointId(), nodeId), url);
         },
         canvas() {
-            return useCanvas.getState();
+            return focusedCanvas().getState();
         }
     };
 };

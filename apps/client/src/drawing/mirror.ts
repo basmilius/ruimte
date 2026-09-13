@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { create } from 'zustand';
 import type { DrawingElement } from '@ruimte/contracts';
-import { useDrawing } from '@/state/drawing';
+import { liveDrawing, subscribeDrawings } from '@/state/drawing';
 import { currentEndpointId, dropEndpoint, endpointKey, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { transportFor } from '@/transport';
@@ -39,17 +39,18 @@ const wired = new Map<string, Transport>();
 let wiredStores = false;
 
 /*
- * The editor store covers the drawing that is open here, which has to follow every stroke rather
- * than every save. Both it and the project are what is on screen, so they are watched once.
+ * The editors cover the drawings that are open here, which have to follow every stroke rather than
+ * every save. Every cell is listened to rather than the one with the focus: a node mirrors a drawing
+ * that may be standing in the cell beside it, and a stroke there counts the same.
  */
 const wireStores = (): void => {
     if (wiredStores) {
         return;
     }
     wiredStores = true;
-    useDrawing.subscribe((state, previous) => {
-        const key = state.viewId ? endpointKey(currentEndpointId(), state.viewId) : null;
-        if (key && state.elements !== previous.elements && watchers.has(key)) {
+    subscribeDrawings((viewId, state, previous) => {
+        const key = endpointKey(currentEndpointId(), viewId);
+        if (state.elements !== previous.elements && watchers.has(key)) {
             put(key, { elements: state.elements, gone: false, loading: false });
         }
     });
@@ -84,9 +85,9 @@ const load = (endpointId: string, viewId: string): void => {
         return;
     }
     const key = endpointKey(endpointId, viewId);
-    // The drawing that is open in the editor is already in the store, with its unsaved strokes.
-    const editor = useDrawing.getState();
-    if (editor.viewId === viewId) {
+    // A drawing already open in a cell is in that editor, with its unsaved strokes.
+    const editor = liveDrawing(viewId);
+    if (editor !== null) {
         put(key, { elements: editor.elements, gone: false, loading: false });
         return;
     }

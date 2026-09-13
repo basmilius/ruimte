@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectDocument, ProjectNode } from '@ruimte/contracts';
-import { useCanvas } from '@/state/canvas';
+import { focusedCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { watchNodes } from '@/terminal/lifecycle-watch';
@@ -27,7 +27,7 @@ let stop: (() => void) | null = null;
 
 beforeEach(() => {
     ended = [];
-    useCanvas.getState().setViewport({ w: 800, h: 600 });
+    focusedCanvas().getState().setViewport({ w: 800, h: 600 });
     useDocument.getState().load(project([view('a', [node('t1'), node('c1', 'chat'), node('b1', 'browser')]), view('b', [node('t2')])]), {
         activeViewId: 'a',
         views: {}
@@ -51,19 +51,19 @@ describe('a view switch', () => {
 
     test('leaves the canvas holding the view it was asked for', () => {
         useDocument.getState().setActiveView('b');
-        expect(useCanvas.getState().viewId).toBe('b');
-        expect(useCanvas.getState().order).toEqual(['t2']);
+        expect(focusedCanvas().getState().viewId).toBe('b');
+        expect(focusedCanvas().getState().order).toEqual(['t2']);
         useDocument.getState().setActiveView('a');
-        expect(useCanvas.getState().viewId).toBe('a');
-        expect(useCanvas.getState().order).toEqual(['t1', 'c1', 'b1']);
+        expect(focusedCanvas().getState().viewId).toBe('a');
+        expect(focusedCanvas().getState().order).toEqual(['t1', 'c1', 'b1']);
     });
 
     test('never leaves the canvas standing in for a view it does not hold', () => {
         const seen: string[] = [];
         const record = (): void => {
-            seen.push(useCanvas.getState().order.join());
+            seen.push(focusedCanvas().getState().order.join());
         };
-        const offCanvas = useCanvas.subscribe(record);
+        const offCanvas = focusedCanvas().subscribe(record);
         const offDocument = useDocument.subscribe(record);
         useDocument.getState().setActiveView('b');
         offCanvas();
@@ -76,8 +76,8 @@ describe('a view switch', () => {
 
 describe('a node leaving the document', () => {
     test('ends by kind', () => {
-        useCanvas.getState().select(['t1', 'c1', 'b1']);
-        useCanvas.getState().deleteSelected();
+        focusedCanvas().getState().select(['t1', 'c1', 'b1']);
+        focusedCanvas().getState().deleteSelected();
         expect(ended.sort()).toEqual(['local browser:b1', 'local chat:c1', 'local terminal:t1']);
     });
 
@@ -96,16 +96,16 @@ describe('a node leaving the document', () => {
         useEndpoints.getState().add(container);
         useEndpoints.getState().setActive(container.id);
         stop = watchNodes((endpointId, id, kind) => ended.push(`${endpointId} ${kind}:${id}`));
-        useCanvas.getState().select(['t1']);
-        useCanvas.getState().deleteSelected();
+        focusedCanvas().getState().select(['t1']);
+        focusedCanvas().getState().deleteSelected();
         expect(ended).toEqual(['Xk3p terminal:t1']);
     });
 
     test('ends nothing of the machine that is left behind when another one takes over', () => {
         useEndpoints.getState().add(container);
         useEndpoints.getState().setActive(container.id);
-        useCanvas.getState().select(['t1', 'c1']);
-        useCanvas.getState().deleteSelected();
+        focusedCanvas().getState().select(['t1', 'c1']);
+        focusedCanvas().getState().deleteSelected();
         expect(ended).toEqual([]);
     });
 });

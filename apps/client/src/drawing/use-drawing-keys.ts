@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
+import type { StoreApi } from 'zustand';
 import { GRID } from '@/canvas/math';
 import { copyDrawingElements, readDrawingElements } from '@/drawing/export';
-import { useDrawing, type DrawingTool } from '@/state/drawing';
+import type { DrawingState, DrawingTool } from '@/state/drawing';
 import { useUi } from '@/state/ui';
 import { isInFloatingLayer } from '@/ui/floating';
 
@@ -44,8 +45,8 @@ const somethingElseHasIt = (target: EventTarget | null): boolean => {
 };
 
 /* Escape clears one thing at a time, in the order the canvas uses: the draft first, the tool last. */
-const clearOne = (): boolean => {
-    const state = useDrawing.getState();
+const clearOne = (store: StoreApi<DrawingState>): boolean => {
+    const state = store.getState();
     if (state.draft) {
         state.cancelDraft();
         return true;
@@ -65,13 +66,9 @@ const clearOne = (): boolean => {
     return false;
 };
 
-/* True while the drawing still has something to let go of, which is what keeps Escape here. */
-export const drawingCanClear = (): boolean => {
-    const state = useDrawing.getState();
-    return state.draft !== null || state.editingTextId !== null || state.selection.length > 0 || state.tool !== 'select';
-};
-
-export const useDrawingKeys = (active: boolean): void => {
+/* The tools of the drawing in one cell. The store is the cell's own, never the focused one: the
+   listener sits on the window, so the drawing it acts on has to be decided where it is drawn. */
+export const useDrawingKeys = (store: StoreApi<DrawingState>, active: boolean): void => {
     useEffect(() => {
         if (!active) {
             return;
@@ -80,10 +77,10 @@ export const useDrawingKeys = (active: boolean): void => {
             if (somethingElseHasIt(e.target)) {
                 return;
             }
-            const state = useDrawing.getState();
+            const state = store.getState();
             const mod = e.metaKey || e.ctrlKey;
             if (e.key === 'Escape' && !mod) {
-                if (clearOne()) {
+                if (clearOne(store)) {
                     e.preventDefault();
                     e.stopPropagation();
                 }
@@ -117,12 +114,12 @@ export const useDrawingKeys = (active: boolean): void => {
                 }
                 if (key === 'c') {
                     e.preventDefault();
-                    void copyDrawingElements();
+                    void copyDrawingElements(store);
                     return;
                 }
                 if (key === 'x') {
                     e.preventDefault();
-                    void copyDrawingElements().then(() => useDrawing.getState().deleteSelected());
+                    void copyDrawingElements(store).then(() => store.getState().deleteSelected());
                     return;
                 }
                 if (key === 'v') {
@@ -130,7 +127,7 @@ export const useDrawingKeys = (active: boolean): void => {
                     void navigator.clipboard.readText().then((text) => {
                         const elements = readDrawingElements(text);
                         if (elements) {
-                            useDrawing.getState().pasteElements(elements);
+                            store.getState().pasteElements(elements);
                         }
                     });
                     return;
@@ -202,5 +199,5 @@ export const useDrawingKeys = (active: boolean): void => {
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
-    }, [active]);
+    }, [active, store]);
 };

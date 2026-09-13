@@ -5,7 +5,7 @@ import { isHtmlName } from '@/shell/panels/file-kind';
 import { localFileUrl } from '@/shell/panels/file-url';
 import { basenameOf, relativeTo, revealableInFiles } from '@/shell/panels/files-tree';
 import { addNodeAtCenter } from '@/shell/commands';
-import { useCanvas } from '@/state/canvas';
+import { focusedCanvas } from '@/state/canvas';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
@@ -40,7 +40,9 @@ export function FileActionItems({ path, on, onRefresh }: FileActionItemsProps) {
     const openInBrowserNode = (): void => {
         const id = addNodeAtCenter('browser');
         if (id !== null) {
-            useCanvas.getState().updateNode(id, { url: localFileUrl(path) });
+            focusedCanvas()
+                .getState()
+                .updateNode(id, { url: localFileUrl(path) });
         }
     };
 

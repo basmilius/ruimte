@@ -106,7 +106,7 @@ const registryIn = <T>(slot: EditorSlot, fallback: EditorRegistry<T>, stores: Wo
     stores === null ? fallback : (stores[slot] as unknown as EditorRegistry<T>);
 
 /* One editor out of a registry: the cell that was asked for, else the one with the focus, else blank. */
-const resolveEditor = <T>(registry: EditorRegistry<T>, cell: string | null): StoreApi<T> => {
+export const resolveEditor = <T>(registry: EditorRegistry<T>, cell: string | null): StoreApi<T> => {
     const viewId = cell ?? registry.focused();
     return (viewId === null ? null : registry.peek(viewId)) ?? registry.blank;
 };
@@ -125,17 +125,38 @@ export const useEditorStoreOf = <T>(slot: EditorSlot, fallback: EditorRegistry<T
 };
 
 /*
- * One editor of the workspace on screen, as a hook that is also a store. A view with no editor of
- * this kind (a chat where a canvas is asked for) reads the workspace's blank one, which is what the
- * single editor held back when a view that was not a canvas left it empty.
+ * A hook over one editor and nothing else. It is deliberately not a store: `useCanvas.getState()`
+ * used to read whichever cell had the focus, while `useCanvas(selector)` two lines above it read the
+ * cell the component was drawn in, so a drawing beside another one wrote into its neighbor. Without
+ * the store half the two cannot disagree, and a reader who really means the focused cell has to
+ * write `focusedCanvas()` or `focusedDrawing()`, where it is visible.
  */
-export const editorHook = <T>(slot: EditorSlot, fallback: EditorRegistry<T>): WorkspaceHook<T> => {
-    const focused = (): StoreApi<T> => resolveEditor(registryIn(slot, fallback, currentStores()), null);
-    const useEditorStore = <U>(selector?: (state: T) => U): T | U => useStore(useEditorStoreOf(slot, fallback), selector as (state: T) => U);
-    return asStore(useEditorStore as WorkspaceHook<T>, focused);
-};
+export interface EditorHook<T> {
+    (): T;
+    <U>(selector: (state: T) => U): U;
+}
 
-/* Hangs the store half on the hook: outside React every call means the workspace that has the focus. */
+/*
+ * One editor of the workspace on screen, as a hook. A view with no editor of this kind (a chat where
+ * a canvas is asked for) reads the workspace's blank one, which is what the single editor held back
+ * when a view that was not a canvas left it empty.
+ */
+export const editorHook = <T>(slot: EditorSlot, fallback: EditorRegistry<T>): EditorHook<T> =>
+    (<U>(selector?: (state: T) => U): T | U => useStore(useEditorStoreOf(slot, fallback), selector as (state: T) => U)) as EditorHook<T>;
+
+/*
+ * The editor of the cell that has the focus, for code with no cell of its own: a chord, a menu of the
+ * window, a palette row, a watcher. Anything drawn inside a cell means its own editor and asks for it
+ * with `useCanvasStore` or `useDrawingStore`.
+ */
+export const focusedEditor = <T>(slot: EditorSlot, fallback: EditorRegistry<T>): StoreApi<T> =>
+    resolveEditor(registryIn(slot, fallback, currentStores()), null);
+
+/*
+ * Hangs the store half on the hook: outside React every call means the workspace that has the focus.
+ * Only the slots holding one store for the whole workspace get this. An editor is one cell of a grid
+ * and there is no honest answer to "which one" outside a render, so those come without it.
+ */
 const asStore = <T>(hook: WorkspaceHook<T>, focused: () => StoreApi<T>): WorkspaceHook<T> => {
     hook.getState = () => focused().getState();
     hook.getInitialState = () => focused().getInitialState();

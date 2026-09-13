@@ -4,7 +4,7 @@ import { isCanvasView, isFileView, type ProjectView } from '@ruimte/contracts';
 import { Canvas } from '@/canvas/Canvas';
 import { SplitGrid } from '@/shell/SplitGrid';
 import { DrawingView } from '@/drawing/DrawingView';
-import { drawingCanClear } from '@/drawing/use-drawing-keys';
+import { drawingHasSomethingToClear, useDrawingStore } from '@/state/drawing';
 import { BrowserFallback, usePage } from '@/nodes/BrowserBody';
 import { ChatBody } from '@/nodes/ChatBody';
 import { TerminalBody } from '@/nodes/TerminalBody';
@@ -28,6 +28,7 @@ import { isInFloatingLayer } from '@/ui/floating';
  * on the same chord a terminal node uses.
  */
 const useLeaveOnEscape = (view: ProjectView): void => {
+    const drawingStore = useDrawingStore();
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent): void => {
             const leaving = view.kind === 'terminal' ? isLeaveNodeChord(e, isApplePlatform()) : e.key === 'Escape' && !e.metaKey && !e.ctrlKey && !e.altKey;
@@ -37,7 +38,7 @@ const useLeaveOnEscape = (view: ProjectView): void => {
                 return;
             }
             // A drawing clears its draft, its selection and its tool first; only an empty one is left.
-            if (view.kind === 'drawing' && drawingCanClear()) {
+            if (view.kind === 'drawing' && drawingHasSomethingToClear(drawingStore.getState())) {
                 return;
             }
             e.preventDefault();
@@ -46,7 +47,7 @@ const useLeaveOnEscape = (view: ProjectView): void => {
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
-    }, [view.id, view.kind]);
+    }, [drawingStore, view.id, view.kind]);
 };
 
 function StandaloneView({ view }: { view: ProjectView }) {

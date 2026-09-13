@@ -3,7 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { LINE_HEIGHT, NOTE_PADDING, RESIZE_HANDLES, boundsOfElements, handlePoint, writingFrameOf, type Rect, type WrittenElement } from '@ruimte/drawing';
 import { fitTextBox } from '@/drawing/paint';
 import { readFontStacks } from '@/drawing/palette';
-import { isWritten, useDrawing } from '@/state/drawing';
+import { isWritten, useDrawing, useDrawingStore } from '@/state/drawing';
 
 /* The squares on a selection box, in screen pixels whatever the zoom is. */
 const HANDLE = 8;
@@ -104,6 +104,7 @@ const EDITOR_MIN_WIDTH = 40;
  * so the paper is never too small for what it says.
  */
 function TextEditor({ element, camera }: { element: WrittenElement; camera: Camera }) {
+    const drawingStore = useDrawingStore();
     const ref = useRef<HTMLTextAreaElement>(null);
     const [box, setBox] = useState(() => fitTextBox(element));
     const note = element.kind === 'note';
@@ -116,7 +117,7 @@ function TextEditor({ element, camera }: { element: WrittenElement; camera: Came
 
     const commit = (): void => {
         const value = ref.current?.value ?? '';
-        const state = useDrawing.getState();
+        const state = drawingStore.getState();
         if (value !== element.text) {
             state.updateText(element.id, value);
             if (note || value.trim() !== '') {
@@ -131,7 +132,7 @@ function TextEditor({ element, camera }: { element: WrittenElement; camera: Came
         const fitted = fitTextBox(element, value);
         setBox(fitted);
         if (note && fitted.h !== element.h) {
-            useDrawing.getState().updateElement(element.id, fitted, false);
+            drawingStore.getState().updateElement(element.id, fitted, false);
         }
     };
 

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { ClipboardPaste, Copy, Scan, Scissors } from 'lucide-react';
 import { Markdown } from '@/chat/ui/Markdown';
-import { useCanvas } from '@/state/canvas';
+import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { MENU_SEPARATOR } from '@/ui/classes';
 import { copyText, readClipboardText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
@@ -12,6 +12,7 @@ import { Icon } from '@/ui/Icon';
  * is saved with the project and, linked into an agent, read by it as a text source.
  */
 export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
+    const canvasStore = useCanvasStore();
     const body = useCanvas((s) => s.nodes[id]?.body ?? '');
     const ref = useRef<HTMLTextAreaElement>(null);
     // What was selected in the field when its menu opened; a textarea keeps that to itself, so the
@@ -29,7 +30,7 @@ export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
     if (focused) {
         const selected = body.slice(range[0], range[1]);
         const replaceSelection = (text: string): void => {
-            useCanvas.getState().updateNode(id, { body: `${body.slice(0, range[0])}${text}${body.slice(range[1])}` });
+            canvasStore.getState().updateNode(id, { body: `${body.slice(0, range[0])}${text}${body.slice(range[1])}` });
             const caret = range[0] + text.length;
             // The value comes back through the store, so the caret goes back after that render.
             requestAnimationFrame(() => ref.current?.setSelectionRange(caret, caret));
@@ -54,7 +55,7 @@ export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
                         placeholder="Write a note. Markdown works."
                         spellCheck={false}
                         className="h-full w-full resize-none bg-transparent px-3 py-2.5 font-sans text-sm leading-normal text-text outline-none placeholder:text-text-faint"
-                        onChange={(e) => useCanvas.getState().updateNode(id, { body: e.target.value })}
+                        onChange={(e) => canvasStore.getState().updateNode(id, { body: e.target.value })}
                     />
                 </ContextMenu.Trigger>
                 <ContextMenu.Portal>
@@ -93,7 +94,7 @@ export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
             <button
                 className="h-full w-full cursor-text px-3 py-2.5 text-left text-sm text-text-faint"
                 onPointerDown={(e) => e.stopPropagation()}
-                onClick={() => useCanvas.getState().enterNode(id)}
+                onClick={() => canvasStore.getState().enterNode(id)}
             >
                 Click to write
             </button>

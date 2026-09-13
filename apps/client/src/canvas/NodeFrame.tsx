@@ -17,7 +17,7 @@ import {
     X
 } from 'lucide-react';
 import { AgentIcon } from '@/agents/AgentIcon';
-import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
+import { isNodeFocused, useCanvas, useCanvasStore, type AgentStatus, type NodeKind } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
 import { ProcessAlertMark, useNodeAlerts } from '@/processes/ProcessAlertMark';
 import { useHasContextLinks } from '@/context/sources';
@@ -98,6 +98,7 @@ export function StatusDot({ status, className, plain = false }: { status: AgentS
 }
 
 function Title({ id, title, editing, onDone }: { id: string; title: string; editing: boolean; onDone: () => void }) {
+    const canvasStore = useCanvasStore();
     if (!editing) {
         return <span className="truncate text-sm font-medium text-text">{title}</span>;
     }
@@ -112,7 +113,7 @@ function Title({ id, title, editing, onDone }: { id: string; title: string; edit
                 const next = e.currentTarget.value.trim();
                 // An empty field is not a name: it hands the node back to whatever named it before.
                 if (next) {
-                    useCanvas.getState().renameNode(id, next);
+                    canvasStore.getState().renameNode(id, next);
                 } else {
                     resetTitle(id);
                 }
@@ -133,6 +134,7 @@ function Title({ id, title, editing, onDone }: { id: string; title: string; edit
 }
 
 export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
+    const canvasStore = useCanvasStore();
     const node = useCanvas((s) => s.nodes[id]);
     const selected = useCanvas((s) => s.selection.includes(id));
     const focused = useCanvas((s) => isNodeFocused(s.mode, id));
@@ -160,7 +162,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const isNote = node.kind === 'note';
     const collapsed = isGroup && node.collapsed === true;
     const remove = (): void => {
-        const s = useCanvas.getState();
+        const s = canvasStore.getState();
         s.select([id]);
         s.deleteSelected();
     };
@@ -195,7 +197,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     // Tab reaches the frame; Enter steps into it, so a node is usable without a pointer.
                     if (e.key === 'Enter' && e.target === e.currentTarget && !isGroup) {
                         e.preventDefault();
-                        useCanvas.getState().enterNode(id);
+                        canvasStore.getState().enterNode(id);
                     }
                 }}
             >
@@ -215,7 +217,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                 >
                     {isGroup && (
                         <Tooltip label={collapsed ? 'Expand' : 'Collapse'} name>
-                            <button className="icon-btn h-7 w-7" onClick={() => useCanvas.getState().toggleGroupCollapse(id)}>
+                            <button className="icon-btn h-7 w-7" onClick={() => canvasStore.getState().toggleGroupCollapse(id)}>
                                 {collapsed ? <Icon icon={ChevronRight} size={16} /> : <Icon icon={ChevronDown} size={16} />}
                             </button>
                         </Tooltip>
@@ -257,7 +259,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     {node.kind === 'file' && <span ref={setFileControls} className={`${BTN_GROUP} shrink-0`} />}
                     <div className={`${BTN_GROUP} shrink-0`}>
                         <Tooltip label="Zoom to node" name>
-                            <button className="icon-btn h-7 w-7" onClick={() => useCanvas.getState().goToNode(id)}>
+                            <button className="icon-btn h-7 w-7" onClick={() => canvasStore.getState().goToNode(id)}>
                                 <Icon icon={Maximize2} size={16} />
                             </button>
                         </Tooltip>

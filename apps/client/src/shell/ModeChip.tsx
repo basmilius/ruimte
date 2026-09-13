@@ -1,5 +1,5 @@
 import { useShallow } from 'zustand/react/shallow';
-import { useCanvas } from '@/state/canvas';
+import { focusedCanvas, useCanvas } from '@/state/canvas';
 import { isApplePlatform } from '@/desktop/bridge';
 import { leaveNodeChordLabel } from '@/terminal/keymap';
 import { Tooltip } from '@/ui/Tooltip';
@@ -37,7 +37,7 @@ export function ModeChip() {
                 <button
                     className={IN_BODY}
                     aria-label={`Leave ${focusedTitle ?? 'this node'} and return to the canvas`}
-                    onClick={() => useCanvas.getState().exitNode()}
+                    onClick={() => focusedCanvas().getState().exitNode()}
                 >
                     <span className="h-1.5 w-1.5 rounded-full bg-accent" />
                     <span className="max-w-40 truncate">{focusedTitle}</span>

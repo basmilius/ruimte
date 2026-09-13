@@ -27,7 +27,7 @@ import { DEFAULT_NOTE_COLOR, NOTE_COLORS } from '@/canvas/note-colors';
 import { EMPTY_DRAFT, writeDraft } from '@/chat/drafts';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
-import { useCanvas } from '@/state/canvas';
+import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useChatRow } from '@/state/chats';
 import { useProject } from '@/state/project';
 import { useProviders } from '@/state/providers';
@@ -41,6 +41,7 @@ import { Tooltip } from '@/ui/Tooltip';
 
 /* The context menu of one node, the same from its frame and from its row in the sidebar. */
 export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }) {
+    const canvasStore = useCanvasStore();
     const node = useCanvas((s) => s.nodes[id]);
     const agent = useSessionRow(id, (row) => row?.agent);
     const chatSession = useChatRow(id, (row) => row?.info.agentSessionId);
@@ -56,7 +57,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
     }
 
     const remove = (): void => {
-        const s = useCanvas.getState();
+        const s = canvasStore.getState();
         s.select([id]);
         s.deleteSelected();
     };
@@ -66,7 +67,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
     const canOpenInChat = agent ? providers.some((entry) => entry.kind === agent.kind && entry.capabilities.chat) : false;
     const openInChat = (): void => {
         if (agent) {
-            useCanvas
+            canvasStore
                 .getState()
                 .addNode('chat', beside, { title: node.title, cwd: node.cwd, resume: agent.agentSessionId, provider: agent.kind, providerFixed: true });
         }
@@ -74,7 +75,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
     const openInTerminal = (): void => {
         // The daemon owns the resume line: the node only says which CLI and which session.
         if (chatSession && chatProvider) {
-            useCanvas.getState().addNode('terminal', beside, { title: node.title, cwd: chatCwd, provider: chatProvider, resume: chatSession });
+            canvasStore.getState().addNode('terminal', beside, { title: node.title, cwd: chatCwd, provider: chatProvider, resume: chatSession });
         }
     };
     /*
@@ -91,7 +92,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
         if (body) {
             writeDraft(chatId, { ...EMPTY_DRAFT, text: body });
         }
-        useCanvas.getState().addEdge(id, chatId);
+        canvasStore.getState().addEdge(id, chatId);
     };
     // The folder the node works in: its own, or the project's when it has none.
     const workingFolder = node.kind === 'terminal' || node.kind === 'chat' ? (node.cwd ?? chatCwd ?? projectFolder) : (node.worktree?.path ?? null);
@@ -105,24 +106,24 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                     <ContextMenu.Item className="menu-item" onClick={onRename}>
                         <Icon icon={Pencil} size={14} /> Rename <span className={MENU_HINT}>dbl-click</span>
                     </ContextMenu.Item>
-                    <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().duplicateNode(id)}>
+                    <ContextMenu.Item className="menu-item" onClick={() => canvasStore.getState().duplicateNode(id)}>
                         <Icon icon={Copy} size={14} /> Duplicate
                     </ContextMenu.Item>
-                    <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().goToNode(id)}>
+                    <ContextMenu.Item className="menu-item" onClick={() => canvasStore.getState().goToNode(id)}>
                         <Icon icon={Maximize2} size={14} /> Zoom to node
                     </ContextMenu.Item>
-                    <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().startLink(id)}>
+                    <ContextMenu.Item className="menu-item" onClick={() => canvasStore.getState().startLink(id)}>
                         <Icon icon={Link2} size={14} /> Connect to...
                         <span className={MENU_HINT}>Then click a node</span>
                     </ContextMenu.Item>
                     {node.kind === 'group' && (
                         <>
-                            <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().toggleGroupCollapse(id)}>
+                            <ContextMenu.Item className="menu-item" onClick={() => canvasStore.getState().toggleGroupCollapse(id)}>
                                 {node.collapsed ? <Icon icon={ChevronsUpDown} size={14} /> : <Icon icon={ChevronsDownUp} size={14} />}{' '}
                                 {node.collapsed ? 'Expand' : 'Collapse'}
                             </ContextMenu.Item>
                             {node.worktree ? (
-                                <ContextMenu.Item className="menu-item" onClick={() => useCanvas.getState().setGroupWorktree(id, null)}>
+                                <ContextMenu.Item className="menu-item" onClick={() => canvasStore.getState().setGroupWorktree(id, null)}>
                                     <Icon icon={GitBranch} size={14} /> Unbind worktree
                                     <span className={MENU_HINT}>Checkout stays</span>
                                 </ContextMenu.Item>
@@ -179,7 +180,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                                                 <ContextMenu.Item
                                                     key={color.id}
                                                     className="menu-item"
-                                                    onClick={() => useCanvas.getState().updateNode(id, { color: color.id })}
+                                                    onClick={() => canvasStore.getState().updateNode(id, { color: color.id })}
                                                 >
                                                     <span className={`h-3 w-3 rounded-full border border-border-strong ${color.className}`} /> {color.label}
                                                     {(node.color ?? DEFAULT_NOTE_COLOR) === color.id && <Icon icon={Check} size={14} className="ml-auto" />}
@@ -205,7 +206,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                                         <ContextMenu.Item
                                             aria-label="None"
                                             className={clsx(ACCENT_SWATCH, 'border border-border-strong text-text-muted')}
-                                            onClick={() => useCanvas.getState().setNodeAccent(id, null)}
+                                            onClick={() => canvasStore.getState().setNodeAccent(id, null)}
                                         >
                                             {!node.accent && <Icon icon={Check} size={12} />}
                                         </ContextMenu.Item>
@@ -216,7 +217,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                                                 aria-label={a.label}
                                                 className={clsx(ACCENT_SWATCH, node.accent === a.id && ACCENT_SWATCH_PICKED)}
                                                 style={{ background: a.color }}
-                                                onClick={() => useCanvas.getState().setNodeAccent(id, a.id)}
+                                                onClick={() => canvasStore.getState().setNodeAccent(id, a.id)}
                                             >
                                                 {node.accent === a.id && <Icon icon={Check} size={12} />}
                                             </ContextMenu.Item>

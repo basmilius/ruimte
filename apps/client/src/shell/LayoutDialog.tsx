@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { useCanvas } from '@/state/canvas';
+import { focusedCanvas } from '@/state/canvas';
 import { useUi } from '@/state/ui';
 import { Button } from '@/ui/Button';
 
@@ -15,7 +15,7 @@ export function LayoutDialog() {
         if (!trimmed) {
             return;
         }
-        useCanvas.getState().saveLayout(trimmed);
+        focusedCanvas().getState().saveLayout(trimmed);
         setName('');
         setOpen(false);
     };

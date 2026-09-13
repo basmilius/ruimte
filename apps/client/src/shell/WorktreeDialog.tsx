@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { GitBranch } from 'lucide-react';
-import { useCanvas } from '@/state/canvas';
+import { focusedCanvas, useCanvas } from '@/state/canvas';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
@@ -36,7 +36,7 @@ export function WorktreeDialog() {
         setFailure(null);
         try {
             const result = await transport.request('git.worktree-add', { repo: folder, branch: value.trim() });
-            useCanvas.getState().setGroupWorktree(groupId, result.worktree);
+            focusedCanvas().getState().setGroupWorktree(groupId, result.worktree);
             setBranch(null);
             close(null);
         } catch (e) {

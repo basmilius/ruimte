@@ -2,7 +2,7 @@ import { CircleAlert, Eye, GitBranch } from 'lucide-react';
 import { drawingClient, projectClient } from '@/project';
 import { Banner } from '@/shell/Banner';
 import { useDocument } from '@/state/document';
-import { useDrawing } from '@/state/drawing';
+import { focusedDrawing, useDrawing } from '@/state/drawing';
 import { useProject } from '@/state/project';
 import { Button } from '@/ui/Button';
 
@@ -38,7 +38,7 @@ export function ProjectBanner() {
         );
     }
     const resolve = (choice: 'theirs' | 'mine'): void => void (drawing ? drawingClient.resolveConflict(choice) : projectClient.resolveConflict(choice));
-    const dismiss = (): void => (drawing ? useDrawing.getState().setError(null) : useProject.getState().setError(null));
+    const dismiss = (): void => (drawing ? focusedDrawing().getState().setError(null) : useProject.getState().setError(null));
     return conflict ? (
         <Banner icon={GitBranch} tone="attention" message={`The ${drawing ? 'drawing' : 'canvas'} changed on disk while you had unsaved edits.`}>
             <Button size="sm" onClick={() => resolve('theirs')}>

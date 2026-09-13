@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { isSessionView, type AgentKind, type NodeKind, type NodeTitleSource, type ProjectView, type RuntimeMode } from '@ruimte/contracts';
-import { DEFAULT_TITLES, useCanvas, type CanvasNode } from '@/state/canvas';
+import { canvasOfNode, DEFAULT_TITLES, useCanvas, type CanvasNode } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
 import { providersOf } from '@/state/providers';
@@ -53,7 +53,7 @@ const hostOfView = (view: ProjectView): NodeHost | null => {
 };
 
 export const readNodeHost = (id: string): NodeHost | null => {
-    const node = useCanvas.getState().nodes[id];
+    const node = canvasOfNode(id)?.getState().nodes[id];
     if (node) {
         return hostOfNode(node);
     }
@@ -69,16 +69,18 @@ export const useNodeHost = (id: string): NodeHost | null => {
 
 /* The title of a node is the name of its view when it has no frame to carry one. */
 export const renameHost = (id: string, title: string, source: NodeTitleSource | null = 'user'): void => {
-    if (useCanvas.getState().nodes[id]) {
-        useCanvas.getState().renameNode(id, title, source);
+    const canvas = canvasOfNode(id);
+    if (canvas !== null) {
+        canvas.getState().renameNode(id, title, source);
         return;
     }
     useDocument.getState().renameView(id, title, source);
 };
 
 export const updateHost = (id: string, patch: Partial<Pick<NodeHost, 'url' | 'cwd' | 'command' | 'resume' | 'provider'>>): void => {
-    if (useCanvas.getState().nodes[id]) {
-        useCanvas.getState().updateNode(id, patch);
+    const canvas = canvasOfNode(id);
+    if (canvas !== null) {
+        canvas.getState().updateNode(id, patch);
         return;
     }
     useDocument.getState().updateStandalone(id, patch);
@@ -106,8 +108,8 @@ export const resetTitle = (id: string): void => {
 
 /* Closing a body: the node leaves its canvas, or the view leaves the project. */
 export const closeHost = (id: string): void => {
-    if (useCanvas.getState().nodes[id]) {
-        const canvas = useCanvas.getState();
+    const canvas = canvasOfNode(id)?.getState();
+    if (canvas !== undefined) {
         canvas.select([id]);
         canvas.deleteSelected();
         return;

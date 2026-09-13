@@ -63,7 +63,8 @@ const resizedRect = (rect: Rect, edge: string, dx: number, dy: number): Rect => 
 };
 
 export function Canvas() {
-    /* The editor of this cell, for the effects below: `useCanvas` outside a render is the focused one. */
+    /* The editor of this cell. Everything below a render (an effect, a gesture, a menu) goes through
+       it, because the cell this canvas is drawn in is not always the cell that has the focus. */
     const canvasStore = useCanvasStore();
     const rootRef = useRef<HTMLDivElement>(null);
     const gestureRef = useRef<Gesture | null>(null);
@@ -99,17 +100,15 @@ export function Canvas() {
 
     // The pages park outside this transform and may not swallow the pointer mid-gesture.
     useEffect(() => {
-        useCanvas.getState().setGesturing(activeGesture !== null);
-    }, [activeGesture]);
+        canvasStore.getState().setGesturing(activeGesture !== null);
+    }, [activeGesture, canvasStore]);
 
     useLayoutEffect(() => {
         const el = rootRef.current;
         if (!el) {
             return;
         }
-        /* The editor of this cell, never `useCanvas`: that one is whichever cell has the focus, and
-           handing it a size measured somewhere else leaves both of them with a viewport that is not
-           theirs. The store decides what to do with it, which is where a waiting camera move runs. */
+        /* The store decides what to do with the size, which is where a waiting camera move runs. */
         const observer = new ResizeObserver(([entry]) => {
             canvasStore.getState().setViewport({
                 w: entry.contentRect.width,
@@ -128,7 +127,7 @@ export function Canvas() {
             return;
         }
         const onWheel = (e: WheelEvent): void => {
-            const s = useCanvas.getState();
+            const s = canvasStore.getState();
             const target = e.target as HTMLElement;
             const ownerId = target.closest('[data-node-body]')?.closest('[data-node-id]')?.getAttribute('data-node-id');
             const isZoom = e.ctrlKey || e.metaKey;
@@ -154,7 +153,7 @@ export function Canvas() {
                 }
                 zoomTimer.current = window.setTimeout(() => {
                     if (zoomMoved.current) {
-                        useCanvas.getState().settleZoom(zoomAnchor.current);
+                        canvasStore.getState().settleZoom(zoomAnchor.current);
                         zoomMoved.current = false;
                     }
                 }, ZOOM_SETTLE_MS);
@@ -181,7 +180,7 @@ export function Canvas() {
             document.removeEventListener('gesturestart', swallowGesture);
             document.removeEventListener('gesturechange', swallowGesture);
         };
-    }, []);
+    }, [canvasStore]);
 
     const screenPoint = (e: { clientX: number; clientY: number }): Point => {
         const rect = rootRef.current!.getBoundingClientRect();
@@ -204,7 +203,7 @@ export function Canvas() {
         if (isInFloatingLayer(target)) {
             return;
         }
-        const s = useCanvas.getState();
+        const s = canvasStore.getState();
         const point = screenPoint(e);
         const nodeId = target.closest<HTMLElement>('[data-node-id]')?.dataset.nodeId ?? null;
         const textId = target.closest<HTMLElement>('[data-text-id]')?.dataset.textId ?? null;
@@ -346,7 +345,7 @@ export function Canvas() {
 
     const onPointerMove = (e: ReactPointerEvent): void => {
         const g = gestureRef.current;
-        const s = useCanvas.getState();
+        const s = canvasStore.getState();
         const point = screenPoint(e);
         if (!g) {
             if (s.linkDraft?.aiming) {
@@ -403,7 +402,7 @@ export function Canvas() {
         if (!g) {
             return;
         }
-        const s = useCanvas.getState();
+        const s = canvasStore.getState();
         rootRef.current?.releasePointerCapture(e.pointerId);
         if (g.kind === 'box') {
             setBox(null);
@@ -477,7 +476,7 @@ export function Canvas() {
         if (paths.length === 0) {
             return;
         }
-        const at = toWorld(useCanvas.getState().camera, screenPoint(e));
+        const at = toWorld(canvasStore.getState().camera, screenPoint(e));
         // Several files at once are several nodes in a row, so none of them lands on top of another.
         const points = dropPoints(at, paths.length, DROP_STEP);
         for (const [index, path] of paths.entries()) {
@@ -490,7 +489,7 @@ export function Canvas() {
         if (target.closest('[data-node-id]') || target.closest('[data-text-id]') || isInFloatingLayer(target)) {
             return;
         }
-        const s = useCanvas.getState();
+        const s = canvasStore.getState();
         s.addText(toWorld(s.camera, screenPoint(e)));
     };
 
@@ -521,7 +520,7 @@ export function Canvas() {
                 onDragLeave={onDragLeave}
                 onDrop={onDrop}
                 onContextMenu={(e) => {
-                    const s = useCanvas.getState();
+                    const s = canvasStore.getState();
                     menuPoint.current = toWorld(s.camera, screenPoint(e));
                 }}
             >

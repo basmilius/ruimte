@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { isCanvasView } from '@ruimte/contracts';
 import { addNodeAtCenter } from '@/shell/commands';
 import { newCanvasView, showView, splitFocusedCell, stepView, viewAtIndex } from '@/project/views';
-import { useCanvas, type NodeKind } from '@/state/canvas';
+import { focusedCanvas, type NodeKind } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { cellCount, type SplitDirection } from '@/shell/split';
@@ -54,7 +54,7 @@ export const useCanvasChords = (stores: WorkspaceStores | null): void => {
             if (!isFocusedWorkspace(stores)) {
                 return;
             }
-            const s = useCanvas.getState();
+            const s = focusedCanvas().getState();
             if (e.code === 'Space' && !isTypingTarget(e.target)) {
                 spaceDown = true;
                 e.preventDefault();

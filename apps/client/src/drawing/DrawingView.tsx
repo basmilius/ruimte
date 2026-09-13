@@ -23,7 +23,7 @@ import { applyCamera, clearPathCache, fitTextBox, paintElements, paintOptions } 
 import { useDrawingKeys } from '@/drawing/use-drawing-keys';
 import { useDocument } from '@/state/document';
 import { nextId } from '@/state/canvas';
-import { isWritten, newSeed, useDrawing } from '@/state/drawing';
+import { isWritten, newSeed, useDrawing, useDrawingStore } from '@/state/drawing';
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 import { isInFloatingLayer } from '@/ui/floating';
@@ -60,6 +60,9 @@ const ZOOM_SETTLE_MS = 160;
  * DOM layer above them for the handles and the text editor, which stay whole pixels at any zoom.
  */
 export function DrawingView({ id }: { id: string }) {
+    /* The editor of this cell. Two drawings can stand side by side and only one of them has the
+       focus, so every read, write and subscription below a render goes through this store. */
+    const drawingStore = useDrawingStore();
     const rootRef = useRef<HTMLDivElement>(null);
     const sceneRef = useRef<HTMLCanvasElement>(null);
     const draftRef = useRef<HTMLCanvasElement>(null);
@@ -75,7 +78,10 @@ export function DrawingView({ id }: { id: string }) {
     const [gestureKind, setGestureKind] = useState<Gesture['kind'] | null>(null);
     const snapSetting = useSettings((s) => s.drawingSnap);
     /* One keyboard: the tools answer for the drawing in the focused cell, not for one beside it. */
-    useDrawingKeys(useDocument((s) => s.activeViewId === id));
+    useDrawingKeys(
+        drawingStore,
+        useDocument((s) => s.activeViewId === id)
+    );
 
     // The hand of a drawing arrives with the first one that is opened, never with the app.
     useEffect(() => {
@@ -98,11 +104,11 @@ export function DrawingView({ id }: { id: string }) {
             return;
         }
         const observer = new ResizeObserver(([entry]) => {
-            useDrawing.getState().setViewport({ w: entry!.contentRect.width, h: entry!.contentRect.height });
+            drawingStore.getState().setViewport({ w: entry!.contentRect.width, h: entry!.contentRect.height });
         });
         observer.observe(root);
         return () => observer.disconnect();
-    }, []);
+    }, [drawingStore]);
 
     /* Paints on every change of what is drawn, of the camera or of the theme, once per frame. */
     useEffect(() => {
@@ -116,7 +122,7 @@ export function DrawingView({ id }: { id: string }) {
             if (!scene || !draft || !ctx || !draftCtx) {
                 return;
             }
-            const state = useDrawing.getState();
+            const state = drawingStore.getState();
             const dpr = window.devicePixelRatio || 1;
             const width = Math.round(state.viewport.w * dpr);
             const height = Math.round(state.viewport.h * dpr);
@@ -143,7 +149,7 @@ export function DrawingView({ id }: { id: string }) {
             frame ||= requestAnimationFrame(draw);
         };
         schedule();
-        const unsubscribe = useDrawing.subscribe((state, previous) => {
+        const unsubscribe = drawingStore.subscribe((state, previous) => {
             if (
                 state.elements !== previous.elements ||
                 state.camera !== previous.camera ||
@@ -162,19 +168,19 @@ export function DrawingView({ id }: { id: string }) {
             }
         };
         // The theme and the font change what the same elements look like, so both force a repaint.
-    }, [theme, fontReady, id]);
+    }, [drawingStore, theme, fontReady, id]);
 
     /* A drawing this machine has no camera for opens on everything it holds, once there is room. */
     useEffect(() => {
         const fit = (): void => {
-            const state = useDrawing.getState();
+            const state = drawingStore.getState();
             if (state.fitPending && state.viewport.w > 0) {
                 state.fitAll();
             }
         };
         fit();
-        return useDrawing.subscribe(fit);
-    }, []);
+        return drawingStore.subscribe(fit);
+    }, [drawingStore]);
 
     /* React makes wheel listeners passive, so the browser's own pinch zoom needs a native one. */
     useEffect(() => {
@@ -184,7 +190,7 @@ export function DrawingView({ id }: { id: string }) {
         }
         const onWheel = (e: WheelEvent): void => {
             e.preventDefault();
-            const state = useDrawing.getState();
+            const state = drawingStore.getState();
             const rect = root.getBoundingClientRect();
             const anchor = { x: e.clientX - rect.left, y: e.clientY - rect.top };
             if (!e.ctrlKey && !e.metaKey) {
@@ -196,11 +202,11 @@ export function DrawingView({ id }: { id: string }) {
             if (zoomTimer.current) {
                 window.clearTimeout(zoomTimer.current);
             }
-            zoomTimer.current = window.setTimeout(() => useDrawing.getState().settleZoom(zoomAnchor.current), ZOOM_SETTLE_MS);
+            zoomTimer.current = window.setTimeout(() => drawingStore.getState().settleZoom(zoomAnchor.current), ZOOM_SETTLE_MS);
         };
         root.addEventListener('wheel', onWheel, { passive: false });
         return () => root.removeEventListener('wheel', onWheel);
-    }, []);
+    }, [drawingStore]);
 
     /* Space turns any tool into the hand for as long as it is held. */
     useEffect(() => {
@@ -227,7 +233,7 @@ export function DrawingView({ id }: { id: string }) {
         return { x: e.clientX - rect.left, y: e.clientY - rect.top };
     };
 
-    const worldPoint = (e: { clientX: number; clientY: number }): Point => toWorld(useDrawing.getState().camera, screenPoint(e));
+    const worldPoint = (e: { clientX: number; clientY: number }): Point => toWorld(drawingStore.getState().camera, screenPoint(e));
 
     /* The setting says whether a drawing snaps; Cmd turns it around for as long as it is held. */
     const snapping = (e: { metaKey: boolean; ctrlKey: boolean }): boolean => snapSetting !== (e.metaKey || e.ctrlKey);
@@ -245,7 +251,7 @@ export function DrawingView({ id }: { id: string }) {
         if (isChrome(e.target)) {
             return;
         }
-        const state = useDrawing.getState();
+        const state = drawingStore.getState();
         // A text being typed commits by losing focus, which the press it takes does for it.
         if (state.editingTextId !== null) {
             return;
@@ -333,7 +339,7 @@ export function DrawingView({ id }: { id: string }) {
     };
 
     const eraseAt = (point: Point): void => {
-        const state = useDrawing.getState();
+        const state = drawingStore.getState();
         const hit = elementAt(state.elements, point, HIT_TOLERANCE / state.camera.zoom);
         if (hit) {
             state.eraseElement(hit.id);
@@ -345,7 +351,7 @@ export function DrawingView({ id }: { id: string }) {
         if (!active) {
             return;
         }
-        const state = useDrawing.getState();
+        const state = drawingStore.getState();
         const point = worldPoint(e);
         const snap = snapping(e);
         switch (active.kind) {
@@ -443,7 +449,7 @@ export function DrawingView({ id }: { id: string }) {
         if (!active) {
             return;
         }
-        const state = useDrawing.getState();
+        const state = drawingStore.getState();
         if (active.kind === 'erase') {
             state.commitErase();
             return;
@@ -483,7 +489,7 @@ export function DrawingView({ id }: { id: string }) {
         if (isChrome(e.target)) {
             return;
         }
-        const state = useDrawing.getState();
+        const state = drawingStore.getState();
         if (state.tool !== 'select') {
             return;
         }
