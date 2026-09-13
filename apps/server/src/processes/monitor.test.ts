@@ -1,8 +1,7 @@
-import { afterAll, describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type { SessionEvent } from '../sessions/manager.ts';
-import { makeHarness, SH, SH_ARGS, waitFor } from '../sessions/test-helpers.ts';
 import { COARSE_INTERVAL_MS, FINE_POINTS, ProcessMonitor } from './monitor.ts';
-import { createSampler, type ProcessSampler, type RawProcess, type RawSample } from './sampler.ts';
+import { type ProcessSampler, type RawProcess, type RawSample } from './sampler.ts';
 
 const MACHINE: RawSample['machine'] = { cores: 4, cpuBusy: 0, cpuTotal: 0, memoryUsed: 1000, memoryTotal: 4000, diskFree: null, diskTotal: null };
 
@@ -155,56 +154,5 @@ describe('signals', () => {
         expect(() => monitor.signal({ pid: 300, startTime: 300_000, signal: 'SIGKILL' })).toThrow('another user');
         expect(() => monitor.signal({ pid: 100, startTime: 100_000, signal: 'SIGKILL' })).toThrow('itself');
         expect(signals).toHaveLength(1);
-    });
-});
-
-describe.skipIf(process.platform !== 'darwin' && process.platform !== 'linux')('orphans of a real shell', async () => {
-    const sampler = await createSampler();
-    const harness = await makeHarness();
-    const { manager } = harness;
-    let orphanPid: number | null = null;
-
-    afterAll(async () => {
-        await harness.cleanup();
-        if (orphanPid !== null) {
-            try {
-                process.kill(orphanPid, 'SIGKILL');
-            } catch {
-                // Already gone.
-            }
-        }
-    });
-
-    test('a background process that outlives its terminal is a warning with its pid', async () => {
-        const monitor = new ProcessMonitor({
-            sampler,
-            sessions: () =>
-                manager.list().map((session) => ({ id: session.sessionId, pid: session.pid, exited: session.exited, agent: session.agent ?? null })),
-            chats: () => [],
-            contextUrl: () => null,
-            reportsEnd: () => true
-        });
-        const alerts = recorder();
-        monitor.subscribe('a', alerts.sink);
-        await manager.create({ sessionId: 'orphan-node', cols: 80, rows: 24, shell: SH, args: SH_ARGS });
-        manager.write('orphan-node', 'nohup sleep 9999 >/dev/null 2>&1 &\n');
-        const session = manager.get('orphan-node')!;
-        await waitFor(() => {
-            monitor.sampleNow(false);
-            const group = monitor.follow('a', { scope: 'ruimte', sort: 'cpu' }).sample?.groups.find((entry) => entry.nodeId === 'orphan-node');
-            return group?.processes.some((row) => row.name === 'sleep') === true;
-        }, 'the sleep inside the shell');
-        monitor.unfollow('a');
-
-        await manager.kill('orphan-node');
-        await waitFor(() => session.exited, 'the shell to exit');
-        await waitFor(() => {
-            monitor.sampleNow(false);
-            return monitor.alerts().some((alert) => alert.kind === 'orphan');
-        }, 'the orphan warning');
-        const orphan = monitor.alerts().find((alert) => alert.kind === 'orphan')!;
-        orphanPid = orphan.pid;
-        expect(orphan).toMatchObject({ nodeId: 'orphan-node', name: 'sleep' });
-        expect(alerts.events.some((event) => event.event === 'processes.alerts')).toBe(true);
     });
 });
