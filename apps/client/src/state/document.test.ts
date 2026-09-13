@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectDocument } from '@ruimte/contracts';
+import { viewIdsIn } from '@/shell/split';
 import { useCanvas } from './canvas';
 import { useDocument } from './document';
 
@@ -84,6 +85,40 @@ describe('switching views', () => {
         useDocument.getState().addCanvasView('Third');
         expect(useDocument.getState().edits).toBe(before + 1);
         expect(useDocument.getState().activeViewId).toBe(useDocument.getState().views[2]!.id);
+    });
+});
+
+describe('a view an agent asked for', () => {
+    test('takes the focused cell and says what stood there, so the toast can put it back', () => {
+        const shown = useDocument.getState().showView('b')!;
+        expect(useDocument.getState().activeViewId).toBe('b');
+        expect(shown.replaced).toBe('a');
+        useDocument.getState().undoShowView(shown);
+        expect(useDocument.getState().activeViewId).toBe('a');
+    });
+
+    test('the view already in front is nothing to show, and a view this document has not got is ignored', () => {
+        expect(useDocument.getState().showView('a')).toBeNull();
+        expect(useDocument.getState().showView('gone')).toBeNull();
+        expect(useDocument.getState().activeViewId).toBe('a');
+    });
+
+    test('showing is no edit: what a person looks at never reaches the shared file', () => {
+        const before = useDocument.getState().edits;
+        const shown = useDocument.getState().showView('b')!;
+        useDocument.getState().undoShowView(shown);
+        expect(useDocument.getState().edits).toBe(before);
+    });
+
+    test('a view standing in another cell takes the focus instead of appearing twice', () => {
+        useDocument.getState().splitFocused('right', 'b');
+        expect(useDocument.getState().activeViewId).toBe('b');
+        const shown = useDocument.getState().showView('a')!;
+        expect(useDocument.getState().activeViewId).toBe('a');
+        expect(shown.replaced).toBeNull();
+        expect(viewIdsIn(useDocument.getState().layout!)).toEqual(['a', 'b']);
+        useDocument.getState().undoShowView(shown);
+        expect(useDocument.getState().activeViewId).toBe('b');
     });
 });
 

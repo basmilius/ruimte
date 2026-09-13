@@ -57,6 +57,10 @@ export interface Settings {
     dockAutoHide: boolean;
     /* Whether the desktop shell downloads an update as soon as it finds one, or waits to be asked. */
     updatesAutoDownload: boolean;
+    /* Whether a view an agent asks for takes the place of the one you are working in. Off, nothing
+       moves and the toast carries a button instead. Making is shared and the daemon enforces it;
+       looking is one person at one screen, so this one is the client's. */
+    agentsShowViews: boolean;
 }
 
 interface SettingsStore extends Settings {
@@ -79,7 +83,8 @@ const DEFAULT_SETTINGS: Settings = {
     diffWhitespace: true,
     drawingSnap: false,
     dockAutoHide: false,
-    updatesAutoDownload: true
+    updatesAutoDownload: true,
+    agentsShowViews: true
 };
 
 // Rounded as well as clamped: the stepper used to move in halves, so a browser can still hand back
@@ -157,7 +162,8 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 diffWhitespace,
                 drawingSnap,
                 dockAutoHide,
-                updatesAutoDownload
+                updatesAutoDownload,
+                agentsShowViews
             } = get();
             const next: Settings = {
                 accent,
@@ -174,6 +180,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 drawingSnap,
                 dockAutoHide,
                 updatesAutoDownload,
+                agentsShowViews,
                 ...patch
             };
             next.fontSize = clampSize(next.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize);

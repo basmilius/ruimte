@@ -3,7 +3,9 @@ import { create } from 'zustand';
 // How long a toast that went well stays up; a failure waits for the person instead.
 export const SUCCESS_MS = 4000;
 
-export type ToastKind = 'progress' | 'success' | 'error';
+/* `notice` is something that happened elsewhere and waits to be read: it carries no verdict, so it
+   neither spins nor warns, and like a failure it stays until the person has done something with it. */
+export type ToastKind = 'progress' | 'success' | 'error' | 'notice';
 
 export interface ToastAction {
     label: string;

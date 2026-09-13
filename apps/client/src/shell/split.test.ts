@@ -15,7 +15,9 @@ import {
     layoutOf,
     locateView,
     openableViewIds,
+    showViewIn,
     singleLayout,
+    undoShowView,
     viewIdsIn,
     type CellAt,
     type SplitDirection
@@ -218,6 +220,64 @@ describe('focusCell', () => {
         const layout = gridOf([['a']]);
         expect(focusCell(layout, { column: 2, cell: 0 })).toBe(layout);
         expect(focusCell(layout, { column: 0, cell: 0 }).focus).toEqual({ column: 0, cell: 0 });
+    });
+});
+
+describe('showViewIn', () => {
+    test('a view nobody has on screen takes the place of the one in the focused cell', () => {
+        const layout = gridOf([['a'], ['b', 'c']], { column: 1, cell: 1 });
+        const shown = showViewIn(layout, 'd')!;
+        expect(shapeOf(shown.layout)).toEqual([['a'], ['b', 'd']]);
+        expect(shown.at).toEqual({ column: 1, cell: 1 });
+        expect(shown.replaced).toBe('c');
+        expect(shown.from).toEqual({ column: 1, cell: 1 });
+        expect(shown.layout.focus).toEqual({ column: 1, cell: 1 });
+        sums(shown.layout);
+    });
+
+    test('a view already in another cell moves the focus instead of appearing twice', () => {
+        const layout = gridOf([['a'], ['b', 'c']], { column: 0, cell: 0 });
+        const shown = showViewIn(layout, 'c')!;
+        expect(shapeOf(shown.layout)).toEqual([['a'], ['b', 'c']]);
+        expect(shown.at).toEqual({ column: 1, cell: 1 });
+        expect(shown.replaced).toBeNull();
+        expect(shown.from).toEqual({ column: 0, cell: 0 });
+        expect(shown.layout.focus).toEqual({ column: 1, cell: 1 });
+    });
+
+    test('the view the person is already looking at is nothing to show and nothing to undo', () => {
+        expect(showViewIn(gridOf([['a'], ['b']], { column: 1, cell: 0 }), 'b')).toBeNull();
+    });
+});
+
+describe('undoShowView', () => {
+    test('puts the view that made room back in its cell', () => {
+        const layout = gridOf([['a'], ['b', 'c']], { column: 1, cell: 1 });
+        const shown = showViewIn(layout, 'd')!;
+        const back = undoShowView(shown.layout, shown);
+        expect(shapeOf(back)).toEqual([['a'], ['b', 'c']]);
+        expect(back.focus).toEqual({ column: 1, cell: 1 });
+        sums(back);
+    });
+
+    test('hands the focus back when nothing was replaced', () => {
+        const layout = gridOf([['a'], ['b', 'c']], { column: 0, cell: 0 });
+        const shown = showViewIn(layout, 'c')!;
+        expect(undoShowView(shown.layout, shown).focus).toEqual({ column: 0, cell: 0 });
+        expect(shapeOf(undoShowView(shown.layout, shown))).toEqual([['a'], ['b', 'c']]);
+    });
+
+    test('runs against the grid as it stands, so a split made in between survives', () => {
+        const shown = showViewIn(gridOf([['a']]), 'd')!;
+        // The person split the cell after the toast went up; going back may only touch the cell it named.
+        const moved = dropView(shown.layout, 'e', { column: 0, cell: 0 }, 'right');
+        expect(shapeOf(undoShowView(moved, shown))).toEqual([['a'], ['e']]);
+    });
+
+    test('a cell that is gone leaves everything where it is', () => {
+        const shown = showViewIn(gridOf([['a'], ['b']], { column: 1, cell: 0 }), 'd')!;
+        const closed = closeCell(shown.layout, { column: 1, cell: 0 })!;
+        expect(shapeOf(undoShowView(closed, shown))).toEqual([['a']]);
     });
 });
 

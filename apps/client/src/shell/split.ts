@@ -149,6 +149,43 @@ export const dropView = (layout: SplitLayout, viewId: string, at: CellAt, zone: 
     return settled(next, { column: target.column, cell: index });
 };
 
+/* What showing a view did, which is everything the way back needs. */
+export interface ShownView {
+    layout: SplitLayout;
+    /* The cell the view is standing in now. */
+    at: CellAt;
+    /* The view that made room for it, null when the view was already on screen and only took the focus. */
+    replaced: string | null;
+    /* The cell the person was working in, which is where the focus goes back to. */
+    from: CellAt;
+}
+
+/*
+ * A view someone else asked for, put on screen. It takes the place of the one in the cell that has
+ * the focus, unless it is already standing somewhere: one view is in at most one cell, so that cell
+ * takes the focus instead of the view appearing twice. Null when the view is the one being looked
+ * at already, since then there is nothing to do and nothing to undo.
+ */
+export const showViewIn = (layout: SplitLayout, viewId: string): ShownView | null => {
+    const standing = locateView(layout, viewId);
+    if (standing !== null) {
+        return isSameCell(standing, layout.focus) ? null : { layout: focusCell(layout, standing), at: standing, replaced: null, from: layout.focus };
+    }
+    const at = layout.focus;
+    return { layout: dropView(layout, viewId, at, 'center'), at, replaced: cellAt(layout, at)?.viewId ?? null, from: at };
+};
+
+/*
+ * The way back the toast offers. It runs against the layout as it stands when the button is
+ * pressed rather than against a copy from the moment of the toast: between the two a person may
+ * have split a cell or closed one, and handing them back a grid from before that would take away
+ * work they did themselves. A cell that is gone leaves everything where it is.
+ */
+export const undoShowView = (layout: SplitLayout, shown: Omit<ShownView, 'layout'>): SplitLayout => {
+    const back = shown.replaced === null || cellAt(layout, shown.at) === null ? layout : dropView(layout, shown.replaced, shown.at, 'center');
+    return focusCell(back, shown.from);
+};
+
 /* Null when that was the last cell; the caller decides what an empty grid means. */
 export const closeCell = (layout: SplitLayout, at: CellAt): SplitLayout | null => {
     if (cellAt(layout, at) === null) {

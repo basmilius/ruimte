@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import clsx from 'clsx';
-import { Check, CircleAlert, Copy, LoaderCircle, X } from 'lucide-react';
+import { Check, CircleAlert, Copy, Eye, LoaderCircle, X } from 'lucide-react';
 import { useToasts, type Toast } from '@/state/toasts';
 import { Button } from '@/ui/Button';
 import { FLOAT } from '@/ui/classes';
@@ -10,13 +10,15 @@ import { Tooltip } from '@/ui/Tooltip';
 const ICON = {
     progress: LoaderCircle,
     success: Check,
-    error: CircleAlert
+    error: CircleAlert,
+    notice: Eye
 } as const;
 
 const TONE = {
     progress: 'text-text-muted',
     success: 'text-status-idle',
-    error: 'text-status-error'
+    error: 'text-status-error',
+    notice: 'text-text-muted'
 } as const;
 
 /* Nothing else in the app copies text, so the button says whether it worked instead of a toast about a toast. */
@@ -73,7 +75,8 @@ function ToastCard({ toast }: { toast: Toast }) {
 /*
  * Bottom right, over everything: what a git action is doing while it runs and how it went when it
  * is over. A success takes itself away after four seconds, a failure waits to be read and carries
- * the output of the command that failed.
+ * the output of the command that failed, and a notice (an agent that asked for a view) waits too,
+ * because the button on it is the whole point of the card.
  */
 export function Toasts() {
     const toasts = useToasts((s) => s.toasts);

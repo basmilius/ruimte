@@ -39,9 +39,12 @@ import {
     isSameCell,
     layoutOf,
     locateView,
+    showViewIn,
     singleLayout,
+    undoShowView,
     viewIdsIn,
     type CellAt,
+    type ShownView,
     type SplitDirection,
     type SplitZone
 } from '@/shell/split';
@@ -78,6 +81,11 @@ export interface DocumentState {
     applyAdditions(views: ProjectView[], canvases: Record<string, CanvasAddition>): void;
     /* Puts a view in the cell that has the focus, or moves the focus to the cell it already stands in. */
     setActiveView(id: string): void;
+    /* The same, for a view someone else asked for: it answers what moved, so a toast can put it back.
+       Null when nothing moved, which is a view this document does not have or the one already in front. */
+    showView(id: string): ShownView | null;
+    /* The way back out of that toast, run against the grid as it stands when the button is pressed. */
+    undoShowView(shown: Omit<ShownView, 'layout'>): void;
     /* A view into a cell's zone: the four edges split, the middle takes the place of what is there. */
     dropViewAt(viewId: string, at: CellAt, zone: SplitZone): void;
     /* Splits the focused cell and puts a view in the new one. */
@@ -297,10 +305,34 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                     commit(singleLayout(id));
                     return;
                 }
-                // Already in a cell: the view does not move, the focus goes to it. Otherwise it takes the
-                // place of the view in the focused cell, which is what one cell has always done.
-                const standing = locateView(state.layout, id);
-                commit(standing === null ? dropView(state.layout, id, state.layout.focus, 'center') : focusCell(state.layout, standing));
+                const shown = showViewIn(state.layout, id);
+                if (shown !== null) {
+                    commit(shown.layout);
+                }
+            },
+
+            showView(id) {
+                const state = get();
+                const view = state.views.find((candidate) => candidate.id === id);
+                if (!view || !isOpenableView(view)) {
+                    return null;
+                }
+                if (state.layout === null) {
+                    commit(singleLayout(id));
+                    return null;
+                }
+                const shown = showViewIn(state.layout, id);
+                if (shown !== null) {
+                    commit(shown.layout);
+                }
+                return shown;
+            },
+
+            undoShowView(shown) {
+                const state = get();
+                if (state.layout !== null) {
+                    commit(undoShowView(state.layout, shown));
+                }
             },
 
             dropViewAt(viewId, at, zone) {

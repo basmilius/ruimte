@@ -12,6 +12,7 @@ import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Badge, Skeleton, Toggle } from '@/shell/settings/controls';
 import { useProviders } from '@/state/providers';
+import { useSettings } from '@/state/settings';
 import { Select, type SelectItem } from '@/ui/Select';
 
 const PROVIDER_DEFAULT = '';
@@ -98,6 +99,8 @@ export function AgentsPane() {
     const providers = useProviders((s) => s.providers);
     const loaded = useProviders((s) => s.loaded);
     const preferences = useChatPreferences();
+    const agentsShowViews = useSettings((s) => s.agentsShowViews);
+    const update = useSettings((s) => s.update);
     const withModels = providers.filter((provider) => provider.models.length > 0);
 
     return (
@@ -138,6 +141,18 @@ export function AgentsPane() {
                             items={runtimeModeItems}
                             onValueChange={(value) => rememberChatPreferences({ terminalRuntimeMode: value })}
                         />
+                    }
+                />
+            </SettingsSection>
+            <SettingsSection
+                title="What an agent may do here"
+                description="This one is about this client alone: what an agent makes is shared, what you look at is not."
+            >
+                <SettingsRow
+                    label="Let an agent show you a view"
+                    description="On, a view an agent asks for takes the place of the one you are working in, and a toast puts it back. Off, nothing moves and the toast names the view with a button to go there."
+                    control={
+                        <Toggle checked={agentsShowViews} onChange={(checked) => update({ agentsShowViews: checked })} label="Let an agent show you a view" />
                     }
                 />
             </SettingsSection>

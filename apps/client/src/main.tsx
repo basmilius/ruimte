@@ -8,6 +8,7 @@ import { startEndpointSelection } from '@/endpoint';
 import { startEndpointWatch } from '@/endpoint/watch';
 import { startProcessWarnings } from '@/processes/watch';
 import { startProjectList } from '@/project/list';
+import { startShowViewWatch } from '@/project/show-view-watch';
 import { restoreLastEndpoint } from '@/project/open';
 import { startConnections } from '@/transport/connections';
 import { desktop } from '@/desktop/bridge';
@@ -31,6 +32,7 @@ startEndpointWatch();
 startProcessWarnings();
 startConnections();
 startProjectList();
+startShowViewWatch();
 startInputModality();
 /* The shell dresses its native chrome and every page it hosts in the theme the client is in. The
    background travels with it, so `styles.css` stays the only place the token is written down. */
