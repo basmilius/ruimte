@@ -45,7 +45,7 @@ export function Toolbar() {
 
     return (
         <header
-            className="app-drag relative flex h-12 shrink-0 items-center gap-2 border-b border-border bg-surface pr-3 pl-2 text-xs text-text-muted transition-[padding] duration-200 ease-out"
+            className="app-drag relative flex h-12 shrink-0 items-center gap-2 border-b border-border bg-surface pr-2 pl-2 text-xs text-text-muted transition-[padding] duration-200 ease-out"
             style={sidebarOpen ? undefined : { paddingLeft: inset ?? STRIP_PADDING_PX }}
         >
             {!sidebarOpen && <SidebarToggle />}
