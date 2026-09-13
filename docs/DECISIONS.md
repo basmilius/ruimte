@@ -206,6 +206,23 @@ canvas, against Ruimte, one verdict each.
   setting itself, which is what makes the switch act at once on a request that is already open.
   `--no-approvals` stays what it was, one level up: the machine's own answer, for every client,
   which is what an operator reaches for and not what a person clicks.
+- **The daemon says what a permission answer means for the status, because the CLI will not.** A
+  CLI has no reason to report anything when its own prompt is settled from the outside: the next
+  hook is the PostToolUse of the tool that just started, which for a command running for minutes
+  is minutes away. Measured on Claude Code 2.1.270, an approved `sleep 20` left a node saying
+  "Needs you" for the whole twenty seconds. So `answerApproval` sets the status itself: working
+  again, an allow and a deny alike (the agent reads the refusal and carries on), unless another
+  request is still open for that session, which is a person's turn all the same. Only a session
+  still on `needs-you` is touched, so a hook that spoke after the request opened keeps the last
+  word, and every later hook overwrites the inference as it would any other status. The other way
+  round is the same daemon knowing the same thing: a hook that reports `idle`, `error` or an
+  agent that is gone proves no permission prompt is on the screen, so anything still held for
+  that session was answered in the TUI and is withdrawn from every client. A `running` hook is no
+  such proof, since a CLI runs tools beside each other and may be asking about one while it
+  reports another. Both matter beyond the header: `needs-you` is what the notification, the
+  "Needs you" section, the attention marks and the `busy-after-turn` rule in
+  `apps/server/src/processes/stuck.ts` all read, and a stale one of those is a warning nobody
+  earned.
 - A chat process is not started when the node mounts, only on the first message, so a canvas
   full of chat nodes costs nothing until used.
 - A turn's checkpoint diff compares two trees of ours, not the tree against the working tree:
@@ -1041,8 +1058,11 @@ Also decided against for now: a scheduler, checkpoint restore and telemetry.
   hook is a trap for anyone who reads it as "the CLI waits for my answer". Measured against
   Claude Code 2.1.270 in a real PTY: the prompt appears on screen at the same moment the hook
   starts, both stay live, and the first answer settles it (the transcript then says "Allowed by
-  PermissionRequest hook"). Answering in the TUI kills the running hook mid-sleep, which arrives
-  on the daemon as an aborted request and is the signal to withdraw the request from every client.
+  PermissionRequest hook"). **Answering in the TUI tells the hook nothing.** Measured again on the
+  same version: the hook was not cancelled, the request sat out its whole 110 seconds while the
+  approved command ran and the turn ended, and the only abort that ever arrived was the CLI
+  itself dying. So an aborted request is not the signal to withdraw one; the end of the turn is
+  (`applyHook` in `apps/server/src/sessions/manager.ts`).
   A hook that outlives its `timeout` is cancelled and its output discarded, and the prompt simply
   stays up, so a hold that runs out costs nothing. The reply shape is not what the published docs
   say either: for `PermissionRequest` it is `hookSpecificOutput.decision` as an *object*,
