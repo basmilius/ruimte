@@ -1,0 +1,218 @@
+import { NODE_SIZE, type AgentKind, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
+import { z } from 'zod';
+import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
+import { providerFor } from '../providers/registry.ts';
+import { AGENT_KINDS, agentNode, chatKinds, nameOf } from './agent-verb.ts';
+import { DEPTH_LIMIT_LINES, depthForOpening } from './depth.ts';
+import { MAX_CANVAS_NODES, newId } from './node-verb.ts';
+import { placeFree, placeTeam, TEAM_COLUMNS } from './placement.ts';
+import { checkCwd } from './project-paths.ts';
+import { VerbRefusal, canvasFor, defineVerb, field, placeOf } from './verb.ts';
+
+/* The design's number: past eight the group is a wall of terminals and the bill is somebody's day. */
+export const MAX_ROLES = 8;
+
+/* Every field says its own sentence, so a role that is missing one reads the same as a role that
+   filled it with the wrong thing; zod's default would name a type where the agent needs the field. */
+const RoleSchema = z.strictObject({
+    title: z.string({ error: 'title needs a name for the node' }).trim().min(1, 'title needs a name for the node'),
+    prompt: z
+        .string({ error: 'prompt says what this agent starts working on' })
+        .trim()
+        .min(1, 'prompt says what this agent starts working on')
+        .max(MAX_PROMPT_LENGTH, `prompt is longer than the ${MAX_PROMPT_LENGTH} characters a launch line carries`),
+    provider: z.enum(AGENT_KINDS, { error: `provider needs a CLI: ${AGENT_KINDS.join(', ')}` }),
+    chat: z.boolean({ error: 'chat is true or false' }).optional()
+});
+
+type Role = z.infer<typeof RoleSchema>;
+
+const RolesSchema = z
+    .array(RoleSchema, { error: '--roles is a JSON array of roles' })
+    .min(1, `--roles has no roles in it; a team is between 1 and ${MAX_ROLES} of them`)
+    .max(MAX_ROLES, `--roles has more than the ${MAX_ROLES} roles a team takes`);
+
+export const ROLES_SHAPE = '[{"title": "Lexer", "prompt": "Fix the tokenizer", "provider": "claude"}]';
+
+/* The shape, said the same way in help and under a refusal, so a bad call is one read away from a good one. */
+const ROLES_LINES: readonly string[] = [
+    `roles\tshape\t${ROLES_SHAPE}`,
+    'roles\ttitle\trequired\tThe title of the node; the session never renames over it',
+    `roles\tprompt\trequired\tWhat that agent starts working on, at most ${MAX_PROMPT_LENGTH} characters`,
+    `roles\tprovider\trequired\t${AGENT_KINDS.join(', ')}`,
+    'roles\tchat\toptional\ttrue opens a chat node instead of a terminal node; only a CLI with a chat backend takes it',
+    `roles\tcount\tbetween 1 and ${MAX_ROLES}`
+];
+
+const TEAM_DETAIL: readonly string[] = [
+    'flag\t--label L\trequired\tThe name of the group the agents land in',
+    `flag\t--roles J\trequired\tThe roles as JSON, ${ROLES_SHAPE}`,
+    ...ROLES_LINES,
+    'json\tA prompt is a JSON string, so a line break in it is \\n of JSON itself and nothing is escaped twice',
+    `example\truimte-context team --label "Parser work" --roles '[{"title":"Lexer","prompt":"Fix the tokenizer in src/lex.ts","provider":"claude"},{"title":"Reviewer","prompt":"Read the Lexer node and review its work","provider":"codex","chat":true}]'`,
+    'prints\tid\tkind\tview\tcli\tthe group first, with its label where a role has its CLI, then one line per role in the order of --roles',
+    'flag\t--cwd P\toptional\tThe directory every agent starts in; a directory per role is not a thing',
+    'flag\t--view V\toptional\tThe canvas to add to, by view id; ruimte-context views lists them',
+    'flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field of every line is dry-run',
+    'edges\tOne edge per role, from you into that agent, so each of them can read you with ruimte-context read',
+    'where\tThe group lands on the first free spot right of you, or right of everything when you are not on that canvas',
+    `group\tThe agents stand in rows of at most ${TEAM_COLUMNS} inside the frame, and the frame is sized to hold them`,
+    'refusal\tA role that is wrong is named by its place in the array, counting from 0',
+    'paths\t--cwd is resolved against the project folder and has to stay inside it or a worktree of its repository',
+    'prompt\tA terminal role gets its prompt on the line its CLI is started with, a chat role as the first message of its thread; it is delivered once and never written into project.json',
+    `limit\tA canvas holds at most ${MAX_CANVAS_NODES} nodes, the group among them`,
+    ...DEPTH_LIMIT_LINES,
+    'note\tEvery agent starts working the moment a client shows it; with nobody looking, the daemon holds the prompts until one does'
+];
+
+/*
+ * Which role is wrong and why. zod says `[2].prompt`, and an agent that wrote the JSON needs the
+ * index back to find the object it typed, so the path is spelled out in front of the sentence.
+ */
+const rolesMessage = (error: z.ZodError): string => {
+    const issue = error.issues[0];
+    if (!issue) {
+        return '--roles is not a list of roles';
+    }
+    const [index, key] = issue.path;
+    if (typeof index !== 'number') {
+        return issue.message;
+    }
+    return `role ${index}${typeof key === 'string' ? ` (${key})` : ''}: ${issue.message}`;
+};
+
+const parseRoles = (raw: string): Role[] => {
+    let json: unknown;
+    try {
+        json = JSON.parse(raw);
+    } catch (e) {
+        throw new VerbRefusal('bad-roles-json', `--roles is not JSON: ${e instanceof Error ? e.message : 'it could not be read'}`, [...ROLES_LINES]);
+    }
+    const parsed = RolesSchema.safeParse(json);
+    if (!parsed.success) {
+        throw new VerbRefusal('bad-roles', rolesMessage(parsed.error), [...ROLES_LINES]);
+    }
+    return parsed.data;
+};
+
+const kindOf = (role: Role): 'chat' | 'terminal' => (role.chat === true ? 'chat' : 'terminal');
+
+export const teamVerb = defineVerb({
+    name: 'team',
+    usage: `--label L --roles '${ROLES_SHAPE}' [--view V] [--cwd P] [--dry-run]`,
+    summary: `Opens up to ${MAX_ROLES} agents at once in a group, each with an edge from you into it`,
+    detail: TEAM_DETAIL,
+    dryRun: true,
+    positionals: z.tuple([], { error: 'team takes no arguments, only flags; the agents go in --roles' }),
+    flags: z.object({
+        label: z.string().trim().min(1, '--label needs a name for the group'),
+        roles: z.string().min(1, `--roles needs the roles as JSON, ${ROLES_SHAPE}`),
+        cwd: z.string().min(1, '--cwd needs the path of a directory').optional(),
+        view: z.string().min(1, '--view needs the id of a canvas').optional()
+    }),
+    async run({ flags, dryRun }, call) {
+        const place = placeOf(call);
+        const roles = parseRoles(flags.roles);
+        const depth = depthForOpening(call, 'team', roles.length);
+
+        for (const [index, role] of roles.entries()) {
+            if (role.chat === true && !providerFor(role.provider).capabilities.chat) {
+                throw new VerbRefusal(
+                    'no-chat-backend',
+                    `role ${index} (${role.provider}): ${nameOf(role.provider)} has no chat backend; leave chat out and it opens as a terminal agent`,
+                    chatKinds().map((candidate) => `cli\t${candidate}\t${nameOf(candidate)}\ttakes chat`)
+                );
+            }
+        }
+        const installed = await call.host.installedAgents();
+        const missing = roles.findIndex((role) => !installed.includes(role.provider));
+        if (missing !== -1) {
+            const kind = roles[missing]!.provider;
+            throw new VerbRefusal(
+                'cli-not-installed',
+                `role ${missing} (${kind}): ${nameOf(kind)} is not installed on this machine`,
+                installed.length === 0
+                    ? ['note\tNo agent CLI is installed on this machine']
+                    : installed.map((candidate: AgentKind) => `cli\t${candidate}\t${nameOf(candidate)}`)
+            );
+        }
+
+        // Everything that touches the disk or git runs before the lock, so a slow repository holds up no save.
+        const cwd = flags.cwd === undefined ? undefined : await checkCwd(place.folder, flags.cwd, (folder) => call.host.worktreePaths(folder));
+
+        return call.host.mutate(place.projectId, async (content) => {
+            const canvas = canvasFor(content, place, flags.view);
+            // The group counts too, which is the one node a caller does not name in --roles.
+            if (canvas.nodes.length + roles.length + 1 > MAX_CANVAS_NODES) {
+                throw new VerbRefusal(
+                    'canvas-full',
+                    `${canvas.name} holds ${canvas.nodes.length} nodes and this team needs ${roles.length + 1} more; a canvas holds at most ${MAX_CANVAS_NODES}`
+                );
+            }
+
+            const layout = placeTeam(roles.map((role) => NODE_SIZE[kindOf(role)]));
+            const caller = canvas.nodes.find((node) => node.id === call.caller) ?? null;
+            const origin = placeFree(canvas.nodes, layout.frame, caller);
+            const label = flags.label;
+
+            if (dryRun) {
+                return {
+                    content: null,
+                    result: [
+                        ['dry-run', 'group', canvas.id, field(label)].join('\t'),
+                        ...roles.map((role) => ['dry-run', kindOf(role), canvas.id, role.provider].join('\t'))
+                    ]
+                };
+            }
+
+            const taken: string[] = [];
+            const mint = (prefix: string): string => {
+                const id = newId(prefix, content, taken);
+                taken.push(id);
+                return id;
+            };
+
+            /* A group that is not collapsed holds whatever has its center inside the frame, the same
+               rule the client reads membership by, so there is no memberIds to fill in here. */
+            const groupId = mint('group');
+            const group: ProjectNode = { id: groupId, kind: 'group', title: label, ...origin };
+            const nodes: ProjectNode[] = [group];
+            const edges: ProjectEdge[] = [];
+            const lines = [[groupId, 'group', canvas.id, field(label)].join('\t')];
+
+            for (const [index, role] of roles.entries()) {
+                const chat = kindOf(role) === 'chat';
+                const rect = layout.rects[index]!;
+                const id = mint(chat ? 'chat' : 'terminal');
+                nodes.push(
+                    agentNode({
+                        id,
+                        chat,
+                        kind: role.provider,
+                        title: role.title,
+                        rect: { ...rect, x: origin.x + rect.x, y: origin.y + rect.y },
+                        cwd
+                    })
+                );
+                if (caller) {
+                    edges.push({ id: mint('edge'), from: caller.id, to: id, label: 'context' });
+                }
+                // Written under the project's own lock, before the nodes are on disk, so a client that
+                // reacts to project.changed can never mount one while its prompt or its depth is still coming.
+                await call.host.recordOpened(place.projectId, id, call.caller, depth);
+                await call.host.holdPrompt(place.projectId, id, role.prompt);
+                lines.push([id, chat ? 'chat' : 'terminal', canvas.id, role.provider].join('\t'));
+            }
+
+            return {
+                content: {
+                    ...content,
+                    views: content.views.map((view) =>
+                        view.id === canvas.id ? { ...canvas, nodes: [...canvas.nodes, ...nodes], edges: [...canvas.edges, ...edges] } : view
+                    )
+                },
+                result: lines
+            };
+        });
+    }
+});

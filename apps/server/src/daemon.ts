@@ -2,6 +2,7 @@ import { dirname, join, normalize, resolve } from 'node:path';
 import type { ServerWebSocket } from 'bun';
 import { AuthTicketPayloadSchema, PairPayloadSchema, type AgentKind, type ServerFrame } from '@ruimte/contracts';
 import { AgentStore } from './agents/agent-store.ts';
+import { AgentLineageStore } from './agents/lineage.ts';
 import { PendingPromptStore } from './agents/pending-prompts.ts';
 import { OutputGate } from './backpressure.ts';
 import { decideAccess, isLoopbackAddress, reachabilityOf } from './auth/access.ts';
@@ -86,6 +87,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     // Loaded before anything can take one: a node made just before a restart still starts on its prompt.
     const prompts = new PendingPromptStore(config.home);
     await prompts.load();
+    // The same for the chain of agents that opened agents: a restart must not start the count over.
+    const lineage = new AgentLineageStore(config.home);
+    await lineage.load();
     const manager = new SessionManager({
         adapter: new BunPtyAdapter(),
         snapshots,
@@ -121,8 +125,11 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         onLimits: (update) => limits.applyLive(update)
     });
     const projects = new ProjectStore(config.home);
-    // A node deleted before anyone ran it takes its prompt with it.
-    projects.index.onPlaces = (projectId, ids) => void prompts.prune(projectId, ids).catch((e) => console.error('Pruning pending prompts failed', e));
+    // A node deleted before anyone ran it takes its prompt with it, and a node that is gone frees the count its opener is held to.
+    projects.index.onPlaces = (projectId, ids) => {
+        void prompts.prune(projectId, ids).catch((e) => console.error('Pruning pending prompts failed', e));
+        void lineage.prune(projectId, ids).catch((e) => console.error('Pruning agent lineage failed', e));
+    };
     const drawings = new DrawingStore(projects);
     projects.attachDrawings(drawings);
     // Before the socket answers, so an agent whose project nobody opened since the restart still reads its links.
@@ -153,7 +160,10 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 .then((list) => list.map((worktree) => worktree.path))
                 .catch(() => []),
         installedAgents: async () => (await providers.list()).filter((provider) => provider.installed).map((provider) => provider.kind),
-        holdPrompt: (projectId: string, nodeId: string, prompt: string) => prompts.put(projectId, nodeId, prompt)
+        holdPrompt: (projectId: string, nodeId: string, prompt: string) => prompts.put(projectId, nodeId, prompt),
+        depthOf: (nodeId: string) => lineage.depthOf(nodeId),
+        openedCount: (callerId: string) => lineage.openedCount(callerId),
+        recordOpened: (projectId: string, nodeId: string, openedBy: string, depth: number) => lineage.put(projectId, nodeId, openedBy, depth)
     };
 
     const dispatcher = new Dispatcher();

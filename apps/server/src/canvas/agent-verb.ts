@@ -2,6 +2,7 @@ import { AgentKindSchema, NODE_SIZE, type AgentKind, type ProjectCanvasView, typ
 import { z } from 'zod';
 import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
 import { providerFor } from '../providers/registry.ts';
+import { DEPTH_LIMIT_LINES, depthForOpening } from './depth.ts';
 import { MAX_CANVAS_NODES, newId, nodeLines } from './node-verb.ts';
 import { groupMembers, placeBeside, placeFree, placeInGroup, type Rect } from './placement.ts';
 import { checkCwd, readPromptFile } from './project-paths.ts';
@@ -11,9 +12,9 @@ import { VerbRefusal, canvasFor, defineVerb, field, placeOf, type VerbCall } fro
 export const AGENT_KINDS = AgentKindSchema.options;
 
 /* The CLIs with a chat backend; the rest only ever runs in a shell, which is what `--chat` refuses. */
-const chatKinds = (): AgentKind[] => AGENT_KINDS.filter((kind) => providerFor(kind).capabilities.chat);
+export const chatKinds = (): AgentKind[] => AGENT_KINDS.filter((kind) => providerFor(kind).capabilities.chat);
 
-const nameOf = (kind: AgentKind): string => providerFor(kind).name;
+export const nameOf = (kind: AgentKind): string => providerFor(kind).name;
 
 const KIND_MESSAGE = `agent needs a CLI: ${AGENT_KINDS.join(', ')}`;
 
@@ -37,10 +38,11 @@ const AGENT_DETAIL: readonly string[] = [
     'paths\tBoth have to stay inside the project folder or a worktree of its repository',
     'prompt\tA terminal agent gets it on the line its CLI is started with, a chat agent as the first message of the thread; it is delivered once and never written into project.json',
     `limit\tA canvas holds at most ${MAX_CANVAS_NODES} nodes`,
+    ...DEPTH_LIMIT_LINES,
     'note\tThe node starts working the moment a client shows it; with nobody looking, the daemon holds the prompt until one does'
 ];
 
-interface AgentNodeSpec {
+export interface AgentNodeSpec {
     id: string;
     chat: boolean;
     kind: AgentKind;
@@ -51,7 +53,7 @@ interface AgentNodeSpec {
 
 /* The node a person's own click would have made: titled after the CLI, and a chat fixed to it, so
    its composer shows a badge instead of a model picker (`addAgentNode` in the client). */
-const agentNode = (spec: AgentNodeSpec): ProjectNode => ({
+export const agentNode = (spec: AgentNodeSpec): ProjectNode => ({
     id: spec.id,
     kind: spec.chat ? 'chat' : 'terminal',
     title: spec.title ?? nameOf(spec.kind),
@@ -114,6 +116,7 @@ export const agentVerb = defineVerb({
     }),
     async run({ positionals: [kind], flags, switches, dryRun }, call) {
         const place = placeOf(call);
+        const depth = depthForOpening(call, 'agent', 1);
         const chat = switches.has('chat');
         if (chat && !providerFor(kind).capabilities.chat) {
             throw new VerbRefusal(
@@ -169,9 +172,10 @@ export const agentVerb = defineVerb({
             const edge: ProjectEdge | null = caller ? { id: newId('edge', content, [id]), from: caller.id, to: id, label: 'context' } : null;
             const nodes = [...canvas.nodes.map((candidate) => (group && candidate.id === group.id ? grownGroup(candidate, inGroup, id) : candidate)), node];
 
+            // Written under the project's own lock, before the node is on disk, so a client that
+            // reacts to project.changed can never mount the node while its depth is still coming.
+            await call.host.recordOpened(place.projectId, id, call.caller, depth);
             if (prompt !== null) {
-                // Written under the project's own lock, before the node is on disk, so a client that
-                // reacts to project.changed can never mount the node while the prompt is still coming.
                 await call.host.holdPrompt(place.projectId, id, prompt);
             }
             return {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { GROUP_HEADER, GROUP_PADDING, type ProjectNode } from '@ruimte/contracts';
-import { PLACEMENT_GAP, groupMembers, placeBeside, placeFree, placeInGroup } from './placement.ts';
+import { PLACEMENT_GAP, TEAM_COLUMNS, groupMembers, placeBeside, placeFree, placeInGroup, placeTeam } from './placement.ts';
 
 const size = { w: 320, h: 240 };
 
@@ -95,5 +95,44 @@ describe('groupMembers', () => {
     test('a collapsed group is what the file says, since its members sit nowhere near it', () => {
         const folded: ProjectNode = { id: 'g', kind: 'group', title: 'Work', x: 100, y: 100, w: 900, h: 39, collapsed: true, memberIds: ['b'] };
         expect(groupMembers(folded, [folded, inside, outside]).map((node) => node.id)).toEqual(['b']);
+    });
+});
+
+describe('placeTeam', () => {
+    const terminal = { w: 560, h: 360 };
+    const chat = { w: 480, h: 520 };
+
+    test('three of a kind stand in one row under the title bar, without overlap', () => {
+        const { rects, frame } = placeTeam([terminal, terminal, terminal]);
+        expect(rects.map((rect) => rect.y)).toEqual([GROUP_HEADER + GROUP_PADDING, GROUP_HEADER + GROUP_PADDING, GROUP_HEADER + GROUP_PADDING]);
+        expect(rects.map((rect) => rect.x)).toEqual([GROUP_PADDING, GROUP_PADDING + 560 + PLACEMENT_GAP, GROUP_PADDING + (560 + PLACEMENT_GAP) * 2]);
+        expect(frame.w).toBe(GROUP_PADDING * 2 + 560 * 3 + PLACEMENT_GAP * 2);
+        expect(frame.h).toBe(GROUP_HEADER + GROUP_PADDING * 2 + 360);
+    });
+
+    test(`past ${TEAM_COLUMNS} it starts a second row and the frame holds both`, () => {
+        const { rects, frame } = placeTeam(Array.from({ length: TEAM_COLUMNS + 1 }, () => terminal));
+        expect(rects[TEAM_COLUMNS]!.x).toBe(GROUP_PADDING);
+        expect(rects[TEAM_COLUMNS]!.y).toBe(GROUP_HEADER + GROUP_PADDING + 360 + PLACEMENT_GAP);
+        expect(frame.h).toBe(GROUP_HEADER + GROUP_PADDING * 2 + 360 * 2 + PLACEMENT_GAP);
+    });
+
+    test('mixed sizes keep their gap and the frame is measured from the tallest', () => {
+        const { rects, frame } = placeTeam([terminal, chat]);
+        expect(rects[1]!.x).toBe(GROUP_PADDING + 560 + PLACEMENT_GAP);
+        expect(frame.h).toBe(GROUP_HEADER + GROUP_PADDING * 2 + 520);
+        const overlapping = rects.some((rect, index) =>
+            rects.some(
+                (other, otherIndex) =>
+                    index !== otherIndex && rect.x < other.x + other.w && other.x < rect.x + rect.w && rect.y < other.y + other.h && other.y < rect.y + rect.h
+            )
+        );
+        expect(overlapping).toBe(false);
+    });
+
+    test('one role gets a frame of its own size', () => {
+        const { rects, frame } = placeTeam([chat]);
+        expect(rects[0]).toEqual({ x: GROUP_PADDING, y: GROUP_HEADER + GROUP_PADDING, ...chat });
+        expect(frame).toEqual({ w: GROUP_PADDING * 2 + 480, h: GROUP_HEADER + GROUP_PADDING * 2 + 520 });
     });
 });

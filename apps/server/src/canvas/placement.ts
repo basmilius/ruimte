@@ -46,12 +46,15 @@ export const placeFree = (existing: readonly Rect[], size: { w: number; h: numbe
     };
 };
 
+/* What placing inside a group needs to know about it, so a frame that is not a node yet also fits. */
+type GroupFrame = Pick<ProjectNode, 'x' | 'y' | 'w' | 'h' | 'collapsed' | 'expandedHeight'>;
+
 /*
  * The rectangle a group holds its members in. A collapsed group is drawn as its header alone, but
  * its members keep the places they had, so what a new one has to fit inside is the height it goes
  * back to when it opens.
  */
-export const groupRect = (group: ProjectNode): Rect => ({
+export const groupRect = (group: GroupFrame): Rect => ({
     x: group.x,
     y: group.y,
     w: group.w,
@@ -84,7 +87,7 @@ export const groupMembers = (group: ProjectNode, nodes: readonly ProjectNode[]):
  * hold it. The node goes in whether or not the group has room: a refusal over geometry would be a
  * puzzle nobody can solve from a terminal, so the frame grows instead.
  */
-export const placeInGroup = (group: ProjectNode, members: readonly Rect[], size: { w: number; h: number }): { rect: Rect; grown: Rect } => {
+export const placeInGroup = (group: GroupFrame, members: readonly Rect[], size: { w: number; h: number }): { rect: Rect; grown: Rect } => {
     const rect = groupRect(group);
     const left = Math.round(rect.x + GROUP_PADDING);
     const right = rect.x + rect.w - GROUP_PADDING;
@@ -112,4 +115,32 @@ export const placeInGroup = (group: ProjectNode, members: readonly Rect[], size:
             h: Math.max(rect.h, spot.y + size.h + GROUP_PADDING - rect.y)
         }
     };
+};
+
+// How wide a team stands before it starts a second row: eight roles then read as two rows of four.
+export const TEAM_COLUMNS = 4;
+
+/*
+ * Where a whole team stands inside the group that holds it, and how big that group has to be. The
+ * frame starts as wide as a row of members and every one of them is placed by `placeInGroup`, which
+ * walks to the right until the row is full and then starts another, so the two ways a node lands in
+ * a group put it in the same kind of spot. The rectangles are relative to the group's own corner:
+ * the caller decides where the group lands and moves everything by that much.
+ */
+export const placeTeam = (sizes: readonly { w: number; h: number }[]): { rects: Rect[]; frame: { w: number; h: number } } => {
+    const widest = Math.max(...sizes.map((size) => size.w));
+    const columns = Math.min(TEAM_COLUMNS, sizes.length);
+    let frame = {
+        x: 0,
+        y: 0,
+        w: GROUP_PADDING * 2 + columns * widest + (columns - 1) * PLACEMENT_GAP,
+        h: GROUP_HEADER + GROUP_PADDING * 2
+    };
+    const rects: Rect[] = [];
+    for (const size of sizes) {
+        const placed = placeInGroup(frame, rects, size);
+        rects.push(placed.rect);
+        frame = { ...frame, w: placed.grown.w, h: placed.grown.h };
+    }
+    return { rects, frame: { w: frame.w, h: frame.h } };
 };

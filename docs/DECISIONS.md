@@ -458,6 +458,36 @@ canvas, against Ruimte, one verdict each.
   is for an open group, so nothing else would make it a member. A collapsed group keeps its members
   in the file, so the id joins `memberIds` there as well, and the frame grows when it has no room,
   since a refusal over pixels is a puzzle nobody can solve from a terminal.
+- `team` is one call and one write: up to eight roles validated against a zod schema in the registry
+  entry, and then the group, the agents, the edges and the prompts in a single `ProjectStore.mutate`.
+  A role that is wrong is named by its place in the array (`role 1 (prompt): ...`), because the
+  caller wrote that array and needs the index back to find the object it typed. A `--roles` that is
+  not JSON is a refusal of its own, and both print the shape of a role under them.
+- The agents of a team stand in rows of at most four inside their group, laid out by the same
+  `placeInGroup` a single `--group` uses: the frame starts as wide as one row and every role is put
+  in it, so the two ways a node can land in a group put it in the same kind of spot. The group is not
+  collapsed, so what it holds is read off the positions, the rule the client's `membersOf` applies,
+  and there is no `memberIds` to write. The whole frame then goes to the first free spot right of the
+  caller, which is where `agent` puts a single node.
+- Who opened an agent node, and how deep it sits, is daemon state under `$RUIMTE_HOME/lineage`, not a
+  field on the node in `project.json`. A node field would be a number the limited party can edit: an
+  agent in a terminal has a shell in the project folder and could rewrite `.ruimte/project.json` to
+  call itself depth 0. It would also have to be added to `ProjectNodeSchema` first, since every hop
+  strips what the schema does not name, and the next save from a client would drop it again. On disk
+  rather than in memory, because a restart is exactly the moment a loop would start counting over. A
+  view carries `createdBy` in the shared file (phase 5) for the opposite reason: that one is a fact
+  two people share, and nothing has to be enforced with it.
+- `agent` opens up to depth 2 and `team` up to depth 1, with a node a person opened as depth 0. So a
+  person's agent may open a team and the agents in that team may not open another one, which is the
+  case the design names: eight agents becoming sixty-four becoming five hundred and twelve. A chain
+  of single agents still gets two links, since that is one thread a person can follow, not a fan-out.
+  Both refusals name the depth the caller sits at and the depth each verb reaches, so the way out is
+  in the answer.
+- The cap per caller is 16 agent nodes at a time, next to the canvas's own 500. The canvas number is
+  the ceiling of the drawing and says nothing about who filled it; this one is about a single caller
+  in a loop, and it needs no notion of a turn or a session: the record is per node and goes when the
+  node does (`ProjectIndex.onPlaces`, the hook that already prunes a pending prompt). Per caller
+  rather than per project, so a person opening agents of their own is never the one who runs out.
 
 ### Updating
 

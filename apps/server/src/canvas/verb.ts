@@ -28,6 +28,12 @@ export interface CanvasHost {
     installedAgents(): Promise<AgentKind[]>;
     /* Holds the first prompt of a node against its id until the session or the chat for it is made. */
     holdPrompt(projectId: string, nodeId: string, prompt: string): Promise<void>;
+    /* How deep in the chain of agents opening agents this node sits; 0 for one a person opened. */
+    depthOf(nodeId: string): number;
+    /* The agent nodes this caller has opened and not lost, which is what caps one caller in a loop. */
+    openedCount(callerId: string): number;
+    /* Writes down who opened a node and how deep it sits, outside the project and across a restart. */
+    recordOpened(projectId: string, nodeId: string, openedBy: string, depth: number): Promise<void>;
 }
 
 export interface VerbCall {

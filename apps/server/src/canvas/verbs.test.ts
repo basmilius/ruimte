@@ -7,11 +7,15 @@ import { SESSION_VARIABLES } from '../config.ts';
 import { MAX_SCREEN_LINES } from '../context/context-store.ts';
 import { documentPathInFolder } from '../projects/project-files.ts';
 import { ProjectStore } from '../projects/project-store.ts';
+import { AgentLineageStore } from '../agents/lineage.ts';
 import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
 import { CANVAS_PATH, handleCanvasRequest } from './canvas-route.ts';
+import { MAX_AGENT_DEPTH, MAX_OPENED_PER_CALLER, MAX_TEAM_DEPTH } from './depth.ts';
+import { AGENT_KINDS } from './agent-verb.ts';
 import { MAX_LINKS } from './link-verb.ts';
 import { MAX_CANVAS_NODES } from './node-verb.ts';
 import { PLACEMENT_GAP } from './placement.ts';
+import { MAX_ROLES, ROLES_SHAPE } from './team-verb.ts';
 import type { CanvasHost } from './verb.ts';
 import { VERBS } from './verbs.ts';
 
@@ -24,6 +28,7 @@ let projectId: string;
 let worktrees: string[];
 let installed: AgentKind[];
 let held: Array<{ projectId: string; nodeId: string; prompt: string }>;
+let lineage: AgentLineageStore;
 
 const TOKENS: Record<string, string> = { term: 'term-1', chat: 'chat-1', stray: 'nobody' };
 
@@ -63,6 +68,8 @@ beforeEach(async () => {
     worktrees = [];
     installed = ['claude', 'codex', 'gemini', 'copilot'];
     held = [];
+    lineage = new AgentLineageStore(join(root, 'home'));
+    await lineage.load();
     store = new ProjectStore(join(root, 'home'));
     const opened = await store.openProject({ folder });
     projectId = opened.summary.projectId;
@@ -84,7 +91,10 @@ const host = (): CanvasHost => ({
     installedAgents: async () => installed,
     holdPrompt: async (projectId, nodeId, prompt) => {
         held.push({ projectId, nodeId, prompt });
-    }
+    },
+    depthOf: (nodeId) => lineage.depthOf(nodeId),
+    openedCount: (callerId) => lineage.openedCount(callerId),
+    recordOpened: (projectId, nodeId, openedBy, depth) => lineage.put(projectId, nodeId, openedBy, depth)
 });
 
 const post = async (verb: string, argv: string[], token = 'term'): Promise<{ status: number; lines: string[] }> => {
@@ -138,7 +148,7 @@ describe('help', () => {
         expect(lines.map((line) => line.split('\t')[0])).toEqual([...VERBS.map(() => 'verb'), 'scope', 'dry run', 'detail', 'refusal']);
         expect(lines[2]).toBe('verb\tread\t<id>\tPrints one linked source');
         expect(lines.at(-4)).toStartWith('scope\tlist and read are what a person linked into this session;');
-        expect(lines.at(-3)).toBe('dry run\t--dry-run\tnode, agent\tsame checks, nothing made; every other verb refuses the flag');
+        expect(lines.at(-3)).toBe('dry run\t--dry-run\tnode, agent, team\tsame checks, nothing made; every other verb refuses the flag');
         expect(lines.at(-2)).toBe('detail\truimte-context help <verb>\tone verb in full');
         expect(lines.at(-1)).toBe(
             'refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a Ruimte session, 3 refused'
@@ -646,6 +656,209 @@ describe('agent', () => {
     });
 });
 
+describe('team', () => {
+    const THREE = [
+        { title: 'Lexer', prompt: 'fix the tokenizer', provider: 'claude' },
+        { title: 'Parser', prompt: 'fix the parser', provider: 'codex', chat: true },
+        { title: 'Docs', prompt: 'write the docs', provider: 'gemini' }
+    ];
+
+    const args = (roles: unknown, label = 'Crew'): string[] => ['--label', label, '--roles', JSON.stringify(roles)];
+
+    const many = (count: number): unknown[] => Array.from({ length: count }, (_, index) => ({ title: `R${index}`, prompt: 'go', provider: 'claude' }));
+
+    test('opens an agent per role in a group, with an edge into each and every prompt held', async () => {
+        const { status, lines } = await post('team', args(THREE));
+        expect(status).toBe(200);
+        expect(lines).toHaveLength(4);
+
+        const [groupId, ...group] = lines[0]!.split('\t');
+        expect(groupId).toMatch(/^group-[0-9a-z]{8}$/);
+        expect(group).toEqual(['group', 'main', 'Crew']);
+        const members = lines.slice(1).map((line) => line.split('\t'));
+        expect(members.map((fields) => fields.slice(1))).toEqual([
+            ['terminal', 'main', 'claude'],
+            ['chat', 'main', 'codex'],
+            ['terminal', 'main', 'gemini']
+        ]);
+
+        const ids = members.map((fields) => fields[0]!);
+        const canvas = await canvasOnDisk();
+        const frame = canvas.nodes.find((node) => node.id === groupId)!;
+        expect([frame.kind, frame.title]).toEqual(['group', 'Crew']);
+        // An open group holds whatever has its center inside it, so there is nothing to spell out.
+        expect(frame.memberIds).toBeUndefined();
+        for (const id of ids) {
+            const node = canvas.nodes.find((candidate) => candidate.id === id)!;
+            expect(node.x + node.w / 2).toBeWithin(frame.x, frame.x + frame.w);
+            expect(node.y + node.h / 2).toBeWithin(frame.y, frame.y + frame.h);
+        }
+        const chat = canvas.nodes.find((node) => node.id === ids[1])!;
+        expect([chat.title, chat.titleSource, chat.provider, chat.providerFixed]).toEqual(['Parser', 'user', 'codex', true]);
+
+        expect(canvas.edges.map((edge) => [edge.from, edge.to, edge.label])).toEqual(ids.map((id) => ['term-1', id, 'context']));
+        expect(held).toEqual(ids.map((id, index) => ({ projectId, nodeId: id, prompt: THREE[index]!.prompt })));
+    });
+
+    test('the agents stand beside each other inside the frame, never on top of one another', async () => {
+        const { lines } = await post('team', args(many(MAX_ROLES)));
+        const canvas = await canvasOnDisk();
+        const placed = lines.slice(1).map((line) => canvas.nodes.find((node) => node.id === line.split('\t')[0])!);
+        for (const node of placed) {
+            for (const other of placed) {
+                if (node === other) {
+                    continue;
+                }
+                const over = node.x < other.x + other.w && other.x < node.x + node.w && node.y < other.y + other.h && other.y < node.y + node.h;
+                expect(over).toBe(false);
+            }
+        }
+        // Four to a row, so eight roles stand in two.
+        expect(new Set(placed.map((node) => node.y)).size).toBe(2);
+        // The group went beside the caller rather than over the note below it.
+        const frame = canvas.nodes.find((node) => node.id === lines[0]!.split('\t')[0])!;
+        expect(frame.x).toBe(560 + PLACEMENT_GAP);
+    });
+
+    test('roles that are not JSON, too few or too many are refused with the shape', async () => {
+        const broken = await post('team', ['--label', 'Crew', '--roles', '[{"title":]']);
+        expect(broken.status).toBe(422);
+        expect(broken.lines[0]).toStartWith('refused\tbad-roles-json\t--roles is not JSON: ');
+        expect(broken.lines[1]).toBe(`roles\tshape\t${ROLES_SHAPE}`);
+
+        expect((await post('team', args(many(MAX_ROLES + 1)))).lines[0]).toBe(`refused\tbad-roles\t--roles has more than the ${MAX_ROLES} roles a team takes`);
+        expect((await post('team', args([]))).lines[0]).toBe('refused\tbad-roles\t--roles has no roles in it; a team is between 1 and 8 of them');
+        expect((await post('team', args('claude'))).lines[0]).toBe('refused\tbad-roles\t--roles is a JSON array of roles');
+        expect((await onDisk()).rev).toBe(1);
+    });
+
+    test('a role that is wrong is named by its place in the array', async () => {
+        const cases: Array<[unknown, string]> = [
+            [[THREE[0], { title: 'Parser', provider: 'codex' }], 'role 1 (prompt): prompt says what this agent starts working on'],
+            [[{ title: 'Lexer', prompt: 'go', provider: 'kimi' }], `role 0 (provider): provider needs a CLI: ${AGENT_KINDS.join(', ')}`],
+            [[{ prompt: 'go', provider: 'claude' }], 'role 0 (title): title needs a name for the node'],
+            [[THREE[0], { title: 'Parser', prompt: 'go', provider: 'codex', chat: 'yes' }], 'role 1 (chat): chat is true or false'],
+            [[{ title: 'Lexer', prompt: 'go', provider: 'claude', cwd: 'src' }], 'role 0: Unrecognized key: "cwd"'],
+            [
+                [{ title: 'Lexer', prompt: 'x'.repeat(MAX_PROMPT_LENGTH + 1), provider: 'claude' }],
+                `role 0 (prompt): prompt is longer than the ${MAX_PROMPT_LENGTH} characters a launch line carries`
+            ]
+        ];
+        for (const [roles, message] of cases) {
+            expect((await post('team', args(roles))).lines[0]).toBe(`refused\tbad-roles\t${message}`);
+        }
+        expect(held).toEqual([]);
+        expect((await onDisk()).rev).toBe(1);
+    });
+
+    test('a role asking for a chat on a CLI without one, or for a CLI that is not here, is refused by index', async () => {
+        const noChat = await post('team', args([THREE[0], { title: 'Docs', prompt: 'go', provider: 'gemini', chat: true }]));
+        expect(noChat.lines[0]).toBe('refused\tno-chat-backend\trole 1 (gemini): Gemini has no chat backend; leave chat out and it opens as a terminal agent');
+        expect(noChat.lines.slice(1)).toEqual(['cli\tclaude\tClaude Code\ttakes chat', 'cli\tcodex\tCodex\ttakes chat']);
+
+        installed = ['claude'];
+        const gone = await post('team', args(THREE));
+        expect(gone.lines[0]).toBe('refused\tcli-not-installed\trole 1 (codex): Codex is not installed on this machine');
+        expect(gone.lines.slice(1)).toEqual(['cli\tclaude\tClaude Code']);
+        expect((await onDisk()).rev).toBe(1);
+    });
+
+    test('--cwd goes to every role and has to stay inside the project folder', async () => {
+        expect((await post('team', [...args(THREE), '--cwd', outside])).lines[0]).toStartWith('refused\tcwd-outside-project\t');
+        const { lines } = await post('team', [...args(THREE), '--cwd', 'src']);
+        const canvas = await canvasOnDisk();
+        for (const line of lines.slice(1)) {
+            expect(canvas.nodes.find((node) => node.id === line.split('\t')[0])!.cwd).toBe('./src');
+        }
+    });
+
+    test('a caller that is not a node on the canvas gets a team without edges', async () => {
+        const { lines } = await post('team', [...args(THREE), '--view', 'board'], 'chat');
+        expect(lines.every((line) => line.split('\t')[2] === 'board')).toBe(true);
+        expect((await canvasOnDisk('board')).edges).toEqual([]);
+        expect(held).toHaveLength(3);
+    });
+
+    test('--dry-run says what it would open and writes nothing', async () => {
+        const { status, lines } = await post('team', [...args(THREE), '--dry-run']);
+        expect(status).toBe(200);
+        expect(lines).toEqual([
+            'dry-run\tgroup\tmain\tCrew',
+            'dry-run\tterminal\tmain\tclaude',
+            'dry-run\tchat\tmain\tcodex',
+            'dry-run\tterminal\tmain\tgemini'
+        ]);
+        expect((await onDisk()).rev).toBe(1);
+        expect(held).toEqual([]);
+        expect(lineage.openedCount('term-1')).toBe(0);
+    });
+});
+
+describe('the depth limit', () => {
+    const args = (label: string): string[] => ['--label', label, '--roles', JSON.stringify([{ title: 'Lexer', prompt: 'go', provider: 'claude' }])];
+
+    /* The team a person's own agent opens, and a token for the first of its members. */
+    const openTeam = async (label = 'Crew', token = 'term'): Promise<string> => {
+        const { lines } = await post('team', args(label), token);
+        const member = lines[1]!.split('\t')[0]!;
+        TOKENS.member = member;
+        return member;
+    };
+
+    test('a person opens a team, its members open none, and a restart does not forget that', async () => {
+        const member = await openTeam();
+        expect(lineage.depthOf(member)).toBe(MAX_TEAM_DEPTH);
+
+        const refused = await post('team', args('Subcrew'), 'member');
+        expect(refused.status).toBe(422);
+        expect(refused.lines[0]).toBe(
+            `refused\ttoo-deep\tYou sit at depth ${MAX_TEAM_DEPTH} and team would open agents at depth ${MAX_TEAM_DEPTH + 1}; team opens up to depth ${MAX_TEAM_DEPTH}`
+        );
+        expect(refused.lines.slice(1)).toEqual([
+            `depth\tyou\t${MAX_TEAM_DEPTH}`,
+            'depth\t0\ta node a person opened',
+            `depth\tagent\topens up to depth ${MAX_AGENT_DEPTH}`,
+            `depth\tteam\topens up to depth ${MAX_TEAM_DEPTH}`
+        ]);
+
+        // The depths are on disk, which is the moment a loop would otherwise start counting over.
+        lineage = new AgentLineageStore(join(root, 'home'));
+        await lineage.load();
+        expect(lineage.depthOf(member)).toBe(MAX_TEAM_DEPTH);
+        expect((await post('team', args('Subcrew'), 'member')).lines[0]).toStartWith('refused\ttoo-deep\t');
+    });
+
+    test('a member may still open one agent, and that one may open none', async () => {
+        await openTeam();
+        const opened = (await post('agent', ['claude'], 'member')).lines[0]!.split('\t')[0]!;
+        expect(lineage.depthOf(opened)).toBe(MAX_AGENT_DEPTH);
+
+        TOKENS.deep = opened;
+        const refused = await post('agent', ['claude'], 'deep');
+        expect(refused.lines[0]).toBe(
+            `refused\ttoo-deep\tYou sit at depth ${MAX_AGENT_DEPTH} and agent would open agents at depth ${MAX_AGENT_DEPTH + 1}; agent opens up to depth ${MAX_AGENT_DEPTH}`
+        );
+        expect(lineage.openedCount(opened)).toBe(0);
+    });
+
+    test('one caller may not run away with a canvas, however deep it sits', async () => {
+        for (let index = 0; index < MAX_OPENED_PER_CALLER; index += 1) {
+            await lineage.put(projectId, `stub-${index}`, 'term-1', 1);
+        }
+        const refused = await post('agent', ['claude']);
+        expect(refused.lines[0]).toBe(
+            `refused\ttoo-many-agents\tYou have ${MAX_OPENED_PER_CALLER} agent nodes open and this would open 1 more; one caller may have ${MAX_OPENED_PER_CALLER} open at a time, and the count frees when a person removes them`
+        );
+        expect((await post('team', args('Crew'))).lines[0]).toStartWith('refused\ttoo-many-agents\t');
+        expect((await onDisk()).rev).toBe(1);
+
+        // The nodes a person removed free the count again.
+        await lineage.prune(projectId, new Set(['stub-0', 'stub-1']));
+        expect((await post('team', args('Crew'))).status).toBe(200);
+        expect((await onDisk()).rev).toBe(2);
+    });
+});
+
 describe('link', () => {
     test('draws a line from the caller into a node and prints what it made', async () => {
         const { status, lines } = await post('link', ['--to', 'note-1']);
@@ -730,7 +943,8 @@ describe('--dry-run', () => {
         expect(lines).toEqual([
             'refused\tno-dry-run\tnodes takes no --dry-run; only the verbs that make something do',
             'verb\tnode\ttakes --dry-run',
-            'verb\tagent\ttakes --dry-run'
+            'verb\tagent\ttakes --dry-run',
+            'verb\tteam\ttakes --dry-run'
         ]);
         expect((await post('link', ['--to', 'note-1', '--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
     });
