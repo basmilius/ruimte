@@ -2,12 +2,14 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ContextSourceSchema, NODE_SIZE, type ProjectCanvasView, type ProjectContent, type ProjectDocument } from '@ruimte/contracts';
+import { ContextSourceSchema, NODE_SIZE, type AgentKind, type ProjectCanvasView, type ProjectContent, type ProjectDocument } from '@ruimte/contracts';
 import { SESSION_VARIABLES } from '../config.ts';
 import { MAX_SCREEN_LINES } from '../context/context-store.ts';
 import { documentPathInFolder } from '../projects/project-files.ts';
 import { ProjectStore } from '../projects/project-store.ts';
+import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
 import { CANVAS_PATH, handleCanvasRequest } from './canvas-route.ts';
+import { MAX_LINKS } from './link-verb.ts';
 import { MAX_CANVAS_NODES } from './node-verb.ts';
 import { PLACEMENT_GAP } from './placement.ts';
 import type { CanvasHost } from './verb.ts';
@@ -20,6 +22,8 @@ let worktree: string;
 let store: ProjectStore;
 let projectId: string;
 let worktrees: string[];
+let installed: AgentKind[];
+let held: Array<{ projectId: string; nodeId: string; prompt: string }>;
 
 const TOKENS: Record<string, string> = { term: 'term-1', chat: 'chat-1', stray: 'nobody' };
 
@@ -57,6 +61,8 @@ beforeEach(async () => {
     await writeFile(join(folder, 'src', 'main.ts'), 'export {};\n');
     await writeFile(join(outside, 'notes.md'), '# notes\n');
     worktrees = [];
+    installed = ['claude', 'codex', 'gemini', 'copilot'];
+    held = [];
     store = new ProjectStore(join(root, 'home'));
     const opened = await store.openProject({ folder });
     projectId = opened.summary.projectId;
@@ -74,7 +80,11 @@ const host = (): CanvasHost => ({
     locate: (id) => store.index.locate(id),
     read: (id) => store.read(id),
     mutate: store.mutate.bind(store),
-    worktreePaths: async () => worktrees
+    worktreePaths: async () => worktrees,
+    installedAgents: async () => installed,
+    holdPrompt: async (projectId, nodeId, prompt) => {
+        held.push({ projectId, nodeId, prompt });
+    }
 });
 
 const post = async (verb: string, argv: string[], token = 'term'): Promise<{ status: number; lines: string[] }> => {
@@ -103,9 +113,9 @@ describe('the route', () => {
     });
 
     test('an unknown verb is a 404 refusal that lists the verbs', async () => {
-        const { status, lines } = await post('agent', ['claude']);
+        const { status, lines } = await post('spawn', ['claude']);
         expect(status).toBe(404);
-        expect(lines[0]).toBe('refused\tunknown-verb\tagent is not a verb');
+        expect(lines[0]).toBe('refused\tunknown-verb\tspawn is not a verb');
         expect(lines.slice(1)).toEqual(VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`));
     });
 
@@ -124,10 +134,11 @@ describe('help', () => {
     test('renders one row per verb from the registry, with what is not a verb marked as such', async () => {
         const { status, lines } = await post('help', []);
         expect(status).toBe(200);
-        expect(lines.slice(0, -3)).toEqual(VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`));
-        expect(lines.map((line) => line.split('\t')[0])).toEqual([...VERBS.map(() => 'verb'), 'scope', 'detail', 'refusal']);
+        expect(lines.slice(0, -4)).toEqual(VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`));
+        expect(lines.map((line) => line.split('\t')[0])).toEqual([...VERBS.map(() => 'verb'), 'scope', 'dry run', 'detail', 'refusal']);
         expect(lines[2]).toBe('verb\tread\t<id>\tPrints one linked source');
-        expect(lines.at(-3)).toStartWith('scope\tlist and read are what a person linked into this session;');
+        expect(lines.at(-4)).toStartWith('scope\tlist and read are what a person linked into this session;');
+        expect(lines.at(-3)).toBe('dry run\t--dry-run\tnode, agent\tsame checks, nothing made; every other verb refuses the flag');
         expect(lines.at(-2)).toBe('detail\truimte-context help <verb>\tone verb in full');
         expect(lines.at(-1)).toBe(
             'refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a Ruimte session, 3 refused'
@@ -176,7 +187,7 @@ describe('help', () => {
         for (const verb of ['list', 'read', 'nodes']) {
             const scope = (await post('help', [verb])).lines.filter((line) => line.startsWith('scope\t'));
             expect(scope).toHaveLength(1);
-            expect(scope[0]).toInclude('a node you add is readable through read only once someone draws a line into you');
+            expect(scope[0]).toInclude('a node you add is readable through read only once a line runs from it into you');
         }
     });
 
@@ -203,9 +214,9 @@ describe('help', () => {
     });
 
     test('a verb it does not have is refused with the list', async () => {
-        const { status, lines } = await post('help', ['agent']);
+        const { status, lines } = await post('help', ['spawn']);
         expect(status).toBe(422);
-        expect(lines[0]).toBe('refused\tunknown-verb\tagent is not a verb');
+        expect(lines[0]).toBe('refused\tunknown-verb\tspawn is not a verb');
         expect(lines.slice(1)).toEqual(VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`));
     });
 
@@ -243,7 +254,7 @@ describe('refusals', () => {
                 verb: 'node',
                 argv: ['note', '--cmd', 'ls'],
                 code: 'unknown-flag',
-                message: '--cmd is not one of --title, --text, --url, --path, --source, --cwd, --view, --beside'
+                message: '--cmd is not one of --title, --text, --url, --path, --source, --cwd, --view, --beside, --dry-run'
             },
             { verb: 'views', argv: ['--view', 'main'], code: 'unknown-flag', message: '--view is not a flag here; this verb takes none' },
             {
@@ -527,5 +538,200 @@ describe('node', () => {
         const before = await onDisk();
         expect((await post('node', ['note', '--view', 'board'])).lines[0]).toStartWith('refused\tcanvas-full\t');
         expect((await onDisk()).rev).toBe(before.rev);
+    });
+});
+
+describe('agent', () => {
+    test('opens a terminal agent with an edge from the caller into it, and holds the prompt', async () => {
+        const { status, lines } = await post('agent', ['claude', '--prompt', 'say hello']);
+        expect(status).toBe(200);
+        const [id, kind, viewId, cli, edgeId] = lines[0]!.split('\t');
+        expect(id).toMatch(/^terminal-[0-9a-z]{8}$/);
+        expect([kind, viewId, cli]).toEqual(['terminal', 'main', 'claude']);
+
+        const canvas = await canvasOnDisk();
+        const node = canvas.nodes.find((candidate) => candidate.id === id)!;
+        expect([node.kind, node.title, node.provider, node.titleSource]).toEqual(['terminal', 'Claude Code', 'claude', undefined]);
+        // Context flows from the edge's `from` into the agent at `to`, so the caller is what the new agent may read.
+        expect(canvas.edges).toEqual([{ id: edgeId!, from: 'term-1', to: id!, label: 'context' }]);
+        expect(held).toEqual([{ projectId, nodeId: id!, prompt: 'say hello' }]);
+    });
+
+    test('--chat makes a chat node fixed to its CLI', async () => {
+        const { lines } = await post('agent', ['codex', '--chat', '--title', 'Reviewer']);
+        const [id, kind] = lines[0]!.split('\t');
+        expect(kind).toBe('chat');
+        const node = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === id)!;
+        expect([node.provider, node.providerFixed, node.title, node.titleSource]).toEqual(['codex', true, 'Reviewer', 'user']);
+    });
+
+    test('--chat is refused for a CLI without a chat backend, with the ones that have one', async () => {
+        const { status, lines } = await post('agent', ['gemini', '--chat']);
+        expect(status).toBe(422);
+        expect(lines[0]).toBe('refused\tno-chat-backend\tGemini has no chat backend; leave --chat out and it opens as a terminal agent');
+        expect(lines.slice(1)).toEqual(['cli\tclaude\tClaude Code\ttakes --chat', 'cli\tcodex\tCodex\ttakes --chat']);
+    });
+
+    test('a CLI that is not installed is refused with the ones that are', async () => {
+        installed = ['codex'];
+        const { lines } = await post('agent', ['claude']);
+        expect(lines[0]).toBe('refused\tcli-not-installed\tClaude Code is not installed on this machine');
+        expect(lines.slice(1)).toEqual(['cli\tcodex\tCodex']);
+        installed = [];
+        expect((await post('agent', ['claude'])).lines.slice(1)).toEqual(['note\tNo agent CLI is installed on this machine']);
+        expect((await onDisk()).rev).toBe(1);
+    });
+
+    test('--prompt and --prompt-file are refused together, and a prompt past the cap is refused', async () => {
+        expect((await post('agent', ['claude', '--prompt', 'a', '--prompt-file', 'b'])).lines[0]).toStartWith('refused\tprompt-twice\t');
+        expect((await post('agent', ['claude', '--prompt', '   '])).lines[0]).toStartWith('refused\tempty-prompt\t');
+        const long = 'x'.repeat(MAX_PROMPT_LENGTH + 1);
+        const refusal = await post('agent', ['claude', `--prompt=${long}`]);
+        expect(refusal.lines[0]).toStartWith(`refused\tprompt-too-long\tThe prompt is ${MAX_PROMPT_LENGTH + 1} characters`);
+        expect(held).toEqual([]);
+    });
+
+    test('--prompt-file is read by the daemon, inside the project folder only', async () => {
+        await writeFile(join(folder, 'brief.md'), 'Fix the parser\n');
+        const { lines } = await post('agent', ['claude', '--prompt-file', 'brief.md']);
+        expect(held).toEqual([{ projectId, nodeId: lines[0]!.split('\t')[0]!, prompt: 'Fix the parser' }]);
+        expect((await post('agent', ['claude', '--prompt-file', join(outside, 'notes.md')])).lines[0]).toStartWith('refused\tprompt-file-outside-project\t');
+        expect((await post('agent', ['claude', '--prompt-file', 'nowhere.md'])).lines[0]).toStartWith('refused\tbad-prompt-file\t');
+    });
+
+    test('--group puts the node inside the group, and a collapsed one also takes its id', async () => {
+        const withGroup = content();
+        const canvas = withGroup.views[0] as ProjectCanvasView;
+        canvas.nodes.push({ id: 'group-1', kind: 'group', title: 'Work', x: 2000, y: 0, w: 900, h: 800 });
+        canvas.nodes.push({ id: 'group-2', kind: 'group', title: 'Folded', x: 5000, y: 0, w: 900, h: 39, collapsed: true, expandedHeight: 800, memberIds: [] });
+        await store.mutate(projectId, () => ({ content: withGroup, result: null }));
+
+        const open = await post('agent', ['claude', '--group', 'group-1']);
+        const openId = open.lines[0]!.split('\t')[0]!;
+        const node = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === openId)!;
+        expect(node.x).toBe(2000 + 32);
+        expect(node.y).toBe(0 + 40 + 32);
+        // Its center falls inside the frame, which is what makes it a member of an open group.
+        expect(node.x + node.w / 2).toBeLessThan(2000 + 900);
+
+        const folded = await post('agent', ['claude', '--group', 'group-2']);
+        const foldedId = folded.lines[0]!.split('\t')[0]!;
+        const group = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === 'group-2')!;
+        expect(group.memberIds).toEqual([foldedId]);
+        expect(group.h).toBe(39);
+        expect(group.expandedHeight).toBe(800);
+    });
+
+    test('a --group that is not a group of that canvas is refused with the groups', async () => {
+        const withGroup = content();
+        (withGroup.views[0] as ProjectCanvasView).nodes.push({ id: 'group-1', kind: 'group', title: 'Work', x: 2000, y: 0, w: 900, h: 800 });
+        await store.mutate(projectId, () => ({ content: withGroup, result: null }));
+        const { lines } = await post('agent', ['claude', '--group', 'note-1']);
+        expect(lines[0]).toBe('refused\tunknown-group\tnote-1 is not a group on main');
+        expect(lines.slice(1)).toEqual(['group\tgroup-1\tWork']);
+        expect((await post('agent', ['claude', '--group', 'group-1', '--beside', 'note-1'])).lines[0]).toStartWith('refused\ttwo-places\t');
+    });
+
+    test('a caller that is not a node on the canvas gets no edge', async () => {
+        const { lines } = await post('agent', ['claude', '--view', 'board'], 'chat');
+        expect(lines[0]!.split('\t').slice(1)).toEqual(['terminal', 'board', 'claude', '-']);
+        expect((await canvasOnDisk('board')).edges).toEqual([]);
+    });
+
+    test('--cwd has to stay inside the project folder', async () => {
+        expect((await post('agent', ['claude', '--cwd', outside])).lines[0]).toStartWith('refused\tcwd-outside-project\t');
+        const { lines } = await post('agent', ['claude', '--cwd', 'src']);
+        const node = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === lines[0]!.split('\t')[0])!;
+        expect(node.cwd).toBe('./src');
+    });
+});
+
+describe('link', () => {
+    test('draws a line from the caller into a node and prints what it made', async () => {
+        const { status, lines } = await post('link', ['--to', 'note-1']);
+        expect(status).toBe(200);
+        const [id, from, to, state] = lines[0]!.split('\t');
+        expect([from, to, state]).toEqual(['term-1', 'note-1', 'new']);
+        expect((await canvasOnDisk()).edges).toEqual([{ id: id!, from: 'term-1', to: 'note-1' }]);
+    });
+
+    test('between two agents it draws both ways and labels them context', async () => {
+        const pair = content();
+        (pair.views[0] as ProjectCanvasView).nodes.push({ id: 'term-2', kind: 'terminal', title: 'other', x: 2000, y: 0, w: 560, h: 360 });
+        await store.mutate(projectId, () => ({ content: pair, result: null }));
+
+        const { lines } = await post('link', ['--to', 'term-2']);
+        expect(lines.map((line) => line.split('\t').slice(1))).toEqual([
+            ['term-1', 'term-2', 'new'],
+            ['term-2', 'term-1', 'new']
+        ]);
+        expect((await canvasOnDisk()).edges.map((edge) => [edge.from, edge.to, edge.label])).toEqual([
+            ['term-1', 'term-2', 'context'],
+            ['term-2', 'term-1', 'context']
+        ]);
+    });
+
+    test('running the same link again changes nothing and says so', async () => {
+        await post('link', ['--to', 'note-1']);
+        const rev = (await onDisk()).rev;
+        const { lines } = await post('link', ['--to', 'note-1']);
+        expect(lines[0]!.split('\t')[3]).toBe('existing');
+        expect((await onDisk()).rev).toBe(rev);
+    });
+
+    test('refuses ids that are not on the canvas and a line to itself', async () => {
+        const missing = await post('link', ['--to', 'note-1,ghost,other']);
+        expect(missing.lines[0]).toBe('refused\tunknown-node\tghost, other are not a node on main');
+        expect(missing.lines.slice(1)).toEqual(['node\tterm-1\tterminal\tshell', 'node\tnote-1\tnote\tPlan with a tab']);
+        expect((await post('link', ['--to', 'term-1'])).lines[0]).toStartWith('refused\tself-link\t');
+        expect((await post('link', ['--to', 'note-1', '--view', 'main'], 'chat')).lines[0]).toStartWith(
+            'refused\tunknown-node\tYou are not a node on main, so a line has nowhere to start'
+        );
+        expect((await onDisk()).rev).toBe(1);
+    });
+
+    test('--from, --label and --view say where the line goes and what it is called', async () => {
+        const { lines } = await post('link', ['--to', 'term-1', '--from', 'note-1', '--label', 'plan']);
+        expect(lines[0]!.split('\t').slice(1)).toEqual(['note-1', 'term-1', 'new']);
+        expect((await canvasOnDisk()).edges[0]!.label).toBe('plan');
+    });
+
+    test('refuses more than the cap and an empty id', async () => {
+        const many = Array.from({ length: MAX_LINKS + 1 }, (_, i) => `n-${i}`).join(',');
+        expect((await post('link', ['--to', many])).lines[0]).toStartWith('refused\ttoo-many-links\t');
+        expect((await post('link', ['--to', 'note-1,'])).lines[0]).toStartWith('refused\tbad-arguments\t');
+    });
+});
+
+describe('--dry-run', () => {
+    test('agent checks everything, prints what it would make and writes nothing', async () => {
+        const { status, lines } = await post('agent', ['claude', '--prompt', 'hi', '--dry-run']);
+        expect(status).toBe(200);
+        expect(lines).toEqual(['dry-run\tterminal\tmain\tclaude\tedge']);
+        expect((await onDisk()).rev).toBe(1);
+        expect(held).toEqual([]);
+    });
+
+    test('a dry run still refuses what a real one would', async () => {
+        installed = ['codex'];
+        expect((await post('agent', ['claude', '--dry-run'])).lines[0]).toStartWith('refused\tcli-not-installed\t');
+        installed = ['claude'];
+        expect((await post('agent', ['claude', '--group', 'note-1', '--dry-run'])).lines[0]).toStartWith('refused\tunknown-group\t');
+    });
+
+    test('node says which kind it would have made', async () => {
+        expect((await post('node', ['note', '--text', 'x', '--dry-run'])).lines).toEqual(['dry-run\tnote\tmain']);
+        expect((await onDisk()).rev).toBe(1);
+    });
+
+    test('a verb that makes nothing refuses the flag and names the ones that take it', async () => {
+        const { status, lines } = await post('nodes', ['--dry-run']);
+        expect(status).toBe(422);
+        expect(lines).toEqual([
+            'refused\tno-dry-run\tnodes takes no --dry-run; only the verbs that make something do',
+            'verb\tnode\ttakes --dry-run',
+            'verb\tagent\ttakes --dry-run'
+        ]);
+        expect((await post('link', ['--to', 'note-1', '--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
     });
 });

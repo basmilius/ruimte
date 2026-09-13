@@ -94,7 +94,9 @@ export interface ProjectDrawings {
 
 /* What a change hands back: the whole new content, and whatever the caller wants to answer with. */
 export interface ProjectMutation<T> {
-    content: ProjectContent;
+    /* Null when nothing changed, which is what a dry run leaves behind: it runs every check under
+       the same lock a write takes, so what it answers is what the write would have done. */
+    content: ProjectContent | null;
     result: T;
 }
 
@@ -334,6 +336,9 @@ export class ProjectStore {
         return this.locked(async () => {
             const { entry, path, rev, content } = await this.readCurrent(projectId);
             const mutation = await apply(content);
+            if (mutation.content === null) {
+                return mutation.result;
+            }
             const parsed = ProjectDocumentSchema.safeParse({ version: 2, rev: rev + 1, ...toPortable(mutation.content, entry.folder) });
             if (!parsed.success) {
                 throw new ProjectError('project-invalid', `The change would not make a valid canvas: ${parsed.error.issues[0]?.message ?? 'unknown'}`);

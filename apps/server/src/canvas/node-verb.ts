@@ -1,6 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { realpath, stat } from 'node:fs/promises';
-import { basename, isAbsolute, relative, resolve } from 'node:path';
+import { basename } from 'node:path';
 import {
     DEFAULT_TITLES,
     NODE_SIZE,
@@ -13,6 +12,7 @@ import {
 } from '@ruimte/contracts';
 import { z } from 'zod';
 import { placeBeside, placeFree } from './placement.ts';
+import { checkCwd, checkPath, isInside } from './project-paths.ts';
 import { unescapeText } from './text-escapes.ts';
 import { VerbRefusal, canvasFor, defineVerb, field, placeOf } from './verb.ts';
 
@@ -70,6 +70,7 @@ const NODE_DETAIL: readonly string[] = [
     "flag\t--title T\tevery kind\tThe title; one set here is the node's for good, the session never renames over it",
     'flag\t--view V\tevery kind\tThe canvas to add to, by view id; ruimte-context views lists them',
     'flag\t--beside N\tevery kind\tPuts the node directly right of node N, top edges level, whatever is there already',
+    'flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field is dry-run instead of the id the node would have got',
     `flag\t--text B\t${kindsFor('text')}\tThe body; \\n, \\t and \\\\ are read as escapes, and --text - takes the body from stdin, byte for byte`,
     `flag\t--url U\t${kindsFor('url')}\tAn http or https address`,
     `flag\t--source V\t${kindsFor('source')}\tThe id of a drawing view of this project; ruimte-context views lists them`,
@@ -85,19 +86,12 @@ const NODE_DETAIL: readonly string[] = [
 // What a caller may pick instead of a --beside that is nowhere; a full canvas would bury the refusal, so it says where to look.
 const BESIDE_LINES_MAX = 20;
 
-const nodeLines = (canvas: ProjectCanvasView): string[] => {
+export const nodeLines = (canvas: ProjectCanvasView): string[] => {
     if (canvas.nodes.length > BESIDE_LINES_MAX) {
         return [`detail\truimte-context nodes\tthe ${canvas.nodes.length} nodes of ${canvas.id}`];
     }
     return canvas.nodes.map((node) => `node\t${node.id}\t${node.kind}\t${field(node.title)}`);
 };
-
-const isInside = (root: string, path: string): boolean => {
-    const rel = relative(root, path);
-    return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
-};
-
-const realOrNull = (path: string): Promise<string | null> => realpath(path).catch(() => null);
 
 /* Every id the project already uses, since a node id is also a session id and a view id is too. */
 const idsIn = (content: ProjectContent): Set<string> => {
@@ -113,56 +107,19 @@ const idsIn = (content: ProjectContent): Set<string> => {
     return ids;
 };
 
-// The shape the client's `nextId` gives: the kind, a dash, eight base-36 characters.
-const newNodeId = (kind: NodeVerbKind, taken: Set<string>): string => {
+/* A fresh id in the shape the client's `nextId` gives: a prefix, a dash, eight base-36 characters.
+   `also` is what the same mutation already handed out and has not written down yet. */
+export const newId = (prefix: string, content: ProjectContent, also: readonly string[] = []): string => {
+    const taken = idsIn(content);
+    for (const id of also) {
+        taken.add(id);
+    }
     for (;;) {
-        const id = `${kind}-${Array.from(randomBytes(8), (byte) => (byte % 36).toString(36)).join('')}`;
+        const id = `${prefix}-${Array.from(randomBytes(8), (byte) => (byte % 36).toString(36)).join('')}`;
         if (!taken.has(id)) {
             return id;
         }
     }
-};
-
-/*
- * A cwd lies in the project folder or in a worktree of its repository: an agent must not hand a new
- * session a folder outside the project the person opened it in. Compared on real paths, so neither a
- * symlink inside the folder nor `/tmp` against `/private/tmp` decides it.
- */
-const checkCwd = async (folder: string | null, cwd: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> => {
-    if (folder === null) {
-        throw new VerbRefusal('no-folder', 'This project has no folder, so --cwd has nothing to be inside of');
-    }
-    const resolved = resolve(folder, cwd);
-    const real = await realOrNull(resolved);
-    if (real === null || !(await stat(real)).isDirectory()) {
-        throw new VerbRefusal('bad-cwd', `${resolved} is not a folder; --cwd is resolved against the project folder unless it is absolute`);
-    }
-    const realFolder = await realOrNull(folder);
-    if (realFolder !== null && isInside(realFolder, real)) {
-        return resolved;
-    }
-    const paths = await worktreePaths(folder);
-    const worktrees = await Promise.all(paths.map(realOrNull));
-    if (!worktrees.some((root) => root !== null && isInside(root, real))) {
-        // The paths as git has them, not the real ones the comparison ran on: those are what a caller can type back.
-        throw new VerbRefusal('cwd-outside-project', `${resolved} is outside ${folder} and the worktrees of its repository`, [
-            `folder\t${folder}`,
-            ...paths.filter((path) => path !== folder).map((path) => `worktree\t${path}`)
-        ]);
-    }
-    return resolved;
-};
-
-const checkPath = async (folder: string | null, path: string): Promise<string> => {
-    if (folder === null && !isAbsolute(path)) {
-        throw new VerbRefusal('bad-path', 'This project has no folder, so --path has to be absolute');
-    }
-    const resolved = folder === null ? path : resolve(folder, path);
-    const info = await stat(resolved).catch(() => null);
-    if (!info?.isFile()) {
-        throw new VerbRefusal('bad-path', `${resolved} is not a file; --path is resolved against the project folder unless it is absolute`);
-    }
-    return resolved;
 };
 
 const checkUrl = (url: string): string => {
@@ -180,12 +137,13 @@ const checkUrl = (url: string): string => {
 
 export const nodeVerb = defineVerb({
     name: 'node',
-    usage: `<${NODE_VERB_KINDS.join('|')}> [--title T] [--text B] [--url U] [--path P] [--source V] [--cwd P] [--view V] [--beside N]`,
+    usage: `<${NODE_VERB_KINDS.join('|')}> [--title T] [--text B] [--url U] [--path P] [--source V] [--cwd P] [--view V] [--beside N] [--dry-run]`,
     // The required flags are in the summary too: without them the first thing a first-time caller meets is a refusal.
     summary: `Adds one node to a canvas and prints id, kind, view; ${Object.entries(REQUIRED_FLAG)
         .map(([kind, flag]) => `a ${kind} needs --${flag}`)
         .join(', ')}`,
     detail: NODE_DETAIL,
+    dryRun: true,
     positionals: z.tuple([z.enum(NODE_VERB_KINDS, { error: KIND_MESSAGE })], {
         error: (issue) => (issue.code === 'too_big' ? 'node takes one kind and nothing else; a title goes in --title' : KIND_MESSAGE)
     }),
@@ -199,7 +157,7 @@ export const nodeVerb = defineVerb({
         view: z.string().min(1, '--view needs the id of a canvas').optional(),
         beside: z.string().min(1, '--beside needs the id of a node on that canvas').optional()
     }),
-    async run({ positionals: [kind], flags }, call) {
+    async run({ positionals: [kind], flags, dryRun }, call) {
         const place = placeOf(call);
         const kindLines = [kindLine(kind), EVERY_KIND_LINE];
         for (const flag of ['text', 'url', 'path', 'source', 'cwd'] as const) {
@@ -240,8 +198,11 @@ export const nodeVerb = defineVerb({
                 throw new VerbRefusal('unknown-node', `${flags.beside} is not a node on ${canvas.id}`, nodeLines(canvas));
             }
             const rect = anchor ? placeBeside(anchor, size) : placeFree(canvas.nodes, size, canvas.nodes.find((node) => node.id === call.caller) ?? null);
+            if (dryRun) {
+                return { content: null, result: [`dry-run\t${kind}\t${canvas.id}`] };
+            }
 
-            const id = newNodeId(kind, idsIn(content));
+            const id = newId(kind, content);
             const node: ProjectNode = {
                 id,
                 kind,

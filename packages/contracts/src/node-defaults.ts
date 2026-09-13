@@ -12,6 +12,11 @@ export const NODE_SIZE: Record<NodeKind, { w: number; h: number }> = {
     file: { w: 520, h: 420 }
 };
 
+/* The room a group keeps around what it holds, and the band its title bar takes. Shared, because a
+   node the daemon puts in a group has to land where a person's own grouping would have put it. */
+export const GROUP_PADDING = 32;
+export const GROUP_HEADER = 40;
+
 /* What a node of each kind is called before anything names it. */
 export const DEFAULT_TITLES: Record<NodeKind, string> = {
     terminal: 'Terminal',

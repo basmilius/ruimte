@@ -151,7 +151,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             worktrees
                 .list(folder)
                 .then((list) => list.map((worktree) => worktree.path))
-                .catch(() => [])
+                .catch(() => []),
+        installedAgents: async () => (await providers.list()).filter((provider) => provider.installed).map((provider) => provider.kind),
+        holdPrompt: (projectId: string, nodeId: string, prompt: string) => prompts.put(projectId, nodeId, prompt)
     };
 
     const dispatcher = new Dispatcher();

@@ -8,7 +8,8 @@ describe('parseArgv', () => {
         expect(parseArgv(['--title', 'Plan', 'note', '--text', 'hello world'], KNOWN)).toEqual({
             ok: true,
             positionals: ['note'],
-            flags: { title: 'Plan', text: 'hello world' }
+            flags: { title: 'Plan', text: 'hello world' },
+            switches: new Set()
         });
     });
 
@@ -16,12 +17,13 @@ describe('parseArgv', () => {
         expect(parseArgv(['note', '--text=--not a flag', '--view=main'], KNOWN)).toEqual({
             ok: true,
             positionals: ['note'],
-            flags: { text: '--not a flag', view: 'main' }
+            flags: { text: '--not a flag', view: 'main' },
+            switches: new Set()
         });
     });
 
     test('a single dash is a positional, not a flag', () => {
-        expect(parseArgv(['-x'], KNOWN)).toEqual({ ok: true, positionals: ['-x'], flags: {} });
+        expect(parseArgv(['-x'], KNOWN)).toEqual({ ok: true, positionals: ['-x'], flags: {}, switches: new Set() });
     });
 
     test('refuses an unknown flag', () => {
@@ -36,5 +38,25 @@ describe('parseArgv', () => {
 
     test('refuses a flag given twice', () => {
         expect(parseArgv(['--view', 'a', '--view=b'], KNOWN)).toMatchObject({ ok: false, code: 'duplicate-flag' });
+    });
+
+    test('a switch is on by being written and swallows no word after it', () => {
+        expect(parseArgv(['--chat', 'note', '--dry-run'], KNOWN, ['chat', 'dry-run'])).toEqual({
+            ok: true,
+            positionals: ['note'],
+            flags: {},
+            switches: new Set(['chat', 'dry-run'])
+        });
+    });
+
+    test('a switch takes no value and is refused twice', () => {
+        expect(parseArgv(['--chat=yes'], KNOWN, ['chat'])).toMatchObject({ ok: false, code: 'unexpected-value' });
+        expect(parseArgv(['--chat', '--chat'], KNOWN, ['chat'])).toMatchObject({ ok: false, code: 'duplicate-flag' });
+    });
+
+    test('an unknown flag names the switches too', () => {
+        const parsed = parseArgv(['--cmd', 'x'], KNOWN, ['chat']);
+        expect(parsed).toMatchObject({ ok: false, code: 'unknown-flag' });
+        expect(parsed.ok === false && parsed.message).toContain('--chat');
     });
 });

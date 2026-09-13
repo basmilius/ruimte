@@ -1,8 +1,10 @@
 import { ContextSourceSchema } from '@ruimte/contracts';
 import { z } from 'zod';
 import { MAX_SCREEN_LINES } from '../context/context-store.ts';
+import { agentVerb } from './agent-verb.ts';
+import { linkVerb } from './link-verb.ts';
 import { nodeVerb } from './node-verb.ts';
-import { VerbRefusal, canvasFor, defineVerb, field, placeOf, type ContextVerb, type VerbEntry } from './verb.ts';
+import { DRY_RUN_FLAG, VerbRefusal, canvasFor, defineVerb, dryRunVerbNames, field, placeOf, type ContextVerb, type VerbEntry } from './verb.ts';
 
 /* The one line about failure every help output ends with; the codes are the CLI's, which is what runs the verb. */
 const REFUSAL_LINE =
@@ -10,7 +12,10 @@ const REFUSAL_LINE =
 
 /* Two things an agent keeps mixing up, so the line is in the list and in the detail of each verb it is about. */
 const SCOPE_LINE =
-    'scope\tlist and read are what a person linked into this session; nodes, views and node are the canvas itself\ta node you add is readable through read only once someone draws a line into you';
+    'scope\tlist and read are what a person linked into this session; nodes, views, node, agent and link are the canvas itself\ta node you add is readable through read only once a line runs from it into you';
+
+/* Said once under the list, since the flag is on some verbs and refused by name on the rest. */
+const dryRunLine = (): string => `dry run\t--${DRY_RUN_FLAG}\t${dryRunVerbNames().join(', ')}\tsame checks, nothing made; every other verb refuses the flag`;
 
 /* Every row says what it is in its first field, so the lines under the list are never read as verbs. */
 export const verbSummaryLines = (): string[] => VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`);
@@ -29,7 +34,7 @@ const helpVerb = defineVerb({
     flags: z.object({}),
     run: async ({ positionals: [name] }) => {
         if (name === undefined) {
-            return [...verbSummaryLines(), SCOPE_LINE, 'detail\truimte-context help <verb>\tone verb in full', REFUSAL_LINE];
+            return [...verbSummaryLines(), SCOPE_LINE, dryRunLine(), 'detail\truimte-context help <verb>\tone verb in full', REFUSAL_LINE];
         }
         const verb = verbNamed(name);
         if (!verb) {
@@ -111,6 +116,6 @@ const viewsVerb = defineVerb({
 });
 
 /* In the order `help` lists them: everything `ruimte-context` does, whichever route serves it. */
-export const VERBS: readonly VerbEntry[] = [helpVerb, listVerb, readVerb, nodesVerb, viewsVerb, nodeVerb];
+export const VERBS: readonly VerbEntry[] = [helpVerb, listVerb, readVerb, nodesVerb, viewsVerb, nodeVerb, agentVerb, linkVerb];
 
 export const verbNamed = (name: string): VerbEntry | undefined => VERBS.find((verb) => verb.name === name);

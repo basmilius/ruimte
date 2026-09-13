@@ -27,7 +27,7 @@ import type {
     ProjectViewLocal,
     RuntimeMode
 } from '@ruimte/contracts';
-import { DEFAULT_TITLES, NODE_SIZE, isAgentKind } from '@ruimte/contracts';
+import { DEFAULT_TITLES, GROUP_HEADER, GROUP_PADDING, NODE_SIZE, isAgentKind } from '@ruimte/contracts';
 
 export type { AgentStatus, NodeKind } from '@ruimte/contracts';
 
@@ -204,10 +204,6 @@ export interface CanvasState {
 }
 
 export { DEFAULT_TITLES, NODE_SIZE, isAgentKind };
-
-// Room a group keeps around the nodes it was made for.
-const GROUP_PADDING = 32;
-const GROUP_HEADER = 40;
 
 const center = (rect: Rect): Point => ({ x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 });
 
