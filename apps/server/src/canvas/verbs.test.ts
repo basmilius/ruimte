@@ -266,8 +266,7 @@ describe('refusals', () => {
             { argv: ['browser', '--url', 'not a url'], code: 'bad-url', says: 'http or https address' },
             { argv: ['browser', '--url', 'file:///etc/passwd'], code: 'bad-url', says: 'browser node opens nothing else' },
             { argv: ['file', '--path', 'src/missing.ts'], code: 'bad-path', says: 'resolved against the project folder' },
-            { argv: ['terminal', '--cwd', 'nope'], code: 'bad-cwd', says: 'resolved against the project folder' },
-            { argv: ['terminal', '--cwd', outside], code: 'cwd-outside-project', says: 'outside the project folder and its worktrees' }
+            { argv: ['terminal', '--cwd', 'nope'], code: 'bad-cwd', says: 'resolved against the project folder' }
         ];
         for (const { argv, code, says } of cases) {
             const { lines } = await post('node', argv);
@@ -448,6 +447,16 @@ describe('node', () => {
 
         worktrees = [worktree];
         expect((await post('node', ['terminal', '--cwd', worktree])).status).toBe(200);
+    });
+
+    test('a cwd outside names the folder and every worktree, so the next try needs no guessing', async () => {
+        const bare = await post('node', ['terminal', '--cwd', outside]);
+        expect(bare.lines).toEqual([`refused\tcwd-outside-project\t${outside} is outside ${folder} and the worktrees of its repository`, `folder\t${folder}`]);
+
+        // git lists the checkout itself among the worktrees; the folder line already said that one.
+        worktrees = [folder, worktree];
+        const listed = await post('node', ['terminal', '--cwd', outside]);
+        expect(listed.lines).toEqual([listed.lines[0]!, `folder\t${folder}`, `worktree\t${worktree}`]);
     });
 
     test('a project without a folder refuses --cwd', async () => {

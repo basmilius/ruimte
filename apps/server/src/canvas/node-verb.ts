@@ -141,9 +141,14 @@ const checkCwd = async (folder: string | null, cwd: string, worktreePaths: (fold
     if (realFolder !== null && isInside(realFolder, real)) {
         return resolved;
     }
-    const worktrees = await Promise.all((await worktreePaths(folder)).map(realOrNull));
+    const paths = await worktreePaths(folder);
+    const worktrees = await Promise.all(paths.map(realOrNull));
     if (!worktrees.some((root) => root !== null && isInside(root, real))) {
-        throw new VerbRefusal('cwd-outside-project', `${resolved} is outside the project folder and its worktrees`);
+        // The paths as git has them, not the real ones the comparison ran on: those are what a caller can type back.
+        throw new VerbRefusal('cwd-outside-project', `${resolved} is outside ${folder} and the worktrees of its repository`, [
+            `folder\t${folder}`,
+            ...paths.filter((path) => path !== folder).map((path) => `worktree\t${path}`)
+        ]);
     }
     return resolved;
 };
