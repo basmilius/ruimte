@@ -545,33 +545,49 @@ canvas, against Ruimte, one verdict each.
   answer says `sent no`, nothing is held for later, and the same call a minute later reaches whoever
   is there then. Holding it would be a message queue, and a view shown ten minutes after the agent
   meant it is worse than one never shown.
-- The client follows by default and a client setting turns that off, because this is the one verb a
-  person can refuse. Everywhere else the daemon executes and asks nobody; here what would be asked is
-  not permission to change the project but permission to move someone's eyes, and that answer is the
-  same every time, so it is a setting rather than a dialog. On, the view takes the cell that has the
-  focus and a toast puts it back. Off, nothing moves and the toast waits with "Go there". Which is why
-  `agentsShowViews` sits in the client's settings while `agentsDeleteAnyView` sits on the machine: the
-  daemon enforces one and cannot enforce the other.
+- The client asks before it follows, and a client setting (`agentsShowViews`) turns the asking into
+  following, because this is the one verb a person can refuse. Everywhere else the daemon executes and
+  asks nobody; here what would be asked is not permission to change the project but permission to move
+  someone's eyes, and that answer is the same every time, so it is a setting rather than a dialog. Off,
+  which is where everyone starts, nothing moves and the request waits in the banner. On, the view takes
+  the cell that has the focus and a toast puts it back. A default of on would have been the app moving
+  a person the first time an agent asked, before that person knew the verb existed; the way to find out
+  the feature is there is to be asked once, not to be moved once. Which is also why `agentsShowViews`
+  sits in the client's settings while `agentsDeleteAnyView` sits on the machine: the daemon enforces one
+  and cannot enforce the other.
 - Showing reuses what `setActiveView` always did, lifted into `showViewIn` in `shell/split.ts`: the
   view takes the focused cell, and one already standing somewhere takes the focus instead of appearing
   twice. The way back is `undoShowView`, and it runs against the grid as it stands when the button is
   pressed rather than against a copy from the moment of the toast. Between the two a person may have
   split a cell or closed one, and handing them a layout from before that would take away work they did
   themselves; a cell that is gone leaves everything where it is.
+- The request that waits is a banner, not a toast: the same strip over the views that the save conflict
+  and the save failure use (`shell/Banner.tsx`, lifted out of `ProjectBanner` so both draw the same
+  card). A toast is read after the fact and a decision has to be where the eyes already are, and a card
+  in the corner that never goes away is a card that gets ignored. One slot, and the file comes first:
+  work that may be lost outranks a request that can be made again. A second `open` while one is up
+  replaces it, since the last thing an agent asked for is the one worth acting on, and a queue would be
+  a list nobody works through. The banner lives in the document store (`askedView`, `askView`,
+  `goToAskedView`, `dismissAskedView`), which is per workspace and already knows when the view is
+  deleted or the project swapped out, both of which take the banner with them.
+- Both buttons clear it, which is what the first version got wrong: pressing "Go there" showed the view
+  and left the card standing, because dismissing lived in the component's callback rather than in the
+  one place that owns the state. The same rule sends the "Back" toast away the moment it is pressed.
 - Every workspace with that project acts, on its own focused cell, and the machine has to match as
   well as the project id: the same folder may be open on two machines at once, and the event is about
   one of them. One toast per workspace, keyed on its id, so an agent showing three views in a row
   leaves the last one on screen instead of a stack.
-- The toast gained a fourth kind, `notice`. A success takes itself away after four seconds, which is
-  right for "the view moved, here is the way back" and wrong for a card whose button is the whole
-  point: with the setting off the person has to act, so it waits like a failure does, without the
-  failure's mark.
-- The Machines pane writes `agentsDeleteAnyView` over the same `endpoint.setIdentity` the name and the
-  icon go through, sending both back unchanged, since the wire takes the three together. A machine
-  nobody named sends `null` for the name rather than the name it answers to, or reading a setting
-  would quietly make its default name a chosen one. With more than one machine on the list the row
-  names the machine, because a bare "Agents may delete any view" under four rows says nothing about
-  which one it is about.
+- The toast gained a fourth kind, `notice`: something that happened elsewhere, so it neither spins nor
+  warns, and like a success it takes itself away after four seconds. It is what is left for the toast
+  now that nothing waiting for an answer is one.
+- `agentsDeleteAnyView` is written over the same `endpoint.setIdentity` the name and the icon go
+  through, sending both back unchanged, since the wire takes the three together. A machine nobody named
+  sends `null` for the name rather than the name it answers to, or reading a setting would quietly make
+  its default name a chosen one. The switch sits under Agents rather than in the Machines pane: that
+  pane is about pairing a machine and whether it answers, and this is about what an agent may do. One
+  row per machine there, each with the machine's name and icon, because a bare "Agents may delete any
+  view" says nothing about which machine it is about, and a machine that is not answering shows the
+  switch dead rather than guessing at its value.
 
 ### Updating
 
