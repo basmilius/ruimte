@@ -18,6 +18,9 @@ beforeAll(() => {
             if (url.pathname === '/context') {
                 return Response.json({ sources: [{ id: 'n1', kind: 'text', title: 'Plan' }] });
             }
+            if (url.pathname === '/context/n1') {
+                return new Response('the plan');
+            }
             if (!url.pathname.startsWith('/canvas/')) {
                 return new Response('Not found', { status: 404 });
             }
@@ -79,6 +82,13 @@ describe('runContext', () => {
         expect(await runContext([], env)).toBe(0);
         expect(await runContext(['list'], env)).toBe(0);
         expect(stdout).toBe('n1\ttext\tPlan\nn1\ttext\tPlan\n');
+        expect(seen).toEqual([]);
+    });
+
+    test('read prints one source from /context and never posts to /canvas', async () => {
+        expect(await runContext(['read', 'n1'], env)).toBe(0);
+        expect(stdout).toBe('the plan\n');
+        expect(await runContext(['read'], env)).toBe(1);
         expect(seen).toEqual([]);
     });
 

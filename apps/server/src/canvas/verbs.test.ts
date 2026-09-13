@@ -122,7 +122,16 @@ describe('help', () => {
         const { status, lines } = await post('help', []);
         expect(status).toBe(200);
         expect(lines).toEqual(VERBS.map((verb) => `${verb.name}\t${verb.usage}\t${verb.summary}`));
-        expect(lines.map((line) => line.split('\t')[0])).toEqual(['help', 'nodes', 'views', 'node']);
+        expect(lines.map((line) => line.split('\t')[0])).toEqual(['help', 'list', 'read', 'nodes', 'views', 'node']);
+        expect(lines[2]).toBe('read\t<id>\tPrints one linked source');
+    });
+
+    test('list and read are named there but not run by the canvas route', async () => {
+        for (const verb of ['list', 'read']) {
+            const { status, lines } = await post(verb, []);
+            expect(status).toBe(404);
+            expect(lines).toEqual([`refused\tnot-a-canvas-verb\t${verb} is answered by GET /context; run ruimte-context ${verb}`]);
+        }
     });
 
     test('refuses arguments it does not take', async () => {

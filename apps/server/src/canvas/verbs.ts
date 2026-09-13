@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { nodeVerb } from './node-verb.ts';
-import { canvasFor, defineVerb, field, placeOf, type Verb } from './verb.ts';
+import { canvasFor, defineVerb, field, placeOf, type ContextVerb, type VerbEntry } from './verb.ts';
 
 const helpVerb = defineVerb({
     name: 'help',
@@ -10,6 +10,20 @@ const helpVerb = defineVerb({
     flags: z.object({}),
     run: async () => VERBS.map((verb) => `${verb.name}\t${verb.usage}\t${verb.summary}`)
 });
+
+const listVerb: ContextVerb = {
+    served: 'context',
+    name: 'list',
+    usage: '',
+    summary: 'Lists the context linked to this session: id, kind, title (also what ruimte-context prints without a verb)'
+};
+
+const readVerb: ContextVerb = {
+    served: 'context',
+    name: 'read',
+    usage: '<id>',
+    summary: 'Prints one linked source'
+};
 
 const nodesVerb = defineVerb({
     name: 'nodes',
@@ -38,7 +52,7 @@ const viewsVerb = defineVerb({
     }
 });
 
-/* In the order `help` lists them. */
-export const VERBS: readonly Verb[] = [helpVerb, nodesVerb, viewsVerb, nodeVerb];
+/* In the order `help` lists them: everything `ruimte-context` does, whichever route serves it. */
+export const VERBS: readonly VerbEntry[] = [helpVerb, listVerb, readVerb, nodesVerb, viewsVerb, nodeVerb];
 
-export const verbNamed = (name: string): Verb | undefined => VERBS.find((verb) => verb.name === name);
+export const verbNamed = (name: string): VerbEntry | undefined => VERBS.find((verb) => verb.name === name);

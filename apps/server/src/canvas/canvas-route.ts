@@ -44,6 +44,9 @@ export const handleCanvasRequest = async (request: Request, pathname: string, de
     if (!verb) {
         return refusal('unknown-verb', `${name || '(none)'} is not a verb; ruimte-context help lists them`, [], 404);
     }
+    if (verb.served === 'context') {
+        return refusal('not-a-canvas-verb', `${name} is answered by GET /context; run ruimte-context ${name}`, [], 404);
+    }
     const body = BodySchema.safeParse(await request.json().catch(() => null));
     if (!body.success) {
         return refusal('bad-request', 'The body must be { "argv": string[] }');

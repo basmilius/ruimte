@@ -32,12 +32,24 @@ export interface VerbCall {
     host: CanvasHost;
 }
 
-export interface Verb {
+interface VerbHelp {
     name: string;
     usage: string;
     summary: string;
+}
+
+/* A verb `POST /canvas/<verb>` runs. */
+export interface Verb extends VerbHelp {
+    served: 'canvas';
     run(argv: readonly string[], call: VerbCall): Promise<string[]>;
 }
+
+/* A word `ruimte-context` answers itself through `GET /context`; in the registry only so `help` names it. */
+export interface ContextVerb extends VerbHelp {
+    served: 'context';
+}
+
+export type VerbEntry = Verb | ContextVerb;
 
 interface VerbSpec<Positionals extends z.ZodType, Flags extends z.ZodObject> {
     name: string;
@@ -56,6 +68,7 @@ interface VerbSpec<Positionals extends z.ZodType, Flags extends z.ZodObject> {
 export const defineVerb = <Positionals extends z.ZodType, Flags extends z.ZodObject>(spec: VerbSpec<Positionals, Flags>): Verb => {
     const usageLines = [`usage\t${spec.name}\t${spec.usage}`];
     return {
+        served: 'canvas',
         name: spec.name,
         usage: spec.usage,
         summary: spec.summary,
