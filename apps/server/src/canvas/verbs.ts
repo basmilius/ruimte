@@ -5,12 +5,13 @@ import { agentVerb } from './agent-verb.ts';
 import { arrangeVerb } from './arrange-verb.ts';
 import { groupVerb } from './group-verb.ts';
 import { linkVerb } from './link-verb.ts';
+import { containersOf } from './placement.ts';
 import { notifyVerb } from './notify-verb.ts';
 import { renameVerb } from './rename-verb.ts';
 import { nodeVerb } from './node-verb.ts';
 import { openVerb } from './open-verb.ts';
 import { teamVerb } from './team-verb.ts';
-import { VIEW_KINDS, deletableView, viewVerb } from './view-verb.ts';
+import { VIEW_KINDS, deleteReason, viewVerb } from './view-verb.ts';
 import { DRY_RUN_FLAG, VerbRefusal, canvasFor, defineVerb, dryRunVerbNames, field, placeOf, type ContextVerb, type VerbEntry } from './verb.ts';
 
 /* The one line about failure every help output ends with; the codes are the CLI's, which is what runs the verb. */
@@ -99,14 +100,15 @@ const readVerb: ContextVerb = {
 const nodesVerb = defineVerb({
     name: 'nodes',
     usage: '[--view V]',
-    summary: 'Lists the nodes of a canvas: id, kind, title, x, y, w, h',
+    summary: 'Lists the nodes of a canvas: id, kind, title, x, y, w, h, group',
     detail: [
         'flag\t--view V\toptional\tThe canvas to list, by view id; ruimte-context views lists them',
-        'prints\tid\tkind\ttitle\tx\ty\tw\th\tone line per node, rounded to whole pixels',
+        'prints\tid\tkind\ttitle\tx\ty\tw\th\tgroup\tone line per node, rounded to whole pixels',
         'units\tx and y are the top left corner of the node in canvas pixels, w and h its size; the canvas has no edges and x or y may be negative',
         'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one',
-        'self\tYour own row is the one whose id is $RUIMTE_SESSION_ID, the variable every terminal session gets; a chat backend is given none',
-        'groups\tA group is a row of kind group; its id is what --group takes on agent',
+        'self\tThe last row is not a node: it is self and your own id, or self and a dash when you are not a node on this canvas',
+        'self\tA terminal session also carries its own id in $RUIMTE_SESSION_ID; a chat backend is given none, which is what the self row is for',
+        'groups\tA group is a row of kind group; its id is what --group takes on agent, and the group column names the frame a node stands in, empty on the canvas itself',
         'see\truimte-context edges\tthe lines of the same canvas, which this list does not show',
         'note\tA tab or a newline in a title is printed as a space, so a node is always one row',
         SCOPE_LINE
@@ -116,9 +118,21 @@ const nodesVerb = defineVerb({
     async run({ flags }, call) {
         const place = placeOf(call);
         const canvas = canvasFor(await call.host.read(place.projectId), place, flags.view);
-        return canvas.nodes.map((node) =>
-            [node.id, node.kind, field(node.title), ...[node.x, node.y, node.w, node.h].map((value) => String(Math.round(value)))].join('\t')
-        );
+        const containers = containersOf(canvas.nodes);
+        const mine = canvas.nodes.some((node) => node.id === call.caller);
+        return [
+            ...canvas.nodes.map((node) =>
+                [
+                    node.id,
+                    node.kind,
+                    field(node.title),
+                    ...[node.x, node.y, node.w, node.h].map((value) => String(Math.round(value))),
+                    containers.get(node.id)?.id ?? ''
+                ].join('\t')
+            ),
+            // Which row is the caller, which it can read nowhere else: a chat backend has no $RUIMTE_SESSION_ID.
+            mine ? `self\t${call.caller}` : 'self\t-\tyou are not a node on this canvas'
+        ];
     }
 });
 
@@ -147,12 +161,13 @@ const edgesVerb = defineVerb({
 const viewsVerb = defineVerb({
     name: 'views',
     usage: '',
-    summary: 'Lists the views of the project in sidebar order: id, kind, name, and whether you may delete it',
+    summary: 'Lists the views of the project in sidebar order: id, kind, name, whether you may delete it and why',
     detail: [
-        'prints\tid\tkind\tname\tdelete\tone line per view, in the order the sidebar has them',
+        'prints\tid\tkind\tname\tdelete\twhy\tone line per view, in the order the sidebar has them',
         `kinds\t${VIEW_KINDS.join('\t')}`,
-        'delete\tyes or no: whether ruimte-context view delete would remove that view for you',
-        'delete\tA view you made yourself is yes; one a person or another agent made is no unless the machine frees every view',
+        'delete\tyes or no: whether ruimte-context view delete would remove that view for you, with the reason beside it',
+        'why\tyours, this machine frees every view, a person made it, <id> made it, or you are in it',
+        'self\tThe last row is self and the view you are in: the canvas you stand on, or your own id when you are a view of your own',
         'note\tA separator is a line in the sidebar and has an empty name',
         'see\truimte-context view\tmaking a view, renaming it, marking it, moving it, removing it'
     ],
@@ -162,9 +177,13 @@ const viewsVerb = defineVerb({
         const place = placeOf(call);
         const content = await call.host.read(place.projectId);
         const anyView = call.host.agentsDeleteAnyView();
-        return content.views.map(
-            (view) => `${view.id}\t${view.kind}\t${field(view.name ?? '')}\t${deletableView(view, { caller: call.caller, place, anyView }) ? 'yes' : 'no'}`
-        );
+        return [
+            ...content.views.map((view) => {
+                const { may, why } = deleteReason(view, { caller: call.caller, place, anyView });
+                return `${view.id}\t${view.kind}\t${field(view.name ?? '')}\t${may ? 'yes' : 'no'}\t${why}`;
+            }),
+            `self\t${place.canvasId ?? call.caller}`
+        ];
     }
 });
 

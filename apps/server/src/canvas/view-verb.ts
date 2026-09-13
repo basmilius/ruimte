@@ -3,6 +3,7 @@ import {
     PROJECT_ICON_NAMES,
     ProjectViewSchema,
     emptyCanvasView,
+    isCanvasView,
     isSeparatorView,
     sessionNodesOfView,
     storedPathOf,
@@ -28,6 +29,9 @@ import { TITLE_LINE, VerbRefusal, defineSubVerb, defineVerbGroup, field, placeOf
  */
 export const MAX_PROJECT_VIEWS = 100;
 
+// A canvas with more nodes than this would bury the one line that says the view is gone.
+const DELETED_NODE_LINES = 20;
+
 /* Straight from the union in contracts, so a kind added there is one this verb makes on its own. */
 export const VIEW_KINDS = ProjectViewSchema.options.map((option) => option.shape.kind.value);
 
@@ -45,19 +49,29 @@ const kindsFor = (flag: ViewFlag): string =>
         .map((kind) => `${kind} (required)`)
         .join(', ');
 
-export const viewLines = (content: ProjectContent): string[] => content.views.map((view) => `view\t${view.id}\t${view.kind}\t${field(view.name ?? '')}`);
+/* The views a refusal offers instead; the caller passes the ones its verb would actually take. */
+export const viewLines = (views: readonly ProjectView[]): string[] => views.map((view) => `view\t${view.id}\t${view.kind}\t${field(view.name ?? '')}`);
 
 /*
- * Whether `view delete` would remove this view for this caller: one it made itself, or any view at
- * all on a machine that says so. A view the caller is standing in is never deletable, since the
- * verb would end the session that is asking.
+ * Whether `view delete` would remove this view for this caller, and why: one it made itself, or any
+ * view at all on a machine that says so. A view the caller is standing in is never deletable, since
+ * the verb would end the session that is asking. The reason is what the `views` column prints, so a
+ * `yes` on a machine that frees everything does not read as a mistake to a caller that made none of them.
  */
-export const deletableView = (view: ProjectView, call: { caller: string; place: IndexedPlace; anyView: boolean }): boolean => {
+export const deleteReason = (view: ProjectView, call: { caller: string; place: IndexedPlace; anyView: boolean }): { may: boolean; why: string } => {
     if (view.id === call.caller || view.id === call.place.canvasId) {
-        return false;
+        return { may: false, why: 'you are in it' };
     }
-    return call.anyView || view.createdBy === call.caller;
+    if (view.createdBy === call.caller) {
+        return { may: true, why: 'yours' };
+    }
+    if (call.anyView) {
+        return { may: true, why: 'this machine frees every view' };
+    }
+    return { may: false, why: view.createdBy === undefined ? 'a person made it' : `${view.createdBy} made it` };
 };
+
+export const deletableView = (view: ProjectView, call: { caller: string; place: IndexedPlace; anyView: boolean }): boolean => deleteReason(view, call).may;
 
 /* The icon names in rows of ten: sixty of them one per line would bury the refusal they belong to. */
 const ICON_NAME_LINES = Array.from({ length: Math.ceil(PROJECT_ICON_NAMES.length / 10) }, (_, row) =>
@@ -86,7 +100,10 @@ const iconChoice = (value: string): ProjectIconChoice => {
 const viewNamed = (content: ProjectContent, id: string, flag: string): ProjectView => {
     const view = content.views.find((candidate) => candidate.id === id);
     if (!view) {
-        throw new VerbRefusal('unknown-view', `${id} is not a view of this project`, [...viewLines(content), `note\t${flag} takes a view id, never a name`]);
+        throw new VerbRefusal('unknown-view', `${id} is not a view of this project`, [
+            ...viewLines(content.views),
+            `note\t${flag} takes a view id, never a name`
+        ]);
     }
     return view;
 };
@@ -291,6 +308,7 @@ const deleteSub = defineSubVerb('view', {
         'argument\t<viewId>\trequired\tThe view to remove, by id; ruimte-context views lists them',
         'prints\tdeleted\tid\tkind\tname\tthe view that went',
         'prints\tended\tid\tkind\tone line per session it took with it, a terminal or a chat',
+        `prints\tnode\tid\tkind\ttitle\tone line per node that stood on it, up to ${DELETED_NODE_LINES}, with a nodes row counting them all`,
         'rule\tOnly a view whose maker is you, which is every view you made with view new',
         'rule\tA machine can free every view of every project on it; a refusal says whether this one does',
         'rule\tNever the view you are standing in, since that would end the session asking, which is also why this can never empty the sidebar',
@@ -316,11 +334,26 @@ const deleteSub = defineSubVerb('view', {
             }
             return {
                 content: { ...content, views: result.views },
-                result: [`deleted\t${id}\t${view.kind}\t${field(view.name ?? '')}`, ...sessions.map((node) => `ended\t${node.id}\t${node.kind}`)]
+                result: [
+                    `deleted\t${id}\t${view.kind}\t${field(view.name ?? '')}`,
+                    ...sessions.map((node) => `ended\t${node.id}\t${node.kind}`),
+                    ...wentWithIt(view)
+                ]
             };
         });
     }
 });
+
+/*
+ * What a canvas took with it, counted and then named: a `deleted` line on its own leaves a caller
+ * guessing whether the note it made is still somewhere. Nothing at all for a view that holds no nodes.
+ */
+const wentWithIt = (view: ProjectView): string[] => {
+    if (!isCanvasView(view) || view.nodes.length === 0) {
+        return [];
+    }
+    return [`nodes\t${view.nodes.length}`, ...view.nodes.slice(0, DELETED_NODE_LINES).map((node) => `node\t${node.id}\t${node.kind}\t${field(node.title)}`)];
+};
 
 /* Why this view stays. Every sentence names the way out, since the caller cannot read the machine. */
 const refuseUndeletable = (view: ProjectView, call: { caller: string; place: IndexedPlace; anyView: boolean }): void => {
