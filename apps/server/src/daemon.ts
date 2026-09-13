@@ -92,6 +92,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const snapshotSchedule = scheduleSnapshots(manager, snapshots);
     const providers = new ProviderRegistry();
     const context: ContextStore = new ContextStore({
+        sources: (targetId) => projects.index.sourcesFor(targetId),
         terminalText: (sessionId) => manager.get(sessionId)?.plainText() ?? Promise.resolve(null),
         chatItems: (chatId) => chats.get(chatId)?.thread.list() ?? null,
         drawingElements: (viewId) => drawings.elementsOf(viewId),
@@ -113,6 +114,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const projects = new ProjectStore(config.home);
     const drawings = new DrawingStore(projects);
     projects.attachDrawings(drawings);
+    // Before the socket answers, so an agent whose project nobody opened since the restart still reads its links.
+    await projects.warmIndex();
     const folders = new FolderWatcher();
     const statuses = new GitStatusWatcher();
     const usage = new UsageService({ home: config.home, allowPriceFetch: config.priceFetch, knownProjects: () => projects.known() });
@@ -131,7 +134,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const dispatcher = new Dispatcher();
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await readMachineModel() });
     registerSessionHandlers(dispatcher, manager);
-    registerChatHandlers(dispatcher, chats, providers, context);
+    registerChatHandlers(dispatcher, chats, providers);
     registerProjectHandlers(dispatcher, projects);
     registerDrawingHandlers(dispatcher, drawings);
     registerAuthHandlers(dispatcher, auth, {

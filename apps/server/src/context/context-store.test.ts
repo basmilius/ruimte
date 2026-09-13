@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatItem, DrawingElement } from '@ruimte/contracts';
+import type { ChatItem, ContextSource, DrawingElement } from '@ruimte/contracts';
 import { ContextStore, renderTranscript } from './context-store.ts';
 
 const items: ChatItem[] = [
@@ -24,7 +24,11 @@ const drawing: DrawingElement[] = [
     { kind: 'text', id: 'el-2', x: 10, y: 20, w: 80, h: 24, stroke: 'ink', strokeWidth: 1, seed: 5, text: 'Client', size: 20 }
 ];
 
+// Stands in for the project index: what each target's document links into it.
+const linked = new Map<string, ContextSource[]>();
+
 const store = new ContextStore({
+    sources: (targetId) => linked.get(targetId) ?? [],
     terminalText: async (id) => (id === 'term' ? `${Array.from({ length: 2500 }, (_, i) => `line ${i}`).join('\n')}` : null),
     chatItems: (id) => (id === 'chat' ? items : null),
     drawingElements: async (id) => (id === 'view-1' ? drawing : null),
@@ -36,15 +40,15 @@ const get = (path: string, token?: string) =>
 
 describe('ContextStore', () => {
     test('a file answers its path and a line telling the agent to read it itself', async () => {
-        store.set('agent', [{ id: 'node-1', kind: 'file', title: 'README.md', text: '/home/bas/app/README.md' }]);
+        linked.set('agent', [{ id: 'node-1', kind: 'file', title: 'README.md', text: '/home/bas/app/README.md' }]);
         expect(store.list('agent')).toEqual([{ id: 'node-1', kind: 'file', title: 'README.md' }]);
         const read = await store.read('agent', 'node-1');
         expect(read).toContain('/home/bas/app/README.md');
         expect(read).toContain('Read it with your own tools');
     });
 
-    test('lists what the client set, without the text bodies, and reads each kind', async () => {
-        store.set('agent', [
+    test('lists what the document links, without the text bodies, and reads each kind', async () => {
+        linked.set('agent', [
             { id: 'note', kind: 'text', title: 'Sprint', text: 'ship it' },
             { id: 'term', kind: 'terminal', title: 'dev server' },
             { id: 'chat', kind: 'chat', title: 'planner' }
@@ -63,7 +67,7 @@ describe('ContextStore', () => {
     });
 
     test('the HTTP face checks the token and answers list and read', async () => {
-        store.set('agent', [{ id: 'note', kind: 'text', title: 'Sprint', text: 'ship it' }]);
+        linked.set('agent', [{ id: 'note', kind: 'text', title: 'Sprint', text: 'ship it' }]);
         expect((await get('/context')).status).toBe(401);
         expect((await get('/context', 'wrong')).status).toBe(401);
         expect(await (await get('/context', 'tok')).json()).toEqual({ sources: [{ id: 'note', kind: 'text', title: 'Sprint' }] });
@@ -72,18 +76,20 @@ describe('ContextStore', () => {
     });
 
     test('a file answers with its path and never with its bytes', async () => {
-        store.set('agent', [{ id: 'node-1', kind: 'file', title: 'main.ts', text: '/repo/src/main.ts' }]);
+        linked.set('agent', [{ id: 'node-1', kind: 'file', title: 'main.ts', text: '/repo/src/main.ts' }]);
         expect(store.list('agent')).toEqual([{ id: 'node-1', kind: 'file', title: 'main.ts' }]);
         const answer = (await store.read('agent', 'node-1')) ?? '';
         expect(answer).toContain('/repo/src/main.ts');
         expect(answer.split('\n')).toHaveLength(3);
     });
 
-    test('an empty set clears the target', () => {
-        store.set('agent', [{ id: 'x', kind: 'text', title: 'x', text: '' }]);
+    test('a target has context only while something is linked into it', () => {
+        linked.set('agent', [{ id: 'x', kind: 'text', title: 'x', text: '' }]);
         expect(store.has('agent')).toBe(true);
-        store.set('agent', []);
+        linked.set('agent', []);
         expect(store.has('agent')).toBe(false);
+        expect(store.list('agent')).toEqual([]);
+        expect(store.has('stranger')).toBe(false);
     });
 });
 
@@ -99,7 +105,7 @@ describe('renderTranscript', () => {
 
 describe('a drawing as context', () => {
     test('an agent reads the texts first and the picture after them', async () => {
-        store.set('agent', [{ id: 'view-1', kind: 'drawing', title: 'Sketch' }]);
+        linked.set('agent', [{ id: 'view-1', kind: 'drawing', title: 'Sketch' }]);
         const text = await store.read('agent', 'view-1');
         expect(text).toContain('Client');
         expect(text?.indexOf('Client')).toBeLessThan(text!.indexOf('## SVG'));
@@ -107,7 +113,7 @@ describe('a drawing as context', () => {
     });
 
     test('a drawing whose project is closed reads as nothing at all', async () => {
-        store.set('agent', [{ id: 'gone', kind: 'drawing', title: 'Sketch' }]);
+        linked.set('agent', [{ id: 'gone', kind: 'drawing', title: 'Sketch' }]);
         expect(await store.read('agent', 'gone')).toBeNull();
     });
 });

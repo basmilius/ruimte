@@ -167,10 +167,9 @@ canvas, against Ruimte, one verdict each.
   decides and a person can change it from outside the app.
 - Formatting is prettier (`.prettierrc`: single quotes, width 160, 4 spaces). Run
   `bun run format` before a commit.
-- A line between two non-agent nodes means nothing to the daemon; it is a drawing. Only the
-  client's `context/sources.ts` decides what an edge means, from the target's kind, so the
-  daemon never learns about plain lines and `ContextSource` needs no new kinds: a note travels
-  as `text` with its title and body. Notes are not in the sidebar; that list is about what
+- A line between two non-agent nodes means nothing; it is a drawing. What an edge means is
+  decided from the target's kind, and `ContextSource` needs no new kinds: a note travels as
+  `text` with its title and body. Notes are not in the sidebar; that list is about what
   runs.
 - "Connect to..." is a click mode, not a drag: the draft follows the pointer without a button
   held, because a menu item cannot hand over a pointer capture. Escape and empty canvas cancel.
@@ -389,7 +388,7 @@ canvas, against Ruimte, one verdict each.
 - The path is relative to the project folder, POSIX, because `.ruimte/project.json` goes into git
   and an absolute path is wrong in every other checkout. A file outside the folder keeps its
   absolute path, which is what `relativeTo` hands back for a path it cannot shorten
-  (`storedPathOf` and `resolveStoredPath` in `shell/panels/files-tree.ts`).
+  (`storedPathOf` and `resolveStoredPath` in `packages/contracts/src/stored-path.ts`).
 - All three surfaces (a preview tab, a node, a view) are the preview's own reading layer:
   `useFileRead` for the read and the re-read, `renderFile` for the renderer, `FileBody` for the one
   loading state and the one error state. A path that is gone shows that error and stays where it
@@ -607,10 +606,7 @@ Also decided against for now: a scheduler, checkpoint restore and telemetry.
   prompt (on the screen only, never typed into the PTY); a Claude Code agent inside a shell
   gets the hint as `additionalContext` from its `SessionStart` and `UserPromptSubmit` hooks,
   which is why the hook command prints curl's reply now. A link made while a shell is already
-  running is only visible as the "context" chip in the node header and to the hooks. The
-  shell's line depends on `context.set` reaching the daemon before `session.create`; on a
-  fresh project load the client's sync (300 ms settle) can lose that race, so the chip and the
-  hooks are the ones to rely on.
+  running is only visible as the "context" chip in the node header and to the hooks.
 - The app-server frames have no `jsonrpc` field: `{ id, method, params }` out, `{ id, result }`
   or `{ id, error }` back, `{ method, params }` for notifications, and the server's own requests
   (approvals, questions) arrive with an `id` that starts at 0 for every process. Approval item

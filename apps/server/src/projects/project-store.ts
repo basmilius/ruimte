@@ -35,6 +35,7 @@ import {
     ICON_EXTENSION_BY_MIME,
     PROJECT_FILE
 } from './project-files.ts';
+import { ProjectIndex } from './project-index.ts';
 import { IdentityCache, readIdeaName, sniffMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
 
 type ProjectErrorCode = 'project-not-found' | 'project-missing' | 'project-invalid' | 'rev-conflict' | 'folder-not-found' | 'folder-create-failed' | 'bad-icon';
@@ -111,6 +112,8 @@ const drawingIdsIn = (views: ProjectView[]): Set<string> => new Set(views.filter
  */
 export class ProjectStore {
     readonly home: string;
+    /* Every known project's last document, which outlives `release`: the sessions of a project keep running after a client lets go of it. */
+    readonly index = new ProjectIndex();
     private readonly sinks = new Map<string, SessionSink>();
     private readonly open = new Map<string, OpenProject>();
     private registry: RegistryEntry[] | null = null;
@@ -255,6 +258,7 @@ export class ProjectStore {
         }
 
         this.release(entry.projectId);
+        this.index.set(entry.projectId, entry.folder, fromPortable(document, entry.folder));
         const state: OpenProject = {
             entry,
             rev: document.rev,
@@ -290,6 +294,7 @@ export class ProjectStore {
         const document: ProjectDocument = { version: 2, rev: state.rev + 1, ...toPortable(content, state.entry.folder) };
         state.lastText = await writeDocument(this.documentPath(state.entry), document);
         state.rev = document.rev;
+        this.index.set(projectId, state.entry.folder, fromPortable(document, state.entry.folder));
         const drawingIds = drawingIdsIn(document.views);
         // A view that a person deleted here takes its file with it. An outside edit never does:
         // a git pull can drop a view whose file is still on its way, and that file is someone's work.
@@ -407,6 +412,7 @@ export class ProjectStore {
             throw new ProjectError('project-not-found', `No project ${projectId}`);
         }
         this.release(projectId);
+        this.index.remove(projectId);
         await this.saveRegistry(entries.filter((candidate) => candidate.projectId !== projectId));
         await rm(this.localPath(projectId), { force: true });
         if (!removeFiles) {
@@ -423,6 +429,30 @@ export class ProjectStore {
         } else {
             await rm(dirname(this.documentPath(entry)), { recursive: true, force: true });
         }
+    }
+
+    /*
+     * Reads the document of every known project into the index, open or not. A file that is missing
+     * or will not parse is skipped rather than set aside: nobody asked for it, and a daemon must
+     * start whatever state a folder is in. A project a save or an open indexed meanwhile is newer
+     * than what this read, so it is left alone.
+     */
+    async warmIndex(): Promise<void> {
+        const entries = await this.loadRegistry();
+        await Promise.all(
+            entries.map(async (entry) => {
+                let text: string;
+                try {
+                    text = await readFile(this.documentPath(entry), 'utf8');
+                } catch {
+                    return;
+                }
+                const parsed = parseDocument(text);
+                if (parsed.kind === 'ok' && !this.index.has(entry.projectId)) {
+                    this.index.set(entry.projectId, entry.folder, fromPortable(parsed.document, entry.folder));
+                }
+            })
+        );
     }
 
     /* The daemon is going down: it lets go of every project without closing any of them. */
@@ -525,6 +555,7 @@ export class ProjectStore {
         state.rev = document.rev;
         state.drawingIds = drawingIdsIn(document.views);
         state.entry = { ...state.entry, name: document.name, color: document.color, icon: document.icon ?? null };
+        this.index.set(state.entry.projectId, state.entry.folder, fromPortable(document, state.entry.folder));
         this.emit({ event: 'project.changed', payload: { projectId: state.entry.projectId, document: fromPortable(document, state.entry.folder) } });
         this.publish(state.entry);
     }

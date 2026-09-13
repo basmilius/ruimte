@@ -386,6 +386,78 @@ describe('ProjectStore', () => {
     });
 });
 
+describe('the project index', () => {
+    const linked = (body: string): ProjectContent => ({
+        name: 'repo',
+        color: '#123456',
+        views: [
+            {
+                kind: 'canvas',
+                id: 'main',
+                name: 'Canvas',
+                nodes: [
+                    { id: 'agent', kind: 'terminal', title: 'shell', x: 0, y: 0, w: 560, h: 360 },
+                    { id: 'plan', kind: 'note', title: 'Plan', x: 0, y: 0, w: 200, h: 200, body },
+                    { id: 'readme', kind: 'file', title: 'README.md', x: 0, y: 0, w: 200, h: 200, path: 'README.md' }
+                ],
+                texts: [],
+                edges: [
+                    { id: 'e1', from: 'plan', to: 'agent' },
+                    { id: 'e2', from: 'readme', to: 'agent' }
+                ],
+                layouts: []
+            }
+        ]
+    });
+
+    test('a save changes what an agent reads, and letting go of the project keeps it readable', async () => {
+        const opened = await store.openProject({ folder });
+        const { projectId } = opened.summary;
+        expect(store.index.sourcesFor('agent')).toEqual([]);
+
+        await store.save(projectId, 0, linked('first'));
+        expect(store.index.sourcesFor('agent')).toEqual([
+            { id: 'plan', kind: 'text', title: 'Plan', text: 'first' },
+            { id: 'readme', kind: 'file', title: 'README.md', text: join(folder, 'README.md') }
+        ]);
+        await store.save(projectId, 1, linked('second'));
+        expect(store.index.sourcesFor('agent')[0]).toMatchObject({ text: 'second' });
+
+        // Switching away is what `release` is; the shell on that canvas keeps running and keeps its links.
+        store.release(projectId);
+        expect(store.index.sourcesFor('agent')[0]).toMatchObject({ text: 'second' });
+        await store.closeProject(projectId);
+        expect(store.index.locate('agent')).toEqual({ projectId, folder, canvasId: 'main' });
+
+        await store.delete(projectId, false);
+        expect(store.index.sourcesFor('agent')).toEqual([]);
+    });
+
+    test('warming reads a project nobody opened since the daemon started', async () => {
+        const opened = await store.openProject({ folder });
+        await store.save(opened.summary.projectId, 0, linked('from disk'));
+        await store.closeProject(opened.summary.projectId);
+
+        const restarted = new ProjectStore(home);
+        expect(restarted.index.sourcesFor('agent')).toEqual([]);
+        await restarted.warmIndex();
+        expect(restarted.index.sourcesFor('agent')[0]).toMatchObject({ text: 'from disk' });
+        expect(restarted.openProjectIds()).toEqual([]);
+    });
+
+    test('warming skips a project whose file is gone or will not parse, and starts anyway', async () => {
+        const opened = await store.openProject({ folder });
+        await store.save(opened.summary.projectId, 0, linked('x'));
+        await writeFile(documentPathInFolder(folder), '{ not json');
+
+        const restarted = new ProjectStore(home);
+        await restarted.warmIndex();
+        expect(restarted.index.has(opened.summary.projectId)).toBe(false);
+        // Nobody asked for that file, so it is not set aside the way an open would.
+        expect(await readFile(documentPathInFolder(folder), 'utf8')).toBe('{ not json');
+    });
+});
+
 describe('portable paths', () => {
     test('paths inside the folder go relative, the folder itself is a dot, outside stays absolute', () => {
         const portable = toPortable(

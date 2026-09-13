@@ -7,6 +7,8 @@ export const CONTEXT_PATH = '/context';
 const MAX_LINES = 2000;
 
 interface ContextReaders {
+    /* What the agent under this id may read, derived from the project documents the daemon knows. */
+    sources(targetId: string): ContextSource[];
     /* The elements of a drawing view, or null when no open project has one under that id. */
     drawingElements(viewId: string): Promise<DrawingElement[] | null>;
     /* The plain text of a terminal session's screen and scrollback, or null when there is none. */
@@ -55,35 +57,26 @@ export const renderTranscript = (items: ChatItem[]): string => {
 };
 
 /*
- * What each agent node may read, as the client last told us. Texts arrive with their content;
+ * What each agent node may read, as its project's document says. Texts carry their content;
  * terminals and chats are read at request time, so an agent always sees the current state.
  */
 export class ContextStore {
     private readonly readers: ContextReaders;
-    private readonly byTarget = new Map<string, ContextSource[]>();
 
     constructor(readers: ContextReaders) {
         this.readers = readers;
     }
 
-    set(targetId: string, sources: ContextSource[]): void {
-        if (sources.length === 0) {
-            this.byTarget.delete(targetId);
-        } else {
-            this.byTarget.set(targetId, sources);
-        }
-    }
-
     has(targetId: string): boolean {
-        return this.byTarget.has(targetId);
+        return this.readers.sources(targetId).length > 0;
     }
 
     list(targetId: string): ContextSource[] {
-        return (this.byTarget.get(targetId) ?? []).map(({ text: _text, ...source }) => source);
+        return this.readers.sources(targetId).map(({ text: _text, ...source }) => source);
     }
 
     async read(targetId: string, sourceId: string): Promise<string | null> {
-        const source = this.byTarget.get(targetId)?.find((entry) => entry.id === sourceId);
+        const source = this.readers.sources(targetId).find((entry) => entry.id === sourceId);
         if (!source) {
             return null;
         }

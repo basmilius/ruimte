@@ -807,15 +807,36 @@ describe.skipIf(!ENABLED)('one id on two machines', () => {
         expect(theirs.entries.map((entry) => entry.name)).not.toContain('mine.txt');
     });
 
-    test('context set on a node of the container is read back inside that container', async () => {
+    test('a note linked on a canvas of the container is read back inside that container', async () => {
         const sessionId = `scope-context-${Date.now()}`;
         startedSessions.push(sessionId);
+        /* A folder of its own, so the project file it writes stays out of the checkouts the git tests read. */
+        const opened = await there.request<ProjectOpenResult>('project.open', { folder: `/tmp/ruimte-context-${Date.now()}`, createFolder: true });
+        // The daemon derives the links from the document it saved, so no client has to tell it.
+        await there.request<ProjectSaveResult>('project.save', {
+            projectId: opened.summary.projectId,
+            baseRev: opened.document.rev,
+            content: {
+                name: 'Context',
+                color: '#000',
+                views: [
+                    {
+                        kind: 'canvas',
+                        id: 'main',
+                        name: 'Canvas',
+                        nodes: [
+                            { id: sessionId, kind: 'terminal', title: 'shell', x: 0, y: 0, w: 560, h: 360 },
+                            { id: 'note-1', kind: 'note', title: 'Sprint goals', x: 600, y: 0, w: 240, h: 200, body: 'ship the pool' }
+                        ],
+                        texts: [],
+                        edges: [{ id: 'edge-1', from: 'note-1', to: sessionId }],
+                        layouts: []
+                    }
+                ] satisfies ProjectView[]
+            }
+        });
         await there.request('session.create', { sessionId, cwd: REPO, cols: 80, rows: 24 });
         await there.request('session.attach', { sessionId, cols: 80, rows: 24 });
-        await there.request('context.set', {
-            targetId: sessionId,
-            sources: [{ id: 'note-1', kind: 'text', title: 'Sprint goals', text: 'ship the pool' }]
-        });
 
         there.takeOutput();
         /*
