@@ -288,6 +288,18 @@ describe('project', () => {
         expect(payload.safeParse({ projectId: 'p1', image: { mime: 'image/png', base64: 'AAAA' } }).success).toBe(true);
         expect(payload.safeParse({ projectId: 'p1' }).success).toBe(false);
     });
+
+    test('project.showView names the view and who asked, and is an event rather than a request', () => {
+        const event = EVENT_SCHEMAS['project.showView'];
+        expect(event.safeParse({ projectId: 'p1', viewId: 'board', by: 'term-1' }).success).toBe(true);
+        // Every field is load-bearing: without the caller no client can say which agent pulled the view up.
+        expect(event.safeParse({ projectId: 'p1', viewId: 'board' }).success).toBe(false);
+        expect(event.safeParse({ projectId: 'p1', viewId: '', by: 'term-1' }).success).toBe(false);
+        expect(event.safeParse({ projectId: '', viewId: 'board', by: 'term-1' }).success).toBe(false);
+        // Showing is personal, so nothing on the wire asks the daemon to show a view.
+        expect(isRequestType('project.showView')).toBe(false);
+        expect(isEventType('project.showView')).toBe(true);
+    });
 });
 
 describe('fs', () => {

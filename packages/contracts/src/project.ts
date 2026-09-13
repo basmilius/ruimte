@@ -522,6 +522,20 @@ export const ProjectChangedEventSchema = z.object({
 });
 export type ProjectChangedEvent = z.infer<typeof ProjectChangedEventSchema>;
 
+/*
+ * An agent asked for a view to be shown. Making is shared and lands in `project.json`; showing is
+ * personal, so this changes no document and every client with the project on screen decides for
+ * itself whether to follow it. The caller rides along as an id, never as a title, so a client that
+ * wants to name the agent reads the name out of the document it already holds.
+ */
+export const ProjectShowViewEventSchema = z.object({
+    projectId: ProjectIdSchema,
+    viewId: z.string().min(1),
+    // The node or view the verb ran from: a terminal session, a chat, or a session that is a view of its own.
+    by: z.string().min(1)
+});
+export type ProjectShowViewEvent = z.infer<typeof ProjectShowViewEventSchema>;
+
 // Writes or removes `.ruimte/icon.<ext>`; a null image deletes what is there. The bytes are
 // base64 because a JSON frame carries no binary, and the daemon checks them against its own cap.
 export const ProjectSetIconPayloadSchema = z.object({

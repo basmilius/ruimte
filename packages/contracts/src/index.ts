@@ -88,6 +88,7 @@ import {
     ProjectSavePayloadSchema,
     ProjectSaveResultSchema,
     ProjectSetIconPayloadSchema,
+    ProjectShowViewEventSchema,
     ProjectSummaryEventSchema,
     ProjectSummaryResultSchema,
     ProjectTargetPayloadSchema
@@ -241,6 +242,7 @@ export const EVENT_SCHEMAS = {
     'chat.event': ChatEventEnvelopeSchema,
     'endpoint.changed': EndpointChangedEventSchema,
     'project.changed': ProjectChangedEventSchema,
+    'project.showView': ProjectShowViewEventSchema,
     'project.summary': ProjectSummaryEventSchema,
     'drawing.changed': DrawingChangedEventSchema,
     'fs.changed': FsChangedEventSchema,
