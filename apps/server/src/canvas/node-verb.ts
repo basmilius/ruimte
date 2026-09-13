@@ -133,7 +133,7 @@ export const newId = (prefix: string, content: ProjectContent, also: readonly st
     }
 };
 
-const checkUrl = (url: string): string => {
+export const checkUrl = (url: string): string => {
     let parsed: URL;
     try {
         parsed = new URL(url);

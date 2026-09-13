@@ -5,6 +5,7 @@ import { agentVerb } from './agent-verb.ts';
 import { linkVerb } from './link-verb.ts';
 import { nodeVerb } from './node-verb.ts';
 import { teamVerb } from './team-verb.ts';
+import { VIEW_KINDS, deletableView, viewVerb } from './view-verb.ts';
 import { DRY_RUN_FLAG, VerbRefusal, canvasFor, defineVerb, dryRunVerbNames, field, placeOf, type ContextVerb, type VerbEntry } from './verb.ts';
 
 /* The one line about failure every help output ends with; the codes are the CLI's, which is what runs the verb. */
@@ -13,7 +14,7 @@ const REFUSAL_LINE =
 
 /* Two things an agent keeps mixing up, so the line is in the list and in the detail of each verb it is about. */
 const SCOPE_LINE =
-    'scope\tlist and read are what a person linked into this session; nodes, edges, views, node, agent, team and link are the canvas itself\ta node you add is readable through read only once a line runs from it into you';
+    'scope\tlist and read are what a person linked into this session; nodes, edges, views, node, agent, team, link and view are the canvas itself\ta node you add is readable through read only once a line runs from it into you';
 
 /* Said once under the list, since the flag is on some verbs and refused by name on the rest. */
 const dryRunLine = (): string => `dry run\t--${DRY_RUN_FLAG}\t${dryRunVerbNames().join(', ')}\tsame checks, nothing made; every other verb refuses the flag`;
@@ -21,7 +22,20 @@ const dryRunLine = (): string => `dry run\t--${DRY_RUN_FLAG}\t${dryRunVerbNames(
 /* Every row says what it is in its first field, so the lines under the list are never read as verbs. */
 export const verbSummaryLines = (): string[] => VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`);
 
-const detailLines = (verb: VerbEntry): string[] => [`usage\t${verb.name}\t${verb.usage}`, `about\t${verb.summary}`, ...verb.detail, REFUSAL_LINE];
+/* A verb with words of its own prints each of them in full under its own lines, out of the same
+   table the dispatch reads, so a subcommand is documented by being defined. */
+const subcommandLines = (verb: VerbEntry): string[] =>
+    verb.served !== 'canvas' || verb.subcommands === undefined
+        ? []
+        : verb.subcommands.flatMap((sub) => [`usage\t${sub.name}\t${sub.usage}`, `about\t${sub.name}\t${sub.summary}`, ...sub.detail]);
+
+const detailLines = (verb: VerbEntry): string[] => [
+    `usage\t${verb.name}\t${verb.usage}`,
+    `about\t${verb.summary}`,
+    ...verb.detail,
+    ...subcommandLines(verb),
+    REFUSAL_LINE
+];
 
 const helpVerb = defineVerb({
     name: 'help',
@@ -126,21 +140,28 @@ const edgesVerb = defineVerb({
 const viewsVerb = defineVerb({
     name: 'views',
     usage: '',
-    summary: 'Lists the views of the project in sidebar order: id, kind, name',
+    summary: 'Lists the views of the project in sidebar order: id, kind, name, and whether you may delete it',
     detail: [
-        'prints\tid\tkind\tname\tone line per view, in the order the sidebar has them',
-        'kinds\tcanvas\tchat\tterminal\tbrowser\tdrawing\tfile\tseparator',
-        'note\tA separator is a line in the sidebar and has an empty name'
+        'prints\tid\tkind\tname\tdelete\tone line per view, in the order the sidebar has them',
+        `kinds\t${VIEW_KINDS.join('\t')}`,
+        'delete\tyes or no: whether ruimte-context view delete would remove that view for you',
+        'delete\tA view you made yourself is yes; one a person or another agent made is no unless the machine frees every view',
+        'note\tA separator is a line in the sidebar and has an empty name',
+        'see\truimte-context view\tmaking a view, renaming it, marking it, moving it, removing it'
     ],
     positionals: z.tuple([], { error: 'views takes no arguments' }),
     flags: z.object({}),
     async run(_input, call) {
-        const content = await call.host.read(placeOf(call).projectId);
-        return content.views.map((view) => `${view.id}\t${view.kind}\t${field(view.name ?? '')}`);
+        const place = placeOf(call);
+        const content = await call.host.read(place.projectId);
+        const anyView = call.host.agentsDeleteAnyView();
+        return content.views.map(
+            (view) => `${view.id}\t${view.kind}\t${field(view.name ?? '')}\t${deletableView(view, { caller: call.caller, place, anyView }) ? 'yes' : 'no'}`
+        );
     }
 });
 
 /* In the order `help` lists them: everything `ruimte-context` does, whichever route serves it. */
-export const VERBS: readonly VerbEntry[] = [helpVerb, listVerb, readVerb, nodesVerb, edgesVerb, viewsVerb, nodeVerb, agentVerb, teamVerb, linkVerb];
+export const VERBS: readonly VerbEntry[] = [helpVerb, listVerb, readVerb, nodesVerb, edgesVerb, viewsVerb, nodeVerb, agentVerb, teamVerb, linkVerb, viewVerb];
 
 export const verbNamed = (name: string): VerbEntry | undefined => VERBS.find((verb) => verb.name === name);

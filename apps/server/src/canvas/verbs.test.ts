@@ -2,7 +2,16 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ContextSourceSchema, NODE_SIZE, type AgentKind, type ProjectCanvasView, type ProjectContent, type ProjectDocument } from '@ruimte/contracts';
+import {
+    ContextSourceSchema,
+    NODE_SIZE,
+    PROJECT_ICON_NAMES,
+    type AgentKind,
+    type ProjectCanvasView,
+    type ProjectContent,
+    type ProjectDocument,
+    type ProjectView
+} from '@ruimte/contracts';
 import { SESSION_VARIABLES } from '../config.ts';
 import { MAX_SCREEN_LINES } from '../context/context-store.ts';
 import { documentPathInFolder } from '../projects/project-files.ts';
@@ -16,8 +25,11 @@ import { MAX_LINKS } from './link-verb.ts';
 import { MAX_CANVAS_NODES } from './node-verb.ts';
 import { PLACEMENT_GAP } from './placement.ts';
 import { MAX_ROLES, ROLES_SHAPE } from './team-verb.ts';
+import { MAX_PROJECT_VIEWS, VIEW_KINDS, viewVerb } from './view-verb.ts';
 import { MAX_TITLE_LENGTH, type CanvasHost } from './verb.ts';
 import { VERBS } from './verbs.ts';
+
+const VIEW_SUBS = viewVerb.subcommands ?? [];
 
 let root: string;
 let folder: string;
@@ -29,6 +41,8 @@ let worktrees: string[];
 let installed: AgentKind[];
 let held: Array<{ projectId: string; nodeId: string; prompt: string }>;
 let lineage: AgentLineageStore;
+let deleteAnyView: boolean;
+let ended: string[];
 
 const TOKENS: Record<string, string> = { term: 'term-1', chat: 'chat-1', stray: 'nobody' };
 
@@ -68,6 +82,8 @@ beforeEach(async () => {
     worktrees = [];
     installed = ['claude', 'codex', 'gemini', 'copilot'];
     held = [];
+    deleteAnyView = false;
+    ended = [];
     lineage = new AgentLineageStore(join(root, 'home'));
     await lineage.load();
     store = new ProjectStore(join(root, 'home'));
@@ -94,7 +110,11 @@ const host = (): CanvasHost => ({
     },
     depthOf: (nodeId) => lineage.depthOf(nodeId),
     openedCount: (callerId) => lineage.openedCount(callerId),
-    recordOpened: (projectId, nodeId, openedBy, depth) => lineage.put(projectId, nodeId, openedBy, depth)
+    recordOpened: (projectId, nodeId, openedBy, depth) => lineage.put(projectId, nodeId, openedBy, depth),
+    agentsDeleteAnyView: () => deleteAnyView,
+    endSession: async (kind, nodeId) => {
+        ended.push(`${kind}\t${nodeId}`);
+    }
 });
 
 const post = async (verb: string, argv: string[], token = 'term'): Promise<{ status: number; lines: string[] }> => {
@@ -113,6 +133,16 @@ const onDisk = async (): Promise<ProjectDocument> => JSON.parse(await readFile(d
 const canvasOnDisk = async (id = 'main'): Promise<ProjectCanvasView> => (await onDisk()).views.find((view) => view.id === id) as ProjectCanvasView;
 
 const CANVAS_LINES = ['canvas\tmain\tCanvas', 'canvas\tboard\tBoard'];
+
+/* A view the caller made itself, which is the only kind `view delete` takes away by default. */
+const made = async (name: string, argv: string[] = [], token = 'term'): Promise<string> =>
+    (await post('view', ['new', name, ...argv], token)).lines[0]!.split('\t')[0]!;
+
+/* The last column of `views`, per view id: whether `view delete` would remove it for this caller. */
+const deleteColumn = async (token = 'term'): Promise<Record<string, string>> =>
+    Object.fromEntries((await post('views', [], token)).lines.map((line) => line.split('\t')).map(([id, , , may]) => [id!, may!]));
+
+const viewOnDisk = async (id: string): Promise<ProjectView | undefined> => (await onDisk()).views.find((view) => view.id === id);
 
 describe('the route', () => {
     test('answers 405 to anything but POST and 401 to an unknown token', async () => {
@@ -171,7 +201,11 @@ describe('help', () => {
             expect(status).toBe(200);
             expect(lines[0]).toBe(`usage\t${verb.name}\t${verb.usage}`);
             expect(lines[1]).toBe(`about\t${verb.summary}`);
-            expect(lines.slice(2, -1)).toEqual([...verb.detail]);
+            const subs = verb.served === 'canvas' ? (verb.subcommands ?? []) : [];
+            expect(lines.slice(2, -1)).toEqual([
+                ...verb.detail,
+                ...subs.flatMap((sub) => [`usage\t${sub.name}\t${sub.usage}`, `about\t${sub.name}\t${sub.summary}`, ...sub.detail])
+            ]);
             expect(lines.at(-1)).toStartWith('refusal\t');
             // Tab-separated rows, never a paragraph.
             expect(lines.every((line) => line.includes('\t'))).toBe(true);
@@ -476,12 +510,28 @@ describe('scoping', () => {
 describe('views', () => {
     test('lists every view in sidebar order, a separator with an empty name', async () => {
         expect((await post('views', [])).lines).toEqual([
-            'main\tcanvas\tCanvas',
-            'sep-1\tseparator\t',
-            'board\tcanvas\tBoard',
-            'chat-1\tchat\tPlanner',
-            'sketch-1\tdrawing\tSketch'
+            'main\tcanvas\tCanvas\tno',
+            'sep-1\tseparator\t\tno',
+            'board\tcanvas\tBoard\tno',
+            'chat-1\tchat\tPlanner\tno',
+            'sketch-1\tdrawing\tSketch\tno'
         ]);
+    });
+
+    test('the last column is whether view delete would remove that view for the caller', async () => {
+        const mine = await made('Notes');
+        expect(await deleteColumn()).toEqual({ main: 'no', 'sep-1': 'no', board: 'no', 'chat-1': 'no', 'sketch-1': 'no', [mine]: 'yes' });
+    });
+
+    test('a machine that frees every view says so in the column, except for the one the caller is in', async () => {
+        deleteAnyView = true;
+        // The caller is a node on main, so removing main would end the session that is asking.
+        expect(await deleteColumn()).toEqual({ main: 'no', 'sep-1': 'yes', board: 'yes', 'chat-1': 'yes', 'sketch-1': 'yes' });
+    });
+
+    test('a caller that is a view of its own may not remove the view it is', async () => {
+        deleteAnyView = true;
+        expect((await deleteColumn('chat'))['chat-1']).toBe('no');
     });
 });
 
@@ -1124,5 +1174,271 @@ describe('--dry-run', () => {
             'verb\tteam\ttakes --dry-run'
         ]);
         expect((await post('link', ['--to', 'note-1', '--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
+    });
+});
+
+describe('view new', () => {
+    test('adds a canvas last in the sidebar and writes the caller down as its maker', async () => {
+        const { status, lines } = await post('view', ['new', 'Plan']);
+        expect(status).toBe(200);
+        const [id, kind, name] = lines[0]!.split('\t');
+        expect([kind, name]).toEqual(['canvas', 'Plan']);
+        expect((await onDisk()).views.at(-1)).toMatchObject({ id, kind: 'canvas', name: 'Plan', createdBy: 'term-1', nodes: [], edges: [] });
+    });
+
+    test('every kind of the union in contracts is one it makes', async () => {
+        const extra: Partial<Record<(typeof VIEW_KINDS)[number], string[]>> = {
+            file: ['--path', 'src/main.ts'],
+            browser: ['--url', 'https://bas.dev']
+        };
+        for (const kind of VIEW_KINDS) {
+            const { status, lines } = await post('view', ['new', `A ${kind}`, '--kind', kind, ...(extra[kind] ?? [])]);
+            expect(status).toBe(200);
+            const [id, said] = lines[0]!.split('\t');
+            expect(said).toBe(kind);
+            expect(await viewOnDisk(id!)).toMatchObject({ kind, name: `A ${kind}`, createdBy: 'term-1' });
+        }
+    });
+
+    test('a file view stores its path folder-relative and a browser view keeps its address', async () => {
+        const file = await made('main.ts', ['--kind', 'file', '--path', join(folder, 'src', 'main.ts')]);
+        expect(await viewOnDisk(file)).toMatchObject({ kind: 'file', path: 'src/main.ts' });
+        const outsideFile = await made('notes.md', ['--kind', 'file', '--path', join(outside, 'notes.md')]);
+        expect(await viewOnDisk(outsideFile)).toMatchObject({ path: join(outside, 'notes.md') });
+        const page = await made('Docs', ['--kind', 'browser', '--url', 'https://bas.dev/docs']);
+        expect(await viewOnDisk(page)).toMatchObject({ kind: 'browser', url: 'https://bas.dev/docs' });
+    });
+
+    test('--after puts the row right under the view it names', async () => {
+        const id = await made('Plan', ['--after', 'main']);
+        expect((await onDisk()).views.map((view) => view.id)).toEqual(['main', id, 'sep-1', 'board', 'chat-1', 'sketch-1']);
+    });
+
+    test('--after that names no view of this project is refused with the views', async () => {
+        const { status, lines } = await post('view', ['new', 'Plan', '--after', 'nowhere']);
+        expect(status).toBe(422);
+        expect(lines[0]).toBe('refused\tunknown-view\tnowhere is not a view of this project');
+        expect(lines.slice(1, -1)).toEqual([
+            'view\tmain\tcanvas\tCanvas',
+            'view\tsep-1\tseparator\t',
+            'view\tboard\tcanvas\tBoard',
+            'view\tchat-1\tchat\tPlanner',
+            'view\tsketch-1\tdrawing\tSketch'
+        ]);
+        expect((await onDisk()).rev).toBe(1);
+    });
+
+    test('a kind that needs a flag refuses without it, and a flag that is not for the kind is refused too', async () => {
+        expect((await post('view', ['new', 'Doc', '--kind', 'file'])).lines[0]).toBe('refused\tmissing-flag\tA file view needs --path');
+        expect((await post('view', ['new', 'Page', '--kind', 'browser'])).lines[0]).toBe('refused\tmissing-flag\tA browser view needs --url');
+        expect((await post('view', ['new', 'Plan', '--url', 'https://bas.dev'])).lines[0]).toBe(
+            'refused\tflag-not-for-kind\t--url does not go with a canvas view'
+        );
+        expect((await post('view', ['new', 'Page', '--kind', 'browser', '--url', 'ftp://bas.dev'])).lines[0]).toStartWith('refused\tbad-url\t');
+        expect((await post('view', ['new', 'Doc', '--kind', 'file', '--path', 'nowhere.ts'])).lines[0]).toStartWith('refused\tbad-path\t');
+    });
+
+    test('a kind that is not in the union is refused with the ones that are', async () => {
+        const { lines } = await post('view', ['new', 'Plan', '--kind', 'kanban']);
+        expect(lines[0]).toBe(`refused\tbad-arguments\t--kind takes one of ${VIEW_KINDS.join(', ')}`);
+    });
+
+    test('a name is needed, and only one', async () => {
+        expect((await post('view', ['new'])).lines[0]).toBe('refused\tbad-arguments\tview new needs a name');
+        expect((await post('view', ['new', 'a', 'b'])).lines[0]).toBe(
+            'refused\tbad-arguments\tview new takes one name and nothing else; a name with spaces in it is one argument'
+        );
+    });
+
+    test('a project holds only so many rows', async () => {
+        const start = (await onDisk()).views.length;
+        for (let index = start; index < MAX_PROJECT_VIEWS; index += 1) {
+            await post('view', ['new', `View ${index}`]);
+        }
+        const { status, lines } = await post('view', ['new', 'One too many']);
+        expect(status).toBe(422);
+        expect(lines[0]).toBe(`refused\ttoo-many-views\tThis project has ${MAX_PROJECT_VIEWS} views and a project holds at most ${MAX_PROJECT_VIEWS}`);
+    });
+});
+
+describe('view rename', () => {
+    test('renames a view and says nothing it hosts may rename it again', async () => {
+        const { status, lines } = await post('view', ['rename', 'board', 'Roadmap']);
+        expect(status).toBe(200);
+        expect(lines).toEqual(['board\tcanvas\tRoadmap']);
+        expect(await viewOnDisk('board')).toMatchObject({ name: 'Roadmap', titleSource: 'user' });
+    });
+
+    test('a rename to the name it already carries writes nothing at all', async () => {
+        await post('view', ['rename', 'board', 'Roadmap']);
+        const rev = (await onDisk()).rev;
+        expect((await post('view', ['rename', 'board', 'Roadmap'])).lines).toEqual(['board\tcanvas\tRoadmap']);
+        expect((await onDisk()).rev).toBe(rev);
+    });
+
+    test('an id that is no view of this project is refused with the views', async () => {
+        const { status, lines } = await post('view', ['rename', 'Board', 'Roadmap']);
+        expect(status).toBe(422);
+        expect(lines[0]).toBe('refused\tunknown-view\tBoard is not a view of this project');
+        expect(lines.at(-1)).toBe('note\tview rename takes a view id, never a name');
+    });
+});
+
+describe('view icon', () => {
+    test('takes a Lucide name from the closed set and an emoji', async () => {
+        expect((await post('view', ['icon', 'board', 'rocket'])).lines).toEqual(['board\tcanvas\tlucide\trocket']);
+        expect(await viewOnDisk('board')).toMatchObject({ icon: { kind: 'lucide', value: 'rocket' } });
+        expect((await post('view', ['icon', 'board', '\u{1f680}'])).lines).toEqual(['board\tcanvas\temoji\t\u{1f680}']);
+        expect(await viewOnDisk('board')).toMatchObject({ icon: { kind: 'emoji', value: '\u{1f680}' } });
+    });
+
+    test('a name that is not one of them is a typo, not an emoji, so it is refused with the set', async () => {
+        const { status, lines } = await post('view', ['icon', 'board', 'rockett']);
+        expect(status).toBe(422);
+        expect(lines[0]).toBe(`refused\tunknown-icon\trockett is not one of the ${PROJECT_ICON_NAMES.length} Lucide names a view picks from`);
+        expect(lines.slice(1).every((line) => line.startsWith('icons\t'))).toBe(true);
+        expect(lines.slice(1).flatMap((line) => line.split('\t').slice(1))).toEqual([...PROJECT_ICON_NAMES]);
+    });
+
+    test('a separator is a line in the sidebar with no room for a mark', async () => {
+        expect((await post('view', ['icon', 'sep-1', 'rocket'])).lines[0]).toBe(
+            'refused\tnot-markable\tsep-1 is a separator, a line in the sidebar with no room for a mark'
+        );
+    });
+});
+
+describe('view move', () => {
+    test('--first puts the row at the top and --after right under the view it names', async () => {
+        expect((await post('view', ['move', 'board', '--first'])).lines).toEqual(['board\tcanvas\t0']);
+        expect((await onDisk()).views.map((view) => view.id)).toEqual(['board', 'main', 'sep-1', 'chat-1', 'sketch-1']);
+        expect((await post('view', ['move', 'board', '--after', 'chat-1'])).lines).toEqual(['board\tcanvas\t3']);
+        expect((await onDisk()).views.map((view) => view.id)).toEqual(['main', 'sep-1', 'chat-1', 'board', 'sketch-1']);
+    });
+
+    test('exactly one of --after and --first, and never under itself', async () => {
+        const both = await post('view', ['move', 'board', '--first', '--after', 'main']);
+        expect(both.lines[0]).toBe('refused\ttwo-places\tview move takes exactly one of --after and --first');
+        expect((await post('view', ['move', 'board'])).lines[0]).toBe('refused\ttwo-places\tview move takes exactly one of --after and --first');
+        expect((await post('view', ['move', 'board', '--after', 'board'])).lines[0]).toBe('refused\ttwo-places\tview move cannot put a view under itself');
+        expect((await onDisk()).rev).toBe(1);
+    });
+
+    test('moving a row to where it already stands writes nothing', async () => {
+        expect((await post('view', ['move', 'main', '--first'])).lines).toEqual(['main\tcanvas\t0']);
+        expect((await onDisk()).rev).toBe(1);
+    });
+});
+
+describe('view delete', () => {
+    test('removes a view the caller made and names it', async () => {
+        const id = await made('Plan');
+        const { status, lines } = await post('view', ['delete', id]);
+        expect(status).toBe(200);
+        expect(lines).toEqual([`deleted\t${id}\tcanvas\tPlan`]);
+        expect(await viewOnDisk(id)).toBeUndefined();
+    });
+
+    test('refuses a view the caller did not make, naming who did and how the machine frees it', async () => {
+        const { status, lines } = await post('view', ['delete', 'board']);
+        expect(status).toBe(422);
+        expect(lines).toEqual([
+            'refused\tnot-yours\tboard was made by a person and view delete only removes a view you made yourself',
+            'made by\ta person',
+            'you\tterm-1',
+            "setting\tagentsDeleteAnyView in this machine's endpoint.json frees every view; a person turns it on from the Machines pane"
+        ]);
+        expect(await viewOnDisk('board')).toBeDefined();
+    });
+
+    test('a view another agent made is not the caller’s either', async () => {
+        const id = await made('Theirs', [], 'chat');
+        const { lines } = await post('view', ['delete', id]);
+        expect(lines[0]).toBe(`refused\tnot-yours\t${id} was made by chat-1 and view delete only removes a view you made yourself`);
+        expect(lines[1]).toBe('made by\tchat-1');
+    });
+
+    test('the same delete goes through once the machine frees every view', async () => {
+        expect((await post('view', ['delete', 'board'])).status).toBe(422);
+        deleteAnyView = true;
+        expect((await post('view', ['delete', 'board'])).lines).toEqual(['deleted\tboard\tcanvas\tBoard']);
+        expect(await viewOnDisk('board')).toBeUndefined();
+    });
+
+    test('never the view the caller is standing in, however free the machine is', async () => {
+        deleteAnyView = true;
+        expect((await post('view', ['delete', 'main'])).lines[0]).toBe('refused\tdeletes-caller\tYou are in main, so removing it would end the session asking');
+        expect((await post('view', ['delete', 'chat-1'], 'chat')).lines[0]).toBe(
+            'refused\tdeletes-caller\tYou are in chat-1, so removing it would end the session asking'
+        );
+    });
+
+    test('a canvas takes its sessions with it, and the answer names them', async () => {
+        const id = await made('Crew');
+        const shell = (await post('node', ['terminal', '--view', id])).lines[0]!.split('\t')[0]!;
+        const chat = (await post('node', ['chat', '--view', id])).lines[0]!.split('\t')[0]!;
+        await post('node', ['note', '--text', 'x', '--view', id]);
+
+        const { lines } = await post('view', ['delete', id]);
+        expect(lines).toEqual([`deleted\t${id}\tcanvas\tCrew`, `ended\t${shell}\tterminal`, `ended\t${chat}\tchat`]);
+        // The daemon ends them itself, which is what makes the verb work with no client connected.
+        expect(ended).toEqual([`terminal\t${shell}`, `chat\t${chat}`]);
+    });
+
+    test('a chat view of its own is the one session it is', async () => {
+        const id = await made('Helper', ['--kind', 'chat']);
+        expect((await post('view', ['delete', id])).lines).toEqual([`deleted\t${id}\tchat\tHelper`, `ended\t${id}\tchat`]);
+    });
+
+    test('what the daemon held for a node goes with the canvas the node stood on', async () => {
+        const id = await made('Crew');
+        const opened = (await post('agent', ['claude', '--view', id, '--prompt', 'go'])).lines[0]!.split('\t')[0]!;
+        expect(lineage.openedCount('term-1')).toBe(1);
+        // The same hook the daemon wires up, which is what prunes a prompt and a lineage record.
+        store.index.onPlaces = (project, ids) => {
+            void lineage.prune(project, ids);
+        };
+
+        await post('view', ['delete', id]);
+        await Bun.sleep(10);
+        expect(lineage.depthOf(opened)).toBe(0);
+        expect(lineage.openedCount('term-1')).toBe(0);
+    });
+
+    test('the sidebar can never be emptied, because the caller is always standing in one of the rows', async () => {
+        deleteAnyView = true;
+        for (const id of ['main', 'sep-1', 'chat-1', 'board', 'sketch-1']) {
+            await post('view', ['delete', id], 'chat');
+        }
+        // Every other row went; the caller's own view is the one that refused.
+        expect((await onDisk()).views).toMatchObject([{ id: 'chat-1', kind: 'chat' }]);
+    });
+
+    test('an id that is no view of this project is refused with the views', async () => {
+        expect((await post('view', ['delete', 'nowhere'])).lines[0]).toBe('refused\tunknown-view\tnowhere is not a view of this project');
+    });
+});
+
+describe('the view verb itself', () => {
+    test('needs one of its words, and says which they are', async () => {
+        const { status, lines } = await post('view', []);
+        expect(status).toBe(422);
+        expect(lines[0]).toBe('refused\tunknown-subcommand\tview needs one of new, rename, icon, move, delete');
+        expect(lines.slice(1)).toEqual(VIEW_SUBS.map((sub) => `usage\t${sub.name}\t${sub.usage}`));
+        expect((await post('view', ['duplicate', 'board'])).lines[0]).toBe(
+            'refused\tunknown-subcommand\tview needs one of new, rename, icon, move, delete, and duplicate is not one'
+        );
+    });
+
+    test('help view prints every one of them in full, out of the registry', async () => {
+        const { lines } = await post('help', ['view']);
+        for (const sub of VIEW_SUBS) {
+            expect(lines).toContain(`usage\t${sub.name}\t${sub.usage}`);
+            expect(lines).toContain(`about\t${sub.name}\t${sub.summary}`);
+        }
+    });
+
+    test('a session that is in no project of this machine changes nothing', async () => {
+        expect((await post('view', ['new', 'Plan'], 'stray')).lines[0]).toStartWith('refused\tnot-in-project\t');
+        expect((await post('view', ['delete', 'board'], 'stray')).lines[0]).toStartWith('refused\tnot-in-project\t');
     });
 });

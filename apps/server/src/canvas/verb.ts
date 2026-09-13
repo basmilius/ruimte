@@ -34,6 +34,10 @@ export interface CanvasHost {
     openedCount(callerId: string): number;
     /* Writes down who opened a node and how deep it sits, outside the project and across a restart. */
     recordOpened(projectId: string, nodeId: string, openedBy: string, depth: number): Promise<void>;
+    /* Whether this machine lets an agent remove a view it did not make (`agentsDeleteAnyView` in `endpoint.json`). */
+    agentsDeleteAnyView(): boolean;
+    /* Ends the shell or the CLI behind a node; a canvas that is removed takes its sessions with it. */
+    endSession(kind: 'terminal' | 'chat', nodeId: string): Promise<void>;
 }
 
 export interface VerbCall {
@@ -42,7 +46,7 @@ export interface VerbCall {
     host: CanvasHost;
 }
 
-interface VerbHelp {
+export interface VerbHelp {
     name: string;
     usage: string;
     summary: string;
@@ -57,6 +61,8 @@ export interface Verb extends VerbHelp {
     flagNames: readonly string[];
     /* Whether `--dry-run` means something here; only the verbs that make something take it. */
     dryRun: boolean;
+    /* The words that can follow a verb that has them, so `help <verb>` renders every one of them. */
+    subcommands?: readonly VerbHelp[];
     run(argv: readonly string[], call: VerbCall): Promise<string[]>;
 }
 
@@ -78,11 +84,7 @@ const dryRunVerbs: string[] = [];
 
 export const dryRunVerbNames = (): readonly string[] => dryRunVerbs;
 
-interface VerbSpec<Positionals extends z.ZodType, Flags extends z.ZodObject> {
-    name: string;
-    usage: string;
-    summary: string;
-    detail: readonly string[];
+interface ArgsSpec<Positionals extends z.ZodType, Flags extends z.ZodObject> {
     positionals: Positionals;
     /* Every flag is a string that takes a value; the keys of this object are the flags the parser knows. */
     flags: Flags;
@@ -93,14 +95,57 @@ interface VerbSpec<Positionals extends z.ZodType, Flags extends z.ZodObject> {
     run(input: { positionals: z.infer<Positionals>; flags: z.infer<Flags>; switches: ReadonlySet<string>; dryRun: boolean }, call: VerbCall): Promise<string[]>;
 }
 
+interface VerbSpec<Positionals extends z.ZodType, Flags extends z.ZodObject> extends VerbHelp, ArgsSpec<Positionals, Flags> {}
+
+/* What `help <verb>` names and what a refusal over arguments points at; a subcommand names both words. */
+const usageLinesOf = (name: string, usage: string): string[] => [`usage\t${name}\t${usage}`, `detail\truimte-context help ${name.split(' ')[0]}`];
+
+const flagsOf = (spec: ArgsSpec<z.ZodType, z.ZodObject>): { values: string[]; switches: string[] } => ({
+    values: Object.keys(spec.flags.shape),
+    switches: [...(spec.switches ?? []), ...(spec.dryRun === true ? [DRY_RUN_FLAG] : [])]
+});
+
+/*
+ * One set of arguments parsed and run, whether it is a whole verb or a word after one. `name` is
+ * what a refusal calls it, so `view new` refuses under both its words.
+ */
+const runArgs = async <Positionals extends z.ZodType, Flags extends z.ZodObject>(
+    name: string,
+    usage: string,
+    spec: ArgsSpec<Positionals, Flags>,
+    argv: readonly string[],
+    call: VerbCall
+): Promise<string[]> => {
+    const usageLines = usageLinesOf(name, usage);
+    const { values, switches } = flagsOf(spec);
+    const parsed = parseArgv(argv, values, switches);
+    if (!parsed.ok) {
+        if (parsed.code === 'unknown-flag' && argv.some((word) => word === `--${DRY_RUN_FLAG}` || word.startsWith(`--${DRY_RUN_FLAG}=`))) {
+            throw new VerbRefusal(
+                'no-dry-run',
+                `${name} takes no --${DRY_RUN_FLAG}; only the verbs that make something do`,
+                dryRunVerbs.map((verb) => `verb\t${verb}\ttakes --${DRY_RUN_FLAG}`)
+            );
+        }
+        throw new VerbRefusal(parsed.code, parsed.message, usageLines);
+    }
+    const positionals = spec.positionals.safeParse(parsed.positionals);
+    if (!positionals.success) {
+        throw new VerbRefusal('bad-arguments', issueMessage(positionals.error, 'argument'), usageLines);
+    }
+    const flags = spec.flags.safeParse(parsed.flags);
+    if (!flags.success) {
+        throw new VerbRefusal('bad-arguments', issueMessage(flags.error, 'flag'), usageLines);
+    }
+    return spec.run({ positionals: positionals.data, flags: flags.data, switches: parsed.switches, dryRun: parsed.switches.has(DRY_RUN_FLAG) }, call);
+};
+
 /*
  * One object per verb, holding its synopsis and the schemas its arguments are checked against, so
  * `help` renders from what validation runs and the two cannot drift apart.
  */
 export const defineVerb = <Positionals extends z.ZodType, Flags extends z.ZodObject>(spec: VerbSpec<Positionals, Flags>): Verb => {
-    const usageLines = [`usage\t${spec.name}\t${spec.usage}`, `detail\truimte-context help ${spec.name}`];
-    const flagNames = Object.keys(spec.flags.shape);
-    const switches = [...(spec.switches ?? []), ...(spec.dryRun === true ? [DRY_RUN_FLAG] : [])];
+    const { values, switches } = flagsOf(spec);
     if (spec.dryRun === true) {
         dryRunVerbs.push(spec.name);
     }
@@ -110,29 +155,61 @@ export const defineVerb = <Positionals extends z.ZodType, Flags extends z.ZodObj
         usage: spec.usage,
         summary: spec.summary,
         detail: spec.detail,
-        flagNames: [...flagNames, ...switches],
+        flagNames: [...values, ...switches],
         dryRun: spec.dryRun === true,
+        run: (argv, call) => runArgs(spec.name, spec.usage, spec, argv, call)
+    };
+};
+
+interface SubVerb extends VerbHelp {
+    /* Just the second word; `name` is both, since that is what a refusal and `help` have to say. */
+    word: string;
+    run(argv: readonly string[], call: VerbCall): Promise<string[]>;
+    flagNames: readonly string[];
+}
+
+export const defineSubVerb = <Positionals extends z.ZodType, Flags extends z.ZodObject>(verb: string, spec: VerbSpec<Positionals, Flags>): SubVerb => {
+    const name = `${verb} ${spec.name}`;
+    const { values, switches } = flagsOf(spec);
+    return {
+        word: spec.name,
+        name,
+        usage: spec.usage,
+        summary: spec.summary,
+        detail: spec.detail,
+        flagNames: [...values, ...switches],
+        run: (argv, call) => runArgs(name, spec.usage, spec, argv, call)
+    };
+};
+
+/*
+ * A verb whose first word says which of its own operations to run. The table is the only source:
+ * the dispatch, the synopsis in the verb list and everything `help <verb>` prints come out of it,
+ * so a subcommand that is added is documented by being defined.
+ */
+export const defineVerbGroup = (spec: { name: string; summary: string; detail: readonly string[]; subs: readonly SubVerb[] }): Verb => {
+    const words = spec.subs.map((sub) => sub.word);
+    const usage = `<${words.join('|')}> ...`;
+    return {
+        served: 'canvas',
+        name: spec.name,
+        usage,
+        summary: spec.summary,
+        detail: spec.detail,
+        flagNames: [...new Set(spec.subs.flatMap((sub) => sub.flagNames))],
+        dryRun: false,
+        subcommands: spec.subs,
         async run(argv, call) {
-            const parsed = parseArgv(argv, flagNames, switches);
-            if (!parsed.ok) {
-                if (parsed.code === 'unknown-flag' && argv.some((word) => word === `--${DRY_RUN_FLAG}` || word.startsWith(`--${DRY_RUN_FLAG}=`))) {
-                    throw new VerbRefusal(
-                        'no-dry-run',
-                        `${spec.name} takes no --${DRY_RUN_FLAG}; only the verbs that make something do`,
-                        dryRunVerbs.map((name) => `verb\t${name}\ttakes --${DRY_RUN_FLAG}`)
-                    );
-                }
-                throw new VerbRefusal(parsed.code, parsed.message, usageLines);
+            const [word, ...rest] = argv;
+            const sub = spec.subs.find((candidate) => candidate.word === word);
+            if (!sub) {
+                throw new VerbRefusal(
+                    'unknown-subcommand',
+                    `${spec.name} needs one of ${words.join(', ')}${word === undefined ? '' : `, and ${word} is not one`}`,
+                    spec.subs.map((candidate) => `usage\t${candidate.name}\t${candidate.usage}`)
+                );
             }
-            const positionals = spec.positionals.safeParse(parsed.positionals);
-            if (!positionals.success) {
-                throw new VerbRefusal('bad-arguments', issueMessage(positionals.error, 'argument'), usageLines);
-            }
-            const flags = spec.flags.safeParse(parsed.flags);
-            if (!flags.success) {
-                throw new VerbRefusal('bad-arguments', issueMessage(flags.error, 'flag'), usageLines);
-            }
-            return spec.run({ positionals: positionals.data, flags: flags.data, switches: parsed.switches, dryRun: parsed.switches.has(DRY_RUN_FLAG) }, call);
+            return sub.run(rest, call);
         }
     };
 };

@@ -163,7 +163,13 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         holdPrompt: (projectId: string, nodeId: string, prompt: string) => prompts.put(projectId, nodeId, prompt),
         depthOf: (nodeId: string) => lineage.depthOf(nodeId),
         openedCount: (callerId: string) => lineage.openedCount(callerId),
-        recordOpened: (projectId: string, nodeId: string, openedBy: string, depth: number) => lineage.put(projectId, nodeId, openedBy, depth)
+        recordOpened: (projectId: string, nodeId: string, openedBy: string, depth: number) => lineage.put(projectId, nodeId, openedBy, depth),
+        agentsDeleteAnyView: () => identity.agentsDeleteAnyView,
+        /* A node that has never been shown has no session, and a canvas going down is not the place
+           to fail over one, so an id neither manager knows is already ended as far as the verb goes. */
+        endSession: async (kind: 'terminal' | 'chat', nodeId: string) => {
+            await (kind === 'terminal' ? manager.kill(nodeId) : chats.kill(nodeId)).catch(() => undefined);
+        }
     };
 
     const dispatcher = new Dispatcher();
@@ -217,6 +223,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         label: identity.label,
         nameSource: identity.nameSource,
         icon: identity.icon,
+        agentsDeleteAnyView: identity.agentsDeleteAnyView,
         platform: process.platform,
         version: VERSION,
         reachability,
