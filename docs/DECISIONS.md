@@ -488,6 +488,49 @@ canvas, against Ruimte, one verdict each.
   in a loop, and it needs no notion of a turn or a session: the record is per node and goes when the
   node does (`ProjectIndex.onPlaces`, the hook that already prunes a pending prompt). Per caller
   rather than per project, so a person opening agents of their own is never the one who runs out.
+- What a person does to the list of views is pure functions in `packages/contracts/src/project-views.ts`,
+  which the client's document store and the daemon's `view` verb both run. The rules that were only in
+  the client (a view id is unique across the project, a separator is a line and never opens, an edge
+  that would point outside its canvas falls away, a project always has a view to open) are exactly the
+  ones both sides need, and a second copy of them would have drifted the first time one side changed.
+  What stays in the client is what only it knows: the camera, the focus, the split layout and the
+  editors holding a canvas on screen, so a function that needs a place takes it as an argument
+  (`withViewAsNode` is given the point, it does not go looking for a viewport).
+- A view carries `createdBy` in `project.json`, a separator included, where a node's depth is daemon
+  state. The two look alike and are opposites: the depth is a number the limited party could rewrite
+  from a shell in the project folder, so it has to live outside the file, while a maker is a fact both
+  sides read and nothing is defended with it. A person deleting a view of their own is not what the
+  rule is about, so nothing has to stop them, and having it in the shared file is what lets a sidebar
+  say who made a row without asking the daemon.
+- `view delete` only removes a view whose `createdBy` is the caller. The setting that frees the rest is
+  `agentsDeleteAnyView` in `endpoint.json`, next to the machine's name and icon, because the daemon is
+  what enforces it: in the client it would be a checkbox that holds nothing back. It rides in
+  `endpoint.info`, in the answer to `endpoint.setIdentity` and in `endpoint.changed`, optional rather
+  than nullable on the payload, since naming a machine is a different control and must leave it alone.
+  The refusal names who made the view, who is asking and what the setting does, so the agent can say it
+  in words to the person who can change it.
+- The verb never removes the view the caller is standing in, which is also why it can never empty the
+  sidebar: the caller always holds one row, so the "deleting the last view leaves an empty canvas"
+  rule is reachable from the client and not from here. Deleting a canvas ends the sessions of its nodes
+  first, inside the same `ProjectStore.mutate` that writes, so the checks have already passed and a
+  refusal never costs anybody a shell. The daemon does it itself (`SessionManager.kill`,
+  `ChatManager.kill`), which is what makes the verb work with nothing connected, where the client's
+  `endProjectSessions` is the same rule run from the other side; an id neither manager knows counts as
+  already ended. The prompts and lineage records go with it through `ProjectIndex.onPlaces`, the hook
+  the write already fires.
+- `view` is one verb with words of its own rather than five verbs. The list `help` prints stays the
+  size of what an agent picks from, and the words are a table in the registry entry that the dispatch,
+  the synopsis and `help view` all read, so a subcommand is documented by being defined. `--dry-run`
+  stays off it: the design's argument holds, since `createdBy` and the machine setting decide before
+  anything is asked, and a delete that named what it would end and then did not do it would be a second
+  round trip for an answer `views` already gives in its last column.
+- `views` gained that column (`yes` or `no`) rather than a `createdBy` column. Who made a row is not
+  the question; whether this caller may remove it is, and answering it needs the machine setting too,
+  which is not in the project at all. A `--kind` on `view new` comes from the union in contracts, so a
+  kind added there is one the verb makes without a line of its own.
+- A `view icon` value made of letters, digits and dashes that is not one of the 60 Lucide names is a
+  typo, not an emoji, so it is refused with all of them rather than written into the file as a mark
+  nothing can draw. The names print in rows of ten: sixty lines under a refusal would bury it.
 
 ### Updating
 
