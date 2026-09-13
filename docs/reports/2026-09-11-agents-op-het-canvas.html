@@ -155,11 +155,12 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
   <p class="eyebrow">Ruimte / Ontwerpvoorstel / 11 september 2026</p>
   <h1>Agents op het canvas</h1>
   <p class="intro">De lijntjes tussen de nodes werken al. Wat ontbreekt is de andere richting: een agent kan lezen wat er op het canvas staat, maar er niets aan toevoegen. Dit voorstel legt die schrijfweg in de daemon in plaats van in de client, en levert de verbs die een agent over HTTP aanroept met de bearer die zijn sessie al heeft. Het is gebouwd, en het zijn er veertien geworden.</p>
-  <p class="status">Gebouwd op main, 13 september · roadmap-punt 6 in <code>docs/DECISIONS.md</code></p>
-  <p class="caption">Gelezen op <code>ab3a1f6</code>. Op 13 september opnieuw gelegd naast main bij <code>323d4dd</code> (views naast elkaar, file-nodes, meerdere daemons) en aangevuld met het beheer van views; wat toen besloten is staat in <a href="#besloten">Besloten op 13 september</a>. Diezelfde dag gebouwd, in 66 commits van <code>323d4dd</code> tot <code>fd202cd</code>. Het ontwerp hieronder staat er zoals het geschreven is; <a href="#gebouwd">Wat er gebouwd is</a> zegt waar de bouw ervan afweek. Geen metingen: dit is een leesronde door de codebase, geen benchmark.</p>
+  <p class="status">Gebouwd op main, 13 en 14 september · roadmap-punt 6 in <code>docs/DECISIONS.md</code></p>
+  <p class="caption">Gelezen op <code>ab3a1f6</code>. Op 13 september opnieuw gelegd naast main bij <code>323d4dd</code> (views naast elkaar, file-nodes, meerdere daemons) en aangevuld met het beheer van views; wat toen besloten is staat in <a href="#besloten">Besloten op 13 september</a>. Diezelfde dag gebouwd, in 66 commits van <code>323d4dd</code> tot <code>fd202cd</code>. Het ontwerp hieronder staat er zoals het geschreven is; <a href="#gebouwd">Wat er gebouwd is</a> zegt waar de bouw ervan afweek. Op 14 september aangevuld met de ronde die daarna kwam, gelezen op <code>6313ae8</code>: <a href="#daarna">Wat er daarna bij kwam</a>. Geen metingen aan het ontwerp: dit was een leesronde door de codebase, geen benchmark. De cijfers over de CLI's in die laatste sectie zijn wel gemeten.</p>
   <nav aria-label="Inhoud">
     <a href="#samenvatting">Samenvatting</a>
     <a href="#gebouwd">Wat er gebouwd is</a>
+    <a href="#daarna">Wat er daarna bij kwam</a>
     <a href="#besloten">Besloten</a>
     <a href="#alstaat">Wat al werkt</a>
     <a href="#clientweg">De weg via de client</a>
@@ -236,6 +237,66 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
       </table>
     </div>
     <p>De grenzen uit <a href="#grenzen">Grenzen</a> staan er allemaal, met getallen erbij die het ontwerp openliet: <code>agent</code> opent tot diepte 2 en <code>team</code> tot diepte 1, met een node die een mens opende als diepte 0, en een aanroeper houdt hoogstens 16 agent-nodes tegelijk. De besluiten zoals ze uiteindelijk gevallen zijn staan in <code>docs/DECISIONS.md</code>, vanaf "The daemon parses a verb's arguments".</p>
+  </section>
+
+  <section id="daarna">
+    <h2>Wat er daarna bij kwam</h2>
+    <p>Dit rapport gaat over wat een agent op het canvas mag schrijven. Wat er op 13 en 14 september bovenop kwam, in 28 commits van <code>5d25093</code> tot <code>6313ae8</code>, gaat over de andere kant van dezelfde vraag: wat het canvas zegt tegen de mens die weggelopen is. Drie functies, twee fouten die onderweg boven kwamen en drie kleinere.</p>
+    <div class="table" role="region" aria-label="Wat er na de bouw bij kwam" tabindex="0">
+      <table class="wide">
+        <thead><tr><th scope="col">Wat</th><th scope="col">Hoe het werkt</th><th scope="col">De schakelaar</th></tr></thead>
+        <tbody>
+          <tr>
+            <th scope="row">Wakker blijven terwijl een agent werkt</th>
+            <td>De client kijkt naar het agent-record zelf en niet naar <code>nodeStatus</code>, die elke aangekoppelde terminal <code>running</code> noemt en dus elke openstaande shell zou meetellen; <code>state/agent-work.ts</code> is sinds deze ronde het enige antwoord op de vraag wie er werkt, en <code>state/keep-awake.ts</code> vertelt de shell één boolean. Alleen op de desktop: zonder bridge wordt de rij niet eens getekend.</td>
+            <td><code>agentsKeepAwake</code>, standaard uit. Een laptop die niet meer slaapt is een beslissing over andermans accu.</td>
+          </tr>
+          <tr>
+            <th scope="row">Aandacht</th>
+            <td>Een node waarvan de beurt buiten beeld eindigde draagt een stille markering, op de node-header en op de sidebar-rij. Gezien is: dit venster heeft het toetsenbord, de view staat in een cel van het raster, en de node valt binnen wat de camera toont op <code>READABLE_ZOOM</code> (0,4) of meer. Welke cel de focus heeft telt niet mee, want negen cellen staan voor hetzelfde paar ogen, en de cull-marge van de renderer ook niet: die houdt een node een halve schermbreedte buiten beeld in leven zodat een pan niet hapert, wat niet hetzelfde is als dat iemand hem gelezen heeft. Alles wordt op één plek geteld (<code>state/attention.ts</code>): de markering, de teller naast die van de werkende agents in de toolbar, de melding, de badge op het dock en de vraag vóór het afsluiten.</td>
+            <td><code>agentsTurnNotify</code> aan, <code>agentsTurnSound</code> uit. Een melding kan niet landen op wat je aan het doen bent, want hij komt alleen als dit venster niet vooraan staat; een geluid komt wel aan in waar je heen liep.</td>
+          </tr>
+          <tr>
+            <th scope="row">Goedkeuren vanuit de node-header</th>
+            <td>Claude's <code>PermissionRequest</code> wordt 110 seconden vastgehouden op de daemon (<code>APPROVAL_HOLD_MS</code> in <code>apps/server/src/agents/approvals.ts</code>, onder de 120 van curl en de 125 in het settings-bestand) en beantwoord vanuit een strip in de header van de node. De keuzes zijn de <code>permission_suggestions</code> van de CLI zelf, woordelijk doorgegeven, dus een client hoeft de permissie-vocabulaire van geen enkele CLI te kennen. Er wordt niets vastgehouden zolang elke aangekoppelde client nee zegt.</td>
+            <td><code>agentsApprovals</code> aan, per client, doorgegeven met <code>agent.setApprovals</code> aan elke machine waar een socket naartoe staat. <code>--no-approvals</code> blijft één niveau hoger het antwoord van de machine zelf.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>Wat de hook echt doet</h3>
+    <p>De goedkeuringen staan of vallen bij drie dingen die gemeten zijn tegen Claude Code 2.1.270 in een echte PTY, en geen ervan staat zo in de documentatie.</p>
+    <ul>
+      <li>De hook houdt niets tegen, hij racet de prompt van de CLI. Die prompt verschijnt op hetzelfde moment dat de hook start, allebei blijven ze open, en wie het eerst antwoordt wint. Daarom kan de CLI door dit alles nooit blijven hangen, en daarom is loslaten gratis: een hold die afloopt print niets en laat de prompt staan waar hij stond.</li>
+      <li><code>hookSpecificOutput.decision</code> is voor dit event een object, <code>{"behavior":"allow"}</code> of <code>{"behavior":"deny","message":"..."}</code>, en niet de string die de docs beschrijven; een string wordt geweigerd. <code>PreToolUse</code> is degene met een string <code>permissionDecision</code>, en de <code>defer</code> daarvan is alleen voor print-mode.</li>
+      <li>Wie in de TUI antwoordt breekt de hook niet af. Het verzoek zat zijn volle 110 seconden uit terwijl het goedgekeurde commando liep en de beurt eindigde; het enige abort dat ooit binnenkwam was de CLI die zelf omviel. Een eerdere regel in <code>docs/DECISIONS.md</code> zei het omgekeerde en is rechtgezet: het einde van de beurt is wat een verzoek intrekt, niet een abort.</li>
+    </ul>
+    <div class="note">
+      <p>De assertie heet niet naar de app. Op macOS verschijnt <code>prevent-app-suspension</code> in <code>pmset -g assertions</code> als <code>NoIdleSleepAssertion named: "Electron"</code>. Dat is de naam van vóór 10.7, waaronder Chromium hem nog steeds aanmaakt, met een eigenaar die in Chromium is meegecompileerd. Greppen op <code>PreventUserIdleSystemSleep</code> of op Ruimte vindt dus niets, twee keer niet, en de functie leest dan als dood terwijl hij werkt. <code>pmset -g assertions | grep NoIdleSleepAssertion</code> is wat hem wel laat zien: hij staat er binnen een seconde na het begin van een beurt en is binnen een seconde na de laatste weer weg.</p>
+    </div>
+    <h3>Twee fouten onderweg</h3>
+    <div class="table" role="region" aria-label="Fouten die tijdens deze ronde boven kwamen" tabindex="0">
+      <table class="wide">
+        <thead><tr><th scope="col">Wat er misging</th><th scope="col">Waarom</th><th scope="col">Wat het nog meer raakte</th></tr></thead>
+        <tbody>
+          <tr>
+            <th scope="row">Een node bleef op "needs-you" staan zolang het goedgekeurde commando liep</th>
+            <td>Tussen het antwoord en de volgende hook rapporteert niemand iets. Een CLI heeft geen reden om iets te zeggen wanneer zijn eigen prompt van buitenaf wordt afgehandeld, en de <code>PostToolUse</code> van een commando dat minuten draait is minuten weg. De daemon leidt nu zelf <code>running</code> af zodra hij antwoordt, alleen bij een sessie die nog op <code>needs-you</code> staat, dus een echte hook wint altijd.</td>
+            <td>Diezelfde status die bleef staan voedde een valse waarschuwing: de regel <code>busy-after-turn</code> in <code>apps/server/src/processes/stuck.ts</code> kijkt naar een agent op <code>idle</code> of <code>needs-you</code> die CPU blijft branden, dus een agent die gewoon werkte werd gemeld als vastgelopen. Die fout bestond al voordat de goedkeuringen er waren.</td>
+          </tr>
+          <tr>
+            <th scope="row">De resume-regel noemde alleen de sessie-id</th>
+            <td>Een node die in accept edits begon kwam terug op wat zijn CLI standaard doet. De modus en het model rijden nu mee op die regel: <code>{flags}</code> staat naast <code>{id}</code> in het resume-sjabloon van elke provider, op de plek waar die CLI ze wil. Een launch die geen modus noemt krijgt er nog steeds geen, want dat is een CLI die iemand met de hand startte.</td>
+            <td>Gemeten: Claude Code 2.1.270 leest modus en model wel terug uit het transcript dat het hervat, Codex 0.154 niet. De daemon leunde dus op ongedocumenteerd gedrag dat per CLI verschilt, en bij Codex kwam een node in volledige toegang terug in de sandbox.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>Drie kleinere fouten</h3>
+    <p>Centreren op een node zette hem in de linkerbovenhoek (<code>fd202cd</code>, de laatste commit van de vorige ronde). Sinds de views naast elkaar staan heeft elke view op het scherm een eigen canvas-editor, gemaakt op het moment dat de view in een cel gaat, en het element eromheen wordt pas een frame later gemeten: onthullen schakelt van view en centreert in dezelfde tick, dus de camera werd uitgerekend tegen een viewport van nul, en het midden van niets is de hoek. <code>cameraCenteredOn</code> en <code>cameraToFit</code> antwoorden nu <code>null</code> op een ongemeten viewport en de editor parkeert wat hem gevraagd is tot zijn maat binnenkomt.</p>
+    <p>Een drawing in een cel zonder focus tekende uit de store van de buurman (<code>5d25093</code>). Het ontwerp van die hook nodigde het uit: hij was tegelijk een store, en die helft betekende stilletjes "die met de focus", dus een component las de ene editor tijdens het renderen en schreef in de andere zodra er een pointer bewoog. De hook is nu een hook en niets meer, en wie voorbij zijn cel wil reikt naar <code>focusedCanvas()</code> of <code>focusedDrawing()</code>, wat een lezer kan zien staan.</p>
+    <p>En <code>relativeTo</code> las een map naast het project als een map erin (<code>9d697c6</code>): de test voor "binnen de map" was een kale <code>startsWith</code>, dus in een project op <code>/Users/bas/repo</code> werd <code>/Users/bas/repo-old/src/a.ts</code> opgeslagen als <code>old/src/a.ts</code> en kwam terug als een bestand dat niemand op het canvas had gelegd. Een pad ligt binnen de map wanneer het teken na de root een scheidingsteken is, of wanneer het de root zelf is.</p>
+    <p>Wat hiervan in <code>docs/DECISIONS.md</code> staat: "Staying awake while an agent works" en "Attention" als eigen kopjes, de goedkeuringen bij de beslissing die begint met "A terminal agent's permission is answered over the wire", en de hook zelf onder "Gotchas already paid for". Roadmap-punt 6 zegt sindsdien alleen nog wat er over is.</p>
   </section>
 
   <section id="besloten">
@@ -588,6 +649,6 @@ Maak eerst een kort plan en wacht op mijn akkoord voordat je code schrijft.</cod
     <p>Wat telt als "zelf gemaakt" als de aanroeper verdwijnt? <code>createdBy</code> is de id van een node of view die later weg kan zijn. Het voorstel is dat een view dan alleen nog door een mens of met de instelling op de machine te verwijderen is, en dat een nieuwe sessie op dezelfde node-id hem wel weer mag verwijderen, want die id is de node.</p>
   </section>
 </main>
-<footer><p>Geschreven na een leesronde door de codebase op 11 september 2026. De uitspraken over Ruimte zijn gecontroleerd tegen <code>ab3a1f6</code>, met bestandspaden in de tekst. Er is niets gemeten: de cijfers in de samenvatting zijn tellingen uit de code, geen prestaties. Op 13 september bijgewerkt tegen <code>323d4dd</code> met de besluiten over het beheer van views, <code>open</code> naast elkaar, de naam van de CLI en waar een node landt, en diezelfde dag gebouwd. Alleen de statusregel, de samenvatting en <a href="#gebouwd">Wat er gebouwd is</a> zijn daarna nog aangeraakt; wat daaronder staat is het ontwerp zoals het geschreven werd, inclusief de vragen die het openliet.</p></footer>
+<footer><p>Geschreven na een leesronde door de codebase op 11 september 2026. De uitspraken over Ruimte zijn gecontroleerd tegen <code>ab3a1f6</code>, met bestandspaden in de tekst. Er is niets gemeten: de cijfers in de samenvatting zijn tellingen uit de code, geen prestaties. Op 13 september bijgewerkt tegen <code>323d4dd</code> met de besluiten over het beheer van views, <code>open</code> naast elkaar, de naam van de CLI en waar een node landt, en diezelfde dag gebouwd. Op 14 september kwam <a href="#daarna">Wat er daarna bij kwam</a> erbij, gelezen op <code>6313ae8</code>, over de 28 commits die na de bouw volgden. Alleen de statusregel, de samenvatting en die twee secties zijn na 11 september nog aangeraakt; wat daaronder staat is het ontwerp zoals het geschreven werd, inclusief de vragen die het openliet.</p></footer>
 </body>
 </html>
