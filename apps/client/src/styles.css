@@ -163,16 +163,16 @@
 
 [data-theme="dark"] {
     color-scheme: dark;
-    --bg: #131316;
-    --surface: #1b1b1f;
-    --surface-raised: #222227;
-    --surface-sunken: #0f0f12;
+    --bg: #0d0d10;
+    --surface: #131316;
+    --surface-raised: #18181c;
+    --surface-sunken: #08080a;
     --surface-idle: color-mix(in srgb, var(--surface) 50%, var(--surface-sunken));
-    --surface-hover: #2b2b32;
-    --surface-active: #34343d;
-    --border: #2a2a31;
-    --border-strong: #3a3a43;
-    --border-soft: #1f1f25;
+    --surface-hover: #202024;
+    --surface-active: #28282e;
+    --border: #1f1f24;
+    --border-strong: #2c2c33;
+    --border-soft: #16161a;
     --text: #ececf1;
     --text-muted: #9a9aa6;
     --text-faint: #5f5f6b;
@@ -187,8 +187,8 @@
        shape; iron-700 keeps the same relation to the surface that iron-900 has in the light theme. */
     --brand-front: var(--color-iron-300);
     --brand-back: var(--color-iron-700);
-    --canvas-bg: #0e0e11;
-    --canvas-dot: #26262d;
+    --canvas-bg: #08080a;
+    --canvas-dot: #1c1c21;
     --selection: rgb(var(--accent-rgb) / 0.6);
     --shadow-node: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 30px rgb(0 0 0 / 0.45);
     --shadow-float: 0 1px 2px rgb(0 0 0 / 0.5), 0 12px 36px rgb(0 0 0 / 0.6);
@@ -200,7 +200,7 @@
     /* Dark on light green: the dark theme's positive is a foreground color, so text sits on it the
        other way round from the light theme, where the same token is a fill deep enough for white. */
     --positive-text: #052e16;
-    --term-bg: #0c0c0f;
+    --term-bg: #08080a;
     --term-fg: #d6d6de;
     --term-dim: #6b6b76;
     --term-green: #4ade80;
