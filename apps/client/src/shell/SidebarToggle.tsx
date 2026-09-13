@@ -11,7 +11,7 @@ export function SidebarToggle() {
     return (
         <Tooltip label={open ? 'Hide sidebar' : 'Show sidebar'} kbd="⌘B">
             <button
-                className="icon-btn h-7 w-7 shrink-0"
+                className="icon-btn shrink-0"
                 aria-label={open ? 'Hide sidebar' : 'Show sidebar'}
                 /* Expanded rather than pressed: the icon already says which way it goes, and a
                    pressed toggle would sit filled for as long as the sidebar is open. */

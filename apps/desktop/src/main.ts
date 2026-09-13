@@ -134,10 +134,10 @@ const TITLEBAR_HEIGHT = 48;
 const OVERLAY_COLORS = { dark: { color: '#1b1b1f', symbolColor: '#ececf1' }, light: { color: '#ffffff', symbolColor: '#18181b' } };
 
 /* The client draws its own chrome. macOS keeps the traffic lights, inset into the sidebar; elsewhere the window controls overlay the toolbar's right end.
-   `trafficLightPosition` is the top left of the buttons' frame, which measures 14pt on current macOS, so centering them in the band is (48 - 14) / 2. */
+   `trafficLightPosition` is the top left of the buttons' frame, lined up with the sidebar toggle beside it. */
 const titleBarOptions = (dark: boolean): Electron.BrowserWindowConstructorOptions =>
     process.platform === 'darwin'
-        ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 12, y: 17 } }
+        ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 12, y: 15 } }
         : { titleBarStyle: 'hidden', titleBarOverlay: { height: TITLEBAR_HEIGHT, ...OVERLAY_COLORS[dark ? 'dark' : 'light'] } };
 
 // The partition every browser node's page lives in; `apps/client/src/browser/registry.ts`.
