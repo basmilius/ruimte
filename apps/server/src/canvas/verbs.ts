@@ -65,8 +65,8 @@ const nodesVerb = defineVerb({
         'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one',
         'note\tA tab or a newline in a title is printed as a space, so a node is always one row'
     ],
-    positionals: z.tuple([]),
-    flags: z.object({ view: z.string().min(1).optional() }),
+    positionals: z.tuple([], { error: 'nodes takes no arguments, only flags' }),
+    flags: z.object({ view: z.string().min(1, '--view needs the id of a canvas').optional() }),
     async run({ flags }, call) {
         const place = placeOf(call);
         const canvas = canvasFor(await call.host.read(place.projectId), place, flags.view);
@@ -85,7 +85,7 @@ const viewsVerb = defineVerb({
         'kinds\tcanvas\tchat\tterminal\tbrowser\tdrawing\tfile\tseparator',
         'note\tA separator is a line in the sidebar and has an empty name'
     ],
-    positionals: z.tuple([]),
+    positionals: z.tuple([], { error: 'views takes no arguments' }),
     flags: z.object({}),
     async run(_input, call) {
         const content = await call.host.read(placeOf(call).projectId);

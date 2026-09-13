@@ -98,14 +98,11 @@ export const defineVerb = <Positionals extends z.ZodType, Flags extends z.ZodObj
     };
 };
 
-const issueMessage = (error: z.ZodError, what: 'argument' | 'flag'): string => {
-    const issue = error.issues[0];
-    if (!issue) {
-        return `Bad ${what}`;
-    }
-    const at = issue.path.length === 0 ? '' : what === 'flag' ? `--${String(issue.path[0])}: ` : `${what} ${Number(issue.path[0]) + 1}: `;
-    return `${at}${issue.message}`;
-};
+/*
+ * Every schema in the registry carries a sentence of its own, because zod's default ("Too small:
+ * expected array to have >=1 items") names neither what is missing nor what may go there.
+ */
+const issueMessage = (error: z.ZodError, what: 'argument' | 'flag'): string => error.issues[0]?.message ?? `Bad ${what}`;
 
 /* The project the caller is in, from the index of every known project: an open one would miss an agent whose person switched away. */
 export const placeOf = (call: VerbCall): IndexedPlace => {

@@ -43,6 +43,8 @@ const untitled = (kind: NodeVerbKind): string => {
     return `"${DEFAULT_TITLES[kind]}"`;
 };
 
+const KIND_MESSAGE = `node needs a kind: ${NODE_VERB_KINDS.join(', ')}`;
+
 const NODE_DETAIL: readonly string[] = [
     `argument\t<kind>\trequired\t${NODE_VERB_KINDS.join(', ')}`,
     'prints\tid\tkind\tview\tthe id of the new node, its kind, and the canvas it landed on',
@@ -148,16 +150,18 @@ export const nodeVerb = defineVerb({
     usage: `<${NODE_VERB_KINDS.join('|')}> [--title T] [--text B] [--url U] [--path P] [--source V] [--cwd P] [--view V] [--beside N]`,
     summary: 'Adds one node to a canvas and prints id, kind, view; a terminal or chat starts when a client shows it',
     detail: NODE_DETAIL,
-    positionals: z.tuple([z.enum(NODE_VERB_KINDS)]),
+    positionals: z.tuple([z.enum(NODE_VERB_KINDS, { error: KIND_MESSAGE })], {
+        error: (issue) => (issue.code === 'too_big' ? 'node takes one kind and nothing else; a title goes in --title' : KIND_MESSAGE)
+    }),
     flags: z.object({
-        title: z.string().trim().min(1).optional(),
+        title: z.string().trim().min(1, '--title needs a title').optional(),
         text: z.string().optional(),
-        url: z.string().min(1).optional(),
-        path: z.string().min(1).optional(),
-        source: z.string().min(1).optional(),
-        cwd: z.string().min(1).optional(),
-        view: z.string().min(1).optional(),
-        beside: z.string().min(1).optional()
+        url: z.string().min(1, '--url needs an http or https address').optional(),
+        path: z.string().min(1, '--path needs the path of a file').optional(),
+        source: z.string().min(1, '--source needs the id of a drawing view').optional(),
+        cwd: z.string().min(1, '--cwd needs the path of a directory').optional(),
+        view: z.string().min(1, '--view needs the id of a canvas').optional(),
+        beside: z.string().min(1, '--beside needs the id of a node on that canvas').optional()
     }),
     async run({ positionals: [kind], flags }, call) {
         const place = placeOf(call);

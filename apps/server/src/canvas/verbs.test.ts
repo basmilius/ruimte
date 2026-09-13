@@ -196,6 +196,57 @@ describe('help', () => {
     });
 });
 
+describe('refusals', () => {
+    test('say what is missing and, for a closed set, what may go there', async () => {
+        const cases: Array<{ verb: string; argv: string[]; code: string; message: string }> = [
+            { verb: 'node', argv: [], code: 'bad-arguments', message: 'node needs a kind: note, browser, drawing, file, terminal, chat' },
+            { verb: 'node', argv: ['group'], code: 'bad-arguments', message: 'node needs a kind: note, browser, drawing, file, terminal, chat' },
+            { verb: 'node', argv: ['note', 'My note'], code: 'bad-arguments', message: 'node takes one kind and nothing else; a title goes in --title' },
+            { verb: 'node', argv: ['note', '--title='], code: 'bad-arguments', message: '--title needs a title' },
+            { verb: 'node', argv: ['note', '--view='], code: 'bad-arguments', message: '--view needs the id of a canvas' },
+            { verb: 'node', argv: ['note', '--beside='], code: 'bad-arguments', message: '--beside needs the id of a node on that canvas' },
+            { verb: 'nodes', argv: ['main'], code: 'bad-arguments', message: 'nodes takes no arguments, only flags' },
+            { verb: 'views', argv: ['all'], code: 'bad-arguments', message: 'views takes no arguments' },
+            {
+                verb: 'node',
+                argv: ['note', '--cmd', 'ls'],
+                code: 'unknown-flag',
+                message: '--cmd is not one of --title, --text, --url, --path, --source, --cwd, --view, --beside'
+            },
+            { verb: 'views', argv: ['--view', 'main'], code: 'unknown-flag', message: '--view is not a flag here; this verb takes none' },
+            {
+                verb: 'node',
+                argv: ['note', '--text'],
+                code: 'missing-value',
+                message: '--text needs a value (write --text=<value> for one that starts with --)'
+            },
+            { verb: 'node', argv: ['note', '--title', 'a', '--title', 'b'], code: 'duplicate-flag', message: '--title is given twice' }
+        ];
+        for (const { verb, argv, code, message } of cases) {
+            const { status, lines } = await post(verb, argv);
+            expect({ argv, status, line: lines[0] }).toEqual({ argv, status: 422, line: `refused\t${code}\t${message}` });
+            expect(lines).toContain(`detail\truimte-context help ${verb}`);
+        }
+    });
+
+    test('never leak a message out of zod', async () => {
+        const argvPerVerb: Record<string, string[][]> = {
+            help: [['nope', 'nope']],
+            nodes: [['x'], ['--view=']],
+            views: [['x']],
+            node: [[], ['x'], ['note', 'x'], ['note', '--path=']]
+        };
+        for (const [verb, cases] of Object.entries(argvPerVerb)) {
+            for (const argv of cases) {
+                const message = (await post(verb, argv)).lines[0]!.split('\t')[2]!;
+                expect(message).not.toStartWith('Too ');
+                expect(message).not.toStartWith('Invalid ');
+                expect(message).not.toInclude('expected');
+            }
+        }
+    });
+});
+
 describe('scoping', () => {
     test('a caller no project places is refused', async () => {
         expect((await post('views', [], 'stray')).lines).toEqual([
