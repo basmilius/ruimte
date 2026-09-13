@@ -51,6 +51,9 @@ export interface DesktopBridge {
     onBrowserContextMenu?(listener: (params: BrowserContextParams) => void): () => void;
     /* The row that was picked, for the part of it the client cannot do itself. */
     browserContextAction?(action: BrowserContextAction): void;
+    /* A guest page took the focus, which a press inside it never tells the page around it. Optional
+       for the same reason `onBrowserContextMenu` is. */
+    onGuestFocus?(listener: (webContentsId: number) => void): () => void;
     /* Where a file dragged in from the file manager lives, which a browser never tells a page.
        Optional for the same reason `onBrowserContextMenu` is; without it such a drag is refused. */
     pathForFile?(file: File): string | null;

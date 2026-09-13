@@ -596,11 +596,15 @@ const runSmoke = async (window: Electron.BrowserWindow): Promise<void> => {
 if (!app.requestSingleInstanceLock()) {
     app.quit();
 } else {
-    /*
-     * Only the pages of browser nodes get a menu. The preview partition is sealed on purpose: it
-     * renders a local file the panel opened, with nowhere to navigate and nothing to inspect.
-     */
     app.on('web-contents-created', (_event, contents) => {
+        /* Every guest page, the preview of an HTML file included, says when it takes the focus: a
+           press inside one never reaches the client's page, and the grid has to know which cell
+           the keyboard went to. */
+        if (contents.getType() === 'webview') {
+            contents.on('focus', () => mainWindow?.webContents.send('guest:focus', contents.id));
+        }
+        /* Only the pages of browser nodes get a menu. The preview partition is sealed on purpose: it
+           renders a local file the panel opened, with nowhere to navigate and nothing to inspect. */
         if (!isBrowserGuest(contents)) {
             return;
         }

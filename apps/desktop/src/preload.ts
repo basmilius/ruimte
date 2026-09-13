@@ -16,6 +16,11 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
         return () => ipcRenderer.removeListener('browser:context-menu', handler);
     },
     browserContextAction: (action: unknown): void => ipcRenderer.send('browser:context-action', action),
+    onGuestFocus: (listener: (webContentsId: number) => void): (() => void) => {
+        const handler = (_event: unknown, webContentsId: number): void => listener(webContentsId);
+        ipcRenderer.on('guest:focus', handler);
+        return () => ipcRenderer.removeListener('guest:focus', handler);
+    },
     isFullscreen: (): Promise<boolean> => ipcRenderer.invoke('window:is-fullscreen'),
     onFullscreen: (listener: (fullscreen: boolean) => void): (() => void) => {
         const handler = (_event: unknown, fullscreen: boolean): void => listener(fullscreen);
