@@ -14,6 +14,7 @@ import { useToasts } from '@/state/toasts';
 import { useUsageStore } from '@/state/usage';
 import { pool, transport } from '@/transport';
 import { dropMachine } from '@/transport/connections';
+import { useProcesses, useProcessWarnings } from '@/state/processes';
 import { clientKey } from './client-key';
 import { clientLabelFrom } from './client-label';
 import { forgetTicket } from './credentials';
@@ -152,6 +153,8 @@ const forgetEndpointState = (id: string): void => {
     useServers.getState().forget(id);
     useProvidersStore.getState().forget(id);
     useUsageStore.getState().forget(id);
+    useProcesses.getState().forget(id);
+    useProcessWarnings.getState().forget(id);
 };
 
 /* The clients paired with the daemon this client talks to right now. */

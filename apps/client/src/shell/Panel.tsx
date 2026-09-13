@@ -6,6 +6,7 @@ import { PANELS } from '@/shell/panels';
 import { PanelHeaderProvider } from '@/shell/PanelHeaderSlot';
 import { FilesPanel } from '@/shell/panels/FilesPanel';
 import { GitPanel } from '@/shell/panels/GitPanel';
+import { ProcessesPanel } from '@/shell/panels/ProcessesPanel';
 import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useUi, type PanelKind } from '@/state/ui';
@@ -21,7 +22,14 @@ const MIN_CANVAS_WIDTH = 360;
 const TRANSITION_MS = 200;
 
 function PanelBody({ kind }: { kind: PanelKind }) {
-    return kind === 'files' ? <FilesPanel /> : <GitPanel />;
+    switch (kind) {
+        case 'files':
+            return <FilesPanel />;
+        case 'git':
+            return <GitPanel />;
+        case 'processes':
+            return <ProcessesPanel />;
+    }
 }
 
 /* The surface right of the canvas, spanning the whole main column so its header lines up with the

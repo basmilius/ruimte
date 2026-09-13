@@ -19,6 +19,7 @@ import {
 import { AgentIcon } from '@/agents/AgentIcon';
 import { isNodeFocused, useCanvas, type AgentStatus, type NodeKind } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
+import { ProcessAlertMark, useNodeAlerts } from '@/processes/ProcessAlertMark';
 import { useHasContextLinks } from '@/context/sync';
 import { accentColor } from '@/canvas/accents';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
@@ -146,6 +147,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const [fileControls, setFileControls] = useState<HTMLElement | null>(null);
     const toolbarSlot = useMemo(() => fixedSlot(fileControls), [fileControls]);
     const status = useNodeStatus(node);
+    const processAlerts = useNodeAlerts(id);
     const hasContext = useHasContextLinks(id);
     const hidden = useCanvas((s) => s.hidden.has(id));
 
@@ -251,6 +253,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                             {STATUS_LABEL[status]}
                         </Pill>
                     )}
+                    {!renaming && <ProcessAlertMark alerts={processAlerts} />}
                     {node.kind === 'file' && <span ref={setFileControls} className={`${BTN_GROUP} shrink-0`} />}
                     <div className={`${BTN_GROUP} shrink-0`}>
                         <Tooltip label="Zoom to node" name>

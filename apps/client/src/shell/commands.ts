@@ -235,6 +235,7 @@ export const appCommands = (): Command[] => {
         { id: 'panel-preview', label: 'Toggle preview panel', run: () => useUi.getState().togglePreview() },
         { id: 'panel-files', label: 'Toggle files panel', run: () => useUi.getState().togglePanel('files') },
         { id: 'panel-git', label: 'Toggle git panel', run: () => useUi.getState().togglePanel('git') },
+        { id: 'panel-processes', label: 'Toggle processes panel', run: () => useUi.getState().togglePanel('processes') },
         { id: 'theme', label: 'Toggle light and dark', run: () => useTheme.getState().toggle() },
         { id: 'settings', label: 'Settings', shortcut: '⌘,', run: () => useUi.getState().setSettings({ open: true }) },
         { id: 'settings-keyboard', label: 'Keyboard shortcuts', run: () => useUi.getState().setSettings({ open: true, section: 'keyboard' }) },

@@ -9,7 +9,7 @@ export type PanelKind = ProjectPanelKind;
    while it is up. Not persisted, so a reload lands on the project's own view. */
 export type AppPage = 'usage';
 
-const PANEL_KINDS: readonly PanelKind[] = ['files', 'git'];
+const PANEL_KINDS: readonly PanelKind[] = ['files', 'git', 'processes'];
 
 const SIDEBAR_STORAGE_KEY = 'ruimte.sidebar';
 

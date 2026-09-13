@@ -10,6 +10,8 @@ export interface SidebarNode {
     status: AgentStatus | null;
     /* A chat with something typed and never sent. */
     draft: boolean;
+    /* The machine warns about the processes of this node. */
+    alert?: boolean;
 }
 
 export interface SidebarView {

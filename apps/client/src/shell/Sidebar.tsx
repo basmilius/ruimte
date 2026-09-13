@@ -17,12 +17,14 @@ import {
     Smile,
     StickyNote,
     Terminal,
-    Trash
+    Trash,
+    TriangleAlert
 } from 'lucide-react';
 import clsx from 'clsx';
 import { isCanvasView, isSessionView, type AgentKind, type NodeKind } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { useDrafts } from '@/chat/drafts';
+import { useProcessWarnings } from '@/state/processes';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
 import { finderPaths } from '@/canvas/finder-drop';
 import { askDeleteView, askViewIcon, duplicateViewOf, newFileView, putOnCanvas, revealNode, showView, showViewOnCanvas } from '@/project/views';
@@ -151,6 +153,17 @@ function RenameField({ value, onDone }: { value: string; onDone(next: string | n
     );
 }
 
+/* A folded canvas still says one of its nodes has a warning, the way it says one needs you. */
+function ProcessWarningMark() {
+    return (
+        <Tooltip label="Process warning, see the processes panel">
+            <span className="inline-flex shrink-0 text-status-needs-you">
+                <Icon icon={TriangleAlert} size={12} />
+            </span>
+        </Tooltip>
+    );
+}
+
 function NodeRow({ row, tabbable, onFocus, onArrow }: RowProps & { row: SidebarNodeRow }) {
     const { node } = row;
     const picked = useCanvas((s) => s.selection.includes(node.id));
@@ -218,6 +231,7 @@ function NodeRow({ row, tabbable, onFocus, onArrow }: RowProps & { row: SidebarN
                         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-faint" />
                     </Tooltip>
                 )}
+                {node.alert && <ProcessWarningMark />}
                 {node.status && <StatusDot status={node.status} plain />}
             </ContextMenu.Trigger>
             <NodeMenuPopup id={node.id} onRename={() => setRenaming(true)} />
@@ -370,6 +384,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
                         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-faint" />
                     </Tooltip>
                 )}
+                {(view.self ? view.self.alert : view.nodes.some((node) => node.alert)) && <ProcessWarningMark />}
                 {row.status && <StatusDot status={row.status} plain />}
             </ContextMenu.Trigger>
             <ContextMenu.Portal>
@@ -426,6 +441,7 @@ export function Sidebar() {
     const sessions = useSessions((s) => s.byKey);
     const chats = useChats((s) => s.byKey);
     const drafts = useDrafts((s) => s.ids);
+    const warnings = useProcessWarnings((s) => s.byEndpoint);
     const open = useUi((s) => s.sidebarOpen);
     const usageOpen = useUi((s) => s.page === 'usage');
     const hasProject = useProject((s) => s.current !== null);
@@ -459,7 +475,8 @@ export function Sidebar() {
                         kind: node.kind,
                         provider: node.provider ?? null,
                         status: nodeStatus(node, sessions, chats, source.endpointId) ?? null,
-                        draft: node.kind === 'chat' && drafts.includes(node.id)
+                        draft: node.kind === 'chat' && drafts.includes(node.id),
+                        alert: (warnings[source.endpointId] ?? []).some((alert) => alert.nodeId === node.id)
                     });
                     const provider = view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : undefined;
                     return {
@@ -475,7 +492,7 @@ export function Sidebar() {
                     };
                 })
             })),
-        [sources, sessions, chats, drafts, usageOpen]
+        [sources, sessions, chats, drafts, warnings, usageOpen]
     );
 
     const activeViewId = workspaces.find((workspace) => workspace.focused)?.activeViewId ?? null;
