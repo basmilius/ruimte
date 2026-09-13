@@ -5,18 +5,24 @@ import { TransportError, type Transport, type TransportStatus } from '../transpo
 import { browserStorage, readLastProject, rememberProject, type LastProjectStorage } from './last-project';
 import type { PanelsPort } from './panels-port';
 
-/* The slice of the canvas store the client reads; the real store has more. */
-interface CanvasAccess {
-    getState(): {
-        nodes: Record<string, unknown>;
-        texts: Record<string, unknown>;
-        edges: unknown[];
-        order: string[];
-        camera: { x: number; y: number; zoom: number };
-        mode: { kind: 'canvas' } | { kind: 'node'; nodeId: string };
-        loading: boolean;
-    };
-    subscribe: StoreApi<CanvasAccess extends { getState(): infer S } ? S : never>['subscribe'];
+/* The slice of a canvas editor the client reads; the real store has more. */
+interface CanvasSlice {
+    nodes: Record<string, unknown>;
+    texts: Record<string, unknown>;
+    edges: unknown[];
+    order: string[];
+    camera: { x: number; y: number; zoom: number };
+    mode: { kind: 'canvas' } | { kind: 'node'; nodeId: string };
+    loading: boolean;
+}
+
+/*
+ * Every canvas on screen, not the one that has the focus: with a grid of cells a save has to follow
+ * an edit in any of them. The registry names the view an edit happened in, which the client does not
+ * need to know, because what it saves is the whole document either way.
+ */
+interface CanvasesAccess {
+    subscribe(listener: (viewId: string, state: CanvasSlice, previous: CanvasSlice) => void): () => void;
 }
 
 /* The slice of the document store the client reads and writes; the real store has more. */
@@ -28,7 +34,7 @@ interface DocumentAccess {
         loading: boolean;
         load(document: ProjectDocument | null, local: ProjectLocal | null): void;
         exportViews(): ProjectView[];
-        exportLocal(): Pick<ProjectLocal, 'activeViewId' | 'views'>;
+        exportLocal(): Pick<ProjectLocal, 'activeViewId' | 'views' | 'layout'>;
     };
     subscribe: StoreApi<DocumentAccess extends { getState(): infer S } ? S : never>['subscribe'];
 }
@@ -56,10 +62,14 @@ export interface ProjectSink {
     };
 }
 
-/* The slice of the drawing store the client watches: its camera is machine state like the canvas's. */
-interface DrawingAccess {
-    getState(): { camera: { x: number; y: number; zoom: number }; loading: boolean };
-    subscribe: StoreApi<DrawingAccess extends { getState(): infer S } ? S : never>['subscribe'];
+/* The slice of a drawing editor the client watches: its camera is machine state like the canvas's. */
+interface DrawingSlice {
+    camera: { x: number; y: number; zoom: number };
+    loading: boolean;
+}
+
+interface DrawingsAccess {
+    subscribe(listener: (viewId: string, state: DrawingSlice, previous: DrawingSlice) => void): () => void;
 }
 
 interface ProjectClientOptions {
@@ -68,7 +78,7 @@ interface ProjectClientOptions {
     storage?: LastProjectStorage;
     /* Which daemon the client is talking to; what it remembers about a project is that daemon's. */
     endpointId?: () => string;
-    drawing?: DrawingAccess;
+    drawings?: DrawingsAccess;
     /* Runs before a project is swapped in, so the drawing on screen reaches its own file first. */
     beforeSwitch?: () => Promise<void>;
     /*
@@ -105,7 +115,7 @@ export class ProjectClient {
 
     constructor(
         transport: Transport,
-        canvas: CanvasAccess,
+        canvases: CanvasesAccess,
         documents: DocumentAccess,
         panels: PanelsPort,
         sink: ProjectSink,
@@ -125,12 +135,12 @@ export class ProjectClient {
             transport.on('project.changed', ({ projectId, document }) => this.onChanged(projectId, document)),
             transport.on('project.summary', ({ summary }) => this.applySummary(summary)),
             transport.subscribeStatus((status) => this.onStatus(status)),
-            canvas.subscribe((state, previous) => this.onCanvas(state, previous)),
+            canvases.subscribe((_viewId, state, previous) => this.onCanvas(state, previous)),
             documents.subscribe((state, previous) => this.onDocument(state, previous)),
             panels.subscribe(() => this.scheduleLocal()),
-            ...(options.drawing
+            ...(options.drawings
                 ? [
-                      options.drawing.subscribe((state, previous) => {
+                      options.drawings.subscribe((_viewId, state, previous) => {
                           if (!state.loading && !previous.loading && state.camera !== previous.camera) {
                               this.scheduleLocal();
                           }
@@ -346,7 +356,7 @@ export class ProjectClient {
         }
     }
 
-    private onCanvas(state: ReturnType<CanvasAccess['getState']>, previous: ReturnType<CanvasAccess['getState']>): void {
+    private onCanvas(state: CanvasSlice, previous: CanvasSlice): void {
         if (state.loading || previous.loading || !this.sink.getState().current) {
             return;
         }

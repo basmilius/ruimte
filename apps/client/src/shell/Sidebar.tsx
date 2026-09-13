@@ -58,6 +58,7 @@ import { EmptyState } from '@/ui/EmptyState';
 import { Tooltip } from '@/ui/Tooltip';
 import { SidebarToggle } from '@/shell/SidebarToggle';
 import { NewViewItems } from '@/shell/ViewMenu';
+import { setDragging as setDraggedView, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { UsageLimitsCard } from '@/shell/usage/UsageLimitsCard';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
@@ -89,6 +90,9 @@ const INSERT_LINE = 'pointer-events-none -my-px h-0.5 shrink-0 rounded-full bg-a
 /* Every row opens with the same 16px square, so a view and a node under it line up one indent apart. */
 const ICON_SLOT = 'grid size-4 shrink-0 place-items-center';
 const ROW_SELECTED = 'bg-surface-active text-text';
+/* Standing in a cell beside the focused one: the name at full strength, the background left empty,
+   so it reads as open without claiming to be the row the keyboard is on. */
+const ROW_BESIDE = 'text-text hover:bg-surface-hover';
 const ROW_PLAIN = 'text-text-muted hover:bg-surface-hover hover:text-text';
 
 /* The gap in the list the pointer is asking for: above the row whose top half it is in. */
@@ -225,7 +229,8 @@ interface ViewRowProps extends RowProps {
     row: SidebarViewRow;
     onToggle(): void;
     onDelete(): void;
-    onDrag(id: string | null): void;
+    /* A drag of a view, with the transfer to write the payload on; null when it ends. */
+    onDrag(id: string | null, transfer?: DataTransfer): void;
 }
 
 /*
@@ -246,7 +251,7 @@ function SeparatorRow({ row, tabbable, onFocus, onArrow, onDelete, onDrag }: Omi
                 tabIndex={tabbable ? 0 : -1}
                 className="flex h-6 w-full cursor-default items-center gap-2 px-2 outline-none focus-visible:ring-1 focus-visible:ring-accent"
                 onFocus={onFocus}
-                onDragStart={() => onDrag(view.id)}
+                onDragStart={(event) => onDrag(view.id, event.dataTransfer)}
                 onDragEnd={() => onDrag(null)}
                 onKeyDown={(e) => {
                     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -303,11 +308,11 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
                 aria-current={row.active ? 'true' : undefined}
                 aria-expanded={row.expandable ? row.expanded : undefined}
                 tabIndex={tabbable ? 0 : -1}
-                className={clsx(ROW, 'group font-medium', row.active ? ROW_SELECTED : ROW_PLAIN)}
+                className={clsx(ROW, 'group font-medium', row.active ? ROW_SELECTED : row.beside ? ROW_BESIDE : ROW_PLAIN)}
                 onFocus={onFocus}
                 onClick={() => showView(view.id)}
                 onDoubleClick={() => setRenaming(true)}
-                onDragStart={() => onDrag(view.id)}
+                onDragStart={(event) => onDrag(view.id, event.dataTransfer)}
                 onDragEnd={() => onDrag(null)}
                 onKeyDown={(e) => {
                     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -355,6 +360,9 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
                     )}
                 </span>
                 <span className="min-w-0 truncate">{view.name}</span>
+                {/* Colour alone would say nothing to a screen reader, and a view standing in another
+                    cell is not the same as one that is closed. */}
+                {row.beside && <span className="sr-only">, open in another cell</span>}
                 <span className="grow" />
                 {row.count > 0 && <span className="shrink-0 text-xs tabular-nums text-text-faint">{row.count}</span>}
                 {row.draft && (
@@ -440,6 +448,7 @@ export function Sidebar() {
                 focused: source.focused,
                 // A page owns the main column, so no view is showing and no row in the list is the active one.
                 activeViewId: usageOpen ? null : source.activeViewId,
+                openViewIds: usageOpen ? [] : source.openViewIds,
                 views: source.views.map((view) => {
                     // The canvas store owns the view it holds, so its nodes are the fresher ones. It pairs on
                     // the store's own view, not on the active one, which flips a tick before the canvas follows.
@@ -484,10 +493,21 @@ export function Sidebar() {
     const roving = rovingId !== null && rows.includes(rovingId) ? rovingId : (rows[0] ?? null);
     const empty = workspaces.every((workspace) => workspace.views.length === 0);
 
-    const onDrag = (drag: { sectionId: string; viewId: string } | null): void => {
+    /*
+     * One gesture, two targets: a gap between two rows reorders the list, a cell of the grid opens
+     * the view there. The row does not know which it will be, so it always writes the payload and
+     * both listeners read the same type.
+     */
+    const onDrag = (drag: { sectionId: string; viewId: string } | null, transfer?: DataTransfer): void => {
         setDragging(drag);
+        setDraggedView(drag?.viewId ?? null);
         if (drag === null) {
             setInsertAt(null);
+            return;
+        }
+        transfer?.setData(VIEW_DRAG_TYPE, drag.viewId);
+        if (transfer) {
+            transfer.effectAllowed = 'move';
         }
     };
 
@@ -637,7 +657,8 @@ export function Sidebar() {
                                             onFocus: () => setRovingId(row.rowId),
                                             onArrow: moveFocus,
                                             onDelete: () => askDeleteView(row.view.id),
-                                            onDrag: (viewId: string | null) => onDrag(viewId === null ? null : { sectionId: section.id, viewId })
+                                            onDrag: (viewId: string | null, transfer?: DataTransfer) =>
+                                                onDrag(viewId === null ? null : { sectionId: section.id, viewId }, transfer)
                                         };
                                         return (
                                             <Fragment key={row.rowId}>

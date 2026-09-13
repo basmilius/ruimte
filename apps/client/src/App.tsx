@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { WebviewParking } from '@/browser/WebviewParking';
+import { useCanvasChords } from '@/canvas/canvas-chords';
 import { useAppChords } from '@/shell/app-chords';
 import { CommandPalette } from '@/shell/CommandPalette';
 import { LayoutDialog } from '@/shell/LayoutDialog';
@@ -7,7 +8,6 @@ import { ViewDialogs } from '@/shell/ViewDialogs';
 import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { ViewHost } from '@/shell/ViewHost';
 import { WorktreeDialog } from '@/shell/WorktreeDialog';
-import { Dock } from '@/shell/Dock';
 import { SettingsDialog } from '@/shell/SettingsDialog';
 import { Panel } from '@/shell/Panel';
 import { PreviewPanel } from '@/shell/PreviewPanel';
@@ -29,6 +29,8 @@ import { TooltipProvider } from '@/ui/Tooltip';
 function Workspace() {
     const workspace = useMainWorkspace();
     const connection = useWorkspaceConnection(workspace);
+    /* Once for the whole project rather than once per cell: a grid draws up to nine canvases. */
+    useCanvasChords(workspace.stores);
     /* The window's toolbar is where a file view puts its controls, and the body that draws them sits
        under the same column, so the element they portal into is held here. */
     const [fileToolbarHost, setFileToolbarHost] = useState<HTMLElement | null>(null);
@@ -46,7 +48,6 @@ function Workspace() {
                                 <ViewHost />
                                 <WebviewParking />
                                 <ProjectBanner />
-                                <Dock />
                             </div>
                         </div>
                     </FileToolbarSlotProvider>

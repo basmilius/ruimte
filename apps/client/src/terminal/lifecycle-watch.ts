@@ -1,6 +1,6 @@
 import { isSessionView, type NodeKind } from '@ruimte/contracts';
 import { projectNodes } from '@/project/views';
-import { useCanvas } from '@/state/canvas';
+import { liveCanvases, subscribeCanvases } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
@@ -52,11 +52,19 @@ export const watchNodes = (end: NodeEnder): (() => void) => {
         }
         previous = current;
     };
-    const offCanvas = useCanvas.subscribe((state, before) =>
-        step(state.nodes !== before.nodes, state.loading || before.loading || useDocument.getState().loading)
-    );
+    /* The nodes of every canvas on screen, so a cell beside the focused one counts as well. */
+    let nodesSeen = new Map<string, unknown>();
+    const nodesMoved = (): boolean => {
+        const next = new Map<string, unknown>(liveCanvases().map(([viewId, state]) => [viewId, state.nodes]));
+        const same = next.size === nodesSeen.size && [...next].every(([viewId, nodes]) => nodesSeen.get(viewId) === nodes);
+        nodesSeen = next;
+        return !same;
+    };
+    const canvasLoading = (): boolean => liveCanvases().some(([, state]) => state.loading);
+    nodesMoved();
+    const offCanvas = subscribeCanvases(() => step(nodesMoved(), canvasLoading() || useDocument.getState().loading));
     const offDocument = useDocument.subscribe((state, before) =>
-        step(state.views !== before.views || state.activeViewId !== before.activeViewId, state.loading || before.loading || useCanvas.getState().loading)
+        step(state.views !== before.views || state.activeViewId !== before.activeViewId, state.loading || before.loading || canvasLoading())
     );
     /* Another machine is another project on another daemon: what this one holds keeps running, and
        what the next one holds was never this watcher's to end. */

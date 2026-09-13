@@ -47,6 +47,7 @@ const workspace = (id: string, name: string, views: SidebarView[], activeViewId:
     name,
     views,
     activeViewId,
+    openViewIds: activeViewId === null ? [] : [activeViewId],
     focused
 });
 

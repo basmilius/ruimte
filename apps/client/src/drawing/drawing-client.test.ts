@@ -1,12 +1,22 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { DrawingDocument, DrawingElement, EventMap, EventType, ProjectDocument, ProjectSummary, RequestMap, RequestType } from '@ruimte/contracts';
 import { useDocument } from '@/state/document';
-import { useDrawing } from '@/state/drawing';
+import { createDrawingStore, type DrawingState } from '@/state/drawing';
+import { createEditorRegistry } from '@/state/editors';
 import { useProject } from '@/state/project';
 import { TransportError, type Transport, type TransportStatus } from '@/transport/transport';
 import { DrawingClient } from './drawing-client';
 
 type Call = { type: RequestType; payload: unknown };
+
+/* The client owns its editors, so the test hands it a registry of its own and reads what it opened. */
+const drawings = createEditorRegistry(createDrawingStore);
+
+/* The drawing the client has open, or the blank one when it closed the last one. */
+const drawing = (): DrawingState => (drawings.live()[0]?.[1] ?? drawings.blank).getState();
+
+/* One named editor, for the tests where more than one drawing is on screen at a time. */
+const editorOf = (viewId: string) => drawings.peek(viewId) ?? drawings.blank;
 
 const rect = (id: string, x = 0): DrawingElement => ({ kind: 'rect', id, x, y: 0, w: 100, h: 60, stroke: 'ink', strokeWidth: 2, seed: 1 });
 
@@ -105,7 +115,7 @@ let client: DrawingClient;
 let flushes: number;
 
 const setup = (): void => {
-    useDrawing.getState().unload();
+    drawings.keep([]);
     useProject.getState().setCurrent(summary, 1, 'daemon-a');
     useDocument.getState().load(project(), {
         activeViewId: 'main',
@@ -113,7 +123,7 @@ const setup = (): void => {
     });
     transport = new FakeTransport();
     flushes = 0;
-    client = new DrawingClient(transport, useDrawing, useDocument, useProject, {
+    client = new DrawingClient(transport, drawings, useDocument, useProject, {
         saveDelayMs: 1,
         window: null,
         document: null,
@@ -136,19 +146,19 @@ describe('DrawingClient', () => {
         expect(transport.of('drawing.open')[0]?.payload).toEqual({ projectId: 'p1', viewId: 'view-1' });
         // The project file is written first, or the daemon would not know the view yet.
         expect(flushes).toBe(1);
-        expect(useDrawing.getState().elements.map((element) => element.id)).toEqual(['a']);
-        expect(useDrawing.getState().rev).toBe(5);
-        expect(useDrawing.getState().camera).toEqual({ x: 3, y: 4, zoom: 2 });
+        expect(drawing().elements.map((element) => element.id)).toEqual(['a']);
+        expect(drawing().rev).toBe(5);
+        expect(drawing().camera).toEqual({ x: 3, y: 4, zoom: 2 });
     });
 
     test('a page that gets the views before the project still opens the drawing', async () => {
         // What a reload does: the client is up, the document store fills, the project lands last.
         client.dispose();
-        useDrawing.getState().unload();
+        drawings.keep([]);
         useProject.getState().setCurrent(null, 0, null);
         useDocument.getState().load(null, null);
         transport = new FakeTransport();
-        client = new DrawingClient(transport, useDrawing, useDocument, useProject, { saveDelayMs: 1, window: null, document: null });
+        client = new DrawingClient(transport, drawings, useDocument, useProject, { saveDelayMs: 1, window: null, document: null });
 
         useProject.getState().setSwitching(true);
         useDocument.getState().load(project(), { activeViewId: 'view-1', views: {} });
@@ -157,27 +167,27 @@ describe('DrawingClient', () => {
         await tick();
 
         expect(transport.of('drawing.open')).toHaveLength(1);
-        expect(useDrawing.getState().elements.map((element) => element.id)).toEqual(['a']);
+        expect(drawing().elements.map((element) => element.id)).toEqual(['a']);
     });
 
     test('an edit saves after the pause, against the rev it was loaded on', async () => {
         useDocument.getState().setActiveView('view-1');
         await tick();
-        useDrawing.getState().addElement(rect('b', 200));
-        expect(useDrawing.getState().dirty).toBe(true);
+        drawing().addElement(rect('b', 200));
+        expect(drawing().dirty).toBe(true);
         await tick(20);
         expect(transport.of('drawing.save')).toHaveLength(1);
         expect(transport.of('drawing.save')[0]?.payload).toMatchObject({ projectId: 'p1', viewId: 'view-1', baseRev: 5 });
-        expect(useDrawing.getState().rev).toBe(6);
-        expect(useDrawing.getState().dirty).toBe(false);
+        expect(drawing().rev).toBe(6);
+        expect(drawing().dirty).toBe(false);
     });
 
     test('edits made during a save ride the next one, never a second write at the same time', async () => {
         useDocument.getState().setActiveView('view-1');
         await tick();
-        useDrawing.getState().addElement(rect('b'));
+        drawing().addElement(rect('b'));
         await tick(20);
-        useDrawing.getState().addElement(rect('c'));
+        drawing().addElement(rect('c'));
         await tick(20);
         expect(transport.of('drawing.save').map((call) => (call.payload as { baseRev: number }).baseRev)).toEqual([5, 6]);
     });
@@ -186,73 +196,98 @@ describe('DrawingClient', () => {
         useDocument.getState().setActiveView('view-1');
         await tick();
         transport.conflictOnSave = true;
-        useDrawing.getState().addElement(rect('b'));
+        drawing().addElement(rect('b'));
         await tick(20);
-        expect(useDrawing.getState().dirty).toBe(true);
-        expect(useDrawing.getState().error).toBeNull();
+        expect(drawing().dirty).toBe(true);
+        expect(drawing().error).toBeNull();
 
         transport.emit('drawing.changed', { projectId: 'p1', viewId: 'view-1', document: { version: 1, rev: 9, elements: [rect('z')] } });
-        expect(useDrawing.getState().conflict).toMatchObject({ rev: 9 });
+        expect(drawing().conflict).toMatchObject({ rev: 9 });
         // Taking the file loads it and stops the drawing from being dirty.
         await client.resolveConflict('theirs');
-        expect(useDrawing.getState().elements.map((element) => element.id)).toEqual(['z']);
-        expect(useDrawing.getState().rev).toBe(9);
+        expect(drawing().elements.map((element) => element.id)).toEqual(['z']);
+        expect(drawing().rev).toBe(9);
     });
 
     test('a change from disk with nothing unsaved is loaded in place', async () => {
         useDocument.getState().setActiveView('view-1');
         await tick();
         transport.emit('drawing.changed', { projectId: 'p1', viewId: 'view-1', document: { version: 1, rev: 7, elements: [rect('z')] } });
-        expect(useDrawing.getState().conflict).toBeNull();
-        expect(useDrawing.getState().elements.map((element) => element.id)).toEqual(['z']);
-        expect(useDrawing.getState().rev).toBe(7);
+        expect(drawing().conflict).toBeNull();
+        expect(drawing().elements.map((element) => element.id)).toEqual(['z']);
+        expect(drawing().rev).toBe(7);
     });
 
     test('a change for another drawing is not this one', async () => {
         useDocument.getState().setActiveView('view-1');
         await tick();
         transport.emit('drawing.changed', { projectId: 'p1', viewId: 'view-2', document: { version: 1, rev: 7, elements: [rect('z')] } });
-        expect(useDrawing.getState().elements.map((element) => element.id)).toEqual(['a']);
+        expect(drawing().elements.map((element) => element.id)).toEqual(['a']);
     });
 
     test('switching views writes what is pending and closes the drawing behind it', async () => {
         useDocument.getState().setActiveView('view-1');
         await tick();
-        useDrawing.getState().addElement(rect('b'));
+        drawing().addElement(rect('b'));
         useDocument.getState().setActiveView('main');
         await tick(20);
         expect(transport.of('drawing.save')).toHaveLength(1);
         expect(transport.of('drawing.close')[0]?.payload).toEqual({ projectId: 'p1', viewId: 'view-1' });
-        expect(useDrawing.getState().viewId).toBeNull();
+        expect(drawing().viewId).toBeNull();
+    });
+
+    test('two drawings side by side are both open, and each saves into its own file', async () => {
+        useDocument.getState().setActiveView('view-1');
+        await tick();
+        useDocument.getState().splitFocused('right', 'view-2');
+        await tick(20);
+        expect(transport.of('drawing.open').map((call) => (call.payload as { viewId: string }).viewId)).toEqual(['view-1', 'view-2']);
+        expect(transport.of('drawing.close')).toHaveLength(0);
+
+        // Each cell edits its own editor, so an edit in one may never be written into the other's file.
+        editorOf('view-1').getState().addElement(rect('b'));
+        await tick(20);
+        expect(transport.of('drawing.save').map((call) => (call.payload as { viewId: string }).viewId)).toEqual(['view-1']);
+    });
+
+    test('closing one cell closes that drawing and leaves the other open', async () => {
+        useDocument.getState().setActiveView('view-1');
+        await tick();
+        useDocument.getState().splitFocused('right', 'view-2');
+        await tick(20);
+        useDocument.getState().closeCellAt({ column: 1, cell: 0 });
+        await tick(20);
+        expect(transport.of('drawing.close').map((call) => (call.payload as { viewId: string }).viewId)).toEqual(['view-2']);
+        expect(editorOf('view-1').getState().viewId).toBe('view-1');
     });
 
     test('a drawing whose view is deleted is dropped without a save, so no orphan file comes back', async () => {
         useDocument.getState().setActiveView('view-1');
         await tick();
-        useDrawing.getState().addElement(rect('b'));
+        drawing().addElement(rect('b'));
         useDocument.getState().deleteView('view-1');
         await tick(20);
         expect(transport.of('drawing.save')).toHaveLength(0);
         // The neighbor takes over, which is another drawing, so the store holds that one now.
-        expect(useDrawing.getState().viewId).toBe('view-2');
+        expect(drawing().viewId).toBe('view-2');
     });
 
     test('a daemon that forgot the drawing gets it again, and the work that was waiting lands', async () => {
         useDocument.getState().setActiveView('view-1');
         await tick();
-        useDrawing.getState().addElement(rect('b', 200));
+        drawing().addElement(rect('b', 200));
         await tick(20);
-        expect(useDrawing.getState().rev).toBe(6);
+        expect(drawing().rev).toBe(6);
 
         transport.document = { version: 1, rev: 6, elements: [rect('a'), rect('b', 200)] };
         transport.forgotten = true;
         transport.reconnect();
-        useDrawing.getState().addElement(rect('c', 400));
+        drawing().addElement(rect('c', 400));
         await tick(30);
 
         expect(transport.of('drawing.open')).toHaveLength(2);
-        expect(useDrawing.getState().dirty).toBe(false);
-        expect(useDrawing.getState().rev).toBe(7);
+        expect(drawing().dirty).toBe(false);
+        expect(drawing().rev).toBe(7);
         const written = transport.of('drawing.save').at(-1)?.payload as { content: { elements: DrawingElement[] } };
         expect(written.content.elements.map((element) => element.id)).toEqual(['a', 'b', 'c']);
     });

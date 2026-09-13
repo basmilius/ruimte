@@ -1,8 +1,9 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useSyncExternalStore } from 'react';
 import { useStore, type StoreApi } from 'zustand';
 import type { CanvasState } from '@/state/canvas';
 import type { DocumentState } from '@/state/document';
 import type { DrawingState } from '@/state/drawing';
+import type { EditorRegistry } from '@/state/editors';
 import type { ProjectState } from '@/state/project';
 
 /*
@@ -13,16 +14,25 @@ import type { ProjectState } from '@/state/project';
  * modules can import this one.
  */
 export interface WorkspaceStores {
-    canvas: StoreApi<CanvasState>;
+    /* The two that hold a view each are registries, one editor per view the grid has on screen. */
+    canvases: EditorRegistry<CanvasState>;
+    drawings: EditorRegistry<DrawingState>;
     document: StoreApi<DocumentState>;
-    drawing: StoreApi<DrawingState>;
     project: StoreApi<ProjectState>;
 }
 
-export type WorkspaceSlot = keyof WorkspaceStores;
+/* The slots holding one store for the whole workspace, as against the two registries beside them. */
+export type WorkspaceSlot = 'document' | 'project';
+export type EditorSlot = 'canvases' | 'drawings';
 
 /* The stores of the workspace a component sits in. Null outside one, which is what the fallback is for. */
 export const WorkspaceStoresContext = createContext<WorkspaceStores | null>(null);
+
+/*
+ * The view a cell of the split shows. Null outside a cell, where a reader means the cell that has
+ * the focus: that is what a dialog, a panel and everything outside the grid are asking about.
+ */
+export const CellViewContext = createContext<string | null>(null);
 
 /* What the code outside React means by "here": the stores it reads and the daemon they are on. */
 export interface CurrentWorkspace {
@@ -39,6 +49,22 @@ let current: CurrentWorkspace | null = null;
  */
 export const setCurrentWorkspace = (workspace: CurrentWorkspace | null): void => {
     current = workspace;
+    for (const listener of [...currentListeners]) {
+        listener();
+    }
+};
+
+const currentListeners = new Set<() => void>();
+
+/*
+ * Fires when another workspace takes the focus. A watcher that is about "the project in front of me"
+ * holds on to stores rather than to a hook, so it has to be told when those stores are another set.
+ */
+export const subscribeCurrentWorkspace = (listener: () => void): (() => void) => {
+    currentListeners.add(listener);
+    return () => {
+        currentListeners.delete(listener);
+    };
 };
 
 export const currentStores = (): WorkspaceStores | null => current?.stores ?? null;
@@ -72,7 +98,45 @@ export const workspaceHook = <T>(slot: WorkspaceSlot, fallback: StoreApi<T>): Wo
         const store = resolve(useContext(WorkspaceStoresContext) ?? currentStores());
         return useStore(store, selector as (state: T) => U);
     };
-    const hook = useWorkspaceStore as WorkspaceHook<T>;
+    return asStore(useWorkspaceStore as WorkspaceHook<T>, focused);
+};
+
+/* The registry a subtree resolves in: its workspace's own, else the one of no workspace at all. */
+const registryIn = <T>(slot: EditorSlot, fallback: EditorRegistry<T>, stores: WorkspaceStores | null): EditorRegistry<T> =>
+    stores === null ? fallback : (stores[slot] as unknown as EditorRegistry<T>);
+
+/* One editor out of a registry: the cell that was asked for, else the one with the focus, else blank. */
+const resolveEditor = <T>(registry: EditorRegistry<T>, cell: string | null): StoreApi<T> => {
+    const viewId = cell ?? registry.focused();
+    return (viewId === null ? null : registry.peek(viewId)) ?? registry.blank;
+};
+
+/*
+ * The editor a subtree resolves to, as the store itself: the cell the component is drawn in, else
+ * the cell that has the focus, else the blank editor. A component needs this over the hook below
+ * when it subscribes or writes rather than reads, since `getState()` would land on the focused cell
+ * even while the component sits in one beside it.
+ */
+export const useEditorStoreOf = <T>(slot: EditorSlot, fallback: EditorRegistry<T>): StoreApi<T> => {
+    const registry = registryIn(slot, fallback, useContext(WorkspaceStoresContext) ?? currentStores());
+    const cell = useContext(CellViewContext);
+    // The shape rather than the contents: which editor this is changes far less often than what is in it.
+    return useSyncExternalStore(registry.subscribeShape, () => resolveEditor(registry, cell));
+};
+
+/*
+ * One editor of the workspace on screen, as a hook that is also a store. A view with no editor of
+ * this kind (a chat where a canvas is asked for) reads the workspace's blank one, which is what the
+ * single editor held back when a view that was not a canvas left it empty.
+ */
+export const editorHook = <T>(slot: EditorSlot, fallback: EditorRegistry<T>): WorkspaceHook<T> => {
+    const focused = (): StoreApi<T> => resolveEditor(registryIn(slot, fallback, currentStores()), null);
+    const useEditorStore = <U>(selector?: (state: T) => U): T | U => useStore(useEditorStoreOf(slot, fallback), selector as (state: T) => U);
+    return asStore(useEditorStore as WorkspaceHook<T>, focused);
+};
+
+/* Hangs the store half on the hook: outside React every call means the workspace that has the focus. */
+const asStore = <T>(hook: WorkspaceHook<T>, focused: () => StoreApi<T>): WorkspaceHook<T> => {
     hook.getState = () => focused().getState();
     hook.getInitialState = () => focused().getInitialState();
     // `setState` is two overloads, and a forwarder can only be written as one of them; the cast is the seam.

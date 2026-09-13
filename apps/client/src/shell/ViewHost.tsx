@@ -1,15 +1,15 @@
 import { useEffect } from 'react';
-import clsx from 'clsx';
 import { FolderOpen } from 'lucide-react';
 import { isCanvasView, isFileView, type ProjectView } from '@ruimte/contracts';
 import { Canvas } from '@/canvas/Canvas';
+import { SplitGrid } from '@/shell/SplitGrid';
 import { DrawingView } from '@/drawing/DrawingView';
 import { drawingCanClear } from '@/drawing/use-drawing-keys';
 import { BrowserFallback, usePage } from '@/nodes/BrowserBody';
 import { ChatBody } from '@/nodes/ChatBody';
 import { TerminalBody } from '@/nodes/TerminalBody';
 import { FileSurface } from '@/shell/panels/FileSurface';
-import { activeViewOf, useDocument } from '@/state/document';
+import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { UsagePage } from '@/shell/usage/UsagePage';
@@ -32,7 +32,8 @@ const useLeaveOnEscape = (view: ProjectView): void => {
         const onKeyDown = (e: KeyboardEvent): void => {
             const leaving = view.kind === 'terminal' ? isLeaveNodeChord(e, isApplePlatform()) : e.key === 'Escape' && !e.metaKey && !e.ctrlKey && !e.altKey;
             // An open popup or dialog owns Escape; it closes itself and the body keeps the keyboard.
-            if (!leaving || !useDocument.getState().bodyFocused || isInFloatingLayer(e.target)) {
+            // Every cell has this listener, so only the one the keyboard is in may answer.
+            if (!leaving || !useDocument.getState().bodyFocused || useDocument.getState().activeViewId !== view.id || isInFloatingLayer(e.target)) {
                 return;
             }
             // A drawing clears its draft, its selection and its tool first; only an empty one is left.
@@ -111,27 +112,27 @@ function NoProject() {
 }
 
 /*
- * The main column. A canvas view draws the canvas; every other kind draws the body of its one node,
- * without a frame. The canvas stays mounted either way: it owns the app's pointer and key handling,
- * and its terminals keep their screens instead of rebuilding on the way back. An app-level page is
- * neither: it belongs to the machine and not to the project, so it draws over whatever is active
- * and hands the column back untouched when it closes.
+ * One cell of the grid. A canvas view draws the canvas; every other kind draws the body of its one
+ * node, without a frame. A cell draws what its view is and nothing else: the canvas used to stay
+ * mounted under every other kind because it carried the app's chords, and with up to nine cells that
+ * would mean nine hidden canvases. The chords moved to the workspace (`canvas/canvas-chords.ts`).
+ */
+export function ViewSurface({ view }: { view: ProjectView }) {
+    return isCanvasView(view) ? <Canvas /> : <StandaloneView view={view} />;
+}
+
+/*
+ * The main column: the grid of cells, or what stands in for it. An app-level page belongs to the
+ * machine and not to the project, so it covers the whole column and hands it back untouched when it
+ * closes; with no project open there is no grid to draw at all.
  */
 export function ViewHost() {
-    const view = useDocument((s) => activeViewOf(s));
     const page = useUi((s) => s.page);
     const hasProject = useProject((s) => s.current !== null);
-    const standalone = view !== null && !isCanvasView(view) ? view : null;
-    /* The canvas keeps its place under the empty state for the same reason it keeps it under a page:
-       it carries the app's chords, ⌘K among them, which is the one the empty state points at. */
-    const covered = page !== null || standalone !== null || !hasProject;
     return (
         <>
-            <div className={clsx('absolute inset-0', covered && 'invisible')} inert={covered}>
-                <Canvas />
-            </div>
-            {page === null && standalone && <StandaloneView view={standalone} />}
-            {page === null && standalone === null && !hasProject && <NoProject />}
+            {page === null && hasProject && <SplitGrid />}
+            {page === null && !hasProject && <NoProject />}
             {page === 'usage' && <UsagePage />}
         </>
     );

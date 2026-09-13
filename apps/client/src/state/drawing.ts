@@ -1,5 +1,6 @@
 import { createStore, type StoreApi } from 'zustand';
-import { workspaceHook } from '@/state/workspace-stores';
+import { createEditorRegistry } from '@/state/editors';
+import { editorHook } from '@/state/workspace-stores';
 import type {
     DrawingColor,
     DrawingContent,
@@ -617,7 +618,10 @@ export const createDrawingStore = (): StoreApi<DrawingState> =>
 
 export const defaultDrawingStore = createDrawingStore();
 
-export const useDrawing = workspaceHook('drawing', defaultDrawingStore);
+/* The registry of no workspace at all; its blank editor is the store this module made. */
+export const defaultDrawings = createEditorRegistry(createDrawingStore, defaultDrawingStore);
+
+export const useDrawing = editorHook('drawings', defaultDrawings);
 
 /* Keeps the hand-drawn wobble of an element the same on every render and on every machine. */
 export const newSeed = (): number => Math.floor(Math.random() * 2 ** 31);

@@ -38,6 +38,9 @@ export interface SidebarViewRow {
     /* Where the view sits in the project's list, which is what a drop between two rows writes back. */
     index: number;
     active: boolean;
+    /* Standing in a cell beside the focused one. Not active, but not closed either, and a row that
+       said nothing would read as closed the moment you put a view next to the one you were on. */
+    beside: boolean;
     expandable: boolean;
     expanded: boolean;
     /* The heaviest status of the nodes it holds, so a folded canvas still says something is up. */
@@ -82,6 +85,8 @@ export interface SidebarWorkspace {
     /* In project order, which is the order of the file, so every machine reads the same list. */
     views: SidebarView[];
     activeViewId: string | null;
+    /* Every view the grid has on screen, the active one among them. */
+    openViewIds: readonly string[];
     /* The workspace the keyboard and the menus mean; in project scope it is the only one listed. */
     focused: boolean;
 }
@@ -158,6 +163,7 @@ export const buildSidebar = ({ workspaces, scope, expandedIds }: SidebarInput): 
                 view,
                 index,
                 active: view.id === workspace.activeViewId,
+                beside: view.id !== workspace.activeViewId && workspace.openViewIds.includes(view.id),
                 expandable,
                 expanded,
                 status: view.self ? view.self.status : heaviestStatus(view.nodes),

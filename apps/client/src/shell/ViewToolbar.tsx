@@ -1,4 +1,4 @@
-import { isCanvasView, type ProjectViewKind } from '@ruimte/contracts';
+import { isCanvasView, type ProjectView, type ProjectViewKind } from '@ruimte/contracts';
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
 import { BrowserToolbar } from '@/nodes/BrowserBody';
 import { useNodeHost, type NodeHost } from '@/nodes/node-host';
@@ -13,11 +13,10 @@ const KINDS_WITH_TOOLBAR = new Set<ProjectViewKind>(['browser', 'terminal', 'fil
 
 const modeOf = (host: NodeHost | null) => RUNTIME_MODES.find((entry) => entry.id === host?.runtimeMode);
 
-/* Whether the bar has view content to fence off, which is what the separators around it wait for. A
-   browser always brings its navigation and a file its own controls, a terminal only the mode of an
-   agent running in it; a canvas and a chat bring nothing. */
-export const useHasViewToolbar = (): boolean => {
-    const view = useDocument((s) => activeViewOf(s));
+/* Whether a view has content for the bar, which is what the separators around it wait for. A browser
+   always brings its navigation and a file its own controls, a terminal only the mode of an agent
+   running in it; a canvas and a chat bring nothing. */
+export const useHasViewToolbar = (view: ProjectView | null): boolean => {
     const page = useUi((s) => s.page);
     const host = useNodeHost(view && !isCanvasView(view) ? view.id : '');
     if (page !== null || view === null || !KINDS_WITH_TOOLBAR.has(view.kind)) {
@@ -26,15 +25,19 @@ export const useHasViewToolbar = (): boolean => {
     return view.kind === 'browser' || view.kind === 'file' || modeOf(host) !== undefined;
 };
 
+/* The view the window's toolbar speaks for: the one in the focused cell, and none while a page is up. */
+export const useToolbarView = (): ProjectView | null => useDocument((s) => activeViewOf(s));
+
 /*
- * What a view of its own puts in the toolbar, where a node would have its header: the permission
- * mode of a terminal, the navigation bar of a browser, the controls of a file. A canvas view has
- * nothing here; its nodes carry their own headers. It takes the room between the two separators,
- * which is what lets a browser's address field run the width of the bar.
+ * What a view of its own puts in a toolbar, where a node would have its header: the permission mode
+ * of a terminal, the navigation bar of a browser, the controls of a file. A canvas view has nothing
+ * here; its nodes carry their own headers. It takes the room it is given, which is what lets a
+ * browser's address field run the width of the bar.
+ *
+ * Which bar that is depends on the grid: with one cell the window's toolbar speaks for the view, and
+ * with the views side by side every cell carries its own (`shell/CellToolbar.tsx`).
  */
-export function ViewToolbar() {
-    const view = useDocument((s) => activeViewOf(s));
-    const focused = useDocument((s) => s.bodyFocused);
+export function ViewToolbar({ view, focused }: { view: ProjectView | null; focused: boolean }) {
     const page = useUi((s) => s.page);
     const host = useNodeHost(view && !isCanvasView(view) ? view.id : '');
     const { mount } = useFileToolbarSlot();

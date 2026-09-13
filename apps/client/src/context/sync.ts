@@ -1,6 +1,6 @@
 import { isCanvasView, type ContextSource } from '@ruimte/contracts';
 import { deriveContextSources } from '@/context/sources';
-import { useCanvas } from '@/state/canvas';
+import { liveCanvas, liveCanvases, subscribeCanvases, useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { currentEndpointId } from '@/state/keys';
@@ -22,17 +22,17 @@ const byId = <T extends { id: string }>(items: T[]): Record<string, T> => Object
  */
 export const contextSources = (): Map<string, ContextSource[]> => {
     const merged = new Map<string, ContextSource[]>();
-    const canvas = useCanvas.getState();
     const { views } = useDocument.getState();
     const folder = projectFolder();
     for (const view of views) {
         if (!isCanvasView(view)) {
             continue;
         }
+        const editor = liveCanvas(view.id);
         const derived =
-            view.id === canvas.viewId
-                ? deriveContextSources(canvas.nodes, canvas.texts, canvas.edges, folder)
-                : deriveContextSources(byId(view.nodes), byId(view.texts), view.edges, folder);
+            editor === null
+                ? deriveContextSources(byId(view.nodes), byId(view.texts), view.edges, folder)
+                : deriveContextSources(editor.nodes, editor.texts, editor.edges, folder);
         for (const [targetId, sources] of derived) {
             merged.set(targetId, sources);
         }
@@ -87,8 +87,18 @@ export const startContextSync = (): (() => void) => {
         }, SETTLE_MS);
     };
 
-    const offCanvas = useCanvas.subscribe((state, previous) => {
-        if (state.edges !== previous.edges || state.texts !== previous.texts || state.nodes !== previous.nodes) {
+    /* What every canvas on screen holds, since an edge drawn in any cell is context for its agent. */
+    let seen = new Map<string, unknown>();
+    const offCanvas = subscribeCanvases(() => {
+        const next = new Map<string, unknown>(liveCanvases().map(([viewId, state]) => [viewId, [state.edges, state.texts, state.nodes]]));
+        const same =
+            next.size === seen.size &&
+            [...next].every(([viewId, held]) => {
+                const before = seen.get(viewId) as unknown[] | undefined;
+                return before !== undefined && (held as unknown[]).every((part, at) => part === before[at]);
+            });
+        seen = next;
+        if (!same) {
             schedule();
         }
     });

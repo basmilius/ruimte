@@ -1,10 +1,11 @@
 import { isCanvasView, isDrawingView, isFileView, isOpenableView, isSessionView, MAIN_VIEW_NAME, type NodeKind, type ProjectView } from '@ruimte/contracts';
 import { toWorld, type Point } from '@/canvas/math';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
-import { useCanvas } from '@/state/canvas';
+import { viewIdsIn, type SplitDirection } from '@/shell/split';
+import { liveCanvas, useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { currentEndpointId } from '@/state/keys';
-import { useDocument, viewOfNode } from '@/state/document';
+import { useDocument, viewOfNode, type DocumentState } from '@/state/document';
 import { useProject } from '@/state/project';
 import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
 import { useUi } from '@/state/ui';
@@ -17,6 +18,33 @@ import { useUi } from '@/state/ui';
 export const showView = (id: string): void => {
     useUi.getState().setPage(null);
     useDocument.getState().setActiveView(id);
+};
+
+/*
+ * The view a split puts in the cell it makes: the first one that is not standing anywhere yet, from
+ * the focused view down the list and around. A view lives in at most one cell, so with every view
+ * already up there is nothing to put beside them and the split does not happen.
+ */
+export const freeViewFor = (state: Pick<DocumentState, 'views' | 'layout' | 'activeViewId'>): string | null => {
+    const openable = state.views.filter(isOpenableView);
+    const taken = new Set(state.layout === null ? [] : viewIdsIn(state.layout));
+    const from = openable.findIndex((view) => view.id === state.activeViewId);
+    for (let step = 1; step <= openable.length; step += 1) {
+        const view = openable[(Math.max(from, 0) + step) % openable.length]!;
+        if (!taken.has(view.id)) {
+            return view.id;
+        }
+    }
+    return null;
+};
+
+/* Splitting the focused cell, from a chord or from a menu: the grid decides, this picks the view. */
+export const splitFocusedCell = (direction: SplitDirection): void => {
+    const state = useDocument.getState();
+    const viewId = freeViewFor(state);
+    if (viewId !== null) {
+        state.splitFocused(direction, viewId);
+    }
 };
 
 export const revealNode = (nodeId: string): void => {
@@ -174,7 +202,6 @@ export interface ProjectNodeRef extends StatusOf {
  * lifecycle) reads this rather than the canvas on screen.
  */
 export const projectNodes = (): ProjectNodeRef[] => {
-    const canvas = useCanvas.getState();
     const { views } = useDocument.getState();
     return views.flatMap<ProjectNodeRef>((view) => {
         if (isSessionView(view)) {
@@ -183,7 +210,9 @@ export const projectNodes = (): ProjectNodeRef[] => {
         if (!isCanvasView(view)) {
             return [];
         }
-        return view.id === canvas.viewId ? canvas.order.map((id) => canvas.nodes[id]!) : view.nodes;
+        // Every view on screen has an editor of its own, and what it holds is newer than the copy here.
+        const editor = liveCanvas(view.id);
+        return editor === null ? view.nodes : editor.order.map((id) => editor.nodes[id]!);
     });
 };
 

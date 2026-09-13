@@ -1,17 +1,14 @@
-import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Plus } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
-import { isCanvasView } from '@ruimte/contracts';
 import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths } from '@/canvas/drop';
 import { finderPaths } from '@/canvas/finder-drop';
 import { GRID, intersects, snapToGrid, toWorld, type Point, type Rect } from '@/canvas/math';
-import { NODE_SIZE, useCanvas, type NodeKind } from '@/state/canvas';
+import { isSpaceDown } from '@/canvas/canvas-chords';
+import { NODE_SIZE, useCanvas, useCanvasStore } from '@/state/canvas';
 import { useEndpointId } from '@/state/keys';
-import { isFocusedWorkspace, WorkspaceStoresContext } from '@/state/workspace-stores';
-import { useUi } from '@/state/ui';
-import { newCanvasView, showFileOnCanvas, showView, stepView, viewAtIndex } from '@/project/views';
-import { activeViewOf, useDocument } from '@/state/document';
+import { showFileOnCanvas } from '@/project/views';
 import { addNodeAtCenter } from '@/shell/commands';
 import { CanvasMenuPopup } from '@/canvas/CanvasMenu';
 import { EdgeLayer } from '@/canvas/EdgeLayer';
@@ -41,22 +38,6 @@ const ZOOM_SETTLE_MS = 160;
 const DROP_STEP = NODE_SIZE.file.w + 24;
 const MIN_NODE = { w: 240, h: 160 };
 
-// Option plus a letter adds a node; a bare letter would fight every text field on the canvas.
-const ADD_KEYS: Record<string, NodeKind> = { KeyT: 'terminal', KeyC: 'chat', KeyB: 'browser', KeyG: 'group', KeyN: 'note' };
-
-/* The canvas keeps its own keys to itself while a view of its own is on screen over it. */
-const onStandaloneView = (): boolean => {
-    const view = activeViewOf(useDocument.getState());
-    return view !== null && !isCanvasView(view);
-};
-
-const isTypingTarget = (el: EventTarget | null): boolean => {
-    if (!(el instanceof HTMLElement)) {
-        return false;
-    }
-    return el.isContentEditable || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA';
-};
-
 /* Snapped rect for a resize from `edge`, keeping the opposite edge fixed. */
 const resizedRect = (rect: Rect, edge: string, dx: number, dy: number): Rect => {
     const r = { ...rect };
@@ -80,11 +61,10 @@ const resizedRect = (rect: Rect, edge: string, dx: number, dy: number): Rect => 
 };
 
 export function Canvas() {
-    /* Which workspace this canvas is, so a chord on the window can tell it from the one beside it. */
-    const stores = useContext(WorkspaceStoresContext);
+    /* The editor of this cell, for the effects below: `useCanvas` outside a render is the focused one. */
+    const canvasStore = useCanvasStore();
     const rootRef = useRef<HTMLDivElement>(null);
     const gestureRef = useRef<Gesture | null>(null);
-    const spaceRef = useRef(false);
     const zoomTimer = useRef<number | null>(null);
     const zoomAnchor = useRef<Point>({ x: 0, y: 0 });
     const zoomMoved = useRef(false);
@@ -136,18 +116,18 @@ export function Canvas() {
     }, []);
 
     useEffect(() => {
-        const state = useCanvas.getState();
+        const state = canvasStore.getState();
         if (state.viewport.w > 0) {
             state.fitAll();
         } else {
-            const unsub = useCanvas.subscribe((s, prev) => {
+            const unsub = canvasStore.subscribe((s, prev) => {
                 if (prev.viewport.w === 0 && s.viewport.w > 0) {
                     s.fitAll();
                     unsub();
                 }
             });
         }
-    }, []);
+    }, [canvasStore]);
 
     /* React registers wheel listeners as passive, so preventDefault there cannot stop the
        browser's own pinch zoom. The canvas needs a native, non-passive listener. */
@@ -212,121 +192,6 @@ export function Canvas() {
         };
     }, []);
 
-    useEffect(() => {
-        const onKeyDown = (e: KeyboardEvent): void => {
-            /* Every chord below acts on one project: the views it switches between, the nodes it adds
-               and deletes, the panel beside it. Bound on the window, because a view has to answer
-               with the focus in the sidebar as well, so the workspace it belongs to is asked here.
-               The chords of the window itself (the palette, find in files, the settings, the sidebar)
-               are not in this listener at all: `shell/app-chords.ts` has them. */
-            if (!isFocusedWorkspace(stores)) {
-                return;
-            }
-            const s = useCanvas.getState();
-            if (e.code === 'Space' && !isTypingTarget(e.target)) {
-                spaceRef.current = true;
-                e.preventDefault();
-                return;
-            }
-            if (e.key === 'Escape') {
-                // An open popup or dialog owns Escape. It closes itself, and the node it belongs to stays focused.
-                if (isInFloatingLayer(e.target)) {
-                    return;
-                }
-                // The view host answers Escape for a view of its own; there is no canvas to return to.
-                if (onStandaloneView()) {
-                    return;
-                }
-                if (s.linkDraft?.aiming) {
-                    s.setLinkDraft(null);
-                } else if (s.editingTextId) {
-                    s.setEditingText(null);
-                } else if (s.mode.kind === 'node') {
-                    s.exitNode();
-                } else {
-                    s.clearSelection();
-                }
-                (document.activeElement as HTMLElement | null)?.blur();
-                return;
-            }
-            const mod = e.metaKey || e.ctrlKey;
-            // The views answer from anywhere, a focused node included: they are how you leave one.
-            if (mod && !e.altKey && !e.shiftKey && /^Digit[1-9]$/.test(e.code)) {
-                e.preventDefault();
-                const view = viewAtIndex(Number(e.code.slice(-1)));
-                if (view) {
-                    showView(view.id);
-                }
-                return;
-            }
-            if (mod && e.shiftKey && (e.code === 'BracketLeft' || e.code === 'BracketRight')) {
-                e.preventDefault();
-                stepView(e.code === 'BracketRight' ? 1 : -1);
-                return;
-            }
-            if (mod && !e.altKey && !e.shiftKey && e.code === 'KeyT') {
-                e.preventDefault();
-                newCanvasView();
-                return;
-            }
-            // Option+B on macOS is a dead key, so the chord reads the physical key, not the character.
-            if (mod && e.altKey && e.code === 'KeyB') {
-                e.preventDefault();
-                useUi.getState().togglePanel();
-                return;
-            }
-            // A dialog owns the keyboard while it is up; Backspace there must not delete nodes. Nor may
-            // a key reach the canvas that is parked behind a view of its own.
-            if (isTypingTarget(e.target) || s.mode.kind === 'node' || useUi.getState().settings.open || onStandaloneView()) {
-                return;
-            }
-            if (e.altKey && !mod && ADD_KEYS[e.code]) {
-                e.preventDefault();
-                addNodeAtCenter(ADD_KEYS[e.code]!);
-            } else if (mod && e.key === 'z') {
-                e.preventDefault();
-                if (e.shiftKey) {
-                    s.redo();
-                } else {
-                    s.undo();
-                }
-            } else if (mod && e.key === 'g') {
-                e.preventDefault();
-                s.groupSelection();
-            } else if (mod && e.code === 'Digit0') {
-                e.preventDefault();
-                s.zoomTo(1);
-            } else if (e.shiftKey && e.code === 'Digit1') {
-                e.preventDefault();
-                s.fitAll();
-            } else if (e.shiftKey && e.code === 'Digit2') {
-                e.preventDefault();
-                s.zoomToSelection();
-            } else if (mod && e.key === 'a') {
-                e.preventDefault();
-                s.select([...s.order, ...Object.keys(s.texts)]);
-            } else if ((e.key === 'Delete' || e.key === 'Backspace') && s.selection.length > 0) {
-                e.preventDefault();
-                s.deleteSelected();
-            } else if (e.key === '=' || e.key === '+') {
-                s.zoomTo(Math.round(s.camera.zoom * 100 + 10) / 100);
-            } else if (e.key === '-') {
-                s.zoomTo(Math.round(s.camera.zoom * 100 - 10) / 100);
-            }
-        };
-        const onKeyUp = (e: KeyboardEvent): void => {
-            if (e.code === 'Space') {
-                spaceRef.current = false;
-            }
-        };
-        window.addEventListener('keydown', onKeyDown);
-        window.addEventListener('keyup', onKeyUp);
-        return () => {
-            window.removeEventListener('keydown', onKeyDown);
-            window.removeEventListener('keyup', onKeyUp);
-        };
-    }, [stores]);
-
     const screenPoint = (e: { clientX: number; clientY: number }): Point => {
         const rect = rootRef.current!.getBoundingClientRect();
         return { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -353,7 +218,7 @@ export function Canvas() {
         const nodeId = target.closest<HTMLElement>('[data-node-id]')?.dataset.nodeId ?? null;
         const textId = target.closest<HTMLElement>('[data-text-id]')?.dataset.textId ?? null;
 
-        if (e.button === 1 || (e.button === 0 && spaceRef.current)) {
+        if (e.button === 1 || (e.button === 0 && isSpaceDown())) {
             if (!s.locks.pan) {
                 e.preventDefault();
                 startGesture({ kind: 'pan', last: point }, e);
@@ -647,7 +512,7 @@ export function Canvas() {
                     // Space is tracked in a ref because a held key must not re-render the canvas; the cursor
                     // catches up on the next render, which the pointer move that follows always triggers.
                     // oxlint-disable-next-line react/refs
-                    cursor: aiming ? 'crosshair' : activeGesture === 'pan' ? 'grabbing' : locks.pan ? undefined : spaceRef.current ? 'grab' : undefined
+                    cursor: aiming ? 'crosshair' : activeGesture === 'pan' ? 'grabbing' : locks.pan ? undefined : isSpaceDown() ? 'grab' : undefined
                 }}
                 data-mode={mode.kind}
                 data-gesture={activeGesture ?? undefined}

@@ -1,14 +1,21 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { createCanvasStore, defaultCanvasStore, useCanvas } from './canvas';
-import { createDocumentStore } from './document';
+import { createEditorRegistry } from './editors';
+import { createDocumentStore, useDocument } from './document';
 import { createDrawingStore } from './drawing';
 import { createProjectStore, useProject } from './project';
 import { currentStores, currentWorkspaceEndpointId, isFocusedWorkspace, setCurrentWorkspace, type WorkspaceStores } from './workspace-stores';
 
 const workspace = (): WorkspaceStores => {
-    const canvas = createCanvasStore();
-    const drawing = createDrawingStore();
-    return { canvas, drawing, document: createDocumentStore({ canvas, drawing }), project: createProjectStore() };
+    const canvases = createEditorRegistry(createCanvasStore);
+    const drawings = createEditorRegistry(createDrawingStore);
+    return { canvases, drawings, document: createDocumentStore({ canvases, drawings }), project: createProjectStore() };
+};
+
+/* The canvas a workspace is editing: with no view loaded that is its blank editor. */
+const canvasOf = (stores: WorkspaceStores): ReturnType<typeof createCanvasStore> => {
+    const active = stores.document.getState().activeViewId;
+    return (active === null ? null : stores.canvases.peek(active)) ?? stores.canvases.blank;
 };
 
 afterEach(() => {
@@ -19,11 +26,15 @@ describe('the stores of a workspace', () => {
     test('two workspaces edit two canvases', () => {
         const here = workspace();
         const there = workspace();
-        here.canvas.getState().updateText(here.canvas.getState().addText({ x: 0, y: 0 }), 'here');
-        there.canvas.getState().updateText(there.canvas.getState().addText({ x: 0, y: 0 }), 'there');
+        canvasOf(here)
+            .getState()
+            .updateText(canvasOf(here).getState().addText({ x: 0, y: 0 }), 'here');
+        canvasOf(there)
+            .getState()
+            .updateText(canvasOf(there).getState().addText({ x: 0, y: 0 }), 'there');
 
-        expect(Object.values(here.canvas.getState().texts).map((element) => element.text)).toEqual(['here']);
-        expect(Object.values(there.canvas.getState().texts).map((element) => element.text)).toEqual(['there']);
+        expect(Object.values(canvasOf(here).getState().texts).map((element) => element.text)).toEqual(['here']);
+        expect(Object.values(canvasOf(there).getState().texts).map((element) => element.text)).toEqual(['there']);
     });
 
     test('a view added in one workspace lands in its own canvas', () => {
@@ -32,8 +43,9 @@ describe('the stores of a workspace', () => {
         here.document.getState().load({ version: 2, rev: 1, name: 'Here', color: '#000', views: [] }, null);
         here.document.getState().addCanvasView('Drafts');
 
-        expect(here.canvas.getState().viewId).not.toBeNull();
-        expect(there.canvas.getState().viewId).toBeNull();
+        expect(here.canvases.live()).toHaveLength(1);
+        expect(canvasOf(here).getState().viewId).not.toBeNull();
+        expect(there.canvases.live()).toHaveLength(0);
     });
 
     test('the open project of one workspace says nothing about the other', () => {
@@ -47,7 +59,9 @@ describe('the stores of a workspace', () => {
 });
 
 describe('the hook over a slot', () => {
-    test('with no workspace it is the store the module made', () => {
+    test('with no workspace and no view open it is the blank editor the module made', () => {
+        // Said out loud, because a project left open by another test would resolve to its editor instead.
+        useDocument.getState().load(null, null);
         expect(currentStores()).toBeNull();
         useCanvas.setState({ viewport: { w: 640, h: 480 } });
         expect(defaultCanvasStore.getState().viewport).toEqual({ w: 640, h: 480 });

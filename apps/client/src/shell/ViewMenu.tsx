@@ -1,5 +1,5 @@
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, ChevronDown, FileText, Frame, Globe, Minus, Pencil, PenTool, Smile, Terminal, Trash } from 'lucide-react';
+import { Check, ChevronDown, FileText, Frame, Globe, Minus, PanelBottom, PanelRight, Pencil, PenTool, Smile, Terminal, Trash, X } from 'lucide-react';
 import { isDrawingView, isFileView, isOpenableView, isSessionView } from '@ruimte/contracts';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentView } from '@/agents/nodes';
@@ -10,12 +10,15 @@ import {
     newCanvasView,
     newDrawingView,
     newSeparatorView,
+    freeViewFor,
     newTerminalView,
     putOnCanvas,
+    splitFocusedCell,
     showView,
     showViewOnCanvas
 } from '@/project/views';
 import { ViewGlyph } from '@/project/ViewGlyph';
+import { canSplit, cellCount, type SplitDirection } from '@/shell/split';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
@@ -58,6 +61,40 @@ export function NewViewItems() {
             <Menu.Item className="menu-item" onClick={() => void newSeparatorView()}>
                 <Icon icon={Minus} size={14} /> Separator
             </Menu.Item>
+        </>
+    );
+}
+
+/*
+ * Putting a view beside the one on screen. Which view lands there is the same question the chord
+ * answers (`freeViewFor`): the first one that is not standing anywhere yet, since a view is in at
+ * most one cell. With every view already up, or with the grid full, the row is not offered.
+ */
+function SplitItems() {
+    const layout = useDocument((s) => s.layout);
+    const free = useDocument(freeViewFor);
+    const closable = layout !== null && cellCount(layout) > 1;
+    const room = (direction: SplitDirection): boolean => layout !== null && free !== null && canSplit(layout, layout.focus, direction, free);
+    if (!room('right') && !room('down') && !closable) {
+        return null;
+    }
+    return (
+        <>
+            {room('right') && (
+                <Menu.Item className="menu-item" onClick={() => splitFocusedCell('right')}>
+                    <Icon icon={PanelRight} size={14} /> Split to the right <kbd>⌘\</kbd>
+                </Menu.Item>
+            )}
+            {room('down') && (
+                <Menu.Item className="menu-item" onClick={() => splitFocusedCell('down')}>
+                    <Icon icon={PanelBottom} size={14} /> Split downwards <kbd>⇧⌘\</kbd>
+                </Menu.Item>
+            )}
+            {closable && (
+                <Menu.Item className="menu-item" onClick={() => useDocument.getState().closeCellAt(layout.focus)}>
+                    <Icon icon={X} size={14} /> Close this cell <kbd>⌘W</kbd>
+                </Menu.Item>
+            )}
         </>
     );
 }
@@ -111,6 +148,8 @@ export function ViewMenu() {
                             the button called "New view" they would repeat it. */}
                         <div className={MENU_LABEL}>New view</div>
                         <NewViewItems />
+                        <Menu.Separator className={MENU_SEPARATOR} />
+                        <SplitItems />
                         <Menu.Separator className={MENU_SEPARATOR} />
                         {isSessionView(active) && (
                             <Menu.Item className="menu-item" onClick={() => putOnCanvas(active.id)}>

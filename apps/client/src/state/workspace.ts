@@ -1,17 +1,18 @@
-import { createCanvasStore, defaultCanvasStore } from '@/state/canvas';
+import { createCanvasStore, defaultCanvases } from '@/state/canvas';
 import { createDocumentStore, defaultDocumentStore } from '@/state/document';
-import { createDrawingStore, defaultDrawingStore } from '@/state/drawing';
+import { createDrawingStore, defaultDrawings } from '@/state/drawing';
+import { createEditorRegistry } from '@/state/editors';
 import { createProjectStore, defaultProjectStore } from '@/state/project';
 import type { WorkspaceStores } from '@/state/workspace-stores';
 
 /*
- * The four stores of one open project, made together because the document hands its views to the
- * canvas and reads a drawing's camera: peers of one workspace, never of the workspace next to it.
+ * The stores of one open project, made together because the document hands every view its editor and
+ * reads back what those editors hold: peers of one workspace, never of the workspace next to it.
  */
 export const createWorkspaceStores = (): WorkspaceStores => {
-    const canvas = createCanvasStore();
-    const drawing = createDrawingStore();
-    return { canvas, drawing, document: createDocumentStore({ canvas, drawing }), project: createProjectStore() };
+    const canvases = createEditorRegistry(createCanvasStore);
+    const drawings = createEditorRegistry(createDrawingStore);
+    return { canvases, drawings, document: createDocumentStore({ canvases, drawings }), project: createProjectStore() };
 };
 
 /*
@@ -20,8 +21,8 @@ export const createWorkspaceStores = (): WorkspaceStores => {
  * the app started with instead of an empty store nothing writes to.
  */
 export const defaultWorkspaceStores: WorkspaceStores = {
-    canvas: defaultCanvasStore,
+    canvases: defaultCanvases,
     document: defaultDocumentStore,
-    drawing: defaultDrawingStore,
+    drawings: defaultDrawings,
     project: defaultProjectStore
 };

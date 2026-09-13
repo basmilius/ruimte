@@ -1,5 +1,6 @@
 import { createStore, type StoreApi } from 'zustand';
-import { workspaceHook } from '@/state/workspace-stores';
+import { createEditorRegistry, type EditorRegistry } from '@/state/editors';
+import { currentStores, editorHook, subscribeCurrentWorkspace, useEditorStoreOf } from '@/state/workspace-stores';
 import {
     cameraCenteredOn,
     cameraToFit,
@@ -738,6 +739,49 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
 /* The canvas of no workspace at all: what a unit test reads and what the hook falls back on. */
 export const defaultCanvasStore = createCanvasStore();
 
-export const useCanvas = workspaceHook('canvas', defaultCanvasStore);
+/* The registry of no workspace at all; its blank editor is the store this module made. */
+export const defaultCanvases = createEditorRegistry(createCanvasStore, defaultCanvasStore);
+
+export const useCanvas = editorHook('canvases', defaultCanvases);
+
+/*
+ * The canvas store of the cell a component is drawn in, as the store itself. A component that
+ * subscribes rather than reads needs this: `useCanvas.subscribe` is the cell that has the focus at
+ * the moment of the call, and stays with that editor after the focus and the view have moved on.
+ */
+export const useCanvasStore = (): StoreApi<CanvasState> => useEditorStoreOf('canvases', defaultCanvases);
+
+/* The canvas editors of the workspace in front of us, which outside one is the default registry. */
+const canvases = (): EditorRegistry<CanvasState> => currentStores()?.canvases ?? defaultCanvases;
+
+/*
+ * What a view holds right now. A view on screen is held by its editor, which is fresher than the
+ * copy the document keeps of it, so anything asking what a project has must prefer this.
+ */
+export const liveCanvas = (viewId: string): CanvasState | null => canvases().peek(viewId)?.getState() ?? null;
+
+/* Every canvas on screen, which is what a watcher about the whole project walks over. */
+export const liveCanvases = (): [string, CanvasState][] =>
+    canvases()
+        .live()
+        .map(([viewId, store]) => [viewId, store.getState()]);
+
+/*
+ * Every change in every canvas on screen, and one opening or closing. A watcher that is about the
+ * project subscribes here rather than to `useCanvas`, which is one cell and stops being that cell
+ * the moment another view takes it. Rewired when the focus moves to another workspace.
+ */
+export const subscribeCanvases = (listener: () => void): (() => void) => {
+    let off = canvases().subscribe(listener);
+    const offWorkspaces = subscribeCurrentWorkspace(() => {
+        off();
+        off = canvases().subscribe(listener);
+        listener();
+    });
+    return () => {
+        off();
+        offWorkspaces();
+    };
+};
 
 export const isNodeFocused = (mode: Mode, id: string): boolean => mode.kind === 'node' && mode.nodeId === id;

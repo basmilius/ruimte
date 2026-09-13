@@ -10,8 +10,8 @@ interface ShortcutGroup {
 }
 
 /*
- * The chords `Canvas.tsx` binds directly and that no command in `commands.ts` names. The list
- * is by hand on purpose: the handler is a chain of conditions, not a table.
+ * The chords `canvas/canvas-chords.ts` binds directly and that no command in `commands.ts` names.
+ * The list is by hand on purpose: the handler is a chain of conditions, not a table.
  */
 export const CANVAS_SHORTCUTS: readonly ShortcutGroup[] = [
     {
@@ -44,6 +44,15 @@ export const CANVAS_SHORTCUTS: readonly ShortcutGroup[] = [
             { keys: '⇧ ⌘ ]', label: 'Next view' },
             { keys: '⌘ T', label: 'New canvas view' },
             { keys: 'F2', label: 'Rename the view or node the sidebar has focus on' }
+        ]
+    },
+    {
+        title: 'Split',
+        shortcuts: [
+            { keys: '⌘ \\', label: 'Split the cell to the right' },
+            { keys: '⇧ ⌘ \\', label: 'Split the cell downwards' },
+            { keys: '⌥ ⌘ ←', label: 'Focus the cell in that direction, and the other three arrows' },
+            { keys: '⌘ W', label: 'Close the cell that has the focus' }
         ]
     },
     {

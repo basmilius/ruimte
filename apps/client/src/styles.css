@@ -31,6 +31,9 @@
     --surface: #ffffff;
     --surface-raised: #ffffff;
     --surface-sunken: #ececef;
+    /* A bar that is not the one in focus: between the sunken page behind it and a focused bar, so it
+       still reads as a bar. The toolbar of a cell in the grid that does not have the keyboard. */
+    --surface-idle: color-mix(in srgb, var(--surface) 50%, var(--surface-sunken));
     /* The step under the pointer: one shade off the ground a row or a button sits on, and lighter
        than the pressed step, so hover reads as a lift and pressed as the heavier state. A white
        popup cannot go lighter, so in this theme the step is the softest gray there is. */
@@ -164,6 +167,7 @@
     --surface: #1b1b1f;
     --surface-raised: #222227;
     --surface-sunken: #0f0f12;
+    --surface-idle: color-mix(in srgb, var(--surface) 50%, var(--surface-sunken));
     --surface-hover: #2b2b32;
     --surface-active: #34343d;
     --border: #2a2a31;
@@ -295,6 +299,7 @@
     --color-surface: var(--surface);
     --color-surface-raised: var(--surface-raised);
     --color-surface-sunken: var(--surface-sunken);
+    --color-surface-idle: var(--surface-idle);
     --color-surface-hover: var(--surface-hover);
     --color-surface-active: var(--surface-active);
     --color-border: var(--border);
@@ -391,6 +396,9 @@ body {
         justify-content: center;
         width: 32px;
         height: 32px;
+        /* An icon button is a square in every row it stands in: a bar that runs out of room truncates
+           its text or folds its actions away, it never squeezes a button into a sliver. */
+        flex-shrink: 0;
         border-radius: 8px;
         color: var(--text-muted);
         /* Only the press animates. A fade on hover lags behind the pointer, which reads as the
@@ -634,6 +642,13 @@ body {
      */
     .chat-column .chat-column-content { margin-inline: auto; max-width: 768px; }
 
+
+    /* Every page the app embeds: a browser node or view, and the preview of an HTML file. While a
+       view is being dragged across the grid they step out of the pointer's way, because a <webview>
+       swallows the drag events of the page around it and the cell it covers would never see the drag
+       arrive. The attribute is set in `shell/view-drag.ts` for as long as the drag lasts. */
+    body[data-view-drag] .browser-host,
+    body[data-view-drag] .file-preview-page { pointer-events: none; }
 
     /* A diff inside a chat tool block; the library paints its own colors inside a shadow root and
        takes the face it draws them in through these variables. */

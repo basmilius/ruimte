@@ -21,6 +21,7 @@ import {
 } from '@/drawing/gestures';
 import { applyCamera, clearPathCache, fitTextBox, paintElements, paintOptions } from '@/drawing/paint';
 import { useDrawingKeys } from '@/drawing/use-drawing-keys';
+import { useDocument } from '@/state/document';
 import { nextId } from '@/state/canvas';
 import { isWritten, newSeed, useDrawing } from '@/state/drawing';
 import { useSettings } from '@/state/settings';
@@ -73,7 +74,8 @@ export function DrawingView({ id }: { id: string }) {
     const gesture = useRef<Gesture | null>(null);
     const [gestureKind, setGestureKind] = useState<Gesture['kind'] | null>(null);
     const snapSetting = useSettings((s) => s.drawingSnap);
-    useDrawingKeys(true);
+    /* One keyboard: the tools answer for the drawing in the focused cell, not for one beside it. */
+    useDrawingKeys(useDocument((s) => s.activeViewId === id));
 
     // The hand of a drawing arrives with the first one that is opened, never with the app.
     useEffect(() => {

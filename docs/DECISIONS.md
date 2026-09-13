@@ -406,6 +406,49 @@ canvas, against Ruimte, one verdict each.
   node in it, not just that node. That is the trade every new kind makes, and it only bites a
   remote daemon that lags behind its client.
 
+### Views side by side
+
+The grid landed on 2026-09-12 from `docs/reports/2026-09-12-split-views.html`; what follows is
+what the report left open and what the build decided differently.
+
+- **Columns of cells, not a tree.** A layout is at most three columns of at most three cells, so
+  "3x3" is a property of the model rather than a counter laid over one. Both limits live in
+  `apps/client/src/shell/split.ts` and nowhere else; the zod schema keeps no maximum, so a file
+  edited by hand past them opens and is trimmed on the way in rather than refused.
+- **One view, one cell.** A view already on screen moves instead of appearing twice, and a drop on
+  the middle of a cell swaps the two views rather than pushing one off the grid. Two cameras on the
+  same nodes is a feature nobody asked for and a bug everybody runs into.
+- **The layout is machine state.** It rides in `<projectId>.local.json` beside the camera and the
+  panel widths, never in `project.json`: a grid built on a 32 inch screen has no business appearing
+  on a laptop. `activeViewId` is still written beside it, so an older client reads such a file as
+  the project with that one view open.
+- **The chords hang on the workspace, not on a canvas.** `canvas/canvas-chords.ts` binds once per
+  workspace. Nine cells would otherwise be nine window listeners that all resolve to the focused
+  cell, and one undo would land nine times. The same reasoning moved the Escape listener of a
+  standalone view and the tool keys of a drawing behind "is this the focused cell".
+- **A cell carries its own toolbar as soon as there are two.** With one cell the window's toolbar
+  speaks for the view, as it always did; split, it goes back to being the application's and every
+  cell says for itself which view it holds. The bar has the size of the toolbar under a panel's header (`FILE_TOOLBAR`, `h-10`), and
+  its name is the drag handle, which is where a tab bar would be in an app that had tabs.
+- **The drag payload is unreadable until the drop.** A browser keeps `getData` from the page during
+  `dragover`, so a cell cannot ask which view is coming and cannot judge the limit. There is one
+  pointer and so one drag: `shell/view-drag.ts` holds it in module state between dragstart and
+  dragend. A drag from outside the window has no payload and is refused.
+- **A `<webview>` swallows the drag.** For as long as a view is being dragged, `data-view-drag` on
+  the body takes every embedded page out of the pointer's way (one rule in `styles.css`): the parked
+  browser pages and the preview of an HTML file, which is a webview of its own. Without it a drag
+  passing over such a cell loses its `dragover` and the cell never lights up.
+- **One parking layer, clipped per cell.** Every page is placed against the cell of the view it
+  belongs to (`shell/cell-rects.ts` says where each cell is), inside a clip box that never changes
+  parent. A parking layer per cell would move a `<webview>` between parents whenever a view changes
+  cells, and a page that leaves the document reloads.
+- **Not done:** the report's plan to fold `useColumnResize` and the git panel's log resize into one
+  axis-agnostic hook. Those two drag pixels and the grid drags shares of an axis; there is nothing
+  worth sharing. The grid's own splitter is `splitDrag` in `shell/SplitGrid.tsx`.
+- **Not measured:** nine cells at once. The WebGL budget already spreads itself over them (ten
+  contexts, LRU), but the React trees, pointer handlers and resize observers scale with the cells.
+  If a full grid stutters, lowering the limit is two numbers in `split.ts`.
+
 ### Skipped on purpose
 
 Skipped: kanban, loop and trigger nodes, minimap, dictation, notch HUD, agent-to-agent

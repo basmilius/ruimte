@@ -26,6 +26,8 @@ export const isLeaveNodeChord = (event: KeyChord, apple: boolean): boolean => {
 /* The chord as a tooltip or a chip prints it. The Keyboard pane says ⌘ where Windows reads Ctrl; this one cannot. */
 export const leaveNodeChordLabel = (apple: boolean): string => (apple ? '⌘Esc' : '⌃⇧Esc');
 
+const ARROW_CODES = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']);
+
 /*
  * The chords a focused terminal hands back to the app: the ones that move between views, panels and
  * settings, so you never have to leave the terminal to reach another view. Every other chord is the
@@ -37,13 +39,21 @@ export const isAppChord = (event: KeyChord, apple: boolean): boolean => {
         return false;
     }
     if (event.altKey) {
-        return event.code === 'KeyB';
+        // The arrows step between the cells of the grid, which a terminal in one of them may not eat.
+        return event.code === 'KeyB' || ARROW_CODES.has(event.code);
     }
     if (event.shiftKey) {
-        return event.code === 'BracketLeft' || event.code === 'BracketRight';
+        return event.code === 'BracketLeft' || event.code === 'BracketRight' || event.code === 'Backslash';
     }
     // Ctrl+B is readline's backward-char and tmux's prefix, so off macOS the shell keeps it.
-    return /^Digit[1-9]$/.test(event.code) || event.code === 'KeyT' || event.key === ',' || (apple && event.code === 'KeyB');
+    return (
+        /^Digit[1-9]$/.test(event.code) ||
+        event.code === 'KeyT' ||
+        event.code === 'Backslash' ||
+        event.code === 'KeyW' ||
+        event.key === ',' ||
+        (apple && event.code === 'KeyB')
+    );
 };
 
 /*

@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Code, Eye, FileWarning } from 'lucide-react';
 import type { FsReadText } from '@ruimte/contracts';
+import { focusCellOfView, watchGuestFocus } from '@/browser/guest-focus';
 import { isDesktop } from '@/desktop/bridge';
 import { CodeFile } from '@/shell/panels/CodeFile';
 import { DisabledWrapToggle, FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { localFileUrl } from '@/shell/panels/file-url';
 import { dirnameOf } from '@/shell/panels/files-tree';
 import { useEndpoints } from '@/state/endpoints';
+import { CellViewContext } from '@/state/workspace-stores';
 import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP } from '@/ui/classes';
@@ -58,6 +60,8 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
     const transport = useTransport();
     const host = useRef<HTMLDivElement>(null);
     const page = useRef<PreviewWebview | null>(null);
+    /* The cell this preview stands in, or null in the preview panel, which is no cell at all. */
+    const cell = useContext(CellViewContext);
     const url = localFileUrl(path);
 
     useEffect(() => {
@@ -87,11 +91,13 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
         element.src = url;
         parent.appendChild(element);
         page.current = element;
+        const offFocus = cell === null ? null : watchGuestFocus(element, () => focusCellOfView(cell));
         return () => {
+            offFocus?.();
             page.current = null;
             element.remove();
         };
-    }, [canPreview, url]);
+    }, [canPreview, url, cell]);
 
     useEffect(() => {
         if (!canPreview) {

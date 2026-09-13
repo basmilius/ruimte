@@ -138,11 +138,11 @@ const connect = (id: string, stores: WorkspaceStores, endpoint: Endpoint): Conne
     const transport = machineOn(endpoint).transport;
     /* Asked again on every save: a machine switch replaces the connection under the same workspace. */
     const endpointId = (): string => workspaces.get(id)?.connection.endpointId ?? endpoint.id;
-    const drawings = new DrawingClient(transport, stores.drawing, stores.document, stores.project, {
+    const drawings = new DrawingClient(transport, stores.drawings, stores.document, stores.project, {
         flushProject: (): Promise<void> => projects.flush()
     });
-    const projects = new ProjectClient(transport, stores.canvas, stores.document, panelsPort, projectSink(stores, endpointId), {
-        drawing: stores.drawing,
+    const projects = new ProjectClient(transport, stores.canvases, stores.document, panelsPort, projectSink(stores, endpointId), {
+        drawings: stores.drawings,
         beforeSwitch: (): Promise<void> => drawings.flush(),
         endSessions: endProjectSessions,
         endpointId

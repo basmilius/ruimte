@@ -10,12 +10,13 @@ import type {
     RequestMap,
     RequestType
 } from '@ruimte/contracts';
-import { useCanvas } from '../state/canvas';
+import { useCanvas, type CanvasState } from '../state/canvas';
 import { useDocument } from '../state/document';
 import { useFiles } from '../state/files';
 import { useUi } from '../state/ui';
 import { createWorkspaceStores, defaultWorkspaceStores } from '../state/workspace';
 import type { WorkspaceStores } from '../state/workspace-stores';
+import type { StoreApi } from 'zustand';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 import { PanelsPort } from './panels-port';
 import { rekeyLastProject } from './last-project';
@@ -23,6 +24,12 @@ import { ProjectClient, type ProjectSink } from './project-client';
 import { sessionNodesOf } from './project-sessions';
 
 type Call = { type: RequestType; payload: unknown };
+
+/* The canvas a workspace is editing, which with a project open is the editor of its active view. */
+const canvasOf = (stores: WorkspaceStores): StoreApi<CanvasState> => {
+    const active = stores.document.getState().activeViewId;
+    return (active === null ? null : stores.canvases.peek(active)) ?? stores.canvases.blank;
+};
 
 const summary = (projectId: string, folder: string | null = null): ProjectSummary => ({
     projectId,
@@ -210,7 +217,7 @@ const setup = (
     const panels = new PanelsPort();
     /* What the client asked to end, in the words the caller would kill it with: kind and id, on the machine it named. */
     const ended: Array<{ endpointId: string; nodes: string[] }> = [];
-    const client = new ProjectClient(transport, stores.canvas, stores.document, panels, sink, {
+    const client = new ProjectClient(transport, stores.canvases, stores.document, panels, sink, {
         saveDelayMs: 1,
         localDelayMs: 1,
         endpointId: () => endpointId,
@@ -548,12 +555,12 @@ describe('two workspaces side by side', () => {
         const there = setup({ endpointId: 'daemon-b', stores: createWorkspaceStores(), storage, projects: [summary('q1', '/there')], open: 'q1' });
         await tick();
 
-        here.stores.canvas.getState().addText({ x: 0, y: 0 });
+        canvasOf(here.stores).getState().addText({ x: 0, y: 0 });
         await tick(20);
 
         expect(here.transport.of('project.save')).toHaveLength(1);
         expect(there.transport.of('project.save')).toHaveLength(0);
-        expect(there.stores.canvas.getState().texts).toEqual({});
+        expect(canvasOf(there.stores).getState().texts).toEqual({});
         here.dispose();
         there.dispose();
     });

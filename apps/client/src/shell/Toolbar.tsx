@@ -7,10 +7,11 @@ import { PanelControls } from '@/shell/PanelControls';
 import { ProjectActionsMenu } from '@/shell/ProjectActionsMenu';
 import { ProjectMenu } from '@/shell/ProjectMenu';
 import { ViewMenu } from '@/shell/ViewMenu';
-import { useHasViewToolbar, ViewToolbar } from '@/shell/ViewToolbar';
+import { useHasViewToolbar, useToolbarView, ViewToolbar } from '@/shell/ViewToolbar';
 import { STRIP_PADDING_PX } from '@/shell/Sidebar';
 import { SidebarToggle } from '@/shell/SidebarToggle';
 import { useDrawing } from '@/state/drawing';
+import { cellCount } from '@/shell/split';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
@@ -33,8 +34,13 @@ export function Toolbar() {
     const panel = useUi((s) => s.panel);
     const previewOpen = useUi((s) => s.preview.open);
     const sidebarOpen = useUi((s) => s.sidebarOpen);
+    const bodyFocused = useDocument((s) => s.bodyFocused);
     const hasView = useDocument((s) => s.activeViewId !== null);
-    const hasViewToolbar = useHasViewToolbar();
+    /* With the views side by side every cell carries its own bar, and this one goes back to being
+       the application's: two bars speaking for two different views would read as one bar for both. */
+    const split = useDocument((s) => (s.layout === null ? false : cellCount(s.layout) > 1));
+    const view = useToolbarView();
+    const hasViewToolbar = useHasViewToolbar(split ? null : view);
     const inset = useTrafficLightInset();
 
     return (
@@ -67,7 +73,7 @@ export function Toolbar() {
             {/* A view of its own has no node header, so what that header carried sits here, fenced
                 off from the breadcrumb on one side and the panels on the other. */}
             {hasViewToolbar && <Separator />}
-            <ViewToolbar />
+            {!split && <ViewToolbar view={view} focused={bodyFocused} />}
             {hasViewToolbar && <Separator />}
             <ConnectionDot />
             <div className={BTN_GROUP}>
