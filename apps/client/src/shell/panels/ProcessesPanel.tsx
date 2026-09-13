@@ -5,6 +5,7 @@ import { Dialog } from '@base-ui-components/react/dialog';
 import {
     Activity,
     AppWindow,
+    ArrowDown,
     ChevronRight,
     CircleStop,
     Cpu,
@@ -56,10 +57,10 @@ const SCOPES = [
     { id: 'all', label: 'All' }
 ] as const;
 
-const COLUMNS: readonly { sort: ProcessSort; label: string; width: string }[] = [
-    { sort: 'cpu', label: 'CPU', width: 'w-12' },
-    { sort: 'memory', label: 'Memory', width: 'w-16' },
-    { sort: 'disk', label: 'Disk', width: 'w-16' }
+const COLUMNS: readonly { sort: ProcessSort; label: string; tooltip: string; width: string }[] = [
+    { sort: 'cpu', label: 'CPU', tooltip: 'Sort by CPU', width: 'w-12' },
+    { sort: 'memory', label: 'Memory', tooltip: 'Sort by memory', width: 'w-16' },
+    { sort: 'disk', label: 'Disk', tooltip: 'Sort by disk', width: 'w-16' }
 ];
 
 const GROUP_ICONS: Record<ProcessGroupKind, LucideIcon> = { terminal: Terminal, chat: MessageSquare, app: AppWindow, daemon: Server, other: Cpu };
@@ -364,14 +365,23 @@ export function ProcessesPanel() {
             <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-border pr-3 pl-3">
                 <span className={clsx(SECTION_LABEL, 'grow')}>Node</span>
                 {COLUMNS.map((column) => (
-                    <button
-                        key={column.sort}
-                        aria-pressed={sort === column.sort}
-                        className={clsx(SECTION_LABEL, column.width, 'shrink-0 text-right hover:text-text', sort === column.sort && 'text-text')}
-                        onClick={() => useProcesses.getState().setSort(column.sort)}
-                    >
-                        {column.label}
-                    </button>
+                    <Tooltip key={column.sort} label={column.tooltip}>
+                        <button
+                            aria-pressed={sort === column.sort}
+                            className={clsx(
+                                SECTION_LABEL,
+                                column.width,
+                                'group inline-flex shrink-0 items-center justify-end gap-0.5 hover:text-text',
+                                sort === column.sort && 'text-text'
+                            )}
+                            onClick={() => useProcesses.getState().setSort(column.sort)}
+                        >
+                            {/* The sort only runs high to low, so one arrow is the whole state. On the
+                                other columns it shows under the pointer to say they sort as well. */}
+                            <Icon icon={ArrowDown} size={12} className={clsx('shrink-0', sort !== column.sort && 'opacity-0 group-hover:opacity-100')} />
+                            {column.label}
+                        </button>
+                    </Tooltip>
                 ))}
             </div>
             <div className="min-h-0 grow overflow-y-auto">
