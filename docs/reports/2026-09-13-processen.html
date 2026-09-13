@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Processen</title>
+<style>
+:root {
+  color-scheme: light;
+  --accent: #3f38b5;
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --image-outline: rgb(0 0 0 / 10%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { min-width: 480px; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--muted); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide, .plot { min-width: 0; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+
+.prompt-box { position: relative; }
+.prompt-box pre { white-space: pre-wrap; font-size: 13px; line-height: 1.55; padding-top: 56px; }
+.prompt-box button { position: absolute; top: 8px; right: 8px; }
+.diagram .label-small { font-size: 13px; fill: var(--muted); }
+@media print {
+  .prompt-box button { display: none; }
+  .prompt-box pre { padding-top: 18px; }
+}
+.mock { background: var(--panel); border-radius: 12px; padding: 20px; }
+.mock .diagram { max-width: 420px; min-width: 0; margin: auto; }
+.mock .diagram text { font-size: 13px; }
+.diagram .spark { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .spark-area { fill: var(--highlight); }
+.diagram .warn { fill: var(--warning-bg); stroke: var(--warning); }
+.diagram .warn-text { fill: var(--warning); }
+</style>
+</head>
+<body>
+<a class="skip" href="#advies">Naar de inhoud</a>
+<header>
+  <p class="eyebrow">RUIMTE / ONDERZOEK / 13 SEPTEMBER 2026</p>
+  <h1>Processen: CPU, geheugen en schijf in een panel</h1>
+  <p class="intro">De daemon kan elke 2 seconden de hele procestabel lezen voor minder dan 2 ms, zonder <code>ps</code>, zonder native addon en zonder helperproces: <code>bun:ffi</code> op de libproc van macOS zelf. Het panel toont standaard de procesboom van Ruimte, per node gegroepeerd. Een vastgelopen agent vindt de daemon door hooks en metingen naast elkaar te leggen, want met maar één van de twee zie je het niet.</p>
+  <p class="status">Onderzoek, nog geen regel code</p>
+  <p class="caption">Gebaseerd op Ruimte main bij <code>3132a66</code> en ai-usage met de ongecommitte map <code>Sources/Processes</code>. Metingen op deze Mac: macOS 27.0, arm64, 16 cores, 64 GB, Bun 1.4.0. <span class="badge confirmed">Geverifieerd</span> betekent gemeten of in de broncode gecontroleerd. <span class="badge info">Afgeleid</span> betekent niet gecontroleerd.</p>
+  <nav aria-label="Inhoud">
+    <a href="#advies">Advies</a>
+    <a href="#referenties">Wat de projecten doen</a>
+    <a href="#metingen">Metingen</a>
+    <a href="#meten">Wat en hoe meten</a>
+    <a href="#scope">Welke processen</a>
+    <a href="#panel">Het panel</a>
+    <a href="#vastgelopen">Vastgelopen agents</a>
+    <a href="#inpassing">Inpassing</a>
+    <a href="#fasen">Fasen</a>
+    <a href="#beslissingen">Beslissingen</a>
+    <a href="#risicos">Risico's</a>
+    <a href="#startprompt">Startprompt</a>
+    <a href="#bronnen">Bronnen</a>
+  </nav>
+</header>
+<main>
+
+<section id="advies" class="recommendation">
+  <h2>Advies</h2>
+  <p>Bouw een <code>ProcessMonitor</code> in de daemon met een sampler per platform. Op macOS leest die met <code>bun:ffi</code> uit <code>/usr/lib/libproc.dylib</code>: <code>proc_listallpids</code>, <code>proc_pidinfo</code> voor ouder, naam en starttijd, en <code>proc_pid_rusage</code> voor CPU-tijd, <code>phys_footprint</code> en schijf-I/O in één aanroep. Op Linux leest hij <code>/proc</code>. Windows krijgt voorlopig een lege staat die uitlegt waarom.</p>
+  <p>Staat het panel open, dan samplet de monitor elke 2 s. Is het panel dicht, dan samplet hij elke 5 minuten de boom van Ruimte en de machinetotalen, genoeg voor de waarschuwingen en voor een grove grafiek van de afgelopen 24 uur. Een panel dat opengaat, heeft zo meteen een grafiek. Het abonnement volgt het patroon van <code>usage.subscribe</code>: een volgerset, één timer en een event per sample. Het panel gaat over de machine waar de workspace op draait, net als de limietbalken in de sidebar.</p>
+  <p>Vastlopen beoordeelt de daemon, niet de client. Alleen de daemon heeft hookstatus en metingen tegelijk, en het oordeel moet ook kloppen als er geen panel open is. Het oordeel is een waarschuwing met een knop. Ruimte killt nooit iets uit zichzelf.</p>
+  <div class="stats">
+    <div><strong>1,8 ms</strong><span>alle 900 processen lezen via FFI</span></div>
+    <div><strong>0</strong><span>kindprocessen per sample</span></div>
+    <div><strong>6</strong><span>signalen voor een vastgelopen agent</span></div>
+    <div><strong>4</strong><span>fasen, te beginnen met de sampler</span></div>
+  </div>
+  <p><span class="badge confirmed">Geverifieerd</span> FFI naar libproc en naar <code>host_statistics</code> werkt onder Bun, ook in een binary van <code>bun build --compile</code>. Die binary moet wel gesigneerd zijn. Een verpakte app is dat altijd.</p>
+  <p><span class="badge warning">Let op</span> Een idle <code>claude</code>-chat gebruikt hier 2 tot 4% CPU. "Nul procent CPU" betekent dus niet "vastgelopen". De drempels in dit rapport zijn startwaarden die fase 1 op echte sessies moet ijken.</p>
+</section>
+
+<section id="referenties">
+  <h2>Wat de projecten doen</h2>
+  <div class="split">
+    <div class="panel">
+      <h3>ai-usage</h3>
+      <p>Een Swift-venster dat elke 3 seconden alle processen leest via libproc, alleen zolang het venster zichtbaar is. CPU is het verschil in <code>ri_user_time + ri_system_time</code>, omgerekend met <code>mach_timebase_info</code> en gedeeld door de verstreken <code>mach_continuous_time</code>. 100% is één core. Geheugen is <code>phys_footprint</code>. Schijf-I/O zit in dezelfde struct, maar wordt niet gelezen.</p>
+      <p>Een AI-familie herkent het aan naam en pad (<code>claude</code>, <code>codex</code>, Ollama, Cursor en meer), en kinderen erven die van hun voorouders. Een wees onthoudt zijn familie. Er zijn geen grafieken, alleen een lijst met drie tegels. De identiteit van een proces is PID plus starttijd. Een gat van meer dan 10 s wist de historie, zodat een slapende Mac geen "30 s hoge CPU" verzint.</p>
+      <p>Vastlopen noemt het nooit zo. Het heeft vier "review"-signalen: CPU ≥ 80% gedurende 30 s, footprint ≥ 2 GB, +512 MB in een minuut, en een AI-proces onder launchd dat ouder is dan 5 minuten en veel CPU of geheugen gebruikt.</p>
+    </div>
+    <div class="panel">
+      <h3>Een geheugenpil in de toolbar</h3>
+      <p>Alleen geheugen, en nergens CPU of schijf. Een RAM-pil in de toolbar pollt elke 30 s, en een sessiepanel meet alleen bij openen. Het koppelt tmux-panes aan nodes, telt de procesboom per sessie op en toont dat per rij, met Pauze (<code>/exit</code>) en Kill. Er zijn geen grafieken en geen historie. Het houdt "kon niet meten" altijd apart van "niets".</p>
+      <p>Agentstatus komt alleen uit hooks, net als in Ruimte. Er zijn drie mechanismen. Status <code>working</code> zonder hook-event gedurende 20 minuten wordt <code>done</code>. De <code>idle_prompt</code>-notificatie redt een hangende <code>working</code>. De DROPPED-chip verschijnt als de pane een shell toont terwijl de status zegt dat er een agent draait, met een knop Resume.</p>
+      <p>Die chip weigert bewust in vier gevallen. Hij kijkt nooit tijdens <code>working</code>, want dan heeft een tool de voorgrond. Hij kijkt alleen bij agents die <code>SessionEnd</code> melden, want bij Codex zijn een nette exit en een OOM-kill niet te onderscheiden. Een ontbrekend signaal is nooit bewijs.</p>
+    </div>
+  </div>
+  <h3>Een sidecar in Rust</h3>
+  <p>Een andere route is een Rust-sidecar met de <code>sysinfo</code>-crate die NDJSON over stdio praat. Die volgt alleen de nakomelingen van de server en van Electron, en houdt zelf een uur historie bij. De server zet streaming alleen aan zolang er een abonnee is, en vertraagt van 1 s naar 15 s op batterij of met een vergrendeld scherm. De UI is een diagnosepagina in de instellingen met een staafgrafiek per 5, 15, 30 of 60 minuten en een procesboom met INT en KILL. Vóór een signaal controleert de server opnieuw of PID en starttijd nog kloppen. Detectie van vastlopen zit er niet in.</p>
+  <p>Ruimte heeft de sidecar niet nodig. Een sidecar bespaart het onderhoud van een Node-addon-ABI, en FFI naar een systeembibliotheek heeft dat probleem niet.</p>
+  <div class="table" role="region" aria-label="Vergelijking van de referenties" tabindex="0">
+    <table class="wide">
+      <caption>Wat elk project meet en toont</caption>
+      <thead><tr><th scope="col"></th><th scope="col">ai-usage</th><th scope="col">Geheugenpil</th><th scope="col">Sidecar</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">CPU per proces</th><td>ja, libproc</td><td>nee</td><td>ja, sysinfo</td></tr>
+        <tr><th scope="row">Geheugen</th><td><code>phys_footprint</code></td><td>footprint via <code>top -l 1</code>, RSS op Linux</td><td>RSS</td></tr>
+        <tr><th scope="row">Schijf</th><td>nee</td><td>nee</td><td>bytes gelezen en geschreven</td></tr>
+        <tr><th scope="row">Machinetotalen</th><td>geheugendruk, thermiek</td><td>vrij geheugen, swap, PSI</td><td>vermogen, thermiek</td></tr>
+        <tr><th scope="row">Scope</th><td>alles, filter op AI</td><td>tmux-sessies</td><td>boom van de server</td></tr>
+        <tr><th scope="row">Grafiek</th><td>nee</td><td>nee</td><td>staven per tijdvak</td></tr>
+        <tr><th scope="row">Vastlopen</th><td>vier signalen op metingen</td><td>drie signalen op hooks</td><td>nee</td></tr>
+        <tr><th scope="row">Automatisch killen</th><td>nee</td><td>alleen opt-in hibernatie en een reaper</td><td>nee</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="metingen">
+  <h2>Metingen op deze Mac</h2>
+  <p>Wegwerpscripts in <code>/tmp</code>, met de Ruimte-dev-daemon, Electron en twee chats actief.</p>
+  <div class="table" role="region" aria-label="Metingen" tabindex="0">
+    <table class="wide">
+      <caption>Kosten en uitkomsten per methode</caption>
+      <thead><tr><th scope="col">Wat</th><th scope="col">Uitkomst</th><th scope="col">Betekenis</th></tr></thead>
+      <tbody>
+        <tr><td><code>proc_listallpids</code> plus <code>proc_pid_rusage</code> via <code>bun:ffi</code></td><td>900 PID's in 1,8 ms; 574 leesbaar, 326 geweigerd</td><td>De geweigerde zijn van root of van het systeem. De eigen processen zijn allemaal leesbaar.</td></tr>
+        <tr><td>Hetzelfde script als binary van <code>bun build --compile</code></td><td>ongesigneerd gekild (exit 137), na <code>codesign -s -</code> 1,9 ms</td><td>macOS 27 killt elke ongesigneerde binary van Bun, ook een lege <code>console.log</code>. Dat ligt niet aan FFI.</td></tr>
+        <tr><td><code>ps -axo pid,ppid,pcpu,rss,…</code></td><td>30 ms, een kindproces per aanroep</td><td>Bruikbaar als terugvaloptie. <code>%cpu</code> is op macOS een uitdempend gemiddelde en geen momentopname.</td></tr>
+        <tr><td><code>top -l 1 -stats pid,mem</code></td><td>400 tot 440 ms per aanroep</td><td>Te duur voor elke 2 s. libproc geeft dezelfde footprint gratis.</td></tr>
+        <tr><td><code>host_statistics(HOST_CPU_LOAD_INFO)</code> via FFI</td><td>werkt, 15% user, 9% system over 1 s</td><td>Totale CPU zonder <code>top</code> of <code>iostat</code>.</td></tr>
+        <tr><td>CPU-tijd uit <code>rusage</code>, Electron-renderer</td><td>22,8% na ×125/3 ns, <code>ps</code> gaf 19 tot 29%</td><td>De tijden zijn Mach-ticks, geen nanoseconden. Zonder omrekening lees je 0,5%.</td></tr>
+        <tr><td>Twee idle <code>claude -p</code>-chats</td><td>2,5 en 3,6% CPU; footprint 200 en 217 MB bij RSS 335 en 328 MB</td><td>Een idle agent is niet stil. Hier ligt footprint onder RSS; bij gecomprimeerde idle processen kan het omgekeerde gelden (RSS 1,8 tot 2,2 keer te laag). Footprint is in beide gevallen wat Activiteitenweergave toont.</td></tr>
+        <tr><td>Dev-daemon (<code>bun --watch</code>)</td><td>0,2% CPU, footprint 49 MB, 129 MB geschreven sinds de start</td><td>Schijf-I/O per proces is echt beschikbaar en telt op.</td></tr>
+        <tr><td>Procesboom</td><td><code>claude</code> en <code>zsh</code> zijn directe kinderen van de daemon</td><td>Een boom vanaf <code>process.pid</code> vangt alles wat Ruimte start.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="meten">
+  <h2>Wat en hoe meten</h2>
+  <div class="table" role="region" aria-label="Bronnen per metriek" tabindex="0">
+    <table class="wide">
+      <caption>Bron per metriek en platform</caption>
+      <thead><tr><th scope="col">Metriek</th><th scope="col">macOS</th><th scope="col">Linux</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Proces: ouder, naam, starttijd</th><td><code>proc_pidinfo(PROC_PIDTBSDINFO)</code>, pad via <code>proc_pidpath</code> <span class="badge confirmed">ai-usage</span></td><td><code>/proc/&lt;pid&gt;/stat</code>, <code>cmdline</code></td></tr>
+        <tr><th scope="row">Proces: CPU</th><td>verschil in <code>ri_user_time + ri_system_time</code> × timebase ÷ verstreken tijd</td><td>verschil in <code>utime + stime</code> ÷ <code>CLK_TCK</code></td></tr>
+        <tr><th scope="row">Proces: geheugen</th><td><code>ri_phys_footprint</code></td><td><code>VmRSS</code> uit <code>status</code>, nooit <code>statm</code></td></tr>
+        <tr><th scope="row">Proces: schijf</th><td><code>ri_diskio_bytesread</code> en <code>byteswritten</code></td><td><code>read_bytes</code> en <code>write_bytes</code> uit <code>/proc/&lt;pid&gt;/io</code> (alleen eigen gebruiker) <span class="badge info">Afgeleid</span></td></tr>
+        <tr><th scope="row">Machine: CPU</th><td><code>host_statistics(HOST_CPU_LOAD_INFO)</code></td><td><code>/proc/stat</code></td></tr>
+        <tr><th scope="row">Machine: geheugen</th><td><code>host_statistics64(HOST_VM_INFO64)</code> met paginagrootte 16 KiB, plus <code>kern.memorystatus_vm_pressure_level</code> <span class="badge info">Afgeleid</span></td><td><code>MemAvailable</code>, swap en PSI <code>full avg60</code> (dat laatste vangt thrashen)</td></tr>
+        <tr><th scope="row">Machine: schijf</th><td>vrije ruimte van het projectvolume via <code>statfs</code>; doorvoer als som van alle leesbare processen, of later IOKit</td><td><code>/proc/diskstats</code>, <code>statfs</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Voor elk proces geldt dezelfde discipline. Een proces is PID plus starttijd, zodat hergebruik van een PID geen sprong in de grafiek geeft. De klok is monotoon. Omdat een dicht panel maar elke 5 minuten samplet, zegt de lengte van een gat niets. Slaap herken je aan het verschil tussen <code>mach_continuous_time</code> en <code>mach_absolute_time</code> (op Linux <code>CLOCK_BOOTTIME</code> en <code>CLOCK_MONOTONIC</code>): alleen de eerste loopt door tijdens slaap. Is dat verschil gegroeid, dan start de historie opnieuw. <span class="badge info">Afgeleid</span> Een geweigerd proces is "niet leesbaar" en niet 0%. Het eerste sample van een proces heeft nog geen CPU.</p>
+  <p class="note">Schijf is de zwakste metriek op macOS. Er is geen goedkope systeemteller zonder IOKit, en processen van root tellen niet mee in de som. Voor "welk proces schrijft zich suf" per proces is dat geen probleem, voor een machinegrafiek wel. <a href="#beslissingen">Zie beslissing 3.</a></p>
+</section>
+
+<section id="scope">
+  <h2>Welke processen</h2>
+  <h3>Standaard: wat Ruimte start</h3>
+  <p>De daemon loopt de boom af vanaf zijn eigen <code>process.pid</code>. Daarin zitten de PTY-shells met alles wat erin draait, de chat-CLI's, de limiet-probes, <code>git</code> en de detectie van CLI's. In de desktop-app is de ouder van de daemon Electron. Die boom (hoofdproces, renderer, gastpagina's) komt erbij als de ouder een Electron-app is.</p>
+  <p>Groeperen gebeurt per node, want daar denkt een mens in. De daemon kent al een deel van de koppelingen:</p>
+  <ul>
+    <li>Een terminal: <code>Session.pid</code> is de shell en de session-id is de node-id. Een agent in die shell is een kleinkind en valt eronder.</li>
+    <li>Een chat: de backend houdt het <code>Subprocess</code> vast maar leest nooit <code>.pid</code>. Dat moet een getter worden.</li>
+    <li>Een browser-node: de daemon kent geen PID's van Electron. <code>webContents.getOSProcessId()</code> over de bridge kan dat later leveren. Tot die tijd valt alles onder "Ruimte-app".</li>
+    <li>De rest valt onder "Machine-taken": daemon, probes, git.</li>
+  </ul>
+  <p>Welk project bij een node hoort, weet alleen de client (<code>sessionNodesOf</code>). De client zet dus de naam van de node en het project op de rij. De daemon levert de session-id.</p>
+  <h3>Optie: alles</h3>
+  <p>Een schakelaar "Alle processen" stuurt per sample alleen de top 50 op de gekozen sortering, niet 900 rijen. Processen die niet leesbaar zijn, staan er gedimd bij met de naam en zonder cijfers. De AI-herkenning van ai-usage (naam en pad, geërfd via voorouders) is hier nuttig. Zo valt een <code>claude</code> uit iTerm op tussen de rest.</p>
+</section>
+
+<section id="panel">
+  <h2>Het panel</h2>
+  <p>Een derde panel naast Files en Git, genaamd "Processen". Bovenaan staan drie grafieken en daaronder de lijst.</p>
+  <figure class="mock">
+    <div class="table" role="region" aria-label="Schets van het panel" tabindex="0">
+      <svg class="diagram plot" viewBox="0 0 360 520" role="img" aria-labelledby="mock-title mock-desc">
+        <title id="mock-title">Schets van het processenpanel</title>
+        <desc id="mock-desc">Een smal panel met een kop met de machinenaam, drie grafieken voor CPU, geheugen en schijf van de laatste 10 minuten, en een lijst van nodes met hun CPU en geheugen. Eén chatrij heeft een gele waarschuwing: stil sinds 14 minuten.</desc>
+        <rect x="0" y="0" width="360" height="520" rx="12" style="fill: var(--paper); stroke: var(--line)"/>
+        <text x="16" y="28" font-weight="600">Processen</text>
+        <text x="344" y="28" text-anchor="end" class="label-small">MacBook Pro · Ruimte | Alles</text>
+        <path class="grid" d="M0 42 H360"/>
+        <text x="16" y="66" class="label-small">CPU</text><text x="344" y="66" text-anchor="end">24%</text>
+        <path class="spark-area" d="M16 110 L16 96 L60 92 L100 98 L140 80 L180 84 L220 72 L260 88 L300 76 L344 82 L344 110 Z"/>
+        <path class="spark" d="M16 96 L60 92 L100 98 L140 80 L180 84 L220 72 L260 88 L300 76 L344 82"/>
+        <text x="16" y="136" class="label-small">Geheugen</text><text x="344" y="136" text-anchor="end">41 / 64 GB</text>
+        <path class="spark-area" d="M16 180 L16 162 L100 161 L180 158 L260 156 L344 150 L344 180 Z"/>
+        <path class="spark" d="M16 162 L100 161 L180 158 L260 156 L344 150"/>
+        <text x="16" y="206" class="label-small">Schijf</text><text x="344" y="206" text-anchor="end">↓ 2 MB/s ↑ 150 kB/s</text>
+        <path class="spark" d="M16 246 L80 246 L100 222 L120 246 L220 244 L240 232 L260 246 L344 246"/>
+        <path class="grid" d="M0 262 H360"/>
+        <text x="16" y="286" class="label-small">NODE</text><text x="260" y="286" text-anchor="end" class="label-small">CPU</text><text x="344" y="286" text-anchor="end" class="label-small">GEHEUGEN</text>
+        <text x="16" y="316">Claude · refactor</text><text x="260" y="316" text-anchor="end">87%</text><text x="344" y="316" text-anchor="end">1,2 GB</text>
+        <text x="28" y="334" class="label-small">+ node, vitest (3 processen)</text>
+        <rect class="warn" x="12" y="348" width="336" height="58" rx="8"/>
+        <text x="24" y="370">Chat · onderzoek</text><text x="260" y="370" text-anchor="end">0,4%</text><text x="336" y="370" text-anchor="end">220 MB</text>
+        <text x="24" y="392" class="warn-text">Werkt volgens de hook, stil sinds 14 min</text>
+        <text x="16" y="432">Terminal · dev server</text><text x="260" y="432" text-anchor="end">3%</text><text x="344" y="432" text-anchor="end">410 MB</text>
+        <text x="16" y="462">Ruimte-app</text><text x="260" y="462" text-anchor="end">21%</text><text x="344" y="462" text-anchor="end">1,1 GB</text>
+        <text x="16" y="492">Machine-taken</text><text x="260" y="492" text-anchor="end">0%</text><text x="344" y="492" text-anchor="end">49 MB</text>
+      </svg>
+    </div>
+    <figcaption>Schets, geen ontwerp. De cijfers zijn illustratief.</figcaption>
+  </figure>
+  <ul>
+    <li>De kop noemt de machine, volgens de regel dat een daemon voor een mens een machine is. Daarnaast een segment <em>Ruimte</em> / <em>Alles</em> en een sortering op CPU, geheugen of schijf.</li>
+    <li>Elke grafiek toont het machinetotaal als lijn en het aandeel van Ruimte als vlak eronder. Zo zie je in één oogopslag of Ruimte de machine traag maakt of iets anders. Handgeschreven SVG (<code>&lt;polyline&gt;</code> over de ringbuffer) met chart-tokens uit <code>styles.css</code>, zoals <code>UsageChart.tsx</code> al doet. <code>DECISIONS.md</code> wijst chartbibliotheken af.</li>
+    <li>Een rij is een node, uitklapbaar tot de processen eronder. Klikken op de naam focust de node op het canvas. Hover op een rij kleurt een eigen sparkline van dat proces in de grafieken. Het contextmenu biedt Onderbreken (SIGINT), Beëindigen (SIGTERM) en Forceren (SIGKILL, met bevestiging). De daemon controleert vóór het signaal of PID en starttijd nog kloppen.</li>
+    <li>Een waarschuwing staat op de rij zelf, met de reden in gewone taal en een knop die bij het signaal past. Dezelfde stip verschijnt op de node en in de sidebar, ook als het panel dicht is. Met een dicht panel kan die stip tot 5 minuten na het probleem verschijnen.</li>
+    <li>Er zijn aparte lege staten voor een platform zonder sampler, een machine die niet antwoordt en "nog aan het meten". "Kon niet meten" is nooit hetzelfde als "niets".</li>
+  </ul>
+</section>
+
+<section id="vastgelopen">
+  <h2>Vastgelopen AI-processen opsporen</h2>
+  <p>Ruimte heeft wat de andere twee missen: hookstatus met <code>updatedAt</code> (<code>running</code>, <code>needs-you</code>, <code>idle</code>, <code>error</code>, <code>exited</code>) naast metingen van dezelfde procesboom. Juist de tegenspraak tussen die twee is het sterke signaal. Veel CPU is normaal als de hook zegt dat de agent werkt, en verdacht als hij zegt dat de agent klaar is.</p>
+  <div class="table" role="region" aria-label="Signalen voor vastlopen" tabindex="0">
+    <table class="wide">
+      <caption>Voorgestelde signalen, drempels als startwaarde</caption>
+      <thead><tr><th scope="col">Signaal</th><th scope="col">Regel</th><th scope="col">Wat het meestal is</th><th scope="col">Knop</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Stil tijdens werk</th><td>status <code>running</code>, geen hook-event sinds 10 min, CPU van de boom onder de eigen idle-basislijn en geen schijf-I/O in die periode</td><td>een hangende netwerkaanroep of een tool die op invoer wacht</td><td>Onderbreken</td></tr>
+        <tr><th scope="row">Draait door na afloop</th><td>status <code>idle</code> of <code>needs-you</code>, en een proces in de boom zit boven 80% van een core, 60 s lang met een open panel of gemiddeld over een interval van 5 minuten met een dicht panel</td><td>een watcher, testrunner of MCP-server die blijft draaien</td><td>Toon proces, Beëindigen</td></tr>
+        <tr><th scope="row">Geheugen loopt op</th><td>footprint ≥ 2 GB, of +512 MB binnen een minuut (ai-usage)</td><td>een lek of een enorme context in een tool</td><td>Toon proces</td></tr>
+        <tr><th scope="row">Agent verdwenen</th><td>status <code>running</code> of <code>needs-you</code>, maar geen agent-binary meer in de shellboom; alleen voor CLI's die <code>SessionEnd</code> melden</td><td>OOM-kill of crash zonder hook</td><td>Hervatten</td></tr>
+        <tr><th scope="row">Wees</th><td>een proces dat in de boom van een sessie zat en nog leeft na <code>session.kill</code> of exit, nu onder launchd</td><td><code>nohup</code>, een losgeslagen dev server, een agent die zijn shell overleefde</td><td>Beëindigen</td></tr>
+        <tr><th scope="row">Probe hangt</th><td>een limiet-probe, <code>git</code> of <code>--version</code> van de daemon leeft langer dan twee keer zijn eigen timeout</td><td>een bug in Ruimte zelf</td><td>Beëindigen, en een regel in het log</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Na een herstart van de daemon is de boom weg. Een wees van vóór de herstart valt nog te vinden via <code>RUIMTE_SESSION_ID</code> in de omgeving van het proces. Die variabele zet de daemon al in elke sessie. Op macOS leest <code>sysctl(KERN_PROCARGS2)</code> de omgeving van processen van dezelfde gebruiker. <span class="badge info">Afgeleid</span></p>
+  <p>Drie regels gelden hier ook:</p>
+  <ul>
+    <li>Een ontbrekend signaal is nooit bewijs. Een onleesbaar proces of een mislukte meting geeft geen waarschuwing.</li>
+    <li>Kijk nooit naar de voorgrond tijdens <code>running</code>, want dan heeft een tool die.</li>
+    <li>Niets killt automatisch. Elk signaal eindigt bij een mens.</li>
+  </ul>
+  <p>Een waarschuwing verdwijnt vanzelf zodra het signaal wegvalt. Negeren houdt hem stil tot er een nieuwe hook-event komt.</p>
+</section>
+
+<section id="inpassing">
+  <h2>Inpassing in Ruimte</h2>
+  <h3>Het panel</h3>
+  <p><code>ProjectPanelKindSchema</code> (<code>packages/contracts/src/project.ts:316</code>) krijgt <code>'processes'</code>, met dezelfde lijst in <code>state/ui.ts</code> (<code>PANEL_KINDS</code>), <code>shell/panels.ts</code> en de paletcommando's in <code>shell/commands.ts</code>. <code>shell/Panel.tsx:23</code> kiest nu met <code>kind === 'files' ? … : &lt;GitPanel/&gt;</code>. Een derde kind valt daar stil door naar Git, dus dat moet een switch worden. Het devices-onderzoek komt tot hetzelfde punt. Voeg beide kinds tegelijk toe als die feature ook komt, want een oudere daemon weigert een local-bestand met een onbekend kind.</p>
+  <h3>Daemon en wire</h3>
+  <p>Contracts in een nieuw <code>processes.ts</code>, geregistreerd in <code>REQUEST_SCHEMAS</code> en <code>EVENT_SCHEMAS</code>:</p>
+  <ul>
+    <li><code>processes.subscribe { scope: 'ruimte' | 'all', sort }</code> antwoordt met de historie van de ringbuffer; <code>processes.unsubscribe</code> is de tegenhanger.</li>
+    <li>Het event <code>processes.sample</code> draagt machinetotalen, de rijen in de scope en de waarschuwingen.</li>
+    <li><code>processes.signal { pid, startTime, signal }</code> weigert als de identiteit niet meer klopt.</li>
+    <li>Het event <code>processes.alerts</code> gaat naar elke socket, ook zonder abonnement, zodat de sidebar een stip kan zetten.</li>
+  </ul>
+  <p>Server-side komt er <code>apps/server/src/processes/</code> met <code>sampler.ts</code> (interface), <code>darwin.ts</code> (FFI), <code>linux.ts</code> (<code>/proc</code>), <code>monitor.ts</code> (volgers, timer, ringbuffer), <code>tree.ts</code> (boom, groepering) en <code>stuck.ts</code> (de signalen, puur en getest met samples als invoer). De bedrading in <code>daemon.ts</code> volgt <code>usage</code>: <code>subscribe(clientId, sink)</code> en <code>detachAll</code> bij sluiten.</p>
+  <h3 id="tempo">Tempo</h3>
+  <p>Gekozen: actief samplen als het panel open staat, elke 5 minuten als het dicht is. "Open" betekent dat minstens één client een abonnement heeft op deze machine.</p>
+  <ul>
+    <li>Met een volger samplet de monitor elke 2 s, in de scope waar die volger om vraagt. Scope "alles" samplet alleen zolang iemand erom vraagt.</li>
+    <li>Zonder volgers samplet hij elke 5 minuten de boom van Ruimte en de machinetotalen. Dat kost ongeveer 2 ms per 5 minuten.</li>
+    <li>Twee buffers per reeks: een fijne van 300 punten op 2 s (10 minuten, alleen gevuld terwijl het panel open is) en een grove van 288 punten op 5 minuten (24 uur, altijd gevuld). <code>processes.subscribe</code> antwoordt met allebei. Het panel toont eerst de grove lijn en schakelt over zodra de fijne reeks er is.</li>
+    <li>CPU blijft kloppen bij een lang interval, want <code>rusage</code> telt cumulatief. Een sample na 5 minuten geeft het gemiddelde over die 5 minuten.</li>
+    <li>Het lange interval maakt de waarschuwingen trager. Daarom neemt de monitor ook buiten het ritme één sample van de betrokken boom bij een hook-event (<code>Stop</code>, <code>SessionEnd</code>, <code>StopFailure</code>), bij de exit van een shell en bij <code>session.kill</code>. Wezen en verdwenen agents zie je dan direct. Stilte blijft vanzelf trager, maar die drempel ligt toch al op 10 minuten.</li>
+  </ul>
+  <h3>Meerdere machines</h3>
+  <p>Het panel leest <code>useTransport()</code> en <code>useEndpointId()</code> van zijn workspace en slaat rijen op onder <code>byEndpoint</code>, zoals <code>state/usage.ts</code>. Er komt geen machinekiezer zoals op de usage-pagina: processen horen bij de machine van het project. <code>ServerHelloResult.platform</code> bepaalt de lege staat op Windows.</p>
+  <svg class="diagram" viewBox="0 0 960 300" role="img" aria-labelledby="arch-title arch-desc">
+    <title id="arch-title">Voorgestelde architectuur</title>
+    <desc id="arch-desc">De client abonneert zich bij de daemon en krijgt samples terug. In de daemon leest de ProcessMonitor de sampler (libproc via FFI op macOS, proc op Linux) en de agentstatus uit de SessionManager en ChatManager. Stuck-detectie combineert die twee en stuurt waarschuwingen naar elke client.</desc>
+    <defs><marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="arrow" d="M0 0L10 5L0 10z"/></marker></defs>
+    <rect class="node" x="20" y="90" width="210" height="120" rx="14"/>
+    <text x="125" y="132" text-anchor="middle" font-weight="600">Client</text>
+    <text x="125" y="158" text-anchor="middle" class="label-small">Processen-panel</text>
+    <text x="125" y="180" text-anchor="middle" class="label-small">stip op node en sidebar</text>
+    <rect class="node" x="370" y="90" width="220" height="120" rx="14"/>
+    <text x="480" y="132" text-anchor="middle" font-weight="600">ProcessMonitor</text>
+    <text x="480" y="158" text-anchor="middle" class="label-small">ringbuffer, boom</text>
+    <text x="480" y="180" text-anchor="middle" class="label-small">stuck.ts</text>
+    <rect class="node" x="730" y="20" width="210" height="100" rx="14"/>
+    <text x="835" y="62" text-anchor="middle" font-weight="600">Sampler</text>
+    <text x="835" y="88" text-anchor="middle" class="label-small">libproc via bun:ffi, /proc</text>
+    <rect class="node" x="730" y="180" width="210" height="100" rx="14"/>
+    <text x="835" y="222" text-anchor="middle" font-weight="600">Sessies en chats</text>
+    <text x="835" y="248" text-anchor="middle" class="label-small">PID's, hookstatus</text>
+    <path class="edge" d="M230 130H370" marker-end="url(#arrowhead)"/>
+    <text x="300" y="118" text-anchor="middle" class="label-small">subscribe</text>
+    <path class="edge" d="M370 175H230" marker-end="url(#arrowhead)"/>
+    <text x="300" y="198" text-anchor="middle" class="label-small">sample, alerts</text>
+    <path class="edge" d="M730 70L590 120" marker-end="url(#arrowhead)"/>
+    <path class="edge" d="M730 230L590 180" marker-end="url(#arrowhead)"/>
+  </svg>
+</section>
+
+<section id="fasen">
+  <h2>Fasen</h2>
+  <ol class="steps">
+    <li class="step"><div>
+      <h3>Sampler en metingen</h3>
+      <p><code>sampler.ts</code>, <code>darwin.ts</code> en <code>linux.ts</code> met tests op pure delen (delta's, timebase, slaapdetectie, PID-hergebruik), plus een script dat een uur samples van echte agentsessies logt om de drempels te ijken. Test de FFI-sampler in de gecompileerde en gesigneerde daemon.</p>
+      <p><strong>Klaar als:</strong> CPU en footprint van de sampler op macOS binnen een paar procentpunten liggen van Activiteitenweergave, de Linux-sampler op een Linux-machine of container draait, een sample van de Ruimte-boom onder 5 ms blijft, en er gemeten basislijnen zijn voor idle en werkende Claude- en Codex-sessies.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Monitor, wire en panel</h3>
+      <p>Contracts, <code>monitor.ts</code> met ringbuffer en tempo, de PID-getter op chat-backends, het panel-kind met de switch in <code>Panel.tsx</code>, drie grafieken, de lijst per node, de schakelaar Alles en signalen met identiteitscontrole.</p>
+      <p><strong>Klaar als:</strong> een geopend panel meteen de grove historie van 24 uur toont en binnen 2 s live bijwerkt, een workspace op een tweede machine de processen van die machine laat zien, het tempo pas naar 5 minuten gaat als de laatste client op die machine het panel sluit of wegvalt, slaap de historie opnieuw start maar een gat van 5 minuten niet, een SIGTERM op een hergebruikte PID geweigerd wordt, en <code>bun run check</code> en de tests groen zijn.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Vastgelopen agents</h3>
+      <p><code>stuck.ts</code> met de zes signalen, <code>processes.alerts</code>, de stip op node en sidebar, knoppen per signaal en wezen na een herstart via <code>RUIMTE_SESSION_ID</code>.</p>
+      <p><strong>Klaar als:</strong> elk signaal een test heeft met een reeks samples en hookstatussen, ook een test die bewijst dat een onleesbaar proces of een mislukte meting geen waarschuwing geeft, een <code>sleep 9999 &amp;</code> na het sluiten van een terminal als wees verschijnt, en een <code>kill -9</code> op een Claude-proces "Agent verdwenen" toont binnen 2 s met een open panel en uiterlijk na 5 minuten met een dicht panel.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Electron en schijf</h3>
+      <p>PID's van renderer en gastpagina's via de bridge, gekoppeld aan browser-nodes. Een beter systeemtotaal voor schijf (IOKit of <code>/proc/diskstats</code>). Later poorten per sessie via dezelfde boom (<code>DECISIONS.md</code> noemt al een <code>lsof</code>-poll).</p>
+      <p><strong>Klaar als:</strong> een zware webpagina in een browser-node als die node in de lijst staat en niet als "Ruimte-app".</p>
+    </div></li>
+  </ol>
+</section>
+
+<section id="beslissingen">
+  <h2>Beslissingen voor jou</h2>
+  <ol>
+    <li><span class="badge confirmed">Besloten</span> <strong>Tempo.</strong> Elke 2 s als het panel open staat, elke 5 minuten als het dicht is, plus een extra sample bij hook-events en het einde van een sessie. <a href="#tempo">Zie Tempo.</a></li>
+    <li><strong>Hoe ver mag Ruimte gaan bij vastlopen?</strong> Het advies is waarschuwen met een knop. Een opt-in "onderbreek een agent die X minuten stil is" kan later.</li>
+    <li><strong>Schijf op macOS.</strong> Per proces is gratis. Voor een systeemgrafiek: de som van leesbare processen (onvolledig), IOKit via FFI (meer werk) of alleen vrije ruimte tonen.</li>
+    <li><strong>Windows.</strong> Een lege staat, of <code>tasklist</code>/PowerShell als trage terugval?</li>
+    <li><strong>Waar waarschuwingen zichtbaar zijn.</strong> Alleen in het panel, of ook als stip op de node, in de sidebar en als toast?</li>
+    <li><strong>Hoort een agent van buiten Ruimte erbij?</strong> Een <code>claude</code> in iTerm is in scope "Alles" herkenbaar. Moeten de signalen daar ook voor gelden? Zonder hooks kan dat alleen met de meetsignalen van ai-usage.</li>
+    <li><strong>Historie na een herstart.</strong> De ringbuffer staat in het geheugen en is na een herstart leeg. Wegschrijven naar <code>$RUIMTE_HOME</code> lijkt het niet waard.</li>
+  </ol>
+</section>
+
+<section id="risicos">
+  <h2>Risico's</h2>
+  <ul>
+    <li><code>bun:ffi</code> is in Bun gemarkeerd als experimenteel. De functies van libproc zijn stabiel, maar de struct-offsets van <code>rusage_info_v4</code> staan hard in de code. Test ze tegen <code>ps</code> in de testsuite.</li>
+    <li>Een ongesigneerde gecompileerde daemon wordt op macOS 27 gekild. Dat staat los van dit werk, maar raakt iedereen die <code>scripts/compile.ts</code> lokaal draait.</li>
+    <li>Drempels die niet kloppen, geven valse alarmen, en die leren mensen om waarschuwingen te negeren. Daarom ijkt fase 1 eerst.</li>
+    <li>Een kort proces tussen twee samples (een <code>git</code> van 300 ms) is onzichtbaar. Voor een overzicht maakt dat niet uit, voor "wat deed die piek" wel.</li>
+    <li>Een signaal naar een verkeerd proces is het ergste dat dit panel kan doen. Controleer altijd PID plus starttijd, en weiger alles buiten de eigen gebruiker.</li>
+    <li>Een extra panel-kind laat een oudere daemon het local-bestand weigeren. Dat valt mee, omdat <code>panels</code> optioneel is.</li>
+  </ul>
+</section>
+
+<section id="startprompt">
+  <h2>Startprompt voor een schone sessie</h2>
+  <p>Plak dit in een nieuwe sessie. De prompt stopt na fase 1, omdat de drempels voor fase 3 van die metingen afhangen.</p>
+  <div class="prompt-box">
+    <button type="button" id="copy-prompt">Kopieer</button>
+<pre><code id="prompt-text">We gaan een Processen-panel bouwen in Ruimte, naast Files en Git: CPU, geheugen en schijf per proces (standaard wat Ruimte start, optioneel alles), grafieken van de machine, en waarschuwingen voor vastgelopen AI-agents.
+
+Lees eerst:
+- docs/reports/2026-09-13-processen.html (het onderzoek: wat ai-usage doet, metingen, het panel, de signalen, het plan en de open beslissingen)
+- CLAUDE.md en docs/DECISIONS.md
+
+Uitgangspunten uit het onderzoek:
+- Sampler in de daemon, geen ps, geen top, geen native addon: bun:ffi op /usr/lib/libproc.dylib (proc_listallpids, proc_pidinfo PROC_PIDTBSDINFO, proc_pid_rusage RUSAGE_INFO_V4) en host_statistics op macOS, /proc op Linux, een lege staat op Windows.
+- CPU-tijden uit rusage zijn Mach-ticks: omrekenen met mach_timebase_info. Geheugen is phys_footprint. Een proces is PID plus starttijd. Slaap (mach_continuous_time loopt verder dan mach_absolute_time) reset de historie, de lengte van een gat niet. Onleesbaar is niet nul.
+- Tempo (besloten): elke 2 s zolang minstens één client het panel open heeft op die machine, anders elke 5 minuten alleen de Ruimte-boom en de machinetotalen, plus een extra sample bij hook-events (Stop, SessionEnd, StopFailure), shell-exit en session.kill. Een fijne buffer (300 punten op 2 s) en een grove (288 punten op 5 minuten).
+- Scope "Ruimte" is de boom vanaf process.pid van de daemon (plus Electron als dat de ouder is), gegroepeerd per node via Session.pid en een nieuwe pid-getter op de chat-backends.
+- Wire volgt usage.subscribe: processes.subscribe/unsubscribe, event processes.sample, processes.signal met pid+startTime-controle.
+- Vastlopen beoordeelt de daemon door hookstatus en metingen te combineren. Nooit automatisch killen.
+- Geen code overnemen uit ai-usage; ideeën wel.
+
+Stap 1 is fase 1 uit het rapport:
+1. apps/server/src/processes/sampler.ts (interface), darwin.ts en linux.ts, met bun tests voor de pure delen (delta's, timebase, slaapdetectie, PID-hergebruik) en een test die de offsets vergelijkt met ps.
+2. Een meetscript dat een uur lang samples van de Ruimte-boom plus hookstatussen logt naar $RUIMTE_HOME, zodat we de drempels van de signalen kunnen ijken op idle en werkende Claude- en Codex-sessies.
+3. Controleer dat de FFI-sampler werkt in een gecompileerde en ad hoc gesigneerde daemon (apps/server/scripts/compile.ts).
+
+Meld de meetresultaten en de basislijnen, en stop dan. Ik beslis daarna over de open punten in het rapport (sectie "Beslissingen voor jou"). Maak voor fase 2 eerst een kort plan.</code></pre>
+  </div>
+</section>
+
+<section id="bronnen">
+  <h2>Bronnen</h2>
+  <ul>
+    <li>ai-usage: <code>Sources/Processes/ProcessSampler.swift</code>, <code>ProcessSnapshot.swift</code> (signalen op regels 96 tot 108, families op 124 tot 151), <code>ProcessMonitor.swift</code>, <code>ProcessesScreen.swift</code>, <code>Tests/ProcessChecks.swift</code></li>
+    <li>Ruimte (<code>3132a66</code>): <code>packages/contracts/src/project.ts:316</code>, <code>apps/client/src/shell/Panel.tsx:23</code>, <code>apps/server/src/usage/usage-service.ts</code>, <code>apps/server/src/pty/bun-pty.ts</code>, <code>apps/server/src/chat/claude-backend.ts</code>, <code>apps/server/src/agents/hooks.ts</code>, <code>contracts/src/agent.ts</code>, <code>apps/client/src/shell/usage/UsageChart.tsx</code></li>
+    <li>Lokaal: wegwerpscripts met <code>bun:ffi</code> in <code>/tmp</code>, <code>ps</code>, <code>top</code>, <code>iostat</code>, <code>sysctl</code>; macOS 27.0 arm64, Bun 1.4.0</li>
+  </ul>
+</section>
+
+</main>
+<footer>
+  <p>Subagents lazen de broncode van ai-usage en doorzochten Ruimte op <code>3132a66</code>. De metingen zijn gedaan op deze Mac met wegwerpscripts. Niet geverifieerd: de Linux-sampler, <code>host_statistics64</code> voor geheugen, het lezen van de omgeving via <code>KERN_PROCARGS2</code>, en of de drempels passen bij echte sessies. Er is nog geen regel code geschreven.</p>
+</footer>
+<script>
+{
+    const button = document.getElementById('copy-prompt');
+    const text = document.getElementById('prompt-text');
+    button.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(text.textContent);
+            button.textContent = 'Gekopieerd';
+        } catch {
+            button.textContent = 'Kopiëren mislukt';
+        }
+        setTimeout(() => {
+            button.textContent = 'Kopieer';
+        }, 2000);
+    });
+}
+</script>
+</body>
+</html>

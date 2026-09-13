@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Devices</title>
+<style>
+:root {
+  color-scheme: light;
+  --accent: #3f38b5;
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --image-outline: rgb(0 0 0 / 10%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { min-width: 480px; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--muted); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide, .plot { min-width: 0; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+
+.prompt-box { position: relative; }
+.prompt-box pre { white-space: pre-wrap; font-size: 13px; line-height: 1.55; padding-top: 56px; }
+.prompt-box button { position: absolute; top: 8px; right: 8px; }
+.diagram .label-small { font-size: 13px; fill: var(--muted); }
+@media print {
+  .prompt-box button { display: none; }
+  .prompt-box pre { padding-top: 18px; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#advies">Naar de inhoud</a>
+<header>
+  <p class="eyebrow">RUIMTE / ONDERZOEK / 13 SEPTEMBER 2026</p>
+  <h1>Devices: de iOS Simulator in Ruimte</h1>
+  <p class="intro">De native addon van <code>serve-sim</code> is de beste kern, in een eigen helperproces naast de daemon, zodat Ruimte zelf geen capture-code schrijft. Beeld gaat als MJPEG over een geauthenticeerde HTTP-route, input als request over de bestaande socket.</p>
+  <p class="status">Onderzoek afgerond, klaar voor de spike</p>
+  <p class="caption">Gebaseerd op main bij 91ffc2e, met het split-views-werk nog ongecommit in de werkkopie. <span class="badge confirmed">Geverifieerd</span> betekent: gecontroleerd in broncode, CLI of op deze Mac. <span class="badge info">Afgeleid</span> betekent: niet gecontroleerd.</p>
+  <nav aria-label="Inhoud">
+    <a href="#advies">Advies</a>
+    <a href="#bestaand">Een hub op bestaande pakketten</a>
+    <a href="#opties">Opties</a>
+    <a href="#inpassing">Inpassing</a>
+    <a href="#architectuur">Architectuur</a>
+    <a href="#fasen">Fasen</a>
+    <a href="#beslissingen">Beslissingen</a>
+    <a href="#risicos">Risico's</a>
+    <a href="#startprompt">Startprompt</a>
+    <a href="#bronnen">Bronnen</a>
+  </nav>
+</header>
+<main>
+
+<section id="advies" class="recommendation">
+  <h2>Advies</h2>
+  <p>Bouw een <code>DeviceManager</code> in de daemon die simulators vindt en start met <code>xcrun simctl</code>. Capture en input draaien in een apart, bewaakt helperproces dat de gepinde <code>serve-sim-native.node</code> laadt (Apache-2.0). Crasht die addon, dan valt alleen de helper om en niet de daemon.</p>
+  <p>Het beeld komt als MJPEG op <code>GET /devices/&lt;udid&gt;/stream.mjpeg?token=</code>, achter dezelfde <code>decideAccess</code> als <code>/fs/file</code>. Dat werkt in een <code>&lt;img&gt;</code>, in Electron en in een gewone browser over HTTP op het LAN. H.264 via WebCodecs is een latere upgrade, want WebCodecs vraagt een secure context. Input (tik, sleep, knoppen, draaien) gaat als <code>device.input</code> over de socket die er al ligt.</p>
+  <p>Een simulator wordt één view-kind en één node-kind <code>device</code>, met een veld <code>platform: 'ios' | 'android'</code>. Android vraagt dan geen tweede kind, en dat telt: een oudere daemon weigert een project met een onbekend kind helemaal.</p>
+  <p>Android komt direct na iOS, niet pas aan het eind. De contracts en de daemon krijgen vanaf fase 1 een backend per platform (<code>simctl</code> voor iOS, <code>adb</code> en <code>emulator</code> voor Android), en het panel toont beide platforms met hun eigen status. Omdat Android alleen H.264 levert, neemt de spike Android al mee: die bepaalt of de client één of twee streampaden krijgt.</p>
+  <div class="stats">
+    <div><strong>0</strong><span>regels eigen capture-code nodig</span></div>
+    <div><strong>60</strong><span>fps volgens serve-sim, niet gemeten</span></div>
+    <div><strong>6</strong><span>fasen, te beginnen met een spike</span></div>
+  </div>
+  <p><span class="badge confirmed">Geverifieerd</span> De addon laadt onder Bun 1.4.0 en Node, met exports <code>SimHID</code>, <code>SimCapture</code> en <code>axDescribe</code>. Een capture is niet gedraaid, want er stond geen simulator aan.</p>
+  <p><span class="badge confirmed">Besloten 13 september</span> De eerste versie heeft geen toetsenbord. Onder Xcode 27 negeert iOS 27 de toetsenbordberichten van de private HID-API. serve-sim zoekt een omweg via <code>CGEvent</code>s naar Apple's DeviceHub.app, en die vraagt een zichtbaar venster en Accessibility-rechten. Een omweg is later onderzoek.</p>
+</section>
+
+<section id="bestaand">
+  <h2>Een hub op bestaande pakketten</h2>
+
+  <h3>Wat de gebruiker ziet</h3>
+  <ul>
+    <li>Een wizard in drie stappen. Er wordt pas iets gedownload na toestemming.</li>
+    <li>Een Device-panel rechts met draaiende devices en gestopte Android-AVD's, starten en uitzetten, en een tab per device. Alleen de zichtbare tab streamt.</li>
+    <li>Klikken en slepen is aanraken. Toetsenbordinput werkt in de praktijk niet (getest op 13 september), ook al noemen de PR en de docs het. Een toolbar met Home, Back en Recents (Android) of draaien (iOS).</li>
+    <li>Een Tools-lade met licht en donker, tekstgrootte, toegankelijkheid, nep-locatie, app-permissies en testpushberichten.</li>
+    <li>Alleen simulators en emulators, geen fysieke toestellen. Bouwen, installeren en Metro vallen erbuiten.</li>
+  </ul>
+
+  <h3>Wat eronder zit</h3>
+  <p>De hub-aanpak pint <code>expo-device-hub@0.9.0</code> en <code>agent-device@0.20.10</code>. Beide worden met npm geïnstalleerd onder een eigen map en met de Node van de server gestart, nooit met <code>npx</code>. De hub draait als bewaakt kindproces op loopback.</p>
+  <div class="split">
+    <div class="panel">
+      <h3>Beeld</h3>
+      <p><code>serve-sim</code> laadt CoreSimulator en SimulatorKit met <code>dlopen</code> en krijgt callbacks op de framebuffer-poorten. Het leest de IOSurface zonder kopie. Daarna volgt JPEG voor MJPEG, of H.264 via VideoToolbox (60 fps, 6 Mbit/s, elke 5 s een keyframe). Zonder beweging houdt het 5 fps aan zodat een MJPEG-client blijft tekenen.</p>
+      <p>De viewer decodeert H.264 met WebCodecs en valt terug op MJPEG in een <code>&lt;img&gt;</code> als de codec niet wordt ondersteund of de pagina geen secure context is.</p>
+    </div>
+    <div class="panel">
+      <h3>Input</h3>
+      <p>Private <code>IndigoHIDMessageFor…</code>-functies via <code>SimDeviceLegacyHIDClient</code>, en draaien via GSEvent-mach-berichten, net als idb. Aan de webkant een binaire WebSocket met een tag per soort: aanraken, knop, toets als HID-usage-code, oriëntatie.</p>
+      <p>Android loopt via <code>serve-emu</code>: een scrcpy-server op het device via <code>adb forward</code>, H.264 over een WebSocket, geen MJPEG-pad.</p>
+    </div>
+  </div>
+
+  <h3>Beveiliging</h3>
+  <p>serve-sim heeft een route die shell-commando's uitvoert, met een token dat via zijn onbeveiligde <code>/api</code> op te vragen is. serve-emu heeft helemaal geen auth. Wie de hub gebruikt, zet er daarom een allowlist-proxy voor, met een cookie of een kortlevend ticket in de query en aparte scopes voor kijken en bedienen. Instellingen gaan buiten de hub om, via getypeerde <code>simctl</code>- en <code>adb</code>-commando's.</p>
+
+  <h3>Agents</h3>
+  <p>Vier MCP-tools: <code>device_list</code>, <code>device_open</code>, <code>device_screenshot</code> en <code>device_close</code>. Echt bedienen doet de agent met de <code>agent-device</code>-CLI op zijn PATH, die werkt op de toegankelijkheidsboom (<code>snapshot -i</code>, <code>press @e2</code>). Op iOS bouwt die bij het eerste gebruik een XCUITest-runner, wat minuten duurt. Toegang voor agents is een aparte toestemming.</p>
+</section>
+
+<section id="opties">
+  <h2>De opties voor Ruimte</h2>
+  <div class="table">
+    <table class="wide">
+      <caption>Mechanismen voor beeld en input</caption>
+      <thead><tr><th scope="col">Mechanisme</th><th scope="col">Beeld</th><th scope="col">Input</th><th scope="col">Licentie</th><th scope="col">fps</th></tr></thead>
+      <tbody>
+        <tr><td><code>simctl io screenshot</code> in een lus</td><td>PNG of JPEG naar stdout</td><td>geen</td><td>Apple</td><td>ongeveer 2 tot 5, een proces per frame <span class="badge info">Afgeleid</span></td></tr>
+        <tr><td><strong>serve-sim-addon</strong></td><td>IOSurface, JPEG of H.264</td><td>HID, draaien, AX-boom</td><td>Apache-2.0</td><td>60 geclaimd, latency nergens gemeten</td></tr>
+        <tr><td>serve-sim-CLI</td><td>idem, over HTTP</td><td>WebSocket</td><td>Apache-2.0</td><td>idem, maar vraagt Node en heeft een onbeveiligde API</td></tr>
+        <tr><td>AXe</td><td>MJPEG op basis van screenshots</td><td>tik, veeg, typ, knop, UI beschrijven</td><td>MIT</td><td>1 tot 30, standaard 10</td></tr>
+        <tr><td>idb (Meta)</td><td>h264, mjpeg, rgba</td><td>volledige HID, installeren, logs</td><td>MIT</td><td>dynamisch; zware installatie met brew en Python</td></tr>
+        <tr><td>agent-device</td><td>screenshots</td><td>semantisch via XCUITest</td><td>MIT</td><td>voor agents, geen live beeld</td></tr>
+        <tr><td>Eigen Swift-helper met ScreenCaptureKit</td><td>vensteropname</td><td>CGEvent in het venster</td><td>eigen code</td><td>vraagt een zichtbaar venster en schermopname-rechten</td></tr>
+        <tr><td>Android: scrcpy of serve-emul</td><td>H.264 over adb</td><td>scrcpy-control-socket</td><td>Apache-2.0</td><td>lage latency; WebCodecs of MSE nodig</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Twee dingen in de browser bepalen de keuze. WebCodecs werkt alleen in een secure context, dus een client op <code>http://&lt;lan-host&gt;:4210</code> krijgt alleen MJPEG (<code>localhost</code> telt wel als secure). Welke status de origin van de Electron-shell heeft, is niet gecontroleerd. En elke route over private frameworks breekt mee met Xcode-releases, wat serve-sim nu al zichtbaar maakt met aparte paden voor Xcode 27.</p>
+  <p>De pakketten gebruiken als dependency mag. Apache-2.0 vraagt dat de NOTICE en licentie meegaan. De regel in <code>CLAUDE.md</code> verbiedt code overnemen, geen npm-pakketten.</p>
+</section>
+
+<section id="inpassing">
+  <h2>Inpassing in Ruimte</h2>
+
+  <h3>Het panel</h3>
+  <p><code>ProjectPanelKindSchema</code> in <code>packages/contracts/src/project.ts</code> is <code>z.enum(['files', 'git'])</code> en wordt bewaard in <code>&lt;projectId&gt;.local.json</code>. Aan de client staan de lijsten in <code>state/ui.ts</code> (<code>PANEL_KINDS</code>, <code>PANEL_DEFAULTS</code>) en <code>shell/panels.ts</code>, getekend door <code>PanelControls.tsx</code>.</p>
+  <p class="note"><code>shell/Panel.tsx</code> kiest de inhoud met <code>kind === 'files' ? &lt;FilesPanel/&gt; : &lt;GitPanel/&gt;</code>. Een derde kind valt daar stil door naar Git. Dat moet een switch worden.</p>
+
+  <h3>De view</h3>
+  <p><code>ProjectViewSchema</code> is een discriminated union. Alleen <code>project/ViewGlyph.tsx</code> dwingt volledigheid af. De rest van de ketens moet met de hand mee: <code>ViewHost.tsx</code>, <code>ViewToolbar.tsx</code> (<code>KINDS_WITH_TOOLBAR</code>), <code>Sidebar.tsx</code>, <code>sidebar-rows.ts</code>, <code>ViewMenu.tsx</code>, <code>CommandPalette.tsx</code>, <code>nodes/node-host.ts</code>, <code>project-sessions.ts</code>, <code>terminal/lifecycle.ts</code> en <code>WebviewParking.tsx</code>.</p>
+
+  <h3>De node</h3>
+  <p><code>NodeKindSchema</code> voedt vier <code>Record&lt;NodeKind, …&gt;</code>-maps die de typecheck laat falen tot ze kloppen: <code>state/canvas.ts</code>, <code>canvas/NodeFrame.tsx</code>, <code>CommandPalette.tsx</code> en <code>Sidebar.tsx</code>. De file-node is het voorbeeld om te volgen: hij tekent alleen inhoud als hij in beeld is en boven <code>READABLE_ZOOM</code> (0,4) staat, en anders een plaatje. Een device-node doet hetzelfde. Hij streamt als hij zichtbaar en leesbaar is en toont anders het laatste frame of naam met icoon.</p>
+
+  <h3>Daemon en wire</h3>
+  <p>Een <code>device.ts</code> in de contracts naast <code>fs.ts</code> en <code>git.ts</code>, handlers via <code>registerXHandlers</code> in <code>apps/server/src/handlers</code>, bedraad in <code>daemon.ts</code>. De refcount-watchers (<code>FolderWatcher</code>, <code>GitStatusWatcher</code>) zijn het model voor "alleen vastleggen zolang iemand kijkt".</p>
+  <p>De socket draagt geen binaire data. Elk frame gaat door <code>JSON.stringify</code>, en <code>OutputGate</code> laat terminal-output vallen boven de high-water mark. JPEG als base64 over die socket kost 33% extra en concurreert met terminals. De HTTP-routes zijn het betere voorbeeld: <code>/fs/file</code> en het projecticoon zitten al achter <code>decideAccess</code> met <code>?token=</code>, en de CSP staat <code>img-src http: https: blob:</code> al toe.</p>
+
+  <h3>Machines zonder Mac</h3>
+  <p><code>platform</code> staat al op <code>EndpointInfoSchema</code> en komt via <code>useServers.byEndpoint</code> bij de client. Het panel op een Linux-daemon toont een lege staat die zegt waarom: iOS-simulators vragen een Mac met Xcode. Een device-node of -view op zo'n machine tekent een plaatje met dezelfde regel, zoals <code>BrowserFallback</code> doet, zonder het document te wijzigen. Voor Android is dat anders: <code>adb</code> en de emulator draaien ook op Linux, dus daar toont het panel alleen de iOS-sectie als niet beschikbaar. Een <code>DeviceClient</code> komt per machine in <code>transport/connections.ts</code>, de store onder <code>endpointKey</code>.</p>
+
+  <h3>Agents</h3>
+  <p><code>ContextSourceSchema</code> kent <code>text</code>, <code>terminal</code>, <code>chat</code>, <code>drawing</code> en <code>file</code>. Een bron <code>device</code> past daar direct bij. Bij het lezen neemt de daemon een verse screenshot, schrijft die naar <code>$RUIMTE_HOME/devices/&lt;udid&gt;/screen.png</code> en antwoordt met dat pad, de devicenaam, runtime, oriëntatie en eventueel de toegankelijkheidsboom. Bedienen wordt <code>ruimte device screenshot|tap|swipe|type|button|describe</code> naast <code>ruimte context</code>, met hetzelfde sessietoken. Een agent bedient dan alleen een device waar een edge vandaan komt. De edge is de toestemming, net als bij context nu.</p>
+</section>
+
+<section id="architectuur">
+  <h2>Architectuur</h2>
+  <svg class="diagram" viewBox="0 0 960 330" role="img" aria-labelledby="arch-title arch-desc">
+    <title id="arch-title">Voorgestelde architectuur</title>
+    <desc id="arch-desc">De client haalt MJPEG via HTTP bij de daemon en stuurt input over de WebSocket. De daemon praat met een helperproces dat de serve-sim-addon laadt, en met simctl voor lijst en levenscyclus. De helper praat met de iOS Simulator.</desc>
+    <defs><marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="arrow" d="M0 0L10 5L0 10z"/></marker></defs>
+    <rect class="node" x="20" y="100" width="220" height="130" rx="14"/>
+    <text x="130" y="140" text-anchor="middle" font-weight="600">Client</text>
+    <text x="130" y="168" text-anchor="middle" class="label-small">Devices-panel</text>
+    <text x="130" y="190" text-anchor="middle" class="label-small">view en node</text>
+    <rect class="node" x="370" y="100" width="220" height="130" rx="14"/>
+    <text x="480" y="140" text-anchor="middle" font-weight="600">Daemon</text>
+    <text x="480" y="168" text-anchor="middle" class="label-small">DeviceManager</text>
+    <text x="480" y="190" text-anchor="middle" class="label-small">decideAccess</text>
+    <rect class="node" x="720" y="30" width="220" height="100" rx="14"/>
+    <text x="830" y="72" text-anchor="middle" font-weight="600">Helper</text>
+    <text x="830" y="98" text-anchor="middle" class="label-small">serve-sim-native.node</text>
+    <rect class="node" x="720" y="200" width="220" height="100" rx="14"/>
+    <text x="830" y="242" text-anchor="middle" font-weight="600">xcrun simctl</text>
+    <text x="830" y="268" text-anchor="middle" class="label-small">lijst, boot, shutdown</text>
+    <path class="edge" d="M370 140H240" marker-end="url(#arrowhead)"/>
+    <text x="305" y="128" text-anchor="middle" class="label-small">MJPEG</text>
+    <path class="edge" d="M240 195H370" marker-end="url(#arrowhead)"/>
+    <text x="305" y="220" text-anchor="middle" class="label-small">device.input</text>
+    <path class="edge" d="M590 140L720 85" marker-start="url(#arrowhead)" marker-end="url(#arrowhead)"/>
+    <text x="655" y="96" text-anchor="middle" class="label-small">stdio</text>
+    <path class="edge" d="M590 190L720 245" marker-end="url(#arrowhead)"/>
+  </svg>
+  <p>Eén capture per device, uitgedeeld aan elke kijker en gestopt zodra de laatste weggaat. De helper is dezelfde gecompileerde binary in een aparte modus (<code>ruimte device-helper &lt;udid&gt;</code>), zodat er geen Node op de machine nodig is. Of <code>bun build --compile</code> de <code>.node</code> kan meenemen of ernaast kan leveren, is niet gecontroleerd.</p>
+  <p>Android loopt langs een tweede backend in dezelfde <code>DeviceManager</code>. Discovery met <code>adb devices -l</code> en <code>emulator -list-avds</code>, starten met <code>emulator -avd &lt;naam&gt;</code>. Beeld en input via een scrcpy-server (Apache-2.0) die de daemon met <code>adb push</code> op het device zet en via <code>adb forward</code> aanspreekt. Het control-kanaal van scrcpy neemt aanraking, keycodes (Home, Back, Recents) en tekst aan, dus Android krijgt wel een toetsenbord. Die server-jar en de client-kant moeten precies dezelfde scrcpy-versie hebben.</p>
+  <p class="note">Het open punt van Android is de stroom. scrcpy levert H.264 en geen JPEG. De spike vergelijkt twee routes: H.264 in fragmenten naar een <code>&lt;video&gt;</code> via MSE (werkt volgens expo-device-hub ook over gewone HTTP, met meer latency), of op de daemon omzetten naar MJPEG (één pad in de client, meer CPU en ffmpeg als afhankelijkheid). Niet getest.</p>
+  <p>Werkt de addon onder Bun niet, dan zijn er twee terugvallers: de serve-sim-CLI met Node, strikt op loopback, of AXe met hoogstens 30 fps.</p>
+  <p>Waarom niet expo-device-hub zelf: dat vraagt Node en een eigen HTTP-server die Ruimte zou moeten afschermen, inclusief een allowlist tegen de exec-route. De addon rechtstreeks gebruiken houdt het aanvalsoppervlak bij routes die Ruimte zelf schrijft.</p>
+</section>
+
+<section id="fasen">
+  <h2>Fasen</h2>
+  <ol class="steps">
+    <li class="step"><div>
+      <h3>Spike</h3>
+      <p>iOS: een wegwerpscript onder Bun dat de gepinde addon laadt, een draaiende simulator vastlegt, MJPEG serveert en met <code>SimHID.touch</code> tikt. Test de addon in de gecompileerde binary.</p>
+      <p>Android: een emulator starten, de scrcpy-server erop zetten, de H.264-stroom één keer via MSE in een <code>&lt;video&gt;</code> tonen en één keer op de daemon omzetten naar MJPEG. Tik en een Home-keycode via het control-kanaal.</p>
+      <p>Meet voor alle routes fps, latency lokaal en over het LAN, bytes per seconde en CPU.</p>
+      <p><strong>Klaar als:</strong> er getallen staan bij elk van die punten, en er een besluit ligt over de iOS-engine (addon of AXe) en over de Android-stroom (MSE of omzetten).</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>MVP iOS: panel en view</h3>
+      <p>Contracts, met <code>platform</code> in elk device en een backend-interface per platform in de daemon waar alleen iOS een implementatie van heeft. Contracts voor <code>device.capabilities</code>, <code>device.list</code>, <code>device.subscribe</code>/<code>unsubscribe</code>, <code>device.boot</code>, <code>device.shutdown</code>, <code>device.input</code> en het event <code>device.changed</code>. <code>DeviceManager</code>, de helper, de streamroute, het Devices-panel en het view-kind <code>device</code>.</p>
+      <p><strong>Klaar als:</strong> het panel op een Mac-daemon simulators toont en er een start, een view het live scherm met minstens 30 fps laat zien, tikken, slepen en Home werken, een gesloten view de capture stopt, een Linux-daemon uitlegt waarom er niets staat, een gepairde browser over HTTP de stream krijgt met een ticket en een 401 zonder, en <code>bun run check</code> en de tests groen zijn.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>MVP Android</h3>
+      <p>De Android-backend: SDK vinden (<code>ANDROID_HOME</code>, <code>ANDROID_SDK_ROOT</code>, anders <code>adb</code> op het PATH), AVD's en draaiende devices tonen, starten en stoppen, de scrcpy-server meeleveren, de stroom zoals de spike besloot, input inclusief toetsenbord en Home, Back en Recents.</p>
+      <p><strong>Klaar als:</strong> dezelfde lat als de iOS-MVP gehaald wordt voor een Android-emulator, op een macOS- en op een Linux-daemon, typen in een tekstveld werkt, en een machine zonder SDK in het panel zegt wat er ontbreekt.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Canvas-node</h3>
+      <p>Node-kind <code>device</code> met culling en plaatje, meerdere kijkers op één device, draaien, een schaal- of fps-limiet voor kijkers op afstand, H.264 in een secure context, herstel na een helpercrash.</p>
+      <p><strong>Klaar als:</strong> hetzelfde device in een view en een node op twee clients één capture deelt, een node buiten beeld of onder <code>READABLE_ZOOM</code> na de grace-periode geen frames meer krijgt, en een gekilde helper binnen enkele seconden terugkomt zonder de daemon mee te nemen.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Agents</h3>
+      <p>Contextbron <code>device</code> en de <code>ruimte device</code>-commando's, beperkt tot gekoppelde devices.</p>
+      <p><strong>Klaar als:</strong> een Claude-node met een edge vanaf een device-node de screenshot leest, een knop aantikt en het resultaat controleert, en een device zonder edge de commando's weigert.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Apps</h3>
+      <p>Installeren, starten, stoppen, URL openen, uiterlijk en logs, via <code>simctl</code> op iOS en <code>adb</code> op Android.</p>
+      <p><strong>Klaar als:</strong> een app op beide platforms vanuit Ruimte te installeren en te starten is, en de logs van een device in een view te volgen zijn.</p>
+    </div></li>
+  </ol>
+  <p>Later: een omweg voor het toetsenbord op iOS (klembord via <code>simctl pbcopy</code>, of de DeviceHub.app-route als die zonder zichtbaar venster blijkt te werken) en fysieke toestellen via agent-device of idb. Een Mac op afstand vraagt waarschijnlijk niets nieuws, want die kan als eigen machine gepaird worden.</p>
+</section>
+
+<section id="beslissingen">
+  <h2>Beslissingen</h2>
+  <ol>
+    <li><span class="badge info">Beslist door de spike</span> <strong>Welke iOS-engine?</strong> De serve-sim-addon (snel, private API's, gepind), of AXe als die onder Bun niet werkt. Een eigen Swift-helper valt af: maanden reverse-engineering.</li>
+    <li><span class="badge info">Beslist door de spike</span> <strong>Welke Android-stroom?</strong> MSE of op de daemon omzetten naar MJPEG.</li>
+    <li><span class="badge confirmed">Besloten 13 september</span> <strong>Installeren in twee stappen.</strong> Eerst device-ondersteuning (de addon, pas na toestemming opgehaald), daarna los de agent-tools. Het panel toont die stappen zolang ze niet gedaan zijn. Voorstel, te bevestigen vóór fase 1: de addon en de scrcpy-server gaan mee in de verpakte app en staan pas aan na toestemming. Dat scheelt een downloadpad en een versie die los van de app kan lopen. Downloaden na toestemming is het alternatief als de app daar te groot van wordt.</li>
+    <li><span class="badge confirmed">Besloten 13 september</span> <strong>Geen UDID in <code>project.json</code>.</strong> Voorstel: het gedeelde bestand bewaart alleen wat overal betekenis heeft (platform, devicetype zoals "iPhone 17 Pro", runtime zoals "iOS 27"). De koppeling van node of view aan een UDID staat in <code>&lt;projectId&gt;.local.json</code>, per machine. Zonder koppeling zoekt de client een device met hetzelfde type en dezelfde runtime, dan hetzelfde type met de nieuwste runtime, en vraagt pas als er niets past. Wat daar gekozen wordt, wordt de nieuwe lokale koppeling.</li>
+    <li><strong>Is een edge genoeg toestemming voor een agent?</strong> Voorstel, te bevestigen vóór de agentfase: ja, want de tweede installatiestap (agent-tools) is al een toestemming per machine. Een edge bepaalt daarna welk device een agent mag bedienen.</li>
+    <li><strong>Bandbreedte op afstand.</strong> MJPEG op retina-resolutie en 60 fps is naar schatting 5 tot 15 MB/s <span class="badge info">Afgeleid</span>. Voorstel: kijkers op loopback krijgen alles, kijkers op afstand standaard halve resolutie en 30 fps. De spike levert de echte getallen.</li>
+    <li><span class="badge confirmed">Besloten 13 september</span> <strong>Android direct na de iOS-MVP,</strong> met het platform al in de contracts van fase 1 en Android in de spike.</li>
+    <li><strong>Waar de instellingen van een device staan.</strong> Voorstel: in de toolbar van de view of node (volgt <code>file-toolbar-slot.ts</code>), want dat is waar het device staat. Het panel blijft een lijst met starten, stoppen en openen.</li>
+  </ol>
+</section>
+
+<section id="risicos">
+  <h2>Risico's</h2>
+  <ul>
+    <li>SimulatorKit en Indigo HID zijn privé en veranderen per Xcode-release. De JS-API van de addon is intern voor serve-sim, zonder stabiliteitsbelofte. Pinnen en elke upgrade testen.</li>
+    <li>Een iOS-toetsenbord blijft voorlopig weg. De route via DeviceHub.app vraagt een zichtbaar venster en Accessibility-rechten.</li>
+    <li>Capture onder Bun en de addon in de gecompileerde binary zijn niet getest.</li>
+    <li>Clients over gewone HTTP hebben geen WebCodecs. Voor Android betekent dat MSE of omzetten op de daemon, en welke van de twee werkt is nog niet gemeten.</li>
+    <li>Een verpakte app start de daemon met een kaal PATH, dus <code>adb</code> en <code>xcrun</code> zijn daar misschien niet te vinden <span class="badge info">Afgeleid</span>. Zoek de SDK via de omgevingsvariabelen en bekende mappen, en zeg in het panel wat er ontbreekt.</li>
+    <li>scrcpy-server en de client-kant moeten dezelfde versie hebben. Pin die samen.</li>
+    <li>Een nieuw node- of view-kind laat oudere daemons het project weigeren. Voeg het één keer toe.</li>
+    <li>Stel nooit de HTTP-server van een helper bloot. Elke route gaat door <code>decideAccess</code>, input vraagt een echte clientverbinding.</li>
+  </ul>
+</section>
+
+<section id="startprompt">
+  <h2>Startprompt voor een schone sessie</h2>
+  <p>Plak dit in een nieuwe sessie. De prompt begint met de spike en stopt bij het go/no-go-besluit, omdat fase 1 afhangt van wat de spike meet.</p>
+  <div class="prompt-box">
+    <button type="button" id="copy-prompt">Kopieer</button>
+<pre><code id="prompt-text">We gaan een Devices-integratie bouwen in Ruimte: de iOS Simulator en de Android-emulator in een "Devices"-panel naast Files en Git, en als view én als canvas-node.
+
+Lees eerst:
+- docs/reports/2026-09-13-devices.html (het onderzoek: de opties, de inpassing, het plan en de open beslissingen)
+- CLAUDE.md en docs/DECISIONS.md
+
+Uitgangspunten uit het onderzoek:
+- Kern: de native addon van serve-sim (EvanBacon/serve-sim, Apache-2.0, gepinde versie) in een apart helperproces dat de daemon bewaakt. Geen code overnemen uit serve-sim; npm-pakketten gebruiken mag.
+- Beeld: MJPEG op GET /devices/&lt;udid&gt;/stream.mjpeg?token= achter decideAccess. Input: device.input over de bestaande WebSocket.
+- Eén view-kind en één node-kind "device" met platform: 'ios' | 'android'.
+- Android: backend met adb en emulator, beeld en input via een gepinde scrcpy-server. Android komt direct na de iOS-MVP; platform en de backend-interface staan al in de contracts van fase 1.
+- Een daemon die geen Mac is toont in panel, view en node waarom iOS er niet is; Android kan daar wel.
+- Geen toetsenbordinput op iOS in de eerste versie; Android krijgt wel toetsenbord via scrcpy; een omweg is later onderzoek.
+- Installeren in twee stappen, na toestemming: eerst device-ondersteuning, daarna de agent-tools.
+- Geen UDID in project.json: daar staan platform, devicetype en runtime; de koppeling aan een UDID staat per machine in &lt;projectId&gt;.local.json.
+
+Stap 1 is de spike (fase 0), op een wegwerpbranch of in /tmp, niet in de app:
+1. Laad de gepinde serve-sim-native.node onder Bun, leg een draaiende simulator vast met SimCapture en serveer MJPEG.
+2. Tik en sleep met SimHID.touch en druk op Home.
+3. Test of de addon werkt vanuit een binary van bun build --compile.
+4. Android: start de AVD Pixel_9_Pro_API_35 (SDK in ~/Development/Environment/android-sdk, emulator staat niet op het PATH), zet een gepinde scrcpy-server erop, en toon de H.264-stroom één keer via MSE in een &lt;video&gt; en één keer omgezet naar MJPEG op de daemon (ffmpeg staat in /opt/homebrew/bin). Tik en stuur een Home-keycode.
+5. Meet voor elke route fps, latency lokaal en over het LAN, bytes per seconde en CPU.
+
+Vraag mij toestemming voordat je een simulator of emulator start of gedownloade code uitvoert. Leg de meetresultaten vast en stop dan: ik beslis op basis daarvan tussen de addon en AXe, tussen MSE en omzetten, en over de open beslissingen in het rapport (sectie "Beslissingen"). Maak voor fase 1 daarna eerst een kort plan.</code></pre>
+  </div>
+</section>
+
+<section id="bronnen">
+  <h2>Bronnen</h2>
+  <ul>
+    <li><a href="https://github.com/EvanBacon/serve-sim">EvanBacon/serve-sim</a> (commit <code>7e44584</code>), <code>packages/serve-sim/Sources/SimNative</code></li>
+    <li><a href="https://github.com/expo/expo-device-hub">expo/expo-device-hub</a> (<code>e11d963</code>)</li>
+    <li><a href="https://github.com/callstack/agent-device">callstack/agent-device</a> (<code>973b74c</code>)</li>
+    <li><a href="https://github.com/jiunshinn/serve-emul">jiunshinn/serve-emul</a> (<code>4becbbe</code>)</li>
+    <li><a href="https://github.com/facebook/idb">facebook/idb</a>, <a href="https://github.com/cameroncooke/AXe">cameroncooke/AXe</a>, <a href="https://github.com/Genymobile/scrcpy">Genymobile/scrcpy</a>, <a href="https://github.com/google/android-emulator-webrtc">google/android-emulator-webrtc</a>, <a href="https://github.com/getsentry/XcodeBuildMCP">getsentry/XcodeBuildMCP</a></li>
+    <li>Lokaal: <code>xcrun simctl io help</code>, Xcode-beta 27.0 (27A5228h), DeviceHub.app, macOS 27.0 arm64</li>
+  </ul>
+</section>
+
+</main>
+<footer>
+  <p>Het onderzoek is gedaan door een subagent die de broncode van de genoemde tools las en de Ruimte-code op 91ffc2e doorzocht. Niet geverifieerd: of de serve-sim-CLI onder Bun draait (het uitvoeren van gedownloade code werd tegengehouden), het hele gRPC-pad van de Android-emulator, de MSE- en omzetroute voor Android, latency (nergens gemeten gevonden) en of de Electron-origin een secure context is. De getallen voor bandbreedte zijn schattingen. Er is nog geen regel code geschreven.</p>
+</footer>
+<script>
+{
+    const button = document.getElementById('copy-prompt');
+    const text = document.getElementById('prompt-text');
+    button.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(text.textContent);
+            button.textContent = 'Gekopieerd';
+        } catch {
+            button.textContent = 'Kopiëren mislukt';
+        }
+        setTimeout(() => {
+            button.textContent = 'Kopieer';
+        }, 2000);
+    });
+}
+</script>
+</body>
+</html>
