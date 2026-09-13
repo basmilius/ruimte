@@ -7,7 +7,8 @@
 <style>
 :root {
   color-scheme: light;
-  --accent: #3f38b5;
+  --brand: #3f38b5;
+  --accent: var(--brand);
   --paper: #fff;
   --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
   --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
@@ -24,7 +25,10 @@
   --danger-bg: #f8e9e6;
   --info: #365573;
   --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
   --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--ink);
   background: var(--page);
@@ -34,6 +38,7 @@
   -moz-osx-font-smoothing: grayscale;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { margin: 0; }
 header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
 header { padding-top: 64px; }
@@ -83,13 +88,15 @@ figure { margin: 20px 0; }
 .split > figure { margin: 0; }
 figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
 figcaption { margin-top: 10px; }
-.diagram { display: block; width: 100%; height: auto; }
+.diagram { display: block; max-width: 100%; height: auto; }
 .diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .reference { fill: var(--reference); }
 .diagram .node { fill: var(--highlight); stroke: var(--accent); }
 .diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
 .diagram .arrow, .diagram .series { fill: var(--accent); }
 .diagram .grid { stroke: var(--line); }
-.plot { min-width: 480px; }
+.plot { max-width: none; }
 .steps { list-style: none; padding: 0; counter-reset: step; }
 .step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
 .step::before { content: counter(step); font-size: 26px; color: var(--accent); }
@@ -108,10 +115,34 @@ button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
 input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
 .bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
 .bar span { display: block; height: 100%; background: var(--accent); }
-.bar.reference span { background: var(--muted); }
+.bar.reference span { background: var(--reference); }
 .bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
 .skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
 .skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   button:active:not(:disabled):not([data-static]) { scale: none; }
@@ -135,7 +166,8 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
   nav, .skip, input[type="range"], .interactive-only { display: none; }
   section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
   .table { overflow: visible; }
-  .wide, .plot { min-width: 0; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
   th, td { overflow-wrap: anywhere; }
   .split { grid-template-columns: 1fr; }
   figure, tr, .panel { break-inside: avoid; }
@@ -309,7 +341,7 @@ system.subtype: init | task_started | task_progress | task_notification | compac
     <h2>Voorgesteld ontwerp</h2>
     <figure class="panel">
       <div class="table" role="region" aria-label="Weg van de titel, horizontaal scrollbaar" tabindex="0">
-        <svg class="diagram plot" viewBox="0 0 900 190" role="img" aria-labelledby="flow-title flow-description">
+        <svg class="diagram plot" width="900" viewBox="0 0 900 190" role="img" aria-labelledby="flow-title flow-description">
           <title id="flow-title">De weg van een gegenereerde titel</title>
           <desc id="flow-description">Het CLI-proces schrijft een titel in zijn transcript. De daemon leest die op de sessie-id en stuurt hem als veld op de chat-info. De client zet hem via renameHost op de node of de view, waarna hij in het projectbestand staat.</desc>
           <defs><marker id="flow-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0 0 L8 4 L0 8 Z"/></marker></defs>
