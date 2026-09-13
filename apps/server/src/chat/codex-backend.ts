@@ -64,6 +64,10 @@ export class CodexBackend implements ChatBackend {
         return this.transport !== null;
     }
 
+    get pid(): number | null {
+        return this.transport?.pid ?? null;
+    }
+
     async start(): Promise<void> {
         if (this.transport) {
             return;

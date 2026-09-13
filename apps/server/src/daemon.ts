@@ -9,6 +9,7 @@ import { AuthStore } from './auth/auth-store.ts';
 import { Handshake } from './auth/handshake.ts';
 import { NoRelay, type Relay } from './auth/relay.ts';
 import { HOOKS_PATH, handleHookRequest } from './agents/hook-receiver.ts';
+import { HOOK_EVENTS } from './agents/hooks.ts';
 import { defaultHookPaths, installHooks } from './agents/install.ts';
 import { ATTACHMENTS_PATH, handleAttachmentRequest } from './chat/attachment-route.ts';
 import { AttachmentStore } from './chat/attachment-store.ts';
@@ -31,10 +32,13 @@ import { registerProjectHandlers } from './handlers/project.ts';
 import { registerServerHandlers } from './handlers/server.ts';
 import { readMachineModel } from './machine-model.ts';
 import { registerSessionHandlers } from './handlers/session.ts';
+import { registerProcessHandlers } from './handlers/processes.ts';
 import { registerUsageHandlers } from './handlers/usage.ts';
 import { Checkpoints } from './git/checkpoints.ts';
 import { GitStatusWatcher } from './git/status-watcher.ts';
 import { Worktrees } from './git/worktrees.ts';
+import { ProcessMonitor } from './processes/monitor.ts';
+import { createSampler } from './processes/sampler.ts';
 import { handleProjectRequest, PROJECTS_PATH } from './projects/icon-route.ts';
 import { DrawingStore } from './projects/drawing-store.ts';
 import { ProjectStore } from './projects/project-store.ts';
@@ -113,6 +117,16 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const statuses = new GitStatusWatcher();
     const usage = new UsageService({ home: config.home, allowPriceFetch: config.priceFetch, knownProjects: () => projects.known() });
     const limits = new UsageMonitor({ providers });
+    const processes = new ProcessMonitor({
+        sampler: await createSampler(process.platform, config.home),
+        sessions: () => manager.list().map((session) => ({ id: session.sessionId, pid: session.pid, exited: session.exited, agent: session.agent ?? null })),
+        chats: () => chats.processTargets(),
+        contextUrl: () => manager.contextUrl,
+        // Without a SessionEnd a clean exit and a crash look the same, so only these CLIs can be missed.
+        reportsEnd: (kind) => HOOK_EVENTS[kind]?.includes('SessionEnd') === true
+    });
+    manager.onProcessChange = (_sessionId, phase) => (phase === 'before-kill' ? processes.beforeKill() : processes.nudge());
+    manager.isAgentGone = (sessionId) => processes.isAgentGone(sessionId);
 
     const dispatcher = new Dispatcher();
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await readMachineModel() });
@@ -135,6 +149,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     });
     registerFsHandlers(dispatcher, folders);
     registerUsageHandlers(dispatcher, usage, limits);
+    registerProcessHandlers(dispatcher, processes);
     registerGitHandlers(dispatcher, new Worktrees(config.home), statuses, providers);
 
     if (config.installHooks) {
@@ -313,6 +328,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 const unsubscribeStatuses = statuses.subscribe(client.id, sink);
                 const unsubscribeUsage = usage.subscribe(client.id, sink);
                 const unsubscribeLimits = limits.subscribe(client.id, sink);
+                const unsubscribeProcesses = processes.subscribe(client.id, sink);
                 connections.set(ws, {
                     client,
                     gate,
@@ -326,6 +342,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                         unsubscribeStatuses();
                         unsubscribeUsage();
                         unsubscribeLimits();
+                        unsubscribeProcesses();
                     }
                 });
             },
@@ -358,6 +375,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
 
     // The first read runs now, so a page opened straight after a start already has the plan on it.
     limits.start();
+    processes.start();
 
     // Hooks and context always go over loopback, whatever interface the socket listens on.
     manager.hookUrl = `http://127.0.0.1:${server.port}${HOOKS_PATH}`;
@@ -392,6 +410,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         snapshotSchedule.stop();
         usage.stop();
         limits.stop();
+        processes.stop();
         // Before anything is awaited: a `bun --watch` reload restarts the module during the first
         // await, so a turn in flight would otherwise never reach its file.
         chats.persistAllSync();

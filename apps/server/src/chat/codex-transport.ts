@@ -49,6 +49,10 @@ export class CodexTransport {
         void this.readLines();
     }
 
+    get pid(): number {
+        return this.process.pid;
+    }
+
     get alive(): boolean {
         return !this.closed;
     }

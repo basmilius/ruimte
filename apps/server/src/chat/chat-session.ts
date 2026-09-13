@@ -92,6 +92,10 @@ export class ChatSession {
         return this.backend?.running === true;
     }
 
+    get pid(): number | null {
+        return this.backend?.pid ?? null;
+    }
+
     /* Whether the person has to wait. A turn the CLI opened itself is stepped on by the next message. */
     get busy(): boolean {
         const turnId = this.thread.info.activeTurnId;

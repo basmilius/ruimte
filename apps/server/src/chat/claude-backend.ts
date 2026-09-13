@@ -35,6 +35,10 @@ export class ClaudeBackend implements ChatBackend {
         return this.process !== null;
     }
 
+    get pid(): number | null {
+        return this.process?.pid ?? null;
+    }
+
     start(): Promise<void> {
         if (this.process) {
             return Promise.resolve();

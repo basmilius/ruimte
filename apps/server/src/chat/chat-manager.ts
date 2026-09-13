@@ -68,6 +68,8 @@ export class ChatManager {
     private readonly waiting = new Map<string, ReturnType<typeof setTimeout>>();
     // The write in flight per chat, so the next one queues behind it instead of racing it.
     private readonly writes = new Map<string, Promise<void>>();
+    // When each chat last said anything, which is what a chat has instead of a hook event.
+    private readonly activity = new Map<string, number>();
     private readonly contextUrl: string | null;
     private readonly hasContext: (chatId: string) => boolean;
     private readonly contextSources: (chatId: string) => ContextSource[];
@@ -277,6 +279,7 @@ export class ChatManager {
         this.cancelWaiting(chatId);
         this.sizes.delete(chatId);
         this.writes.delete(chatId);
+        this.activity.delete(chatId);
         this.chats.delete(chatId);
         this.attached.delete(chatId);
         for (const [token, id] of this.tokens) {
@@ -285,6 +288,18 @@ export class ChatManager {
             }
         }
         await Promise.all([this.store?.delete(chatId), this.attachments.removeAll(chatId)]);
+    }
+
+    /* The chats with a CLI process, for the process monitor. */
+    processTargets(): { id: string; pid: number; provider: AgentKind; status: ChatInfo['status']; updatedAt: number }[] {
+        const targets = [];
+        for (const [id, session] of this.chats) {
+            const pid = session.pid;
+            if (pid !== null) {
+                targets.push({ id, pid, provider: session.info.provider, status: session.info.status, updatedAt: this.activity.get(id) ?? 0 });
+            }
+        }
+        return targets;
     }
 
     list(): ChatInfo[] {
@@ -377,6 +392,7 @@ export class ChatManager {
     }
 
     private emit(chatId: string, event: ChatEvent): void {
+        this.activity.set(chatId, Date.now());
         const clients = this.attached.get(chatId);
         if (!clients) {
             return;

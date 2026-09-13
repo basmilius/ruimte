@@ -55,6 +55,9 @@ export interface SessionManagerOptions {
 
 export type HookResult = 'applied' | 'ignored' | 'unknown-token';
 
+/* `before-kill` comes while the tree is still whole, so a watcher can see what was in it; `changed` after it moved. */
+export type ProcessChangePhase = 'before-kill' | 'changed';
+
 export class SessionManager {
     private readonly adapter: PtyAdapter;
     private readonly snapshots: SnapshotStore | null;
@@ -69,6 +72,10 @@ export class SessionManager {
     contextUrl: string | null;
     private readonly binDir: string | null;
     private readonly contextFor: (sessionId: string) => ContextSource[];
+    // Told when the process tree of a session is about to change or just did: the end of a turn, an exit, a kill.
+    onProcessChange: ((sessionId: string, phase: ProcessChangePhase) => void) | null = null;
+    // Whether the process monitor found the agent of a session gone while its status still says it runs.
+    isAgentGone: (sessionId: string) => boolean = () => false;
 
     constructor(options: SessionManagerOptions) {
         this.adapter = options.adapter;
@@ -154,6 +161,9 @@ export class SessionManager {
                       updatedAt: Date.now()
                   };
         await this.setAgent(session, agent);
+        if (agent === null || agent.status === 'idle' || agent.status === 'error') {
+            this.onProcessChange?.(session.id, 'changed');
+        }
         return 'applied';
     }
 
@@ -166,7 +176,8 @@ export class SessionManager {
         if (!session.agent) {
             throw new SessionError('agent-not-found', `Session ${sessionId} has no agent to resume`);
         }
-        if (session.agent.live) {
+        // A CLI that died without a SessionEnd still reads as live; the process monitor is what knows better.
+        if (session.agent.live && !this.isAgentGone(sessionId)) {
             throw new SessionError('agent-live', `The agent in ${sessionId} is still running`);
         }
         session.write(`${resumeCommand(session.agent.kind, session.agent.agentSessionId)}\n`);
@@ -239,6 +250,7 @@ export class SessionManager {
             this.broadcastListChanged();
             return;
         }
+        this.onProcessChange?.(sessionId, 'before-kill');
         this.killing.add(sessionId);
         session.kill();
     }
@@ -324,6 +336,7 @@ export class SessionManager {
             void this.setAgent(session, { ...session.agent, status: 'exited', live: false, updatedAt: Date.now() });
         }
         this.broadcastListChanged();
+        this.onProcessChange?.(sessionId, 'changed');
     }
 
     private async setAgent(session: Session, agent: AgentInfo | null): Promise<void> {

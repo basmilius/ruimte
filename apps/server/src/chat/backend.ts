@@ -90,6 +90,8 @@ export interface BackendHost {
 
 export interface ChatBackend {
     readonly running: boolean;
+    // The CLI's process while it runs, so the process panel can put its tree under the node.
+    readonly pid: number | null;
     // Starts the process if it has not started; resolves once the CLI can take a turn.
     start(): Promise<void>;
     sendTurn(input: TurnInput): void;
