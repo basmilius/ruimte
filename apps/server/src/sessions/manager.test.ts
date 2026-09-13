@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { RESTORED_TEXT } from './session.ts';
+import type { SessionManager } from './manager.ts';
 import { Recorder, SH, SH_ARGS, makeHarness, waitFor, type Harness } from './test-helpers.ts';
 
 let harness: Harness;
@@ -13,6 +14,21 @@ afterEach(async () => {
 });
 
 const create = (sessionId: string, cols = 80, rows = 24) => harness.manager.create({ sessionId, cols, rows, shell: SH, args: SH_ARGS, cwd: harness.home });
+
+// What Claude Code posts when it asks, and posts again beside its own prompt on the screen.
+const PERMISSION_HOOK = { hook_event_name: 'PermissionRequest', session_id: 'cli-1', tool_name: 'Bash', tool_input: { command: 'sleep 12' } };
+
+/* The two calls the hook route makes for one permission POST: the status first, then the hold.
+   The hold is handed back wrapped, so awaiting this helper does not wait for the answer as well. */
+const askPermission = async (manager: SessionManager, token: string): Promise<{ decision: Promise<unknown> }> => {
+    await manager.applyHook('claude', token, PERMISSION_HOOK);
+    return { decision: manager.holdApproval(token, PERMISSION_HOOK, new AbortController().signal) };
+};
+
+const pendingIds = (recorder: Recorder, sessionId: string): string[] => {
+    const last = recorder.events.filter((event) => event.event === 'session.approvals' && event.payload.sessionId === sessionId).at(-1);
+    return last?.event === 'session.approvals' ? last.payload.approvals.map((approval) => approval.requestId) : [];
+};
 
 describe('SessionManager', () => {
     test('a permission request is held only while some client still wants to be asked', () => {
@@ -33,6 +49,112 @@ describe('SessionManager', () => {
         // The one that still wanted them left, so only the client that said no is here.
         leave();
         expect(harness.manager.wantsApprovals()).toBe(false);
+    });
+
+    test('a permission answered here takes the node off needs-you, since the CLI reports nothing', async () => {
+        const recorder = new Recorder();
+        harness.manager.subscribe('c1', recorder.sink());
+        await create('s1');
+
+        const { decision } = await askPermission(harness.manager, harness.manager.get('s1')!.hookToken);
+        expect(recorder.statusesOf('s1').at(-1)).toBe('needs-you');
+
+        expect(harness.manager.answerApproval('s1', pendingIds(recorder, 's1')[0]!, 'allow')).toBe(true);
+        expect(await decision).toEqual({ behavior: 'allow' });
+        // The tool the agent asked for is running now, and PostToolUse is a whole command away.
+        expect(recorder.statusesOf('s1').at(-1)).toBe('running');
+        expect(harness.manager.get('s1')!.agent?.status).toBe('running');
+    });
+
+    test('a deny says the same, since the agent reads the refusal and carries on', async () => {
+        const recorder = new Recorder();
+        harness.manager.subscribe('c1', recorder.sink());
+        await create('s1');
+
+        const { decision } = await askPermission(harness.manager, harness.manager.get('s1')!.hookToken);
+        harness.manager.answerApproval('s1', pendingIds(recorder, 's1')[0]!, 'deny');
+        expect(await decision).toEqual({ behavior: 'deny', message: 'Denied from Ruimte.' });
+        expect(recorder.statusesOf('s1').at(-1)).toBe('running');
+    });
+
+    test('a second request still open keeps the node waiting for a person', async () => {
+        const recorder = new Recorder();
+        harness.manager.subscribe('c1', recorder.sink());
+        await create('s1');
+        const token = harness.manager.get('s1')!.hookToken;
+
+        const { decision: first } = await askPermission(harness.manager, token);
+        const { decision: second } = await askPermission(harness.manager, token);
+        const [firstId, secondId] = pendingIds(recorder, 's1');
+
+        harness.manager.answerApproval('s1', firstId!, 'allow');
+        expect(await first).toEqual({ behavior: 'allow' });
+        expect(harness.manager.get('s1')!.agent?.status).toBe('needs-you');
+
+        harness.manager.answerApproval('s1', secondId!, 'allow');
+        expect(await second).toEqual({ behavior: 'allow' });
+        expect(harness.manager.get('s1')!.agent?.status).toBe('running');
+    });
+
+    test('a hook that spoke after the request keeps the last word over what the daemon infers', async () => {
+        const recorder = new Recorder();
+        harness.manager.subscribe('c1', recorder.sink());
+        await create('s1');
+        const token = harness.manager.get('s1')!.hookToken;
+
+        const { decision } = await askPermission(harness.manager, token);
+        // A tool running beside the question finished, which is a status the CLI reported itself.
+        await harness.manager.applyHook('claude', token, { hook_event_name: 'PostToolUse', session_id: 'cli-1', tool_name: 'Read' });
+        const reported = harness.manager.get('s1')!.agent!;
+        expect(reported.status).toBe('running');
+
+        harness.manager.answerApproval('s1', pendingIds(recorder, 's1')[0]!, 'allow');
+        expect(await decision).toEqual({ behavior: 'allow' });
+        // Untouched down to the moment it was stamped, so nothing was inferred over the hook's word.
+        expect(harness.manager.get('s1')!.agent).toEqual(reported);
+    });
+
+    test('a turn that ends takes back what the CLI is no longer asking', async () => {
+        const recorder = new Recorder();
+        harness.manager.subscribe('c1', recorder.sink());
+        await create('s1');
+        const token = harness.manager.get('s1')!.hookToken;
+
+        const { decision } = await askPermission(harness.manager, token);
+        expect(pendingIds(recorder, 's1')).toHaveLength(1);
+
+        // The person answered in the CLI's own prompt, which leaves the hook hanging; Stop is the proof.
+        await harness.manager.applyHook('claude', token, { hook_event_name: 'Stop', session_id: 'cli-1' });
+        expect(await decision).toBeNull();
+        expect(pendingIds(recorder, 's1')).toEqual([]);
+        expect(harness.manager.get('s1')!.agent?.status).toBe('idle');
+    });
+
+    test('a tool that finished beside the question leaves the question standing', async () => {
+        const recorder = new Recorder();
+        harness.manager.subscribe('c1', recorder.sink());
+        await create('s1');
+        const token = harness.manager.get('s1')!.hookToken;
+
+        await askPermission(harness.manager, token);
+        await harness.manager.applyHook('claude', token, { hook_event_name: 'PostToolUse', session_id: 'cli-1', tool_name: 'Read' });
+        expect(pendingIds(recorder, 's1')).toHaveLength(1);
+    });
+
+    test('a request nobody answered leaves the status alone, since the CLI is still asking on its own screen', async () => {
+        const local = await makeHarness({ approvalHoldMs: 20 });
+        try {
+            const recorder = new Recorder();
+            local.manager.subscribe('c1', recorder.sink());
+            await local.manager.create({ sessionId: 's1', cols: 80, rows: 24, shell: SH, args: SH_ARGS, cwd: local.home });
+
+            const { decision } = await askPermission(local.manager, local.manager.get('s1')!.hookToken);
+            expect(await decision).toBeNull();
+            expect(pendingIds(recorder, 's1')).toEqual([]);
+            expect(local.manager.get('s1')!.agent?.status).toBe('needs-you');
+        } finally {
+            await local.cleanup();
+        }
     });
 
     test('a socket that comes back is asked again, since its preference left with it', () => {

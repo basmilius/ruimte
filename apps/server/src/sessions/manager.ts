@@ -230,6 +230,16 @@ export class SessionManager {
         }
         await this.setAgent(session, agent);
         if (agent === null || agent.status === 'idle' || agent.status === 'error') {
+            /*
+             * A CLI waiting at its own prompt, one whose turn ended and one that is gone all have
+             * no permission prompt on the screen, so whatever is still held for this session was
+             * answered there. Claude Code 2.1.270 does not cancel the hook when the person answers
+             * in the TUI (measured: the request sat out its whole 110 seconds), and without this
+             * every client would keep offering a question nobody can answer any more. A `running`
+             * hook is no such proof: the CLI runs tools beside each other and may well be asking
+             * about one while it reports another.
+             */
+            this.approvals?.dropSession(session.id);
             this.onProcessChange?.(session.id, 'changed');
         }
         return 'applied';
@@ -256,7 +266,32 @@ export class SessionManager {
 
     /* A client's answer to a held request. False when it was already settled, here or in the CLI's prompt. */
     answerApproval(sessionId: string, requestId: string, choiceId: string): boolean {
-        return this.approvals?.answer(sessionId, requestId, choiceId) ?? false;
+        if (this.approvals?.answer(sessionId, requestId, choiceId) !== true) {
+            return false;
+        }
+        this.settleAfterApproval(sessionId);
+        return true;
+    }
+
+    /*
+     * The status a session has the moment a permission is answered here. A CLI has no reason to
+     * report one: its own prompt was settled from the outside, and the next hook is the PostToolUse
+     * of the tool that just started, which for a command running for minutes is minutes away.
+     * Measured against Claude Code 2.1.270, a `sleep 12` approved through the hook left twelve
+     * seconds of silence, so a node would keep saying `needs-you` for the whole run. The daemon
+     * knows what the CLI does not bother to say: the question it was waiting on is gone, so the
+     * agent is working again (a deny too, since the agent reads the refusal and carries on), unless
+     * another request is still open, which is a person's turn all the same. Only a session that is
+     * still on `needs-you` is touched, so a hook that spoke after the request opened keeps the last
+     * word, and every later hook overwrites this inference as it would any other status.
+     */
+    private settleAfterApproval(sessionId: string): void {
+        const session = this.sessions.get(sessionId);
+        const agent = session?.agent;
+        if (!session || !agent || agent.status !== 'needs-you' || this.approvals?.forSession(sessionId).length !== 0) {
+            return;
+        }
+        void this.setAgent(session, { ...agent, status: 'running', updatedAt: Date.now() });
     }
 
     /* Types the CLI's resume command into the shell of a session whose agent is known but not running. */
