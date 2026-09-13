@@ -65,6 +65,21 @@ export const unionRect = (rects: Rect[]): Rect | null => {
 export const intersects = (a: Rect, b: Rect): boolean => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
 /*
+ * What the camera has in front of it, in world coordinates. The margin is screen pixels around the
+ * edge: a renderer keeps a band there so a node does not flicker as it crosses, and a question about
+ * what a person has really seen passes none.
+ */
+export const visibleRect = (camera: Camera, viewport: { w: number; h: number }, margin = 0): Rect => {
+    const edge = margin / camera.zoom;
+    return {
+        x: -camera.x / camera.zoom - edge,
+        y: -camera.y / camera.zoom - edge,
+        w: viewport.w / camera.zoom + edge * 2,
+        h: viewport.h / camera.zoom + edge * 2
+    };
+};
+
+/*
  * Whether an element has been measured. An editor exists from the moment its view goes into a cell,
  * which is a frame before the element that holds it has a size, and the middle of nothing is the
  * corner: a camera worked out against a zero viewport parks what it was aimed at in the top left.

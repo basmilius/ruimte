@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { intersects } from '@/canvas/math';
+import { intersects, visibleRect } from '@/canvas/math';
 import { useCanvas } from '@/state/canvas';
 
 /* Screen pixels around the viewport that still count as visible, so an edge does not flicker. */
-const VIEW_MARGIN = 96;
+export const VIEW_MARGIN = 96;
 /* How long a node stays live after leaving the viewport; a pan across it never thrashes. */
 const OFFSCREEN_GRACE_MS = 10_000;
 
@@ -13,14 +13,7 @@ export const useNodeInViewport = (id: string): boolean =>
         if (!node || s.viewport.w === 0) {
             return true;
         }
-        const margin = VIEW_MARGIN / s.camera.zoom;
-        const view = {
-            x: -s.camera.x / s.camera.zoom - margin,
-            y: -s.camera.y / s.camera.zoom - margin,
-            w: s.viewport.w / s.camera.zoom + margin * 2,
-            h: s.viewport.h / s.camera.zoom + margin * 2
-        };
-        return intersects(node, view);
+        return intersects(node, visibleRect(s.camera, s.viewport, VIEW_MARGIN));
     });
 
 /*

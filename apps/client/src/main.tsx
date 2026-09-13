@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { App } from '@/App';
 import { startAgentNotifications } from '@/shell/notifications';
+import { startAttentionWatch } from '@/state/attention';
 import { startSessionLifecycle } from '@/terminal/lifecycle';
 import { startServerInfo } from '@/transport/server-info';
 import { startPing } from '@/transport/ping';
@@ -24,6 +25,7 @@ import '@/styles.css';
 
 startSessionLifecycle();
 startAgentNotifications();
+startAttentionWatch();
 startServerInfo();
 startPing();
 /* Before anything opens a socket: the machine the work was left on decides which daemon boots. */
