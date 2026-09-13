@@ -121,6 +121,7 @@ export * from './agent.ts';
 export * from './auth.ts';
 export * from './chat.ts';
 export * from './context.ts';
+export * from './context-sources.ts';
 export * from './drawing.ts';
 export * from './envelope.ts';
 export * from './fs.ts';
@@ -132,6 +133,7 @@ export * from './project.ts';
 export * from './project-migrate.ts';
 export * from './server.ts';
 export * from './session.ts';
+export * from './stored-path.ts';
 export * from './usage.ts';
 
 const EmptySchema = z.object({});

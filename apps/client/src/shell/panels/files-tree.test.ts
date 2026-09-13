@@ -2,7 +2,6 @@ import { describe, expect, test } from 'bun:test';
 import type { FsEntry, GitFile } from '@ruimte/contracts';
 import {
     LOADING_NAME,
-    absoluteOf,
     ancestorDirsOf,
     buildTreeInput,
     compareRows,
@@ -11,9 +10,6 @@ import {
     isDirectoryPath,
     mergeExpanded,
     newlyExpanded,
-    relativeTo,
-    resolveStoredPath,
-    storedPathOf,
     treeGitStatus,
     treePathOf
 } from './files-tree.ts';
@@ -34,15 +30,6 @@ const entry = (path: string, patch: Partial<FsEntry> = {}): FsEntry => ({
 const directory = (path: string, patch: Partial<FsEntry> = {}): FsEntry => entry(path, { kind: 'directory', size: null, ...patch });
 
 describe('paths', () => {
-    test('crosses between the daemon\u2019s absolute path and the tree\u2019s relative one', () => {
-        expect(relativeTo(ROOT, '/repo/src/index.ts')).toBe('src/index.ts');
-        expect(relativeTo('/repo/', '/repo/src')).toBe('src');
-        expect(relativeTo('C:\\repo', 'C:\\repo\\src\\index.ts')).toBe('src/index.ts');
-        expect(absoluteOf(ROOT, 'src/index.ts')).toBe('/repo/src/index.ts');
-        expect(absoluteOf(ROOT, 'src/')).toBe('/repo/src');
-        expect(absoluteOf('C:\\repo', 'src/index.ts')).toBe('C:\\repo\\src\\index.ts');
-    });
-
     test('a directory keeps the trailing slash the tree marks it with', () => {
         expect(treePathOf(ROOT, directory('/repo/src'))).toBe('src/');
         expect(treePathOf(ROOT, entry('/repo/README.md'))).toBe('README.md');
@@ -165,33 +152,5 @@ describe('gitStatusEntries', () => {
         expect(treeGitStatus('UU')).toBe('modified');
         expect(treeGitStatus('RM')).toBe('renamed');
         expect(treeGitStatus('A')).toBe('added');
-    });
-});
-
-describe('storedPathOf', () => {
-    test('shortens a path inside the folder and leaves the rest whole', () => {
-        expect(storedPathOf('/home/bas/app', '/home/bas/app/src/main.ts')).toBe('src/main.ts');
-        expect(storedPathOf('/home/bas/app', '/etc/hosts')).toBe('/etc/hosts');
-        expect(storedPathOf(null, '/etc/hosts')).toBe('/etc/hosts');
-    });
-
-    test('speaks POSIX about a Windows folder', () => {
-        expect(storedPathOf('C:\\code\\app', 'C:\\code\\app\\src\\main.ts')).toBe('src/main.ts');
-    });
-});
-
-describe('resolveStoredPath', () => {
-    test('puts a relative path back on the daemon machine', () => {
-        expect(resolveStoredPath('/home/bas/app', 'src/main.ts')).toBe('/home/bas/app/src/main.ts');
-        expect(resolveStoredPath('C:\\code\\app', 'src/main.ts')).toBe('C:\\code\\app\\src\\main.ts');
-    });
-
-    test('hands an absolute path over untouched, folder or no folder', () => {
-        expect(resolveStoredPath('/home/bas/app', '/etc/hosts')).toBe('/etc/hosts');
-        expect(resolveStoredPath(null, '/etc/hosts')).toBe('/etc/hosts');
-    });
-
-    test('answers null for a relative path with no folder to resolve it against', () => {
-        expect(resolveStoredPath(null, 'src/main.ts')).toBeNull();
     });
 });

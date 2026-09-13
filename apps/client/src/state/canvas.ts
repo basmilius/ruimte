@@ -26,6 +26,7 @@ import type {
     ProjectViewLocal,
     RuntimeMode
 } from '@ruimte/contracts';
+import { isAgentKind } from '@ruimte/contracts';
 
 export type { AgentStatus, NodeKind } from '@ruimte/contracts';
 
@@ -217,8 +218,7 @@ export const DEFAULT_TITLES: Record<NodeKind, string> = {
     file: 'File'
 };
 
-/* The kinds an agent lives in; an edge into one of these is readable context. */
-export const isAgentKind = (kind: NodeKind): boolean => kind === 'terminal' || kind === 'chat';
+export { isAgentKind };
 
 // Room a group keeps around the nodes it was made for.
 const GROUP_PADDING = 32;

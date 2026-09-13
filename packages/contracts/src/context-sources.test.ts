@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import type { CanvasNode } from '@/state/canvas';
-import { deriveContextSources } from './sources';
+import { deriveContextSources, deriveProjectContextSources } from './context-sources.ts';
+import type { ProjectNode, ProjectView } from './project.ts';
 
-const node = (id: string, kind: CanvasNode['kind'], extra: Partial<CanvasNode> = {}): CanvasNode => ({
+const node = (id: string, kind: ProjectNode['kind'], extra: Partial<ProjectNode> = {}): ProjectNode => ({
     id,
     kind,
     title: id,
@@ -19,6 +19,7 @@ describe('deriveContextSources', () => {
         shell: node('shell', 'terminal'),
         note: node('note', 'note', { title: 'Plan', body: '# Plan\n\nShip it.' }),
         page: node('page', 'browser', { url: 'https://ruimte.app' }),
+        sketch: node('sketch', 'drawing', { title: 'Sketch', viewId: 'drawing-1' }),
         readme: node('readme', 'file', { title: 'README.md', path: 'docs/README.md' }),
         outside: node('outside', 'file', { title: 'hosts', path: '/etc/hosts' }),
         frame: node('frame', 'group')
@@ -45,6 +46,17 @@ describe('deriveContextSources', () => {
         expect(sources.get('chat')).toEqual([{ id: 'note', kind: 'text', title: 'Plan', text: '# Plan\n\nShip it.' }]);
     });
 
+    test('a drawing is read by the view it mirrors, a terminal by its own id', () => {
+        const sources = deriveContextSources(nodes, texts, [
+            { id: 'e1', from: 'sketch', to: 'chat' },
+            { id: 'e2', from: 'shell', to: 'chat' }
+        ]);
+        expect(sources.get('chat')).toEqual([
+            { id: 'drawing-1', kind: 'drawing', title: 'Sketch' },
+            { id: 'shell', kind: 'terminal', title: 'shell' }
+        ]);
+    });
+
     test('only edges into an agent node become context', () => {
         const edges = [
             { id: 'e1', from: 'shell', to: 'note' },
@@ -63,5 +75,44 @@ describe('deriveContextSources', () => {
             { id: 'e2', from: 'page', to: 'chat' }
         ]);
         expect(sources.get('chat')).toEqual([{ id: 'page', kind: 'text', title: 'page', text: 'https://ruimte.app' }]);
+    });
+});
+
+describe('deriveProjectContextSources', () => {
+    const views: ProjectView[] = [
+        {
+            kind: 'canvas',
+            id: 'main',
+            name: 'Canvas',
+            nodes: [node('agent-a', 'terminal'), node('plan', 'note', { title: 'Plan', body: 'ship' })],
+            texts: [],
+            edges: [{ id: 'e1', from: 'plan', to: 'agent-a' }],
+            layouts: []
+        },
+        { kind: 'terminal', id: 'solo', name: 'Shell', node: {} },
+        {
+            kind: 'canvas',
+            id: 'second',
+            name: 'Second',
+            nodes: [node('agent-b', 'chat'), node('spec', 'file', { title: 'spec.md', path: 'docs/spec.md' })],
+            texts: [],
+            edges: [{ id: 'e2', from: 'spec', to: 'agent-b' }],
+            layouts: []
+        }
+    ];
+
+    test('every canvas counts, not only the one on screen', () => {
+        const sources = deriveProjectContextSources(views, '/repo');
+        expect(sources.get('agent-a')).toEqual([{ id: 'plan', kind: 'text', title: 'Plan', text: 'ship' }]);
+        expect(sources.get('agent-b')).toEqual([{ id: 'spec', kind: 'file', title: 'spec.md', text: '/repo/docs/spec.md' }]);
+        expect(sources.has('solo')).toBe(false);
+    });
+
+    test('an edge from one canvas never reaches a node on another', () => {
+        const crossed: ProjectView[] = [
+            { ...(views[0] as Extract<ProjectView, { kind: 'canvas' }>), edges: [] },
+            { ...(views[2] as Extract<ProjectView, { kind: 'canvas' }>), edges: [{ id: 'e3', from: 'plan', to: 'agent-b' }] }
+        ];
+        expect(deriveProjectContextSources(crossed, null).size).toBe(0);
     });
 });
