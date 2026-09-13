@@ -122,35 +122,67 @@ describe('a view an agent asked for', () => {
     });
 });
 
-describe('a view an agent asked for while nothing may move', () => {
-    test('the banner names it, the button goes there and the banner is done', () => {
-        useDocument.getState().askView({ viewId: 'b', message: 'Refactor asked you to look at b' });
-        expect(useDocument.getState().askedView?.viewId).toBe('b');
-        useDocument.getState().goToAskedView();
+describe('the banner an agent leaves over the views', () => {
+    /* The two an agent can leave: the request nothing moved for, and the way back out of a view that took the cell. */
+    const asks = (viewId: string, message = 'asked'): void => useDocument.getState().showNotice({ message, action: { kind: 'go', viewId } });
+    const showed = (viewId: string, message = 'showed'): void => {
+        const shown = useDocument.getState().showView(viewId)!;
+        useDocument.getState().showNotice({ message, action: { kind: 'back', shown } });
+    };
+
+    test('the request goes where it names and is done', () => {
+        asks('b');
+        useDocument.getState().runNotice();
         expect(useDocument.getState().activeViewId).toBe('b');
-        expect(useDocument.getState().askedView).toBeNull();
+        expect(useDocument.getState().viewNotice).toBeNull();
     });
 
-    test('staying where you are leaves the grid alone', () => {
-        useDocument.getState().askView({ viewId: 'b', message: 'Refactor asked you to look at b' });
-        useDocument.getState().dismissAskedView();
-        expect(useDocument.getState().askedView).toBeNull();
+    test('the way back puts the grid back and is done', () => {
+        showed('b');
+        expect(useDocument.getState().activeViewId).toBe('b');
+        useDocument.getState().runNotice();
         expect(useDocument.getState().activeViewId).toBe('a');
+        expect(useDocument.getState().viewNotice).toBeNull();
     });
 
-    test('a second request replaces the one on screen, since the last one is the one worth acting on', () => {
-        useDocument.getState().askView({ viewId: 'a', message: 'first' });
-        useDocument.getState().askView({ viewId: 'b', message: 'second' });
-        expect(useDocument.getState().askedView).toEqual({ viewId: 'b', message: 'second' });
+    test('dismissing either one leaves the grid where it is', () => {
+        showed('b');
+        useDocument.getState().dismissNotice();
+        expect(useDocument.getState().viewNotice).toBeNull();
+        expect(useDocument.getState().activeViewId).toBe('b');
+    });
+
+    test('switching view by hand drops the way back, since it describes a grid that is gone', () => {
+        showed('b');
+        useDocument.getState().setActiveView('a');
+        expect(useDocument.getState().viewNotice).toBeNull();
+    });
+
+    test('a request survives a switch of your own, unless the switch is you arriving there', () => {
+        asks('b');
+        useDocument.getState().addCanvasView('c');
+        expect(useDocument.getState().viewNotice).not.toBeNull();
+        useDocument.getState().setActiveView('b');
+        expect(useDocument.getState().viewNotice).toBeNull();
+    });
+
+    test('a second open replaces the banner, and the way back is then out of the second view', () => {
+        const third = useDocument.getState().addCanvasView('c');
+        useDocument.getState().setActiveView('a');
+        showed('b', 'first');
+        showed(third, 'second');
+        expect(useDocument.getState().viewNotice?.message).toBe('second');
+        useDocument.getState().runNotice();
+        expect(useDocument.getState().activeViewId).toBe('b');
     });
 
     test('a view that is deleted or a project that is swapped out takes its banner with it', () => {
-        useDocument.getState().askView({ viewId: 'b', message: 'second' });
+        asks('b');
         useDocument.getState().deleteView('b');
-        expect(useDocument.getState().askedView).toBeNull();
-        useDocument.getState().askView({ viewId: 'a', message: 'first' });
+        expect(useDocument.getState().viewNotice).toBeNull();
+        asks('a');
         useDocument.getState().load(document([view('c')]), { activeViewId: 'c', views: {} });
-        expect(useDocument.getState().askedView).toBeNull();
+        expect(useDocument.getState().viewNotice).toBeNull();
     });
 });
 

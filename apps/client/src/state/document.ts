@@ -67,9 +67,9 @@ export interface DocumentState {
     viewLocal: Record<string, ProjectViewLocal>;
     /* Whether the keyboard is inside the body of a standalone view; Escape leaves it to the sidebar. */
     bodyFocused: boolean;
-    /* The view an agent asked for while nothing was allowed to move, as the banner says it. Null when
-       there is nothing waiting; one at a time, since the last thing asked for is the one worth acting on. */
-    askedView: AskedView | null;
+    /* What an agent's `open` left on the banner over the views, in either setting. Null when there is
+       nothing to say; one at a time, since the last thing an agent asked for is the one worth acting on. */
+    viewNotice: ViewNotice | null;
     /* Counts changes to the document itself. Switching views writes the canvas back, which is not one. */
     edits: number;
     /* True for the one update that swaps in another project, so nobody reads it as edits. */
@@ -89,12 +89,13 @@ export interface DocumentState {
     showView(id: string): ShownView | null;
     /* The way back out of that toast, run against the grid as it stands when the button is pressed. */
     undoShowView(shown: Omit<ShownView, 'layout'>): void;
-    /* A view an agent asked for without moving anything, put in the banner over whatever was in it. */
-    askView(asked: AskedView): void;
-    /* The banner's own two answers. Both take it off the screen, which is what a card with a button
-       has to do: leaving it up after the press reads as a press that did nothing. */
-    goToAskedView(): void;
-    dismissAskedView(): void;
+    /* What an agent's `open` has to say, put in the banner over whatever was standing in it. */
+    showNotice(notice: ViewNotice): void;
+    /* The button on that banner, whichever of the two it is. It takes the banner off the screen as
+       well, which is what a card with a button has to do: leaving it up after the press reads as a
+       press that did nothing. */
+    runNotice(): void;
+    dismissNotice(): void;
     /* A view into a cell's zone: the four edges split, the middle takes the place of what is there. */
     dropViewAt(viewId: string, at: CellAt, zone: SplitZone): void;
     /* Splits the focused cell and puts a view in the new one. */
@@ -137,10 +138,14 @@ export interface DocumentState {
     exportLocal(): Pick<ProjectLocal, 'activeViewId' | 'views' | 'layout'>;
 }
 
-/* A request from an agent that is waiting for an answer: which view, and the line the banner reads. */
-export interface AskedView {
-    viewId: string;
+/*
+ * What the banner over the views says about a view an agent opened, and the one thing it can do
+ * about it: go to the view nothing moved for, or step back out of the one that took the cell. Null
+ * where there is nothing to offer, which is an agent pointing at the view already in front.
+ */
+export interface ViewNotice {
     message: string;
+    action: { kind: 'go'; viewId: string } | { kind: 'back'; shown: Omit<ShownView, 'layout'> } | null;
 }
 
 /* What a new standalone view needs: a chat and a terminal carry a node, a browser carries a page. */
@@ -243,9 +248,37 @@ const settledOn = (
     };
 };
 
-/* A banner about a view the project has not got any more offers a door into nothing, so it goes with it. */
-const keptAsk = (asked: AskedView | null, views: ProjectView[]): AskedView | null =>
-    asked === null || views.some((view) => view.id === asked.viewId) ? asked : null;
+/* Which view a banner would put on screen if its button were pressed; null for one that offers nothing. */
+const noticeTarget = (notice: ViewNotice | null): string | null => {
+    if (notice === null || notice.action === null) {
+        return null;
+    }
+    return notice.action.kind === 'go' ? notice.action.viewId : notice.action.shown.replaced;
+};
+
+/* A banner whose button would open a view the project has not got any more is a door into nothing. */
+const keptNotice = (notice: ViewNotice | null, views: ProjectView[]): ViewNotice | null => {
+    const target = noticeTarget(notice);
+    return target === null || views.some((view) => view.id === target) ? notice : null;
+};
+
+/*
+ * What a grid that just moved does to the banner standing over it. A way back describes the grid as
+ * it was, so the moment a person moves the grid themselves they have answered the question and the
+ * offer is stale; a request to look somewhere survives that, unless the move is the person arriving
+ * there, which is the request answered by doing it. That is the whole of when a banner goes by
+ * itself: no timer, because four seconds of a view you did not ask for is exactly when you would
+ * reach for the way back.
+ */
+const afterMove = (notice: ViewNotice | null, activeViewId: string | null): ViewNotice | null => {
+    if (notice === null || notice.action === null) {
+        return notice;
+    }
+    if (notice.action.kind === 'back') {
+        return null;
+    }
+    return notice.action.viewId === activeViewId ? null : notice;
+};
 
 /*
  * Every view of the project that is open, and which one is on screen. The canvas store edits one
@@ -263,7 +296,8 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             const state = get();
             const views = state.exportViews();
             const viewLocal = { ...state.viewLocal, ...state.exportLocal().views };
-            set(settledOn(views, viewLocal, layout, state));
+            const settled = settledOn(views, viewLocal, layout, state);
+            set({ ...settled, viewNotice: afterMove(state.viewNotice, settled.activeViewId) });
             openEditors(views, viewLocal, layout === null ? [] : viewIdsIn(layout), layout === null ? null : focusedViewId(layout), peers);
         };
 
@@ -271,7 +305,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
            for what is already there, which claims no edit and so does not make the project dirty. */
         const write = (views: ProjectView[] | null): void => {
             if (views !== null) {
-                set((state) => ({ views, edits: state.edits + 1, askedView: keptAsk(state.askedView, views) }));
+                set((state) => ({ views, edits: state.edits + 1, viewNotice: keptNotice(state.viewNotice, views) }));
             }
         };
 
@@ -291,7 +325,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             lastCanvasViewId: null,
             viewLocal: {},
             bodyFocused: false,
-            askedView: null,
+            viewNotice: null,
             edits: 0,
             loading: false,
 
@@ -301,8 +335,8 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 // A file written before views could stand side by side reads as one cell on the view it named.
                 const layout = layoutOf(local ?? { activeViewId: null, layout: undefined }, views);
                 const settled = settledOn(views, viewLocal, layout, { lastCanvasViewId: views.find(isCanvasView)?.id ?? null });
-                // Another project is another set of views, so a request about the one that just left goes with it.
-                set({ ...settled, askedView: null, loading: true, edits: 0 });
+                // Another project is another set of views, so a banner about the one that just left goes with it.
+                set({ ...settled, viewNotice: null, loading: true, edits: 0 });
                 // The project that was here goes first, editors and all: nothing of it may show through.
                 peers.canvases.keep([]);
                 openEditors(views, viewLocal, layout === null ? [] : viewIdsIn(layout), settled.activeViewId, peers);
@@ -310,7 +344,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             },
 
             applyAdditions(views, canvases) {
-                set((state) => ({ views, askedView: keptAsk(state.askedView, views) }));
+                set((state) => ({ views, viewNotice: keptNotice(state.viewNotice, views) }));
                 for (const [viewId, addition] of Object.entries(canvases)) {
                     peers.canvases.peek(viewId)?.getState().addExternal(addition);
                 }
@@ -356,23 +390,28 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 }
             },
 
-            askView(asked) {
-                // The one that was up is replaced rather than queued: an agent that asks twice means
-                // the second one, and a line of old requests is a list nobody would work through.
-                set({ askedView: asked });
+            showNotice(notice) {
+                // The one that was up is replaced rather than queued: an agent that opens twice means
+                // the second one, and a line of old requests is a list nobody would work through. The
+                // way back goes with it, since it is the second move that is now the one to undo.
+                set({ viewNotice: notice });
             },
 
-            goToAskedView() {
-                const asked = get().askedView;
-                if (asked === null) {
+            runNotice() {
+                const action = get().viewNotice?.action ?? null;
+                if (action === null) {
                     return;
                 }
-                set({ askedView: null });
-                get().setActiveView(asked.viewId);
+                set({ viewNotice: null });
+                if (action.kind === 'go') {
+                    get().setActiveView(action.viewId);
+                    return;
+                }
+                get().undoShowView(action.shown);
             },
 
-            dismissAskedView() {
-                set({ askedView: null });
+            dismissNotice() {
+                set({ viewNotice: null });
             },
 
             dropViewAt(viewId, at, zone) {
@@ -494,7 +533,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 }
                 const { views } = result;
                 const { [id]: _gone, ...viewLocal } = state.viewLocal;
-                set({ views, viewLocal, edits: state.edits + 1, askedView: keptAsk(state.askedView, views) });
+                set({ views, viewLocal, edits: state.edits + 1, viewNotice: keptNotice(state.viewNotice, views) });
                 const standing = state.layout === null ? null : locateView(state.layout, id);
                 if (state.layout === null || standing === null) {
                     return;

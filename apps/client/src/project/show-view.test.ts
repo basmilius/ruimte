@@ -21,35 +21,30 @@ describe('callerName', () => {
         expect(callerName(views, 'chat-1')).toBe('Planner');
     });
 
-    test('an id this client has not got yet has no name, and the toast says so in its own words', () => {
+    test('an id this client has not got yet has no name, and the banner says so in its own words', () => {
         expect(callerName(views, 'term-9')).toBeNull();
-        expect(showViewNotice({ agent: null, view: 'Board', follow: true, alreadyThere: false }).title).toBe('An agent showed Board');
+        expect(showViewNotice({ agent: null, view: 'Board', follow: true, alreadyThere: false }).message).toStartWith('An agent showed Board');
     });
 });
 
 describe('showViewNotice', () => {
-    test('following says what moved and offers the way back', () => {
+    test('following reports what moved and offers the way back', () => {
         const notice = showViewNotice({ agent: 'Refactor', view: 'Board', follow: true, alreadyThere: false });
-        expect(notice.title).toBe('Refactor showed Board');
-        expect(notice.where).toBe('toast');
-        expect(notice.back).toBe(true);
+        expect(notice.message).toBe('Refactor showed Board in the cell you were working in');
+        expect(notice.action).toBe('back');
     });
 
-    test('with the setting off nothing moves, so it is the banner that asks', () => {
+    test('with the setting off nothing moves, so the line asks instead of reporting', () => {
         const notice = showViewNotice({ agent: 'Refactor', view: 'Board', follow: false, alreadyThere: false });
-        expect(notice.title).toBe('Refactor asked you to look at Board');
-        expect(notice.where).toBe('banner');
-        expect(notice.back).toBe(false);
-        // The banner is one row, so everything it says has to be in that one line.
-        expect(notice.description).toBeUndefined();
+        expect(notice.message).toBe('Refactor asked you to look at Board');
+        expect(notice.action).toBe('go');
     });
 
-    test('the view already in front reads the same either way, and carries no button at all', () => {
+    test('the view already in front reads the same either way, and offers nothing at all', () => {
         for (const follow of [true, false]) {
             const notice = showViewNotice({ agent: 'Refactor', view: 'Board', follow, alreadyThere: true });
-            expect(notice.title).toBe('Refactor pointed at Board');
-            expect(notice.where).toBe('toast');
-            expect(notice.back).toBe(false);
+            expect(notice.message).toBe('Refactor pointed at Board, which you were already looking at');
+            expect(notice.action).toBeNull();
         }
     });
 });

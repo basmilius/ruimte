@@ -151,7 +151,7 @@ export function AgentsPane() {
             >
                 <SettingsRow
                     label="Let an agent show you a view"
-                    description="Off, a view an agent asks for waits in a banner over the ones you have open, with a button to go there. On, it takes the place of the view you are working in and a toast puts it back."
+                    description="Off, a view an agent asks for waits in the banner over the ones you have open, with a button to go there. On, it takes the place of the view you are working in and the same banner offers the way back."
                     control={
                         <Toggle checked={agentsShowViews} onChange={(checked) => update({ agentsShowViews: checked })} label="Let an agent show you a view" />
                     }

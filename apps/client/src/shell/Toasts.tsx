@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import clsx from 'clsx';
-import { Check, CircleAlert, Copy, Eye, LoaderCircle, X } from 'lucide-react';
+import { Check, CircleAlert, Copy, LoaderCircle, X } from 'lucide-react';
 import { useToasts, type Toast } from '@/state/toasts';
 import { Button } from '@/ui/Button';
 import { FLOAT } from '@/ui/classes';
@@ -10,15 +10,13 @@ import { Tooltip } from '@/ui/Tooltip';
 const ICON = {
     progress: LoaderCircle,
     success: Check,
-    error: CircleAlert,
-    notice: Eye
+    error: CircleAlert
 } as const;
 
 const TONE = {
     progress: 'text-text-muted',
     success: 'text-status-idle',
-    error: 'text-status-error',
-    notice: 'text-text-muted'
+    error: 'text-status-error'
 } as const;
 
 /* Nothing else in the app copies text, so the button says whether it worked instead of a toast about a toast. */
@@ -74,9 +72,9 @@ function ToastCard({ toast }: { toast: Toast }) {
 
 /*
  * Bottom right, over everything: what a git action is doing while it runs and how it went when it
- * is over. A success and a notice (a view an agent showed you) take themselves away after four
- * seconds, and a failure waits to be read and carries the output of the command that failed. What
- * waits for an answer is not here but in the banner over the views.
+ * is over. A success takes itself away after four seconds, and a failure waits to be read and
+ * carries the output of the command that failed. Anything an agent has to say about a view is not
+ * here but in the banner over the views, where a person looks for a decision.
  */
 export function Toasts() {
     const toasts = useToasts((s) => s.toasts);

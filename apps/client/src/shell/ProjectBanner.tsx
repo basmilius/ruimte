@@ -8,29 +8,32 @@ import { Button } from '@/ui/Button';
 
 /*
  * Floats at the top of the canvas, under the toolbar: the file that changed under unsaved edits, the
- * save that failed, and the view an agent asked for while the setting that follows one is off. One
- * slot, and the order is what it costs to miss it: work that may be lost comes before a request that
- * can be made again, so the agent's line waits until the file is settled rather than stacking under it.
+ * save that failed, and whatever an agent's `open` has to say, which is one line in either setting.
+ * One slot, and the order is what it costs to miss it: work that may be lost comes before a view that
+ * can be shown again, so the agent's line waits until the file is settled rather than stacking under
+ * it. The two agent lines can never be up at once, since one is the setting on and the other off.
  */
 export function ProjectBanner() {
     const projectConflict = useProject((s) => s.conflict);
     const drawingConflict = useDrawing((s) => s.conflict);
     const projectError = useProject((s) => s.error);
     const drawingError = useDrawing((s) => s.error);
-    const asked = useDocument((s) => s.askedView);
+    const notice = useDocument((s) => s.viewNotice);
     // One banner for both files: the wording is the same and two of them would stack.
     const drawing = drawingConflict !== null || (drawingError !== null && projectError === null);
     const conflict = projectConflict ?? drawingConflict;
     const error = projectError ?? drawingError;
     if (!conflict && !error) {
-        return asked === null ? null : (
-            <Banner icon={Eye} tone="neutral" message={asked.message}>
-                <Button size="sm" onClick={() => useDocument.getState().dismissAskedView()}>
-                    Stay here
+        return notice === null ? null : (
+            <Banner icon={Eye} tone="neutral" message={notice.message}>
+                <Button size="sm" onClick={() => useDocument.getState().dismissNotice()}>
+                    {notice.action?.kind === 'go' ? 'Stay here' : 'Dismiss'}
                 </Button>
-                <Button size="sm" variant="primary" onClick={() => useDocument.getState().goToAskedView()}>
-                    Go there
-                </Button>
+                {notice.action !== null && (
+                    <Button size="sm" variant="primary" onClick={() => useDocument.getState().runNotice()}>
+                        {notice.action.kind === 'go' ? 'Go there' : 'Back'}
+                    </Button>
+                )}
             </Banner>
         );
     }

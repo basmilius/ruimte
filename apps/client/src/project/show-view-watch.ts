@@ -1,7 +1,6 @@
 import { isOpenableView, type ProjectShowViewEvent } from '@ruimte/contracts';
 import { callerName, showViewNotice } from '@/project/show-view';
 import { useSettings } from '@/state/settings';
-import { useToasts, type ToastAction } from '@/state/toasts';
 import { pool } from '@/transport';
 import { listWorkspaces, type Workspace } from '@/transport/connections';
 
@@ -24,32 +23,15 @@ const showInWorkspace = (workspace: Workspace, payload: ProjectShowViewEvent): v
         follow,
         alreadyThere: state.activeViewId === payload.viewId
     });
-    if (notice.where === 'banner') {
-        documents.getState().askView({ viewId: payload.viewId, message: notice.title });
-        return;
-    }
-    const shown = follow ? documents.getState().showView(payload.viewId) : null;
-    /* One card per workspace: an agent that shows three views in a row leaves the last of them on
-       screen, not a stack nobody asked for. */
-    const id = `show-view:${workspace.id}`;
-    /* Nothing to go back to when the grid was empty, which is a project whose views all went. */
-    const button: ToastAction | null =
-        notice.back && shown !== null
-            ? {
-                  label: 'Back',
-                  run: () => {
-                      documents.getState().undoShowView(shown);
-                      // The card has said all it had to say once the button on it has been pressed.
-                      useToasts.getState().dismiss(id);
-                  }
-              }
-            : null;
-    useToasts.getState().show({
-        id,
-        kind: 'notice',
-        title: notice.title,
-        ...(notice.description === undefined ? {} : { description: notice.description }),
-        ...(button === null ? {} : { action: button })
+    /* The grid moves first, so the way back is recorded against the grid as it stands after the move
+       and a second `open` undoes the second one rather than the first. */
+    const shown = notice.action === 'back' ? documents.getState().showView(payload.viewId) : null;
+    /* One banner per workspace: an agent that shows three views in a row leaves the last of them on
+       screen, not a stack nobody asked for. Nothing to go back to when the grid was empty, which is a
+       project whose views all went, so that one only reports. */
+    documents.getState().showNotice({
+        message: notice.message,
+        action: notice.action === 'go' ? { kind: 'go', viewId: payload.viewId } : shown === null ? null : { kind: 'back', shown }
     });
 };
 
