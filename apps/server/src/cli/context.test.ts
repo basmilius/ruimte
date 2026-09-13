@@ -1,0 +1,106 @@
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, spyOn, test } from 'bun:test';
+import type { Server } from 'bun';
+import { runContext } from './context.ts';
+
+let server: Server<undefined>;
+let env: Record<string, string>;
+let stdout: string;
+let stderr: string;
+let restore: Array<() => void>;
+let seen: { verb: string; argv: unknown; authorization: string | null }[];
+
+beforeAll(() => {
+    server = Bun.serve({
+        port: 0,
+        hostname: '127.0.0.1',
+        async fetch(request) {
+            const url = new URL(request.url);
+            if (url.pathname === '/context') {
+                return Response.json({ sources: [{ id: 'n1', kind: 'text', title: 'Plan' }] });
+            }
+            if (!url.pathname.startsWith('/canvas/')) {
+                return new Response('Not found', { status: 404 });
+            }
+            const verb = decodeURIComponent(url.pathname.slice('/canvas/'.length));
+            const { argv } = (await request.json()) as { argv: string[] };
+            seen.push({ verb, argv, authorization: request.headers.get('authorization') });
+            switch (verb) {
+                case 'node':
+                    return new Response('note-12345678\tnote\tmain\n');
+                case 'nodes':
+                    return new Response('refused\tview-required\tname one with --view\ncanvas\tmain\tCanvas\n', { status: 422 });
+                case 'broken':
+                    return new Response('boom', { status: 500 });
+                default:
+                    return new Response(`refused\tunknown-verb\t${verb} is not a verb\n`, { status: 404 });
+            }
+        }
+    });
+});
+
+afterAll(() => {
+    server.stop(true);
+});
+
+beforeEach(() => {
+    env = { RUIMTE_CONTEXT_URL: `http://127.0.0.1:${server.port}/context`, RUIMTE_HOOK_TOKEN: 'tok' };
+    stdout = '';
+    stderr = '';
+    seen = [];
+    const out = spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+        stdout += String(chunk);
+        return true;
+    });
+    const err = spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+        stderr += String(chunk);
+        return true;
+    });
+    const log = spyOn(console, 'log').mockImplementation((...parts) => {
+        stdout += `${parts.join(' ')}\n`;
+    });
+    const error = spyOn(console, 'error').mockImplementation((...parts) => {
+        stderr += `${parts.join(' ')}\n`;
+    });
+    restore = [out, err, log, error].map((spy) => () => spy.mockRestore());
+});
+
+afterEach(() => {
+    for (const undo of restore) {
+        undo();
+    }
+});
+
+describe('runContext', () => {
+    test('outside a session exits 2', async () => {
+        expect(await runContext(['node', 'note'], {})).toBe(2);
+    });
+
+    test('bare and list still list the linked sources', async () => {
+        expect(await runContext([], env)).toBe(0);
+        expect(await runContext(['list'], env)).toBe(0);
+        expect(stdout).toBe('n1\ttext\tPlan\nn1\ttext\tPlan\n');
+        expect(seen).toEqual([]);
+    });
+
+    test('a verb posts its argv to /canvas/<verb> and prints the answer', async () => {
+        expect(await runContext(['node', 'note', '--text', 'hello'], env)).toBe(0);
+        expect(seen).toEqual([{ verb: 'node', argv: ['note', '--text', 'hello'], authorization: 'Bearer tok' }]);
+        expect(stdout).toBe('note-12345678\tnote\tmain\n');
+    });
+
+    test('a refusal exits 3 and goes to stderr', async () => {
+        expect(await runContext(['nodes'], env)).toBe(3);
+        expect(stderr).toBe('refused\tview-required\tname one with --view\ncanvas\tmain\tCanvas\n');
+        expect(stdout).toBe('');
+    });
+
+    test('an unknown verb is a refusal too', async () => {
+        expect(await runContext(['agent', 'claude'], env)).toBe(3);
+        expect(stderr).toStartWith('refused\tunknown-verb\t');
+    });
+
+    test('a daemon error exits 1, and so does a daemon that is not there', async () => {
+        expect(await runContext(['broken'], env)).toBe(1);
+        expect(await runContext(['help'], { ...env, RUIMTE_CONTEXT_URL: 'http://127.0.0.1:1/context' })).toBe(1);
+    });
+});
