@@ -1,6 +1,7 @@
 import { memo, useEffect, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import ReactMarkdown from 'react-markdown';
+import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
 import { openFileLink, useFileLinkCwd, useFileLinkTarget, type FileRef } from '@/shell/panels/file-links';
 import { useSettings } from '@/state/settings';
@@ -146,17 +147,25 @@ const components = {
     }
 };
 
+// Module constants, so a render never hands react-markdown a fresh array and makes it parse again.
+const PLUGINS = [remarkGfm];
+const PLUGINS_WITH_BREAKS = [remarkGfm, remarkBreaks];
+
 /*
  * Assistant text as the model wrote it: GitHub-flavored markdown, code highlighted off the main
  * path. Tailwind Typography sets the rhythm and `.chat-markdown` paints it in the theme's tokens.
  * `text-sm` is the size, which a node, a view and the file preview each move for themselves, and it
  * has to be a utility to outrank the one `prose-sm` brings; prose scales its own air off it in
  * `em`. `max-w-none` leaves the column width to whoever renders this.
+ *
+ * `breaks` makes a single newline a line break, which is what a person typing a note means by
+ * Enter. A thread never asks for it: a CLI writes proper markdown there, and folding its lines
+ * would change the layout it wrote.
  */
-export const Markdown = memo(function Markdown({ text }: { text: string }) {
+export const Markdown = memo(function Markdown({ text, breaks = false }: { text: string; breaks?: boolean }) {
     return (
         <div className="chat-markdown prose prose-sm max-w-none text-sm">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+            <ReactMarkdown remarkPlugins={breaks ? PLUGINS_WITH_BREAKS : PLUGINS} components={components}>
                 {text}
             </ReactMarkdown>
         </div>

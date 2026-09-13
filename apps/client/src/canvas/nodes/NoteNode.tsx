@@ -102,5 +102,5 @@ export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
 
     // No menu here: the frame lays an overlay over an unfocused body, so there is nothing to select
     // and nothing to copy until the note is entered, which is where its own menu lives.
-    return <div className="h-full overflow-auto px-3 py-2.5 select-text">{<Markdown text={body} />}</div>;
+    return <div className="h-full overflow-auto px-3 py-2.5 select-text">{<Markdown text={body} breaks />}</div>;
 }

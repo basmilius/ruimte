@@ -84,6 +84,10 @@ canvas, against Ruimte, one verdict each.
   element next to the class outranks the `:where()` prose wraps its own in), and the size through
   the `text-sm` utility, since a utility is a layer later. That is why the size is not in
   `.chat-markdown`.
+- A note breaks on a single newline, a thread does not (`remark-breaks` behind the `breaks` prop of
+  `Markdown`, passed only by `NoteNode`). A person typing a note means a line break by Enter, and
+  an agent writing one with `--text` means the same; a CLI writing into a thread writes proper
+  markdown, where folding the lines it wrote would change the layout it chose.
 - The colors are the semantic tokens mapped onto the prose variables (`--tw-prose-body` and
   `--tw-prose-headings` from `--text`, `--tw-prose-links` from `--accent`, `--tw-prose-code` and
   `--tw-prose-pre-code` from `--text` with `--tw-prose-pre-bg` from `--surface-sunken`, counters
