@@ -290,6 +290,7 @@ describe('help', () => {
         expect(lines).toContain('kind\tevery kind\t--title T, --view V, --beside N');
         expect(lines).toContain('flag\t--url U\tbrowser (required)\tAn http or https address');
         expect(lines).toContain('flag\t--cwd P\tterminal, chat\tThe directory the shell starts in');
+        expect(lines).toContain('kind\tdiagram\t--source (required)\tcalled the name of the diagram view without --title');
         expect(lines.filter((line) => line.startsWith('where\t')).length).toBe(2);
         expect(lines.filter((line) => line.startsWith('paths\t')).length).toBe(2);
         expect(lines.some((line) => line.includes('--text - takes the body from stdin'))).toBe(true);
@@ -406,8 +407,8 @@ describe('help', () => {
 describe('refusals', () => {
     test('say what is missing and, for a closed set, what may go there', async () => {
         const cases: Array<{ verb: string; argv: string[]; code: string; message: string }> = [
-            { verb: 'node', argv: [], code: 'bad-arguments', message: 'node needs a kind: note, browser, drawing, file, terminal, chat' },
-            { verb: 'node', argv: ['group'], code: 'bad-arguments', message: 'node needs a kind: note, browser, drawing, file, terminal, chat' },
+            { verb: 'node', argv: [], code: 'bad-arguments', message: 'node needs a kind: note, browser, drawing, diagram, file, terminal, chat' },
+            { verb: 'node', argv: ['group'], code: 'bad-arguments', message: 'node needs a kind: note, browser, drawing, diagram, file, terminal, chat' },
             { verb: 'node', argv: ['note', 'My note'], code: 'bad-arguments', message: 'node takes one kind and nothing else; a title goes in --title' },
             { verb: 'node', argv: ['note', '--title='], code: 'bad-arguments', message: '--title needs a title' },
             { verb: 'node', argv: ['note', '--view='], code: 'bad-arguments', message: '--view needs the id of a canvas' },
@@ -721,6 +722,34 @@ describe('node', () => {
         const { lines } = await post('node', ['drawing', '--source', 'sketch-1']);
         const node = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === lines[0]!.split('\t')[0])!;
         expect(node).toMatchObject({ viewId: 'sketch-1', title: 'Sketch' });
+    });
+
+    test('a diagram needs a diagram view of the same project as its source', async () => {
+        const withFlow = content();
+        withFlow.views.push({ kind: 'diagram', id: 'flow-1', name: 'Flow' });
+        await store.mutate(projectId, () => ({ content: withFlow, result: null }));
+
+        expect((await post('node', ['diagram'])).lines[0]).toStartWith('refused\tmissing-flag\t');
+        // A drawing is not a diagram, even though both take --source.
+        const wrongKind = await post('node', ['diagram', '--source', 'sketch-1']);
+        expect(wrongKind.lines).toEqual(['refused\tnot-a-diagram\tsketch-1 is not a diagram view of this project', 'diagram\tflow-1\tFlow']);
+        const unknown = await post('node', ['diagram', '--source', 'nowhere']);
+        expect(unknown.lines[0]).toBe('refused\tnot-a-diagram\tnowhere is not a diagram view of this project');
+        expect((await post('node', ['drawing', '--source', 'flow-1'])).lines[0]).toStartWith('refused\tnot-a-drawing\t');
+
+        const { lines } = await post('node', ['diagram', '--source', 'flow-1']);
+        const [id, kind] = lines[0]!.split('\t');
+        expect(kind).toBe('diagram');
+        const node = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === id)!;
+        expect(node).toMatchObject({ kind: 'diagram', viewId: 'flow-1', title: 'Flow', w: 480, h: 360 });
+    });
+
+    test('a --source with no diagram view in the project says how to make one', async () => {
+        const { lines } = await post('node', ['diagram', '--source', 'nowhere']);
+        expect(lines).toEqual([
+            'refused\tnot-a-diagram\tnowhere is not a diagram view of this project',
+            'note\tThis project has no diagram views; ruimte-context view new --kind diagram makes one'
+        ]);
     });
 
     test('a cwd lies inside the folder or a worktree of it', async () => {

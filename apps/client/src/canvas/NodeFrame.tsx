@@ -14,6 +14,7 @@ import {
     Maximize2,
     MessageSquare,
     PenTool,
+    Workflow,
     StickyNote,
     Terminal,
     X
@@ -55,6 +56,7 @@ const ICONS: Record<CanvasNodeKind, ReactNode> = {
     group: <Icon icon={LayoutGrid} size={14} />,
     note: <Icon icon={StickyNote} size={14} />,
     drawing: <Icon icon={PenTool} size={14} />,
+    diagram: <Icon icon={Workflow} size={14} />,
     // The floor under a file node that has no path yet; with one it wears the mark of its own name.
     file: <Icon icon={FileText} size={14} />,
     unknown: <Icon icon={CircleQuestionMark} size={14} />

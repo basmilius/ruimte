@@ -20,6 +20,7 @@ describe('deriveContextSources', () => {
         note: node('note', 'note', { title: 'Plan', body: '# Plan\n\nShip it.' }),
         page: node('page', 'browser', { url: 'https://ruimte.app' }),
         sketch: node('sketch', 'drawing', { title: 'Sketch', viewId: 'drawing-1' }),
+        flow: node('flow', 'diagram', { title: 'Flow', viewId: 'diagram-1' }),
         readme: node('readme', 'file', { title: 'README.md', path: 'docs/README.md' }),
         outside: node('outside', 'file', { title: 'hosts', path: '/etc/hosts' }),
         frame: node('frame', 'group')
@@ -55,6 +56,16 @@ describe('deriveContextSources', () => {
             { id: 'drawing-1', kind: 'drawing', title: 'Sketch' },
             { id: 'shell', kind: 'terminal', title: 'shell' }
         ]);
+    });
+
+    test('a diagram is read by the view it mirrors, like a drawing', () => {
+        const sources = deriveContextSources(nodes, texts, [{ id: 'e1', from: 'flow', to: 'shell' }]);
+        expect(sources.get('shell')).toEqual([{ id: 'diagram-1', kind: 'diagram', title: 'Flow' }]);
+    });
+
+    test('a diagram node that mirrors nothing yet is only a line', () => {
+        const loose = { ...nodes, empty: node('empty', 'diagram') };
+        expect(deriveContextSources(loose, texts, [{ id: 'e1', from: 'empty', to: 'chat' }]).size).toBe(0);
     });
 
     test('only edges into an agent node become context', () => {

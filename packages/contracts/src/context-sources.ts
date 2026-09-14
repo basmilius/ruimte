@@ -34,9 +34,9 @@ export const deriveContextSources = (
             source = { id: node.id, kind: node.kind, title: node.title };
         } else if (node && node.kind === 'note') {
             source = { id: node.id, kind: 'text', title: node.title, text: node.body ?? '' };
-        } else if (node && node.kind === 'drawing' && node.viewId) {
+        } else if (node && (node.kind === 'drawing' || node.kind === 'diagram') && node.viewId) {
             // The view id, not the node id: the daemon reads the file, and two nodes can mirror one.
-            source = { id: node.viewId, kind: 'drawing', title: node.title };
+            source = { id: node.viewId, kind: node.kind, title: node.title };
         } else if (node && node.kind === 'file' && node.path) {
             // The path the daemon's machine knows it by, since that is where the agent runs.
             source = { id: node.id, kind: 'file', title: node.title, text: resolveStoredPath(folder, node.path) ?? node.path };

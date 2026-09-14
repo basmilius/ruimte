@@ -2,9 +2,9 @@ import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from '
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
 import {
-    CircleQuestionMark,
     ChartNoAxesColumn,
     ChevronRight,
+    CircleQuestionMark,
     Copy,
     FileText,
     Frame,
@@ -19,7 +19,8 @@ import {
     StickyNote,
     Terminal,
     Trash,
-    TriangleAlert
+    TriangleAlert,
+    Workflow
 } from 'lucide-react';
 import clsx from 'clsx';
 import { isCanvasView, isSessionView, type AgentKind, type CanvasNodeKind, viewIconOf } from '@ruimte/contracts';
@@ -86,6 +87,7 @@ const ROW_ICON: Record<CanvasNodeKind, typeof Terminal> = {
     group: LayoutGrid,
     note: StickyNote,
     drawing: PenTool,
+    diagram: Workflow,
     file: FileText,
     unknown: CircleQuestionMark
 };

@@ -9,6 +9,7 @@ export const NODE_SIZE: Record<NodeKind, { w: number; h: number }> = {
     group: { w: 800, h: 600 },
     note: { w: 320, h: 240 },
     drawing: { w: 480, h: 360 },
+    diagram: { w: 480, h: 360 },
     file: { w: 520, h: 420 }
 };
 
@@ -85,6 +86,7 @@ export const DEFAULT_TITLES: Record<NodeKind, string> = {
     browser: 'Browser',
     group: 'Group',
     drawing: 'Drawing',
+    diagram: 'Diagram',
     note: 'Note',
     file: 'File'
 };

@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
 import {
-    CircleQuestionMark,
     ArrowLeft,
     CaseSensitive,
+    CircleQuestionMark,
     CornerLeftUp,
     FileSearch,
     FileText,
@@ -18,9 +18,10 @@ import {
     Search,
     StickyNote,
     Terminal,
+    type LucideIcon,
     WholeWord,
-    Zap,
-    type LucideIcon
+    Workflow,
+    Zap
 } from 'lucide-react';
 import { isCanvasView, isOpenableView, type FsBrowseResult, viewIconOf, type CanvasNodeKind } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
@@ -78,6 +79,7 @@ const KIND_ICON: Record<CanvasNodeKind, React.ReactNode> = {
     group: <Icon icon={LayoutGrid} size={14} />,
     note: <Icon icon={StickyNote} size={14} />,
     drawing: <Icon icon={PenTool} size={14} />,
+    diagram: <Icon icon={Workflow} size={14} />,
     file: <Icon icon={FileText} size={14} />,
     unknown: <Icon icon={CircleQuestionMark} size={14} />
 };

@@ -4,11 +4,15 @@ import {
     DEFAULT_TITLES,
     NODE_SIZE,
     isCanvasView,
+    isDiagramView,
     isDrawingView,
     storedPathOf,
     type ProjectCanvasView,
     type ProjectContent,
-    type ProjectNode
+    type ProjectDiagramView,
+    type ProjectDrawingView,
+    type ProjectNode,
+    type ProjectView
 } from '@ruimte/contracts';
 import { z } from 'zod';
 import type { IndexedPlace } from '../projects/project-index.ts';
@@ -17,7 +21,7 @@ import { checkCwd, checkPath, isInside } from './project-paths.ts';
 import { unescapeText } from './text-escapes.ts';
 import { MAX_TITLE_LENGTH, TITLE_LINE, VerbRefusal, canvasFor, defineSubVerb, defineVerb, field, orNote, placeOf, titleField, type Verb } from './verb.ts';
 
-export const NODE_VERB_KINDS = ['note', 'browser', 'drawing', 'file', 'terminal', 'chat'] as const;
+export const NODE_VERB_KINDS = ['note', 'browser', 'drawing', 'diagram', 'file', 'terminal', 'chat'] as const;
 type NodeVerbKind = (typeof NODE_VERB_KINDS)[number];
 
 // A plafond, not a budget: it is there to stop an agent in a loop long before a canvas stops drawing.
@@ -30,12 +34,13 @@ const KIND_FLAGS: Record<NodeVerbKind, readonly KindFlag[]> = {
     note: ['text'],
     browser: ['url'],
     drawing: ['source'],
+    diagram: ['source'],
     file: ['path'],
     terminal: ['cwd'],
     chat: ['cwd']
 };
 
-const REQUIRED_FLAG: Partial<Record<NodeVerbKind, KindFlag>> = { browser: 'url', drawing: 'source', file: 'path' };
+const REQUIRED_FLAG: Partial<Record<NodeVerbKind, KindFlag>> = { browser: 'url', drawing: 'source', diagram: 'source', file: 'path' };
 
 /* Which kinds a flag goes with, from the same table `run` refuses against, so help cannot claim another pairing. */
 const kindsFor = (flag: KindFlag): string =>
@@ -45,8 +50,8 @@ const kindsFor = (flag: KindFlag): string =>
 
 /* What the title falls back to without `--title`, in the order `run` picks it. */
 const untitled = (kind: NodeVerbKind): string => {
-    if (kind === 'drawing') {
-        return 'the name of the drawing view';
+    if (kind === 'drawing' || kind === 'diagram') {
+        return `the name of the ${kind} view`;
     }
     if (kind === 'file') {
         return "the file's own name";
@@ -74,7 +79,7 @@ const NODE_DETAIL: readonly string[] = [
     'flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field is dry-run instead of the id the node would have got',
     `flag\t--text B\t${kindsFor('text')}\tThe body; \\n, \\t and \\\\ are read as escapes, and --text - takes the body from stdin, byte for byte`,
     `flag\t--url U\t${kindsFor('url')}\tAn http or https address`,
-    `flag\t--source V\t${kindsFor('source')}\tThe id of a drawing view of this project; ruimte-context views lists them`,
+    `flag\t--source V\t${kindsFor('source')}\tThe id of a view of this project of the same kind as the node, a drawing for a drawing and a diagram for a diagram; ruimte-context views lists them`,
     `flag\t--path P\t${kindsFor('path')}\tThe file to show; it has to exist`,
     `flag\t--cwd P\t${kindsFor('cwd')}\tThe directory the shell starts in`,
     'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one',
@@ -205,7 +210,7 @@ const addVerb = defineVerb({
         text: z.string().transform(unescapeText).optional(),
         url: z.string().min(1, '--url needs an http or https address').optional(),
         path: z.string().min(1, '--path needs the path of a file').optional(),
-        source: z.string().min(1, '--source needs the id of a drawing view').optional(),
+        source: z.string().min(1, '--source needs the id of a drawing or diagram view').optional(),
         cwd: z.string().min(1, '--cwd needs the path of a directory').optional(),
         view: z.string().min(1, '--view needs the id of a canvas').optional(),
         beside: z.string().min(1, '--beside needs the id of a node on that canvas').optional()
@@ -235,14 +240,20 @@ const addVerb = defineVerb({
             }
             let sourceName: string | undefined;
             if (flags.source !== undefined) {
+                // Only a drawing or a diagram takes --source, and each mirrors a view of its own kind.
+                const sourceKind = kind === 'diagram' ? 'diagram' : 'drawing';
+                const ofKind = (view: ProjectView): view is ProjectDrawingView | ProjectDiagramView =>
+                    sourceKind === 'diagram' ? isDiagramView(view) : isDrawingView(view);
                 const source = content.views.find((view) => view.id === flags.source);
-                if (!source || !isDrawingView(source)) {
+                if (!source || !ofKind(source)) {
                     throw new VerbRefusal(
-                        'not-a-drawing',
-                        `${flags.source} is not a drawing view of this project`,
+                        `not-a-${sourceKind}`,
+                        `${flags.source} is not a ${sourceKind} view of this project`,
                         orNote(
-                            content.views.filter(isDrawingView).map((view) => `drawing\t${view.id}\t${field(view.name)}`),
-                            'This project has no drawing views; a person makes one in the sidebar'
+                            content.views.filter(ofKind).map((view) => `${sourceKind}\t${view.id}\t${field(view.name)}`),
+                            sourceKind === 'diagram'
+                                ? 'This project has no diagram views; ruimte-context view new --kind diagram makes one'
+                                : 'This project has no drawing views; a person makes one in the sidebar'
                         )
                     );
                 }

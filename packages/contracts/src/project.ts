@@ -6,7 +6,7 @@ import { RuntimeModeSchema } from './model.ts';
 export const ProjectIdSchema = z.string().min(1);
 export type ProjectId = z.infer<typeof ProjectIdSchema>;
 
-export const NodeKindSchema = z.enum(['terminal', 'chat', 'browser', 'group', 'note', 'drawing', 'file']);
+export const NodeKindSchema = z.enum(['terminal', 'chat', 'browser', 'group', 'note', 'drawing', 'diagram', 'file']);
 export type NodeKind = z.infer<typeof NodeKindSchema>;
 
 /*
@@ -108,7 +108,7 @@ export const ProjectNodeSchema = z.object({
     // Note only: its markdown and one of the note colors; without a color it takes the default.
     body: z.string().optional(),
     color: z.string().optional(),
-    // Drawing only: the drawing view this node mirrors, which lives in the same project.
+    // Drawing and diagram only: the view of that kind this node mirrors, which lives in the same project.
     viewId: z.string().optional(),
     /* File only: the file it reads. Relative to the project folder, POSIX, so the node still points
        at the same file in another checkout; a file outside that folder keeps its absolute path. */

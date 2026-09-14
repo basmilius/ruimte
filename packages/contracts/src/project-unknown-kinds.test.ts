@@ -43,6 +43,14 @@ const unknownEntriesOf = (views: readonly unknown[]): string => JSON.stringify([
 const UNKNOWN_ENTRIES = JSON.stringify([NEWER_FILE.views[0]!.nodes![1], NEWER_FILE.views[1]]);
 
 describe('kinds this version does not know', () => {
+    test('a diagram node is a kind this version knows, not one it only carries', () => {
+        const file = structuredClone(NEWER_FILE);
+        file.views[0]!.nodes!.push({ id: 'flow', kind: 'diagram', title: 'Flow', x: 0, y: 400, w: 480, h: 360, viewId: 'flow-1' } as never);
+        const node = canvasOf(migrateDocument(file)!.views).nodes[2]!;
+        expect(isUnknownNode(node)).toBe(false);
+        expect(node).toMatchObject({ kind: 'diagram', viewId: 'flow-1' });
+    });
+
     test('a view and a node of an unknown kind are read and written back byte for byte', () => {
         const document = parsed();
         expect(isUnknownView(document.views[1]!)).toBe(true);
