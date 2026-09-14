@@ -19,6 +19,9 @@ beforeAll(() => {
         hostname: '127.0.0.1',
         async fetch(request) {
             const url = new URL(request.url);
+            if (request.headers.get('authorization') === 'Bearer stale') {
+                return new Response('Unknown token', { status: 401 });
+            }
             if (url.pathname === '/context') {
                 return Response.json({ sources });
             }
@@ -154,6 +157,16 @@ describe('runContext', () => {
         sources = [];
         expect(await runContext(['read', 'nonsense'], env)).toBe(3);
         expect(stderr).toBe(['refused\tunknown-source\tnonsense is not linked to this session', 'note\tNothing is linked to this session'].join('\n') + '\n');
+    });
+
+    test('a token the daemon does not know is no session, for list, read and a verb alike', async () => {
+        const stale = { ...env, RUIMTE_HOOK_TOKEN: 'stale' };
+        expect(await runContext(['list'], stale)).toBe(2);
+        expect(await runContext(['read', 'n1'], stale)).toBe(2);
+        expect(await runContext(['read', 'n1', '--tail', '3'], stale)).toBe(2);
+        expect(await runContext(['nodes'], stale)).toBe(2);
+        expect(stderr.trim().split('\n')).toEqual(Array.from({ length: 4 }, () => 'Not inside a live Ruimte session: the daemon answered 401 Unknown token'));
+        expect(stdout).toBe('');
     });
 
     test('a daemon that fails or is not there stays a failure, not a refusal', async () => {

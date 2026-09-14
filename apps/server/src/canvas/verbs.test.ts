@@ -265,7 +265,7 @@ describe('help', () => {
         expect(lines.at(-3)).toBe('dry run\t--dry-run\tnode, agent, team\tsame checks, nothing made; every other verb refuses the flag');
         expect(lines.at(-2)).toBe('detail\truimte-context help <verb>\tone verb in full');
         expect(lines.at(-1)).toBe(
-            'refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a Ruimte session, 3 refused'
+            'refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused'
         );
     });
 

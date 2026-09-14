@@ -17,7 +17,7 @@ import { DRY_RUN_FLAG, VerbRefusal, canvasFor, defineVerb, dryRunVerbNames, fiel
 
 /* The one line about failure every help output ends with; the codes are the CLI's, which is what runs the verb. */
 const REFUSAL_LINE =
-    'refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a Ruimte session, 3 refused';
+    'refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused';
 
 /* Two things an agent keeps mixing up, so the line is in the list and in the detail of each verb it is about. */
 const SCOPE_LINE =

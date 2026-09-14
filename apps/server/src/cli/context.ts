@@ -12,7 +12,8 @@ import { escapeText } from '../canvas/text-escapes.ts';
  *   ruimte-context help <verb>          everything that one verb takes
  *   ruimte-context <verb> ...           runs one; the daemon parses the arguments
  *
- * Exit codes: 0 done, 1 the daemon could not be reached or failed, 2 not inside a session, 3 a
+ * Exit codes: 0 done, 1 the daemon could not be reached or failed, 2 not inside a live session (no
+ * token, or a 401 for one the daemon does not know, such as the token of a session that ended), 3 a
  * refusal (an unknown verb, bad arguments, a rule of the project, or a `read` of nothing linked).
  */
 export const runContext = async (
@@ -36,7 +37,7 @@ export const runContext = async (
             sources = await fetchSources(url, headers);
         } catch (e) {
             console.error(e instanceof Error ? e.message : 'The daemon failed');
-            return 1;
+            return e instanceof StaleToken ? 2 : 1;
         }
         if (sources.length === 0) {
             console.log('Nothing is linked to this session.');
@@ -65,6 +66,10 @@ export const runContext = async (
         } catch (e) {
             console.error(unreachable(e));
             return 1;
+        }
+        if (response.status === 401) {
+            console.error(staleToken(await response.text()));
+            return 2;
         }
         if (response.status === 404) {
             return refuse('unknown-source', `${id} is not linked to this session`, await linkedLines(url, headers));
@@ -127,6 +132,9 @@ const fetchSources = async (url: string, headers: Record<string, string>): Promi
     } catch (e) {
         throw new Error(unreachable(e));
     }
+    if (response.status === 401) {
+        throw new StaleToken(staleToken(await response.text()));
+    }
     if (!response.ok) {
         throw new Error(`The daemon answered ${response.status}`);
     }
@@ -155,6 +163,11 @@ const refuse = (code: string, message: string, lines: string[]): number => {
     process.stderr.write(`${[`refused\t${code}\t${message.replace(/[\t\r\n]+/g, ' ')}`, ...lines].join('\n')}\n`);
     return 3;
 };
+
+/* A daemon that does not know the token: the session it was minted for is gone, so this is no session at all. */
+class StaleToken extends Error {}
+
+const staleToken = (body: string): string => `Not inside a live Ruimte session: the daemon answered 401${body.trim() ? ` ${body.trim()}` : ''}`;
 
 const unreachable = (e: unknown): string => `Could not reach the daemon: ${e instanceof Error ? e.message : 'unknown error'}`;
 
@@ -197,6 +210,10 @@ const runVerb = async (canvasUrl: string, verb: string, argv: string[], headers:
     if (response.ok) {
         process.stdout.write(body);
         return 0;
+    }
+    if (response.status === 401) {
+        console.error(staleToken(body));
+        return 2;
     }
     // 404 is a verb this daemon does not have, which is the same kind of no as bad arguments.
     if (response.status === 422 || response.status === 404) {
