@@ -871,3 +871,12 @@
 .chat-code { border-radius: 8px; border: 1px solid var(--border); background: var(--term-bg); overflow: auto; }
 .chat-code pre { margin: 0; padding: round(0.625rem, 1px) round(0.75rem, 1px); background: transparent !important; font-family: var(--font-mono); font-size: var(--text-code); line-height: var(--text-code--line-height); }
 .chat-code code { font-family: inherit; }
+
+/* The chat composer is a CodeMirror editor, whose base theme lands in an unlayered style tag at
+   mount. These rules stay unlayered too, and carry one class more than the theme's selectors. */
+.composer-input .cm-editor { max-height: 200px; }
+.composer-input .cm-editor.cm-focused { outline: none; }
+.composer-input .cm-editor .cm-scroller { overflow: auto; font-family: inherit; line-height: inherit; }
+.composer-input .cm-editor .cm-scroller .cm-content { padding: 12px 14px 4px; caret-color: var(--text); }
+.composer-input .cm-scroller .cm-content .cm-line { padding: 0; }
+.composer-input .cm-scroller .cm-content .cm-placeholder { color: var(--text-faint); }

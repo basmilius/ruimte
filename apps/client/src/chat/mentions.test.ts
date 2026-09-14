@@ -90,11 +90,6 @@ describe('chipText', () => {
         expect(chipText({ kind: 'text', text: '  two spaces  ' })).toBe('  two spaces  ');
     });
 
-    /*
-     * The composer paints these segments on a layer behind the textarea, so the layer has to spell
-     * out the textarea's own value to the character. One character more or less and everything
-     * behind it is drawn away from the caret, which the textarea places from its raw text.
-     */
     test('the segments of a prompt spell that prompt again', () => {
         const long = `${'nested/'.repeat(10)}2026-09-10-tekenview.html`;
         const cases: Array<[string, string[], string[]]> = [

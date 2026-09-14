@@ -82,8 +82,8 @@ export const presentMentions = (text: string, chosen: string[]): string[] => pre
 export const presentSkills = (text: string, chosen: string[]): string[] => present(text, '$', chosen);
 
 /*
- * The characters a segment stands for. A renderer draws this and nothing else, so a chip layer
- * behind a textarea spells out exactly what the textarea holds, sigil included.
+ * The characters a segment stands for, sigil included. Joined, the segments spell the text they
+ * were cut from.
  */
 export const chipText = (segment: ChipSegment): string => {
     if (segment.kind === 'mention') {

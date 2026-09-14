@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
+import { insertNewline } from '@codemirror/commands';
+import { EditorView } from '@codemirror/view';
 import clsx from 'clsx';
 import { ArrowUp, ChevronDown, Clock, FastForward, Paperclip, Square, SquareSlash, X, Zap } from 'lucide-react';
 import type { AgentKind, ChatApprovalItem, ChatInfo, ChatQuestionItem, ChatSkill, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
@@ -8,21 +10,22 @@ import { checkAttachmentLimits, filesOf, formatBytes, isImageAttachment, readAtt
 import { EMPTY_DRAFT, isEmptyDraft, readDraft, writeDraft, type ChatDraft } from '@/chat/drafts';
 import {
     MENTION_DRAG_TYPE,
-    chipText,
     findMentionQuery,
     findSkillQuery,
     insertMention,
     insertSkill,
     presentMentions,
     presentSkills,
-    tokenizeChips,
-    type MentionQuery
+    type MentionQuery,
+    type TextRange
 } from '@/chat/mentions';
 import { PROMPT_MAX_CHARS, pasteBecomesAttachment, pastedTextName, promptGuard, usableSlashCommands } from '@/chat/guards';
 import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferences';
 import { STASH_SHORTCUT, stashDraft, type StashedPrompt, useStash } from '@/chat/stash';
 import { pageTimeline, scrollTimelineToEnd, subscribeTimelineEnd, timelineAtEnd } from '@/chat/timeline-scroll';
-import { CHIP_BEHIND_TEXT, MENTION_TONE, SKILL_TONE } from '@/chat/ui/chips';
+import { chipDecorations } from '@/chat/ui/composer/chips';
+import { recallDirection } from '@/chat/ui/composer/keys';
+import { ComposerInput, type ComposerInputHandle } from '@/chat/ui/ComposerInput';
 import { ContextMeter } from '@/chat/ui/ContextMeter';
 import { ApprovalDock, QuestionDock } from '@/chat/ui/PendingDock';
 import { ModelPicker, ModePicker, OptionsPicker, StashPicker } from '@/chat/ui/Pickers';
@@ -39,7 +42,6 @@ import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
 import { KEY_SHORTCUTS, matchesShortcut } from '@/ui/shortcut';
 
-const MAX_ROWS_PX = 200;
 const SEARCH_DEBOUNCE_MS = 80;
 // What fits above the composer without turning the picker into a file tree.
 const MENTION_RESULTS = 8;
@@ -54,13 +56,11 @@ const LOCAL_COMMANDS = [
     { name: 'clear', hint: 'Start a new context' }
 ];
 
-/*
- * The textarea and the chip layer behind it must wrap identically and put every glyph on the same
- * pixel, so they share every metric that decides an advance width. A chip may add color and a
- * radius on top of that, never spacing (see `CHIP_BEHIND_TEXT`): the caret is the textarea's, drawn
- * from its own raw text, so drawn text that walks even a pixel leaves the caret next to it.
- */
-const INPUT_CLASS = 'w-full px-3.5 pt-3 pb-1 text-sm leading-normal break-words whitespace-pre-wrap select-text';
+/* Files and paths dropped on the card become attachments and chips there. CodeMirror would paste a
+   file's text, or the drag's own text, at the drop point on top of that. */
+const LEAVE_DROPS_TO_THE_CARD = EditorView.domEventHandlers({
+    drop: (event) => event.dataTransfer !== null && (event.dataTransfer.types.includes('Files') || event.dataTransfer.types.includes(MENTION_DRAG_TYPE))
+});
 
 interface ComposerProps {
     chatId: string;
@@ -116,8 +116,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
     const [dragging, setDragging] = useState(false);
     const [modelPickerOpen, setModelPickerOpen] = useState(false);
     const [confirmClear, setConfirmClear] = useState(false);
-    const inputRef = useRef<HTMLTextAreaElement>(null);
-    const backdropRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<ComposerInputHandle>(null);
     // A paste event says nothing about the keys behind it, so the key that asked for text inline is remembered here.
     const pasteInlineRef = useRef(false);
     const providers = useProviders((s) => s.providers);
@@ -155,14 +154,6 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
             inputRef.current?.focus();
         }
     }, [focused]);
-
-    useEffect(() => {
-        const el = inputRef.current;
-        if (el) {
-            el.style.height = 'auto';
-            el.style.height = `${Math.min(MAX_ROWS_PX, el.scrollHeight)}px`;
-        }
-    }, [text, draft.attachments.length]);
 
     useEffect(() => {
         writeDraft(chatId, draft);
@@ -261,7 +252,10 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
     const mentionMenuOpen = !commandMenuOpen && !skillMenuOpen && mention !== null;
     // Results belong to the query that asked for them; a closed picker shows none while the next answer is on its way.
     const files = mention === null ? [] : searched;
-    const segments = useMemo(() => tokenizeChips(text, draft.mentions, draft.skills), [text, draft.mentions, draft.skills]);
+    const editorExtensions = useMemo(
+        () => [chipDecorations({ mentions: draft.mentions, skills: draft.skills }), LEAVE_DROPS_TO_THE_CARD],
+        [draft.mentions, draft.skills]
+    );
     const guard = promptGuard(text);
 
     const setText = (next: string, mentions = draft.mentions, chosen = draft.skills): void => {
@@ -322,23 +316,18 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
     const same = (a: MentionQuery | null, b: MentionQuery | null): boolean => a?.start === b?.start && a?.query === b?.query;
 
     /* Which picker the caret opens: `@` for a file, `$` for a skill, or neither. */
-    const trackTriggers = (el: HTMLTextAreaElement): void => {
-        const caret = el.selectionStart === el.selectionEnd ? el.selectionStart : null;
-        const skill = caret === null ? null : findSkillQuery(el.value, caret);
+    const trackTriggers = (value: string, selection: TextRange): void => {
+        const caret = selection.from === selection.to ? selection.from : null;
+        const skill = caret === null ? null : findSkillQuery(value, caret);
         setSkillQuery((current) => (same(current, skill) ? current : skill));
         // A CLI that does not expand `@path` gets the text as it is, so the picker stays out of the way.
-        const next = caret === null || capabilities?.mentions === false ? null : findMentionQuery(el.value, caret);
+        const next = caret === null || capabilities?.mentions === false ? null : findMentionQuery(value, caret);
         setMention((current) => (same(current, next) ? current : next));
     };
 
+    // The inserted text reaches the editor with the render it causes, so the caret waits a frame for it.
     const moveCaret = (caret: number): void => {
-        const el = inputRef.current;
-        if (el) {
-            requestAnimationFrame(() => {
-                el.focus();
-                el.setSelectionRange(caret, caret);
-            });
-        }
+        requestAnimationFrame(() => inputRef.current?.setCaret(caret));
     };
 
     const chooseMention = (path: string): void => {
@@ -472,107 +461,123 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
         return true;
     };
 
-    const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    /* Runs before the editor's own keymap; true means the key is handled and its default prevented. */
+    const onKeyDown = (e: KeyboardEvent, view: EditorView): boolean => {
         // Shift with the paste shortcut pastes a large text inline after all; any other key forgets it.
         pasteInlineRef.current = e.shiftKey && e.key.toLowerCase() === 'v' && (isApplePlatform() ? e.metaKey : e.ctrlKey);
-        if (e.key === 'Escape') {
-            // Escape leaves the node, unless it first has a recalled prompt to put back.
-            if (historyIndex !== null) {
-                e.preventDefault();
-                e.stopPropagation();
-                setHistoryIndex(null);
-                setText('', [], []);
+        // Escape leaves the node, unless it first has a recalled prompt to put back.
+        if (e.key === 'Escape' && !e.isComposing) {
+            if (historyIndex === null) {
+                return false;
             }
-            return;
+            e.stopPropagation();
+            setHistoryIndex(null);
+            setText('', [], []);
+            return true;
         }
         // The composer keeps the keyboard while you type, but the shortcuts that move between views,
         // panels and the palette stay the app's; the window listener never sees a stopped key.
         if (!isShellShortcut(e, isApplePlatform())) {
             e.stopPropagation();
         }
-        const el = e.currentTarget;
+        // A key inside an IME composition belongs to the composition, Enter and the arrows included.
+        if (e.isComposing) {
+            return false;
+        }
+        // Reading back through a long answer should not mean leaving the box you are typing in.
         if (e.key === 'PageUp' || e.key === 'PageDown') {
-            // Reading back through a long answer should not mean leaving the box you are typing in.
-            if (pageTimeline(chatId, e.key === 'PageUp' ? -1 : 1)) {
-                e.preventDefault();
-            }
-            return;
+            return pageTimeline(chatId, e.key === 'PageUp' ? -1 : 1);
         }
         if (matchesShortcut(STASH_SHORTCUT, e, isApplePlatform())) {
-            e.preventDefault();
             toggleStash();
-            return;
+            return true;
         }
         if (commandMenuOpen) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
                 setMenuIndex((i) => (i + 1) % commands.length);
-                return;
+                return true;
             }
             if (e.key === 'ArrowUp') {
-                e.preventDefault();
                 setMenuIndex((i) => (i - 1 + commands.length) % commands.length);
-                return;
+                return true;
             }
             if (e.key === 'Tab') {
-                e.preventDefault();
                 const chosen = commands[menuIndex]!;
                 if (chosen.skill) {
                     chooseSkill(chosen.name);
                 } else {
                     setText(`/${chosen.name} `);
                 }
-                return;
+                return true;
             }
         }
         if (skillMenuOpen) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
                 setMenuIndex((i) => (i + 1) % skillMatches.length);
-                return;
+                return true;
             }
             if (e.key === 'ArrowUp') {
-                e.preventDefault();
                 setMenuIndex((i) => (i - 1 + skillMatches.length) % skillMatches.length);
-                return;
+                return true;
             }
             if (e.key === 'Tab' || e.key === 'Enter') {
-                e.preventDefault();
                 chooseSkill((skillMatches[menuIndex] ?? skillMatches[0]!).name);
-                return;
+                return true;
             }
         }
         if (mentionMenuOpen && files.length > 0) {
             if (e.key === 'ArrowDown') {
-                e.preventDefault();
                 setMenuIndex((i) => (i + 1) % files.length);
-                return;
+                return true;
             }
             if (e.key === 'ArrowUp') {
-                e.preventDefault();
                 setMenuIndex((i) => (i - 1 + files.length) % files.length);
-                return;
+                return true;
             }
             if (e.key === 'Tab' || e.key === 'Enter') {
-                e.preventDefault();
                 chooseMention(files[menuIndex] ?? files[0]!);
-                return;
+                return true;
             }
         }
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
+        if (e.key === 'Enter') {
+            if (e.shiftKey) {
+                return insertNewline(view);
+            }
             submit();
-            return;
+            return true;
         }
-        // The arrows recall earlier prompts only from an empty box or an unedited recall, on its first or last line.
+        const { from, to } = view.state.selection.main;
         const recalled = historyIndex !== null && text === history[historyIndex]?.text;
-        const atStart = el.selectionStart === 0 && !text.slice(0, el.selectionStart).includes('\n');
-        const atEnd = el.selectionEnd === text.length && !text.slice(el.selectionEnd).includes('\n');
-        if (e.key === 'ArrowUp' && (text === '' || (recalled && atStart)) && recall(-1)) {
-            e.preventDefault();
-        } else if (e.key === 'ArrowDown' && recalled && atEnd && recall(1)) {
-            e.preventDefault();
+        const direction = recallDirection({ key: e.key, text, from, to, recalled });
+        return direction !== null && recall(direction);
+    };
+
+    /* Files become attachments and a long text a file of its own; anything else the editor pastes as plain text. */
+    const onPaste = (e: ClipboardEvent, view: EditorView): boolean => {
+        const data = e.clipboardData;
+        if (!data) {
+            return false;
         }
+        const pasted = filesOf(data);
+        if (pasted.length > 0) {
+            addFiles(pasted);
+            return true;
+        }
+        const inline = pasteInlineRef.current;
+        pasteInlineRef.current = false;
+        const clip = data.getData('text/plain');
+        // Without attachments there is nowhere else for the text to go, so it pastes as it always did.
+        if (inline || capabilities?.attachments === false || !pasteBecomesAttachment(clip)) {
+            return false;
+        }
+        // The paste still replaces what was selected; it just puts nothing in its place.
+        const { from, to } = view.state.selection.main;
+        if (from !== to) {
+            view.dispatch({ changes: { from, to }, userEvent: 'delete' });
+        }
+        const name = pastedTextName(draft.attachments.map((attachment) => attachment.name));
+        addFiles([new File([clip], name, { type: 'text/plain' })]);
+        return true;
     };
 
     /* The timeline owns the scroller; this is the one bit of it the composer needs to know. */
@@ -760,75 +765,30 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                         ))}
                     </div>
                 )}
-                <div className="relative">
-                    <div ref={backdropRef} aria-hidden className={clsx(INPUT_CLASS, 'pointer-events-none absolute inset-0 overflow-hidden text-text')}>
-                        {segments.map((segment, index) => {
-                            if (segment.kind === 'text') {
-                                return <span key={index}>{segment.text}</span>;
-                            }
-                            return (
-                                <span key={index} className={`${segment.kind === 'skill' ? SKILL_TONE : MENTION_TONE} ${CHIP_BEHIND_TEXT}`}>
-                                    {chipText(segment)}
-                                </span>
-                            );
-                        })}
-                        {text.endsWith('\n') && <br />}
-                    </div>
-                    <textarea
-                        ref={inputRef}
-                        rows={1}
-                        placeholder={placeholder}
-                        className={clsx(
-                            INPUT_CLASS,
-                            'relative resize-none bg-transparent text-transparent caret-text outline-none placeholder:text-text-faint'
-                        )}
-                        value={text}
-                        disabled={disabled}
-                        tabIndex={focused ? 0 : -1}
-                        onChange={(e) => {
-                            setText(e.target.value);
-                            setMenuIndex(0);
-                            trackTriggers(e.target);
-                            if (historyIndex !== null && e.target.value !== history[historyIndex]?.text) {
-                                setHistoryIndex(null);
-                            }
-                        }}
-                        onSelect={(e) => trackTriggers(e.currentTarget)}
-                        onBlur={() => {
-                            setMention(null);
-                            setSkillQuery(null);
-                        }}
-                        onScroll={(e) => {
-                            if (backdropRef.current) {
-                                backdropRef.current.scrollTop = e.currentTarget.scrollTop;
-                            }
-                        }}
-                        onPaste={(e) => {
-                            const pasted = filesOf(e.clipboardData);
-                            if (pasted.length > 0) {
-                                e.preventDefault();
-                                addFiles(pasted);
-                                return;
-                            }
-                            const inline = pasteInlineRef.current;
-                            pasteInlineRef.current = false;
-                            const clip = e.clipboardData.getData('text/plain');
-                            // Without attachments there is nowhere else for the text to go, so it pastes as it always did.
-                            if (inline || capabilities?.attachments === false || !pasteBecomesAttachment(clip)) {
-                                return;
-                            }
-                            e.preventDefault();
-                            const el = e.currentTarget;
-                            // The paste still replaces what was selected; it just puts nothing in its place.
-                            if (el.selectionStart !== el.selectionEnd) {
-                                setText(text.slice(0, el.selectionStart) + text.slice(el.selectionEnd));
-                            }
-                            const name = pastedTextName(draft.attachments.map((attachment) => attachment.name));
-                            addFiles([new File([clip], name, { type: 'text/plain' })]);
-                        }}
-                        onKeyDown={onKeyDown}
-                    />
-                </div>
+                <ComposerInput
+                    ref={inputRef}
+                    className="composer-input select-text text-sm leading-normal text-text"
+                    value={text}
+                    placeholder={placeholder}
+                    disabled={disabled}
+                    tabbable={focused}
+                    extensions={editorExtensions}
+                    onChange={(value, selection) => {
+                        setText(value);
+                        setMenuIndex(0);
+                        trackTriggers(value, selection);
+                        if (historyIndex !== null && value !== history[historyIndex]?.text) {
+                            setHistoryIndex(null);
+                        }
+                    }}
+                    onSelectionChange={trackTriggers}
+                    onBlur={() => {
+                        setMention(null);
+                        setSkillQuery(null);
+                    }}
+                    onKeyDown={onKeyDown}
+                    onPaste={onPaste}
+                />
                 {notice && <div className="px-3.5 pb-1 text-xs text-status-error">{notice}</div>}
                 {guard.visible && (
                     <div className={clsx('px-3.5 pb-1 text-right text-xs tabular-nums', guard.tooLong ? 'text-status-error' : 'text-text-faint')}>

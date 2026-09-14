@@ -291,14 +291,18 @@ canvas, against Ruimte, one verdict each.
   output).
 - `@file` mentions are plain `@path` text in the prompt, because that is what the Claude CLI
   expands itself (checked with `claude -p` 2.1.266); the chosen paths travel next to the text
-  as `mentions` only so the timeline can draw them as chips. In the composer a chip is painted on
-  a layer behind the textarea, so it may only add a tint, an inset ring and a radius
-  (`CHIP_BEHIND_TEXT` in `src/chat/ui/chips.ts`): the caret is placed by the textarea from its own
-  raw text, so a weight, a font size or a horizontal padding on the chip moved the drawn text off
-  its characters and left the caret sitting in the wrong word. Padding cannot be handed back as a
-  negative margin, since a wrapped chip takes it again on every line, and `chipText` is what the
-  layer draws so a test can hold it against the textarea's value. The pill with the file icon in
-  front of the path is the sent message's (`CHIP_IN_MESSAGE`). The picker searches through
+  as `mentions` only so the timeline can draw them as chips. The composer is a CodeMirror 6 editor
+  (`src/chat/ui/ComposerInput.tsx`, its extensions in `src/chat/ui/composer`) controlled by the
+  draft's plain string, and a chip is a mark decoration on it (`CHIP_IN_EDITOR`). It used to be a
+  transparent textarea over a layer that painted the same string with the chips in it. That only
+  held while both layers put every glyph on the same pixel: the caret was the textarea's, placed
+  from its own raw text, so a chip could add a tint and a ring but no padding, and a weight or a
+  monospace font walked the drawn text off its characters. An editor that draws the text itself
+  places the caret from what it drew, which is what lets a chip have padding and markdown have its
+  fonts. CodeMirror only turns on EditContext on Android, so in Electron it edits through
+  `contenteditable`; anything that asks "is this a text field" has to count `isContentEditable`.
+  The pill with the file icon in front of the path is the sent message's (`CHIP_IN_MESSAGE`). The
+  picker searches through
   `fs.search`: `git ls-files` (tracked plus untracked, minus .gitignore) inside a repo, a
   bounded walk elsewhere, ranked by a small fuzzy score on the daemon.
 - An attachment goes over the wire as base64 in `chat.send` once (25 MB and 8 per message) and

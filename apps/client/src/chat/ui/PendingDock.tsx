@@ -17,7 +17,8 @@ const UnifiedDiff = lazy(() => import('@/chat/ui/UnifiedDiff'));
 
 /* Enter answers and Escape refuses while the dock has focus. A field inside it types instead: a
    written answer must be able to hold both keys. */
-const isTypingTarget = (target: EventTarget | null): boolean => target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
+const isTypingTarget = (target: EventTarget | null): boolean =>
+    target instanceof HTMLElement && (target.isContentEditable || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
 
 /* One permission request, fused to the top of the composer; the buttons answer it in place. */
 export function ApprovalDock({

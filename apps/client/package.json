@@ -11,8 +11,10 @@
   },
   "dependencies": {
     "@base-ui-components/react": "^1.0.0-rc.0",
+    "@codemirror/commands": "^6.11.0",
     "@codemirror/language": "^6.12.4",
     "@codemirror/state": "^6.7.4",
+    "@codemirror/view": "^6.43.11",
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource/kalam": "^5.3.0",
     "@lezer/common": "^1.5.2",
