@@ -20,7 +20,7 @@ are under "The address book" in `docs/DECISIONS.md`.
 | `POST /v1/session/refresh`         | A new access and refresh token; a spent refresh token ends the session  |
 | `DELETE /v1/session`               | Sign out                                                                |
 | `GET /v1/machines`                 | The machines on this account                                            |
-| `POST /v1/machines`                | Register a machine with the daemon's signature                          |
+| `POST /v1/machines`                | Register a machine with the daemon's signature, its icon and broker URL |
 | `DELETE /v1/machines/<id>`         | Take a machine off the list                                             |
 | `POST /v1/statements`              | A signed statement for one machine and one client key, two minutes      |
 
@@ -73,7 +73,8 @@ bun run deploy                   # migrations on the remote database, then wrang
 ```
 
 A migration is a new numbered file in `migrations/`, committed with the code that reads it. Migrations
-run before the new Worker is live, so a migration must keep the Worker that is still running working.
+run before the new Worker is live, so a migration must keep the Worker that is still running working;
+`0002_machine_broker.sql` adds `broker_url` as a nullable column for that reason.
 
 ## Secrets
 

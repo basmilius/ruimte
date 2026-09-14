@@ -1701,7 +1701,7 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
 
 - Phase 5a of remote access: `apps/pulsar-worker`, a Cloudflare Worker with D1 at `https://pulsar.ruimte.app`
   (a Custom Domain on the Worker, with `ruimte-pulsar.bas.workers.dev` beside it) and the database
-  `ruimte-pulsar`. Nothing in the client or the daemon calls it yet; that is 5b.
+  `ruimte-pulsar`. The client and the daemon use it since 5b, below.
 - The routes: `GET /health`, `GET /auth/github/start` and `/callback`, `POST /v1/session` (a login code for
   a session), `POST /v1/session/refresh`, `DELETE /v1/session`, `GET` and `POST /v1/machines`,
   `DELETE /v1/machines/<id>` and `POST /v1/statements`. The report called the last one `/v1/grants`; the
@@ -1754,6 +1754,70 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   `packages/pulsar`: tests, remote migrations, deploy, `/health`. Migrations go first, so a migration has to
   keep the running Worker working. `apps/pulsar-worker/README.md` lists the token's permissions, the
   secrets and how to rotate the statement key.
+
+### Signing in and statements
+
+- Phase 5b of remote access: a client signs in to the address book, puts a machine it reaches on the account,
+  and on another client opens that machine without pairing. The daemon never talks to the address book and
+  never holds an account token.
+- The login comes back through a loopback listener in the shell, not through `ruimte://`. Electron claims a
+  scheme only for a packaged app, and an unpackaged "Ruimte Dev" beside an installed Ruimte would have the
+  other app receive its code. The listener binds 127.0.0.1 on a random port, answers the first request on
+  `/pulsar/callback`, closes, and gives up after ten minutes. The scheme stays in `isAppRedirectUri` for the
+  mobile app, which has no listener.
+- The page makes the verifier and the state and checks the state before the code is looked at
+  (`apps/client/src/pulsar/pkce.ts`, only WebCrypto and `URL`, so a phone runs the same login). The shell
+  trades the code, keeps the refresh token encrypted with `safeStorage` in `userData/pulsar-session.bin`, and
+  hands the page access tokens only: a page that can read the refresh token can send it anywhere, and the
+  shell's main process is out of reach of anything injected into a page. Without keychain encryption (a Linux
+  desktop without a keyring) nothing is written and the session ends with the app. `SessionVault` in
+  `packages/pulsar` does one refresh at a time, since the address book ends a session when a spent refresh
+  token comes back.
+- A plain browser gets no sign-in: it has no loopback listener and nowhere a script cannot read, so the
+  Account section says signing in works in the desktop app. Everything else keeps working.
+- A machine joins an account through the client: `endpoint.signRegistration` has the daemon sign
+  `machineRegistrationMessage` for the account id the client names, and the client posts it with its own
+  session. Any client that got in may ask, since it already reaches everything the account would lead to.
+  The record also carries the broker URL the machine hands its clients, unsigned like the icon: a wrong
+  broker only fails to find a machine whose answers are believed from its key. Migration `0002` adds the
+  column as nullable, so the Worker that runs while it applies keeps working.
+- The statement travels in the broker offer (`access` on the offer: the statement and the label the machine
+  lists the client under), and `signalMessage` signs it with the offer. Not in the channel handshake: since
+  phase 4 a machine answers an unpaired key with `not-paired` before any peer connection exists, and keeping
+  that means the key has to be let in before the answer. The offer's signature already proves the key, and
+  signing the statement with it keeps a broker from moving one statement to another attempt.
+- The nonce is the client's, fresh per request, and the machine spends it. The report had the machine hand one
+  out, which is a round trip over the broker with a key nobody paired before every first connection, and state
+  kept for strangers. What the machine checks instead (`StatementGate`, `apps/server/src/pulsar/statement.ts`):
+  the machine id is its own, the statement's key is the key that signed the offer, the time is inside
+  `issuedAt` to `expiresAt` with 30 seconds of skew either way, a pinned key signed it, and the nonce was
+  never spent. Spent nonces are in `auth.json` until the statement could not be believed anyway, so a restart
+  inside the two minutes does not make one new. A replay gets nothing; a statement for another machine fails
+  the id; one for another key fails because nobody else can sign an offer as that key.
+- A good statement pairs the key with the origin `statement` and the offer's label, logs it, and the ordinary
+  channel handshake follows. A key that is paired already is let through on its pairing and its statement is
+  not looked at. `refuseStatements` is asked only once a statement holds up, so a stranger learns nothing about
+  the switch, and it answers `statements-refused`; everything else that fails answers `not-paired`, as before.
+- Revoking a client remembers its key (`revokedKeys` in `auth.json`). Without that, a device a person revoked
+  walks back in on the next statement the account hands it, which makes revoking meaningless while that device
+  is signed in. Pairing the key with a link clears it: a person handing out a link is taking it back.
+- `auth.sessions` carries the origin, absent from an older daemon and read as `link`. This is the visibility
+  the report asked for: every client a statement let in is on the machine's own list, with its label and the
+  day, and can be revoked there.
+- The pinned keys can be replaced only in a daemon that runs from source: `RUIMTE_PULSAR_TEST_STATEMENT_KEY`
+  is read by `trustedStatementKeys`, which ignores it in a compiled binary, and `scripts/compile.ts` defines it
+  to an empty string as well. The Docker bench makes a key pair per run in `docker/test.sh`; the production
+  private key is nowhere near a test.
+- A machine opened from the account list is a row with no address, Direct on and the key the list gave, which
+  is the trust signing in buys. `needsStatement` makes every offer ask the account for a statement (each one
+  is spent) until the machine has let this client in once. The row cannot fall back to a socket, so its
+  Direct switch is not drawn.
+- A workspace connection holds its machine's socket (`transport/connections.ts`). `pool.require` takes no hold,
+  so a workspace on a machine that was not the active one lost its socket to the 30-second idle countdown and
+  nothing rebuilt its clients; the Machines pane brought it back only because it holds every machine.
+- Not built: the statement log in a client (the Worker keeps it, the machine's own list is what a person
+  sees), revoking a device at the address book, and asking for two-factor beyond one sentence in the Account
+  section.
 
 ### Skipped on purpose
 
