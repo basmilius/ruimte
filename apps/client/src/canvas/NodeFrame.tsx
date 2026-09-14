@@ -39,6 +39,7 @@ import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
 import { ChatBody } from '@/nodes/ChatBody';
 import { BrowserBody } from '@/nodes/BrowserBody';
 import { NoteNode } from '@/canvas/nodes/NoteNode';
+import { DiagramNode, DiagramPlate } from '@/canvas/nodes/DiagramNode';
 import { DrawingNode } from '@/canvas/nodes/DrawingNode';
 import { FileNode, FilePlate } from '@/canvas/nodes/FileNode';
 import { UnknownNodePlate } from '@/canvas/nodes/UnknownNode';
@@ -321,6 +322,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                             {node.kind === 'browser' && <BrowserBody id={id} focused={focused} />}
                             {node.kind === 'note' && <NoteNode id={id} focused={focused} />}
                             {node.kind === 'drawing' && <DrawingNode id={id} />}
+                            {node.kind === 'diagram' && (live && readable ? <DiagramNode id={id} /> : <DiagramPlate id={id} />)}
                             {isUnknown && <UnknownNodePlate id={id} />}
                             {node.kind === 'file' &&
                                 (live && readable ? (

@@ -244,6 +244,7 @@ export const appCommands = (): Command[] => {
                             ...(useProject.getState().current?.folder
                                 ? [{ id: 'diagram-open-json', label: 'Open the diagram as JSON', run: () => openDiagramJson(activeView.id) }]
                                 : []),
+                            { id: 'diagram-show-on-canvas', label: 'Show the diagram on canvas', run: () => void showOnCanvas(activeView.id) },
                             { id: 'diagram-copy-json', label: 'Copy the diagram as JSON', run: () => void copyDiagramJson(focusedDiagram()) },
                             { id: 'diagram-copy-png', label: 'Copy the diagram as PNG', run: () => void copyDiagramPng(focusedDiagram()) },
                             { id: 'diagram-save-png', label: 'Save the diagram as PNG', run: () => void saveDiagramPng(focusedDiagram()) },

@@ -460,7 +460,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
                                 <Icon icon={Frame} size={14} /> Put on canvas
                             </ContextMenu.Item>
                         )}
-                        {(view.kind === 'drawing' || view.kind === 'file') && (
+                        {(view.kind === 'drawing' || view.kind === 'diagram' || view.kind === 'file') && (
                             <ContextMenu.Item className="menu-item" onClick={() => showViewOnCanvas(view.id)}>
                                 <Icon icon={Frame} size={14} /> Show on the canvas
                             </ContextMenu.Item>

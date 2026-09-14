@@ -89,20 +89,20 @@ export const newDiagramView = (): string | null =>
     canAddView() ? useDocument.getState().addDiagramView(freeName(useDocument.getState().views, 'Diagram')) : null;
 
 /*
- * Puts a mirror of a drawing view on the canvas that was open last. The drawing itself stays a view
- * of its own: the node reads the same file and opens the view on a double-click.
+ * Puts a mirror of a drawing or a diagram view on the canvas that was open last. The view itself
+ * stays a view of its own: the node reads the same file and opens the view on a double-click.
  */
 export const showOnCanvas = (viewId: string): string | null => {
     const document = useDocument.getState();
     const view = document.views.find((candidate) => candidate.id === viewId);
     const canvasViewId = document.lastCanvasViewId ?? document.views.find(isCanvasView)?.id ?? null;
-    if (!view || !isDrawingView(view) || !canvasViewId) {
+    if (!view || !(isDrawingView(view) || isDiagramView(view)) || !canvasViewId) {
         return null;
     }
     showView(canvasViewId);
     const canvas = focusedCanvas().getState();
     const center = toWorld(canvas.camera, { x: canvas.viewport.w / 2, y: canvas.viewport.h / 2 });
-    const id = canvas.addNode('drawing', center, { title: view.name, viewId });
+    const id = canvas.addNode(view.kind, center, { title: view.name, viewId });
     if (id === null) {
         return null;
     }
@@ -147,7 +147,7 @@ export const showFileOnCanvas = (path: string, at?: Point): string | null => {
 /* A file as a view of its own, a column beside the canvas rather than a frame on it. */
 export const newFileView = (path: string): string | null => (canAddView() ? useDocument.getState().addFileView(basenameOf(path), storedFilePath(path)) : null);
 
-/* "Show on the canvas" for either view that offers it: a drawing is mirrored, a file is read again. */
+/* "Show on the canvas" for every view that offers it: a drawing or a diagram is mirrored, a file is read again. */
 export const showViewOnCanvas = (viewId: string): string | null => {
     const view = useDocument.getState().views.find((candidate) => candidate.id === viewId);
     return view && isFileView(view) ? showFileOnCanvas(view.path) : showOnCanvas(viewId);

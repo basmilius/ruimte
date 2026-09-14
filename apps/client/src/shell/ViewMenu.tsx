@@ -1,6 +1,6 @@
 import { Menu } from '@base-ui-components/react/menu';
 import { Check, ChevronDown, FileText, Frame, Globe, Minus, PanelBottom, PanelRight, Pencil, PenTool, Workflow, Smile, Terminal, Trash, X } from 'lucide-react';
-import { isDrawingView, isFileView, isOpenableView, isSessionView, viewIconOf } from '@ruimte/contracts';
+import { isDiagramView, isDrawingView, isFileView, isOpenableView, isSessionView, viewIconOf } from '@ruimte/contracts';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentView } from '@/agents/nodes';
 import {
@@ -162,7 +162,7 @@ export function ViewMenu() {
                                 <Icon icon={Frame} size={14} /> Put on canvas
                             </Menu.Item>
                         )}
-                        {(isDrawingView(active) || isFileView(active)) && (
+                        {(isDrawingView(active) || isDiagramView(active) || isFileView(active)) && (
                             <Menu.Item className="menu-item" onClick={() => showViewOnCanvas(active.id)}>
                                 <Icon icon={Frame} size={14} /> Show on the canvas
                             </Menu.Item>
