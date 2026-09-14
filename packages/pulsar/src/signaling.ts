@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AccessStatementSchema } from './address-book.ts';
 
 /*
  * What two peers say to each other to open a DataChannel. It rides inside a relayed broker message,
@@ -11,9 +12,22 @@ import { z } from 'zod';
 
 export const SDP_MAX_LENGTH = 32_768;
 
+/*
+ * What an offer from a key the machine has never paired with carries to get in: a statement from the
+ * address book that names this machine and the offer's own key, and what the machine should call the
+ * client in its list of who has access. The machine checks the statement against the pinned key and
+ * spends its nonce before it answers; a paired key leaves this off.
+ */
+export const SignalAccessSchema = z.object({
+    statement: AccessStatementSchema,
+    label: z.string().min(1).max(80)
+});
+export type SignalAccess = z.infer<typeof SignalAccessSchema>;
+
 export const SignalOfferSchema = z.object({
     kind: z.literal('offer'),
-    sdp: z.string().min(1).max(SDP_MAX_LENGTH)
+    sdp: z.string().min(1).max(SDP_MAX_LENGTH),
+    access: SignalAccessSchema.optional()
 });
 export type SignalOffer = z.infer<typeof SignalOfferSchema>;
 
@@ -32,8 +46,12 @@ export const SignalCandidateSchema = z.object({
 });
 export type SignalCandidate = z.infer<typeof SignalCandidateSchema>;
 
-// `not-paired` is a machine telling a key it has never paired with, or revoked, that it will not answer it.
-export const SignalCloseReasonSchema = z.enum(['declined', 'failed', 'timeout', 'done', 'not-paired']);
+/*
+ * `not-paired` is a machine telling a key it has never paired with, or revoked, that it will not answer
+ * it; an offer whose statement does not hold up gets the same. `statements-refused` is a machine that
+ * was told to take no statements at all, said only to an offer whose statement was otherwise good.
+ */
+export const SignalCloseReasonSchema = z.enum(['declined', 'failed', 'timeout', 'done', 'not-paired', 'statements-refused']);
 export type SignalCloseReason = z.infer<typeof SignalCloseReasonSchema>;
 
 export const SignalCloseSchema = z.object({

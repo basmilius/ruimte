@@ -37,7 +37,24 @@ export const signalMessage = (from: string, to: string, envelope: SignalEnvelope
     const { signal } = envelope;
     const body = (() => {
         switch (signal.kind) {
-            case 'offer':
+            case 'offer': {
+                // Signed with the offer, so a broker cannot take a statement off one attempt and put it on another.
+                const access = signal.access;
+                if (!access) {
+                    return [signal.sdp];
+                }
+                const { statement } = access;
+                return [
+                    signal.sdp,
+                    statement.machineId,
+                    statement.clientPublicKey,
+                    statement.nonce,
+                    statement.issuedAt,
+                    statement.expiresAt,
+                    statement.signature,
+                    access.label
+                ];
+            }
             case 'answer':
                 return [signal.sdp];
             case 'candidate':

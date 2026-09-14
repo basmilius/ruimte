@@ -16,6 +16,7 @@ interface MachineRow {
     id: string;
     name: string;
     icon: string | null;
+    broker_url: string | null;
     public_key: string;
     last_seen_at: number | null;
 }
@@ -25,6 +26,7 @@ const machineOf = (row: MachineRow): Machine => ({
     name: row.name,
     icon: row.icon ? (JSON.parse(row.icon) as MachineIcon) : null,
     publicKey: row.public_key,
+    brokerUrl: row.broker_url,
     lastSeenAt: row.last_seen_at
 });
 
@@ -37,7 +39,7 @@ export const listMachines = async (request: Request, env: Env): Promise<Response
         return signInAgain();
     }
     const { results } = await env.DB.prepare(
-        'SELECT id, name, icon, public_key, last_seen_at FROM machine WHERE account_id = ?1 ORDER BY name COLLATE NOCASE, id'
+        'SELECT id, name, icon, broker_url, public_key, last_seen_at FROM machine WHERE account_id = ?1 ORDER BY name COLLATE NOCASE, id'
     )
         .bind(session.account.id)
         .all<MachineRow>();
@@ -71,11 +73,19 @@ export const registerMachine = async (request: Request, env: Env): Promise<Respo
         return failure('bad-signature', 'The machine did not sign this registration for this account');
     }
     const row = await env.DB.prepare(
-        `INSERT INTO machine (account_id, id, name, icon, public_key, last_seen_at, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)
-         ON CONFLICT (account_id, id) DO UPDATE SET name = excluded.name, icon = excluded.icon, public_key = excluded.public_key, last_seen_at = excluded.last_seen_at
-         RETURNING id, name, icon, public_key, last_seen_at`
+        `INSERT INTO machine (account_id, id, name, icon, broker_url, public_key, last_seen_at, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
+         ON CONFLICT (account_id, id) DO UPDATE SET name = excluded.name, icon = excluded.icon, broker_url = excluded.broker_url, public_key = excluded.public_key, last_seen_at = excluded.last_seen_at
+         RETURNING id, name, icon, broker_url, public_key, last_seen_at`
     )
-        .bind(session.account.id, payload.id, payload.name, payload.icon ? JSON.stringify(payload.icon) : null, payload.publicKey, now)
+        .bind(
+            session.account.id,
+            payload.id,
+            payload.name,
+            payload.icon ? JSON.stringify(payload.icon) : null,
+            payload.brokerUrl ?? null,
+            payload.publicKey,
+            now
+        )
         .first<MachineRow>();
     if (!row) {
         return failure('internal', 'The machine was not saved');

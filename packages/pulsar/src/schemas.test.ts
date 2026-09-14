@@ -77,7 +77,19 @@ describe('signaling', () => {
         { connectionId: 'attempt-1', signal: { kind: 'answer', sdp: 'v=0' } },
         { connectionId: 'attempt-1', signal: { kind: 'candidate', candidate: 'candidate:1 1 udp 1 192.0.2.1 5000 typ host', sdpMid: '0', sdpMLineIndex: 0 } },
         { connectionId: 'attempt-1', signal: { kind: 'candidate', candidate: '', sdpMid: null, sdpMLineIndex: null } },
-        { connectionId: 'attempt-1', signal: { kind: 'close', reason: 'declined' } }
+        { connectionId: 'attempt-1', signal: { kind: 'close', reason: 'declined' } },
+        { connectionId: 'attempt-1', signal: { kind: 'close', reason: 'statements-refused' } },
+        {
+            connectionId: 'attempt-1',
+            signal: {
+                kind: 'offer',
+                sdp: 'v=0',
+                access: {
+                    statement: { machineId: 'machine-1', clientPublicKey: key, nonce, issuedAt: 0, expiresAt: ACCESS_STATEMENT_LIFETIME_MS, signature },
+                    label: 'Laptop'
+                }
+            }
+        }
     ])('an envelope survives a round trip: %p', (value) => {
         expect(roundTrip(SignalEnvelopeSchema, value as never)).toEqual(value as never);
     });
@@ -86,6 +98,16 @@ describe('signaling', () => {
         expect(SignalEnvelopeSchema.safeParse({ connectionId: 'attempt-1', signal: { kind: 'offer', sdp: '' } }).success).toBe(false);
         expect(SignalEnvelopeSchema.safeParse({ connectionId: 'attempt-1', signal: { kind: 'renegotiate', sdp: 'v=0' } }).success).toBe(false);
         expect(SignalEnvelopeSchema.safeParse({ connectionId: 'attempt/1', signal: { kind: 'close', reason: 'done' } }).success).toBe(false);
+    });
+
+    test('refuses an offer whose statement lasts too long or whose label is empty', () => {
+        const statement = { machineId: 'machine-1', clientPublicKey: key, nonce, issuedAt: 0, expiresAt: ACCESS_STATEMENT_LIFETIME_MS, signature };
+        const offer = (access: unknown) => ({ connectionId: 'attempt-1', signal: { kind: 'offer', sdp: 'v=0', access } });
+        expect(SignalEnvelopeSchema.safeParse(offer({ statement, label: 'Laptop' })).success).toBe(true);
+        expect(
+            SignalEnvelopeSchema.safeParse(offer({ statement: { ...statement, expiresAt: ACCESS_STATEMENT_LIFETIME_MS + 1 }, label: 'Laptop' })).success
+        ).toBe(false);
+        expect(SignalEnvelopeSchema.safeParse(offer({ statement, label: '' })).success).toBe(false);
     });
 });
 
@@ -102,14 +124,22 @@ describe('address book', () => {
     test('the machine list, a registration, a request, a statement and an error survive a round trip', () => {
         const list = {
             machines: [
-                { id: 'machine-1', name: 'Studio', icon: null, publicKey: key, lastSeenAt: null },
-                { id: 'machine-2', name: 'Server', icon: { kind: 'lucide' as const, value: 'server' }, publicKey: otherKey, lastSeenAt: 1_800_000_000_000 }
+                { id: 'machine-1', name: 'Studio', icon: null, publicKey: key, brokerUrl: null, lastSeenAt: null },
+                {
+                    id: 'machine-2',
+                    name: 'Server',
+                    icon: { kind: 'lucide' as const, value: 'server' },
+                    publicKey: otherKey,
+                    brokerUrl: 'wss://broker.ruimte.app',
+                    lastSeenAt: 1_800_000_000_000
+                }
             ]
         };
         const registration = {
             id: 'machine-1',
             name: 'Studio',
             icon: { kind: 'emoji' as const, value: 'S' },
+            brokerUrl: 'wss://broker.ruimte.app',
             publicKey: key,
             issuedAt: 1_800_000_000_000,
             signature
@@ -131,9 +161,17 @@ describe('address book', () => {
 
     test('refuses a registration without a signature and a machine without a name', () => {
         expect(RegisterMachinePayloadSchema.safeParse({ id: 'machine-1', name: 'Studio', publicKey: key, issuedAt: 0 }).success).toBe(false);
-        expect(MachineListResultSchema.safeParse({ machines: [{ id: 'machine-1', name: '', icon: null, publicKey: key, lastSeenAt: null }] }).success).toBe(
-            false
-        );
+        expect(
+            MachineListResultSchema.safeParse({ machines: [{ id: 'machine-1', name: '', icon: null, publicKey: key, brokerUrl: null, lastSeenAt: null }] })
+                .success
+        ).toBe(false);
+    });
+
+    test('a broker URL is a ws or wss URL, and a registration from before the broker still parses', () => {
+        const registration = { id: 'machine-1', name: 'Studio', icon: null, publicKey: key, issuedAt: 0, signature };
+        expect(RegisterMachinePayloadSchema.safeParse(registration).success).toBe(true);
+        expect(RegisterMachinePayloadSchema.safeParse({ ...registration, brokerUrl: 'https://broker.ruimte.app' }).success).toBe(false);
+        expect(RegisterMachinePayloadSchema.safeParse({ ...registration, brokerUrl: 'ws://127.0.0.1:4420' }).success).toBe(true);
     });
 
     test('a login comes back only to the custom scheme or a loopback listener', () => {

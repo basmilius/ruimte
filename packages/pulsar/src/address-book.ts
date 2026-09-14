@@ -105,11 +105,19 @@ const MachineNameSchema = z.string().min(1).max(80);
 export const MachineIconSchema = z.object({ kind: z.enum(['emoji', 'lucide']), value: z.string().min(1).max(64) });
 export type MachineIcon = z.infer<typeof MachineIconSchema>;
 
+// The broker a machine announces itself to, as it hands the URL to its clients.
+export const BrokerUrlSchema = z
+    .string()
+    .max(512)
+    .regex(/^wss?:\/\/[^\s]+$/, 'Expected a ws:// or wss:// URL');
+
 export const MachineSchema = z.object({
     id: MachineIdSchema,
     name: MachineNameSchema,
     icon: MachineIconSchema.nullable(),
     publicKey: PublicKeySchema,
+    // Where a client that has never reached this machine signals it; null for a machine on no broker.
+    brokerUrl: BrokerUrlSchema.nullable(),
     // Milliseconds since the epoch of the latest registration; the address book never sees a machine online.
     lastSeenAt: z.number().int().nullable()
 });
@@ -125,13 +133,17 @@ export type MachineListResult = z.infer<typeof MachineListResultSchema>;
  * `POST /v1/machines`, sent by the client that sits on the machine, with the daemon's signature over
  * `machineRegistrationMessage`. The client cannot sign for the daemon's key, so a machine lands in
  * an account only when the daemon itself agreed to that account. Registering again replaces the name,
- * the icon and the key. The icon is not signed: it is decoration a signed-in client may set anyway.
- * `DELETE /v1/machines/<id>` takes a machine off the list and leaves its pairings alone.
+ * the icon, the broker and the key. The icon and the broker are not signed: the icon is decoration a
+ * signed-in client may set anyway, and a wrong broker only fails to find a machine whose answers are
+ * believed from its key alone. `DELETE /v1/machines/<id>` takes a machine off the list and leaves its
+ * pairings alone.
  */
 export const RegisterMachinePayloadSchema = z.object({
     id: MachineIdSchema,
     name: MachineNameSchema,
     icon: MachineIconSchema.nullable(),
+    // Optional so a registration from before the broker still parses; absent is none.
+    brokerUrl: BrokerUrlSchema.nullable().optional(),
     publicKey: PublicKeySchema,
     issuedAt: z.number().int().min(0),
     signature: SignatureSchema
@@ -144,9 +156,9 @@ export const RegisterMachineResultSchema = z.object({
 export type RegisterMachineResult = z.infer<typeof RegisterMachineResultSchema>;
 
 /*
- * `POST /v1/statements`: a signed-in client asking for a statement to show one machine. The nonce is
- * the machine's, handed out over the channel, so a statement is good at that machine for that one
- * connection; the signature over `accessRequestMessage` proves the client holds the key it names.
+ * `POST /v1/statements`: a signed-in client asking for a statement to show one machine. The client
+ * picks the nonce fresh for every request and the machine spends it, so a statement opens that machine
+ * once for that key; the signature over `accessRequestMessage` proves the client holds the key it names.
  */
 export const AccessRequestPayloadSchema = z.object({
     machineId: MachineIdSchema,

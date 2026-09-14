@@ -189,6 +189,7 @@ const registration = (session: SessionResult, machine: KeyPair, id: string, acco
         id,
         name,
         icon: { kind: 'lucide', value: 'server' },
+        brokerUrl: 'wss://broker.ruimte.test',
         publicKey: machine.publicKey,
         issuedAt,
         signature: signWith(signer, machineRegistrationMessage(accountId, id, machine.publicKey, name, issuedAt))
@@ -361,6 +362,7 @@ describe('machines', () => {
             id: 'studio',
             name: 'Machine studio',
             icon: { kind: 'lucide', value: 'server' },
+            brokerUrl: 'wss://broker.ruimte.test',
             publicKey: machine.publicKey
         });
 
@@ -368,6 +370,20 @@ describe('machines', () => {
         expect((await dispatch('/v1/machines/studio', { method: 'DELETE', headers: bearer(session) })).status).toBe(404);
         const empty = (await (await dispatch('/v1/machines', { headers: bearer(session) })).json()) as MachineListResult;
         expect(empty.machines).toHaveLength(0);
+    });
+
+    test('a registration without a broker lists the machine without one, and registering again replaces it', async () => {
+        const session = await signIn(3004);
+        const machine = newKeyPair();
+        const { brokerUrl: _dropped, ...withoutBroker } = registration(session, machine, 'quiet');
+        expect((await dispatch('/v1/machines', { method: 'POST', headers: bearer(session), body: withoutBroker })).status).toBe(200);
+        let list = (await (await dispatch('/v1/machines', { headers: bearer(session) })).json()) as MachineListResult;
+        expect(list.machines[0]?.brokerUrl).toBeNull();
+
+        const withBroker = { ...registration(session, machine, 'quiet'), brokerUrl: 'ws://127.0.0.1:4420' };
+        expect((await dispatch('/v1/machines', { method: 'POST', headers: bearer(session), body: withBroker })).status).toBe(200);
+        list = (await (await dispatch('/v1/machines', { headers: bearer(session) })).json()) as MachineListResult;
+        expect(list.machines.map((entry) => entry.brokerUrl)).toEqual(['ws://127.0.0.1:4420']);
     });
 
     test('a registration with a wrong signature is refused', async () => {

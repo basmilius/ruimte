@@ -83,4 +83,23 @@ describe('signed bytes', () => {
     test('a statement binds its expiry', () => {
         expect(accessStatementMessage('machine-1', key, nonce, 0, 120_000)).not.toBe(accessStatementMessage('machine-1', key, nonce, 0, 119_999));
     });
+
+    test('an offer signs the statement it carries, and one without a statement signs as before', () => {
+        const statement = { machineId: 'machine-1', clientPublicKey: key, nonce, issuedAt: 0, expiresAt: 120_000, signature: 's'.repeat(86) };
+        const bare: SignalEnvelope = { connectionId: 'attempt-1', signal: { kind: 'offer', sdp: 'v=0' } };
+        const carrying: SignalEnvelope = { connectionId: 'attempt-1', signal: { kind: 'offer', sdp: 'v=0', access: { statement, label: 'Laptop' } } };
+        const base = signalMessage(key, otherKey, carrying);
+
+        expect(signalMessage(key, otherKey, bare)).toBe(`${SIGNING_PURPOSES.signal}\n${JSON.stringify([key, otherKey, 'attempt-1', 'offer', 'v=0'])}`);
+        expect(base).not.toBe(signalMessage(key, otherKey, bare));
+        const swapped = (patch: Partial<typeof statement>, label = 'Laptop'): string =>
+            signalMessage(key, otherKey, {
+                connectionId: 'attempt-1',
+                signal: { kind: 'offer', sdp: 'v=0', access: { statement: { ...statement, ...patch }, label } }
+            });
+        expect(swapped({ nonce: 'm'.repeat(22) })).not.toBe(base);
+        expect(swapped({ machineId: 'machine-2' })).not.toBe(base);
+        expect(swapped({ signature: 't'.repeat(86) })).not.toBe(base);
+        expect(swapped({}, 'Phone')).not.toBe(base);
+    });
 });
