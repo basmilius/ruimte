@@ -133,6 +133,32 @@ describe('ChatManager', () => {
         expect(manager.attach('chat-1', 'c2').items.map((item) => item.kind)).toEqual(['turn', 'user', 'thinking', 'assistant']);
     });
 
+    test('the name Claude Code wrote down for the session rides on the info once the turn ends', async () => {
+        const asked: string[] = [];
+        await manager.shutdown();
+        manager = new ChatManager({
+            providers,
+            store,
+            attachments,
+            command: FAKE,
+            env: { PATH: process.env.PATH, HOME: home, RUIMTE_HOOK_URL: 'x' },
+            claudeTitles: {
+                forSession: async (agentSessionId) => {
+                    asked.push(agentSessionId);
+                    return 'Say hello';
+                }
+            }
+        });
+        manager.subscribe('c1', recorder.sink());
+        await manager.create({ chatId: 'chat-title', cwd: home });
+        manager.attach('chat-title', 'c1');
+
+        await manager.send('chat-title', 'hello there');
+        await waitFor(idle, 'the turn to end');
+        await waitFor(() => recorder.info?.suggestedTitle === 'Say hello', 'the suggested title');
+        expect(new Set(asked)).toEqual(new Set([recorder.info!.agentSessionId!]));
+    });
+
     test('a permission request becomes an approval card, and allowing always sends the suggested rule', async () => {
         await manager.create({ chatId: 'chat-2', cwd: home });
         manager.attach('chat-2', 'c1');

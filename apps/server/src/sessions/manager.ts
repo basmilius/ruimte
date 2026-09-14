@@ -76,7 +76,12 @@ export interface SessionManagerOptions {
     approvals?: boolean;
     // Lets a test shorten how long a request is held.
     approvalHoldMs?: number;
+    // Where Claude Code's own name for a session is read from the transcript its hooks point at.
+    claudeTitles?: { forTranscript(path: string): Promise<string | null> };
 }
+
+// How often a hook of a turn in flight may look for a name the session does not have yet.
+const TITLE_READ_INTERVAL_MS = 5_000;
 
 export type HookResult = 'applied' | 'ignored' | 'unknown-token';
 
@@ -99,6 +104,9 @@ export class SessionManager {
     private readonly resuming = new Map<string, number>();
     private readonly now: () => number;
     private readonly approvals: ApprovalStore | null;
+    private readonly claudeTitles: SessionManagerOptions['claudeTitles'] | null;
+    // When each session last looked for its name, so the tool hooks of a busy turn do not all read.
+    private readonly titleReadAt = new Map<string, number>();
     hookUrl: string | null;
     contextUrl: string | null;
     private readonly binDir: string | null;
@@ -122,6 +130,7 @@ export class SessionManager {
         this.firstPrompt = options.firstPrompt ?? (() => Promise.resolve(null));
         this.firstNotices = options.firstNotices ?? (() => []);
         this.now = options.now ?? Date.now;
+        this.claudeTitles = options.claudeTitles ?? null;
         this.approvals =
             options.approvals === false
                 ? null
@@ -213,6 +222,8 @@ export class SessionManager {
         if (!outcome) {
             return 'ignored';
         }
+        // A name belongs to the conversation it was given in; a new one in the same shell starts without.
+        const suggestedTitle = session.agent?.agentSessionId === outcome.agentSessionId ? session.agent.suggestedTitle : undefined;
         const agent: AgentInfo | null =
             outcome.status === null
                 ? null
@@ -220,6 +231,7 @@ export class SessionManager {
                       kind,
                       agentSessionId: outcome.agentSessionId,
                       transcriptPath: outcome.transcriptPath ?? session.agent?.transcriptPath ?? null,
+                      ...(suggestedTitle !== undefined ? { suggestedTitle } : {}),
                       status: outcome.status,
                       live: true,
                       updatedAt: Date.now()
@@ -229,6 +241,9 @@ export class SessionManager {
             this.resuming.delete(session.id);
         }
         await this.setAgent(session, agent);
+        if (agent !== null && kind === 'claude') {
+            this.refreshTitle(session, agent);
+        }
         if (agent === null || agent.status === 'idle' || agent.status === 'error') {
             /*
              * A CLI waiting at its own prompt, one whose turn ended and one that is gone all have
@@ -528,9 +543,41 @@ export class SessionManager {
         }
     }
 
+    /*
+     * Looks for the name Claude Code wrote into the transcript. Not awaited by the hook, which the CLI
+     * waits on: the first read of a long resumed transcript is not free. A turn that ends is always
+     * worth a look, a hook in the middle of one only while there is no name yet and not too often.
+     */
+    private refreshTitle(session: Session, agent: AgentInfo): void {
+        const path = agent.transcriptPath;
+        if (!this.claudeTitles || path === null) {
+            return;
+        }
+        const now = this.now();
+        const last = this.titleReadAt.get(session.id);
+        if (agent.status === 'running' && (agent.suggestedTitle !== undefined || (last !== undefined && now - last < TITLE_READ_INTERVAL_MS))) {
+            return;
+        }
+        this.titleReadAt.set(session.id, now);
+        void this.claudeTitles
+            .forTranscript(path)
+            .then((title) => {
+                const current = session.agent;
+                if (title === null || this.sessions.get(session.id) !== session || current === null) {
+                    return;
+                }
+                if (current.agentSessionId !== agent.agentSessionId || current.suggestedTitle === title) {
+                    return;
+                }
+                return this.setAgent(session, { ...current, suggestedTitle: title });
+            })
+            .catch(() => undefined);
+    }
+
     private remove(session: Session): void {
         this.sessions.delete(session.id);
         this.resuming.delete(session.id);
+        this.titleReadAt.delete(session.id);
         this.tokens.delete(session.hookToken);
         this.approvals?.dropSession(session.id);
         session.dispose();

@@ -49,6 +49,8 @@ interface ChatManagerOptions {
     attachments: AttachmentStore;
     // What a running turn says about the plan its CLI runs on; the usage monitor takes it from here.
     onLimits?: (update: LimitsUpdate) => void;
+    // Where Claude Code's own name for a session is read; the other CLIs write none down.
+    claudeTitles?: { forSession(agentSessionId: string): Promise<string | null> };
 }
 
 // Above this the record is big enough that rewriting it on every tool call costs more than it saves.
@@ -81,9 +83,11 @@ export class ChatManager {
     private readonly contextSources: (chatId: string) => ContextSource[];
     private readonly messages: (chatId: string) => string[];
     private readonly firstPrompt: (chatId: string) => Promise<string | null>;
+    private readonly claudeTitles: ChatManagerOptions['claudeTitles'] | null;
 
     constructor(options: ChatManagerOptions) {
         this.providers = options.providers;
+        this.claudeTitles = options.claudeTitles ?? null;
         this.store = options.store ?? null;
         this.checkpoints = options.checkpoints ?? null;
         this.skillIndex = options.skills ?? new SkillIndex();
@@ -156,6 +160,7 @@ export class ChatManager {
         const items = stored?.items.map(settle) ?? [];
         const token = randomBytes(24).toString('base64url');
         this.tokens.set(token, payload.chatId);
+        const claudeTitles = this.claudeTitles;
         const session = new ChatSession({
             info,
             items,
@@ -169,7 +174,8 @@ export class ChatManager {
             emit: (event: ChatEvent) => this.emit(payload.chatId, event),
             ...(this.onLimits ? { onLimits: this.onLimits } : {}),
             persist: () => this.persist(payload.chatId),
-            persistSoon: () => this.persistSoon(payload.chatId)
+            persistSoon: () => this.persistSoon(payload.chatId),
+            ...(kind === 'claude' && claudeTitles ? { readTitle: (agentSessionId: string) => claudeTitles.forSession(agentSessionId) } : {})
         });
         this.chats.set(session.id, session);
         // Sent before the info goes back, so the client's attach already carries it: a prompt an

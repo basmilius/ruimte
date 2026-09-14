@@ -40,7 +40,12 @@ interface ChatSessionOptions {
     persist(): void;
     // A write that may wait a moment: the work of a turn in flight, so a restart loses less than a whole turn.
     persistSoon(): void;
+    // The name the CLI gave its session, where it writes one down; absent for a CLI that does not.
+    readTitle?(agentSessionId: string): Promise<string | null>;
 }
+
+// Claude Code names a session about six seconds after its first prompt, and a first turn can run for minutes.
+const TITLE_RECHECK_MS = 10_000;
 
 export interface ChatSendExtras {
     mentions?: string[];
@@ -75,6 +80,7 @@ export class ChatSession {
     private turnReady: Promise<void> = Promise.resolve();
     // Turns we settled ourselves whose `result` is still on its way; it may not close the turn after them.
     private staleResults = 0;
+    private titleTimer: ReturnType<typeof setTimeout> | null = null;
 
     constructor(options: ChatSessionOptions) {
         this.options = options;
@@ -306,6 +312,10 @@ export class ChatSession {
     }
 
     dispose(): void {
+        if (this.titleTimer !== null) {
+            clearTimeout(this.titleTimer);
+            this.titleTimer = null;
+        }
         this.backend?.dispose();
         this.backend = null;
         this.starting = null;
@@ -548,10 +558,39 @@ export class ChatSession {
         if (openTurnId !== null && activeTurnId === null) {
             this.settleCheckpoint(openTurnId);
         }
+        if (event.type === 'session' && this.thread.info.agentSessionId !== null) {
+            this.refreshTitle();
+            if (this.titleTimer === null && this.thread.info.suggestedTitle === undefined) {
+                this.titleTimer = setTimeout(() => {
+                    this.titleTimer = null;
+                    this.refreshTitle();
+                }, TITLE_RECHECK_MS);
+            }
+        }
         // The turn is over and the CLI is still there, so whatever waited behind it can go out now.
         if (event.type === 'turn.done') {
+            this.refreshTitle();
             this.drainQueue();
         }
+    }
+
+    /* Rides on the info patch: a client that has the chat open hears it, and a reload finds it stored. */
+    private refreshTitle(): void {
+        const agentSessionId = this.thread.info.agentSessionId;
+        if (!this.options.readTitle || agentSessionId === null) {
+            return;
+        }
+        void this.options
+            .readTitle(agentSessionId)
+            .then((title) => {
+                // A clear in between started another session, whose name this is not.
+                if (title === null || title === this.thread.info.suggestedTitle || this.thread.info.agentSessionId !== agentSessionId) {
+                    return;
+                }
+                this.emit([this.thread.patchInfo({ suggestedTitle: title })]);
+                this.options.persistSoon();
+            })
+            .catch(() => undefined);
     }
 
     private emit(events: ChatEvent[]): void {

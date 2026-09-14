@@ -2,6 +2,7 @@ import { dirname, join, normalize, resolve } from 'node:path';
 import type { ServerWebSocket } from 'bun';
 import { AuthTicketPayloadSchema, PairPayloadSchema, type AgentKind, type DiagramContent, type ServerFrame } from '@ruimte/contracts';
 import { AgentStore } from './agents/agent-store.ts';
+import { ClaudeTitleReader } from './agents/claude-title.ts';
 import { AgentLineageStore } from './agents/lineage.ts';
 import { PendingPromptStore } from './agents/pending-prompts.ts';
 import { OutputGate } from './backpressure.ts';
@@ -99,6 +100,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     /* What a node hears the moment it can: taken here, so whichever channel gets there first is the
        only one that delivers it. */
     const messagesFor = (targetId: string): string[] => notices.take(targetId).map(renderNotice);
+    // One reader for chats and terminals, so a transcript both look at is only read on from where either stopped.
+    const claudeTitles = new ClaudeTitleReader();
     const manager = new SessionManager({
         adapter: new BunPtyAdapter(),
         snapshots,
@@ -108,7 +111,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         contextFor: (sessionId) => context.list(sessionId),
         firstPrompt: (sessionId) => prompts.take(sessionId),
         firstNotices: messagesFor,
-        approvals: config.approvals
+        approvals: config.approvals,
+        claudeTitles
     });
     const snapshotSchedule = scheduleSnapshots(manager, snapshots);
     const providers = new ProviderRegistry();
@@ -138,7 +142,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         messages: messagesFor,
         firstPrompt: (chatId) => prompts.take(chatId),
         // A turn reports what is left of its plan in passing; that belongs to the machine's numbers.
-        onLimits: (update) => limits.applyLive(update)
+        onLimits: (update) => limits.applyLive(update),
+        claudeTitles
     });
     const projects = new ProjectStore(config.home);
     // A node deleted before anyone ran it takes its prompt with it, and a node that is gone frees the count its opener is held to.
