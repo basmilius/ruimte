@@ -474,6 +474,7 @@ groot:  60 x 64 KB in 427 ms =  141 ber/s, 8.78 MB/s</code></pre>
 <section id="stand">
   <h2>Stand op 14 september 2026</h2>
   <p><strong>Getest op 14 september.</strong> Bas heeft fase 1 tot en met 3 in de Electron-app getest tegen de Docker-container, met computer use, en alles werkt: koppelen, de schakelaar Direct, een terminal en afbeeldingen over het kanaal. De probe tussen twee echte netwerken (<code>apps/server/scripts/webrtc-probe.ts</code>) is nog niet gedaan. Fase 4 kwam dezelfde dag daarna; die staat hieronder en is nog niet door Bas getest.</p>
+  <p><strong>Herstel na wegvallen, 14 september.</strong> Een directe verbinding die wegviel kwam pas terug na het openen van Machines; de transport kan niet meer in <code>connecting</code> blijven hangen (time-out op het adres, een opener die gooit telt als mislukte poging), en een client sluit eerst het kanaal en dan de peer, zodat de daemon het sluiten meteen ziet en logt in plaats van na 30 s ICE consent.</p>
   <p>Drie dagen na de eerste versie is fase 1 af, dezelfde dag nog; van de andere vijf fases is niets gebouwd: geen werift, geen <code>RTCPeerConnection</code>, geen broker, geen adresboek, en <code>Relay</code> is nog steeds <code>NoRelay</code>. Wat wel landde zit eromheen, en een deel daarvan maakt de fases kleiner. Dit is de stand, nagelopen in de code op <code>4e96370</code>.</p>
   <div class="table">
     <table class="wide">

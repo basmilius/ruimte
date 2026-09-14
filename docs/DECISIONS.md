@@ -1928,6 +1928,15 @@ Also decided against for now: a scheduler, checkpoint restore and telemetry.
   this. The suggestions come in three shapes: `addRules` (`rules[].toolName` plus `ruleContent`),
   `addDirectories` and `setMode`; the last widens the whole session rather than one call and is
   deliberately not offered as a button.
+- **A direct connection has to close its channel before its peer, or the daemon waits 30 s.** werift's
+  `RTCPeerConnection.close` stops DTLS without sending an alert and only then sends its SCTP abort, on
+  a transport that is already gone, so neither reaches the other side. The one word that does is the
+  stream reset a channel close starts, and closing the peer in the same tick races it; the daemon then
+  keeps the peer until ICE consent fails 30 s later (CI lost that race, a laptop rarely does). Both
+  clients (`DirectClient.close`, `webRtcLink`) close the channel, wait for it to report closed (the
+  reset answered) for at most 2 s, and only then close the peer. The daemon's werift ends a channel on
+  a stream reset and on any DTLS alert, and ICE consent stays the fallback for a client that vanished.
+  `DirectPeers` logs every connection that opens and ends, with the reason.
 
 
 ## Next
