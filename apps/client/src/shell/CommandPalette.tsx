@@ -900,8 +900,7 @@ export function CommandPalette() {
                                 </div>
                             );
                         })}
-                        {/* Offering to create a folder needs more than a listing, which never learns
-                            whether a folder is there; ours does, so the offer is reachable. */}
+                        {/* fs.browse says whether the typed folder exists, so a missing one can be offered for creation. */}
                         {presence === 'missing' && (
                             <div className="px-3 py-6 text-center text-xs text-text-faint">Press Enter to create this folder and open it as a project</div>
                         )}
