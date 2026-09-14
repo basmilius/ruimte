@@ -1627,12 +1627,31 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
 - A quiet direct connection is pinged. Chromium calls a path failed only when ICE consent freshness
   runs out, 30 seconds after the last answer (RFC 7675), and a machine that was killed or lost its
   network says nothing before then. After 2 s without a frame the client sends `server.ping` under an
-  id no request waits for, and 5 s without anything back ends the link. Any piece that arrives counts,
-  so a busy connection never pings; the timeout counts from the ping, so a window whose timers were
-  throttled does not take its own silence for a dead peer; and 5 s is above SCTP's retransmission
-  timeout, so one lost packet on a bad path is no disconnect. Measured with the container paused:
-  noticed after 7.0 s, while werift's ICE still said connected. The daemon does not ping its clients;
-  a client that vanished holds a channel until ICE fails on that side.
+  id no request waits for, and 10 s without a single packet from the machine ends the link. Any piece
+  that arrives counts, so a busy connection never pings; the timeout counts from the ping, so a window
+  whose timers were throttled does not take its own silence for a dead peer. The daemon does not ping
+  its clients; a client that vanished holds a channel until ICE fails on that side.
+- The trap: the answer to a ping is no measure of a live peer on this channel. It is ordered and
+  reliable, so the reply queues behind whatever the daemon sent first (up to the output gate's 1 MB of
+  terminal output, plus the frames the gate never holds back: a screen on attach, a 342 KiB piece of
+  `bytes.read`), and every channel of a connection shares werift's one queue and one congestion window,
+  so a second channel for control frames would wait in the same line. After a loss werift waits at
+  least a second (`SCTP_RTO_MIN`), longer as the round trip swings, and starts again from one packet
+  (`cwnd` of 1,200 bytes); while one packet is missing nothing behind it is delivered. On a path with
+  round trips of 15 to 40 ms that spike to 1.2 s after a burst, the first version (5 s from the ping to
+  the reply) ended healthy connections. So the client reads the bytes the DTLS transport received from
+  `getStats` once a tick, and any growth counts as heard: the machine's SCTP acknowledges the ping
+  itself within a round trip, however long its answer waits, and the retransmissions arrive too. Only
+  a transport that received nothing at all for 10 s is a dead peer, noticed within about 13 s, still
+  well before ICE gives up. Werift's `bufferedAmount` drops once a message is in its SCTP queue, not
+  once it is on the wire, which is why the gate's 1 MB is a line in the daemon rather than SCTP's.
+- A drop is not a reload. A link that closes and opens again used to boot the project client as if
+  the page had just started: `project.open`, a document load, and a fresh editor for every view,
+  which draws nothing until it is measured. Now a client with a project on screen only asks the daemon
+  to open it again, lets the document through the path of a change from disk when the rev moved, and
+  writes what waited; a save waits while the link is down instead of failing with nobody to retry it.
+  The drawings and diagrams on screen are opened again from `afterResume`, since nothing reloads the
+  document that used to trigger that.
 - werift is pinned at 0.24.4, the version the report measured. Measured here, werift on both ends in
   one process on macOS: a channel open in about 240 ms over loopback and about 310 ms from the host
   into the Docker container, an 8 MB burst in 16 KiB pieces at 2.4 MB/s, a round trip of 3 to 4 ms.
