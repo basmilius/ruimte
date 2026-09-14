@@ -11,11 +11,19 @@ export type AgentKind = z.infer<typeof AgentKindSchema>;
 export const AgentStatusSchema = z.enum(['running', 'needs-you', 'idle', 'error', 'exited']);
 export type AgentStatus = z.infer<typeof AgentStatusSchema>;
 
+// Past this a model's name for a session is a summary, not a title.
+export const SUGGESTED_TITLE_LIMIT = 80;
+
+// Written by a model, so a node shows it as plain text and nothing reads it as an instruction.
+export const SuggestedTitleSchema = z.string().min(1).max(SUGGESTED_TITLE_LIMIT);
+
 export const AgentInfoSchema = z.object({
     kind: AgentKindSchema,
     // The CLI's own session id, what `--resume` takes.
     agentSessionId: z.string().min(1),
     transcriptPath: z.string().nullable(),
+    // The name the CLI gave the session in its transcript; only Claude Code writes one.
+    suggestedTitle: SuggestedTitleSchema.optional(),
     status: AgentStatusSchema,
     // False once the daemon came back after a restart: the CLI is gone but its session can be resumed.
     live: z.boolean(),

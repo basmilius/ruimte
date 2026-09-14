@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AgentKindSchema, AgentStatusSchema } from './agent.ts';
+import { AgentKindSchema, AgentStatusSchema, SuggestedTitleSchema } from './agent.ts';
 import { ModelSelectionSchema, RuntimeModeSchema } from './model.ts';
 
 // The client picks the id (its node id), like a terminal session.
@@ -73,6 +73,8 @@ export const ChatInfoSchema = z.object({
     // Messages typed while a turn ran, in the order they go out once it settles.
     queue: z.array(ChatQueuedMessageSchema).optional(),
     usage: ChatUsageSchema,
+    // The name the CLI gave the session, when it gives one; a node that nobody named takes it.
+    suggestedTitle: SuggestedTitleSchema.optional(),
     createdAt: z.number()
 });
 export type ChatInfo = z.infer<typeof ChatInfoSchema>;
