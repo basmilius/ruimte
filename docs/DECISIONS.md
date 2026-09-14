@@ -424,7 +424,32 @@ canvas, against Ruimte, one verdict each.
   over a derived one, both `'auto'`, so the latest automatic name wins. A suggestion equal to the
   title writes nothing. The text is a model's: capped at `SUGGESTED_TITLE_LIMIT`, flattened to one
   line and drawn as plain text. About a quarter of sessions never get one, and then the derived
-  name stays. Codex and Gemini write no name down and get none from this.
+  name stays.
+- A Codex terminal takes the name the TUI gave its thread. Codex appends
+  `{"id", "thread_name", "updated_at"}` to `session_index.jsonl` in its home whenever it names a
+  thread, 2 to 90 seconds after the session started (codex-cli 0.154.0), and the last line for an id
+  is its name (`CodexTitleReader` in `apps/server/src/agents/codex-title.ts`, read on from where the
+  previous read stopped like the transcript, with the thread id the hooks carry as `session_id`).
+  Since the name often lands after the last hook of a short turn, a terminal whose look found
+  nothing looks again every 15 seconds, six times, and every hook starts that window over. The same
+  SQLite database also has the name, but the file is enough; its `title` column is the first prompt,
+  not a name.
+- A Codex chat gets its name from Ruimte, since `codex app-server` names no thread on its own. After
+  the first turn that ends well, and only when the chat has no name yet, the daemon asks the one-shot
+  CLI `git.suggestMessage` uses for a title of a few words in the language of the conversation, from
+  the first prompt and the start of the answer, both capped (`suggestChatTitle` in
+  `apps/server/src/chat/chat-title.ts`). That costs one one-shot call per Codex chat, on Codex when it
+  is installed and otherwise on the first CLI that answers a single prompt; with none there is no
+  call. The answer is untrusted text: only a `{"title": ...}` object counts, cleaned and capped like
+  the others, and a failure, a timeout or a stray line leaves the derived name without a word to the
+  person. The name rides on `ChatInfo.suggestedTitle` and goes to the app-server with
+  `thread/name/set`, so Codex's own thread list and a resume carry it; a resumed thread that already
+  has a name brings it along on `thread/start` and `thread/resume` (and `thread/name/updated` on a
+  rename), and nothing is asked. It happens in the daemon, once per chat however many clients are
+  attached, and a later turn never asks again because only the first completed turn does. The Codex
+  one-shot runs with `--skip-git-repo-check`, since a chat's folder need not be a repository, and
+  `--ephemeral`, so the call does not become a thread in Codex's list; its tokens are therefore not on
+  the usage page. Gemini and Copilot write no name down and get none.
 - A CLI that goes down with its shell is `exited`, not `error`. The daemon sees the PTY child end
   while its agent record is still live and writes `status: 'exited', live: false`
   (`SessionManager.handleExit`), the record outlives the shell, and the node shows `[session ended]`
