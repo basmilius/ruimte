@@ -445,7 +445,7 @@ function DirectConnectionSection() {
     return (
         <SettingsSection
             title="Direct connections"
-            description="An experiment. A machine with Direct on is reached over WebRTC instead of its socket; images, attachments and file previews do not load over it yet."
+            description="An experiment. A machine with Direct on is reached over WebRTC instead of its socket."
         >
             <SettingsRow
                 label="STUN server"
