@@ -400,12 +400,12 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
                         <ContextMenu.Item className="menu-item" onClick={() => askViewIcon(view.id)}>
                             <Icon icon={Smile} size={14} /> Change icon…
                         </ContextMenu.Item>
-                        {(view.kind === 'canvas' || view.kind === 'drawing') && (
+                        {(view.kind === 'canvas' || view.kind === 'drawing' || view.kind === 'diagram') && (
                             <ContextMenu.Item className="menu-item" onClick={() => duplicateViewOf(view.id)}>
                                 <Icon icon={Copy} size={14} /> Duplicate
                             </ContextMenu.Item>
                         )}
-                        {view.kind !== 'canvas' && view.kind !== 'drawing' && view.kind !== 'file' && (
+                        {view.kind !== 'canvas' && view.kind !== 'drawing' && view.kind !== 'diagram' && view.kind !== 'file' && (
                             <ContextMenu.Item className="menu-item" onClick={() => putOnCanvas(view.id)}>
                                 <Icon icon={Frame} size={14} /> Put on canvas
                             </ContextMenu.Item>

@@ -1,6 +1,7 @@
 import { createContext, useContext, useSyncExternalStore } from 'react';
 import { useStore, type StoreApi } from 'zustand';
 import type { CanvasState } from '@/state/canvas';
+import type { DiagramState } from '@/state/diagram';
 import type { DocumentState } from '@/state/document';
 import type { DrawingState } from '@/state/drawing';
 import type { EditorRegistry } from '@/state/editors';
@@ -14,16 +15,17 @@ import type { ProjectState } from '@/state/project';
  * modules can import this one.
  */
 export interface WorkspaceStores {
-    /* The two that hold a view each are registries, one editor per view the grid has on screen. */
+    /* The three that hold a view each are registries, one editor per view the grid has on screen. */
     canvases: EditorRegistry<CanvasState>;
     drawings: EditorRegistry<DrawingState>;
+    diagrams: EditorRegistry<DiagramState>;
     document: StoreApi<DocumentState>;
     project: StoreApi<ProjectState>;
 }
 
-/* The slots holding one store for the whole workspace, as against the two registries beside them. */
+/* The slots holding one store for the whole workspace, as against the registries beside them. */
 export type WorkspaceSlot = 'document' | 'project';
-export type EditorSlot = 'canvases' | 'drawings';
+export type EditorSlot = 'canvases' | 'drawings' | 'diagrams';
 
 /* The stores of the workspace a component sits in. Null outside one, which is what the fallback is for. */
 export const WorkspaceStoresContext = createContext<WorkspaceStores | null>(null);

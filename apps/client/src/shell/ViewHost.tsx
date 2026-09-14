@@ -3,6 +3,7 @@ import { FolderOpen } from 'lucide-react';
 import { isCanvasView, isFileView, type ProjectView } from '@ruimte/contracts';
 import { Canvas } from '@/canvas/Canvas';
 import { SplitGrid } from '@/shell/SplitGrid';
+import { DiagramView } from '@/diagram/DiagramView';
 import { DrawingView } from '@/drawing/DrawingView';
 import { drawingHasSomethingToClear, useDrawingStore } from '@/state/drawing';
 import { BrowserFallback, usePage } from '@/nodes/BrowserBody';
@@ -74,6 +75,7 @@ function StandaloneView({ view }: { view: ProjectView }) {
             {view.kind === 'terminal' && <TerminalBody id={view.id} focused={focused} />}
             {view.kind === 'browser' && <BrowserViewSurface id={view.id} />}
             {view.kind === 'drawing' && <DrawingView id={view.id} />}
+            {view.kind === 'diagram' && <DiagramView id={view.id} />}
             {/* No column around it: prose centers itself at 768px inside its own renderer, and
                 code wants every pixel the window has. */}
             {isFileView(view) && <FileSurface path={view.path} on="view" />}

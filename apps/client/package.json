@@ -16,6 +16,7 @@
     "@pierre/diffs": "^1.4.1",
     "@pierre/trees": "1.0.0-beta.6",
     "@ruimte/contracts": "workspace:*",
+    "@ruimte/diagram": "workspace:*",
     "@ruimte/drawing": "workspace:*",
     "@tanstack/react-virtual": "^3.14.11",
     "@xterm/addon-fit": "^0.11.0",

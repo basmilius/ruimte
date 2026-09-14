@@ -1,2 +1,2 @@
 export { panelsPort } from '@/project/panels-port';
-export { drawingClient, projectClient } from '@/transport/connections';
+export { diagramClient, drawingClient, projectClient } from '@/transport/connections';

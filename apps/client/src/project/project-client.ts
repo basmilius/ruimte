@@ -82,6 +82,8 @@ interface ProjectClientOptions {
     /* Which daemon the client is talking to; what it remembers about a project is that daemon's. */
     endpointId?: () => string;
     drawings?: DrawingsAccess;
+    /* A diagram keeps its camera in its own editor the way a drawing does. */
+    diagrams?: DrawingsAccess;
     /* Runs before a project is swapped in, so the drawing on screen reaches its own file first. */
     beforeSwitch?: () => Promise<void>;
     /*
@@ -154,15 +156,17 @@ export class ProjectClient {
             canvases.subscribe((_viewId, state, previous) => this.onCanvas(state, previous)),
             documents.subscribe((state, previous) => this.onDocument(state, previous)),
             panels.subscribe(() => this.scheduleLocal()),
-            ...(options.drawings
-                ? [
-                      options.drawings.subscribe((_viewId, state, previous) => {
-                          if (!state.loading && !previous.loading && state.camera !== previous.camera) {
-                              this.scheduleLocal();
-                          }
-                      })
-                  ]
-                : [])
+            ...[options.drawings, options.diagrams].flatMap((editors) =>
+                editors
+                    ? [
+                          editors.subscribe((_viewId, state, previous) => {
+                              if (!state.loading && !previous.loading && state.camera !== previous.camera) {
+                                  this.scheduleLocal();
+                              }
+                          })
+                      ]
+                    : []
+            )
         );
         const host = options.window === undefined ? (typeof window === 'undefined' ? null : window) : options.window;
         if (host) {

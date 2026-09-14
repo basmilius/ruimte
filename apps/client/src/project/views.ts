@@ -1,4 +1,14 @@
-import { isCanvasView, isDrawingView, isFileView, isOpenableView, isSessionView, MAIN_VIEW_NAME, type NodeKind, type ProjectView } from '@ruimte/contracts';
+import {
+    isCanvasView,
+    isDiagramView,
+    isDrawingView,
+    isFileView,
+    isOpenableView,
+    isSessionView,
+    MAIN_VIEW_NAME,
+    type NodeKind,
+    type ProjectView
+} from '@ruimte/contracts';
 import { toWorld, type Point } from '@/canvas/math';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
 import { viewIdsIn, type SplitDirection } from '@/shell/split';
@@ -85,6 +95,9 @@ export const newSeparatorView = (): string | null => (canAddView() ? useDocument
 export const newDrawingView = (): string | null =>
     canAddView() ? useDocument.getState().addDrawingView(freeName(useDocument.getState().views, 'Drawing')) : null;
 
+export const newDiagramView = (): string | null =>
+    canAddView() ? useDocument.getState().addDiagramView(freeName(useDocument.getState().views, 'Diagram')) : null;
+
 /*
  * Puts a mirror of a drawing view on the canvas that was open last. The drawing itself stays a view
  * of its own: the node reads the same file and opens the view on a double-click.
@@ -150,7 +163,7 @@ export const showViewOnCanvas = (viewId: string): string | null => {
     return view && isFileView(view) ? showFileOnCanvas(view.path) : showOnCanvas(viewId);
 };
 
-/* Copies a canvas or a drawing view. A drawing's elements are copied by the daemon, not here. */
+/* Copies a canvas, a drawing or a diagram view. What a drawing or a diagram holds is copied by the daemon, not here. */
 export const duplicateViewOf = (id: string): string | null => {
     const source = useDocument.getState().views.find((view) => view.id === id);
     const copyId = useDocument.getState().duplicateView(id);
@@ -158,6 +171,9 @@ export const duplicateViewOf = (id: string): string | null => {
         // Loaded here rather than at the top: this module is the actions, and importing the clients
         // would pull the transport into everything that only wants to know what a view holds.
         void import('@/project').then(({ drawingClient }) => drawingClient.copy(id, copyId));
+    }
+    if (copyId && source && isDiagramView(source)) {
+        void import('@/project').then(({ diagramClient }) => diagramClient.copy(id, copyId));
     }
     return copyId;
 };

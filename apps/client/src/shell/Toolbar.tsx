@@ -10,6 +10,7 @@ import { ViewMenu } from '@/shell/ViewMenu';
 import { useHasViewToolbar, useToolbarView, ViewToolbar } from '@/shell/ViewToolbar';
 import { STRIP_PADDING_PX } from '@/shell/Sidebar';
 import { SidebarToggle } from '@/shell/SidebarToggle';
+import { useDiagram } from '@/state/diagram';
 import { useDrawing } from '@/state/drawing';
 import { cellCount } from '@/shell/split';
 import { useDocument } from '@/state/document';
@@ -30,7 +31,8 @@ import { APP_SHORTCUTS } from '@/shell/shortcuts';
 export function Toolbar() {
     const projectDirty = useProject((s) => s.dirty);
     const drawingDirty = useDrawing((s) => s.dirty);
-    const dirty = projectDirty || drawingDirty;
+    const diagramDirty = useDiagram((s) => s.dirty);
+    const dirty = projectDirty || drawingDirty || diagramDirty;
     const switching = useProject((s) => s.switching);
     const panel = useUi((s) => s.panel);
     const previewOpen = useUi((s) => s.preview.open);

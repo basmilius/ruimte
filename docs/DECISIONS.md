@@ -787,6 +787,66 @@ canvas, against Ruimte, one verdict each.
   node in it, not just that node. That is the trade every new kind makes, and it only bites a
   remote daemon that lags behind its client.
 
+### A diagram
+
+Built on 2026-09-14 after `docs/reports/2026-09-12-diagram-view.html`, phases 1 to 3 of it. What
+the report left open and what the build decided:
+
+- **Two view kinds, not a second sort inside a drawing.** The report's advice, kept: a diagram
+  inheriting the bare letter keys, the dock and the undo of a drawing would have been a question in
+  every drawing branch of the client, and the file of one is nothing like the file of the other.
+- **A group wraps nodes and nothing else.** No group in a group, no node in two groups, and an
+  edge joins two nodes, never a group. Nodes and groups share one id namespace anyway, so a later
+  nesting or an edge to a group reads an existing file the same way. Every one of these rules is a
+  refusal by id (`diagramProblemIn`), because an agent that wrote the file has to be able to repair it.
+- **`meta` is required, `title` may be empty.** A missing direction would have needed a default
+  written down in two places; a file is either a diagram or it is refused.
+- **On disk the order is meta, nodes, groups, edges**, the order of the schema. The report's
+  example put the groups first; nothing reads the order but a person.
+- **A cycle is broken by a walk in file order.** A depth-first walk starts from every node without
+  incoming edges, in file order, then from every node still unvisited, also in file order; an edge
+  that points back at a node still on the walk is left out of the layering and still drawn, routed
+  underneath both boxes. A loop on one node never counts for a layer. The same file breaks the same
+  edges on every machine, and a different order of the same graph may break a different one.
+- **Layers are centered across the flow.** The report only fixed the order inside a layer; aligning
+  every layer at its start made every chain of nodes of different widths a staircase. Where one
+  group ends and the next begins inside a layer, the gap grows by both paddings and the label band.
+  An edge whose ends are within 12 units of each other across the flow is drawn straight.
+- **A node with `pos` gives up its place in its layer**, and the rest close up. Keeping the slot
+  empty would leave a hole where a person dragged a node away from.
+- **Text is estimated, never measured.** `packages/diagram` has no DOM and the daemon draws the same
+  picture, so a label is 0.6 of its size per character and a box is 120 to 280 wide. A label past
+  that runs out of its box. The palette defaults and the sans stack come from `packages/drawing`.
+- **`DiagramStore.write` finds its project on disk, not among the open ones.** `ProjectStore.place`
+  reads the project file under the project store's lock, and the diagram store writes under a lock of
+  its own that `open`, `save` and `copy` also take, so a client's save and an agent's write never
+  build on the same rev. It keeps no watcher for a project nobody opened and sends `diagram.changed`
+  itself; a client that has the diagram open has its rev moved along, so its own watcher stays
+  quiet. A file under the name that is not a diagram is refused and left alone, as a drawing's is.
+- **A save is checked as well as a read.** A drawing's save trusts the client; a diagram's refuses
+  an edge or a group that names a node that is not there, since phase 5 lets a person delete one.
+- **The client is the drawing's, save path included.** `DiagramClient` follows `DrawingClient`
+  line for line (open what the grid shows, flush and close what leaves it, a conflict to the banner,
+  a reopen after a reconnect), with a registry of editors of its own beside the drawings'. Nothing on
+  screen edits a diagram yet, so no person can cause a save or a conflict today: `replaceContent` is
+  the seam dragging a node will use, and the tests drive the save path through it.
+- **SVG in the DOM, colors through the tokens.** `DiagramView` draws `layoutOf` and the shape paths
+  of `packages/diagram` as elements, with every tone as `var(--draw-<name>)` in a style, so a theme
+  switch needs no repaint. The export goes through `toSvg` with the palette read from the theme, and
+  a PNG is that SVG drawn onto a canvas, so the two formats cannot differ.
+- **The controls live in the bar, not in a dock.** Zoom, "Open the JSON file", "Copy as JSON" and the
+  exports are portaled into the window's toolbar or the cell's (`file-toolbar-slot.ts`, `diagram` in
+  `KINDS_WITH_TOOLBAR`). A floating dock is for tools, and a diagram has none. Opening the JSON file
+  waits until there is one (rev above 0) and needs a project folder.
+- **What a diagram view is offered:** a new view from the view menu and the palette, a duplicate
+  (the daemon copies the file), and the zoom and export rows in the palette. Not "Put on canvas" or
+  "Show on the canvas": the node that mirrors a diagram is a later phase.
+
+- **Open: an agent's `view delete` leaves the file behind.** Orphans are only removed when a person
+  saves the project, which is the drawing's rule too (`ProjectStore.mutate` updates the ids without
+  asking the stores). For a drawing that is a sketch left in `.ruimte/drawings`; for a diagram an
+  agent made and deleted in one turn it is a file nobody will ever see again.
+
 ### Views side by side
 
 The grid landed on 2026-09-12; what follows is what the design left open and what the build

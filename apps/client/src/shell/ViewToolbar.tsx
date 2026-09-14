@@ -9,12 +9,12 @@ import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
 
 /* The kinds that put something in the toolbar; the bar draws its separators around that part. */
-const KINDS_WITH_TOOLBAR = new Set<ProjectViewKind>(['browser', 'terminal', 'file']);
+const KINDS_WITH_TOOLBAR = new Set<ProjectViewKind>(['browser', 'terminal', 'file', 'diagram']);
 
 const modeOf = (host: NodeHost | null) => RUNTIME_MODES.find((entry) => entry.id === host?.runtimeMode);
 
 /* Whether a view has content for the bar, which is what the separators around it wait for. A browser
-   always brings its navigation and a file its own controls, a terminal only the mode of an agent
+   always brings its navigation, a file and a diagram their own controls, a terminal only the mode of an agent
    running in it; a canvas and a chat bring nothing. */
 export const useHasViewToolbar = (view: ProjectView | null): boolean => {
     const page = useUi((s) => s.page);
@@ -22,7 +22,7 @@ export const useHasViewToolbar = (view: ProjectView | null): boolean => {
     if (page !== null || view === null || !KINDS_WITH_TOOLBAR.has(view.kind)) {
         return false;
     }
-    return view.kind === 'browser' || view.kind === 'file' || modeOf(host) !== undefined;
+    return view.kind === 'browser' || view.kind === 'file' || view.kind === 'diagram' || modeOf(host) !== undefined;
 };
 
 /* The view the window's toolbar speaks for: the one in the focused cell, and none while a page is up. */
@@ -53,9 +53,9 @@ export function ViewToolbar({ view, focused }: { view: ProjectView | null; focus
             </div>
         );
     }
-    if (view.kind === 'file') {
+    if (view.kind === 'file' || view.kind === 'diagram') {
         // Empty until the body has rendered, which is what fills it: the controls belong to the
-        // renderer that draws the file, and only that one knows which the file has.
+        // renderer that draws the file or the diagram, and only that one knows which it has.
         return <div ref={mount} className="app-no-drag flex min-w-0 grow items-center justify-end gap-1" />;
     }
     const mode = modeOf(host);

@@ -1,0 +1,203 @@
+import { createStore, type StoreApi } from 'zustand';
+import { EMPTY_DIAGRAM, type DiagramContent, type DiagramDocument, type ProjectViewLocal, type ViewCamera } from '@ruimte/contracts';
+import { layoutOf, type DiagramLayout } from '@ruimte/diagram';
+import { cameraOfView, cameraToFit, clampZoom, isMeasured, snapZoom, viewCameraOf, zoomAround, type Camera, type Point } from '@/canvas/math';
+import type { CameraRequest } from '@/state/canvas';
+import { createEditorRegistry } from '@/state/editors';
+import { editorHook, focusedEditor, useEditorStoreOf } from '@/state/workspace-stores';
+
+interface Viewport {
+    w: number;
+    h: number;
+}
+
+export interface DiagramState {
+    /* The diagram view this store holds, or null while none is on screen. */
+    viewId: string | null;
+    camera: Camera;
+    viewport: Viewport;
+    content: DiagramContent;
+    /* Computed from `content` whenever it changes, so a render never lays the graph out itself. */
+    layout: DiagramLayout;
+    rev: number;
+    dirty: boolean;
+    /* Counts changes to the content, which is what the client saves on. */
+    edits: number;
+    loading: boolean;
+    /* Where the camera goes the moment the diagram has a size. */
+    pendingCamera: Extract<CameraRequest, { kind: 'fit' | 'view' }> | null;
+    conflict: DiagramDocument | null;
+    error: string | null;
+
+    load(viewId: string, document: DiagramDocument, local: ProjectViewLocal | null): void;
+    /* Takes the diagram off screen without saving; the client flushes before it calls this. */
+    unload(): void;
+    exportContent(): DiagramContent;
+    /* A change a person made. Nothing on screen makes one yet; dragging a node will. */
+    replaceContent(content: DiagramContent): void;
+
+    setViewport(viewport: Viewport): void;
+    setCamera(camera: Camera): void;
+    panBy(dx: number, dy: number): void;
+    zoomAt(factor: number, anchor: Point): void;
+    settleZoom(anchor: Point): void;
+    zoomTo(zoom: number, anchor?: Point): void;
+    fitAll(): void;
+    /* A diagram has no selection, so the palette's "zoom to selection" fits the whole of it. */
+    zoomToSelection(): void;
+    viewCamera(): ViewCamera | null;
+
+    setRev(rev: number): void;
+    setDirty(dirty: boolean): void;
+    setConflict(conflict: DiagramDocument | null): void;
+    setError(error: string | null): void;
+    /* What is on disk now, loaded in place: the camera stays where the person left it. */
+    applyDocument(document: DiagramDocument): void;
+}
+
+export const contentOf = (document: DiagramDocument): DiagramContent => ({
+    meta: document.meta,
+    nodes: document.nodes,
+    groups: document.groups,
+    edges: document.edges
+});
+
+const EMPTY_CONTENT = contentOf(EMPTY_DIAGRAM);
+
+/*
+ * The diagram on screen: the graph, its layout and where the camera is. Shaped after the drawing
+ * store, without tools, a selection or an undo, because a diagram is written rather than drawn.
+ */
+export const createDiagramStore = (): StoreApi<DiagramState> =>
+    createStore<DiagramState>((set, get) => ({
+        viewId: null,
+        camera: { x: 0, y: 0, zoom: 1 },
+        viewport: { w: 0, h: 0 },
+        content: EMPTY_CONTENT,
+        layout: layoutOf(EMPTY_CONTENT),
+        rev: 0,
+        dirty: false,
+        edits: 0,
+        loading: false,
+        pendingCamera: null,
+        conflict: null,
+        error: null,
+
+        load(viewId, document, local) {
+            const content = contentOf(document);
+            set({
+                loading: true,
+                viewId,
+                content,
+                layout: layoutOf(content),
+                rev: document.rev,
+                dirty: false,
+                edits: 0,
+                conflict: null,
+                error: null,
+                pendingCamera: null
+            });
+            const stored = local?.camera ?? null;
+            if (stored !== null) {
+                const camera = cameraOfView(stored, get().viewport);
+                set(camera === null ? { pendingCamera: { kind: 'view', view: stored } } : { camera });
+            }
+            set({ loading: false });
+            if (stored === null) {
+                get().fitAll();
+            }
+        },
+
+        unload() {
+            set({ viewId: null, content: EMPTY_CONTENT, layout: layoutOf(EMPTY_CONTENT), rev: 0, dirty: false, edits: 0, conflict: null, error: null });
+        },
+
+        exportContent() {
+            return get().content;
+        },
+
+        replaceContent(content) {
+            set((state) => ({ content, layout: layoutOf(content), edits: state.edits + 1 }));
+        },
+
+        setViewport(viewport) {
+            const waiting = isMeasured(viewport) ? get().pendingCamera : null;
+            set({ viewport });
+            if (waiting?.kind === 'fit') {
+                get().fitAll();
+            } else if (waiting?.kind === 'view') {
+                set({ camera: cameraOfView(waiting.view, viewport)!, pendingCamera: null });
+            }
+        },
+        setCamera(camera) {
+            set({ camera });
+        },
+        panBy(dx, dy) {
+            const { camera } = get();
+            set({ camera: { ...camera, x: camera.x + dx, y: camera.y + dy } });
+        },
+        zoomAt(factor, anchor) {
+            const { camera } = get();
+            set({ camera: zoomAround(camera, camera.zoom * factor, anchor) });
+        },
+        settleZoom(anchor) {
+            const { camera } = get();
+            const target = snapZoom(camera.zoom);
+            if (target !== camera.zoom) {
+                set({ camera: zoomAround(camera, target, anchor) });
+            }
+        },
+        zoomTo(zoom, anchor) {
+            const { camera, viewport } = get();
+            set({ camera: zoomAround(camera, clampZoom(zoom), anchor ?? { x: viewport.w / 2, y: viewport.h / 2 }) });
+        },
+        fitAll() {
+            const { layout, viewport } = get();
+            // An empty diagram has nothing to fit, so the wait ends rather than standing forever.
+            if (layout.nodes.length === 0) {
+                set({ pendingCamera: null });
+                return;
+            }
+            const camera = cameraToFit(layout.bounds, viewport);
+            set(camera === null ? { pendingCamera: { kind: 'fit' } } : { camera, pendingCamera: null });
+        },
+        zoomToSelection() {
+            get().fitAll();
+        },
+        viewCamera() {
+            const { camera, viewport, pendingCamera } = get();
+            return pendingCamera?.kind === 'view' ? pendingCamera.view : viewCameraOf(camera, viewport);
+        },
+
+        setRev(rev) {
+            set({ rev });
+        },
+        setDirty(dirty) {
+            set({ dirty });
+        },
+        setConflict(conflict) {
+            set({ conflict });
+        },
+        setError(error) {
+            set({ error });
+        },
+        applyDocument(document) {
+            const content = contentOf(document);
+            set({ loading: true, content, layout: layoutOf(content), rev: document.rev, dirty: false, conflict: null });
+            set({ loading: false });
+        }
+    }));
+
+export const defaultDiagramStore = createDiagramStore();
+
+/* The registry of no workspace at all; its blank editor is the store this module made. */
+export const defaultDiagrams = createEditorRegistry(createDiagramStore, defaultDiagramStore);
+
+/* What a component reads while it renders: the diagram of the cell it is drawn in. */
+export const useDiagram = editorHook('diagrams', defaultDiagrams);
+
+/* The diagram store of the cell a component is drawn in, for everything that writes or subscribes. */
+export const useDiagramStore = (): StoreApi<DiagramState> => useEditorStoreOf('diagrams', defaultDiagrams);
+
+/* The diagram of the cell that has the focus, for a palette row with no cell of its own. */
+export const focusedDiagram = (): StoreApi<DiagramState> => focusedEditor('diagrams', defaultDiagrams);

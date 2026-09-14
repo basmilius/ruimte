@@ -1,5 +1,5 @@
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, ChevronDown, FileText, Frame, Globe, Minus, PanelBottom, PanelRight, Pencil, PenTool, Smile, Terminal, Trash, X } from 'lucide-react';
+import { Check, ChevronDown, FileText, Frame, Globe, Minus, PanelBottom, PanelRight, Pencil, PenTool, Workflow, Smile, Terminal, Trash, X } from 'lucide-react';
 import { isDrawingView, isFileView, isOpenableView, isSessionView } from '@ruimte/contracts';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentView } from '@/agents/nodes';
@@ -8,6 +8,7 @@ import {
     askRenameView,
     askViewIcon,
     newCanvasView,
+    newDiagramView,
     newDrawingView,
     newSeparatorView,
     freeViewFor,
@@ -46,6 +47,9 @@ export function NewViewItems() {
             </Menu.Item>
             <Menu.Item className="menu-item" onClick={() => void newDrawingView()}>
                 <Icon icon={PenTool} size={14} /> Drawing
+            </Menu.Item>
+            <Menu.Item className="menu-item" onClick={() => void newDiagramView()}>
+                <Icon icon={Workflow} size={14} /> Diagram
             </Menu.Item>
             <Menu.Item className="menu-item" onClick={() => void newTerminalView()}>
                 <Icon icon={Terminal} size={14} /> Terminal

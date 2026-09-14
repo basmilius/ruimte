@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { ChatClient } from '@/chat/chat-client';
+import { DiagramClient } from '@/diagram/diagram-client';
 import { DrawingClient } from '@/drawing/drawing-client';
 import { foldList } from '@/project/list';
 import { panelsPort } from '@/project/panels-port';
@@ -30,6 +31,7 @@ export interface Connection {
     chats: ChatClient;
     projects: ProjectClient;
     drawings: DrawingClient;
+    diagrams: DiagramClient;
 }
 
 /* The clients of one daemon that write state keyed on that daemon, so several may be alive at once. */
@@ -144,9 +146,15 @@ const connect = (id: string, stores: WorkspaceStores, endpoint: Endpoint): Conne
     const drawings = new DrawingClient(transport, stores.drawings, stores.document, stores.project, {
         flushProject: (): Promise<void> => projects.flush()
     });
+    const diagrams = new DiagramClient(transport, stores.diagrams, stores.document, stores.project, {
+        flushProject: (): Promise<void> => projects.flush()
+    });
     const projects = new ProjectClient(transport, stores.canvases, stores.document, panelsPort, projectSink(stores, endpointId), {
         drawings: stores.drawings,
-        beforeSwitch: (): Promise<void> => drawings.flush(),
+        diagrams: stores.diagrams,
+        beforeSwitch: async (): Promise<void> => {
+            await Promise.all([drawings.flush(), diagrams.flush()]);
+        },
         endSessions: endProjectSessions,
         endpointId
     });
@@ -162,13 +170,15 @@ const connect = (id: string, stores: WorkspaceStores, endpoint: Endpoint): Conne
             return machineOn(endpoint).chats;
         },
         projects,
-        drawings
+        drawings,
+        diagrams
     };
 };
 
 const disposeConnection = (connection: Connection): void => {
     connection.projects.dispose();
     connection.drawings.dispose();
+    connection.diagrams.dispose();
 };
 
 /*
@@ -298,6 +308,7 @@ export const sessionClient = activeClient(() => activeMachine().sessions);
 export const chatClient = activeClient(() => activeMachine().chats);
 export const projectClient = activeClient(() => mainWorkspace().connection.projects);
 export const drawingClient = activeClient(() => mainWorkspace().connection.drawings);
+export const diagramClient = activeClient(() => mainWorkspace().connection.diagrams);
 
 /* The session client of one machine, for a node that names the daemon it runs on. */
 export const sessionClientFor = (endpointId: string): SessionClient | null => machineFor(endpointId)?.sessions ?? null;

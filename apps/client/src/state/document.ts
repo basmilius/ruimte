@@ -3,6 +3,7 @@ import type { SplitLayout } from '@ruimte/contracts';
 import {
     emptyCanvasView,
     isCanvasView,
+    isDiagramView,
     isDrawingView,
     isOpenableView,
     isSessionView,
@@ -25,6 +26,7 @@ import {
 } from '@ruimte/contracts';
 import type { CanvasAddition } from '@/project/merge';
 import { NODE_SIZE, defaultCanvases, nextId, type CanvasState } from '@/state/canvas';
+import { defaultDiagrams, type DiagramState } from '@/state/diagram';
 import { defaultDrawings, type DrawingState } from '@/state/drawing';
 import type { EditorRegistry } from '@/state/editors';
 import {
@@ -113,6 +115,7 @@ export interface DocumentState {
     addSeparatorView(): string;
     /* A sketch of its own. Its elements live in a file of their own, which the daemon keeps. */
     addDrawingView(name: string): string;
+    addDiagramView(name: string): string;
     /* One file on disk, read and never written. The path is all it holds. */
     addFileView(name: string, path: string): string;
     /* A chat, terminal or browser without a canvas under it. The id is the session id, as for a node. */
@@ -159,6 +162,7 @@ export type StandaloneRequest =
 export interface DocumentPeers {
     canvases: EditorRegistry<CanvasState>;
     drawings: EditorRegistry<DrawingState>;
+    diagrams: EditorRegistry<DiagramState>;
 }
 
 /* What a view holds right now: its editor while it is on screen, the document's copy otherwise. */
@@ -170,8 +174,8 @@ const canvasOf = (viewId: string | null | undefined, peers: DocumentPeers): Canv
  * it is made, so nothing ever reads one that is empty while its view has nodes; a view that is not a
  * canvas simply gets none, which is what the single store stood for when a chat was up.
  *
- * Only the canvases are let go of here. A drawing is a file of its own, and its editor is the
- * `DrawingClient`'s: releasing one it has not written out yet would hand it an empty store to save.
+ * Only the canvases are let go of here. A drawing or a diagram is a file of its own, and its editor
+ * is its client's (`DrawingClient`, `DiagramClient`): releasing one it has not written out yet would hand it an empty store to save.
  * The focus is mirrored onto both, since that is what a reader outside the grid resolves through.
  */
 const openEditors = (views: ProjectView[], viewLocal: Record<string, ProjectViewLocal>, open: string[], focus: string | null, peers: DocumentPeers): void => {
@@ -190,12 +194,16 @@ const openEditors = (views: ProjectView[], viewLocal: Record<string, ProjectView
     }
     peers.canvases.focus(focus);
     peers.drawings.focus(focus);
+    peers.diagrams.focus(focus);
 };
 
-/* Where a view on screen stands. A drawing keeps its camera in its own editor, a canvas in its own. */
+/* Where a view on screen stands. A drawing and a diagram keep their camera in their own editor, a canvas in its own. */
 const localOfView = (view: ProjectView | undefined, peers: DocumentPeers): ProjectViewLocal => {
     if (view && isDrawingView(view)) {
         return { camera: peers.drawings.peek(view.id)?.getState().viewCamera() ?? null, focusedNodeId: null };
+    }
+    if (view && isDiagramView(view)) {
+        return { camera: peers.diagrams.peek(view.id)?.getState().viewCamera() ?? null, focusedNodeId: null };
     }
     const canvas = canvasOf(view?.id, peers);
     return canvas === null
@@ -500,6 +508,10 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 return addView({ kind: 'drawing', id: nextId('view'), name }, true);
             },
 
+            addDiagramView(name) {
+                return addView({ kind: 'diagram', id: nextId('view'), name }, true);
+            },
+
             addFileView(name, path) {
                 return addView({ kind: 'file', id: nextId('view'), name, path }, true);
             },
@@ -654,7 +666,11 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
 
             exportLocal() {
                 const { activeViewId, viewLocal, views } = get();
-                const open = new Set([...peers.canvases.live().map(([viewId]) => viewId), ...peers.drawings.live().map(([viewId]) => viewId)]);
+                const open = new Set([
+                    ...peers.canvases.live().map(([viewId]) => viewId),
+                    ...peers.drawings.live().map(([viewId]) => viewId),
+                    ...peers.diagrams.live().map(([viewId]) => viewId)
+                ]);
                 const next = { ...viewLocal };
                 for (const viewId of open) {
                     next[viewId] = localOfView(
@@ -667,7 +683,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
         };
     });
 
-export const defaultDocumentStore = createDocumentStore({ canvases: defaultCanvases, drawings: defaultDrawings });
+export const defaultDocumentStore = createDocumentStore({ canvases: defaultCanvases, drawings: defaultDrawings, diagrams: defaultDiagrams });
 
 export const useDocument = workspaceHook('document', defaultDocumentStore);
 

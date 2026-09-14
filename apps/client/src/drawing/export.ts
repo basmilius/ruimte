@@ -59,7 +59,7 @@ export const drawingPng = async (store: DrawingSource, elements: readonly Drawin
     return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/png'));
 };
 
-const download = async (blob: Blob, name: string, mime: string): Promise<void> => {
+export const download = async (blob: Blob, name: string, mime: string): Promise<void> => {
     const bridge = desktop();
     if (bridge?.saveFile) {
         // The desktop app asks where the file goes; a browser tab has no such dialog to offer.

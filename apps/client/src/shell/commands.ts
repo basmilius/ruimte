@@ -1,4 +1,4 @@
-import { isCanvasView, isDrawingView, isSessionView, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
+import { isCanvasView, isDiagramView, isDrawingView, isSessionView, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
 import { addAgentNode, addAgentView, type AgentTarget } from '@/agents/nodes';
 import { toWorld } from '@/canvas/math';
 import {
@@ -7,14 +7,17 @@ import {
     askRenameView,
     canOpenAsView,
     newCanvasView,
+    newDiagramView,
     newDrawingView,
     newSeparatorView,
     newTerminalView,
     putOnCanvas,
     showOnCanvas
 } from '@/project/views';
+import { copyDiagramJson, copyDiagramPng, copyDiagramSvg, openDiagramJson, saveDiagramPng, saveDiagramSvg } from '@/diagram/export';
 import { copyDrawingPng, copyDrawingSvg, saveDrawingPng, saveDrawingSvg } from '@/drawing/export';
 import { focusedCanvas, type AddNodeOptions, type CanvasState, type NodeKind } from '@/state/canvas';
+import { focusedDiagram } from '@/state/diagram';
 import { focusedDrawing } from '@/state/drawing';
 import { activeViewOf, useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
@@ -42,7 +45,10 @@ export interface Command {
 /* Whichever surface is on screen owns the zoom rows in the palette. */
 const zoomTarget = (): Pick<CanvasState, 'fitAll' | 'zoomToSelection' | 'zoomTo'> => {
     const view = activeViewOf(useDocument.getState());
-    return view && isDrawingView(view) ? focusedDrawing().getState() : focusedCanvas().getState();
+    if (view && isDrawingView(view)) {
+        return focusedDrawing().getState();
+    }
+    return view && isDiagramView(view) ? focusedDiagram().getState() : focusedCanvas().getState();
 };
 
 const centerWorld = () => {
@@ -118,6 +124,7 @@ export const appCommands = (): Command[] => {
     const activeView = views.find((view) => view.id === activeViewId) ?? null;
     const selected = canvas.selection.length === 1 ? canvas.nodes[canvas.selection[0]!] : undefined;
     const drawing = activeView !== null && isDrawingView(activeView);
+    const diagram = activeView !== null && isDiagramView(activeView);
     /* A row that writes into a canvas is offered only while one is on screen. In a chat or a
        terminal view "New note" and "Zoom to fit" would act on a surface nobody is looking at. */
     const onCanvas = activeView !== null && isCanvasView(activeView);
@@ -151,6 +158,7 @@ export const appCommands = (): Command[] => {
                         ]
                       : []),
                   { id: 'view-new-drawing', label: 'New drawing view', run: () => void newDrawingView() },
+                  { id: 'view-new-diagram', label: 'New diagram view', run: () => void newDiagramView() },
                   ...(folder ? [{ id: 'view-new-file', label: 'New file view', run: () => useUi.getState().openFilePicker({ kind: 'view' }) }] : []),
                   { id: 'view-new-terminal', label: 'New terminal view', run: () => void newTerminalView() },
                   { id: 'view-new-separator', label: 'New separator', run: () => void newSeparatorView() },
@@ -219,7 +227,7 @@ export const appCommands = (): Command[] => {
                         ]
                       : []),
                   // A drawing has a camera of its own, so the same three rows act on whichever is on screen.
-                  ...(onCanvas || drawing
+                  ...(onCanvas || drawing || diagram
                       ? [
                             { id: 'fit', label: 'Zoom to fit', shortcut: CANVAS_SHORTCUTS.fitAll, run: () => zoomTarget().fitAll() },
                             {
@@ -229,6 +237,18 @@ export const appCommands = (): Command[] => {
                                 run: () => zoomTarget().zoomToSelection()
                             },
                             { id: 'zoom-reset', label: 'Zoom to 100%', shortcut: CANVAS_SHORTCUTS.zoomReset, run: () => zoomTarget().zoomTo(1) }
+                        ]
+                      : []),
+                  ...(diagram && activeView
+                      ? [
+                            ...(useProject.getState().current?.folder
+                                ? [{ id: 'diagram-open-json', label: 'Open the diagram as JSON', run: () => openDiagramJson(activeView.id) }]
+                                : []),
+                            { id: 'diagram-copy-json', label: 'Copy the diagram as JSON', run: () => void copyDiagramJson(focusedDiagram()) },
+                            { id: 'diagram-copy-png', label: 'Copy the diagram as PNG', run: () => void copyDiagramPng(focusedDiagram()) },
+                            { id: 'diagram-save-png', label: 'Save the diagram as PNG', run: () => void saveDiagramPng(focusedDiagram()) },
+                            { id: 'diagram-copy-svg', label: 'Copy the diagram as SVG', run: () => void copyDiagramSvg(focusedDiagram()) },
+                            { id: 'diagram-save-svg', label: 'Save the diagram as SVG', run: () => void saveDiagramSvg(focusedDiagram()) }
                         ]
                       : []),
                   ...(drawing && activeView

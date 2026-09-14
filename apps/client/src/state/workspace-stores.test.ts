@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { createCanvasStore, defaultCanvasStore, focusedCanvas } from './canvas';
 import { createEditorRegistry } from './editors';
 import { createDocumentStore, useDocument } from './document';
+import { createDiagramStore } from './diagram';
 import { createDrawingStore } from './drawing';
 import { createProjectStore, useProject } from './project';
 import { currentStores, currentWorkspaceEndpointId, isFocusedWorkspace, resolveEditor, setCurrentWorkspace, type WorkspaceStores } from './workspace-stores';
@@ -9,7 +10,8 @@ import { currentStores, currentWorkspaceEndpointId, isFocusedWorkspace, resolveE
 const workspace = (): WorkspaceStores => {
     const canvases = createEditorRegistry(createCanvasStore);
     const drawings = createEditorRegistry(createDrawingStore);
-    return { canvases, drawings, document: createDocumentStore({ canvases, drawings }), project: createProjectStore() };
+    const diagrams = createEditorRegistry(createDiagramStore);
+    return { canvases, drawings, diagrams, document: createDocumentStore({ canvases, drawings, diagrams }), project: createProjectStore() };
 };
 
 /* The canvas a workspace is editing: with no view loaded that is its blank editor. */
