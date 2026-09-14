@@ -255,6 +255,10 @@ export type ProjectBrowserView = z.infer<typeof ProjectBrowserViewSchema>;
 export const ProjectDrawingViewSchema = ViewBaseSchema.extend({ kind: z.literal('drawing') });
 export type ProjectDrawingView = z.infer<typeof ProjectDrawingViewSchema>;
 
+/* A graph that is written rather than drawn. The graph lives in `.ruimte/diagrams/<id>.json`, never in this file. */
+export const ProjectDiagramViewSchema = ViewBaseSchema.extend({ kind: z.literal('diagram') });
+export type ProjectDiagramView = z.infer<typeof ProjectDiagramViewSchema>;
+
 /* One file on disk, read and never written. The path is the whole view: the bytes are the
    file system's, so there is nothing here for Ruimte to own, migrate or save. */
 export const ProjectFileViewSchema = ViewBaseSchema.extend({ kind: z.literal('file'), path: z.string().min(1) });
@@ -266,6 +270,7 @@ export const ProjectViewSchema = z.discriminatedUnion('kind', [
     ProjectTerminalViewSchema,
     ProjectBrowserViewSchema,
     ProjectDrawingViewSchema,
+    ProjectDiagramViewSchema,
     ProjectFileViewSchema,
     ProjectSeparatorViewSchema
 ]);
@@ -278,12 +283,14 @@ export const isSeparatorView = (view: ProjectView): view is ProjectSeparatorView
 
 export const isDrawingView = (view: ProjectView): view is ProjectDrawingView => view.kind === 'drawing';
 
+export const isDiagramView = (view: ProjectView): view is ProjectDiagramView => view.kind === 'diagram';
+
 export const isFileView = (view: ProjectView): view is ProjectFileView => view.kind === 'file';
 
 /*
  * The views that are one session under their own id: what a node carries, without a canvas around
- * it. A separator holds nothing, and a drawing and a file are both read off disk, so none of the
- * three has a session to attach to.
+ * it. A separator holds nothing, and a drawing, a diagram and a file are all read off disk, so none
+ * of them has a session to attach to.
  */
 export const isSessionView = (view: ProjectView): view is ProjectChatView | ProjectTerminalView | ProjectBrowserView =>
     view.kind === 'chat' || view.kind === 'terminal' || view.kind === 'browser';

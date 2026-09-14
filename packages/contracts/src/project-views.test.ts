@@ -123,12 +123,14 @@ describe('duplicating', () => {
         expect(copy.edges[0]).toMatchObject({ from: copy.nodes[0]!.id, to: copy.texts[0]!.id });
     });
 
-    test('only a canvas and a drawing are copied; a view of its own holds a session nobody can clone', () => {
+    test('only a canvas, a drawing and a diagram are copied; a view of its own holds a session nobody can clone', () => {
         const views: ProjectView[] = [
             { kind: 'drawing', id: 'd', name: 'Sketch' },
+            { kind: 'diagram', id: 'g', name: 'Graph' },
             { kind: 'terminal', id: 'term', name: 'Shell', node: {} }
         ];
         expect(withDuplicatedView(views, 'd', ids())!.views[1]).toMatchObject({ kind: 'drawing', name: 'Sketch copy' });
+        expect(withDuplicatedView(views, 'g', ids())!.views[2]).toMatchObject({ kind: 'diagram', name: 'Graph copy' });
         expect(withDuplicatedView(views, 'term', ids())).toBeNull();
     });
 });

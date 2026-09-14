@@ -3,6 +3,7 @@ import {
     MAIN_VIEW_ID,
     MAIN_VIEW_NAME,
     isCanvasView,
+    isDiagramView,
     isDrawingView,
     isOpenableView,
     isSeparatorView,
@@ -103,9 +104,10 @@ export const withMovedView = (views: readonly ProjectView[], id: string, toIndex
 };
 
 /*
- * A copy of a canvas or a drawing, right under the one it came from. A copy is new nodes with new
- * sessions, so every id inside it is renamed and no node resumes what the original was attached to;
- * a drawing holds nothing here, since its elements live in a file the daemon copies.
+ * A copy of a canvas, a drawing or a diagram, right under the one it came from. A copy is new nodes
+ * with new sessions, so every id inside it is renamed and no node resumes what the original was
+ * attached to; a drawing or a diagram holds nothing here, since its content lives in a file the
+ * daemon copies.
  */
 export const withDuplicatedView = (
     views: readonly ProjectView[],
@@ -113,12 +115,12 @@ export const withDuplicatedView = (
     nextId: (prefix: string) => string
 ): { views: ProjectView[]; id: string } | null => {
     const source = views.find((view) => view.id === id);
-    if (!source || (!isCanvasView(source) && !isDrawingView(source))) {
+    if (!source || (!isCanvasView(source) && !isDrawingView(source) && !isDiagramView(source))) {
         return null;
     }
     const copy: ProjectView = isCanvasView(source)
         ? copyOfCanvas(source, `${source.name} copy`, nextId)
-        : { kind: 'drawing', id: nextId('view'), name: `${source.name} copy` };
+        : { kind: source.kind, id: nextId('view'), name: `${source.name} copy` };
     return { views: withView(views, copy, id), id: copy.id };
 };
 

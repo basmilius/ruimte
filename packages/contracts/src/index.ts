@@ -85,6 +85,14 @@ import {
     DrawingSaveResultSchema,
     DrawingTargetPayloadSchema
 } from './drawing.ts';
+import {
+    DiagramChangedEventSchema,
+    DiagramCopyPayloadSchema,
+    DiagramOpenResultSchema,
+    DiagramSavePayloadSchema,
+    DiagramSaveResultSchema,
+    DiagramTargetPayloadSchema
+} from './diagram.ts';
 import { ProviderListResultSchema } from './model.ts';
 import {
     ProjectChangedEventSchema,
@@ -130,6 +138,7 @@ export * from './auth.ts';
 export * from './chat.ts';
 export * from './context.ts';
 export * from './context-sources.ts';
+export * from './diagram.ts';
 export * from './drawing.ts';
 export * from './envelope.ts';
 export * from './fs.ts';
@@ -192,6 +201,10 @@ export const REQUEST_SCHEMAS = {
     'drawing.save': { payload: DrawingSavePayloadSchema, result: DrawingSaveResultSchema },
     'drawing.close': { payload: DrawingTargetPayloadSchema, result: EmptySchema },
     'drawing.copy': { payload: DrawingCopyPayloadSchema, result: EmptySchema },
+    'diagram.open': { payload: DiagramTargetPayloadSchema, result: DiagramOpenResultSchema },
+    'diagram.save': { payload: DiagramSavePayloadSchema, result: DiagramSaveResultSchema },
+    'diagram.close': { payload: DiagramTargetPayloadSchema, result: EmptySchema },
+    'diagram.copy': { payload: DiagramCopyPayloadSchema, result: EmptySchema },
     'fs.browse': { payload: FsBrowsePayloadSchema, result: FsBrowseResultSchema },
     'fs.reveal': { payload: FsRevealPayloadSchema, result: EmptySchema },
     'fs.search': { payload: FsSearchPayloadSchema, result: FsSearchResultSchema },
@@ -257,6 +270,7 @@ export const EVENT_SCHEMAS = {
     'project.showView': ProjectShowViewEventSchema,
     'project.summary': ProjectSummaryEventSchema,
     'drawing.changed': DrawingChangedEventSchema,
+    'diagram.changed': DiagramChangedEventSchema,
     'fs.changed': FsChangedEventSchema,
     'git.status': GitStatusEventSchema,
     'git.progress': GitProgressEventSchema,
