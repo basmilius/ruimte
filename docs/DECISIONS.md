@@ -1639,6 +1639,64 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   Crossing two real networks is what `apps/server/scripts/webrtc-probe.ts` is for, and has not been
   measured yet.
 
+### The broker
+
+- Phase 4 of remote access: `apps/pulsar-broker`, so a client reaches a machine it paired with without
+  a socket to that machine. The broker holds a `Map` from public key to socket and passes a signal on,
+  nothing more: no database, no accounts, nothing on disk. It does not verify the signature on a signal
+  and does not look inside the envelope beyond the schema, because the receiver has to check it anyway
+  and is the one a lying broker would be lying to. A machine relays to clients and a client to machines;
+  a relay to the same role answers `not-connected`, so a client cannot use the broker to reach another
+  client.
+- The broker names itself. The challenge carries the host the broker answers to, the peer refuses a
+  challenge for a host it did not dial, and the broker verifies against the name it put in. With
+  `--name` a `Host` header it does not know gets a 421, so a service in the middle cannot pass a peer
+  this broker's nonce and announce that peer's key here. Without a name the header is believed, which is
+  what a laptop wants and what the systemd unit does not do.
+- A second announcement of a key replaces the first socket. The later one proved the key, so it is the
+  one that is really there; the earlier one is a NAT mapping that died quietly or a second process. A
+  daemon that is told `replaced` waits the full backoff before it tries again, so two processes on one
+  home do not knock each other off in turn. The client signs in with one key for every machine, so it
+  keeps one broker socket per page shared by every attempt and closes it when the last channel is in.
+  Two tabs of one origin still share a key and can replace each other, but only during the seconds of
+  signaling, and the loser's reconnect tries again.
+- The limits, all flags: 30 upgrades per minute and 32 sockets per address, 20 frames per second per
+  address (counted before a frame is parsed), 60 relays and 10 announcements per minute per key, 64 KiB
+  per frame, a ping every 25 seconds and a drop after two without an answer, 10 seconds from open to a
+  verified signature. A bucket fills to its limit and refills evenly, so the limit is also the burst.
+  One attempt is two or three frames (hello, prove, the offer), and a reconnect loop tops out at one
+  attempt per 10 seconds, so a person never meets them; a script does. An announcement over the limit
+  closes the socket that made it and leaves the one holding the key alone, so a flood of announcements
+  cannot knock a machine off. Behind Caddy every socket is loopback, so `--trust-proxy` counts against
+  the last `X-Forwarded-For` entry, and only for a socket from loopback.
+- The daemon hears the broker's pings as Bun's client `ping` event and calls a broker that said nothing
+  for 90 seconds gone, which is why `--heartbeat-seconds` stops at 40. Reconnecting backs off from 1 to
+  30 seconds with 20% jitter, so a restarted broker does not get every machine back in one millisecond.
+- What a key gets from the daemon. A signal whose signature does not verify gets nothing, not even a
+  refusal: an answer would let anyone make the machine sign messages for keys of their choosing. A
+  signature that verifies from a key nobody paired gets one signed `close` with `not-paired` for an
+  offer and nothing for anything else, so a revoked client says why at once instead of after its 20
+  second timeout, and no werift peer connection is ever made for it. Whether a key is paired is the
+  same `AuthStore` lookup the channel handshake makes, which still runs on the channel and still
+  decides access. An attempt belongs to the key that offered it, so a second paired client cannot close
+  or feed it.
+- Two URLs on the daemon: `--broker` is what it dials, `--broker-advertise` what it hands clients in the
+  pairing answer and `endpoint.info`. The Docker container reaches a broker on the Mac as
+  `host.docker.internal` while a client on the Mac dials `127.0.0.1`, and the name is part of what gets
+  signed, so one URL could not serve both. In production they are the same and the second is left off.
+- The client takes the broker route only with Direct on, a `brokerUrl` from the machine and a pinned
+  machine key (`brokerRouteOf`), never for the row of this machine. On that route the address the
+  transport resolves is the broker URL itself and `socketAddressFor` never runs, so no
+  `/auth/challenge`, no ticket over HTTP and nothing else touches the machine's address: across two
+  networks there is nothing there to ask. An answer is believed only when the pinned key signed it for
+  this client's key, which catches a broker that swaps a fingerprint before the channel handshake does.
+  A row that says the broker is gone (`brokerUrl` null in `endpoint.info`) goes back to signaling over
+  a socket on its next attempt.
+- Measured in the Docker bench, broker on the host and the daemon in the container: a channel open in
+  301 ms and signed in after 304 ms through the broker alone, against 274 and 283 ms signaled over a
+  socket. Killing the broker afterwards leaves the terminal on that channel answering. Not measured yet:
+  two machines on two networks through a broker on the VPS, and nothing is deployed.
+
 ### Skipped on purpose
 
 Skipped: kanban, loop and trigger nodes, minimap, dictation, notch HUD, agent-to-agent

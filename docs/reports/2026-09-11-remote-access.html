@@ -473,6 +473,7 @@ groot:  60 x 64 KB in 427 ms =  141 ber/s, 8.78 MB/s</code></pre>
 
 <section id="stand">
   <h2>Stand op 14 september 2026</h2>
+  <p><strong>Getest op 14 september.</strong> Bas heeft fase 1 tot en met 3 in de Electron-app getest tegen de Docker-container, met computer use, en alles werkt: koppelen, de schakelaar Direct, een terminal en afbeeldingen over het kanaal. De probe tussen twee echte netwerken (<code>apps/server/scripts/webrtc-probe.ts</code>) is nog niet gedaan. Fase 4 kwam dezelfde dag daarna; die staat hieronder en is nog niet door Bas getest.</p>
   <p>Drie dagen na de eerste versie is fase 1 af, dezelfde dag nog; van de andere vijf fases is niets gebouwd: geen werift, geen <code>RTCPeerConnection</code>, geen broker, geen adresboek, en <code>Relay</code> is nog steeds <code>NoRelay</code>. Wat wel landde zit eromheen, en een deel daarvan maakt de fases kleiner. Dit is de stand, nagelopen in de code op <code>4e96370</code>.</p>
   <div class="table">
     <table class="wide">
@@ -496,8 +497,8 @@ groot:  60 x 64 KB in 427 ms =  141 ber/s, 8.78 MB/s</code></pre>
         </tr>
         <tr>
           <td><strong>4. De broker</strong></td>
-          <td><span class="badge">open</span></td>
-          <td>Niets van gebouwd. De sleutel waarop hij routeert staat klaar: <code>endpoint.json</code> heeft het sleutelpaar (<code>endpoint-id.ts:17-31</code>) en <code>auth/keys.ts</code> tekent en verifieert.</td>
+          <td><span class="badge confirmed">klaar</span></td>
+          <td><strong>Bijgewerkt na fase 4:</strong> <code>apps/pulsar-broker</code> staat, de daemon meldt zich aan met <code>BrokerRelay</code>, en de client signaleert over de broker zonder het adres van de machine; zie <a href="#plan">Het plan</a>. Nog nergens gedeployd. Wat hieronder staat was de stand ervoor. Niets van gebouwd. De sleutel waarop hij routeert staat klaar: <code>endpoint.json</code> heeft het sleutelpaar (<code>endpoint-id.ts:17-31</code>) en <code>auth/keys.ts</code> tekent en verifieert.</td>
         </tr>
         <tr>
           <td><strong>5. Het adresboek</strong></td>
@@ -566,7 +567,24 @@ groot:  60 x 64 KB in 427 ms =  141 ber/s, 8.78 MB/s</code></pre>
     </li>
     <li class="step">
       <div>
-        <h3>De broker <span class="badge">open</span></h3>
+        <h3>De broker <span class="badge confirmed">klaar</span></h3>
+        <p><strong>Gedaan op 14 september.</strong> <code>apps/pulsar-broker</code> is een Bun-WebSocketserver: een peer meldt zijn publieke sleutel aan, tekent de nonce van de broker over <code>brokerHelloMessage</code>, en staat daarna in een <code>Map</code> van sleutel naar socket. Een signaal gaat van een client naar een machine of terug, met de afzender ingevuld door de broker. De broker leest de envelope niet en controleert de handtekening niet, want de ontvanger doet dat. Geen database, geen accounts, niets op schijf. Een tweede aanmelding met dezelfde sleutel vervangt de eerste. <code>GET /health</code> telt sockets, machines en clients. In <code>deploy/</code> staan een systemd-unit en een Caddyfile voor de VPS; er is niets gedeployd.</p>
+        <p><strong>De limieten.</strong> 30 verbindingen per minuut en 32 sockets per adres, 20 frames per seconde per adres (geteld v&oacute;&oacute;r het parsen), 60 relays en 10 aanmeldingen per minuut per sleutel, 64 KiB per frame, elke 25 seconden een ping en weg na twee zonder antwoord, en 10 seconden om een handtekening te geven. Allemaal vlaggen en omgevingsvariabelen. Een poging kost twee of drie frames en een reconnect-lus doet er hooguit &eacute;&eacute;n per tien seconden, dus een mens merkt ze niet en een script wel. Achter Caddy komt elke socket van loopback, dus met <code>--trust-proxy</code> telt het laatste adres in <code>X-Forwarded-For</code>, en alleen voor een socket van loopback.</p>
+        <p><strong>De daemon.</strong> <code>BrokerRelay</code> zit achter de <code>Relay</code>-naad en staat aan met <code>--broker</code> of <code>RUIMTE_BROKER_URL</code>, standaard uit. Hij tekent de challenge met de sleutel uit <code>endpoint.json</code>, verbindt opnieuw met een backoff van 1 tot 30 seconden, en geeft een signaal alleen aan <code>DirectPeers</code> als een gekoppelde sleutel het tekende; de code van de peer connection is niet veranderd. Een handtekening die niet klopt krijgt niets, ook geen weigering, want anders laat iedereen de machine berichten tekenen voor een sleutel naar keuze. Een geldige handtekening van een sleutel die niemand koppelde krijgt voor een offer &eacute;&eacute;n getekende <code>close</code> met <code>not-paired</code>, en er komt geen peer connection. Een poging hoort bij de sleutel die hem aanbood.</p>
+        <p><strong>De client.</strong> Het koppelantwoord en <code>endpoint.info</code> geven <code>brokerUrl</code> mee, en de rij van de machine bewaart hem. Staat Direct aan en heeft de rij een broker en een gepinde sleutel, dan gaan offer en answer over de broker (<code>brokerSignaling</code>) en vraagt de client niets aan het HTTP-adres van de machine: geen <code>/auth/challenge</code>, geen ticket. De client meldt zich aan met zijn eigen sleutel uit IndexedDB en gelooft een answer alleen als de gepinde sleutel van de machine het voor deze client tekende. Het socketpad uit 2b zit achter dezelfde naad (<code>transport/signaling.ts</code>) en werkt zoals het werkte.</p>
+        <p><strong>Afwijkingen van het plan.</strong> <code>BrokerPeer</code> staat in <code>packages/pulsar</code>, zodat aanmelden en een relay tekenen op &eacute;&eacute;n plek staan voor daemon, client en tests. De daemon kent een tweede URL, <code>--broker-advertise</code>: de container bereikt de broker als <code>host.docker.internal</code> en een client op de Mac als <code>127.0.0.1</code>, en de host zit in wat getekend wordt; in productie is het &eacute;&eacute;n URL. De broker kent zijn eigen naam (<code>--name</code>), anders gelooft hij de <code>Host</code>-header, wat lokaal prima is en op de VPS niet. De client houdt &eacute;&eacute;n brokersocket per pagina voor alle pogingen, omdat de broker per sleutel &eacute;&eacute;n socket houdt en de client &eacute;&eacute;n sleutel heeft voor elke machine; twee tabbladen van dezelfde origin kunnen elkaar nog wegdrukken, maar alleen tijdens de signaling. Er is een sluitreden <code>not-paired</code> bij gekomen, en een machine praat alleen met clients en een client alleen met machines.</p>
+        <p><strong>Wat de tests bewezen.</strong> In de broker, over echte sockets: twee peers melden zich aan en sturen een signaal heen en terug; een verkeerde handtekening sluit de socket en de sleutel blijft onbereikbaar; een relay naar een onbekende sleutel krijgt <code>not-connected</code> met zijn id; de limieten per sleutel en per adres slaan aan; een tweede aanmelding vervangt de eerste; een socket die niet meer antwoordt valt na twee heartbeats weg. In de Docker-testbank start de test een broker op de host, de daemon in de container meldt zich daar aan, en een client op de host opent het kanaal met alleen de broker voor de signaling (poort 4320 alleen om te koppelen): open na 301 ms, ingelogd na 304 ms, tegen 274 en 283 ms over een socket. Een terminal antwoordt, en na het stoppen van de broker antwoordt dezelfde terminal nog. Een sleutel die niemand koppelde krijgt een getekende <code>not-paired</code>, een signaal dat een gekoppelde sleutel niet zelf tekende krijgt niets. Alle 51 tests van de testbank slagen.</p>
+        <p><strong>Nog niet.</strong> Twee machines op verschillende netwerken via een broker op de VPS; die staat nog nergens. Geen TURN. De daemon pingt zijn clients nog steeds niet.</p>
+        <p><strong>Zo test je het in de Electron-app.</strong> Dezelfde stappen staan in <code>apps/pulsar-broker/README.md</code>.</p>
+        <ol>
+          <li>Start de broker op de Mac en laat hem draaien: <code>bun run --cwd apps/pulsar-broker start</code> (luistert op <code>ws://127.0.0.1:4400</code>).</li>
+          <li>Maak de container opnieuw met de broker erin; het volume houdt de koppelingen: <code>RUIMTE_BROKER_URL=ws://host.docker.internal:4400 RUIMTE_BROKER_ADVERTISE_URL=ws://127.0.0.1:4400 bun run --cwd apps/server docker:up</code>. <code>docker logs ruimte-remote</code> zegt dan <code>Announced to the broker at ws://host.docker.internal:4400</code>, en <code>curl -s http://127.0.0.1:4400/health</code> telt &eacute;&eacute;n machine.</li>
+          <li>Start de app met <code>bun dev</code>. Staat <code>docker-linux</code> nog niet onder Settings, Machines, koppel dan: <code>bun run --cwd apps/server docker:pair</code> geeft een link om daar te plakken. Een machine die al gekoppeld was leert de broker bij de volgende verbinding.</li>
+          <li>Zet Direct aan voor <code>docker-linux</code>. De tooltip op het bolletje zegt "Direct connection through the broker". Open een terminal op die machine en typ iets.</li>
+          <li>Stop de broker met Ctrl+C. De terminal blijft werken.</li>
+          <li>Met de broker nog uit: zet Direct uit en weer aan. De rij zegt <code>The broker at 127.0.0.1:4400 could not be reached</code> in plaats van over poort 4310 te verbinden; dat is het bewijs dat de signaling over de broker liep. Start de broker weer en de volgende poging komt binnen.</li>
+          <li>Terug naar de oude stand: broker stoppen en <code>bun run --cwd apps/server docker:up</code> zonder de twee variabelen.</li>
+        </ol>
         <p>Een Bun-proces op de VPS: WebSocket, challenge-response op de publieke sleutel, een <code>Map</code> van sleutel naar socket, berichten doorgeven, rate limiting per IP en per sleutel. Geen database. Caddy ervoor voor TLS. In de daemon een <code>BrokerRelay</code> achter de <code>Relay</code>-naad (<code>auth/relay.ts:5-9</code>) die in <code>publish</code> de socket naar de broker opent en de challenge tekent met de sleutel uit <code>endpoint.json</code> (<code>auth/keys.ts</code>).</p>
         <p><strong>Klaar als:</strong> twee machines op verschillende netwerken elkaar vinden via de broker en daarna rechtstreeks praten, en de broker afsluiten breekt die verbinding niet.</p>
         <p class="caption">Een paar honderd regels in <code>apps/pulsar-broker</code>, met <code>packages/pulsar</code> uit fase 2 als de wire.</p>
@@ -647,7 +665,7 @@ Niet doen in deze beurt: de andere fases vast voorbereiden, of afhankelijkheden 
           <td>Laat de bytes van een attachment (<code>apps/client/src/chat/attachments.ts</code>), een projecticoon (<code>project/icon-url.ts</code>) en een bestand (<code>shell/panels/file-url.ts</code>) over het kanaal komen als het transport geen HTTP heeft: een request dat bytes antwoordt en een cache die er een blob-URL van maakt, met de HTTP-route als de goedkope weg zolang er een WebSocket is. Klaar als de drie tekenplekken alle drie laden over WebRTC.</td>
         </tr>
         <tr>
-          <td><strong>4</strong></td>
+          <td><strong>4</strong><br><span class="caption">gedaan</span></td>
           <td>Bouw <code>apps/pulsar-broker</code>: een Bun-WebSocketserver die een aanmelding met een handtekening verifieert, een Map van publieke sleutel naar socket bijhoudt, berichten doorgeeft naar een sleutel, en rate limiting doet per IP en per sleutel. Geen database. In de daemon een <code>BrokerRelay</code> achter <code>apps/server/src/auth/relay.ts</code>. Met tests die twee nepclients laten aanmelden en een bericht heen en weer sturen, en die bewijzen dat een verkeerde handtekening niets oplevert.</td>
         </tr>
         <tr>
@@ -678,6 +696,7 @@ Niet doen in deze beurt: de andere fases vast voorbereiden, of afhankelijkheden 
         <li>Een subdomein, bijvoorbeeld <code>broker.ruimte.app</code>.</li>
         <li><code>ulimit -n</code> omhoog, want de standaard is lager dan het aantal sockets dat je wilt kunnen houden.</li>
       </ol>
+      <p>Sinds fase 4 staan de systemd-unit (met <code>LimitNOFILE=65536</code>) en de Caddyfile in <code>apps/pulsar-broker/deploy</code>, en de stappen om ze te installeren in <code>apps/pulsar-broker/README.md</code>. Er is nog niets gedeployd.</p>
     </div>
     <div class="panel">
       <h3>Cloudflare</h3>
