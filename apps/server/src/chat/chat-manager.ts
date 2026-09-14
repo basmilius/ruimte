@@ -21,6 +21,7 @@ import type { LimitsUpdate } from '../usage/limits/normalize.ts';
 import type { AttachmentStore } from './attachment-store.ts';
 import { ChatSession, type ChatSendExtras } from './chat-session.ts';
 import type { ChatStore } from './chat-store.ts';
+import { DeltaCoalescer } from './delta-coalescer.ts';
 import { ChatError } from './errors.ts';
 interface ChatManagerOptions {
     providers: ProviderRegistry;
@@ -66,6 +67,7 @@ export class ChatManager {
     private readonly chats = new Map<string, ChatSession>();
     private readonly sinks = new Map<string, SessionSink>();
     private readonly attached = new Map<string, Set<string>>();
+    private readonly coalescers = new Map<string, DeltaCoalescer>();
     private readonly tokens = new Map<string, string>();
     // How big each record was the last time it went to disk, and the writes waiting for a big one.
     private readonly sizes = new Map<string, number>();
@@ -196,17 +198,24 @@ export class ChatManager {
             clients = new Set();
             this.attached.set(chatId, clients);
         }
+        // The snapshot already holds the text of a delta that is waiting, so it goes out before this
+        // client is on the list: the text is either in the snapshot or in the stream, never both.
+        this.coalescers.get(chatId)?.flush();
         clients.add(clientId);
         return session.thread.snapshot();
     }
 
     detach(chatId: string, clientId: string): void {
+        this.coalescers.get(chatId)?.flush();
         this.attached.get(chatId)?.delete(clientId);
     }
 
     detachAll(clientId: string): void {
-        for (const clients of this.attached.values()) {
-            clients.delete(clientId);
+        for (const [chatId, clients] of this.attached) {
+            if (clients.has(clientId)) {
+                this.coalescers.get(chatId)?.flush();
+                clients.delete(clientId);
+            }
         }
     }
 
@@ -306,6 +315,8 @@ export class ChatManager {
     async kill(chatId: string): Promise<void> {
         const session = this.require(chatId);
         session.dispose();
+        this.coalescers.get(chatId)?.dispose();
+        this.coalescers.delete(chatId);
         this.cancelWaiting(chatId);
         this.sizes.delete(chatId);
         this.writes.delete(chatId);
@@ -423,6 +434,15 @@ export class ChatManager {
 
     private emit(chatId: string, event: ChatEvent): void {
         this.activity.set(chatId, Date.now());
+        let coalescer = this.coalescers.get(chatId);
+        if (!coalescer) {
+            coalescer = new DeltaCoalescer((coalesced) => this.broadcast(chatId, coalesced));
+            this.coalescers.set(chatId, coalescer);
+        }
+        coalescer.push(event);
+    }
+
+    private broadcast(chatId: string, event: ChatEvent): void {
         const clients = this.attached.get(chatId);
         if (!clients) {
             return;
