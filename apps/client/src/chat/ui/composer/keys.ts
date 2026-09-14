@@ -70,6 +70,20 @@ export const inOpenFence = (tree: Tree, pos: number): boolean => {
     return false;
 };
 
+/* Whether `pos` sits in the body of a fenced code block, open or closed: below its opening line and before its end. */
+export const inFenceBody = (tree: Tree, text: string, pos: number): boolean => {
+    for (let node: SyntaxNode | null = tree.resolveInner(pos, -1); node !== null; node = node.parent) {
+        if (node.name === 'FencedCode') {
+            const openingEnd = text.indexOf('\n', node.from);
+            return openingEnd !== -1 && pos > openingEnd && (pos < node.to || node.getChildren('CodeMark').length < 2);
+        }
+    }
+    return false;
+};
+
+/* The spaces Tab inserts at `column`, up to the next stop of four, the way a code editor lines up. */
+export const tabSpaces = (column: number): string => ' '.repeat(4 - (column % 4));
+
 const INLINE_BLOCK = /^(Paragraph|ATXHeading\d|SetextHeading\d)$/;
 
 /*

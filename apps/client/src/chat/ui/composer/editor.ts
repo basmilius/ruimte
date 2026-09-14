@@ -1,5 +1,5 @@
 import { history, historyKeymap, standardKeymap } from '@codemirror/commands';
-import { Language, defineLanguageFacet, syntaxHighlighting, syntaxTree } from '@codemirror/language';
+import { Language, defineLanguageFacet, indentUnit, syntaxHighlighting, syntaxTree } from '@codemirror/language';
 import { Annotation, type EditorState, type Extension, type Range } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, keymap, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { tagHighlighter, tags } from '@lezer/highlight';
@@ -107,6 +107,8 @@ export const composerEditorExtensions = (): Extension => [
     history(),
     keymap.of([...standardKeymap, ...historyKeymap]),
     EditorView.lineWrapping,
+    // What Tab and Shift+Tab in a fence add and take away, so a selection indents in the same steps as a caret.
+    indentUnit.of('    '),
     markdownLanguage,
     syntaxHighlighting(markdownClasses),
     codeDecorationPlugin

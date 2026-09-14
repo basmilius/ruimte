@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { insertNewline } from '@codemirror/commands';
+import { indentLess, indentMore, insertNewline } from '@codemirror/commands';
 import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import type { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
@@ -26,7 +26,7 @@ import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferenc
 import { STASH_SHORTCUT, stashDraft, type StashedPrompt, useStash } from '@/chat/stash';
 import { pageTimeline, scrollTimelineToEnd, subscribeTimelineEnd, timelineAtEnd } from '@/chat/timeline-scroll';
 import { chipDecorations } from '@/chat/ui/composer/chips';
-import { enterAction, inCode, inOpenFence, listItemAt, recallDirection } from '@/chat/ui/composer/keys';
+import { enterAction, inCode, inFenceBody, inOpenFence, listItemAt, recallDirection, tabSpaces } from '@/chat/ui/composer/keys';
 import { ComposerInput, type ComposerInputHandle } from '@/chat/ui/ComposerInput';
 import { ContextMeter } from '@/chat/ui/ContextMeter';
 import { ApprovalDock, QuestionDock } from '@/chat/ui/PendingDock';
@@ -540,6 +540,23 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
             }
             if (e.key === 'Tab' || e.key === 'Enter') {
                 chooseMention(files[menuIndex] ?? files[0]!);
+                return true;
+            }
+        }
+        // In a fence Tab indents like a code editor; anywhere else it keeps moving the focus.
+        if (e.key === 'Tab' && !e.altKey && !e.metaKey && !e.ctrlKey) {
+            const { state } = view;
+            const { from, to, head } = state.selection.main;
+            const tree = ensureSyntaxTree(state, state.doc.length, 50) ?? syntaxTree(state);
+            if (inFenceBody(tree, state.doc.toString(), head)) {
+                // Handled even when there is nothing to outdent, so Shift+Tab never throws the focus out of a block.
+                if (e.shiftKey) {
+                    indentLess(view);
+                } else if (from !== to) {
+                    indentMore(view);
+                } else {
+                    view.dispatch(state.replaceSelection(tabSpaces(head - state.doc.lineAt(head).from)), { scrollIntoView: true, userEvent: 'input' });
+                }
                 return true;
             }
         }

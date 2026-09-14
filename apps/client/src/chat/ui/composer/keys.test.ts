@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { parser } from '@lezer/markdown';
-import { type EnterContext, enterAction, inCode, inOpenFence, listItemAt, recallDirection } from './keys';
+import { type EnterContext, enterAction, inCode, inFenceBody, inOpenFence, listItemAt, recallDirection, tabSpaces } from './keys';
 
 const fenceAt = (doc: string, pos: number = doc.length): boolean => inOpenFence(parser.parse(doc), pos);
 
@@ -102,6 +102,33 @@ describe('inOpenFence', () => {
         expect(fenceAt('plain text')).toBe(false);
         expect(fenceAt('see `code')).toBe(false);
         expect(fenceAt('see `code`')).toBe(false);
+    });
+});
+
+describe('inFenceBody', () => {
+    const bodyAt = (doc: string, pos: number = doc.length): boolean => inFenceBody(parser.parse(doc), doc, pos);
+
+    test('is true below the opening line of a fence, open or closed', () => {
+        expect(bodyAt('```php\n<?php')).toBe(true);
+        expect(bodyAt('```\n')).toBe(true);
+        expect(bodyAt('```\ncode\n```\nafter', 5)).toBe(true);
+    });
+
+    test('is false on the opening line, after a closed fence and outside one', () => {
+        expect(bodyAt('```php')).toBe(false);
+        expect(bodyAt('```\ncode\n```')).toBe(false);
+        expect(bodyAt('```\ncode\n```\nafter')).toBe(false);
+        expect(bodyAt('plain text')).toBe(false);
+        expect(bodyAt('see `code`', 6)).toBe(false);
+    });
+});
+
+describe('tabSpaces', () => {
+    test('fills up to the next stop of four', () => {
+        expect(tabSpaces(0)).toBe('    ');
+        expect(tabSpaces(1)).toBe('   ');
+        expect(tabSpaces(3)).toBe(' ');
+        expect(tabSpaces(4)).toBe('    ');
     });
 });
 

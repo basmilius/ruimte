@@ -335,6 +335,10 @@ canvas, against Ruimte, one verdict each.
   syntax tree, so the number is not renumbered below the caret and a nested item that is left
   loses its indentation with its marker. Once a fence is closed and outside a list Enter sends
   again, so a prompt with a finished block in it goes out the way it always did.
+- Tab in the body of a fence, open or closed, indents with spaces up to the next stop of four, a
+  selection indents its lines by four and Shift+Tab takes four away. Everywhere else, the opening
+  line of a fence and inline code included, Tab still moves the focus, so a prompt box never traps
+  the keyboard (`inFenceBody` and `tabSpaces` in `src/chat/ui/composer/keys.ts`).
 - An attachment goes over the wire as base64 in `chat.send` once (25 MB and 8 per message) and
   never again: the daemon writes it under `$RUIMTE_HOME/attachments` and the thread keeps its
   name, mime, size and path. The prompt names the file by path instead of carrying an `image`
