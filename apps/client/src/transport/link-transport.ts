@@ -14,6 +14,9 @@ import { TransportError, type ConnectionState, type TransportStatus } from './tr
 const RECONNECT_MIN_MS = 500;
 const RECONNECT_MAX_MS = 10_000;
 
+// A daemon address that has not resolved by then (a fetch for a ticket that hangs) is an attempt that failed, not one to wait on.
+const ADDRESS_TIMEOUT_MS = 20_000;
+
 /* Where the next connection opens. A function, because the address carries a credential that is signed for per connection. */
 export type SocketAddress = string | (() => Promise<string>);
 
@@ -33,6 +36,11 @@ export interface LinkEvents {
 
 /* Opens a link on an address the transport resolved for this attempt. */
 export type LinkOpener = (url: string, events: LinkEvents) => Link;
+
+export interface LinkTransportOptions {
+    addressTimeoutMs?: number;
+    log?: Pick<Console, 'info' | 'warn'>;
+}
 
 interface Pending {
     type: RequestType;
@@ -55,6 +63,8 @@ export class LinkTransport implements PooledTransport {
     private readonly eventHandlers = new Map<EventType, Set<(payload: never) => void>>();
     private readonly pending = new Map<string, Pending>();
     private readonly openLink: LinkOpener;
+    private readonly addressTimeoutMs: number;
+    private readonly log: Pick<Console, 'info' | 'warn'>;
     private nextId = 1;
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     private disposed = false;
@@ -62,9 +72,11 @@ export class LinkTransport implements PooledTransport {
     // Bumped by anything that makes an attempt stale, so an address resolved slowly cannot open a link nobody wants.
     private generation = 0;
 
-    constructor(address: SocketAddress, openLink: LinkOpener) {
+    constructor(address: SocketAddress, openLink: LinkOpener, options: LinkTransportOptions = {}) {
         this.address = address;
         this.openLink = openLink;
+        this.addressTimeoutMs = options.addressTimeoutMs ?? ADDRESS_TIMEOUT_MS;
+        this.log = options.log ?? console;
         this.connect();
     }
 
@@ -106,12 +118,15 @@ export class LinkTransport implements PooledTransport {
             this.reconnectTimer = null;
         }
         const link = this.link;
+        // Let go of the link before closing it, so the next attempt never waits on a close event the old link may not send.
+        this.link = null;
+        this.linkToken = null;
         if (link) {
-            // Closing runs the normal close path, which reconnects on the address set above.
             link.close();
-        } else {
-            this.connect();
+            this.log.info('Reconnecting to the machine');
+            this.rejectPending('disconnected', 'The connection closed before the machine answered');
         }
+        this.connect();
     }
 
     subscribeStatus(handler: (status: TransportStatus) => void): () => void {
@@ -176,7 +191,7 @@ export class LinkTransport implements PooledTransport {
         }
         this.setConnection({ status: 'connecting', retryAt: null });
         const generation = this.generation;
-        const resolved = typeof this.address === 'string' ? Promise.resolve(this.address) : this.address();
+        const resolved = typeof this.address === 'string' ? Promise.resolve(this.address) : withTimeout(this.address(), this.addressTimeoutMs);
         void resolved.then(
             (url) => {
                 if (generation === this.generation && !this.disposed) {
@@ -188,7 +203,7 @@ export class LinkTransport implements PooledTransport {
                     return;
                 }
                 // A daemon that will not say how to reach it is a daemon that is not reachable; the backoff is the same one.
-                console.warn('Could not work out how to connect', e);
+                this.log.warn('Could not work out how to connect to the machine', e);
                 this.scheduleReconnect();
                 this.setConnection({ status: 'closed' });
             }
@@ -198,7 +213,7 @@ export class LinkTransport implements PooledTransport {
     private open(url: string): void {
         const token = {};
         this.linkToken = token;
-        const link = this.openLink(url, {
+        const events: LinkEvents = {
             open: () => {
                 if (this.linkToken === token) {
                     this.setConnection({ status: 'open', attempts: 0, retryAt: null, failure: null });
@@ -215,12 +230,27 @@ export class LinkTransport implements PooledTransport {
                 }
                 this.linkToken = null;
                 this.link = null;
+                if (failure === null) {
+                    this.log.info('The connection to the machine closed');
+                } else {
+                    this.log.warn(`The connection to the machine closed: ${failure}`);
+                }
                 // Scheduling first, so the closed status arrives with the attempt it announces.
                 this.scheduleReconnect();
                 this.setConnection({ status: 'closed', failure });
                 this.rejectPending('disconnected', 'The connection closed before the machine answered');
             }
-        });
+        };
+        let link: Link;
+        try {
+            link = this.openLink(url, events);
+        } catch (e) {
+            // An opener that throws would otherwise leave the transport connecting forever, with no link and no timer.
+            if (this.linkToken === token) {
+                events.close(`Could not open a connection: ${e instanceof Error ? e.message : String(e)}`);
+            }
+            return;
+        }
         // A link that failed while it was being opened already reported, and is no link to keep.
         if (this.linkToken === token) {
             this.link = link;
@@ -307,3 +337,18 @@ export class LinkTransport implements PooledTransport {
         }
     }
 }
+
+const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> =>
+    new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(`No address within ${Math.round(timeoutMs / 1000)} seconds`)), timeoutMs);
+        promise.then(
+            (value) => {
+                clearTimeout(timer);
+                resolve(value);
+            },
+            (e: unknown) => {
+                clearTimeout(timer);
+                reject(e);
+            }
+        );
+    });

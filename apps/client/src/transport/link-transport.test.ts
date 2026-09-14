@@ -103,6 +103,103 @@ describe('LinkTransport', () => {
         transport.dispose();
     });
 
+    test('an opener that throws is a failed attempt, and the loop tries again', async () => {
+        const opened: FakeLink[] = [];
+        const warnings: unknown[][] = [];
+        const transport = new LinkTransport(
+            'ws://machine/ws',
+            (_url, events) => {
+                if (opened.length === 0) {
+                    opened.push(new FakeLink(events));
+                    throw new Error('RTCPeerConnection is not available');
+                }
+                const link = new FakeLink(events);
+                opened.push(link);
+                return link;
+            },
+            { log: { info: () => undefined, warn: (...parts: unknown[]) => warnings.push(parts) } }
+        );
+        await tick();
+        expect(transport.connection).toMatchObject({
+            status: 'closed',
+            attempts: 1,
+            failure: 'Could not open a connection: RTCPeerConnection is not available'
+        });
+        await tick(600);
+        expect(opened).toHaveLength(2);
+        opened[1]!.events.open();
+        expect(transport.status).toBe('open');
+        expect(warnings.length).toBeGreaterThan(0);
+        transport.dispose();
+    });
+
+    test('an address that never resolves gives up and tries again', async () => {
+        let asked = 0;
+        const links: FakeLink[] = [];
+        const transport = new LinkTransport(
+            () => {
+                asked += 1;
+                return asked === 1 ? new Promise<string>(() => undefined) : Promise.resolve('ws://machine/ws');
+            },
+            (_url, events) => {
+                const link = new FakeLink(events);
+                links.push(link);
+                return link;
+            },
+            { addressTimeoutMs: 20, log: { info: () => undefined, warn: () => undefined } }
+        );
+        await tick(40);
+        expect(transport.connection).toMatchObject({ status: 'closed', attempts: 1 });
+        await tick(600);
+        expect(asked).toBe(2);
+        expect(links).toHaveLength(1);
+        transport.dispose();
+    });
+
+    test('reconnect opens a new link even when the old one never reports its close', async () => {
+        const links: FakeLink[] = [];
+        const transport = new LinkTransport('ws://machine/ws', (_url, events) => {
+            const link = new FakeLink(events);
+            // A link that closes without a word, which a transport must not wait on forever.
+            link.close = () => {
+                link.closed = true;
+            };
+            links.push(link);
+            return link;
+        });
+        await tick();
+        links[0]!.events.open();
+        const reply = transport.request('session.list', {});
+        transport.reconnect();
+        expect(links[0]!.closed).toBe(true);
+        await expect(reply).rejects.toThrow(/closed before the machine answered/);
+        await tick();
+        expect(links).toHaveLength(2);
+        expect(transport.status).toBe('connecting');
+        links[1]!.events.open();
+        expect(transport.status).toBe('open');
+        transport.dispose();
+    });
+
+    test('the reason a link closed is logged', async () => {
+        const lines: string[] = [];
+        const links: FakeLink[] = [];
+        const transport = new LinkTransport(
+            'ws://machine/ws',
+            (_url, events) => {
+                const link = new FakeLink(events);
+                links.push(link);
+                return link;
+            },
+            { log: { info: (...parts: unknown[]) => lines.push(parts.join(' ')), warn: (...parts: unknown[]) => lines.push(parts.join(' ')) } }
+        );
+        await tick();
+        links[0]!.events.open();
+        links[0]!.events.close('The machine stopped answering over the direct connection');
+        expect(lines.some((line) => line.includes('The machine stopped answering over the direct connection'))).toBe(true);
+        transport.dispose();
+    });
+
     test('pending requests fail when the link goes, and a disposed transport stays down', async () => {
         const { transport, links } = setup();
         await tick();
