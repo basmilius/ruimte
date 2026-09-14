@@ -61,6 +61,12 @@ export const MAIN_WORKSPACE_ID = 'main';
 
 const machines = new Map<string, Machine>();
 const workspaces = new Map<string, Workspace>();
+/*
+ * The hold each workspace connection keeps on its machine's socket. A workspace keeps the transport
+ * it was built on and nothing rebuilds it when the pool closes that socket, so on a machine that is
+ * not the active one (which nothing else holds) its project client would go quiet for good.
+ */
+const connectionHolds = new WeakMap<Connection, () => void>();
 /* The same array until the set changes, so a React store reading it gets a stable snapshot. */
 let workspaceList: Workspace[] = [];
 const listeners = new Set<() => void>();
@@ -158,7 +164,7 @@ const connect = (id: string, stores: WorkspaceStores, endpoint: Endpoint): Conne
         endSessions: endProjectSessions,
         endpointId
     });
-    return {
+    const connection: Connection = {
         endpointId: endpoint.id,
         transport,
         /* Asked for rather than held: the sessions and the threads belong to the machine, and the
@@ -173,9 +179,13 @@ const connect = (id: string, stores: WorkspaceStores, endpoint: Endpoint): Conne
         drawings,
         diagrams
     };
+    connectionHolds.set(connection, pool.hold(endpoint));
+    return connection;
 };
 
 const disposeConnection = (connection: Connection): void => {
+    connectionHolds.get(connection)?.();
+    connectionHolds.delete(connection);
     connection.projects.dispose();
     connection.drawings.dispose();
     connection.diagrams.dispose();
@@ -220,7 +230,13 @@ const moveTo = (workspace: Workspace, endpoint: Endpoint): void => {
     }
     if (connection.transport === socket) {
         // A row that learned the id of its daemon is the same machine under another name; the socket stayed put.
-        workspace.connection = { ...connection, endpointId: endpoint.id };
+        const renamed = { ...connection, endpointId: endpoint.id };
+        const hold = connectionHolds.get(connection);
+        if (hold) {
+            connectionHolds.delete(connection);
+            connectionHolds.set(renamed, hold);
+        }
+        workspace.connection = renamed;
         emit();
         return;
     }
