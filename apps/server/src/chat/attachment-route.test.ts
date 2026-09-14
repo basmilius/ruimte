@@ -8,7 +8,9 @@ import { ATTACHMENTS_PATH, handleAttachmentRequest } from './attachment-route.ts
 import { AttachmentStore } from './attachment-store.ts';
 
 // No handshake in these tests, so a credential is only ever a session token.
-const OPTIONS = { allowedOrigins: [], requireToken: false, tickets: { ticketSession: () => null } };
+// What the desktop app on this machine presents; a loopback address alone gets nothing.
+const LOCAL_SECRET = 'the-local-secret';
+const OPTIONS = { allowedOrigins: [], localSecret: LOCAL_SECRET, tickets: { ticketSession: () => null } };
 
 let root: string;
 let auth: AuthStore;
@@ -25,8 +27,13 @@ const lookup = (chatId: string, id: string): ChatAttachment | null => {
 
 const ask = (chatId: string, id: string, remote = '127.0.0.1', init?: RequestInit): Promise<Response> => {
     const url = new URL(`http://127.0.0.1:4210${ATTACHMENTS_PATH}/${encodeURIComponent(chatId)}/${id}`);
-    return handleAttachmentRequest(new Request(url, init), url, remote, auth, OPTIONS, lookup);
+    return handleAttachmentRequest(new Request(url, asLocal(init)), url, remote, auth, OPTIONS, lookup);
 };
+// Every request below carries the local secret unless a test says otherwise, the way the desktop app's does.
+const asLocal = (init?: RequestInit): RequestInit => ({
+    ...init,
+    headers: { authorization: `Bearer ${LOCAL_SECRET}`, ...(init?.headers as Record<string, string>) }
+});
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-attach-route-'));
@@ -41,7 +48,7 @@ afterEach(async () => {
 });
 
 describe('the attachment route', () => {
-    test('serves an image inline to a loopback client, with headers that keep it inert', async () => {
+    test('serves an image inline to the local secret, with headers that keep it inert', async () => {
         const response = await ask('node-1', png.id);
         expect(response.status).toBe(200);
         expect(response.headers.get('content-type')).toBe('image/png');
@@ -67,7 +74,10 @@ describe('the attachment route', () => {
     });
 
     test('a client from elsewhere needs the token the socket needs', async () => {
-        expect((await ask('node-1', png.id, '192.168.1.20')).status).toBe(401);
+        const bare = new URL(`http://127.0.0.1:4210${ATTACHMENTS_PATH}/node-1/${png.id}`);
+        expect((await handleAttachmentRequest(new Request(bare), bare, '192.168.1.20', auth, OPTIONS, lookup)).status).toBe(401);
+        // A tunnel on this machine looks exactly like this.
+        expect((await handleAttachmentRequest(new Request(bare), bare, '127.0.0.1', auth, OPTIONS, lookup)).status).toBe(401);
 
         const paired = await auth.pair(auth.issuePairingToken(), { label: 'a laptop' });
         const url = new URL(`http://127.0.0.1:4210${ATTACHMENTS_PATH}/node-1/${png.id}?token=${paired!.sessionToken!}`);
@@ -83,6 +93,6 @@ describe('the attachment route', () => {
         expect((await ask('node-1', png.id, '127.0.0.1', { method: 'DELETE' })).status).toBe(405);
 
         const short = new URL(`http://127.0.0.1:4210${ATTACHMENTS_PATH}/node-1`);
-        expect((await handleAttachmentRequest(new Request(short), short, '127.0.0.1', auth, OPTIONS, lookup)).status).toBe(404);
+        expect((await handleAttachmentRequest(new Request(short, asLocal()), short, '127.0.0.1', auth, OPTIONS, lookup)).status).toBe(404);
     });
 });

@@ -52,7 +52,7 @@ export interface PairOptions {
  * Who may talk to this daemon from another machine. A client registers a public key when it pairs
  * and proves it per connection; a client from before that holds a session token, stored as a hash
  * in `$RUIMTE_HOME/auth.json`. Either way it pairs once, for a token the daemon printed that dies
- * after one use or ten minutes. Loopback needs none of this.
+ * after one use or ten minutes. A process on the daemon's own machine presents the local secret instead.
  */
 export class AuthStore {
     readonly path: string;

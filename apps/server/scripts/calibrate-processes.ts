@@ -3,12 +3,13 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import type { ChatListResult, ProcessesAlerts, ProcessesSampleEvent, SessionListResult } from '@ruimte/contracts';
+import { readLocalSecret } from '../src/auth/local-secret.ts';
 
 /*
  * Logs what the stuck warnings are judged on, so their thresholds can be calibrated on real sessions:
  * every sample of Ruimte's own tree next to the hook status of every terminal and the status of every
- * chat, one JSON line per sample. It asks a running daemon over its socket (a loopback client needs no
- * credential) and keeps the panel's tempo of two seconds for as long as it runs.
+ * chat, one JSON line per sample. It asks a running daemon over its socket with the local secret of
+ * `--home` and keeps the panel's tempo of two seconds for as long as it runs.
  *
  *   bun scripts/calibrate-processes.ts                          an hour against the daemon on 4210
  *   bun scripts/calibrate-processes.ts --port 4211 --minutes 20
@@ -29,7 +30,8 @@ const folder = join(values.home, 'processes');
 await mkdir(folder, { recursive: true });
 const file = join(folder, `calibration-${new Date().toISOString().replace(/[:.]/g, '-')}.jsonl`);
 
-const socket = new WebSocket(`ws://127.0.0.1:${values.port}/ws`);
+const secret = (await readLocalSecret(values.home)) ?? '';
+const socket = new WebSocket(`ws://127.0.0.1:${values.port}/ws?token=${encodeURIComponent(secret)}`);
 const pending = new Map<string, (result: unknown) => void>();
 let alerts: ProcessesAlerts['alerts'] = [];
 let lines = 0;

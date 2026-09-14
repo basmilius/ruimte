@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { decideAccess, originAllowed, reachabilityOf } from './access.ts';
+import { decideAccess, mayInvite, originAllowed, reachabilityOf } from './access.ts';
 import { AuthStore, PAIRING_TTL_MS } from './auth-store.ts';
 import { generateKeyPair, signMessage, verifySignature } from './keys.ts';
 
@@ -146,12 +146,18 @@ describe('access', () => {
         expect(originAllowed('not a url', 'box:4210', [])).toBe(false);
     });
 
-    test('loopback passes without a token, anything else needs a paired one', async () => {
-        const options = { allowedOrigins: [], requireToken: false, tickets: NO_TICKETS };
+    test('the local secret or a paired token gets in, a loopback address alone does not', async () => {
+        const options = { allowedOrigins: [], localSecret: 'the-local-secret', tickets: NO_TICKETS };
         const request = (token?: string, origin?: string) =>
             new Request(`http://box:4210/ws${token ? `?token=${token}` : ''}`, { headers: { host: 'box:4210', ...(origin ? { origin } : {}) } });
 
-        expect(await decideAccess(request(), '127.0.0.1', store, options)).toEqual({ ok: true, access: { reachability: 'loopback', sessionId: null } });
+        // A tunnel or a reverse proxy makes every visitor loopback, so the address is no proof.
+        expect(await decideAccess(request(), '127.0.0.1', store, options)).toMatchObject({ ok: false, status: 401 });
+        expect(await decideAccess(request('the-local-secret'), '127.0.0.1', store, options)).toEqual({
+            ok: true,
+            access: { reachability: 'loopback', sessionId: null }
+        });
+        expect(await decideAccess(request('the-local-secre'), '127.0.0.1', store, options)).toMatchObject({ ok: false, status: 401 });
         expect(await decideAccess(request(), '192.168.1.20', store, options)).toMatchObject({ ok: false, status: 401 });
         expect(await decideAccess(request(undefined, 'https://evil.example'), '127.0.0.1', store, options)).toMatchObject({ ok: false, status: 403 });
 
@@ -161,13 +167,12 @@ describe('access', () => {
             access: { reachability: 'lan', sessionId: paired!.id }
         });
         expect(await decideAccess(request('bogus'), '192.168.1.20', store, options)).toMatchObject({ ok: false, status: 401 });
-        expect(await decideAccess(request(), '127.0.0.1', store, { ...options, requireToken: true })).toMatchObject({ ok: false, status: 401 });
     });
 
     test('a ticket opens the same door as a token, in the same place', async () => {
         const options = {
             allowedOrigins: [],
-            requireToken: false,
+            localSecret: 'the-local-secret',
             tickets: { ticketSession: (ticket: string) => (ticket === 'good-ticket' ? 'session-7' : null) }
         };
         const request = (token: string) => new Request(`http://box:4210/ws?token=${token}`, { headers: { host: 'box:4210' } });
@@ -177,5 +182,18 @@ describe('access', () => {
             access: { reachability: 'lan', sessionId: 'session-7' }
         });
         expect(await decideAccess(request('stale-ticket'), '192.168.1.20', store, options)).toMatchObject({ ok: false, status: 401 });
+    });
+
+    test('the secret travels as a bearer as well, which is how `ruimte pair` sends it', async () => {
+        const options = { allowedOrigins: [], localSecret: 'the-local-secret', tickets: NO_TICKETS };
+        const request = new Request('http://127.0.0.1:4210/auth/pairing-token', { method: 'POST', headers: { authorization: 'Bearer the-local-secret' } });
+        expect(await decideAccess(request, '127.0.0.1', store, options)).toMatchObject({ ok: true, access: { sessionId: null } });
+    });
+
+    test('only the local secret may invite another machine', () => {
+        expect(mayInvite({ reachability: 'loopback', sessionId: null })).toBe(true);
+        expect(mayInvite({ reachability: 'loopback', sessionId: 'paired-over-a-tunnel' })).toBe(false);
+        expect(mayInvite({ reachability: 'lan', sessionId: 's1' })).toBe(false);
+        expect(mayInvite(undefined)).toBe(false);
     });
 });

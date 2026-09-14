@@ -1,4 +1,5 @@
 import { RequestError, type ClientAccess, type Dispatcher } from '../dispatcher.ts';
+import { mayInvite } from '../auth/access.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 
@@ -56,9 +57,8 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
     dispatcher.register('auth.sessions', async (_payload, client) => ({ sessions: await store.list(client.access?.sessionId ?? null) }));
 
     dispatcher.register('auth.pairingToken', (_payload, client) => {
-        // Same rule as the HTTP route: only something on the daemon's own machine may invite another one.
-        if ((client.access?.reachability ?? 'loopback') !== 'loopback') {
-            throw new RequestError('forbidden', 'Only a client on this machine can make a pairing link');
+        if (!mayInvite(client.access)) {
+            throw new RequestError('forbidden', 'Only the app on this machine can make a pairing link');
         }
         return { url: host.pairingUrl() };
     });

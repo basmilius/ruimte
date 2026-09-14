@@ -10,7 +10,9 @@ const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0
 const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
 
 // No handshake in these tests, so a credential is only ever a session token.
-const OPTIONS = { allowedOrigins: [], requireToken: false, tickets: { ticketSession: () => null } };
+// What the desktop app on this machine presents; a loopback address alone gets nothing.
+const LOCAL_SECRET = 'the-local-secret';
+const OPTIONS = { allowedOrigins: [], localSecret: LOCAL_SECRET, tickets: { ticketSession: () => null } };
 
 let root: string;
 let folder: string;
@@ -20,8 +22,13 @@ let projectId: string;
 
 const ask = (path: string, remote = '127.0.0.1', init?: RequestInit): Promise<Response> => {
     const url = new URL(`http://127.0.0.1:4210${path}`);
-    return handleProjectRequest(new Request(url, init), url, remote, auth, OPTIONS, store);
+    return handleProjectRequest(new Request(url, asLocal(init)), url, remote, auth, OPTIONS, store);
 };
+// Every request below carries the local secret unless a test says otherwise, the way the desktop app's does.
+const asLocal = (init?: RequestInit): RequestInit => ({
+    ...init,
+    headers: { authorization: `Bearer ${LOCAL_SECRET}`, ...(init?.headers as Record<string, string>) }
+});
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-icon-route-'));
@@ -39,7 +46,12 @@ afterEach(async () => {
 });
 
 describe('the icon route', () => {
-    test('serves the bytes to a loopback client with headers that keep them inert', async () => {
+    test('a loopback address without a credential gets nothing', async () => {
+        const url = new URL(`http://127.0.0.1:4210${PROJECTS_PATH}/${projectId}/icon?v=1`);
+        expect((await handleProjectRequest(new Request(url), url, '127.0.0.1', auth, OPTIONS, store)).status).toBe(401);
+    });
+
+    test('serves the bytes to the local secret with headers that keep them inert', async () => {
         const response = await ask(`${PROJECTS_PATH}/${projectId}/icon?v=1`);
         expect(response.status).toBe(200);
         expect(response.headers.get('content-type')).toBe('image/png');
@@ -73,14 +85,15 @@ describe('the icon route', () => {
     });
 
     test('a client from elsewhere needs the token the socket needs', async () => {
-        const refused = await ask(`${PROJECTS_PATH}/${projectId}/icon?v=1`, '192.168.1.20');
+        // An empty authorization header takes the local secret off, so only the query speaks.
+        const refused = await ask(`${PROJECTS_PATH}/${projectId}/icon?v=1`, '192.168.1.20', { headers: { authorization: '' } });
         expect(refused.status).toBe(401);
 
-        const wrong = await ask(`${PROJECTS_PATH}/${projectId}/icon?v=1&token=nope`, '192.168.1.20');
+        const wrong = await ask(`${PROJECTS_PATH}/${projectId}/icon?v=1&token=nope`, '192.168.1.20', { headers: { authorization: '' } });
         expect(wrong.status).toBe(401);
 
         const paired = await auth.pair(auth.issuePairingToken(), { label: 'a laptop' });
-        const allowed = await ask(`${PROJECTS_PATH}/${projectId}/icon?v=1&token=${paired!.sessionToken!}`, '192.168.1.20');
+        const allowed = await ask(`${PROJECTS_PATH}/${projectId}/icon?v=1&token=${paired!.sessionToken!}`, '192.168.1.20', { headers: { authorization: '' } });
         expect(allowed.status).toBe(200);
     });
 

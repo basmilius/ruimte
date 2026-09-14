@@ -12,15 +12,22 @@ const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
 const MP4 = Buffer.concat([Buffer.from([0x00, 0x00, 0x00, 0x20]), Buffer.from('ftyp'), Buffer.from('isom'), Buffer.alloc(100, 0x2a)]);
 
 // No handshake in these tests, so a credential is only ever a session token.
-const OPTIONS = { allowedOrigins: [], requireToken: false, tickets: { ticketSession: () => null } };
+// What the desktop app on this machine presents; a loopback address alone gets nothing.
+const LOCAL_SECRET = 'the-local-secret';
+const OPTIONS = { allowedOrigins: [], localSecret: LOCAL_SECRET, tickets: { ticketSession: () => null } };
 
 let root: string;
 let auth: AuthStore;
 
 const ask = (path: string, remote = '127.0.0.1', init?: RequestInit): Promise<Response> => {
     const url = new URL(`http://127.0.0.1:4210${FS_FILE_PATH}?v=1-1&path=${encodeURIComponent(join(root, path))}`);
-    return handleFsFileRequest(new Request(url, init), url, remote, auth, OPTIONS);
+    return handleFsFileRequest(new Request(url, asLocal(init)), url, remote, auth, OPTIONS);
 };
+// Every request below carries the local secret unless a test says otherwise, the way the desktop app's does.
+const asLocal = (init?: RequestInit): RequestInit => ({
+    ...init,
+    headers: { authorization: `Bearer ${LOCAL_SECRET}`, ...(init?.headers as Record<string, string>) }
+});
 
 beforeEach(async () => {
     root = await mkdtemp(join(tmpdir(), 'ruimte-fs-file-route-'));
@@ -33,7 +40,7 @@ afterEach(async () => {
 });
 
 describe('the file route', () => {
-    test('serves the bytes to a loopback client with headers that keep them inert', async () => {
+    test('serves the bytes to the local secret with headers that keep them inert', async () => {
         const response = await ask('icon.png');
         expect(response.status).toBe(200);
         expect(response.headers.get('content-type')).toBe('image/png');
@@ -104,6 +111,8 @@ describe('the file route', () => {
         const url = new URL(`http://127.0.0.1:4210${FS_FILE_PATH}?path=${encodeURIComponent(join(root, 'icon.png'))}`);
         const refused = await handleFsFileRequest(new Request(url), url, '192.168.1.20', auth, OPTIONS);
         expect(refused.status).toBe(401);
+        // A tunnel on this machine looks exactly like this.
+        expect((await handleFsFileRequest(new Request(url), url, '127.0.0.1', auth, OPTIONS)).status).toBe(401);
 
         const paired = await auth.pair(auth.issuePairingToken(), { label: 'a laptop' });
         url.searchParams.set('token', paired!.sessionToken!);
@@ -119,9 +128,9 @@ describe('the file route', () => {
         expect((await ask('icon.png', '127.0.0.1', { method: 'DELETE' })).status).toBe(405);
 
         const bare = new URL(`http://127.0.0.1:4210${FS_FILE_PATH}`);
-        expect((await handleFsFileRequest(new Request(bare), bare, '127.0.0.1', auth, OPTIONS)).status).toBe(400);
+        expect((await handleFsFileRequest(new Request(bare, asLocal()), bare, '127.0.0.1', auth, OPTIONS)).status).toBe(400);
 
         const elsewhere = new URL('http://127.0.0.1:4210/fs/other');
-        expect((await handleFsFileRequest(new Request(elsewhere), elsewhere, '127.0.0.1', auth, OPTIONS)).status).toBe(404);
+        expect((await handleFsFileRequest(new Request(elsewhere, asLocal()), elsewhere, '127.0.0.1', auth, OPTIONS)).status).toBe(404);
     });
 });

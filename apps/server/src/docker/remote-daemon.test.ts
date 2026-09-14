@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { generateKeyPair, signMessage, verifySignature } from '../auth/keys.ts';
+import { readLocalSecret } from '../auth/local-secret.ts';
 import {
     clientAuthMessage,
     daemonChallengeMessage,
@@ -302,6 +303,26 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
         await expect(client.request('auth.pairingToken', {})).rejects.toThrow(/forbidden/);
     });
 
+    /*
+     * Inside the container every request comes from loopback, which is what a tunnel or a reverse
+     * proxy in front of a daemon looks like. Without the local secret none of it opens: `pair()`
+     * above is the same request with the secret, read from the home the way `ruimte pair` reads it.
+     */
+    test('loopback without the local secret gets through no door', async () => {
+        const doors = [
+            ['/ws', 'GET'],
+            ['/auth/pairing-token', 'POST'],
+            [`/fs/file?path=${REPO}/README.md`, 'GET'],
+            ['/projects/nope/icon', 'GET'],
+            ['/attachments/node-1/deadbeef', 'GET']
+        ];
+        const script = `const codes = []; for (const [path, method] of ${JSON.stringify(doors)}) { codes.push((await fetch('http://127.0.0.1:${PORT}' + path, { method })).status); } console.log(codes.join(','));`;
+        expect(await inContainer(['bun', '-e', script])).toBe('401,403,401,401,401');
+        // A wrong secret is no secret either.
+        const guessed = `console.log((await fetch('http://127.0.0.1:${PORT}/auth/pairing-token', { method: 'POST', headers: { authorization: 'Bearer guessed' } })).status);`;
+        expect(await inContainer(['bun', '-e', guessed])).toBe('403');
+    });
+
     test('a freshly paired daemon lists nothing at all, and asking twice still makes nothing', async () => {
         expect((await client.request<ProjectListResult>('project.list', {})).projects).toEqual([]);
         expect((await client.request<ProjectListResult>('project.list', {})).projects).toEqual([]);
@@ -591,8 +612,9 @@ describe.skipIf(!ENABLED)('two daemons at the same time', () => {
         );
         await waitUntil(`a second daemon on ${LOCAL_URL}`, () => answers(LOCAL_URL));
         await waitUntil(`the container on ${BASE_URL}`, () => answers(BASE_URL), 5_000);
-        // A daemon on this machine needs no token; the one in the container does.
-        here = await RemoteClient.connect(null, LOCAL_PORT);
+        // Being on this machine is not enough for the daemon here either: the secret of its home is what gets in.
+        await expect(RemoteClient.connect(null, LOCAL_PORT)).rejects.toThrow();
+        here = await RemoteClient.connect(await readLocalSecret(home), LOCAL_PORT);
         there = await RemoteClient.connect((await pair()).sessionToken!);
     }, 60_000);
 
@@ -724,7 +746,7 @@ describe.skipIf(!ENABLED)('one id on two machines', () => {
         );
         await waitUntil(`a second daemon on ${LOCAL_URL}`, () => answers(LOCAL_URL));
         await waitUntil(`the container on ${BASE_URL}`, () => answers(BASE_URL), 5_000);
-        here = await RemoteClient.connect(null, LOCAL_PORT);
+        here = await RemoteClient.connect(await readLocalSecret(home), LOCAL_PORT);
         there = await RemoteClient.connect((await pair()).sessionToken!);
         await seedRepo(async (command) => Bun.spawn(command, { stdout: 'ignore', stderr: 'inherit' }).exited, 'here', 'mine.txt');
         await seedRepo((command) => inContainer(command), 'there', 'theirs.txt');
@@ -925,7 +947,7 @@ describe.skipIf(!ENABLED)('two projects side by side', () => {
         );
         await waitUntil(`a second daemon on ${LOCAL_URL}`, () => answers(LOCAL_URL));
         await waitUntil(`the container on ${BASE_URL}`, () => answers(BASE_URL), 5_000);
-        here = await RemoteClient.connect(null, LOCAL_PORT);
+        here = await RemoteClient.connect(await readLocalSecret(home), LOCAL_PORT);
         sessionToken = (await pair()).sessionToken!;
         there = await RemoteClient.connect(sessionToken);
 
@@ -1025,7 +1047,8 @@ describe.skipIf(!ENABLED)('two projects side by side', () => {
         await Bun.write(join(folder, 'here.gif'), Buffer.from(here_gif, 'base64'));
         await inContainer(['sh', '-c', `echo ${there_gif} | base64 -d > ${REPO}/there.gif`]);
 
-        const mineBytes = await fetch(`${LOCAL_URL}/fs/file?path=${encodeURIComponent(join(folder, 'here.gif'))}&v=1-1`);
+        const localSecret = encodeURIComponent((await readLocalSecret(home)) ?? '');
+        const mineBytes = await fetch(`${LOCAL_URL}/fs/file?path=${encodeURIComponent(join(folder, 'here.gif'))}&v=1-1&token=${localSecret}`);
         expect(Buffer.from(await mineBytes.arrayBuffer()).toString('base64')).toBe(here_gif);
         const theirsBytes = await fetch(`${BASE_URL}/fs/file?path=${encodeURIComponent(`${REPO}/there.gif`)}&v=1-1&token=${encodeURIComponent(sessionToken)}`);
         expect(Buffer.from(await theirsBytes.arrayBuffer()).toString('base64')).toBe(there_gif);

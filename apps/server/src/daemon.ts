@@ -8,7 +8,8 @@ import { AgentLineageStore } from './agents/lineage.ts';
 import { PendingPromptStore } from './agents/pending-prompts.ts';
 import { OutputGate } from './backpressure.ts';
 import { suggestChatTitle } from './chat/chat-title.ts';
-import { decideAccess, isLoopbackAddress, reachabilityOf } from './auth/access.ts';
+import { decideAccess, isLoopbackAddress, mayInvite, reachabilityOf } from './auth/access.ts';
+import { readOrCreateLocalSecret } from './auth/local-secret.ts';
 import { pairingUrl } from './cli/pairing.ts';
 import { AuthStore } from './auth/auth-store.ts';
 import { Handshake } from './auth/handshake.ts';
@@ -87,7 +88,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const auth = new AuthStore(config.home);
     const handshake = new Handshake(auth, identity);
     const relay: Relay = new NoRelay();
-    const access = { allowedOrigins: config.allowedOrigins, requireToken: config.requireToken, tickets: handshake };
+    const access = { allowedOrigins: config.allowedOrigins, localSecret: await readOrCreateLocalSecret(config.home), tickets: handshake };
 
     const snapshots = new SnapshotStore(config.home);
     // Loaded before anything can take one: a node made just before a restart still starts on its prompt.
@@ -293,8 +294,12 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }
 
             if (url.pathname === '/auth/pairing-token') {
-                // Only something on this machine may mint a pairing URL; that is what `ruimte pair` is.
-                if (request.method !== 'POST' || !isLoopbackAddress(remote)) {
+                // `ruimte pair` sends the local secret as a bearer; the socket's `auth.pairingToken` asks the same `mayInvite`.
+                if (request.method !== 'POST') {
+                    return new Response('Method not allowed', { status: 405 });
+                }
+                const decision = await decideAccess(request, remote, auth, access);
+                if (!decision.ok || !mayInvite(decision.access)) {
                     return new Response('Forbidden', { status: 403 });
                 }
                 return Response.json({ url: pairingUrl(config.host, server.port ?? config.port, auth.issuePairingToken()) });

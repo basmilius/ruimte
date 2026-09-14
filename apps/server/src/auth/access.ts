@@ -1,5 +1,6 @@
 import type { Reachability } from '@ruimte/contracts';
 import type { AuthStore } from './auth-store.ts';
+import { sameSecret } from './local-secret.ts';
 
 const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1', 'localhost']);
 
@@ -16,7 +17,7 @@ export const reachabilityOf = (address: string): Reachability => (isLoopbackAddr
  * A browser sends the page's origin with the upgrade; a page that is not ours must not drive
  * the daemon with the person's cookies-free but reachable socket. Our own origin, any loopback
  * origin (the desktop app, the dev server) and the configured extras pass; no header passes too,
- * since that is a non-browser client which has to hold a token anyway.
+ * since that is a non-browser client which has to hold a credential anyway.
  */
 export const originAllowed = (origin: string | null, host: string | null, extra: string[]): boolean => {
     if (!origin) {
@@ -39,7 +40,7 @@ export const originAllowed = (origin: string | null, host: string | null, extra:
 
 export interface Access {
     reachability: Reachability;
-    // The auth session behind a token, or null for a loopback client that needs none.
+    // The paired session behind a ticket or a token, or null for a client that presented the local secret.
     sessionId: string | null;
 }
 
@@ -47,13 +48,17 @@ type AccessDecision = { ok: true; access: Access } | { ok: false; status: number
 
 export interface AccessOptions {
     allowedOrigins: string[];
-    // A daemon told to accept only tokens, loopback included.
-    requireToken: boolean;
+    // The secret in `$RUIMTE_HOME/local.key`, which is what a process on this machine presents.
+    localSecret: string;
     // What turns a connection ticket back into a session; the handshake that handed it out.
     tickets: { ticketSession(ticket: string): string | null };
 }
 
-/* Decides whether an upgrade or an API request may proceed and as whom. */
+/*
+ * Decides whether an upgrade or an API request may proceed and as whom. The source address never
+ * grants anything: a tunnel or a reverse proxy makes every visitor loopback. It still decides
+ * `reachability`, which only says how far away the client probably is.
+ */
 export const decideAccess = async (request: Request, remoteAddress: string, store: AuthStore, options: AccessOptions): Promise<AccessDecision> => {
     if (!originAllowed(request.headers.get('origin'), request.headers.get('host'), options.allowedOrigins)) {
         return { ok: false, status: 403, reason: 'Origin not allowed' };
@@ -62,16 +67,23 @@ export const decideAccess = async (request: Request, remoteAddress: string, stor
     const url = new URL(request.url);
     const header = request.headers.get('authorization') ?? '';
     const token = header.startsWith('Bearer ') ? header.slice(7).trim() : (url.searchParams.get('token') ?? '');
-    if (token) {
-        // A ticket first: it is what a client that signs for itself carries, and it costs no disk.
-        const sessionId = options.tickets.ticketSession(token) ?? (await store.authenticate(token));
-        if (sessionId) {
-            return { ok: true, access: { reachability, sessionId } };
-        }
-        return { ok: false, status: 401, reason: 'Unknown token' };
+    if (!token) {
+        return { ok: false, status: 401, reason: 'Pair this client first' };
     }
-    if (reachability === 'loopback' && !options.requireToken) {
+    if (sameSecret(token, options.localSecret)) {
         return { ok: true, access: { reachability, sessionId: null } };
     }
-    return { ok: false, status: 401, reason: 'Pair this client first' };
+    // A ticket first: it is what a client that signs for itself carries, and it costs no disk.
+    const sessionId = options.tickets.ticketSession(token) ?? (await store.authenticate(token));
+    if (sessionId) {
+        return { ok: true, access: { reachability, sessionId } };
+    }
+    return { ok: false, status: 401, reason: 'Unknown token' };
 };
+
+/*
+ * The one rule for minting a pairing link, over HTTP and over the socket alike: only a client that
+ * presented the local secret may invite another machine. A paired client may not, or a single
+ * pairing would be enough to hand out access forever.
+ */
+export const mayInvite = (access: Access | undefined): boolean => access !== undefined && access.sessionId === null;

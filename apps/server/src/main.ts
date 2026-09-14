@@ -9,7 +9,7 @@ const config = parseServerArgs(process.argv.slice(2));
 
 if (config.command === 'pair') {
     const { runPair } = await import('./cli/pairing.ts');
-    process.exit(await runPair(config.port));
+    process.exit(await runPair(config.port, config.home));
 }
 
 if (config.command === 'context') {

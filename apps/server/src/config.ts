@@ -14,8 +14,6 @@ export interface ServerConfig {
     label: string;
     // Browser origins allowed on top of our own and loopback.
     allowedOrigins: string[];
-    // Refuse even loopback clients without a token.
-    requireToken: boolean;
     // Whether the daemon may ask LiteLLM for the price table; off leaves it on the bundled snapshot.
     priceFetch: boolean;
     // Whether a terminal agent's permission request may be answered from a client; off leaves every one to the CLI's own prompt.
@@ -54,7 +52,6 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
             serve: { type: 'string' },
             label: { type: 'string' },
             'allow-origin': { type: 'string', multiple: true, default: [] },
-            'require-token': { type: 'boolean', default: false },
             'no-price-fetch': { type: 'boolean', default: false },
             'no-approvals': { type: 'boolean', default: false }
         },
@@ -79,7 +76,6 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
         serve: values.serve ?? null,
         label: values.label ?? env.RUIMTE_LABEL ?? hostname(),
         allowedOrigins: values['allow-origin'],
-        requireToken: values['require-token'],
         priceFetch: !values['no-price-fetch'],
         approvals: !values['no-approvals'],
         command,

@@ -29,7 +29,7 @@ export const EndpointInfoSchema = z.object({
     platform: z.string(),
     version: z.string(),
     reachability: ReachabilitySchema,
-    // False on a loopback connection, which needs no token.
+    // False for a client that presented the local secret, which has no paired session.
     authenticated: z.boolean(),
     // The daemon's ed25519 public key, raw and base64url. Optional: a daemon from before this existed answers without one.
     publicKey: z.string().optional()
@@ -97,7 +97,7 @@ export const AuthRevokePayloadSchema = z.object({
 });
 export type AuthRevokePayload = z.infer<typeof AuthRevokePayloadSchema>;
 
-// `auth.pairingToken`: a fresh pairing URL, minted for the client on the daemon's own machine.
+// `auth.pairingToken`: a fresh pairing URL, minted only for a client that presented the local secret.
 export const PairingTokenResultSchema = z.object({
     url: z.string().min(1)
 });
@@ -140,7 +140,7 @@ export const AuthRegisterKeyPayloadSchema = z.object({
 export type AuthRegisterKeyPayload = z.infer<typeof AuthRegisterKeyPayloadSchema>;
 
 export const AuthRegisterKeyResultSchema = z.object({
-    // False for a loopback client, which has no session record to hang a key on.
+    // False for a client on the local secret, which has no session record to hang a key on.
     registered: z.boolean()
 });
 export type AuthRegisterKeyResult = z.infer<typeof AuthRegisterKeyResultSchema>;

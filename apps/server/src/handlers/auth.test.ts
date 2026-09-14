@@ -56,15 +56,17 @@ afterEach(async () => {
 });
 
 describe('auth handlers', () => {
-    test('a loopback client gets a pairing link, a paired remote one does not', async () => {
+    test('a client with the local secret gets a pairing link, a paired one does not, wherever it comes from', async () => {
         const local = await ask({ reachability: 'loopback', sessionId: null }, 'auth.pairingToken');
         expect(local).toMatchObject({ ok: true, result: { url: expect.stringMatching(/^http:\/\/box:4210\/pair#/) } });
-        // A test client without access is the daemon's own process, which counts as loopback.
-        expect(await ask(undefined, 'auth.pairingToken')).toMatchObject({ ok: true });
 
         const remote = await ask({ reachability: 'lan', sessionId: 's1' }, 'auth.pairingToken');
         expect(remote).toMatchObject({ ok: false, error: { code: 'forbidden' } });
-        expect(minted).toBe(2);
+        // Paired, but arriving through a tunnel on this machine: the address is loopback and still grants nothing.
+        const tunneled = await ask({ reachability: 'loopback', sessionId: 's1' }, 'auth.pairingToken');
+        expect(tunneled).toMatchObject({ ok: false, error: { code: 'forbidden' } });
+        expect(await ask(undefined, 'auth.pairingToken')).toMatchObject({ ok: false, error: { code: 'forbidden' } });
+        expect(minted).toBe(1);
     });
 
     test('sessions list the asking client as current, and revoking an unknown one is an error', async () => {

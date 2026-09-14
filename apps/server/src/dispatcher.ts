@@ -12,7 +12,7 @@ import {
 
 export interface ClientAccess {
     reachability: 'loopback' | 'lan' | 'tunnel' | 'public';
-    // The paired session behind the socket; null for a loopback client, which needs none.
+    // The paired session behind the socket; null for a client that presented the local secret.
     sessionId: string | null;
 }
 

@@ -1,10 +1,14 @@
 import { parseServerFrame, type RequestMap, type RequestType } from '@ruimte/contracts';
-import { DEFAULT_HOST, DEFAULT_PORT } from './config.ts';
+import { readLocalSecret } from './auth/local-secret.ts';
+import { DEFAULT_HOST, DEFAULT_PORT, parseServerArgs } from './config.ts';
 
 // Manual check against a running daemon: create a session, run uname, print the screen, kill it.
 // Usage: bun run --cwd apps/server smoke [ws://host:port/ws]
 
-const url = process.argv[2] ?? `ws://${DEFAULT_HOST}:${DEFAULT_PORT}/ws`;
+const address = process.argv[2] ?? `ws://${DEFAULT_HOST}:${DEFAULT_PORT}/ws`;
+// The daemon asks this machine's processes for the secret of its home (RUIMTE_HOME), not for their address.
+const secret = await readLocalSecret(parseServerArgs([]).home);
+const url = secret === null ? address : `${address}?token=${encodeURIComponent(secret)}`;
 const sessionId = `smoke-${Date.now()}`;
 const SCREEN_DELAY_MS = 500;
 
