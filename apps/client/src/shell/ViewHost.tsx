@@ -56,7 +56,8 @@ const useLeaveOnEscape = (view: ProjectView): void => {
 };
 
 function StandaloneView({ view }: { view: ProjectView }) {
-    const focused = useDocument((s) => s.bodyFocused);
+    // `bodyFocused` is one flag for the whole grid, so without the cell every chat and terminal would grab it.
+    const focused = useDocument((s) => s.bodyFocused && s.activeViewId === view.id);
     useLeaveOnEscape(view);
     return (
         <div

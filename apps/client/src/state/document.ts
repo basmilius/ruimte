@@ -1,3 +1,4 @@
+import { useContext } from 'react';
 import { createStore, type StoreApi } from 'zustand';
 import type { SplitLayout } from '@ruimte/contracts';
 import {
@@ -49,7 +50,7 @@ import {
     type SplitDirection,
     type SplitZone
 } from '@/shell/split';
-import { workspaceHook } from '@/state/workspace-stores';
+import { CellViewContext, workspaceHook } from '@/state/workspace-stores';
 
 export interface DocumentState {
     /* In sidebar order. The active canvas view is stale here: the canvas store is the editor of that one. */
@@ -686,6 +687,15 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
 export const defaultDocumentStore = createDocumentStore({ canvases: defaultCanvases, drawings: defaultDrawings, diagrams: defaultDiagrams });
 
 export const useDocument = workspaceHook('document', defaultDocumentStore);
+
+/*
+ * Whether the cell a component is drawn in has the focus; true outside a cell. A body that takes the
+ * keyboard asks this first, because a DOM focus in a cell beside it moves the grid's focus there.
+ */
+export const useCellHasFocus = (): boolean => {
+    const cell = useContext(CellViewContext);
+    return useDocument((s) => cell === null || s.activeViewId === cell);
+};
 
 /* The view a node sits on, so a jump from anywhere can switch to it first. */
 export const viewOfNode = (views: ProjectView[], nodeId: string): ProjectView | null =>

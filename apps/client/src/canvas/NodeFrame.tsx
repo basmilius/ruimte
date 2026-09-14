@@ -29,6 +29,7 @@ import { useHasContextLinks } from '@/context/sources';
 import { accentColor } from '@/canvas/accents';
 import { ApprovalStrip } from '@/canvas/ApprovalStrip';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
+import { useCellHasFocus } from '@/state/document';
 import { useProject } from '@/state/project';
 import { BTN_GROUP } from '@/ui/classes';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
@@ -163,6 +164,10 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const node = useCanvas((s) => s.nodes[id]);
     const selected = useCanvas((s) => s.selection.includes(id));
     const focused = useCanvas((s) => isNodeFocused(s.mode, id));
+    /* Every cell's canvas keeps a focused node of its own; only the one in the focused cell may take
+       the keyboard, or a node remounting beside it pulls the grid's focus over. */
+    const cellHasFocus = useCellHasFocus();
+    const takesKeyboard = focused && cellHasFocus;
     const resizable = useCanvas((s) => !s.locks.resize);
     const resizing = useCanvas((s) => s.resizing === id);
     const inViewport = useNodeInViewport(id);
@@ -317,8 +322,8 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     >
                         {/* Around the body only, so the header, the menu, a drag and a resize keep working. */}
                         <NodeBodyBoundary kind={node.kind}>
-                            {node.kind === 'terminal' && (live ? <TerminalBody id={id} focused={focused} /> : <TerminalPlate id={id} />)}
-                            {node.kind === 'chat' && <ChatBody id={id} focused={focused} />}
+                            {node.kind === 'terminal' && (live ? <TerminalBody id={id} focused={takesKeyboard} /> : <TerminalPlate id={id} />)}
+                            {node.kind === 'chat' && <ChatBody id={id} focused={takesKeyboard} />}
                             {node.kind === 'browser' && <BrowserBody id={id} focused={focused} />}
                             {node.kind === 'note' && <NoteNode id={id} focused={focused} />}
                             {node.kind === 'drawing' && <DrawingNode id={id} />}
