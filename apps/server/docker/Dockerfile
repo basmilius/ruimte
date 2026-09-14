@@ -22,10 +22,12 @@ COPY bun.lock ./bun.lock
 COPY apps/server/package.json ./apps/server/package.json
 COPY packages/contracts/package.json ./packages/contracts/package.json
 COPY packages/drawing/package.json ./packages/drawing/package.json
+COPY packages/diagram/package.json ./packages/diagram/package.json
 RUN bun install
 
 COPY packages/contracts/src ./packages/contracts/src
 COPY packages/drawing/src ./packages/drawing/src
+COPY packages/diagram/src ./packages/diagram/src
 COPY apps/server/src ./apps/server/src
 COPY apps/server/bin ./apps/server/bin
 COPY apps/server/docker/entrypoint.sh /usr/local/bin/ruimte-entrypoint
