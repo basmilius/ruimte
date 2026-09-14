@@ -6,6 +6,7 @@ import {
     localMachineLabel,
     parsePairingUrl,
     parseStoredEndpoints,
+    storedLocalDirect,
     socketUrlFor,
     useEndpoints,
     type Endpoint
@@ -194,5 +195,43 @@ describe('one row per daemon', () => {
         expect(endpointForDaemon('daemon-a')?.id).toBe('daemon-a');
         expect(endpointForDaemon('daemon-a', 'daemon-a')).toBeNull();
         expect(endpointForDaemon('daemon-c')).toBeNull();
+    });
+});
+
+describe('a direct connection per machine', () => {
+    beforeEach(() => {
+        // Bun has no Web Storage; the store writes through the global, so a small one stands in for it.
+        const items = new Map<string, string>();
+        globalThis.localStorage = {
+            getItem: (key: string) => items.get(key) ?? null,
+            setItem: (key: string, value: string) => void items.set(key, value),
+            removeItem: (key: string) => void items.delete(key),
+            clear: () => items.clear(),
+            key: (index: number) => [...items.keys()][index] ?? null,
+            get length() {
+                return items.size;
+            }
+        };
+        useEndpoints.setState({ endpoints: [row(LOCAL_ENDPOINT_ID, { daemonId: null }), row('daemon-a')], activeId: LOCAL_ENDPOINT_ID, mismatched: {} });
+    });
+
+    test('is off until a person turns it on, and is kept with the row, the local one included', () => {
+        expect(useEndpoints.getState().endpoints.every((endpoint) => endpoint.direct !== true)).toBe(true);
+        useEndpoints.getState().setDirect('daemon-a', true);
+        useEndpoints.getState().setDirect(LOCAL_ENDPOINT_ID, true);
+
+        const raw = localStorage.getItem('ruimte.endpoints');
+        expect(parseStoredEndpoints(raw).endpoints.find((endpoint) => endpoint.id === 'daemon-a')?.direct).toBe(true);
+        expect(storedLocalDirect(raw)).toBe(true);
+
+        useEndpoints.getState().setDirect(LOCAL_ENDPOINT_ID, false);
+        expect(storedLocalDirect(localStorage.getItem('ruimte.endpoints'))).toBe(false);
+        expect(storedLocalDirect(null)).toBe(false);
+    });
+
+    test('survives pairing with the same machine again', () => {
+        useEndpoints.getState().setDirect('daemon-a', true);
+        useEndpoints.getState().add(row('daemon-a', { httpBaseUrl: 'http://new:4210' }));
+        expect(useEndpoints.getState().endpoints.find((endpoint) => endpoint.id === 'daemon-a')?.direct).toBe(true);
     });
 });

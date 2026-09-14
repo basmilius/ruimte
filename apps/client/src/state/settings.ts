@@ -101,7 +101,19 @@ export interface Settings {
     /* Whether two fingers sideways on a trackpad go back and forward in a browser page. On, because
        it is what every browser on macOS does; off, the pages do not even report their wheel. */
     browserSwipe: boolean;
+    /* The STUN servers a direct connection asks for this client's public address, separated by spaces.
+       Empty offers the addresses of this machine's own interfaces only, which is enough on one network. */
+    directStunServer: string;
 }
+
+// A public one, so a direct connection across two networks works without anybody running a server.
+export const DEFAULT_STUN_SERVER = 'stun:stun.l.google.com:19302';
+
+/* What `RTCPeerConnection` takes for the servers in the setting; none for an empty field. */
+export const iceServersFrom = (value: string): RTCIceServer[] => {
+    const urls = value.split(/[\s,]+/).filter((url) => url !== '');
+    return urls.length === 0 ? [] : [{ urls }];
+};
 
 interface SettingsStore extends Settings {
     /* Bumped on every change, so a terminal knows to read the tokens again. */
@@ -130,7 +142,8 @@ const DEFAULT_SETTINGS: Settings = {
     agentsKeepAwake: false,
     agentsTurnNotify: true,
     agentsTurnSound: false,
-    browserSwipe: true
+    browserSwipe: true,
+    directStunServer: DEFAULT_STUN_SERVER
 };
 
 // Rounded as well as clamped: the stepper used to move in halves, so a browser can still hand back
@@ -163,7 +176,8 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     chatStreaming: chatStreamingFrom(stored.chatStreaming),
     // Same rule as the block: nothing makes a sound unless a stored `true` asked for it.
     agentsTurnSound: stored.agentsTurnSound === true,
-    browserSwipe: stored.browserSwipe !== false
+    browserSwipe: stored.browserSwipe !== false,
+    directStunServer: typeof stored.directStunServer === 'string' ? stored.directStunServer : DEFAULT_SETTINGS.directStunServer
 });
 
 const read = (): Settings => {
@@ -233,7 +247,8 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 agentsKeepAwake,
                 agentsTurnNotify,
                 agentsTurnSound,
-                browserSwipe
+                browserSwipe,
+                directStunServer
             } = get();
             const next: Settings = {
                 accent,
@@ -257,6 +272,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 agentsTurnNotify,
                 agentsTurnSound,
                 browserSwipe,
+                directStunServer,
                 ...patch
             };
             next.fontSize = clampSize(next.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize);

@@ -14,7 +14,8 @@ import { describeConnection, describePing, REACHABILITY_LABELS } from '@/shell/c
 import { MachineIdentityDialog } from '@/shell/settings/MachineIdentityDialog';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Skeleton } from '@/shell/settings/controls';
+import { Skeleton, Toggle } from '@/shell/settings/controls';
+import { useSettings } from '@/state/settings';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
@@ -58,6 +59,7 @@ function EndpointState({ endpoint }: { endpoint: Endpoint }) {
             <span>{describeConnection(connection, null)}</span>
             <span className="text-text-muted">{REACHABILITY_LABELS[reachability]}</span>
             <span className="font-mono text-text-muted">{endpoint.httpBaseUrl}</span>
+            {endpoint.direct === true && <span className="text-text-muted">Direct connection (experimental)</span>}
             <span className="text-text-muted">{describePing(latency)}</span>
         </span>
     );
@@ -88,11 +90,39 @@ function MachineName({ icon, name, note }: { icon: ProjectIconChoice | null; nam
     );
 }
 
+/*
+ * The experiment, per machine: its wire over a WebRTC DataChannel instead of the socket. Switching
+ * reconnects straight away, and a direct connection that does not come up stays one that failed,
+ * with the reason under the machine's name, rather than quietly turning back into a socket.
+ */
+function DirectToggle({ endpoint }: { endpoint: Endpoint }) {
+    const toggle = (direct: boolean): void => {
+        useEndpoints.getState().setDirect(endpoint.id, direct);
+        pool.reconnect(endpoint.id);
+    };
+
+    return (
+        <Tooltip label="Connect directly over WebRTC (experimental). Images, attachments and file previews do not load over it yet.">
+            <label className="flex items-center gap-1.5 text-xs text-text-muted">
+                Direct
+                <Toggle checked={endpoint.direct === true} onChange={toggle} label={`Connect directly to ${endpoint.label} (experimental)`} />
+            </label>
+        </Tooltip>
+    );
+}
+
+/* Why the direct connection to a machine failed, for the line under its name; nothing while it works or is not on. */
+const useDirectFailure = (endpoint: Endpoint): string | null => {
+    const connection = useEndpointConnection(endpoint.id);
+    return endpoint.direct === true && connection.status !== 'open' ? (connection.failure ?? null) : null;
+};
+
 /* A machine that was added here: what it is called, whether it answers, and what can be done to it. */
 function EndpointRow({ endpoint }: { endpoint: Endpoint }) {
     const mismatch = useEndpoints((s) => s.mismatched[endpoint.id]);
     const icon = useServers((s) => s.byEndpoint[endpoint.id]?.icon ?? null);
     const connected = useEndpointConnection(endpoint.id).status === 'open';
+    const directFailure = useDirectFailure(endpoint);
     const [identityOpen, setIdentityOpen] = useState(false);
 
     return (
@@ -102,14 +132,17 @@ function EndpointRow({ endpoint }: { endpoint: Endpoint }) {
                     icon={icon}
                     name={endpoint.label}
                     note={
-                        mismatch === undefined ? undefined : (
+                        mismatch !== undefined ? (
                             <span className="text-status-error">A different machine answers at this address. Pair again to connect.</span>
-                        )
+                        ) : directFailure !== null ? (
+                            <span className="text-status-error">{directFailure}</span>
+                        ) : undefined
                     }
                 />
             }
             control={
                 <>
+                    <DirectToggle endpoint={endpoint} />
                     <EndpointState endpoint={endpoint} />
                     <span className={BTN_GROUP}>
                         {/* The name and the icon live on the machine, so a machine that is not answering cannot be given either. */}
@@ -374,15 +407,23 @@ function LocalRow({ endpoint }: { endpoint: Endpoint }) {
     const icon = useServers((s) => s.byEndpoint[endpoint.id]?.icon ?? null);
     const model = useServers((s) => s.byEndpoint[endpoint.id]?.model ?? null);
     const connected = useEndpointConnection(endpoint.id).status === 'open';
+    const directFailure = useDirectFailure(endpoint);
     const [identityOpen, setIdentityOpen] = useState(false);
     const own = localMachineLabel(model);
 
     return (
         <SettingsRow
             /* The second line only once the machine carries a name of its own, or it would say what the one above it says. */
-            label={<MachineName icon={icon} name={endpoint.label} note={endpoint.label === own ? undefined : own} />}
+            label={
+                <MachineName
+                    icon={icon}
+                    name={endpoint.label}
+                    note={directFailure !== null ? <span className="text-status-error">{directFailure}</span> : endpoint.label === own ? undefined : own}
+                />
+            }
             control={
                 <>
+                    <DirectToggle endpoint={endpoint} />
                     <Tooltip label={connected ? 'Name and icon' : 'Available once the machine answers'} name>
                         <button className="icon-btn h-8 w-8" disabled={!connected} onClick={() => setIdentityOpen(true)}>
                             <Icon icon={Pencil} size={16} />
@@ -392,6 +433,42 @@ function LocalRow({ endpoint }: { endpoint: Endpoint }) {
                 </>
             }
         />
+    );
+}
+
+/* Where a direct connection learns this client's public address. Saved when the field is left, so a half-typed URL is never tried. */
+function DirectConnectionSection() {
+    const stored = useSettings((s) => s.directStunServer);
+    // This field is the only thing that writes the setting, so the draft never has to catch up with it.
+    const [draft, setDraft] = useState(stored);
+
+    return (
+        <SettingsSection
+            title="Direct connections"
+            description="An experiment. A machine with Direct on is reached over WebRTC instead of its socket; images, attachments and file previews do not load over it yet."
+        >
+            <SettingsRow
+                label="STUN server"
+                description="Tells this app its public address, so a machine on another network can reach it. Separate several with spaces, or leave it empty to stay on this network."
+                control={
+                    <input
+                        className="field w-64 font-mono text-code"
+                        aria-label="STUN server"
+                        placeholder="stun:host:port"
+                        spellCheck={false}
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value)}
+                        onBlur={() => useSettings.getState().update({ directStunServer: draft.trim() })}
+                        onKeyDown={(e) => {
+                            e.stopPropagation();
+                            if (e.key === 'Enter') {
+                                e.currentTarget.blur();
+                            }
+                        }}
+                    />
+                }
+            />
+        </SettingsSection>
     );
 }
 
@@ -444,6 +521,7 @@ export function EndpointsSection() {
                     <EndpointRow key={endpoint.id} endpoint={endpoint} />
                 ))}
             </SettingsSection>
+            <DirectConnectionSection />
             <PairedClients key={activeId} />
             <AddMachineDialog open={addOpen} onOpenChange={setAddOpen} />
         </>

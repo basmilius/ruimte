@@ -40,6 +40,11 @@ export interface Endpoint {
      * a challenge with it, so the id above is a proof rather than a string read off the wire.
      */
     daemonPublicKey: string | null;
+    /*
+     * Whether this client reaches the machine over a WebRTC DataChannel instead of the socket, an
+     * experiment a person turns on per machine. Absent is off, which is every row from before it.
+     */
+    direct?: boolean;
 }
 
 interface EndpointsStore {
@@ -60,6 +65,7 @@ interface EndpointsStore {
     /* Moves a row onto the id its daemon answers with, over a row already under that id; the pre-phase-1 rows were keyed on an address. */
     rekeyEndpoint(oldId: string, newId: string): void;
     noteMismatch(id: string, daemonId: string): void;
+    setDirect(id: string, direct: boolean): void;
 }
 
 /* The daemon this page was served by, or in dev the Vite origin that proxies to it. */
@@ -97,6 +103,15 @@ export const parseStoredEndpoints = (raw: string | null): { endpoints: Endpoint[
     }
 };
 
+/* The local row is rebuilt from the page's origin on every start, so the one choice a person makes about it is kept beside the list. */
+export const storedLocalDirect = (raw: string | null): boolean => {
+    try {
+        return raw !== null && (JSON.parse(raw) as { localDirect?: unknown }).localDirect === true;
+    } catch {
+        return false;
+    }
+};
+
 const persist = (state: { endpoints: Endpoint[]; activeId: string }): void => {
     try {
         localStorage.setItem(
@@ -104,7 +119,8 @@ const persist = (state: { endpoints: Endpoint[]; activeId: string }): void => {
             JSON.stringify({
                 version: STORAGE_VERSION,
                 endpoints: state.endpoints.filter((endpoint) => endpoint.id !== LOCAL_ENDPOINT_ID),
-                activeId: state.activeId
+                activeId: state.activeId,
+                localDirect: state.endpoints.some((endpoint) => endpoint.id === LOCAL_ENDPOINT_ID && endpoint.direct === true)
             })
         );
     } catch {
@@ -121,7 +137,7 @@ const read = (): { endpoints: Endpoint[]; activeId: string } => {
         // Storage that refuses leaves this client with the daemon that served it.
     }
     const stored = parseStoredEndpoints(raw);
-    const endpoints = [local, ...stored.endpoints];
+    const endpoints = [storedLocalDirect(raw) ? { ...local, direct: true } : local, ...stored.endpoints];
     const activeId = endpoints.some((endpoint) => endpoint.id === stored.activeId) ? stored.activeId! : LOCAL_ENDPOINT_ID;
     if (stored.migrated) {
         persist({ endpoints, activeId });
@@ -137,7 +153,9 @@ export const useEndpoints = create<EndpointsStore>((set, get) => ({
         const known = get().endpoints.find((entry) => entry.id === endpoint.id);
         /* The row keeps its place in the list and takes the address and the credential the pairing
            handed out. The key it pinned survives a pairing that brings none, which is what a client without ed25519 does. */
-        const row = known ? { ...endpoint, daemonPublicKey: endpoint.daemonPublicKey ?? known.daemonPublicKey } : endpoint;
+        const row = known
+            ? { ...endpoint, daemonPublicKey: endpoint.daemonPublicKey ?? known.daemonPublicKey, ...(known.direct === true ? { direct: true } : {}) }
+            : endpoint;
         const endpoints = known ? get().endpoints.map((entry) => (entry.id === row.id ? row : entry)) : [...get().endpoints, row];
         set({ endpoints });
         persist({ endpoints, activeId: get().activeId });
@@ -202,6 +220,11 @@ export const useEndpoints = create<EndpointsStore>((set, get) => ({
     },
     noteMismatch(id, daemonId) {
         set({ mismatched: { ...get().mismatched, [id]: daemonId } });
+    },
+    setDirect(id, direct) {
+        const endpoints = get().endpoints.map((entry) => (entry.id === id ? { ...entry, direct } : entry));
+        set({ endpoints });
+        persist({ endpoints, activeId: get().activeId });
     }
 }));
 

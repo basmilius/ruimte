@@ -10,7 +10,7 @@ import { forgetTicket, rememberLocalSecret, rememberTicket } from './credentials
  * reason not to reach for a library: what a browser without it loses is the pinning, not the
  * connection, and the client falls back to the session token it already had.
  */
-const verifyDaemon = async (publicKey: string, message: string, signature: string): Promise<boolean> => {
+export const verifyDaemon = async (publicKey: string, message: string, signature: string): Promise<boolean> => {
     try {
         const key = await crypto.subtle.importKey('raw', bytesOf(publicKey), { name: 'Ed25519' }, false, ['verify']);
         return await crypto.subtle.verify({ name: 'Ed25519' }, key, bytesOf(signature), new TextEncoder().encode(message));

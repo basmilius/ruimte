@@ -38,6 +38,9 @@ export const rememberLocalSecret = (endpointId: string, secret: string | null): 
     localSecrets.set(endpointId, secret);
 };
 
+/* The local secret this client holds for a row, which a direct connection proves it has without sending it. */
+export const localSecretOf = (endpointId: string): string | null => localSecrets.get(endpointId) ?? null;
+
 /*
  * What goes in the `token` query of a socket URL or of a URL an `<img>` fetches. The name stayed:
  * the daemon takes a ticket, a session token and the local secret in the same place, which is what keeps a client of
