@@ -1137,6 +1137,43 @@ decided.
   nothing to close, so the window menu's Close never shuts the window on it; the first column there is
   `fileMenu` rather than `appMenu`, which is a macOS menu.
 
+### Kinds a newer Ruimte wrote
+
+Landed on 2026-09-14, after Ruimte Dev added a `diagram` view to a project the installed Ruimte had
+open. The installed daemon did not know the kind, could not parse the file and set it aside as
+`project.json.corrupt-<time>`, which took the project away from both apps. The file was valid JSON
+and a valid document apart from that one view.
+
+- **An unknown kind is carried, not refused.** A view or a canvas node whose `kind` this version
+  does not know, with an `id`, is read into an entry of kind `unknown` that holds what was read in
+  `raw` (`UNKNOWN_KIND` in `packages/contracts/src/project.ts`). `storedContentOf` puts it back in
+  the file exactly as it came, so the entry survives a save, a merge and every verb byte for byte.
+  A known kind with a broken field is still refused, and so is an entry without an id or a kind.
+- **A real discriminant, not a looser type.** Keeping the raw shape and typing `kind` as a branded
+  string was tried first: TypeScript then stops narrowing the whole view union on `kind`, and every
+  `view.kind === 'canvas'` in the code breaks. `'unknown'` in memory narrows like any other kind,
+  and the places that list kinds (`Record<CanvasNodeKind, ...>`) fail to compile until they say what
+  an unknown entry wears. `unknown` is therefore a reserved name that no real kind may take.
+- **The wire takes both shapes.** Reading opens an `unknown` entry back up before it is checked, so
+  a client on this version that sends one to a daemon that knows the kind hands over the real thing.
+  Only the file has to be in the raw shape, and `serializeDocument` is the one place that writes it.
+- **What a person may change is the frame.** A node of an unknown kind moves, resizes and is
+  deleted; its id follows a copy of the canvas. Those five fields are laid over `raw` when they
+  differ from what was read, and nothing else is: a rename, an accent, a patch and a duplicate of
+  the node itself are refused in the canvas store, since they would never reach the file. A view of
+  an unknown kind is a dimmed row that does not open or drag into a cell, and a person may delete it.
+- **Its files are kept.** The orphan cleanup of drawings and diagrams counts a view of an unknown
+  kind as live for both folders, since a newer kind may keep a file under either. A layout in
+  `.local.json` that names such a view loses that cell on the way in (`openableViewIds`), as it does
+  for a view that is gone.
+- **Only kinds.** A field a newer Ruimte adds to a kind this version knows is still stripped by zod
+  on the first save, as `apps/server/src/agents/lineage.ts` already notes. Nothing needed that yet.
+- **Limit: this only helps from this version on.** A release without this fix still sets aside a
+  project that holds a kind it does not know. A new view or node kind is only safe to write once the
+  release before it already carried this fix, so the first kind after it (the canvas node `diagram`
+  is the next one planned) should wait one release, or ship knowing that anyone on an older release
+  who opens the project loses it to a `.corrupt-` file until they update and rename it back.
+
 ### Skipped on purpose
 
 Skipped: kanban, loop and trigger nodes, minimap, dictation, notch HUD, agent-to-agent
@@ -1184,6 +1221,8 @@ Also decided against for now: a scheduler, checkpoint restore and telemetry.
   with a file node there fails to parse. It is the price of every kind that was ever added and
   nothing about the file changed (it is still version 2), but it is the reason a kind is worth
   adding once rather than twice.
+  Since 2026-09-14 a version reads and keeps a kind it does not know ("Kinds a newer Ruimte
+  wrote"); a release from before that still refuses one.
 
 - React registers `wheel` listeners as passive. Pinch zoom needs the native, non-passive
   listener in `Canvas.tsx`, and the document-level guard keeps a pinch over the sidebar from
