@@ -1546,6 +1546,66 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   read a file, and the browser version is meant to be self-hosted later, where pairing is the rule
   anyway. Its "This machine" row stays unreachable; the row the pairing adds is how it gets in.
 
+### A direct connection
+
+- Phase 2b of remote access: the client's wire over a WebRTC DataChannel, with no broker yet. The
+  signals ride over a socket the client already holds to the same daemon (`direct.signal`, answered
+  with the `direct.signaled` event), carrying the `packages/pulsar` envelope unchanged. `DirectPeers`
+  takes a signal and a function that sends the reply back the way it came, and knows nothing else
+  about the socket, so the broker replaces that leg without touching the peer code. The envelope is
+  not signed on this leg: the socket is authenticated, and the channel handshake below binds the
+  fingerprints anyway. Over the broker `signalMessage` still signs every signal.
+- The channel inherits nothing from the socket that signaled it, since over the broker there is no
+  such socket. Its first frames are the HTTP handshake: the daemon speaks first with a challenge it
+  signed, the client answers with a key signature or the local secret's proof, the daemon answers
+  with a verdict, and nothing before that verdict reaches the dispatcher. A frame before then is at
+  most 4 KiB, and anything that is not a proof gets a refusal and a closed channel.
+- The DTLS fingerprints are bound into both signatures, because it was cheap: both peers hold the
+  offer and the answer as text, so `channelBinding` is the fingerprints each side applied, and the
+  signed messages have prefixes of their own (`ruimte-daemon-channel-v1`, `ruimte-client-channel-v1`)
+  so neither verifies as the HTTP handshake's. Something in the signaling path that swaps a
+  fingerprint for its own ends up with two DTLS sessions, each with a binding the other side did
+  not sign. A challenge remembers the binding it was handed out for, so one from `/auth/challenge`
+  cannot be spent on a channel and one from a channel cannot be spent on another.
+- The local secret crosses no channel. The row of this machine has no pinned daemon key, so the
+  client cannot check who is on the other end before it answers; it sends an HMAC-SHA256 of the
+  binding keyed with the secret (`direct.secret`) instead of the secret itself.
+- A frame goes out in pieces. werift announces an SCTP max-message-size of 64 KiB and refuses to
+  send more, Chromium announces 256 KiB, and a screen at attach or a project document is easily
+  larger. `splitFrame` cuts at 16,000 UTF-16 units (at most 48 KiB of UTF-8) behind one mark
+  character that says whether more follow, never between the halves of a surrogate pair, since each
+  piece is encoded on its own. A binary framing would not need that rule and would cost a copy per frame.
+- The adapter answers `send` like Bun's socket, because the output gate reads it that way: the byte
+  count of the whole frame once every piece is queued, 0 on a channel that is not open. A send that
+  throws closes the channel rather than counting as dropped, since half a frame may already be out
+  and nothing after it would parse. werift queued 6.4 MB without refusing anything, so the gate's
+  1 MB high-water mark pauses output long before SCTP would, and `bufferedamountlow` at
+  `LOW_WATER_MARK` is the drain.
+- One transport per machine, with the link chosen per attempt. The first plan was a
+  `WebRtcTransport` object next to the WebSocket one, picked by the pool's factory. Switching a
+  machine over would then replace the transport under every `SessionClient`, `ChatClient` and
+  project client built on it, and a terminal node that is attached keeps its `SessionClient`, so
+  it would go blank until it remounted. `LinkTransport` holds the requests, the events and the
+  reconnect loop, and each attempt opens `socketLink` or `webRtcLink` depending on the row, so
+  switching is `pool.reconnect` and the clients reattach exactly as they do after any reconnect.
+- No fallback. A direct connection that does not come up ends with a sentence (ICE failed, the
+  machine refused, the machine does not know `direct.signal`) and the reconnect loop tries direct
+  again. The sentence stands under the machine's name. A connection that quietly turned back into a
+  socket would test nothing.
+- ICE is gathered whole before the offer and before the answer (at most 5 s each), so an attempt is
+  one offer and one answer and nothing trickles. The daemon takes `--stun` (Google's public server by
+  default), `--no-stun`, `--direct-ports` and `--direct-host-address`. The Docker containers publish a
+  UDP range and announce `127.0.0.1`, which is how a client on the host reaches a werift inside
+  Docker Desktop's VM. The client's STUN servers are a setting (`directStunServer`).
+- The channel's ticket is remembered like one from `/auth/ticket`, so the HTTP routes an `<img>`
+  fetches keep working where the HTTP port is reachable too. Over the channel alone they do not
+  load; that is phase 3.
+- werift is pinned at 0.24.4, the version the report measured. Measured here, werift on both ends in
+  one process on macOS: a channel open in about 240 ms over loopback and about 310 ms from the host
+  into the Docker container, an 8 MB burst in 16 KiB pieces at 2.4 MB/s, a round trip of 3 to 4 ms.
+  Crossing two real networks is what `apps/server/scripts/webrtc-probe.ts` is for, and has not been
+  measured yet.
+
 ### Skipped on purpose
 
 Skipped: kanban, loop and trigger nodes, minimap, dictation, notch HUD, agent-to-agent
