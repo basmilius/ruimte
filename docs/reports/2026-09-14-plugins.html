@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Plugins</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .reference { fill: var(--reference); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--reference); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+.prompt-box { position: relative; }
+.prompt-box pre { white-space: pre-wrap; font-size: 13px; line-height: 1.55; padding-top: 56px; }
+.prompt-box button { position: absolute; top: 8px; right: 8px; }
+.diagram .label-small { font-size: 13px; fill: var(--muted); }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+@media print {
+  .prompt-box button { display: none; }
+  .prompt-box pre { padding-top: 18px; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#advies">Naar de inhoud</a>
+<header>
+  <p class="eyebrow">RUIMTE / ONDERZOEK / 14 SEPTEMBER 2026</p>
+  <h1>Plugins in Ruimte</h1>
+  <p class="intro">Een plugin kan veel in Ruimte, maar de vraag die alles bepaalt is waar zijn code vandaan komt. Begin met plugins die alleen data zijn: een manifest met verbs, commando's, web-panels en -nodes, thema's en link providers. Code die in de client zelf draait, kan elke gepairde machine bedienen, dus die komt pas later, geïsoleerd, of alleen van Ruimte zelf.</p>
+  <p class="status">Onderzoek afgerond, er is niets gebouwd</p>
+  <p class="caption">Gebaseerd op main bij 676a671. <span class="badge confirmed">Geverifieerd</span> betekent: gecontroleerd in de broncode of op deze Mac. <span class="badge info">Afgeleid</span> betekent: niet gecontroleerd.</p>
+  <nav aria-label="Inhoud">
+    <a href="#advies">Advies</a>
+    <a href="#vertrouwen">Vertrouwen</a>
+    <a href="#laden">Code laden</a>
+    <a href="#panels">Panels</a>
+    <a href="#context">ruimte-context</a>
+    <a href="#kinds">Views en nodes</a>
+    <a href="#injecties">Injecties</a>
+    <a href="#wire">Wire en opslag</a>
+    <a href="#architecturen">Architecturen</a>
+    <a href="#alternatief">Alternatief: alleen voeden</a>
+    <a href="#prior-art">Prior art</a>
+    <a href="#fasen">Fasen</a>
+    <a href="#beslissingen">Beslissingen</a>
+    <a href="#risicos">Risico's</a>
+    <a href="#bronnen">Bronnen</a>
+  </nav>
+</header>
+<main>
+
+<section id="advies" class="recommendation">
+  <h2>Advies</h2>
+  <p>Bouw plugins in drie lagen en begin onderaan.</p>
+  <ol>
+    <li><strong>Interne registries.</strong> Maak van de gesloten lijsten in de code tabellen waar je iets aan kunt toevoegen: panels, node- en view-kinds, verbs, bestandsrenderers, palette-commando's, instellingen. Dat is een refactor zonder zichtbaar gedrag, en de ingebouwde features worden er de eerste gebruikers van.</li>
+    <li><strong>Declaratieve plugins.</strong> Een map <code>$RUIMTE_HOME/plugins/&lt;id&gt;/</code> met een <code>ruimte-plugin.json</code>, geïnstalleerd per machine. Het manifest voegt verbs toe die een commando uitvoeren, palette-commando's, een panel of node die een web-pagina van de plugin is, instellingen, thema's, Shiki-grammatica's en link providers voor terminals. Er draait geen plugin-JavaScript in de client.</li>
+    <li><strong>Geïsoleerde code.</strong> Pas als laag 2 laat zien dat er vraag is naar echte UI en logica: plugin-UI in een iframe of webview achter een broker met een geversioneerde API, en een daemon-helft als apart proces dat JSON over stdio spreekt.</li>
+  </ol>
+  <p>Plugins die in de client zelf draaien, met echte React-nodes op het canvas, zijn het krachtigst en het gevaarlijkst. Houd dat model voor features van Ruimte zelf.</p>
+  <p><span class="badge info">Alternatief</span> Een smaller model staat onder <a href="#alternatief">Alternatief: plugins die alleen voeden</a>. Daar leest een plugin alleen iets in, zoals een lijst Jira-issues, en geeft die als context aan een agent. Een plugin bestuurt niets en draait geen code op de daemon.</p>
+  <div class="stats">
+    <div><strong>6</strong><span>plekken die al bijna een registry zijn</span></div>
+    <div><strong>1</strong><span>generiek kind <code>plugin</code> voor nodes, views en contextbronnen</span></div>
+    <div><strong>3</strong><span>lagen, te beginnen zonder plugin-code</span></div>
+  </div>
+  <p><span class="badge warning">Let op</span> Elke versoepeling in <code>packages/contracts</code> (een nieuw kind, een panel-id als string) is pas veilig nadat een release die haar kent overal draait. Dat is dezelfde regel als "Kinds a newer Ruimte wrote" in <code>docs/DECISIONS.md</code>. Die compatibiliteitsrelease hoort dus vóór de eerste plugin.</p>
+</section>
+
+<section id="vertrouwen">
+  <h2>Vertrouwen bepaalt de architectuur</h2>
+  <p>Code in de origin van de client heeft dezelfde macht als de client. Zo'n plugin kan op de lokale daemon zonder token shells starten, want loopback vraagt geen credential (<code>apps/server/src/auth/access.ts:73</code>). Hij kan de niet-extraheerbare ed25519-sleutel in IndexedDB <em>gebruiken</em> en via <code>transportFor(id)</code> elke gepairde machine bedienen. Ook <code>window.ruimteDesktop</code> uit de preload is voor hem bereikbaar. <span class="badge confirmed">Geverifieerd</span></p>
+  <p>Pairen geeft de client macht over een machine, en niet andersom. Laat een client JavaScript draaien die van machine A kwam, dan draai je die richting om. Een gecompromitteerde A neemt de client over, en via de client ook B en C.</p>
+  <div class="table" role="region" aria-label="Waar plugin-code vandaan komt" tabindex="0">
+    <table class="wide">
+      <caption>Waar code vandaan komt en waar die mag draaien (voorstel)</caption>
+      <thead><tr><th scope="col">Herkomst</th><th scope="col">Daemon-code</th><th scope="col">Client-code</th><th scope="col">Waarom</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Geïnstalleerd op machine A</th><td>Ja, op A</td><td>Alleen geïsoleerd, met rechten beperkt tot A</td><td>Een persoon installeerde de code op A, met A's rechten. Een gepairde client kan op A al een shell openen, dus dit geeft niemand extra macht.</td></tr>
+        <tr><th scope="row">Geïnstalleerd in deze client</th><td>Nee</td><td>Ja, eventueel in-process</td><td>De persoon achter deze client koos er zelf voor.</td></tr>
+        <tr><th scope="row"><code>&lt;project&gt;/.ruimte/plugins</code> uit een repo</th><td>Nooit bij het openen</td><td>Nooit bij het openen</td><td>Een clone mag geen code uitvoeren. Hooguit een lijst met "aanbevolen plugins" die een persoon zelf installeert.</td></tr>
+        <tr><th scope="row">Een agent via een verb</th><td>Nooit installeren</td><td>Nooit installeren</td><td>Een agent leest onvertrouwde context. <code>DECISIONS.md:640</code> belooft al dat geen verb iets start behalve <code>agent</code>.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Een plugin-verb doet een agent code starten die niet van Ruimte is. Het sessietoken heeft geen scopes, dus elke agent op de machine kan elk plugin-verb aanroepen. Een schakelaar per machine, zoals <code>agentsDeleteAnyView</code>, is daarom het minimum.</p>
+  <p>Een manifest met permissies (<code>canvas.write</code>, <code>context.read</code>, <code>net:&lt;host&gt;</code>, <code>shell</code>) maakt die keuze leesbaar. De client of machine pint de hash bij het goedkeuren, trust on first use zoals bij pairen, en vraagt opnieuw als een update meer permissies wil. Een handtekening bewijst waar een update vandaan komt, niet dat die deugt. Hij vult de goedkeuring aan en vervangt haar niet.</p>
+</section>
+
+<section id="laden">
+  <h2>Code laden</h2>
+  <h3>Wat de app nu toestaat</h3>
+  <ul>
+    <li>De CSP (<code>apps/client/index.html:11</code>, <code>apps/server/src/daemon.ts:74</code>) staat <code>script-src 'self' 'wasm-unsafe-eval'</code>, <code>frame-src 'none'</code> en <code>worker-src 'self' blob:</code> toe. Een <code>import()</code> kan dus alleen van de eigen origin laden, iframes zijn dicht, en workers en WASM mogen. <span class="badge confirmed">Geverifieerd</span></li>
+    <li>Electron laadt de client van de lokale daemon (<code>apps/desktop/src/main.ts:811</code>) en registreert geen eigen protocol. Er zijn twee partities: <code>persist:ruimte</code> voor browsers met een preload, en de verzegelde <code>preview</code> zonder permissies (<code>main.ts:190</code>). Die laatste is het model voor een plugin-partitie.</li>
+    <li>De Vite-build heeft geen externals. React en zustand zitten gehasht in de chunks, er is geen import map en geen host-object.</li>
+  </ul>
+  <div class="table" role="region" aria-label="Laadopties voor client-code" tabindex="0">
+    <table class="wide">
+      <caption>Laadopties voor client-code</caption>
+      <thead><tr><th scope="col">Optie</th><th scope="col">Kan</th><th scope="col">Isolatie</th><th scope="col">Pijn</th></tr></thead>
+      <tbody>
+        <tr><th scope="row"><code>import()</code> van een ESM-bundel</th><td>Alles, echte React-nodes op het canvas</td><td>Geen</td><td>React en de stores moeten singletons zijn via externals. Elke React-major of store-refactor breekt plugins. Van een machine op afstand laden vraagt een CSP-gat.</td></tr>
+        <tr><th scope="row">Iframe of <code>&lt;webview&gt;</code> met broker</th><td>Een eigen DOM in een rechthoek, plus wat de broker aanbiedt</td><td>Sterk: opaque origin of een eigen partitie</td><td>Een webview ligt boven alles op het canvas (#13). De Server Edition heeft geen webview, dus daar een iframe met <code>frame-src</code> open. Geheugen per plugin.</td></tr>
+        <tr><th scope="row">Web Worker met UI als data</th><td>Logica plus een vaste set componenten die Ruimte tekent</td><td>Redelijk: geen DOM, wel <code>fetch</code></td><td>De componentset wordt een publiek contract. Of het netwerk in een worker dicht kan, is niet uitgezocht. <span class="badge info">Afgeleid</span></td></tr>
+        <tr><th scope="row">Web Components</th><td>Een verpakking voor de eerste optie</td><td>Geen, Shadow DOM isoleert alleen stijl</td><td>Voegt niets toe.</td></tr>
+        <tr><th scope="row">WASM</th><td>Parsers en verbs zonder UI</td><td>Sterk</td><td>Past bij de daemon, nauwelijks bij UI.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>Daemon-code</h3>
+  <p>Een daemon-plugin in hetzelfde proces draait met de volle rechten van de gebruiker. Hij kan de daemon laten crashen of blokkeren, en dat is het proces dat terminals en chats vasthoudt. Een apart proces per plugin, met JSON over stdio, houdt een crash buiten de daemon en maakt de API een protocol in plaats van interne objecten.</p>
+  <p><span class="badge confirmed">Geverifieerd</span> Onder <code>bun</code> 1.4.0 laadt <code>await import(pad)</code> tijdens runtime zowel een <code>.js</code>- als een <code>.ts</code>-bestand buiten het project.</p>
+  <p class="note">Niet vastgesteld: of een binary van <code>bun build --compile</code>, zoals de verpakte app die meeneemt, hetzelfde kan, en wat er met de <code>node_modules</code> van een plugin gebeurt. Op deze Mac werd elke ad-hoc gesigneerde gecompileerde binary vanuit de shell direct met SIGKILL gestopt, ook één die alleen "hello" print. De test zei dus niets over <code>import()</code>. Tot dat vaststaat is de veilige vorm: een plugin levert één gebundeld JS-bestand zonder <code>node_modules</code>. Dit is ook de eerste taak van de spike.</p>
+</section>
+
+<section id="panels">
+  <h2>Panels toevoegen</h2>
+  <p><code>shell/panels.ts:6</code> heeft al een halve registry (kind, label, icoon, minimale breedte), en de toggles worden daaruit getekend. De inhoud kiest <code>Panel.tsx:25</code> nog met een <code>switch</code>. Het kind is een gesloten enum, <code>z.enum(['files','git','processes'])</code> (<code>packages/contracts/src/project.ts:487</code>). Wat een panel zelf moet onthouden, staat als vaste velden in het lokale schema (<code>git</code>, <code>expandedDirs</code>).</p>
+  <p class="note">De val: <code>project/client-local.ts:35</code> gooit met <code>safeParse</code> de hele rij in localStorage weg als één veld niet klopt. Een onbekend panel-id kost dan de camera, het raster en de panels van dat project, niet alleen het panel. Een oudere client heeft die enum al, dus een plugin-panel mag pas in de lokale staat komen als de versoepeling een release oud is.</p>
+  <h3>Kleinste stap</h3>
+  <ul>
+    <li><code>render</code> in <code>PANELS</code> in plaats van de <code>switch</code>, en de palette-regels uit <code>commands.ts:268</code> genereren.</li>
+    <li><code>panel.kind</code> wordt een string. Een client die het id niet kent valt terug op <code>files</code>.</li>
+    <li>Eigen staat per plugin in <code>panels.plugins: record&lt;string, unknown&gt;</code>, in plaats van nieuwe vaste velden.</li>
+    <li>Declaratief: een panel is een web-pagina van de plugin in een webview met partitie <code>plugin:&lt;id&gt;</code>, met de <code>PanelHeaderSlot</code> voor knoppen.</li>
+  </ul>
+</section>
+
+<section id="context">
+  <h2><code>ruimte-context</code> uitbreiden</h2>
+  <p>Dit is de seam die het meest klaar is. <code>VERBS</code> (<code>apps/server/src/canvas/verbs.ts:193</code>) is een array van objecten met synopsis, zod-schema's en <code>run</code>, en <code>help</code> wordt uit dezelfde spec gerenderd. De CLI stuurt alles behalve <code>list</code> en <code>read</code> ongelezen als argv naar <code>POST /canvas/&lt;verb&gt;</code> (<code>cli/context.ts:86</code>), dus een nieuw verb vraagt niets van de CLI. <span class="badge confirmed">Geverifieerd</span></p>
+  <h3>Een plugin-verb</h3>
+  <ul>
+    <li><code>ruimte-context &lt;plugin&gt; &lt;verb&gt;</code> past op <code>defineVerbGroup</code>, dat subcommando's en help al uit één tabel haalt. Een plugin-id die botst met een ingebouwd verb wordt geweigerd.</li>
+    <li><code>VERBS</code> wordt een <code>VerbRegistry</code> met <code>register()</code>. <code>dryRunVerbs</code> is nu module-globaal en moet per registry. <code>SCOPE_LINE</code> somt de verbs met de hand op en moet gegenereerd worden.</li>
+    <li>Declaratief: het manifest noemt een argv-array (geen shell-string) met getypeerde parameters. De daemon valideert, voert uit en geeft de uitvoer door. Exit 3 blijft een weigering.</li>
+    <li>Met code: de plugin krijgt niet heel <code>CanvasHost</code> (dat kan sessies beëindigen en diagrammen schrijven), maar <code>locate</code>, <code>read</code> en een <code>mutate</code> die alleen nodes van zijn eigen kind raakt.</li>
+  </ul>
+  <h3>Een contextbron</h3>
+  <p><code>ContextSourceSchema.kind</code> is een gesloten enum (<code>contracts/src/context.ts:6</code>), <code>deriveContextSources</code> een if-keten, en <code>ContextStore.read</code> een exhaustieve <code>switch</code>. Voeg één bronkind <code>plugin</code> toe met <code>pluginId</code>, en in de daemon een <code>Map&lt;pluginId, reader&gt;</code> naast de <code>switch</code>. Declaratief kan een reader een commando zijn dat tekst print, of een bestand van de plugin.</p>
+  <p>Een contextbron moet op de daemon bestaan. De daemon leidt de bronnen af uit <code>ProjectIndex</code>, ook als er geen client openstaat. Een plugin die alleen in de client draait, kan een agent dus nooit iets laten lezen.</p>
+  <p>Een reader zit in het pad van de prompt-hook (<code>changeSince</code>). Hij heeft een timeout en een regellimiet nodig, zoals <code>MAX_SCREEN_LINES</code> die al heeft.</p>
+</section>
+
+<section id="kinds">
+  <h2>Eigen views en nodes</h2>
+  <p>Het mechanisme ligt er al. <code>readEntry</code> (<code>project.ts:52</code>) leest elk onbekend kind als <code>{ kind: 'unknown', raw }</code>, <code>storedContentOf</code> schrijft het ongewijzigd terug, en de opruiming van wezen telt het als levend. Een <code>plugin</code>-kind overleeft vandaag al een Ruimte die het niet kent, als een plaat die niet opent. <span class="badge confirmed">Geverifieerd</span></p>
+  <p>Wat ontbreekt is tekenen en wijzigen:</p>
+  <ul>
+    <li>Nodes lopen via ketens van <code>node.kind === ...</code> in <code>NodeFrame.tsx:324</code> en via <code>Record&lt;NodeKind, …&gt;</code>-tabellen. Voorbeelden zijn <code>NODE_SIZE</code>, <code>DEFAULT_TITLES</code>, <code>ICONS</code>, <code>ROW_ICON</code> en <code>ADD_NODE_SHORTCUTS</code>.</li>
+    <li>Views gaan via <code>StandaloneView</code> (<code>ViewHost.tsx:73</code>), <code>KINDS_WITH_TOOLBAR</code> en de sidebar.</li>
+    <li>Alleen het frame van een <code>unknown</code> is wijzigbaar. Hernoemen, accent en dupliceren worden bewust geweigerd.</li>
+  </ul>
+  <div class="split">
+    <div class="panel">
+      <h3>Intern: een kind-registry</h3>
+      <p>Een <code>NodeKindDef</code> met body, plaat, icoon, standaardmaat, titel, menu-items en <code>readableOnly</code>, naar het model van tldraw's <code>ShapeUtil</code>. De ingebouwde kinds verhuizen erheen. Culling (<code>canvas/culling.ts</code>) is al onafhankelijk van het kind. De <code>ErrorBoundary</code> rond de body vangt een plugin-kind vanzelf, met het plugin-id erbij in het label.</p>
+    </div>
+    <div class="panel">
+      <h3>Op disk: één kind <code>plugin</code></h3>
+      <p>Een node of view <code>{ kind: 'plugin', plugin: '&lt;id&gt;', type: '&lt;kind&gt;', data }</code>. Een client zonder de plugin tekent een plaat met de naam van de plugin. Plugin-data staat altijd in <code>data</code> en nooit als veld op een bekend kind, want zod verwijdert onbekende velden bij de eerste save. Grote data krijgt een eigen bestand onder <code>.ruimte/plugins/&lt;id&gt;/</code>.</p>
+    </div>
+  </div>
+  <p>Declaratief is de eerste plugin-node een web-pagina van de plugin, dus een browser-node in een eigen partitie. Die krijgt dezelfde z-order-beperking als elke webview (#13). Nodes die echt op het canvas thuishoren (native tekenen, zoomen, culling) vragen de broker of in-process code.</p>
+  <p>Nog open in dezelfde refactor: de drop-regels in <code>canvas/drop.ts</code> maken altijd een <code>file</code>-node, en er is geen hook op MIME-type of extensie. "Open een <code>.excalidraw</code> als node van plugin X" heeft die hook nodig.</p>
+</section>
+
+<section id="injecties">
+  <h2>Injecties in bestaande features</h2>
+  <p>Wat al een lijst is of een pure functie over bestaande data, is goedkoop. Wat een wire shape of een kind-enum raakt, is duur.</p>
+  <div class="table" role="region" aria-label="Injectiepunten" tabindex="0">
+    <table class="wide">
+      <caption>De acht injectiepunten met de beste verhouding tussen waarde en moeite</caption>
+      <thead><tr><th scope="col">#</th><th scope="col">Punt</th><th scope="col">Wat er ligt</th><th scope="col">Voorbeeld</th><th scope="col">Declaratief?</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><th scope="row">Palette-commando's</th><td><code>Command</code> en <code>appCommands()</code> in <code>shell/commands.ts:34,119</code></td><td>"Open de staging-omgeving" als browser-node</td><td>Ja, als verb, URL of nieuwe node</td></tr>
+        <tr><td>2</td><th scope="row">Bestandsrenderers</th><td><code>TEXT_RENDERERS</code> is een lijst <code>{id, match, render}</code> (<code>renderers.tsx:28</code>), plus de toolbar-slot</td><td>CSV als tabel, <code>.http</code>-bestanden</td><td>Nee, vraagt code</td></tr>
+        <tr><td>3</td><th scope="row">Terminal: links en OSC</th><td>Eén laadpunt voor addons in <code>TerminalBody.tsx:104</code>, geen link provider-API</td><td>Jira-sleutels en <code>#45</code> klikbaar, OSC 133 om naar het vorige commando te springen</td><td>Links wel: regex plus URL-sjabloon</td></tr>
+        <tr><td>4</td><th scope="row">Composer</th><td>Een <code>extensions</code>-compartment in <code>ComposerInput.tsx:26</code>, <code>LOCAL_COMMANDS</code> in <code>Composer.tsx:55</code></td><td><code>/ticket</code> dat een issue als prompt invoegt</td><td>Slash-commando als sjabloon wel</td></tr>
+        <tr><td>5</td><th scope="row">Canvas-verbs</th><td>De zod-registry van <a href="#context"><code>ruimte-context</code></a></td><td><code>ruimte-context jira ABC-1</code> zet een notitie met het ticket neer</td><td>Ja</td></tr>
+        <tr><td>6</td><th scope="row">Bestands- en berichtacties</th><td>Vaste JSX in <code>FileActionItems.tsx:34</code> en <code>TimelineMenu.tsx:38</code></td><td>"Open in de editor", "Stuur naar de gelinkte chat"</td><td>Ja, als verb of URL met het pad</td></tr>
+        <tr><td>7</td><th scope="row">Observer-bus op de daemon</th><td>Alleen sinks per client (<code>connection.ts:84</code>) en callbacks met één slot</td><td>Een audit-log van revs, een melding naar ntfy als een turn eindigt</td><td>Ja, als commando per event</td></tr>
+        <tr><td>8</td><th scope="row">Stuck-detectors en prijsbron</th><td><code>StuckJudge.observe</code> (<code>processes/stuck.ts:120</code>), LiteLLM in <code>usage/pricing.ts</code></td><td>Contractprijzen van een eigen gateway</td><td>Prijzen wel, detectors niet</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>Ook als data te leveren</h3>
+  <p>Thema's als set CSS-variabelen per <code>data-theme</code>. Die raken ook het drawing-palet en het Shiki-thema, dat nu vast op github-light/dark staat (<code>CodeBlock.tsx:13</code>). Verder Shiki-grammatica's als TextMate-JSON, want nu komen talen alleen uit <code>bundledLanguages</code>. En exportformaten voor diagrammen bovenop <code>readingOrder</code>, al is dat laatste code.</p>
+  <h3>Apart houden</h3>
+  <ul>
+    <li><strong>Agent-providers.</strong> <code>AgentKindSchema</code> is gesloten (<code>contracts/src/agent.ts:6</code>). Hooks, usage, limieten en logo zijn per kind hard gecodeerd. Hoge waarde (een extra CLI-agent), maar diep.</li>
+    <li><strong>Markdown en rehype in chats.</strong> Die draaien per blok bij elke delta. Een trage plugin maakt het streamen traag.</li>
+    <li><strong>Vormen en tinten in drawings en diagrammen.</strong> Die zitten in het bestandsformaat en in de determinisme van <code>layoutOf</code>.</li>
+    <li><strong>De guest-preload van browsers.</strong> Die draait in elke pagina van <code>persist:ruimte</code>. Daar hoort geen plugin-code.</li>
+  </ul>
+  <p class="note">Een observer die zich als nep-client abonneert, telt mee als iemand die approvals wil (<code>sessions/manager.ts:187</code>). Hij houdt dan elke <code>PermissionRequest</code> vast. De bus moet los staan van attach. <code>onProcessChange</code> en <code>onPlaces</code> hebben één slot en zijn al bezet door <code>daemon.ts</code>.</p>
+</section>
+
+<section id="wire">
+  <h2>Wire, opslag en versies</h2>
+  <ul>
+    <li><strong>Requests.</strong> <code>REQUEST_SCHEMAS</code> en <code>EVENT_SCHEMAS</code> zijn <code>as const</code>-tabellen. Voeg één <code>plugin.request</code> toe met <code>{ pluginId, type, payload: unknown }</code> en één <code>plugin.event</code>. Die worden in twee stappen gevalideerd: eerst de envelop in contracts, dan de payload met het schema van de plugin. Contracts groeit zo niet per plugin.</li>
+    <li><strong>HTTP.</strong> De routes zijn een if-keten van prefixes (<code>daemon.ts:351</code>). Eén prefix <code>/plugins/&lt;id&gt;/</code> serveert de statische bestanden van een web-panel en de routes van een plugin. Elke route declareert zelf of hij client-auth (<code>decideAccess</code>) of een agent-bearer wil.</li>
+    <li><strong>Eigen bestanden.</strong> <code>DrawingStore</code> en <code>DiagramStore</code> zijn twee kopieën van hetzelfde patroon: één regel per element, een rev, een watcher. Een generieke <code>ViewFileStore&lt;T&gt;</code> onder <code>.ruimte/plugins/&lt;id&gt;/&lt;viewId&gt;.json</code> geeft een plugin datzelfde, en ruimt de twee kopieën meteen op.</li>
+    <li><strong>Versies.</strong> <code>packages/contracts</code> is intern en verandert vrij, dus het is geen plugin-API. Maak een apart <code>@ruimte/plugin-api</code> met het manifest-schema, het broker-protocol en een <code>apiVersion</code>. <code>EndpointInfoSchema</code> krijgt een optioneel <code>plugins: [{ id, version, apiVersion }]</code>, zodat een client ziet wat een machine draait.</li>
+  </ul>
+  <details open>
+    <summary>Een manifest zoals het er in laag 2 uit zou kunnen zien</summary>
+<pre><code>{
+    "id": "jira",
+    "name": "Jira",
+    "version": "0.1.0",
+    "apiVersion": 1,
+    "permissions": ["net:acme.atlassian.net", "canvas.write"],
+    "settings": {
+        "baseUrl": { "type": "string", "label": "Jira URL" }
+    },
+    "verbs": [{
+        "name": "issue",
+        "synopsis": "issue &lt;key&gt;",
+        "args": [{ "name": "key", "pattern": "^[A-Z]+-\\d+$" }],
+        "run": ["./bin/issue", "{key}"]
+    }],
+    "terminal": {
+        "links": [{ "match": "\\b[A-Z]{2,}-\\d+\\b", "url": "{settings.baseUrl}/browse/{0}" }]
+    },
+    "panels": [{ "id": "board", "label": "Board", "icon": "kanban", "page": "web/board.html" }],
+    "commands": [{ "label": "Open Jira board", "panel": "board" }]
+}</code></pre>
+    <p>Een voorbeeld van de vorm, geen ontwerp. Iconen zijn Lucide-namen, zodat een plugin geen eigen set meebrengt.</p>
+  </details>
+</section>
+
+<section id="architecturen">
+  <h2>Drie architecturen</h2>
+  <svg class="diagram" width="960" viewBox="0 0 960 300" role="img" aria-labelledby="layers-title layers-desc">
+    <title id="layers-title">De drie lagen</title>
+    <desc id="layers-desc">Een manifest op machine A levert verbs en contextbronnen aan de daemon, en web-panels en data-injecties aan de client. Geïsoleerde plugin-UI praat via een broker met de client. Een plugin-proces praat via stdio met de daemon. In-process client-code is alleen voor wat deze client zelf installeerde.</desc>
+    <defs><marker id="layer-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="arrow" d="M0 0L10 5L0 10z"/></marker></defs>
+    <rect class="node" x="20" y="110" width="200" height="90" rx="14"/>
+    <text x="120" y="148" text-anchor="middle" font-weight="600">Manifest</text>
+    <text x="120" y="174" text-anchor="middle" class="label-small">$RUIMTE_HOME/plugins</text>
+    <rect class="node" x="380" y="20" width="220" height="110" rx="14"/>
+    <text x="490" y="58" text-anchor="middle" font-weight="600">Daemon op A</text>
+    <text x="490" y="84" text-anchor="middle" class="label-small">verbs, contextbronnen</text>
+    <text x="490" y="106" text-anchor="middle" class="label-small">/plugins/&lt;id&gt;/, events</text>
+    <rect class="node" x="380" y="175" width="220" height="110" rx="14"/>
+    <text x="490" y="213" text-anchor="middle" font-weight="600">Client</text>
+    <text x="490" y="239" text-anchor="middle" class="label-small">panels, commando's</text>
+    <text x="490" y="261" text-anchor="middle" class="label-small">thema's, link providers</text>
+    <rect class="node" x="740" y="20" width="200" height="110" rx="14"/>
+    <text x="840" y="62" text-anchor="middle" font-weight="600">Plugin-proces</text>
+    <text x="840" y="88" text-anchor="middle" class="label-small">laag 3, JSON over stdio</text>
+    <rect class="node" x="740" y="175" width="200" height="110" rx="14"/>
+    <text x="840" y="217" text-anchor="middle" font-weight="600">Plugin-UI</text>
+    <text x="840" y="243" text-anchor="middle" class="label-small">laag 3, iframe of webview</text>
+    <path class="edge" d="M220 140L380 80" marker-end="url(#layer-arrow)"/>
+    <path class="edge" d="M220 175L380 225" marker-end="url(#layer-arrow)"/>
+    <text x="300" y="98" text-anchor="middle" class="label-small">laag 2</text>
+    <path class="edge" d="M490 130V175" marker-start="url(#layer-arrow)" marker-end="url(#layer-arrow)"/>
+    <text x="512" y="157" class="label-small">plugin.request</text>
+    <path class="edge" d="M600 75H740" marker-start="url(#layer-arrow)" marker-end="url(#layer-arrow)"/>
+    <path class="edge" d="M600 230H740" marker-start="url(#layer-arrow)" marker-end="url(#layer-arrow)"/>
+    <text x="670" y="218" text-anchor="middle" class="label-small">broker</text>
+  </svg>
+  <div class="split">
+    <div class="panel">
+      <h3>A. Declaratief</h3>
+      <p><strong>Dagen.</strong> Een manifest per machine: verbs als argv, palette-commando's, web-panels en -nodes in partitie <code>plugin:&lt;id&gt;</code>, instellingen als schema, thema's, grammatica's, link providers en een contextbron die een commando of bestand is.</p>
+      <p>Voor: past op wat er ligt (de verbs-registry, de verzegelde preview-partitie, het <code>unknown</code>-kind), en is veilig bij installatie op een machine op afstand. Tegen: geen native canvas-integratie, de webview-z-order (#13), en in de Server Edition een iframe.</p>
+    </div>
+    <div class="panel">
+      <h3>B. Geïsoleerde code</h3>
+      <p><strong>Weken.</strong> Bovenop A: plugin-UI in een iframe of webview, met een postMessage-broker die een geversioneerde API aanbiedt (<code>canvas.addNode</code>, <code>context.read</code>, <code>notify</code>, thema-tokens), beperkt tot de eigen machine. De daemon-helft draait als apart proces met <code>plugin.request</code> en <code>plugin.event</code>.</p>
+      <p>Voor: code van machine A kan veilig draaien, permissies zijn af te dwingen, en een hostwijziging raakt alleen het protocol. Tegen: een broker-API om te onderhouden, geheugen per webview, en UI die minder als Ruimte voelt.</p>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>C. In-process, alleen vertrouwd</h3>
+    <p>Een ESM-bundel via <code>import()</code>, met React en de stores gedeeld via een host-object, en echte nodes op het canvas zonder z-order-probleem. Een plugin krijgt dan alleen een <code>PluginContext</code> (<code>endpointId</code>, zijn eigen <code>request</code>, <code>viewId</code> of <code>nodeId</code>, <code>data</code> en <code>updateData</code>, opslag onder <code>${endpointId}:${projectId}:${pluginId}</code>), nooit de module-singletons. Wie <code>transport</code> of <code>projectClient</code> importeert, praat met de actieve machine in plaats van die van zijn workspace (<code>state/keys.ts:5</code>).</p>
+    <p>Hij kan alles wat de client kan, dus alleen voor wat de persoon zelf in deze client installeerde, achter een waarschuwing. Het is vooral nuttig als interne vorm: de kind-registry uit laag 1 is precies dit, zonder het laden van buitenaf.</p>
+  </div>
+</section>
+
+<section id="alternatief">
+  <h2>Alternatief: plugins die alleen voeden</h2>
+  <p class="status">Toegevoegd 14 september, nog niet uitgewerkt</p>
+  <p>Een plugin haalt iets op en toont het, en geeft die inhoud als context aan een agent. Hij heeft geen verbs, raakt het canvas niet en start geen sessies. Het voorbeeld: een panel met Jira-issues, waarna je tegen een agent zegt dat hij een issue daaruit moet inlezen.</p>
+  <p>Hiermee vallen laag 2 en 3 samen tot één smal model. Er is geen plugin-code op de daemon, dus het compile-importprobleem verdwijnt. Er zijn geen plugin-verbs die agents kunnen aanroepen. Je installeert niets per machine op afstand.</p>
+
+  <h3>Context moet op de daemon staan</h3>
+  <p>Een agent leest via <code>ruimte-context</code>, en de daemon beantwoordt dat ook als er geen client openstaat. Een plugin in de client stuurt zijn inhoud daarom naar de daemon, bijvoorbeeld met <code>context.publish(nodeId, items)</code>. De daemon bewaart die snapshot en serveert hem als contextbron van kind <code>plugin</code>, met het tijdstip erbij zodat de agent ziet hoe oud hij is.</p>
+  <div class="split">
+    <div class="panel">
+      <h3>Snapshot</h3>
+      <p>De plugin publiceert de lijst plus de details van elk issue. Dit werkt zonder open client en is prima voor tientallen issues. Het nadeel is dat de inhoud veroudert zodra niemand de plugin open heeft.</p>
+    </div>
+    <div class="panel">
+      <h3>Op aanvraag</h3>
+      <p>Voor <code>ruimte-context read &lt;node&gt; ABC-123</code> vraagt de daemon een verbonden client met die plugin om het issue op te halen. Het resultaat is altijd vers, maar het faalt zonder client, en dan moet de agent dat duidelijk te horen krijgen.</p>
+    </div>
+  </div>
+  <p>Voorstel: een snapshot als basis, met ophalen op aanvraag als aanvulling.</p>
+
+  <h3>"Niks besturen" vraagt isolatie</h3>
+  <p>Plugin-code in de client zelf kan bij <code>transport</code> en dus bij elke gepairde machine (zie <a href="#vertrouwen">Vertrouwen</a>). De grens houdt alleen stand als de plugin in een sandboxed iframe of worker draait, achter een broker met een handvol functies:</p>
+  <ul>
+    <li>zijn eigen UI tekenen;</li>
+    <li>instellingen en een geheim, zoals het Jira-token, lezen;</li>
+    <li><code>fetch</code> naar de hosts uit zijn manifest;</li>
+    <li>context publiceren.</li>
+  </ul>
+  <p>Die kleine API is het voordeel: er is weinig te onderhouden en weinig dat breekt.</p>
+
+  <h3>Een edge vraagt een node</h3>
+  <p>Een panel staat niet op het canvas, dus je kunt er geen lijn van trekken. Het panel toont de lijst, en je sleept een issue of de hele lijst op het canvas. Daar wordt het een <code>plugin</code>-node met een snapshot, en die verbind je met een agent. Dat volgt hoe een bestand nu vanuit het files-panel op het canvas komt (<code>canvas/drop.ts</code>).</p>
+
+  <h3>Ophalen en CORS</h3>
+  <p>Een <code>fetch</code> naar de Jira-API vanaf de origin van de client (<code>http://127.0.0.1:&lt;port&gt;</code>) loopt waarschijnlijk tegen CORS aan. <span class="badge info">Afgeleid</span> Er zijn twee doorgeefluiken:</p>
+  <ul>
+    <li><strong>De Electron-main.</strong> Die werkt niet in de Server Edition.</li>
+    <li><strong>Een proxy op de daemon.</strong> Die laat alleen de hosts uit het manifest door. Hij haalt alleen op, dus hij blijft binnen "voeden".</li>
+  </ul>
+
+  <h3>Open vragen</h3>
+  <ol>
+    <li>Snapshot, op aanvraag, of beide.</li>
+    <li>Waar het token woont: per client (een tweede client moet opnieuw inloggen) of per machine (de daemon ziet het geheim).</li>
+    <li>Of een plugin-node ook in <code>project.json</code> komt, en dus bij iedereen staat die het project opent, ook zonder de plugin.</li>
+    <li>Of CORS bij Jira Cloud echt dicht is. Dat is snel te testen.</li>
+  </ol>
+</section>
+
+<section id="prior-art">
+  <h2>Prior art</h2>
+  <p>Ideeën, geen code.</p>
+  <div class="table" role="region" aria-label="Vergelijkbare plugin-systemen" tabindex="0">
+    <table class="wide">
+      <caption>Hoe andere apps plugins laden</caption>
+      <thead><tr><th scope="col">App</th><th scope="col">Model</th><th scope="col">Les voor Ruimte</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">VS Code</th><td>Apart extension-hostproces, contribution points in <code>package.json</code>, activation events, webviews in iframes</td><td>Declaratieve contributies bestaan zonder code te laden. Code pas laden als het nodig is. Er is geen permissiemodel.</td></tr>
+        <tr><th scope="row">Obsidian</th><td>In-process, volle rechten, Restricted Mode als schakelaar</td><td>Groot ecosysteem met een kleine API, maar vertrouwen is alles of niets.</td></tr>
+        <tr><th scope="row">Figma</th><td>Logica in een QuickJS-VM als WASM, UI in een iframe, postMessage</td><td>Een sandbox in dezelfde realm lekte (Realms-shim). Isolatie hoort een echte grens te zijn.</td></tr>
+        <tr><th scope="row">Zed</th><td>WASM in Wasmtime tegen een geversioneerde WIT-API</td><td>Veilig en stabiel, en meerdere API-versies naast elkaar. Maar vrijwel geen UI.</td></tr>
+        <tr><th scope="row">Raycast</th><td>Node-proces met een React-reconciler die een JSON-boom naar native UI stuurt</td><td>UI als data houdt de app consistent. De componentset wordt het contract.</td></tr>
+        <tr><th scope="row">JupyterLab</th><td>Module federation met gedeelde singletons</td><td>Elke major van de host brak extensies.</td></tr>
+        <tr><th scope="row">Grafana</th><td>Frontend in-process, sinds 11.5 een opt-in sandbox. Backend-plugins als processen, met signing.</td><td>Isolatie achteraf toevoegen is traag en gaat per plugin.</td></tr>
+        <tr><th scope="row">Backstage</th><td>Eerst meegecompileerd, runtime laden via module federation nog alpha</td><td>Meecompileren is simpel. Runtime laden kostte jaren.</td></tr>
+        <tr><th scope="row">tldraw</th><td>Custom shapes als <code>ShapeUtil</code>-klassen die de app meebundelt</td><td>Een goed model voor de interne kind-registry.</td></tr>
+        <tr><th scope="row">Hyper</th><td>npm-pakketten in main en renderer, React-HOC-ketens</td><td>Trage plugins werden de app aangerekend en HOC-ketens braken bij upgrades. Deels uit het geheugen van de agent. <span class="badge info">Afgeleid</span></td></tr>
+        <tr><th scope="row">Warp</th><td>Workflows als YAML met parameters</td><td>Declaratief dekt veel en kost bijna niets.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="fasen">
+  <h2>Fasen</h2>
+  <ol class="steps">
+    <li class="step"><div>
+      <h3>Interne registries</h3>
+      <p>Refactor zonder zichtbaar gedrag: <code>render</code> in <code>PANELS</code>, een <code>NodeKindDef</code>- en view-registry voor de ingebouwde kinds, <code>VerbRegistry</code>, <code>TEXT_RENDERERS</code> met <code>matchBinary</code>, palette-commando's en instellingen-secties uit lijsten, en een generieke toolbar-slot voor elke view en node.</p>
+      <p><strong>Klaar als:</strong> een nieuw ingebouwd kind op één plek wordt toegevoegd in plaats van tien, <code>bun run check</code> en de tests groen zijn en er niets zichtbaar veranderd is.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Compatibiliteitsrelease</h3>
+      <p>Contracts verdragen wat plugins later schrijven: node- en view-kind <code>plugin</code> met <code>data</code>, <code>panel.kind</code> als string met terugval, <code>panels.plugins</code>, bronkind <code>plugin</code>, optioneel <code>plugins</code> in <code>EndpointInfo</code>. De lokale staat verliest bij één onbekend veld niet meer de hele rij.</p>
+      <p><strong>Klaar als:</strong> er een release uit is waarin een project met een <code>plugin</code>-node en een onbekend panel-id opent, als plaat tekent, ongewijzigd terugschrijft en camera en raster behoudt. Een test borgt dat.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Spike</h3>
+      <p>Uitzoeken of een gecompileerde daemon tijdens runtime een gebundeld JS-bestand en een <code>.ts</code>-bestand laadt, en wat er met <code>node_modules</code> gebeurt. Draai dat in de gesigneerde verpakte app, want op deze Mac stopte elke ad-hoc gecompileerde binary. Meet ook een plugin-proces met JSON over stdio: opstarttijd en geheugen.</p>
+      <p><strong>Klaar als:</strong> vaststaat welke vorm een plugin moet hebben om in de verpakte app te laden, en of een apart proces per plugin betaalbaar is.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Declaratieve plugins (A)</h3>
+      <p>Manifest en <code>@ruimte/plugin-api</code>. Laden uit <code>$RUIMTE_HOME/plugins</code>, verbs als argv met een schakelaar per machine voor agents, palette-commando's, web-panels en -nodes in partitie <code>plugin:&lt;id&gt;</code> (iframe in de Server Edition), instellingen, thema's, grammatica's, terminal-links en een contextbron als commando. Een pane Plugins per machine, met permissies die een persoon goedkeurt en een hash-pin.</p>
+      <p><strong>Klaar als:</strong> een voorbeeldplugin een verb, een panel, een link provider en een contextbron levert. Een agent leest de bron via een edge, een tweede client ziet de plugin op dezelfde machine, en een project uit een clone met een plugin-map voert niets uit.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Geïsoleerde code (B)</h3>
+      <p>De broker met een geversioneerde capability-API, <code>plugin.request</code> en <code>plugin.event</code>, het plugin-proces op de daemon, <code>ViewFileStore&lt;T&gt;</code> en de observer-bus los van attach.</p>
+      <p><strong>Klaar als:</strong> een plugin-view met een eigen bestand onder <code>.ruimte/plugins/&lt;id&gt;/</code> werkt met rev en conflictbanner, een crashend plugin-proces de daemon niet raakt, en een plugin van machine A geen request naar machine B kan sturen.</p>
+    </div></li>
+  </ol>
+</section>
+
+<section id="beslissingen">
+  <h2>Open beslissingen</h2>
+  <ol>
+    <li><strong>Waar wonen client-only plugins?</strong> Voorstel: ook op een machine, zodat elke client die ze ziet dezelfde krijgt. Thema's en link providers zijn data. Het alternatief is per client in <code>userData</code>, wat bij meerdere clients per machine verwarrend wordt.</li>
+    <li><strong>Wie mag installeren?</strong> Voorstel: elke gepairde client, met bevestiging en permissies op het scherm, want die kan op de machine al een shell openen. Nooit een agent via een verb.</li>
+    <li><strong>Mogen agents plugin-verbs gebruiken?</strong> Voorstel: per plugin een schakelaar per machine, uit tot iemand hem aanzet, naast <code>agentsDeleteAnyView</code>.</li>
+    <li><strong>Komt laag C er ooit als laadweg?</strong> Voorstel: nee voor derden. Alleen als interne registry voor wat Ruimte zelf meelevert.</li>
+    <li><strong>Aanbevolen plugins per project.</strong> Een lijst in <code>project.json</code> die een banner geeft ("dit project gebruikt Jira"), of niets. Voorstel: pas na laag A.</li>
+    <li><strong>Distributie.</strong> Een map of tarball installeren, of een index zoals een Git-repo met manifesten. Voorstel: eerst lokaal en via URL, een index pas als er plugins zijn.</li>
+  </ol>
+</section>
+
+<section id="risicos">
+  <h2>Risico's</h2>
+  <ul>
+    <li>Plugin-code in de client of in de daemon draait met de rechten van de gebruiker. Wie een plugin van machine A in de client laat draaien, geeft A de sleutels van elke gepairde machine.</li>
+    <li>Een verb start code die niet van Ruimte is, en een agent die onvertrouwde context leest kan het aanroepen. Het sessietoken heeft geen scopes.</li>
+    <li>Hete paden: <code>Session.receive</code> op de daemon, link providers bij elke hover en scroll, rehype bij elke delta. Een plugin daar heeft een budget nodig of blijft eruit.</li>
+    <li>Een versoepeling in contracts die zonder compatibiliteitsrelease uitgaat, laat een oudere Ruimte een project weigeren of de lokale staat weggooien.</li>
+    <li>Een webview ligt boven alles op het canvas (#13). Web-nodes van plugins erven dat.</li>
+    <li>Of een gecompileerde daemon plugin-code laadt, is niet vastgesteld.</li>
+    <li>Een API die te vroeg publiek wordt, bevriest interne keuzes. JupyterLab en Hyper braken bij elke major van de host.</li>
+  </ul>
+</section>
+
+<section id="bronnen">
+  <h2>Bronnen</h2>
+  <ul>
+    <li><a href="https://code.visualstudio.com/api/references/contribution-points">VS Code contribution points</a>, <a href="https://code.visualstudio.com/api/references/activation-events">activation events</a></li>
+    <li><a href="https://obsidian.md/help/plugin-security">Obsidian plugin security</a></li>
+    <li><a href="https://www.figma.com/blog/how-we-built-the-figma-plugin-system/">How we built the Figma plugin system</a>, <a href="https://www.figma.com/blog/an-update-on-plugin-security/">An update on plugin security</a></li>
+    <li><a href="https://zed.dev/blog/zed-decoded-extensions">Zed Decoded: Life of a Zed Extension</a></li>
+    <li><a href="https://www.raycast.com/blog/how-raycast-api-extensions-work">How the Raycast API and extensions work</a></li>
+    <li><a href="https://jupyterlab.readthedocs.io/en/stable/extension/extension_dev.html">JupyterLab extension development</a></li>
+    <li><a href="https://grafana.com/docs/grafana/latest/administration/plugin-management/plugin-frontend-sandbox/">Grafana plugin frontend sandbox</a></li>
+    <li><a href="https://backstage.io/docs/frontend-system/building-apps/module-federation/">Backstage module federation</a></li>
+    <li><a href="https://tldraw.dev/reference/editor/ShapeUtil">tldraw ShapeUtil</a></li>
+    <li><a href="https://github.com/vercel/hyper/blob/canary/PLUGINS.md">Hyper PLUGINS.md</a></li>
+    <li><a href="https://docs.warp.dev/terminal/entry/yaml-workflows/">Warp YAML workflows</a></li>
+    <li><a href="https://www.electronjs.org/docs/latest/api/protocol">Electron protocol</a></li>
+    <li>Lokaal: Ruimte op 676a671, <code>docs/DECISIONS.md</code>, Bun 1.4.0, macOS 27.0</li>
+  </ul>
+</section>
+
+</main>
+<footer>
+  <p>Vier subagents deden het onderzoek: client, daemon, laden en isolatie, en injecties. Ze lazen de code met grep en gerichte leesacties. De prior art komt uit de gelinkte documentatie. De eerste poging voor de daemon liep vast en is zonder experimenten overgedaan. Geverifieerd op deze Mac: runtime-import onder <code>bun</code>. Niet geverifieerd: runtime-import in een gecompileerde binary, netwerkisolatie in een worker, en de ervaringen met Hyper. Regelnummers kunnen een paar regels verschoven zijn. Er is geen regel code geschreven.</p>
+</footer>
+</body>
+</html>
