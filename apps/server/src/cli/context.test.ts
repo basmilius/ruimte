@@ -42,6 +42,8 @@ beforeAll(() => {
             switch (verb) {
                 case 'node':
                     return new Response('note-12345678\tnote\tmain\n');
+                case 'diagram':
+                    return new Response('flow-1\t1\t0\t0\t0\n');
                 case 'nodes':
                     return new Response('refused\tview-required\tname one with --view\ncanvas\tmain\tCanvas\n', { status: 422 });
                 case 'broken':
@@ -194,6 +196,18 @@ describe('runContext', () => {
         };
         expect(await runContext(['node', 'note', '--text', 'a\\nb', '--title', '-'], env, stdin)).toBe(0);
         expect(seen[0]!.argv).toEqual(['note', '--text', 'a\\nb', '--title', '-']);
+    });
+
+    test('diagram sends stdin as --document byte for byte, and leaves stdin unread when --document is given', async () => {
+        const document = '{"meta":{"title":"a\\nb","direction":"right"}}\n';
+        expect(await runContext(['diagram', 'flow-1'], env, async () => document)).toBe(0);
+        expect(seen[0]!.argv).toEqual(['flow-1', `--document=${document}`]);
+        expect(stdout).toBe('flow-1\t1\t0\t0\t0\n');
+        const stdin = async (): Promise<string> => {
+            throw new Error('stdin was read');
+        };
+        expect(await runContext(['diagram', 'flow-1', '--document', '{}'], env, stdin)).toBe(0);
+        expect(seen[1]!.argv).toEqual(['flow-1', '--document', '{}']);
     });
 
     test('a refusal exits 3 and goes to stderr', async () => {

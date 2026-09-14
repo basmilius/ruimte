@@ -1,4 +1,4 @@
-import { isCanvasView, type AgentKind, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
+import { isCanvasView, type AgentKind, type DiagramContent, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
 import { z } from 'zod';
 import type { NoticeDelivery, Notice } from '../context/notices.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
@@ -45,6 +45,8 @@ export interface CanvasHost {
     endSession(kind: 'terminal' | 'chat', nodeId: string): Promise<void>;
     /* Puts a message in front of another node's agent, and says whether it landed or is waiting. */
     notify(notice: Omit<Notice, 'createdAt'>): Promise<NoticeDelivery>;
+    /* Replaces the diagram of a view, whether or not anyone has its project open, and answers the new rev. */
+    writeDiagram(projectId: string, viewId: string, content: DiagramContent): Promise<number>;
 }
 
 export interface VerbCall {

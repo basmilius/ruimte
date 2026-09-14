@@ -77,7 +77,20 @@ export const runContext = async (
         return 0;
     }
 
-    return runVerb(url.replace(/\/context\/?$/, '/canvas'), command, await withStdinText(args.slice(1), stdin), headers);
+    const argv = command === 'diagram' ? await withStdinDocument(args.slice(1), stdin) : await withStdinText(args.slice(1), stdin);
+    return runVerb(url.replace(/\/context\/?$/, '/canvas'), command, argv, headers);
+};
+
+/*
+ * `diagram` takes its document on stdin, which the daemon never sees, so it travels as `--document`.
+ * Not escaped the way `--text` is: the daemon parses JSON here and reads no escapes of its own. A
+ * `--document` already given means stdin is not the source, so it is left unread.
+ */
+const withStdinDocument = async (argv: string[], stdin: () => Promise<string>): Promise<string[]> => {
+    if (argv.some((word) => word === '--document' || word.startsWith('--document='))) {
+        return argv;
+    }
+    return [...argv, `--document=${await stdin()}`];
 };
 
 interface ContextRow {

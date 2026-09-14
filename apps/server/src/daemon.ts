@@ -1,6 +1,6 @@
 import { dirname, join, normalize, resolve } from 'node:path';
 import type { ServerWebSocket } from 'bun';
-import { AuthTicketPayloadSchema, PairPayloadSchema, type AgentKind, type ServerFrame } from '@ruimte/contracts';
+import { AuthTicketPayloadSchema, PairPayloadSchema, type AgentKind, type DiagramContent, type ServerFrame } from '@ruimte/contracts';
 import { AgentStore } from './agents/agent-store.ts';
 import { AgentLineageStore } from './agents/lineage.ts';
 import { PendingPromptStore } from './agents/pending-prompts.ts';
@@ -186,6 +186,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         madeBy: (nodeId: string) => lineage.madeBy(nodeId),
         agentsDeleteAnyView: () => identity.agentsDeleteAnyView,
         showView: (projectId: string, viewId: string, by: string) => projects.showView(projectId, viewId, by),
+        writeDiagram: (projectId: string, viewId: string, content: DiagramContent) => diagrams.write(projectId, viewId, content),
         /* A node that has never been shown has no session, and a canvas going down is not the place
            to fail over one, so an id neither manager knows is already ended as far as the verb goes. */
         endSession: async (kind: 'terminal' | 'chat', nodeId: string) => {

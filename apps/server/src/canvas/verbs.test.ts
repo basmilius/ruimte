@@ -5,6 +5,14 @@ import { join } from 'node:path';
 import {
     CANVAS_GRID,
     ContextSourceSchema,
+    DIAGRAM_SHAPES,
+    DiagramDirectionSchema,
+    DiagramEdgeSchema,
+    DiagramEdgeStyleSchema,
+    DiagramGroupSchema,
+    DiagramMetaSchema,
+    DiagramNodeSchema,
+    DrawingColorSchema,
     GROUP_HEADER,
     GROUP_PADDING,
     NODE_ACCENT_NAMES,
@@ -21,7 +29,10 @@ import { SESSION_VARIABLES } from '../config.ts';
 import { MAX_SCREEN_LINES } from '../context/context-store.ts';
 import { documentPathInFolder } from '../projects/project-files.ts';
 import { ProjectStore } from '../projects/project-store.ts';
+import { DiagramStore } from '../projects/diagram-store.ts';
+import type { SessionEvent } from '../sessions/manager.ts';
 import { AgentLineageStore } from '../agents/lineage.ts';
+import { DIAGRAM_EXAMPLE } from './diagram-verb.ts';
 import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
 import { CANVAS_PATH, handleCanvasRequest } from './canvas-route.ts';
 import { MAX_AGENT_DEPTH, MAX_OPENED_PER_CALLER, MAX_TEAM_DEPTH } from './depth.ts';
@@ -43,6 +54,8 @@ let folder: string;
 let outside: string;
 let worktree: string;
 let store: ProjectStore;
+let diagrams: DiagramStore;
+let diagramEvents: SessionEvent[];
 let projectId: string;
 let worktrees: string[];
 let installed: AgentKind[];
@@ -100,6 +113,10 @@ beforeEach(async () => {
     lineage = new AgentLineageStore(join(root, 'home'));
     await lineage.load();
     store = new ProjectStore(join(root, 'home'));
+    diagrams = new DiagramStore(store);
+    store.attachDiagrams(diagrams);
+    diagramEvents = [];
+    diagrams.subscribe('client-1', (event) => diagramEvents.push(event));
     // A client on its socket, which is what `open` asks the store to tell.
     store.subscribe('client-1', (event) => {
         if (event.event === 'project.showView') {
@@ -114,6 +131,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+    diagrams.closeAll();
     store.closeAll();
     await rm(root, { recursive: true, force: true });
 });
@@ -139,7 +157,8 @@ const host = (): CanvasHost => ({
     notify: async (notice) => {
         notified.push(notice);
         return delivery;
-    }
+    },
+    writeDiagram: (projectId, viewId, content) => diagrams.write(projectId, viewId, content)
 });
 
 const post = async (verb: string, argv: string[], token = 'term'): Promise<{ status: number; lines: string[] }> => {
@@ -1927,5 +1946,153 @@ describe('node delete', () => {
         expect(nodes).toContain(first);
         expect(nodes).toContain(second);
         expect(nodes).not.toContain(group);
+    });
+});
+
+describe('diagram', () => {
+    const doc = (overrides: Record<string, unknown> = {}): string =>
+        JSON.stringify({
+            meta: { title: 'Wire', direction: 'down' },
+            nodes: [
+                { id: 'web', label: 'Web' },
+                { id: 'api', label: 'API' }
+            ],
+            groups: [{ id: 'back', label: 'Back', wraps: ['api'] }],
+            edges: [{ from: 'web', to: 'api' }],
+            ...overrides
+        });
+
+    const write = (viewId: string, document: string, token = 'term'): Promise<{ status: number; lines: string[] }> =>
+        post('diagram', [viewId, `--document=${document}`], token);
+
+    const diagramOnDisk = async (viewId: string, base = folder): Promise<unknown> =>
+        readFile(join(base, '.ruimte', 'diagrams', `${viewId}.json`), 'utf8')
+            .then((text) => JSON.parse(text))
+            .catch(() => null);
+
+    test('help diagram names every field of the document and every value a closed field takes', async () => {
+        const { lines } = await post('help', ['diagram']);
+        const shapes = {
+            'meta.': DiagramMetaSchema.shape,
+            'nodes[].': DiagramNodeSchema.shape,
+            'groups[].': DiagramGroupSchema.shape,
+            'edges[].': DiagramEdgeSchema.shape
+        };
+        for (const [prefix, shape] of Object.entries(shapes)) {
+            for (const key of Object.keys(shape)) {
+                expect(lines.some((line) => line.startsWith(`field\t${prefix}${key}\t`))).toBe(true);
+            }
+        }
+        const text = lines.join('\n');
+        for (const value of [...DIAGRAM_SHAPES, ...DrawingColorSchema.options, ...DiagramEdgeStyleSchema.options, ...DiagramDirectionSchema.options]) {
+            expect(text).toInclude(value);
+        }
+        expect(lines.find((line) => line.startsWith('field\tnodes[].pos\t'))).toInclude('Only a person');
+        expect(text).toInclude('loses a position a person dragged it to');
+    });
+
+    test('the example in the help is a document the verb takes', async () => {
+        const id = await made('Flow', ['--kind', 'diagram']);
+        expect((await write(id, DIAGRAM_EXAMPLE)).lines).toEqual([`${id}\t1\t3\t1\t2`]);
+    });
+
+    test('a valid document lands on disk at rev + 1 in a released project, and every client hears it', async () => {
+        const id = await made('Flow', ['--kind', 'diagram']);
+        expect(await write(id, doc())).toEqual({ status: 200, lines: [`${id}\t1\t2\t1\t1`] });
+        expect(await diagramOnDisk(id)).toMatchObject({ version: 1, rev: 1, meta: { direction: 'down' }, nodes: [{ id: 'web' }, { id: 'api' }] });
+        expect((await write(id, doc({ edges: [] }))).lines).toEqual([`${id}\t2\t2\t1\t0`]);
+        expect(diagramEvents.map((event) => event.event)).toEqual(['diagram.changed', 'diagram.changed']);
+        expect(diagramEvents[1]).toMatchObject({ payload: { projectId, viewId: id, document: { rev: 2 } } });
+    });
+
+    test('a project a client had open and let go of is written all the same, and the client hears it', async () => {
+        const id = await made('Flow', ['--kind', 'diagram']);
+        await store.openProject({ projectId });
+        await diagrams.open(projectId, id);
+        store.release(projectId);
+        expect((await write(id, doc())).lines).toEqual([`${id}\t1\t2\t1\t1`]);
+        expect(diagramEvents).toHaveLength(1);
+        expect(diagramEvents[0]).toMatchObject({ event: 'diagram.changed', payload: { projectId, viewId: id, document: { rev: 1 } } });
+    });
+
+    test('version and rev read back from the file are ignored, since the rev is the daemon’s', async () => {
+        const id = await made('Flow', ['--kind', 'diagram']);
+        await write(id, doc());
+        const fromDisk = { ...((await diagramOnDisk(id)) as object), rev: 40 };
+        expect((await write(id, JSON.stringify(fromDisk))).lines).toEqual([`${id}\t2\t2\t1\t1`]);
+    });
+
+    test('an edge to an id that is no node is refused with that id, and nothing is written', async () => {
+        const id = await made('Flow', ['--kind', 'diagram']);
+        const { status, lines } = await write(id, doc({ edges: [{ from: 'web', to: 'ghost' }] }));
+        expect(status).toBe(422);
+        expect(lines[0]).toBe('refused\tdiagram-invalid\tThe edge from "web" to "ghost" names "ghost", which is not a node');
+        expect(await diagramOnDisk(id)).toBeNull();
+        expect(diagramEvents).toEqual([]);
+    });
+
+    test('a document that breaks the schema is refused by path, with the item it is about and what may go there', async () => {
+        const id = await made('Flow', ['--kind', 'diagram']);
+        const { lines } = await write(
+            id,
+            doc({
+                nodes: [
+                    { id: 'web', label: 'Web' },
+                    { id: 'api', lable: 'API', shape: 'hexagon' }
+                ],
+                edges: [{ from: 'web', to: 'api', style: 'wavy' }]
+            })
+        );
+        expect(lines[0]).toStartWith('refused\tbad-document\tnodes[1]');
+        const problems = lines.filter((line) => line.startsWith('problem\t'));
+        expect(problems).toContain(`problem\tnodes[1].shape\ttakes one of ${DIAGRAM_SHAPES.join(', ')} (node "api")`);
+        expect(problems).toContain('problem\tnodes[1].label\tis missing and needs a string (node "api")');
+        expect(problems).toContain('problem\tnodes[1]\thas no field lable (node "api")');
+        expect(problems.some((line) => line.startsWith('problem\tedges[0].style\t') && line.endsWith('(the edge from "web" to "api")'))).toBe(true);
+        expect(lines.at(-1)).toBe('detail\truimte-context help diagram');
+        for (const line of lines) {
+            expect(line).not.toInclude('Invalid');
+            expect(line).not.toInclude('expected');
+        }
+        expect(await diagramOnDisk(id)).toBeNull();
+    });
+
+    test('no document, one that is not JSON, one that is not an object and a --dry-run are each refused by name', async () => {
+        const id = await made('Flow', ['--kind', 'diagram']);
+        expect((await post('diagram', [id])).lines[0]).toStartWith('refused\tno-document\t');
+        expect((await write(id, '  \n')).lines[0]).toStartWith('refused\tno-document\t');
+        expect((await write(id, '{ nodes: [')).lines[0]).toStartWith('refused\tbad-json\tThe document is not JSON: ');
+        expect((await write(id, '[]')).lines[0]).toBe('refused\tbad-document\tdocument needs to be one JSON object with meta, nodes, groups and edges');
+        expect((await write(id, JSON.stringify({ nodes: [], groups: [], edges: [] }))).lines[0]).toBe(
+            'refused\tbad-document\tmeta is missing and needs an object'
+        );
+        expect((await post('diagram', [id, '--dry-run', `--document=${doc()}`])).lines[0]).toStartWith('refused\tno-dry-run\t');
+    });
+
+    test('a view that is no diagram, or a diagram of another project, is refused with the diagrams of this one', async () => {
+        expect((await write('sketch-1', doc())).lines).toEqual([
+            'refused\tnot-a-diagram\tsketch-1 is not a diagram view of this project',
+            'note\tThis project has no diagram view; ruimte-context view new <name> --kind diagram makes one'
+        ]);
+        const id = await made('Flow', ['--kind', 'diagram']);
+        expect((await write('sketch-1', doc())).lines.slice(1)).toEqual([`view\t${id}\tdiagram\tFlow`]);
+
+        const otherFolder = join(root, 'other');
+        await mkdir(otherFolder);
+        const other = await store.openProject({ folder: otherFolder });
+        await store.save(other.summary.projectId, other.document.rev, {
+            name: 'other',
+            color: '#654321',
+            views: [{ kind: 'diagram', id: 'theirs', name: 'Theirs' }]
+        });
+        store.release(other.summary.projectId);
+        expect((await write('theirs', doc())).lines[0]).toBe('refused\tnot-a-diagram\ttheirs is not a diagram view of this project');
+        expect(await diagramOnDisk('theirs', otherFolder)).toBeNull();
+    });
+
+    test('a session that is in no project of this machine writes nothing', async () => {
+        const id = await made('Flow', ['--kind', 'diagram']);
+        expect((await write(id, doc(), 'stray')).lines[0]).toStartWith('refused\tnot-in-project\t');
+        expect(await diagramOnDisk(id)).toBeNull();
     });
 });
