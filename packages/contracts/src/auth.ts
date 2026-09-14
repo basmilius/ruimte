@@ -32,7 +32,11 @@ export const EndpointInfoSchema = z.object({
     // False for a client that presented the local secret, which has no paired session.
     authenticated: z.boolean(),
     // The daemon's ed25519 public key, raw and base64url. Optional: a daemon from before this existed answers without one.
-    publicKey: z.string().optional()
+    publicKey: z.string().optional(),
+    /* The Pulsar broker this machine announces itself to, which a client dials to signal a direct
+       connection without reaching the machine's own address. Null when it has none, absent from a
+       daemon from before the broker. */
+    brokerUrl: z.string().nullish()
 });
 export type EndpointInfo = z.infer<typeof EndpointInfoSchema>;
 

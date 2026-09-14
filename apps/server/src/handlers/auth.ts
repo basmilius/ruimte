@@ -7,6 +7,8 @@ interface EndpointHost {
     /* The machine itself: its id, its key pair and what it calls itself right now. */
     identity: EndpointIdentity;
     version: string;
+    // The broker clients are told to dial, or null when this machine announces itself to none.
+    brokerUrl: string | null;
     // Mints a one-time pairing URL; what `ruimte pair` and the settings dialog hand to another machine.
     pairingUrl(): string;
     // Revoking must take effect now, not at the next connection, so the daemon drops that session's sockets here.
@@ -27,7 +29,8 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
         version: host.version,
         reachability: access?.reachability ?? 'loopback',
         authenticated: access?.sessionId !== null && access?.sessionId !== undefined,
-        publicKey: identity.publicKey
+        publicKey: identity.publicKey,
+        brokerUrl: host.brokerUrl
     });
 
     dispatcher.register('endpoint.info', (_payload, client) => info(client.access));

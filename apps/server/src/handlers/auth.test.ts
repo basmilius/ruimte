@@ -46,6 +46,7 @@ beforeEach(async () => {
     registerAuthHandlers(dispatcher, store, {
         identity,
         version: '0.0.0',
+        brokerUrl: null,
         pairingUrl: () => `http://box:4210/pair#${store.issuePairingToken()}${minted++}`,
         disconnect: (sessionId) => disconnected.push(sessionId)
     });

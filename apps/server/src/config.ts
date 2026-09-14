@@ -24,6 +24,10 @@ export interface ServerConfig {
     directPorts: [number, number] | null;
     // Addresses announced as candidates on top of the interfaces, such as the one a container is published on.
     directHostAddresses: string[];
+    // The Pulsar broker this machine announces itself to, so a client can signal a direct connection without its address; null is off.
+    broker: string | null;
+    // The broker URL clients are told to dial, when it is not the one this machine dials (a container reaching the host by another name).
+    brokerAdvertise: string | null;
     // `pair` asks the running daemon for a pairing URL; `context` is the agent-side CLI (`ruimte-context`).
     command: 'serve' | 'pair' | 'context';
     // What follows the command, for `context`.
@@ -59,6 +63,24 @@ export const parsePortRange = (value: string): [number, number] => {
     return [first, last];
 };
 
+/* A `ws:` or `wss:` URL, or null for nothing at all; an empty value is nothing, so compose can pass an unset variable through. */
+export const parseBrokerUrl = (value: string | undefined, flag: string): string | null => {
+    const trimmed = value?.trim() ?? '';
+    if (trimmed === '') {
+        return null;
+    }
+    let url: URL;
+    try {
+        url = new URL(trimmed);
+    } catch {
+        throw new Error(`Invalid ${flag}: ${trimmed}`);
+    }
+    if (url.protocol !== 'ws:' && url.protocol !== 'wss:') {
+        throw new Error(`Invalid ${flag}: ${trimmed} (a broker URL starts with ws:// or wss://)`);
+    }
+    return trimmed;
+};
+
 export const parseServerArgs = (argv: string[], env: Record<string, string | undefined> = process.env): ServerConfig => {
     // Everything after `context` belongs to the agent's CLI (`node note --text ...`), whose flags the daemon parses, not this.
     const cli = argv[0] === 'context';
@@ -76,7 +98,9 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
             stun: { type: 'string', multiple: true, default: [] },
             'no-stun': { type: 'boolean', default: false },
             'direct-ports': { type: 'string' },
-            'direct-host-address': { type: 'string', multiple: true, default: [] }
+            'direct-host-address': { type: 'string', multiple: true, default: [] },
+            broker: { type: 'string' },
+            'broker-advertise': { type: 'string' }
         },
         strict: true,
         allowPositionals: true
@@ -104,6 +128,8 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
         stun: values['no-stun'] ? [] : values.stun.length > 0 ? values.stun : [DEFAULT_STUN_SERVER],
         directPorts: values['direct-ports'] === undefined ? null : parsePortRange(values['direct-ports']),
         directHostAddresses: values['direct-host-address'],
+        broker: parseBrokerUrl(values.broker ?? env.RUIMTE_BROKER_URL, '--broker'),
+        brokerAdvertise: parseBrokerUrl(values['broker-advertise'] ?? env.RUIMTE_BROKER_ADVERTISE_URL, '--broker-advertise'),
         command,
         args: cli ? argv.slice(1) : positionals.slice(1)
     };

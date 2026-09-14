@@ -54,6 +54,20 @@ describe('parseServerArgs', () => {
         });
     });
 
+    test('a broker is off by default, and read from the flag or the environment', () => {
+        expect(parseServerArgs([], {})).toMatchObject({ broker: null, brokerAdvertise: null });
+        // An unset compose variable arrives as an empty string, which is still off.
+        expect(parseServerArgs([], { RUIMTE_BROKER_URL: '', RUIMTE_BROKER_ADVERTISE_URL: '' })).toMatchObject({ broker: null, brokerAdvertise: null });
+        expect(
+            parseServerArgs(['--broker', 'wss://broker.example.com'], {
+                RUIMTE_BROKER_URL: 'ws://ignored:1',
+                RUIMTE_BROKER_ADVERTISE_URL: 'ws://127.0.0.1:4400'
+            })
+        ).toMatchObject({ broker: 'wss://broker.example.com', brokerAdvertise: 'ws://127.0.0.1:4400' });
+        expect(() => parseServerArgs(['--broker', 'https://broker.example.com'], {})).toThrow('Invalid --broker');
+        expect(() => parseServerArgs([], { RUIMTE_BROKER_ADVERTISE_URL: 'not a url' })).toThrow('Invalid --broker-advertise');
+    });
+
     test('rejects a port that is not a number', () => {
         expect(() => parseServerArgs(['--port', 'abc'], {})).toThrow('Invalid --port');
     });

@@ -9,6 +9,7 @@ import { PendingPromptStore } from './agents/pending-prompts.ts';
 import { connectionOpener, socketChannel, type ClientChannel, type OpenConnection, type SocketChannel } from './connection.ts';
 import { authenticateChannel } from './pulsar/channel-auth.ts';
 import { AUTHENTICATED_FRAME_CHARS } from './pulsar/data-channel.ts';
+import { BrokerRelay } from './pulsar/broker-relay.ts';
 import { DirectPeers } from './pulsar/peers.ts';
 import { registerDirectHandlers } from './handlers/direct.ts';
 import { suggestChatTitle } from './chat/chat-title.ts';
@@ -93,7 +94,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const identity = await readOrCreateEndpointIdentity(config.home, config.label);
     const auth = new AuthStore(config.home);
     const handshake = new Handshake(auth, identity);
-    const relay: Relay = new NoRelay();
+    // What a client is told to dial; the machine itself may reach the same broker under another name.
+    const brokerUrl = config.brokerAdvertise ?? config.broker;
     const access = { allowedOrigins: config.allowedOrigins, localSecret: await readOrCreateLocalSecret(config.home), tickets: handshake };
 
     const snapshots = new SnapshotStore(config.home);
@@ -235,6 +237,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerAuthHandlers(dispatcher, auth, {
         identity,
         version: VERSION,
+        brokerUrl,
         pairingUrl: () => pairingUrl(config.host, server.port ?? config.port, auth.issuePairingToken()),
         disconnect: (sessionId) => {
             handshake.revoke(sessionId);
@@ -277,6 +280,17 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         }
     });
     registerDirectHandlers(dispatcher, peers);
+    // The broker is the second way a signal reaches `peers`, next to `direct.signal` on a socket.
+    const relay: Relay =
+        config.broker === null
+            ? new NoRelay()
+            : new BrokerRelay({
+                  url: config.broker,
+                  publicKey: identity.publicKey,
+                  sign: (message) => identity.sign(message),
+                  isPaired: async (publicKey) => (await auth.sessionForPublicKey(publicKey)) !== null,
+                  receive: (envelope, reply) => peers.receive(envelope, reply)
+              });
 
     if (config.installHooks) {
         // Only the CLIs the daemon has a normalizer for are listed; the others run without status.
@@ -323,7 +337,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         version: VERSION,
         reachability,
         authenticated,
-        publicKey: identity.publicKey
+        publicKey: identity.publicKey,
+        brokerUrl
     });
 
     const server = Bun.serve<ClientAccess>({

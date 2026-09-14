@@ -10,6 +10,9 @@ x-daemon: &daemon
   image: ruimte-remote
   init: true
   stop_grace_period: 5s
+  # A broker on this machine is reachable from the container under this name, on Linux as well.
+  extra_hosts:
+    - 'host.docker.internal:host-gateway'
   # `docker:up` waits on this, so the tests can talk to the daemon the moment it returns.
   healthcheck:
     # Concatenated rather than interpolated: compose reads a `${...}` in here as its own.
@@ -33,6 +36,10 @@ services:
     command: ['--no-stun', '--direct-ports', '43100-43109', '--direct-host-address', '127.0.0.1']
     environment:
       RUIMTE_LABEL: docker-linux
+      # Off unless set when compose runs (apps/pulsar-broker/README.md): the broker this container
+      # dials, and the address a client on this machine is told to dial for the same broker.
+      RUIMTE_BROKER_URL: ${RUIMTE_BROKER_URL:-}
+      RUIMTE_BROKER_ADVERTISE_URL: ${RUIMTE_BROKER_ADVERTISE_URL:-}
     # A named volume, not a bind mount: the file system has to be the container's own, which is
     # what makes paths, permissions and checkouts here not this machine's.
     volumes:
@@ -54,6 +61,10 @@ services:
     environment:
       RUIMTE_LABEL: docker-linux
       RUIMTE_PORT: '4320'
+      # The suite starts a broker of its own on this port on the host, after the container is up;
+      # the daemon keeps retrying until it is there.
+      RUIMTE_BROKER_URL: ws://host.docker.internal:4420
+      RUIMTE_BROKER_ADVERTISE_URL: ws://127.0.0.1:4420
       # No volumes at all, and a wipe on every start, so the restart halfway through the suite
       # lands on a fresh machine as well.
       RUIMTE_FRESH_STATE: '1'
