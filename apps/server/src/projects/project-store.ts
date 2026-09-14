@@ -101,6 +101,9 @@ export interface ProjectMutation<T> {
        the same lock a write takes, so what it answers is what the write would have done. */
     content: ProjectContent | null;
     result: T;
+    /* Runs once the document is on disk and before `project.changed` goes out, so what a new node
+       needs beside the file exists before a client mounts it, and never for a change that was refused. */
+    landed?: () => Promise<void>;
 }
 
 interface OpenProject {
@@ -400,6 +403,7 @@ export class ProjectStore {
             }
             const daemonSide = fromPortable(document, entry.folder);
             this.index.set(projectId, entry.folder, daemonSide);
+            await mutation.landed?.();
             // Every sink, open or not: a client that released the project may still have it on screen in another workspace.
             this.emit({ event: 'project.changed', payload: { projectId, document: daemonSide } });
             return mutation.result;

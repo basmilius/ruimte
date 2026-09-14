@@ -191,13 +191,13 @@ export const agentVerb = defineVerb({
             const edge: ProjectEdge | null = caller ? { id: newId('edge', content, [id]), from: caller.id, to: id, label: 'context' } : null;
             const nodes = [...canvas.nodes.map((candidate) => (group && candidate.id === group.id ? grownGroup(candidate, inGroup, id) : candidate)), node];
 
-            // Written under the project's own lock, before the node is on disk, so a client that
-            // reacts to project.changed can never mount the node while its depth is still coming.
-            await call.host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: call.caller, depth, agent: true });
-            if (prompt !== null) {
-                await call.host.holdPrompt(place.projectId, id, prompt);
-            }
             return {
+                landed: async () => {
+                    await call.host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: call.caller, depth, agent: true });
+                    if (prompt !== null) {
+                        await call.host.holdPrompt(place.projectId, id, prompt);
+                    }
+                },
                 content: {
                     ...content,
                     views: content.views.map((view) =>

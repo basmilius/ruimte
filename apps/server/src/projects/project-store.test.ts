@@ -552,6 +552,26 @@ describe('mutate', () => {
         expect(changed).toEqual([]);
     });
 
+    test('landed runs after the write and before the event, and never for a refused change', async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        store.release(projectId);
+        changed = [];
+        const seen: Array<{ rev: number; events: number }> = [];
+        const landed = async () => {
+            const onDisk = JSON.parse(await readFile(documentPathInFolder(folder), 'utf8')) as ProjectDocument;
+            seen.push({ rev: onDisk.rev, events: changed.length });
+        };
+
+        await store.mutate(projectId, (current) => ({ ...addNote('note-1')(current), landed }));
+        expect(seen).toEqual([{ rev: opened.document.rev + 1, events: 0 }]);
+        expect(changed).toHaveLength(1);
+
+        await expect(store.mutate(projectId, (current) => ({ ...addNote('note-1')(current), landed }))).rejects.toMatchObject({ code: 'project-invalid' });
+        await store.mutate(projectId, () => ({ content: null, result: null, landed }));
+        expect(seen).toHaveLength(1);
+    });
+
     test('refuses a project whose file is gone or unknown', async () => {
         const opened = await store.openProject({ folder });
         store.release(opened.summary.projectId);

@@ -195,6 +195,7 @@ export const teamVerb = defineVerb({
             const nodes: ProjectNode[] = [group];
             const edges: ProjectEdge[] = [];
             const lines = [[groupId, 'group', field(label), canvas.id, '-', '-'].join('\t')];
+            const made: Array<{ id: string; prompt: string }> = [];
 
             for (const [index, role] of roles.entries()) {
                 const chat = kindOf(role) === 'chat';
@@ -215,14 +216,17 @@ export const teamVerb = defineVerb({
                     edgeId = mint('edge');
                     edges.push({ id: edgeId, from: caller.id, to: id, label: 'context' });
                 }
-                // Written under the project's own lock, before the nodes are on disk, so a client that
-                // reacts to project.changed can never mount one while its prompt or its depth is still coming.
-                await call.host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: call.caller, depth, agent: true });
-                await call.host.holdPrompt(place.projectId, id, role.prompt);
+                made.push({ id, prompt: role.prompt });
                 lines.push([id, chat ? 'chat' : 'terminal', field(role.title), canvas.id, role.provider, edgeId].join('\t'));
             }
 
             return {
+                landed: async () => {
+                    for (const { id, prompt } of made) {
+                        await call.host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: call.caller, depth, agent: true });
+                        await call.host.holdPrompt(place.projectId, id, prompt);
+                    }
+                },
                 content: {
                     ...content,
                     views: content.views.map((view) =>

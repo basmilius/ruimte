@@ -66,6 +66,17 @@ let ended: string[];
 let watching: Array<{ projectId: string; viewId: string; by: string }>;
 let notified: Array<Omit<Notice, 'createdAt'>>;
 let delivery: NoticeDelivery;
+let breakWrites: boolean;
+
+/* A change the store's own check refuses after the verb had its say: `note-1` a second time, on the board. */
+const withRepeatedId = (current: ProjectContent): ProjectContent => ({
+    ...current,
+    views: current.views.map((view) =>
+        view.id === 'board' && view.kind === 'canvas'
+            ? { ...view, nodes: [...view.nodes, { id: 'note-1', kind: 'note', title: 'Twin', x: 0, y: 0, w: 320, h: 240 }] }
+            : view
+    )
+});
 
 const TOKENS: Record<string, string> = { term: 'term-1', chat: 'chat-1', stray: 'nobody' };
 
@@ -103,6 +114,7 @@ beforeEach(async () => {
     await writeFile(join(folder, 'src', 'main.ts'), 'export {};\n');
     await writeFile(join(outside, 'notes.md'), '# notes\n');
     worktrees = [];
+    breakWrites = false;
     installed = ['claude', 'codex', 'gemini', 'copilot'];
     held = [];
     deleteAnyView = false;
@@ -139,7 +151,11 @@ afterEach(async () => {
 const host = (): CanvasHost => ({
     locate: (id) => store.index.locate(id),
     read: (id) => store.read(id),
-    mutate: store.mutate.bind(store),
+    mutate: (id, apply) =>
+        store.mutate(id, async (current) => {
+            const mutation = await apply(current);
+            return breakWrites && mutation.content ? { ...mutation, content: withRepeatedId(mutation.content) } : mutation;
+        }),
     worktreePaths: async () => worktrees,
     installedAgents: async () => installed,
     holdPrompt: async (projectId, nodeId, prompt) => {
@@ -937,9 +953,35 @@ describe('agent', () => {
         const node = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === lines[0]!.split('\t')[0])!;
         expect(node.cwd).toBe('./src');
     });
+
+    test('a write the store refuses leaves no held prompt and no lineage, and neither does a dry run', async () => {
+        breakWrites = true;
+        const { status, lines } = await post('agent', ['claude', '--prompt', 'say hello']);
+        expect(status).toBe(422);
+        expect(lines[0]).toStartWith('refused\tproject-invalid\t');
+        breakWrites = false;
+        expect((await post('agent', ['claude', '--prompt', 'say hello', '--dry-run'])).status).toBe(200);
+        expect((await onDisk()).rev).toBe(1);
+        expect(held).toEqual([]);
+        expect(lineage.openedCount('term-1')).toBe(0);
+    });
 });
 
 describe('team', () => {
+    test('a write the store refuses leaves no held prompt and no lineage for any role', async () => {
+        breakWrites = true;
+        const roles = JSON.stringify([
+            { provider: 'claude', title: 'One', prompt: 'a' },
+            { provider: 'codex', title: 'Two', prompt: 'b' }
+        ]);
+        const { status, lines } = await post('team', ['--label', 'Crew', '--roles', roles]);
+        expect(status).toBe(422);
+        expect(lines[0]).toStartWith('refused\tproject-invalid\t');
+        expect((await onDisk()).rev).toBe(1);
+        expect(held).toEqual([]);
+        expect(lineage.openedCount('term-1')).toBe(0);
+    });
+
     const THREE = [
         { title: 'Lexer', prompt: 'fix the tokenizer', provider: 'claude' },
         { title: 'Parser', prompt: 'fix the parser', provider: 'codex', chat: true },
