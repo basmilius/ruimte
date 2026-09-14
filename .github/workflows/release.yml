@@ -1,7 +1,8 @@
 name: Release
 
-# A tag `v1.2.3` builds the desktop app for macOS and uploads it to a draft GitHub release with the
-# files electron-updater reads (`latest-mac.yml`). Publish the draft to ship.
+# A tag `v1.2.3` builds the desktop app for macOS and Linux and uploads it to a draft GitHub release
+# with the files electron-updater reads (`latest-mac.yml`, `latest-linux.yml`,
+# `latest-linux-arm64.yml`). Publish the draft to ship.
 on:
   push:
     tags:
@@ -11,7 +12,22 @@ permissions:
   contents: write
 
 jobs:
+  # Two artifacts that finish at once both find no release and both create one. One of the races
+  # loses, and its upload with it: v0.0.1 landed without the x64 zip that `latest-mac.yml` names.
+  # With three builds in parallel the draft has to exist before any of them starts.
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - name: The draft release, before anything uploads
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 && exit 0
+          gh release create "$GITHUB_REF_NAME" --draft --title "${GITHUB_REF_NAME#v}" --notes ''
+
   build:
+    needs: draft
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -58,14 +74,6 @@ jobs:
           rm -f "$RUNNER_TEMP/cert.p12"
           security find-identity -v -p codesigning "$keychain"
           echo "RUIMTE_SIGN=1" >> "$GITHUB_ENV"
-      # Two artifacts that finish at once both find no release and both create one. One of the races
-      # loses, and its upload with it: v0.0.1 landed without the x64 zip that `latest-mac.yml` names.
-      - name: The draft release, before anything uploads
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 && exit 0
-          gh release create "$GITHUB_REF_NAME" --draft --title "$RUIMTE_VERSION" --notes ''
       - name: Build and upload
         working-directory: apps/desktop
         env:
@@ -85,3 +93,41 @@ jobs:
         run: |
           rm -f "$RUNNER_TEMP/AuthKey.p8" "$RUNNER_TEMP/cert.p12"
           security delete-keychain "$RUNNER_TEMP/build.keychain-db" || true
+
+  # The check and the tests run in the macOS job on the same commit; a failure there leaves a draft
+  # nobody publishes, so this job only builds.
+  linux:
+    needs: draft
+    strategy:
+      matrix:
+        include:
+          # The runner sets the glibc floor for the daemon and Electron, and 24.04 would lock out
+          # Debian 12 and Ubuntu 22.04.
+          - arch: x64
+            runner: ubuntu-22.04
+          - arch: arm64
+            runner: ubuntu-22.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      # fpm builds the rpm through rpmbuild, which the runner does not carry.
+      - run: sudo apt-get update && sudo apt-get install -y rpm
+      - run: bun install --frozen-lockfile
+      - name: Version from the tag
+        run: echo "RUIMTE_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+      - run: bun run --cwd apps/client build
+      - name: Compile the daemon
+        run: bun run --cwd apps/server compile -- --os linux --arch ${{ matrix.arch }}
+      # Every target goes up, AppImage included: the feed an install updates from has to name the
+      # format it was installed from.
+      - name: Build and upload
+        working-directory: apps/desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bun run build:main
+          bun x electron-builder --linux --${{ matrix.arch }} --publish always \
+            -c.extraMetadata.version="$RUIMTE_VERSION"

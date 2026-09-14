@@ -40,61 +40,44 @@ Do not set `linux.icon`. Left alone, electron-builder generates the whole set fr
 `build/icon.png` and installs 16 through 512 in `hicolor`. Pointed at that same file it installs
 one 1024x1024 icon and nothing else, which is worse.
 
+## Built by the release workflow
+
+The `linux` job in `.github/workflows/release.yml` builds x64 on `ubuntu-22.04` and arm64 on
+`ubuntu-22.04-arm`, and uploads the AppImage, the deb, the rpm and each arch's feed
+(`latest-linux.yml`, `latest-linux-arm64.yml`) into the draft.
+
+- **22.04, not `ubuntu-latest`.** The runner sets the glibc floor for both the Bun daemon and
+  Electron. 24.04 (glibc 2.39) locks out Debian 12 and Ubuntu 22.04.
+- **Every format.** A feed has to carry the format someone installed from, or their update finds
+  no file, so the job that publishes the feed builds all three targets.
+- **`rpm` from apt.** The rpm goes through fpm, which needs `rpmbuild` on the runner. The default
+  rpm dependencies are the right ones (`gtk3`, `libnotify`, `nss`, `libXScrnSaver`,
+  `(libXtst or libXtst6)`, `xdg-utils`, `at-spi2-core`, `(libuuid or libuuid1)`), so no
+  `rpm.depends` block is needed.
+- **A draft job of its own.** Three builds run in parallel, so the draft is created before any of
+  them starts rather than inside the macOS job.
+- **No check and no tests.** The macOS job runs both on the same commit, and `bun test` has never
+  run on Linux.
+
 ## To build
 
-1. **A Linux job in `.github/workflows/release.yml`.** Today the workflow is one `macos-latest`
-   job that compiles the daemon `--os mac --arch arm64` and runs `electron-builder --mac --arm64`.
-   Nothing builds Linux. The draft release is created before any upload already, so a second job
-   needs no extra guard.
-
-   ```yaml
-   linux:
-     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-22.04-arm' || 'ubuntu-22.04' }}
-     strategy:
-       matrix:
-         arch: [x64, arm64]
-     steps:
-       # checkout, setup-bun, install, RUIMTE_VERSION, check, test, client build
-       - run: sudo apt-get update && sudo apt-get install -y rpm
-       - run: bun run --cwd apps/server compile -- --os linux --arch ${{ matrix.arch }}
-       - working-directory: apps/desktop
-         env:
-           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-         run: |
-           bun run build:main
-           bun x electron-builder --linux --${{ matrix.arch }} --publish always \
-             -c.extraMetadata.version="$RUIMTE_VERSION"
-   ```
-
-   The rpm goes through fpm, which needs `rpmbuild` on the runner, hence the `apt-get`. A Fedora
-   box has it already. The default rpm dependencies are the right ones (`gtk3`, `libnotify`,
-   `nss`, `libXScrnSaver`, `(libXtst or libXtst6)`, `xdg-utils`, `at-spi2-core`,
-   `(libuuid or libuuid1)`), so no `rpm.depends` block is needed.
-
-2. **Pin the runner to 22.04.** The runner sets the glibc floor for both the Bun daemon and
-   Electron. `ubuntu-latest` is 24.04 (glibc 2.39), which locks out Debian 12 and Ubuntu 22.04.
-
-3. **A Linux line in `.github/workflows/ci.yml`.** It runs on `macos-latest` only, so nothing
+1. **A Linux line in `.github/workflows/ci.yml`.** It runs on `macos-latest` only, so nothing
    catches a Linux regression before a tag.
-
-4. **Publish every format, for the updater's sake.** Each arch's feed (`latest-linux.yml`, and
-   `latest-linux-arm64.yml` for the other one) has to carry the format someone installed from, or
-   their update finds no file. Build all three targets in the job that publishes the feed.
 
 ## To support
 
-5. **Trim the application menu.** `Menu.setApplicationMenu` uses `appMenu, editMenu, viewMenu,
+2. **Trim the application menu.** `Menu.setApplicationMenu` uses `appMenu, editMenu, viewMenu,
    windowMenu`. On Linux `appMenu` does produce About and Quit, but it also produces Services,
    Hide, Hide Others and Show All, four rows that do nothing off macOS. A template per platform.
 
-6. **Fonts with a Linux face.** `--font-sans` and `--font-mono` in `apps/client/src/styles.css`
+3. **Fonts with a Linux face.** `--font-sans` and `--font-mono` in `apps/client/src/styles.css`
    name Apple, Microsoft and web faces only, so both fall through to the generic on a Linux
    desktop. Cantarell, Ubuntu and Noto Sans for the first, DejaVu Sans Mono, Liberation Mono and
    Noto Sans Mono for the second. `DEFAULT_FONT_STACKS` in `packages/drawing/src/text.ts` has the
    same gap, and its `hand` stack (`Kalam, "Comic Sans MS", cursive`) names nothing a stock Linux
    box ships, so a hand-written drawing falls back to whatever `cursive` resolves to.
 
-7. **Wayland.** The app runs under XWayland by default, which is blurry on fractional scaling.
+4. **Wayland.** The app runs under XWayland by default, which is blurry on fractional scaling.
    Whether to pass `--ozone-platform-hint=auto` is a choice, not a bug.
 
 ## What the first build proved
@@ -147,7 +130,4 @@ if it were committed, so do not commit it. Electron's binary also had to be fetc
 
 ## Stale claims to correct
 
-- `site/index.html` offers a "Download for Linux" button and says "Linux ships as AppImage and deb",
-  pointing at a releases page with no Linux artifact. The caption wants the rpm in it too.
-- `docs/RELEASE.md` says the Linux targets exist but no workflow asks for them, and `README.md` says
-  a tag builds macOS. Both need the opposite sentence when the job lands.
+- `site/index.html` says "Linux ships as AppImage and deb" and leaves the rpm out.
