@@ -345,6 +345,24 @@ describe('DiagramClient', () => {
         expect(written.content.nodes.map((entry) => entry.id)).toEqual(['a', 'b', 'c']);
     });
 
+    test('an edit made while the link is down waits, and a resume opens the diagram again and writes it', async () => {
+        useDocument.getState().setActiveView('view-1');
+        await tick();
+        transport.status = 'closed';
+        transport.reconnect();
+        addNode(diagram(), node('b'));
+        await tick(20);
+        expect(transport.of('diagram.save')).toHaveLength(0);
+        expect(diagram().dirty).toBe(true);
+
+        transport.status = 'open';
+        await client.resume();
+        await tick(20);
+        expect(transport.of('diagram.open')).toHaveLength(2);
+        expect(transport.of('diagram.save')).toHaveLength(1);
+        expect(diagram().dirty).toBe(false);
+    });
+
     test('the project being read again after a reconnect opens the diagram on the daemon', async () => {
         useDocument.getState().setActiveView('view-1');
         await tick();

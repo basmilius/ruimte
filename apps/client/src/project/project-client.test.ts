@@ -132,6 +132,14 @@ class FakeTransport implements Transport {
     of(type: RequestType): Call[] {
         return this.calls.filter((call) => call.type === type);
     }
+
+    /* The link dropping or coming back, the way the pool's transport reports it. */
+    setStatus(status: TransportStatus): void {
+        this.status = status;
+        for (const handler of this.statusHandlers) {
+            handler(status);
+        }
+    }
 }
 
 const makeSink = () => {
@@ -607,6 +615,68 @@ describe('ProjectClient', () => {
 });
 
 describe('a project with a drawing view', () => {
+    test('a link that drops and comes back leaves the project, its editors and the grid where they were', async () => {
+        const { transport, sink, state, stores, dispose } = setup();
+        await tick();
+        const editor = stores.canvases.peek('main');
+        const layout = stores.document.getState().layout;
+        let switched = false;
+        const setSwitching = sink.setSwitching;
+        sink.setSwitching = (switching) => {
+            switched ||= switching;
+            setSwitching(switching);
+        };
+        expect(editor).toBeDefined();
+
+        transport.setStatus('closed');
+        await tick();
+        expect(state.current?.projectId).toBe('p1');
+        transport.setStatus('connecting');
+        transport.setStatus('open');
+        await tick(10);
+
+        // Asked again, since a restarted daemon holds nothing open, but nothing on screen was loaded again.
+        expect(transport.of('project.open')).toHaveLength(2);
+        expect(stores.canvases.peek('main')).toBe(editor);
+        expect(stores.document.getState().layout).toBe(layout);
+        expect(switched).toBe(false);
+        expect(state.current?.projectId).toBe('p1');
+        expect(state.rev).toBe(3);
+        dispose();
+    });
+
+    test('an edit made while the link is down waits for it, and goes out against the loaded rev once it is back', async () => {
+        const { transport, state, dispose } = setup();
+        await tick();
+        transport.setStatus('closed');
+        focusedCanvas().getState().addNode('terminal', { x: 0, y: 0 });
+        await tick(10);
+        expect(transport.of('project.save')).toHaveLength(0);
+        expect(transport.of('project.save-local')).toHaveLength(0);
+        expect(state.dirty).toBe(true);
+
+        transport.setStatus('open');
+        await tick(10);
+        expect(transport.of('project.save')).toHaveLength(1);
+        expect(transport.of('project.save')[0]?.payload).toMatchObject({ baseRev: 3 });
+        expect(state.dirty).toBe(false);
+        expect(state.rev).toBe(4);
+        dispose();
+    });
+
+    test('a file that moved on while the link was down comes in the way a change from disk does', async () => {
+        const { transport, state, dispose } = setup();
+        await tick();
+        transport.setStatus('closed');
+        transport.rev = 7;
+        transport.views = [canvasView('main'), canvasView('second')];
+        transport.setStatus('open');
+        await tick(10);
+        expect(state.rev).toBe(7);
+        expect(useDocument.getState().views.map((view) => view.id)).toEqual(['main', 'second']);
+        dispose();
+    });
+
     test('the view survives a load and the save that follows it', async () => {
         const { transport, dispose } = setup();
         transport.views = [canvasView('main'), { kind: 'drawing', id: 'view-1', name: 'Sketch' }];

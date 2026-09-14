@@ -293,6 +293,24 @@ describe('DrawingClient', () => {
         expect(written.content.elements.map((element) => element.id)).toEqual(['a', 'b', 'c']);
     });
 
+    test('an edit made while the link is down waits, and a resume opens the drawing again and writes it', async () => {
+        useDocument.getState().setActiveView('view-1');
+        await tick();
+        transport.status = 'closed';
+        transport.reconnect();
+        drawing().addElement(rect('b', 200));
+        await tick(20);
+        expect(transport.of('drawing.save')).toHaveLength(0);
+        expect(drawing().dirty).toBe(true);
+
+        transport.status = 'open';
+        await client.resume();
+        await tick(20);
+        expect(transport.of('drawing.open')).toHaveLength(2);
+        expect(transport.of('drawing.save')).toHaveLength(1);
+        expect(drawing().dirty).toBe(false);
+    });
+
     test('the project being read again after a reconnect opens the drawing on the daemon', async () => {
         useDocument.getState().setActiveView('view-1');
         await tick();

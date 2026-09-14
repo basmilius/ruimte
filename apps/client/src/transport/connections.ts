@@ -162,6 +162,9 @@ const connect = (id: string, stores: WorkspaceStores, endpoint: Endpoint): Conne
             await Promise.all([drawings.flush(), diagrams.flush()]);
         },
         endSessions: endProjectSessions,
+        afterResume: async (): Promise<void> => {
+            await Promise.all([drawings.resume(), diagrams.resume()]);
+        },
         endpointId
     });
     const connection: Connection = {

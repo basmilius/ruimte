@@ -143,6 +143,18 @@ export class DiagramClient {
         }
     }
 
+    /*
+     * The link came back while the project stayed on screen. The daemon may have forgotten every
+     * diagram while it was gone, and an edit made meanwhile is still waiting to be written.
+     */
+    async resume(): Promise<void> {
+        if (!this.reconnecting) {
+            return;
+        }
+        this.reconnecting = false;
+        await Promise.all([...this.open.values()].map((diagram) => this.reopen(diagram)));
+    }
+
     /* Copies the graph of one diagram view into another, which is what duplicating a view is. */
     async copy(from: string, to: string): Promise<void> {
         const projectId = this.projects.getState().current?.projectId;
@@ -359,7 +371,8 @@ export class DiagramClient {
             return diagram.saving.then(() => (diagram.store.getState().dirty ? this.save(diagram) : undefined));
         }
         const state = diagram.store.getState();
-        if (state.conflict) {
+        // A link that is down keeps the edit dirty for `resume` to write, rather than a request that can only fail.
+        if (state.conflict || this.transport.status !== 'open') {
             return Promise.resolve();
         }
         state.setDirty(false);

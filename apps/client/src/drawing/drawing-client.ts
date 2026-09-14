@@ -143,6 +143,18 @@ export class DrawingClient {
         }
     }
 
+    /*
+     * The link came back while the project stayed on screen. The daemon may have forgotten every
+     * drawing while it was gone, and an edit made meanwhile is still waiting to be written.
+     */
+    async resume(): Promise<void> {
+        if (!this.reconnecting) {
+            return;
+        }
+        this.reconnecting = false;
+        await Promise.all([...this.open.values()].map((drawing) => this.reopen(drawing)));
+    }
+
     /* Copies the elements of one drawing view into another, which is what duplicating a view is. */
     async copy(from: string, to: string): Promise<void> {
         const projectId = this.projects.getState().current?.projectId;
@@ -357,7 +369,8 @@ export class DrawingClient {
             return drawing.saving.then(() => (drawing.store.getState().dirty ? this.save(drawing) : undefined));
         }
         const state = drawing.store.getState();
-        if (state.conflict) {
+        // A link that is down keeps the edit dirty for `resume` to write, rather than a request that can only fail.
+        if (state.conflict || this.transport.status !== 'open') {
             return Promise.resolve();
         }
         state.setDirty(false);

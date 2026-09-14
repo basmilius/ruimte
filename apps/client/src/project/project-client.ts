@@ -91,6 +91,8 @@ interface ProjectClientOptions {
      * project reaches this: switching away releases the project and leaves its sessions running.
      */
     endSessions?: (endpointId: string, views: readonly ProjectView[]) => void;
+    /* Runs once the project is open on the daemon again after the link came back, so the drawings on screen can follow. */
+    afterResume?: () => Promise<void>;
     /* Left out in tests, where there is no window to listen on. */
     window?: Pick<Window, 'addEventListener' | 'removeEventListener'> | null;
 }
@@ -120,6 +122,7 @@ export class ProjectClient {
     private readonly localDelayMs: number;
     private readonly beforeSwitch: () => Promise<void>;
     private readonly endSessions: (endpointId: string, views: readonly ProjectView[]) => void;
+    private readonly afterResume: () => Promise<void>;
     private readonly unsubscribe: Array<() => void> = [];
     private saveTimer: ReturnType<typeof setTimeout> | null = null;
     private localTimer: ReturnType<typeof setTimeout> | null = null;
@@ -149,6 +152,7 @@ export class ProjectClient {
         this.localDelayMs = options.localDelayMs ?? 1000;
         this.beforeSwitch = options.beforeSwitch ?? (() => Promise.resolve());
         this.endSessions = options.endSessions ?? ((): void => undefined);
+        this.afterResume = options.afterResume ?? (() => Promise.resolve());
         this.unsubscribe.push(
             transport.on('project.changed', ({ projectId, document }) => this.onChanged(projectId, document)),
             transport.on('project.summary', ({ summary }) => this.applySummary(summary)),
@@ -462,7 +466,9 @@ export class ProjectClient {
         const local = this.localOfScreen();
         // This client's own copy first: the machine only has to be where a client that never saw the project starts.
         writeClientLocal(this.storage, this.endpointId(), current.projectId, local);
-        void this.transport.request('project.save-local', { projectId: current.projectId, local }).catch(() => undefined);
+        if (this.transport.status === 'open') {
+            void this.transport.request('project.save-local', { projectId: current.projectId, local }).catch(() => undefined);
+        }
     }
 
     /* What this client would remember about the project right now: the panels, and every view's camera. */
@@ -476,7 +482,8 @@ export class ProjectClient {
             return this.saving.then(() => (this.sink.getState().dirty ? this.save() : undefined));
         }
         const { current, rev, conflict } = this.sink.getState();
-        if (!current || conflict) {
+        // A link that is down keeps the edit dirty for the resume to write, rather than a request that can only fail.
+        if (!current || conflict || this.transport.status !== 'open') {
             return Promise.resolve();
         }
         const content = this.contentOfScreen();
@@ -578,10 +585,46 @@ export class ProjectClient {
     }
 
     private onStatus(status: TransportStatus): void {
-        if (status === 'open') {
-            this.boot();
+        if (status !== 'open') {
+            this.booted = false;
             return;
         }
-        this.booted = false;
+        // A boot would load the project again and swap every editor out from under the canvas, which blanks it until it is measured.
+        if (this.sink.getState().current) {
+            this.booted = true;
+            void this.resume();
+            return;
+        }
+        this.boot();
+    }
+
+    /*
+     * The link came back with a project on screen. The daemon is asked for it again, since one that
+     * restarted holds nothing open, but its document only reaches the screen when the file moved on
+     * meanwhile, through the same path as any change from disk. The editors, the grid and the cameras
+     * stay as they are, and the edits made while the link was down go out now.
+     */
+    private async resume(): Promise<void> {
+        const current = this.sink.getState().current;
+        if (!current) {
+            return;
+        }
+        try {
+            const result = await this.transport.request('project.open', { projectId: current.projectId });
+            if (this.sink.getState().current?.projectId !== current.projectId) {
+                return;
+            }
+            if (result.document.rev !== this.sink.getState().rev) {
+                this.onChanged(current.projectId, result.document);
+            }
+            await this.flush();
+            this.saveLocal();
+            await this.afterResume();
+            await this.refreshList();
+        } catch (e) {
+            if (!isConnectionError(e)) {
+                this.sink.setError(e instanceof Error ? e.message : 'The project could not be opened again');
+            }
+        }
     }
 }
