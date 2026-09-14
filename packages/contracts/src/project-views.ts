@@ -8,6 +8,7 @@ import {
     isOpenableView,
     isSeparatorView,
     isSessionView,
+    isUnknownView,
     type NodeTitleSource,
     type ProjectCanvasView,
     type ProjectIconChoice,
@@ -71,14 +72,15 @@ export const withView = (views: readonly ProjectView[], view: ProjectView, after
  */
 export const withRenamedView = (views: readonly ProjectView[], id: string, name: string, source: NodeTitleSource | null = 'user'): ProjectView[] | null => {
     const current = views.find((view) => view.id === id);
-    if (!current || (current.name === name && (isSeparatorView(current) || (current.titleSource ?? null) === source))) {
+    // A view of an unknown kind is written back as it was read, so a new name would never reach the file.
+    if (!current || isUnknownView(current) || (current.name === name && (isSeparatorView(current) || (current.titleSource ?? null) === source))) {
         return null;
     }
     return views.map((view) => {
         if (view.id !== id) {
             return view;
         }
-        return isSeparatorView(view) ? { ...view, name } : { ...view, name, titleSource: source ?? undefined };
+        return isSeparatorView(view) || isUnknownView(view) ? { ...view, name } : { ...view, name, titleSource: source ?? undefined };
     });
 };
 
@@ -86,7 +88,7 @@ export const withRenamedView = (views: readonly ProjectView[], id: string, name:
 export const withViewIcon = (views: readonly ProjectView[], id: string, icon: ProjectIconChoice | null): ProjectView[] | null => {
     const current = views.find((view) => view.id === id);
     // A separator is a line with no room for a mark, so there is nothing to override.
-    if (!current || isSeparatorView(current) || ((current.icon ?? null) === null && icon === null)) {
+    if (!current || isSeparatorView(current) || isUnknownView(current) || ((current.icon ?? null) === null && icon === null)) {
         return null;
     }
     return views.map((view) => (view.id === id ? { ...view, icon: icon ?? undefined } : view));

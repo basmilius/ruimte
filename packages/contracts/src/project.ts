@@ -9,6 +9,65 @@ export type ProjectId = z.infer<typeof ProjectIdSchema>;
 export const NodeKindSchema = z.enum(['terminal', 'chat', 'browser', 'group', 'note', 'drawing', 'file']);
 export type NodeKind = z.infer<typeof NodeKindSchema>;
 
+/*
+ * What a node or a view of a kind this version does not know is called in memory. A newer Ruimte
+ * wrote it, so it is carried along and written back exactly as it came: the entry as it was read
+ * rides in `raw`, and only the file holds it in that shape again (`storedContentOf`). The name is
+ * reserved: no real kind may ever be called this.
+ */
+export const UNKNOWN_KIND = 'unknown';
+
+const KNOWN_NODE_KINDS: ReadonlySet<string> = new Set(NodeKindSchema.options);
+
+// The frame a plate is drawn in when the entry does not say. Only used in memory, never written.
+const UNKNOWN_NODE_SIZE = { w: 320, h: 200 };
+
+const RawEntrySchema = z.record(z.string(), z.unknown());
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const finiteOr = (value: unknown, fallback: number): number => (typeof value === 'number' && Number.isFinite(value) ? value : fallback);
+
+const positiveOr = (value: unknown, fallback: number): number => (typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback);
+
+/* The frame of a node of an unknown kind as the entry gives it, with what a plate needs where the entry is silent. */
+const unknownNodeFrameOf = (raw: Record<string, unknown>): { id: unknown; title: string; x: number; y: number; w: number; h: number } => ({
+    id: raw.id,
+    title: typeof raw.title === 'string' ? raw.title : String(raw.kind),
+    x: finiteOr(raw.x, 0),
+    y: finiteOr(raw.y, 0),
+    w: positiveOr(raw.w, UNKNOWN_NODE_SIZE.w),
+    h: positiveOr(raw.h, UNKNOWN_NODE_SIZE.h)
+});
+
+// What a person may change about such a node: where it stands, how big it is, and its id when a canvas is copied.
+const UNKNOWN_NODE_WRITABLE = ['id', 'x', 'y', 'w', 'h'] as const;
+
+/*
+ * The shape an entry is read in. A kind this version knows stays as it is and is checked as usual;
+ * one it does not know, with an id, becomes an `unknown` entry around what it read. An `unknown`
+ * entry coming back over the wire is opened up first, so a machine that does know the kind reads the
+ * real thing again.
+ */
+const readEntry = (
+    value: unknown,
+    known: ReadonlySet<string>,
+    stored: (entry: Record<string, unknown>) => unknown,
+    wrap: (raw: Record<string, unknown>) => unknown
+): unknown => {
+    if (!isRecord(value)) {
+        return value;
+    }
+    const entry = value.kind === UNKNOWN_KIND && isRecord(value.raw) ? stored(value) : value;
+    if (!isRecord(entry) || typeof entry.kind !== 'string' || entry.kind === '' || entry.kind === UNKNOWN_KIND || known.has(entry.kind)) {
+        return entry;
+    }
+    if (typeof entry.id !== 'string' || entry.id === '') {
+        return entry;
+    }
+    return wrap(entry);
+};
+
 // Where the title of a node came from: the session named itself from its first prompt, or a person
 // typed it. The title follows the session until someone sets it.
 export const NodeTitleSourceSchema = z.enum(['auto', 'user']);
@@ -16,7 +75,7 @@ export type NodeTitleSource = z.infer<typeof NodeTitleSourceSchema>;
 
 export const ProjectNodeSchema = z.object({
     id: z.string().min(1),
-    kind: NodeKindSchema,
+    kind: z.union([NodeKindSchema, z.literal(UNKNOWN_KIND)]),
     title: z.string(),
     // Who named the node. Absent on a node nobody named yet, which is the only state in which its
     // session may still name it.
@@ -53,9 +112,43 @@ export const ProjectNodeSchema = z.object({
     viewId: z.string().optional(),
     /* File only: the file it reads. Relative to the project folder, POSIX, so the node still points
        at the same file in another checkout; a file outside that folder keeps its absolute path. */
-    path: z.string().optional()
+    path: z.string().optional(),
+    // Unknown kind only: the entry exactly as it was read.
+    raw: RawEntrySchema.optional()
 });
 export type ProjectNode = z.infer<typeof ProjectNodeSchema>;
+
+/* Every kind a node on a canvas can have in memory: the ones this version makes, and the one it only carries. */
+export type CanvasNodeKind = ProjectNode['kind'];
+
+export const isUnknownNode = (node: Pick<ProjectNode, 'kind'>): boolean => node.kind === UNKNOWN_KIND;
+
+/* A node the way the file holds it: an unknown one is what was read, with whatever a person moved on top. */
+export const storedNodeOf = (node: ProjectNode): unknown => {
+    if (node.kind !== UNKNOWN_KIND || !node.raw) {
+        return node;
+    }
+    const read = unknownNodeFrameOf(node.raw);
+    const stored: Record<string, unknown> = { ...node.raw };
+    for (const key of UNKNOWN_NODE_WRITABLE) {
+        if (node[key] !== read[key]) {
+            stored[key] = node[key];
+        }
+    }
+    return stored;
+};
+
+/* A node on a canvas, whatever its kind: see `UNKNOWN_KIND`. */
+export const CanvasNodeSchema = z.preprocess(
+    (value) =>
+        readEntry(
+            value,
+            KNOWN_NODE_KINDS,
+            (entry) => storedNodeOf(entry as ProjectNode),
+            (raw) => ({ ...unknownNodeFrameOf(raw), kind: UNKNOWN_KIND, raw })
+        ),
+    ProjectNodeSchema
+);
 
 export const ProjectTextSchema = z.object({
     id: z.string().min(1),
@@ -222,7 +315,7 @@ export type StandaloneNode = z.infer<typeof StandaloneNodeSchema>;
 export const ProjectCanvasViewSchema = ViewBaseSchema.extend({
     kind: z.literal('canvas'),
     // In stacking order, back to front.
-    nodes: z.array(ProjectNodeSchema),
+    nodes: z.array(CanvasNodeSchema),
     texts: z.array(ProjectTextSchema),
     edges: z.array(ProjectEdgeSchema),
     layouts: z.array(ProjectLayoutSchema).default([])
@@ -264,7 +357,7 @@ export type ProjectDiagramView = z.infer<typeof ProjectDiagramViewSchema>;
 export const ProjectFileViewSchema = ViewBaseSchema.extend({ kind: z.literal('file'), path: z.string().min(1) });
 export type ProjectFileView = z.infer<typeof ProjectFileViewSchema>;
 
-export const ProjectViewSchema = z.discriminatedUnion('kind', [
+const KNOWN_VIEW_SCHEMAS = [
     ProjectCanvasViewSchema,
     ProjectChatViewSchema,
     ProjectTerminalViewSchema,
@@ -273,7 +366,43 @@ export const ProjectViewSchema = z.discriminatedUnion('kind', [
     ProjectDiagramViewSchema,
     ProjectFileViewSchema,
     ProjectSeparatorViewSchema
-]);
+] as const;
+
+/* The kinds this version can make and open, in the order of the union. */
+export const PROJECT_VIEW_KINDS = KNOWN_VIEW_SCHEMAS.map((schema) => schema.shape.kind.value);
+
+const KNOWN_VIEW_KINDS: ReadonlySet<string> = new Set(PROJECT_VIEW_KINDS);
+
+/*
+ * A view of a kind a newer Ruimte made: listed under its name, never opened, and written back as it
+ * was read. The name falls back to the kind, since a sidebar row needs something to say.
+ */
+export const ProjectUnknownViewSchema = z.object({
+    kind: z.literal(UNKNOWN_KIND),
+    id: z.string().min(1),
+    name: z.string().min(1),
+    // Read from the entry, so `view delete` still knows who made it; never written from here.
+    createdBy: CreatedBySchema,
+    raw: RawEntrySchema
+});
+export type ProjectUnknownView = z.infer<typeof ProjectUnknownViewSchema>;
+
+export const ProjectViewSchema = z.preprocess(
+    (value) =>
+        readEntry(
+            value,
+            KNOWN_VIEW_KINDS,
+            (entry) => entry.raw,
+            (raw) => ({
+                kind: UNKNOWN_KIND,
+                id: raw.id,
+                name: typeof raw.name === 'string' && raw.name !== '' ? raw.name : raw.kind,
+                ...(typeof raw.createdBy === 'string' && raw.createdBy !== '' ? { createdBy: raw.createdBy } : {}),
+                raw
+            })
+        ),
+    z.discriminatedUnion('kind', [...KNOWN_VIEW_SCHEMAS, ProjectUnknownViewSchema])
+);
 export type ProjectView = z.infer<typeof ProjectViewSchema>;
 export type ProjectViewKind = ProjectView['kind'];
 
@@ -287,6 +416,12 @@ export const isDiagramView = (view: ProjectView): view is ProjectDiagramView => 
 
 export const isFileView = (view: ProjectView): view is ProjectFileView => view.kind === 'file';
 
+export const isUnknownView = (view: ProjectView): view is ProjectUnknownView => view.kind === UNKNOWN_KIND;
+
+/* The mark a person picked for a view; a separator has no room for one and an unknown view keeps whatever it has in the file. */
+export const viewIconOf = (view: ProjectView): ProjectIconChoice | null =>
+    view.kind === 'separator' || view.kind === UNKNOWN_KIND ? null : (view.icon ?? null);
+
 /*
  * The views that are one session under their own id: what a node carries, without a canvas around
  * it. A separator holds nothing, and a drawing, a diagram and a file are all read off disk, so none
@@ -295,8 +430,17 @@ export const isFileView = (view: ProjectView): view is ProjectFileView => view.k
 export const isSessionView = (view: ProjectView): view is ProjectChatView | ProjectTerminalView | ProjectBrowserView =>
     view.kind === 'chat' || view.kind === 'terminal' || view.kind === 'browser';
 
-/* The views a person can put on screen; a separator is a line in the list, not a place to go. */
-export const isOpenableView = (view: ProjectView): boolean => view.kind !== 'separator';
+/* The views a person can put on screen. A separator is a line in the list, not a place to go, and
+   this version has nothing to draw a view of an unknown kind with. */
+export const isOpenableView = (view: ProjectView): boolean => view.kind !== 'separator' && view.kind !== UNKNOWN_KIND;
+
+/* A view the way the file holds it. */
+export const storedViewOf = (view: ProjectView): unknown => {
+    if (view.kind === UNKNOWN_KIND) {
+        return view.raw;
+    }
+    return view.kind === 'canvas' ? { ...view, nodes: view.nodes.map(storedNodeOf) } : view;
+};
 
 // What the person edits; the daemon wraps it with the version and the rev.
 export const ProjectContentSchema = z.object({
@@ -316,6 +460,15 @@ export const ProjectDocumentSchema = ProjectContentSchema.extend({
 });
 export type ProjectDocument = z.infer<typeof ProjectDocumentSchema>;
 
+/*
+ * Content or a document as it goes into the file: every entry of an unknown kind back in the shape
+ * it was read in. The wire takes either shape, since reading opens an `unknown` entry up again.
+ */
+export const storedContentOf = <T extends ProjectContent>(content: T): Omit<T, 'views'> & { views: unknown[] } => ({
+    ...content,
+    views: content.views.map(storedViewOf)
+});
+
 /* What a version-1 file holds: one project is one canvas. Read, migrated, never written again. */
 export const ProjectDocumentV1Schema = z.object({
     version: z.literal(1),
@@ -323,7 +476,7 @@ export const ProjectDocumentV1Schema = z.object({
     name: z.string().min(1),
     color: z.string(),
     icon: ProjectIconChoiceSchema.optional(),
-    nodes: z.array(ProjectNodeSchema),
+    nodes: z.array(CanvasNodeSchema),
     texts: z.array(ProjectTextSchema),
     edges: z.array(ProjectEdgeSchema),
     layouts: z.array(ProjectLayoutSchema).default([])

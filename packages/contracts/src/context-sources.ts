@@ -1,9 +1,9 @@
 import type { ContextSource } from './context.ts';
-import { isCanvasView, type NodeKind, type ProjectEdge, type ProjectNode, type ProjectText, type ProjectView } from './project.ts';
+import { isCanvasView, type CanvasNodeKind, type ProjectEdge, type ProjectNode, type ProjectText, type ProjectView } from './project.ts';
 import { resolveStoredPath } from './stored-path.ts';
 
 /* The kinds an agent lives in; an edge into one of these is readable context. */
-export const isAgentKind = (kind: NodeKind): boolean => kind === 'terminal' || kind === 'chat';
+export const isAgentKind = (kind: CanvasNodeKind): boolean => kind === 'terminal' || kind === 'chat';
 
 // A text's first line is its name in the list an agent sees.
 const titleOf = (text: string): string => text.split('\n')[0]?.trim().slice(0, 60) || 'Text';

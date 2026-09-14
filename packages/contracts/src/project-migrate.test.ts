@@ -53,7 +53,7 @@ describe('migrateDocument', () => {
         const migrated = migrateDocument({ ...V1_FILE, icon: { kind: 'lucide', value: 'rocket' } });
         expect(migrated!.icon).toEqual({ kind: 'lucide', value: 'rocket' });
         expect(migrateDocument({ version: 3, rev: 0 })).toBeNull();
-        expect(migrateDocument({ ...V1_FILE, nodes: [{ id: 'n1', kind: 'sticky' }] })).toBeNull();
+        expect(migrateDocument({ ...V1_FILE, nodes: [{ id: 'n1', kind: 'note' }] })).toBeNull();
         expect(migrateDocument('nonsense')).toBeNull();
     });
 });

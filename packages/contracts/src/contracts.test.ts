@@ -277,9 +277,13 @@ describe('project', () => {
         const content = { name: 'p', color: 'violet', views: [view] };
         const { payload } = REQUEST_SCHEMAS['project.save'];
         expect(payload.safeParse({ projectId: 'p1', baseRev: 0, content }).success).toBe(true);
+        // A kind this version does not know is carried along; a known kind with a broken field is not.
         expect(
             payload.safeParse({ projectId: 'p1', baseRev: 0, content: { ...content, views: [{ ...view, nodes: [{ ...view.nodes[0], kind: 'sticky' }] }] } })
                 .success
+        ).toBe(true);
+        expect(
+            payload.safeParse({ projectId: 'p1', baseRev: 0, content: { ...content, views: [{ ...view, nodes: [{ ...view.nodes[0], color: 7 }] }] } }).success
         ).toBe(false);
         // A project always has a view; the last one that goes leaves an empty canvas behind.
         expect(payload.safeParse({ projectId: 'p1', baseRev: 0, content: { ...content, views: [] } }).success).toBe(false);
