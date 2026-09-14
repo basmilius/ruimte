@@ -1697,6 +1697,64 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   socket. Killing the broker afterwards leaves the terminal on that channel answering. Not measured yet:
   two machines on two networks through a broker on the VPS, and nothing is deployed.
 
+### The address book
+
+- Phase 5a of remote access: `apps/pulsar-worker`, a Cloudflare Worker with D1 at `https://pulsar.ruimte.app`
+  (a Custom Domain on the Worker, with `ruimte-pulsar.bas.workers.dev` beside it) and the database
+  `ruimte-pulsar`. Nothing in the client or the daemon calls it yet; that is 5b.
+- The routes: `GET /health`, `GET /auth/github/start` and `/callback`, `POST /v1/session` (a login code for
+  a session), `POST /v1/session/refresh`, `DELETE /v1/session`, `GET` and `POST /v1/machines`,
+  `DELETE /v1/machines/<id>` and `POST /v1/statements`. The report called the last one `/v1/grants`; the
+  schemas already said statement, so the route does too.
+- How a login gets back to the app. The app opens `/auth/<provider>/start` in the system browser with a
+  redirect, a state of its own and a PKCE S256 challenge. The redirect is `ruimte://pulsar/callback` or
+  `http://127.0.0.1:<port>/pulsar/callback` (or `[::1]`) and nothing else (`isAppRedirectUri`): the scheme
+  for an app that can claim one (a packaged desktop app, the mobile app), a loopback listener on any port
+  for one that cannot (an unpackaged dev app). Both, because Electron only claims a scheme when packaged and
+  a phone has no loopback listener. The Worker keeps the app's challenge and state and is a PKCE client of
+  GitHub itself with a verifier of its own. Its state is stored only as a hash, lives ten minutes, is
+  spent by the first callback whatever happens, and is bound to the browser that opened the start URL with
+  a `__Host-` cookie. The callback sends the browser to the app's redirect with a one-time code (60 s,
+  stored as a hash) and the app's state, or with `error` and the state. The app posts the code, its
+  verifier and the redirect to `/v1/session`; a wrong verifier spends the code.
+- Sessions are short and revocable: an access token of 15 minutes and a refresh token, both 32 random bytes
+  kept only as SHA-256, ending 30 days after sign-in whatever happens. A refresh rotates both. A refresh
+  token that was already spent revokes the session, since two holders of one token means a copy; a client
+  that lost the answer to a refresh pays for that by signing in again.
+- An account is the provider plus the provider's user id (GitHub's numeric id), never an email. The login
+  is kept for display and updated at every sign-in. No scope is asked, and the GitHub token is dropped after
+  one request to `/user`. A provider is an entry in `PROVIDERS` (`providers.ts`) and in `ProviderIdSchema`,
+  so Apple is one of each.
+- A machine is keyed on the account plus its id, so a daemon two people share can be in both lists. A
+  registration needs the daemon's signature over `machineRegistrationMessage`, which names the account, and
+  an `issuedAt` within 10 minutes of the Worker's clock. Registering again replaces the name, the icon and
+  the key. The icon was not in the schemas and is added unsigned, as decoration a signed-in client may set
+  anyway. `lastSeenAt` is the latest registration: the Worker never sees a machine online.
+- A statement: the request's signature proves the client key, the machine has to be on the session's
+  account (a machine on another account answers `not-found`, like one that does not exist), and the answer
+  is signed over `accessStatementMessage` with the key in the `STATEMENT_PRIVATE_KEY` secret. Every one lands
+  in `statement_log` (account, machine, device key, session, address, times) and the key in `device` with
+  the label the session was opened with, for the list of who got access in 5b. The public half is pinned as
+  `PULSAR_STATEMENT_PUBLIC_KEYS`, a list so a rotation can overlap, and `/health` names the public half the
+  Worker signs with, which is how a deploy is checked against the pin.
+- Rate limits are fixed one-minute windows in D1 rather than the platform's rate limiting binding, which
+  counts per location: 20 logins per address, 30 session calls per address, 20 registrations per account
+  and 30 per address, 30 statements per account and 60 per address. A daily cron drops expired logins,
+  codes, windows and dead sessions.
+- CORS only on `/v1/*`, for loopback origins (the desktop app loads the client from
+  `http://127.0.0.1:<port>`, Vite runs on localhost) and whatever `ALLOWED_ORIGINS` lists, which is empty.
+  Tokens are bearer and never cookies, so this decides which pages read the answers, not who can send.
+- The tests run the bundled Worker in workerd through Miniflare under `bun test`, with the migrations on an
+  in-memory D1 and GitHub as the outbound service, rather than `@cloudflare/vitest-pool-workers`, which
+  would bring a second test runner. Miniflare is pinned on the 4.x line because the one wrangler brings is a
+  5 alpha with another options shape, and the compatibility date is the newest its workerd knows. With
+  `PULSAR_STATEMENT_PRIVATE_KEY` in the environment a statement is also checked against the pinned key; CI
+  has no such secret and skips that test.
+- Deploys go through `.github/workflows/pulsar-worker.yml` on a push to main that touches the app or
+  `packages/pulsar`: tests, remote migrations, deploy, `/health`. Migrations go first, so a migration has to
+  keep the running Worker working. `apps/pulsar-worker/README.md` lists the token's permissions, the
+  secrets and how to rotate the statement key.
+
 ### Skipped on purpose
 
 Skipped: kanban, loop and trigger nodes, minimap, dictation, notch HUD, agent-to-agent

@@ -502,8 +502,8 @@ groot:  60 x 64 KB in 427 ms =  141 ber/s, 8.78 MB/s</code></pre>
         </tr>
         <tr>
           <td><strong>5. Het adresboek</strong></td>
-          <td><span class="badge">open</span></td>
-          <td>Niets van gebouwd, maar de twee dingen die "eerlijk opgeschreven" vraagt zijn voor de helft klaar: de lijst met gekoppelde clients met intrekken bestaat (<code>handlers/auth.ts:56-72</code>, <code>Handshake.revoke</code> in <code>auth/handshake.ts:115</code>, het paneel Machines), en het patroon voor een vlag per machine die de daemon afdwingt bestaat als <code>agentsDeleteAnyView</code> (<code>endpoint-id.ts:27-30</code>, gezet met <code>endpoint.setIdentity</code>). Wat ontbreekt is een herkomst per koppeling.</td>
+          <td><span class="badge info">5a klaar, 5b open</span></td>
+          <td><strong>Bijgewerkt na 5a:</strong> het adresboek draait op <code>https://pulsar.ruimte.app</code> met de D1-database <code>ruimte-pulsar</code>, maar nog niets in de client of de daemon spreekt het aan; zie <a href="#plan">Het plan</a>. Wat hieronder staat was de stand ervoor. Niets van gebouwd, maar de twee dingen die "eerlijk opgeschreven" vraagt zijn voor de helft klaar: de lijst met gekoppelde clients met intrekken bestaat (<code>handlers/auth.ts:56-72</code>, <code>Handshake.revoke</code> in <code>auth/handshake.ts:115</code>, het paneel Machines), en het patroon voor een vlag per machine die de daemon afdwingt bestaat als <code>agentsDeleteAnyView</code> (<code>endpoint-id.ts:27-30</code>, gezet met <code>endpoint.setIdentity</code>). Wat ontbreekt is een herkomst per koppeling.</td>
         </tr>
         <tr>
           <td><strong>6. Achtergronddienst</strong></td>
@@ -592,8 +592,10 @@ groot:  60 x 64 KB in 427 ms =  141 ber/s, 8.78 MB/s</code></pre>
     </li>
     <li class="step">
       <div>
-        <h3>Het adresboek <span class="badge">open</span></h3>
-        <p>Worker met D1, OAuth voor GitHub, Apple en Google, drie tabellen, vier routes. Het sleutelpaar voor verklaringen, met de publieke helft gepind in de Ruimte-build. In de client: inloggen, de lijst, en de lijst met apparaten die toegang hebben plus intrekken.</p>
+        <h3>Het adresboek <span class="badge info">5a klaar, 5b open</span></h3>
+        <p><strong>5a staat, 14 september.</strong> <code>apps/pulsar-worker</code> is gedeployd als Worker <code>ruimte-pulsar</code> op <code>https://pulsar.ruimte.app</code> (Custom Domain, daarnaast <code>ruimte-pulsar.bas.workers.dev</code>), met D1 <code>ruimte-pulsar</code> en de migraties remote toegepast. De routes: <code>GET /v1/machines</code>, <code>POST /v1/machines</code>, <code>DELETE /v1/machines/&lt;id&gt;</code>, <code>POST /v1/statements</code> (in het rapport heette die <code>/v1/grants</code>), plus <code>/auth/github/start</code> en <code>/callback</code> en de sessieroutes <code>POST /v1/session</code>, <code>/v1/session/refresh</code> en <code>DELETE /v1/session</code>. Inloggen komt terug in de app via <code>ruimte://pulsar/callback</code> of een loopback-listener op <code>http://127.0.0.1:&lt;poort&gt;/pulsar/callback</code>, met PKCE en een eenmalige code die de app omruilt voor een sessie van een kwartier plus een refresh-token. Een account is provider plus het id van de provider, nooit een e-mailadres; elke uitgegeven verklaring staat in <code>statement_log</code>. De publieke sleutel voor verklaringen is gepind als <code>PULSAR_STATEMENT_PUBLIC_KEYS</code> in <code>packages/pulsar</code>, de private helft staat in de secret van de Worker en in <code>~/.private/ruimte.secrets.env</code>. De beslissingen staan onder "The address book" in <code>docs/DECISIONS.md</code>.</p>
+        <p><strong>Wat Bas nog moet doen voordat inloggen werkt:</strong> de GitHub OAuth-app aanmaken met callback <code>https://pulsar.ruimte.app/auth/github/callback</code>, <code>GITHUB_CLIENT_ID</code> en <code>GITHUB_CLIENT_SECRET</code> zetten met <code>wrangler secret put</code>, en voor de workflow een Cloudflare API-token maken en als repository secret <code>CLOUDFLARE_API_TOKEN</code> zetten. Tot die tijd antwoordt <code>/auth/github/start</code> met <code>not-configured</code>. De rechten van het token staan in <code>apps/pulsar-worker/README.md</code>. Nog niet gepusht.</p>
+        <p>Het oorspronkelijke plan: Worker met D1, OAuth voor GitHub, Apple en Google, drie tabellen, vier routes. Het sleutelpaar voor verklaringen, met de publieke helft gepind in de Ruimte-build. In de client: inloggen, de lijst, en de lijst met apparaten die toegang hebben plus intrekken.</p>
         <p>Wat er al is: de lijst met gekoppelde clients en intrekken (<code>handlers/auth.ts:56-72</code>, het paneel Machines), naam en icoon in <code>endpoint.info</code>, en het patroon voor een vlag per machine die de daemon afdwingt (<code>agentsDeleteAnyView</code>, <code>endpoint-id.ts:27-30</code>). Wat erbij moet: een herkomst per koppeling (link of verklaring) in de <code>AuthStore</code>, de vlag "weiger verklaringen" op dezelfde plek als <code>agentsDeleteAnyView</code>, en een <code>pairedBy</code> op de rij in <code>state/endpoints.ts</code>.</p>
         <p><strong>Klaar als:</strong> je op een vers apparaat inlogt, je machines ziet staan, er een opent zonder iets over te tikken, en op je eerste apparaat ziet dat het tweede toegang heeft gekregen.</p>
         <p class="caption">Inclusief de knoppen die je nodig hebt als het misgaat: een machine uit je lijst halen, toegang van een apparaat intrekken, en op de machine zelf verklaringen weigeren.</p>
@@ -669,7 +671,7 @@ Niet doen in deze beurt: de andere fases vast voorbereiden, of afhankelijkheden 
           <td>Bouw <code>apps/pulsar-broker</code>: een Bun-WebSocketserver die een aanmelding met een handtekening verifieert, een Map van publieke sleutel naar socket bijhoudt, berichten doorgeeft naar een sleutel, en rate limiting doet per IP en per sleutel. Geen database. In de daemon een <code>BrokerRelay</code> achter <code>apps/server/src/auth/relay.ts</code>. Met tests die twee nepclients laten aanmelden en een bericht heen en weer sturen, en die bewijzen dat een verkeerde handtekening niets oplevert.</td>
         </tr>
         <tr>
-          <td><strong>5a</strong></td>
+          <td><strong>5a</strong><br><span class="caption">gedaan</span></td>
           <td>Bouw <code>apps/pulsar-worker</code>: Cloudflare Worker met D1, de drie tabellen uit het rapport, OAuth voor GitHub (Apple en Google daarna), en de vier routes. De verklaring wordt getekend met een ed25519-sleutel uit de secrets. Migraties en schema horen bij elkaar in dezelfde commit.</td>
         </tr>
         <tr>
@@ -701,9 +703,10 @@ Niet doen in deze beurt: de andere fases vast voorbereiden, of afhankelijkheden 
     <div class="panel">
       <h3>Cloudflare</h3>
       <ol>
-        <li>Een Worker en een D1-database. Past binnen het abonnement dat er al is: tien miljoen requests per maand inbegrepen, en dit adresboek wordt alleen aangesproken bij inloggen en bij het openen van een machine.</li>
-        <li>Een OAuth-applicatie bij GitHub, Apple en Google, met de callback naar de Worker.</li>
-        <li>Een sleutelpaar voor de verklaringen. De private helft in de secrets van de Worker, de publieke helft in de Ruimte-build.</li>
+        <li>Een Worker en een D1-database. Past binnen het abonnement dat er al is: tien miljoen requests per maand inbegrepen, en dit adresboek wordt alleen aangesproken bij inloggen en bij het openen van een machine. <strong>Staat sinds 14 september:</strong> Worker <code>ruimte-pulsar</code> op <code>https://pulsar.ruimte.app</code>, D1 <code>ruimte-pulsar</code>.</li>
+        <li>Een OAuth-applicatie bij GitHub, Apple en Google, met de callback naar de Worker. <strong>Nog te doen door Bas:</strong> de GitHub-app, met als callback <code>https://pulsar.ruimte.app/auth/github/callback</code>, en daarna <code>wrangler secret put GITHUB_CLIENT_ID</code> en <code>GITHUB_CLIENT_SECRET</code>. Apple en Google komen later.</li>
+        <li>Een sleutelpaar voor de verklaringen. De private helft in de secrets van de Worker, de publieke helft in de Ruimte-build. <strong>Staat:</strong> de secret <code>STATEMENT_PRIVATE_KEY</code> is gezet, een kopie staat in <code>~/.private/ruimte.secrets.env</code>, de publieke helft in <code>packages/pulsar/src/statement-key.ts</code>.</li>
+        <li><strong>Nog te doen door Bas:</strong> een Cloudflare API-token voor de deploy-workflow, als repository secret <code>CLOUDFLARE_API_TOKEN</code> in <code>basmilius/ruimte</code>. Rechten: Account Workers Scripts Edit, D1 Edit en Account Settings Read; op de zone <code>ruimte.app</code> Workers Routes Edit, Zone Read en SSL and Certificates Edit. Pas daarna pushen, anders faalt de workflow.</li>
       </ol>
     </div>
   </div>
