@@ -3,7 +3,17 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import type { Subprocess } from 'bun';
-import { BrokerPeer, brokerHostOf, signalMessage, type BrokerRelayed, type SignalEnvelope } from '@ruimte/pulsar';
+import {
+    ACCESS_STATEMENT_LIFETIME_MS,
+    BrokerPeer,
+    accessStatementMessage,
+    brokerHostOf,
+    signalMessage,
+    type AccessStatement,
+    type BrokerRelayed,
+    type SignalCloseReason,
+    type SignalEnvelope
+} from '@ruimte/pulsar';
 import { generateKeyPair, signMessage, verifySignature } from '../auth/keys.ts';
 import { readLocalSecret } from '../auth/local-secret.ts';
 import { DirectClient, type DirectCredential } from '../pulsar/direct-client.ts';
@@ -13,6 +23,7 @@ import {
     daemonChallengeMessage,
     parseServerFrame,
     type AuthChallengeResult,
+    type AuthSessionsResult,
     type AuthTicketResult,
     type BytesReadResult,
     type EndpointChangedEvent,
@@ -1421,3 +1432,199 @@ describe.skipIf(!ENABLED)('a direct connection signaled through the broker', () 
         }
     }, 90_000);
 });
+
+/*
+ * A client that never paired, on the route the account list opens: a statement signed with the bench's
+ * own key (`test.sh`, believed by the test container only), carried in the offer through the broker.
+ * Port 4320 is used for nothing but reading who the machine is, which the address book would have said,
+ * and for one paired client that flips the refusal switch.
+ */
+const STATEMENT_PRIVATE_KEY = process.env.RUIMTE_PULSAR_TEST_STATEMENT_PRIVATE_KEY
+    ? Buffer.from(process.env.RUIMTE_PULSAR_TEST_STATEMENT_PRIVATE_KEY, 'base64url').toString('utf8')
+    : null;
+
+describe.skipIf(!ENABLED || STATEMENT_PRIVATE_KEY === null)('a machine opened on a statement, never paired', () => {
+    const BROKER_PORT = 4420;
+    const BROKER_URL = `ws://127.0.0.1:${BROKER_PORT}`;
+    const BROKER_HEALTH = `http://127.0.0.1:${BROKER_PORT}/health`;
+    let broker: Subprocess | null = null;
+    const clients: DirectClient[] = [];
+    const sockets: WebSocket[] = [];
+
+    beforeAll(async () => {
+        broker = Bun.spawn(['bun', join(import.meta.dir, '..', '..', '..', 'pulsar-broker', 'src', 'main.ts'), '--port', String(BROKER_PORT)], {
+            stdout: 'ignore',
+            stderr: 'inherit'
+        });
+        await waitUntil('the broker to answer', async () => (await fetch(BROKER_HEALTH).catch(() => null))?.ok === true);
+        // The container backs off up to 30 seconds between tries, and the broker before this one went away.
+        await waitUntil(
+            'the machine in the container to announce itself to the broker',
+            async () => (((await (await fetch(BROKER_HEALTH)).json()) as { machines: number }).machines ?? 0) >= 1,
+            45_000
+        );
+    }, 60_000);
+
+    afterAll(async () => {
+        for (const client of clients) {
+            client.close();
+        }
+        for (const socket of sockets) {
+            socket.close();
+        }
+        broker?.kill();
+        await broker?.exited;
+    });
+
+    /* Who the machine is, as the address book lists it; the challenge route tells anybody. */
+    const machine = async (): Promise<{ id: string; publicKey: string }> => {
+        const answer = (await (await fetch(`${BASE_URL}/auth/challenge`, { method: 'POST', body: '{}' })).json()) as AuthChallengeResult;
+        return { id: answer.daemon.id, publicKey: answer.daemon.publicKey };
+    };
+
+    const statementFor = (machineId: string, clientPublicKey: string, overrides: Partial<AccessStatement> = {}): AccessStatement => {
+        const issuedAt = Date.now();
+        const base = { machineId, clientPublicKey, nonce: randomNonce(), issuedAt, expiresAt: issuedAt + ACCESS_STATEMENT_LIFETIME_MS, ...overrides };
+        return {
+            ...base,
+            signature: signMessage(
+                STATEMENT_PRIVATE_KEY!,
+                accessStatementMessage(base.machineId, base.clientPublicKey, base.nonce, base.issuedAt, base.expiresAt)
+            )
+        };
+    };
+
+    /* Offers from a key over the broker, believing only what the machine's key signed; answers the client and what came back. */
+    const offerFrom = async (key: { publicKey: string; privateKey: string }, machineAt: { id: string; publicKey: string }, statement?: AccessStatement) => {
+        const socket = new WebSocket(BROKER_URL);
+        sockets.push(socket);
+        const closes: SignalCloseReason[] = [];
+        let client: DirectClient | null = null;
+        let ready = false;
+        const peer = new BrokerPeer({
+            role: 'client',
+            publicKey: key.publicKey,
+            host: brokerHostOf(BROKER_URL),
+            sign: (message) => signMessage(key.privateKey, message),
+            send: (frame) => socket.send(frame),
+            events: {
+                ready: () => {
+                    ready = true;
+                },
+                relayed: (frame: BrokerRelayed) => {
+                    if (
+                        frame.from !== machineAt.publicKey ||
+                        !verifySignature(machineAt.publicKey, signalMessage(machineAt.publicKey, key.publicKey, frame.envelope), frame.signature)
+                    ) {
+                        return;
+                    }
+                    if (frame.envelope.signal.kind === 'close') {
+                        closes.push(frame.envelope.signal.reason);
+                    }
+                    client?.receiveSignal(frame.envelope);
+                },
+                refused: (frame) => {
+                    throw new Error(`The broker refused: ${JSON.stringify(frame)}`);
+                },
+                failed: (reason) => {
+                    throw new Error(reason);
+                }
+            }
+        });
+        socket.onopen = () => peer.start();
+        socket.onmessage = (message) => void peer.receive(String(message.data));
+        await waitUntil('the client to sign in to the broker', () => ready);
+        client = new DirectClient({
+            stunServers: [],
+            credential: { kind: 'key', publicKey: key.publicKey, privateKey: key.privateKey, daemonId: machineAt.id, daemonPublicKey: machineAt.publicKey },
+            ...(statement ? { access: { statement, label: 'Bench laptop' } } : {}),
+            timeoutMs: 20_000,
+            signal: (envelope) => void peer.relay(machineAt.publicKey, envelope)
+        });
+        clients.push(client);
+        return { client, socket, closes };
+    };
+
+    test('a statement for this machine and this key opens a terminal, and the machine lists the client as signed in through a statement', async () => {
+        const machineAt = await machine();
+        const key = generateKeyPair();
+        const { client, socket } = await offerFrom(key, machineAt, statementFor(machineAt.id, key.publicKey));
+        await client.open();
+        socket.close();
+        expect((await client.request<EndpointInfo>('endpoint.info', {})).authenticated).toBe(true);
+        const { sessions } = await client.request<AuthSessionsResult>('auth.sessions', {});
+        expect(sessions.find((session) => session.current)).toMatchObject({ label: 'Bench laptop', origin: 'statement' });
+
+        let output = '';
+        client.onFrame((raw) => {
+            const frame = JSON.parse(raw) as { event?: string; payload?: { data?: string } };
+            if (frame.event === 'session.output') {
+                output += frame.payload?.data ?? '';
+            }
+        });
+        const sessionId = `docker-statement-${Date.now()}`;
+        await client.request<SessionInfo>('session.create', { sessionId, cwd: REPO, cols: 80, rows: 24 });
+        try {
+            await client.request<SessionAttachResult>('session.attach', { sessionId, cols: 80, rows: 24 });
+            await client.request('session.write', { sessionId, data: 'echo statement-$((6*7)) && uname -s\n' });
+            await waitUntil('the shell to answer over the channel', () => output.includes('statement-42') && output.includes('Linux'));
+        } finally {
+            await client.request('session.kill', { sessionId }).catch(() => undefined);
+        }
+    }, 90_000);
+
+    test('no statement, a statement for another key, one that ran out and one for another machine all get not-paired and no channel', async () => {
+        const machineAt = await machine();
+        const attempts: Array<[string, (key: { publicKey: string }) => AccessStatement | undefined]> = [
+            ['no statement', () => undefined],
+            ['another key', () => statementFor(machineAt.id, generateKeyPair().publicKey)],
+            [
+                'ran out',
+                (key) =>
+                    statementFor(machineAt.id, key.publicKey, {
+                        issuedAt: Date.now() - 10 * 60_000,
+                        expiresAt: Date.now() - 10 * 60_000 + ACCESS_STATEMENT_LIFETIME_MS
+                    })
+            ],
+            ['another machine', (key) => statementFor('the-machine-next-door', key.publicKey)]
+        ];
+        for (const [what, statement] of attempts) {
+            const key = generateKeyPair();
+            const { client, closes } = await offerFrom(key, machineAt, statement(key));
+            const opening = client.open().then(
+                () => 'opened',
+                () => 'refused'
+            );
+            await waitUntil(`the refusal for ${what}`, () => closes.length > 0);
+            expect([what, closes]).toEqual([what, ['not-paired']]);
+            client.close();
+            expect(await opening).toBe('refused');
+        }
+    }, 120_000);
+
+    test('with the refusal switch on, a good statement gets statements-refused and nothing else', async () => {
+        const machineAt = await machine();
+        const paired = await pair();
+        const admin = await RemoteClient.connect(paired.sessionToken!);
+        const info = await admin.request<EndpointInfo>('endpoint.info', {});
+        const identity = { name: info.nameSource === 'chosen' ? info.label : null, icon: info.icon ?? null };
+        await admin.request('endpoint.setIdentity', { ...identity, refuseStatements: true });
+        try {
+            const key = generateKeyPair();
+            const { client, closes } = await offerFrom(key, machineAt, statementFor(machineAt.id, key.publicKey));
+            void client.open().catch(() => undefined);
+            await waitUntil('the refusal', () => closes.length > 0);
+            expect(closes).toEqual(['statements-refused']);
+            client.close();
+            const { sessions } = await admin.request<AuthSessionsResult>('auth.sessions', {});
+            expect(
+                sessions.some((session) => session.label === 'Bench laptop' && session.origin === 'statement' && session.lastSeenAt > Date.now() - 5_000)
+            ).toBe(false);
+        } finally {
+            await admin.request('endpoint.setIdentity', { ...identity, refuseStatements: false });
+            admin.close();
+        }
+    }, 90_000);
+});
+
+const randomNonce = (): string => crypto.getRandomValues(new Uint8Array(16)).reduce((text, byte) => text + byte.toString(16).padStart(2, '0'), '');

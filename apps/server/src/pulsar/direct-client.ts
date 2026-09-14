@@ -10,7 +10,7 @@ import {
     DirectVerdictFrameSchema,
     type DirectProofFrame
 } from '@ruimte/contracts';
-import type { SignalEnvelope } from '@ruimte/pulsar';
+import type { SignalAccess, SignalEnvelope } from '@ruimte/pulsar';
 import { randomBytes } from 'node:crypto';
 import { RTCPeerConnection, type RTCDataChannel } from 'werift';
 import { signMessage, verifySignature } from '../auth/keys.ts';
@@ -31,6 +31,8 @@ export interface DirectClientOptions {
     /* Sends a signal towards the daemon; whatever it answers goes into `receiveSignal`. */
     signal(envelope: SignalEnvelope): void;
     credential: DirectCredential;
+    /* A statement for a machine this key never paired with, carried in the offer the way the app does. */
+    access?: SignalAccess;
     timeoutMs?: number;
     /* Pings a quiet channel the way the app does, and closes it when nothing answers; off unless asked. */
     ping?: { idleMs?: number; timeoutMs?: number };
@@ -94,7 +96,10 @@ export class DirectClient {
         await this.peer.setLocalDescription(await this.peer.createOffer());
         await waitFor(() => this.peer.iceGatheringState === 'complete', 5_000).catch(() => undefined);
         this.offerSdp = this.peer.localDescription!.sdp;
-        this.options.signal({ connectionId: this.connectionId, signal: { kind: 'offer', sdp: this.offerSdp } });
+        const offer = this.options.access
+            ? { kind: 'offer' as const, sdp: this.offerSdp, access: this.options.access }
+            : { kind: 'offer' as const, sdp: this.offerSdp };
+        this.options.signal({ connectionId: this.connectionId, signal: offer });
 
         const timeoutMs = this.options.timeoutMs ?? 30_000;
         const answerSdp = await withTimeout(answer, timeoutMs, 'The machine did not answer the offer');

@@ -65,6 +65,9 @@ services:
       # the daemon keeps retrying until it is there.
       RUIMTE_BROKER_URL: ws://host.docker.internal:4420
       RUIMTE_BROKER_ADVERTISE_URL: ws://127.0.0.1:4420
+      # The bench's own statement key (`test.sh` makes one per run), believed in place of the address
+      # book's; a daemon from source reads it, a compiled one never does.
+      RUIMTE_PULSAR_TEST_STATEMENT_KEY: ${RUIMTE_PULSAR_TEST_STATEMENT_KEY:-}
       # No volumes at all, and a wipe on every start, so the restart halfway through the suite
       # lands on a fresh machine as well.
       RUIMTE_FRESH_STATE: '1'
