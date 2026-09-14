@@ -78,10 +78,18 @@ export interface SessionManagerOptions {
     approvalHoldMs?: number;
     // Where Claude Code's own name for a session is read from the transcript its hooks point at.
     claudeTitles?: { forTranscript(path: string): Promise<string | null> };
+    // Where the Codex TUI's own name for a thread is read, by the thread id its hooks carry.
+    codexTitles?: { forThread(threadId: string): Promise<string | null> };
+    // Lets a test shorten the wait before a session without a name looks again.
+    titleRetryMs?: number;
 }
 
 // How often a hook of a turn in flight may look for a name the session does not have yet.
 const TITLE_READ_INTERVAL_MS = 5_000;
+// Codex names a thread up to 90 seconds after it started, often after a short turn already ended and
+// no hook is coming until the next prompt; a session without a name looks again this often, this many times.
+const TITLE_RETRY_MS = 15_000;
+const TITLE_RETRIES = 6;
 
 export type HookResult = 'applied' | 'ignored' | 'unknown-token';
 
@@ -105,6 +113,9 @@ export class SessionManager {
     private readonly now: () => number;
     private readonly approvals: ApprovalStore | null;
     private readonly claudeTitles: SessionManagerOptions['claudeTitles'] | null;
+    private readonly codexTitles: SessionManagerOptions['codexTitles'] | null;
+    private readonly titleRetryMs: number;
+    private readonly titleRetries = new Map<string, { timer: ReturnType<typeof setTimeout> | null; count: number }>();
     // When each session last looked for its name, so the tool hooks of a busy turn do not all read.
     private readonly titleReadAt = new Map<string, number>();
     hookUrl: string | null;
@@ -131,6 +142,8 @@ export class SessionManager {
         this.firstNotices = options.firstNotices ?? (() => []);
         this.now = options.now ?? Date.now;
         this.claudeTitles = options.claudeTitles ?? null;
+        this.codexTitles = options.codexTitles ?? null;
+        this.titleRetryMs = options.titleRetryMs ?? TITLE_RETRY_MS;
         this.approvals =
             options.approvals === false
                 ? null
@@ -241,7 +254,7 @@ export class SessionManager {
             this.resuming.delete(session.id);
         }
         await this.setAgent(session, agent);
-        if (agent !== null && kind === 'claude') {
+        if (agent !== null) {
             this.refreshTitle(session, agent);
         }
         if (agent === null || agent.status === 'idle' || agent.status === 'error') {
@@ -543,30 +556,59 @@ export class SessionManager {
         }
     }
 
-    /*
-     * Looks for the name Claude Code wrote into the transcript. Not awaited by the hook, which the CLI
-     * waits on: the first read of a long resumed transcript is not free. A turn that ends is always
-     * worth a look, a hook in the middle of one only while there is no name yet and not too often.
-     */
-    private refreshTitle(session: Session, agent: AgentInfo): void {
+    /* How the CLI of this agent is asked for its own name, or null for a CLI that writes none down. */
+    private titleReader(agent: AgentInfo): (() => Promise<string | null>) | null {
+        const claude = this.claudeTitles;
+        const codex = this.codexTitles;
         const path = agent.transcriptPath;
-        if (!this.claudeTitles || path === null) {
+        const threadId = agent.agentSessionId;
+        if (agent.kind === 'claude' && claude && path !== null) {
+            return () => claude.forTranscript(path);
+        }
+        if (agent.kind === 'codex' && codex && threadId !== null) {
+            return () => codex.forThread(threadId);
+        }
+        return null;
+    }
+
+    /*
+     * Looks for the name the CLI wrote down. Not awaited by the hook, which the CLI waits on: the
+     * first read of a long resumed transcript is not free. A turn that ends is always worth a look, a
+     * hook in the middle of one only while there is no name yet and not too often. A look that finds
+     * nothing tries again a few times, since the name may land after the last hook of a short turn.
+     */
+    private refreshTitle(session: Session, agent: AgentInfo, retry = false): void {
+        const read = this.titleReader(agent);
+        if (read === null) {
             return;
         }
         const now = this.now();
         const last = this.titleReadAt.get(session.id);
-        if (agent.status === 'running' && (agent.suggestedTitle !== undefined || (last !== undefined && now - last < TITLE_READ_INTERVAL_MS))) {
-            return;
+        if (!retry) {
+            // A hook starts the retries over, so every prompt gets the whole window to be named in.
+            const pending = this.titleRetries.get(session.id);
+            if (pending) {
+                pending.count = 0;
+            }
+            if (agent.status === 'running' && (agent.suggestedTitle !== undefined || (last !== undefined && now - last < TITLE_READ_INTERVAL_MS))) {
+                return;
+            }
         }
         this.titleReadAt.set(session.id, now);
-        void this.claudeTitles
-            .forTranscript(path)
+        void read()
             .then((title) => {
                 const current = session.agent;
-                if (title === null || this.sessions.get(session.id) !== session || current === null) {
+                if (this.sessions.get(session.id) !== session || current === null || current.agentSessionId !== agent.agentSessionId) {
                     return;
                 }
-                if (current.agentSessionId !== agent.agentSessionId || current.suggestedTitle === title) {
+                if (title === null) {
+                    if (current.suggestedTitle === undefined) {
+                        this.retryTitle(session);
+                    }
+                    return;
+                }
+                this.titleRetries.delete(session.id);
+                if (current.suggestedTitle === title) {
                     return;
                 }
                 return this.setAgent(session, { ...current, suggestedTitle: title });
@@ -574,10 +616,32 @@ export class SessionManager {
             .catch(() => undefined);
     }
 
+    private retryTitle(session: Session): void {
+        const pending = this.titleRetries.get(session.id) ?? { timer: null, count: 0 };
+        this.titleRetries.set(session.id, pending);
+        if (pending.timer !== null || pending.count >= TITLE_RETRIES) {
+            return;
+        }
+        pending.count += 1;
+        pending.timer = setTimeout(() => {
+            pending.timer = null;
+            const agent = session.agent;
+            if (this.sessions.get(session.id) === session && agent !== null && agent.live && agent.suggestedTitle === undefined) {
+                this.refreshTitle(session, agent, true);
+            }
+        }, this.titleRetryMs);
+        pending.timer.unref?.();
+    }
+
     private remove(session: Session): void {
         this.sessions.delete(session.id);
         this.resuming.delete(session.id);
         this.titleReadAt.delete(session.id);
+        const retry = this.titleRetries.get(session.id);
+        if (retry?.timer) {
+            clearTimeout(retry.timer);
+        }
+        this.titleRetries.delete(session.id);
         this.tokens.delete(session.hookToken);
         this.approvals?.dropSession(session.id);
         session.dispose();

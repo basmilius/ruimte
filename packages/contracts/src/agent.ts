@@ -22,7 +22,7 @@ export const AgentInfoSchema = z.object({
     // The CLI's own session id, what `--resume` takes.
     agentSessionId: z.string().min(1),
     transcriptPath: z.string().nullable(),
-    // The name the CLI gave the session in its transcript; only Claude Code writes one.
+    // The name the CLI wrote down for the session; Claude Code and the Codex TUI write one.
     suggestedTitle: SuggestedTitleSchema.optional(),
     status: AgentStatusSchema,
     // False once the daemon came back after a restart: the CLI is gone but its session can be resumed.

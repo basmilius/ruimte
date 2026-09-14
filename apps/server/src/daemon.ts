@@ -3,6 +3,7 @@ import type { ServerWebSocket } from 'bun';
 import { AuthTicketPayloadSchema, PairPayloadSchema, type AgentKind, type DiagramContent, type ServerFrame } from '@ruimte/contracts';
 import { AgentStore } from './agents/agent-store.ts';
 import { ClaudeTitleReader } from './agents/claude-title.ts';
+import { CodexTitleReader } from './agents/codex-title.ts';
 import { AgentLineageStore } from './agents/lineage.ts';
 import { PendingPromptStore } from './agents/pending-prompts.ts';
 import { OutputGate } from './backpressure.ts';
@@ -112,7 +113,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         firstPrompt: (sessionId) => prompts.take(sessionId),
         firstNotices: messagesFor,
         approvals: config.approvals,
-        claudeTitles
+        claudeTitles,
+        codexTitles: new CodexTitleReader()
     });
     const snapshotSchedule = scheduleSnapshots(manager, snapshots);
     const providers = new ProviderRegistry();
