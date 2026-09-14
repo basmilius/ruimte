@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ruimte-pulsar",
+  "main": "src/index.ts",
+  "account_id": "5e565cf9fa55b0eae1f8131903da2ca9",
+  // The newest date the pinned miniflare's workerd knows, so the tests run the same runtime rules.
+  "compatibility_date": "2026-08-01",
+  "workers_dev": true,
+  "preview_urls": false,
+  "routes": [{ "pattern": "pulsar.ruimte.app", "custom_domain": true }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ruimte-pulsar",
+      "database_id": "dcbaa2c2-a829-4564-b593-eeede567ce04",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "PUBLIC_ORIGIN": "https://pulsar.ruimte.app",
+    "ALLOWED_ORIGINS": ""
+  },
+  // Expired logins, codes, rate limit windows and dead sessions.
+  "triggers": { "crons": ["17 4 * * *"] },
+  "observability": { "enabled": true }
+}
