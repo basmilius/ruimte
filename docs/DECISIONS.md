@@ -318,6 +318,11 @@ canvas, against Ruimte, one verdict each.
   Spellcheck stays on, as it was on the textarea, and a paste stays plain text. The editor loads
   with the main bundle rather than as a lazy chunk; measured with `vite build`, the main chunk
   went from 1,697.70 kB (496.32 kB gzip) to 1,996.03 kB (593.92 kB gzip).
+- Enter in the composer sends, except inside a fence nobody has closed yet, where it adds a line:
+  whoever types there is writing code. Shift+Enter adds a line anywhere, and Cmd+Enter (Ctrl+Enter
+  elsewhere) sends from anywhere, an open fence included (`enterAction` and `inOpenFence` in
+  `src/chat/ui/composer/keys.ts`). Once the fence is closed Enter sends again, so a prompt with a
+  finished block in it goes out the way it always did.
 - An attachment goes over the wire as base64 in `chat.send` once (25 MB and 8 per message) and
   never again: the daemon writes it under `$RUIMTE_HOME/attachments` and the thread keeps its
   name, mime, size and path. The prompt names the file by path instead of carrying an `image`

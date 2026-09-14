@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { insertNewline } from '@codemirror/commands';
+import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import { EditorView } from '@codemirror/view';
 import clsx from 'clsx';
 import { ArrowUp, ChevronDown, Clock, FastForward, Paperclip, Square, SquareSlash, X, Zap } from 'lucide-react';
@@ -24,7 +25,7 @@ import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferenc
 import { STASH_SHORTCUT, stashDraft, type StashedPrompt, useStash } from '@/chat/stash';
 import { pageTimeline, scrollTimelineToEnd, subscribeTimelineEnd, timelineAtEnd } from '@/chat/timeline-scroll';
 import { chipDecorations } from '@/chat/ui/composer/chips';
-import { recallDirection } from '@/chat/ui/composer/keys';
+import { enterAction, inOpenFence, recallDirection } from '@/chat/ui/composer/keys';
 import { ComposerInput, type ComposerInputHandle } from '@/chat/ui/ComposerInput';
 import { ContextMeter } from '@/chat/ui/ContextMeter';
 import { ApprovalDock, QuestionDock } from '@/chat/ui/PendingDock';
@@ -40,7 +41,7 @@ import { BTN_GROUP, FLOAT, MENU_LABEL } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
-import { KEY_SHORTCUTS, matchesShortcut } from '@/ui/shortcut';
+import { KEY_SHORTCUTS, isModHeld, matchesShortcut } from '@/ui/shortcut';
 
 const SEARCH_DEBOUNCE_MS = 80;
 // What fits above the composer without turning the picker into a file tree.
@@ -540,7 +541,10 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
             }
         }
         if (e.key === 'Enter') {
-            if (e.shiftKey) {
+            const { head } = view.state.selection.main;
+            // Parsed to the end, since the fence that closes the block can sit after the caret.
+            const tree = ensureSyntaxTree(view.state, view.state.doc.length, 50) ?? syntaxTree(view.state);
+            if (enterAction({ shift: e.shiftKey, mod: isModHeld(e, isApplePlatform()) }, inOpenFence(tree, head)) === 'newline') {
                 return insertNewline(view);
             }
             submit();
