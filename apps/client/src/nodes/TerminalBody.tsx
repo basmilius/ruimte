@@ -67,7 +67,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
     const exited = useSessionRow(id, (row) => row?.exited);
     const agentRecord = useSessionRow(id, (row) => row?.agent);
     // Only Claude Code writes a name down; the daemon sends none for the other CLIs either way.
-    useSuggestedTitle(id, agentRecord?.kind === 'claude' ? agentRecord.suggestedTitle : undefined);
+    useSuggestedTitle(id, agentRecord?.kind === 'claude' || agentRecord?.kind === 'codex' ? agentRecord.suggestedTitle : undefined);
     const resolvedTheme = useTheme((t) => t.resolved);
     const settingsVersion = useSettings((s) => s.version);
 
