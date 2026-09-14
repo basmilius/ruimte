@@ -14,24 +14,26 @@ import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { UsagePage } from '@/shell/usage/UsagePage';
 import { isApplePlatform } from '@/desktop/bridge';
-import { isLeaveNodeChord } from '@/terminal/keymap';
+import { isLeaveNodeShortcut } from '@/terminal/keymap';
 import { focusViewRow } from '@/shell/sidebar-focus';
 import { Button } from '@/ui/Button';
 import { TOOLTIP_KBD } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { isInFloatingLayer } from '@/ui/floating';
+import { APP_SHORTCUTS } from '@/shell/shortcuts';
+import { Kbd } from '@/ui/Kbd';
 
 /*
  * A view of its own has no canvas to fall back to, so leaving its body puts the keyboard on its row
  * in the sidebar. A chat leaves on Escape; a terminal hands Escape to the program it runs and leaves
- * on the same chord a terminal node uses.
+ * on the same shortcut a terminal node uses.
  */
 const useLeaveOnEscape = (view: ProjectView): void => {
     const drawingStore = useDrawingStore();
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent): void => {
-            const leaving = view.kind === 'terminal' ? isLeaveNodeChord(e, isApplePlatform()) : e.key === 'Escape' && !e.metaKey && !e.ctrlKey && !e.altKey;
+            const leaving = view.kind === 'terminal' ? isLeaveNodeShortcut(e, isApplePlatform()) : e.key === 'Escape' && !e.metaKey && !e.ctrlKey && !e.altKey;
             // An open popup or dialog owns Escape; it closes itself and the body keeps the keyboard.
             // Every cell has this listener, so only the one the keyboard is in may answer.
             if (!leaving || !useDocument.getState().bodyFocused || useDocument.getState().activeViewId !== view.id || isInFloatingLayer(e.target)) {
@@ -106,7 +108,8 @@ function NoProject() {
                     </div>
                 }
             >
-                No project is open. Press <kbd className={TOOLTIP_KBD}>⌘K</kbd> to open an existing one, or open a folder to start a new one.
+                No project is open. Press <Kbd shortcut={APP_SHORTCUTS.palette} className={TOOLTIP_KBD} /> to open an existing one, or open a folder to start a
+                new one.
             </EmptyState>
         </div>
     );
@@ -115,8 +118,8 @@ function NoProject() {
 /*
  * One cell of the grid. A canvas view draws the canvas; every other kind draws the body of its one
  * node, without a frame. A cell draws what its view is and nothing else: the canvas used to stay
- * mounted under every other kind because it carried the app's chords, and with up to nine cells that
- * would mean nine hidden canvases. The chords moved to the workspace (`canvas/canvas-chords.ts`).
+ * mounted under every other kind because it carried the app's shortcuts, and with up to nine cells that
+ * would mean nine hidden canvases. The shortcuts moved to the workspace (`canvas/canvas-shortcuts.ts`).
  */
 export function ViewSurface({ view }: { view: ProjectView }) {
     return isCanvasView(view) ? <Canvas /> : <StandaloneView view={view} />;

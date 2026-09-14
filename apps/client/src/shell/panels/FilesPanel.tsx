@@ -66,6 +66,8 @@ import { FILE_TREE_ICONS } from '@/ui/file-icon';
 import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
+import { APP_SHORTCUTS } from '@/shell/shortcuts';
+import { Kbd } from '@/ui/Kbd';
 
 const SEARCH_DEBOUNCE_MS = 150;
 const SEARCH_LIMIT = 200;
@@ -499,7 +501,7 @@ export function FilesPanel() {
                         <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
                             <Menu.Popup className="menu-popup">
                                 <Menu.Item className="menu-item" onClick={() => useUi.getState().openFindInFiles()}>
-                                    <Icon icon={FileSearch} size={14} /> Find in files <kbd>⇧⌘F</kbd>
+                                    <Icon icon={FileSearch} size={14} /> Find in files <Kbd shortcut={APP_SHORTCUTS.findInFiles} />
                                 </Menu.Item>
                                 <Menu.Separator className={MENU_SEPARATOR} />
                                 <Menu.CheckboxItem

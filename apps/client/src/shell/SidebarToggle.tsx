@@ -2,6 +2,7 @@ import { PanelLeft, PanelLeftClose } from 'lucide-react';
 import { useUi } from '@/state/ui';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
+import { APP_SHORTCUTS } from '@/shell/shortcuts';
 
 /* The one control that shows and hides the session list. The sidebar strip renders it while the
    list is open and the toolbar takes it over when the list is gone, both at the same x, so it
@@ -9,7 +10,7 @@ import { Tooltip } from '@/ui/Tooltip';
 export function SidebarToggle() {
     const open = useUi((s) => s.sidebarOpen);
     return (
-        <Tooltip label={open ? 'Hide sidebar' : 'Show sidebar'} kbd="⌘B">
+        <Tooltip label={open ? 'Hide sidebar' : 'Show sidebar'} kbd={APP_SHORTCUTS.sidebar}>
             <button
                 className="icon-btn shrink-0"
                 aria-label={open ? 'Hide sidebar' : 'Show sidebar'}

@@ -375,7 +375,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
             });
             const bounds = unionRect(rects);
             const camera = bounds === null ? null : cameraToFit(bounds, viewport, 96, 1.5);
-            // A chord on a canvas nobody can see yet is worth nothing later, so this one does not wait.
+            // A shortcut on a canvas nobody can see yet is worth nothing later, so this one does not wait.
             if (camera !== null) {
                 set({ camera, pendingCamera: null });
             }
@@ -815,7 +815,7 @@ export const useCanvasStore = (): StoreApi<CanvasState> => useEditorStoreOf('can
 
 /*
  * The canvas of the cell that has the focus. This is "the canvas in front of me", which is what a
- * chord, a window menu, a palette row or anything else with no cell of its own means. Inside a cell
+ * shortcut, a window menu, a palette row or anything else with no cell of its own means. Inside a cell
  * it is the wrong store as often as not: use `useCanvasStore`.
  */
 export const focusedCanvas = (): StoreApi<CanvasState> => focusedEditor('canvases', defaultCanvases);

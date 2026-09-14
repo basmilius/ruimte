@@ -24,6 +24,8 @@ import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
+import { CANVAS_SHORTCUTS, viewShortcut } from '@/canvas/shortcuts';
+import { Kbd } from '@/ui/Kbd';
 
 /*
  * What "New view" offers: a canvas, or one session with no canvas around it. The agent submenus are
@@ -40,7 +42,7 @@ export function NewViewItems() {
     return (
         <>
             <Menu.Item className="menu-item" onClick={() => newCanvasView()}>
-                <Icon icon={Frame} size={14} /> Canvas <kbd>⌘T</kbd>
+                <Icon icon={Frame} size={14} /> Canvas <Kbd shortcut={CANVAS_SHORTCUTS.newView} />
             </Menu.Item>
             <Menu.Item className="menu-item" onClick={() => void newDrawingView()}>
                 <Icon icon={PenTool} size={14} /> Drawing
@@ -66,7 +68,7 @@ export function NewViewItems() {
 }
 
 /*
- * Putting a view beside the one on screen. Which view lands there is the same question the chord
+ * Putting a view beside the one on screen. Which view lands there is the same question the shortcut
  * answers (`freeViewFor`): the first one that is not standing anywhere yet, since a view is in at
  * most one cell. With every view already up, or with the grid full, the row is not offered.
  */
@@ -82,17 +84,17 @@ function SplitItems() {
         <>
             {room('right') && (
                 <Menu.Item className="menu-item" onClick={() => splitFocusedCell('right')}>
-                    <Icon icon={PanelRight} size={14} /> Split to the right <kbd>⌘\</kbd>
+                    <Icon icon={PanelRight} size={14} /> Split to the right <Kbd shortcut={CANVAS_SHORTCUTS.splitRight} />
                 </Menu.Item>
             )}
             {room('down') && (
                 <Menu.Item className="menu-item" onClick={() => splitFocusedCell('down')}>
-                    <Icon icon={PanelBottom} size={14} /> Split downwards <kbd>⇧⌘\</kbd>
+                    <Icon icon={PanelBottom} size={14} /> Split downwards <Kbd shortcut={CANVAS_SHORTCUTS.splitDown} />
                 </Menu.Item>
             )}
             {closable && (
                 <Menu.Item className="menu-item" onClick={() => useDocument.getState().closeCellAt(layout.focus)}>
-                    <Icon icon={X} size={14} /> Close this cell <kbd>⌘W</kbd>
+                    <Icon icon={X} size={14} /> Close this cell <Kbd shortcut={CANVAS_SHORTCUTS.closeCell} />
                 </Menu.Item>
             )}
         </>
@@ -139,8 +141,8 @@ export function ViewMenu() {
                                         <Icon icon={Check} size={14} />
                                     </span>
                                 )}
-                                {/* The first nine have a chord of their own; the rest are one click away. */}
-                                {index < 9 && view.id !== activeViewId && <kbd>⌘{index + 1}</kbd>}
+                                {/* The first nine have a shortcut of their own; the rest are one click away. */}
+                                {index < 9 && view.id !== activeViewId && <Kbd shortcut={viewShortcut(index)!} />}
                             </Menu.Item>
                         ))}
                         <Menu.Separator className={MENU_SEPARATOR} />

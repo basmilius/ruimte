@@ -1,13 +1,16 @@
 import { useEffect } from 'react';
 import type { StoreApi } from 'zustand';
 import { GRID } from '@/canvas/math';
+import { isApplePlatform } from '@/desktop/bridge';
+import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 import { copyDrawingElements, readDrawingElements } from '@/drawing/export';
 import type { DrawingState, DrawingTool } from '@/state/drawing';
 import { useUi } from '@/state/ui';
+import { matchesShortcut, type Shortcut } from '@/ui/shortcut';
 import { isInFloatingLayer } from '@/ui/floating';
 
 /*
- * The one place in the app where a bare letter is a chord. A drawing has the keyboard the way a
+ * The one place in the app where a bare letter is a shortcut. A drawing has the keyboard the way a
  * terminal has it, and these are the letters every sketching tool uses; they never fire while a
  * text is being typed or a dialog is up.
  */
@@ -78,6 +81,8 @@ export const useDrawingKeys = (store: StoreApi<DrawingState>, active: boolean): 
                 return;
             }
             const state = store.getState();
+            const apple = isApplePlatform();
+            const is = (target: Shortcut): boolean => matchesShortcut(target, e, apple);
             const mod = e.metaKey || e.ctrlKey;
             if (e.key === 'Escape' && !mod) {
                 if (clearOne(store)) {
@@ -86,66 +91,77 @@ export const useDrawingKeys = (store: StoreApi<DrawingState>, active: boolean): 
                 }
                 return;
             }
-            if (mod) {
-                const key = e.key.toLowerCase();
-                if (key === 'z') {
-                    e.preventDefault();
-                    if (e.shiftKey) {
-                        state.redo();
-                    } else {
-                        state.undo();
+            if (is(DRAWING_SHORTCUTS.undo) || is(DRAWING_SHORTCUTS.redo)) {
+                e.preventDefault();
+                if (is(DRAWING_SHORTCUTS.redo)) {
+                    state.redo();
+                } else {
+                    state.undo();
+                }
+                return;
+            }
+            if (is(DRAWING_SHORTCUTS.selectAll)) {
+                e.preventDefault();
+                state.selectAll();
+                return;
+            }
+            if (is(DRAWING_SHORTCUTS.duplicate)) {
+                e.preventDefault();
+                state.duplicateSelected();
+                return;
+            }
+            if (is(DRAWING_SHORTCUTS.lock)) {
+                e.preventDefault();
+                state.toggleLockSelected();
+                return;
+            }
+            if (is(DRAWING_SHORTCUTS.copy)) {
+                e.preventDefault();
+                void copyDrawingElements(store);
+                return;
+            }
+            if (is(DRAWING_SHORTCUTS.cut)) {
+                e.preventDefault();
+                void copyDrawingElements(store).then(() => store.getState().deleteSelected());
+                return;
+            }
+            if (is(DRAWING_SHORTCUTS.paste)) {
+                e.preventDefault();
+                void navigator.clipboard.readText().then((text) => {
+                    const elements = readDrawingElements(text);
+                    if (elements) {
+                        store.getState().pasteElements(elements);
                     }
-                    return;
-                }
-                if (key === 'a') {
-                    e.preventDefault();
-                    state.selectAll();
-                    return;
-                }
-                if (key === 'd') {
-                    e.preventDefault();
-                    state.duplicateSelected();
-                    return;
-                }
-                if (key === 'l' && e.shiftKey) {
-                    e.preventDefault();
-                    state.toggleLockSelected();
-                    return;
-                }
-                if (key === 'c') {
-                    e.preventDefault();
-                    void copyDrawingElements(store);
-                    return;
-                }
-                if (key === 'x') {
-                    e.preventDefault();
-                    void copyDrawingElements(store).then(() => store.getState().deleteSelected());
-                    return;
-                }
-                if (key === 'v') {
-                    e.preventDefault();
-                    void navigator.clipboard.readText().then((text) => {
-                        const elements = readDrawingElements(text);
-                        if (elements) {
-                            store.getState().pasteElements(elements);
-                        }
-                    });
-                    return;
-                }
-                if (key === ']') {
-                    e.preventDefault();
-                    state.bringToFront();
-                    return;
-                }
-                if (key === '[') {
-                    e.preventDefault();
-                    state.sendToBack();
-                    return;
-                }
-                if (key === '0') {
-                    e.preventDefault();
-                    state.zoomTo(1);
-                }
+                });
+                return;
+            }
+            if (is(DRAWING_SHORTCUTS.bringToFront)) {
+                e.preventDefault();
+                state.bringToFront();
+                return;
+            }
+            if (is(DRAWING_SHORTCUTS.sendToBack)) {
+                e.preventDefault();
+                state.sendToBack();
+                return;
+            }
+            if (is(DRAWING_SHORTCUTS.zoomReset)) {
+                e.preventDefault();
+                state.zoomTo(1);
+                return;
+            }
+            if (is(DRAWING_SHORTCUTS.fitAll)) {
+                e.preventDefault();
+                state.fitAll();
+                return;
+            }
+            if (is(DRAWING_SHORTCUTS.zoomSelection)) {
+                e.preventDefault();
+                state.zoomToSelection();
+                return;
+            }
+            // A held Cmd or Ctrl is never a bare letter, or Ctrl+V on macOS would pick the select tool.
+            if (mod) {
                 return;
             }
             if (e.altKey) {
@@ -165,15 +181,6 @@ export const useDrawingKeys = (store: StoreApi<DrawingState>, active: boolean): 
                 return;
             }
             if (e.shiftKey) {
-                if (e.code === 'Digit1') {
-                    e.preventDefault();
-                    state.fitAll();
-                    return;
-                }
-                if (e.code === 'Digit2') {
-                    e.preventDefault();
-                    state.zoomToSelection();
-                }
                 return;
             }
             if (e.key === '=' || e.key === '+') {

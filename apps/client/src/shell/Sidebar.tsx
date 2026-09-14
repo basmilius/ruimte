@@ -67,6 +67,7 @@ import { useInstantWidth } from '@/shell/useInstantWidth';
 import { UsageLimitsCard } from '@/shell/usage/UsageLimitsCard';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { Icon } from '@/ui/Icon';
+import { APP_SHORTCUTS } from '@/shell/shortcuts';
 
 /* How wide the list is when it is open. The inner column keeps this width while the wrapper
    animates to zero, so nothing reflows on the way out. */
@@ -740,7 +741,7 @@ export function Sidebar() {
                             <Icon icon={ChartNoAxesColumn} size={16} />
                         </button>
                     </UsageLimitsCard>
-                    <Tooltip label="Settings" kbd="⌘," name>
+                    <Tooltip label="Settings" kbd={APP_SHORTCUTS.settings} name>
                         <button className="icon-btn" onClick={() => useUi.getState().setSettings({ open: true })}>
                             <Icon icon={Settings} size={16} />
                         </button>

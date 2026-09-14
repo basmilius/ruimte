@@ -24,13 +24,16 @@ import { fileManagerName, serverInfoOf } from '@/state/server';
 import { useTheme } from '@/state/theme';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
+import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { APP_SHORTCUTS } from '@/shell/shortcuts';
+import type { Shortcut } from '@/ui/shortcut';
 
 export interface Command {
     id: string;
     label: string;
     hint?: string;
-    /* Shown next to the label; the chord itself lives in the keyboard handler. */
-    shortcut?: string;
+    /* Shown next to the label; the handler binds the same value. */
+    shortcut?: Shortcut;
     /* Draws this row with the CLI's brand mark instead of the generic action icon. */
     agent?: AgentKind;
     run(): void;
@@ -121,7 +124,9 @@ export const appCommands = (): Command[] => {
     const project = useProject.getState().current !== null;
     return [
         { id: 'open-folder', label: 'Open a folder as a project', run: () => useUi.getState().openFolderBrowser() },
-        ...(folder ? [{ id: 'find-in-files', label: 'Find in files', shortcut: '⌘⇧F', run: () => useUi.getState().openFindInFiles() }] : []),
+        ...(folder
+            ? [{ id: 'find-in-files', label: 'Find in files', shortcut: APP_SHORTCUTS.findInFiles, run: () => useUi.getState().openFindInFiles() }]
+            : []),
         ...(folder
             ? [
                   {
@@ -138,7 +143,7 @@ export const appCommands = (): Command[] => {
            is no file behind any of it, so these rows are not offered rather than quietly lost. */
         ...(project
             ? [
-                  { id: 'view-new', label: 'New canvas view', shortcut: '⌘T', run: () => void newCanvasView() },
+                  { id: 'view-new', label: 'New canvas view', shortcut: CANVAS_SHORTCUTS.newView, run: () => void newCanvasView() },
                   ...(activeViewId
                       ? [
                             { id: 'view-rename', label: 'Rename view', run: () => askRenameView(activeViewId) },
@@ -165,11 +170,11 @@ export const appCommands = (): Command[] => {
                   ...(onCanvas
                       ? [
                             ...moveNodeCommands(),
-                            { id: 'add-terminal', label: 'New terminal', shortcut: '⌥T', run: () => void addNodeAtCenter('terminal') },
-                            { id: 'add-chat', label: 'New chat', shortcut: '⌥C', run: () => void addNodeAtCenter('chat') },
-                            { id: 'add-browser', label: 'New browser', shortcut: '⌥B', run: () => void addNodeAtCenter('browser') },
-                            { id: 'add-group', label: 'New group', shortcut: '⌥G', run: () => void addNodeAtCenter('group') },
-                            { id: 'add-note', label: 'New note', shortcut: '⌥N', run: () => void addNodeAtCenter('note') },
+                            { id: 'add-terminal', label: 'New terminal', shortcut: ADD_NODE_SHORTCUTS.terminal, run: () => void addNodeAtCenter('terminal') },
+                            { id: 'add-chat', label: 'New chat', shortcut: ADD_NODE_SHORTCUTS.chat, run: () => void addNodeAtCenter('chat') },
+                            { id: 'add-browser', label: 'New browser', shortcut: ADD_NODE_SHORTCUTS.browser, run: () => void addNodeAtCenter('browser') },
+                            { id: 'add-group', label: 'New group', shortcut: ADD_NODE_SHORTCUTS.group, run: () => void addNodeAtCenter('group') },
+                            { id: 'add-note', label: 'New note', shortcut: ADD_NODE_SHORTCUTS.note, run: () => void addNodeAtCenter('note') },
                             ...(folder
                                 ? [
                                       {
@@ -184,7 +189,7 @@ export const appCommands = (): Command[] => {
                                 id: 'group-selection',
                                 label: 'Group selection',
                                 hint: canvas.selection.length === 0 ? 'Select nodes first' : undefined,
-                                shortcut: '⌘G',
+                                shortcut: CANVAS_SHORTCUTS.group,
                                 run: () => void focusedCanvas().getState().groupSelection()
                             },
                             { id: 'add-text', label: 'New text', run: () => void focusedCanvas().getState().addText(centerWorld()) },
@@ -216,9 +221,14 @@ export const appCommands = (): Command[] => {
                   // A drawing has a camera of its own, so the same three rows act on whichever is on screen.
                   ...(onCanvas || drawing
                       ? [
-                            { id: 'fit', label: 'Zoom to fit', shortcut: '⇧1', run: () => zoomTarget().fitAll() },
-                            { id: 'zoom-selection', label: 'Zoom to selection', shortcut: '⇧2', run: () => zoomTarget().zoomToSelection() },
-                            { id: 'zoom-reset', label: 'Zoom to 100%', shortcut: '⌘0', run: () => zoomTarget().zoomTo(1) }
+                            { id: 'fit', label: 'Zoom to fit', shortcut: CANVAS_SHORTCUTS.fitAll, run: () => zoomTarget().fitAll() },
+                            {
+                                id: 'zoom-selection',
+                                label: 'Zoom to selection',
+                                shortcut: CANVAS_SHORTCUTS.zoomSelection,
+                                run: () => zoomTarget().zoomToSelection()
+                            },
+                            { id: 'zoom-reset', label: 'Zoom to 100%', shortcut: CANVAS_SHORTCUTS.zoomReset, run: () => zoomTarget().zoomTo(1) }
                         ]
                       : []),
                   ...(drawing && activeView
@@ -233,13 +243,13 @@ export const appCommands = (): Command[] => {
               ]
             : []),
         { id: 'usage', label: 'Usage', hint: 'Cost, tokens and plan limits', run: () => useUi.getState().togglePage('usage') },
-        { id: 'sidebar', label: 'Toggle sidebar', shortcut: '⌘B', run: () => useUi.getState().toggleSidebar() },
+        { id: 'sidebar', label: 'Toggle sidebar', shortcut: APP_SHORTCUTS.sidebar, run: () => useUi.getState().toggleSidebar() },
         { id: 'panel-preview', label: 'Toggle preview panel', run: () => useUi.getState().togglePreview() },
         { id: 'panel-files', label: 'Toggle files panel', run: () => useUi.getState().togglePanel('files') },
         { id: 'panel-git', label: 'Toggle git panel', run: () => useUi.getState().togglePanel('git') },
         { id: 'panel-processes', label: 'Toggle processes panel', run: () => useUi.getState().togglePanel('processes') },
         { id: 'theme', label: 'Toggle light and dark', run: () => useTheme.getState().toggle() },
-        { id: 'settings', label: 'Settings', shortcut: '⌘,', run: () => useUi.getState().setSettings({ open: true }) },
+        { id: 'settings', label: 'Settings', shortcut: APP_SHORTCUTS.settings, run: () => useUi.getState().setSettings({ open: true }) },
         { id: 'settings-keyboard', label: 'Keyboard shortcuts', run: () => useUi.getState().setSettings({ open: true, section: 'keyboard' }) },
         {
             id: 'settings-machines',

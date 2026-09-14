@@ -8,6 +8,9 @@ import { useProject } from '@/state/project';
 import { useUi } from '@/state/ui';
 import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
+import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { APP_SHORTCUTS } from '@/shell/shortcuts';
+import { Kbd } from '@/ui/Kbd';
 
 /* The menu for a right-click on empty canvas; everything it adds lands where the click was. */
 export function CanvasMenuPopup({ at }: { at: () => Point }) {
@@ -24,20 +27,20 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                 <ContextMenu.Popup className="menu-popup">
                     <div className={MENU_LABEL}>Add here</div>
                     <ContextMenu.Item className="menu-item" onClick={() => add('terminal')}>
-                        <Icon icon={Terminal} size={14} /> Terminal <kbd>⌥T</kbd>
+                        <Icon icon={Terminal} size={14} /> Terminal <Kbd shortcut={ADD_NODE_SHORTCUTS.terminal} />
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => add('chat')}>
-                        <Icon icon={MessageSquare} size={14} /> Chat <kbd>⌥C</kbd>
+                        <Icon icon={MessageSquare} size={14} /> Chat <Kbd shortcut={ADD_NODE_SHORTCUTS.chat} />
                     </ContextMenu.Item>
                     <AgentSubmenus onPick={(target, provider) => addAgentNode(target, provider, at())} />
                     <ContextMenu.Item className="menu-item" onClick={() => add('browser')}>
-                        <Icon icon={Globe} size={14} /> Browser <kbd>⌥B</kbd>
+                        <Icon icon={Globe} size={14} /> Browser <Kbd shortcut={ADD_NODE_SHORTCUTS.browser} />
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => add('group')}>
-                        <Icon icon={LayoutGrid} size={14} /> Group <kbd>⌥G</kbd>
+                        <Icon icon={LayoutGrid} size={14} /> Group <Kbd shortcut={ADD_NODE_SHORTCUTS.group} />
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => add('note')}>
-                        <Icon icon={StickyNote} size={14} /> Note <kbd>⌥N</kbd>
+                        <Icon icon={StickyNote} size={14} /> Note <Kbd shortcut={ADD_NODE_SHORTCUTS.note} />
                     </ContextMenu.Item>
                     {hasFolder && (
                         <ContextMenu.Item className="menu-item" onClick={() => useUi.getState().openFilePicker({ kind: 'node', at: at() })}>
@@ -49,7 +52,7 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                     </ContextMenu.Item>
                     <ContextMenu.Separator className={MENU_SEPARATOR} />
                     <ContextMenu.Item className="menu-item" disabled={!hasSelection} onClick={() => canvasStore.getState().groupSelection()}>
-                        <Icon icon={SquareDashedMousePointer} size={14} /> Group selection <kbd>⌘G</kbd>
+                        <Icon icon={SquareDashedMousePointer} size={14} /> Group selection <Kbd shortcut={CANVAS_SHORTCUTS.group} />
                     </ContextMenu.Item>
                     <ContextMenu.Item
                         className="menu-item"
@@ -58,14 +61,14 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                             s.select([...s.order, ...Object.keys(s.texts)]);
                         }}
                     >
-                        <Icon icon={Scan} size={14} /> Select all <kbd>⌘A</kbd>
+                        <Icon icon={Scan} size={14} /> Select all <Kbd shortcut={CANVAS_SHORTCUTS.selectAll} />
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => canvasStore.getState().fitAll()}>
-                        <Icon icon={Maximize} size={14} /> Zoom to fit <kbd>⇧1</kbd>
+                        <Icon icon={Maximize} size={14} /> Zoom to fit <Kbd shortcut={CANVAS_SHORTCUTS.fitAll} />
                     </ContextMenu.Item>
                     <ContextMenu.Separator className={MENU_SEPARATOR} />
                     <ContextMenu.Item className="menu-item" onClick={() => useUi.getState().setSettings({ open: true })}>
-                        <Icon icon={Settings} size={14} /> Settings <kbd>⌘,</kbd>
+                        <Icon icon={Settings} size={14} /> Settings <Kbd shortcut={APP_SHORTCUTS.settings} />
                     </ContextMenu.Item>
                 </ContextMenu.Popup>
             </ContextMenu.Positioner>

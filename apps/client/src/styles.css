@@ -525,7 +525,7 @@
     .cursor-row[data-active='true'] { background: var(--surface-active); color: var(--text); }
     :root[data-modality='pointer'] .cursor-row[data-active='true'] { background: var(--surface-hover); }
     .menu-item[data-popup-open] { background: var(--surface-active); }
-    /* A chord in a row: pushed to the right, in the interface font, wherever a row carries one. */
+    /* A shortcut in a row: pushed to the right, in the interface font, wherever a row carries one. */
     .menu-item kbd { margin-left: auto; font-family: var(--font-sans); font-size: var(--text-xs); color: var(--text-faint); }
 
     /* A menu with a search field on top: the field sits flush against the edge, so the padding is the list's. */

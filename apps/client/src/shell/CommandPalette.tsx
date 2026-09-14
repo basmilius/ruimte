@@ -60,12 +60,15 @@ import { transportFor } from '@/transport';
 import { useFocusedConnection } from '@/transport/connections';
 import type { Transport } from '@/transport/transport';
 import { useOpenEndpoints } from '@/transport/status';
-import { desktop } from '@/desktop/bridge';
+import { desktop, isApplePlatform } from '@/desktop/bridge';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP, SECTION_LABEL, TOOLTIP_KBD } from '@/ui/classes';
 import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
+import { viewShortcut } from '@/canvas/shortcuts';
+import { Kbd } from '@/ui/Kbd';
+import { KEY_SHORTCUTS, matchesShortcut } from '@/ui/shortcut';
 
 const KIND_ICON: Record<NodeKind, React.ReactNode> = {
     terminal: <Icon icon={Terminal} size={14} />,
@@ -505,7 +508,7 @@ export function CommandPalette() {
         const viewSwitches: Entry[] = views.filter(isOpenableView).map((view, index) => ({
             id: `view-${view.id}`,
             label: view.name ?? '',
-            shortcut: index < 9 ? `⌘${index + 1}` : undefined,
+            shortcut: viewShortcut(index),
             icon: (
                 <ViewGlyph
                     id={view.id}
@@ -663,8 +666,8 @@ export function CommandPalette() {
     const backTo = browse === null ? null : browseBack(browse, machines.length).to;
     const backLabel = backTo === 'folders' ? 'Back to the folders' : backTo === 'machines' ? 'Browse another machine' : 'Back to the palette';
     const submitLabel = presence === 'missing' ? 'Create and open' : 'Open folder';
-    // Enter means "use what I typed" until a row is highlighted, and then the chord takes that over.
-    const submitChord = active === undefined ? '↵' : '⌘↵';
+    // Enter means "use what I typed" until a row is highlighted, and then the shortcut takes that over.
+    const submitShortcut = active === undefined ? KEY_SHORTCUTS.enter : KEY_SHORTCUTS.modEnter;
     /* The shell's own picker, which only makes sense for the daemon that served this page: the word
        on the button is the Electron machine's, because that is whose dialog opens. */
     const nativeDialog = browseEndpointId === LOCAL_ENDPOINT_ID ? desktop() : null;
@@ -707,7 +710,7 @@ export function CommandPalette() {
                             it says which machine that is. With one machine there is nothing to name,
                             so it is the plain arrow that leaves browsing. */}
                         {browsing && (
-                            <Tooltip label={backLabel} kbd="⌫">
+                            <Tooltip label={backLabel} kbd={KEY_SHORTCUTS.backspace}>
                                 <button
                                     className="flex h-6 shrink-0 items-center gap-1.5 rounded-md px-1.5 text-xs text-text-muted hover:bg-surface-hover"
                                     // The field keeps the keys; a control that takes focus would swallow the next arrow.
@@ -779,7 +782,11 @@ export function CommandPalette() {
                                     e.preventDefault();
                                     if (grepping) {
                                         runHit(activeHit);
-                                    } else if (browsing && !machineStep && (active === undefined || e.metaKey || e.ctrlKey)) {
+                                    } else if (
+                                        browsing &&
+                                        !machineStep &&
+                                        (active === undefined || matchesShortcut(KEY_SHORTCUTS.modEnter, e, isApplePlatform()))
+                                    ) {
                                         void submitPath(query);
                                     } else {
                                         run(active);
@@ -824,16 +831,16 @@ export function CommandPalette() {
                             </span>
                         )}
                         {/* The button that opens what was typed sits in the field, at its right end,
-                            carrying the one chord that does the same thing. */}
+                            carrying the one shortcut that does the same thing. */}
                         {browsing && !machineStep && (
-                            <Tooltip label={submitLabel} kbd={submitChord}>
+                            <Tooltip label={submitLabel} kbd={submitShortcut}>
                                 <Button size="sm" variant="secondary" disabled={busy || query.trim() === ''} onClick={() => void submitPath(query)}>
                                     {submitLabel}
-                                    <kbd className={TOOLTIP_KBD}>{submitChord}</kbd>
+                                    <Kbd shortcut={submitShortcut} className={TOOLTIP_KBD} />
                                 </Button>
                             </Tooltip>
                         )}
-                        {!browsing && <kbd className={TOOLTIP_KBD}>esc</kbd>}
+                        {!browsing && <Kbd shortcut={KEY_SHORTCUTS.escape} className={TOOLTIP_KBD} />}
                     </div>
                     <div id={LIST_ID} className="max-h-[50vh] overflow-auto p-1.5" role="listbox" aria-label="Results">
                         <div aria-live="polite">
@@ -884,7 +891,7 @@ export function CommandPalette() {
                                         {entry.hint && <span className="text-xs text-text-faint">{entry.hint}</span>}
                                         <span className="grow" />
                                         {entry.trailing}
-                                        {entry.shortcut && <kbd className={TOOLTIP_KBD}>{entry.shortcut}</kbd>}
+                                        {entry.shortcut && <Kbd shortcut={entry.shortcut} className={TOOLTIP_KBD} />}
                                     </button>
                                 </div>
                             );
@@ -910,7 +917,8 @@ export function CommandPalette() {
                             )}
                             <span className="grow" />
                             <span>
-                                <kbd className={TOOLTIP_KBD}>↵</kbd> opens the file, <kbd className={TOOLTIP_KBD}>⌫</kbd> on an empty search goes back
+                                <Kbd shortcut={KEY_SHORTCUTS.enter} className={TOOLTIP_KBD} /> opens the file,{' '}
+                                <Kbd shortcut={KEY_SHORTCUTS.backspace} className={TOOLTIP_KBD} /> on an empty search goes back
                             </span>
                         </div>
                     )}
@@ -924,14 +932,14 @@ export function CommandPalette() {
                                 the button in the field is already saying so. */}
                             {(active !== undefined || query.trim() === '') && (
                                 <span className="flex shrink-0 items-center gap-1.5">
-                                    <kbd className={TOOLTIP_KBD}>↵</kbd> Select
+                                    <Kbd shortcut={KEY_SHORTCUTS.enter} className={TOOLTIP_KBD} /> Select
                                 </span>
                             )}
                             <span className="flex shrink-0 items-center gap-1.5">
-                                <kbd className={TOOLTIP_KBD}>⌫</kbd> Back
+                                <Kbd shortcut={KEY_SHORTCUTS.backspace} className={TOOLTIP_KBD} /> Back
                             </span>
                             <span className="flex shrink-0 items-center gap-1.5">
-                                <kbd className={TOOLTIP_KBD}>esc</kbd> Close
+                                <Kbd shortcut={KEY_SHORTCUTS.escape} className={TOOLTIP_KBD} /> Close
                             </span>
                             <span className="grow" />
                             {failure && (

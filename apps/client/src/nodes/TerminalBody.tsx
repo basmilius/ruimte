@@ -12,7 +12,7 @@ import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 import { isApplePlatform } from '@/desktop/bridge';
 import { sessionClient } from '@/terminal';
-import { isAppChord, isClearChord, isLeaveNodeChord, macMotionSequence } from '@/terminal/keymap';
+import { isAppShortcut, isClearShortcut, isLeaveNodeShortcut, macMotionSequence } from '@/terminal/keymap';
 import { lastScreenOf, registerTerminal } from '@/terminal/registry';
 import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
 import { webglBudget } from '@/terminal/webgl-budget';
@@ -97,24 +97,24 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
         term.attachCustomKeyEventHandler((e) => {
             const apple = isApplePlatform();
             if (e.key === 'Escape') {
-                // Escape is the program's (an interrupt, a mode change); only the leave chord returns
+                // Escape is the program's (an interrupt, a mode change); only the leave shortcut returns
                 // to the canvas, and it does so by falling through to the window listener unwritten.
-                if (isLeaveNodeChord(e, apple)) {
+                if (isLeaveNodeShortcut(e, apple)) {
                     return false;
                 }
                 // The canvas listens on window, where any Escape would end node mode.
                 e.stopPropagation();
                 return true;
             }
-            // A focused terminal has the keyboard the way a native one does: every chord the app does
+            // A focused terminal has the keyboard the way a native one does: every shortcut the app does
             // not need to move between views stops here instead of reaching the window listeners.
-            if (!isAppChord(e, apple)) {
+            if (!isAppShortcut(e, apple)) {
                 e.stopPropagation();
             }
             if (e.type !== 'keydown') {
                 return true;
             }
-            if (isClearChord(e, apple)) {
+            if (isClearShortcut(e, apple)) {
                 e.preventDefault();
                 sessionClient.clear(id);
                 return false;

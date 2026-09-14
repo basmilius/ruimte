@@ -6,7 +6,7 @@ import { Bookmark, Check, ChevronDown, ChevronRight, Search, Shield, SlidersHori
 import type { AgentKind, ModelInfo, ModelSelection, ProviderInfo, RuntimeMode } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
-import { forgetStashed, useStash, type StashedPrompt } from '@/chat/stash';
+import { forgetStashed, STASH_SHORTCUT, useStash, type StashedPrompt } from '@/chat/stash';
 import { MENU_LABEL, MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
 import { Select, type SelectItem } from '@/ui/Select';
 import { Tooltip } from '@/ui/Tooltip';
@@ -305,7 +305,7 @@ export function StashPicker({ onRestore }: { onRestore(prompt: StashedPrompt): v
     }
     return (
         <Popover.Root>
-            <Tooltip label="Stashed prompts" kbd="⌘S">
+            <Tooltip label="Stashed prompts" kbd={STASH_SHORTCUT}>
                 <Popover.Trigger className={triggerClass}>
                     <Icon icon={Bookmark} size={12} />
                     <span className="tabular-nums">{prompts.length}</span>

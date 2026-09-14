@@ -38,7 +38,7 @@ export const freeViewFor = (state: Pick<DocumentState, 'views' | 'layout' | 'act
     return null;
 };
 
-/* Splitting the focused cell, from a chord or from a menu: the grid decides, this picks the view. */
+/* Splitting the focused cell, from a shortcut or from a menu: the grid decides, this picks the view. */
 export const splitFocusedCell = (direction: SplitDirection): void => {
     const state = useDocument.getState();
     const viewId = freeViewFor(state);
@@ -70,7 +70,7 @@ const freeName = (views: readonly ProjectView[], base: string): string => {
 };
 
 /* A view belongs to a project file, so with no project open there is nothing to add it to and
-   nothing that would ever save it. Every menu, chord and palette row making a view comes past here. */
+   nothing that would ever save it. Every menu, shortcut and palette row making a view comes past here. */
 export const canAddView = (): boolean => useProject.getState().current !== null;
 
 export const newCanvasView = (): string | null =>

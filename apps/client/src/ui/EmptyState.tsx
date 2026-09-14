@@ -5,7 +5,7 @@ interface EmptyStateProps {
     icon?: ReactNode;
     /* One sentence. What is missing, and what puts something there. */
     children: ReactNode;
-    /* The button or the chord that fills the space; kept to one. */
+    /* The button or the shortcut that fills the space; kept to one. */
     action?: ReactNode;
     className?: string;
 }

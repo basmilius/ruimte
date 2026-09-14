@@ -6,6 +6,8 @@ import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { MENU_SEPARATOR } from '@/ui/classes';
 import { copyText, readClipboardText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
+import { EDIT_SHORTCUTS } from '@/ui/shortcut';
+import { Kbd } from '@/ui/Kbd';
 
 /*
  * A sticky note: rendered markdown on the canvas, a textarea while the node has focus. The text
@@ -62,7 +64,7 @@ export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
                     <ContextMenu.Positioner className="z-(--z-popup)">
                         <ContextMenu.Popup className="menu-popup">
                             <ContextMenu.Item className="menu-item" disabled={selected === ''} onClick={() => copyText(selected)}>
-                                <Icon icon={Copy} size={14} /> Copy <kbd>⌘C</kbd>
+                                <Icon icon={Copy} size={14} /> Copy <Kbd shortcut={EDIT_SHORTCUTS.copy} />
                             </ContextMenu.Item>
                             <ContextMenu.Item
                                 className="menu-item"
@@ -72,14 +74,14 @@ export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
                                     replaceSelection('');
                                 }}
                             >
-                                <Icon icon={Scissors} size={14} /> Cut <kbd>⌘X</kbd>
+                                <Icon icon={Scissors} size={14} /> Cut <Kbd shortcut={EDIT_SHORTCUTS.cut} />
                             </ContextMenu.Item>
                             <ContextMenu.Item className="menu-item" onClick={() => void paste()}>
-                                <Icon icon={ClipboardPaste} size={14} /> Paste <kbd>⌘V</kbd>
+                                <Icon icon={ClipboardPaste} size={14} /> Paste <Kbd shortcut={EDIT_SHORTCUTS.paste} />
                             </ContextMenu.Item>
                             <ContextMenu.Separator className={MENU_SEPARATOR} />
                             <ContextMenu.Item className="menu-item" onClick={() => ref.current?.select()}>
-                                <Icon icon={Scan} size={14} /> Select all <kbd>⌘A</kbd>
+                                <Icon icon={Scan} size={14} /> Select all <Kbd shortcut={EDIT_SHORTCUTS.selectAll} />
                             </ContextMenu.Item>
                         </ContextMenu.Popup>
                     </ContextMenu.Positioner>

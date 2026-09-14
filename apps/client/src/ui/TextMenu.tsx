@@ -5,6 +5,9 @@ import { MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
 import { selectAllWithin, selectionWithin } from '@/ui/selection';
+import { isApplePlatform } from '@/desktop/bridge';
+import { EDIT_SHORTCUTS, matchesShortcut } from '@/ui/shortcut';
+import { Kbd } from '@/ui/Kbd';
 
 /*
  * A block of text and the menu that belongs to it: Copy for what is selected inside it, Select all
@@ -18,7 +21,7 @@ export function TextMenu({ children, ...rest }: ComponentProps<'div'>) {
     const [selection, setSelection] = useState('');
 
     const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
-        if (event.key !== 'a' || !(event.metaKey || event.ctrlKey)) {
+        if (!matchesShortcut(EDIT_SHORTCUTS.selectAll, event, isApplePlatform())) {
             return;
         }
         event.preventDefault();
@@ -34,11 +37,11 @@ export function TextMenu({ children, ...rest }: ComponentProps<'div'>) {
                 <ContextMenu.Positioner className="z-(--z-popup)">
                     <ContextMenu.Popup className="menu-popup">
                         <ContextMenu.Item className="menu-item" disabled={selection === ''} onClick={() => copyText(selection)}>
-                            <Icon icon={Copy} size={14} /> Copy <kbd>⌘C</kbd>
+                            <Icon icon={Copy} size={14} /> Copy <Kbd shortcut={EDIT_SHORTCUTS.copy} />
                         </ContextMenu.Item>
                         <ContextMenu.Separator className={MENU_SEPARATOR} />
                         <ContextMenu.Item className="menu-item" onClick={() => selectAllWithin(host.current)}>
-                            <Icon icon={Scan} size={14} /> Select all <kbd>⌘A</kbd>
+                            <Icon icon={Scan} size={14} /> Select all <Kbd shortcut={EDIT_SHORTCUTS.selectAll} />
                         </ContextMenu.Item>
                     </ContextMenu.Popup>
                 </ContextMenu.Positioner>

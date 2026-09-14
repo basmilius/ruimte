@@ -1,90 +1,68 @@
-/* What these helpers read from a key event. A real `KeyboardEvent` satisfies it, a test writes one by hand. */
-export interface KeyChord {
-    key: string;
-    code: string;
-    metaKey: boolean;
-    altKey: boolean;
-    ctrlKey: boolean;
-    shiftKey: boolean;
+import { CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, VIEW_SHORTCUTS } from '@/canvas/shortcuts';
+import { APP_SHORTCUTS } from '@/shell/shortcuts';
+import { shortcut, matchesShortcut, type Shortcut, type KeyLike } from '@/ui/shortcut';
+
+/* A shortcut that is a different key on macOS than everywhere else, on purpose. */
+export interface PlatformShortcut {
+    mac: Shortcut;
+    other: Shortcut;
 }
+
+export const platformShortcut = (pair: PlatformShortcut, apple: boolean): Shortcut => (apple ? pair.mac : pair.other);
 
 /*
  * Escape belongs to the program in the terminal (Claude Code interrupts on it, vim lives on it), so
- * leaving node mode is a chord: Cmd+Escape on macOS, Ctrl+Shift+Escape elsewhere. Plain Ctrl+Escape
- * is the Windows Start menu, which never reaches the page.
+ * leaving node mode is a shortcut. Plain Ctrl+Escape is the Windows Start menu, which never reaches the page.
  */
-export const isLeaveNodeChord = (event: KeyChord, apple: boolean): boolean => {
-    if (event.key !== 'Escape') {
-        return false;
-    }
-    if (apple) {
-        return event.metaKey;
-    }
-    return event.ctrlKey && event.shiftKey;
-};
+export const LEAVE_NODE_SHORTCUT: PlatformShortcut = { mac: shortcut('Meta+Escape'), other: shortcut('Ctrl+Shift+Escape') };
 
-/* The chord as a tooltip or a chip prints it. The Keyboard pane says ⌘ where Windows reads Ctrl; this one cannot. */
-export const leaveNodeChordLabel = (apple: boolean): string => (apple ? '⌘Esc' : '⌃⇧Esc');
+/* Clearing is Cmd+K, what every macOS terminal does; off macOS Ctrl+K is readline's kill-line. */
+export const CLEAR_SHORTCUT: PlatformShortcut = { mac: shortcut('Meta+K'), other: shortcut('Ctrl+Shift+K') };
 
-const ARROW_CODES = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']);
+export const isLeaveNodeShortcut = (event: KeyLike, apple: boolean): boolean => matchesShortcut(platformShortcut(LEAVE_NODE_SHORTCUT, apple), event, apple);
+
+export const isClearShortcut = (event: KeyLike, apple: boolean): boolean => matchesShortcut(platformShortcut(CLEAR_SHORTCUT, apple), event, apple);
 
 /*
- * The chords a focused terminal hands back to the app: the ones that move between views, panels and
- * settings, so you never have to leave the terminal to reach another view. Every other chord is the
- * program's, which is why ⌘K clears the screen here instead of opening the palette.
+ * The shortcuts a focused terminal hands back to the app: the ones that move between views, cells, panels
+ * and settings, so you never have to leave the terminal to reach another view. Every other shortcut is the
+ * program's, which is why Cmd+K clears the screen here instead of opening the palette.
  */
-export const isAppChord = (event: KeyChord, apple: boolean): boolean => {
-    const mod = apple ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
-    if (!mod) {
-        return false;
-    }
-    if (event.altKey) {
-        // The arrows step between the cells of the grid, which a terminal in one of them may not eat.
-        return event.code === 'KeyB' || ARROW_CODES.has(event.code);
-    }
-    if (event.shiftKey) {
-        return event.code === 'BracketLeft' || event.code === 'BracketRight' || event.code === 'Backslash';
-    }
-    // Ctrl+B is readline's backward-char and tmux's prefix, so off macOS the shell keeps it.
-    return (
-        /^Digit[1-9]$/.test(event.code) ||
-        event.code === 'KeyT' ||
-        event.code === 'Backslash' ||
-        event.code === 'KeyW' ||
-        event.key === ',' ||
-        (apple && event.code === 'KeyB')
-    );
-};
+export const TERMINAL_HANDED_BACK: readonly Shortcut[] = [
+    ...VIEW_SHORTCUTS,
+    CANVAS_SHORTCUTS.newView,
+    CANVAS_SHORTCUTS.splitRight,
+    CANVAS_SHORTCUTS.splitDown,
+    CANVAS_SHORTCUTS.closeCell,
+    CANVAS_SHORTCUTS.previousView,
+    CANVAS_SHORTCUTS.nextView,
+    CANVAS_SHORTCUTS.togglePanel,
+    ...Object.values(FOCUS_SHORTCUTS),
+    APP_SHORTCUTS.settings,
+    APP_SHORTCUTS.sidebar
+];
+
+/* Off macOS these are control characters a program reads: Ctrl+B the tmux prefix, Ctrl+W delete-word,
+   Ctrl+T transpose, Ctrl+\ SIGQUIT. There the terminal keeps them. */
+const PTY_CONTROL_SHORTCUTS: readonly Shortcut[] = [APP_SHORTCUTS.sidebar, CANVAS_SHORTCUTS.newView, CANVAS_SHORTCUTS.splitRight, CANVAS_SHORTCUTS.closeCell];
+
+const matchesAny = (shortcuts: readonly Shortcut[], event: KeyLike, apple: boolean): boolean =>
+    shortcuts.some((candidate) => matchesShortcut(candidate, event, apple));
+
+export const isAppShortcut = (event: KeyLike, apple: boolean): boolean =>
+    TERMINAL_HANDED_BACK.some((candidate) => (apple || !PTY_CONTROL_SHORTCUTS.includes(candidate)) && matchesShortcut(candidate, event, apple));
 
 /*
- * Everything a focused terminal hands back, plus the chords only a terminal keeps for itself: the
- * palette, find in files. A text field that stops its own keys (the chat composer) reads this one,
- * so typing in it never costs you a shortcut the rest of the app answers.
+ * What a text field that stops its own keys (the chat composer) hands back: everything a terminal
+ * does, the Ctrl shortcuts a terminal keeps off macOS (a text field has no program behind it), and the
+ * palette and find in files. Ctrl+B stays out of it off macOS, as it always has.
  */
-export const isShellChord = (event: KeyChord, apple: boolean): boolean => {
-    if (isAppChord(event, apple)) {
-        return true;
-    }
-    const mod = apple ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
-    if (!mod || event.altKey) {
-        return false;
-    }
-    if (event.shiftKey) {
-        return event.code === 'KeyF';
-    }
-    return event.code === 'KeyK';
-};
-
-/* Clearing is ⌘K, what every macOS terminal does; off macOS the shell owns Ctrl+K, so it is ⌃⇧K. */
-export const isClearChord = (event: KeyChord, apple: boolean): boolean => {
-    if (event.code !== 'KeyK' || event.altKey) {
-        return false;
-    }
-    if (apple) {
-        return event.metaKey && !event.ctrlKey && !event.shiftKey;
-    }
-    return event.ctrlKey && event.shiftKey && !event.metaKey;
-};
+export const isShellShortcut = (event: KeyLike, apple: boolean): boolean =>
+    matchesAny(
+        TERMINAL_HANDED_BACK.filter((candidate) => apple || candidate !== APP_SHORTCUTS.sidebar),
+        event,
+        apple
+    ) || matchesAny([APP_SHORTCUTS.palette, APP_SHORTCUTS.findInFiles], event, apple);
 
 /* Home and End in both forms the application cursor keys mode (DECCKM) asks for. */
 const HOME_NORMAL = '\x1b[H';
@@ -100,9 +78,9 @@ const KILL_LINE_BACK = '\x15';
 /**
  * The line and word motions macOS gives every native terminal and xterm does not: Cmd is the start
  * or the end of the line, Option a word, Cmd+Backspace kills back to the start. Returns the bytes to
- * write, or null when the chord is none of them and xterm should handle the key itself.
+ * write, or null when the shortcut is none of them and xterm should handle the key itself.
  */
-export const macMotionSequence = (event: KeyChord, applicationCursorKeys: boolean): string | null => {
+export const macMotionSequence = (event: KeyLike, applicationCursorKeys: boolean): string | null => {
     if (event.ctrlKey) {
         return null;
     }

@@ -1,6 +1,8 @@
 import type { ReactElement, ReactNode } from 'react';
 import clsx from 'clsx';
 import { Tooltip as BaseTooltip } from '@base-ui-components/react/tooltip';
+import { isApplePlatform } from '@/desktop/bridge';
+import { formatShortcut, type Shortcut } from '@/ui/shortcut';
 import { TOOLTIP_KBD } from '@/ui/classes';
 
 type Side = 'top' | 'bottom' | 'left' | 'right';
@@ -16,7 +18,8 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
 
 interface TooltipProps {
     label: ReactNode;
-    kbd?: string;
+    /* A shortcut, or a short phrase about a key that is not one ("Shift skips the cache"). */
+    kbd?: Shortcut | string;
     side?: Side;
     /* Makes the label the accessible name of the trigger as well: what an icon-only button needs,
        and the way to keep the name and the tooltip from ever saying two different things. */
@@ -35,8 +38,8 @@ export function Tooltip({ label, kbd, side = 'top', name = false, children }: To
                         <BaseTooltip.Viewport className="px-[9px] py-[5px] whitespace-nowrap">
                             <span>{label}</span>
                             {/* The viewport wraps its children in a div of its own, so the 8px
-                                between the label and the chord has to sit on the chord itself. */}
-                            {kbd && <kbd className={clsx(TOOLTIP_KBD, 'ml-2')}>{kbd}</kbd>}
+                                between the label and the shortcut has to sit on the shortcut itself. */}
+                            {kbd && <kbd className={clsx(TOOLTIP_KBD, 'ml-2')}>{typeof kbd === 'string' ? kbd : formatShortcut(kbd, isApplePlatform())}</kbd>}
                         </BaseTooltip.Viewport>
                     </BaseTooltip.Popup>
                 </BaseTooltip.Positioner>

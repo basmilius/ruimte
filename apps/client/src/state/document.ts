@@ -54,7 +54,7 @@ export interface DocumentState {
     views: ProjectView[];
     /*
      * The view of the cell that has the focus. It is derived from the layout and kept beside it,
-     * because it is what the sidebar marks, what a chord acts on and what everything outside the
+     * because it is what the sidebar marks, what a shortcut acts on and what everything outside the
      * grid means by "the view": one answer to a question that is asked from everywhere.
      */
     activeViewId: string | null;

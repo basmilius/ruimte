@@ -20,7 +20,7 @@ import {
 } from '@/chat/mentions';
 import { PROMPT_MAX_CHARS, promptGuard, usableSlashCommands } from '@/chat/guards';
 import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferences';
-import { stashDraft, useStash, type StashedPrompt } from '@/chat/stash';
+import { STASH_SHORTCUT, stashDraft, type StashedPrompt, useStash } from '@/chat/stash';
 import { pageTimeline, scrollTimelineToEnd, subscribeTimelineEnd, timelineAtEnd } from '@/chat/timeline-scroll';
 import { CHIP_BEHIND_TEXT, MENTION_TONE, SKILL_TONE } from '@/chat/ui/chips';
 import { ContextMeter } from '@/chat/ui/ContextMeter';
@@ -29,13 +29,14 @@ import { ModelPicker, ModePicker, OptionsPicker, StashPicker } from '@/chat/ui/P
 import { isApplePlatform } from '@/desktop/bridge';
 import { useChatRow } from '@/state/chats';
 import { useProviders } from '@/state/providers';
-import { isShellChord } from '@/terminal/keymap';
+import { isShellShortcut } from '@/terminal/keymap';
 import { TransportError } from '@/transport';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP, FLOAT, MENU_LABEL } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
+import { KEY_SHORTCUTS, matchesShortcut } from '@/ui/shortcut';
 
 const MAX_ROWS_PX = 200;
 const SEARCH_DEBOUNCE_MS = 80;
@@ -477,9 +478,9 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
             }
             return;
         }
-        // The composer keeps the keyboard while you type, but the chords that move between views,
+        // The composer keeps the keyboard while you type, but the shortcuts that move between views,
         // panels and the palette stay the app's; the window listener never sees a stopped key.
-        if (!isShellChord(e, isApplePlatform())) {
+        if (!isShellShortcut(e, isApplePlatform())) {
             e.stopPropagation();
         }
         const el = e.currentTarget;
@@ -490,7 +491,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
             }
             return;
         }
-        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        if (matchesShortcut(STASH_SHORTCUT, e, isApplePlatform())) {
             e.preventDefault();
             toggleStash();
             return;
@@ -846,7 +847,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                     )}
                     {/* While a turn runs the same button queues the message instead of sending it. */}
                     {(!busy || !isEmptyDraft(draft)) && (
-                        <Tooltip label={busy ? 'Queue' : 'Send'} kbd="↵" name>
+                        <Tooltip label={busy ? 'Queue' : 'Send'} kbd={KEY_SHORTCUTS.enter} name>
                             <button
                                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-accent-text disabled:opacity-40"
                                 disabled={isEmptyDraft(draft) || disabled || guard.tooLong}

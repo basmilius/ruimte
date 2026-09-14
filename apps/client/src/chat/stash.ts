@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { uploadBytes } from '@/chat/attachments';
 import type { ChatDraft } from '@/chat/drafts';
+import { shortcut } from '@/ui/shortcut';
+
+/* Puts the draft away, or takes the last one back on an empty box. */
+export const STASH_SHORTCUT = shortcut('Mod+S');
 
 const STORAGE_KEY = 'ruimte.chat.stash';
 

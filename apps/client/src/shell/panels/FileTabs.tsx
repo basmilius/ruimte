@@ -10,6 +10,7 @@ import { useGit } from '@/state/git';
 import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
 /* A tab lifts on hover instead of sinking (`surface-raised` is the step above the panel's ground),
    and the active one carries its mark inside itself, so turning it on moves nothing. */
@@ -100,7 +101,7 @@ export function FileTabs() {
                                 </button>
                             </Tooltip>
                             {tab.pinned && <Icon icon={Pin} size={12} className="shrink-0 text-text-muted" />}
-                            <Tooltip label={`Close ${label}`} kbd="⌘W" name>
+                            <Tooltip label={`Close ${label}`} kbd={CANVAS_SHORTCUTS.closeCell} name>
                                 <button className={TAB_CLOSE} onClick={() => useFiles.getState().close(tab.key)}>
                                     <Icon icon={X} size={12} />
                                 </button>

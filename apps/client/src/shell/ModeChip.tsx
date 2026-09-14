@@ -1,7 +1,8 @@
 import { useShallow } from 'zustand/react/shallow';
 import { focusedCanvas, useCanvas } from '@/state/canvas';
 import { isApplePlatform } from '@/desktop/bridge';
-import { leaveNodeChordLabel } from '@/terminal/keymap';
+import { LEAVE_NODE_SHORTCUT, platformShortcut } from '@/terminal/keymap';
+import { KEY_SHORTCUTS } from '@/ui/shortcut';
 import { Tooltip } from '@/ui/Tooltip';
 
 const IN_BODY = 'flex h-8 items-center gap-1.5 rounded-lg bg-accent-soft px-2.5 text-xs font-medium text-accent';
@@ -11,7 +12,7 @@ const OUTSIDE = 'flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-me
  * Where the keyboard is on a canvas: the canvas itself, or one node. A view of its own never gets
  * here, because the dock it sits in belongs to the canvas; there the way out is Escape and the
  * view's row in the sidebar. A terminal hands Escape to the program it runs, which is why the way
- * out is a chord there and plain Escape everywhere else.
+ * out is a shortcut there and plain Escape everywhere else.
  */
 export function ModeChip() {
     const { mode, focusedTitle, focusedKind } = useCanvas(
@@ -31,7 +32,7 @@ export function ModeChip() {
                       ? 'Keyboard goes to this terminal, Escape included. Click to return to the canvas.'
                       : 'Keyboard goes to this node. Click to return to the canvas.'
             }
-            kbd={mode === 'node' ? (focusedKind === 'terminal' ? leaveNodeChordLabel(isApplePlatform()) : 'Esc') : undefined}
+            kbd={mode === 'node' ? (focusedKind === 'terminal' ? platformShortcut(LEAVE_NODE_SHORTCUT, isApplePlatform()) : KEY_SHORTCUTS.escape) : undefined}
         >
             {mode === 'node' ? (
                 <button

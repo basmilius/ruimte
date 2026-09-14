@@ -9,6 +9,8 @@ import { useTransport } from '@/transport/context';
 import { MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { Kbd } from '@/ui/Kbd';
 
 /*
  * Everything an open tab can be asked, as menu items. The toolbar's overflow menu and the right
@@ -88,7 +90,7 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
                 <Icon icon={pinned ? PinOff : Pin} size={14} /> {pinned ? 'Unpin tab' : 'Pin tab'}
             </Menu.Item>
             <Menu.Item className="menu-item" onClick={() => useFiles.getState().close(tabKey)}>
-                <Icon icon={X} size={14} /> Close tab <kbd>⌘W</kbd>
+                <Icon icon={X} size={14} /> Close tab <Kbd shortcut={CANVAS_SHORTCUTS.closeCell} />
             </Menu.Item>
             <Menu.Item className="menu-item" disabled={!hasOthers} onClick={() => useFiles.getState().closeOthers(tabKey)}>
                 <Icon icon={ListX} size={14} /> Close other tabs

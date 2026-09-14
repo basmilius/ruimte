@@ -34,6 +34,8 @@ import { DockShell } from '@/ui/DockShell';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
+import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { Kbd } from '@/ui/Kbd';
 
 const centerWorld = (store: StoreApi<CanvasState>) => {
     const s = store.getState();
@@ -43,7 +45,7 @@ const centerWorld = (store: StoreApi<CanvasState>) => {
 /*
  * The canvas's own controls: zoom, locks, layouts and the plus that adds a node. A view of its own
  * has no canvas under it, so the dock stays away there; its counters are the sidebar's "Needs you"
- * section, and the way out of a body is Escape, the chord a terminal uses, or its row in the list.
+ * section, and the way out of a body is Escape, the shortcut a terminal uses, or its row in the list.
  */
 export function Dock() {
     /* The canvas under this dock. It is drawn in the focused cell only, so the focused editor would
@@ -93,20 +95,20 @@ export function Dock() {
                     <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="start">
                         <Menu.Popup className="menu-popup">
                             <Menu.Item className="menu-item" onClick={() => add('terminal')}>
-                                <Icon icon={Terminal} size={14} /> Terminal <kbd>⌥T</kbd>
+                                <Icon icon={Terminal} size={14} /> Terminal <Kbd shortcut={ADD_NODE_SHORTCUTS.terminal} />
                             </Menu.Item>
                             <Menu.Item className="menu-item" onClick={() => add('chat')}>
-                                <Icon icon={MessageSquare} size={14} /> Chat <kbd>⌥C</kbd>
+                                <Icon icon={MessageSquare} size={14} /> Chat <Kbd shortcut={ADD_NODE_SHORTCUTS.chat} />
                             </Menu.Item>
                             <AgentSubmenus onPick={(target, provider) => addAgentNode(target, provider, centerWorld(canvasStore))} />
                             <Menu.Item className="menu-item" onClick={() => add('browser')}>
-                                <Icon icon={Globe} size={14} /> Browser <kbd>⌥B</kbd>
+                                <Icon icon={Globe} size={14} /> Browser <Kbd shortcut={ADD_NODE_SHORTCUTS.browser} />
                             </Menu.Item>
                             <Menu.Item className="menu-item" onClick={() => add('group')}>
-                                <Icon icon={LayoutGrid} size={14} /> Group <kbd>⌥G</kbd>
+                                <Icon icon={LayoutGrid} size={14} /> Group <Kbd shortcut={ADD_NODE_SHORTCUTS.group} />
                             </Menu.Item>
                             <Menu.Item className="menu-item" onClick={() => add('note')}>
-                                <Icon icon={StickyNote} size={14} /> Note <kbd>⌥N</kbd>
+                                <Icon icon={StickyNote} size={14} /> Note <Kbd shortcut={ADD_NODE_SHORTCUTS.note} />
                             </Menu.Item>
                             <Menu.Separator className={MENU_SEPARATOR} />
                             <Menu.Item className="menu-item" onClick={() => canvasStore.getState().addText(centerWorld(canvasStore))}>
@@ -142,7 +144,7 @@ export function Dock() {
                                                 </Menu.RadioItemIndicator>
                                             </span>
                                             <span className="tabular-nums">{pct}%</span>
-                                            {pct === 100 && <kbd>⌘0</kbd>}
+                                            {pct === 100 && <Kbd shortcut={CANVAS_SHORTCUTS.zoomReset} />}
                                         </Menu.RadioItem>
                                     ))}
                                 </Menu.RadioGroup>
@@ -151,13 +153,13 @@ export function Dock() {
                                     <span className="grid h-4 w-4 place-items-center">
                                         <Icon icon={Maximize} size={14} />
                                     </span>{' '}
-                                    Zoom to fit <kbd>⇧1</kbd>
+                                    Zoom to fit <Kbd shortcut={CANVAS_SHORTCUTS.fitAll} />
                                 </Menu.Item>
                                 <Menu.Item className="menu-item" disabled={!hasSelection} onClick={() => canvasStore.getState().zoomToSelection()}>
                                     <span className="grid h-4 w-4 place-items-center">
                                         <Icon icon={Scan} size={14} />
                                     </span>{' '}
-                                    Zoom to selection <kbd>⇧2</kbd>
+                                    Zoom to selection <Kbd shortcut={CANVAS_SHORTCUTS.zoomSelection} />
                                 </Menu.Item>
                             </Menu.Popup>
                         </Menu.Positioner>
@@ -169,7 +171,7 @@ export function Dock() {
                         <Icon icon={Plus} size={16} />
                     </button>
                 </Tooltip>
-                <Tooltip label="Fit everything" kbd="Shift+1" name>
+                <Tooltip label="Fit everything" kbd={CANVAS_SHORTCUTS.fitAll} name>
                     <button className="icon-btn" onClick={() => canvasStore.getState().fitAll()}>
                         <Icon icon={Maximize} size={16} />
                     </button>

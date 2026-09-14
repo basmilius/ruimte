@@ -154,7 +154,7 @@ describe('the hook over a slot', () => {
     });
 });
 
-describe('which workspace a chord acts on', () => {
+describe('which workspace a shortcut acts on', () => {
     test('the one that has the focus, never the one beside it', () => {
         const here = workspace();
         const there = workspace();

@@ -24,13 +24,14 @@ import { prettyUrl } from '@/browser/pretty-url';
 import { browserRegistry, useBrowserRow } from '@/browser/registry';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { deriveNodeTitle } from '@/chat/title';
-import { desktop, isDesktop } from '@/desktop/bridge';
+import { desktop, isApplePlatform, isDesktop } from '@/desktop/bridge';
 import { renameHost, updateHost, useNodeHost } from '@/nodes/node-host';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
+import { formatShortcut, KEY_SHORTCUTS } from '@/ui/shortcut';
 
 export const DEFAULT_URL = 'https://bas.dev';
 
@@ -114,7 +115,7 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                         </button>
                     </Tooltip>
                 ) : (
-                    <Tooltip label="Reload" kbd="⇧ skips the cache" name>
+                    <Tooltip label="Reload" kbd={`${formatShortcut(KEY_SHORTCUTS.shift, isApplePlatform())} skips the cache`} name>
                         <button className="icon-btn h-7 w-7" onClick={(e) => browserRegistry.reload(key, e.shiftKey)}>
                             <Icon icon={RotateCw} size={16} />
                         </button>

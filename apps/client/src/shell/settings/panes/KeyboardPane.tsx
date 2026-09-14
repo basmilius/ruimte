@@ -1,17 +1,21 @@
 import { useMemo, useState } from 'react';
 import { Search, X } from 'lucide-react';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { isApplePlatform, isDesktop } from '@/desktop/bridge';
 import { appCommands } from '@/shell/commands';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Keys } from '@/shell/settings/controls';
-import { CANVAS_SHORTCUTS, commandShortcuts, filterShortcuts } from '@/shell/settings/shortcuts';
+import { commandShortcuts, filterShortcuts, shortcutGroups } from '@/shell/settings/shortcuts';
 import { Icon } from '@/ui/Icon';
+import { formatShortcut } from '@/ui/shortcut';
 
 export function KeyboardPane() {
     const [query, setQuery] = useState('');
+    const apple = isApplePlatform();
     // The command list depends on canvas state (layouts, locks), so it is read once per pane visit.
-    const groups = useMemo(() => [commandShortcuts(appCommands()), ...CANVAS_SHORTCUTS], []);
-    const visible = useMemo(() => filterShortcuts(groups, query), [groups, query]);
+    const groups = useMemo(() => [commandShortcuts(appCommands()), ...shortcutGroups(apple)], [apple]);
+    const visible = useMemo(() => filterShortcuts(groups, query, apple), [groups, query, apple]);
 
     return (
         <>
@@ -42,11 +46,21 @@ export function KeyboardPane() {
             {visible.map((group) => (
                 <SettingsSection key={group.title} title={group.title}>
                     {group.shortcuts.map((shortcut, index) => (
-                        <SettingsRow key={`${shortcut.keys}-${index}`} label={shortcut.label} control={<Keys keys={shortcut.keys} />} />
+                        <SettingsRow
+                            key={`${shortcut.label}-${index}`}
+                            label={shortcut.label}
+                            control={<Keys shortcut={shortcut.keys} then={shortcut.then} />}
+                        />
                     ))}
                 </SettingsSection>
             ))}
-            <p className="text-xs text-text-faint">On Windows and Linux, ⌘ is Ctrl and ⌥ is Alt.</p>
+            {/* A page in a browser tab never sees the tab shortcuts; the browser takes them first. */}
+            {!isDesktop() && (
+                <p className="text-xs text-text-faint">
+                    In a browser tab, {formatShortcut(CANVAS_SHORTCUTS.newView, apple)} and {formatShortcut(CANVAS_SHORTCUTS.closeCell, apple)} belong to the
+                    browser.
+                </p>
+            )}
         </>
     );
 }

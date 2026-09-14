@@ -6,7 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths } from '@/canvas/drop';
 import { finderPaths } from '@/canvas/finder-drop';
 import { GRID, intersects, snapToGrid, toWorld, type Point, type Rect } from '@/canvas/math';
-import { isSpaceDown } from '@/canvas/canvas-chords';
+import { isSpaceDown } from '@/canvas/canvas-shortcuts';
 import { NODE_SIZE, useCanvas, useCanvasStore } from '@/state/canvas';
 import { useEndpointId } from '@/state/keys';
 import { showFileOnCanvas } from '@/project/views';
@@ -20,6 +20,11 @@ import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
 import { isInFloatingLayer } from '@/ui/floating';
 import { Icon } from '@/ui/Icon';
+import { ADD_NODE_SHORTCUTS } from '@/canvas/shortcuts';
+import { APP_SHORTCUTS } from '@/shell/shortcuts';
+import { Kbd } from '@/ui/Kbd';
+import { isModHeld } from '@/ui/shortcut';
+import { isApplePlatform } from '@/desktop/bridge';
 
 type Gesture =
     | { kind: 'pan'; last: Point }
@@ -119,6 +124,10 @@ export function Canvas() {
         return () => observer.disconnect();
     }, [canvasStore]);
 
+    /* Chromium reports a trackpad pinch as a wheel with Ctrl held on every platform, so Ctrl always
+       zooms and Cmd joins it on macOS; the Windows key never does. */
+    const wheelZooms = (e: WheelEvent): boolean => e.ctrlKey || isModHeld(e, isApplePlatform());
+
     /* React registers wheel listeners as passive, so preventDefault there cannot stop the
        browser's own pinch zoom. The canvas needs a native, non-passive listener. */
     useEffect(() => {
@@ -130,7 +139,7 @@ export function Canvas() {
             const s = canvasStore.getState();
             const target = e.target as HTMLElement;
             const ownerId = target.closest('[data-node-body]')?.closest('[data-node-id]')?.getAttribute('data-node-id');
-            const isZoom = e.ctrlKey || e.metaKey;
+            const isZoom = wheelZooms(e);
             /* A focused node owns the wheel inside its body. Pinch is always the camera's. */
             if (!isZoom && s.mode.kind === 'node' && ownerId === s.mode.nodeId) {
                 return;
@@ -165,7 +174,7 @@ export function Canvas() {
         };
         /* Outside the canvas (sidebar, dock) a pinch must not zoom the page either. */
         const swallowPinch = (e: WheelEvent): void => {
-            if ((e.ctrlKey || e.metaKey) && !el.contains(e.target as Node)) {
+            if (wheelZooms(e) && !el.contains(e.target as Node)) {
                 e.preventDefault();
             }
         };
@@ -552,14 +561,14 @@ export function Canvas() {
                                         <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={6} align="center">
                                             <Menu.Popup className="menu-popup">
                                                 <Menu.Item className="menu-item" onClick={() => addNodeAtCenter('terminal')}>
-                                                    <Icon icon={Terminal} size={14} /> Terminal <kbd>⌥T</kbd>
+                                                    <Icon icon={Terminal} size={14} /> Terminal <Kbd shortcut={ADD_NODE_SHORTCUTS.terminal} />
                                                 </Menu.Item>
                                                 <Menu.Item className="menu-item" onClick={() => addNodeAtCenter('chat')}>
-                                                    <Icon icon={MessageSquare} size={14} /> Chat <kbd>⌥C</kbd>
+                                                    <Icon icon={MessageSquare} size={14} /> Chat <Kbd shortcut={ADD_NODE_SHORTCUTS.chat} />
                                                 </Menu.Item>
                                                 <AgentSubmenus onPick={(target, provider) => addAgentNodeAtCenter(target, provider)} />
                                                 <Menu.Item className="menu-item" onClick={() => addNodeAtCenter('browser')}>
-                                                    <Icon icon={Globe} size={14} /> Browser <kbd>⌥B</kbd>
+                                                    <Icon icon={Globe} size={14} /> Browser <Kbd shortcut={ADD_NODE_SHORTCUTS.browser} />
                                                 </Menu.Item>
                                             </Menu.Popup>
                                         </Menu.Positioner>
@@ -567,7 +576,7 @@ export function Canvas() {
                                 </Menu.Root>
                             }
                         >
-                            Right-click anywhere to add a node, or press ⌘K.
+                            Right-click anywhere to add a node, or press <Kbd shortcut={APP_SHORTCUTS.palette} />.
                         </EmptyState>
                     </div>
                 )}

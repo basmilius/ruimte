@@ -10,6 +10,8 @@ import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
+import { isApplePlatform } from '@/desktop/bridge';
+import { KEY_SHORTCUTS, matchesShortcut } from '@/ui/shortcut';
 
 interface CommitBoxProps {
     cwd: string;
@@ -76,7 +78,7 @@ export function CommitBox({ cwd, status, capabilities, busy, onCommit }: CommitB
                 value={message}
                 onChange={(event) => useGit.getState().setMessage(cwd, event.target.value)}
                 onKeyDown={(event) => {
-                    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                    if (matchesShortcut(KEY_SHORTCUTS.modEnter, event, isApplePlatform())) {
                         event.preventDefault();
                         commit(false);
                     }

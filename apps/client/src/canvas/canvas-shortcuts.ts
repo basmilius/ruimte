@@ -1,19 +1,20 @@
 import { useEffect } from 'react';
 import { isCanvasView } from '@ruimte/contracts';
+import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, VIEW_SHORTCUTS } from '@/canvas/shortcuts';
+import { isApplePlatform } from '@/desktop/bridge';
 import { addNodeAtCenter } from '@/shell/commands';
 import { newCanvasView, showView, splitFocusedCell, stepView, viewAtIndex } from '@/project/views';
-import { focusedCanvas, type NodeKind } from '@/state/canvas';
+import { focusedCanvas } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { cellCount, type SplitDirection } from '@/shell/split';
+import { matchesShortcut, type Shortcut } from '@/ui/shortcut';
 import { isFocusedWorkspace, type WorkspaceStores } from '@/state/workspace-stores';
 import { isInFloatingLayer } from '@/ui/floating';
 
-/* The four directions, as the physical keys, so a layout that moves the arrows still reads them. */
-const ARROWS: Record<string, SplitDirection> = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
-
-// Option plus a letter adds a node; a bare letter would fight every text field on the canvas.
-const ADD_KEYS: Record<string, NodeKind> = { KeyT: 'terminal', KeyC: 'chat', KeyB: 'browser', KeyG: 'group', KeyN: 'note' };
+/* The first entry whose shortcut the event is, so a table reads as one condition. */
+const entryFor = <T extends string>(table: Record<T, Shortcut>, e: KeyboardEvent, apple: boolean): T | null =>
+    (Object.keys(table) as T[]).find((name) => matchesShortcut(table[name], e, apple)) ?? null;
 
 /* The canvas keeps its own keys to itself while a view of its own has the focus. */
 const onStandaloneView = (): boolean => {
@@ -38,17 +39,17 @@ let spaceDown = false;
 export const isSpaceDown = (): boolean => spaceDown;
 
 /*
- * Every chord that acts on a project: the views it switches between, the nodes it adds and deletes,
+ * Every shortcut that acts on a project: the views it switches between, the nodes it adds and deletes,
  * the panel beside it. Bound on the window once per workspace, because a view has to answer with the
  * keyboard in the sidebar as well, and `isFocusedWorkspace` is what keeps it off the project in the
- * pane beside it. The chords of the window itself (the palette, find in files, the settings, the
- * sidebar) are not here at all: `shell/app-chords.ts` has them.
+ * pane beside it. The shortcuts of the window itself (the palette, find in files, the settings, the
+ * sidebar) are not here at all: `shell/app-shortcuts.ts` has them.
  *
  * It hangs on the workspace and not on a canvas because a grid draws up to nine of them: nine
- * listeners would each act on the focused cell, so one chord would land nine times. What "the canvas
+ * listeners would each act on the focused cell, so one shortcut would land nine times. What "the canvas
  * in front of me" means is `useCanvas` on its own, which is the focused cell by definition.
  */
-export const useCanvasChords = (stores: WorkspaceStores | null): void => {
+export const useCanvasShortcuts = (stores: WorkspaceStores | null): void => {
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent): void => {
             if (!isFocusedWorkspace(stores)) {
@@ -81,50 +82,56 @@ export const useCanvasChords = (stores: WorkspaceStores | null): void => {
                 (document.activeElement as HTMLElement | null)?.blur();
                 return;
             }
-            const mod = e.metaKey || e.ctrlKey;
+            const apple = isApplePlatform();
+            const is = (target: Shortcut): boolean => matchesShortcut(target, e, apple);
             /* The grid answers from anywhere, a focused node or a text field included: splitting,
                closing and stepping between cells are about the window, not about what is in a cell. */
-            if (mod && e.code === 'Backslash' && !e.altKey) {
+            if (is(CANVAS_SHORTCUTS.splitRight) || is(CANVAS_SHORTCUTS.splitDown)) {
                 e.preventDefault();
-                splitFocusedCell(e.shiftKey ? 'down' : 'right');
+                splitFocusedCell(is(CANVAS_SHORTCUTS.splitDown) ? 'down' : 'right');
                 return;
             }
-            if (mod && e.altKey && ARROWS[e.code]) {
+            const direction: SplitDirection | null = entryFor(FOCUS_SHORTCUTS, e, apple);
+            if (direction) {
                 e.preventDefault();
-                useDocument.getState().focusTowards(ARROWS[e.code]!);
+                useDocument.getState().focusTowards(direction);
                 return;
             }
-            /* The preview closes its own tab on ⌘W and says so by stopping the event; only with the
-               keyboard outside it does the chord reach the cell. */
-            if (mod && !e.altKey && !e.shiftKey && e.code === 'KeyW' && !e.defaultPrevented) {
+            /* The preview closes its own tab on this shortcut and says so by stopping the event; only with
+               the keyboard outside it does the shortcut reach the cell. Off macOS the window menu's Close
+               answers Ctrl+W, so the shortcut is always taken there, even with nothing to close. */
+            if (is(CANVAS_SHORTCUTS.closeCell)) {
                 const layout = useDocument.getState().layout;
-                if (layout !== null && cellCount(layout) > 1) {
+                const closes = !e.defaultPrevented && layout !== null && cellCount(layout) > 1;
+                if (closes || !apple) {
                     e.preventDefault();
+                }
+                if (closes && layout !== null) {
                     useDocument.getState().closeCellAt(layout.focus);
                 }
                 return;
             }
             // The views answer from anywhere, a focused node included: they are how you leave one.
-            if (mod && !e.altKey && !e.shiftKey && /^Digit[1-9]$/.test(e.code)) {
+            const viewIndex = VIEW_SHORTCUTS.findIndex((candidate) => is(candidate));
+            if (viewIndex !== -1) {
                 e.preventDefault();
-                const view = viewAtIndex(Number(e.code.slice(-1)));
+                const view = viewAtIndex(viewIndex + 1);
                 if (view) {
                     showView(view.id);
                 }
                 return;
             }
-            if (mod && e.shiftKey && (e.code === 'BracketLeft' || e.code === 'BracketRight')) {
+            if (is(CANVAS_SHORTCUTS.previousView) || is(CANVAS_SHORTCUTS.nextView)) {
                 e.preventDefault();
-                stepView(e.code === 'BracketRight' ? 1 : -1);
+                stepView(is(CANVAS_SHORTCUTS.nextView) ? 1 : -1);
                 return;
             }
-            if (mod && !e.altKey && !e.shiftKey && e.code === 'KeyT') {
+            if (is(CANVAS_SHORTCUTS.newView)) {
                 e.preventDefault();
                 newCanvasView();
                 return;
             }
-            // Option+B on macOS is a dead key, so the chord reads the physical key, not the character.
-            if (mod && e.altKey && e.code === 'KeyB') {
+            if (is(CANVAS_SHORTCUTS.togglePanel)) {
                 e.preventDefault();
                 useUi.getState().togglePanel();
                 return;
@@ -134,29 +141,30 @@ export const useCanvasChords = (stores: WorkspaceStores | null): void => {
             if (isTypingTarget(e.target) || s.mode.kind === 'node' || useUi.getState().settings.open || onStandaloneView()) {
                 return;
             }
-            if (e.altKey && !mod && ADD_KEYS[e.code]) {
+            const addKind = entryFor(ADD_NODE_SHORTCUTS, e, apple);
+            if (addKind) {
                 e.preventDefault();
-                addNodeAtCenter(ADD_KEYS[e.code]!);
-            } else if (mod && e.key === 'z') {
+                addNodeAtCenter(addKind);
+            } else if (is(CANVAS_SHORTCUTS.undo) || is(CANVAS_SHORTCUTS.redo)) {
                 e.preventDefault();
-                if (e.shiftKey) {
+                if (is(CANVAS_SHORTCUTS.redo)) {
                     s.redo();
                 } else {
                     s.undo();
                 }
-            } else if (mod && e.key === 'g') {
+            } else if (is(CANVAS_SHORTCUTS.group)) {
                 e.preventDefault();
                 s.groupSelection();
-            } else if (mod && e.code === 'Digit0') {
+            } else if (is(CANVAS_SHORTCUTS.zoomReset)) {
                 e.preventDefault();
                 s.zoomTo(1);
-            } else if (e.shiftKey && e.code === 'Digit1') {
+            } else if (is(CANVAS_SHORTCUTS.fitAll)) {
                 e.preventDefault();
                 s.fitAll();
-            } else if (e.shiftKey && e.code === 'Digit2') {
+            } else if (is(CANVAS_SHORTCUTS.zoomSelection)) {
                 e.preventDefault();
                 s.zoomToSelection();
-            } else if (mod && e.key === 'a') {
+            } else if (is(CANVAS_SHORTCUTS.selectAll)) {
                 e.preventDefault();
                 s.select([...s.order, ...Object.keys(s.texts)]);
             } else if ((e.key === 'Delete' || e.key === 'Backspace') && s.selection.length > 0) {

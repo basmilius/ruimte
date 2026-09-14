@@ -665,7 +665,7 @@ export const useDrawing = editorHook('drawings', defaultDrawings);
  */
 export const useDrawingStore = (): StoreApi<DrawingState> => useEditorStoreOf('drawings', defaultDrawings);
 
-/* The drawing of the cell that has the focus, for a chord or a palette row with no cell of its own. */
+/* The drawing of the cell that has the focus, for a shortcut or a palette row with no cell of its own. */
 export const focusedDrawing = (): StoreApi<DrawingState> => focusedEditor('drawings', defaultDrawings);
 
 /* The drawing editors of the workspace in front of us, which outside one is the default registry. */

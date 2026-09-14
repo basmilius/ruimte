@@ -27,6 +27,8 @@ import { isWritten, newSeed, useDrawing, useDrawingStore } from '@/state/drawing
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
 import { isInFloatingLayer } from '@/ui/floating';
+import { isModHeld } from '@/ui/shortcut';
+import { isApplePlatform } from '@/desktop/bridge';
 
 /*
  * The dock sits over the surface and its menus portal out to <body>, where React still routes their
@@ -181,7 +183,8 @@ export function DrawingView({ id }: { id: string }) {
             const state = drawingStore.getState();
             const rect = root.getBoundingClientRect();
             const anchor = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-            if (!e.ctrlKey && !e.metaKey) {
+            // Chromium reports a trackpad pinch as a wheel with Ctrl held on every platform.
+            if (!e.ctrlKey && !isModHeld(e, isApplePlatform())) {
                 state.panBy(-e.deltaX, -e.deltaY);
                 return;
             }
@@ -223,8 +226,8 @@ export function DrawingView({ id }: { id: string }) {
 
     const worldPoint = (e: { clientX: number; clientY: number }): Point => toWorld(drawingStore.getState().camera, screenPoint(e));
 
-    /* The setting says whether a drawing snaps; Cmd turns it around for as long as it is held. */
-    const snapping = (e: { metaKey: boolean; ctrlKey: boolean }): boolean => snapSetting !== (e.metaKey || e.ctrlKey);
+    /* The setting says whether a drawing snaps; Cmd (Ctrl off macOS) turns it around for as long as it is held. */
+    const snapping = (e: { metaKey: boolean; ctrlKey: boolean }): boolean => snapSetting !== isModHeld(e, isApplePlatform());
 
     const start = (next: Gesture, e: React.PointerEvent): void => {
         gesture.current = next;

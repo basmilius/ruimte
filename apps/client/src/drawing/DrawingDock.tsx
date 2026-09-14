@@ -34,6 +34,8 @@ import { DockShell } from '@/ui/DockShell';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
+import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
+import { Kbd } from '@/ui/Kbd';
 
 interface ToolRow {
     tool: DrawingTool;
@@ -272,7 +274,7 @@ export function DrawingDock() {
                                                 </Menu.RadioItemIndicator>
                                             </span>
                                             <span className="tabular-nums">{pct}%</span>
-                                            {pct === 100 && <kbd>⌘0</kbd>}
+                                            {pct === 100 && <Kbd shortcut={DRAWING_SHORTCUTS.zoomReset} />}
                                         </Menu.RadioItem>
                                     ))}
                                 </Menu.RadioGroup>
@@ -281,13 +283,13 @@ export function DrawingDock() {
                                     <span className="grid h-4 w-4 place-items-center">
                                         <Icon icon={Maximize} size={14} />
                                     </span>
-                                    Zoom to fit <kbd>⇧1</kbd>
+                                    Zoom to fit <Kbd shortcut={DRAWING_SHORTCUTS.fitAll} />
                                 </Menu.Item>
                                 <Menu.Item className="menu-item" disabled={!hasSelection} onClick={() => drawingStore.getState().zoomToSelection()}>
                                     <span className="grid h-4 w-4 place-items-center">
                                         <Icon icon={Scan} size={14} />
                                     </span>
-                                    Zoom to selection <kbd>⇧2</kbd>
+                                    Zoom to selection <Kbd shortcut={DRAWING_SHORTCUTS.zoomSelection} />
                                 </Menu.Item>
                             </Menu.Popup>
                         </Menu.Positioner>
@@ -298,7 +300,7 @@ export function DrawingDock() {
                         <Icon icon={Plus} size={16} />
                     </button>
                 </Tooltip>
-                <Tooltip label="Fit everything" kbd="Shift+1" name>
+                <Tooltip label="Fit everything" kbd={DRAWING_SHORTCUTS.fitAll} name>
                     <button className="icon-btn" onClick={() => drawingStore.getState().fitAll()}>
                         <Icon icon={Maximize} size={16} />
                     </button>
@@ -348,12 +350,12 @@ export function DrawingDock() {
                         </Menu.Positioner>
                     </Menu.Portal>
                 </Menu.Root>
-                <Tooltip label="Undo" kbd="Cmd+Z" name>
+                <Tooltip label="Undo" kbd={DRAWING_SHORTCUTS.undo} name>
                     <button className="icon-btn" disabled={!canUndo} onClick={() => drawingStore.getState().undo()}>
                         <Icon icon={Undo2} size={16} />
                     </button>
                 </Tooltip>
-                <Tooltip label="Redo" kbd="Shift+Cmd+Z" name>
+                <Tooltip label="Redo" kbd={DRAWING_SHORTCUTS.redo} name>
                     <button className="icon-btn" disabled={!canRedo} onClick={() => drawingStore.getState().redo()}>
                         <Icon icon={Redo2} size={16} />
                     </button>

@@ -109,7 +109,7 @@ const withoutCell = (columns: readonly SplitColumn[], source: CellAt, target: Ce
 };
 
 /*
- * The one mutation behind both a drag and a split chord: a view lands in a cell's zone. A view that
+ * The one mutation behind both a drag and a split shortcut: a view lands in a cell's zone. A view that
  * was already on screen moves rather than appearing twice, and a drop on the middle swaps with the
  * view that stood there instead of closing it, so nothing falls off the grid by accident.
  */

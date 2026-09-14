@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { WebviewParking } from '@/browser/WebviewParking';
-import { useCanvasChords } from '@/canvas/canvas-chords';
+import { useCanvasShortcuts } from '@/canvas/canvas-shortcuts';
 import { desktop } from '@/desktop/bridge';
-import { useAppChords } from '@/shell/app-chords';
+import { useAppShortcuts } from '@/shell/app-shortcuts';
 import { CommandPalette } from '@/shell/CommandPalette';
 import { LayoutDialog } from '@/shell/LayoutDialog';
 import { ViewDialogs } from '@/shell/ViewDialogs';
@@ -33,14 +33,14 @@ function Workspace() {
     const workspace = useMainWorkspace();
     const connection = useWorkspaceConnection(workspace);
     /* Once for the whole project rather than once per cell: a grid draws up to nine canvases. */
-    useCanvasChords(workspace.stores);
+    useCanvasShortcuts(workspace.stores);
     /* The window's toolbar is where a file view puts its controls, and the body that draws them sits
        under the same column, so the element they portal into is held here. */
     const [fileToolbarHost, setFileToolbarHost] = useState<HTMLElement | null>(null);
     return (
         <WorkspaceProvider connection={connection} stores={workspace.stores}>
             {/* A press anywhere in it makes this the workspace everything outside React means: the
-                chords, the palette and the menus all act on the project that was touched last. */}
+                shortcuts, the palette and the menus all act on the project that was touched last. */}
             <div className="flex h-full w-full bg-bg" onPointerDownCapture={() => focusWorkspace(workspace.id)}>
                 <Sidebar />
                 <main className="flex min-w-0 grow">
@@ -68,7 +68,7 @@ function Workspace() {
 
 export function App() {
     const name = useProject((s) => s.current?.name ?? null);
-    useAppChords();
+    useAppShortcuts();
 
     // The Electron window has no title of its own, so this names it as well.
     useEffect(() => {

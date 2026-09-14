@@ -10,6 +10,8 @@ import { MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
 import { selectAllWithin } from '@/ui/selection';
+import { EDIT_SHORTCUTS } from '@/ui/shortcut';
+import { Kbd } from '@/ui/Kbd';
 
 /*
  * The menu behind a right-click in a thread. Copy is the reason it exists: everything in a thread
@@ -33,7 +35,7 @@ export function TimelineMenuPopup({ target, scroller }: { target: TimelineTarget
             <ContextMenu.Positioner className="z-(--z-popup)">
                 <ContextMenu.Popup className="menu-popup">
                     <ContextMenu.Item className="menu-item" disabled={target.selection === ''} onClick={() => copyText(target.selection)}>
-                        <Icon icon={Copy} size={14} /> Copy <kbd>⌘C</kbd>
+                        <Icon icon={Copy} size={14} /> Copy <Kbd shortcut={EDIT_SHORTCUTS.copy} />
                     </ContextMenu.Item>
                     {message !== null && (
                         <ContextMenu.Item className="menu-item" onClick={() => copyText(message)}>

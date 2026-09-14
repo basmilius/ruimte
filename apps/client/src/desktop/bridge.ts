@@ -124,15 +124,22 @@ export const hasTrafficLights = (): boolean => desktop()?.platform === 'darwin';
    shell), and the first control starts 20px after that, so the lights read as their own group. */
 export const TRAFFIC_LIGHTS_INSET_PX = 84;
 
-/* True on macOS, in the desktop app and in a browser tab alike. Chords differ there: Ctrl+B is
+/* True on macOS, in the desktop app and in a browser tab alike. Shortcuts differ there: Ctrl+B is
    readline's backward-char and tmux's prefix, while Cmd+B is free. */
 export const isApplePlatform = (): boolean => {
     const bridge = desktop();
     if (bridge) {
         return bridge.platform === 'darwin';
     }
-    return typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+    if (typeof navigator === 'undefined') {
+        return false;
+    }
+    const hints = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData;
+    return applePlatformFrom(hints?.platform || navigator.platform);
 };
+
+/* Never the daemon's platform: the keyboard in question is the one in front of this page. */
+export const applePlatformFrom = (platform: string | undefined): boolean => /mac|iphone|ipad/i.test(platform ?? '');
 
 /* True when the window controls sit over the top right of the window, which Windows and Linux do. */
 export const hasOverlayControls = (): boolean => {

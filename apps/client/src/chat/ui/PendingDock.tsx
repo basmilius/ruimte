@@ -9,6 +9,8 @@ import { DOCK_ICON_SIZE, toolIcon } from '@/chat/ui/icons';
 import { Button } from '@/ui/Button';
 import { TOOLTIP_KBD } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
+import { KEY_SHORTCUTS } from '@/ui/shortcut';
+import { Kbd } from '@/ui/Kbd';
 
 const EditDiff = lazy(() => import('@/chat/ui/EditDiff'));
 const UnifiedDiff = lazy(() => import('@/chat/ui/UnifiedDiff'));
@@ -91,7 +93,7 @@ export function ApprovalDock({
                     </Button>
                 )}
                 <Button size="sm" variant="primary" onClick={() => decide('allow')}>
-                    <Icon icon={Check} size={12} /> Approve <kbd className={TOOLTIP_KBD}>↵</kbd>
+                    <Icon icon={Check} size={12} /> Approve <Kbd shortcut={KEY_SHORTCUTS.enter} className={TOOLTIP_KBD} />
                 </Button>
             </div>
             {item.description && <p className="px-3 pb-2 text-xs text-text-muted">{item.description}</p>}
@@ -277,7 +279,7 @@ export function QuestionDock({ chatId, item, more, focused }: { chatId: string; 
                 <span className="grow" />
                 <Button size="sm" variant="primary" disabled={!canCommit} onClick={commit}>
                     {last ? 'Submit' : 'Next'} {last ? <Icon icon={Check} size={12} /> : <Icon icon={ChevronRight} size={12} />}
-                    <kbd className={TOOLTIP_KBD}>↵</kbd>
+                    <Kbd shortcut={KEY_SHORTCUTS.enter} className={TOOLTIP_KBD} />
                 </Button>
             </div>
         </div>

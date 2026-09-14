@@ -20,6 +20,7 @@ import { BTN_GROUP } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
+import { APP_SHORTCUTS } from '@/shell/shortcuts';
 
 /* The band above the canvas: which project is open, and the panels that sit next to it. It is as
    tall as the sidebar's own strip, so the two read as one title bar across the window. The
@@ -86,7 +87,7 @@ export function Toolbar() {
                 An open panel reaches the window's edge instead and its header takes the inset over. */}
             <div className={clsx(BTN_GROUP, !panel.open && !previewOpen && hasOverlayControls() && 'toolbar-overlay-inset')}>
                 <UpdateButton />
-                <Tooltip label="Search" kbd="⌘K" name>
+                <Tooltip label="Search" kbd={APP_SHORTCUTS.palette} name>
                     <button className="icon-btn" onClick={() => useUi.getState().setPaletteOpen(true)}>
                         <Icon icon={Search} size={16} />
                     </button>

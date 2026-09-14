@@ -251,7 +251,7 @@ export const useUi = create<UiStore>((set, get) => ({
     },
     togglePanel(kind) {
         const was = get().panel;
-        /* Without a kind the chord reopens whatever was up last, so the panel has one toggle of its own. */
+        /* Without a kind the shortcut reopens whatever was up last, so the panel has one toggle of its own. */
         const panel = kind ? { open: !(was.open && was.kind === kind), kind } : { ...was, open: !was.open };
         set({ panel, ...leaves(panel.open, get().page), panelsRestoring: false });
     },

@@ -5,6 +5,8 @@ import { Minus, Plus } from 'lucide-react';
 import { BTN_GROUP } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
+import { isApplePlatform } from '@/desktop/bridge';
+import { shortcutParts, type Shortcut } from '@/ui/shortcut';
 
 /* The shared controls of the settings panes; each one is small enough to read at a glance. */
 
@@ -96,16 +98,17 @@ export function Stepper({ value, min, max, step, unit, label, onChange }: Steppe
     );
 }
 
-function Kbd({ children }: { children: ReactNode }) {
+function KeyCap({ children }: { children: ReactNode }) {
     return <kbd className="rounded-md border border-border bg-surface-sunken px-1.5 py-0.5 font-sans text-xs text-text-muted">{children}</kbd>;
 }
 
-/* A few keys in a row, `⌘` and `K` for one chord, separated by a thin gap. */
-export function Keys({ keys }: { keys: string }) {
+/* A shortcut as one cap per key, `⌘` and `K`, plus the pointer gesture it goes with ("drag"). */
+export function Keys({ shortcut, then }: { shortcut: Shortcut; then?: string }) {
+    const parts = [...shortcutParts(shortcut, isApplePlatform()), ...(then ? [then] : [])];
     return (
         <span className="flex items-center gap-1">
-            {keys.split(' ').map((part, index) => (
-                <Kbd key={`${part}-${index}`}>{part}</Kbd>
+            {parts.map((part, index) => (
+                <KeyCap key={`${part}-${index}`}>{part}</KeyCap>
             ))}
         </span>
     );

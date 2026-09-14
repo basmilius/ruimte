@@ -70,7 +70,7 @@ export const subscribeCurrentWorkspace = (listener: () => void): (() => void) =>
 export const currentStores = (): WorkspaceStores | null => current?.stores ?? null;
 
 /*
- * Whether a subtree is the workspace the app means by "here". A chord that acts on a project is bound
+ * Whether a subtree is the workspace the app means by "here". A shortcut that acts on a project is bound
  * on the window, because it has to answer with the focus in the sidebar or a panel as well, and this
  * is what keeps it off the project in the pane beside it. Outside every provider there is one
  * workspace and it is this one.
@@ -145,7 +145,7 @@ export const editorHook = <T>(slot: EditorSlot, fallback: EditorRegistry<T>): Ed
     (<U>(selector?: (state: T) => U): T | U => useStore(useEditorStoreOf(slot, fallback), selector as (state: T) => U)) as EditorHook<T>;
 
 /*
- * The editor of the cell that has the focus, for code with no cell of its own: a chord, a menu of the
+ * The editor of the cell that has the focus, for code with no cell of its own: a shortcut, a menu of the
  * window, a palette row, a watcher. Anything drawn inside a cell means its own editor and asks for it
  * with `useCanvasStore` or `useDrawingStore`.
  */

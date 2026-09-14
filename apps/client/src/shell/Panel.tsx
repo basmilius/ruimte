@@ -13,6 +13,7 @@ import { useUi, type PanelKind } from '@/state/ui';
 import { SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
 const DEFAULT_WIDTH = 540;
 // A drag stops here instead of squeezing the canvas away.
@@ -107,7 +108,7 @@ export function Panel() {
                         <span className={`${SECTION_LABEL} shrink-0`}>{label}</span>
                         {/* The panel's own controls, between its name and the close button. */}
                         <div ref={setHeaderSlot} className="flex min-w-0 grow items-center gap-2" />
-                        <Tooltip label={`Close ${label}`} kbd="⌘⌥B" name>
+                        <Tooltip label={`Close ${label}`} kbd={CANVAS_SHORTCUTS.togglePanel} name>
                             <button className="icon-btn shrink-0" onClick={() => useUi.getState().setPanel({ open: false })}>
                                 <Icon icon={X} size={16} />
                             </button>

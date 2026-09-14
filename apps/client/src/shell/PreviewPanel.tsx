@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import clsx from 'clsx';
 import { X } from 'lucide-react';
-import { hasOverlayControls } from '@/desktop/bridge';
+import { hasOverlayControls, isApplePlatform } from '@/desktop/bridge';
 import { FileTabs } from '@/shell/panels/FileTabs';
 import { FileViewer } from '@/shell/panels/FileViewer';
 import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
@@ -12,6 +12,8 @@ import { useUi } from '@/state/ui';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { matchesShortcut } from '@/ui/shortcut';
 
 const MIN_WIDTH = 360;
 // Half a wide canvas is more room than a file needs, so the width it opens with stops here.
@@ -98,7 +100,7 @@ export function PreviewPanel() {
         if (!active) {
             return;
         }
-        if (event.key === 'w' && (event.metaKey || event.ctrlKey)) {
+        if (matchesShortcut(CANVAS_SHORTCUTS.closeCell, event, isApplePlatform())) {
             event.preventDefault();
             useFiles.getState().close(active);
         } else if (event.key === 'Tab' && event.ctrlKey && tabs.length > 1) {

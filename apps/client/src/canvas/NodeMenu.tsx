@@ -38,6 +38,8 @@ import { useTransport } from '@/transport/context';
 import { ACCENT_SWATCH, ACCENT_SWATCH_PICKED, MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
+import { Kbd } from '@/ui/Kbd';
 
 /* The context menu of one node, the same from its frame and from its row in the sidebar. */
 export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }) {
@@ -229,7 +231,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                     </ContextMenu.SubmenuRoot>
                     <ContextMenu.Separator className={MENU_SEPARATOR} />
                     <ContextMenu.Item className="menu-item text-status-error" onClick={remove}>
-                        <Icon icon={Trash} size={14} /> Delete <kbd>⌫</kbd>
+                        <Icon icon={Trash} size={14} /> Delete <Kbd shortcut={CANVAS_SHORTCUTS.deleteSelection} />
                     </ContextMenu.Item>
                 </ContextMenu.Popup>
             </ContextMenu.Positioner>

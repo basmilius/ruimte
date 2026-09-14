@@ -17,14 +17,14 @@ export const MENU_LABEL = 'px-2.5 pt-1.5 pb-0.5 text-xs/[inherit] text-text-fain
 /* The same label outside a popup: the sidebar's groups, the palette's sections. */
 export const SECTION_LABEL = 'text-xs/[inherit] font-medium text-text-faint';
 
-/* A trailing hint in a menu row: what the item does to something else, never a chord. Chords stay
+/* A trailing hint in a menu row: what the item does to something else, never a shortcut. Shortcuts stay
    `<kbd>`, which `.menu-item` already pushes to the right. */
 export const MENU_HINT = 'ml-auto pl-3 text-xs/[inherit] text-text-faint';
 
 /* The hairline between two groups of menu rows. */
 export const MENU_SEPARATOR = 'mx-1.5 my-1 h-px bg-border';
 
-/* A chord next to a label: in a tooltip, in the palette and on the buttons of a pending question. */
+/* A shortcut next to a label: in a tooltip, in the palette and on the buttons of a pending question. */
 export const TOOLTIP_KBD = 'rounded-sm bg-surface-sunken px-[5px] py-px font-sans text-xs/[inherit] text-text-muted';
 
 /* One accent, drawn as the color itself: in the Appearance row, in its overflow and in the Color
