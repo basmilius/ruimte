@@ -12,7 +12,7 @@ import { canKeepAwake } from '@/desktop/bridge';
 import { DeleteAnyViewSection } from '@/shell/settings/DeleteAnyViewSection';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Badge, Segmented, Skeleton, Toggle } from '@/shell/settings/controls';
+import { Badge, Skeleton, Toggle } from '@/shell/settings/controls';
 import { useProviders } from '@/state/providers';
 import { useSettings } from '@/state/settings';
 import { Select, type SelectItem } from '@/ui/Select';
@@ -203,17 +203,17 @@ export function AgentsPane() {
             <SettingsSection title="Chats">
                 <SettingsRow
                     label="Show replies"
-                    description="Words follow the agent as it writes. Paragraphs appear one at a time once each is complete. Whole waits until the reply is done."
                     control={
-                        <Segmented
+                        <Select
                             value={chatStreaming}
-                            options={[
-                                { id: 'words', label: 'Words' },
-                                { id: 'blocks', label: 'Paragraphs' },
-                                { id: 'whole', label: 'Whole' }
-                            ]}
                             label="Show replies"
-                            onChange={(value) => update({ chatStreaming: value })}
+                            align="end"
+                            items={[
+                                { value: 'words', label: 'Word by word', description: 'Follows the agent as it writes.' },
+                                { value: 'blocks', label: 'Paragraph by paragraph', description: 'Shows each paragraph once it is complete.' },
+                                { value: 'whole', label: 'When complete', description: 'Waits until the reply is done.' }
+                            ]}
+                            onValueChange={(value) => update({ chatStreaming: value })}
                         />
                     }
                 />

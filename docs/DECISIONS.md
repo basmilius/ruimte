@@ -1280,7 +1280,7 @@ decided.
   client's: the daemon keeps sending deltas either way. It was a switch; a stored `true` reads as
   `words` and a stored `false` as `whole`. Whole, a reply fades in only on a row that saw it being
   written, so scrolling back through an old thread does not animate it.
-- The middle mode, `blocks` ("Paragraphs"), is for a reader who finds a word at a time restless and
+- The middle mode, `blocks` ("Paragraph by paragraph"), is for a reader who finds a word at a time restless and
   whole too slow. It draws only the blocks of the splitter that are closed (`settledBlocksText`),
   so half a block is never on screen, and a block is closed once the line after its blank line
   starts, not at the blank line itself: that line may still be a list item or an indented paragraph
