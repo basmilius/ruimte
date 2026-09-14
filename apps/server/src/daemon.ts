@@ -1,12 +1,12 @@
 import { dirname, join, normalize, resolve } from 'node:path';
 import type { ServerWebSocket } from 'bun';
-import { AuthTicketPayloadSchema, PairPayloadSchema, type AgentKind, type DiagramContent, type ServerFrame } from '@ruimte/contracts';
+import { AuthTicketPayloadSchema, PairPayloadSchema, type AgentKind, type DiagramContent } from '@ruimte/contracts';
 import { AgentStore } from './agents/agent-store.ts';
 import { ClaudeTitleReader } from './agents/claude-title.ts';
 import { CodexTitleReader } from './agents/codex-title.ts';
 import { AgentLineageStore } from './agents/lineage.ts';
 import { PendingPromptStore } from './agents/pending-prompts.ts';
-import { OutputGate } from './backpressure.ts';
+import { connectionOpener, socketChannel, type OpenConnection, type SocketChannel } from './connection.ts';
 import { suggestChatTitle } from './chat/chat-title.ts';
 import { decideAccess, isLoopbackAddress, mayInvite, reachabilityOf } from './auth/access.ts';
 import { readOrCreateLocalSecret } from './auth/local-secret.ts';
@@ -26,7 +26,7 @@ import { CONTEXT_PATH, ContextStore } from './context/context-store.ts';
 import { deliverNotice, NoticeStore, renderNotice, type Notice } from './context/notices.ts';
 import { ChatStore } from './chat/chat-store.ts';
 import type { ServerConfig } from './config.ts';
-import { Dispatcher, sendEvent, type ClientAccess, type ClientConnection } from './dispatcher.ts';
+import { Dispatcher, type ClientAccess } from './dispatcher.ts';
 import { readOrCreateEndpointIdentity } from './endpoint-id.ts';
 import { VERSION } from './version.ts';
 import { registerAuthHandlers } from './handlers/auth.ts';
@@ -232,9 +232,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         pairingUrl: () => pairingUrl(config.host, server.port ?? config.port, auth.issuePairingToken()),
         disconnect: (sessionId) => {
             handshake.revoke(sessionId);
-            for (const ws of connections.keys()) {
-                if (ws.data.sessionId === sessionId) {
-                    ws.close(4001, 'Access revoked');
+            for (const { channel, connection } of connections.values()) {
+                if (connection.client.access?.sessionId === sessionId) {
+                    channel.close(4001, 'Access revoked');
                 }
             }
         }
@@ -258,13 +258,25 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     }
 
     interface ConnectionState {
-        client: ClientConnection;
-        gate: OutputGate;
-        unsubscribe(): void;
+        channel: SocketChannel;
+        connection: OpenConnection;
     }
 
     const connections = new Map<ServerWebSocket<ClientAccess>, ConnectionState>();
-    let nextClientId = 1;
+    const openConnection = connectionOpener({
+        dispatcher,
+        sessions: manager,
+        chats,
+        identity,
+        projects,
+        drawings,
+        diagrams,
+        folders,
+        statuses,
+        usage,
+        limits,
+        processes
+    });
 
     const endpointInfo = (reachability: ClientAccess['reachability'], authenticated: boolean) => ({
         id: identity.id,
@@ -415,62 +427,15 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         },
         websocket: {
             open(ws) {
-                const clientId = `client-${nextClientId++}`;
-                const gate = new OutputGate({
-                    socket: ws,
-                    screenOf: (sessionId) => {
-                        const session = manager.get(sessionId);
-                        // A session this client no longer watches needs no screen; its mark just goes.
-                        return session?.isAttached(clientId) ? session.serializeScreen() : Promise.resolve(null);
-                    }
-                });
-                const client: ClientConnection = {
-                    id: clientId,
-                    access: ws.data,
-                    send(frame: ServerFrame) {
-                        gate.send(frame);
-                    }
-                };
-                const sink = ({ event, payload }: Parameters<Parameters<typeof manager.subscribe>[1]>[0]): void => sendEvent(client, event, payload);
-                const unsubscribeSessions = manager.subscribe(client.id, sink);
-                const unsubscribeChats = chats.subscribe(client.id, sink);
-                const unsubscribeIdentity = identity.subscribe(client.id, sink);
-                const unsubscribeProjects = projects.subscribe(client.id, sink);
-                const unsubscribeDrawings = drawings.subscribe(client.id, sink);
-                const unsubscribeDiagrams = diagrams.subscribe(client.id, sink);
-                const unsubscribeFolders = folders.subscribe(client.id, sink);
-                const unsubscribeStatuses = statuses.subscribe(client.id, sink);
-                const unsubscribeUsage = usage.subscribe(client.id, sink);
-                const unsubscribeLimits = limits.subscribe(client.id, sink);
-                const unsubscribeProcesses = processes.subscribe(client.id, sink);
-                connections.set(ws, {
-                    client,
-                    gate,
-                    unsubscribe() {
-                        unsubscribeSessions();
-                        unsubscribeChats();
-                        unsubscribeIdentity();
-                        unsubscribeProjects();
-                        unsubscribeDrawings();
-                        unsubscribeDiagrams();
-                        unsubscribeFolders();
-                        unsubscribeStatuses();
-                        unsubscribeUsage();
-                        unsubscribeLimits();
-                        unsubscribeProcesses();
-                    }
-                });
+                const channel = socketChannel(ws);
+                connections.set(ws, { channel, connection: openConnection(channel, ws.data) });
             },
             drain(ws) {
                 // The socket has room again: every session that lost output gets a fresh screen.
-                connections.get(ws)?.gate.onDrain();
+                connections.get(ws)?.channel.drained();
             },
             message(ws, message) {
-                const state = connections.get(ws);
-                if (!state) {
-                    return;
-                }
-                void dispatcher.handle(state.client, message);
+                connections.get(ws)?.connection.receive(message);
             },
             close(ws) {
                 const state = connections.get(ws);
@@ -478,12 +443,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                     return;
                 }
                 connections.delete(ws);
-                // The sessions keep running; only this client's view of them goes.
-                manager.detachAll(state.client.id);
-                chats.detachAll(state.client.id);
-                folders.detachAll(state.client.id);
-                statuses.detachAll(state.client.id);
-                state.unsubscribe();
+                state.channel.closed();
             }
         }
     });
