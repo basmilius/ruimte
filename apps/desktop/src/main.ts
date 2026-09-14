@@ -160,6 +160,16 @@ interface AppTheme {
     background: string;
 }
 
+/*
+ * The preload of every browser page (`guest.ts`): the wheel samples a swipe is read from, the side
+ * buttons of a mouse and Cmd+[ inside a page, all sent to the webview element. Registered on the
+ * session so the client names no path; a main frame runs it and a subframe does not. Never on the
+ * preview partition, which is sealed and has no history to walk.
+ */
+const registerGuestPreload = (): void => {
+    session.fromPartition(BROWSER_PARTITION).registerPreloadScript({ type: 'frame', id: 'ruimte-guest', filePath: join(here, 'guest.cjs') });
+};
+
 const isBrowserGuest = (contents: Electron.WebContents): boolean =>
     contents.getType() === 'webview' && contents.session === session.fromPartition(BROWSER_PARTITION);
 
@@ -788,6 +798,7 @@ if (!app.requestSingleInstanceLock()) {
     void app.whenReady().then(async () => {
         Menu.setApplicationMenu(Menu.buildFromTemplate([appMenu(), { role: 'editMenu' }, viewMenu(), { role: 'windowMenu' }]));
         sealPreviewSession();
+        registerGuestPreload();
         startDaemon();
         try {
             await waitForDaemon();

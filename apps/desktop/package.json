@@ -10,7 +10,7 @@
     "main": "dist/main.cjs",
     "desktopName": "ruimte.desktop",
     "scripts": {
-        "build:main": "bun build src/main.ts --target=node --format=cjs --external electron --outfile dist/main.cjs && bun build src/preload.ts --target=node --format=cjs --external electron --outfile dist/preload.cjs",
+        "build:main": "bun build src/main.ts --target=node --format=cjs --external electron --outfile dist/main.cjs && bun build src/preload.ts --target=node --format=cjs --external electron --outfile dist/preload.cjs && bun build src/guest.ts --target=node --format=cjs --external electron --outfile dist/guest.cjs",
         "dev": "bun run build:main && RUIMTE_DEV_URL=http://localhost:5173 bun scripts/launch.ts",
         "smoke": "bun run build:main && RUIMTE_DEV_URL=http://localhost:5173 RUIMTE_SMOKE=1 bun scripts/launch.ts",
         "build": "bun run build:main",
