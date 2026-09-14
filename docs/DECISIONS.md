@@ -789,8 +789,9 @@ canvas, against Ruimte, one verdict each.
 
 ### A diagram
 
-Built on 2026-09-14 after `docs/reports/2026-09-12-diagram-view.html`, phases 1 to 3 of it. What
-the report left open and what the build decided:
+Built on 2026-09-14 after `docs/reports/2026-09-12-diagram-view.html`, phases 1 to 4 of it (the
+`diagram` kind of `node`, which the report put in phase 4, waits for phase 5 with the node itself).
+What the report left open and what the build decided:
 
 - **Two view kinds, not a second sort inside a drawing.** The report's advice, kept: a diagram
   inheriting the bare letter keys, the dock and the undo of a drawing would have been a question in
@@ -841,6 +842,31 @@ the report left open and what the build decided:
 - **What a diagram view is offered:** a new view from the view menu and the palette, a duplicate
   (the daemon copies the file), and the zoom and export rows in the palette. Not "Put on canvas" or
   "Show on the canvas": the node that mirrors a diagram is a later phase.
+- **An agent writes the whole diagram, never a piece of it.** `ruimte-context diagram <viewId>`
+  replaces the file, with no patch form and no `--dry-run`: a wrong diagram is undone by writing
+  the right one. A small change is an edit of the file with the agent's own tools, which the
+  watcher reports and nothing checks. The project is the caller's (`ProjectIndex.locate`), and a
+  view id of another project is refused as not a diagram of this one, the same answer as a drawing.
+- **Stdin travels as `--document`.** The canvas route stays `{ argv }`: the CLI reads stdin for this
+  one verb and puts it in the flag unescaped, because the daemon parses JSON there and reads no
+  escapes the way it does in `--text`. Given `--document` itself, stdin is not read. A person who
+  runs the verb in a terminal without a redirect waits on stdin the way `cat` does.
+- **Strict where a save is not.** The verb checks a strict copy of the schema at every level, so a
+  misspelled field is refused by its path instead of being stripped and the diagram written
+  without it; a client's save still strips, as "Kinds a newer Ruimte wrote" describes. `version`
+  and `rev` pass and are ignored, since a rewrite most naturally starts from the file on disk. A
+  refusal carries a `problem` line per zod issue (at most 20) in words of its own, with the id of
+  the node or group or the two ends of the edge it is about, and the first one as its message.
+- **A diagram source waits for the node.** `diagram` is a kind in `ContextSourceSchema`, rendered
+  (`context/context-diagram.ts`) and read, but `deriveContextSources` makes none yet: an edge only
+  joins the nodes and texts of one canvas, and nothing on a canvas mirrors a diagram before phase 5,
+  which adds the branch beside the drawing's with the view id as the source id. A diagram view
+  without a node is never a source, like a drawing view without one; an agent that wants it reads
+  `.ruimte/diagrams/<viewId>.json` itself. Unlike the drawing reader, which only looks among open
+  projects, `DiagramStore.read` finds the project of the agent asking on disk, and it never sets a
+  broken file aside, since a read should leave the folder as it found it.
+- **The hint names no verb.** `VERBS_NOTE` says what `ruimte-context` is for rather than listing
+  its verbs, so it stays as it was; `help` lists `diagram`, and `help diagram` is the schema.
 
 - **Open: an agent's `view delete` leaves the file behind.** Orphans are only removed when a person
   saves the project, which is the drawing's rule too (`ProjectStore.mutate` updates the ids without
