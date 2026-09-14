@@ -375,7 +375,7 @@ export const viewVerb = defineVerbGroup({
     summary: 'Manages the views of the project: makes one, renames it, marks it, moves it, removes it',
     detail: [
         'see\truimte-context views\tthe views of the project, which is where every id here comes from',
-        'note\tA view is a row in the sidebar: a canvas, a drawing, a file, a page, a session of its own, or a line between them',
+        'note\tA view is a row in the sidebar: a canvas, a drawing, a diagram, a file, a page, a session of its own, or a line between them',
         'note\tThe views of a project are shared, so what you make here is what every person with this project open sees'
     ],
     subs: [newSub, renameSub, iconSub, moveSub, deleteSub]

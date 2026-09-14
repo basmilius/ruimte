@@ -25,6 +25,7 @@ import { z } from 'zod';
 import { isNotFound, writeAtomic } from '../fs.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import {
+    diagramsDirOf,
     documentPathInFolder,
     drawingsDirOf,
     fromPortable,
@@ -83,11 +84,12 @@ const firstView = (): ProjectView => ({ kind: 'canvas', id: MAIN_VIEW_ID, name: 
 const newId = (): string => randomBytes(6).toString('base64url');
 
 /*
- * What the drawing store needs to hear from this one. It is an interface rather than the class so
- * the two files do not import each other; the daemon hands the real store over on startup.
+ * What a store of view files (the drawings, the diagrams) needs to hear from this one. It is an
+ * interface rather than the class so the files do not import each other; the daemon hands the real
+ * stores over on startup.
  */
-export interface ProjectDrawings {
-    /* Every drawing file whose view left the project is deleted, but only when a person saved. */
+export interface ProjectViewFiles {
+    /* Every file whose view left the project is deleted, but only when a person saved. */
     removeOrphans(projectId: string, keep: Set<string>): Promise<void>;
     closeProject(projectId: string): void;
 }
@@ -109,11 +111,14 @@ interface OpenProject {
     settle: ReturnType<typeof setTimeout> | null;
     // The burst that is settling touched an icon file, so the folder has to be read again.
     iconTouched: boolean;
-    // The drawing views of the document as it stands, so an orphan file can be told from a live one.
+    // The drawing and diagram views of the document as it stands, so an orphan file can be told from a live one.
     drawingIds: Set<string>;
+    diagramIds: Set<string>;
 }
 
 const drawingIdsIn = (views: ProjectView[]): Set<string> => new Set(views.filter((view) => view.kind === 'drawing').map((view) => view.id));
+
+const diagramIdsIn = (views: ProjectView[]): Set<string> => new Set(views.filter((view) => view.kind === 'diagram').map((view) => view.id));
 
 /*
  * Every canvas the daemon knows, where it lives and which ones are open. A folder project is
@@ -132,7 +137,8 @@ export class ProjectStore {
     private readonly viewers = new Map<string, Set<string>>();
     private registry: RegistryEntry[] | null = null;
     private readonly identity = new IdentityCache();
-    private drawings: ProjectDrawings | null = null;
+    private drawings: ProjectViewFiles | null = null;
+    private diagrams: ProjectViewFiles | null = null;
     // Registry changes run one after the other; two clients opening at once must not lose an entry.
     private chain: Promise<unknown> = Promise.resolve();
 
@@ -141,8 +147,13 @@ export class ProjectStore {
     }
 
     /* The drawing store follows this one: it hears about a save and about a project closing. */
-    attachDrawings(drawings: ProjectDrawings): void {
+    attachDrawings(drawings: ProjectViewFiles): void {
         this.drawings = drawings;
+    }
+
+    /* The diagram store follows this one the same way. */
+    attachDiagrams(diagrams: ProjectViewFiles): void {
+        this.diagrams = diagrams;
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
@@ -296,7 +307,8 @@ export class ProjectStore {
             watcher: null,
             settle: null,
             iconTouched: false,
-            drawingIds: drawingIdsIn(document.views)
+            drawingIds: drawingIdsIn(document.views),
+            diagramIds: diagramIdsIn(document.views)
         };
         this.open.set(entry.projectId, state);
         this.startWatching(state, path);
@@ -332,6 +344,11 @@ export class ProjectStore {
             await this.drawings.removeOrphans(projectId, drawingIds);
         }
         state.drawingIds = drawingIds;
+        const diagramIds = diagramIdsIn(document.views);
+        if (this.diagrams && [...state.diagramIds].some((id) => !diagramIds.has(id))) {
+            await this.diagrams.removeOrphans(projectId, diagramIds);
+        }
+        state.diagramIds = diagramIds;
         const icon = content.icon ?? null;
         if (content.name !== state.entry.name || content.color !== state.entry.color || !sameIcon(icon, state.entry.icon ?? null)) {
             state.entry = { ...state.entry, name: content.name, color: content.color, icon };
@@ -374,6 +391,7 @@ export class ProjectStore {
                 state.lastText = text;
                 state.rev = document.rev;
                 state.drawingIds = drawingIdsIn(document.views);
+                state.diagramIds = diagramIdsIn(document.views);
             }
             const daemonSide = fromPortable(document, entry.folder);
             this.index.set(projectId, entry.folder, daemonSide);
@@ -397,6 +415,17 @@ export class ProjectStore {
             }
         }
         return told > 0;
+    }
+
+    /*
+     * Where the project file sits and which views it holds, read from disk whether the project is open
+     * or not: a diagram written after the person switched away still has to land in its own folder.
+     */
+    place(projectId: string): Promise<{ documentPath: string; views: ProjectView[] }> {
+        return this.locked(async () => {
+            const { path, content } = await this.readCurrent(projectId);
+            return { documentPath: path, views: content.views };
+        });
     }
 
     /* Deliberately not `readDocument`: a verb that finds a broken file refuses, it does not move a person's file aside. */
@@ -483,7 +512,7 @@ export class ProjectStore {
 
     /*
      * Lets go of an open project without saying anything about it: the watcher stops and the
-     * drawings are dropped. This is what switching to another project does, which is why it leaves
+     * drawings and diagrams are dropped. This is what switching to another project does, which is why it leaves
      * the registry alone; a person closing a project is `closeProject`.
      */
     release(projectId: string): void {
@@ -492,6 +521,7 @@ export class ProjectStore {
             return;
         }
         this.drawings?.closeProject(projectId);
+        this.diagrams?.closeProject(projectId);
         state.watcher?.close();
         if (state.settle) {
             clearTimeout(state.settle);
@@ -533,9 +563,10 @@ export class ProjectStore {
             return;
         }
         if (entry.folder) {
-            // Only the canvas file and the drawings that belong to it; the rest of the folder is
-            // the person's project. The drawings go first, or the rmdir below finds `.ruimte` full.
+            // Only the canvas file and the drawings and diagrams that belong to it; the rest of the folder
+            // is the person's project. Those go first, or the rmdir below finds `.ruimte` full.
             await rm(drawingsDirOf(this.documentPath(entry)), { recursive: true, force: true });
+            await rm(diagramsDirOf(this.documentPath(entry)), { recursive: true, force: true });
             await rm(this.documentPath(entry), { force: true });
             // `.ruimte` goes only when nothing else is in it: an icon or a file a person put there
             // keeps it, and `rmdir` says so by failing.
@@ -582,7 +613,7 @@ export class ProjectStore {
         return run;
     }
 
-    /* Where the project file of an open project sits, which is where its drawings sit beside it. */
+    /* Where the project file of an open project sits, which is where its drawings and diagrams sit beside it. */
     documentPathOf(projectId: string): string {
         return this.documentPath(this.require(projectId).entry);
     }
@@ -594,6 +625,10 @@ export class ProjectStore {
 
     isDrawingView(projectId: string, viewId: string): boolean {
         return this.require(projectId).drawingIds.has(viewId);
+    }
+
+    isDiagramView(projectId: string, viewId: string): boolean {
+        return this.require(projectId).diagramIds.has(viewId);
     }
 
     private documentPath(entry: RegistryEntry): string {
@@ -668,6 +703,7 @@ export class ProjectStore {
         state.lastText = text;
         state.rev = document.rev;
         state.drawingIds = drawingIdsIn(document.views);
+        state.diagramIds = diagramIdsIn(document.views);
         state.entry = { ...state.entry, name: document.name, color: document.color, icon: document.icon ?? null };
         this.index.set(state.entry.projectId, state.entry.folder, fromPortable(document, state.entry.folder));
         this.emit({ event: 'project.changed', payload: { projectId: state.entry.projectId, document: fromPortable(document, state.entry.folder) } });

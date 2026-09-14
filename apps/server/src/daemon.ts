@@ -31,6 +31,7 @@ import { FS_FILE_PATH, handleFsFileRequest } from './fs/file-route.ts';
 import { FolderWatcher } from './fs/watch.ts';
 import { registerFsHandlers } from './handlers/fs.ts';
 import { registerGitHandlers } from './handlers/git.ts';
+import { registerDiagramHandlers } from './handlers/diagram.ts';
 import { registerDrawingHandlers } from './handlers/drawing.ts';
 import { registerProjectHandlers } from './handlers/project.ts';
 import { registerServerHandlers } from './handlers/server.ts';
@@ -44,6 +45,7 @@ import { Worktrees } from './git/worktrees.ts';
 import { ProcessMonitor } from './processes/monitor.ts';
 import { createSampler } from './processes/sampler.ts';
 import { handleProjectRequest, PROJECTS_PATH } from './projects/icon-route.ts';
+import { DiagramStore } from './projects/diagram-store.ts';
 import { DrawingStore } from './projects/drawing-store.ts';
 import { ProjectStore } from './projects/project-store.ts';
 import { ProviderRegistry } from './providers/registry.ts';
@@ -143,6 +145,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     };
     const drawings = new DrawingStore(projects);
     projects.attachDrawings(drawings);
+    const diagrams = new DiagramStore(projects);
+    projects.attachDiagrams(diagrams);
     // Before the socket answers, so an agent whose project nobody opened since the restart still reads its links.
     await projects.warmIndex();
     const folders = new FolderWatcher();
@@ -205,6 +209,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerChatHandlers(dispatcher, chats, providers);
     registerProjectHandlers(dispatcher, projects);
     registerDrawingHandlers(dispatcher, drawings);
+    registerDiagramHandlers(dispatcher, diagrams);
     registerAuthHandlers(dispatcher, auth, {
         identity,
         version: VERSION,
@@ -412,6 +417,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 const unsubscribeIdentity = identity.subscribe(client.id, sink);
                 const unsubscribeProjects = projects.subscribe(client.id, sink);
                 const unsubscribeDrawings = drawings.subscribe(client.id, sink);
+                const unsubscribeDiagrams = diagrams.subscribe(client.id, sink);
                 const unsubscribeFolders = folders.subscribe(client.id, sink);
                 const unsubscribeStatuses = statuses.subscribe(client.id, sink);
                 const unsubscribeUsage = usage.subscribe(client.id, sink);
@@ -426,6 +432,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                         unsubscribeIdentity();
                         unsubscribeProjects();
                         unsubscribeDrawings();
+                        unsubscribeDiagrams();
                         unsubscribeFolders();
                         unsubscribeStatuses();
                         unsubscribeUsage();
@@ -511,6 +518,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         manager.killAll();
         projects.closeAll();
         drawings.closeAll();
+        diagrams.closeAll();
         await relay.stop();
         server.stop(true);
         process.exit(0);

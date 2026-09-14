@@ -1,12 +1,15 @@
 import { mkdir, readFile, rename, rm } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import {
+    diagramProblemIn,
     duplicateElementIdIn,
     duplicateIdIn,
     isCanvasView,
+    migrateDiagram,
     migrateDocument,
     migrateDrawing,
     withoutCrossViewEdges,
+    type DiagramDocument,
     type DrawingDocument,
     type ProjectContent,
     type ProjectDocument,
@@ -20,6 +23,8 @@ export const PROJECT_FILE = 'project.json';
 // One file per drawing view, in a directory of their own: `.ruimte` is read by people and by git,
 // and its top level stays the two files the daemon documents.
 export const DRAWINGS_DIR = 'drawings';
+// The same rule for diagrams, in a directory beside it, so a file name never says which kind it is.
+export const DIAGRAMS_DIR = 'diagrams';
 
 /*
  * `unreadable` is broken JSON or a shape no version of ours ever wrote; `invalid` is a file that
@@ -137,11 +142,13 @@ export const documentPathInFolder = (folder: string): string => join(folder, PRO
 
 export const drawingsDirOf = (documentPath: string): string => join(dirname(documentPath), DRAWINGS_DIR);
 
-/* The view id, never its name: a rename must not move a file, and two machines must agree. */
-export const drawingPathIn = (dir: string, viewId: string): string => join(dir, `${encodeURIComponent(viewId)}.json`);
+export const diagramsDirOf = (documentPath: string): string => join(dirname(documentPath), DIAGRAMS_DIR);
 
-/* The view a drawing file belongs to, or null for a name that is not one of ours. */
-export const drawingViewIdOf = (filename: string): string | null => {
+/* The view id, never its name: a rename must not move a file, and two machines must agree. */
+export const viewFilePathIn = (dir: string, viewId: string): string => join(dir, `${encodeURIComponent(viewId)}.json`);
+
+/* The view a drawing or diagram file belongs to, or null for a name that is not one of ours. */
+export const viewIdOfFile = (filename: string): string | null => {
     if (!filename.endsWith('.json')) {
         return null;
     }
@@ -219,6 +226,80 @@ export const readDrawing = async (path: string): Promise<DrawingReadOutcome> => 
 export const writeDrawing = async (path: string, document: DrawingDocument): Promise<string> => {
     await mkdir(dirname(path), { recursive: true });
     const text = serializeDrawing(document);
+    await writeAtomic(path, text, 0o644);
+    return text;
+};
+
+const oneItemPerLine = (items: readonly unknown[]): string =>
+    items.length === 0 ? '[]' : `[\n${items.map((item) => `    ${JSON.stringify(item)}`).join(',\n')}\n  ]`;
+
+/* The top level indented and every node, group and edge on one line, so a diff names what was added. */
+export const serializeDiagram = (document: DiagramDocument): string =>
+    [
+        '{',
+        `  "version": ${document.version},`,
+        `  "rev": ${document.rev},`,
+        `  "meta": ${JSON.stringify(document.meta)},`,
+        `  "nodes": ${oneItemPerLine(document.nodes)},`,
+        `  "groups": ${oneItemPerLine(document.groups)},`,
+        `  "edges": ${oneItemPerLine(document.edges)}`,
+        '}',
+        ''
+    ].join('\n');
+
+export type DiagramParse = { kind: 'ok'; document: DiagramDocument } | { kind: 'unreadable' } | { kind: 'invalid'; message: string };
+
+export const parseDiagram = (text: string): DiagramParse => {
+    let value: unknown;
+    try {
+        value = JSON.parse(text);
+    } catch {
+        return { kind: 'unreadable' };
+    }
+    const document = migrateDiagram(value);
+    if (!document) {
+        // JSON that is not a diagram at all: a person's file under our name, so it stays where it is.
+        return { kind: 'invalid', message: 'This file is not a diagram Ruimte can read' };
+    }
+    const problem = diagramProblemIn(document);
+    if (problem) {
+        return { kind: 'invalid', message: problem };
+    }
+    return { kind: 'ok', document };
+};
+
+type DiagramReadOutcome =
+    | { kind: 'ok'; document: DiagramDocument; text: string }
+    | { kind: 'missing' }
+    | { kind: 'corrupt'; setAside: string }
+    | { kind: 'invalid'; message: string };
+
+/* Reads a diagram file under the rule a drawing follows: broken JSON is set aside, never written over. */
+export const readDiagram = async (path: string): Promise<DiagramReadOutcome> => {
+    let text: string;
+    try {
+        text = await readFile(path, 'utf8');
+    } catch (e) {
+        if (isNotFound(e)) {
+            return { kind: 'missing' };
+        }
+        throw e;
+    }
+    const parsed = parseDiagram(text);
+    if (parsed.kind === 'ok') {
+        return { kind: 'ok', document: parsed.document, text };
+    }
+    if (parsed.kind === 'invalid') {
+        return parsed;
+    }
+    const setAside = `${path}.corrupt-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+    await rename(path, setAside);
+    return { kind: 'corrupt', setAside };
+};
+
+export const writeDiagram = async (path: string, document: DiagramDocument): Promise<string> => {
+    await mkdir(dirname(path), { recursive: true });
+    const text = serializeDiagram(document);
     await writeAtomic(path, text, 0o644);
     return text;
 };

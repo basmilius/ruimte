@@ -3,8 +3,8 @@ import { mkdir, readdir, rm } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { EMPTY_DRAWING, type DrawingContent, type DrawingDocument, type DrawingElement } from '@ruimte/contracts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
-import { drawingPathIn, drawingViewIdOf, drawingsDirOf, readDrawing, writeDrawing } from './project-files.ts';
-import type { ProjectDrawings, ProjectStore } from './project-store.ts';
+import { drawingsDirOf, readDrawing, viewFilePathIn, viewIdOfFile, writeDrawing } from './project-files.ts';
+import type { ProjectStore, ProjectViewFiles } from './project-store.ts';
 
 type DrawingErrorCode = 'project-not-found' | 'drawing-not-found' | 'drawing-invalid' | 'rev-conflict';
 
@@ -39,7 +39,7 @@ interface OpenProjectDrawings {
  * rev discipline of the project file. It watches that directory itself, because a non-recursive
  * watch on `.ruimte` does not reliably report a write one level down on macOS.
  */
-export class DrawingStore implements ProjectDrawings {
+export class DrawingStore implements ProjectViewFiles {
     private readonly projects: ProjectStore;
     private readonly sinks = new Map<string, SessionSink>();
     private readonly states = new Map<string, OpenProjectDrawings>();
@@ -63,7 +63,7 @@ export class DrawingStore implements ProjectDrawings {
      */
     async open(projectId: string, viewId: string): Promise<DrawingDocument> {
         const state = await this.stateOf(projectId, viewId);
-        const outcome = await readDrawing(drawingPathIn(state.dir, viewId));
+        const outcome = await readDrawing(viewFilePathIn(state.dir, viewId));
         if (outcome.kind === 'invalid') {
             throw new DrawingError('drawing-invalid', outcome.message);
         }
@@ -85,7 +85,7 @@ export class DrawingStore implements ProjectDrawings {
             throw new DrawingError('rev-conflict', `The drawing is at rev ${current.rev}, the save was based on ${baseRev}`);
         }
         const document: DrawingDocument = { version: 1, rev: current.rev + 1, elements: content.elements };
-        const text = await writeDrawing(drawingPathIn(state.dir, viewId), document);
+        const text = await writeDrawing(viewFilePathIn(state.dir, viewId), document);
         state.open.set(viewId, { rev: document.rev, lastText: text });
         return document.rev;
     }
@@ -93,13 +93,13 @@ export class DrawingStore implements ProjectDrawings {
     /* A duplicated view starts from the same elements at rev 0; ids are unique inside a file only. */
     async copy(projectId: string, from: string, to: string): Promise<void> {
         const state = await this.stateOf(projectId, to);
-        const outcome = await readDrawing(drawingPathIn(state.dir, from));
+        const outcome = await readDrawing(viewFilePathIn(state.dir, from));
         if (outcome.kind !== 'ok') {
             // Nothing was ever saved for the source, so the copy has nothing to be.
             return;
         }
         const document: DrawingDocument = { version: 1, rev: 0, elements: outcome.document.elements };
-        const text = await writeDrawing(drawingPathIn(state.dir, to), document);
+        const text = await writeDrawing(viewFilePathIn(state.dir, to), document);
         state.open.set(to, { rev: 0, lastText: text });
     }
 
@@ -112,7 +112,7 @@ export class DrawingStore implements ProjectDrawings {
             if (!this.projects.isDrawingView(projectId, viewId)) {
                 continue;
             }
-            const outcome = await readDrawing(drawingPathIn(drawingsDirOf(this.projects.documentPathOf(projectId)), viewId));
+            const outcome = await readDrawing(viewFilePathIn(drawingsDirOf(this.projects.documentPathOf(projectId)), viewId));
             return outcome.kind === 'ok' ? outcome.document.elements : [];
         }
         return null;
@@ -136,11 +136,11 @@ export class DrawingStore implements ProjectDrawings {
             return;
         }
         for (const name of names) {
-            const viewId = drawingViewIdOf(name);
+            const viewId = viewIdOfFile(name);
             if (!viewId || keep.has(viewId)) {
                 continue;
             }
-            await rm(drawingPathIn(dir, viewId), { force: true });
+            await rm(viewFilePathIn(dir, viewId), { force: true });
             this.close(projectId, viewId);
         }
     }
@@ -193,7 +193,7 @@ export class DrawingStore implements ProjectDrawings {
         try {
             state.watcher = watch(state.dir, (_event, filename) => {
                 // A platform that reports no name could have touched any drawing of this project.
-                const touched = filename ? [drawingViewIdOf(basename(filename))] : [...state.open.keys()];
+                const touched = filename ? [viewIdOfFile(basename(filename))] : [...state.open.keys()];
                 for (const viewId of touched) {
                     if (!viewId || !state.open.has(viewId)) {
                         continue;
@@ -225,7 +225,7 @@ export class DrawingStore implements ProjectDrawings {
         if (!current) {
             return;
         }
-        const outcome = await readDrawing(drawingPathIn(state.dir, viewId));
+        const outcome = await readDrawing(viewFilePathIn(state.dir, viewId));
         if (outcome.kind === 'invalid') {
             console.warn(`An outside edit to the drawing ${viewId} was ignored: ${outcome.message}`);
             return;
