@@ -38,8 +38,16 @@ class FakeChannel {
         this.sent.push(data);
     }
 
+    // A browser channel reports closed once the other end answered its stream reset; `silent` is one whose answer never comes.
+    silent = false;
+
     close(): void {
         this.closed = true;
+        if (this.silent) {
+            return;
+        }
+        this.readyState = 'closed';
+        this.onclose?.();
     }
 
     deliver(frame: unknown): void {
@@ -163,6 +171,23 @@ describe('webRtcLink', () => {
         const large = JSON.stringify({ id: '1', type: 'session.write', payload: { data: 'x'.repeat(40_000) } });
         link.send(large);
         expect(peer.channel.sent.slice(-3)).toEqual(splitFrame(large));
+    });
+
+    test('closing an open link takes the peer down only after the channel closed, or after the grace', async () => {
+        const { peer, link, log } = await negotiated();
+        peer.channel.deliver(CHALLENGE);
+        await tick();
+        peer.channel.deliver({ type: 'direct.accepted', ticket: null, expiresIn: 1000 });
+        await tick();
+        peer.channel.silent = true;
+        link.close();
+        expect(log.closes).toEqual([null]);
+        expect(peer.channel.closed).toBe(true);
+        // The machine hears the close through the channel's stream reset, which a peer closed first can cut off.
+        expect(peer.closed).toBe(false);
+        peer.channel.readyState = 'closed';
+        peer.channel.onclose?.();
+        expect(peer.closed).toBe(true);
     });
 
     test('nothing the client sends travels before the daemon let it in', async () => {

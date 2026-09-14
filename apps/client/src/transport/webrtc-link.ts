@@ -24,6 +24,9 @@ const GATHER_TIMEOUT_MS = 5_000;
 const FRAME_CHARS = 16 * 1024 * 1024;
 const HANDSHAKE_FRAME_CHARS = 4_096;
 
+// How long a close waits for the channel to report closed before the peer goes anyway.
+const CLOSE_GRACE_MS = 2_000;
+
 export interface WebRtcLinkOptions {
     iceServers: RTCIceServer[];
     /* The answer to the daemon's challenge; throws when the daemon did not prove itself. */
@@ -97,14 +100,27 @@ export const webRtcLink =
                 clearInterval(livenessTimer);
             }
             closeSignaling();
-            if (channel) {
-                channel.onclose = null;
-                channel.onmessage = null;
-                channel.close();
+            const closingPeer = peer;
+            if (closingPeer) {
+                closingPeer.onconnectionstatechange = null;
             }
-            if (peer) {
-                peer.onconnectionstatechange = null;
-                peer.close();
+            const releasePeer = (): void => closingPeer?.close();
+            if (channel && channel.readyState === 'open') {
+                // The channel's stream reset is how the machine hears the close at once; a peer taken down first can cut it off, which leaves the machine waiting on ICE consent.
+                const grace = setTimeout(releasePeer, CLOSE_GRACE_MS);
+                channel.onmessage = null;
+                channel.onclose = () => {
+                    clearTimeout(grace);
+                    releasePeer();
+                };
+                channel.close();
+            } else {
+                if (channel) {
+                    channel.onclose = null;
+                    channel.onmessage = null;
+                    channel.close();
+                }
+                releasePeer();
             }
             events.close(failure);
         };

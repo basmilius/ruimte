@@ -12,10 +12,13 @@ import {
 } from '@ruimte/contracts';
 import type { SignalEnvelope } from '@ruimte/pulsar';
 import { randomBytes } from 'node:crypto';
-import { RTCPeerConnection } from 'werift';
+import { RTCPeerConnection, type RTCDataChannel } from 'werift';
 import { signMessage, verifySignature } from '../auth/keys.ts';
 import { localSecretProof } from './channel-auth.ts';
 import { AUTHENTICATED_FRAME_CHARS, directChannel, fromWerift, UNAUTHENTICATED_FRAME_CHARS, type DirectChannel } from './data-channel.ts';
+
+// How long a close waits for the channel's stream reset to be answered before the peer goes anyway.
+const CLOSE_GRACE_MS = 2_000;
 
 export type DirectCredential =
     | { kind: 'key'; publicKey: string; privateKey: string; daemonId: string; daemonPublicKey: string }
@@ -52,6 +55,8 @@ export class DirectClient {
     private readonly pending = new Map<string, Pending>();
     private readonly frameListeners = new Set<(frame: string) => void>();
     private channel: DirectChannel | null = null;
+    private raw: RTCDataChannel | null = null;
+    private closing = false;
     private offerSdp: string | null = null;
     private answered: (sdp: string) => void = () => undefined;
     private nextId = 1;
@@ -81,6 +86,7 @@ export class DirectClient {
         const started = Date.now();
         const raw = this.peer.createDataChannel(DIRECT_CHANNEL_LABEL, { ordered: true });
         const channel = directChannel(fromWerift(raw));
+        this.raw = raw;
         this.channel = channel;
         const answer = new Promise<string>((resolve) => {
             this.answered = resolve;
@@ -165,16 +171,25 @@ export class DirectClient {
     }
 
     close(): void {
+        if (this.closing) {
+            return;
+        }
+        this.closing = true;
         if (this.livenessTimer !== null) {
             clearInterval(this.livenessTimer);
             this.livenessTimer = null;
         }
+        const raw = this.raw;
         this.channel?.close(1000, 'done');
         for (const entry of this.pending.values()) {
             entry.reject(new Error('disconnected'));
         }
         this.pending.clear();
-        void this.peer.close().catch(() => undefined);
+        /* werift's peer close stops DTLS without an alert and sends its SCTP abort after that, so the
+           stream reset the channel close starts is the only word the daemon gets. Taking the peer down
+           before the reset is answered races it, and a daemon that loses that race waits 30 s for ICE consent. */
+        const released = raw === null || raw.readyState === 'closed' ? Promise.resolve() : waitFor(() => raw.readyState === 'closed', CLOSE_GRACE_MS);
+        void released.catch(() => undefined).then(() => this.peer.close().catch(() => undefined));
     }
 
     private handshake(channel: DirectChannel, binding: string): Promise<{ ticket: string | null }> {

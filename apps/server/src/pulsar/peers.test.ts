@@ -28,6 +28,7 @@ let store: AuthStore;
 let handshake: Handshake;
 let peers: DirectPeers;
 const opened: Array<{ channel: DirectChannel; access: ClientAccess }> = [];
+const logged: string[] = [];
 const clients: DirectClient[] = [];
 
 const noSource = { subscribe: () => () => undefined, detachAll: () => undefined };
@@ -62,6 +63,7 @@ beforeAll(async () => {
         portRange: null,
         hostAddresses: [],
         attemptTimeoutMs: 10_000,
+        log: { log: (...parts: unknown[]) => logged.push(parts.join(' ')), warn: (...parts: unknown[]) => logged.push(parts.join(' ')) },
         authenticate: (channel, binding) =>
             authenticateChannel({ channel, binding, handshake, daemonId: DAEMON_ID, localSecret: LOCAL_SECRET, reachability: 'lan', timeoutMs: 5_000 }),
         open: (channel, access) => {
@@ -210,21 +212,66 @@ describe('a direct connection', () => {
         expect(drained).toBeGreaterThanOrEqual(1);
     }, 40_000);
 
+    test('the daemon logs a direct connection opening and ending, with the reason', async () => {
+        const client = connect({ kind: 'secret', secret: LOCAL_SECRET, daemonId: DAEMON_ID });
+        await client.open();
+        const tag = client.connectionId.slice(0, 8);
+        expect(logged.some((line) => line.includes(tag) && line.includes('opened'))).toBe(true);
+        client.close();
+        const deadline = Date.now() + 15_000;
+        while (!logged.some((line) => line.includes(tag) && line.includes('ended')) && Date.now() < deadline) {
+            await Bun.sleep(20);
+        }
+        const ended = logged.find((line) => line.includes(tag) && line.includes('ended'));
+        expect(ended).toMatch(/ended: (the channel closed|the peer connection closed|ICE failed)/);
+    }, 20_000);
+
+    test('an attempt that times out is logged with that reason', async () => {
+        const connectionId = `silent-${Date.now()}`;
+        const quick = new DirectPeers({
+            stunServers: [],
+            portRange: null,
+            hostAddresses: [],
+            attemptTimeoutMs: 300,
+            log: { log: (...parts: unknown[]) => logged.push(parts.join(' ')), warn: (...parts: unknown[]) => logged.push(parts.join(' ')) },
+            authenticate: async () => null,
+            open: () => undefined
+        });
+        const offerer = new DirectClient({
+            stunServers: [],
+            credential: { kind: 'none' },
+            signal: (envelope) => quick.receive({ ...envelope, connectionId }, () => undefined)
+        });
+        clients.push(offerer);
+        void offerer.open().catch(() => undefined);
+        const deadline = Date.now() + 10_000;
+        while (!logged.some((line) => line.includes(connectionId.slice(0, 8)) && line.includes('ended')) && Date.now() < deadline) {
+            await Bun.sleep(20);
+        }
+        expect(logged.find((line) => line.includes(connectionId.slice(0, 8)) && line.includes('ended'))).toMatch(/did not open in time/);
+        expect(quick.size).toBe(0);
+    }, 20_000);
+
     test('closing the client ends the attempt on the daemon', async () => {
         const client = connect({ kind: 'secret', secret: LOCAL_SECRET, daemonId: DAEMON_ID });
         await client.open();
         const channel = opened.at(-1)!.channel;
         let closed = false;
+        let clientIce: string | null = null;
         channel.onClose(() => {
             closed = true;
+            clientIce = client.iceState;
         });
         const before = peers.size;
         client.close();
-        const deadline = Date.now() + 15_000;
+        // Well inside the 30 s of ICE consent, so only the channel's own close can pass this.
+        const deadline = Date.now() + 5_000;
         while (!closed && Date.now() < deadline) {
             await Bun.sleep(20);
         }
         expect(closed).toBe(true);
+        // The daemon heard it while the client's peer was still up, not by luck in a race with its teardown.
+        expect(clientIce).not.toBe('closed');
         expect(peers.size).toBe(before - 1);
     }, 20_000);
 });

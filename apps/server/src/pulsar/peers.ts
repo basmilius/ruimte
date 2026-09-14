@@ -25,6 +25,7 @@ export interface DirectPeersOptions {
     /* A channel that passed the handshake, for the connection opener. */
     open(channel: DirectChannel, access: ClientAccess): void;
     attemptTimeoutMs?: number;
+    log?: Pick<Console, 'log' | 'warn'>;
 }
 
 interface Attempt {
@@ -42,9 +43,11 @@ interface Attempt {
 export class DirectPeers {
     private readonly options: DirectPeersOptions;
     private readonly attempts = new Map<string, Attempt>();
+    private readonly log: Pick<Console, 'log' | 'warn'>;
 
     constructor(options: DirectPeersOptions) {
         this.options = options;
+        this.log = options.log ?? console;
     }
 
     receive(envelope: SignalEnvelope, reply: (envelope: SignalEnvelope) => void): void {
@@ -64,7 +67,7 @@ export class DirectPeers {
                 return;
             }
             case 'close':
-                this.end(connectionId);
+                this.end(connectionId, 'the client closed it');
                 return;
             case 'answer':
                 // This side never offers, so an answer belongs to nothing here.
@@ -79,7 +82,7 @@ export class DirectPeers {
 
     closeAll(): void {
         for (const connectionId of [...this.attempts.keys()]) {
-            this.end(connectionId);
+            this.end(connectionId, 'the daemon is shutting down');
         }
     }
 
@@ -102,14 +105,20 @@ export class DirectPeers {
             channel: null,
             timer: setTimeout(() => {
                 reply({ connectionId, signal: { kind: 'close', reason: 'timeout' } });
-                this.end(connectionId);
+                this.end(connectionId, `did not open in time (${Math.round((this.options.attemptTimeoutMs ?? ATTEMPT_TIMEOUT_MS) / 1000)} s)`);
             }, this.options.attemptTimeoutMs ?? ATTEMPT_TIMEOUT_MS)
         };
         this.attempts.set(connectionId, attempt);
 
         peer.connectionStateChange.subscribe((state) => {
-            if (state === 'failed' || state === 'closed') {
-                this.end(connectionId);
+            if (state === 'failed') {
+                // werift fails a pair that had no answer to its consent checks for 30 seconds (RFC 7675), as well as one that never connected.
+                this.end(
+                    connectionId,
+                    attempt.timer === null ? 'ICE failed: the client stopped answering consent checks' : 'ICE failed before the channel opened'
+                );
+            } else if (state === 'closed') {
+                this.end(connectionId, 'the peer connection closed');
             }
         });
 
@@ -121,7 +130,7 @@ export class DirectPeers {
             }
             const channel = directChannel(fromWerift(raw));
             attempt.channel = channel;
-            channel.onClose(() => this.end(connectionId));
+            channel.onClose(() => this.end(connectionId, 'the channel closed'));
             void this.admit(connectionId, attempt, channel, binding, raw);
         });
 
@@ -131,7 +140,7 @@ export class DirectPeers {
             await gathered(peer);
             const answerSdp = peer.localDescription?.sdp;
             if (!answerSdp || this.attempts.get(connectionId) !== attempt) {
-                this.end(connectionId);
+                this.end(connectionId, 'no answer to send');
                 return;
             }
             binding = channelBinding(offerSdp, answerSdp);
@@ -139,7 +148,7 @@ export class DirectPeers {
         } catch (e) {
             console.warn('Answering a direct connection failed', e);
             reply({ connectionId, signal: { kind: 'close', reason: 'failed' } });
-            this.end(connectionId);
+            this.end(connectionId, 'answering failed');
         }
     }
 
@@ -161,15 +170,17 @@ export class DirectPeers {
             clearTimeout(attempt.timer);
             attempt.timer = null;
         }
+        this.log.log(`Direct connection ${tagOf(connectionId)} opened (${access.reachability}, ${this.attempts.size} alive)`);
         this.options.open(channel, access);
     }
 
-    private end(connectionId: string): void {
+    private end(connectionId: string, reason: string): void {
         const attempt = this.attempts.get(connectionId);
         if (!attempt) {
             return;
         }
         this.attempts.delete(connectionId);
+        this.log.log(`Direct connection ${tagOf(connectionId)} ended: ${reason} (${this.attempts.size} alive)`);
         if (attempt.timer) {
             clearTimeout(attempt.timer);
         }
@@ -177,6 +188,9 @@ export class DirectPeers {
         void attempt.peer.close().catch(() => undefined);
     }
 }
+
+// Enough of the id to follow one connection through the log without printing the whole of it.
+const tagOf = (connectionId: string): string => connectionId.slice(0, 8);
 
 const until = async (ready: () => boolean): Promise<void> => {
     while (!ready()) {
