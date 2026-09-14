@@ -4,3 +4,4 @@ export * from './keys.ts';
 export * from './peer.ts';
 export * from './signaling.ts';
 export * from './signing.ts';
+export * from './statement-key.ts';

@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import {
     ACCESS_STATEMENT_LIFETIME_MS,
+    APP_REDIRECT_SCHEME_URI,
+    isAppRedirectUri,
     AccessRequestPayloadSchema,
     AccessStatementSchema,
     AddressBookErrorSchema,
@@ -98,8 +100,20 @@ describe('address book', () => {
     };
 
     test('the machine list, a registration, a request, a statement and an error survive a round trip', () => {
-        const list = { machines: [{ id: 'machine-1', name: 'Studio', publicKey: key, lastSeenAt: null }] };
-        const registration = { id: 'machine-1', name: 'Studio', publicKey: key, issuedAt: 1_800_000_000_000, signature };
+        const list = {
+            machines: [
+                { id: 'machine-1', name: 'Studio', icon: null, publicKey: key, lastSeenAt: null },
+                { id: 'machine-2', name: 'Server', icon: { kind: 'lucide' as const, value: 'server' }, publicKey: otherKey, lastSeenAt: 1_800_000_000_000 }
+            ]
+        };
+        const registration = {
+            id: 'machine-1',
+            name: 'Studio',
+            icon: { kind: 'emoji' as const, value: 'S' },
+            publicKey: key,
+            issuedAt: 1_800_000_000_000,
+            signature
+        };
         const request = { machineId: 'machine-1', clientPublicKey: key, nonce, signature };
         const error = { error: { code: 'unauthorized' as const, message: 'Sign in again' } };
 
@@ -117,6 +131,26 @@ describe('address book', () => {
 
     test('refuses a registration without a signature and a machine without a name', () => {
         expect(RegisterMachinePayloadSchema.safeParse({ id: 'machine-1', name: 'Studio', publicKey: key, issuedAt: 0 }).success).toBe(false);
-        expect(MachineListResultSchema.safeParse({ machines: [{ id: 'machine-1', name: '', publicKey: key, lastSeenAt: null }] }).success).toBe(false);
+        expect(MachineListResultSchema.safeParse({ machines: [{ id: 'machine-1', name: '', icon: null, publicKey: key, lastSeenAt: null }] }).success).toBe(
+            false
+        );
+    });
+
+    test('a login comes back only to the custom scheme or a loopback listener', () => {
+        expect(isAppRedirectUri(APP_REDIRECT_SCHEME_URI)).toBe(true);
+        expect(isAppRedirectUri('http://127.0.0.1:53682/pulsar/callback')).toBe(true);
+        expect(isAppRedirectUri('http://[::1]:53682/pulsar/callback')).toBe(true);
+        for (const refused of [
+            'ruimte://pulsar/callback?x=1',
+            'http://127.0.0.1/pulsar/callback',
+            'http://localhost:53682/pulsar/callback',
+            'https://127.0.0.1:53682/pulsar/callback',
+            'http://127.0.0.1:53682/pulsar/callback?next=evil',
+            'http://127.0.0.1:53682/pulsar/callback/',
+            'http://user@127.0.0.1:53682/pulsar/callback',
+            'https://example.com/pulsar/callback'
+        ]) {
+            expect(isAppRedirectUri(refused)).toBe(false);
+        }
     });
 });
