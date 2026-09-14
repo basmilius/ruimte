@@ -1,6 +1,6 @@
 import { rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import type { AgentLaunch } from '@ruimte/contracts';
 import { SessionError, type SessionManagerOptions } from './manager.ts';
 import { CLEAN_PATH, Recorder, SH, SH_ARGS, makeHarness, waitFor, waitForAsync, type Harness } from './test-helpers.ts';
@@ -14,6 +14,9 @@ const freshHarness = async (extra: Partial<SessionManagerOptions> = {}): Promise
     transcript = join(harness.home, 'transcript.jsonl');
     await writeFile(transcript, '');
 };
+
+// A test here waits on a real shell several times over, each wait up to DEFAULT_TIMEOUT_MS; Bun's own 5 s per test ended them on a loaded CI runner before any wait gave up.
+setDefaultTimeout(30_000);
 
 beforeEach(async () => {
     await freshHarness();
