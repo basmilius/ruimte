@@ -94,6 +94,9 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
         // Only settings that turn something on: an Electron webview attribute counts as set the moment
         // it is there, so `nodeintegration="false"` would be node integration switched on.
         element.setAttribute('webpreferences', 'sandbox=yes,contextIsolation=yes');
+        // Without it a `target="_blank"` link never reaches the shell, which opens it in the system
+        // browser and denies the window itself.
+        element.setAttribute('allowpopups', '');
         element.className = 'file-preview-page';
         element.addEventListener('did-start-loading', () => {
             setLoading(true);

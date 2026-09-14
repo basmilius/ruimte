@@ -193,6 +193,31 @@ const sealPreviewSession = (): void => {
     preview.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
 };
 
+const isPreviewGuest = (contents: Electron.WebContents): boolean =>
+    contents.getType() === 'webview' && contents.session === session.fromPartition(PREVIEW_PARTITION);
+
+// What a link in a previewed page may hand to the system: a web page or a mail, never a scheme that starts an app.
+const isExternalLink = (url: string): boolean => /^(https?:\/\/|mailto:)/.test(url);
+
+/*
+ * The sealed session cancels a link to the web, so the click would do nothing at all: it goes to the
+ * system browser instead. A link to a file beside the page still opens in place.
+ */
+const routePreviewLinks = (contents: Electron.WebContents): void => {
+    contents.on('will-navigate', (event) => {
+        if (isExternalLink(event.url)) {
+            event.preventDefault();
+            void shell.openExternal(event.url);
+        }
+    });
+    contents.setWindowOpenHandler(({ url }) => {
+        if (isExternalLink(url)) {
+            void shell.openExternal(url);
+        }
+        return { action: 'deny' };
+    });
+};
+
 /* The blocker in flight, or null. One window, so one id; holding it here is what keeps a second
    request from leaking the first. */
 let keepAwakeId: number | null = null;
@@ -728,8 +753,11 @@ if (!app.requestSingleInstanceLock()) {
         if (contents.getType() === 'webview') {
             contents.on('focus', () => mainWindow?.webContents.send('guest:focus', contents.id));
         }
+        if (isPreviewGuest(contents)) {
+            routePreviewLinks(contents);
+        }
         /* Only the pages of browser nodes get a menu. The preview partition is sealed on purpose: it
-           renders a local file the panel opened, with nowhere to navigate and nothing to inspect. */
+           renders a local file the panel opened, with nothing to inspect. */
         if (!isBrowserGuest(contents)) {
             return;
         }
