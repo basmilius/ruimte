@@ -220,6 +220,15 @@ describe('a diagram as context', () => {
         expect(await (await get('/context/flow-1?tail=1', 'tok')).text()).toBe('Machine wraps: Daemon, Disk');
     });
 
+    test('the node it is linked through reads it too, and lists under the view id alone', async () => {
+        linked.set('agent', [{ id: 'flow-1', kind: 'diagram', title: 'Wire', nodeId: 'diagram-node' }]);
+        expect(store.list('agent')).toEqual([{ id: 'flow-1', kind: 'diagram', title: 'Wire' }]);
+        expect(await (await get('/context/diagram-node', 'tok')).text()).toBe(await (await get('/context/flow-1', 'tok')).text());
+        expect(await (await get('/context/diagram-node?tail=1', 'tok')).text()).toBe('Machine wraps: Daemon, Disk');
+        // A node nothing links into the asker stays unreadable, whatever it mirrors.
+        expect((await get('/context/other-node', 'tok')).status).toBe(404);
+    });
+
     test('a diagram the daemon cannot find reads as nothing at all', async () => {
         linked.set('agent', [{ id: 'gone', kind: 'diagram', title: 'Wire' }]);
         expect(await store.read('agent', 'gone')).toBeNull();

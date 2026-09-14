@@ -53,14 +53,14 @@ describe('deriveContextSources', () => {
             { id: 'e2', from: 'shell', to: 'chat' }
         ]);
         expect(sources.get('chat')).toEqual([
-            { id: 'drawing-1', kind: 'drawing', title: 'Sketch' },
+            { id: 'drawing-1', kind: 'drawing', title: 'Sketch', nodeId: 'sketch' },
             { id: 'shell', kind: 'terminal', title: 'shell' }
         ]);
     });
 
-    test('a diagram is read by the view it mirrors, like a drawing', () => {
+    test('a diagram is read by the view it mirrors, like a drawing, and names the node it is linked through', () => {
         const sources = deriveContextSources(nodes, texts, [{ id: 'e1', from: 'flow', to: 'shell' }]);
-        expect(sources.get('shell')).toEqual([{ id: 'diagram-1', kind: 'diagram', title: 'Flow' }]);
+        expect(sources.get('shell')).toEqual([{ id: 'diagram-1', kind: 'diagram', title: 'Flow', nodeId: 'flow' }]);
     });
 
     test('a diagram node that mirrors nothing yet is only a line', () => {

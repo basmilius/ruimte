@@ -97,7 +97,7 @@ export class ContextStore {
     }
 
     list(targetId: string): ContextSource[] {
-        return this.readers.sources(targetId).map(({ text: _text, ...source }) => source);
+        return this.readers.sources(targetId).map(({ text: _text, nodeId: _nodeId, ...source }) => source);
     }
 
     /*
@@ -106,7 +106,8 @@ export class ContextStore {
      * are rendered here) and because the wire then carries fifteen lines instead of two thousand.
      */
     async read(targetId: string, sourceId: string, tail: number | null = null): Promise<string | null> {
-        const source = this.readers.sources(targetId).find((entry) => entry.id === sourceId);
+        // Only what is linked into the asker matches, so a node id opens nothing an edge did not.
+        const source = this.readers.sources(targetId).find((entry) => entry.id === sourceId || entry.nodeId === sourceId);
         if (!source) {
             return null;
         }

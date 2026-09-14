@@ -85,7 +85,7 @@ const readVerb: ContextVerb = {
     usage: '<id> [--tail N]',
     summary: 'Prints one linked source, whole or its last N lines',
     detail: [
-        'argument\t<id>\trequired\tThe id of a source, from ruimte-context list',
+        'argument\t<id>\trequired\tThe id of a source, from ruimte-context list; a drawing or diagram also takes the id of the linked node that shows it',
         'flag\t--tail N\toptional\tOnly the last N lines, N a positive whole number; without it the whole source',
         'prints\tThe source itself, as text, not as tab-separated lines',
         'kind\ttext\tThe text the person wrote: a note, a text on the canvas or a browser address\t--tail counts its lines',
