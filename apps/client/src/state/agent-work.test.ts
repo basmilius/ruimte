@@ -32,6 +32,7 @@ const chat = (status: AgentStatus): ChatState => ({
         createdAt: 0
     },
     items: {},
+    structure: {},
     order: []
 });
 

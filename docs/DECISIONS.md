@@ -1214,9 +1214,19 @@ decided.
 
 - Replies came in chunks although every delta already arrived on its own: a delta often holds several
   tokens and was on screen the moment it landed, half-written markdown changed shape, and every delta
-  parsed the whole reply again (and highlighted an open code block again). The deltas stay as they
-  are and nothing changes on the wire; the client spreads what arrived over the time after it and
-  fades every new word in over 300 ms (`chat/ui/reveal.ts`, where the constants live).
+  parsed the whole reply again (and highlighted an open code block again). The deltas keep their
+  shape on the wire; the client spreads what arrived over the time after it and fades every new word
+  in over 300 ms (`chat/ui/reveal.ts`, where the constants live).
+- The daemon holds the deltas of a chat back for 16 ms and sends a run on one item as one delta
+  (`apps/server/src/chat/delta-coalescer.ts`), the rhythm terminal output already had. Every CLI
+  delta used to be a frame to every client and a store update there, while the reveal only moves
+  once a frame. Any other event sends what is held first, so the order stays the thread's; `attach`
+  flushes before the client joins, because the snapshot already carries the held text, and `detach`
+  flushes before it leaves. The client derives the rows from `structure` rather than `items`
+  (`state/chats.ts`): the same map, except that a delta growing a reply or a thought that already
+  has text leaves it alone. The row reads its text from `items`, so a word renders that row and not
+  the thread. The first text of an item, a sub-agent's text and tool output still change the
+  structure, since the rows are what decides whether and where those are drawn.
 - The first version closed a sixth of the gap per frame and revealed a character at a time, and it
   looked like a fade that started at half and trailed, with the text still coming in steps. Three
   causes: a span made with half a word showed its later letters at the opacity it had already

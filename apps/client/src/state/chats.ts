@@ -6,6 +6,13 @@ import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
 export interface ChatState {
     info: ChatInfo;
     items: Record<string, ChatItem>;
+    /*
+     * The items as the timeline groups them: the same map as `items`, except that a delta growing a
+     * reply or a thought that already has text leaves it as it was. The rows are derived from this,
+     * so a word arriving touches the row that draws it and not the whole thread; that row reads its
+     * text from `items`.
+     */
+    structure: Record<string, ChatItem>;
     order: string[];
 }
 
@@ -28,33 +35,37 @@ interface ChatsStore {
     clear(endpointId: string): void;
 }
 
-const stateOf = (info: ChatInfo, items: ChatItem[]): ChatState => ({
-    info,
-    items: Object.fromEntries(items.map((item) => [item.id, item])),
-    order: items.map((item) => item.id)
-});
+const stateOf = (info: ChatInfo, items: ChatItem[]): ChatState => {
+    const byId = Object.fromEntries(items.map((item) => [item.id, item]));
+    return { info, items: byId, structure: byId, order: items.map((item) => item.id) };
+};
+
+/* The state with one item replaced, in the thread and in the structure the rows come from. */
+const withItem = (state: ChatState, item: ChatItem): ChatState => {
+    const items = { ...state.items, [item.id]: item };
+    return { ...state, items, structure: items };
+};
 
 export const applyEvent = (state: ChatState, event: ChatEvent): ChatState => {
     switch (event.type) {
         case 'item': {
             const known = event.item.id in state.items;
-            return {
-                ...state,
-                items: { ...state.items, [event.item.id]: event.item },
-                order: known ? state.order : [...state.order, event.item.id]
-            };
+            return { ...withItem(state, event.item), order: known ? state.order : [...state.order, event.item.id] };
         }
         case 'delta': {
             const item = state.items[event.itemId];
             if (item?.kind === 'assistant' || item?.kind === 'thinking') {
-                return { ...state, items: { ...state.items, [event.itemId]: { ...item, text: item.text + event.text } } };
+                const grown = { ...item, text: item.text + event.text };
+                // The first text is structure after all: an empty reply that is not streaming has no row.
+                // A sub-agent's text is drawn from inside its parent's row, which only the rows carry.
+                if (item.text === '' || (item.kind === 'assistant' && item.parentToolUseId)) {
+                    return withItem(state, grown);
+                }
+                return { ...state, items: { ...state.items, [event.itemId]: grown } };
             }
             if (item?.kind === 'tool' && item.state === 'running') {
                 const progress = item.progress ?? { startedAt: null, description: null, output: null };
-                return {
-                    ...state,
-                    items: { ...state.items, [event.itemId]: { ...item, progress: { ...progress, output: (progress.output ?? '') + event.text } } }
-                };
+                return withItem(state, { ...item, progress: { ...progress, output: (progress.output ?? '') + event.text } });
             }
             return state;
         }

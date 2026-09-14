@@ -1,3 +1,4 @@
+import type { ChatItem } from '@ruimte/contracts';
 import type { TimelineRow } from '@/chat/logic/timeline';
 import { selectionWithin } from '@/ui/selection';
 
@@ -15,6 +16,26 @@ export interface TimelineTarget {
 }
 
 export const EMPTY_TARGET: TimelineTarget = { selection: '', row: null, code: null, path: null, line: null };
+
+/*
+ * The rows with the text a reply or a thought holds now. Rows are derived from the structure of a
+ * thread, which a delta leaves alone, so a row still carries the text it was derived with.
+ */
+export const withCurrentText = (rows: TimelineRow[], items: Record<string, ChatItem> | undefined): TimelineRow[] => {
+    if (!items) {
+        return rows;
+    }
+    return rows.map((row) => {
+        const item = items[row.id];
+        if (row.kind === 'assistant' && item?.kind === 'assistant') {
+            return { ...row, item };
+        }
+        if (row.kind === 'thinking' && item?.kind === 'thinking') {
+            return { ...row, item };
+        }
+        return row;
+    });
+};
 
 /* The row a click landed in is the one whose id it sits under; the rest comes from the same walk up. */
 export const readTimelineTarget = (element: HTMLElement, scroller: HTMLElement | null, rows: TimelineRow[]): TimelineTarget => {

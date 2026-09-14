@@ -4,12 +4,13 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import clsx from 'clsx';
 import { deriveTimelineRows, type TimelineRow } from '@/chat/logic/timeline';
 import { registerTimeline, setTimelineAtEnd } from '@/chat/timeline-scroll';
-import { EMPTY_TARGET, readTimelineTarget, type TimelineTarget } from '@/chat/logic/timeline-target';
+import { EMPTY_TARGET, readTimelineTarget, withCurrentText, type TimelineTarget } from '@/chat/logic/timeline-target';
 import { TimelineMenuPopup } from '@/chat/ui/TimelineMenu';
 import { AgentTurnRow, ApprovalHistoryRow, AssistantRow, CompactionRow, NoteRow, QuestionHistoryRow, ThinkingRow, UserRow } from '@/chat/ui/rows/MessageRows';
 import { SubagentRow } from '@/chat/ui/rows/SubagentRow';
 import { ChangedFilesRow, TurnFoldRow, WorkGroupRow, WorkLiveRow, WorkRow, WorkingRow } from '@/chat/ui/rows/WorkRows';
-import { useChatRow } from '@/state/chats';
+import { useChatRow, useChats } from '@/state/chats';
+import { endpointKey, useEndpointId } from '@/state/keys';
 import { FileLinkContext } from '@/shell/panels/file-links';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { EmptyState } from '@/ui/EmptyState';
@@ -36,9 +37,9 @@ function Row({ row, chatId, toggleGroup, toggleTurn, toggleSubagent, openSubagen
             return <AgentTurnRow label={row.label} onOpen={toolUseId ? () => openSubagent(toolUseId) : undefined} />;
         }
         case 'assistant':
-            return <AssistantRow item={row.item} />;
+            return <AssistantRow chatId={chatId} item={row.item} />;
         case 'thinking':
-            return <ThinkingRow item={row.item} />;
+            return <ThinkingRow chatId={chatId} item={row.item} />;
         case 'work':
             return <WorkRow tool={row.tool} />;
         case 'work-live':
@@ -78,9 +79,13 @@ const isBlock = (row: TimelineRow): boolean => BLOCK_KINDS.has(row.kind);
 
 export function Timeline({ chatId }: { chatId: string }) {
     const order = useChatRow(chatId, (row) => row?.order);
-    const items = useChatRow(chatId, (row) => row?.items);
+    // The structure, not the items: a delta growing a reply must not derive every row again.
+    const items = useChatRow(chatId, (row) => row?.structure);
     const activeTurnId = useChatRow(chatId, (row) => row?.info.activeTurnId ?? null);
     const info = useChatRow(chatId, (row) => row?.info ?? null);
+    const endpointId = useEndpointId();
+    // Read when the menu opens rather than subscribed to, for the same reason the rows use the structure.
+    const fullItems = () => useChats.getState().byKey[endpointKey(endpointId, chatId)]?.items;
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
     const [expandedTurns, setExpandedTurns] = useState<Set<string>>(() => new Set());
     const [expandedSubagents, setExpandedSubagents] = useState<Set<string>>(() => new Set());
@@ -117,7 +122,11 @@ export function Timeline({ chatId }: { chatId: string }) {
 
     // A change in what the last row says (a streaming delta) must also pull the view down.
     const lastRow = rows[rows.length - 1];
-    const tail = lastRow?.kind === 'assistant' ? lastRow.item.text.length : rows.length;
+    const lastReplyLength = useChatRow(chatId, (row) => {
+        const item = lastRow?.kind === 'assistant' ? row?.items[lastRow.id] : undefined;
+        return item?.kind === 'assistant' ? item.text.length : null;
+    });
+    const tail = lastReplyLength ?? rows.length;
     /*
      * The rows are measured as they render, so the end of the list moves while it is drawn: a diff
      * that highlights, an image that loads, a tool row that grows a line of output. `scrollToIndex`
@@ -184,7 +193,7 @@ export function Timeline({ chatId }: { chatId: string }) {
                         followRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < FOLLOW_THRESHOLD_PX + COMPOSER_CLEARANCE_PX;
                         setTimelineAtEnd(chatId, followRef.current);
                     }}
-                    onContextMenu={(e) => setTarget(readTimelineTarget(e.target as HTMLElement, scrollRef.current, rows))}
+                    onContextMenu={(e) => setTarget(readTimelineTarget(e.target as HTMLElement, scrollRef.current, withCurrentText(rows, fullItems())))}
                 >
                     <div className="chat-column-content relative w-full" style={{ height: virtualizer.getTotalSize() }}>
                         {virtualizer.getVirtualItems().map((virtualRow) => {

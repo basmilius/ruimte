@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import { Bot, Brain, Check, ChevronDown, CircleAlert, Info, MessageCircleQuestionMark, Minimize2, Paperclip, TriangleAlert, X, Zap } from 'lucide-react';
 import type { ChatApprovalItem, ChatAssistantItem, ChatQuestionItem, ChatThinkingItem, ChatUserItem } from '@ruimte/contracts';
 import { attachmentUrl, formatBytes, isImageAttachment } from '@/chat/attachments';
+import { useChatRow } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useSettings } from '@/state/settings';
 import { tokenizeChips } from '@/chat/mentions';
@@ -95,11 +96,22 @@ export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }
 }
 
 /*
+ * The item as the thread holds it now. The row was derived from the structure, which a delta leaves
+ * alone, so only this row renders again when a word arrives.
+ */
+const useCurrentItem = <T extends ChatAssistantItem | ChatThinkingItem>(chatId: string, derived: T): T =>
+    useChatRow(chatId, (row) => {
+        const item = row?.items[derived.id];
+        return item?.kind === derived.kind ? (item as T) : derived;
+    });
+
+/*
  * A reply. Streamed, it follows the text as it arrives, a word at a time. Not streamed, it says it is
  * being written and fades in whole once it is done, which only a row that saw it being written does:
  * an old reply scrolled back into view just stands there.
  */
-export function AssistantRow({ item }: { item: ChatAssistantItem }) {
+export function AssistantRow({ chatId, item: derived }: { chatId: string; item: ChatAssistantItem }) {
+    const item = useCurrentItem(chatId, derived);
     const stream = useSettings((s) => s.chatStreaming);
     const [sawWriting] = useState(item.streaming);
     const live = stream && item.streaming;
@@ -142,7 +154,8 @@ function FadingWords({ text }: { text: string }) {
  * What the model thought before it answered. It shimmers while it streams and folds itself away
  * once the answer starts, because the thought is worth a glance and rarely worth reading twice.
  */
-export function ThinkingRow({ item }: { item: ChatThinkingItem }) {
+export function ThinkingRow({ chatId, item: derived }: { chatId: string; item: ChatThinkingItem }) {
+    const item = useCurrentItem(chatId, derived);
     const stream = useSettings((s) => s.chatStreaming);
     const [open, setOpen] = useState(false);
     const reveal = useRevealedText(item.text, stream && item.streaming);
