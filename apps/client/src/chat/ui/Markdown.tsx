@@ -1,61 +1,16 @@
-import { memo, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { memo, useMemo, type ReactNode } from 'react';
 import clsx from 'clsx';
 import ReactMarkdown from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
+import { CodeBlock } from '@/chat/ui/CodeBlock';
+import { CodeStreamingContext } from '@/chat/ui/code-streaming';
 import { splitMarkdownBlocks } from '@/chat/ui/markdown-blocks';
 import { rehypeFadeWords } from '@/chat/ui/rehype-fade';
 import { openFileLink, useFileLinkCwd, useFileLinkTarget, type FileRef } from '@/shell/panels/file-links';
 import { useSettings } from '@/state/settings';
-import { useTheme } from '@/state/theme';
-
-type Highlighter = (code: string, lang: string, theme: 'light' | 'dark') => Promise<string>;
-
-let highlighterPromise: Promise<Highlighter> | null = null;
-
-// Shiki loads on the first code block, not with the app; the web bundle covers the languages a coding agent writes.
-const loadHighlighter = (): Promise<Highlighter> => {
-    highlighterPromise ??= import('shiki/bundle/web').then(({ codeToHtml, bundledLanguages }) => async (code, lang, theme) => {
-        const language = lang in bundledLanguages ? lang : 'text';
-        return codeToHtml(code, { lang: language, theme: theme === 'dark' ? 'github-dark' : 'github-light' });
-    });
-    return highlighterPromise;
-};
 
 const languageOf = (className: string | undefined): string => /language-([\w-]+)/.exec(className ?? '')?.[1] ?? 'text';
-
-function CodeBlock({ code, lang }: { code: string; lang: string }) {
-    const theme = useTheme((t) => t.resolved);
-    const [html, setHtml] = useState<string | null>(null);
-
-    useEffect(() => {
-        let cancelled = false;
-        loadHighlighter()
-            .then((highlight) => highlight(code, lang, theme))
-            .then((result) => {
-                if (!cancelled) {
-                    setHtml(result);
-                }
-            })
-            .catch(() => undefined);
-        return () => {
-            cancelled = true;
-        };
-    }, [code, lang, theme]);
-
-    if (html === null) {
-        // The same shape shiki hands back, so the block does not resize once it is highlighted and
-        // prose never sees a bare `pre` to paint from its own variables.
-        return (
-            <div className="chat-code">
-                <pre>
-                    <code>{code}</code>
-                </pre>
-            </div>
-        );
-    }
-    return <div className="chat-code" dangerouslySetInnerHTML={{ __html: html }} />;
-}
 
 const INLINE_CODE = 'rounded-sm bg-surface-sunken px-1 py-px font-mono text-code';
 
@@ -149,25 +104,6 @@ const components = {
     }
 };
 
-/* The same elements with a fence that is still open drawn as plain code: highlighting it again on
-   every delta is what made a code block lag behind the text around it. */
-const plainComponents = {
-    ...components,
-    code({ className, children }: { className?: string; children?: ReactNode }) {
-        const text = String(children ?? '');
-        if (className?.startsWith('language-') || text.includes('\n')) {
-            return (
-                <div className="chat-code">
-                    <pre>
-                        <code>{text.replace(/\n$/, '')}</code>
-                    </pre>
-                </div>
-            );
-        }
-        return <InlineCode text={text} />;
-    }
-};
-
 // Module constants, so a render never hands react-markdown a fresh array and makes it parse again.
 const PLUGINS = [remarkGfm];
 const PLUGINS_WITH_BREAKS = [remarkGfm, remarkBreaks];
@@ -176,18 +112,22 @@ const NO_PLUGINS: typeof FADE_PLUGINS = [];
 
 /* One block of a reply. It renders no element of its own, so prose still sees the paragraphs as
    direct children and keeps its first and last margins. */
-const ReplyBlock = memo(function ReplyBlock({ text, fade, plain }: { text: string; fade: boolean; plain: boolean }) {
+const ReplyBlock = memo(function ReplyBlock({ text, fade, open }: { text: string; fade: boolean; open: boolean }) {
     return (
-        <ReactMarkdown remarkPlugins={PLUGINS} rehypePlugins={fade ? FADE_PLUGINS : NO_PLUGINS} components={plain ? plainComponents : components}>
-            {text}
-        </ReactMarkdown>
+        // A context rather than a second set of components: a component that changed would mount the
+        // code block again the moment its fence closes, and it would lose the lines it already has.
+        <CodeStreamingContext.Provider value={open}>
+            <ReactMarkdown remarkPlugins={PLUGINS} rehypePlugins={fade ? FADE_PLUGINS : NO_PLUGINS} components={components}>
+                {text}
+            </ReactMarkdown>
+        </CodeStreamingContext.Provider>
     );
 });
 
 /*
  * A reply in a chat thread, parsed a block at a time so a delta only parses the block that grows.
- * While it streams every new word fades in, and a fence that has not closed yet waits for shiki
- * until it has.
+ * While it streams every new word fades in, and a fence that has not closed yet is highlighted a
+ * line at a time as it grows.
  */
 export const ReplyMarkdown = memo(function ReplyMarkdown({ text, streaming }: { text: string; streaming: boolean }) {
     const blocks = useMemo(() => splitMarkdownBlocks(text), [text]);
@@ -195,7 +135,7 @@ export const ReplyMarkdown = memo(function ReplyMarkdown({ text, streaming }: { 
         <div className="chat-markdown prose prose-sm max-w-none text-sm">
             {blocks.map((block, index) => (
                 // Blocks only ever grow at the end, so the place of a block is a stable key.
-                <ReplyBlock key={index} text={block.text} fade={streaming} plain={streaming && block.openFence} />
+                <ReplyBlock key={index} text={block.text} fade={streaming} open={streaming && block.openFence} />
             ))}
         </div>
     );

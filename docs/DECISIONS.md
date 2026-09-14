@@ -1246,6 +1246,16 @@ decided.
   indented line, so a loose list or a paragraph inside a list item stays one piece; a text with a
   reference definition stays whole. The split is the same while streaming and after, so the end of a
   stream moves nothing.
+- A code block used to be drawn bare and then swapped for Shiki's HTML, a flash of uncolored code
+  per block, and a fence still being written stayed bare until it closed and then colored all at
+  once. `CodeBlock.tsx` now draws Shiki's tokens as elements, a line at a time: a line that ended
+  keeps its tokens, and the grammar state after it is where the next line starts (`code-lines.ts`),
+  so a delta tokenizes the new lines and the one being written however long the block is. Code with
+  a carriage return is tokenized whole every time, since a cut at newlines cannot see its lines.
+  Until Shiki and the grammar are loaded the block holds its place invisibly (`aria-hidden`) and
+  fades in once; only a failed load shows it bare. Whether a fence is still open reaches the block
+  through a context rather than a second set of components, because a different component mounts
+  the block again the moment its fence closes and throws its lines away.
 - The client ignored deltas on thinking items, so the thought stood still until it closed. It now
   grows like a reply, under the same switch.
 - "Stream replies" is one switch for everything an agent writes, the thought included, and it is the
