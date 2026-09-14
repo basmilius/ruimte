@@ -1,0 +1,35 @@
+{
+    "version": 1,
+    "rev": 0,
+    "meta": { "title": "Ruimte on the wire", "direction": "right" },
+    "nodes": [
+        { "id": "person", "label": "Person", "shape": "pill", "tone": "muted" },
+        { "id": "client", "label": "Client", "sub": "React, Vite", "tone": "blue" },
+        { "id": "desktop", "label": "Desktop shell", "sub": "Electron", "shape": "round", "tone": "purple" },
+        { "id": "auth", "label": "Paired?", "shape": "diamond", "tone": "yellow" },
+        { "id": "sessions", "label": "SessionManager", "sub": "PTY per node" },
+        { "id": "chats", "label": "ChatManager", "sub": "stream-json" },
+        { "id": "projects", "label": "ProjectStore", "sub": ".ruimte/project.json", "shape": "cylinder", "tone": "green" },
+        { "id": "diagrams", "label": "DiagramStore", "sub": ".ruimte/diagrams", "shape": "cylinder", "tone": "green" },
+        { "id": "cli", "label": "Claude Code", "shape": "pill", "tone": "orange" },
+        { "id": "context", "label": "ruimte-context with a label that is deliberately far too long for its box", "tone": "pink" }
+    ],
+    "groups": [
+        { "id": "daemon", "label": "Daemon", "wraps": ["auth", "sessions", "chats"], "tone": "muted" },
+        { "id": "disk", "label": "On disk", "wraps": ["projects", "diagrams"], "tone": "green" }
+    ],
+    "edges": [
+        { "from": "person", "to": "client", "label": "clicks" },
+        { "from": "person", "to": "desktop", "style": "dotted" },
+        { "from": "desktop", "to": "client", "label": "bridge", "style": "dashed" },
+        { "from": "client", "to": "auth", "label": "ticket", "tone": "accent" },
+        { "from": "auth", "to": "sessions", "label": "session.attach" },
+        { "from": "auth", "to": "chats", "label": "chat.send" },
+        { "from": "sessions", "to": "projects" },
+        { "from": "chats", "to": "projects" },
+        { "from": "projects", "to": "diagrams", "label": "diagramIdsIn" },
+        { "from": "cli", "to": "sessions", "label": "hooks", "style": "dashed", "tone": "orange" },
+        { "from": "context", "to": "cli", "label": "reads", "style": "dotted" },
+        { "from": "sessions", "to": "cli", "label": "PTY", "tone": "red" }
+    ]
+}

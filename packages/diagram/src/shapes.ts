@@ -1,5 +1,6 @@
 import type { DiagramEdgeStyle, DiagramShape } from '@ruimte/contracts';
-import { LABEL_SIZE, SUB_SIZE, type Point, type Rect } from './layout.ts';
+import { CYLINDER_LID, EDGE_LABEL_PADDING, type EdgeLabelBox, type NodeBox, type Point, type Rect } from './layout.ts';
+import { LABEL_LINE, LABEL_SIZE, SUB_LINE, SUB_SIZE } from './text.ts';
 
 const ROUND_RADIUS = 10;
 /* How deep the lid of a cylinder is, as a share of its height. */
@@ -61,15 +62,40 @@ export const shapePaths = (shape: DiagramShape | undefined, box: Rect): ShapePat
     }
 };
 
-/* Where the label and the line under it sit, as text baselines centered in the box. */
-export const textLinesOf = (box: Rect, hasSub: boolean, shape?: DiagramShape): { label: Point; sub: Point | null } => {
+/* One line of text, positioned as a baseline and anchored in the middle. */
+export interface TextLine {
+    text: string;
+    x: number;
+    y: number;
+    size: number;
+    bold: boolean;
+    /* The line under a node's label, drawn in the muted tone. */
+    muted: boolean;
+}
+
+/* Where every line of a node's label and of the line under it sits, centered in the box as one block. */
+export const textLinesOf = (box: Pick<NodeBox, 'x' | 'y' | 'w' | 'h' | 'label' | 'sub'>, shape?: DiagramShape): TextLine[] => {
     const x = Math.round(box.x + box.w / 2);
-    // The lid of a cylinder takes the top of the box, so its text sits a little lower.
-    const middle = Math.round(box.y + box.h / 2) + (shape === 'cylinder' ? Math.round(box.h * LID_RATIO * 0.25) : 0);
-    if (!hasSub) {
-        return { label: { x, y: middle + Math.round(LABEL_SIZE * 0.35) }, sub: null };
-    }
-    return { label: { x, y: middle - 2 }, sub: { x, y: middle + SUB_SIZE + 2 } };
+    const height = box.label.length * LABEL_LINE + box.sub.length * SUB_LINE;
+    // The lid of a cylinder takes the top of the box, so its text sits below it.
+    const top = Math.round(box.y + (box.h - height) / 2) + (shape === 'cylinder' ? CYLINDER_LID / 2 : 0);
+    const label = box.label.map((text, index) => ({ text, x, y: top + index * LABEL_LINE + 14, size: LABEL_SIZE, bold: true, muted: false }));
+    const subTop = top + box.label.length * LABEL_LINE;
+    const sub = box.sub.map((text, index) => ({ text, x, y: subTop + index * SUB_LINE + 12, size: SUB_SIZE, bold: false, muted: true }));
+    return [...label, ...sub];
+};
+
+/* The lines of an edge's label, centered in the box the layout gave it. */
+export const edgeLabelLinesOf = (label: EdgeLabelBox): TextLine[] => {
+    const x = Math.round(label.x + label.w / 2);
+    return label.lines.map((text, index) => ({
+        text,
+        x,
+        y: label.y + EDGE_LABEL_PADDING.y + index * SUB_LINE + 12,
+        size: SUB_SIZE,
+        bold: false,
+        muted: false
+    }));
 };
 
 export const edgePath = (points: readonly Point[]): string => points.map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x} ${point.y}`).join(' ');

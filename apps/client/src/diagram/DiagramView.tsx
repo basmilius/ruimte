@@ -9,10 +9,10 @@ import {
     DEFAULT_GROUP_TONE,
     DEFAULT_NODE_TONE,
     GROUP_LABEL_BAND,
-    LABEL_SIZE,
     SUB_SIZE,
     arrowHeadPath,
     dashOf,
+    edgeLabelLinesOf,
     edgePath,
     shapePaths,
     textLinesOf,
@@ -58,7 +58,7 @@ function DiagramScene({ content, layout }: { content: DiagramContent; layout: Di
                             strokeDasharray="6 4"
                             style={{ fill: 'none', stroke: tone }}
                         />
-                        <text x={box.x + 12} y={box.y + Math.round(GROUP_LABEL_BAND * 0.7)} fontSize={SUB_SIZE} fontWeight={600} style={{ fill: tone }}>
+                        <text x={box.labelBox.x} y={box.y + Math.round(GROUP_LABEL_BAND * 0.7)} fontSize={SUB_SIZE} fontWeight={600} style={{ fill: tone }}>
                             {group.label}
                         </text>
                     </g>
@@ -77,18 +77,20 @@ function DiagramScene({ content, layout }: { content: DiagramContent; layout: Di
                             style={{ fill: 'none', stroke: tone }}
                         />
                         <path d={arrowHeadPath(route.points)} style={{ fill: tone }} />
-                        {edge.label && (
-                            <text
-                                x={route.labelAt.x}
-                                y={route.labelAt.y - 6}
-                                fontSize={SUB_SIZE}
-                                textAnchor="middle"
-                                strokeWidth={4}
-                                style={{ fill: tone, stroke: 'var(--canvas-bg)', paintOrder: 'stroke' }}
-                            >
-                                {edge.label}
-                            </text>
-                        )}
+                        {route.label &&
+                            edgeLabelLinesOf(route.label).map((line, index) => (
+                                <text
+                                    key={index}
+                                    x={line.x}
+                                    y={line.y}
+                                    fontSize={line.size}
+                                    textAnchor="middle"
+                                    strokeWidth={4}
+                                    style={{ fill: tone, stroke: 'var(--canvas-bg)', paintOrder: 'stroke' }}
+                                >
+                                    {line.text}
+                                </text>
+                            ))}
                     </g>
                 );
             })}
@@ -96,19 +98,23 @@ function DiagramScene({ content, layout }: { content: DiagramContent; layout: Di
                 const node = nodes.get(box.id)!;
                 const tone = node.tone ?? DEFAULT_NODE_TONE;
                 const paths = shapePaths(node.shape, box);
-                const lines = textLinesOf(box, Boolean(node.sub), node.shape);
                 return (
                     <g key={box.id}>
                         <path d={paths.body} strokeWidth={2} style={{ fill: paper(tone), stroke: ink(tone) }} />
                         {paths.detail && <path d={paths.detail} strokeWidth={2} style={{ fill: 'none', stroke: ink(tone) }} />}
-                        <text x={lines.label.x} y={lines.label.y} fontSize={LABEL_SIZE} fontWeight={600} textAnchor="middle" style={{ fill: ink('ink') }}>
-                            {node.label}
-                        </text>
-                        {node.sub && lines.sub && (
-                            <text x={lines.sub.x} y={lines.sub.y} fontSize={SUB_SIZE} textAnchor="middle" style={{ fill: ink('muted') }}>
-                                {node.sub}
+                        {textLinesOf(box, node.shape).map((line, index) => (
+                            <text
+                                key={index}
+                                x={line.x}
+                                y={line.y}
+                                fontSize={line.size}
+                                fontWeight={line.bold ? 600 : undefined}
+                                textAnchor="middle"
+                                style={{ fill: ink(line.muted ? 'muted' : 'ink') }}
+                            >
+                                {line.text}
                             </text>
-                        )}
+                        ))}
                     </g>
                 );
             })}
