@@ -34,7 +34,7 @@ const settleId = (endpointId: string, daemonId: string): string => {
      */
     const twin = endpoint.daemonId === null || endpoint.daemonId === daemonId ? endpointForDaemon(daemonId, endpoint.id) : null;
     if (twin?.id === LOCAL_ENDPOINT_ID) {
-        // The address this row was keyed on is this machine's own, and the local row reaches it without a credential.
+        // The address this row was keyed on is this machine's own, and the local row reaches it with the local secret.
         void dropDuplicate(twin, endpoint);
         return twin.id;
     }

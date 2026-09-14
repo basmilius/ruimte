@@ -119,6 +119,10 @@ export interface DesktopBridge {
     /* The notes of the last releases, from the shell's copy on disk. `refresh` asks GitHub first.
        Optional for the same reason `onBrowserContextMenu` is; without it About offers no notes. */
     releaseNotes?(refresh?: boolean): Promise<ReleaseNotesState>;
+    /* The secret in the home of the daemon this app started, which the local row presents instead of
+       pairing: a loopback address is no proof of anything. Null while the daemon has not written it.
+       Optional for the same reason `onBrowserContextMenu` is; without it the local row has to pair. */
+    localSecret?(): Promise<string | null>;
 }
 
 declare global {

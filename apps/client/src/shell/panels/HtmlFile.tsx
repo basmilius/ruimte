@@ -22,7 +22,7 @@ type HtmlView = 'preview' | 'source';
  * A session of its own for previewed pages, in memory: what a page stores is gone when the app quits
  * and never touches the session the browser nodes browse in. The main process cancels every request
  * out of this partition that is not the file itself, so a script in the page cannot reach the daemon
- * (on loopback its routes need no token).
+ * or any other server.
  */
 const PREVIEW_PARTITION = 'preview';
 

@@ -98,7 +98,7 @@ const daemonAt = async (httpBaseUrl: string): Promise<string | null> => {
 
 /*
  * The one machine a pairing cannot add. The daemon that served this page is already in the list as
- * the local row, which reaches it over this page's own origin, without a credential and without a
+ * the local row, which reaches it over this page's own origin, with the secret the desktop shell hands over and without a
  * row that can be forgotten; a second row for it would carry the same sessions and projects under a
  * key of its own. Updating the local row with the pasted address is not it either: in dev that
  * origin is Vite, and the address it answers on is the way back to the daemon behind it.

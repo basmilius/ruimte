@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { forgetTicket, rememberTicket } from '@/endpoint/credentials';
+import { forgetTicket, rememberLocalSecret, rememberTicket } from '@/endpoint/credentials';
 import {
     LOCAL_ENDPOINT_ID,
     endpointForDaemon,
@@ -41,7 +41,7 @@ describe('endpoints', () => {
         expect(parsePairingUrl('not a url')).toBeNull();
     });
 
-    test('socketUrlFor puts the credential in the query and leaves loopback bare', () => {
+    test('socketUrlFor puts the credential in the query and leaves a row without one bare', () => {
         const base = {
             id: 'x',
             label: 'x',
@@ -59,6 +59,24 @@ describe('endpoints', () => {
         expect(socketUrlFor({ ...base, token: 'a b' })).toBe('ws://box:4210/ws?token=ticket-9');
         forgetTicket('x');
         expect(socketUrlFor({ ...base, token: 'a b' })).toBe('ws://box:4210/ws?token=a%20b');
+    });
+
+    test('the local row presents the secret the desktop shell read, and nothing without one', () => {
+        const local = {
+            id: 'local',
+            label: 'This machine',
+            httpBaseUrl: 'http://127.0.0.1:4211',
+            wsBaseUrl: 'ws://127.0.0.1:4211',
+            reachability: 'loopback' as const,
+            token: null,
+            daemonId: null,
+            daemonPublicKey: null
+        };
+        expect(socketUrlFor(local)).toBe('ws://127.0.0.1:4211/ws');
+        rememberLocalSecret('local', 'secret-1');
+        expect(socketUrlFor(local)).toBe('ws://127.0.0.1:4211/ws?token=secret-1');
+        rememberLocalSecret('local', null);
+        expect(socketUrlFor(local)).toBe('ws://127.0.0.1:4211/ws');
     });
 });
 

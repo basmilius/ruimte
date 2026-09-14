@@ -48,5 +48,6 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
     checkForUpdate: (): Promise<void> => ipcRenderer.invoke('update:check'),
     downloadUpdate: (): Promise<void> => ipcRenderer.invoke('update:download'),
     installUpdate: (): void => ipcRenderer.send('update:install'),
-    releaseNotes: (refresh?: boolean): Promise<unknown> => ipcRenderer.invoke('releases:list', refresh === true)
+    releaseNotes: (refresh?: boolean): Promise<unknown> => ipcRenderer.invoke('releases:list', refresh === true),
+    localSecret: (): Promise<string | null> => ipcRenderer.invoke('daemon:local-secret')
 });

@@ -25,8 +25,23 @@ export const rekeyTicket = (oldId: string, newId: string): void => {
 };
 
 /*
+ * The local secret the desktop shell read from the daemon's home, for the row of the daemon that
+ * served this page. It lives in memory only, like a ticket, and is asked for again on every connection.
+ */
+const localSecrets = new Map<string, string>();
+
+export const rememberLocalSecret = (endpointId: string, secret: string | null): void => {
+    if (secret === null) {
+        localSecrets.delete(endpointId);
+        return;
+    }
+    localSecrets.set(endpointId, secret);
+};
+
+/*
  * What goes in the `token` query of a socket URL or of a URL an `<img>` fetches. The name stayed:
- * the daemon takes a ticket and a session token in the same place, which is what keeps a client of
+ * the daemon takes a ticket, a session token and the local secret in the same place, which is what keeps a client of
  * either kind talking to a daemon of either kind.
  */
-export const credentialFor = (endpoint: { id: string; token: string | null }): string | null => tickets.get(endpoint.id) ?? endpoint.token;
+export const credentialFor = (endpoint: { id: string; token: string | null }): string | null =>
+    tickets.get(endpoint.id) ?? endpoint.token ?? localSecrets.get(endpoint.id) ?? null;

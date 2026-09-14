@@ -1,8 +1,9 @@
 import { AuthChallengeResultSchema, AuthTicketResultSchema, clientAuthMessage, daemonChallengeMessage } from '@ruimte/contracts';
-import { socketUrlFor, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { desktop } from '@/desktop/bridge';
+import { LOCAL_ENDPOINT_ID, socketUrlFor, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useToasts } from '@/state/toasts';
 import { clientKey, type ClientKey } from './client-key';
-import { forgetTicket, rememberTicket } from './credentials';
+import { forgetTicket, rememberLocalSecret, rememberTicket } from './credentials';
 
 /*
  * Verifying a daemon's signature needs no private key, so this side of ed25519 is enough of a
@@ -106,6 +107,13 @@ export const socketAddressFor = async (endpointId: string): Promise<string> => {
     const endpoint = useEndpoints.getState().endpoints.find((entry) => entry.id === endpointId);
     if (!endpoint) {
         throw new Error(`No endpoint ${endpointId} to connect to`);
+    }
+    if (endpointId === LOCAL_ENDPOINT_ID) {
+        // Asked again on every attempt, so a daemon that started after the window, or on a fresh home, is still reached.
+        const secret = await desktop()
+            ?.localSecret?.()
+            .catch(() => null);
+        rememberLocalSecret(endpointId, secret ?? null);
     }
     const key = endpoint.daemonPublicKey === null ? null : await clientKey();
     if (key) {

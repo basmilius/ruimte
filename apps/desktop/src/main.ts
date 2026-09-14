@@ -1,6 +1,6 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { existsSync, mkdirSync, openSync, writeFileSync } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createReleaseNotes } from './release-notes';
@@ -31,6 +31,8 @@ const smoke = process.env.RUIMTE_SMOKE === '1';
 // Where the smoke run writes the top-left of the window, which is how the title bar is measured instead of guessed.
 const capturePath = process.env.RUIMTE_CAPTURE ?? null;
 const port = Number(process.env.RUIMTE_PORT ?? DEFAULT_PORT);
+// The home the daemon runs with, where its local secret lives; a checkout uses the dev home, as the server's `bun dev` does.
+const ruimteHome = process.env.RUIMTE_HOME ?? join(homedir(), app.isPackaged ? '.ruimte' : '.ruimte-dev');
 
 let daemon: ChildProcess | null = null;
 let mainWindow: Electron.BrowserWindow | null = null;
@@ -88,9 +90,8 @@ const startDaemon = (): void => {
             env.PATH = path;
             process.env.PATH = path;
         }
-    } else {
-        env.RUIMTE_HOME ??= join(homedir(), '.ruimte-dev');
     }
+    env.RUIMTE_HOME = ruimteHome;
     // A packaged app has no terminal; the daemon's output goes to the app's log directory instead.
     let stdio: 'inherit' | ['ignore', number, number] = 'inherit';
     if (app.isPackaged) {
@@ -195,8 +196,8 @@ const LOCAL_SCHEMES = ['file:', 'data:', 'blob:', 'about:'];
 
 /*
  * A previewed HTML file is a plain local document: it may pull in the assets beside it and nothing
- * else. Without this a script in the file could call the daemon, whose routes ask a loopback caller
- * for no token, and hand what it reads to any host it likes.
+ * else. Without this a script in the file could call any server on this machine and hand what it
+ * reads to any host it likes.
  */
 const sealPreviewSession = (): void => {
     const preview = session.fromPartition(PREVIEW_PARTITION);
@@ -540,6 +541,22 @@ ipcMain.handle('shell:open-external', async (_event, url: string) => {
 });
 
 ipcMain.on('devtools:guest', (_event, id: number) => guestDevTools(id));
+
+/*
+ * The daemon's local secret, which is how the app proves it runs on this machine now that a loopback
+ * address proves nothing. Read on every ask rather than once: the daemon mints it on its first start,
+ * which in `bun dev` may come after this window. Only the app's own page gets it.
+ */
+ipcMain.handle('daemon:local-secret', async (event) => {
+    if (event.sender !== mainWindow?.webContents) {
+        return null;
+    }
+    try {
+        return (await readFile(join(ruimteHome, 'local.key'), 'utf8')).trim() || null;
+    } catch {
+        return null;
+    }
+});
 
 ipcMain.handle('window:is-fullscreen', () => mainWindow?.isFullScreen() ?? false);
 
