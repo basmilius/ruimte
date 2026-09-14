@@ -9,6 +9,7 @@ import { useInstantWidth } from '@/shell/useInstantWidth';
 import { focusedCanvas } from '@/state/canvas';
 import { useFiles } from '@/state/files';
 import { useUi } from '@/state/ui';
+import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
@@ -34,6 +35,7 @@ const halfOfCanvas = (): number => {
    the panel beside it, it stays mounted and animates its width over an inner column of the stored
    width, so its contents do not reflow while it slides in or out. */
 export function PreviewPanel() {
+    const activeTab = useFiles((s) => s.active);
     /* A page takes the main column and the panels step aside; see `Panel`. */
     const open = useUi((s) => s.preview.open && s.page === null);
     const panelOpen = useUi((s) => s.panel.open && s.page === null);
@@ -153,7 +155,10 @@ export function PreviewPanel() {
                             </button>
                         </Tooltip>
                     </header>
-                    <FileViewer />
+                    {/* The tabs above stay, so another file is one click away from a broken one. */}
+                    <ErrorBoundary label="This preview failed to render" resetKeys={[activeTab]} className="min-h-0 grow">
+                        <FileViewer />
+                    </ErrorBoundary>
                 </div>
             )}
         </aside>

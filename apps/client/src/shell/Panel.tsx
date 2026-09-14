@@ -11,6 +11,7 @@ import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useUi, type PanelKind } from '@/state/ui';
 import { SECTION_LABEL } from '@/ui/classes';
+import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
@@ -115,7 +116,9 @@ export function Panel() {
                         </Tooltip>
                     </header>
                     <PanelHeaderProvider value={headerSlot}>
-                        <PanelBody kind={panel.kind} />
+                        <ErrorBoundary label="This panel failed to render" resetKeys={[panel.kind]} className="min-h-0 grow">
+                            <PanelBody kind={panel.kind} />
+                        </ErrorBoundary>
                     </PanelHeaderProvider>
                 </div>
             )}

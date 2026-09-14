@@ -28,7 +28,9 @@ import { useHasContextLinks } from '@/context/sources';
 import { accentColor } from '@/canvas/accents';
 import { ApprovalStrip } from '@/canvas/ApprovalStrip';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
+import { useProject } from '@/state/project';
 import { BTN_GROUP } from '@/ui/classes';
+import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
 import { useHeldWhileVisible, useNodeInViewport, useReadableZoom } from '@/canvas/culling';
@@ -137,6 +139,19 @@ function Title({ id, title, editing, onDone }: { id: string; title: string; edit
                 }
             }}
         />
+    );
+}
+
+/*
+ * The rev is read here and not in the frame, so a save re-renders one boundary per node and not
+ * every frame; the children it hands through are the same elements and React skips them.
+ */
+function NodeBodyBoundary({ kind, children }: { kind: CanvasNodeKind; children: ReactNode }) {
+    const rev = useProject((s) => s.rev);
+    return (
+        <ErrorBoundary label="This node failed to render" resetKeys={[rev, kind]} compact>
+            {children}
+        </ErrorBoundary>
     );
 }
 
@@ -297,20 +312,23 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                             !focused && 'cursor-default'
                         )}
                     >
-                        {node.kind === 'terminal' && (live ? <TerminalBody id={id} focused={focused} /> : <TerminalPlate id={id} />)}
-                        {node.kind === 'chat' && <ChatBody id={id} focused={focused} />}
-                        {node.kind === 'browser' && <BrowserBody id={id} focused={focused} />}
-                        {node.kind === 'note' && <NoteNode id={id} focused={focused} />}
-                        {node.kind === 'drawing' && <DrawingNode id={id} />}
-                        {isUnknown && <UnknownNodePlate id={id} />}
-                        {node.kind === 'file' &&
-                            (live && readable ? (
-                                <FileToolbarSlotProvider value={toolbarSlot}>
-                                    <FileNode id={id} />
-                                </FileToolbarSlotProvider>
-                            ) : (
-                                <FilePlate id={id} />
-                            ))}
+                        {/* Around the body only, so the header, the menu, a drag and a resize keep working. */}
+                        <NodeBodyBoundary kind={node.kind}>
+                            {node.kind === 'terminal' && (live ? <TerminalBody id={id} focused={focused} /> : <TerminalPlate id={id} />)}
+                            {node.kind === 'chat' && <ChatBody id={id} focused={focused} />}
+                            {node.kind === 'browser' && <BrowserBody id={id} focused={focused} />}
+                            {node.kind === 'note' && <NoteNode id={id} focused={focused} />}
+                            {node.kind === 'drawing' && <DrawingNode id={id} />}
+                            {isUnknown && <UnknownNodePlate id={id} />}
+                            {node.kind === 'file' &&
+                                (live && readable ? (
+                                    <FileToolbarSlotProvider value={toolbarSlot}>
+                                        <FileNode id={id} />
+                                    </FileToolbarSlotProvider>
+                                ) : (
+                                    <FilePlate id={id} />
+                                ))}
+                        </NodeBodyBoundary>
                         {!focused && <div className="absolute inset-0" aria-hidden="true" />}
                     </div>
                 )}

@@ -5,7 +5,8 @@ import { Canvas } from '@/canvas/Canvas';
 import { SplitGrid } from '@/shell/SplitGrid';
 import { DiagramView } from '@/diagram/DiagramView';
 import { DrawingView } from '@/drawing/DrawingView';
-import { drawingHasSomethingToClear, useDrawingStore } from '@/state/drawing';
+import { useDiagram } from '@/state/diagram';
+import { drawingHasSomethingToClear, useDrawing, useDrawingStore } from '@/state/drawing';
 import { BrowserFallback, usePage } from '@/nodes/BrowserBody';
 import { ChatBody } from '@/nodes/ChatBody';
 import { TerminalBody } from '@/nodes/TerminalBody';
@@ -20,6 +21,7 @@ import { focusViewRow } from '@/shell/sidebar-focus';
 import { Button } from '@/ui/Button';
 import { TOOLTIP_KBD } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
+import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Icon } from '@/ui/Icon';
 import { isInFloatingLayer } from '@/ui/floating';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
@@ -124,7 +126,18 @@ function NoProject() {
  * would mean nine hidden canvases. The shortcuts moved to the workspace (`canvas/canvas-shortcuts.ts`).
  */
 export function ViewSurface({ view }: { view: ProjectView }) {
-    return isCanvasView(view) ? <Canvas /> : <StandaloneView view={view} />;
+    /* A view draws from the project document, and a drawing or a diagram from a file of its own as
+       well. Reading an editor this cell has none of is the blank one, which never changes. */
+    const rev = useProject((s) => s.rev);
+    const drawing = useDrawing((s) => s.elements);
+    const diagram = useDiagram((s) => s.content);
+    return (
+        /* Inside the cell and around the view alone: the cell's toolbar and the dock stay usable,
+           and the cells beside it never notice. */
+        <ErrorBoundary label="This view failed to render" resetKeys={[view.id, rev, drawing, diagram]}>
+            {isCanvasView(view) ? <Canvas /> : <StandaloneView view={view} />}
+        </ErrorBoundary>
+    );
 }
 
 /*
@@ -139,7 +152,11 @@ export function ViewHost() {
         <>
             {page === null && hasProject && <SplitGrid />}
             {page === null && !hasProject && <NoProject />}
-            {page === 'usage' && <UsagePage />}
+            {page === 'usage' && (
+                <ErrorBoundary label="This page failed to render">
+                    <UsagePage />
+                </ErrorBoundary>
+            )}
         </>
     );
 }

@@ -23,6 +23,7 @@ import { useUi, type SettingsSectionId } from '@/state/ui';
 import { startUpdates } from '@/state/updates';
 import { focusWorkspace, useMainWorkspace, useWorkspaceConnection } from '@/transport/connections';
 import { WorkspaceProvider } from '@/transport/context';
+import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { TooltipProvider } from '@/ui/Tooltip';
 
 /*
@@ -42,7 +43,9 @@ function Workspace() {
             {/* A press anywhere in it makes this the workspace everything outside React means: the
                 shortcuts, the palette and the menus all act on the project that was touched last. */}
             <div className="flex h-full w-full bg-bg" onPointerDownCapture={() => focusWorkspace(workspace.id)}>
-                <Sidebar />
+                <ErrorBoundary label="The sidebar failed to render" className="h-full w-[248px] shrink-0 border-r border-border">
+                    <Sidebar />
+                </ErrorBoundary>
                 <main className="flex min-w-0 grow">
                     <FileToolbarSlotProvider value={{ host: fileToolbarHost, mount: setFileToolbarHost }}>
                         <div className="flex min-w-0 grow flex-col">
@@ -90,10 +93,14 @@ export function App() {
 
     return (
         <TooltipProvider>
-            <Workspace />
-            <CommandPalette />
-            <SettingsDialog />
-            <Toasts />
+            {/* The last resort, for a failure outside every view, node and panel. It unmounts the
+                parked browser pages as well, which is why everything below carries a boundary of its own. */}
+            <ErrorBoundary label="Something went wrong" className="fixed inset-0 bg-bg" reload>
+                <Workspace />
+                <CommandPalette />
+                <SettingsDialog />
+                <Toasts />
+            </ErrorBoundary>
         </TooltipProvider>
     );
 }
