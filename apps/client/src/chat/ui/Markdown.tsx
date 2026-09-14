@@ -104,6 +104,25 @@ const components = {
     }
 };
 
+/* For text from outside this machine, where a path in inline code is not a file anybody meant to open here. */
+const plainComponents = {
+    ...components,
+    code({ className, children }: { className?: string; children?: ReactNode }) {
+        const text = String(children ?? '');
+        if (className?.startsWith('language-') || text.includes('\n')) {
+            return <CodeBlock code={text.replace(/\n$/, '')} lang={languageOf(className)} />;
+        }
+        return <code className={INLINE_CODE}>{text}</code>;
+    },
+    a({ href, children }: { href?: string; children?: ReactNode }) {
+        return (
+            <a href={href} target="_blank" rel="noreferrer">
+                {children}
+            </a>
+        );
+    }
+};
+
 // A reply sits under the heading of its message, an `h3`, so its own headings start one level below
 // that. Only `aria-level` moves: the tag stays, since the styles and a copy of the thread read it.
 const REPLY_HEADING_OFFSET = 3;
@@ -173,11 +192,13 @@ export const ReplyMarkdown = memo(function ReplyMarkdown({ text, streaming, arri
  * `breaks` makes a single newline a line break, which is what a person typing a note means by
  * Enter. A thread never asks for it: a CLI writes proper markdown there, and folding its lines
  * would change the layout it wrote.
+ *
+ * `fileLinks` off keeps inline code as code and opens every link outside the app.
  */
-export const Markdown = memo(function Markdown({ text, breaks = false }: { text: string; breaks?: boolean }) {
+export const Markdown = memo(function Markdown({ text, breaks = false, fileLinks = true }: { text: string; breaks?: boolean; fileLinks?: boolean }) {
     return (
         <div className="chat-markdown prose prose-sm max-w-none text-sm">
-            <ReactMarkdown remarkPlugins={breaks ? PLUGINS_WITH_BREAKS : PLUGINS} components={components}>
+            <ReactMarkdown remarkPlugins={breaks ? PLUGINS_WITH_BREAKS : PLUGINS} components={fileLinks ? components : plainComponents}>
                 {text}
             </ReactMarkdown>
         </div>

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Copy, ExternalLink } from 'lucide-react';
 import { desktop, isDesktop } from '@/desktop/bridge';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
@@ -5,7 +6,8 @@ import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Toggle } from '@/shell/settings/controls';
 import { useServers, type ServerInfo } from '@/state/server';
 import { useSettings } from '@/state/settings';
-import { describeUpdate, setAutoDownload, useUpdates } from '@/state/updates';
+import { canShowReleaseNotes, ensureReleaseNotes, notesView, openReleaseNotes, useReleaseNotes } from '@/state/release-notes';
+import { describeUpdate, hasUpdate, setAutoDownload, useUpdates } from '@/state/updates';
 import { useFocusedConnection } from '@/transport/connections';
 import { Button } from '@/ui/Button';
 import { BrandSymbol } from '@/ui/Brand';
@@ -63,6 +65,17 @@ export function AboutPane() {
     const { headline, detail } = describeUpdate(updates);
     // A browser has no app version of its own: it runs the client the machine serves.
     const version = isDesktop() && updates.currentVersion ? updates.currentVersion : server?.version;
+    const releases = useReleaseNotes((s) => s.notes?.releases);
+    const previousSeen = useReleaseNotes((s) => s.previousSeen);
+    const withNotes = updates.supported && canShowReleaseNotes();
+    const notesLink = withNotes ? notesView(releases ?? [], updates.currentVersion, updates, previousSeen).link : null;
+    const updateOffered = hasUpdate(updates);
+
+    useEffect(() => {
+        if (withNotes) {
+            ensureReleaseNotes();
+        }
+    }, [withNotes]);
 
     const setAuto = (checked: boolean): void => {
         update({ updatesAutoDownload: checked });
@@ -85,9 +98,11 @@ export function AboutPane() {
                     {updates.supported && <span className="text-text-muted"> · {headline}</span>}
                 </p>
                 {updates.supported && detail && <p className="max-w-96 text-xs text-text-muted">{detail}</p>}
+                {notesLink && !updateOffered && <WhatsNewLink label={notesLink.label} version={notesLink.version} />}
                 {updates.supported && (
-                    <div className="mt-2">
+                    <div className="mt-2 flex items-center gap-3">
                         <UpdateAction />
+                        {notesLink && updateOffered && <WhatsNewLink label={notesLink.label} version={notesLink.version} />}
                     </div>
                 )}
             </header>
@@ -138,8 +153,16 @@ export function AboutPane() {
     );
 }
 
+function WhatsNewLink({ label, version }: { label: string; version: string }) {
+    return (
+        <button type="button" className="text-xs text-accent hover:underline" onClick={() => openReleaseNotes(version)}>
+            {label}
+        </button>
+    );
+}
+
 /* The one thing worth doing in the state the app is in. */
-function UpdateAction() {
+export function UpdateAction() {
     const status = useUpdates((s) => s.status);
     const check = useUpdates((s) => s.check);
     const download = useUpdates((s) => s.download);

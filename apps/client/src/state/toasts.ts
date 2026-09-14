@@ -19,6 +19,8 @@ export interface Toast {
     /* Everything the command wrote, behind the copy button of a failure. */
     output?: string;
     action?: ToastAction;
+    /* A success that waits to be dismissed, for news that lands while nobody is looking yet. */
+    persist?: boolean;
 }
 
 export type ToastInput = Omit<Toast, 'id'> & { id?: string };
@@ -42,13 +44,13 @@ const timers = new Map<string, ReturnType<typeof setTimeout>>();
  */
 export const useToasts = create<ToastStore>((set, get) => {
     /* A toast that went well takes itself away; a failure and a running action stay. */
-    const schedule = (id: string, kind: ToastKind): void => {
+    const schedule = (id: string, kind: ToastKind, persist: boolean): void => {
         const running = timers.get(id);
         if (running !== undefined) {
             clearTimeout(running);
             timers.delete(id);
         }
-        if (kind !== 'success') {
+        if (kind !== 'success' || persist) {
             return;
         }
         timers.set(
@@ -68,15 +70,15 @@ export const useToasts = create<ToastStore>((set, get) => {
             const next: Toast = { ...toast, id };
             const toasts = get().toasts;
             set({ toasts: toasts.some((entry) => entry.id === id) ? toasts.map((entry) => (entry.id === id ? next : entry)) : [...toasts, next] });
-            schedule(id, next.kind);
+            schedule(id, next.kind, next.persist === true);
             return id;
         },
         update(id, patch) {
             const toasts = get().toasts.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry));
             set({ toasts });
-            const kind = toasts.find((entry) => entry.id === id)?.kind;
-            if (kind !== undefined) {
-                schedule(id, kind);
+            const updated = toasts.find((entry) => entry.id === id);
+            if (updated !== undefined) {
+                schedule(id, updated.kind, updated.persist === true);
             }
         },
         dismiss(id) {

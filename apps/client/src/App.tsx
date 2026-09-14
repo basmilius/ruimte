@@ -14,6 +14,7 @@ import { ALL_SETTINGS_SECTIONS } from '@/shell/settings/sections';
 import { Panel } from '@/shell/Panel';
 import { PreviewPanel } from '@/shell/PreviewPanel';
 import { ProjectBanner } from '@/shell/ProjectBanner';
+import { ReleaseNotesDialog } from '@/shell/ReleaseNotesDialog';
 import { Sidebar } from '@/shell/Sidebar';
 import { Toasts } from '@/shell/Toasts';
 import { Toolbar } from '@/shell/Toolbar';
@@ -100,6 +101,7 @@ export function App() {
                 <CommandPalette />
                 <SettingsDialog />
                 <Toasts />
+                <ReleaseNotesDialog />
             </ErrorBoundary>
         </TooltipProvider>
     );
