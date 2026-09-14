@@ -276,7 +276,7 @@ const insetOf = (shape: DiagramShape | undefined, box: Rect, offset: number, dow
 };
 
 /* An edge with an end the layout did not place: straight out of one box and into the other, with one elbow. */
-const looseRoute = (source: Rect, target: Rect, loop: boolean): Point[] => {
+const looseRoute = (source: Rect, target: Rect, loop: boolean, down: boolean): Point[] => {
     const from = center(source);
     const to = center(target);
     if (loop) {
@@ -288,7 +288,10 @@ const looseRoute = (source: Rect, target: Rect, loop: boolean): Point[] => {
             { x: right, y: from.y + 6 }
         ];
     }
-    if (target.x >= source.x + source.w) {
+    // A diagram that runs down leaves a box downwards whenever the two are stacked, as its laid-out
+    // edges do; otherwise a dragged node's edges would come out of its side against the flow.
+    const stacked = target.y >= source.y + source.h || target.y + target.h <= source.y;
+    if (!(down && stacked) && target.x >= source.x + source.w) {
         const middle = Math.round((source.x + source.w + target.x) / 2);
         return simplify([
             { x: source.x + source.w, y: from.y },
@@ -297,7 +300,7 @@ const looseRoute = (source: Rect, target: Rect, loop: boolean): Point[] => {
             { x: target.x, y: to.y }
         ]);
     }
-    if (target.x + target.w <= source.x) {
+    if (!(down && stacked) && target.x + target.w <= source.x) {
         const middle = Math.round((target.x + target.w + source.x) / 2);
         return simplify([
             { x: source.x, y: from.y },
@@ -717,7 +720,7 @@ export const layoutOf = (document: Pick<DiagramDocument, 'meta' | 'nodes' | 'gro
         const edge = document.edges[index]!;
         const source = byId.get(edge.from)!;
         const target = byId.get(edge.to)!;
-        const points = looseRoute(source, target, edge.from === edge.to);
+        const points = looseRoute(source, target, edge.from === edge.to, down);
         const size = labelSizes[index];
         let label: EdgeLabelBox | null = null;
         if (size) {

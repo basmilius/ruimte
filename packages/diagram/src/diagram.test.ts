@@ -241,6 +241,22 @@ describe('layoutOf', () => {
         expect(layout.nodes[2]!.y).toBe(0);
     });
 
+    test('an edge into a dragged node follows the flow: out of the side running right, out of the bottom running down', () => {
+        const right = graph(['a', 'b'], ['a>b']);
+        right.nodes[1] = { ...right.nodes[1]!, pos: [400, 300] };
+        const [ra, rb] = layoutOf(right).nodes;
+        const [rightEdge] = layoutOf(right).edges;
+        expect(rightEdge!.points[0]).toEqual({ x: ra!.x + ra!.w, y: ra!.y + ra!.h / 2 });
+        expect(rightEdge!.points.at(-1)).toEqual({ x: rb!.x, y: rb!.y + rb!.h / 2 });
+
+        const down = graph(['a', 'b'], ['a>b'], 'down');
+        down.nodes[1] = { ...down.nodes[1]!, pos: [400, 300] };
+        const [da, db] = layoutOf(down).nodes;
+        const [downEdge] = layoutOf(down).edges;
+        expect(downEdge!.points[0]).toEqual({ x: da!.x + da!.w / 2, y: da!.y + da!.h });
+        expect(downEdge!.points.at(-1)).toEqual({ x: db!.x + db!.w / 2, y: db!.y });
+    });
+
     test('a group encloses what it wraps and nothing it does not', () => {
         const layout = layoutOf(example);
         const group = layout.groups[0]!;
