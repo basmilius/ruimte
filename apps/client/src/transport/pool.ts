@@ -1,6 +1,6 @@
 import type { Endpoint } from '@/state/endpoints';
 import type { ConnectionState, Transport, TransportStatus } from './transport';
-import type { SocketAddress } from './websocket-transport';
+import type { SocketAddress } from './link-transport';
 
 /* How long a socket nobody holds stays up, so a switch there and back costs no round trip. */
 const IDLE_CLOSE_MS = 30_000;
@@ -12,12 +12,17 @@ const NO_SOCKET: ConnectionState = { status: 'closed', attempts: 0, retryAt: nul
 export interface PooledTransport extends Transport {
     switchTo(address: SocketAddress): void;
     retarget(address: SocketAddress): void;
+    /* Drops the connection and opens a new one now; what a machine switched to or from a direct connection gets. */
+    reconnect(): void;
     dispose(): void;
 }
 
 export interface TransportPoolOptions {
-    /* Opens a socket for an endpoint. The pool builds no addresses, which is what lets a test hand it fakes. */
-    open(endpoint: Endpoint): PooledTransport;
+    /*
+     * Opens a socket for an endpoint. The pool builds no addresses, which is what lets a test hand it
+     * fakes. `currentId` is the id the entry is under right now, which a rekey changes.
+     */
+    open(endpoint: Endpoint, currentId: () => string): PooledTransport;
     idleMs?: number;
 }
 
@@ -36,7 +41,7 @@ interface Entry {
  * answers on another address (a re-pair, a new port) moves the socket it already has.
  */
 export class TransportPool {
-    private readonly open: (endpoint: Endpoint) => PooledTransport;
+    private readonly open: (endpoint: Endpoint, currentId: () => string) => PooledTransport;
     private readonly idleMs: number;
     private readonly byId = new Map<string, Entry>();
     private readonly listeners = new Set<() => void>();
@@ -106,6 +111,11 @@ export class TransportPool {
         this.emit(newId);
     }
 
+    /* The connection comes up again on what the row says now, keeping every holder and every client built on it. */
+    reconnect(endpointId: string): void {
+        this.byId.get(endpointId)?.transport.reconnect();
+    }
+
     /* Closes the socket and forgets it; what a forgotten or revoked endpoint gets. */
     drop(endpointId: string): void {
         this.close(endpointId);
@@ -144,8 +154,10 @@ export class TransportPool {
         if (existing) {
             return existing;
         }
-        const transport = this.open(endpoint);
+        const holder: { entry: Entry | null } = { entry: null };
+        const transport = this.open(endpoint, () => holder.entry?.endpointId ?? endpoint.id);
         const entry: Entry = { endpointId: endpoint.id, transport, holds: 0, idleTimer: null, offStatus: () => undefined };
+        holder.entry = entry;
         this.byId.set(endpoint.id, entry);
         entry.offStatus = transport.subscribeStatus(() => this.emit(endpoint.id));
         this.resnapshot();

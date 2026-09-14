@@ -60,6 +60,12 @@ class FakeTransport implements PooledTransport {
         this.url = url;
     }
 
+    reconnects = 0;
+
+    reconnect(): void {
+        this.reconnects += 1;
+    }
+
     dispose(): void {
         this.disposed = true;
     }
@@ -127,6 +133,30 @@ describe('TransportPool', () => {
         pool.hold(endpoint('a'));
         await idle();
         expect(opened[0]?.disposed).toBe(false);
+    });
+
+    test('reconnecting a machine keeps its transport, so every client built on it stays', () => {
+        const { pool, opened } = setup();
+        const held = pool.require(endpoint('a'));
+        pool.reconnect('a');
+        pool.reconnect('nobody');
+        expect(pool.peek('a')).toBe(held);
+        expect(opened).toHaveLength(1);
+        expect(opened[0]?.reconnects).toBe(1);
+    });
+
+    test('the id a transport is opened with follows the entry when it is rekeyed', () => {
+        let currentId: (() => string) | null = null;
+        const pool = new TransportPool({
+            open: (target: Endpoint, idOf: () => string) => {
+                currentId = idOf;
+                return new FakeTransport(`${target.wsBaseUrl}/ws`);
+            }
+        });
+        pool.hold(endpoint('10.0.0.4:4210'));
+        expect(currentId!()).toBe('10.0.0.4:4210');
+        pool.rekey('10.0.0.4:4210', 'daemon-a', 'ws://10.0.0.4:4210/ws');
+        expect(currentId!()).toBe('daemon-a');
     });
 
     test('an endpoint that moved keeps its socket', () => {

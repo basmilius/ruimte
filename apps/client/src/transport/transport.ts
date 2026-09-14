@@ -8,6 +8,8 @@ export interface ConnectionState {
     attempts: number;
     /* When the next reconnect fires, epoch ms, or null when none is waiting. */
     retryAt: number | null;
+    /* Why the last connection failed, when that is worth telling a person (a direct connection that did not come up); cleared on open. */
+    failure?: string | null;
 }
 
 export interface Transport {

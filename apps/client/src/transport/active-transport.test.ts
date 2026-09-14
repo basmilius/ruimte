@@ -75,6 +75,8 @@ class FakeTransport implements PooledTransport {
 
     retarget(): void {}
 
+    reconnect(): void {}
+
     dispose(): void {}
 }
 
