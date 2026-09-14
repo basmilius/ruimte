@@ -32,13 +32,13 @@ canvas, against Ruimte, one verdict each.
 ## Decisions that are not in the code
 
 - No kanban view, ever. Bas dislikes that workflow.
-- No bare single-letter shortcuts. Every chord needs a modifier and becomes remappable in a
+- No bare single-letter shortcuts. Every shortcut needs a modifier and becomes remappable in a
   later settings phase; until then the Keyboard section only lists them. The one exception is a
   drawing view: it has the keyboard the way a terminal has it, and its tools are the bare letters
   and digits every sketching app uses (V/1 select, H hand, R/2 rect, D/3 diamond, O/4 ellipse,
   A/5 arrow, L/6 line, P/7 freehand, T/8 text, E/0 eraser, Q keeps the tool). They fire only while
   no text is being typed and no dialog is up, and they are listed under "Drawing" in the Keyboard
-  pane like every other chord.
+  pane like every other shortcut.
 - A workspace is a React context, not a global. One open project means one daemon, one project and
   drawing client and one set of the four stores that hold a canvas (`useCanvas`, `useDocument`,
   `useDrawing`, `useProject`); a panel or a node inside it reads its machine from the subtree it is
@@ -59,7 +59,7 @@ canvas, against Ruimte, one verdict each.
   header) and `EmptyState` (icon, one sentence, one action). A node's own "connecting" or
   "failed" card is `canvas/nodes/NodeNotice.tsx`. Every text input is `.field` in `styles.css`,
   one height and one focus ring; `SECTION_LABEL` (`src/ui/classes.ts`) is the uppercase label
-  outside a popup and `MENU_HINT` the trailing hint inside one, with `<kbd>` left for chords only.
+  outside a popup and `MENU_HINT` the trailing hint inside one, with `<kbd>` left for shortcuts only.
 - `styles.css` is the tokens, the themes and the rules a utility cannot write: Base UI's `data-*`
   states shared by every menu, picker, dialog and tooltip, the `:not()` chain that keeps a node's
   focus ring behind its focused and selected outlines, the panel shell's `[data-instant]` and
@@ -68,7 +68,7 @@ canvas, against Ruimte, one verdict each.
   `@pierre/trees` variable overrides, the file icon hues, the `<webview>` a preview is drawn in).
   Every rule that was only a bundle of utilities moved to its call site, or to a class string next
   to the component that uses it: `src/ui/classes.ts` (the glass card, the button group, the menu
-  and section labels, the chord), `src/shell/panels/classes.ts` (the file toolbar, the git rows,
+  and section labels, the shortcut), `src/shell/panels/classes.ts` (the file toolbar, the git rows,
   the commit box) and `src/chat/ui/chips.ts` (the mention and skill pills). That took the
   components layer from 157 rules to 92.
 - What is left in that layer stays in Tailwind's `components` layer. An unlayered rule beats
@@ -153,17 +153,17 @@ canvas, against Ruimte, one verdict each.
   One `TooltipProvider` at the app root gives the shared 150 ms delay.
 - Escape in a terminal node goes to the program (Claude Code interrupts on it, vim lives on it).
   Leaving the node is Cmd+Escape on macOS and Ctrl+Shift+Escape elsewhere, plus the dock's mode
-  chip and a click on the canvas; the chord is `isLeaveNodeChord` in
+  chip and a click on the canvas; the shortcut is `isLeaveNodeShortcut` in
   `apps/client/src/terminal/keymap.ts`, and the terminal's key handler swallows every other
   Escape before the canvas listener sees it. Chat, browser and note nodes still leave on plain
   Escape. Ctrl+Escape is the Windows Start menu and Ctrl+Shift+Escape is its Task Manager, so a
-  Windows build still has no chord the OS leaves alone: the mode chip is the way out there.
+  Windows build still has no shortcut the OS leaves alone: the mode chip is the way out there.
 - On macOS a terminal node has the line and word motions a native terminal has and xterm does
   not: Cmd+Left and Cmd+Right send Home and End in the form the application cursor keys mode
   asks for (`\x1b[H` / `\x1b[F`, `\x1bOH` / `\x1bOF` under DECCKM), Option+Left and
   Option+Right send `\x1bb` / `\x1bf`, and Cmd+Backspace sends Ctrl+U. `macMotionSequence`
   (`apps/client/src/terminal/keymap.ts`) is the whole mapping; the key handler writes the bytes
-  itself and returns false, so xterm adds nothing and the chord never reaches the canvas. Other
+  itself and returns false, so xterm adds nothing and the shortcut never reaches the canvas. Other
   platforms keep their own conventions.
 - An image icon is a file in the folder, never a blob in `project.json`: every save rewrites
   that file and every `project.changed` ships it, so 256 KB of base64 would ride along each time.
@@ -804,7 +804,7 @@ decided differently.
   state per client"), never in `project.json`: a grid built on a 32 inch screen has no business
   appearing on a laptop. `activeViewId` is still written beside it, so an older client reads such a file as
   the project with that one view open.
-- **The chords hang on the workspace, not on a canvas.** `canvas/canvas-chords.ts` binds once per
+- **The shortcuts hang on the workspace, not on a canvas.** `canvas/canvas-shortcuts.ts` binds once per
   workspace. Nine cells would otherwise be nine window listeners that all resolve to the focused
   cell, and one undo would land nine times. The same reasoning moved the Escape listener of a
   standalone view and the tool keys of a drawing behind "is this the focused cell".
@@ -1022,7 +1022,7 @@ decided.
 - About and Settings in the macOS application menu open the client's dialog rather than Electron's
   About panel, which knew nothing about the machine or updates and had no Settings next to it. With
   Cmd+, as the menu's accelerator macOS takes the key before the page sees it; both do the same thing,
-  and the chord in `app-chords.ts` stays for the browser.
+  and the shortcut in `app-shortcuts.ts` stays for the browser.
 
 ### Streaming in chats
 
@@ -1055,6 +1055,27 @@ decided.
 - "Stream replies" is one switch for everything an agent writes, the thought included, and it is the
   client's: the daemon keeps sending deltas either way. Off, a reply fades in whole only on a row that
   saw it being written, so scrolling back through an old thread does not animate it.
+
+### Shortcuts per platform
+
+- One `Shortcut` value per shortcut (`ui/shortcut.ts`, parsed from `Mod+Shift+K`) drives both the
+  binding and the label, so a label can no longer say something the handler does not do. The tables
+  sit in pure modules beside their handlers (`shell/shortcuts.ts`, `canvas/shortcuts.ts`,
+  `drawing/shortcuts.ts`), because the handlers load stores a test and the terminal keymap cannot.
+- Modifiers are strict: `Mod` is Cmd on macOS and Ctrl elsewhere, and the other one has to be up.
+  Ctrl+K on macOS no longer opens the palette. Letters and digits match on `code`, so Shift+1 still
+  is Shift+1 while `key` says `!`, and Option's dead keys do not get in the way.
+- macOS prints `⌥⇧⌘K`; Windows and Linux print `Ctrl+Alt+Shift+K`. Enter is `↩` on macOS only.
+- Off macOS a focused terminal keeps Ctrl+W, Ctrl+T and Ctrl+\ next to Ctrl+B: they are control
+  characters a program reads. Ctrl+Shift+\ still splits down from inside a terminal.
+- In a plain browser tab Cmd/Ctrl+T and W belong to the browser and there is nothing to do about it.
+  The Keyboard pane says so there and nowhere else.
+- The wheel zooms on Ctrl on every platform, because Chromium reports a trackpad pinch as a wheel
+  with Ctrl held; Cmd joins it on macOS.
+- The desktop View menu dropped reload and the zoom roles: their accelerators reached the menu before
+  the page, so Cmd+0 never zoomed the canvas. Off macOS the canvas always takes Ctrl+W, even with
+  nothing to close, so the window menu's Close never shuts the window on it; the first column there is
+  `fileMenu` rather than `appMenu`, which is a macOS menu.
 
 ### Skipped on purpose
 
