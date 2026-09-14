@@ -1,0 +1,6 @@
+# TLS for the broker. Caddy gets and renews the certificate on its own once the name points at this
+# host and ports 80 and 443 are open. It proxies WebSocket upgrades as they are, and appends the
+# client's address to X-Forwarded-For, which the broker reads with --trust-proxy.
+broker.ruimte.app {
+	reverse_proxy 127.0.0.1:4400
+}

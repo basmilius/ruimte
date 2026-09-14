@@ -1,0 +1,142 @@
+import { parseArgs } from 'node:util';
+
+export interface BrokerLimits {
+    /* A frame larger than this closes the socket. An offer is a few KiB; the schema caps an SDP at 32 KiB. */
+    maxMessageBytes: number;
+    maxSocketsPerIp: number;
+    connectionsPerMinutePerIp: number;
+    framesPerSecondPerIp: number;
+    relaysPerMinutePerKey: number;
+    announcesPerMinutePerKey: number;
+    /* How often a socket is pinged; one that answers nothing for twice this long is dropped. */
+    heartbeatMs: number;
+    /* How long a socket may take from opening to a verified signature. */
+    helloTimeoutMs: number;
+}
+
+export interface BrokerConfig {
+    host: string;
+    port: number;
+    /*
+     * The host names this broker answers to and signs into its challenge. Empty takes the `Host`
+     * header as it comes, which is fine on a laptop; a public broker names itself, or a service in
+     * the middle could hand a peer this broker's nonce under its own name.
+     */
+    names: string[];
+    /* Read the client address from `X-Forwarded-For`, for a broker behind a proxy on the same host. */
+    trustProxy: boolean;
+    limits: BrokerLimits;
+}
+
+export const DEFAULT_HOST = '127.0.0.1';
+export const DEFAULT_PORT = 4400;
+
+export const DEFAULT_LIMITS: BrokerLimits = {
+    maxMessageBytes: 64 * 1024,
+    maxSocketsPerIp: 32,
+    connectionsPerMinutePerIp: 30,
+    framesPerSecondPerIp: 20,
+    relaysPerMinutePerKey: 60,
+    announcesPerMinutePerKey: 10,
+    heartbeatMs: 25_000,
+    helloTimeoutMs: 10_000
+};
+
+interface NumberOption {
+    flag: string;
+    min: number;
+    max: number;
+    fallback: number;
+}
+
+/* `--key-relays-per-minute` reads `PULSAR_BROKER_KEY_RELAYS_PER_MINUTE` when the flag is not given. */
+const envNameOf = (flag: string): string => `PULSAR_BROKER_${flag.replaceAll('-', '_').toUpperCase()}`;
+
+const readNumber = (value: string | undefined, env: Record<string, string | undefined>, option: NumberOption): number => {
+    const raw = value ?? env[envNameOf(option.flag)];
+    if (raw === undefined || raw === '') {
+        return option.fallback;
+    }
+    const parsed = Number(raw);
+    if (!Number.isInteger(parsed) || parsed < option.min || parsed > option.max) {
+        throw new Error(`Invalid --${option.flag}: ${raw} (a whole number from ${option.min} to ${option.max})`);
+    }
+    return parsed;
+};
+
+const LIMIT_FLAGS = [
+    'max-message-bytes',
+    'max-sockets-per-ip',
+    'ip-connections-per-minute',
+    'ip-frames-per-second',
+    'key-relays-per-minute',
+    'key-announces-per-minute',
+    'heartbeat-seconds',
+    'hello-timeout-seconds'
+] as const;
+
+export const parseBrokerArgs = (argv: string[], env: Record<string, string | undefined> = process.env): BrokerConfig => {
+    const { values } = parseArgs({
+        args: argv,
+        options: {
+            host: { type: 'string' },
+            port: { type: 'string' },
+            name: { type: 'string', multiple: true, default: [] },
+            'trust-proxy': { type: 'boolean', default: false },
+            ...Object.fromEntries(LIMIT_FLAGS.map((flag) => [flag, { type: 'string' as const }]))
+        },
+        strict: true,
+        allowPositionals: false
+    });
+    const flags = values as unknown as Record<string, string | undefined>;
+    const number = (flag: string, min: number, max: number, fallback: number): number => readNumber(flags[flag], env, { flag, min, max, fallback });
+
+    const names = values.name.length > 0 ? values.name : (env.PULSAR_BROKER_NAMES ?? '').split(',');
+    return {
+        host: values.host ?? env.PULSAR_BROKER_HOST ?? DEFAULT_HOST,
+        port: number('port', 0, 65_535, DEFAULT_PORT),
+        names: names.map((name) => name.trim().toLowerCase()).filter((name) => name !== ''),
+        trustProxy: values['trust-proxy'] || env.PULSAR_BROKER_TRUST_PROXY === '1',
+        limits: {
+            maxMessageBytes: number('max-message-bytes', 1024, 1024 * 1024, DEFAULT_LIMITS.maxMessageBytes),
+            maxSocketsPerIp: number('max-sockets-per-ip', 1, 100_000, DEFAULT_LIMITS.maxSocketsPerIp),
+            connectionsPerMinutePerIp: number('ip-connections-per-minute', 1, 100_000, DEFAULT_LIMITS.connectionsPerMinutePerIp),
+            framesPerSecondPerIp: number('ip-frames-per-second', 1, 100_000, DEFAULT_LIMITS.framesPerSecondPerIp),
+            relaysPerMinutePerKey: number('key-relays-per-minute', 1, 100_000, DEFAULT_LIMITS.relaysPerMinutePerKey),
+            announcesPerMinutePerKey: number('key-announces-per-minute', 1, 100_000, DEFAULT_LIMITS.announcesPerMinutePerKey),
+            // A peer gives up on a broker it has not heard from in 90 seconds, so a ping has to come well inside that.
+            heartbeatMs: number('heartbeat-seconds', 1, 40, DEFAULT_LIMITS.heartbeatMs / 1000) * 1000,
+            helloTimeoutMs: number('hello-timeout-seconds', 1, 120, DEFAULT_LIMITS.helloTimeoutMs / 1000) * 1000
+        }
+    };
+};
+
+/*
+ * The name a socket signs into its answer. With names configured the `Host` header has to be one of
+ * them, and null refuses the upgrade; without, the header is taken as it is.
+ */
+export const nameFor = (hostHeader: string | null, names: string[]): string | null => {
+    const host = hostHeader?.trim().toLowerCase() ?? '';
+    if (names.length === 0) {
+        return host === '' ? null : host;
+    }
+    return names.includes(host) ? host : null;
+};
+
+const stripMappedPrefix = (address: string): string => (address.startsWith('::ffff:') ? address.slice('::ffff:'.length) : address);
+
+const isLoopback = (address: string): boolean => address === '::1' || address.startsWith('127.');
+
+/*
+ * The address a limit counts against. Behind a proxy every socket comes from loopback, so the proxy's
+ * own `X-Forwarded-For` says who it is: the last entry, the one the proxy appended itself, since
+ * anything before it is whatever the client chose to send. Only a loopback peer is believed.
+ */
+export const clientIpOf = (socketAddress: string, forwardedFor: string | null, trustProxy: boolean): string => {
+    const address = stripMappedPrefix(socketAddress);
+    if (!trustProxy || forwardedFor === null || !isLoopback(address)) {
+        return address;
+    }
+    const last = forwardedFor.split(',').at(-1)?.trim() ?? '';
+    return last === '' ? address : stripMappedPrefix(last);
+};

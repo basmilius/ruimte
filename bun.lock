@@ -71,6 +71,17 @@
         "typescript": "~6.0.2",
       },
     },
+    "apps/pulsar-broker": {
+      "name": "@ruimte/pulsar-broker",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/pulsar": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.4.0",
+        "typescript": "~6.0.2",
+      },
+    },
     "apps/server": {
       "name": "@ruimte/server",
       "version": "0.0.0",
@@ -343,6 +354,8 @@
     "@ruimte/drawing": ["@ruimte/drawing@workspace:packages/drawing"],
 
     "@ruimte/pulsar": ["@ruimte/pulsar@workspace:packages/pulsar"],
+
+    "@ruimte/pulsar-broker": ["@ruimte/pulsar-broker@workspace:apps/pulsar-broker"],
 
     "@ruimte/server": ["@ruimte/server@workspace:apps/server"],
 

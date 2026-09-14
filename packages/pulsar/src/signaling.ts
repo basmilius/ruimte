@@ -32,7 +32,8 @@ export const SignalCandidateSchema = z.object({
 });
 export type SignalCandidate = z.infer<typeof SignalCandidateSchema>;
 
-export const SignalCloseReasonSchema = z.enum(['declined', 'failed', 'timeout', 'done']);
+// `not-paired` is a machine telling a key it has never paired with, or revoked, that it will not answer it.
+export const SignalCloseReasonSchema = z.enum(['declined', 'failed', 'timeout', 'done', 'not-paired']);
 export type SignalCloseReason = z.infer<typeof SignalCloseReasonSchema>;
 
 export const SignalCloseSchema = z.object({

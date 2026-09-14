@@ -1,0 +1,36 @@
+# The broker as a systemd service on the VPS, behind Caddy on the same host (deploy/Caddyfile).
+# Install: see apps/pulsar-broker/README.md. Replace broker.ruimte.app with the name Caddy serves.
+[Unit]
+Description=Pulsar broker for Ruimte
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pulsar
+Group=pulsar
+WorkingDirectory=/opt/ruimte
+# Loopback only: Caddy is the one thing that reaches it, which is also why --trust-proxy is safe here.
+ExecStart=/usr/local/bin/bun apps/pulsar-broker/src/main.ts --host 127.0.0.1 --port 4400 --name broker.ruimte.app --trust-proxy
+Restart=always
+RestartSec=2
+# One descriptor per socket; the default of 1024 would cap the broker long before memory does.
+LimitNOFILE=65536
+MemoryMax=1G
+# Bun would otherwise try to write a transpiler cache, which the sandbox below does not allow.
+Environment=BUN_RUNTIME_TRANSPILER_CACHE_PATH=0
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
