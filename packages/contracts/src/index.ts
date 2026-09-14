@@ -77,6 +77,7 @@ import {
     EndpointSetIdentityPayloadSchema,
     PairingTokenResultSchema
 } from './auth.ts';
+import { DirectSignalPayloadSchema } from './direct.ts';
 import {
     DrawingChangedEventSchema,
     DrawingCopyPayloadSchema,
@@ -137,6 +138,7 @@ export * from './agent.ts';
 export * from './auth.ts';
 export * from './chat.ts';
 export * from './context.ts';
+export * from './direct.ts';
 export * from './context-sources.ts';
 export * from './diagram.ts';
 export * from './drawing.ts';
@@ -244,6 +246,7 @@ export const REQUEST_SCHEMAS = {
     'auth.revoke': { payload: AuthRevokePayloadSchema, result: EmptySchema },
     'auth.pairingToken': { payload: EmptySchema, result: PairingTokenResultSchema },
     'auth.registerKey': { payload: AuthRegisterKeyPayloadSchema, result: AuthRegisterKeyResultSchema },
+    'direct.signal': { payload: DirectSignalPayloadSchema, result: EmptySchema },
     'chat.kill': { payload: ChatTargetPayloadSchema, result: EmptySchema },
     'chat.list': { payload: EmptySchema, result: ChatListResultSchema }
 } as const satisfies Record<string, { payload: z.ZodType; result: z.ZodType }>;
@@ -266,6 +269,7 @@ export const EVENT_SCHEMAS = {
     'session.list-changed': EmptySchema,
     'chat.event': ChatEventEnvelopeSchema,
     'endpoint.changed': EndpointChangedEventSchema,
+    'direct.signaled': DirectSignalPayloadSchema,
     'project.changed': ProjectChangedEventSchema,
     'project.showView': ProjectShowViewEventSchema,
     'project.summary': ProjectSummaryEventSchema,
