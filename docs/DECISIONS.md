@@ -318,6 +318,13 @@ canvas, against Ruimte, one verdict each.
   migrated on the read that opens it. The prompt names the files by path, since both CLIs open a
   file with their own tools, and `GET /attachments/<chatId>/<id>` serves thumbnails and downloads
   behind the project icon's access rules.
+- An image the composer holds is drawn from a thumbnail rather than its own data URL, which a
+  browser decodes again on every paint of the 56 px box, so a tall screenshot could make typing
+  stutter. `chat/thumbnails.ts` decodes it once with `createImageBitmap`, draws the square in its
+  middle at 256 px at most on an `OffscreenCanvas` and keeps the PNG in a `WeakMap` keyed by the
+  upload, so nothing new lands in the draft in localStorage and the bytes sent are the file's own.
+  An animated image gets its first frame; anything that does not decode this way, an SVG among them,
+  falls back to the image itself.
 - Enter while a turn runs queues the message instead of refusing it. The queue lives on the
   daemon (`ChatInfo.queue`, written with the thread, so a reload keeps it) and drains when the
   turn settles; the composer draws the waiting messages above itself with remove and "Send now",

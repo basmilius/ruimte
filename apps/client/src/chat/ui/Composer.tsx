@@ -4,7 +4,7 @@ import clsx from 'clsx';
 import { ArrowUp, ChevronDown, Clock, FastForward, Paperclip, Square, SquareSlash, X, Zap } from 'lucide-react';
 import type { AgentKind, ChatApprovalItem, ChatInfo, ChatQuestionItem, ChatSkill, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 import { chatClient, type ChatSendExtras } from '@/chat';
-import { checkAttachmentLimits, filesOf, formatBytes, isImageAttachment, readAttachments, uploadBytes, uploadPreviewUrl } from '@/chat/attachments';
+import { checkAttachmentLimits, filesOf, formatBytes, isImageAttachment, readAttachments, uploadBytes } from '@/chat/attachments';
 import { EMPTY_DRAFT, isEmptyDraft, readDraft, writeDraft, type ChatDraft } from '@/chat/drafts';
 import {
     MENTION_DRAG_TYPE,
@@ -26,6 +26,7 @@ import { CHIP_BEHIND_TEXT, MENTION_TONE, SKILL_TONE } from '@/chat/ui/chips';
 import { ContextMeter } from '@/chat/ui/ContextMeter';
 import { ApprovalDock, QuestionDock } from '@/chat/ui/PendingDock';
 import { ModelPicker, ModePicker, OptionsPicker, StashPicker } from '@/chat/ui/Pickers';
+import { UploadThumb } from '@/chat/ui/UploadThumb';
 import { isApplePlatform } from '@/desktop/bridge';
 import { useChatRow } from '@/state/chats';
 import { useProviders } from '@/state/providers';
@@ -735,11 +736,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                         {draft.attachments.map((attachment, index) => (
                             <div key={`${attachment.name}-${index}`} className="group/thumb relative">
                                 {isImageAttachment(attachment.mime) ? (
-                                    <img
-                                        src={uploadPreviewUrl(attachment)}
-                                        alt={attachment.name}
-                                        className="h-14 w-14 rounded-lg border border-border object-cover"
-                                    />
+                                    <UploadThumb upload={attachment} />
                                 ) : (
                                     <span className="flex h-14 w-36 flex-col justify-center gap-0.5 rounded-lg border border-border bg-surface-sunken px-2.5">
                                         <span className="flex items-center gap-1.5 text-xs text-text">
