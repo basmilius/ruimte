@@ -1,5 +1,8 @@
 import {
+    ChannelLiveness,
     channelBinding,
+    DIRECT_PING_TICK_MS,
+    directPingFrame,
     clientChannelMessage,
     daemonChannelMessage,
     DIRECT_CHANNEL_LABEL,
@@ -26,6 +29,8 @@ export interface DirectClientOptions {
     signal(envelope: SignalEnvelope): void;
     credential: DirectCredential;
     timeoutMs?: number;
+    /* Pings a quiet channel the way the app does, and closes it when nothing answers; off unless asked. */
+    ping?: { idleMs?: number; timeoutMs?: number };
 }
 
 interface Pending {
@@ -50,6 +55,9 @@ export class DirectClient {
     private offerSdp: string | null = null;
     private answered: (sdp: string) => void = () => undefined;
     private nextId = 1;
+    private liveness: ChannelLiveness | null = null;
+    private livenessTimer: ReturnType<typeof setInterval> | null = null;
+    private readonly lostListeners = new Set<() => void>();
 
     constructor(options: DirectClientOptions) {
         this.options = options;
@@ -99,6 +107,19 @@ export class DirectClient {
         const verdict = await withTimeout(handshake, timeoutMs, 'The handshake did not finish');
         this.timings.authenticatedMs = Date.now() - started;
         channel.receiveWith((frame) => this.receive(frame), AUTHENTICATED_FRAME_CHARS);
+        if (this.options.ping) {
+            this.liveness = new ChannelLiveness({
+                ping: (id) => void this.send(directPingFrame(id)),
+                dead: () => {
+                    for (const listener of this.lostListeners) {
+                        listener();
+                    }
+                    this.close();
+                },
+                ...this.options.ping
+            });
+            this.livenessTimer = setInterval(() => this.liveness?.tick(), DIRECT_PING_TICK_MS);
+        }
         return verdict;
     }
 
@@ -115,6 +136,16 @@ export class DirectClient {
         return () => {
             this.frameListeners.delete(listener);
         };
+    }
+
+    /* The ping found nobody on the other end. */
+    onLost(listener: () => void): void {
+        this.lostListeners.add(listener);
+    }
+
+    /* What werift's ICE says about the path right now, to compare with what the ping noticed. */
+    get iceState(): string {
+        return this.peer.connectionState;
     }
 
     onClose(listener: () => void): void {
@@ -134,6 +165,10 @@ export class DirectClient {
     }
 
     close(): void {
+        if (this.livenessTimer !== null) {
+            clearInterval(this.livenessTimer);
+            this.livenessTimer = null;
+        }
         this.channel?.close(1000, 'done');
         for (const entry of this.pending.values()) {
             entry.reject(new Error('disconnected'));
@@ -200,6 +235,7 @@ export class DirectClient {
     }
 
     private receive(raw: string): void {
+        this.liveness?.heard();
         for (const listener of this.frameListeners) {
             listener(raw);
         }

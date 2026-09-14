@@ -6,11 +6,13 @@ import { generateKeyPair, signMessage, verifySignature } from '../auth/keys.ts';
 import { readLocalSecret } from '../auth/local-secret.ts';
 import { DirectClient, type DirectCredential } from '../pulsar/direct-client.ts';
 import {
+    BYTES_CHUNK_MAX,
     clientAuthMessage,
     daemonChallengeMessage,
     parseServerFrame,
     type AuthChallengeResult,
     type AuthTicketResult,
+    type BytesReadResult,
     type EndpointChangedEvent,
     type EndpointInfo,
     type PairResult,
@@ -611,13 +613,14 @@ describe.skipIf(!ENABLED)('a direct connection to the daemon in the container', 
     });
 
     /* A channel signaled over a socket that holds a credential of its own, whatever the channel then presents. */
-    const openDirect = async (credential: DirectCredential, socketToken: string): Promise<DirectClient> => {
+    const openDirect = async (credential: DirectCredential, socketToken: string, ping?: { idleMs?: number; timeoutMs?: number }): Promise<DirectClient> => {
         const socket = await RemoteClient.connect(socketToken);
         sockets.push(socket);
         const client = new DirectClient({
             stunServers: [],
             credential,
             timeoutMs: 20_000,
+            ...(ping ? { ping } : {}),
             signal: (envelope) => void socket.request('direct.signal', { envelope })
         });
         clients.push(client);
@@ -656,6 +659,81 @@ describe.skipIf(!ENABLED)('a direct connection to the daemon in the container', 
             await client.request('session.kill', { sessionId }).catch(() => undefined);
         }
         console.log(`direct channel to the container: open after ${client.timings.channelOpenMs} ms, signed in after ${client.timings.authenticatedMs} ms`);
+    }, 60_000);
+
+    /* A client on a paired key, the way the app holds one. */
+    const pairedDirect = async (ping?: { idleMs?: number; timeoutMs?: number }): Promise<DirectClient> => {
+        const key = generateKeyPair();
+        const paired = await pair(key.publicKey);
+        return openDirect(
+            { kind: 'key', publicKey: key.publicKey, privateKey: key.privateKey, daemonId: paired.endpoint.id, daemonPublicKey: paired.endpoint.publicKey! },
+            await ticketFor(key, paired.endpoint.id),
+            ping
+        );
+    };
+
+    test('the bytes of a file come over the channel in pieces, and what the route would refuse is refused', async () => {
+        const client = await pairedDirect();
+        const path = `${REPO}/direct-bytes.gif`;
+        const huge = `${REPO}/direct-huge.gif`;
+        // A GIF header is all the daemon sniffs; the noise behind it makes three pieces.
+        await inContainer(['sh', '-c', `{ printf 'GIF89a'; head -c ${BYTES_CHUNK_MAX * 2 + 4096} /dev/urandom; } > ${path}`]);
+        await inContainer(['sh', '-c', `printf 'GIF89a' > ${huge} && truncate -s 40M ${huge}`]);
+        try {
+            const expected = Buffer.from(await inContainer(['base64', '-w0', path]), 'base64');
+            const parts: Buffer[] = [];
+            let offset = 0;
+            let size = Number.POSITIVE_INFINITY;
+            const started = Date.now();
+            while (offset < size) {
+                const piece = await client.request<BytesReadResult>('bytes.read', { resource: { kind: 'file', path }, offset, length: BYTES_CHUNK_MAX });
+                expect(piece.mime).toBe('image/gif');
+                size = piece.size;
+                const bytes = Buffer.from(piece.data, 'base64');
+                parts.push(bytes);
+                offset += bytes.length;
+            }
+            expect(parts).toHaveLength(3);
+            expect(Buffer.concat(parts).equals(expected)).toBe(true);
+            console.log(`bytes over the direct channel: ${size} bytes in ${parts.length} pieces, ${Date.now() - started} ms`);
+
+            const refused = (resource: unknown) => client.request('bytes.read', { resource, offset: 0, length: 1024 });
+            await expect(refused({ kind: 'file', path: '/etc/passwd' })).rejects.toThrow(/^not-found:/);
+            await expect(refused({ kind: 'file', path: `${HOME}/endpoint.json` })).rejects.toThrow(/^not-found:/);
+            await expect(refused({ kind: 'attachment', chatId: 'no-such-chat', attachmentId: 'nothing' })).rejects.toThrow(/^not-found:/);
+            await expect(refused({ kind: 'file', path: huge })).rejects.toThrow(/^too-large: This file is 40 MB/);
+        } finally {
+            await inContainer(['rm', '-f', path, huge]);
+        }
+    }, 60_000);
+
+    test('a machine that stops answering is noticed by the ping long before ICE gives up', async () => {
+        const client = await pairedDirect({ idleMs: 2_000, timeoutMs: 5_000 });
+        let lostAt: number | null = null;
+        client.onLost(() => {
+            lostAt = Date.now();
+        });
+        // Frozen rather than stopped: no process on the other end gets to say goodbye, like a machine that lost its network.
+        await docker(['pause', CONTAINER]);
+        const pausedAt = Date.now();
+        let iceAtLoss = '';
+        try {
+            await waitUntil(
+                'the ping to notice',
+                () => {
+                    if (lostAt === null) {
+                        iceAtLoss = client.iceState;
+                    }
+                    return lostAt !== null;
+                },
+                20_000
+            );
+        } finally {
+            await docker(['unpause', CONTAINER]);
+        }
+        const noticed = lostAt! - pausedAt;
+        console.log(`ping noticed a paused machine after ${noticed} ms; ICE still said ${iceAtLoss} at that moment`);
+        expect(noticed).toBeLessThan(9_000);
     }, 60_000);
 
     test('a key nobody paired and a channel without a proof get nothing, whatever the signaling socket holds', async () => {
