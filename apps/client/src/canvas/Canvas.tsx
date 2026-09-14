@@ -140,7 +140,9 @@ export function Canvas() {
             const target = e.target as HTMLElement;
             const ownerId = target.closest('[data-node-body]')?.closest('[data-node-id]')?.getAttribute('data-node-id');
             const isZoom = wheelZooms(e);
-            /* A focused node owns the wheel inside its body. Pinch is always the camera's. */
+            /* A focused node owns the wheel inside its body, and a pinch that reaches the canvas is the
+               camera's. A focused browser node's page never reaches it: `WebviewParking` hands that
+               page the pointer, so a pinch there zooms the page itself (`allowPinchZoom` in the shell). */
             if (!isZoom && s.mode.kind === 'node' && ownerId === s.mode.nodeId) {
                 return;
             }

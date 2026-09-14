@@ -173,6 +173,20 @@ const registerGuestPreload = (): void => {
 const isBrowserGuest = (contents: Electron.WebContents): boolean =>
     contents.getType() === 'webview' && contents.session === session.fromPartition(BROWSER_PARTITION);
 
+// Chrome on macOS pinches up to 3x (`default_maximum_page_scale_factor` in Chromium's `web_preferences.h`).
+const BROWSER_PINCH_MAX = 3;
+
+/*
+ * Lets a browser page zoom in with a pinch the way Chrome does, without reflow. Electron pins every
+ * web contents to 1..1 in its web preferences, and those are applied again to a new renderer and on
+ * every preferences update (a theme change among them), so this runs on every `dom-ready` and after
+ * `applyTheme` rather than once. The preview partition stays at 1: it is sealed, and never asks.
+ */
+const allowPinchZoom = (contents: Electron.WebContents): void => {
+    // A renderer that is gone or swapping out rejects, and the next `dom-ready` asks again.
+    contents.setVisualZoomLevelLimits(1, BROWSER_PINCH_MAX).catch(() => undefined);
+};
+
 const applyTheme = (theme: AppTheme): void => {
     // Chromium answers `prefers-color-scheme` from this, so a page follows the app instead of the
     // system the app happens to run on. 'system' is only right while the app follows it as well.
@@ -185,6 +199,8 @@ const applyTheme = (theme: AppTheme): void => {
     if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.setBackgroundColor(theme.background);
     }
+    // The theme source updates every page's preferences, which puts the pinch limits back to 1.
+    webContents.getAllWebContents().filter(isBrowserGuest).forEach(allowPinchZoom);
 };
 
 // The partition the file preview in the client's panel loads a page into; `apps/client/src/shell/panels/HtmlFile.tsx`.
@@ -784,6 +800,7 @@ if (!app.requestSingleInstanceLock()) {
             return;
         }
         contents.on('context-menu', (_e, params) => guestContextMenu(contents, params));
+        contents.on('dom-ready', () => allowPinchZoom(contents));
     });
 
     app.on('second-instance', () => {

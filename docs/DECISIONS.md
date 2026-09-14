@@ -1464,6 +1464,15 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   sees the key, so the guest preload sends it, after the page had its turn, which is how an editor
   in a page still outdents on Cmd+[. The chord is only taken with a browser focused: a drawing
   keeps it for its order, and a canvas keeps it for the camera history in "Next".
+- A pinch zooms the page, Chrome's visual zoom without reflow, in a browser view and a focused
+  browser node, up to 3x as Chrome on macOS allows. A node that is not focused has no pointer, so a
+  pinch over it stays the camera's. Electron pins every web contents to 1..1 in its web preferences
+  and applies them again to a new renderer and on a theme change, so `allowPinchZoom` in
+  `apps/desktop/src/main.ts` runs on every `dom-ready` and after `applyTheme`. The preview partition
+  stays at 1. A pinch is a wheel with Ctrl held, and the guest marks it: the decider ignores it
+  whole, so it neither adds to a swipe nor holds the next one when the page prevents it. A page
+  zoomed in pans its visual viewport before it scrolls, so the edge check counts a
+  `visualViewport` that is not at its edge as a page that takes the gesture.
 
 ### Skipped on purpose
 
