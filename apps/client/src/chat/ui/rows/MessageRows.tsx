@@ -5,6 +5,7 @@ import type { ChatApprovalItem, ChatAssistantItem, ChatQuestionItem, ChatThinkin
 import { attachmentUrl, formatBytes, isImageAttachment } from '@/chat/attachments';
 import { useChatRow } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
+import { useProviders } from '@/state/providers';
 import { useSettings } from '@/state/settings';
 import { tokenizeChips } from '@/chat/mentions';
 import { CHIP_IN_MESSAGE, MENTION_TONE, SKILL_TONE } from '@/chat/ui/chips';
@@ -45,6 +46,7 @@ export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }
     const attachments = item.attachments ?? [];
     return (
         <div className="flex flex-col items-end">
+            <MessageHeading>You</MessageHeading>
             {attachments.length > 0 && (
                 <div className="mb-1.5 flex max-w-[80%] flex-wrap justify-end gap-1.5">
                     {attachments.map((attachment) =>
@@ -106,6 +108,22 @@ const useCurrentItem = <T extends ChatAssistantItem | ChatThinkingItem>(chatId: 
         return item?.kind === derived.kind ? (item as T) : derived;
     });
 
+/*
+ * Who wrote a message, for a screen reader only: one heading per message is what lets VoiceOver's
+ * rotor walk a thread from message to message. `select-none`, so a selection copied across two
+ * messages does not pick the names up.
+ */
+function MessageHeading({ children }: { children: ReactNode }) {
+    return <h3 className="sr-only select-none">{children}</h3>;
+}
+
+/* The heading of a reply, named after the agent the chat runs. */
+function ReplyHeading({ chatId }: { chatId: string }) {
+    const kind = useChatRow(chatId, (row) => row?.info.provider);
+    const name = useProviders((s) => s.providers.find((provider) => provider.kind === kind)?.name);
+    return <MessageHeading>{name ?? 'Agent'}</MessageHeading>;
+}
+
 const WRITING = <span className="chat-live-text text-sm">Writing...</span>;
 
 /*
@@ -125,16 +143,23 @@ export function AssistantRow({ chatId, item: derived }: { chatId: string; item: 
         const settled = item.streaming ? settledBlocksText(item.text) : item.text;
         return (
             <div className="-mx-1 px-1 pb-2">
+                <ReplyHeading chatId={chatId} />
                 {settled !== '' && <ReplyMarkdown text={settled} streaming={false} arriving={sawWriting} />}
                 {item.streaming && WRITING}
             </div>
         );
     }
     if (mode === 'whole' && item.streaming) {
-        return <div className="-mx-1 px-1 pb-2">{WRITING}</div>;
+        return (
+            <div className="-mx-1 px-1 pb-2">
+                <ReplyHeading chatId={chatId} />
+                {WRITING}
+            </div>
+        );
     }
     return (
         <div className={clsx('-mx-1 px-1 pb-2', mode === 'whole' && sawWriting && WHOLE_FADE_CLASS)}>
+            <ReplyHeading chatId={chatId} />
             <ReplyMarkdown text={reveal.text} streaming={reveal.active} />
             {live && item.text === '' && <span className="inline-block h-3.5 w-1.5 animate-pulse rounded-sm bg-text-faint align-middle" />}
         </div>

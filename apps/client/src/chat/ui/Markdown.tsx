@@ -104,6 +104,27 @@ const components = {
     }
 };
 
+// A reply sits under the heading of its message, an `h3`, so its own headings start one level below
+// that. Only `aria-level` moves: the tag stays, since the styles and a copy of the thread read it.
+const REPLY_HEADING_OFFSET = 3;
+
+const replyHeading = (level: 1 | 2 | 3 | 4 | 5 | 6) => {
+    const Tag = `h${level}` as const;
+    return function ReplyHeading({ children }: { children?: ReactNode }) {
+        return <Tag aria-level={Math.min(6, level + REPLY_HEADING_OFFSET)}>{children}</Tag>;
+    };
+};
+
+const replyComponents = {
+    ...components,
+    h1: replyHeading(1),
+    h2: replyHeading(2),
+    h3: replyHeading(3),
+    h4: replyHeading(4),
+    h5: replyHeading(5),
+    h6: replyHeading(6)
+};
+
 // Module constants, so a render never hands react-markdown a fresh array and makes it parse again.
 const PLUGINS = [remarkGfm];
 const PLUGINS_WITH_BREAKS = [remarkGfm, remarkBreaks];
@@ -117,7 +138,7 @@ const ReplyBlock = memo(function ReplyBlock({ text, fade, open }: { text: string
         // A context rather than a second set of components: a component that changed would mount the
         // code block again the moment its fence closes, and it would lose the lines it already has.
         <CodeStreamingContext.Provider value={open}>
-            <ReactMarkdown remarkPlugins={PLUGINS} rehypePlugins={fade ? FADE_PLUGINS : NO_PLUGINS} components={components}>
+            <ReactMarkdown remarkPlugins={PLUGINS} rehypePlugins={fade ? FADE_PLUGINS : NO_PLUGINS} components={replyComponents}>
                 {text}
             </ReactMarkdown>
         </CodeStreamingContext.Provider>

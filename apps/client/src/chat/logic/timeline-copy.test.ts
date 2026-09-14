@@ -63,3 +63,10 @@ describe('markdownOf', () => {
         expect(markdownOf({ kind: 'user', id: 'r1', item: user })).toBeNull();
     });
 });
+
+describe('what a message copies', () => {
+    test('carries the text alone and never the author the heading names', () => {
+        expect(messageTextOf({ kind: 'user', id: user.id, item: user })).toBe('Fix the build');
+        expect(messageTextOf({ kind: 'assistant', id: assistant.id, item: assistant })).toBe('Done\n\nI fixed the build.');
+    });
+});

@@ -1269,6 +1269,11 @@ decided.
   fades in once; only a failed load shows it bare. Whether a fence is still open reaches the block
   through a context rather than a second set of components, because a different component mounts
   the block again the moment its fence closes and throws its lines away.
+- Every user message and every reply starts with a visually hidden `h3` naming its author ("You", or
+  the provider's name), so a screen reader walks a thread a message at a time instead of hearing
+  one long run of text. It is `select-none`, so a selection copied across messages leaves the names
+  out. A heading inside a reply keeps its tag, which the styles and the copy read, and takes an
+  `aria-level` three deeper, so a `#` in an answer never outranks the message it is in.
 - The client ignored deltas on thinking items, so the thought stood still until it closed. It now
   grows like a reply, under the same switch.
 - "Show replies" is one setting for everything an agent writes, the thought included, and it is the
