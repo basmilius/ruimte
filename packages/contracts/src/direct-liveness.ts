@@ -7,8 +7,12 @@
  */
 export const DIRECT_PING_IDLE_MS = 2_000;
 
-// Above SCTP's retransmission timeout on a lossy path (a second at least), so one lost packet is no disconnect.
-export const DIRECT_PING_TIMEOUT_MS = 5_000;
+/*
+ * The channel is ordered and reliable, so an answer can wait behind a burst of output for as long as
+ * SCTP needs to recover from a loss; werift retransmits after at least a second and starts again
+ * from one packet. Measured from the last packet of any kind, a live peer never goes this long.
+ */
+export const DIRECT_PING_TIMEOUT_MS = 10_000;
 
 // The check runs on this tick rather than on a timer per ping, so a throttled window cannot stack them.
 export const DIRECT_PING_TICK_MS = 1_000;
@@ -17,6 +21,12 @@ export interface ChannelLivenessOptions {
     // Sends one frame the daemon answers; `server.ping` under an id nothing else waits for.
     ping(id: string): void;
     dead(): void;
+    /*
+     * The bytes the transport under the channel received so far, or null when that is unknown. A
+     * packet counts even when the frame it belongs to is still stuck behind a lost one, and the
+     * daemon acknowledges the ping itself long before its answer gets through.
+     */
+    received?(): number | null;
     now?(): number;
     idleMs?: number;
     timeoutMs?: number;
@@ -30,6 +40,7 @@ export interface ChannelLivenessOptions {
 export class ChannelLiveness {
     private readonly options: ChannelLivenessOptions;
     private lastHeard: number;
+    private lastReceived: number | null = null;
     private pingSentAt: number | null = null;
     private nextId = 1;
 
@@ -44,6 +55,15 @@ export class ChannelLiveness {
     }
 
     tick(): void {
+        const received = this.options.received?.() ?? null;
+        if (received !== null) {
+            const grew = this.lastReceived !== null && received > this.lastReceived;
+            this.lastReceived = received;
+            if (grew) {
+                this.heard();
+                return;
+            }
+        }
         const now = this.now();
         if (this.pingSentAt !== null) {
             if (now - this.pingSentAt >= (this.options.timeoutMs ?? DIRECT_PING_TIMEOUT_MS)) {

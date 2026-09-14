@@ -65,6 +65,12 @@ class FakePeer {
     connectionState = 'new';
     closed = false;
     onconnectionstatechange: (() => void) | null = null;
+    // What the transport stats say arrived, which a test grows to stand for packets of a frame that is not whole yet.
+    bytesReceived = 0;
+
+    async getStats(): Promise<Map<string, { type: string; bytesReceived: number }>> {
+        return new Map([['T01', { type: 'transport', bytesReceived: this.bytesReceived }]]);
+    }
 
     createDataChannel(): FakeChannel {
         return this.channel;
@@ -261,6 +267,23 @@ describe('webRtcLink', () => {
         clearInterval(chatter);
         expect(log.closes).toEqual([]);
         expect(peer.channel.sent.some((piece) => piece.includes('"server.ping"'))).toBe(false);
+    });
+
+    test('a machine whose frames are stuck behind a burst is not taken for gone while its packets still arrive', async () => {
+        const { peer, log } = await negotiated({ pingIdleMs: 10, pingTimeoutMs: 40, pingTickMs: 5 });
+        peer.channel.deliver(CHALLENGE);
+        await tick();
+        peer.channel.deliver({ type: 'direct.accepted', ticket: null, expiresIn: null });
+        await tick();
+        // No piece arrives for three times the timeout, as on an ordered channel waiting for a retransmission.
+        const packets = setInterval(() => {
+            peer.bytesReceived += 1_200;
+        }, 3);
+        await sleep(150);
+        clearInterval(packets);
+        expect(log.closes).toEqual([]);
+        await sleep(150);
+        expect(log.closes).toEqual(['The machine stopped answering over the direct connection']);
     });
 
     test('another signaling route carries the offer and the answer, opens no socket, and is closed once the channel is in', async () => {

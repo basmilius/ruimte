@@ -184,13 +184,33 @@ export const webRtcLink =
             }
             authenticated = true;
             clearTimeout(timer);
+            let received: number | null = null;
+            let sampling = false;
             liveness = new ChannelLiveness({
                 ping: (id) => sendFrame(directPingFrame(id)),
                 dead: () => end('The machine stopped answering over the direct connection'),
+                received: () => received,
                 idleMs: options.pingIdleMs,
                 timeoutMs: options.pingTimeoutMs
             });
-            livenessTimer = setInterval(() => liveness?.tick(), options.pingTickMs ?? DIRECT_PING_TICK_MS);
+            const measured = peer;
+            livenessTimer = setInterval(() => {
+                // A stats call that never settles must not stop the check, so it goes on with the count it has.
+                if (sampling || !measured) {
+                    liveness?.tick();
+                    return;
+                }
+                sampling = true;
+                void bytesReceivedOf(measured).then((bytes) => {
+                    sampling = false;
+                    if (bytes !== null) {
+                        received = bytes;
+                    }
+                    if (!ended) {
+                        liveness?.tick();
+                    }
+                });
+            }, options.pingTickMs ?? DIRECT_PING_TICK_MS);
             options.accepted?.(verdict.data.ticket);
             // The channel stands on its own from here; the route the signals took was only ever for them.
             closeSignaling();
@@ -268,6 +288,25 @@ export const webRtcLink =
             close: () => end(null)
         };
     };
+
+/*
+ * The bytes the DTLS transport under the channel received, the packets of a message that is not
+ * whole yet included, or null where the browser does not say.
+ */
+const bytesReceivedOf = async (peer: RTCPeerConnection): Promise<number | null> => {
+    try {
+        const report = await peer.getStats();
+        let total: number | null = null;
+        for (const entry of report.values() as IterableIterator<{ type?: string; bytesReceived?: unknown }>) {
+            if (entry.type === 'transport' && typeof entry.bytesReceived === 'number') {
+                total = (total ?? 0) + entry.bytesReceived;
+            }
+        }
+        return total;
+    } catch {
+        return null;
+    }
+};
 
 /* Waits for ICE to finish gathering, so the offer carries every candidate and nothing has to trickle. */
 const gathered = (peer: RTCPeerConnection, timeoutMs: number): Promise<void> =>
