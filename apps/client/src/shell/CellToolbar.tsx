@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactElement } from 'react';
 import clsx from 'clsx';
 import { Popover } from '@base-ui-components/react/popover';
 import { MoreHorizontal, X } from 'lucide-react';
-import type { ProjectView } from '@ruimte/contracts';
+import { viewIconOf, type ProjectView } from '@ruimte/contracts';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { useHasViewToolbar, ViewToolbar } from '@/shell/ViewToolbar';
@@ -110,7 +110,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                     <ViewGlyph
                         id={view.id}
                         kind={view.kind}
-                        icon={view.kind === 'separator' ? null : view.icon}
+                        icon={viewIconOf(view)}
                         provider={view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null}
                         path={view.kind === 'file' ? view.path : null}
                     />

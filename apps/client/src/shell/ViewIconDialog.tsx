@@ -2,7 +2,7 @@ import { useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { RotateCcw } from 'lucide-react';
-import { PROJECT_ICON_NAMES, type ProjectIconChoice, type ProjectView } from '@ruimte/contracts';
+import { PROJECT_ICON_NAMES, type ProjectIconChoice, type ProjectView, viewIconOf } from '@ruimte/contracts';
 import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { useDocument } from '@/state/document';
@@ -14,7 +14,7 @@ import { Tooltip } from '@/ui/Tooltip';
 /* Picks the mark one view wears: an emoji, one of the Lucide icons, or whatever its kind gives it. */
 export function ViewIconDialog({ view, onClose }: { view: ProjectView; onClose(): void }) {
     const [emoji, setEmoji] = useState('');
-    const chosen = view.kind === 'separator' ? null : (view.icon ?? null);
+    const chosen = viewIconOf(view);
     const provider = view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null;
 
     const pick = (icon: ProjectIconChoice | null): void => useDocument.getState().setViewIcon(view.id, icon);

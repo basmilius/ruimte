@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import type { ProjectCanvasView, ProjectDocument } from '@ruimte/contracts';
+import { ProjectSavePayloadSchema, storedContentOf, type ProjectCanvasView, type ProjectDocument, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import { viewIdsIn } from '@/shell/split';
 import { focusedCanvas } from './canvas';
 import { useDocument } from './document';
@@ -365,5 +365,62 @@ describe('a drawing view', () => {
         useDocument.getState().deleteView(id);
         expect(useDocument.getState().views.map((each) => each.id)).toEqual(['a', 'b']);
         expect(useDocument.getState().activeViewId).toBe('b');
+    });
+});
+
+describe('what a newer Ruimte wrote', () => {
+    const hologram: ProjectNode = {
+        id: 'holo',
+        kind: 'unknown',
+        title: 'Hologram',
+        x: 300,
+        y: 0,
+        w: 100,
+        h: 80,
+        raw: { kind: 'hologram', id: 'holo', title: 'Hologram', x: 300, y: 0, w: 100, h: 80, beam: { lumens: [1, 2] } }
+    };
+    const timeline: ProjectView = { kind: 'unknown', id: 'timeline', name: 'Flow', raw: { kind: 'timeline', id: 'timeline', name: 'Flow', tracks: [] } };
+
+    beforeEach(() => {
+        const views = [timeline, view('a', [node('n1'), hologram])];
+        useDocument.getState().load({ version: 2, rev: 1, name: 'p', color: '#000', views } as ProjectDocument, { activeViewId: 'timeline', views: {} });
+        measure();
+    });
+
+    test('a view of an unknown kind never opens, so the canvas after it does', () => {
+        expect(useDocument.getState().activeViewId).toBe('a');
+        useDocument.getState().setActiveView('timeline');
+        expect(useDocument.getState().activeViewId).toBe('a');
+        expect(useDocument.getState().showView('timeline')).toBeNull();
+    });
+
+    test('an edit of the canvas keeps both entries, and what is sent is what the file held', () => {
+        focusedCanvas().getState().addNode('note', { x: 0, y: 400 });
+        const views = useDocument.getState().exportViews();
+        expect(views[0]).toEqual(timeline);
+        expect((views[1] as ProjectCanvasView).nodes[1]).toEqual(hologram);
+
+        const sent = ProjectSavePayloadSchema.parse(JSON.parse(JSON.stringify({ projectId: 'p', baseRev: 1, content: { name: 'p', color: '#000', views } })));
+        const stored = storedContentOf(sent.content).views;
+        expect(stored[0]).toEqual(timeline.raw);
+        expect((stored[1] as { nodes: unknown[] }).nodes[1]).toEqual(hologram.raw);
+    });
+
+    test('a person may move or delete an unknown node, and nothing else about it changes', () => {
+        const canvas = focusedCanvas().getState();
+        canvas.renameNode('holo', 'Other');
+        canvas.setNodeAccent('holo', 'red');
+        canvas.duplicateNode('holo');
+        expect(focusedCanvas().getState().nodes.holo).toEqual(hologram);
+        expect(focusedCanvas().getState().order).toEqual(['n1', 'holo']);
+
+        focusedCanvas().getState().select(['holo']);
+        focusedCanvas().getState().deleteSelected();
+        expect((useDocument.getState().exportViews()[1] as ProjectCanvasView).nodes.map((each) => each.id)).toEqual(['n1']);
+    });
+
+    test('a person may delete an unknown view', () => {
+        useDocument.getState().deleteView('timeline');
+        expect(useDocument.getState().views.map((each) => each.id)).toEqual(['a']);
     });
 });

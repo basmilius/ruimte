@@ -1,6 +1,6 @@
 import { Menu } from '@base-ui-components/react/menu';
 import { Check, ChevronDown, FileText, Frame, Globe, Minus, PanelBottom, PanelRight, Pencil, PenTool, Workflow, Smile, Terminal, Trash, X } from 'lucide-react';
-import { isDrawingView, isFileView, isOpenableView, isSessionView } from '@ruimte/contracts';
+import { isDrawingView, isFileView, isOpenableView, isSessionView, viewIconOf } from '@ruimte/contracts';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentView } from '@/agents/nodes';
 import {
@@ -119,7 +119,7 @@ export function ViewMenu() {
                 <ViewGlyph
                     id={active.id}
                     kind={active.kind}
-                    icon={active.kind === 'separator' ? null : active.icon}
+                    icon={viewIconOf(active)}
                     provider={active.kind === 'chat' || active.kind === 'terminal' ? active.node.provider : null}
                     path={active.kind === 'file' ? active.path : null}
                 />
@@ -135,7 +135,7 @@ export function ViewMenu() {
                                 <ViewGlyph
                                     id={view.id}
                                     kind={view.kind}
-                                    icon={view.kind === 'separator' ? null : view.icon}
+                                    icon={viewIconOf(view)}
                                     provider={view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null}
                                     path={view.kind === 'file' ? view.path : null}
                                 />

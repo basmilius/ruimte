@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from '
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
 import {
+    CircleQuestionMark,
     ChartNoAxesColumn,
     ChevronRight,
     Copy,
@@ -21,7 +22,7 @@ import {
     TriangleAlert
 } from 'lucide-react';
 import clsx from 'clsx';
-import { isCanvasView, isSessionView, type AgentKind, type NodeKind } from '@ruimte/contracts';
+import { isCanvasView, isSessionView, type AgentKind, type CanvasNodeKind, viewIconOf } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { useDrafts } from '@/chat/drafts';
 import { isUnseen, useAttention } from '@/state/attention';
@@ -78,14 +79,15 @@ export const STRIP_PADDING_PX = 12;
 
 /* Every kind a node on a canvas can be. A view row draws itself through `ViewGlyph`, which starts
    from the icon a person picked and falls back to the same marks. */
-const ROW_ICON: Record<NodeKind, typeof Terminal> = {
+const ROW_ICON: Record<CanvasNodeKind, typeof Terminal> = {
     terminal: Terminal,
     chat: MessageSquare,
     browser: Globe,
     group: LayoutGrid,
     note: StickyNote,
     drawing: PenTool,
-    file: FileText
+    file: FileText,
+    unknown: CircleQuestionMark
 };
 
 const ROW = 'flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm';
@@ -123,7 +125,7 @@ interface RowProps {
  * What a row wears at its left edge: a page its own favicon, an agent the mark of its CLI, and
  * anything else the glyph of its kind. The 16px slot is the same either way, so nothing shifts.
  */
-function RowIcon({ id, kind, provider, className }: { id: string; kind: NodeKind; provider: AgentKind | null; className?: string }) {
+function RowIcon({ id, kind, provider, className }: { id: string; kind: CanvasNodeKind; provider: AgentKind | null; className?: string }) {
     if (kind === 'browser') {
         return <Favicon id={id} />;
     }
@@ -279,6 +281,52 @@ function SeparatorRow({ row, tabbable, onFocus, onArrow, onDelete, onDrag }: Omi
                 }}
             >
                 <span className="h-px grow bg-border" />
+            </ContextMenu.Trigger>
+            <ContextMenu.Portal>
+                <ContextMenu.Positioner className="z-(--z-popup)">
+                    <ContextMenu.Popup className="menu-popup">
+                        <ContextMenu.Item className="menu-item text-status-error" onClick={onDelete}>
+                            <Icon icon={Trash} size={14} /> Delete
+                        </ContextMenu.Item>
+                    </ContextMenu.Popup>
+                </ContextMenu.Positioner>
+            </ContextMenu.Portal>
+        </ContextMenu.Root>
+    );
+}
+
+/*
+ * A view a newer Ruimte made. It is listed so nobody wonders where it went and kept in the file as it
+ * is, but this version has nothing to draw it with: it neither opens nor drags into a cell, and a
+ * person may still delete it.
+ */
+function UnknownViewRow({ row, tabbable, onFocus, onArrow, onDelete }: Omit<ViewRowProps, 'onToggle' | 'onDrag'>) {
+    const { view } = row;
+    return (
+        <ContextMenu.Root>
+            <ContextMenu.Trigger
+                render={<div />}
+                aria-disabled="true"
+                data-sidebar-row={row.rowId}
+                data-view-index={row.index}
+                tabIndex={tabbable ? 0 : -1}
+                className={clsx(ROW, 'cursor-default font-medium text-text-faint outline-none focus-visible:ring-1 focus-visible:ring-accent')}
+                onFocus={onFocus}
+                onKeyDown={(e) => {
+                    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        onArrow(e.key === 'ArrowDown' ? 1 : -1);
+                    }
+                }}
+            >
+                <Tooltip label="This view needs a newer version of Ruimte">
+                    <span className="flex min-w-0 grow items-center gap-2">
+                        <span className={ICON_SLOT}>
+                            <ViewGlyph id={view.id} kind={view.kind} />
+                        </span>
+                        <span className="min-w-0 truncate">{view.name}</span>
+                    </span>
+                </Tooltip>
             </ContextMenu.Trigger>
             <ContextMenu.Portal>
                 <ContextMenu.Positioner className="z-(--z-popup)">
@@ -489,7 +537,7 @@ export function Sidebar() {
                         id: view.id,
                         name: view.name ?? '',
                         kind: view.kind,
-                        icon: (view.kind === 'separator' ? null : view.icon) ?? null,
+                        icon: viewIconOf(view),
                         provider: provider ?? null,
                         path: view.kind === 'file' ? view.path : null,
                         nodes: live.filter((node) => isSessionKind(node.kind)).map(asRow),
@@ -689,6 +737,8 @@ export function Sidebar() {
                                                 <RowScope workspaceId={row.workspaceId}>
                                                     {row.view.kind === 'separator' ? (
                                                         <SeparatorRow {...shared} />
+                                                    ) : row.view.kind === 'unknown' ? (
+                                                        <UnknownViewRow {...shared} />
                                                     ) : (
                                                         <ViewRow
                                                             {...shared}

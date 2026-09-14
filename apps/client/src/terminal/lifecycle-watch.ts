@@ -1,4 +1,4 @@
-import { isSessionView, type NodeKind } from '@ruimte/contracts';
+import { isSessionView, type CanvasNodeKind } from '@ruimte/contracts';
 import { projectNodes } from '@/project/views';
 import { liveCanvases, subscribeCanvases } from '@/state/canvas';
 import { useChats } from '@/state/chats';
@@ -9,7 +9,7 @@ import { useProject } from '@/state/project';
 import { useSessions } from '@/state/sessions';
 
 /* What ending a node means, injected so the watching itself never touches the transport. */
-export type NodeEnder = (endpointId: string, id: string, kind: NodeKind) => void;
+export type NodeEnder = (endpointId: string, id: string, kind: CanvasNodeKind) => void;
 
 /*
  * Every node the project holds, on any view, keyed on the machine it runs on, with the kind that
@@ -18,9 +18,9 @@ export type NodeEnder = (endpointId: string, id: string, kind: NodeKind) => void
  * the canvas and they have to keep running. The canvas store edits one view at a time and says
  * which one, so its nodes win over the copy the document still holds of that view alone.
  */
-const liveNodes = (): Map<string, NodeKind> => {
+const liveNodes = (): Map<string, CanvasNodeKind> => {
     const endpointId = currentEndpointId();
-    const live = new Map<string, NodeKind>();
+    const live = new Map<string, CanvasNodeKind>();
     for (const node of projectNodes()) {
         live.set(endpointKey(endpointId, node.id), node.kind);
     }

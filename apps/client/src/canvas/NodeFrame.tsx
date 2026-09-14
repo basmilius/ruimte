@@ -1,9 +1,11 @@
+import type { CanvasNodeKind } from '@ruimte/contracts';
 import { memo, useMemo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import {
     ChevronDown,
     ChevronRight,
+    CircleQuestionMark,
     FileText,
     GitBranch,
     Globe,
@@ -19,7 +21,7 @@ import {
 import { AgentIcon } from '@/agents/AgentIcon';
 import { UnseenMark } from '@/attention/UnseenMark';
 import { useUnseen } from '@/state/attention';
-import { isNodeFocused, useCanvas, useCanvasStore, type AgentStatus, type NodeKind } from '@/state/canvas';
+import { isNodeFocused, useCanvas, useCanvasStore, type AgentStatus } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
 import { ProcessAlertMark, useNodeAlerts } from '@/processes/ProcessAlertMark';
 import { useHasContextLinks } from '@/context/sources';
@@ -36,6 +38,7 @@ import { BrowserBody } from '@/nodes/BrowserBody';
 import { NoteNode } from '@/canvas/nodes/NoteNode';
 import { DrawingNode } from '@/canvas/nodes/DrawingNode';
 import { FileNode, FilePlate } from '@/canvas/nodes/FileNode';
+import { UnknownNodePlate } from '@/canvas/nodes/UnknownNode';
 import { noteColorClass } from '@/canvas/note-colors';
 import { Favicon } from '@/browser/Favicon';
 import { FileIcon } from '@/ui/FileIcon';
@@ -43,7 +46,7 @@ import { fixedSlot, FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-
 import { resetTitle } from '@/nodes/node-host';
 import { Icon } from '@/ui/Icon';
 
-const ICONS: Record<NodeKind, ReactNode> = {
+const ICONS: Record<CanvasNodeKind, ReactNode> = {
     terminal: <Icon icon={Terminal} size={14} />,
     chat: <Icon icon={MessageSquare} size={14} />,
     browser: <Icon icon={Globe} size={14} />,
@@ -51,7 +54,8 @@ const ICONS: Record<NodeKind, ReactNode> = {
     note: <Icon icon={StickyNote} size={14} />,
     drawing: <Icon icon={PenTool} size={14} />,
     // The floor under a file node that has no path yet; with one it wears the mark of its own name.
-    file: <Icon icon={FileText} size={14} />
+    file: <Icon icon={FileText} size={14} />,
+    unknown: <Icon icon={CircleQuestionMark} size={14} />
 };
 
 const STATUS_LABEL: Record<AgentStatus, string> = {
@@ -164,6 +168,8 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const accent = accentColor(node.accent);
     const isGroup = node.kind === 'group';
     const isNote = node.kind === 'note';
+    // A newer Ruimte's node: it moves, resizes and goes away like any other, and nothing else about it is this version's to change.
+    const isUnknown = node.kind === 'unknown';
     const collapsed = isGroup && node.collapsed === true;
     const remove = (): void => {
         const s = canvasStore.getState();
@@ -238,7 +244,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                             ICONS[node.kind]
                         )}
                     </span>
-                    <span className="flex min-w-0 grow items-center" onDoubleClick={() => setRenaming(true)}>
+                    <span className="flex min-w-0 grow items-center" onDoubleClick={() => setRenaming(!isUnknown)}>
                         <Title id={id} title={node.title} editing={renaming} onDone={() => setRenaming(false)} />
                     </span>
                     {collapsed && <Pill className="tabular-nums">{node.memberIds?.length ?? 0} inside</Pill>}
@@ -296,6 +302,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         {node.kind === 'browser' && <BrowserBody id={id} focused={focused} />}
                         {node.kind === 'note' && <NoteNode id={id} focused={focused} />}
                         {node.kind === 'drawing' && <DrawingNode id={id} />}
+                        {isUnknown && <UnknownNodePlate id={id} />}
                         {node.kind === 'file' &&
                             (live && readable ? (
                                 <FileToolbarSlotProvider value={toolbarSlot}>

@@ -63,6 +63,9 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
         s.select([id]);
         s.deleteSelected();
     };
+    if (node.kind === 'unknown') {
+        return <UnknownNodeMenuPopup id={id} onDelete={remove} />;
+    }
     // The same CLI session can continue in the other kind of node, next to this one.
     const beside = { x: node.x + node.w + 40 + 260, y: node.y + node.h / 2 };
     // Any CLI the daemon has a chat backend for can go on in a chat node.
@@ -231,6 +234,26 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                     </ContextMenu.SubmenuRoot>
                     <ContextMenu.Separator className={MENU_SEPARATOR} />
                     <ContextMenu.Item className="menu-item text-status-error" onClick={remove}>
+                        <Icon icon={Trash} size={14} /> Delete <Kbd shortcut={CANVAS_SHORTCUTS.deleteSelection} />
+                    </ContextMenu.Item>
+                </ContextMenu.Popup>
+            </ContextMenu.Positioner>
+        </ContextMenu.Portal>
+    );
+}
+
+/* A node of a kind a newer Ruimte made: this version can find it and remove it, and nothing more. */
+function UnknownNodeMenuPopup({ id, onDelete }: { id: string; onDelete(): void }) {
+    const canvasStore = useCanvasStore();
+    return (
+        <ContextMenu.Portal>
+            <ContextMenu.Positioner className="z-(--z-popup)">
+                <ContextMenu.Popup className="menu-popup">
+                    <ContextMenu.Item className="menu-item" onClick={() => canvasStore.getState().goToNode(id)}>
+                        <Icon icon={Maximize2} size={14} /> Zoom to node
+                    </ContextMenu.Item>
+                    <ContextMenu.Separator className={MENU_SEPARATOR} />
+                    <ContextMenu.Item className="menu-item text-status-error" onClick={onDelete}>
                         <Icon icon={Trash} size={14} /> Delete <Kbd shortcut={CANVAS_SHORTCUTS.deleteSelection} />
                     </ContextMenu.Item>
                 </ContextMenu.Popup>

@@ -219,3 +219,36 @@ describe('what went through JSON', () => {
         expect(merge.ok).toBe(true);
     });
 });
+
+describe('what a newer Ruimte wrote', () => {
+    const hologram: ProjectNode = {
+        id: 'holo',
+        kind: 'unknown',
+        title: 'Hologram',
+        x: 0,
+        y: 0,
+        w: 100,
+        h: 100,
+        raw: { kind: 'hologram', id: 'holo', title: 'Hologram', x: 0, y: 0, w: 100, h: 100, beam: { lumens: [1, 2] } }
+    };
+    const timeline: ProjectView = { kind: 'unknown', id: 'timeline', name: 'Flow', raw: { kind: 'timeline', id: 'timeline', name: 'Flow', tracks: [] } };
+
+    test('a node and a view of an unknown kind stay where they are when the daemon adds something', () => {
+        const base = content([canvas('main', { nodes: [node('a'), hologram] }), timeline]);
+        const mine = content([canvas('main', { nodes: [node('a', { x: 400 }), hologram] }), timeline]);
+        const theirs = content([canvas('main', { nodes: [node('a'), hologram, node('agent')] }), timeline]);
+
+        const merge = mergeProject(base, mine, theirs);
+        expect(merge.ok).toBe(true);
+        expect(canvasOf(merge, 'main').nodes).toEqual([node('a', { x: 400 }), hologram, node('agent')]);
+        expect((merge as { content: ProjectContent }).content.views[1]).toEqual(timeline);
+    });
+
+    test('an unknown view the daemon added arrives like any other view', () => {
+        const base = content([canvas('main')]);
+        const theirs = content([canvas('main'), timeline]);
+        const merge = mergeProject(base, base, theirs);
+        expect(merge.ok).toBe(true);
+        expect((merge as { additions: { views: ProjectView[] } }).additions.views).toEqual([timeline]);
+    });
+});

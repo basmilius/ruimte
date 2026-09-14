@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { isSessionView, type AgentKind, type NodeKind, type NodeTitleSource, type ProjectView, type RuntimeMode } from '@ruimte/contracts';
+import { isSessionView, type AgentKind, type CanvasNodeKind, type NodeTitleSource, type ProjectView, type RuntimeMode } from '@ruimte/contracts';
 import { canvasOfNode, DEFAULT_TITLES, useCanvas, type CanvasNode } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
@@ -12,7 +12,7 @@ import { providersOf } from '@/state/providers';
  */
 export interface NodeHost {
     id: string;
-    kind: NodeKind;
+    kind: CanvasNodeKind;
     title: string;
     /* Who named it. A page only renames what nobody has named. */
     titleSource?: NodeTitleSource;
@@ -90,7 +90,8 @@ export const updateHost = (id: string, patch: Partial<Pick<NodeHost, 'url' | 'cw
    its kind for anything else. */
 export const automaticTitleOf = (host: NodeHost): string => {
     const provider = host.provider ? providersOf(currentEndpointId()).providers.find((each) => each.kind === host.provider) : undefined;
-    return provider?.name ?? DEFAULT_TITLES[host.kind];
+    // A newer Ruimte's node has no name of its kind here, so it keeps the one it came with.
+    return provider?.name ?? (host.kind === 'unknown' ? host.title : DEFAULT_TITLES[host.kind]);
 };
 
 /*

@@ -31,7 +31,7 @@ import type {
     RuntimeMode,
     ViewCamera
 } from '@ruimte/contracts';
-import { DEFAULT_TITLES, NODE_SIZE, groupFrame, isAgentKind } from '@ruimte/contracts';
+import { DEFAULT_TITLES, NODE_SIZE, groupFrame, isAgentKind, isUnknownNode } from '@ruimte/contracts';
 
 export type { AgentStatus, NodeKind } from '@ruimte/contracts';
 
@@ -471,25 +471,28 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
         setGesturing(gesturing) {
             set({ gesturing });
         },
+        /* A node of an unknown kind is written back as it was read, apart from its frame, so an accent,
+           a title or a patch on it would be an edit that never reaches the file. */
         setNodeAccent(id, accent) {
-            set((s) => (s.nodes[id] ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], accent: accent ?? undefined } } } : {}));
+            set((s) => (s.nodes[id] && !isUnknownNode(s.nodes[id]) ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], accent: accent ?? undefined } } } : {}));
         },
         renameNode(id, title, source = 'user') {
             set((s) => {
                 const node = s.nodes[id];
                 // A rename that changes nothing claims nothing: the editor closes on a blur either way.
-                if (!node || (node.title === title && (node.titleSource ?? null) === source)) {
+                if (!node || isUnknownNode(node) || (node.title === title && (node.titleSource ?? null) === source)) {
                     return {};
                 }
                 return { nodes: { ...s.nodes, [id]: { ...node, title, titleSource: source ?? undefined } } };
             });
         },
         updateNode(id, patch) {
-            set((s) => (s.nodes[id] ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], ...patch } } } : {}));
+            set((s) => (s.nodes[id] && !isUnknownNode(s.nodes[id]) ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], ...patch } } } : {}));
         },
         duplicateNode(id) {
             const source = get().nodes[id];
-            if (!source) {
+            // What a newer Ruimte's node holds may be tied to its id (a session, a file), so a copy of it is not this version's to make.
+            if (!source || isUnknownNode(source)) {
                 return;
             }
             const copyId = nextId(source.kind);

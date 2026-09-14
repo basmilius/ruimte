@@ -1,10 +1,10 @@
-import type { AgentKind, AgentStatus, NodeKind, ProjectIconChoice, ProjectViewKind } from '@ruimte/contracts';
+import type { AgentKind, AgentStatus, CanvasNodeKind, ProjectIconChoice, ProjectViewKind } from '@ruimte/contracts';
 import type { SidebarScope } from '@/state/settings';
 
 export interface SidebarNode {
     id: string;
     title: string;
-    kind: NodeKind;
+    kind: CanvasNodeKind;
     /* The CLI behind a chat or an agent terminal, whose mark the row wears instead of the kind's. */
     provider: AgentKind | null;
     status: AgentStatus | null;
@@ -102,7 +102,7 @@ export interface SidebarInput {
 }
 
 /* Groups, notes and drawings are frames, paper and files; the list is about what runs. */
-export const isSessionKind = (kind: NodeKind): boolean => kind === 'terminal' || kind === 'chat' || kind === 'browser';
+export const isSessionKind = (kind: CanvasNodeKind): boolean => kind === 'terminal' || kind === 'chat' || kind === 'browser';
 
 const WEIGHT: Record<AgentStatus, number> = { 'needs-you': 3, error: 2, exited: 2, running: 1, idle: 0 };
 

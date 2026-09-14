@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
 import {
+    CircleQuestionMark,
     ArrowLeft,
     CaseSensitive,
     CornerLeftUp,
@@ -21,7 +22,7 @@ import {
     Zap,
     type LucideIcon
 } from 'lucide-react';
-import { isCanvasView, isOpenableView, type FsBrowseResult } from '@ruimte/contracts';
+import { isCanvasView, isOpenableView, type FsBrowseResult, viewIconOf, type CanvasNodeKind } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
@@ -47,7 +48,7 @@ import { DEFAULT_GREP_OPTIONS, useGrepSearch, type GrepOptions } from '@/shell/p
 import { PaletteGrepResults } from '@/shell/PaletteGrepResults';
 import { readRecents, rememberRecent, sortByRecency } from '@/shell/palette-recents';
 import { absoluteOf, basenameOf } from '@/shell/panels/files-tree';
-import { useCanvas, type NodeKind } from '@/state/canvas';
+import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { useFiles } from '@/state/files';
@@ -70,14 +71,15 @@ import { viewShortcut } from '@/canvas/shortcuts';
 import { Kbd } from '@/ui/Kbd';
 import { KEY_SHORTCUTS, matchesShortcut } from '@/ui/shortcut';
 
-const KIND_ICON: Record<NodeKind, React.ReactNode> = {
+const KIND_ICON: Record<CanvasNodeKind, React.ReactNode> = {
     terminal: <Icon icon={Terminal} size={14} />,
     chat: <Icon icon={MessageSquare} size={14} />,
     browser: <Icon icon={Globe} size={14} />,
     group: <Icon icon={LayoutGrid} size={14} />,
     note: <Icon icon={StickyNote} size={14} />,
     drawing: <Icon icon={PenTool} size={14} />,
-    file: <Icon icon={FileText} size={14} />
+    file: <Icon icon={FileText} size={14} />,
+    unknown: <Icon icon={CircleQuestionMark} size={14} />
 };
 
 // Typing a path turns the palette into a folder browser; anything else searches nodes and actions.
@@ -513,7 +515,7 @@ export function CommandPalette() {
                 <ViewGlyph
                     id={view.id}
                     kind={view.kind}
-                    icon={view.kind === 'separator' ? null : view.icon}
+                    icon={viewIconOf(view)}
                     provider={view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null}
                     path={view.kind === 'file' ? view.path : null}
                 />
