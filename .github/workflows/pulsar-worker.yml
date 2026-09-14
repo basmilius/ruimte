@@ -1,0 +1,38 @@
+name: Address book
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/pulsar-worker/**'
+      - 'packages/pulsar/**'
+
+# One deploy at a time, so two pushes never apply migrations over each other.
+concurrency:
+  group: pulsar-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 5e565cf9fa55b0eae1f8131903da2ca9
+    defaults:
+      run:
+        working-directory: apps/pulsar-worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+        working-directory: .
+      - run: bun run typecheck
+      - run: bun test
+      - run: bun test
+        working-directory: packages/pulsar
+      # Migrations first: a new Worker may read a column the old one never wrote, never the other way round.
+      - run: bunx wrangler d1 migrations apply ruimte-pulsar --remote
+      - run: bunx wrangler deploy
+      - run: curl --fail --silent --show-error --max-time 20 https://pulsar.ruimte.app/health
