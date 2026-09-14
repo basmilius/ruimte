@@ -1237,6 +1237,23 @@ describe('--dry-run', () => {
 });
 
 describe('view new', () => {
+    test('a view and a node of a kind this daemon does not know stay in the file, exactly as they were', async () => {
+        const hologram = { kind: 'hologram', id: 'holo', title: 'Hologram', x: 900, y: 0, w: 480, h: 360, beam: { lumens: [1, 2] } };
+        const timeline = { name: 'Flow', kind: 'timeline', id: 'timeline-1', tracks: [{ at: 0 }] };
+        const file = await onDisk();
+        const main = file.views[0] as ProjectCanvasView;
+        const views = [{ ...main, nodes: [...main.nodes, hologram] }, timeline, ...file.views.slice(1)];
+        await writeFile(documentPathInFolder(folder), JSON.stringify({ ...file, views }, null, 2));
+
+        expect((await post('view', ['new', 'Plan'])).status).toBe(200);
+
+        const after = await onDisk();
+        const raw = after.views as unknown as Array<{ id: string; nodes?: Array<{ id: string }> }>;
+        expect(JSON.stringify(raw.find((view) => view.id === 'timeline-1'))).toBe(JSON.stringify(timeline));
+        expect(JSON.stringify(raw[0]!.nodes!.find((node) => node.id === 'holo'))).toBe(JSON.stringify(hologram));
+        expect(after.views.at(-1)).toMatchObject({ kind: 'canvas', name: 'Plan' });
+    });
+
     test('adds a canvas last in the sidebar and writes the caller down as its maker', async () => {
         const { status, lines } = await post('view', ['new', 'Plan']);
         expect(status).toBe(200);

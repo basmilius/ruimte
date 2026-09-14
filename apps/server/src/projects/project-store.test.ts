@@ -5,6 +5,8 @@ import { join } from 'node:path';
 import type { ProjectCanvasView, ProjectContent, ProjectDocument } from '@ruimte/contracts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { waitFor } from '../sessions/test-helpers.ts';
+import { DiagramStore } from './diagram-store.ts';
+import { DrawingStore } from './drawing-store.ts';
 import { documentPathInFolder, fromPortable, toPortable } from './project-files.ts';
 import { ProjectStore } from './project-store.ts';
 
@@ -556,5 +558,101 @@ describe('mutate', () => {
         await rm(documentPathInFolder(folder));
         await expect(store.mutate(opened.summary.projectId, addNote('x'))).rejects.toMatchObject({ code: 'project-missing' });
         await expect(store.mutate('nope', addNote('x'))).rejects.toMatchObject({ code: 'project-not-found' });
+    });
+});
+
+describe('kinds a newer Ruimte wrote', () => {
+    const HOLOGRAM = { kind: 'hologram', id: 'holo', title: 'Hologram', x: 600, y: 40, w: 480, h: 360, beam: { lumens: [1, 2] } };
+    const TIMELINE = { name: 'Flow', kind: 'timeline', id: 'timeline-1', tracks: [{ at: 0 }] };
+
+    const newerFile = (): string =>
+        `${JSON.stringify(
+            {
+                version: 2,
+                rev: 3,
+                name: 'repo',
+                color: '#123456',
+                views: [
+                    { kind: 'canvas', id: 'main', name: 'Canvas', nodes: [HOLOGRAM], texts: [], edges: [], layouts: [] },
+                    TIMELINE,
+                    { kind: 'drawing', id: 'sketch', name: 'Sketch' },
+                    { kind: 'diagram', id: 'chart', name: 'Chart' }
+                ]
+            },
+            null,
+            2
+        )}\n`;
+
+    /* The entries this daemon does not know, the way they stand in the file right now. */
+    const unknownOnDisk = async (): Promise<string> => {
+        const document = JSON.parse(await readFile(documentPathInFolder(folder), 'utf8')) as { views: Array<{ id: string; nodes?: unknown[] }> };
+        return JSON.stringify([
+            document.views.find((view) => view.id === 'main')!.nodes!.find((node) => (node as { id: string }).id === 'holo'),
+            document.views.find((view) => view.id === 'timeline-1')
+        ]);
+    };
+
+    const UNKNOWN = JSON.stringify([HOLOGRAM, TIMELINE]);
+
+    beforeEach(async () => {
+        await mkdir(join(folder, '.ruimte'), { recursive: true });
+        await writeFile(documentPathInFolder(folder), newerFile());
+    });
+
+    test('opening such a file sets nothing aside and hands the entries on', async () => {
+        const opened = await store.openProject({ folder });
+        expect(await readdir(join(folder, '.ruimte'))).toEqual(['project.json']);
+        expect(await readFile(documentPathInFolder(folder), 'utf8')).toBe(newerFile());
+        expect(opened.document.views.map((view) => view.kind)).toEqual(['canvas', 'unknown', 'drawing', 'diagram']);
+        expect(canvas(opened.document).nodes[0]).toMatchObject({ id: 'holo', kind: 'unknown', x: 600 });
+    });
+
+    test('a save that sends the entries back keeps them as they were, and one that moved the node moves it', async () => {
+        const opened = await store.openProject({ folder });
+        const { version: _version, rev, ...sent } = opened.document;
+        await store.save(opened.summary.projectId, rev, sent);
+        expect(await unknownOnDisk()).toBe(UNKNOWN);
+
+        const main = canvas(sent);
+        const moved = { ...sent, views: [{ ...main, nodes: [{ ...main.nodes[0]!, x: 0 }] }, ...sent.views.slice(1)] };
+        await store.save(opened.summary.projectId, rev + 1, moved);
+        expect(await unknownOnDisk()).toBe(JSON.stringify([{ ...HOLOGRAM, x: 0 }, TIMELINE]));
+    });
+
+    test('a mutation keeps them, open or released', async () => {
+        const opened = await store.openProject({ folder });
+        const { projectId } = opened.summary;
+        const addText = (id: string) => (current: ProjectContent) => {
+            const main = canvas(current);
+            const text = { id, x: 0, y: 0, text: 'hi', size: 16 };
+            return { content: { ...current, views: [{ ...main, texts: [...main.texts, text] }, ...current.views.slice(1)] }, result: null };
+        };
+        await store.mutate(projectId, addText('text-1'));
+        expect(await unknownOnDisk()).toBe(UNKNOWN);
+        store.release(projectId);
+        await store.mutate(projectId, addText('text-2'));
+        expect(await unknownOnDisk()).toBe(UNKNOWN);
+        expect(store.index.locate('holo')).toEqual({ projectId, folder, canvasId: 'main' });
+    });
+
+    test('removing a drawing and a diagram leaves the files of an unknown view alone', async () => {
+        const drawings = new DrawingStore(store);
+        const diagrams = new DiagramStore(store);
+        store.attachDrawings(drawings);
+        store.attachDiagrams(diagrams);
+        const opened = await store.openProject({ folder });
+        const { projectId } = opened.summary;
+        for (const dir of ['drawings', 'diagrams']) {
+            await mkdir(join(folder, '.ruimte', dir), { recursive: true });
+            await writeFile(join(folder, '.ruimte', dir, 'timeline-1.json'), '{}');
+            await writeFile(join(folder, '.ruimte', dir, 'gone.json'), '{}');
+        }
+
+        const { version: _version, rev, ...sent } = opened.document;
+        await store.save(projectId, rev, { ...sent, views: sent.views.filter((view) => view.id !== 'sketch' && view.id !== 'chart') });
+
+        expect(await readdir(join(folder, '.ruimte', 'drawings'))).toEqual(['timeline-1.json']);
+        expect(await readdir(join(folder, '.ruimte', 'diagrams'))).toEqual(['timeline-1.json']);
+        expect(await unknownOnDisk()).toBe(UNKNOWN);
     });
 });

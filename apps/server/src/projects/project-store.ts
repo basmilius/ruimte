@@ -8,6 +8,7 @@ import {
     MAIN_VIEW_NAME,
     ProjectDocumentSchema,
     ProjectIconChoiceSchema,
+    UNKNOWN_KIND,
     duplicateIdIn,
     migrateLocal,
     type ProjectContent,
@@ -116,9 +117,13 @@ interface OpenProject {
     diagramIds: Set<string>;
 }
 
-const drawingIdsIn = (views: ProjectView[]): Set<string> => new Set(views.filter((view) => view.kind === 'drawing').map((view) => view.id));
+/* A view of a kind this daemon does not know may own a file under either folder, so it counts as live for both. */
+const viewIdsIn = (views: ProjectView[], kind: 'drawing' | 'diagram'): Set<string> =>
+    new Set(views.filter((view) => view.kind === kind || view.kind === UNKNOWN_KIND).map((view) => view.id));
 
-const diagramIdsIn = (views: ProjectView[]): Set<string> => new Set(views.filter((view) => view.kind === 'diagram').map((view) => view.id));
+const drawingIdsIn = (views: ProjectView[]): Set<string> => viewIdsIn(views, 'drawing');
+
+const diagramIdsIn = (views: ProjectView[]): Set<string> => viewIdsIn(views, 'diagram');
 
 /*
  * Every canvas the daemon knows, where it lives and which ones are open. A folder project is

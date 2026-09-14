@@ -8,6 +8,7 @@ import {
     migrateDiagram,
     migrateDocument,
     migrateDrawing,
+    storedContentOf,
     withoutCrossViewEdges,
     type DiagramDocument,
     type DrawingDocument,
@@ -84,8 +85,9 @@ export const parseDocument = (text: string): DocumentParse => {
     return { kind: 'ok', document: { ...document, views: withoutCrossViewEdges(document.views) } };
 };
 
-/* Pretty-printed with a trailing newline, so a diff of the file in git reads like one. */
-export const serializeDocument = (document: ProjectDocument): string => `${JSON.stringify(document, null, 2)}\n`;
+/* Pretty-printed with a trailing newline, so a diff of the file in git reads like one. An entry of a
+   kind a newer Ruimte wrote goes back in exactly as it was read. */
+export const serializeDocument = (document: ProjectDocument): string => `${JSON.stringify(storedContentOf(document), null, 2)}\n`;
 
 export const writeDocument = async (path: string, document: ProjectDocument): Promise<string> => {
     await mkdir(dirname(path), { recursive: true });

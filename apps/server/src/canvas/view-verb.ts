@@ -1,7 +1,7 @@
 import {
     PROJECT_ICON_EMOJI_MAX,
     PROJECT_ICON_NAMES,
-    ProjectViewSchema,
+    PROJECT_VIEW_KINDS,
     emptyCanvasView,
     isCanvasView,
     isSeparatorView,
@@ -33,7 +33,7 @@ export const MAX_PROJECT_VIEWS = 100;
 const DELETED_NODE_LINES = 20;
 
 /* Straight from the union in contracts, so a kind added there is one this verb makes on its own. */
-export const VIEW_KINDS = ProjectViewSchema.options.map((option) => option.shape.kind.value);
+export const VIEW_KINDS = PROJECT_VIEW_KINDS;
 
 type ViewFlag = 'path' | 'url';
 
@@ -179,7 +179,7 @@ const newSub = defineSubVerb('view', {
 /* A path stays inside the project folder as a stored one, and stays absolute when it points out. */
 const storedFilePath = (folder: string | null, path: string): string => (folder !== null && isInside(folder, path) ? storedPathOf(folder, path) : path);
 
-const madeView = (kind: ProjectViewKind, id: string, name: string, createdBy: string, parts: { url?: string; path?: string }): ProjectView => {
+const madeView = (kind: (typeof VIEW_KINDS)[number], id: string, name: string, createdBy: string, parts: { url?: string; path?: string }): ProjectView => {
     if (kind === 'canvas') {
         return { ...emptyCanvasView(id, name), createdBy };
     }
