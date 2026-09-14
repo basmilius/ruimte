@@ -1,11 +1,10 @@
 import { existsSync } from 'node:fs';
-import { open, readdir, stat } from 'node:fs/promises';
+import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { SUGGESTED_TITLE_LIMIT } from '@ruimte/contracts';
 import { usageRoots } from '../usage/roots.ts';
+import { cleanTitle, readLines } from './title-file.ts';
 
 interface Progress {
-    // Where the next read starts: just past the last whole line seen.
     offset: number;
     aiTitle: string | null;
     customTitle: string | null;
@@ -13,24 +12,6 @@ interface Progress {
 
 // The two records carry these words; a line without them is never parsed.
 const MARKERS = ['"ai-title"', '"custom-title"'];
-
-// oxlint-disable-next-line no-control-regex
-const CONTROL = /[\u0000-\u001f\u007f]+/g;
-
-/*
- * The model wrote this, so it is text and nothing else: no control characters, no line breaks, one
- * space between words and a length a header can hold.
- */
-export const cleanTitle = (raw: unknown): string | null => {
-    if (typeof raw !== 'string') {
-        return null;
-    }
-    const text = raw.replace(CONTROL, ' ').replace(/\s+/g, ' ').trim();
-    if (text === '') {
-        return null;
-    }
-    return text.length <= SUGGESTED_TITLE_LIMIT ? text : `${text.slice(0, SUGGESTED_TITLE_LIMIT - 1).trimEnd()}…`;
-};
 
 /*
  * The name Claude Code gave a session, out of its own transcript. It writes an `ai-title` record a
@@ -70,41 +51,10 @@ export class ClaudeTitleReader {
             this.progress.set(path, progress);
         }
         if (size > progress.offset) {
-            await this.readFrom(path, progress, size);
+            const current = progress;
+            current.offset = await readLines(path, current.offset, size, this.chunkBytes, (line) => this.take(line, current));
         }
         return progress.customTitle ?? progress.aiTitle;
-    }
-
-    private async readFrom(path: string, progress: Progress, size: number): Promise<void> {
-        const handle = await open(path, 'r');
-        try {
-            // In pieces, so a transcript of hundreds of megabytes is never one buffer. Cut on bytes,
-            // since a piece may end halfway into a character.
-            let carry = Buffer.alloc(0);
-            let position = progress.offset;
-            while (position < size) {
-                const piece = Buffer.alloc(Math.min(this.chunkBytes, size - position));
-                const { bytesRead } = await handle.read(piece, 0, piece.length, position);
-                if (bytesRead === 0) {
-                    return;
-                }
-                position += bytesRead;
-                const bytes = Buffer.concat([carry, piece.subarray(0, bytesRead)]);
-                const end = bytes.lastIndexOf(0x0a);
-                if (end < 0) {
-                    carry = bytes;
-                    continue;
-                }
-                for (const line of bytes.subarray(0, end).toString('utf8').split('\n')) {
-                    this.take(line, progress);
-                }
-                // A line still being written is left for the next read.
-                carry = bytes.subarray(end + 1);
-                progress.offset = position - carry.length;
-            }
-        } finally {
-            await handle.close();
-        }
     }
 
     private take(line: string, progress: Progress): void {
