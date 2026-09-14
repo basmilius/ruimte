@@ -1552,21 +1552,19 @@ Also decided against for now: a scheduler, checkpoint restore and telemetry.
 
 ## Next
 
-The three open issues first, then the rest in the order that makes sense. Sizes are rough: hours,
+The two open issues first, then the rest in the order that makes sense. Sizes are rough: hours,
 a day, several days. Each of the larger ones becomes a GitHub issue when it starts.
 
-1. **#12**: the Codex hook contract in a terminal (the other four boxes are done). On the
-   checkpoints: no way back to one (a restore reads as a revert of the person's own work as
-   much as the agent's), and the diff is of the whole folder, so an edit the person made
-   during a turn lands in the card too.
-2. **#13**: a webview keeps the canvas's z-order only by being above everything, so a node
-   dragged over a browser node slides under its page; the traffic-light inset is fixed, not
-   measured; no Windows run yet (Linux runs, see `docs/LINUX.md`).
-3. **#11**: Pages with source "GitHub Actions" so ruimte.app deploys; the landing video; Windows
-   (the daemon on Bun's Windows PTY or Node with node-pty, `docs/research/windows.md` is the
-   design for a project in its own window, not for the platform); the daemon as a background
-   service so closing the app keeps sessions alive. The signed and notarized build, the icon and
-   the update path are done: `docs/RELEASE.md`.
+1. **#13**: a webview keeps the canvas's z-order only by being above everything, so a node
+   dragged over a browser node slides under its page.
+2. **#15**: Windows, which can wait. The daemon on Bun's Windows PTY or Node with node-pty, the
+   shell and a release build (`docs/research/windows.md` is the design for a project in its own
+   window, not for the platform). Linux runs, see `docs/LINUX.md`; the signed and notarized
+   macOS build, the icon and the update path are done, see `docs/RELEASE.md`.
+3. **The daemon as a background service**, so closing the app keeps sessions alive. The
+   ruimte.app landing page comes later and gets an issue when it starts. A known gap in the
+   checkpoints: the turn diff is of the whole folder, so an edit the person made during a turn
+   lands in the card too.
 4. **A third chat provider** (Gemini, Copilot or opencode) as the proof that the backend seam
    holds: a provider value, a backend and a protocol mapper, plus one literal in `AgentKind`.
    Hooks for Gemini and Copilot are a day per CLI on top.
