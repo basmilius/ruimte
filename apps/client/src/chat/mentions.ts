@@ -95,30 +95,59 @@ export const chipText = (segment: ChipSegment): string => {
     return segment.text;
 };
 
-/* Splits the text so a renderer can draw the mentions and skills as chips; longer values win when one prefixes another. */
-export const tokenizeChips = (text: string, mentions: string[], skills: string[] = []): ChipSegment[] => {
+export interface TextRange {
+    from: number;
+    to: number;
+}
+
+export interface ChipRange extends TextRange {
+    kind: 'mention' | 'skill';
+    value: string;
+}
+
+/*
+ * Where the chosen mentions and skills sit in the text, in text order; longer values win when one
+ * prefixes another. A token that overlaps an excluded range (a code span, say) is text.
+ */
+export const chipRanges = (text: string, mentions: string[], skills: string[] = [], excluded: readonly TextRange[] = []): ChipRange[] => {
     const tokens = [
-        ...[...new Set(mentions)].map((path) => ({ sigil: '@', value: path })),
-        ...[...new Set(skills)].map((name) => ({ sigil: '$', value: name }))
+        ...[...new Set(mentions)].map((value) => ({ sigil: '@', kind: 'mention' as const, value })),
+        ...[...new Set(skills)].map((value) => ({ sigil: '$', kind: 'skill' as const, value }))
     ].sort((a, b) => b.value.length - a.value.length);
-    const segments: ChipSegment[] = [];
+    const allowed = (from: number, to: number): boolean => !excluded.some((range) => from < range.to && to > range.from);
+    const ranges: ChipRange[] = [];
     let cursor = 0;
     while (cursor < text.length) {
-        let best: { index: number; sigil: string; value: string } | null = null;
+        let best: ChipRange | null = null;
         for (const token of tokens) {
-            const index = findToken(text, token.sigil, token.value, cursor);
-            if (index >= 0 && (best === null || index < best.index)) {
-                best = { index, ...token };
+            const length = token.value.length + 1;
+            let index = findToken(text, token.sigil, token.value, cursor);
+            while (index >= 0 && !allowed(index, index + length)) {
+                index = findToken(text, token.sigil, token.value, index + 1);
+            }
+            if (index >= 0 && (best === null || index < best.from)) {
+                best = { from: index, to: index + length, kind: token.kind, value: token.value };
             }
         }
         if (best === null) {
             break;
         }
-        if (best.index > cursor) {
-            segments.push({ kind: 'text', text: text.slice(cursor, best.index) });
+        ranges.push(best);
+        cursor = best.to;
+    }
+    return ranges;
+};
+
+/* Splits the text so a renderer can draw the mentions and skills as chips. */
+export const tokenizeChips = (text: string, mentions: string[], skills: string[] = []): ChipSegment[] => {
+    const segments: ChipSegment[] = [];
+    let cursor = 0;
+    for (const range of chipRanges(text, mentions, skills)) {
+        if (range.from > cursor) {
+            segments.push({ kind: 'text', text: text.slice(cursor, range.from) });
         }
-        segments.push(best.sigil === '@' ? { kind: 'mention', path: best.value } : { kind: 'skill', name: best.value });
-        cursor = best.index + best.value.length + 1;
+        segments.push(range.kind === 'mention' ? { kind: 'mention', path: range.value } : { kind: 'skill', name: range.value });
+        cursor = range.to;
     }
     if (cursor < text.length) {
         segments.push({ kind: 'text', text: text.slice(cursor) });

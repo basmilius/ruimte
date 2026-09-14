@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { chipText, findMentionQuery, findSkillQuery, insertMention, insertSkill, presentMentions, presentSkills, tokenizeChips } from './mentions';
+import { chipRanges, chipText, findMentionQuery, findSkillQuery, insertMention, insertSkill, presentMentions, presentSkills, tokenizeChips } from './mentions';
 
 describe('findMentionQuery', () => {
     test('opens on an @ that starts a word and follows it to the caret', () => {
@@ -110,5 +110,38 @@ describe('chipText', () => {
         for (const [text, mentions, skills] of cases) {
             expect(tokenizeChips(text, mentions, skills).map(chipText).join('')).toBe(text);
         }
+    });
+});
+
+describe('chipRanges', () => {
+    test('finds the same tokens tokenizeChips draws, with their offsets', () => {
+        const text = 'run $unslop over @README.md, then @docs/HANDOFF.md.';
+        const ranges = chipRanges(text, ['README.md', 'docs/HANDOFF.md'], ['unslop']);
+        expect(ranges).toEqual([
+            { from: 4, to: 11, kind: 'skill', value: 'unslop' },
+            { from: 17, to: 27, kind: 'mention', value: 'README.md' },
+            { from: 34, to: 50, kind: 'mention', value: 'docs/HANDOFF.md' }
+        ]);
+        expect(ranges.map((range) => text.slice(range.from, range.to))).toEqual(['$unslop', '@README.md', '@docs/HANDOFF.md']);
+        const chips = tokenizeChips(text, ['README.md', 'docs/HANDOFF.md'], ['unslop']).filter((segment) => segment.kind !== 'text');
+        expect(chips.map(chipText)).toEqual(ranges.map((range) => text.slice(range.from, range.to)));
+    });
+
+    test('lets the longer of two values that share a prefix win', () => {
+        expect(chipRanges('open @src/a.ts.bak.', ['src/a.ts', 'src/a.ts.bak'])).toEqual([{ from: 5, to: 18, kind: 'mention', value: 'src/a.ts.bak' }]);
+    });
+
+    test('leaves a token inside an excluded range as text', () => {
+        // `@a.ts` is a code span from 4 to 11.
+        expect(chipRanges('see `@a.ts` and @a.ts', ['a.ts'], [], [{ from: 4, to: 11 }])).toEqual([{ from: 16, to: 21, kind: 'mention', value: 'a.ts' }]);
+    });
+
+    test('keeps a token right after a closed code span', () => {
+        expect(chipRanges('`x` @a.ts', ['a.ts'], [], [{ from: 0, to: 3 }])).toEqual([{ from: 4, to: 9, kind: 'mention', value: 'a.ts' }]);
+    });
+
+    test('finds nothing in empty text or for values that are gone', () => {
+        expect(chipRanges('', ['a.ts'])).toEqual([]);
+        expect(chipRanges('nothing here', ['gone.ts'], ['gone'])).toEqual([]);
     });
 });
