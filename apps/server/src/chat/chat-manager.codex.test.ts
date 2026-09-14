@@ -348,4 +348,67 @@ describe('ChatManager with Codex', () => {
         expect(other.ofKind('note')[0]?.level).toBe('error');
         await broken.shutdown();
     });
+
+    describe('the name of a Codex chat', () => {
+        const withNamer = (answer: (input: { prompt: string; answer: string }) => string | null) => {
+            const asked: Array<{ prompt: string; answer: string }> = [];
+            manager = new ChatManager({
+                providers,
+                store,
+                attachments,
+                command: ['false'],
+                codexCommand: FAKE_CODEX,
+                env: { PATH: process.env.PATH, HOME: home },
+                nameChat: async (provider, input) => {
+                    expect(provider).toBe('codex');
+                    asked.push({ prompt: input.prompt, answer: input.answer });
+                    return answer(input);
+                }
+            });
+            manager.subscribe('c1', recorder.sink());
+            return asked;
+        };
+
+        test('is asked once, after the first turn, and given to the thread as well', async () => {
+            await manager.shutdown();
+            const asked = withNamer(() => 'Greeting the fake');
+            await open('chat-name');
+
+            await manager.send('chat-name', 'hello there');
+            await waitFor(() => recorder.info?.suggestedTitle === 'Greeting the fake', 'the suggested title');
+            expect(asked).toEqual([{ prompt: 'hello there', answer: 'echo: hello there (medium)' }]);
+
+            // The app-server was told the same name, which is what its thread list and a resume carry.
+            await waitFor(idle, 'the turn to end');
+            await manager.send('chat-name', 'name?');
+            await waitFor(() => recorder.ofKind('assistant').some((item) => item.text === 'Greeting the fake' && !item.streaming), 'the thread name');
+            await waitFor(idle, 'the second turn to end');
+            expect(asked).toHaveLength(1);
+        });
+
+        test('a namer that gives nothing leaves the chat unnamed and is not asked again', async () => {
+            await manager.shutdown();
+            const asked = withNamer(() => null);
+            await open('chat-unnamed');
+            await manager.send('chat-unnamed', 'first');
+            await waitFor(idle, 'the first turn to end');
+            await waitFor(() => asked.length === 1, 'the namer');
+            await manager.send('chat-unnamed', 'second');
+            await waitFor(() => recorder.ofKind('assistant').length === 2 && idle(), 'the second turn to end');
+            await Bun.sleep(50);
+            expect(asked).toHaveLength(1);
+            expect(recorder.info?.suggestedTitle).toBeUndefined();
+        });
+
+        test('a resumed thread that Codex already named keeps that name and asks for none', async () => {
+            await manager.shutdown();
+            const asked = withNamer(() => 'Not this one');
+            await open('chat-named', { resume: 'named-1' });
+            await manager.send('chat-named', 'hello again');
+            await waitFor(idle, 'the turn to end');
+            expect(recorder.info?.suggestedTitle).toBe('Named before');
+            await Bun.sleep(50);
+            expect(asked).toEqual([]);
+        });
+    });
 });

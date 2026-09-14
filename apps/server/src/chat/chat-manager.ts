@@ -20,6 +20,7 @@ import { SkillIndex } from '../skills/skills.ts';
 import type { LimitsUpdate } from '../usage/limits/normalize.ts';
 import type { AttachmentStore } from './attachment-store.ts';
 import { ChatSession, type ChatSendExtras } from './chat-session.ts';
+import type { ChatTitleInput } from './chat-title.ts';
 import type { ChatStore } from './chat-store.ts';
 import { DeltaCoalescer } from './delta-coalescer.ts';
 import { ChatError } from './errors.ts';
@@ -51,6 +52,8 @@ interface ChatManagerOptions {
     onLimits?: (update: LimitsUpdate) => void;
     // Where Claude Code's own name for a session is read; the other CLIs write none down.
     claudeTitles?: { forSession(agentSessionId: string): Promise<string | null> };
+    // A name for a Codex chat, asked of a one-shot CLI: its app-server names no thread on its own.
+    nameChat?: (provider: AgentKind, input: ChatTitleInput) => Promise<string | null>;
 }
 
 // Above this the record is big enough that rewriting it on every tool call costs more than it saves.
@@ -84,10 +87,12 @@ export class ChatManager {
     private readonly messages: (chatId: string) => string[];
     private readonly firstPrompt: (chatId: string) => Promise<string | null>;
     private readonly claudeTitles: ChatManagerOptions['claudeTitles'] | null;
+    private readonly nameChat: ChatManagerOptions['nameChat'] | null;
 
     constructor(options: ChatManagerOptions) {
         this.providers = options.providers;
         this.claudeTitles = options.claudeTitles ?? null;
+        this.nameChat = options.nameChat ?? null;
         this.store = options.store ?? null;
         this.checkpoints = options.checkpoints ?? null;
         this.skillIndex = options.skills ?? new SkillIndex();
@@ -161,6 +166,7 @@ export class ChatManager {
         const token = randomBytes(24).toString('base64url');
         this.tokens.set(token, payload.chatId);
         const claudeTitles = this.claudeTitles;
+        const nameChat = this.nameChat;
         const session = new ChatSession({
             info,
             items,
@@ -175,7 +181,8 @@ export class ChatManager {
             ...(this.onLimits ? { onLimits: this.onLimits } : {}),
             persist: () => this.persist(payload.chatId),
             persistSoon: () => this.persistSoon(payload.chatId),
-            ...(kind === 'claude' && claudeTitles ? { readTitle: (agentSessionId: string) => claudeTitles.forSession(agentSessionId) } : {})
+            ...(kind === 'claude' && claudeTitles ? { readTitle: (agentSessionId: string) => claudeTitles.forSession(agentSessionId) } : {}),
+            ...(kind === 'codex' && nameChat ? { nameThread: (input: ChatTitleInput) => nameChat(kind, input) } : {})
         });
         this.chats.set(session.id, session);
         // Sent before the info goes back, so the client's attach already carries it: a prompt an

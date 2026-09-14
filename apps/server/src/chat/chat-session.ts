@@ -15,6 +15,7 @@ import type { CheckpointService } from '../git/checkpoints.ts';
 import type { ChatProvider } from '../providers/provider.ts';
 import type { LimitsUpdate } from '../usage/limits/normalize.ts';
 import type { BackendEvent, BackendLaunch, ChatBackend } from './backend.ts';
+import type { ChatTitleInput } from './chat-title.ts';
 import { ChatError } from './errors.ts';
 import { ThreadProjector } from './projector.ts';
 import { ChatThread } from './thread.ts';
@@ -42,6 +43,8 @@ interface ChatSessionOptions {
     persistSoon(): void;
     // The name the CLI gave its session, where it writes one down; absent for a CLI that does not.
     readTitle?(agentSessionId: string): Promise<string | null>;
+    // A name asked of a one-shot CLI, for a CLI that names nothing itself; null when none came.
+    nameThread?(input: ChatTitleInput): Promise<string | null>;
 }
 
 // Claude Code names a session about six seconds after its first prompt, and a first turn can run for minutes.
@@ -81,6 +84,8 @@ export class ChatSession {
     // Turns we settled ourselves whose `result` is still on its way; it may not close the turn after them.
     private staleResults = 0;
     private titleTimer: ReturnType<typeof setTimeout> | null = null;
+    // A name is asked for once per chat this daemon holds; the turn count keeps it once across restarts.
+    private naming = false;
 
     constructor(options: ChatSessionOptions) {
         this.options = options;
@@ -524,6 +529,10 @@ export class ChatSession {
             this.options.onLimits?.(event.update);
             return;
         }
+        if (event.type === 'title') {
+            this.applyTitle(event.title);
+            return;
+        }
         // A request that failed after the turn already ended has nothing left to report.
         if (event.type === 'failed' && this.thread.info.activeTurnId === null) {
             return;
@@ -558,6 +567,9 @@ export class ChatSession {
         if (openTurnId !== null && activeTurnId === null) {
             this.settleCheckpoint(openTurnId);
         }
+        if (event.type === 'session' && typeof event.title === 'string') {
+            this.applyTitle(event.title);
+        }
         if (event.type === 'session' && this.thread.info.agentSessionId !== null) {
             this.refreshTitle();
             if (this.titleTimer === null && this.thread.info.suggestedTitle === undefined) {
@@ -570,6 +582,9 @@ export class ChatSession {
         // The turn is over and the CLI is still there, so whatever waited behind it can go out now.
         if (event.type === 'turn.done') {
             this.refreshTitle();
+            if (event.state === 'done') {
+                this.nameThread();
+            }
             this.drainQueue();
         }
     }
@@ -589,6 +604,49 @@ export class ChatSession {
                 }
                 this.emit([this.thread.patchInfo({ suggestedTitle: title })]);
                 this.options.persistSoon();
+            })
+            .catch(() => undefined);
+    }
+
+    private applyTitle(title: string): void {
+        if (title === this.thread.info.suggestedTitle) {
+            return;
+        }
+        this.emit([this.thread.patchInfo({ suggestedTitle: title })]);
+        this.options.persistSoon();
+    }
+
+    /*
+     * Names a chat whose CLI names nothing, after its first turn that went well: the prompt alone is
+     * often too little to name, and the start of the answer says what the conversation became. Once,
+     * and not for a thread that already has a name, as a resumed one may.
+     */
+    private nameThread(): void {
+        const name = this.options.nameThread;
+        if (!name || this.naming || this.thread.info.suggestedTitle !== undefined) {
+            return;
+        }
+        const items = this.thread.list();
+        const done = items.filter((item) => item.kind === 'turn' && item.state === 'done');
+        const prompt = items.find((item) => item.kind === 'user');
+        if (done.length !== 1 || prompt?.kind !== 'user' || prompt.text.trim() === '') {
+            return;
+        }
+        this.naming = true;
+        const turnId = done[0]!.id;
+        const answer = items
+            .map((item) => (item.kind === 'assistant' && item.turnId === turnId ? item.text : ''))
+            .filter((text) => text !== '')
+            .join('\n\n');
+        const agentSessionId = this.thread.info.agentSessionId;
+        void name({ cwd: this.thread.info.cwd, prompt: prompt.text, answer })
+            .then((title) => {
+                // A clear in between started another conversation, and a name that came meanwhile is the CLI's own.
+                if (title === null || this.thread.info.agentSessionId !== agentSessionId || this.thread.info.suggestedTitle !== undefined) {
+                    return;
+                }
+                this.applyTitle(title);
+                this.backend?.setTitle?.(title);
             })
             .catch(() => undefined);
     }

@@ -3,7 +3,8 @@
  * network. `tool: <cmd>` asks approval for a command, `edit: <path>` for a file change, `ask: <q>`
  * asks a blocking question, `async: <q>` asks through an agent message and waits for a steer,
  * `slow` waits for an interrupt, `fail` ends the turn failed, `crash` dies, `note?` answers with
- * what Ruimte put in front of the first prompt. The thread echoes the
+ * what Ruimte put in front of the first prompt. Resuming a thread whose id starts with `named-` finds
+ * it named, `thread/name/set` renames it and says so, and `name?` answers with that name. The thread echoes the
  * model and the sandbox it was started with, so a test can see what a session asked for.
  */
 import { VERBS_NOTE } from '../context/context-note.ts';
@@ -18,6 +19,7 @@ let serverRequestId = 0;
 let itemCounter = 0;
 let threadId = '';
 let threadModel = 'fake-model';
+let threadName: string | null = null;
 let threadSandbox = '';
 let threadApproval = '';
 let turnId = '';
@@ -104,6 +106,12 @@ const handleTurnStart = (params: Frame): void => {
         firstPromptNote = VERBS_NOTE;
     }
     const text = noted ? raw.slice(VERBS_NOTE.length + 2) : raw;
+    if (text === 'name?') {
+        turnStarted();
+        agentMessage(threadName ?? 'unnamed');
+        turnCompleted('completed');
+        return;
+    }
     if (text === 'note?') {
         turnStarted();
         agentMessage(firstPromptNote ?? 'nothing');
@@ -251,7 +259,8 @@ const handleRequest = (id: unknown, method: string, params: Frame): void => {
             threadModel = typeof params.model === 'string' ? params.model : 'fake-model';
             threadSandbox = typeof params.sandbox === 'string' ? params.sandbox : '';
             threadApproval = typeof params.approvalPolicy === 'string' ? params.approvalPolicy : '';
-            const thread = { id: threadId, model: threadModel, cwd: params.cwd, turns: [] };
+            threadName = threadId.startsWith('named-') ? 'Named before' : null;
+            const thread = { id: threadId, model: threadModel, cwd: params.cwd, turns: [], name: threadName };
             out({
                 id,
                 result: {
@@ -266,6 +275,11 @@ const handleRequest = (id: unknown, method: string, params: Frame): void => {
             notify('thread/started', { thread });
             return;
         }
+        case 'thread/name/set':
+            threadName = String(params.name);
+            out({ id, result: {} });
+            notify('thread/name/updated', { threadId, threadName });
+            return;
         case 'turn/start':
             out({ id, result: { turn: { id: `turn-${itemCounter + 1}`, items: [], status: 'inProgress', error: null } } });
             handleTurnStart(params);

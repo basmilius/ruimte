@@ -41,7 +41,10 @@ export type ApprovalDecision = 'allow' | 'allow-always' | 'deny';
  * a message id plus block ordinal, a native item id); the projector turns it into a thread item id.
  */
 export type BackendEvent =
-    | { type: 'session'; agentSessionId: string | null; model: string | null; slashCommands?: string[]; skills?: string[] }
+    // `title` is the name the CLI already has for the thread, as a resumed Codex thread carries it.
+    | { type: 'session'; agentSessionId: string | null; model: string | null; slashCommands?: string[]; skills?: string[]; title?: string | null }
+    // The CLI renamed its thread, for a protocol that says so.
+    | { type: 'title'; title: string }
     | { type: 'text.delta'; ref: string; text: string }
     // `parentRef` is set for text a subagent wrote: it belongs to that agent's row, not to the thread.
     | { type: 'text.done'; ref: string; text: string; parentRef?: string | null }
@@ -102,6 +105,8 @@ export interface ChatBackend {
     respondQuestion(requestId: string, answers: Record<string, string>): boolean;
     // Drops an asynchronous question without telling the CLI, for a protocol that keeps one waiting.
     dismissRequest?(requestId: string): boolean;
+    // Gives the CLI's own thread the name the chat got, for a protocol whose thread list and resume carry one.
+    setTitle?(title: string): void;
     // What this CLI would run right now, for a protocol that answers the question itself.
     listSkills?(): Promise<ChatSkill[]>;
     // Closes the input and lets the CLI leave on its own; `dispose` kills it.

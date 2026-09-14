@@ -2,6 +2,7 @@ import type { ChatFileChange, ChatQuestion } from '@ruimte/contracts';
 import { readCodexLimits } from '../usage/limits/normalize.ts';
 import type { ApprovalDecision, BackendEvent } from './backend.ts';
 import type { CodexFrame } from './codex-transport.ts';
+import { cleanTitle } from '../agents/title-file.ts';
 
 type CodexRpcId = number | string;
 
@@ -153,7 +154,8 @@ export class CodexProtocol {
             {
                 type: 'session',
                 agentSessionId: str(thread.id),
-                model: (isRecord(result) ? str(result.model) : null) ?? str(thread.model)
+                model: (isRecord(result) ? str(result.model) : null) ?? str(thread.model),
+                title: cleanTitle(thread.name)
             }
         ];
     }
@@ -176,6 +178,13 @@ export class CodexProtocol {
                     model: null
                 });
                 break;
+            case 'thread/name/updated': {
+                const title = cleanTitle(params.threadName);
+                if (title !== null) {
+                    events.push({ type: 'title', title });
+                }
+                break;
+            }
             case 'turn/started':
                 this.codexTurnId = isRecord(params.turn) ? str(params.turn.id) : null;
                 break;

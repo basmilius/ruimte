@@ -137,6 +137,14 @@ export class CodexBackend implements ChatBackend {
         this.request('thread/compact/start', { threadId: this.threadId });
     }
 
+    /* Not a turn: a name Codex refuses is not something the person has to hear about. */
+    setTitle(title: string): void {
+        if (!this.transport || this.threadId === '') {
+            return;
+        }
+        void this.transport.request('thread/name/set', { threadId: this.threadId, name: title }).catch(() => undefined);
+    }
+
     /* Codex keeps its own skill index, so the running app-server is the authority on what it will run. */
     async listSkills(): Promise<ChatSkill[]> {
         const transport = this.transport;

@@ -18,10 +18,21 @@ describe('CodexProtocol', () => {
     test('the handshake answers the thread id and model; the turn id comes from turn/started', () => {
         const protocol = new CodexProtocol(1);
         expect(protocol.threadReady({ thread: { id: 'thread-abc', model: 'gpt-6-astra' }, model: 'gpt-6-astra never danger-full-access' })).toEqual([
-            { type: 'session', agentSessionId: 'thread-abc', model: 'gpt-6-astra never danger-full-access' }
+            { type: 'session', agentSessionId: 'thread-abc', model: 'gpt-6-astra never danger-full-access', title: null }
         ]);
         protocol.handle({ method: 'turn/started', params: { ...ids, turn: { id: 'ct1', status: 'inProgress' } } });
         expect(protocol.turnId).toBe('ct1');
+    });
+
+    test('the name a thread already has comes with the handshake, and a rename after it as a title', () => {
+        const protocol = new CodexProtocol(1);
+        expect(protocol.threadReady({ thread: { id: 'thread-abc', name: ' Fix the\nbuild ' }, model: 'm' })).toEqual([
+            { type: 'session', agentSessionId: 'thread-abc', model: 'm', title: 'Fix the build' }
+        ]);
+        expect(protocol.handle({ method: 'thread/name/updated', params: { threadId: 'thread-abc', threadName: 'Renamed' } })).toEqual([
+            { type: 'title', title: 'Renamed' }
+        ]);
+        expect(protocol.handle({ method: 'thread/name/updated', params: { threadId: 'thread-abc' } })).toEqual([]);
     });
 
     test('an agent message opens on item/started, streams deltas and settles on item/completed', () => {

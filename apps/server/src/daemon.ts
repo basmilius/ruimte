@@ -7,6 +7,7 @@ import { CodexTitleReader } from './agents/codex-title.ts';
 import { AgentLineageStore } from './agents/lineage.ts';
 import { PendingPromptStore } from './agents/pending-prompts.ts';
 import { OutputGate } from './backpressure.ts';
+import { suggestChatTitle } from './chat/chat-title.ts';
 import { decideAccess, isLoopbackAddress, reachabilityOf } from './auth/access.ts';
 import { pairingUrl } from './cli/pairing.ts';
 import { AuthStore } from './auth/auth-store.ts';
@@ -145,7 +146,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         firstPrompt: (chatId) => prompts.take(chatId),
         // A turn reports what is left of its plan in passing; that belongs to the machine's numbers.
         onLimits: (update) => limits.applyLive(update),
-        claudeTitles
+        claudeTitles,
+        // One one-shot call per Codex chat, on whichever CLI here answers a single prompt.
+        nameChat: (provider, input) => suggestChatTitle(providers, provider, input)
     });
     const projects = new ProjectStore(config.home);
     // A node deleted before anyone ran it takes its prompt with it, and a node that is gone frees the count its opener is held to.
