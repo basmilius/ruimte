@@ -27,7 +27,7 @@ canvas, against Ruimte, one verdict each.
 | Dino minigame | None | Skip |
 | Kanban board (separate view, session cards in columns) | None | Skip, a decision in this file: no kanban, ever |
 | Spawn team (agents wired to their opener) | `ruimte-context team`: up to eight roles in one write, in a group, each linked back to the caller | Done |
-| Remote pairing and relay | Endpoints with pairing, tokens and origin checks | Done, relay is a seam |
+| Remote pairing and relay | Endpoints with pairing, tokens, a local secret and origin checks | Done, relay is a seam |
 
 ## Decisions that are not in the code
 
@@ -1516,6 +1516,35 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   to a rounded rectangle; and page management moves to the main process (`WebviewParking`,
   `browser/registry.ts`, the context menu, `guest-focus.ts`, favicons, the guest preload). A reflow
   zoom through `setZoomFactor` on a Ctrl-wheel was considered and not chosen.
+
+### Loopback is no proof
+
+- The source address never grants access, on any host. Behind a tunnel, a reverse proxy or a port
+  forward every visitor arrives from `127.0.0.1`, so "loopback means the person at the keyboard"
+  was a hole the moment anything stood in front of the daemon, and `/auth/pairing-token` handed
+  such a visitor a pairing link of its own. What proves a process runs on this machine under this
+  account now is that it can read `$RUIMTE_HOME/local.key`: 32 random bytes the daemon writes on
+  its first start with `0600` in a home of `0700`, kept across restarts. It belongs to a home and
+  not to a machine, because the dev daemon on 4211 has a home of its own.
+- The secret is a third credential beside a ticket and a session token, in the same places
+  (`?token=` or a bearer), compared in constant time over a SHA-256 of both sides so a length
+  difference ends nothing early. A client on it has `sessionId: null`, and `mayInvite`
+  (`auth/access.ts`) is the one rule for minting a pairing link: the HTTP route runs `decideAccess`
+  and then that rule, `auth.pairingToken` asks the same function. A paired client cannot mint one,
+  loopback or not, or one pairing would be enough to hand out access forever.
+- No `--exposed` flag, and `--require-token` is gone. The first plan kept the old rule for a daemon
+  that only listens on loopback and wanted a flag for a proxy in front of it, which nothing in the
+  configuration can see and which a person forgets to set. Requiring a credential everywhere is
+  simpler, and it costs only clients that can read the file (the desktop app, `ruimte pair`, the
+  scripts) or can pair. Pre 1.0, so breaking the flag was fine.
+- The desktop app gets the secret over the bridge (`localSecret`, read from the home on every
+  connection attempt), not by handing one to the daemon it spawns: once the daemon runs as a
+  background service the shell no longer starts it. Reading on every attempt is also what lets
+  `bun dev` start the window before the daemon has written the file. The IPC handler answers only
+  the main window's page; a guest page has no `ipcRenderer` to begin with.
+- A browser tab on the same machine without the shell pairs like any other client. A page cannot
+  read a file, and the browser version is meant to be self-hosted later, where pairing is the rule
+  anyway. Its "This machine" row stays unreachable; the row the pairing adds is how it gets in.
 
 ### Skipped on purpose
 

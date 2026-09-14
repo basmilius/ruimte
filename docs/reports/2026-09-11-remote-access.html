@@ -194,24 +194,25 @@ pre { line-height: 1.5; }
 <body>
 <a class="skip" href="#samenvatting">Naar de samenvatting</a>
 <header>
-  <p class="eyebrow">Ruimte / Ontwerp / 11 september 2026, de route is gekozen</p>
+  <p class="eyebrow">Ruimte / Ontwerp / 11 september 2026, bijgewerkt op 14 september 2026</p>
   <h1>Pulsar: een adresboek, een broker, en verder niemand ertussen</h1>
-  <p class="intro">Ruimte krijgt remote access zonder dat iemand een tunnel opzet of een domein koopt. De dienst heet Pulsar. Een klein adresboek op Cloudflare weet welke machines bij je horen, een broker op een goedkope VPS brengt twee kanten bij elkaar, en daarna praten client en daemon rechtstreeks via WebRTC. Het verkeer gaat door niemands server, de versleuteling zit gratis in het protocol, en de kosten staan vast op een tientje per maand. Dit rapport legt uit waarom deze vorm het wint van een tunnel per machine en van een eigen relay, met de metingen erbij.</p>
-  <p class="status">Route gekozen, nog niets gebouwd</p>
-  <p class="caption">Geschreven op 11 september 2026 tegen de stand van Ruimte op <code>4c5d417</code>. De metingen in dit rapport zijn op 11 september 2026 zelf gedraaid op Bun 1.4.0, macOS arm64; de commando's staan erbij zodat je ze kunt herhalen. Platformlimieten en prijzen zijn dezelfde dag bij de leveranciers opgehaald, met de links onderaan.</p>
+  <p class="intro">Ruimte krijgt remote access zonder dat iemand een tunnel opzet of een domein koopt. De dienst heet Pulsar. Een klein adresboek op Cloudflare weet welke machines bij je horen, een broker op een goedkope VPS brengt twee kanten bij elkaar, en daarna praten client en daemon rechtstreeks via WebRTC. Het verkeer gaat door niemands server, de versleuteling zit gratis in het protocol, en de kosten staan vast op een tientje per maand. Dit rapport beschrijft die route, wat er al van staat, en wat er in welke volgorde nog moet.</p>
+  <p class="status">Route gekozen, het lek staat nog open, van de fases is niets gebouwd</p>
+  <p class="caption">Geschreven op 11 september 2026 tegen de stand van Ruimte op <code>4c5d417</code>, en op 14 september 2026 herschreven rond de gekozen route en nagelopen tegen <code>4e96370</code>: elke verwijzing naar een bestand of een regel is die van 14 september. De metingen zijn op 11 september 2026 gedraaid op Bun 1.4.0, macOS arm64, en niet herhaald. Platformlimieten en prijzen zijn op 11 september bij de leveranciers opgehaald, met de links onderaan.</p>
   <nav aria-label="Inhoud">
     <a href="#samenvatting">Samenvatting</a>
-    <a href="#vorm">De vorm</a>
-    <a href="#hebben">Wat er al staat</a>
-    <a href="#lek">Het lek</a>
-    <a href="#metingen">De metingen</a>
+    <a href="#vorm">De route</a>
     <a href="#adresboek">Het adresboek</a>
     <a href="#broker">De broker</a>
-    <a href="#niet">Wat we niet doen</a>
+    <a href="#kanaal">De directe verbinding</a>
+    <a href="#veiligheid">Veiligheid</a>
+    <a href="#hebben">Wat er al staat</a>
+    <a href="#stand">Stand op 14 september</a>
     <a href="#plan">Het plan</a>
     <a href="#prompt">De startprompt</a>
     <a href="#opzetten">Wat je opzet</a>
     <a href="#vragen">Open vragen</a>
+    <a href="#niet">Wat we niet doen</a>
     <a href="#bronnen">Bronnen</a>
   </nav>
 </header>
@@ -226,13 +227,13 @@ pre { line-height: 1.5; }
     <p><strong>3,5 KB</strong><span>geheugen per open verbinding op de broker, gemeten</span></p>
   </div>
 
-  <h3>De naam</h3>
-  <p>De dienst heet <strong>Pulsar</strong>. Een pulsar is een neutronenster die met metronomische regelmaat een signaal uitzendt, en NASA onderzoekt ze serieus als navigatiebaken voor diepe ruimte: een vaartuig leest aan hun pulsen af waar het is. Je machines pulsen, Pulsar weet waar ze staan. Wat een gebruiker ziet is &eacute;&eacute;n ding ("inloggen bij Pulsar"); intern zijn het twee losse helften die niets van elkaar weten, en dat is precies wat later uitbreiden goedkoop houdt. Kanttekening voor de volledigheid: Apache Pulsar bestaat ook, een messaging-systeem uit ongeveer dezelfde hoek. Verwarring is onwaarschijnlijk zolang het onder <code>ruimte.app</code> hangt.</p>
-
-  <h3>De vorm in drie zinnen</h3>
+  <h3>De route in drie zinnen</h3>
   <p>Het <strong>adresboek</strong> op Cloudflare Workers met D1 weet welke machines bij welk account horen, en levert per machine een naam, een publieke sleutel en of hij online is. De <strong>broker</strong> op een VPS houdt per machine een WebSocket open en geeft signaling door, zodat twee kanten elkaar vinden. Daarna praten client en daemon <strong>rechtstreeks over WebRTC</strong>, versleuteld door DTLS, buiten beide diensten om.</p>
 
-  <h3>Waarom deze vorm</h3>
+  <h3>De naam</h3>
+  <p>De dienst heet <strong>Pulsar</strong>. Een pulsar is een neutronenster die met metronomische regelmaat een signaal uitzendt, en NASA onderzoekt ze als navigatiebaken voor diepe ruimte. Je machines pulsen, Pulsar weet waar ze staan. Wat een gebruiker ziet is &eacute;&eacute;n ding ("inloggen bij Pulsar"); intern zijn het twee losse helften die niets van elkaar weten. Apache Pulsar bestaat ook, een messaging-systeem; verwarring is onwaarschijnlijk zolang het onder <code>ruimte.app</code> hangt.</p>
+
+  <h3>Waarom deze route</h3>
   <ul>
     <li><strong>Vaste kosten.</strong> De VPS is een tientje per maand en beweegt niet met het gebruik. Het adresboek past ruim binnen het Workers-abonnement dat er al is.</li>
     <li><strong>Niemand in het datapad.</strong> Bij een tunnel zit Cloudflare ertussen, bij een relay zit jij ertussen. Bij WebRTC niemand, op de verbindingen na die niet door hun NAT komen.</li>
@@ -243,13 +244,14 @@ pre { line-height: 1.5; }
   </ul>
 
   <div class="note">
-    <p><strong>Er zit een gat in de daemon dat eerst dicht moet.</strong> Zodra er iets v&oacute;&oacute;r de daemon staat dat naar <code>127.0.0.1</code> verbindt, ziet hij elke bezoeker als loopback. Dan laat <code>decideAccess</code> een socket zonder ticket toe, en <code>/auth/pairing-token</code> laat een vreemde een koppellink minten. Vandaag is er niets aan de hand, want er staat niets voor de daemon. Het moet af v&oacute;&oacute;rdat dat verandert; het staat uitgewerkt onder <a href="#lek">Het lek</a>.</p>
+    <p><strong>Er zit een gat in de daemon dat eerst dicht moet, en het staat op 14 september nog open.</strong> Zodra er iets v&oacute;&oacute;r de daemon staat dat naar <code>127.0.0.1</code> verbindt, ziet hij elke bezoeker als loopback. Dan laat <code>decideAccess</code> een socket zonder ticket toe, en <code>/auth/pairing-token</code> laat een vreemde een koppellink minten. Vandaag is er niets aan de hand, want er staat niets voor de daemon. Het moet af v&oacute;&oacute;rdat dat verandert; het staat uitgewerkt onder <a href="#lek">Het lek</a>, en wat er sinds 11 september wel en niet veranderde onder <a href="#stand">Stand op 14 september</a>.</p>
   </div>
 </section>
+
 <section id="vorm">
-  <h2>De vorm</h2>
+  <h2>De route</h2>
   <figure>
-    <div class="table" role="region" aria-label="Diagram van de vorm, horizontaal scrollbaar" tabindex="0">
+    <div class="table" role="region" aria-label="Diagram van de route, horizontaal scrollbaar" tabindex="0">
       <svg class="diagram plot" width="880" viewBox="0 0 880 400" role="img" aria-labelledby="vorm-title vorm-desc">
         <title id="vorm-title">Adresboek, broker en directe verbinding</title>
         <desc id="vorm-desc">De client vraagt het adresboek welke machines bij het account horen en krijgt namen en publieke sleutels terug. De daemon houdt een WebSocket naar de broker open. De client vraagt de broker om signaling naar een sleutel, de broker geeft het door, en daarna praten client en daemon rechtstreeks met elkaar zonder dat een van beide diensten ertussen zit.</desc>
@@ -314,96 +316,7 @@ pre { line-height: 1.5; }
     <li>In de client op die machine inloggen met GitHub, Apple of Google. De client staat op loopback en is dus al binnen; hij registreert de machine in je adresboek.</li>
     <li>Op elk volgend apparaat: inloggen. Je machines staan er, en je kunt er meteen bij.</li>
   </ol>
-  <p>Dat is alles. De enige handeling ooit is stap 2, en die doe je op de machine waar je toch al zit.</p>
-</section>
-
-<section id="hebben">
-  <h2>Wat er al staat</h2>
-  <p>Het zware deel is af, en dat bepaalt hoe klein dit plan kan zijn. Ruimte heeft sinds deze week alles wat een remote verbinding veilig maakt; wat ontbreekt is een manier om elkaar te vinden.</p>
-  <div class="table">
-    <table class="wide">
-      <caption>De bouwstenen, op <code>4c5d417</code></caption>
-      <thead><tr><th>Onderdeel</th><th>Waar</th><th>Wat het doet</th></tr></thead>
-      <tbody>
-        <tr><td>Daemon-identiteit</td><td><code>apps/server/src/endpoint-id.ts</code></td><td>Een id en een ed25519-sleutelpaar in <code>$RUIMTE_HOME/endpoint.json</code>, bestand tegen herstarts en adreswissels. Dit is de sleutel waarop de broker straks routeert.</td></tr>
-        <tr><td>Handshake</td><td><code>auth/handshake.ts</code></td><td>De daemon geeft een nonce en tekent hem zelf, de client tekent terug. Beide berichten bevatten het daemon-id. Resultaat is een ticket dat per verbinding roteert.</td></tr>
-        <tr><td>Client-sleutel</td><td><code>apps/client/src/endpoint/client-key.ts</code></td><td>Een niet-exporteerbare <code>CryptoKey</code> in IndexedDB. De browser kan de private helft aan niemand geven, ook niet aan zichzelf.</td></tr>
-        <tr><td>Pinning</td><td><code>apps/client/src/endpoint/identity.ts</code></td><td>Een adres dat als een andere machine antwoordt geeft een fout. Daarom kan het adresboek onbetrouwbaar zijn zonder dat het gevaarlijk wordt.</td></tr>
-        <tr><td>&Eacute;&eacute;n rij per machine</td><td><code>b9a37c4</code>, <code>state/endpoints.ts</code></td><td>Een daemon is &eacute;&eacute;n rij, welk adres hij ook antwoordt. Precies wat een adresboek nodig heeft.</td></tr>
-        <tr><td>Naam en icoon</td><td><code>7a4e36f</code>, <code>endpoint.json</code></td><td>Een machine heeft een naam en een icoon die elke gekoppelde client ziet. Dat is wat er in de lijst komt te staan.</td></tr>
-        <tr><td>De naad</td><td><code>auth/relay.ts</code></td><td>Een <code>Relay</code>-interface met een <code>NoRelay</code> die niets doet. De plek waar de broker-verbinding komt.</td></tr>
-        <tr><td>Transport als interface</td><td><code>apps/client/src/transport/</code></td><td>De client praat met de daemon door &eacute;&eacute;n interface heen. WebRTC wordt een tweede implementatie, geen verbouwing.</td></tr>
-      </tbody>
-    </table>
-  </div>
-</section>
-<section id="lek">
-  <h2>Het lek dat eerst dicht moet</h2>
-  <p>Dit is de belangrijkste bevinding over Ruimte zelf, en hij geldt ongeacht welke route je kiest. Alles wat je v&oacute;&oacute;r de daemon zet (een tunnel, een reverse proxy, een port forward) verbindt naar <code>http://127.0.0.1:4210</code>. Het adres dat <code>server.requestIP()</code> teruggeeft is dan loopback, wie er ook aan de andere kant zit.</p>
-  <div class="split">
-    <div class="panel">
-      <h3>De socket staat open</h3>
-      <p><code>apps/server/src/auth/access.ts</code>:</p>
-      <pre><code>if (reachability === 'loopback' &amp;&amp; !options.requireToken) {
-    return { ok: true, access: { reachability, sessionId: null } };
-}</code></pre>
-      <p>Een WebSocket zonder ticket, en daarmee elke terminal en elk bestand dat de daemon kan lezen.</p>
-      <p><span class="badge warning">te dichten met</span> <code>--require-token</code></p>
-    </div>
-    <div class="panel">
-      <h3>Iedereen kan zichzelf koppelen</h3>
-      <p><code>apps/server/src/daemon.ts</code>, de route die een koppellink munt:</p>
-      <pre><code>if (request.method !== 'POST' || !isLoopbackAddress(remote)) {
-    return new Response('Forbidden', { status: 403 });
-}</code></pre>
-      <p>Deze kijkt niet naar <code>requireToken</code>. Een vreemde haalt een verse koppel-URL op, wisselt hem in, en is binnen met een eigen sleutelpaar.</p>
-      <p><span class="badge danger">niet te dichten met</span> <code>--require-token</code></p>
-    </div>
-  </div>
-  <h3>De oplossing: een bestand in plaats van een bronadres</h3>
-  <p>De aanname "loopback betekent dat de persoon achter de toetsen dit doet" klopt niet meer zodra er iets voor de daemon staat. Vervang hem door een aanname die wel klopt: wie <code>$RUIMTE_HOME/local.key</code> kan lezen, zit op die machine onder dat account. De home staat al op <code>0o700</code>, <code>endpoint.json</code> op <code>0o600</code>, en <code>writeAtomic</code> bestaat: het patroon is er.</p>
-  <ol>
-    <li>Munt bij het opstarten een lokaal geheim naast het sleutelpaar, met dezelfde rechten.</li>
-    <li><code>ruimte pair</code> leest dat bestand en stuurt het mee naar <code>/auth/pairing-token</code>.</li>
-    <li>De route eist het geheim zodra de daemon weet dat hij niet alleen op loopback bereikbaar is, en blijft anders op de oude controle staan zodat er niets breekt voor wie alleen lokaal werkt.</li>
-    <li>Dat weten komt uit de configuratie, nooit uit een header. Een doorgestuurde <code>Host</code>- of <code>Forwarded</code>-header is door iedereen voor de proxy in te vullen en bewijst dus niets.</li>
-  </ol>
-  <p>Met WebRTC is dit gat overigens kleiner dan bij een tunnel, want er komt geen HTTP-verkeer van buiten op de loopback-poort binnen. Het moet toch dicht: de modus met een eigen domein bestaat gewoon naast de broker, en die zet w&eacute;l iets voor de daemon.</p>
-</section>
-<section id="metingen">
-  <h2>De metingen</h2>
-  <p>Twee dingen in dit plan waren onbekend genoeg om niet op documentatie te vertrouwen: of WebRTC &uuml;berhaupt in een Bun-daemon past, en hoeveel open verbindingen er op een kleine VPS gaan. Allebei zijn ze gedraaid.</p>
-
-  <h3>WebRTC onder Bun</h3>
-  <p><a href="https://github.com/shinyoshiaki/werift-webrtc">werift</a> is een volledige WebRTC-implementatie in TypeScript (ICE, DTLS, SCTP, DataChannels) zonder native module. Dat laatste is doorslaggevend: het alternatief, <code>node-datachannel</code>, is een N-API-binding naar libdatachannel en heeft onder Bun een gerapporteerd probleem met UDP, wat voor WebRTC precies het verkeerde deel is om kapot te hebben.</p>
-  <pre><code>open na 192 ms, ice connected
-klein: 600 x 256 B in 296 ms = 2027 ber/s, 0.49 MB/s
-groot:  60 x 64 KB in 427 ms =  141 ber/s, 8.78 MB/s</code></pre>
-  <p>Ruimte bundelt terminaloutput per animatieframe, dus &eacute;&eacute;n sessie kost ongeveer zestig berichten per seconde. Tweeduizend per seconde ligt daar ruim boven, en dat is gemeten met beide kanten in hetzelfde Bun-proces op &eacute;&eacute;n kern. In de praktijk is de tegenpartij een browser met native WebRTC, dus het wordt eerder beter dan slechter. De 8,8 MB/s voor grote blokken is genoeg voor een schermdump bij attach of een afbeelding.</p>
-  <p>Voordat dit kon draaien moest &eacute;&eacute;n ding vaststaan: Bun 1.4 doet <code>node:dgram</code>, waar ICE op leunt. Dat is apart gecontroleerd.</p>
-  <details open>
-    <summary>Hoe dit gemeten is</summary>
-    <p>Twee <code>RTCPeerConnection</code>s in &eacute;&eacute;n Bun-proces, SDP handmatig uitgewisseld (wat de broker straks doet), daarna een DataChannel met een vaste payload in een strakke lus. De ontvangende kant telt tot het verwachte aantal en dan stopt de klok. Geen logging in de meetlus, want in een eerdere poging domineerde <code>console.log</code> de meting volledig en leek de doorvoer tien keer lager.</p>
-    <p><strong>Wat dit niet bewijst:</strong> dit was loopback met host-candidates. Echte NAT-traversal, STUN- en TURN-integratie, gedrag over uren en gedrag op Linux en Windows zijn niet getest. De vraag die het beantwoordt is smal: past een WebRTC-stack in een Bun-daemon zonder native module, en is hij snel genoeg. Ja en ja.</p>
-  </details>
-
-  <h3>Open verbindingen op de broker</h3>
-  <p>Elke machine die online is houdt &eacute;&eacute;n WebSocket naar de broker open. Dat is de maat die telt, niet het aantal verbindingen dat per dag wordt opgezet.</p>
-  <pre><code>5000 verbindingen open in 123 ms, server rss 30 MB
-per verbinding: 6.1 KB (3,5 KB marginaal boven de 13 MB basis)</code></pre>
-  <p>Een poging met 15.000 liep stuk, maar op de testmachine: de client raakte door zijn ephemeral ports heen. Dat zegt niets over wat een server aankan.</p>
-  <div class="table">
-    <table>
-      <caption>Wat 3,5 KB per verbinding betekent op een VPS van &euro;10 (1 vCPU, 2 GB)</caption>
-      <thead><tr><th>&nbsp;</th><th style="text-align:right">Aantal</th></tr></thead>
-      <tbody>
-        <tr><td>Theoretisch in 1,5 GB bruikbaar geheugen</td><td style="text-align:right">ruim 400.000</td></tr>
-        <tr><td>Realistisch, na file descriptors en pieken</td><td style="text-align:right">tienduizenden</td></tr>
-        <tr><td>Verkeer voor signaling, bij honderdduizenden verbindingen per maand</td><td style="text-align:right">enkele GB</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p>Geheugen is dus niet de grens, en verkeer al helemaal niet. De grens is die ene vCPU bij pieken, en die wordt pas interessant bij duizenden verbindingsopzetten per seconde. Een SDP doorgeven is wat JSON parsen en op een socket schrijven.</p>
+  <p>Dat is alles. De enige handeling ooit is stap 2, en die doe je op de machine waar je toch al zit. Wie het zelf wil regelen houdt de twee andere manieren, een eigen domein met een tunnel of reverse proxy ervoor, of IP en poort op het eigen netwerk. Dezelfde daemon, dezelfde handshake, alleen een ander adres.</p>
 </section>
 
 <section id="adresboek">
@@ -414,7 +327,7 @@ per verbinding: 6.1 KB (3,5 KB marginaal boven de 13 MB basis)</code></pre>
   <pre><code>account   id, provider ('github' | 'apple' | 'google'), subject, aangemaakt
 machine   id, accountId, naam, icoon, publicKey, laatstGezien
 apparaat  id, accountId, label, publicKey, laatstGezien</code></pre>
-  <p>Drie tabellen. <code>machine.id</code> en <code>machine.publicKey</code> zijn wat de daemon al in <code>endpoint.json</code> heeft staan; het adresboek verzint geen nieuwe identiteit, het schrijft de bestaande op.</p>
+  <p>Drie tabellen. <code>machine.id</code> en <code>machine.publicKey</code> zijn wat de daemon al in <code>endpoint.json</code> heeft staan; het adresboek verzint geen nieuwe identiteit, het schrijft de bestaande op. De naam en het icoon reizen sinds 11 september al mee in <code>endpoint.info</code>, dus ook die komen uit de daemon.</p>
 
   <h3>De routes</h3>
   <div class="table">
@@ -439,20 +352,9 @@ apparaat  id, accountId, label, publicKey, laatstGezien</code></pre>
     <li>De daemon verifieert de handtekening tegen de gepinde sleutel, controleert dat de machine-id de zijne is en dat de nonce vers is, en registreert de clientsleutel als gekoppeld.</li>
     <li>Vanaf dat moment is het een gewone gekoppelde client, met dezelfde handshake en dezelfde tickets als een die met een link binnenkwam.</li>
   </ol>
-  <p>De nonce wordt verbrand en de geldigheid is kort, zodat een onderschepte verklaring niets waard is. De machine-id zit in het getekende bericht, dus een verklaring voor de ene machine opent de andere niet.</p>
-
-  <h3>Wat dit kost, eerlijk opgeschreven</h3>
-  <p>Elke dienst die inloggen omzet in toegang maakt deze ruil, en het is goed om hem hardop te zeggen in plaats van hem in een protocol te verstoppen.</p>
-  <ul>
-    <li><strong>Een overgenomen GitHub-account is een overgenomen werkplek.</strong> Wie bij je account komt, komt bij je machines. Tweefactor bij de provider is daarmee geen detail maar de eigenlijke deur, en dat hoort in de onboarding te staan.</li>
-    <li><strong>Het adresboek kan zichzelf toegang geven</strong>, want het bezit de tekensleutel. Dat is niet te voorkomen zolang die sleutel bestaat. Wat wel kan, is het zichtbaar maken.</li>
-  </ul>
-  <p>Twee dingen die daar weinig voor kosten en er vanaf het begin in horen:</p>
-  <ul>
-    <li><strong>Zichtbaarheid.</strong> De daemon noteert elke koppeling die via een verklaring binnenkomt, met tijd en apparaat, en de client toont dat in de lijst met apparaten die toegang hebben. Intrekken werkt onmiddellijk, want <code>Handshake.revoke</code> haalt elk ticket van die sessie weg.</li>
-    <li><strong>Een uitweg.</strong> Een machine kan verklaringen weigeren, met een vlag of een instelling. Dan is handmatig koppelen de enige weg naar binnen, voor wie &eacute;&eacute;n machine heeft waar dit niet op moet.</li>
-  </ul>
+  <p>De nonce wordt verbrand en de geldigheid is kort, zodat een onderschepte verklaring niets waard is. De machine-id zit in het getekende bericht, dus een verklaring voor de ene machine opent de andere niet. Wat deze ruil kost en hoe je dat zichtbaar houdt staat onder <a href="#veiligheid">Veiligheid</a>.</p>
 </section>
+
 <section id="broker">
   <h2>De broker</h2>
   <p>Een Bun-proces op een VPS. Hij houdt per machine een WebSocket open en geeft signaling door. Er zit geen database in en hij weet niets van accounts.</p>
@@ -464,110 +366,216 @@ apparaat  id, accountId, label, publicKey, laatstGezien</code></pre>
     <li>Een client vraagt om een bericht te bezorgen bij een sleutel. De broker zoekt de socket op en schrijft het door. Wie het bericht kan lezen is de daemon, want de inhoud is een SDP-aanbod dat alleen zin heeft voor wie de bijbehorende private sleutel heeft.</li>
     <li>Het antwoord gaat dezelfde weg terug, en daarna is de broker klaar met deze verbinding.</li>
   </ol>
-  <p>De signaling gaat in &eacute;&eacute;n keer, dus wachten tot ICE klaar is en dan &eacute;&eacute;n SDP versturen, niet elk kandidaat los. Dat kost een paar honderd milliseconde extra bij het opzetten en scheelt een factor vijf in berichten. Op een VPS met vaste prijs maakt dat niets uit, maar het houdt de deur open om de broker ooit ergens anders te draaien waar wel per bericht wordt gerekend.</p>
+  <p>De signaling gaat in &eacute;&eacute;n keer: wachten tot ICE klaar is en dan &eacute;&eacute;n SDP versturen, niet elke kandidaat los. Dat kost een paar honderd milliseconde extra bij het opzetten en scheelt een factor vijf in berichten, wat de deur openhoudt om de broker ooit ergens te draaien waar per bericht wordt gerekend.</p>
 
-  <h3>Waarom een VPS en niet Cloudflare</h3>
-  <div class="split">
-    <div class="panel">
-      <h3>Voor de VPS</h3>
-      <ul>
-        <li><strong>Vaste prijs.</strong> Een tientje, en dat beweegt niet mee met succes. Cloudflare heeft geen harde uitgavenlimiet, alleen een CPU-cap per aanroep.</li>
-        <li><strong>Dezelfde runtime.</strong> Bun op Linux, net als de daemon. Je deelt <code>packages/contracts</code>, je test met <code>bun test</code>, en er is geen tweede programmeermodel met eigen eigenaardigheden.</li>
-        <li><strong>Geen lock-in.</strong> Een Durable Object bestaat alleen bij Cloudflare. Deze broker verhuist in een middag naar elke andere VPS.</li>
-      </ul>
-    </div>
-    <div class="panel">
-      <h3>Tegen de VPS</h3>
-      <ul>
-        <li><strong>Jij beheert hem.</strong> Updates, certificaten, in de gaten houden dat hij draait. Voor &eacute;&eacute;n klein proces met Caddy ervoor is dat weinig, maar het is niet nul.</li>
-        <li><strong>E&eacute;n locatie.</strong> Voor signaling maakt dat niets uit, het zijn twee berichten. Voor een eventuele TURN-fallback wel.</li>
-        <li><strong>E&eacute;n punt van falen.</strong> Al is dat hier minder erg dan het klinkt.</li>
-      </ul>
-    </div>
-  </div>
-  <p>Dat laatste verdient de nadruk, want het is het voordeel van deze architectuur dat het makkelijkst over het hoofd wordt gezien. <strong>Bestaande verbindingen lopen niet over de broker.</strong> Valt hij om, dan blijft iedereen die verbonden is gewoon doorwerken en kunnen alleen nieuwe verbindingen niet worden gelegd. Bij een relay in het datapad is een storing het verschil tussen werken en niet werken; hier is het een ongemak van een paar minuten.</p>
+  <h3>Waarom een VPS</h3>
+  <p>Vaste prijs (een tientje, en dat beweegt niet mee met succes), dezelfde runtime als de daemon (Bun op Linux, <code>packages/contracts</code> gedeeld, <code>bun test</code>), en geen lock-in: deze broker verhuist in een middag naar elke andere VPS, waar een Durable Object alleen bij Cloudflare bestaat. De prijs ervan is dat jij hem beheert (updates, een certificaat via Caddy, kijken of hij draait) en dat hij op &eacute;&eacute;n plek staat. Dat laatste is minder erg dan het klinkt: <strong>bestaande verbindingen lopen niet over de broker.</strong> Valt hij om, dan werkt iedereen die verbonden is door en kunnen alleen nieuwe verbindingen even niet worden gelegd.</p>
+
+  <h3>Gemeten: open verbindingen</h3>
+  <p>Elke machine die online is houdt &eacute;&eacute;n WebSocket naar de broker open. Dat is de maat die telt, niet het aantal verbindingen dat per dag wordt opgezet.</p>
+  <pre><code>5000 verbindingen open in 123 ms, server rss 30 MB
+per verbinding: 6.1 KB (3,5 KB marginaal boven de 13 MB basis)</code></pre>
+  <p>Op een VPS van &euro;10 (1 vCPU, 2 GB) is dat theoretisch ruim 400.000 verbindingen in 1,5 GB, realistisch tienduizenden na file descriptors en pieken, en het signaling-verkeer blijft bij honderdduizenden verbindingen per maand onder enkele GB. Geheugen is niet de grens; die ene vCPU wordt pas interessant bij duizenden verbindingsopzetten per seconde. Een poging met 15.000 liep stuk op de testmachine zelf (ephemeral ports op), niet op de server.</p>
 
   <h3>De verbindingen die niet doorkomen</h3>
-  <p>Hole punching lukt niet altijd. Tailscale, die dit al jaren op schaal doet, publiceert percentages ruim boven de negentig. De rest zit achter een NAT die geen directe verbinding toelaat, en heeft een TURN-server nodig, en dat is w&eacute;l een relay met bandbreedtekosten.</p>
-  <p><strong>Het voorstel is om TURN niet aan te bieden</strong>, tenminste niet in het begin. Lukt het niet, dan zegt Ruimte dat eerlijk en wijst het naar de twee andere manieren: je eigen domein of gewoon het LAN. Dan is de dienst gratis bij elke vorm van gebruik. Merk je dat het vaak voorkomt, dan zet je coturn op dezelfde VPS: bij een handvol mensen dat tegelijk relayt merkt die machine daar niets van.</p>
-  <p>STUN heb je wel nodig, maar dat is &eacute;&eacute;n pakketje zonder relay. Cloudflare en Google hebben allebei een publieke server, en je eigen draaien kost bijna niets.</p>
+  <p>Hole punching lukt niet altijd. Tailscale, die dit al jaren op schaal doet, publiceert percentages ruim boven de negentig. De rest zit achter een NAT die geen directe verbinding toelaat en heeft een TURN-server nodig, en dat is w&eacute;l een relay met bandbreedtekosten. <strong>Het voorstel is om TURN niet aan te bieden</strong>, tenminste niet in het begin. Lukt het niet, dan zegt Ruimte dat eerlijk en wijst het naar het eigen domein of het LAN. Blijkt het vaak voor te komen, dan zet je coturn op dezelfde VPS. STUN heb je wel nodig, maar dat is &eacute;&eacute;n pakketje zonder relay; Cloudflare en Google hebben allebei een publieke server.</p>
 </section>
-<section id="niet">
-  <h2>Wat we niet doen, en waarom</h2>
-  <p>Vier routes zijn onderweg afgevallen. Ze staan hier met de reden, zodat een volgende lezer niet dezelfde ronde hoeft te maken.</p>
+
+<section id="kanaal">
+  <h2>De directe verbinding</h2>
+  <p>Na de signaling praten client en daemon over een WebRTC DataChannel. In de browser is dat native; in de daemon is het <a href="https://github.com/shinyoshiaki/werift-webrtc">werift</a>, een volledige WebRTC-implementatie in TypeScript (ICE, DTLS, SCTP, DataChannels) zonder native module. Dat laatste is doorslaggevend: het alternatief, <code>node-datachannel</code>, is een N-API-binding naar libdatachannel en heeft onder Bun een gerapporteerd probleem met UDP, voor WebRTC precies het verkeerde deel om kapot te hebben. Bun 1.4 doet <code>node:dgram</code>, waar ICE op leunt; dat is apart gecontroleerd.</p>
+
+  <h3>Gemeten: werift onder Bun</h3>
+  <pre><code>open na 192 ms, ice connected
+klein: 600 x 256 B in 296 ms = 2027 ber/s, 0.49 MB/s
+groot:  60 x 64 KB in 427 ms =  141 ber/s, 8.78 MB/s</code></pre>
+  <p>Ruimte bundelt terminaloutput per animatieframe, dus &eacute;&eacute;n sessie kost ongeveer zestig berichten per seconde; tweeduizend ligt daar ruim boven, gemeten met beide kanten in hetzelfde Bun-proces op &eacute;&eacute;n kern. De 8,8 MB/s voor grote blokken is genoeg voor een schermdump bij attach of een afbeelding. Gemeten met twee <code>RTCPeerConnection</code>s in &eacute;&eacute;n proces, SDP handmatig uitgewisseld, een vaste payload in een strakke lus en geen logging in de meetlus. <strong>Wat dit niet bewijst:</strong> dit was loopback met host-candidates. Echte NAT-traversal, STUN, uren achter elkaar en Linux en Windows zijn niet getest; dat is de middag uit de noot onder <a href="#prompt">de startprompt</a>.</p>
+
+  <h3>Wat over het kanaal moet dat nu over HTTP gaat</h3>
+  <p>De wire van Ruimte is &eacute;&eacute;n WebSocket met JSON-frames en past zo op een DataChannel. Vier dingen lopen vandaag naast die socket over HTTP en moeten mee. De bytes van een attachment, een projecticoon en een afbeelding uit een bestand worden door een <code>&lt;img&gt;</code> opgehaald met het ticket in de URL (<code>chat/attachments.ts:82-90</code>, <code>project/icon-url.ts:12-19</code>, <code>shell/panels/file-url.ts:13-21</code>); over een kanaal worden dat een request dat bytes antwoordt en een blob-URL in de client. En de handshake zelf (<code>/auth/challenge</code>, <code>/auth/ticket</code> in <code>endpoint/handshake.ts:52-66</code>) wordt de eerste berichten op het kanaal. Uploads gaan al over de socket. Dit is fase 3 van <a href="#plan">het plan</a>.</p>
+</section>
+
+<section id="veiligheid">
+  <h2>Veiligheid</h2>
+  <h3>Wat de daemon al afdwingt</h3>
+  <p>Beide kanten hebben een ed25519-sleutelpaar: de daemon in <code>$RUIMTE_HOME/endpoint.json</code>, de client als niet-exporteerbare <code>CryptoKey</code> in IndexedDB. Bij elke verbinding geeft de daemon een nonce en tekent hem zelf, de client tekent terug, en het resultaat is een ticket van twaalf uur dat per verbinding roteert. De client pint de publieke sleutel van de daemon bij de eerste vertrouwde verbinding en weigert daarna een adres dat als een andere machine antwoordt. Daarom mag het adresboek onbetrouwbaar zijn zonder dat het gevaarlijk wordt: het kan hooguit een verkeerd adres noemen, en dat valt door de mand.</p>
+
+  <h3>Wat inloggen kost, eerlijk opgeschreven</h3>
+  <p>Elke dienst die inloggen omzet in toegang maakt deze ruil, en het is goed om hem hardop te zeggen in plaats van hem in een protocol te verstoppen.</p>
+  <ul>
+    <li><strong>Een overgenomen GitHub-account is een overgenomen werkplek.</strong> Wie bij je account komt, komt bij je machines. Tweefactor bij de provider is daarmee de eigenlijke deur, en dat hoort in de onboarding te staan.</li>
+    <li><strong>Het adresboek kan zichzelf toegang geven</strong>, want het bezit de tekensleutel. Dat is niet te voorkomen zolang die sleutel bestaat. Wat wel kan, is het zichtbaar maken.</li>
+  </ul>
+  <p>Twee dingen die daar weinig voor kosten en er vanaf het begin in horen:</p>
+  <ul>
+    <li><strong>Zichtbaarheid.</strong> De daemon noteert elke koppeling die via een verklaring binnenkomt, met tijd en apparaat, en de client toont dat in de lijst met apparaten die toegang hebben. Die lijst en het intrekken bestaan al (<code>auth.sessions</code>, <code>auth.revoke</code>); wat ontbreekt is de herkomst per koppeling. Intrekken werkt onmiddellijk, want <code>Handshake.revoke</code> haalt elk ticket van die sessie weg.</li>
+    <li><strong>Een uitweg.</strong> Een machine kan verklaringen weigeren, met een vlag in <code>endpoint.json</code> naast <code>agentsDeleteAnyView</code>, dat al zo'n vlag is. Dan is handmatig koppelen de enige weg naar binnen, voor wie &eacute;&eacute;n machine heeft waar dit niet op moet.</li>
+  </ul>
+
+  <h3 id="lek">Het lek dat eerst dicht moet</h3>
+  <p>Dit is de belangrijkste bevinding over Ruimte zelf, en hij geldt ongeacht welke route je kiest. Alles wat je v&oacute;&oacute;r de daemon zet (een tunnel, een reverse proxy, een port forward) verbindt naar <code>http://127.0.0.1:4210</code>. Het adres dat <code>server.requestIP()</code> teruggeeft (<code>daemon.ts:286</code>) is dan loopback, wie er ook aan de andere kant zit. Op 14 september stond alles hieronder er nog precies zo; fase 1 heeft het die dag gedicht (zie <a href="#stand">Stand</a>).</p>
+  <div class="split">
+    <div class="panel">
+      <h3>De socket staat open</h3>
+      <p><code>apps/server/src/auth/access.ts:73-75</code>:</p>
+      <pre><code>if (reachability === 'loopback' &amp;&amp; !options.requireToken) {
+    return { ok: true, access: { reachability, sessionId: null } };
+}</code></pre>
+      <p>Een WebSocket zonder ticket, en daarmee elke terminal en elk bestand dat de daemon kan lezen. Dezelfde functie beslist over de drie routes die een <code>&lt;img&gt;</code> ophaalt (<code>projects/icon-route.ts:33</code>, <code>fs/file-route.ts:63</code>, <code>chat/attachment-route.ts:38</code>), dus die staan even open en gaan even dicht.</p>
+      <p><span class="badge confirmed">dicht</span> zonder lokaal geheim, ticket of token is het een 401, ook vanaf loopback</p>
+    </div>
+    <div class="panel">
+      <h3>Iedereen kan zichzelf koppelen</h3>
+      <p><code>apps/server/src/daemon.ts:295-301</code>, de route die een koppellink munt:</p>
+      <pre><code>if (request.method !== 'POST' || !isLoopbackAddress(remote)) {
+    return new Response('Forbidden', { status: 403 });
+}</code></pre>
+      <p>Deze kijkt niet naar <code>requireToken</code>. Een vreemde haalt een verse koppel-URL op, wisselt hem in, en is binnen met een eigen sleutelpaar. Dezelfde link is ook over de socket te krijgen, als <code>auth.pairingToken</code> (<code>handlers/auth.ts:58-64</code>, dezelfde loopback-regel); die weg sluit <code>--require-token</code> wel, maar alleen omdat de socket dan al een ticket eist.</p>
+      <p><span class="badge confirmed">dicht</span> de route vraagt het lokale geheim als bearer, de socket dezelfde regel</p>
+    </div>
+  </div>
+  <h3>De oplossing: een bestand in plaats van een bronadres</h3>
+  <p>De aanname "loopback betekent dat de persoon achter de toetsen dit doet" klopt niet meer zodra er iets voor de daemon staat. Vervang hem door een aanname die wel klopt: wie <code>$RUIMTE_HOME/local.key</code> kan lezen, zit op die machine onder dat account. De home staat al op <code>0o700</code>, <code>endpoint.json</code> op <code>0o600</code> (<code>endpoint-id.ts:137-138</code>), en <code>writeAtomic</code> (<code>fs.ts:14</code>) schrijft standaard met <code>0o600</code>: het patroon is er. Het geheim hoort bij een home en niet bij een machine, want de dev-daemon op <code>4211</code> heeft een home van zichzelf.</p>
+  <ol>
+    <li>Munt bij het opstarten een lokaal geheim naast het sleutelpaar, met dezelfde rechten.</li>
+    <li><code>ruimte pair</code> (<code>cli/pairing.ts:10-19</code>) leest dat bestand en stuurt het als bearer mee naar <code>/auth/pairing-token</code>. De socketvariant <code>auth.pairingToken</code> krijgt dezelfde eis.</li>
+    <li>De route eist het geheim zodra de daemon weet dat hij niet alleen op loopback bereikbaar is, en blijft anders op de oude controle staan zodat er niets breekt voor wie alleen lokaal werkt. <code>decideAccess</code> krijgt het geheim als derde credential naast ticket en token, en in die stand telt loopback ook daar niet meer als vrij.</li>
+    <li>Dat weten komt uit de configuratie, nooit uit een header. Een doorgestuurde <code>Host</code>- of <code>Forwarded</code>-header is door iedereen voor de proxy in te vullen en bewijst dus niets. Een <code>--host</code> die geen loopback is weet de daemon al (<code>daemon.ts:507</code> print daarop de koppellink); voor een proxy op loopback is een vlag nodig, want daar is niets aan de configuratie te zien.</li>
+    <li>De desktop-app moet het geheim ook kunnen laten zien. De shell start de daemon en kent <code>RUIMTE_HOME</code> (<code>apps/desktop/src/main.ts:64-102</code>), en de client verbindt als de rij <code>local</code> zonder credential (<code>state/endpoints.ts:62-73</code>). De shell leest het bestand en geeft het over de bridge; <code>credentialFor</code> (<code>endpoint/credentials.ts</code>) is de ene plek waar het dan in elke socket-URL en <code>&lt;img&gt;</code>-URL terechtkomt. Een browser op dezelfde machine zonder shell koppelt gewoon met een link.</li>
+  </ol>
+  <p class="caption">Gebouwd op 14 september, eenvoudiger dan hierboven: het bronadres geeft nooit meer toegang, op geen enkele host. Er is dus geen schakelaar en <code>--require-token</code> is weg, want een credential is altijd verplicht. Zie de besluiten onder <a href="#vragen">Open vragen</a>.</p>
+  <p>Met WebRTC is dit gat kleiner dan bij een tunnel, want er komt geen HTTP-verkeer van buiten op de loopback-poort binnen. Het moet toch dicht: de modus met een eigen domein bestaat gewoon naast de broker, en die zet w&eacute;l iets voor de daemon.</p>
+</section>
+
+<section id="hebben">
+  <h2>Wat er al staat</h2>
+  <p>Het zware deel is af, en dat bepaalt hoe klein dit plan kan zijn. Ruimte heeft alles wat een remote verbinding veilig maakt; wat ontbreekt is een manier om elkaar te vinden. Paden zonder app-prefix staan onder <code>apps/server/src</code> of <code>apps/client/src</code>, wat uit de naam blijkt.</p>
   <div class="table">
     <table class="wide">
-      <thead><tr><th>Route</th><th>Waarom niet</th></tr></thead>
+      <caption>De bouwstenen, op <code>4e96370</code></caption>
+      <thead><tr><th>Onderdeel</th><th>Waar</th><th>Wat het doet</th></tr></thead>
+      <tbody>
+        <tr><td>Daemon-identiteit</td><td><code>apps/server/src/endpoint-id.ts:17-31</code></td><td>Een id, een ed25519-sleutelpaar, een naam, een icoon en een vlag per machine in <code>$RUIMTE_HOME/endpoint.json</code>, geschreven met <code>0o600</code> in een home van <code>0o700</code> (regel 137-138). Bestand tegen herstarts en adreswissels. Dit is de sleutel waarop de broker straks routeert, en het bestand waar het lokale geheim van fase 1 naast komt.</td></tr>
+        <tr><td>Handshake</td><td><code>apps/server/src/auth/handshake.ts</code></td><td>De daemon geeft een nonce (60 seconden geldig, regel 7) en tekent hem zelf met <code>daemonChallengeMessage</code> (<code>packages/contracts/src/auth.ts:153</code>), de client tekent terug. Resultaat is een ticket van twaalf uur (regel 14) dat per verbinding roteert, hoogstens acht per sessie (regel 21); <code>revoke</code> (regel 115) haalt ze allemaal weg.</td></tr>
+        <tr><td>Client-sleutel</td><td><code>apps/client/src/endpoint/client-key.ts</code></td><td>Een niet-exporteerbare <code>CryptoKey</code> in IndexedDB. De browser kan de private helft aan niemand geven, ook niet aan zichzelf. Een client van v&oacute;&oacute;r de sleutels stapt over met <code>auth.registerKey</code> (<code>handlers/auth.ts:48-54</code>).</td></tr>
+        <tr><td>Credential per verbinding</td><td><code>apps/client/src/endpoint/credentials.ts</code></td><td>Het ticket van deze verbinding leeft in geheugen, per machine, met het oude sessietoken als terugval; <code>socketAddressFor</code> (<code>endpoint/handshake.ts:105-116</code>) tekent per poging. Wat een <code>&lt;img&gt;</code> in zijn URL meekrijgt komt uit dezelfde functie.</td></tr>
+        <tr><td>Pinning</td><td><code>apps/client/src/endpoint/identity.ts</code>, <code>state/endpoints.ts:41-47</code></td><td>De publieke sleutel van de daemon wordt &eacute;&eacute;n keer geschreven en nooit overschreven. Een adres dat als een andere machine antwoordt geeft een fout.</td></tr>
+        <tr><td>&Eacute;&eacute;n rij per machine</td><td><code>apps/client/src/state/endpoints.ts</code></td><td>Een daemon is &eacute;&eacute;n rij op zijn eigen id, welk adres hij ook antwoordt; een koppeling met een machine die al in de lijst staat verplaatst die rij. Precies wat een adresboek nodig heeft.</td></tr>
+        <tr><td>Naam en icoon</td><td><code>endpoint.info</code>, <code>endpoint.setIdentity</code>, <code>endpoint.changed</code></td><td>Een machine heeft een naam en een icoon die elke gekoppelde client ziet en elke client mag zetten (<code>apps/client/src/endpoint/watch.ts</code> luistert op elke socket). Dat is wat er in de lijst komt te staan.</td></tr>
+        <tr><td>Gekoppelde clients</td><td><code>apps/server/src/handlers/auth.ts:56-72</code></td><td><code>auth.sessions</code> somt ze op, <code>auth.revoke</code> trekt er een in en verbreekt zijn socket meteen. Het paneel Machines toont ze. De helft van de zichtbaarheid die het adresboek vraagt.</td></tr>
+        <tr><td>De naad</td><td><code>apps/server/src/auth/relay.ts</code></td><td>Een <code>Relay</code>-interface met een <code>NoRelay</code> die niets doet, aangesloten in <code>daemon.ts:89</code> en aangeroepen in <code>daemon.ts:505</code>. De plek waar de broker-verbinding komt.</td></tr>
+        <tr><td>Transport als interface</td><td><code>apps/client/src/transport/</code></td><td><code>Transport</code> (<code>transport.ts:13-21</code>) is wat elke store ziet; <code>TransportPool</code> houdt er &eacute;&eacute;n per machine met een eigen reconnect-lus en vraagt van een implementatie alleen <code>PooledTransport</code> (<code>pool.ts:12-16</code>); de fabriek in <code>index.ts:15</code> is de ene regel die zegt welke implementatie een machine krijgt. WebRTC wordt een tweede implementatie, geen verbouwing.</td></tr>
+        <tr><td>Testbank</td><td><code>apps/server/src/docker/remote-daemon.test.ts</code></td><td>Een Linux-daemon in Docker die een test koppelt en over het netwerk aanspreekt, met de echte handshake. Waar fase 1 en 2 hun acceptatietest krijgen.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="stand">
+  <h2>Stand op 14 september 2026</h2>
+  <p>Drie dagen na de eerste versie is fase 1 af, dezelfde dag nog; van de andere vijf fases is niets gebouwd: geen werift, geen <code>RTCPeerConnection</code>, geen broker, geen adresboek, en <code>Relay</code> is nog steeds <code>NoRelay</code>. Wat wel landde zit eromheen, en een deel daarvan maakt de fases kleiner. Dit is de stand, nagelopen in de code op <code>4e96370</code>.</p>
+  <div class="table">
+    <table class="wide">
+      <caption>De zes fases tegen de code van 14 september</caption>
+      <thead><tr><th>Fase</th><th>Stand</th><th>Wat de code zegt</th></tr></thead>
       <tbody>
         <tr>
-          <td><strong>Een tunnel per machine</strong></td>
-          <td>Cloudflare staat 1.000 cloudflared-tunnels en 1.000 routes per account toe. E&eacute;n machine kost er &eacute;&eacute;n van elk, dus het loopt vast op duizend machines, ongeveer vijfhonderd gebruikers. Een dienst op deze route moet dus een harde limiet per gebruiker invoeren, met uitzonderingen ernaast. De uitwegen zijn sharden over meerdere accounts (boekhouding, en elke shard wil zijn eigen zone) of Enterprise (geld). Bovendien zit Cloudflare dan in het datapad: <code>cloudflared</code> termineert TLS aan hun kant en praat onversleuteld verder naar loopback.</td>
+          <td><strong>1. Het lek</strong></td>
+          <td><span class="badge confirmed">klaar</span></td>
+          <td>Gedicht in <code>7c15869</code> en <code>2cd56dc</code>. Het bronadres geeft nooit meer toegang: <code>decideAccess</code> vraagt altijd een ticket, een sessietoken of het lokale geheim uit <code>$RUIMTE_HOME/local.key</code> (<code>auth/local-secret.ts</code>), en <code>mayInvite</code> is de ene regel voor de twee muntplekken. De desktop-app leest het geheim over de bridge, <code>ruimte pair</code> stuurt het als bearer, en de Docker-testbank bewijst dat loopback zonder geheim nergens binnenkomt. Wat er op 14 september 's ochtends stond: beide regels uit <a href="#lek">Het lek</a> onveranderd, <code>auth/access.ts:73-75</code> laat loopback zonder ticket door, <code>daemon.ts:295-301</code> munt een koppellink voor elk loopback-adres. Er is een derde pad bij dat er op 11 september ook al was maar niet in het rapport stond: <code>auth.pairingToken</code> over de socket (<code>handlers/auth.ts:58-64</code>). En de drie routes die een <code>&lt;img&gt;</code> ophaalt delen <code>decideAccess</code>, dus die gaan vanzelf mee zodra de regel verandert.</td>
         </tr>
         <tr>
-          <td><strong>Quick tunnels</strong><br><span class="caption"><code>trycloudflare.com</code></span></td>
-          <td>Afgeknepen op tweehonderd gelijktijdige requests met een 429 daarboven, een ander adres bij elke start, en geen uptimegarantie. Het zwaarste bezwaar is principieel: duizenden Ruimte-installaties op een gratis ontwikkelfaciliteit van iemand anders is een afhankelijkheid die zonder aankondiging kan verdwijnen.</td>
+          <td><strong>2. WebRTC</strong></td>
+          <td><span class="badge">open</span></td>
+          <td>Niets van gebouwd. De naad aan de clientkant is klaar: <code>Transport</code>, <code>PooledTransport</code> met <code>switchTo</code>, <code>retarget</code> en <code>dispose</code>, en &eacute;&eacute;n fabriek die per machine een socket opent. Aan de daemonkant is <code>ClientConnection</code> transportloos (<code>dispatcher.ts:19-23</code>: een id, een <code>access</code> en een <code>send</code>), maar <code>websocket.open</code> in <code>daemon.ts:412-457</code> bouwt de client, de <code>OutputGate</code> en elf abonnementen ter plekke. Dat blok moet een functie worden die een socket en een DataChannel allebei aanroepen.</td>
         </tr>
         <tr>
-          <td><strong>Een eigen relay in het datapad</strong><br><span class="caption">Durable Objects of een VPS</span></td>
-          <td>Technisch prima: een hibernerende Durable Object kost niets als hij idle is, en er zijn geen egress-kosten. Maar dan gaat elke toetsaanslag van elke gebruiker over jouw server, en dat is precies wat je niet wilde. Het maakt je verwerker van andermans broncode, het maakt een storing fataal in plaats van vervelend, en het maakt de kosten afhankelijk van hoe druk mensen typen. End-to-end encryptie zou dat verzachten, maar dat is een sleutelschema, rekeying en een tweede framelaag bouwen, en bij WebRTC krijg je hetzelfde gratis.</td>
+          <td><strong>3. HTTP over het kanaal</strong></td>
+          <td><span class="badge">open</span></td>
+          <td>De drie URL-bouwers en de handshake over HTTP staan onder <a href="#kanaal">De directe verbinding</a>. Uploads gaan al over de socket (base64 in <code>chat.send</code>, zie <code>docs/DECISIONS.md</code>), dus dat deel is er niet meer.</td>
         </tr>
         <tr>
-          <td><strong>Tailscale</strong></td>
-          <td>Werkt uitstekend en kost bijna niets om te bouwen, maar vraagt een installatie op elk apparaat waarmee je wilt kijken. Voor een app die ook bij vreemden draait verschuift dat de opzetkosten alleen maar naar de gebruiker. De architectuurles blijft staan en is hier overgenomen: een tunnel levert alleen een endpoint, er is nooit een apart soort verbinding voor nodig.</td>
+          <td><strong>4. De broker</strong></td>
+          <td><span class="badge">open</span></td>
+          <td>Niets van gebouwd. De sleutel waarop hij routeert staat klaar: <code>endpoint.json</code> heeft het sleutelpaar (<code>endpoint-id.ts:17-31</code>) en <code>auth/keys.ts</code> tekent en verifieert.</td>
+        </tr>
+        <tr>
+          <td><strong>5. Het adresboek</strong></td>
+          <td><span class="badge">open</span></td>
+          <td>Niets van gebouwd, maar de twee dingen die "eerlijk opgeschreven" vraagt zijn voor de helft klaar: de lijst met gekoppelde clients met intrekken bestaat (<code>handlers/auth.ts:56-72</code>, <code>Handshake.revoke</code> in <code>auth/handshake.ts:115</code>, het paneel Machines), en het patroon voor een vlag per machine die de daemon afdwingt bestaat als <code>agentsDeleteAnyView</code> (<code>endpoint-id.ts:27-30</code>, gezet met <code>endpoint.setIdentity</code>). Wat ontbreekt is een herkomst per koppeling.</td>
+        </tr>
+        <tr>
+          <td><strong>6. Achtergronddienst</strong></td>
+          <td><span class="badge">open</span></td>
+          <td>Niets van gebouwd. De verwijzing in de eerste versie klopte niet meer: <code>docs/PLAN.md</code> bestaat niet en issue #11 gaat over packaging en is dicht. Het staat als punt 3 onder <em>Next</em> in <code>docs/DECISIONS.md</code>, zonder issue.</td>
         </tr>
       </tbody>
     </table>
   </div>
-  <p>Twee dingen die niet afvallen maar blijven bestaan naast de broker: <strong>je eigen domein</strong> (je zet zelf een tunnel of reverse proxy op en geeft de daemon een publieke URL) en <strong>IP en poort</strong> op je eigen netwerk. Ze delen dezelfde daemon en dezelfde handshake, en ze zijn de uitweg voor iedereen bij wie de broker niet past of niet werkt.</p>
+
+  <h3>Wat sindsdien landde en dit plan raakt</h3>
+  <ul>
+    <li><strong>Een testbank voor een machine op afstand.</strong> <code>apps/server/src/docker/remote-daemon.test.ts</code> start een Linux-daemon in Docker, koppelt ermee en praat er over het netwerk mee, met de echte handshake. Daar krijgen fase 1 en 2 hun acceptatietest; er hoeft geen tweede harnas voor.</li>
+    <li><strong>Het ticket leeft in geheugen.</strong> <code>apps/client/src/endpoint/credentials.ts</code> houdt per machine het ticket van deze verbinding, en <code>socketAddressFor</code> (<code>endpoint/handshake.ts:105-116</code>) tekent per poging. Een tweede transport haakt daar in en niet in de store.</li>
+    <li><strong>Twee daemons op &eacute;&eacute;n machine is een normale toestand.</strong> <code>bun dev</code> draait op <code>4211</code> met <code>~/.ruimte-dev</code> naast een ge&iuml;nstalleerde Ruimte op <code>4210</code>. Het lokale geheim van fase 1 hoort dus bij een home, niet bij een machine.</li>
+    <li><strong>Loopback-verkeer met een eigen credential bestaat al.</strong> De hooks van de CLI's, <code>ruimte-context</code> en de canvas-verbs posten naar <code>http://127.0.0.1:&lt;port&gt;</code> met een bearer per sessie (<code>daemon.ts:82</code>, <code>daemon.ts:378-400</code>) en controleren dat token zelf. Fase 1 raakt ze niet, want ze lopen niet door <code>decideAccess</code>.</li>
+    <li><strong><code>tunnel</code> is al een waarde van <code>Reachability</code></strong> (<code>packages/contracts/src/auth.ts:5</code>) maar niets maakt hem. Fase 1 kan hem gebruiken voor de stand waarin loopback niet meer telt.</li>
+    <li><strong>De desktop-app is zelf een loopback-client zonder credential.</strong> De shell start de daemon (<code>apps/desktop/src/main.ts:64-102</code>) en de client verbindt als de rij <code>local</code> zonder token of sleutel (<code>state/endpoints.ts:62-73</code>). Zodra loopback niet meer als bewijs telt, moet de shell het lokale geheim ook kunnen laten zien; dat stond niet in de eerste versie.</li>
+  </ul>
 </section>
 
 <section id="plan">
   <h2>Het plan</h2>
+  <p>Bijgewerkt op 14 september. De volgorde is die van 11 september, de beslissingen ook; wat veranderde zijn de bestanden per fase, de omvang, en twee dingen die de code sindsdien afdwingt: de desktop-app in fase 1 en het losmaken van <code>websocket.open</code> in fase 2.</p>
   <ol class="steps">
     <li class="step">
       <div>
-        <h3>Loopback is geen bewijs meer <span class="badge danger">eerst</span></h3>
-        <p>Het lokale geheim naast het sleutelpaar, dat <code>ruimte pair</code> meestuurt, en een schakelaar die zegt dat deze daemon niet alleen op loopback bereikbaar is. In die stand telt loopback niet meer als vrij, ook niet op <code>/auth/pairing-token</code>. Geen header wordt vertrouwd.</p>
-        <p><strong>Klaar als:</strong> een request met loopback als afzender een 401 of 403 krijgt op zowel <code>/ws</code> als <code>/auth/pairing-token</code> zodra die schakelaar aanstaat, en dezelfde daemon zonder die schakelaar beide gewoon toelaat.</p>
-        <p class="caption">Raakt <code>config.ts</code>, <code>daemon.ts</code>, <code>auth/access.ts</code>, <code>cli/pairing.ts</code>, <code>endpoint-id.ts</code>. Een halve tot een hele dag.</p>
+        <h3>Loopback is geen bewijs meer <span class="badge confirmed">klaar</span></h3>
+        <p><strong>Gebouwd op 14 september, in <code>7c15869</code> en <code>2cd56dc</code>.</strong> Zonder schakelaar: loopback telt nergens meer als vrij, op geen enkele host. Het lokale geheim staat in <code>$RUIMTE_HOME/local.key</code> (<code>0600</code>, bij de eerste start gemaakt, blijft over herstarts), <code>ruimte pair</code> stuurt het als bearer mee, en <code>--require-token</code> is weg. Het oorspronkelijke plan hieronder, met de schakelaar, is ter vergelijking blijven staan.</p>
+        <p>Het lokale geheim naast het sleutelpaar, dat <code>ruimte pair</code> meestuurt, en een schakelaar die zegt dat deze daemon niet alleen op loopback bereikbaar is. In die stand telt loopback niet meer als vrij: niet op <code>/ws</code>, niet op <code>/auth/pairing-token</code>, niet op <code>auth.pairingToken</code> over de socket, en niet op de drie <code>&lt;img&gt;</code>-routes. Geen header wordt vertrouwd. De desktop-shell leest het geheim en geeft het over de bridge, zodat de app op de eigen machine blijft werken zonder te koppelen.</p>
+        <p><strong>Klaar als:</strong> met de schakelaar aan een request met loopback als afzender en zonder geheim een 401 of 403 krijgt op <code>/ws</code>, <code>/auth/pairing-token</code>, <code>/fs/file</code>, <code>/projects/:id/icon</code> en <code>/attachments/...</code>; met het geheim werkt alles als voorheen; zonder schakelaar verandert er niets; de Docker-testbank krijgt een geval voor elk van de drie standen.</p>
+        <p class="caption">Raakt <code>apps/server/src/config.ts:45-60</code> (de vlag), <code>daemon.ts:295-301</code> en <code>handlers/auth.ts:58-64</code> (de twee muntplekken), <code>auth/access.ts:48-77</code> (het geheim als derde credential), <code>cli/pairing.ts:10-19</code>, <code>endpoint-id.ts</code> of een bestand ernaast, en aan de andere kant <code>apps/desktop/src/main.ts</code>, <code>src/preload.ts</code>, <code>apps/client/src/desktop/bridge.ts</code> en <code>endpoint/credentials.ts</code>. Een dag; de desktop-helft is de helft die er op 11 september niet in stond.</p>
+        <p class="caption">Risico: het dev-pad (Vite proxyt <code>/ws</code> naar <code>4211</code>) en <code>--serve</code> moeten blijven werken. Dat lukt zolang de schakelaar in dev uitstaat, want de Vite-proxy staat op dezelfde machine en is precies wat loopback bedoelde.</p>
       </div>
     </li>
     <li class="step">
       <div>
-        <h3>WebRTC als tweede transport</h3>
-        <p>werift in de daemon, een <code>WebRtcTransport</code> naast de WebSocket-implementatie in de client, en de signaling voorlopig met de hand of via een testscript. Nog geen broker: eerst bewijzen dat de wire van Ruimte over een DataChannel past.</p>
-        <p><strong>Klaar als:</strong> een terminal, een chat en een canvas werken over WebRTC tussen twee machines op hetzelfde netwerk, met de bestaande handshake eroverheen.</p>
-        <p class="caption">Dit is het grootste stuk van het plan. De <code>Transport</code>-interface bestaat al, dus het is een implementatie en geen verbouwing, maar reken op meer dan een paar dagen.</p>
+        <h3>WebRTC als tweede transport <span class="badge">open</span></h3>
+        <p>werift in <code>apps/server/src/pulsar</code>, een <code>WebRtcTransport</code> die <code>PooledTransport</code> implementeert (<code>transport/pool.ts:12-16</code>: <code>switchTo</code>, <code>retarget</code>, <code>dispose</code>) naast de WebSocket-implementatie, en de fabriek in <code>transport/index.ts:15</code> die per rij kiest. De signaling voorlopig met de hand of via een testscript, en de schemas ervoor meteen in <code>packages/pulsar</code>, met de bytes die getekend worden als een functie, zoals <code>daemonChallengeMessage</code> (<code>packages/contracts/src/auth.ts:153</code>). Nog geen broker: eerst bewijzen dat de wire van Ruimte over een DataChannel past.</p>
+        <p>Aan de daemonkant is de verbouwing klein maar echt: <code>ClientConnection</code> (<code>dispatcher.ts:19-23</code>) weet niets van sockets, maar <code>websocket.open</code> (<code>daemon.ts:412-457</code>) bouwt de client, de <code>OutputGate</code> en elf abonnementen inline. Dat wordt &eacute;&eacute;n functie die een socket en een DataChannel allebei aanroepen, en de gate heeft van het kanaal een <code>bufferedAmount</code> nodig voor zijn backpressure. De handshake (<code>endpoint/handshake.ts:52-66</code>) loopt over HTTP en wordt over een kanaal de eerste berichten op dat kanaal.</p>
+        <p><strong>Klaar als:</strong> een terminal, een chat en een canvas werken over WebRTC tussen twee machines op hetzelfde netwerk, met de bestaande handshake eroverheen, en de Docker-testbank het kanaal opent in plaats van de socket.</p>
+        <p class="caption">Dit is het grootste stuk van het plan. Reken op meer dan een paar dagen, en doe eerst de middag uit de noot onder de startprompt.</p>
       </div>
     </li>
     <li class="step">
       <div>
-        <h3>De HTTP-routes over het kanaal</h3>
-        <p>Afbeeldingen, attachments en bestanden gaan nu over gewone HTTP met een ticket in de URL, omdat een <code>&lt;img&gt;</code> niet kan tekenen. Dat past niet in een DataChannel. Ze moeten over het kanaal en in de client blob-URL's worden.</p>
-        <p><strong>Klaar als:</strong> een afbeelding in een chat, een projecticoon en een bestand uit het bestandenpaneel allemaal laden over een WebRTC-verbinding.</p>
-        <p class="caption">Raakt <code>chat/attachments.ts</code>, <code>project/icon-url.ts</code>, <code>shell/panels/file-url.ts</code>. Dit is de prijs die elke vorm van end-to-end versleuteling zou kosten; hier betaal je hem &eacute;&eacute;n keer en krijg je de versleuteling erbij.</p>
+        <h3>De HTTP-routes over het kanaal <span class="badge">open</span></h3>
+        <p>Afbeeldingen, attachments en bestanden gaan nu over gewone HTTP met een ticket in de URL, omdat een <code>&lt;img&gt;</code> niet kan tekenen. Dat past niet in een DataChannel. Ze moeten over het kanaal en in de client blob-URL's worden: een request dat bytes antwoordt, en een kleine cache die er een <code>URL.createObjectURL</code> van maakt. Over een WebSocket blijft de HTTP-route de goedkopere, dus het transport zegt welke van de twee geldt. Uploads gaan al over de socket en blijven zo.</p>
+        <p><strong>Klaar als:</strong> een afbeelding in een chat, een projecticoon en een afbeelding uit het bestandenpaneel allemaal laden over een WebRTC-verbinding.</p>
+        <p class="caption">Raakt de drie bouwers <code>chat/attachments.ts:82-90</code>, <code>project/icon-url.ts:12-19</code> en <code>shell/panels/file-url.ts:13-21</code>, en wie ze tekent: <code>chat/ui/rows/MessageRows.tsx:41-48</code>, <code>project/ProjectGlyph.tsx:36</code>, <code>shell/panels/ImageFile.tsx:35</code>, <code>chat/ui/ImageView.tsx:197</code>. Dit is de prijs die elke vorm van end-to-end versleuteling zou kosten; hier betaal je hem &eacute;&eacute;n keer en krijg je de versleuteling erbij.</p>
       </div>
     </li>
     <li class="step">
       <div>
-        <h3>De broker</h3>
-        <p>Een Bun-proces op de VPS: WebSocket, challenge-response op de publieke sleutel, een <code>Map</code> van sleutel naar socket, berichten doorgeven, rate limiting per IP en per sleutel. Geen database. Caddy ervoor voor TLS.</p>
+        <h3>De broker <span class="badge">open</span></h3>
+        <p>Een Bun-proces op de VPS: WebSocket, challenge-response op de publieke sleutel, een <code>Map</code> van sleutel naar socket, berichten doorgeven, rate limiting per IP en per sleutel. Geen database. Caddy ervoor voor TLS. In de daemon een <code>BrokerRelay</code> achter de <code>Relay</code>-naad (<code>auth/relay.ts:5-9</code>) die in <code>publish</code> de socket naar de broker opent en de challenge tekent met de sleutel uit <code>endpoint.json</code> (<code>auth/keys.ts</code>).</p>
         <p><strong>Klaar als:</strong> twee machines op verschillende netwerken elkaar vinden via de broker en daarna rechtstreeks praten, en de broker afsluiten breekt die verbinding niet.</p>
-        <p class="caption">Een paar honderd regels, en de code deelt <code>packages/contracts</code> met de rest.</p>
+        <p class="caption">Een paar honderd regels in <code>apps/pulsar-broker</code>, met <code>packages/pulsar</code> uit fase 2 als de wire.</p>
       </div>
     </li>
     <li class="step">
       <div>
-        <h3>Het adresboek</h3>
+        <h3>Het adresboek <span class="badge">open</span></h3>
         <p>Worker met D1, OAuth voor GitHub, Apple en Google, drie tabellen, vier routes. Het sleutelpaar voor verklaringen, met de publieke helft gepind in de Ruimte-build. In de client: inloggen, de lijst, en de lijst met apparaten die toegang hebben plus intrekken.</p>
+        <p>Wat er al is: de lijst met gekoppelde clients en intrekken (<code>handlers/auth.ts:56-72</code>, het paneel Machines), naam en icoon in <code>endpoint.info</code>, en het patroon voor een vlag per machine die de daemon afdwingt (<code>agentsDeleteAnyView</code>, <code>endpoint-id.ts:27-30</code>). Wat erbij moet: een herkomst per koppeling (link of verklaring) in de <code>AuthStore</code>, de vlag "weiger verklaringen" op dezelfde plek als <code>agentsDeleteAnyView</code>, en een <code>pairedBy</code> op de rij in <code>state/endpoints.ts</code>.</p>
         <p><strong>Klaar als:</strong> je op een vers apparaat inlogt, je machines ziet staan, er een opent zonder iets over te tikken, en op je eerste apparaat ziet dat het tweede toegang heeft gekregen.</p>
         <p class="caption">Inclusief de knoppen die je nodig hebt als het misgaat: een machine uit je lijst halen, toegang van een apparaat intrekken, en op de machine zelf verklaringen weigeren.</p>
       </div>
     </li>
     <li class="step">
       <div>
-        <h3>De daemon als achtergronddienst <span class="badge info">stond al op de lijst</span></h3>
-        <p>Staat in issue #11 en fase 25 van <code>docs/PLAN.md</code>. Launchd op macOS, een systemd user service met lingering op Linux. Zonder dit stopt elke remote sessie zodra je je terminal sluit, dus het hoort bij dit onderwerp, ook al is het een fase op zichzelf.</p>
+        <h3>De daemon als achtergronddienst <span class="badge info">stond al op de lijst, open</span></h3>
+        <p>Punt 3 onder <em>Next</em> in <code>docs/DECISIONS.md</code>, nog zonder issue. Launchd op macOS, een systemd user service met lingering op Linux. Zonder dit stopt elke remote sessie zodra je de app sluit, dus het hoort bij dit onderwerp, ook al is het een fase op zichzelf. De desktop-shell start de daemon nu zelf (<code>apps/desktop/src/main.ts:64-102</code>) en wacht op <code>/health</code>; met een dienst wordt dat "sluit aan bij wat er draait, start anders".</p>
       </div>
     </li>
     <li class="step">
@@ -578,6 +586,7 @@ apparaat  id, accountId, label, publicKey, laatstGezien</code></pre>
     </li>
   </ol>
 </section>
+
 <section id="prompt">
   <h2>De startprompt</h2>
   <p>Om hiermee te beginnen in een schone sessie. De context staat erin, de opdracht vul je per fase in met de regel uit de tabel eronder. De verwijzing naar dit rapport staat er bewust in: dan hoeft de prompt niet het hele ontwerp te herhalen en blijft hij kloppen als je hier iets wijzigt.</p>
@@ -601,47 +610,51 @@ JE OPDRACHT NU:
 
 &lt;&lt;&lt; hier de opdracht van de fase die je doet &gt;&gt;&gt;
 
-Werkwijze. Maak eerst een kort plan en wacht op bevestiging voordat je bestanden aanmaakt, want dit raakt meerdere workspaces. Schrijf tests naast de code (bun test). Laat bun run check en bun run format slagen voordat je klaar meldt. Commit niet zonder dat ik erom vraag. Loopt iets vast, stop dan en leg uit wat er misging in plaats van eromheen te bouwen.
+Werkwijze. Maak eerst een kort plan en wacht op bevestiging voordat je bestanden aanmaakt, want dit raakt meerdere workspaces. Schrijf tests naast de code (bun test); voor alles wat een verbinding tussen twee machines raakt is apps/server/src/docker/remote-daemon.test.ts de testbank. Laat bun run check en bun run format slagen voordat je klaar meldt. Commit niet zonder dat ik erom vraag, en nooit met een Co-Authored-By of andere attributie. Loopt iets vast, stop dan en leg uit wat er misging in plaats van eromheen te bouwen.
 
 Niet doen in deze beurt: de andere fases vast voorbereiden, of afhankelijkheden toevoegen die deze fase niet nodig heeft.</code></pre>
   </div>
 
   <h3>De opdracht per fase</h3>
-  <p>Plak er een op de plek van <code>&lt;&lt;&lt; ... &gt;&gt;&gt;</code>. Ze staan in de volgorde waarin ze elkaar het minst in de weg zitten; fase 1 blokkeert de rest echt, de andere vier kunnen desnoods schuiven.</p>
+  <p>Plak er een op de plek van <code>&lt;&lt;&lt; ... &gt;&gt;&gt;</code>. De nummers zijn die van <a href="#plan">Het plan</a>; fase 1 blokkeert de rest echt, en fase 2 en 3 gaan v&oacute;&oacute;r de broker omdat ze bewijzen dat de wire over een kanaal past voordat er een dienst omheen staat. Fase 2 is in twee beurten geknipt: eerst de schemas, dan het transport.</p>
   <div class="table">
     <table class="wide">
       <thead><tr><th>Fase</th><th>Wat je in de prompt zet</th></tr></thead>
       <tbody>
         <tr>
-          <td><strong>1</strong><br><span class="caption">eerst</span></td>
-          <td>Dicht het loopback-gat uit de sectie "Het lek dat eerst dicht moet". Munt een lokaal geheim naast het sleutelpaar in $RUIMTE_HOME, laat <code>ruimte pair</code> dat meesturen, en laat <code>/auth/pairing-token</code> en <code>decideAccess</code> loopback niet meer als bewijs accepteren zodra de daemon weet dat hij ook anders bereikbaar is. Dat weten komt uit de configuratie, nooit uit een header. Klaar als een request met loopback als afzender in die stand een 401 of 403 krijgt op zowel <code>/ws</code> als <code>/auth/pairing-token</code>, en dezelfde daemon zonder die stand beide gewoon toelaat.</td>
+          <td><strong>1</strong><br><span class="caption">gedaan</span></td>
+          <td>Dicht het loopback-gat uit de sectie "Het lek dat eerst dicht moet". Munt een lokaal geheim naast het sleutelpaar in $RUIMTE_HOME, laat <code>ruimte pair</code> (<code>apps/server/src/cli/pairing.ts</code>) dat als bearer meesturen, en laat <code>/auth/pairing-token</code> (<code>daemon.ts</code>), <code>auth.pairingToken</code> (<code>handlers/auth.ts</code>) en <code>decideAccess</code> (<code>auth/access.ts</code>) loopback niet meer als bewijs accepteren zodra de daemon weet dat hij ook anders bereikbaar is. Dat weten komt uit de configuratie, nooit uit een header. Laat de desktop-shell (<code>apps/desktop/src/main.ts</code>) het geheim lezen en over de bridge geven, en laat <code>credentialFor</code> in <code>apps/client/src/endpoint/credentials.ts</code> het voor de rij <code>local</code> gebruiken. Klaar als een request met loopback als afzender en zonder geheim in die stand een 401 of 403 krijgt op <code>/ws</code>, <code>/auth/pairing-token</code> en de drie routes voor bytes, dezelfde daemon zonder die stand alles gewoon toelaat, en <code>apps/server/src/docker/remote-daemon.test.ts</code> dat allebei bewijst.</td>
         </tr>
         <tr>
-          <td><strong>2</strong></td>
+          <td><strong>2a</strong></td>
           <td>Zet <code>packages/pulsar</code> op met de zod-schemas voor beide wires: het brokerprotocol (aanmelden met een publieke sleutel, de challenge, de handtekening, een bericht doorgeven naar een sleutel) en het adresboek (de machinelijst, een machine registreren, een verklaring opvragen). Nog geen implementatie, alleen de vormen en de types, met de bytes die getekend worden expliciet als functie, zoals <code>daemonChallengeMessage</code> in <code>packages/contracts/src/auth.ts</code>.</td>
         </tr>
         <tr>
+          <td><strong>2b</strong></td>
+          <td>Bouw WebRTC als tweede transport: werift in <code>apps/server/src/pulsar</code>, een <code>WebRtcTransport</code> die <code>PooledTransport</code> uit <code>apps/client/src/transport/pool.ts</code> implementeert, gekozen in de fabriek in <code>transport/index.ts</code>, en de signaling met de hand of via een testscript. Haal eerst het blok in <code>websocket.open</code> van <code>apps/server/src/daemon.ts</code> (de client, de <code>OutputGate</code> en de abonnementen) uit de socket naar een functie die een kanaal ook kan aanroepen. Begin met een terminal die werkt tussen twee machines op hetzelfde netwerk; de HTTP-routes voor afbeeldingen en bestanden komen in fase 3.</td>
+        </tr>
+        <tr>
           <td><strong>3</strong></td>
-          <td>Bouw <code>apps/pulsar-broker</code>: een Bun-WebSocketserver die een aanmelding met een handtekening verifieert, een Map van publieke sleutel naar socket bijhoudt, berichten doorgeeft naar een sleutel, en rate limiting doet per IP en per sleutel. Geen database. Met tests die twee nepclients laten aanmelden en een bericht heen en weer sturen, en die bewijzen dat een verkeerde handtekening niets oplevert.</td>
+          <td>Laat de bytes van een attachment (<code>apps/client/src/chat/attachments.ts</code>), een projecticoon (<code>project/icon-url.ts</code>) en een bestand (<code>shell/panels/file-url.ts</code>) over het kanaal komen als het transport geen HTTP heeft: een request dat bytes antwoordt en een cache die er een blob-URL van maakt, met de HTTP-route als de goedkope weg zolang er een WebSocket is. Klaar als de drie tekenplekken alle drie laden over WebRTC.</td>
         </tr>
         <tr>
           <td><strong>4</strong></td>
+          <td>Bouw <code>apps/pulsar-broker</code>: een Bun-WebSocketserver die een aanmelding met een handtekening verifieert, een Map van publieke sleutel naar socket bijhoudt, berichten doorgeeft naar een sleutel, en rate limiting doet per IP en per sleutel. Geen database. In de daemon een <code>BrokerRelay</code> achter <code>apps/server/src/auth/relay.ts</code>. Met tests die twee nepclients laten aanmelden en een bericht heen en weer sturen, en die bewijzen dat een verkeerde handtekening niets oplevert.</td>
+        </tr>
+        <tr>
+          <td><strong>5a</strong></td>
           <td>Bouw <code>apps/pulsar-worker</code>: Cloudflare Worker met D1, de drie tabellen uit het rapport, OAuth voor GitHub (Apple en Google daarna), en de vier routes. De verklaring wordt getekend met een ed25519-sleutel uit de secrets. Migraties en schema horen bij elkaar in dezelfde commit.</td>
         </tr>
         <tr>
-          <td><strong>5</strong></td>
-          <td>Bouw WebRTC als tweede transport: werift in <code>apps/server/src/pulsar</code>, een <code>WebRtcTransport</code> naast de WebSocket-implementatie in de client, en de signaling door de broker. Begin met een terminal die werkt tussen twee machines op hetzelfde netwerk; de HTTP-routes voor afbeeldingen en bestanden komen in een aparte beurt.</td>
-        </tr>
-        <tr>
-          <td><strong>6</strong></td>
-          <td>Bouw inloggen in de client: <code>apps/client/src/pulsar</code> met de OAuth-flow (redirect-based, zodat de mobiele app dezelfde weg kan lopen), de machinelijst naast de gekoppelde rijen in <code>state/endpoints.ts</code>, en de lijst met apparaten die toegang hebben, met intrekken. Een koppeling die via een verklaring binnenkwam is als zodanig herkenbaar.</td>
+          <td><strong>5b</strong></td>
+          <td>Bouw inloggen in de client: <code>apps/client/src/pulsar</code> met de OAuth-flow (redirect-based, zodat de mobiele app dezelfde weg kan lopen), de machinelijst naast de gekoppelde rijen in <code>state/endpoints.ts</code>, en een herkomst per koppeling in de lijst die <code>auth.sessions</code> al geeft. In de daemon het verifi&euml;ren van een verklaring in <code>apps/server/src/pulsar</code> en de vlag "weiger verklaringen" naast <code>agentsDeleteAnyView</code> in <code>endpoint.json</code>.</td>
         </tr>
       </tbody>
     </table>
   </div>
 
   <div class="note">
-    <p><strong>Voordat je aan fase 5 begint.</strong> Het grootste onbekende in dit plan is of werift standhoudt buiten het lab. Het loont om daar een losse middag aan te geven: twee machines op verschillende netwerken, een STUN-server erbij, en kijken of er een verbinding komt en of die blijft staan. Blijkt dat niet te werken, dan verandert er veel aan de fases daarna, en dat weet je liever voordat er code omheen staat.</p>
+    <p><strong>Voordat je aan fase 2b begint.</strong> Het grootste onbekende in dit plan is of werift standhoudt buiten het lab. Het loont om daar een losse middag aan te geven: twee machines op verschillende netwerken, een STUN-server erbij, en kijken of er een verbinding komt en of die blijft staan. Blijkt dat niet te werken, dan verandert er veel aan de fases daarna, en dat weet je liever voordat er code omheen staat.</p>
   </div>
 </section>
 
@@ -651,7 +664,7 @@ Niet doen in deze beurt: de andere fases vast voorbereiden, of afhankelijkheden 
     <div class="panel">
       <h3>De VPS</h3>
       <ol>
-        <li>Een TransIP V2 of kleiner: 1 vCPU, 2 GB, onbeperkt verkeer onder fair use, tien euro per maand. Voor de eerste release is de V1 van vijf euro ruim genoeg; het verschil merk je pas bij tienduizenden machines.</li>
+        <li>Een TransIP V2 of kleiner: 1 vCPU, 2 GB, onbeperkt verkeer onder fair use, tien euro per maand. Voor de eerste release is de V1 van vijf euro ruim genoeg.</li>
         <li>Bun, de broker als systemd-service, Caddy ervoor voor een certificaat dat zichzelf vernieuwt.</li>
         <li>Een subdomein, bijvoorbeeld <code>broker.ruimte.app</code>.</li>
         <li><code>ulimit -n</code> omhoog, want de standaard is lager dan het aantal sockets dat je wilt kunnen houden.</li>
@@ -666,23 +679,45 @@ Niet doen in deze beurt: de andere fases vast voorbereiden, of afhankelijkheden 
       </ol>
     </div>
   </div>
-  <p>En wat je niet opzet, wat net zo veel waard is: geen tunnels, geen DNS-records per machine, geen PlanetScale, geen queues, geen tracingdienst, geen APNs, geen <code>cloudflared</code> op andermans machines, en geen Enterprise-plan om een limiet te ontwijken.</p>
-
-  <h3>Wat een gebruiker opzet</h3>
-  <p>Niets. Dat was het doel, en het is het enige punt waarop deze hele afweging is gevoerd.</p>
-  <p>Wie het toch zelf wil regelen, houdt de twee andere manieren: een eigen domein met een tunnel of reverse proxy ervoor en een publieke URL aan de daemon, of gewoon IP en poort op het eigen netwerk. Dezelfde daemon, dezelfde handshake, alleen een ander adres.</p>
+  <p>Wat een gebruiker opzet: niets. Dat was het doel, en het is het enige punt waarop deze hele afweging is gevoerd.</p>
 </section>
+
 <section id="vragen">
   <h2>Open vragen</h2>
   <ol>
-    <li><strong>Houdt werift stand buiten het lab?</strong> De meting was loopback met host-candidates. Echte NAT-traversal, STUN-integratie, uren achter elkaar draaien en gedrag op Linux en Windows zijn niet getest. Dit is het grootste onbekende in het plan en het eerste dat je zou willen weten; een verbinding tussen twee echte netwerken is de test die telt.</li>
+    <li><strong>Houdt werift stand buiten het lab?</strong> De meting was loopback met host-candidates. Echte NAT-traversal, STUN-integratie, uren achter elkaar draaien en gedrag op Linux en Windows zijn niet getest. Dit is het grootste onbekende in het plan; een verbinding tussen twee echte netwerken is de test die telt.</li>
     <li><strong>Hoeveel verbindingen komen niet door?</strong> Tailscale meldt ruim boven de negentig procent geslaagd, maar dat is hun stack met jaren werk in NAT-trucs. Voor werift met een publieke STUN-server is dat cijfer onbekend. Het antwoord bepaalt of TURN een luxe of een noodzaak is.</li>
     <li><strong>Tweefactor afdwingen?</strong> Nu de login toegang geeft, is het account de deur. Je kunt het niet afdwingen bij GitHub of Google, maar je kunt het wel vragen bij het aanmelden en zichtbaar maken in de instellingen.</li>
-    <li><strong>Wat gebeurt er bij een verlopen sessie midden in het werk?</strong> Een ticket leeft twaalf uur en wordt per verbinding vernieuwd. Over WebRTC is "de verbinding valt weg" iets anders dan bij een WebSocket, want er is geen server die hem verbreekt. Dat vraagt een eigen hertelling van wanneer je opnieuw moet tekenen.</li>
-    <li><strong>Meerdere adressen per machine: nu modelleren of later?</strong> Het LAN-adres naast de WebRTC-route scheelt merkbaar voor wie thuis werkt. Het is goedkoper om <code>httpBaseUrl</code> nu al als lijst te modelleren dan er later een migratie voor te schrijven, ook als je hem voorlopig maar met &eacute;&eacute;n waarde vult.</li>
+    <li><strong>Wat gebeurt er bij een verlopen sessie midden in het werk?</strong> Een ticket leeft twaalf uur (<code>TICKET_TTL_MS</code>, <code>auth/handshake.ts:14</code>) en wordt per verbinding vernieuwd. Over WebRTC is "de verbinding valt weg" iets anders dan bij een WebSocket, want er is geen server die hem verbreekt. Dat vraagt een eigen hertelling van wanneer je opnieuw moet tekenen.</li>
+    <li><strong>Meerdere adressen per machine: nu modelleren of later?</strong> Het LAN-adres naast de WebRTC-route scheelt merkbaar voor wie thuis werkt. <code>httpBaseUrl</code> en <code>wsBaseUrl</code> zijn op 14 september nog &eacute;&eacute;n string per rij (<code>state/endpoints.ts:24-25</code>). Het is goedkoper om ze bij fase 2 als lijst te modelleren dan er later een migratie voor te schrijven, ook als je ze voorlopig maar met &eacute;&eacute;n waarde vult.</li>
     <li><strong>Wat doet de client met een machine die offline is?</strong> Nu blijven de projecten van een niet-antwoordende machine gedimd in de lijst staan. Met een adresboek dat "laatst gezien" weet, kun je dat preciezer maken, en dat wordt belangrijker omdat een machine die slaapt een normale toestand is.</li>
   </ol>
+  <h3>Besloten op 14 september, v&oacute;&oacute;r fase 1</h3>
+  <ol start="7">
+    <li><strong>Hoe komt het lokale geheim bij de desktop-app?</strong> Besloten: over de bridge. De shell leest <code>$RUIMTE_HOME/local.key</code> bij elke verbindingspoging en geeft het aan de pagina (<code>localSecret</code> in <code>src/preload.ts</code> en <code>apps/client/src/desktop/bridge.ts</code>, optioneel zoals elke latere methode). Niet meegeven bij het starten van de daemon, want fase 6 maakt de daemon een achtergronddienst die de shell niet meer start.</li>
+    <li><strong>Een vlag, of afleiden uit <code>--host</code>?</strong> Besloten: geen van beide. Het bronadres geeft nooit meer toegang, op geen enkele host, dus er valt niets af te leiden en er is geen <code>--exposed</code> nodig. Een lokaal proces laat het geheim zien, al het andere koppelt. Dat is de eenvoudigste regel en voor 1.0 mag hij breken.</li>
+    <li><strong>Wat blijft er van <code>--require-token</code>?</strong> Besloten: niets. Een credential eisen is nu altijd zo, dus de vlag, de configuratie ervan en de documentatie zijn weg.</li>
+    <li><strong>Mag een browser op dezelfde machine zonder shell nog zonder koppelen naar binnen?</strong> Besloten: nee. Hij koppelt zoals elke andere client; een webpagina kan geen bestand lezen, en de browserversie wordt later zelf gehost, waar koppelen toch de regel is.</li>
+  </ol>
 </section>
+
+<section id="niet">
+  <h2>Wat we niet doen</h2>
+  <p>Vier routes zijn onderweg afgevallen. Kort, zodat een volgende lezer niet dezelfde ronde hoeft te maken.</p>
+  <div class="table">
+    <table class="wide">
+      <thead><tr><th>Route</th><th>Waarom niet</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Een tunnel per machine</strong></td><td>Cloudflare staat 1.000 tunnels en 1.000 routes per account toe, dus het loopt vast op duizend machines, en <code>cloudflared</code> termineert TLS aan hun kant: Cloudflare zit in het datapad.</td></tr>
+        <tr><td><strong>Quick tunnels</strong> <span class="caption"><code>trycloudflare.com</code></span></td><td>Afgeknepen op tweehonderd gelijktijdige requests, een ander adres bij elke start, geen uptimegarantie, en duizenden installaties op andermans gratis ontwikkelfaciliteit kunnen zonder aankondiging verdwijnen.</td></tr>
+        <tr><td><strong>Een eigen relay in het datapad</strong></td><td>Technisch prima en goedkoop als hij idle is, maar dan gaat elke toetsaanslag over jouw server: je wordt verwerker van andermans broncode, een storing is fataal in plaats van vervelend, en end-to-end versleuteling erbovenop is werk dat WebRTC gratis geeft.</td></tr>
+        <tr><td><strong>Tailscale</strong></td><td>Werkt uitstekend, maar vraagt een installatie op elk apparaat waarmee je wilt kijken; voor een app die ook bij vreemden draait verschuift dat de opzetkosten naar de gebruiker. De les is overgenomen: een tunnel levert alleen een endpoint, er is nooit een apart soort verbinding voor nodig.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Twee dingen die niet afvallen maar naast de broker blijven bestaan: <strong>je eigen domein</strong> (een tunnel of reverse proxy en een publieke URL aan de daemon) en <strong>IP en poort</strong> op je eigen netwerk. Ze delen dezelfde daemon en dezelfde handshake, en ze zijn de uitweg voor iedereen bij wie de broker niet past of niet werkt.</p>
+</section>
+
 <section id="bronnen">
   <h2>Bronnen</h2>
   <h3>Zelf gemeten, 11 september 2026</h3>
@@ -691,17 +726,20 @@ Niet doen in deze beurt: de andere fases vast voorbereiden, of afhankelijkheden 
     <li>Bun WebSocket-server: 5000 open verbindingen, 13 naar 30 MB RSS, 3,5 KB marginaal per verbinding.</li>
     <li>Bun 1.4.0 ondersteunt <code>node:dgram</code>, waar ICE op leunt.</li>
   </ul>
-  <h3>Uit het architectuuronderzoek</h3>
+  <h3>Ontwerplessen die zijn overgenomen</h3>
   <ul>
-    <li><code>docs/internals/environment-auth.md</code>: scopes, DPoP, tickets, en waarom een relay-token nooit een environment-login is.</li>
-    <li><code>docs/internals/remote.md</code>: endpoints zijn hints, alleen het verbindende apparaat kan bewijzen dat een route werkt, en val nooit stil terug op loopback.</li>
-    <li><code>infra/relay/src/environments/ManagedEndpointProvider.ts</code> en <code>ManagedTunnelLimits.ts</code>: de elf stappen van tunnelprovisioning, en de limiet van drie per gebruiker.</li>
-    <li><code>apps/server/src/cloud/ManagedEndpointRuntime.ts</code>: de daemon die <code>cloudflared</code> spawnt en bewaakt.</li>
+    <li>Een token dat een relay uitgeeft is nooit een login op de machine zelf. Wie toegang wil, bewijst dat aan de machine, met een sleutel die de machine kent. Daarom tekent het adresboek een verklaring die de daemon zelf verifieert, en geeft de broker niets uit.</li>
+    <li>Een adres is een hint. Alleen het apparaat dat verbindt kan bewijzen dat een route werkt; identiteit zit in de sleutel en niet in het adres. Dat is wat <code>state/endpoints.ts</code> al doet.</li>
+    <li>Val nooit stil terug op loopback. Een route die niet werkt geeft een fout, nooit "dan maar de lokale daemon", want die is een andere machine.</li>
+    <li>Een beheerde tunnel per machine kost een lange provisioningreeks en een limiet per gebruiker om binnen de accountgrenzen van de leverancier te blijven. Die complexiteit is de reden dat de tunnelroute is afgevallen.</li>
   </ul>
-  <h3>In Ruimte</h3>
+  <h3>In Ruimte, op <code>4e96370</code></h3>
   <ul>
-    <li><code>apps/server/src/auth/</code>: <code>handshake.ts</code>, <code>auth-store.ts</code>, <code>access.ts</code>, <code>keys.ts</code>, <code>relay.ts</code>.</li>
-    <li><code>apps/server/src/endpoint-id.ts</code>, <code>apps/server/src/daemon.ts</code>, <code>apps/client/src/endpoint/</code>, <code>apps/client/src/transport/</code>.</li>  </ul>
+    <li><code>apps/server/src/auth/</code>: <code>handshake.ts</code>, <code>auth-store.ts</code>, <code>access.ts</code>, <code>keys.ts</code>, <code>relay.ts</code>; <code>apps/server/src/handlers/auth.ts</code>.</li>
+    <li><code>apps/server/src/endpoint-id.ts</code>, <code>apps/server/src/daemon.ts</code>, <code>apps/server/src/config.ts</code>, <code>apps/server/src/cli/pairing.ts</code>, <code>apps/server/src/docker/remote-daemon.test.ts</code>.</li>
+    <li><code>apps/client/src/endpoint/</code>, <code>apps/client/src/transport/</code>, <code>apps/client/src/state/endpoints.ts</code>, <code>apps/desktop/src/main.ts</code>.</li>
+    <li><code>docs/DECISIONS.md</code>: de rij "Remote pairing and relay" in de featuretabel, en punt 3 onder <em>Next</em> voor de achtergronddienst.</li>
+  </ul>
   <h3>Op het web, opgehaald op 11 september 2026</h3>
   <ul>
     <li><a href="https://github.com/shinyoshiaki/werift-webrtc">werift</a> en <a href="https://github.com/murat-dogan/node-datachannel">node-datachannel</a>, de twee kandidaten voor WebRTC buiten de browser.</li>
@@ -709,16 +747,14 @@ Niet doen in deze beurt: de andere fases vast voorbereiden, of afhankelijkheden 
     <li><a href="https://developers.cloudflare.com/durable-objects/platform/pricing/">Durable Objects pricing</a> en <a href="https://developers.cloudflare.com/durable-objects/api/websockets/">hibernation</a>, voor de relay-variant die is afgevallen.</li>
     <li><a href="https://developers.cloudflare.com/workers/platform/pricing/">Workers pricing</a>: tien miljoen requests per maand inbegrepen, geen harde uitgavenlimiet.</li>
     <li><a href="https://developers.cloudflare.com/realtime/turn/">Cloudflare TURN</a>: $0,05 per GB uitgaand, als je de fallback ooit wilt kopen in plaats van draaien.</li>
-    <li><a href="https://tailscale.com/blog/nat-traversal-improvements-pt-1">Tailscale over NAT-traversal</a>: ruim boven de negentig procent direct, en het patroon om via de relay te beginnen en naar direct te upgraden.</li>
+    <li><a href="https://tailscale.com/blog/nat-traversal-improvements-pt-1">Tailscale over NAT-traversal</a>: ruim boven de negentig procent direct.</li>
     <li><a href="https://www.transip.nl/vps/">TransIP VPS</a>: de V1 en V2, onbeperkt verkeer onder fair use.</li>
   </ul>
-  <div class="note">
-    <p><strong>Wat niet geverifieerd is.</strong> De prijs van Cloudflare Tunnel staat op geen enkele documentatiepagina die ik kon vinden; dat het gratis is, is breed gerapporteerd maar niet door mij bevestigd bij de bron. Dat geldt ook voor wat TransIP onder fair use verstaat. Geen van beide raakt de conclusie, want de tunnelroute is afgevallen op een limiet die wel gedocumenteerd is en de broker gebruikt nauwelijks verkeer.</p>
-  </div>
+  <p class="caption">Niet geverifieerd bij de bron: dat Cloudflare Tunnel gratis is, en wat TransIP onder fair use verstaat. Geen van beide raakt de conclusie.</p>
 </section>
 </main>
 <footer>
-  <p>Ruimte, 11 september 2026. Ontwerp voor Pulsar.</p>
+  <p>Ruimte, 11 september 2026, bijgewerkt op 14 september 2026. Ontwerp voor Pulsar.</p>
 </footer>
 <script>
 /* De prompt is lang genoeg dat selecteren met de muis vervelend is. Zonder script blijft
