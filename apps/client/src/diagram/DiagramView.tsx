@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Menu } from '@base-ui-components/react/menu';
-import { Braces, Check, Copy, Download, FileJson, Maximize, Minus, MoreHorizontal, Plus } from 'lucide-react';
+import { Braces, Copy, Download, FileJson, MoreHorizontal } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import type { DiagramContent, DrawingColor } from '@ruimte/contracts';
 import {
@@ -18,17 +18,21 @@ import {
     textLinesOf,
     type DiagramLayout
 } from '@ruimte/diagram';
-import { activeZoomPreset, GRID, ZOOM_PRESETS, type Point } from '@/canvas/math';
+import { GRID, type Point } from '@/canvas/math';
 import { isApplePlatform } from '@/desktop/bridge';
+import { DiagramDock } from '@/diagram/DiagramDock';
 import { copyDiagramJson, copyDiagramPng, copyDiagramSvg, openDiagramJson, saveDiagramPng, saveDiagramSvg } from '@/diagram/export';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
 import { useProject } from '@/state/project';
-import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
+import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
+import { isInFloatingLayer } from '@/ui/floating';
 import { Icon } from '@/ui/Icon';
-import { Separator } from '@/ui/Separator';
 import { isModHeld } from '@/ui/shortcut';
 import { Tooltip } from '@/ui/Tooltip';
+
+const isChrome = (target: EventTarget | null): boolean =>
+    isInFloatingLayer(target) || (target instanceof Element && target.closest('[data-diagram-chrome]') !== null);
 
 /* The wheel settles on a whole percent this long after the last tick, as the canvas does. */
 const ZOOM_SETTLE_MS = 160;
@@ -123,96 +127,49 @@ function DiagramScene({ content, layout }: { content: DiagramContent; layout: Di
 }
 
 /*
- * What a diagram can be asked from the bar above it: the zoom, the way to the file and the exports.
- * Portaled into the bar of the view or the cell, so it reads the store of the cell it belongs to.
+ * What a diagram can be asked from the bar above it: the way to the file and the exports. The zoom
+ * is in the dock. Portaled into the bar of the view or the cell, so it reads the store of the cell it belongs to.
  */
 function DiagramControls({ viewId }: { viewId: string }) {
     const store = useDiagramStore();
-    const zoom = useDiagram((s) => s.camera.zoom);
     const empty = useDiagram((s) => s.content.nodes.length === 0);
     // A diagram nobody wrote has no file yet, so there is nothing to open.
     const written = useDiagram((s) => s.rev > 0);
     const hasFolder = useProject((s) => s.current?.folder != null);
-    const preset = activeZoomPreset(zoom);
     return (
-        <>
-            <div className={BTN_GROUP}>
-                <Tooltip label="Zoom out" name>
-                    <button className="icon-btn h-7 w-7" onClick={() => store.getState().zoomTo(Math.round(zoom * 100 - 10) / 100)}>
-                        <Icon icon={Minus} size={14} />
-                    </button>
-                </Tooltip>
-                <Menu.Root>
-                    <Tooltip label="Zoom presets">
-                        <Menu.Trigger className="h-7 min-w-12 rounded-lg px-1 text-xs tabular-nums text-text-muted hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active data-[popup-open]:text-text">
-                            {Math.round(zoom * 100)}%
-                        </Menu.Trigger>
-                    </Tooltip>
-                    <Menu.Portal>
-                        <Menu.Positioner className="z-(--z-popup)" side="bottom" sideOffset={6} align="center">
-                            <Menu.Popup className="menu-popup min-w-40">
-                                <Menu.RadioGroup value={preset} onValueChange={(value: number) => store.getState().zoomTo(value / 100)}>
-                                    {ZOOM_PRESETS.map((pct) => (
-                                        <Menu.RadioItem key={pct} value={pct} className="menu-item">
-                                            <span className="grid h-4 w-4 place-items-center">
-                                                <Menu.RadioItemIndicator>
-                                                    <Icon icon={Check} size={14} />
-                                                </Menu.RadioItemIndicator>
-                                            </span>
-                                            <span className="tabular-nums">{pct}%</span>
-                                        </Menu.RadioItem>
-                                    ))}
-                                </Menu.RadioGroup>
-                            </Menu.Popup>
-                        </Menu.Positioner>
-                    </Menu.Portal>
-                </Menu.Root>
-                <Tooltip label="Zoom in" name>
-                    <button className="icon-btn h-7 w-7" onClick={() => store.getState().zoomTo(Math.round(zoom * 100 + 10) / 100)}>
-                        <Icon icon={Plus} size={14} />
-                    </button>
-                </Tooltip>
-                <Tooltip label="Fit everything" name>
-                    <button className="icon-btn h-7 w-7" onClick={() => store.getState().fitAll()}>
-                        <Icon icon={Maximize} size={14} />
-                    </button>
-                </Tooltip>
-            </div>
-            <Separator />
-            <Menu.Root>
-                <Tooltip label="More" name>
-                    <Menu.Trigger className="icon-btn h-7 w-7">
-                        <Icon icon={MoreHorizontal} size={14} />
-                    </Menu.Trigger>
-                </Tooltip>
-                <Menu.Portal>
-                    <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
-                        <Menu.Popup className="menu-popup min-w-52">
-                            <Menu.Item className="menu-item" disabled={!hasFolder || !written} onClick={() => openDiagramJson(viewId)}>
-                                <Icon icon={FileJson} size={14} /> Open the JSON file
-                            </Menu.Item>
-                            <Menu.Item className="menu-item" onClick={() => void copyDiagramJson(store)}>
-                                <Icon icon={Braces} size={14} /> Copy as JSON
-                            </Menu.Item>
-                            <Menu.Separator className={MENU_SEPARATOR} />
-                            <div className={MENU_LABEL}>Export the diagram</div>
-                            <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDiagramPng(store)}>
-                                <Icon icon={Copy} size={14} /> Copy as PNG
-                            </Menu.Item>
-                            <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDiagramPng(store)}>
-                                <Icon icon={Download} size={14} /> Save PNG
-                            </Menu.Item>
-                            <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDiagramSvg(store)}>
-                                <Icon icon={Copy} size={14} /> Copy as SVG
-                            </Menu.Item>
-                            <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDiagramSvg(store)}>
-                                <Icon icon={Download} size={14} /> Save SVG
-                            </Menu.Item>
-                        </Menu.Popup>
-                    </Menu.Positioner>
-                </Menu.Portal>
-            </Menu.Root>
-        </>
+        <Menu.Root>
+            <Tooltip label="More" name>
+                <Menu.Trigger className="icon-btn h-7 w-7">
+                    <Icon icon={MoreHorizontal} size={14} />
+                </Menu.Trigger>
+            </Tooltip>
+            <Menu.Portal>
+                <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
+                    <Menu.Popup className="menu-popup min-w-52">
+                        <Menu.Item className="menu-item" disabled={!hasFolder || !written} onClick={() => openDiagramJson(viewId)}>
+                            <Icon icon={FileJson} size={14} /> Open the JSON file
+                        </Menu.Item>
+                        <Menu.Item className="menu-item" onClick={() => void copyDiagramJson(store)}>
+                            <Icon icon={Braces} size={14} /> Copy as JSON
+                        </Menu.Item>
+                        <Menu.Separator className={MENU_SEPARATOR} />
+                        <div className={MENU_LABEL}>Export the diagram</div>
+                        <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDiagramPng(store)}>
+                            <Icon icon={Copy} size={14} /> Copy as PNG
+                        </Menu.Item>
+                        <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDiagramPng(store)}>
+                            <Icon icon={Download} size={14} /> Save PNG
+                        </Menu.Item>
+                        <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDiagramSvg(store)}>
+                            <Icon icon={Copy} size={14} /> Copy as SVG
+                        </Menu.Item>
+                        <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDiagramSvg(store)}>
+                            <Icon icon={Download} size={14} /> Save SVG
+                        </Menu.Item>
+                    </Menu.Popup>
+                </Menu.Positioner>
+            </Menu.Portal>
+        </Menu.Root>
     );
 }
 
@@ -277,7 +234,8 @@ export function DiagramView({ id }: { id: string }) {
     const onPointerDown = (e: React.PointerEvent<HTMLDivElement>): void => {
         // The controls are portaled into the bar and their menus into the body, yet React still
         // bubbles their presses through here; capturing the pointer for those would eat the click.
-        if ((e.button !== 0 && e.button !== 1) || !e.currentTarget.contains(e.target as Node)) {
+        // The dock sits inside the surface, so it is told apart by its mark.
+        if ((e.button !== 0 && e.button !== 1) || !e.currentTarget.contains(e.target as Node) || isChrome(e.target)) {
             return;
         }
         e.currentTarget.setPointerCapture(e.pointerId);
@@ -333,6 +291,7 @@ export function DiagramView({ id }: { id: string }) {
                     </p>
                 </div>
             )}
+            <DiagramDock />
             {host !== null && createPortal(<DiagramControls viewId={id} />, host)}
         </div>
     );
