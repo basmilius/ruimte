@@ -4,6 +4,7 @@ import { basename, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { generateKeyPair, signMessage, verifySignature } from '../auth/keys.ts';
 import { readLocalSecret } from '../auth/local-secret.ts';
+import { DirectClient, type DirectCredential } from '../pulsar/direct-client.ts';
 import {
     clientAuthMessage,
     daemonChallengeMessage,
@@ -60,6 +61,7 @@ class RemoteClient {
     private readonly pending = new Map<string, Pending>();
     private readonly output: string[] = [];
     private readonly events = new Map<string, unknown[]>();
+    private readonly listeners = new Map<string, (payload: unknown) => void>();
     private nextId = 1;
 
     private constructor(socket: WebSocket) {
@@ -87,6 +89,11 @@ class RemoteClient {
 
     close(): void {
         this.socket.close();
+    }
+
+    /* Hears one event as it arrives, for a test that has to answer it straight away rather than read it later. */
+    listen(event: string, handler: (payload: unknown) => void): void {
+        this.listeners.set(event, handler);
     }
 
     request<T>(type: string, payload: unknown): Promise<T> {
@@ -118,6 +125,11 @@ class RemoteClient {
         if (!('ok' in frame)) {
             if (frame.event === 'session.output') {
                 this.output.push((frame.payload as { data: string }).data);
+                return;
+            }
+            const listener = this.listeners.get(frame.event);
+            if (listener) {
+                listener(frame.payload);
                 return;
             }
             const seen = this.events.get(frame.event) ?? [];
@@ -577,6 +589,95 @@ describe.skipIf(!ENABLED)('signing in instead of carrying a token', () => {
         signed.close();
         client.close();
     });
+});
+
+/*
+ * The wire over a WebRTC DataChannel instead of the socket. The signals ride over a socket to the
+ * container because there is no broker yet, and that socket is closed the moment the channel is up:
+ * everything after it, the terminal included, travels over UDP through the ports the compose file
+ * publishes, on the access the channel's own handshake gave it.
+ */
+describe.skipIf(!ENABLED)('a direct connection to the daemon in the container', () => {
+    const clients: DirectClient[] = [];
+    const sockets: RemoteClient[] = [];
+
+    afterAll(() => {
+        for (const client of clients) {
+            client.close();
+        }
+        for (const socket of sockets) {
+            socket.close();
+        }
+    });
+
+    /* A channel signaled over a socket that holds a credential of its own, whatever the channel then presents. */
+    const openDirect = async (credential: DirectCredential, socketToken: string): Promise<DirectClient> => {
+        const socket = await RemoteClient.connect(socketToken);
+        sockets.push(socket);
+        const client = new DirectClient({
+            stunServers: [],
+            credential,
+            timeoutMs: 20_000,
+            signal: (envelope) => void socket.request('direct.signal', { envelope })
+        });
+        clients.push(client);
+        socket.listen('direct.signaled', (payload) => client.receiveSignal((payload as { envelope: Parameters<DirectClient['receiveSignal']>[0] }).envelope));
+        try {
+            await client.open();
+        } finally {
+            socket.close();
+        }
+        return client;
+    };
+
+    test('a paired key opens the channel from outside the container and a terminal answers over it', async () => {
+        const key = generateKeyPair();
+        const paired = await pair(key.publicKey);
+        const client = await openDirect(
+            { kind: 'key', publicKey: key.publicKey, privateKey: key.privateKey, daemonId: paired.endpoint.id, daemonPublicKey: paired.endpoint.publicKey! },
+            await ticketFor(key, paired.endpoint.id)
+        );
+        expect((await client.request<EndpointInfo>('endpoint.info', {})).authenticated).toBe(true);
+
+        let output = '';
+        client.onFrame((raw) => {
+            const frame = JSON.parse(raw) as { event?: string; payload?: { data?: string } };
+            if (frame.event === 'session.output') {
+                output += frame.payload?.data ?? '';
+            }
+        });
+        const sessionId = `docker-direct-${Date.now()}`;
+        await client.request<SessionInfo>('session.create', { sessionId, cwd: REPO, cols: 80, rows: 24 });
+        try {
+            await client.request<SessionAttachResult>('session.attach', { sessionId, cols: 80, rows: 24 });
+            await client.request('session.write', { sessionId, data: 'echo direct-$((6*7)) && uname -s\n' });
+            await waitUntil('the shell to answer over the channel', () => output.includes('direct-42') && output.includes('Linux'));
+        } finally {
+            await client.request('session.kill', { sessionId }).catch(() => undefined);
+        }
+        console.log(`direct channel to the container: open after ${client.timings.channelOpenMs} ms, signed in after ${client.timings.authenticatedMs} ms`);
+    }, 60_000);
+
+    test('a key nobody paired and a channel without a proof get nothing, whatever the signaling socket holds', async () => {
+        const paired = await pair(generateKeyPair().publicKey);
+        const socketKey = generateKeyPair();
+        await pair(socketKey.publicKey);
+        const ticket = await ticketFor(socketKey, paired.endpoint.id);
+        const stranger = generateKeyPair();
+        await expect(
+            openDirect(
+                {
+                    kind: 'key',
+                    publicKey: stranger.publicKey,
+                    privateKey: stranger.privateKey,
+                    daemonId: paired.endpoint.id,
+                    daemonPublicKey: paired.endpoint.publicKey!
+                },
+                ticket
+            )
+        ).rejects.toThrow(/does not recognize/);
+        await expect(openDirect({ kind: 'none' }, await ticketFor(socketKey, paired.endpoint.id))).rejects.toThrow(/^Expected a proof$/);
+    }, 60_000);
 });
 
 /* Starts or stops the container itself, for the half of the pool that is about a daemon falling away. */
