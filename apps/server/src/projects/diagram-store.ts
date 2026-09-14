@@ -1,9 +1,9 @@
 import { watch, type FSWatcher } from 'node:fs';
-import { mkdir, readdir, rm } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rm } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { EMPTY_DIAGRAM, diagramProblemIn, isDiagramView, type DiagramContent, type DiagramDocument, type ProjectView } from '@ruimte/contracts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
-import { diagramsDirOf, readDiagram, viewFilePathIn, viewIdOfFile, writeDiagram } from './project-files.ts';
+import { diagramsDirOf, parseDiagram, readDiagram, viewFilePathIn, viewIdOfFile, writeDiagram } from './project-files.ts';
 import { ProjectError, type ProjectStore, type ProjectViewFiles } from './project-store.ts';
 
 type DiagramErrorCode = 'project-not-found' | 'diagram-not-found' | 'diagram-invalid' | 'rev-conflict';
@@ -165,6 +165,29 @@ export class DiagramStore implements ProjectViewFiles {
             this.emit({ event: 'diagram.changed', payload: { projectId, viewId, document } });
             return document.rev;
         });
+    }
+
+    /*
+     * What an agent reads: the diagram of a view, open or not, or null when the project has no
+     * diagram under that id or its file is not one. Unlike `open` it never sets a broken file
+     * aside, since a read nobody asked to repair anything should leave the folder as it found it.
+     */
+    async read(projectId: string, viewId: string): Promise<DiagramDocument | null> {
+        const place = await this.projects.place(projectId).catch(() => null);
+        if (!place || !place.views.some((view) => view.id === viewId && isDiagramView(view))) {
+            return null;
+        }
+        let text: string;
+        try {
+            text = await readFile(viewFilePathIn(diagramsDirOf(place.documentPath), viewId), 'utf8');
+        } catch (e) {
+            if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
+                return EMPTY_DIAGRAM;
+            }
+            throw e;
+        }
+        const parsed = parseDiagram(text);
+        return parsed.kind === 'ok' ? parsed.document : null;
     }
 
     close(projectId: string, viewId: string): void {

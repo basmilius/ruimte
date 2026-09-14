@@ -119,6 +119,10 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         terminalText: (sessionId) => manager.get(sessionId)?.plainText() ?? Promise.resolve(null),
         chatItems: (chatId) => chats.get(chatId)?.thread.list() ?? null,
         drawingElements: (viewId) => drawings.elementsOf(viewId),
+        diagramDocument: async (targetId, viewId) => {
+            const place = projects.index.locate(targetId);
+            return place ? diagrams.read(place.projectId, viewId) : null;
+        },
         targetForToken
     });
     const attachments = new AttachmentStore(config.home);

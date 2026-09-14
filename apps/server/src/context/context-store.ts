@@ -1,5 +1,6 @@
-import type { ChatItem, ContextSource, DrawingElement } from '@ruimte/contracts';
+import type { ChatItem, ContextSource, DiagramDocument, DrawingElement } from '@ruimte/contracts';
 import { contextChangeNote } from './context-note.ts';
+import { renderDiagram } from './context-diagram.ts';
 import { renderDrawing } from './context-drawing.ts';
 
 export const CONTEXT_PATH = '/context';
@@ -18,6 +19,8 @@ interface ContextReaders {
     sources(targetId: string): ContextSource[];
     /* The elements of a drawing view, or null when no open project has one under that id. */
     drawingElements(viewId: string): Promise<DrawingElement[] | null>;
+    /* The diagram of a view in the project of the agent asking, whether or not anyone has that project open. */
+    diagramDocument(targetId: string, viewId: string): Promise<DiagramDocument | null>;
     /* The plain text of a terminal session's screen and scrollback, or null when there is none. */
     terminalText(sessionId: string): Promise<string | null>;
     /* A chat's thread, or null when there is none. */
@@ -129,6 +132,10 @@ export class ContextStore {
             case 'drawing': {
                 const elements = await this.readers.drawingElements(source.id);
                 return elements ? renderDrawing(elements, tail) : null;
+            }
+            case 'diagram': {
+                const document = await this.readers.diagramDocument(targetId, source.id);
+                return document ? renderDiagram(document, tail) : null;
             }
             /*
              * The path, never the bytes. An agent has file tools of its own, so reading it there is

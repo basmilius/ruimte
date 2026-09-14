@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatItem, ContextSource, DrawingElement } from '@ruimte/contracts';
+import type { ChatItem, ContextSource, DiagramDocument, DrawingElement } from '@ruimte/contracts';
 import { ContextStore, MAX_SCREEN_LINES, renderTranscript } from './context-store.ts';
 
 const items: ChatItem[] = [
@@ -26,6 +26,22 @@ const drawing: DrawingElement[] = [
     { kind: 'text', id: 'el-4', x: 10, y: 420, w: 80, h: 24, stroke: 'ink', strokeWidth: 1, seed: 7, text: 'Disk', size: 20 }
 ];
 
+const diagram: DiagramDocument = {
+    version: 1,
+    rev: 3,
+    meta: { title: 'Wire', direction: 'right' },
+    nodes: [
+        { id: 'client', label: 'Client', sub: 'React' },
+        { id: 'daemon', label: 'Daemon' },
+        { id: 'disk', label: 'Disk', shape: 'cylinder' }
+    ],
+    groups: [{ id: 'machine', label: 'Machine', wraps: ['daemon', 'disk'] }],
+    edges: [
+        { from: 'client', to: 'daemon', label: 'socket' },
+        { from: 'daemon', to: 'disk' }
+    ]
+};
+
 // Stands in for the project index: what each target's document links into it.
 const linked = new Map<string, ContextSource[]>();
 
@@ -34,6 +50,8 @@ const store = new ContextStore({
     terminalText: async (id) => (id === 'term' ? `${Array.from({ length: 2500 }, (_, i) => `line ${i}`).join('\n')}` : null),
     chatItems: (id) => (id === 'chat' ? items : null),
     drawingElements: async (id) => (id === 'view-1' ? drawing : null),
+    // Only the agent of the project that holds it reads the diagram, which is what the daemon's reader does too.
+    diagramDocument: async (targetId, id) => (targetId === 'agent' && id === 'flow-1' ? diagram : null),
     targetForToken: (token) => (token === 'tok' ? 'agent' : null)
 });
 
@@ -169,5 +187,42 @@ describe('a drawing as context', () => {
     test('a drawing whose project is closed reads as nothing at all', async () => {
         linked.set('agent', [{ id: 'gone', kind: 'drawing', title: 'Sketch' }]);
         expect(await store.read('agent', 'gone')).toBeNull();
+    });
+});
+
+describe('a diagram as context', () => {
+    test('an agent reads the title, the reading order and the SVG after it', async () => {
+        linked.set('agent', [{ id: 'flow-1', kind: 'diagram', title: 'Wire' }]);
+        expect(store.list('agent')).toEqual([{ id: 'flow-1', kind: 'diagram', title: 'Wire' }]);
+        const text = (await store.read('agent', 'flow-1')) ?? '';
+        const [head, svg] = text.split('\n## SVG\n');
+        expect(head!.split('\n')).toEqual([
+            '# Diagram: Wire',
+            '',
+            'Client (React)',
+            'Daemon',
+            'Disk',
+            'Client -> Daemon: socket',
+            'Daemon -> Disk',
+            'Machine wraps: Daemon, Disk',
+            ''
+        ]);
+        expect(svg).toContain('<svg');
+    });
+
+    test('--tail counts the reading order alone and never reaches the SVG', async () => {
+        linked.set('agent', [{ id: 'flow-1', kind: 'diagram', title: 'Wire' }]);
+        expect(await store.read('agent', 'flow-1', 2)).toBe('Daemon -> Disk\nMachine wraps: Daemon, Disk');
+        // A tail longer than the list is the whole list and still no heading and no markup.
+        expect(await store.read('agent', 'flow-1', 100)).toBe(
+            'Client (React)\nDaemon\nDisk\nClient -> Daemon: socket\nDaemon -> Disk\nMachine wraps: Daemon, Disk'
+        );
+        expect(await (await get('/context/flow-1?tail=1', 'tok')).text()).toBe('Machine wraps: Daemon, Disk');
+    });
+
+    test('a diagram the daemon cannot find reads as nothing at all', async () => {
+        linked.set('agent', [{ id: 'gone', kind: 'diagram', title: 'Wire' }]);
+        expect(await store.read('agent', 'gone')).toBeNull();
+        expect((await get('/context/gone', 'tok')).status).toBe(404);
     });
 });

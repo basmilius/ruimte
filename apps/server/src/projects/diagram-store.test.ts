@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { DiagramContent, DiagramNode, ProjectContent } from '@ruimte/contracts';
+import { EMPTY_DIAGRAM, type DiagramContent, type DiagramNode, type ProjectContent } from '@ruimte/contracts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { waitFor } from '../sessions/test-helpers.ts';
 import { DiagramStore } from './diagram-store.ts';
@@ -228,5 +228,23 @@ describe('DiagramStore.write', () => {
             result: null
         }));
         expect(await diagrams.write(projectId, 'view-new', graph([node('a')]))).toBe(1);
+    });
+});
+
+describe('DiagramStore.read', () => {
+    test('reads a diagram of a released project, empty before anyone wrote it, and null for what is no diagram', async () => {
+        projects.release(projectId);
+        expect(await diagrams.read(projectId, 'view-a')).toEqual(EMPTY_DIAGRAM);
+        await diagrams.write(projectId, 'view-a', graph([node('a')]));
+        expect(await diagrams.read(projectId, 'view-a')).toMatchObject({ rev: 1, nodes: [{ id: 'a' }] });
+        expect(await diagrams.read(projectId, 'sketch')).toBeNull();
+        expect(await diagrams.read('nope', 'view-a')).toBeNull();
+    });
+
+    test('a broken file reads as null and stays where it is', async () => {
+        await mkdir(diagramsDir(), { recursive: true });
+        await writeFile(diagramFile('view-a'), '{ not json');
+        expect(await diagrams.read(projectId, 'view-a')).toBeNull();
+        expect(await readFile(diagramFile('view-a'), 'utf8')).toBe('{ not json');
     });
 });

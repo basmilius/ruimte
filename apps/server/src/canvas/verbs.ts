@@ -91,6 +91,7 @@ const readVerb: ContextVerb = {
         `kind\tterminal\tThe screen of that session, its last ${MAX_SCREEN_LINES} lines, read the moment you ask\t--tail counts screen lines and cannot reach past those ${MAX_SCREEN_LINES}`,
         'kind\tchat\tThe whole thread as markdown: who said what, and what every tool ran\t--tail counts lines of that markdown, so it ends on the latest turn',
         'kind\tdrawing\tThe text of the drawing in reading order, and the picture itself as SVG under it\t--tail counts lines of the reading order and leaves the SVG out',
+        'kind\tdiagram\tIts title, every node layer by layer (sub in brackets), every edge with its label, what each group wraps, and the SVG under it\t--tail counts lines of that list and leaves the SVG out',
         'kind\tfile\tIts path and a line telling you to read it yourself, since your own tools see a fresher copy\t--tail does nothing here',
         'cheap\tThe last fifteen lines of a neighbour is usually the whole answer; read the source whole only when it is not',
         SCOPE_LINE
