@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { isCanvasView, isDiagramView } from '@ruimte/contracts';
+import { browserRegistry } from '@/browser/registry';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, VIEW_SHORTCUTS } from '@/canvas/shortcuts';
 import { isApplePlatform } from '@/desktop/bridge';
 import { addNodeAtCenter } from '@/shell/commands';
@@ -10,7 +11,8 @@ import { activeViewOf, useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { cellCount, type SplitDirection } from '@/shell/split';
 import { matchesShortcut, type Shortcut } from '@/ui/shortcut';
-import { isFocusedWorkspace, type WorkspaceStores } from '@/state/workspace-stores';
+import { endpointKey } from '@/state/keys';
+import { currentWorkspaceEndpointId, isFocusedWorkspace, type WorkspaceStores } from '@/state/workspace-stores';
 import { isInFloatingLayer } from '@/ui/floating';
 
 /* The first entry whose shortcut the event is, so a table reads as one condition. */
@@ -21,6 +23,20 @@ const entryFor = <T extends string>(table: Record<T, Shortcut>, e: KeyboardEvent
 const onStandaloneView = (): boolean => {
     const view = activeViewOf(useDocument.getState());
     return view !== null && !isCanvasView(view);
+};
+
+/* The page the keyboard means: a browser view in the focused cell, or the browser node stepped into on its canvas. */
+const focusedBrowserKey = (): string | null => {
+    const endpointId = currentWorkspaceEndpointId();
+    const view = activeViewOf(useDocument.getState());
+    if (endpointId === null || view === null) {
+        return null;
+    }
+    if (!isCanvasView(view)) {
+        return view.kind === 'browser' ? endpointKey(endpointId, view.id) : null;
+    }
+    const { mode, nodes } = focusedCanvas().getState();
+    return mode.kind === 'node' && nodes[mode.nodeId]?.kind === 'browser' ? endpointKey(endpointId, mode.nodeId) : null;
 };
 
 export const isTypingTarget = (el: EventTarget | null): boolean => {
@@ -121,6 +137,20 @@ export const useCanvasShortcuts = (stores: WorkspaceStores | null): void => {
                     showView(view.id);
                 }
                 return;
+            }
+            /* With the keyboard inside the page these never get here; the guest preload sends them instead.
+               Only a focused browser takes them, so a drawing keeps them for its order. */
+            if (is(CANVAS_SHORTCUTS.browserBack) || is(CANVAS_SHORTCUTS.browserForward)) {
+                const key = focusedBrowserKey();
+                if (key !== null) {
+                    e.preventDefault();
+                    if (is(CANVAS_SHORTCUTS.browserForward)) {
+                        browserRegistry.forward(key);
+                    } else {
+                        browserRegistry.back(key);
+                    }
+                    return;
+                }
             }
             if (is(CANVAS_SHORTCUTS.previousView) || is(CANVAS_SHORTCUTS.nextView)) {
                 e.preventDefault();

@@ -97,6 +97,13 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
         shortcuts: [{ keys: CANVAS_SHORTCUTS.togglePanel, label: 'Toggle the last open panel' }]
     },
     {
+        title: 'Browser',
+        shortcuts: [
+            { keys: CANVAS_SHORTCUTS.browserBack, label: 'Back' },
+            { keys: CANVAS_SHORTCUTS.browserForward, label: 'Forward' }
+        ]
+    },
+    {
         title: 'Nodes',
         shortcuts: [
             { keys: shortcut('Tab'), label: 'Move focus to the next node' },

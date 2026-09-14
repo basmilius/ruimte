@@ -14,6 +14,8 @@ export const CANVAS_SHORTCUTS = {
     togglePanel: shortcut('Mod+Alt+B'),
     previousView: shortcut('Mod+Shift+['),
     nextView: shortcut('Mod+Shift+]'),
+    browserBack: shortcut('Mod+['),
+    browserForward: shortcut('Mod+]'),
     undo: shortcut('Mod+Z'),
     redo: shortcut('Mod+Shift+Z'),
     group: shortcut('Mod+G'),
