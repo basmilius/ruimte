@@ -37,7 +37,9 @@ import { registerAuthHandlers } from './handlers/auth.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
 import { FS_FILE_PATH, handleFsFileRequest } from './fs/file-route.ts';
 import { FolderWatcher } from './fs/watch.ts';
+import { registerBytesHandlers } from './handlers/bytes.ts';
 import { registerFsHandlers } from './handlers/fs.ts';
+import { readMedia } from './fs/read.ts';
 import { registerGitHandlers } from './handlers/git.ts';
 import { registerDiagramHandlers } from './handlers/diagram.ts';
 import { registerDrawingHandlers } from './handlers/drawing.ts';
@@ -244,6 +246,11 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         }
     });
     registerFsHandlers(dispatcher, folders);
+    registerBytesHandlers(dispatcher, {
+        attachment: (chatId, id) => chats.attachment(chatId, id),
+        projectIcon: (projectId, theme) => projects.iconFile(projectId, theme),
+        media: readMedia
+    });
     registerUsageHandlers(dispatcher, usage, limits);
     registerProcessHandlers(dispatcher, processes);
     registerGitHandlers(dispatcher, worktrees, statuses, providers);
