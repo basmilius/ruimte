@@ -789,8 +789,8 @@ canvas, against Ruimte, one verdict each.
 
 ### A diagram
 
-Built on 2026-09-14 after `docs/reports/2026-09-12-diagram-view.html`, phases 1 to 4 of it (the
-`diagram` kind of `node`, which the report put in phase 4, waits for phase 5 with the node itself).
+Built on 2026-09-14 after `docs/reports/2026-09-12-diagram-view.html`, all five phases of it (the
+`diagram` kind of `node`, which the report put in phase 4, came with the node itself in phase 5).
 What the report left open and what the build decided:
 
 - **Two view kinds, not a second sort inside a drawing.** The report's advice, kept: a diagram
@@ -843,7 +843,10 @@ What the report left open and what the build decided:
     outside it.
 - **A node with `pos` gives up its place in its layer**, and the rest close up. Keeping the slot
   empty would leave a hole where a person dragged a node away from. Its edges take the shortest
-  elbow and none of the promises above hold for them; nothing on screen drags a node yet.
+  elbow and none of the promises above hold for them: no port, no track, and a label that moves
+  down until it is clear. The elbow follows the flow, so in a diagram that runs down it leaves a box
+  downwards whenever the two boxes are stacked, instead of out of a side against the flow; that is
+  the one change the drag asked of the layout, and a crossing is still allowed there.
 - **Text is estimated, never measured.** `packages/diagram` has no DOM and the daemon draws the same
   picture, so a glyph is a share of its size per class of character (narrow, lowercase, uppercase,
   wide, digits, CJK), measured in Chromium on the system face and on Helvetica as a stand-in for
@@ -863,9 +866,10 @@ What the report left open and what the build decided:
   an edge or a group that names a node that is not there, since phase 5 lets a person delete one.
 - **The client is the drawing's, save path included.** `DiagramClient` follows `DrawingClient`
   line for line (open what the grid shows, flush and close what leaves it, a conflict to the banner,
-  a reopen after a reconnect), with a registry of editors of its own beside the drawings'. Nothing on
-  screen edits a diagram yet, so no person can cause a save or a conflict today: `replaceContent` is
-  the seam dragging a node will use, and the tests drive the save path through it.
+  a reopen after a reconnect), with a registry of editors of its own beside the drawings'. The
+  handles of phase 5 are the edits that go through it. Taking theirs from the banner cancels the
+  save the conflicting edit had waiting, which would otherwise write their document straight back
+  under a new rev.
 - **SVG in the DOM, colors through the tokens.** `DiagramView` draws `layoutOf` and the shape paths
   of `packages/diagram` as elements, with every tone as `var(--draw-<name>)` in a style, so a theme
   switch needs no repaint. The export goes through `toSvg` with the palette read from the theme, and
@@ -878,8 +882,10 @@ What the report left open and what the build decided:
   the cell's toolbar (`file-toolbar-slot.ts`, `diagram` in `KINDS_WITH_TOOLBAR`): they are about the
   file, not the picture. Opening the JSON file waits until there is one (rev above 0) and needs a project folder.
 - **What a diagram view is offered:** a new view from the view menu and the palette, a duplicate
-  (the daemon copies the file), and the zoom and export rows in the palette. Not "Put on canvas" or
-  "Show on the canvas": the node that mirrors a diagram is a later phase.
+  (the daemon copies the file), the zoom and export rows in the palette, and "Show on the canvas"
+  from the view menu, the sidebar row and the palette, which puts a mirroring node on the canvas
+  that was up last. "Put on canvas" stays what it was, the way back for a session view that was a
+  node; a diagram view never was one, so it is not offered there, as it is not for a drawing.
 - **An agent writes the whole diagram, never a piece of it.** `ruimte-context diagram <viewId>`
   replaces the file, with no patch form and no `--dry-run`: a wrong diagram is undone by writing
   the right one. A small change is an edit of the file with the agent's own tools, which the
@@ -895,14 +901,46 @@ What the report left open and what the build decided:
   and `rev` pass and are ignored, since a rewrite most naturally starts from the file on disk. A
   refusal carries a `problem` line per zod issue (at most 20) in words of its own, with the id of
   the node or group or the two ends of the edge it is about, and the first one as its message.
-- **A diagram source waits for the node.** `diagram` is a kind in `ContextSourceSchema`, rendered
-  (`context/context-diagram.ts`) and read, but `deriveContextSources` makes none yet: an edge only
-  joins the nodes and texts of one canvas, and nothing on a canvas mirrors a diagram before phase 5,
-  which adds the branch beside the drawing's with the view id as the source id. A diagram view
-  without a node is never a source, like a drawing view without one; an agent that wants it reads
-  `.ruimte/diagrams/<viewId>.json` itself. Unlike the drawing reader, which only looks among open
-  projects, `DiagramStore.read` finds the project of the agent asking on disk, and it never sets a
-  broken file aside, since a read should leave the folder as it found it.
+- **A diagram source is the drawing's branch.** `deriveContextSources` makes a source of kind
+  `diagram` for an edge from a diagram node into an agent, with the view id as the source id, so two
+  nodes on one diagram are one source. A diagram node without a `viewId` is only a line. A diagram
+  view without a node is never a source, like a drawing view without one; an agent that wants it
+  reads `.ruimte/diagrams/<viewId>.json` itself. Unlike the drawing reader, which only looks among
+  open projects, `DiagramStore.read` finds the project of the agent asking on disk, and it never sets
+  a broken file aside, since a read should leave the folder as it found it.
+- **`node diagram --source` takes a diagram and nothing else.** The flag is the drawing's, checked
+  against the kind of the node: a drawing view given to a diagram node is refused as `not-a-diagram`
+  with the diagram views listed, and the other way round as before. Where a project has no diagram
+  view the refusal names `view new --kind diagram`, since an agent can make one, where a drawing's
+  still says a person makes one.
+- **The node is the drawing node's, in SVG.** `DiagramNode` lays the mirrored content out with the
+  same `layoutOf` and draws `DiagramScene`, the view's own elements, in an `svg` whose `viewBox` is
+  the bounds with 24 units of air and which takes no pointer, so the canvas drags the node and a
+  double-click opens the view. It is read-only, like a drawing node. Unlike a drawing node it draws a
+  plate (its mark and its title) out of view and under `READABLE_ZOOM`, as a file node does: a
+  diagram costs a read and a layout, where a drawing node only paints what it already holds.
+- **An empty diagram node says what fills it, and nothing says it is being written.** The report
+  left open whether a node an agent places before it writes the diagram should say "being written".
+  It does not: the daemon cannot know a write is coming, so such a state would be a guess that
+  stays up forever when the agent never writes. The node shows the drawing node's empty state with a
+  sentence of its own ("An agent fills it with ruimte-context diagram"), for a file that is not there
+  yet and for one without nodes alike, and the mirror shows the diagram the moment the write lands.
+- **What a person does to a diagram is four handles.** Dragging a node writes `pos` in whole numbers
+  after 3 screen pixels, so a click or a double-click never pins a node. A double-click or "Rename"
+  in the node's context menu types the label over the box; the label is trimmed and an empty one
+  keeps the old label, since a box without a name cannot be found again. "Tone" is the drawing
+  dock's `Swatches` in the paper colors a node is filled with, and "Reset position" removes `pos`. A
+  right-click on the paper opens nothing. Groups and edges have no handles: a diagram is written, and
+  anything more is a change of the file.
+- **Undo is whole contents.** A diagram is a few dozen entries, so the store keeps up to 100
+  earlier contents rather than inverse steps, a drag is one step however many moves it took (the
+  drawing's `first`), and a document from disk starts the history over, as a drawing's does. The
+  dock carries undo and redo beside the export, and Mod+Z and Mod+Shift+Z are bound once per
+  workspace in `canvas-shortcuts.ts` for the focused cell when it holds a diagram, not per cell.
+- **`diagram` is the first node kind after the unknown-kinds fix, and it did not wait a release.**
+  "Kinds a newer Ruimte wrote" advises a release in between. That was weighed and accepted: a
+  project with a diagram node, opened by a release without that fix, is set aside as `.corrupt-`
+  until that app is updated and the file renamed back.
 - **The hint names no verb.** `VERBS_NOTE` says what `ruimte-context` is for rather than listing
   its verbs, so it stays as it was; `help` lists `diagram`, and `help diagram` is the schema.
 
@@ -1234,9 +1272,10 @@ and a valid document apart from that one view.
   on the first save, as `apps/server/src/agents/lineage.ts` already notes. Nothing needed that yet.
 - **Limit: this only helps from this version on.** A release without this fix still sets aside a
   project that holds a kind it does not know. A new view or node kind is only safe to write once the
-  release before it already carried this fix, so the first kind after it (the canvas node `diagram`
-  is the next one planned) should wait one release, or ship knowing that anyone on an older release
-  who opens the project loses it to a `.corrupt-` file until they update and rename it back.
+  release before it already carried this fix, so the first kind after it should wait one release, or
+  ship knowing that anyone on an older release who opens the project loses it to a `.corrupt-` file
+  until they update and rename it back. The canvas node `diagram` was that first kind, and it
+  shipped on the second terms (see "A diagram").
 
 ### Error boundaries
 
