@@ -1,8 +1,8 @@
 import clsx from 'clsx';
 import type { ProjectIcon } from '@ruimte/contracts';
-import { projectIconUrl } from '@/project/icon-url';
 import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
 import { useTheme } from '@/state/theme';
+import { useMachineUrl } from '@/transport/machine-url';
 import { Icon } from '@/ui/Icon';
 
 interface ProjectGlyphProps {
@@ -19,6 +19,7 @@ interface ProjectGlyphProps {
 export function ProjectGlyph({ projectId, endpointId, icon, color, size = 16, className }: ProjectGlyphProps) {
     const theme = useTheme((s) => s.resolved);
     const box = { width: size, height: size };
+    const image = useMachineUrl(icon.kind === 'image' ? { kind: 'projectIcon', projectId, theme, version: icon.version } : null, endpointId);
 
     if (icon.kind === 'lucide') {
         return <Icon icon={PROJECT_ICON_GLYPHS[icon.value]} size={size} className={clsx('shrink-0', className)} />;
@@ -31,16 +32,11 @@ export function ProjectGlyph({ projectId, endpointId, icon, color, size = 16, cl
         );
     }
     if (icon.kind === 'image') {
-        return (
-            <img
-                src={projectIconUrl(projectId, icon.version, theme, endpointId)}
-                alt=""
-                width={size}
-                height={size}
-                className={clsx('shrink-0 rounded-sm object-contain', className)}
-                style={box}
-            />
-        );
+        // The box holds its place while the bytes are on their way, so the name beside it does not jump.
+        if (image.url === null) {
+            return <span aria-hidden className={clsx('shrink-0', className)} style={box} />;
+        }
+        return <img src={image.url} alt="" width={size} height={size} className={clsx('shrink-0 rounded-sm object-contain', className)} style={box} />;
     }
     // The letter takes the project's own color on a tint of it, so nothing has to guess what reads
     // on an arbitrary hex. Never under 12 pixels, which a 16 pixel box still holds.

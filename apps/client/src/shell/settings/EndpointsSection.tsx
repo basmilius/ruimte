@@ -102,7 +102,7 @@ function DirectToggle({ endpoint }: { endpoint: Endpoint }) {
     };
 
     return (
-        <Tooltip label="Connect directly over WebRTC (experimental). Images, attachments and file previews do not load over it yet.">
+        <Tooltip label="Connect directly over WebRTC (experimental).">
             <label className="flex items-center gap-1.5 text-xs text-text-muted">
                 Direct
                 <Toggle checked={endpoint.direct === true} onChange={toggle} label={`Connect directly to ${endpoint.label} (experimental)`} />

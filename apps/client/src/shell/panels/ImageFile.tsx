@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { ImageOff, Maximize, Scan } from 'lucide-react';
 import type { FsReadBinary } from '@ruimte/contracts';
-import { fileBytesUrl } from '@/shell/panels/file-url';
 import { useEndpointId } from '@/state/keys';
+import { useMachineUrl } from '@/transport/machine-url';
 import { formatBytes } from '@/shell/panels/file-size';
 import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { BTN_GROUP } from '@/ui/classes';
@@ -18,6 +18,7 @@ export function ImageFile({ path, name, read }: { path: string; name: string; re
     const [size, setSize] = useState<{ width: number; height: number } | null>(null);
     const [failed, setFailed] = useState(false);
     const endpointId = useEndpointId();
+    const bytes = useMachineUrl({ kind: 'file', path, mtime: read.mtime, size: read.size }, endpointId);
 
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
@@ -28,16 +29,20 @@ export function ImageFile({ path, name, read }: { path: string; name: string; re
                 </div>
             </FileToolbar>
             <div className="grid min-h-0 grow place-items-center overflow-auto bg-surface-sunken p-4">
-                {failed ? (
-                    <EmptyState icon={<Icon icon={ImageOff} size={20} />}>Could not show {name}. It may have changed while loading.</EmptyState>
+                {failed || bytes.failure !== null ? (
+                    <EmptyState icon={<Icon icon={ImageOff} size={20} />}>
+                        Could not show {name}. {bytes.failure ?? 'It may have changed while loading.'}
+                    </EmptyState>
                 ) : (
-                    <img
-                        src={fileBytesUrl(path, read.mtime, read.size, endpointId)}
-                        alt={name}
-                        className={zoom === 'fit' ? 'h-auto max-w-full' : 'max-w-none'}
-                        onLoad={(event) => setSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })}
-                        onError={() => setFailed(true)}
-                    />
+                    bytes.url !== null && (
+                        <img
+                            src={bytes.url}
+                            alt={name}
+                            className={zoom === 'fit' ? 'h-auto max-w-full' : 'max-w-none'}
+                            onLoad={(event) => setSize({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })}
+                            onError={() => setFailed(true)}
+                        />
+                    )
                 )}
             </div>
             <div className="flex h-7 shrink-0 items-center gap-3 border-t border-border px-2 text-xs text-text-muted select-text">

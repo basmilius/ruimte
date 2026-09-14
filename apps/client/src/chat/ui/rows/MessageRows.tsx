@@ -1,12 +1,13 @@
 import { useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { Bot, Brain, Check, ChevronDown, CircleAlert, Info, MessageCircleQuestionMark, Minimize2, Paperclip, TriangleAlert, X } from 'lucide-react';
-import type { ChatApprovalItem, ChatAssistantItem, ChatQuestionItem, ChatThinkingItem, ChatUserItem } from '@ruimte/contracts';
-import { attachmentUrl, formatBytes, isImageAttachment } from '@/chat/attachments';
+import type { ChatApprovalItem, ChatAttachment, ChatAssistantItem, ChatQuestionItem, ChatThinkingItem, ChatUserItem } from '@ruimte/contracts';
+import { formatBytes, isImageAttachment } from '@/chat/attachments';
 import { useChatRow } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useProviders } from '@/state/providers';
 import { useSettings } from '@/state/settings';
+import { useMachineUrl } from '@/transport/machine-url';
 import { ImageThumb } from '@/chat/ui/ImageView';
 import { MessageMarkdown, ReplyMarkdown } from '@/chat/ui/Markdown';
 import { settledBlocksText } from '@/chat/ui/markdown-blocks';
@@ -24,6 +25,28 @@ const USER_FOLD_CHARS = 600;
 /* A folded user prompt fades out at the bottom instead of cutting a line in half. */
 const FOLD = 'max-h-[10em] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent)]';
 
+/*
+ * A file attached to a message that is not a picture. `download` is what saves a blob URL: the shell
+ * hands a link that opens a window to the system browser, which cannot reach a blob of this page.
+ */
+function AttachmentLink({ chatId, endpointId, attachment }: { chatId: string; endpointId: string; attachment: ChatAttachment }) {
+    const { url } = useMachineUrl({ kind: 'attachment', chatId, attachmentId: attachment.id }, endpointId);
+    return (
+        <a
+            href={url ?? undefined}
+            download={attachment.name}
+            target="_blank"
+            rel="noreferrer"
+            aria-disabled={url === null}
+            className="flex max-w-56 items-center gap-1.5 rounded-lg border border-border bg-surface-sunken px-2.5 py-1.5 text-xs text-text-muted hover:text-text"
+        >
+            <Icon icon={Paperclip} size={12} className="shrink-0 text-text-faint" />
+            <span className="truncate">{attachment.name}</span>
+            <span className="shrink-0 text-text-faint">{formatBytes(attachment.size)}</span>
+        </a>
+    );
+}
+
 export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }) {
     const [open, setOpen] = useState(false);
     const endpointId = useEndpointId();
@@ -38,22 +61,13 @@ export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }
                         isImageAttachment(attachment.mime) ? (
                             <ImageThumb
                                 key={attachment.id}
-                                src={attachmentUrl(chatId, attachment.id, endpointId)}
+                                resource={{ kind: 'attachment', chatId, attachmentId: attachment.id }}
+                                endpointId={endpointId}
                                 alt={attachment.name}
                                 className="max-h-32 max-w-48 object-cover"
                             />
                         ) : (
-                            <a
-                                key={attachment.id}
-                                href={attachmentUrl(chatId, attachment.id, endpointId)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex max-w-56 items-center gap-1.5 rounded-lg border border-border bg-surface-sunken px-2.5 py-1.5 text-xs text-text-muted hover:text-text"
-                            >
-                                <Icon icon={Paperclip} size={12} className="shrink-0 text-text-faint" />
-                                <span className="truncate">{attachment.name}</span>
-                                <span className="shrink-0 text-text-faint">{formatBytes(attachment.size)}</span>
-                            </a>
+                            <AttachmentLink key={attachment.id} chatId={chatId} endpointId={endpointId} attachment={attachment} />
                         )
                     )}
                 </div>

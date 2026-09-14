@@ -3,9 +3,9 @@ import { Dialog } from '@base-ui-components/react/dialog';
 import clsx from 'clsx';
 import { ImageOff, Minus, Plus, RotateCcw, X } from 'lucide-react';
 import { isImageMime, type FsReadResult } from '@ruimte/contracts';
-import { fileBytesUrl } from '@/shell/panels/file-url';
 import { useEndpointId } from '@/state/keys';
 import { useTransport } from '@/transport/context';
+import { useMachineUrl, type MachineResource } from '@/transport/machine-url';
 import { BTN_GROUP } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
@@ -140,9 +140,25 @@ function Lightbox({ src, alt, open, onOpenChange }: { src: string; alt: string; 
     );
 }
 
-/* A thumbnail that opens the same image large. The button is the picture, so there is nothing to aim at. */
-export function ImageThumb({ src, alt, className }: { src: string; alt: string; className?: string }) {
+/*
+ * A thumbnail that opens the same image large. The button is the picture, so there is nothing to aim at.
+ * The image is bytes on the machine the thread or the file belongs to; until they are here a quiet
+ * square stands in for it.
+ */
+export function ImageThumb({ resource, endpointId, alt, className }: { resource: MachineResource; endpointId: string; alt: string; className?: string }) {
     const [open, setOpen] = useState(false);
+    const { url: src, failure } = useMachineUrl(resource, endpointId);
+    if (src === null) {
+        return (
+            <span className="grid size-16 place-items-center rounded-lg border border-border bg-surface-sunken text-text-faint">
+                {failure !== null && (
+                    <Tooltip label={failure}>
+                        <Icon icon={ImageOff} size={14} />
+                    </Tooltip>
+                )}
+            </span>
+        );
+    }
     return (
         <>
             <button className="block overflow-hidden rounded-lg border border-border" onClick={() => setOpen(true)}>
@@ -194,7 +210,12 @@ export function ReadImage({ path }: { path: string }) {
     }
     return (
         <div className="mb-1 ml-8">
-            <ImageThumb src={fileBytesUrl(path, read.mtime, read.size, endpointId)} alt={path} className="max-h-48 max-w-full object-contain" />
+            <ImageThumb
+                resource={{ kind: 'file', path, mtime: read.mtime, size: read.size }}
+                endpointId={endpointId}
+                alt={path}
+                className="max-h-48 max-w-full object-contain"
+            />
         </div>
     );
 }

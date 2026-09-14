@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { CornerUpRight, FileVideo } from 'lucide-react';
 import type { FsReadBinary } from '@ruimte/contracts';
-import { fileBytesUrl } from '@/shell/panels/file-url';
 import { useEndpointId } from '@/state/keys';
 import { formatBytes } from '@/shell/panels/file-size';
 import { FileToolbar } from '@/shell/panels/FileToolbar';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
+import { useMachineUrl } from '@/transport/machine-url';
 import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
@@ -25,6 +25,7 @@ export function VideoFile({ path, name, read }: { path: string; name: string; re
     const [failed, setFailed] = useState(!canPlay(read.mime));
     const transport = useTransport();
     const endpointId = useEndpointId();
+    const bytes = useMachineUrl({ kind: 'file', path, mtime: read.mtime, size: read.size }, endpointId);
 
     const reveal = (): void => {
         void transport.request('fs.reveal', { path }).catch(() => undefined);
@@ -34,7 +35,7 @@ export function VideoFile({ path, name, read }: { path: string; name: string; re
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <FileToolbar />
             <div className="grid min-h-0 grow place-items-center overflow-auto bg-surface-sunken p-4">
-                {failed ? (
+                {failed || bytes.failure !== null ? (
                     <EmptyState
                         className="select-text"
                         icon={<Icon icon={FileVideo} size={20} />}
@@ -44,17 +45,19 @@ export function VideoFile({ path, name, read }: { path: string; name: string; re
                             </Button>
                         }
                     >
-                        {name} ({read.mime}, {formatBytes(read.size)}) cannot be played here.
+                        {name} ({read.mime}, {formatBytes(read.size)}) cannot be played here.{bytes.failure !== null && ` ${bytes.failure}.`}
                     </EmptyState>
                 ) : (
-                    <video
-                        controls
-                        preload="metadata"
-                        src={fileBytesUrl(path, read.mtime, read.size, endpointId)}
-                        className="max-h-full max-w-full"
-                        onLoadedMetadata={(event) => setSize({ width: event.currentTarget.videoWidth, height: event.currentTarget.videoHeight })}
-                        onError={() => setFailed(true)}
-                    />
+                    bytes.url !== null && (
+                        <video
+                            controls
+                            preload="metadata"
+                            src={bytes.url}
+                            className="max-h-full max-w-full"
+                            onLoadedMetadata={(event) => setSize({ width: event.currentTarget.videoWidth, height: event.currentTarget.videoHeight })}
+                            onError={() => setFailed(true)}
+                        />
+                    )
                 )}
             </div>
             <div className="flex h-7 shrink-0 items-center gap-3 border-t border-border px-2 text-xs text-text-muted select-text">
