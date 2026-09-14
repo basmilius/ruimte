@@ -12,7 +12,7 @@ function CardBody() {
     const now = useMinute();
 
     if (limits === null) {
-        return <p className="text-xs text-text-faint">Asking the CLIs...</p>;
+        return <p className="text-xs text-text-faint">Loading limits...</p>;
     }
     return <LimitsList limits={limits} now={now} compact />;
 }

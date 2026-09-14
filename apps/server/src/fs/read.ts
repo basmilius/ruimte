@@ -204,7 +204,7 @@ const statFile = async (path: string): Promise<{ path: string; size: number; mti
         throw new ReadError('not-found', 'That file is not there');
     }
     if (stats.isSymbolicLink()) {
-        throw new ReadError('not-a-file', 'That path is a link, and a link is not followed');
+        throw new ReadError('not-a-file', 'That path is a symbolic link. Ruimte does not follow links.');
     }
     if (!stats.isFile()) {
         throw new ReadError('not-a-file', 'That path is not a file');

@@ -45,8 +45,8 @@ function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
             useToasts.getState().show({
                 id: `endpoint-delete-any-view-${endpoint.id}`,
                 kind: 'error',
-                title: `${endpoint.label} did not take the change`,
-                description: e instanceof Error ? e.message : 'What an agent may delete is still what it was.'
+                title: `${endpoint.label} could not save the change`,
+                description: e instanceof Error ? e.message : 'The setting is unchanged.'
             });
         } finally {
             setBusy(false);
@@ -63,8 +63,8 @@ function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
             }
             description={
                 connected
-                    ? 'Off, an agent only removes the views and nodes it made itself. On, it may remove any view and any node of any project there, yours as well.'
-                    : 'Not answering, so what an agent may delete there cannot be read or changed.'
+                    ? 'Off, an agent only deletes views and nodes it created. On, it can delete any view or node in any project there, including yours.'
+                    : 'Not answering. Change this once the machine is back.'
             }
             control={
                 <Toggle checked={info?.agentsDeleteAnyView === true} onChange={(checked) => void set(checked)} label={label} disabled={busy || !connected} />
@@ -96,10 +96,7 @@ export function DeleteAnyViewSection() {
     ];
 
     return (
-        <SettingsSection
-            title="What an agent may delete"
-            description="Every machine keeps this itself, so it holds for every client that opens a project there."
-        >
+        <SettingsSection title="What an agent may delete" description="Saved per machine. Applies to every client connected to it.">
             {ordered.map((endpoint) => (
                 <DeleteAnyViewRow key={endpoint.id} endpoint={endpoint} />
             ))}

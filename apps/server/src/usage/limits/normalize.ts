@@ -59,7 +59,7 @@ const slug = (value: string): string =>
  */
 export const readClaudeUsage = (response: unknown): ProviderReading | { unavailable: UsageLimitsProvider['unavailable'] } => {
     if (!isRecord(response)) {
-        return { unavailable: { reason: 'failed', message: 'Claude Code answered nothing readable' } };
+        return { unavailable: { reason: 'failed', message: 'Claude Code returned no readable usage' } };
     }
     const plan = typeof response.subscription_type === 'string' ? response.subscription_type : null;
     const limits = isRecord(response.rate_limits) ? response.rate_limits : null;

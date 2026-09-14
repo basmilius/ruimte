@@ -196,7 +196,7 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
                                 </Button>
                             }
                         >
-                            {name} did not load: {error}
+                            {name} did not load ({error})
                         </EmptyState>
                     )}
                     <div ref={host} className="flex min-h-0 grow" />

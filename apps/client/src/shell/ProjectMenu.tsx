@@ -156,7 +156,7 @@ export function ProjectMenu() {
                 open={newOpen}
                 onOpenChange={setNewOpen}
                 title="New project"
-                description="One canvas view to start with, stored with the app rather than in a folder. Open a folder instead to share it through git."
+                description="Stored in the app, not in a folder. To share a project through git, open a folder instead."
                 action="Create"
                 fallback="Untitled project"
                 onSubmit={(name) => projectClient.createProject(name)}

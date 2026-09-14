@@ -17,7 +17,7 @@ export function FileSurface({ path, on }: { path: string | null; on: FileSurface
     if (resolved === null) {
         return (
             <EmptyState icon={<Icon icon={FileQuestion} size={16} />} className="h-full">
-                This points at no file.
+                No file to show.
             </EmptyState>
         );
     }

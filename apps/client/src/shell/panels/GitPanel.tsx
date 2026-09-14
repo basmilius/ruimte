@@ -108,7 +108,7 @@ export function GitPanel() {
             setHeld({ cwd, status: answer, failure: null });
             setRevision((count) => count + 1);
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : 'The status could not be read.';
+            const message = error instanceof Error ? error.message : 'Could not read the status.';
             setHeld((previous) => ({ cwd, status: previous?.cwd === cwd ? previous.status : null, failure: message }));
         }
     }, [transport, cwd]);
@@ -211,14 +211,14 @@ export function GitPanel() {
             .request('git.discard', { cwd, paths: [file.path] })
             .then(({ stash }) => {
                 useToasts.getState().show({
-                    title: stash === null ? `${file.path} had nothing to discard` : `${file.path} went into a stash`,
-                    ...(stash === null ? {} : { description: `"git stash pop" brings ${stash} back.` }),
+                    title: stash === null ? `${file.path} had nothing to discard` : `Stashed ${file.path}`,
+                    ...(stash === null ? {} : { description: `Restore ${stash} with "git stash pop".` }),
                     kind: 'success'
                 });
             })
             .catch((error: unknown) => {
                 const message = error instanceof Error ? error.message : 'That did not work.';
-                useToasts.getState().show({ title: 'The discard failed', description: message, kind: 'error', output: message });
+                useToasts.getState().show({ title: 'Discard failed', description: message, kind: 'error', output: message });
             })
             .finally(() => {
                 setBusy(false);
@@ -298,11 +298,7 @@ export function GitPanel() {
     if (cwd === null) {
         return (
             <div className="grid grow place-items-center">
-                <EmptyState icon={<Icon icon={Folder} size={20} />}>
-                    {hasProject
-                        ? 'This canvas has no folder, so there is no repository to look at.'
-                        : 'No project is open, so there is no repository to look at.'}
-                </EmptyState>
+                <EmptyState icon={<Icon icon={Folder} size={20} />}>{hasProject ? 'This canvas has no folder.' : 'No project is open.'}</EmptyState>
             </div>
         );
     }
@@ -427,7 +423,7 @@ export function GitPanel() {
             <GitPrompt
                 open={dialog?.kind === 'create-branch'}
                 title="Create a branch"
-                description="It starts from where this checkout is now and is checked out right away."
+                description="Starts from the current commit and switches to it."
                 field={{ label: 'Name', placeholder: 'feature/what-it-does' }}
                 confirmLabel="Create branch"
                 busy={busy}
@@ -437,7 +433,7 @@ export function GitPanel() {
             <GitPrompt
                 open={dialog?.kind === 'rename-branch'}
                 title="Rename this branch"
-                description="Only this branch moves; a remote that follows it keeps the old name until the next push."
+                description="The remote branch keeps the old name until the next push."
                 field={{ label: 'Name', initial: status?.branch ?? '' }}
                 confirmLabel="Rename branch"
                 busy={busy}
@@ -447,7 +443,7 @@ export function GitPanel() {
             <GitPrompt
                 open={dialog?.kind === 'stash'}
                 title="Stash the changes"
-                description="Everything changed here goes into a stash, untracked files included, and the working tree goes back to HEAD."
+                description="Stashes every change, including untracked files, and resets the working tree to HEAD."
                 field={{ label: 'Message', placeholder: 'Optional' }}
                 confirmLabel="Stash changes"
                 busy={busy}
@@ -457,7 +453,7 @@ export function GitPanel() {
             <GitPrompt
                 open={dialog?.kind === 'force-push'}
                 title="Force push this branch?"
-                description="The remote is overwritten with what this checkout holds. It only goes through when the remote is still where this checkout last saw it, so a push somebody else made in between stops it."
+                description="Overwrites the remote branch with this checkout. It stops if someone else pushed since the last fetch."
                 confirmLabel="Force push"
                 danger
                 busy={busy}
@@ -467,7 +463,7 @@ export function GitPanel() {
             <GitPrompt
                 open={dialog?.kind === 'switch'}
                 title={dialog?.kind === 'switch' ? `Switch to ${dialog.ref.name}?` : 'Switch branch?'}
-                description="This checkout has changes that are not committed. They can go into a stash first, and `git stash pop` brings them back."
+                description='This checkout has uncommitted changes. Stash them first and restore them later with "git stash pop".'
                 confirmLabel="Stash and switch"
                 busy={busy}
                 onConfirm={() => {
@@ -482,8 +478,8 @@ export function GitPanel() {
                 title={dialog?.kind === 'confirm-delete' ? `Delete ${dialog.ref}?` : 'Delete this branch?'}
                 description={
                     dialog?.kind === 'confirm-delete' && dialog.force
-                        ? 'Git refused: this branch holds commits no other branch has. Deleting it now is the last word on them.'
-                        : 'The branch goes away here; a remote branch of the same name stays where it is.'
+                        ? 'This branch has commits that no other branch has. Deleting it loses them.'
+                        : 'Deletes the local branch. A remote branch with the same name stays.'
                 }
                 confirmLabel={dialog?.kind === 'confirm-delete' && dialog.force ? 'Delete anyway' : 'Delete branch'}
                 danger
@@ -498,7 +494,7 @@ export function GitPanel() {
             <GitPrompt
                 open={dialog?.kind === 'discard'}
                 title={dialog?.kind === 'discard' ? `Discard ${basenameOf(dialog.file.path)}?` : 'Discard this file?'}
-                description='The file goes back to what HEAD holds. Nothing is thrown away: the changes go into a stash named after this discard first, and "git stash pop" is the way back.'
+                description='Reverts the file to HEAD. The changes are stashed first, so "git stash pop" restores them.'
                 confirmLabel="Discard"
                 danger
                 busy={busy}
@@ -512,7 +508,7 @@ export function GitPanel() {
             <GitPrompt
                 open={dialog?.kind === 'pull-request'}
                 title="Open a pull request"
-                description="The branch is published first when the remote has never seen it. The pull request opens in your browser once gh has made it."
+                description="Publishes the branch first if needed. The pull request opens in your browser."
                 field={{ label: 'Title', initial: dialog?.kind === 'pull-request' ? dialog.subject : '' }}
                 area={{ label: 'Description', placeholder: 'What this changes and why.' }}
                 confirmLabel="Create pull request"
@@ -546,7 +542,7 @@ export function GitPanel() {
                         : 'Pick a branch'
                 }
                 choices={pickableBranches(dialog, refs, branches, status)}
-                empty="There is no other branch here."
+                empty="No other branches."
                 onPick={(name) => {
                     if (dialog?.kind !== 'pick-branch') {
                         return;
@@ -562,9 +558,9 @@ export function GitPanel() {
             <GitChoice
                 open={dialog?.kind === 'pick-stash'}
                 title="Pop a stash"
-                description="The changes come back into the working tree and the stash entry goes away."
+                description="Applies the stash to the working tree and removes it."
                 choices={stashes.map((stash) => ({ value: stash.ref, label: stash.ref, hint: stash.message }))}
-                empty="There is nothing stashed here."
+                empty="No stashes."
                 onPick={(ref) => void act('stash-pop', { ref })}
                 onClose={() => setDialog(null)}
             />
@@ -630,31 +626,31 @@ function ActionsMenu({ busy, canPullRequest, stashes, onOpen, onAction, onDialog
                             Fetch
                         </Menu.Item>
                         <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'force-push' })}>
-                            Force Push
+                            Force push
                         </Menu.Item>
                         <Menu.Separator className={MENU_SEPARATOR} />
                         <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'pick-branch', action: 'merge' })}>
-                            Merge Branch...
+                            Merge branch...
                         </Menu.Item>
                         <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'pick-branch', action: 'rebase' })}>
                             Rebase onto...
                         </Menu.Item>
                         <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'rename-branch' })}>
-                            Rename Branch...
+                            Rename branch...
                         </Menu.Item>
                         <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'pick-branch', action: 'delete-branch' })}>
-                            Delete Branch...
+                            Delete branch...
                         </Menu.Item>
                         <Menu.Separator className={MENU_SEPARATOR} />
                         <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'stash' })}>
-                            Stash Changes...
+                            Stash changes...
                         </Menu.Item>
                         <Menu.Item
                             className="menu-item"
                             disabled={stashes.length === 0}
                             onClick={() => (stashes.length > 1 ? onDialog({ kind: 'pick-stash' }) : onAction('stash-pop'))}
                         >
-                            Pop Stash
+                            Pop stash
                             {stashes.length > 1 && <span className={MENU_HINT}>{stashes.length}</span>}
                         </Menu.Item>
                         {canPullRequest && (

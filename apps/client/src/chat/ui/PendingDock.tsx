@@ -105,7 +105,7 @@ export function ApprovalDock({
                     <input
                         autoFocus
                         className="field text-xs"
-                        aria-label="Why the agent may not do this"
+                        aria-label="Reason for declining"
                         placeholder="Tell the agent why not, and what to do instead"
                         value={note}
                         onChange={(e) => setNote(e.target.value)}

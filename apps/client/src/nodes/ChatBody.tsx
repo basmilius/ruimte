@@ -66,7 +66,7 @@ export function ChatBody({ id, focused }: { id: string; focused: boolean }) {
 
     return (
         <div className="relative flex h-full flex-col bg-surface">
-            {status !== 'open' && <NodeNotice>{status === 'closed' ? 'Not connected to the Ruimte server.' : 'Connecting to the Ruimte server'}</NodeNotice>}
+            {status !== 'open' && <NodeNotice>{status === 'closed' ? 'Not connected to the machine.' : 'Connecting to the machine'}</NodeNotice>}
             {failure && (
                 <NodeNotice
                     tone="error"

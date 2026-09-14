@@ -44,7 +44,7 @@ export function VideoFile({ path, name, read }: { path: string; name: string; re
                             </Button>
                         }
                     >
-                        {name} is {formatBytes(read.size)} of {read.mime}. This video cannot be played here.
+                        {name} ({read.mime}, {formatBytes(read.size)}) cannot be played here.
                     </EmptyState>
                 ) : (
                     <video

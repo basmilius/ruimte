@@ -40,7 +40,7 @@ export function WorktreeDialog() {
             setBranch(null);
             close(null);
         } catch (e) {
-            setFailure(e instanceof Error ? e.message : 'The worktree could not be made');
+            setFailure(e instanceof Error ? e.message : 'Could not create the worktree');
         } finally {
             setBusy(false);
         }
@@ -65,7 +65,7 @@ export function WorktreeDialog() {
                     {folder ? (
                         <>
                             <p className="mt-1 text-sm text-text-muted">
-                                A checkout of this branch is made next to the app data, and every terminal or chat created inside the group starts in it.
+                                Creates a checkout of this branch. Every terminal and chat you add to the group starts in it.
                             </p>
                             <input
                                 autoFocus
@@ -84,13 +84,13 @@ export function WorktreeDialog() {
                             />
                         </>
                     ) : (
-                        <p className="mt-1 text-sm text-text-muted">This canvas is not in a folder, so there is no repository to make a worktree of.</p>
+                        <p className="mt-1 text-sm text-text-muted">This project is not in a folder, so it has no repository.</p>
                     )}
                     {failure && <p className="mt-2 text-sm text-status-error">{failure}</p>}
                     <div className="mt-4 flex items-center justify-end gap-2">
                         <Button onClick={() => close(null)}>Cancel</Button>
                         <Button variant="primary" disabled={busy || !folder || !value.trim()} onClick={() => void submit()}>
-                            {busy ? 'Making the checkout' : 'Bind'}
+                            {busy ? 'Creating checkout...' : 'Bind'}
                         </Button>
                     </div>
                 </Dialog.Popup>

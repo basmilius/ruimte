@@ -7,14 +7,13 @@ import { useToasts } from '@/state/toasts';
 const refusalToast = (refusal: FinderRefusal, fileManager: string, machine: string | null): { title: string; description: string } => {
     if (refusal === 'no-bridge') {
         return {
-            title: `A file dragged in from ${fileManager} has no path here`,
-            description:
-                'A browser hands a page the bytes of a file and never says where it came from. The desktop app can, and the Files panel opens the same file.'
+            title: `Files from ${fileManager} only drop in the desktop app`,
+            description: 'Open the file from the Files panel instead.'
         };
     }
     return {
         title: `This project runs on ${machine ?? 'another machine'}`,
-        description: `A path from ${fileManager} names a file on this machine, which that one cannot read. Open the file from the Files panel instead.`
+        description: `That machine cannot read files from ${fileManager}. Open the file from the Files panel instead.`
     };
 };
 

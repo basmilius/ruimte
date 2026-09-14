@@ -94,7 +94,7 @@ function WindowBar({ window, now, compact }: { window: UsageWindow; now: number;
                     label={
                         <span className="flex flex-col gap-0.5">
                             <span>
-                                {percent}% used{mark !== null && ` · ${mark}% of the window gone`}
+                                {percent}% used{mark !== null && ` · ${mark}% of the window passed`}
                             </span>
                             {mark !== null && (
                                 <span className="text-text-muted">
@@ -121,13 +121,13 @@ function WindowBar({ window, now, compact }: { window: UsageWindow; now: number;
 
 const explain = (provider: UsageLimitsProvider): string | null => {
     if (provider.unavailable === null) {
-        return provider.windows.length === 0 ? 'No windows reported yet.' : null;
+        return provider.windows.length === 0 ? 'No limits reported yet.' : null;
     }
     if (provider.unavailable.reason === 'not-installed') {
         return 'Not installed on this machine.';
     }
     if (provider.unavailable.reason === 'no-subscription') {
-        return 'This account runs on an API key, which has no plan windows.';
+        return 'This account uses an API key, which has no plan limits.';
     }
     return provider.unavailable.message ?? 'The CLI could not be reached.';
 };

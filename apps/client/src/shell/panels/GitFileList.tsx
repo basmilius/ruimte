@@ -79,14 +79,14 @@ export function GitFileList({ status, tree, collapsed, reading, busy, onOpen, on
     if (!status.repo) {
         return (
             <div className="grid grow place-items-center">
-                <EmptyState icon={<Icon icon={GitBranch} size={20} />}>This folder is not a git repository, so there is nothing to compare.</EmptyState>
+                <EmptyState icon={<Icon icon={GitBranch} size={20} />}>This folder is not a git repository.</EmptyState>
             </div>
         );
     }
     if (status.files.length === 0) {
         return (
             <div className="grid grow place-items-center">
-                <EmptyState icon={<Icon icon={GitBranch} size={20} />}>Nothing changed here. Every file is what the last commit holds.</EmptyState>
+                <EmptyState icon={<Icon icon={GitBranch} size={20} />}>No changes.</EmptyState>
             </div>
         );
     }

@@ -70,7 +70,7 @@ const settleId = (endpointId: string, daemonId: string): string => {
         id: `endpoint-identity-${endpoint.id}`,
         kind: 'error',
         title: `${endpoint.label} answers as another machine`,
-        description: `${endpoint.httpBaseUrl} is a different machine than the one this client paired with. Pair again to talk to it.`
+        description: `${endpoint.httpBaseUrl} is not the machine this client paired with. Pair again to connect.`
     });
     return endpoint.id;
 };
@@ -87,7 +87,7 @@ const reportOneMachine = (kept: Endpoint, dropped: Endpoint): void => {
         id: `endpoint-merged-${dropped.id}`,
         kind: 'success',
         title: `${dropped.label} is already in the list`,
-        description: `${dropped.httpBaseUrl} is another address of the machine listed as ${kept.label}, so this client keeps one row for it.`
+        description: `${dropped.httpBaseUrl} is another address of ${kept.label}.`
     });
 };
 

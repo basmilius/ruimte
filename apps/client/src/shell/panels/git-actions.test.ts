@@ -32,7 +32,7 @@ describe('the push button', () => {
     test('nothing ahead is nothing to push', () => {
         const button = pushButton(status());
         expect(button.disabled).toBe(true);
-        expect(button.reason).toBe('Everything is already pushed.');
+        expect(button.reason).toBe('Nothing to push');
     });
 
     test('commits ahead push, and the reason counts them', () => {

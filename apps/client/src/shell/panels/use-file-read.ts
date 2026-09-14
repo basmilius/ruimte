@@ -38,7 +38,7 @@ export const useFileRead = (path: string): { state: FileRead; retry(): void } =>
             })
             .catch((error: unknown) => {
                 if (!cancelled) {
-                    setState({ status: 'error', message: error instanceof TransportError ? error.message : 'That file could not be read' });
+                    setState({ status: 'error', message: error instanceof TransportError ? error.message : 'Could not read the file' });
                 }
             });
         return () => {

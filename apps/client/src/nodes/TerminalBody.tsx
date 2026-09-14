@@ -279,17 +279,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
         <ContextMenu.Root onOpenChange={(open) => setSelected(open && (termRef.current?.hasSelection() ?? false))}>
             <ContextMenu.Trigger className="absolute inset-0 bg-term-bg">
                 <div ref={hostRef} className="term-host" />
-                {status !== 'open' && (
-                    <NodeNotice>
-                        {status === 'closed' ? (
-                            <>
-                                Not connected to the Ruimte server. Run <code className="font-mono text-text">bun run dev:server</code>.
-                            </>
-                        ) : (
-                            'Connecting to the Ruimte server'
-                        )}
-                    </NodeNotice>
-                )}
+                {status !== 'open' && <NodeNotice>{status === 'closed' ? 'Not connected to the machine.' : 'Connecting to the machine'}</NodeNotice>}
                 {failure && (
                     <NodeNotice tone="error" onRetry={rebuild}>
                         {failure}

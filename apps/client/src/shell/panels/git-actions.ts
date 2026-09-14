@@ -15,16 +15,16 @@ export interface PushButton {
  */
 export const pushButton = (status: GitStatus | null): PushButton => {
     if (status === null || !status.repo) {
-        return { label: 'Push', kind: 'push', disabled: true, reason: 'There is no repository here.' };
+        return { label: 'Push', kind: 'push', disabled: true, reason: 'No repository' };
     }
     if (status.detached || status.branch === null) {
-        return { label: 'Push', kind: 'push', disabled: true, reason: 'A detached HEAD has no branch to push.' };
+        return { label: 'Push', kind: 'push', disabled: true, reason: 'No branch to push on a detached HEAD' };
     }
     if (status.upstream === null) {
-        return { label: 'Publish branch', kind: 'publish', disabled: false, reason: `Push ${status.branch} to origin and follow it from now on` };
+        return { label: 'Publish branch', kind: 'publish', disabled: false, reason: `Push ${status.branch} to origin and track it` };
     }
     if (status.ahead === 0) {
-        return { label: 'Push', kind: 'push', disabled: true, reason: 'Everything is already pushed.' };
+        return { label: 'Push', kind: 'push', disabled: true, reason: 'Nothing to push' };
     }
     const commits = status.ahead === 1 ? '1 commit' : `${status.ahead} commits`;
     return { label: 'Push', kind: 'push', disabled: false, reason: `Push ${commits} to ${status.upstream}` };

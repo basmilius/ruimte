@@ -17,18 +17,18 @@ export interface SettingsSectionMeta {
 export const SETTINGS_SECTIONS: readonly (readonly SettingsSectionMeta[])[] = [
     [
         { id: 'appearance', label: 'Appearance', description: 'Theme, accent and the terminal font.', icon: Palette },
-        { id: 'keyboard', label: 'Keyboard', description: 'Every shortcut. Remapping comes later.', icon: Keyboard }
+        { id: 'keyboard', label: 'Keyboard', description: 'Every keyboard shortcut.', icon: Keyboard }
     ],
     [
-        { id: 'canvas', label: 'Canvas', description: 'How a canvas and a drawing behave while you work on them.', icon: LayoutGrid },
+        { id: 'canvas', label: 'Canvas', description: 'How canvases and drawings behave.', icon: LayoutGrid },
         { id: 'files', label: 'Files and Git', description: 'What the Files and Git panels show, and where browsing for a folder starts.', icon: Folder }
     ],
     [
-        { id: 'agents', label: 'Agents', description: 'What a new agent starts with, and which CLIs the machine found.', icon: Bot },
-        { id: 'usage', label: 'Usage', description: 'The money the usage page counts in.', icon: ChartNoAxesColumn }
+        { id: 'agents', label: 'Agents', description: 'Defaults, permissions and notifications for agents.', icon: Bot },
+        { id: 'usage', label: 'Usage', description: 'The currency of the usage page.', icon: ChartNoAxesColumn }
     ],
-    [{ id: 'machines', label: 'Machines', description: 'The machines this client can talk to, and what each one is called.', icon: Server }],
-    [{ id: 'about', label: 'About', description: 'The version you run, the machine behind it, and where to find more.', icon: Info }]
+    [{ id: 'machines', label: 'Machines', description: 'Pair, name and forget machines.', icon: Server }],
+    [{ id: 'about', label: 'About', description: 'Version, machine details and links.', icon: Info }]
 ];
 
 export const ALL_SETTINGS_SECTIONS: readonly SettingsSectionMeta[] = SETTINGS_SECTIONS.flat();

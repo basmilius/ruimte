@@ -14,7 +14,7 @@ export function FileViewer() {
     if (!active || !tab) {
         return (
             <div className="grid min-h-0 grow place-items-center">
-                <EmptyState icon={<Icon icon={FileText} size={20} />}>Open a file from the files panel to read it here.</EmptyState>
+                <EmptyState icon={<Icon icon={FileText} size={20} />}>Open a file from the Files panel.</EmptyState>
             </div>
         );
     }

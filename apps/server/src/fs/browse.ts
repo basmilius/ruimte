@@ -33,7 +33,7 @@ export const resolveBrowsePath = (partialPath: string, cwd: string | undefined, 
     const platform = options.platform ?? process.platform;
     const trimmed = partialPath.trim();
     if (platform !== 'win32' && looksWindows(trimmed)) {
-        throw new BrowseError('windows-path', 'That is a Windows path; this machine does not have those');
+        throw new BrowseError('windows-path', 'That is a Windows path. This machine does not run Windows.');
     }
     if (trimmed === '~' || trimmed.startsWith('~/') || trimmed.startsWith('~\\')) {
         return join(home, trimmed.slice(1));

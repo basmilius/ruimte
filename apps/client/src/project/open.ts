@@ -40,7 +40,7 @@ const waitForOpen = (transport: Transport, timeoutMs: number): Promise<void> =>
 export const reachEndpoint = async (endpointId: string, timeoutMs = CONNECT_TIMEOUT_MS): Promise<void> => {
     const transport = transportFor(endpointId);
     if (!transport) {
-        throw new Error('That machine is not known any more');
+        throw new Error('That machine is no longer in the list');
     }
     await waitForOpen(transport, timeoutMs);
 };
@@ -107,7 +107,7 @@ export const openFolderOn = async (endpointId: string, folder: string, createFol
         return;
     }
     if (!useEndpoints.getState().endpoints.some((endpoint) => endpoint.id === endpointId)) {
-        throw new Error('That machine is not known any more');
+        throw new Error('That machine is no longer in the list');
     }
     await deps.activate(endpointId);
     await deps.reach(endpointId);

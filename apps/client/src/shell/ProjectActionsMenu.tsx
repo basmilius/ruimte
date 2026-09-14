@@ -103,7 +103,7 @@ export function ProjectActionsMenu() {
                 open={renameOpen}
                 onOpenChange={setRenameOpen}
                 title="Rename project"
-                description="The name goes into the canvas file, so everyone with the folder sees it."
+                description="Everyone with the folder sees this name."
                 action="Rename"
                 initial={current.name}
                 onSubmit={(name) => projectClient.rename(name)}
@@ -137,9 +137,9 @@ export function ProjectActionsMenu() {
                         <Dialog.Title className="text-base font-semibold text-text">Delete {current.name}?</Dialog.Title>
                         <p className="mt-1 text-xs text-text-muted">
                             {current.folder
-                                ? 'Forgets the project here. Its canvas file in the folder is removed too; nothing else in the folder is touched.'
-                                : 'The canvas and its file are removed.'}{' '}
-                            The sessions of its nodes stop, the same as on a close.
+                                ? 'Removes the project and its project file. The rest of the folder stays untouched.'
+                                : 'Removes the project and all its views.'}{' '}
+                            Its running sessions end.
                         </p>
                         {failure && <p className="mt-2 text-xs text-status-error">{failure}</p>}
                         <div className="mt-4 flex items-center justify-end gap-2">

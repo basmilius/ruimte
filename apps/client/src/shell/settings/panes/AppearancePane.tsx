@@ -101,19 +101,15 @@ export function AppearancePane() {
             <SettingsSection title="Theme">
                 <SettingsRow
                     label="Theme"
-                    description="System follows the OS and switches with it."
+                    description="System follows your OS."
                     control={<Segmented value={theme} options={THEMES} onChange={setTheme} label="Theme" />}
                 />
-                <SettingsRow
-                    label="Accent"
-                    description="Selection rings, focus and the terminal cursor. Blue is the one Ruimte carries."
-                    control={<AccentSwatches />}
-                />
+                <SettingsRow label="Accent" description="Selection rings, focus and the terminal cursor." control={<AccentSwatches />} />
             </SettingsSection>
             <SettingsSection title="Interface">
                 <SettingsRow
                     label="Interface font size"
-                    description="Text, rows and spacing everywhere but the terminal and code."
+                    description="Scales text and spacing everywhere except terminals and code."
                     control={
                         <Stepper
                             value={interfaceFontSize}
@@ -128,7 +124,7 @@ export function AppearancePane() {
                 />
                 <SettingsRow
                     label="Sidebar"
-                    description="This window lists every project open in it, each under its own name. This project lists the one you are working in."
+                    description="This project lists the project you are working in. This window lists every project open in the window."
                     control={
                         <Segmented
                             value={sidebarScope}
@@ -140,14 +136,14 @@ export function AppearancePane() {
                 />
                 <SettingsRow
                     label="Hide the dock"
-                    description="The bar under a canvas or a drawing waits below the edge and comes back when the pointer nears the bottom."
+                    description="The bar under a canvas or drawing hides until the pointer nears the bottom edge."
                     control={<Toggle checked={dockAutoHide} onChange={(checked) => update({ dockAutoHide: checked })} label="Hide the dock" />}
                 />
             </SettingsSection>
-            <SettingsSection title="Terminal" description="Every terminal node picks these up the moment they change.">
+            <SettingsSection title="Terminal">
                 <SettingsRow
                     label="Font"
-                    description="A font that is not installed falls back to the system one."
+                    description="Falls back to the system font if it is not installed."
                     control={
                         <Select
                             value={font}
@@ -160,7 +156,6 @@ export function AppearancePane() {
                 />
                 <SettingsRow
                     label="Font size"
-                    description="Open terminals refit their rows and columns."
                     control={
                         <Stepper
                             value={fontSize}

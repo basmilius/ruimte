@@ -442,9 +442,7 @@ export function FilesPanel() {
     if (!folder) {
         return (
             <div className="grid grow place-items-center">
-                <EmptyState icon={<Icon icon={Folder} size={20} />}>
-                    {hasProject ? 'This canvas has no folder, so there are no files to list.' : 'No project is open, so there are no files to list.'}
-                </EmptyState>
+                <EmptyState icon={<Icon icon={Folder} size={20} />}>{hasProject ? 'This canvas has no folder.' : 'No project is open.'}</EmptyState>
             </div>
         );
     }
@@ -453,7 +451,7 @@ export function FilesPanel() {
        way, a folder with nothing in it, or a filter nothing here answers to. */
     const placeholder = (): ReactNode => {
         if (searching) {
-            return matches.length > 0 ? null : <EmptyState icon={<Icon icon={Search} size={20} />}>No file in this folder matches the filter.</EmptyState>;
+            return matches.length > 0 ? null : <EmptyState icon={<Icon icon={Search} size={20} />}>No files match the filter.</EmptyState>;
         }
         if (!cache.has(folder)) {
             return <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>Reading {basenameOf(folder)}.</EmptyState>;
@@ -462,7 +460,9 @@ export function FilesPanel() {
             return null;
         }
         if (!showHidden && (cache.get(folder)?.length ?? 0) > 0) {
-            return <EmptyState icon={<Icon icon={Folder} size={20} />}>Everything in this folder is hidden; the eye button shows it.</EmptyState>;
+            return (
+                <EmptyState icon={<Icon icon={Folder} size={20} />}>This folder only has hidden files. Turn on Show hidden files in the More menu.</EmptyState>
+            );
         }
         return <EmptyState icon={<Icon icon={Folder} size={20} />}>This folder is empty.</EmptyState>;
     };

@@ -99,7 +99,7 @@ export class WebSocketTransport implements Transport {
 
     request<T extends RequestType>(type: T, payload: RequestMap[T]['payload']): Promise<RequestMap[T]['result']> {
         if (this.status !== 'open' || !this.socket) {
-            return Promise.reject(new TransportError('not-connected', 'The server is not connected'));
+            return Promise.reject(new TransportError('not-connected', 'The machine is not connected'));
         }
         const id = String(this.nextId++);
         const promise = new Promise<RequestMap[T]['result']>((resolve, reject) => {
@@ -177,7 +177,7 @@ export class WebSocketTransport implements Transport {
             // Scheduling first, so the closed status arrives with the attempt it announces.
             this.scheduleReconnect();
             this.setConnection({ status: 'closed' });
-            this.rejectPending('disconnected', 'The connection closed before the server answered');
+            this.rejectPending('disconnected', 'The connection closed before the machine answered');
         };
         // The browser fires close right after error, so close owns the state change.
         socket.onerror = () => {};

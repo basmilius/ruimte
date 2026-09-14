@@ -25,7 +25,7 @@ const runtimeModeItems: SelectItem<RuntimeMode>[] = RUNTIME_MODES.map((mode) => 
 /* What a provider offers, in one sentence: where it can be opened and whether its hooks report status. */
 const providerAbilities = (provider: ProviderInfo): string => {
     const where = provider.capabilities.chat ? 'Chat and terminal.' : 'Terminal only.';
-    return `${where} ${provider.capabilities.hooks ? 'Reports status through its hooks.' : 'No status beyond the session itself.'}`;
+    return `${where} ${provider.capabilities.hooks ? 'Reports agent status.' : 'Does not report agent status.'}`;
 };
 
 /* One row per knob the chosen model exposes; the composer's option picker shows the same descriptors. */
@@ -70,11 +70,7 @@ function ProviderModelRows({ provider, preferences }: { provider: ProviderInfo; 
         <>
             <SettingsRow
                 label={provider.name}
-                description={
-                    model
-                        ? `New chats and terminals on ${provider.name} start on ${model.name}${model.legacy ? ', a legacy model' : ''}.`
-                        : "Provider default follows the CLI's own choice."
-                }
+                description={model ? undefined : "Uses the CLI's own default model."}
                 control={
                     <Select
                         value={model?.slug ?? PROVIDER_DEFAULT}
@@ -112,13 +108,10 @@ export function AgentsPane() {
 
     return (
         <>
-            <SettingsSection
-                title="Defaults for new agents"
-                description="One model per CLI, the last one picked. The composer remembers what you pick there too; this is the same default."
-            >
+            <SettingsSection title="Defaults for new agents" description="Picking a model in a chat also changes its default here.">
                 {withModels.length === 0 &&
                     (loaded ? (
-                        <SettingsRow muted label="No agent CLI with a chat backend was found on this machine." />
+                        <SettingsRow muted label="No agent CLI with chat support found on this machine." />
                     ) : (
                         <SettingsRow label={<Skeleton className="w-32" />} control={<Skeleton className="w-24" />} />
                     ))}
@@ -139,7 +132,6 @@ export function AgentsPane() {
                 />
                 <SettingsRow
                     label="Terminal agents start in"
-                    description="An agent opened as a terminal node starts its CLI in this mode."
                     control={
                         <Select
                             value={preferences.terminalRuntimeMode}
@@ -151,13 +143,10 @@ export function AgentsPane() {
                     }
                 />
             </SettingsSection>
-            <SettingsSection
-                title="What an agent may do here"
-                description="These are about this client: what an agent makes is shared, what it may ask of you at this screen is not."
-            >
+            <SettingsSection title="What an agent may do here" description="These settings apply to this client only.">
                 <SettingsRow
                     label="Ask me for permission in the node"
-                    description="On, a permission a terminal agent asks for appears in the node's header with the choices the CLI offers, and the first answer settles it. One that arrives while this window is not in front also comes as a notification, since the machine only holds the question for a couple of minutes. Off, nothing is asked here and the CLI's own prompt in the terminal is the only place to answer; a second client that wants them still gets asked."
+                    description="Permission requests from terminal agents appear in the node header, and the first answer wins. With this window in the background you also get a notification, since a request expires after a few minutes. Off, you answer in the terminal."
                     control={
                         <Toggle
                             checked={agentsApprovals}
@@ -168,17 +157,17 @@ export function AgentsPane() {
                 />
                 <SettingsRow
                     label="Let an agent show you a view"
-                    description="Off, a view an agent asks for waits in the banner over the ones you have open, with a button to go there. On, it takes the place of the view you are working in and the same banner offers the way back."
+                    description="On, a view an agent opens replaces the one you are working in, and a banner takes you back. Off, the banner offers a button to go there."
                     control={
                         <Toggle checked={agentsShowViews} onChange={(checked) => update({ agentsShowViews: checked })} label="Let an agent show you a view" />
                     }
                 />
             </SettingsSection>
             <DeleteAnyViewSection />
-            <SettingsSection title="While an agent works" description="About the computer this window runs on, so these stay with this app and travel nowhere.">
+            <SettingsSection title="While an agent works" description="These settings apply to this computer only.">
                 <SettingsRow
                     label="Tell me when a turn ends"
-                    description="A notification when an agent finishes while this window is not the one in front. A node that finished out of sight keeps a mark until you look at it either way."
+                    description="Sends a notification when an agent finishes while this window is in the background."
                     control={
                         <Toggle checked={agentsTurnNotify} onChange={(checked) => update({ agentsTurnNotify: checked })} label="Tell me when a turn ends" />
                     }
@@ -187,7 +176,7 @@ export function AgentsPane() {
                     whatever that one says, so this is the only answer to "may this make noise". */}
                 <SettingsRow
                     label="Play a sound with a notification"
-                    description="Off, every notification arrives quietly, which is what you want in whatever you walked away to do."
+                    description="Applies to every agent notification."
                     control={
                         <Toggle
                             checked={agentsTurnSound}
@@ -199,29 +188,29 @@ export function AgentsPane() {
                 {/* A browser cannot keep anything awake, so it is told nothing about a switch it has no way to honor. */}
                 {canKeepAwake() && (
                     <SettingsRow
-                        label="Keep this machine awake"
-                        description="Off, the computer sleeps as it always does and an agent running on it stops until you come back. On, it stays awake from the first agent that starts until the last one settles. The display still goes dark."
+                        label="Keep this computer awake"
+                        description="Keeps the computer awake while an agent works, since sleep pauses the agent. The display can still turn off."
                         control={
                             <Toggle
                                 checked={agentsKeepAwake}
                                 onChange={(checked) => update({ agentsKeepAwake: checked })}
-                                label="Keep this machine awake while an agent works"
+                                label="Keep this computer awake while an agent works"
                             />
                         }
                     />
                 )}
             </SettingsSection>
-            <SettingsSection title="Chats" description="How a chat node on this client draws what an agent writes.">
+            <SettingsSection title="Chats">
                 <SettingsRow
                     label="Stream replies"
-                    description="On, a reply appears word by word as the agent writes it. Off, it appears in one piece once it is done."
+                    description="On, a reply appears word by word as the agent writes it. Off, it appears once it is complete."
                     control={<Toggle checked={chatStreaming} onChange={(checked) => update({ chatStreaming: checked })} label="Stream replies" />}
                 />
             </SettingsSection>
-            <SettingsSection title="Providers" description="What the machine found on its PATH. Install a CLI and restart Ruimte there to add one.">
+            <SettingsSection title="Providers" description="Agent CLIs found on the machine's PATH. To add one, install it and restart Ruimte on that machine.">
                 {providers.length === 0 &&
                     (loaded ? (
-                        <SettingsRow muted label="No providers reported" />
+                        <SettingsRow muted label="No providers found" />
                     ) : (
                         <>
                             <SettingsRow label={<Skeleton className="w-28" />} control={<Skeleton className="w-16" />} />
@@ -233,9 +222,7 @@ export function AgentsPane() {
                         key={provider.kind}
                         label={provider.name}
                         description={
-                            provider.installed
-                                ? `${provider.version ? `Version ${provider.version}. ` : ''}${providerAbilities(provider)}`
-                                : 'Not found on this machine.'
+                            provider.installed ? `${provider.version ? `Version ${provider.version}. ` : ''}${providerAbilities(provider)}` : undefined
                         }
                         control={provider.installed ? <Badge tone="idle">Installed</Badge> : <Badge tone="muted">Missing</Badge>}
                     />

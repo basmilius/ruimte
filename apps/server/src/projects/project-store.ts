@@ -269,7 +269,7 @@ export class ProjectStore {
             document = outcome.document;
             text = outcome.text;
         } else if (payload.projectId && entry.folder) {
-            throw new ProjectError('project-missing', `The canvas of ${entry.name} is gone from ${entry.folder}`);
+            throw new ProjectError('project-missing', `The project file of ${entry.name} is missing from ${entry.folder}`);
         } else {
             // The one moment `.idea/.name` counts: it seeds the file, and the file owns the name from here.
             if (firstOpen && entry.folder && !payload.name) {
@@ -411,7 +411,7 @@ export class ProjectStore {
             text = await readFile(path, 'utf8');
         } catch (e) {
             if (isNotFound(e)) {
-                throw new ProjectError('project-missing', `The canvas of ${entry.name} is gone from ${path}`);
+                throw new ProjectError('project-missing', `The project file of ${entry.name} is missing from ${path}`);
             }
             throw e;
         }

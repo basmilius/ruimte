@@ -23,37 +23,37 @@ interface Copy {
 const COPY: Record<LoadErrorKind, Copy> = {
     offline: {
         title: 'No internet connection',
-        hint: 'This machine is not on a network right now.',
+        hint: 'Check the network connection.',
         retryable: true
     },
     dns: {
         title: 'That address has no server',
-        hint: 'The name did not resolve. Check the spelling, or whether it exists on this network.',
+        hint: 'Check the spelling, or whether the address exists on this network.',
         retryable: true
     },
     refused: {
         title: 'The server refused the connection',
-        hint: 'Nothing is listening there. A dev server that is not running looks like this.',
+        hint: 'Nothing is listening on that address. Check that the server is running.',
         retryable: true
     },
     certificate: {
         title: 'The connection is not secure',
-        hint: 'The certificate does not check out, so the page was not loaded. Ruimte offers no way past that.',
+        hint: 'The certificate is not valid, so the page was not loaded.',
         retryable: true
     },
     timeout: {
         title: 'The server took too long',
-        hint: 'It answered nothing in time. It may be busy, or unreachable from here.',
+        hint: 'It may be busy, or unreachable from here.',
         retryable: true
     },
     blocked: {
         title: 'The page was blocked',
-        hint: 'Something on the way stopped the request: a policy, an extension or the page itself.',
+        hint: 'A policy, an extension or the page itself stopped the request.',
         retryable: true
     },
     address: {
         title: 'That address cannot be opened',
-        hint: 'Check the scheme and the spelling. As it stands there is nothing to load.',
+        hint: 'Check the scheme and the spelling.',
         retryable: false
     },
     other: {

@@ -169,7 +169,7 @@ export function CodeFile({ read, toolbarExtra }: CodeFileProps) {
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <FileToolbar>
                 {plain && (
-                    <Tooltip label={`Over ${HIGHLIGHT_MAX_LINES.toLocaleString()} lines, which is past what this highlights.`}>
+                    <Tooltip label={`Over ${HIGHLIGHT_MAX_LINES.toLocaleString()} lines, so syntax highlighting is off`}>
                         <Pill>Plain text</Pill>
                     </Tooltip>
                 )}

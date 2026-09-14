@@ -56,13 +56,13 @@ export function ViewDialogs() {
                     {dialog?.kind === 'rename' && (
                         <>
                             <Dialog.Title className="text-base font-semibold text-text">Rename view</Dialog.Title>
-                            <p className="mt-1 text-sm text-text-muted">The name goes into the project file, so everyone with the folder sees it.</p>
+                            <p className="mt-1 text-sm text-text-muted">Everyone with the folder sees this name.</p>
                         </>
                     )}
                     {dialog?.kind === 'new-browser' && (
                         <>
                             <Dialog.Title className="text-base font-semibold text-text">New browser view</Dialog.Title>
-                            <p className="mt-1 text-sm text-text-muted">The page fills the whole column. A bare host gets https in front of it.</p>
+                            <p className="mt-1 text-sm text-text-muted">An address without a scheme opens over https.</p>
                         </>
                     )}
                     {(dialog?.kind === 'rename' || dialog?.kind === 'new-browser') && (
@@ -87,17 +87,14 @@ export function ViewDialogs() {
                             <p className="mt-1 text-sm text-text-muted">
                                 {view && viewIsBusy(view)
                                     ? 'Something in this view is still running. Deleting it ends those sessions.'
-                                    : 'The view and everything on it are gone from the project.'}
+                                    : 'Removes the view and everything on it.'}
                             </p>
                         </>
                     )}
                     {dialog?.kind === 'promote' && (
                         <>
                             <Dialog.Title className="text-base font-semibold text-text">Open {nodeTitle} as a view?</Dialog.Title>
-                            <p className="mt-1 text-sm text-text-muted">
-                                The session keeps running under the same id. The lines drawn to this node stay on the canvas and are lost, because an edge
-                                belongs to one canvas.
-                            </p>
+                            <p className="mt-1 text-sm text-text-muted">The session keeps running. The lines to this node are lost.</p>
                         </>
                     )}
                     {dialog?.kind === 'icon' && view && <ViewIconDialog view={view} onClose={close} />}

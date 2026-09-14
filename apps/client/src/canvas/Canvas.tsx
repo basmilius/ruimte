@@ -567,7 +567,7 @@ export function Canvas() {
                                 </Menu.Root>
                             }
                         >
-                            This canvas is empty. Right-click anywhere to add a node, or press ⌘K.
+                            Right-click anywhere to add a node, or press ⌘K.
                         </EmptyState>
                     </div>
                 )}

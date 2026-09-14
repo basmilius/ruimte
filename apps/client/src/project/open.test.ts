@@ -76,7 +76,7 @@ describe('opening a folder on the machine it is on', () => {
 
     test('a machine this client has forgotten is not dialed at all', async () => {
         const { deps, steps } = spyDeps();
-        await expect(openFolderOn('daemon-gone', '/work/atlas', false, deps)).rejects.toThrow('not known any more');
+        await expect(openFolderOn('daemon-gone', '/work/atlas', false, deps)).rejects.toThrow('no longer in the list');
         expect(steps).toEqual([]);
     });
 });

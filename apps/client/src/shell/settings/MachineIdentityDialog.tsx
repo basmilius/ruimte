@@ -42,7 +42,7 @@ function IdentityForm({ endpointId, label, onOpenChange }: MachineIdentityDialog
     const save = async (): Promise<void> => {
         const link = transportFor(endpointId);
         if (!link) {
-            setFailure('That machine is not known any more');
+            setFailure('That machine is no longer in the list');
             return;
         }
         setBusy(true);
@@ -58,7 +58,7 @@ function IdentityForm({ endpointId, label, onOpenChange }: MachineIdentityDialog
             adoptMachineName(endpointId, next.label, next.nameSource ?? null);
             onOpenChange(false);
         } catch (e) {
-            setFailure(e instanceof Error ? e.message : 'That machine did not take the change');
+            setFailure(e instanceof Error ? e.message : 'The machine could not save the change');
         } finally {
             setBusy(false);
         }
@@ -85,7 +85,7 @@ function IdentityForm({ endpointId, label, onOpenChange }: MachineIdentityDialog
                 autoFocus
                 className="field"
                 aria-label="Machine name"
-                placeholder={chosen ? 'The name this machine starts with' : label}
+                placeholder={chosen ? 'Default name' : label}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => {
@@ -95,7 +95,7 @@ function IdentityForm({ endpointId, label, onOpenChange }: MachineIdentityDialog
                     }
                 }}
             />
-            <p className="mt-1.5 text-sm text-text-faint">Leave it empty to go back to the name the machine answers with on its own.</p>
+            <p className="mt-1.5 text-sm text-text-faint">Leave empty to use the default name.</p>
 
             <div className={`${SECTION_LABEL} mt-4 mb-1.5`}>Emoji</div>
             <div className="flex items-center gap-2">

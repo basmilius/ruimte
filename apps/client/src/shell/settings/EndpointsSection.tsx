@@ -103,7 +103,7 @@ function EndpointRow({ endpoint }: { endpoint: Endpoint }) {
                     name={endpoint.label}
                     note={
                         mismatch === undefined ? undefined : (
-                            <span className="text-status-error">This address answers as another machine; pair again to talk to it.</span>
+                            <span className="text-status-error">A different machine answers at this address. Pair again to connect.</span>
                         )
                     }
                 />
@@ -113,7 +113,7 @@ function EndpointRow({ endpoint }: { endpoint: Endpoint }) {
                     <EndpointState endpoint={endpoint} />
                     <span className={BTN_GROUP}>
                         {/* The name and the icon live on the machine, so a machine that is not answering cannot be given either. */}
-                        <Tooltip label={connected ? 'Name and icon' : 'Not answering, so there is nothing to name'} name>
+                        <Tooltip label={connected ? 'Name and icon' : 'Available once the machine answers'} name>
                             <button className="icon-btn h-8 w-8" disabled={!connected} onClick={() => setIdentityOpen(true)}>
                                 <Icon icon={Pencil} size={16} />
                             </button>
@@ -195,7 +195,7 @@ function PairedClients() {
             setLink(await requestPairingUrl());
             setCopied(false);
         } catch (e) {
-            setFailure(failureText(e, 'Could not make a pairing link'));
+            setFailure(failureText(e, 'Could not create a pairing link'));
         } finally {
             setBusy(false);
         }
@@ -220,7 +220,7 @@ function PairedClients() {
     return (
         <SettingsSection
             title="Apps with access"
-            description="Every browser and app that paired with this machine, until you revoke it."
+            description="Browsers and apps paired with this machine."
             action={
                 reachability === 'loopback' && (
                     <Button variant="secondary" disabled={busy} onClick={() => void showLink()}>
@@ -234,8 +234,8 @@ function PairedClients() {
                     label="Pairing link"
                     description={
                         onlyLoopback(link)
-                            ? 'This machine only listens on itself; start it with --host 0.0.0.0 before another machine can use a link.'
-                            : 'Paste it in the settings of Ruimte on the other machine. It works once, within ten minutes.'
+                            ? 'This machine only accepts local connections. Start it with --host 0.0.0.0 so other machines can use the link.'
+                            : 'Paste it in the Machines settings on the other machine. It works once and expires after ten minutes.'
                     }
                 >
                     <div className="flex items-center gap-2 rounded-lg border border-border bg-surface-sunken p-2.5">
@@ -259,7 +259,7 @@ function PairedClients() {
                             {session.current && <span className="ml-1.5 text-xs text-accent">this client</span>}
                         </span>
                     }
-                    description={`paired ${new Date(session.createdAt).toLocaleDateString()}, seen ${ago(session.lastSeenAt)}`}
+                    description={`Paired ${new Date(session.createdAt).toLocaleDateString()}, last seen ${ago(session.lastSeenAt)}`}
                     control={
                         <Tooltip label="Revoke access">
                             <button className="icon-btn h-8 w-8 shrink-0" aria-label={`Revoke ${session.label}`} onClick={() => setTarget(session)}>
@@ -277,8 +277,8 @@ function PairedClients() {
                         <Dialog.Title className="text-base font-semibold text-text">Revoke {target?.label}?</Dialog.Title>
                         <p className="mt-1 text-xs text-text-muted">
                             {target?.current
-                                ? 'This is the client you are using. It loses access to this machine and goes back to the one it runs on; pair again to return.'
-                                : 'That client loses access to this machine at its next connection. Pairing again needs a fresh link.'}
+                                ? 'This is the client you are using. It loses access to this machine and switches back to the machine it runs on. Pair again to regain access.'
+                                : 'It loses access the next time it connects. Pairing again needs a new link.'}
                         </p>
                         <div className="mt-4 flex items-center justify-end gap-2">
                             <Button onClick={() => setTarget(null)}>Cancel</Button>
@@ -328,9 +328,7 @@ function AddMachineDialog({ open, onOpenChange }: { open: boolean; onOpenChange(
                 <Dialog.Backdrop className="dialog-backdrop dialog-backdrop-nested" forceRender />
                 <Dialog.Popup className="dialog-popup dialog-popup-nested w-[460px] p-5">
                     <Dialog.Title className="text-base font-semibold text-text">Add a machine</Dialog.Title>
-                    <p className="mt-1 text-xs text-text-muted">
-                        Run Ruimte on the other machine and paste the link it prints. A machine you add here keeps its own sessions, projects and files.
-                    </p>
+                    <p className="mt-1 text-xs text-text-muted">Paste a pairing link from the other machine.</p>
                     <div className="mt-3 flex items-center gap-2">
                         <input
                             autoFocus
@@ -348,7 +346,7 @@ function AddMachineDialog({ open, onOpenChange }: { open: boolean; onOpenChange(
                             }}
                         />
                     </div>
-                    <p className="mt-1.5 text-xs text-text-faint">Take the link from "Show pairing link" or from `ruimte pair` on the other machine.</p>
+                    <p className="mt-1.5 text-xs text-text-faint">Find it under "Show pairing link" in its settings, or run `ruimte pair` there.</p>
                     {failure && (
                         <p className="mt-2 text-xs text-status-error" role="alert">
                             {failure}
@@ -385,7 +383,7 @@ function LocalRow({ endpoint }: { endpoint: Endpoint }) {
             label={<MachineName icon={icon} name={endpoint.label} note={endpoint.label === own ? undefined : own} />}
             control={
                 <>
-                    <Tooltip label={connected ? 'Name and icon' : 'Not answering, so there is nothing to name'} name>
+                    <Tooltip label={connected ? 'Name and icon' : 'Available once the machine answers'} name>
                         <button className="icon-btn h-8 w-8" disabled={!connected} onClick={() => setIdentityOpen(true)}>
                             <Icon icon={Pencil} size={16} />
                         </button>
@@ -422,7 +420,7 @@ export function EndpointsSection() {
                 server, and a heading of the same kind as the rest is what keeps that clear on a screen
                 where every other group has one. */}
             {local && (
-                <SettingsSection title="This machine" description="Where the app runs. Its name and its icon are what every client that pairs with it sees.">
+                <SettingsSection title="This machine" description="The machine this app runs on.">
                     <LocalRow endpoint={local} />
                 </SettingsSection>
             )}
@@ -430,7 +428,7 @@ export function EndpointsSection() {
                 it says nothing about how a machine got here, and it stays true for one that is switched off. */}
             <SettingsSection
                 title="Other machines"
-                description="A machine you add keeps its own sessions, projects and files; opening a project on it is what moves the work there."
+                description="Each machine keeps its own sessions, projects and files. Open a project on it to work there."
                 action={
                     <Tooltip label="Add a machine" name>
                         <button className="icon-btn h-8 w-8" onClick={() => setAddOpen(true)}>

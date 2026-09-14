@@ -15,8 +15,8 @@ export const sessionNodesOf = (views: readonly ProjectView[]): ViewSessionNode[]
  */
 export const closeWarning = (sessions: number): string => {
     if (sessions === 0) {
-        return 'Nothing in this project is running. It drops under Recent and comes back with the canvas as you leave it.';
+        return 'Nothing in this project is running. It moves to Recent with its canvas as you left it.';
     }
-    const what = sessions === 1 ? 'the session this project holds' : `the ${sessions} sessions this project holds`;
-    return `Closing ends ${what}. A terminal loses its scrollback and an agent stops where it is. The project drops under Recent and comes back with the canvas as you leave it.`;
+    const what = sessions === 1 ? 'its running session' : `its ${sessions} running sessions`;
+    return `Closing ends ${what}. A terminal loses its scrollback and an agent stops. The project moves to Recent with its canvas as you left it.`;
 };

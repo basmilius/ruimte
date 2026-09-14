@@ -133,7 +133,7 @@ describe('signing in with a key pair', () => {
 
         await expect(signIn(row({ daemonPublicKey: pinned }), key)).rejects.toThrow(/does not hold the key/);
         expect(asked.some((url) => url.endsWith('/auth/ticket'))).toBe(false);
-        expect(useToasts.getState().toasts[0]?.title).toContain('cannot prove it is itself');
+        expect(useToasts.getState().toasts[0]?.title).toContain('cannot prove its identity');
     });
 
     test('a signature that does not check out is the same refusal', async () => {

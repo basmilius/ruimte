@@ -79,7 +79,7 @@ export function DrawingNode({ id }: { id: string }) {
             )}
             {!mirror?.gone && elements.length === 0 && !mirror?.loading && (
                 <EmptyState icon={<Icon icon={PenTool} size={16} />} className="h-full">
-                    Nothing drawn yet. Double-click to open the drawing.
+                    Nothing drawn yet. Double-click to draw.
                 </EmptyState>
             )}
             <canvas ref={canvasRef} className="h-full w-full" style={{ display: elements.length === 0 ? 'none' : undefined }} />

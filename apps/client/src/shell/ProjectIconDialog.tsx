@@ -152,7 +152,7 @@ export function ProjectIconDialog({ project, open, onOpenChange }: ProjectIconDi
                             Done
                         </Button>
                     </div>
-                    {!project.folder && <p className="mt-2 text-sm text-text-faint">A canvas without a folder has nowhere to keep an image.</p>}
+                    {!project.folder && <p className="mt-2 text-sm text-text-faint">A project without a folder cannot use an image.</p>}
                 </Dialog.Popup>
             </Dialog.Portal>
         </Dialog.Root>

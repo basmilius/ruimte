@@ -250,7 +250,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         </Tooltip>
                     )}
                     {node.kind === 'terminal' && hasContext && !renaming && (
-                        <Tooltip label="Linked context. The agent in this terminal reads it with ruimte-context (list, read <id>).">
+                        <Tooltip label="Linked context. The agent reads it with ruimte-context.">
                             <Pill icon={<Icon icon={Link2} size={12} />}>context</Pill>
                         </Tooltip>
                     )}

@@ -84,7 +84,7 @@ const reportUnknownKey = (endpoint: Endpoint): void => {
         id: `endpoint-key-${endpoint.id}`,
         kind: 'error',
         title: `${endpoint.label} does not know this client`,
-        description: 'Its access was taken away, or that machine lost the pairing. Pair again to talk to it.'
+        description: 'Its access was revoked, or the machine lost the pairing. Pair again to connect.'
     });
 };
 
@@ -92,8 +92,8 @@ const reportImposter = (endpoint: Endpoint): void => {
     useToasts.getState().show({
         id: `endpoint-key-${endpoint.id}`,
         kind: 'error',
-        title: `${endpoint.label} cannot prove it is itself`,
-        description: `${endpoint.httpBaseUrl} answers with another machine's key than the one this client paired with. Pair again to talk to it.`
+        title: `${endpoint.label} cannot prove its identity`,
+        description: `${endpoint.httpBaseUrl} answers with a different key than the one this client paired with. Pair again to connect.`
     });
 };
 

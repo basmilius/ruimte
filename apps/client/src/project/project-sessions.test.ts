@@ -39,8 +39,8 @@ describe('sessionNodesOf', () => {
 
 describe('closeWarning', () => {
     test('says what is lost, with the number of sessions in it', () => {
-        expect(closeWarning(3)).toStartWith('Closing ends the 3 sessions this project holds.');
-        expect(closeWarning(1)).toStartWith('Closing ends the session this project holds.');
+        expect(closeWarning(3)).toStartWith('Closing ends its 3 running sessions.');
+        expect(closeWarning(1)).toStartWith('Closing ends its running session.');
     });
 
     test('a project with nothing running says so instead of counting zero', () => {

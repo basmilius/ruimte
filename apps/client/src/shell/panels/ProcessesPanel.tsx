@@ -216,9 +216,7 @@ export function ProcessesPanel() {
             <div className="grid grow place-items-center">
                 {header}
                 <EmptyState icon={<Icon icon={Activity} size={20} />}>
-                    {platform === 'win32'
-                        ? 'Ruimte cannot measure processes on Windows yet, so there is nothing to show for this machine.'
-                        : 'Ruimte cannot measure processes on the platform of this machine yet.'}
+                    {platform === 'win32' ? 'Process monitoring is not available on Windows yet.' : 'Process monitoring is not available on this platform yet.'}
                 </EmptyState>
             </div>
         );
@@ -227,7 +225,7 @@ export function ProcessesPanel() {
         return (
             <div className="grid grow place-items-center">
                 {header}
-                <EmptyState icon={<Icon icon={Activity} size={20} />}>This machine is not answering, so its processes cannot be measured.</EmptyState>
+                <EmptyState icon={<Icon icon={Activity} size={20} />}>This machine is not answering.</EmptyState>
             </div>
         );
     }
@@ -236,7 +234,7 @@ export function ProcessesPanel() {
         return (
             <div className="grid grow place-items-center">
                 {header}
-                <EmptyState icon={<Icon icon={Activity} size={20} />}>Measuring the processes on this machine...</EmptyState>
+                <EmptyState icon={<Icon icon={Activity} size={20} />}>Measuring processes...</EmptyState>
             </div>
         );
     }
@@ -274,7 +272,7 @@ export function ProcessesPanel() {
     const signal = (target: Target, kind: ProcessSignal): void => {
         transport
             .request('processes.signal', { pid: target.pid, startTime: target.startTime, signal: kind })
-            .catch((e: unknown) => fail(`${target.name} was not signaled`, e));
+            .catch((e: unknown) => fail(`Could not signal ${target.name}`, e));
     };
     const act = (alert: ProcessAlert, action: AlertAction): void => {
         const target =
@@ -289,13 +287,13 @@ export function ProcessesPanel() {
             return;
         }
         if (action === 'resume' && alert.nodeId !== null) {
-            transport.request('agent.resume', { sessionId: alert.nodeId }).catch((e: unknown) => fail('The agent could not be resumed', e));
+            transport.request('agent.resume', { sessionId: alert.nodeId }).catch((e: unknown) => fail('Could not resume the agent', e));
             return;
         }
         const chat = alert.nodeId !== null && groups.some((group) => group.kind === 'chat' && group.nodeId === alert.nodeId);
         if (action === 'interrupt' && chat) {
             // A chat has a turn to cancel, which is the interrupt its CLI understands.
-            transport.request('chat.cancel', { chatId: alert.nodeId! }).catch((e: unknown) => fail('The turn could not be interrupted', e));
+            transport.request('chat.cancel', { chatId: alert.nodeId! }).catch((e: unknown) => fail('Could not interrupt the turn', e));
             return;
         }
         if (target !== null) {
@@ -347,7 +345,7 @@ export function ProcessesPanel() {
                 <ProcessChart
                     label={
                         <Tooltip
-                            label={`The sum of every process this machine lets Ruimte read.${machine.diskFree === null ? '' : ` ${formatBytes(machine.diskFree)} free.`}`}
+                            label={`Total for the processes Ruimte can read.${machine.diskFree === null ? '' : ` ${formatBytes(machine.diskFree)} free.`}`}
                         >
                             <span>Disk</span>
                         </Tooltip>
@@ -472,7 +470,7 @@ export function ProcessesPanel() {
                     <Dialog.Popup className="dialog-popup w-[420px] p-5">
                         <Dialog.Title className="text-base font-semibold text-text">Force quit {forcing?.name}?</Dialog.Title>
                         <p className="mt-1 text-xs text-text-muted">
-                            SIGKILL ends process {forcing?.pid} at once, without a chance to save or clean up. Whatever it was writing may be left half done.
+                            SIGKILL ends process {forcing?.pid} immediately. It cannot save or clean up, so files it was writing may be left incomplete.
                         </p>
                         <div className="mt-4 flex items-center justify-end gap-2">
                             <Button onClick={() => setForcing(null)}>Cancel</Button>

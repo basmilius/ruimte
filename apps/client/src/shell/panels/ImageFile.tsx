@@ -23,13 +23,13 @@ export function ImageFile({ path, name, read }: { path: string; name: string; re
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <FileToolbar>
                 <div className={BTN_GROUP}>
-                    <FileToolbarToggle icon={Maximize} label="Fit to the panel" active={zoom === 'fit'} onClick={() => setZoom('fit')} />
+                    <FileToolbarToggle icon={Maximize} label="Fit" active={zoom === 'fit'} onClick={() => setZoom('fit')} />
                     <FileToolbarToggle icon={Scan} label="Actual size (1:1)" active={zoom === 'full'} onClick={() => setZoom('full')} />
                 </div>
             </FileToolbar>
             <div className="grid min-h-0 grow place-items-center overflow-auto bg-surface-sunken p-4">
                 {failed ? (
-                    <EmptyState icon={<Icon icon={ImageOff} size={20} />}>{name} could not be drawn; the file may have changed while it loaded.</EmptyState>
+                    <EmptyState icon={<Icon icon={ImageOff} size={20} />}>Could not show {name}. It may have changed while loading.</EmptyState>
                 ) : (
                     <img
                         src={fileBytesUrl(path, read.mtime, read.size, endpointId)}

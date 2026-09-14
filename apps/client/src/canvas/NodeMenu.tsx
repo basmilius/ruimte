@@ -125,7 +125,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                             {node.worktree ? (
                                 <ContextMenu.Item className="menu-item" onClick={() => canvasStore.getState().setGroupWorktree(id, null)}>
                                     <Icon icon={GitBranch} size={14} /> Unbind worktree
-                                    <span className={MENU_HINT}>Checkout stays</span>
+                                    <span className={MENU_HINT}>Keeps the checkout</span>
                                 </ContextMenu.Item>
                             ) : (
                                 <ContextMenu.Item className="menu-item" onClick={() => useUi.getState().setWorktreeDialogFor(id)}>

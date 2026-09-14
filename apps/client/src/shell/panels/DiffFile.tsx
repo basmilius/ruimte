@@ -19,8 +19,7 @@ const UnifiedDiff = lazy(() => import('@/chat/ui/UnifiedDiff'));
 
 type DiffState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; diff: GitDiffResult };
 
-const omittedLabel = (omitted: GitDiffResult['omitted']): string =>
-    omitted === 'binary' ? 'A binary file has no diff to read.' : 'This diff is too large to draw here.';
+const omittedLabel = (omitted: GitDiffResult['omitted']): string => (omitted === 'binary' ? 'Binary files have no diff.' : 'This diff is too large to show.');
 
 /*
  * A changed file as its diff, in a tab of the preview panel next to the tab that holds the file
@@ -60,7 +59,7 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
             })
             .catch((error: unknown) => {
                 if (alive) {
-                    setHeld({ asked, state: { status: 'error', message: error instanceof Error ? error.message : 'The diff could not be read.' } });
+                    setHeld({ asked, state: { status: 'error', message: error instanceof Error ? error.message : 'Could not read the diff.' } });
                 }
             });
         return () => {
@@ -93,13 +92,13 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
                     <span className={BTN_GROUP}>
                         <FileToolbarToggle
                             icon={Rows2}
-                            label="One patch, stacked"
+                            label="Stacked"
                             active={layout === 'stacked'}
                             onClick={() => useSettings.getState().update({ diffLayout: 'stacked' })}
                         />
                         <FileToolbarToggle
                             icon={Columns2}
-                            label="Old and new side by side"
+                            label="Split"
                             active={layout === 'split'}
                             onClick={() => useSettings.getState().update({ diffLayout: 'split' })}
                         />
@@ -128,7 +127,7 @@ function DiffBody({ state, wrap, layout, relative }: { state: DiffState; wrap: b
     if (state.status === 'loading') {
         return (
             <div className="file-diff grid min-h-0 grow place-items-center">
-                <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>Reading the diff of {relative}.</EmptyState>
+                <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>Reading the diff of {relative}...</EmptyState>
             </div>
         );
     }
@@ -196,7 +195,7 @@ function CommitDiff({ tabKey, cwd, commit }: { tabKey: string; cwd: string; comm
             })
             .catch((error: unknown) => {
                 if (alive) {
-                    setHeld({ asked, state: { status: 'error', message: error instanceof Error ? error.message : 'The commit could not be read.' } });
+                    setHeld({ asked, state: { status: 'error', message: error instanceof Error ? error.message : 'Could not read the commit.' } });
                 }
             });
         return () => {
@@ -215,13 +214,13 @@ function CommitDiff({ tabKey, cwd, commit }: { tabKey: string; cwd: string; comm
                 <span className={BTN_GROUP}>
                     <FileToolbarToggle
                         icon={Rows2}
-                        label="One patch, stacked"
+                        label="Stacked"
                         active={layout === 'stacked'}
                         onClick={() => useSettings.getState().update({ diffLayout: 'stacked' })}
                     />
                     <FileToolbarToggle
                         icon={Columns2}
-                        label="Old and new side by side"
+                        label="Split"
                         active={layout === 'split'}
                         onClick={() => useSettings.getState().update({ diffLayout: 'split' })}
                     />

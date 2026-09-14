@@ -33,7 +33,7 @@ export function FileBody({ path, name, on, tabKey }: { path: string; name: strin
         if (state.status === 'loading') {
             return (
                 <WithoutRenderer>
-                    <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>Reading {name}.</EmptyState>
+                    <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>Reading {name}...</EmptyState>
                 </WithoutRenderer>
             );
         }

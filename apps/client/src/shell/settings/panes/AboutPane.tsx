@@ -15,9 +15,9 @@ import { Icon } from '@/ui/Icon';
 const TAGLINE = 'Space for AI Engineering.';
 
 const LINKS = [
-    { label: 'ruimte.app', description: 'The site, with the download and the principles.', href: 'https://ruimte.app' },
-    { label: 'Source on GitHub', description: 'The code, the issues and the handoff notes.', href: 'https://github.com/basmilius/ruimte' },
-    { label: 'Report a problem', description: 'A new issue with what you saw and what you expected.', href: 'https://github.com/basmilius/ruimte/issues/new' }
+    { label: 'ruimte.app', description: 'Website and downloads.', href: 'https://ruimte.app' },
+    { label: 'Source on GitHub', description: 'Source code and issues.', href: 'https://github.com/basmilius/ruimte' },
+    { label: 'Report a problem', description: 'Describe what you saw and what you expected.', href: 'https://github.com/basmilius/ruimte/issues/new' }
 ];
 
 const PLATFORM_NAMES: Record<string, string> = { darwin: 'macOS', win32: 'Windows', linux: 'Linux' };
@@ -38,7 +38,7 @@ const detailsOf = (server: ServerInfo | undefined): Detail[] => {
         {
             label: 'Machine',
             value: server?.version ? `${machine}, ${server.version}` : machine,
-            description: 'The machine of the workspace you are in, and the version it runs.'
+            description: 'The machine of the current workspace, and its version.'
         }
     ];
     if (versions) {
@@ -47,7 +47,7 @@ const detailsOf = (server: ServerInfo | undefined): Detail[] => {
     const platform = server?.platform ?? null;
     rows.push(
         { label: 'Platform', value: platform ? (PLATFORM_NAMES[platform] ?? platform) : 'Unknown' },
-        { label: 'Data folder', value: server?.home ?? 'Unknown', description: 'Sessions, chats, worktrees and the project registry live here.', mono: true }
+        { label: 'Data folder', value: server?.home ?? 'Unknown', description: 'Where the machine stores sessions, chats and worktrees.', mono: true }
     );
     return rows;
 };
@@ -111,10 +111,10 @@ export function AboutPane() {
                 ))}
             </SettingsSection>
             {updates.supported && (
-                <SettingsSection title="Updates" description="Downloading is separate from installing; nothing restarts without you.">
+                <SettingsSection title="Updates" description="Installing always waits for you.">
                     <SettingsRow
                         label="Download updates automatically"
-                        description="On, a new version comes down in the background and the toolbar turns green once it is ready to install. Off, the button appears as soon as there is one and you start the download yourself."
+                        description="On, new versions download in the background. Off, you start each download yourself."
                         control={<Toggle checked={autoDownload} onChange={setAuto} label="Download updates automatically" />}
                     />
                 </SettingsSection>

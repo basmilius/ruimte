@@ -15,15 +15,15 @@ export function UsagePane() {
     const rate = useUsage((s) => s.summary?.rate ?? null);
 
     return (
-        <SettingsSection title="Usage" description="What the usage page counts in. The numbers themselves follow the region of this machine.">
+        <SettingsSection title="Usage">
             <SettingsRow
                 label="Currency"
                 description={
                     currency === 'USD'
-                        ? 'Model prices are published in dollars, which is what the page shows.'
+                        ? 'Prices as published, in dollars.'
                         : rate === null
-                          ? 'No exchange rate yet, so the page stays in dollars until the machine has one.'
-                          : `At the ECB reference rate of ${rate.date}, which the machine asks for once a day.`
+                          ? 'No exchange rate yet. The page shows dollars until there is one.'
+                          : `Converted at the ECB reference rate of ${rate.date}.`
                 }
                 control={<Segmented value={currency} options={CURRENCIES} onChange={(id) => useUsageStore.getState().setCurrency(id)} label="Currency" />}
             />

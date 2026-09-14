@@ -74,7 +74,7 @@ export const parseDocument = (text: string): DocumentParse => {
     }
     const duplicate = duplicateIdIn(document.views);
     if (duplicate) {
-        return { kind: 'invalid', message: `Two things in this project share the id "${duplicate}"; every view and every node needs one of its own` };
+        return { kind: 'invalid', message: `Two views or nodes in this project share the id "${duplicate}"` };
     }
     return { kind: 'ok', document: { ...document, views: withoutCrossViewEdges(document.views) } };
 };
@@ -175,11 +175,11 @@ export const parseDrawing = (text: string): DrawingParse => {
     const document = migrateDrawing(value);
     if (!document) {
         // JSON that is not a drawing at all: a person's file under our name, so it stays where it is.
-        return { kind: 'invalid', message: 'This file is not a drawing of this version' };
+        return { kind: 'invalid', message: 'This file is not a drawing Ruimte can read' };
     }
     const duplicate = duplicateElementIdIn(document.elements);
     if (duplicate) {
-        return { kind: 'invalid', message: `Two elements in this drawing share the id "${duplicate}"; every element needs one of its own` };
+        return { kind: 'invalid', message: `Two elements in this drawing share the id "${duplicate}"` };
     }
     return { kind: 'ok', document };
 };

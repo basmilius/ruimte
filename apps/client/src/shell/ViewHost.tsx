@@ -106,7 +106,7 @@ function NoProject() {
                     </div>
                 }
             >
-                No project is open. Press <kbd className={TOOLTIP_KBD}>⌘K</kbd> for one you already have, or open a folder to start a new one.
+                No project is open. Press <kbd className={TOOLTIP_KBD}>⌘K</kbd> to open an existing one, or open a folder to start a new one.
             </EmptyState>
         </div>
     );

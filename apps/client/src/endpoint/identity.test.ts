@@ -42,7 +42,7 @@ describe('a row that turns out to be a machine already in the list', () => {
         await Bun.sleep(1);
 
         expect(useEndpoints.getState().endpoints.map((entry) => entry.id)).toEqual([LOCAL_ENDPOINT_ID]);
-        expect(useToasts.getState().toasts[0]?.description).toContain('another address of the machine listed as This machine');
+        expect(useToasts.getState().toasts[0]?.description).toContain('another address of This machine');
     });
 
     test('a machine paired over the LAN before this page said who it is folds into the local row', async () => {

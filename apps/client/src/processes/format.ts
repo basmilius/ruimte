@@ -66,13 +66,13 @@ export const alertText = (alert: ProcessAlert, now: number): string => {
         case 'silent':
             return `Working, but silent for ${formatDuration(now - alert.since)}`;
         case 'busy-after-turn':
-            return `${name} keeps using ${formatPercent(alert.value)} of a core after the turn ended`;
+            return `${name} still uses ${formatPercent(alert.value)} of a core after its turn ended`;
         case 'memory':
             return `${name} uses ${formatBytes(alert.value)}`;
         case 'agent-gone':
-            return `${agentName(alert.name ?? 'The agent')} is gone, but its status still says it runs`;
+            return `${agentName(alert.name ?? 'The agent')} has exited, but still shows as running`;
         case 'orphan':
-            return `${name} outlived its terminal`;
+            return `${name} is still running after its terminal closed`;
         case 'probe-hung':
             return `${name}, started by Ruimte, has run for ${formatDuration(now - alert.since)}`;
     }

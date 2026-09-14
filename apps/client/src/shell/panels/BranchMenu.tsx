@@ -104,7 +104,7 @@ export function BranchMenu({ target, targets, branch, detached, refs, loading, o
                             ))}
                             {targets.length === 0 && (
                                 <Menu.Item className="menu-item" disabled>
-                                    No checkout to point at
+                                    No checkouts
                                 </Menu.Item>
                             )}
                         </Menu.RadioGroup>

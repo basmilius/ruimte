@@ -57,8 +57,8 @@ describe('the charts', () => {
 describe('the warnings', () => {
     test('say what is wrong in one sentence and offer the button that fits', () => {
         expect(alertText(alert({ kind: 'silent', since: 0 }), 14 * 60_000)).toBe('Working, but silent for 14 min');
-        expect(alertText(alert({ kind: 'agent-gone', name: 'claude' }), 0)).toBe('Claude Code is gone, but its status still says it runs');
-        expect(alertText(alert({ kind: 'busy-after-turn', value: 95 }), 0)).toBe('vitest keeps using 95% of a core after the turn ended');
+        expect(alertText(alert({ kind: 'agent-gone', name: 'claude' }), 0)).toBe('Claude Code has exited, but still shows as running');
+        expect(alertText(alert({ kind: 'busy-after-turn', value: 95 }), 0)).toBe('vitest still uses 95% of a core after its turn ended');
         expect(alertActions(alert({ kind: 'busy-after-turn' }))).toEqual(['show', 'terminate']);
         expect(alertActions(alert({ kind: 'agent-gone' }))).toEqual(['resume']);
     });

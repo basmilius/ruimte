@@ -94,7 +94,7 @@ export class CodexBackend implements ChatBackend {
                 result = await transport.request('thread/resume', { threadId: this.launch.resume, excludeTurns: true, ...params });
             } catch (error) {
                 // The thread is gone from Codex's store; a fresh one keeps the chat usable.
-                this.emit({ type: 'note', level: 'warning', text: `Codex could not resume its thread (${reason(error)}); starting a new one` });
+                this.emit({ type: 'note', level: 'warning', text: `Codex could not resume its thread (${reason(error)}). Started a new one.` });
                 result = await transport.request('thread/start', params);
             }
         } else {

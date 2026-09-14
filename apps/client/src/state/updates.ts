@@ -33,18 +33,18 @@ export const describeUpdate = (state: UpdateState): { headline: string; detail: 
         case 'unsupported':
             return {
                 headline: 'Updates come from the desktop app',
-                detail: 'A browser follows whichever machine it is pointed at, and a checkout updates with git.'
+                detail: ''
             };
         case 'checking':
-            return { headline: 'Looking for a newer version', detail: '' };
+            return { headline: 'Checking for updates', detail: '' };
         case 'available':
-            return { headline: `Version ${state.version ?? 'unknown'} is available`, detail: 'Download it now, or let it come down on its own.' };
+            return { headline: `Version ${state.version ?? 'unknown'} is available`, detail: '' };
         case 'downloading':
-            return { headline: `Downloading ${state.version ?? 'the update'}`, detail: `${Math.round(state.percent ?? 0)}% of the way.` };
+            return { headline: `Downloading ${state.version ?? 'the update'}`, detail: `${Math.round(state.percent ?? 0)}%` };
         case 'ready':
             return {
                 headline: `Version ${state.version ?? 'unknown'} is ready`,
-                detail: 'Ruimte restarts to install it. Nothing you have open is lost: sessions live on the machine.'
+                detail: 'Ruimte restarts to install it. Nothing you have open is lost.'
             };
         case 'error':
             return { headline: 'The last check did not finish', detail: state.error ?? 'No reason given.' };

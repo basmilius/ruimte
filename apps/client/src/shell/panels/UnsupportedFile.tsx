@@ -30,8 +30,8 @@ export function UnsupportedFile({ path, name, read }: { path: string; name: stri
                 }
             >
                 {read.kind === 'too-large'
-                    ? `${name} is ${formatBytes(read.size)}, past the ${formatBytes(FS_READ_MAX_TEXT_BYTES)} the viewer reads.`
-                    : `${name} is ${formatBytes(read.size)} of ${read.mime}, which the viewer cannot draw.`}
+                    ? `${name} is ${formatBytes(read.size)}. Files over ${formatBytes(FS_READ_MAX_TEXT_BYTES)} do not open here.`
+                    : `${name} (${read.mime}, ${formatBytes(read.size)}) cannot be shown here.`}
             </EmptyState>
         </div>
     );

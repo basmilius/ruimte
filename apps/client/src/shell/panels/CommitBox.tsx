@@ -58,7 +58,7 @@ export function CommitBox({ cwd, status, capabilities, busy, onCommit }: CommitB
             })
             .catch((error: unknown) => {
                 const text = error instanceof Error ? error.message : 'The message could not be written.';
-                useToasts.getState().show({ title: 'No message was written', description: text.split('\n')[0], kind: 'error', output: text });
+                useToasts.getState().show({ title: 'Could not write the message', description: text.split('\n')[0], kind: 'error', output: text });
             })
             .finally(() => {
                 writingId.current = null;
@@ -72,7 +72,7 @@ export function CommitBox({ cwd, status, capabilities, busy, onCommit }: CommitB
                 className={COMMIT_MESSAGE}
                 rows={3}
                 spellCheck={false}
-                placeholder="Summary, then an empty line and the why."
+                placeholder="Summary, then a blank line and the details"
                 value={message}
                 onChange={(event) => useGit.getState().setMessage(cwd, event.target.value)}
                 onKeyDown={(event) => {
@@ -92,7 +92,7 @@ export function CommitBox({ cwd, status, capabilities, busy, onCommit }: CommitB
                     </Tooltip>
                 )}
                 <span className="grow" />
-                <Tooltip label={ready ? 'Commit and push in one go' : 'A message and a change are what a commit needs'}>
+                <Tooltip label={ready ? 'Commit and push' : 'Needs a message and a change'}>
                     <Button size="sm" variant="secondary" disabled={!ready} onClick={() => commit(true)}>
                         Commit &amp; Push
                     </Button>

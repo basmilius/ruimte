@@ -531,7 +531,7 @@ const describeUpdateError = (message: string): string => {
         return 'No reason given.';
     }
     if (first.startsWith('404')) {
-        return 'No release feed to read. Either there is no published release yet, or the repository it comes from is private.';
+        return 'No release feed found. There is no published release yet, or the repository is private.';
     }
     return first.length > 200 ? `${first.slice(0, 200)}...` : first;
 };

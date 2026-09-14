@@ -37,7 +37,7 @@ import { socketAddressFor } from './handshake';
 export const pairEndpoint = async (pairingUrl: string): Promise<Endpoint> => {
     const parsed = parsePairingUrl(pairingUrl);
     if (!parsed) {
-        throw new Error('That is not a pairing link; it looks like http://machine:4210/pair#token');
+        throw new Error('That is not a pairing link. A pairing link looks like http://machine:4210/pair#token');
     }
     // Asked before the one-time token is spent, so a link for this machine's own daemon leaves no paired client behind.
     refuseOwnDaemon(await daemonAt(parsed.httpBaseUrl));
@@ -52,7 +52,7 @@ export const pairEndpoint = async (pairingUrl: string): Promise<Endpoint> => {
     }
     const { sessionToken, endpoint } = (await response.json()) as { sessionToken?: string; endpoint: EndpointInfo };
     if (key && !endpoint.publicKey && !sessionToken) {
-        throw new Error('That machine answered with neither a key nor a token; there is nothing to talk to it with');
+        throw new Error('That machine answered without a key or a token');
     }
     // Again with the id the daemon itself put in the pairing answer, for a daemon whose address said nothing.
     refuseOwnDaemon(endpoint.id);
@@ -78,7 +78,7 @@ export const pairEndpoint = async (pairingUrl: string): Promise<Endpoint> => {
             id: `endpoint-merged-${record.id}`,
             kind: 'success',
             title: `${known.label} is already in the list`,
-            description: `That link is another address of the same machine, so this client moved its row to ${record.httpBaseUrl} rather than listing it twice.`
+            description: `That link points to the same machine. Its address is now ${record.httpBaseUrl}.`
         });
     }
     return record;
@@ -106,7 +106,7 @@ const daemonAt = async (httpBaseUrl: string): Promise<string | null> => {
 const refuseOwnDaemon = (daemonId: string | null): void => {
     const known = daemonId === null ? null : endpointForDaemon(daemonId);
     if (known?.id === LOCAL_ENDPOINT_ID) {
-        throw new Error(`That link is for the machine that served this page; it is already in the list as ${known.label}.`);
+        throw new Error(`That link is for the machine that served this page. It is already in the list as ${known.label}.`);
     }
 };
 

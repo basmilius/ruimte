@@ -48,7 +48,7 @@ const PROMPT_HISTORY = 50;
 // Commands the composer handles itself; the CLI's own ones are sent through as text.
 const LOCAL_COMMANDS = [
     { name: 'model', hint: 'Switch the model' },
-    { name: 'compact', hint: 'Fold the context' },
+    { name: 'compact', hint: 'Compact the context' },
     { name: 'clear', hint: 'Start a new context' }
 ];
 
@@ -574,7 +574,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
         () => true
     );
 
-    const placeholder = disabled ? 'Not connected to the Ruimte server' : 'Ask anything, / for commands, @ for files, $ for skills';
+    const placeholder = disabled ? 'Not connected to the machine' : 'Ask anything, / for commands, @ for files, $ for skills';
 
     return (
         <div className="chat-column-content pointer-events-none absolute inset-x-3 bottom-3 z-10">

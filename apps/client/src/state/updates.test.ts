@@ -25,7 +25,7 @@ describe('describeUpdate', () => {
     });
 
     test('rounds the progress it reports', () => {
-        expect(describeUpdate(state({ status: 'downloading', version: '1.2.0', percent: 41.6 })).detail).toBe('42% of the way.');
+        expect(describeUpdate(state({ status: 'downloading', version: '1.2.0', percent: 41.6 })).detail).toBe('42%');
     });
 
     test('carries the reason a check failed, and says so when there is none', () => {

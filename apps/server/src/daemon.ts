@@ -296,7 +296,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                     ...(parsed.data.publicKey ? { publicKey: parsed.data.publicKey } : {})
                 });
                 if (!paired) {
-                    return new Response('That pairing link is used up or stale; ask for a new one', { status: 401, headers: AUTH_CORS });
+                    return new Response('That pairing link is used or expired. Ask for a new one.', { status: 401, headers: AUTH_CORS });
                 }
                 return Response.json(
                     { ...(paired.sessionToken ? { sessionToken: paired.sessionToken } : {}), endpoint: endpointInfo(reachabilityOf(remote), true) },
@@ -327,7 +327,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 }
                 const ticket = await handshake.redeem(parsed.data);
                 if (!ticket) {
-                    return new Response('That signature does not open anything here; pair again', { status: 401, headers: AUTH_CORS });
+                    return new Response('This machine does not recognize that signature. Pair again.', { status: 401, headers: AUTH_CORS });
                 }
                 return Response.json(ticket, { headers: AUTH_CORS });
             }

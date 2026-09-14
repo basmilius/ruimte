@@ -17,7 +17,7 @@ export function UsageLimits() {
         <section className="flex flex-col gap-3">
             <h2 className={SECTION_LABEL}>Limits</h2>
             <p className="text-xs text-text-muted">
-                The mark on a bar is how much of its window has passed. A bar that has run past its mark is spending faster than the window gives back.
+                The mark on a bar shows how much of its window has passed. A bar past its mark is spending faster than the window gives back.
             </p>
             <LimitsList limits={limits} now={now} />
         </section>

@@ -83,11 +83,11 @@ export const suggestMessage = async (cwd: string, registry: ProviderRegistry, op
     const top = await toplevel(cwd);
     const input = await stagedInput(top);
     if (input === null) {
-        throw new GitError('git-failed', 'There is nothing to write a message about.');
+        throw new GitError('git-failed', 'There are no staged changes to describe.');
     }
     const provider = await registry.oneShotProvider(options.provider);
     if (provider === null) {
-        throw new GitError('git-failed', 'No agent CLI on this machine can write a message.');
+        throw new GitError('git-failed', 'No agent CLI on this machine can write a commit message.');
     }
     const args = provider.oneShotArgs?.(buildMessagePrompt(input.nameStatus, input.patch)) ?? null;
     if (args === null) {

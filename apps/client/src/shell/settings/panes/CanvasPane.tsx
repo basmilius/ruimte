@@ -9,10 +9,10 @@ export function CanvasPane() {
     const update = useSettings((s) => s.update);
 
     return (
-        <SettingsSection title="Drawing" description="A sketch is freehand by default; the grid is there when you want it.">
+        <SettingsSection title="Drawing">
             <SettingsRow
                 label="Snap to the grid"
-                description="Corners, moves and resizes land on the 8 unit grid. Freehand never snaps."
+                description="Shapes land on the 8 unit grid when you draw, move or resize them. Freehand strokes never snap."
                 control={
                     <>
                         <Keys keys="⌘ drag" />

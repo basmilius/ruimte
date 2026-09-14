@@ -115,15 +115,12 @@ function Provenance() {
     const currency = useUsage((s) => s.currency);
     const failed = useUsage((s) => s.failed);
     if (failed) {
-        return <p className="text-xs text-status-error">The machine could not read the transcripts. These are the numbers of the last scan that worked.</p>;
+        return <p className="text-xs text-status-error">Could not read the transcripts. Showing the last successful scan.</p>;
     }
     if (summary === null) {
         return null;
     }
-    const prices =
-        summary.pricing.fetchedAt === null
-            ? `Prices from the bundled table, ${formatCount(summary.pricing.models)} models`
-            : `Prices from LiteLLM, ${formatDate(summary.pricing.fetchedAt)}`;
+    const prices = summary.pricing.fetchedAt === null ? 'Prices from the bundled table' : `Prices from LiteLLM, ${formatDate(summary.pricing.fetchedAt)}`;
     // The rate is named only when it is being used, so a page in dollars says nothing about euros.
     const rate = currency === 'USD' || summary.rate === null ? null : `${summary.rate.currency} at the ECB rate of ${summary.rate.date}`;
     return (
@@ -233,9 +230,7 @@ function Page({ endpointId }: { endpointId: string }) {
             )}
             {/* The skeleton is the wait for an answer; without a socket there is no answer on the way. */}
             {shown === null && answering && <LoadingBody />}
-            {shown === null && !answering && (
-                <EmptyState icon={<Icon icon={ChartNoAxesColumn} size={24} />}>Nothing has been read from this machine yet.</EmptyState>
-            )}
+            {shown === null && !answering && <EmptyState icon={<Icon icon={ChartNoAxesColumn} size={24} />}>No usage on this machine yet.</EmptyState>}
             {shown !== null && derived !== null && !noRoots && (
                 <>
                     <div className="grid gap-6 lg:grid-cols-[18rem_1fr]">

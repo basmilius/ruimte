@@ -15,10 +15,10 @@ export function FilesPane() {
 
     return (
         <>
-            <SettingsSection title="Files" description="The tree next to the canvas and the viewer beside it.">
+            <SettingsSection title="Files">
                 <SettingsRow
                     label="Open files"
-                    description="Past this many, the oldest tab you did not pin closes. Double-click a tab to pin it."
+                    description="Past this number, the oldest unpinned tab closes. Double-click a tab to pin it."
                     control={
                         <Stepper
                             value={filesTabLimit}
@@ -32,12 +32,12 @@ export function FilesPane() {
                 />
                 <SettingsRow
                     label="Show hidden files"
-                    description="Dotfiles and dot folders in the tree. The eye button in the panel sets the same thing."
+                    description="Dotfiles and dot folders."
                     control={<Toggle checked={filesShowHidden} onChange={(checked) => update({ filesShowHidden: checked })} label="Show hidden files" />}
                 />
                 <SettingsRow
                     label="Start browsing in"
-                    description="Where the command palette opens when you browse for a folder. One folder for every machine; a machine that does not have it starts in its home, and so does an empty field."
+                    description="The folder the command palette starts in when you browse. Applies to every machine. Empty or missing falls back to the home folder."
                     control={
                         <input
                             className="field w-64 font-mono text-code"
@@ -51,15 +51,15 @@ export function FilesPane() {
                     }
                 />
             </SettingsSection>
-            <SettingsSection title="Git" description="The status list next to the canvas.">
+            <SettingsSection title="Git">
                 <SettingsRow
                     label="Group changes by folder"
-                    description="Every status group is a tree of the folders its files sit in, which folds up. Off lists the files flat, each with its own path."
+                    description="Shows changed files in collapsible folders. Off lists them flat with their full path."
                     control={<Toggle checked={gitTree} onChange={(checked) => update({ gitTree: checked })} label="Group changes by folder" />}
                 />
                 <SettingsRow
                     label="Diff layout"
-                    description="Stacked is one patch, split puts the old and the new side by side. The diff's own toolbar sets the same thing."
+                    description="Stacked shows one column. Split puts the old and new versions side by side."
                     control={
                         <Segmented
                             value={diffLayout}
@@ -74,7 +74,7 @@ export function FilesPane() {
                 />
                 <SettingsRow
                     label="Show whitespace changes"
-                    description="Off asks git to ignore changes that are whitespace alone, so the counts match what the diff shows."
+                    description="Off hides changes that only touch whitespace, in the diff and in the counts."
                     control={<Toggle checked={diffWhitespace} onChange={(checked) => update({ diffWhitespace: checked })} label="Show whitespace changes" />}
                 />
             </SettingsSection>

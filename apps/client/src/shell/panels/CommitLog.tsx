@@ -86,14 +86,14 @@ export function CommitLog({ cwd, revision, reading, onOpen }: CommitLogProps) {
     if (state === 'error') {
         return (
             <div className="grid min-h-0 grow place-items-center">
-                <EmptyState icon={<Icon icon={GitCommitHorizontal} size={20} />}>The history of this checkout could not be read.</EmptyState>
+                <EmptyState icon={<Icon icon={GitCommitHorizontal} size={20} />}>Could not read the history.</EmptyState>
             </div>
         );
     }
     if (state === 'ready' && commits.length === 0) {
         return (
             <div className="grid min-h-0 grow place-items-center">
-                <EmptyState icon={<Icon icon={GitCommitHorizontal} size={20} />}>Nothing is committed here yet.</EmptyState>
+                <EmptyState icon={<Icon icon={GitCommitHorizontal} size={20} />}>No commits yet.</EmptyState>
             </div>
         );
     }

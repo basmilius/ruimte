@@ -5,5 +5,5 @@ export const RUNTIME_MODES: Array<{ id: RuntimeMode; label: string; hint: string
     { id: 'supervised', label: 'Supervised', hint: 'Asks before commands and file changes' },
     { id: 'auto-accept-edits', label: 'Auto-accept edits', hint: 'File edits go through, commands still ask' },
     { id: 'auto', label: 'Auto', hint: 'The agent reviews routine actions itself' },
-    { id: 'full-access', label: 'Full access', hint: 'No approval prompts at all' }
+    { id: 'full-access', label: 'Full access', hint: 'Never asks for approval' }
 ];

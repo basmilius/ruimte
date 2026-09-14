@@ -39,20 +39,20 @@ export const CANVAS_SHORTCUTS: readonly ShortcutGroup[] = [
     {
         title: 'Views',
         shortcuts: [
-            { keys: '⌘ 1', label: 'Go to the first view, up to ⌘ 9 for the ninth' },
+            { keys: '⌘ 1', label: 'Go to view 1 to 9' },
             { keys: '⇧ ⌘ [', label: 'Previous view' },
             { keys: '⇧ ⌘ ]', label: 'Next view' },
             { keys: '⌘ T', label: 'New canvas view' },
-            { keys: 'F2', label: 'Rename the view or node the sidebar has focus on' }
+            { keys: 'F2', label: 'Rename the focused sidebar item' }
         ]
     },
     {
         title: 'Split',
         shortcuts: [
             { keys: '⌘ \\', label: 'Split the cell to the right' },
-            { keys: '⇧ ⌘ \\', label: 'Split the cell downwards' },
-            { keys: '⌥ ⌘ ←', label: 'Focus the cell in that direction, and the other three arrows' },
-            { keys: '⌘ W', label: 'Close the cell that has the focus' }
+            { keys: '⇧ ⌘ \\', label: 'Split the cell down' },
+            { keys: '⌥ ⌘ ←', label: 'Focus the neighboring cell (any arrow key)' },
+            { keys: '⌘ W', label: 'Close the focused cell' }
         ]
     },
     {
@@ -73,26 +73,26 @@ export const CANVAS_SHORTCUTS: readonly ShortcutGroup[] = [
             { keys: 'P', label: 'Freehand (7)' },
             { keys: 'T', label: 'Text (8)' },
             { keys: 'E', label: 'Eraser (0)' },
-            { keys: 'Q', label: 'Keep the tool after a shape' },
+            { keys: 'Q', label: 'Keep the tool selected after drawing' },
             { keys: '⇧ ⌘ L', label: 'Lock or unlock the selection' },
             { keys: '⌘ D', label: 'Duplicate the selection' },
             { keys: '⌘ ]', label: 'Bring to front' },
             { keys: '⌘ [', label: 'Send to back' },
-            { keys: '⌘ drag', label: 'Invert the grid snapping setting' },
-            { keys: '⌘ C', label: 'Copy the selection as elements' },
-            { keys: '⌘ V', label: 'Paste elements into the drawing' }
+            { keys: '⌘ drag', label: 'Toggle grid snapping while dragging' },
+            { keys: '⌘ C', label: 'Copy the selection' },
+            { keys: '⌘ V', label: 'Paste into the drawing' }
         ]
     },
     {
         title: 'Panels',
-        shortcuts: [{ keys: '⌘ ⌥ B', label: 'Toggle the panel that was open last' }]
+        shortcuts: [{ keys: '⌘ ⌥ B', label: 'Toggle the last open panel' }]
     },
     {
         title: 'Nodes',
         shortcuts: [
             { keys: 'Tab', label: 'Move focus to the next node' },
             { keys: '↵', label: 'Step into the focused node' },
-            { keys: 'Esc', label: 'Return from a node to the canvas, except from a terminal, which hands Escape to the program it runs' },
+            { keys: 'Esc', label: 'Return to the canvas (a terminal passes Escape to its program)' },
             { keys: '⌘ Esc', label: 'Leave a terminal node (⌃ ⇧ Esc on Windows and Linux)' }
         ]
     },

@@ -237,7 +237,7 @@ export function BrowserFallback({ id, className }: { id: string; className?: str
     if (!isDesktop()) {
         return (
             <div className={clsx('flex h-full flex-col items-center justify-center gap-2 bg-surface px-6 text-center text-xs text-text-muted', className)}>
-                <span>Web pages open inside the desktop app. In a browser tab this can only hand the address to a new tab.</span>
+                <span>Web pages open only in the desktop app.</span>
                 {saved && saved !== DEFAULT_URL && (
                     <a className="inline-flex items-center gap-1 text-accent" href={saved} target="_blank" rel="noreferrer">
                         <Icon icon={ExternalLink} size={12} /> {saved}

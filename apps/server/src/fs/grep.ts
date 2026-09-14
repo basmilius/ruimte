@@ -33,7 +33,7 @@ const toRegExp = (query: string, options: GrepOptions): RegExp => {
     try {
         return new RegExp(pattern, options.caseSensitive ? '' : 'i');
     } catch {
-        throw new GrepError('invalid-query', 'That is not a pattern this search understands');
+        throw new GrepError('invalid-query', 'That is not a valid search pattern');
     }
 };
 

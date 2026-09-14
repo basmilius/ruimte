@@ -202,14 +202,14 @@ export class ProcessMonitor {
 
     signal(payload: ProcessesSignalPayload): void {
         if (this.sampler === null) {
-            throw new ProcessError('processes-unsupported', 'This machine has no process sampler');
+            throw new ProcessError('processes-unsupported', 'This machine does not support process monitoring');
         }
         if (payload.pid <= 1 || payload.pid === this.daemonPid) {
-            throw new ProcessError('process-refused', 'Ruimte does not signal itself or the system');
+            throw new ProcessError('process-refused', 'Ruimte does not send signals to itself or to system processes');
         }
         const found = this.sampler.inspect(payload.pid);
         if (found === null || found.startTime !== payload.startTime) {
-            throw new ProcessError('process-gone', 'That process has ended; its number may belong to another process now');
+            throw new ProcessError('process-gone', 'That process has ended');
         }
         if (found.uid !== this.uid) {
             throw new ProcessError('process-foreign', 'That process belongs to another user');

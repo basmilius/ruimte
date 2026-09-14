@@ -26,7 +26,7 @@ export function LayoutDialog() {
                 <Dialog.Backdrop className="dialog-backdrop" />
                 <Dialog.Popup className="dialog-popup w-[380px] p-5">
                     <Dialog.Title className="text-base font-semibold text-text">Save layout</Dialog.Title>
-                    <p className="mt-1 text-sm text-text-muted">Where every node and text sits right now, under a name you can apply later.</p>
+                    <p className="mt-1 text-sm text-text-muted">Saves where every node and text sits, so you can apply it later.</p>
                     <input
                         autoFocus
                         className="field mt-3"

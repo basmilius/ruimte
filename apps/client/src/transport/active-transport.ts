@@ -60,7 +60,7 @@ export class ActiveTransport implements Transport {
 
     request<T extends RequestType>(type: T, payload: RequestMap[T]['payload']): Promise<RequestMap[T]['result']> {
         if (!this.bound) {
-            return Promise.reject(new TransportError('not-connected', 'The server is not connected'));
+            return Promise.reject(new TransportError('not-connected', 'The machine is not connected'));
         }
         return this.bound.request(type, payload);
     }

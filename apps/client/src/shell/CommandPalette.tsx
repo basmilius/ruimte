@@ -743,7 +743,7 @@ export function CommandPalette() {
                             }
                             aria-label={
                                 grepping
-                                    ? 'Search through the files of this folder'
+                                    ? 'Search the files in this folder'
                                     : picking
                                       ? 'Pick a file from this folder'
                                       : 'Jump to a node, run a command, or open a folder'
@@ -756,7 +756,7 @@ export function CommandPalette() {
                             )}
                             placeholder={
                                 grepping
-                                    ? 'Search through the files of this folder'
+                                    ? 'Search the files in this folder'
                                     : picking
                                       ? 'Pick a file from this folder'
                                       : machineStep
@@ -842,14 +842,14 @@ export function CommandPalette() {
                             )}
                             {picking && entries.length === 0 && (
                                 <div className="px-3 py-6 text-center text-xs text-text-faint">
-                                    {folder === null ? 'This project has no folder, so there are no files to pick.' : 'No file in this folder matches'}
+                                    {folder === null ? 'This project has no folder.' : 'No file in this folder matches'}
                                 </div>
                             )}
                             {grepping && query.trim() !== '' && !grep.busy && grep.failure === null && grep.matches.length === 0 && (
                                 <div className="px-3 py-6 text-center text-xs text-text-faint">No line in this folder matches</div>
                             )}
                             {grepping && query.trim() === '' && (
-                                <div className="px-3 py-6 text-center text-xs text-text-faint">Type to search through every file in this folder.</div>
+                                <div className="px-3 py-6 text-center text-xs text-text-faint">Type to search every file in this folder.</div>
                             )}
                             {machineStep && entries.length === 0 && <div className="px-3 py-6 text-center text-xs text-text-faint">No machine matches</div>}
                         </div>
