@@ -1597,9 +1597,42 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   default), `--no-stun`, `--direct-ports` and `--direct-host-address`. The Docker containers publish a
   UDP range and announce `127.0.0.1`, which is how a client on the host reaches a werift inside
   Docker Desktop's VM. The client's STUN servers are a setting (`directStunServer`).
-- The channel's ticket is remembered like one from `/auth/ticket`, so the HTTP routes an `<img>`
-  fetches keep working where the HTTP port is reachable too. Over the channel alone they do not
-  load; that is phase 3.
+- Phase 3: the bytes an `<img>` or a `<video>` draws (a chat attachment, a project icon, an image or a
+  video file) travel as `bytes.read` over a direct connection and as the HTTP routes over a socket.
+  One hook decides, `useMachineUrl`, from the row's `direct` flag and never from whether the address
+  answers HTTP: across two networks it will not, and a draw site that quietly used HTTP would pass
+  every test on one machine. The ticket the channel hands out is still remembered, for nothing that
+  needs it yet.
+- The transfer is pulled, not pushed. The client asks for 256 KiB and asks for the next piece once the
+  one before landed, so the daemon keeps no stream, a client that loses interest costs nothing, and the
+  round trip is the backpressure. A piece is about 342 KiB of base64, under the output gate's 1 MB
+  high-water mark, so a picture on its way never pauses a terminal on the same connection. Every piece
+  looks the resource up and stats it again and carries its mtime and size; a piece of another version
+  starts the read over once and fails it the second time. Base64 in JSON costs a third more than a
+  binary framing would, the price of keeping one framing. Measured in the Docker bench: 528 KB in
+  three pieces in 33 ms from the host into the container.
+- The checks are the routes' own lookups (`readBytes`): an attachment only as a chat's thread names it,
+  an icon only as the folder declares it, a file only when it sniffs as an image or a video. Access is
+  the connection's, decided by the handshake. Past 32 MB the answer is `too-large` with the size in
+  the message, which the viewer shows where the picture or the player would be.
+- The blob cache keys on machine, resource and version, as the HTTP URL does, so a file that changed
+  is a new key and the old one only goes idle. A blob URL lives as long as someone draws it and is
+  revoked when the last user goes; the blob stays idle up to 64 MB, least recently used out first, so
+  a chat row scrolled back does not fetch again. What is on screen is never evicted, so the bound is
+  on what nobody sees. A failed load is forgotten when its users go and retried when the connection opens.
+- A blob URL has the client's origin, so a blob keeps its type only for what a browser draws without
+  running anything (raster images, SVG for an `<img>`, video, PDF, plain text) and is
+  `application/octet-stream` otherwise. An attachment link carries `download`, because the shell hands
+  a link that opens a window to the system browser, which cannot open a blob of this page.
+- A quiet direct connection is pinged. Chromium calls a path failed only when ICE consent freshness
+  runs out, 30 seconds after the last answer (RFC 7675), and a machine that was killed or lost its
+  network says nothing before then. After 2 s without a frame the client sends `server.ping` under an
+  id no request waits for, and 5 s without anything back ends the link. Any piece that arrives counts,
+  so a busy connection never pings; the timeout counts from the ping, so a window whose timers were
+  throttled does not take its own silence for a dead peer; and 5 s is above SCTP's retransmission
+  timeout, so one lost packet on a bad path is no disconnect. Measured with the container paused:
+  noticed after 7.0 s, while werift's ICE still said connected. The daemon does not ping its clients;
+  a client that vanished holds a channel until ICE fails on that side.
 - werift is pinned at 0.24.4, the version the report measured. Measured here, werift on both ends in
   one process on macOS: a channel open in about 240 ms over loopback and about 310 ms from the host
   into the Docker container, an 8 MB burst in 16 KiB pieces at 2.4 MB/s, a round trip of 3 to 4 ms.
