@@ -1,5 +1,8 @@
 import { create } from 'zustand';
-import { desktop } from '@/desktop/bridge';
+import { feedWheel, IDLE_SWIPE, settleSwipe, SWIPE_GESTURE_GAP_MS, type SwipeOutcome, type SwipeState, type WheelSample } from '@/browser/swipe';
+import { useSwipeOverlay } from '@/browser/swipe-overlay';
+import { canSwipeBetweenPages, desktop } from '@/desktop/bridge';
+import { useSettings } from '@/state/settings';
 import { dropEndpoint, endpointKey, isOfEndpoint, splitKey, useEndpointId } from '@/state/keys';
 
 /* A main-frame load that did not arrive, in Chromium's own terms. What to say about it is
@@ -95,7 +98,30 @@ interface WebviewElement extends HTMLElement {
     reloadIgnoringCache(): void;
     loadURL(url: string): Promise<void>;
     getWebContentsId(): number;
+    send(channel: string, ...args: unknown[]): void;
 }
+
+/* What the guest preload sends to its element (`apps/desktop/src/guest.ts`). */
+interface GuestMessage {
+    channel: string;
+    args: unknown[];
+}
+
+const isWheelSample = (value: unknown): value is WheelSample => {
+    const sample = value as Partial<WheelSample> | null;
+    return (
+        typeof sample === 'object' &&
+        sample !== null &&
+        typeof sample.deltaX === 'number' &&
+        typeof sample.deltaY === 'number' &&
+        typeof sample.momentum === 'boolean' &&
+        typeof sample.handled === 'boolean' &&
+        typeof sample.pageTakes === 'boolean'
+    );
+};
+
+/* Whether pages report their wheel at all: the setting, on the one platform the gesture belongs to. */
+const swipesOn = (): boolean => canSwipeBetweenPages() && useSettings.getState().browserSwipe;
 
 /* The site a page belongs to, or the address itself when it has no host to compare. */
 const originOf = (url: string): string => {
@@ -133,6 +159,9 @@ const normalizeUrl = (input: string): string => {
 class BrowserRegistry {
     /* Keyed with `endpointKey`, the way the store above is: a page belongs to a node of one machine. */
     private readonly elements = new Map<string, WebviewElement>();
+    private readonly swipes = new Map<string, SwipeState>();
+    private readonly settleTimers = new Map<string, ReturnType<typeof setTimeout>>();
+    private watchingSwipeSetting = false;
 
     has(key: string): boolean {
         return this.elements.has(key);
@@ -156,6 +185,7 @@ class BrowserRegistry {
         // What shows until the page paints. A page with a background of its own covers it at once.
         element.style.backgroundColor = 'var(--bg)';
         element.src = normalizeUrl(initialUrl);
+        this.watchSwipeSetting();
         this.listen(key, element);
         this.elements.set(key, element);
         useBrowser.getState().patch(key, { url: element.src, loading: true });
@@ -237,6 +267,8 @@ class BrowserRegistry {
         this.elements.delete(key);
         element.remove();
         useBrowser.getState().forget(key);
+        this.endSwipe(key);
+        useSwipeOverlay.getState().forget(key);
     }
 
     private listen(key: string, element: WebviewElement): void {
@@ -279,6 +311,103 @@ class BrowserRegistry {
             }
             patch({ loading: false, error: { url: detail.validatedURL, code: detail.errorCode, description: detail.errorDescription } });
         });
+        // Every new document runs the preload again, and it starts out not listening to the wheel.
+        element.addEventListener('dom-ready', () => this.tellGuest(element));
+        element.addEventListener('ipc-message', (event) => {
+            const message = event as unknown as GuestMessage;
+            const [payload] = message.args;
+            if (message.channel === 'ruimte:navigate') {
+                if (payload === 'back') {
+                    this.back(key);
+                } else if (payload === 'forward') {
+                    this.forward(key);
+                }
+            } else if (message.channel === 'ruimte:wheel' && isWheelSample(payload)) {
+                this.feedSwipe(key, element, payload);
+            }
+        });
+    }
+
+    /* Tells a page whether to report its wheel. A guest that is not attached yet hears it on `dom-ready`. */
+    private tellGuest(element: WebviewElement): void {
+        try {
+            element.send('ruimte:swipe', swipesOn());
+        } catch {
+            // Not attached yet; `dom-ready` asks again.
+        }
+    }
+
+    /* The setting reaches every page the moment it changes, so off stops the samples at the source. */
+    private watchSwipeSetting(): void {
+        if (this.watchingSwipeSetting) {
+            return;
+        }
+        this.watchingSwipeSetting = true;
+        useSettings.subscribe((state, before) => {
+            if (state.browserSwipe === before.browserSwipe) {
+                return;
+            }
+            for (const [key, element] of this.elements) {
+                this.tellGuest(element);
+                this.endSwipe(key);
+                useSwipeOverlay.getState().hide(key);
+            }
+        });
+    }
+
+    private feedSwipe(key: string, element: WebviewElement, sample: WheelSample): void {
+        // A sample that was already on its way when the setting went off.
+        if (!swipesOn()) {
+            return;
+        }
+        const history = { canGoBack: element.canGoBack(), canGoForward: element.canGoForward() };
+        const result = feedWheel(this.swipes.get(key) ?? IDLE_SWIPE, sample, history, performance.now());
+        this.applySwipe(key, result.state, result.outcome);
+        clearTimeout(this.settleTimers.get(key));
+        this.settleTimers.delete(key);
+        if (result.state.phase === 'idle') {
+            return;
+        }
+        // Fingers that stop before they lift send no momentum, so silence is what ends the gesture.
+        this.settleTimers.set(
+            key,
+            setTimeout(() => {
+                this.settleTimers.delete(key);
+                const settled = settleSwipe(
+                    this.swipes.get(key) ?? IDLE_SWIPE,
+                    { canGoBack: element.canGoBack(), canGoForward: element.canGoForward() },
+                    performance.now()
+                );
+                this.applySwipe(key, settled.state, settled.outcome);
+            }, SWIPE_GESTURE_GAP_MS)
+        );
+    }
+
+    private applySwipe(key: string, state: SwipeState, outcome: SwipeOutcome): void {
+        this.swipes.set(key, state);
+        const overlay = useSwipeOverlay.getState();
+        if (outcome.kind === 'progress') {
+            overlay.show(key, outcome.side, outcome.progress);
+            return;
+        }
+        if (outcome.kind === 'navigate') {
+            // Fades out from full, so the arrow says it went through.
+            overlay.show(key, outcome.side, 1);
+            overlay.hide(key);
+            if (outcome.side === 'back') {
+                this.back(key);
+            } else {
+                this.forward(key);
+            }
+            return;
+        }
+        overlay.hide(key);
+    }
+
+    private endSwipe(key: string): void {
+        clearTimeout(this.settleTimers.get(key));
+        this.settleTimers.delete(key);
+        this.swipes.delete(key);
     }
 }
 

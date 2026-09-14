@@ -72,6 +72,17 @@ describe('streaming replies', () => {
     });
 });
 
+describe('swiping between pages', () => {
+    test('starts on, the way every browser on macOS does it', () => {
+        expect(settingsFrom({}).browserSwipe).toBe(true);
+    });
+
+    test('is off for a stored false and for nothing else', () => {
+        expect(settingsFrom({ browserSwipe: false }).browserSwipe).toBe(false);
+        expect(settingsFrom({ browserSwipe: 0 as unknown as boolean }).browserSwipe).toBe(true);
+    });
+});
+
 describe('the rest of a stored blob', () => {
     test('a key that is there is kept, and a size out of range is pulled back into it', () => {
         const settings = settingsFrom({ fontSize: 99, filesShowHidden: true, browseStartFolder: '/Users/bas' });

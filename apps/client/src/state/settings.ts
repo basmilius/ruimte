@@ -98,6 +98,9 @@ export interface Settings {
     /* Whether those notifications make a sound. Off, because a sound arrives in whatever the person
        walked away to do, which may be a call. */
     agentsTurnSound: boolean;
+    /* Whether two fingers sideways on a trackpad go back and forward in a browser page. On, because
+       it is what every browser on macOS does; off, the pages do not even report their wheel. */
+    browserSwipe: boolean;
 }
 
 interface SettingsStore extends Settings {
@@ -126,7 +129,8 @@ const DEFAULT_SETTINGS: Settings = {
     agentsApprovals: true,
     agentsKeepAwake: false,
     agentsTurnNotify: true,
-    agentsTurnSound: false
+    agentsTurnSound: false,
+    browserSwipe: true
 };
 
 // Rounded as well as clamped: the stepper used to move in halves, so a browser can still hand back
@@ -158,7 +162,8 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     agentsTurnNotify: stored.agentsTurnNotify !== false,
     chatStreaming: chatStreamingFrom(stored.chatStreaming),
     // Same rule as the block: nothing makes a sound unless a stored `true` asked for it.
-    agentsTurnSound: stored.agentsTurnSound === true
+    agentsTurnSound: stored.agentsTurnSound === true,
+    browserSwipe: stored.browserSwipe !== false
 });
 
 const read = (): Settings => {
@@ -227,7 +232,8 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 agentsApprovals,
                 agentsKeepAwake,
                 agentsTurnNotify,
-                agentsTurnSound
+                agentsTurnSound,
+                browserSwipe
             } = get();
             const next: Settings = {
                 accent,
@@ -250,6 +256,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 agentsKeepAwake,
                 agentsTurnNotify,
                 agentsTurnSound,
+                browserSwipe,
                 ...patch
             };
             next.fontSize = clampSize(next.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize);

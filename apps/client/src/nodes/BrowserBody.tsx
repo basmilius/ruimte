@@ -22,6 +22,7 @@ import {
 import { classifyLoadError, type LoadErrorKind } from '@/browser/load-error';
 import { prettyUrl } from '@/browser/pretty-url';
 import { browserRegistry, useBrowserRow } from '@/browser/registry';
+import { useSwipeOverlay } from '@/browser/swipe-overlay';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { deriveNodeTitle } from '@/chat/title';
 import { desktop, isApplePlatform, isDesktop } from '@/desktop/bridge';
@@ -174,6 +175,7 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
             {/* The bar is the one piece a browser node and a browser view both mount, and the plate
                 it draws lands in the parked host either way, never in the bar itself. */}
             <BrowserErrorPlate id={id} />
+            <SwipeArrow id={id} />
         </>
     );
 }
@@ -227,6 +229,42 @@ function BrowserErrorPlate({ id }: { id: string }) {
                 {/* Chromium's own name for it: the one part of this that is worth searching for. */}
                 <span className="mt-2 block font-mono text-text-faint">{error.symbol}</span>
             </EmptyState>
+        </div>,
+        host
+    );
+}
+
+/* The shield a swipe slides in from the edge: a circle of this size, at most half of it inside the page. */
+const SWIPE_ARROW_PX = 140;
+
+/*
+ * The arrow of a swipe, at the edge of the page it goes towards, in the parked host for the same
+ * reason the error plate is. It follows the fingers and has no motion of its own until it goes: then
+ * it fades, which the reduced motion rule in `styles.css` turns into leaving at once.
+ */
+function SwipeArrow({ id }: { id: string }) {
+    const key = endpointKey(useEndpointId(), id);
+    const arrow = useSwipeOverlay((s) => s.byKey[key] ?? null);
+    const host = arrow === null ? null : (browserRegistry.get(key)?.parentElement ?? null);
+    if (!arrow || !host) {
+        return null;
+    }
+    const back = arrow.side === 'back';
+    const reached = arrow.progress >= 1;
+    const inset = Math.round((SWIPE_ARROW_PX / 2) * arrow.progress) - SWIPE_ARROW_PX;
+    const opacity = !arrow.shown ? 0 : reached ? 0.75 : 0.25 + 0.4 * arrow.progress;
+    return createPortal(
+        <div
+            aria-hidden
+            className={clsx(
+                'pointer-events-none absolute top-1/2 z-10 flex -translate-y-1/2 items-center rounded-full border border-border bg-surface-raised',
+                back ? 'justify-end pr-5' : 'justify-start pl-5',
+                reached ? 'text-text' : 'text-text-muted',
+                !arrow.shown && 'transition-opacity duration-[400ms]'
+            )}
+            style={{ width: SWIPE_ARROW_PX, height: SWIPE_ARROW_PX, opacity, ...(back ? { left: inset } : { right: inset }) }}
+        >
+            <Icon icon={back ? ArrowLeft : ArrowRight} size={24} />
         </div>,
         host
     );

@@ -135,6 +135,10 @@ export const isDesktop = (): boolean => desktop() !== null;
    there rather than shown as a switch that promises something the page has no way to do. */
 export const canKeepAwake = (): boolean => typeof desktop()?.setKeepAwake === 'function';
 
+/* True where a two-finger swipe goes back and forward in a page: the desktop app on macOS. Elsewhere
+   a mouse's side buttons are how that is done, and they work on every platform. */
+export const canSwipeBetweenPages = (): boolean => desktop()?.platform === 'darwin';
+
 /* True when the window chrome leaves room for the traffic lights, which only macOS does. */
 export const hasTrafficLights = (): boolean => desktop()?.platform === 'darwin';
 
