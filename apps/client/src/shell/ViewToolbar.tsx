@@ -48,15 +48,16 @@ export function ViewToolbar({ view, focused }: { view: ProjectView | null; focus
     }
     if (view.kind === 'browser') {
         return (
-            <div className="app-no-drag flex min-w-0 grow items-center gap-2">
+            <div className="flex min-w-0 grow items-center gap-2">
                 <BrowserToolbar id={view.id} focused={focused} />
             </div>
         );
     }
     if (view.kind === 'file' || view.kind === 'diagram') {
         // Empty until the body has rendered, which is what fills it: the controls belong to the
-        // renderer that draws the file or the diagram, and only that one knows which it has.
-        return <div ref={mount} className="app-no-drag flex min-w-0 grow items-center justify-end gap-1" />;
+        // renderer that draws the file or the diagram, and only that one knows which it has. The box
+        // grows over the slack of the bar, so it drags the window and only its controls opt out.
+        return <div ref={mount} className="flex min-w-0 grow items-center justify-end gap-1" />;
     }
     const mode = modeOf(host);
     if (!mode) {
