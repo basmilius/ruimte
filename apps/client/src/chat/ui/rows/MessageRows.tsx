@@ -1,23 +1,20 @@
 import { useState, type ReactNode } from 'react';
 import clsx from 'clsx';
-import { Bot, Brain, Check, ChevronDown, CircleAlert, Info, MessageCircleQuestionMark, Minimize2, Paperclip, TriangleAlert, X, Zap } from 'lucide-react';
+import { Bot, Brain, Check, ChevronDown, CircleAlert, Info, MessageCircleQuestionMark, Minimize2, Paperclip, TriangleAlert, X } from 'lucide-react';
 import type { ChatApprovalItem, ChatAssistantItem, ChatQuestionItem, ChatThinkingItem, ChatUserItem } from '@ruimte/contracts';
 import { attachmentUrl, formatBytes, isImageAttachment } from '@/chat/attachments';
 import { useChatRow } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useProviders } from '@/state/providers';
 import { useSettings } from '@/state/settings';
-import { tokenizeChips } from '@/chat/mentions';
-import { CHIP_IN_MESSAGE, MENTION_TONE, SKILL_TONE } from '@/chat/ui/chips';
 import { ImageThumb } from '@/chat/ui/ImageView';
-import { ReplyMarkdown } from '@/chat/ui/Markdown';
+import { MessageMarkdown, ReplyMarkdown } from '@/chat/ui/Markdown';
 import { settledBlocksText } from '@/chat/ui/markdown-blocks';
 import { FADE_CLASS, WHOLE_FADE_CLASS, isWhitespace, wordSegments } from '@/chat/ui/rehype-fade';
 import { useRevealedText } from '@/chat/ui/reveal';
 import { formatDuration } from '@/chat/logic/timeline';
 import { toolSummary } from '@/chat/logic/tools';
 import { ROW_GUTTER } from '@/chat/ui/icons';
-import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
 
 // A long prompt folds so the answer stays in view; the reader can open it.
@@ -27,22 +24,10 @@ const USER_FOLD_CHARS = 600;
 /* A folded user prompt fades out at the bottom instead of cutting a line in half. */
 const FOLD = 'max-h-[10em] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent)]';
 
-/* A picked file or skill in a sent message: the glyph stands in for the sigil the text still carries. */
-function Chip({ glyph, label, skill = false, path }: { glyph: ReactNode; label: string; skill?: boolean; path?: string }) {
-    return (
-        // The path is what the thread's menu opens in the preview from here.
-        <span className={clsx(CHIP_IN_MESSAGE, skill ? SKILL_TONE : MENTION_TONE)} data-file-path={path}>
-            {glyph}
-            <span className="truncate">{label}</span>
-        </span>
-    );
-}
-
 export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }) {
     const [open, setOpen] = useState(false);
     const endpointId = useEndpointId();
     const long = item.text.split('\n').length > USER_FOLD_LINES || item.text.length > USER_FOLD_CHARS;
-    const segments = tokenizeChips(item.text, item.mentions ?? [], item.skills ?? []);
     const attachments = item.attachments ?? [];
     return (
         <div className="flex flex-col items-end">
@@ -75,16 +60,8 @@ export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }
             )}
             {item.text !== '' && (
                 <div className="relative max-w-[80%] rounded-2xl bg-surface-active px-3.5 py-2.5 text-sm text-text select-text">
-                    <div className={clsx('whitespace-pre-wrap', long && !open && FOLD)}>
-                        {segments.map((segment, index) => {
-                            if (segment.kind === 'mention') {
-                                return <Chip key={index} glyph={<FileIcon path={segment.path} size={14} />} label={segment.path} path={segment.path} />;
-                            }
-                            if (segment.kind === 'skill') {
-                                return <Chip key={index} glyph={<Icon icon={Zap} size={14} className="shrink-0 opacity-85" />} label={segment.name} skill />;
-                            }
-                            return <span key={index}>{segment.text}</span>;
-                        })}
+                    <div className={clsx(long && !open && FOLD)}>
+                        <MessageMarkdown text={item.text} mentions={item.mentions} skills={item.skills} />
                     </div>
                     {long && (
                         <button className="mt-1 flex items-center gap-1 text-xs text-text-muted hover:text-text" onClick={() => setOpen((o) => !o)}>

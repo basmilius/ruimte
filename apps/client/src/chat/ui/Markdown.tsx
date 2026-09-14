@@ -1,14 +1,20 @@
 import { memo, useMemo, type ReactNode } from 'react';
 import clsx from 'clsx';
+import { Zap } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
+import { CHIP_IN_MESSAGE, MENTION_TONE, SKILL_TONE } from '@/chat/ui/chips';
 import { CodeBlock } from '@/chat/ui/CodeBlock';
 import { CodeStreamingContext } from '@/chat/ui/code-streaming';
 import { splitMarkdownBlocks } from '@/chat/ui/markdown-blocks';
+import { rehypeChips, type ChipOptions } from '@/chat/ui/rehype-chips';
 import { rehypeFadeWords } from '@/chat/ui/rehype-fade';
+import { remarkHtmlAsText } from '@/chat/ui/remark-html-as-text';
 import { openFileLink, useFileLinkCwd, useFileLinkTarget, type FileRef } from '@/shell/panels/file-links';
 import { useSettings } from '@/state/settings';
+import { FileIcon } from '@/ui/FileIcon';
+import { Icon } from '@/ui/Icon';
 
 const languageOf = (className: string | undefined): string => /language-([\w-]+)/.exec(className ?? '')?.[1] ?? 'text';
 
@@ -144,9 +150,39 @@ const replyComponents = {
     h6: replyHeading(6)
 };
 
+/* A picked file or skill in a sent message: the glyph stands in for the sigil the text still carries. */
+function Chip({ kind, value }: { kind: string; value: string }) {
+    if (kind === 'skill') {
+        return (
+            <span className={clsx(CHIP_IN_MESSAGE, SKILL_TONE)}>
+                <Icon icon={Zap} size={14} className="shrink-0 opacity-85" />
+                <span className="truncate">{value}</span>
+            </span>
+        );
+    }
+    return (
+        // The path is what the thread's menu opens in the preview from here.
+        <span className={clsx(CHIP_IN_MESSAGE, MENTION_TONE)} data-file-path={value}>
+            <FileIcon path={value} size={14} />
+            <span className="truncate">{value}</span>
+        </span>
+    );
+}
+
+const messageComponents = {
+    ...replyComponents,
+    span({ children, 'data-chip': chip, 'data-value': value }: { children?: ReactNode; 'data-chip'?: string; 'data-value'?: string }) {
+        if (chip === undefined || value === undefined) {
+            return <span>{children}</span>;
+        }
+        return <Chip kind={chip} value={value} />;
+    }
+};
+
 // Module constants, so a render never hands react-markdown a fresh array and makes it parse again.
 const PLUGINS = [remarkGfm];
 const PLUGINS_WITH_BREAKS = [remarkGfm, remarkBreaks];
+const MESSAGE_PLUGINS = [remarkGfm, remarkHtmlAsText, remarkBreaks];
 const FADE_PLUGINS = [rehypeFadeWords];
 const NO_PLUGINS: typeof FADE_PLUGINS = [];
 
@@ -178,6 +214,21 @@ export const ReplyMarkdown = memo(function ReplyMarkdown({ text, streaming, arri
                 // Blocks only ever grow at the end, so the place of a block is a stable key.
                 <ReplyBlock key={index} text={block.text} fade={streaming} open={streaming && block.openFence} />
             ))}
+        </div>
+    );
+});
+
+/*
+ * A message a person sent. Enter meant a line break, a tag typed without backticks stays the text
+ * it was, and the files and skills picked in the composer are chips again.
+ */
+export const MessageMarkdown = memo(function MessageMarkdown({ text, mentions, skills }: { text: string; mentions?: string[]; skills?: string[] }) {
+    const rehypePlugins = useMemo((): [typeof rehypeChips, ChipOptions][] => [[rehypeChips, { mentions, skills }]], [mentions, skills]);
+    return (
+        <div className="chat-markdown prose prose-sm max-w-none text-sm">
+            <ReactMarkdown remarkPlugins={MESSAGE_PLUGINS} rehypePlugins={rehypePlugins} components={messageComponents}>
+                {text}
+            </ReactMarkdown>
         </div>
     );
 });
