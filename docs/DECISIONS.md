@@ -1235,6 +1235,32 @@ and a valid document apart from that one view.
   is the next one planned) should wait one release, or ship knowing that anyone on an older release
   who opens the project loses it to a `.corrupt-` file until they update and rename it back.
 
+### Error boundaries
+
+Added on 2026-09-14, after a render error in `DiagramView.tsx` unmounted the whole tree and every
+parked `<webview>` answered `Invalid guestInstanceId` from then on.
+
+- **One component, three levels.** A node's body, a view, and the app; the sidebar, a panel's body,
+  the preview and the usage page carry one as well, because each of them is cheap and a failure in
+  any of them would otherwise reach the last resort, which unmounts the parked browser pages too.
+- **The view's boundary sits in `ViewSurface`, not around the cell.** The cell and the view are two
+  places (`Cell` in `SplitGrid.tsx` draws the bar, the box and the dock; `ViewSurface` draws the view),
+  and the inner one keeps the cell's toolbar, its drop target and the dock working while the view is
+  down. With one cell the window's toolbar and the sidebar are outside it anyway.
+- **The node's boundary is around the body, not the frame.** The header, the menu, a drag and a resize
+  belong to the frame, so a broken node can still be closed. The rev is read in a small wrapper
+  rather than in `NodeFrame`, so a save re-renders one boundary per node and not every frame.
+- **Reset keys are what the subtree draws from, and they only count while it failed.** A node resets on
+  the project rev and its kind; a view on its id, the project rev, and the drawing's elements or the
+  diagram's content (a diagram changes without the project rev moving); a panel on its kind; the preview on
+  the active tab. Comparing them while nothing failed would remount a terminal on every save, so
+  `shouldReset` answers no for a healthy boundary whatever the keys do.
+- **A browser page stays over a failed view.** Pages live in `WebviewParking`, outside every cell and node,
+  so no boundary below the app ever remounts one; the flip side is that a browser view whose own
+  surface fails keeps its page on top of the message. That surface is a few lines and has not failed yet.
+- **Not tested: the render itself.** The client has no DOM renderer, so `error-boundary.test.ts` covers the
+  reset decision, the state transitions of the class and the copied report, and not a sibling that stays up.
+
 ### Skipped on purpose
 
 Skipped: kanban, loop and trigger nodes, minimap, dictation, notch HUD, agent-to-agent
