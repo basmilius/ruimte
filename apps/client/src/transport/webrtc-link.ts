@@ -1,5 +1,8 @@
 import {
+    ChannelLiveness,
     channelBinding,
+    DIRECT_PING_TICK_MS,
+    directPingFrame,
     DIRECT_CHANNEL_LABEL,
     DirectChallengeFrameSchema,
     DirectSignalPayloadSchema,
@@ -34,6 +37,9 @@ export interface WebRtcLinkOptions {
     createSocket?(url: string): WebSocket;
     timeoutMs?: number;
     gatherMs?: number;
+    pingIdleMs?: number;
+    pingTimeoutMs?: number;
+    pingTickMs?: number;
 }
 
 const CLOSE_REASONS: Record<string, string> = {
@@ -74,6 +80,8 @@ export const webRtcLink =
         let channel: RTCDataChannel | null = null;
         let socket: WebSocket | null = null;
         let nextSignal = 1;
+        let liveness: ChannelLiveness | null = null;
+        let livenessTimer: ReturnType<typeof setInterval> | null = null;
 
         const closeSocket = (): void => {
             if (!socket) {
@@ -92,6 +100,9 @@ export const webRtcLink =
             }
             ended = true;
             clearTimeout(timer);
+            if (livenessTimer !== null) {
+                clearInterval(livenessTimer);
+            }
             closeSocket();
             if (channel) {
                 channel.onclose = null;
@@ -185,6 +196,13 @@ export const webRtcLink =
             }
             authenticated = true;
             clearTimeout(timer);
+            liveness = new ChannelLiveness({
+                ping: (id) => sendFrame(directPingFrame(id)),
+                dead: () => end('The machine stopped answering over the direct connection'),
+                idleMs: options.pingIdleMs,
+                timeoutMs: options.pingTimeoutMs
+            });
+            livenessTimer = setInterval(() => liveness?.tick(), options.pingTickMs ?? DIRECT_PING_TICK_MS);
             options.accepted?.(verdict.data.ticket);
             // The channel stands on its own from here; the socket was only ever for the signals.
             closeSocket();
@@ -195,6 +213,8 @@ export const webRtcLink =
             if (ended) {
                 return;
             }
+            // Every piece is a sign of life, so a connection busy with a large frame is never pinged.
+            liveness?.heard();
             const piece = typeof data === 'string' ? data : new TextDecoder().decode(data as ArrayBuffer);
             const result = assembler.push(piece, authenticated ? FRAME_CHARS : HANDSHAKE_FRAME_CHARS);
             if (result.kind === 'invalid') {

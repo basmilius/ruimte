@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { channelBinding, splitFrame, type DirectChallengeFrame } from '@ruimte/contracts';
 import type { LinkEvents } from './link-transport';
-import { webRtcLink } from './webrtc-link';
+import { webRtcLink, type WebRtcLinkOptions } from './webrtc-link';
 
 const OFFER = 'v=0\r\na=fingerprint:sha-256 AA:AA\r\n';
 const ANSWER = 'v=0\r\na=fingerprint:sha-256 BB:BB\r\n';
@@ -92,7 +92,9 @@ class FakePeer {
 
 const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
-const setup = () => {
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+const setup = (extra: Partial<WebRtcLinkOptions> = {}) => {
     const socket = new FakeSocket();
     const peer = new FakePeer();
     const proved: Array<{ challenge: DirectChallengeFrame; binding: string }> = [];
@@ -114,7 +116,8 @@ const setup = () => {
             proved.push({ challenge, binding });
             return { type: 'direct.secret', challenge: challenge.challenge, proof: 'proof' };
         },
-        accepted: (ticket) => tickets.push(ticket)
+        accepted: (ticket) => tickets.push(ticket),
+        ...extra
     })('ws://machine/ws?token=ticket', events);
     return { socket, peer, link, proved, tickets, log };
 };
@@ -122,8 +125,8 @@ const setup = () => {
 const CHALLENGE: DirectChallengeFrame = { type: 'direct.challenge', challenge: 'nonce', daemon: { id: 'daemon-a', publicKey: 'key', signature: 'signature' } };
 
 /* Everything up to the moment the daemon has answered the offer. */
-const negotiated = async () => {
-    const context = setup();
+const negotiated = async (extra: Partial<WebRtcLinkOptions> = {}) => {
+    const context = setup(extra);
     context.socket.onopen?.();
     await tick();
     const offer = JSON.parse(context.socket.sent[0]!) as {
@@ -207,5 +210,31 @@ describe('webRtcLink', () => {
         second.link.close();
         second.link.close();
         expect(second.log.closes).toEqual([null]);
+    });
+
+    test('a machine that goes quiet after the handshake is pinged, and ends the link when nothing answers', async () => {
+        const { peer, log } = await negotiated({ pingIdleMs: 10, pingTimeoutMs: 40, pingTickMs: 5 });
+        peer.channel.deliver(CHALLENGE);
+        await tick();
+        peer.channel.deliver({ type: 'direct.accepted', ticket: null, expiresIn: null });
+        await tick();
+        await sleep(30);
+        expect(peer.channel.sent.some((piece) => piece.includes('"server.ping"'))).toBe(true);
+        expect(log.closes).toEqual([]);
+        await sleep(80);
+        expect(log.closes).toEqual(['The machine stopped answering over the direct connection']);
+    });
+
+    test('a machine that keeps talking is never taken for gone', async () => {
+        const { peer, log } = await negotiated({ pingIdleMs: 10, pingTimeoutMs: 20, pingTickMs: 5 });
+        peer.channel.deliver(CHALLENGE);
+        await tick();
+        peer.channel.deliver({ type: 'direct.accepted', ticket: null, expiresIn: null });
+        await tick();
+        const chatter = setInterval(() => peer.channel.deliver('{"type":"event","event":"session.list-changed","payload":{}}'), 3);
+        await sleep(100);
+        clearInterval(chatter);
+        expect(log.closes).toEqual([]);
+        expect(peer.channel.sent.some((piece) => piece.includes('"server.ping"'))).toBe(false);
     });
 });
