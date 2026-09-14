@@ -1,0 +1,122 @@
+import { describe, expect, test } from 'bun:test';
+import {
+    ACCESS_STATEMENT_LIFETIME_MS,
+    AccessRequestPayloadSchema,
+    AccessStatementSchema,
+    AddressBookErrorSchema,
+    BrokerPeerFrameSchema,
+    BrokerServerFrameSchema,
+    MachineListResultSchema,
+    RegisterMachinePayloadSchema,
+    SignalEnvelopeSchema,
+    type AccessStatement,
+    type BrokerPeerFrame,
+    type BrokerServerFrame
+} from './index.ts';
+
+const key = 'A'.repeat(43);
+const otherKey = 'B'.repeat(43);
+const signature = 's'.repeat(86);
+const nonce = 'n'.repeat(22);
+const envelope = { connectionId: 'attempt-1', signal: { kind: 'offer' as const, sdp: 'v=0\r\no=- 1 1 IN IP4 0.0.0.0\r\n' } };
+
+// Through JSON and back, the way a frame really travels.
+const roundTrip = <T>(schema: { parse(value: unknown): T }, value: T): T => schema.parse(JSON.parse(JSON.stringify(value)));
+
+describe('broker frames', () => {
+    const peerFrames: BrokerPeerFrame[] = [
+        { type: 'hello', role: 'machine', publicKey: key },
+        { type: 'prove', signature },
+        { type: 'relay', id: 'r1', to: otherKey, envelope, signature }
+    ];
+    const serverFrames: BrokerServerFrame[] = [
+        { type: 'challenge', broker: 'broker.example.com', nonce },
+        { type: 'ready' },
+        { type: 'delivered', id: 'r1' },
+        { type: 'relayed', from: key, envelope, signature },
+        { type: 'error', code: 'not-connected', message: 'Nobody with that key is connected', id: 'r1' },
+        { type: 'rate-limited', scope: 'key', retryAfterMs: 1000 }
+    ];
+
+    test.each(peerFrames)('a peer frame survives a round trip: %p', (frame) => {
+        expect(roundTrip(BrokerPeerFrameSchema, frame)).toEqual(frame);
+    });
+
+    test.each(serverFrames)('a broker frame survives a round trip: %p', (frame) => {
+        expect(roundTrip(BrokerServerFrameSchema, frame)).toEqual(frame);
+    });
+
+    test('refuses a key that is not 32 bytes of base64url', () => {
+        expect(BrokerPeerFrameSchema.safeParse({ type: 'hello', role: 'machine', publicKey: 'A'.repeat(44) }).success).toBe(false);
+        expect(BrokerPeerFrameSchema.safeParse({ type: 'hello', role: 'machine', publicKey: `${'A'.repeat(42)}=` }).success).toBe(false);
+        expect(BrokerPeerFrameSchema.safeParse({ type: 'hello', role: 'machine', publicKey: `${'A'.repeat(42)}+` }).success).toBe(false);
+    });
+
+    test('refuses a role, a type or an error code it does not know', () => {
+        expect(BrokerPeerFrameSchema.safeParse({ type: 'hello', role: 'broker', publicKey: key }).success).toBe(false);
+        expect(BrokerPeerFrameSchema.safeParse({ type: 'subscribe', publicKey: key }).success).toBe(false);
+        expect(BrokerServerFrameSchema.safeParse({ type: 'error', code: 'teapot', message: '' }).success).toBe(false);
+    });
+
+    test('refuses a relay without a signature or with a short nonce in the challenge', () => {
+        expect(BrokerPeerFrameSchema.safeParse({ type: 'relay', id: 'r1', to: otherKey, envelope }).success).toBe(false);
+        expect(BrokerServerFrameSchema.safeParse({ type: 'challenge', broker: 'broker.example.com', nonce: 'short' }).success).toBe(false);
+    });
+
+    test('refuses a negative or fractional retry', () => {
+        expect(BrokerServerFrameSchema.safeParse({ type: 'rate-limited', scope: 'ip', retryAfterMs: -1 }).success).toBe(false);
+        expect(BrokerServerFrameSchema.safeParse({ type: 'rate-limited', scope: 'ip', retryAfterMs: 1.5 }).success).toBe(false);
+    });
+});
+
+describe('signaling', () => {
+    test.each([
+        envelope,
+        { connectionId: 'attempt-1', signal: { kind: 'answer', sdp: 'v=0' } },
+        { connectionId: 'attempt-1', signal: { kind: 'candidate', candidate: 'candidate:1 1 udp 1 192.0.2.1 5000 typ host', sdpMid: '0', sdpMLineIndex: 0 } },
+        { connectionId: 'attempt-1', signal: { kind: 'candidate', candidate: '', sdpMid: null, sdpMLineIndex: null } },
+        { connectionId: 'attempt-1', signal: { kind: 'close', reason: 'declined' } }
+    ])('an envelope survives a round trip: %p', (value) => {
+        expect(roundTrip(SignalEnvelopeSchema, value as never)).toEqual(value as never);
+    });
+
+    test('refuses an empty SDP, an unknown kind and a connection id with a slash in it', () => {
+        expect(SignalEnvelopeSchema.safeParse({ connectionId: 'attempt-1', signal: { kind: 'offer', sdp: '' } }).success).toBe(false);
+        expect(SignalEnvelopeSchema.safeParse({ connectionId: 'attempt-1', signal: { kind: 'renegotiate', sdp: 'v=0' } }).success).toBe(false);
+        expect(SignalEnvelopeSchema.safeParse({ connectionId: 'attempt/1', signal: { kind: 'close', reason: 'done' } }).success).toBe(false);
+    });
+});
+
+describe('address book', () => {
+    const statement: AccessStatement = {
+        machineId: 'machine-1',
+        clientPublicKey: key,
+        nonce,
+        issuedAt: 1_800_000_000_000,
+        expiresAt: 1_800_000_000_000 + ACCESS_STATEMENT_LIFETIME_MS,
+        signature
+    };
+
+    test('the machine list, a registration, a request, a statement and an error survive a round trip', () => {
+        const list = { machines: [{ id: 'machine-1', name: 'Studio', publicKey: key, lastSeenAt: null }] };
+        const registration = { id: 'machine-1', name: 'Studio', publicKey: key, issuedAt: 1_800_000_000_000, signature };
+        const request = { machineId: 'machine-1', clientPublicKey: key, nonce, signature };
+        const error = { error: { code: 'unauthorized' as const, message: 'Sign in again' } };
+
+        expect(roundTrip(MachineListResultSchema, list)).toEqual(list);
+        expect(roundTrip(RegisterMachinePayloadSchema, registration)).toEqual(registration);
+        expect(roundTrip(AccessRequestPayloadSchema, request)).toEqual(request);
+        expect(roundTrip(AccessStatementSchema, statement)).toEqual(statement);
+        expect(roundTrip(AddressBookErrorSchema, error)).toEqual(error);
+    });
+
+    test('refuses a statement that is valid for longer than two minutes, or expires before it is issued', () => {
+        expect(AccessStatementSchema.safeParse({ ...statement, expiresAt: statement.issuedAt + ACCESS_STATEMENT_LIFETIME_MS + 1 }).success).toBe(false);
+        expect(AccessStatementSchema.safeParse({ ...statement, expiresAt: statement.issuedAt }).success).toBe(false);
+    });
+
+    test('refuses a registration without a signature and a machine without a name', () => {
+        expect(RegisterMachinePayloadSchema.safeParse({ id: 'machine-1', name: 'Studio', publicKey: key, issuedAt: 0 }).success).toBe(false);
+        expect(MachineListResultSchema.safeParse({ machines: [{ id: 'machine-1', name: '', publicKey: key, lastSeenAt: null }] }).success).toBe(false);
+    });
+});
