@@ -77,6 +77,13 @@ a few minutes after publishing, a check still answers that the app is up to date
 why the feed can answer 404 just after a repository is made public. Wait and check again before
 going looking for a bug in the updater.
 
+Write the notes on the draft before publishing it. The app reads them from the GitHub API and shows
+them in About and behind the toast after an update from the moment the release is published, so a
+release published with empty notes reads "No notes for this version." until someone fills them in
+and the app asks again. The draft itself stays out of the app, but not out of the feed: a pushed tag
+whose release is still a draft already appears in `releases.atom`, with the last commit message as
+its content.
+
 ## The secrets in CI
 
 `.github/workflows/release.yml` notarizes when `APPLE_API_KEY_P8` is set, and only signs when it is
