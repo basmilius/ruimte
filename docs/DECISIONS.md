@@ -870,13 +870,13 @@ What the report left open and what the build decided:
   of `packages/diagram` as elements, with every tone as `var(--draw-<name>)` in a style, so a theme
   switch needs no repaint. The export goes through `toSvg` with the palette read from the theme, and
   a PNG is that SVG drawn onto a canvas, so the two formats cannot differ.
-- **The zoom lives in a dock, the file in the bar.** First all of it was portaled into the bar,
-  reasoning that a floating dock is for tools and a diagram has none. In use the zoom stood
-  somewhere else than on a canvas and a drawing, so it moved to `DiagramDock` on `DockShell`, with the
-  classes of the other two docks, drawn in every diagram cell as a drawing draws its own. "Open the
-  JSON file", "Copy as JSON" and the exports stay in the window's or the cell's toolbar
-  (`file-toolbar-slot.ts`, `diagram` in `KINDS_WITH_TOOLBAR`): they are about the file, not the
-  surface. Opening the JSON file waits until there is one (rev above 0) and needs a project folder.
+- **The zoom and the exports live in a dock, the JSON in the bar.** First all of it was portaled
+  into the bar, reasoning that a floating dock is for tools and a diagram has none. In use the zoom
+  and the exports stood somewhere else than on a drawing, so they moved to `DiagramDock` on
+  `DockShell`, with the classes and the export menu of the drawing's dock, drawn in every diagram
+  cell as a drawing draws its own. "Open the JSON file" and "Copy as JSON" stay in the window's or
+  the cell's toolbar (`file-toolbar-slot.ts`, `diagram` in `KINDS_WITH_TOOLBAR`): they are about the
+  file, not the picture. Opening the JSON file waits until there is one (rev above 0) and needs a project folder.
 - **What a diagram view is offered:** a new view from the view menu and the palette, a duplicate
   (the daemon copies the file), and the zoom and export rows in the palette. Not "Put on canvas" or
   "Show on the canvas": the node that mirrors a diagram is a later phase.

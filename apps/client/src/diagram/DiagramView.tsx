@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Menu } from '@base-ui-components/react/menu';
-import { Braces, Copy, Download, FileJson, MoreHorizontal } from 'lucide-react';
+import { Braces, FileJson, MoreHorizontal } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import type { DiagramContent, DrawingColor } from '@ruimte/contracts';
 import {
@@ -21,11 +21,10 @@ import {
 import { GRID, type Point } from '@/canvas/math';
 import { isApplePlatform } from '@/desktop/bridge';
 import { DiagramDock } from '@/diagram/DiagramDock';
-import { copyDiagramJson, copyDiagramPng, copyDiagramSvg, openDiagramJson, saveDiagramPng, saveDiagramSvg } from '@/diagram/export';
+import { copyDiagramJson, openDiagramJson } from '@/diagram/export';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
 import { useProject } from '@/state/project';
-import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { isInFloatingLayer } from '@/ui/floating';
 import { Icon } from '@/ui/Icon';
 import { isModHeld } from '@/ui/shortcut';
@@ -127,12 +126,12 @@ function DiagramScene({ content, layout }: { content: DiagramContent; layout: Di
 }
 
 /*
- * What a diagram can be asked from the bar above it: the way to the file and the exports. The zoom
- * is in the dock. Portaled into the bar of the view or the cell, so it reads the store of the cell it belongs to.
+ * What a diagram can be asked from the bar above it: the way to its JSON file. The zoom and the
+ * exports are in the dock. Portaled into the bar of the view or the cell, so it reads the store of
+ * the cell it belongs to.
  */
 function DiagramControls({ viewId }: { viewId: string }) {
     const store = useDiagramStore();
-    const empty = useDiagram((s) => s.content.nodes.length === 0);
     // A diagram nobody wrote has no file yet, so there is nothing to open.
     const written = useDiagram((s) => s.rev > 0);
     const hasFolder = useProject((s) => s.current?.folder != null);
@@ -151,20 +150,6 @@ function DiagramControls({ viewId }: { viewId: string }) {
                         </Menu.Item>
                         <Menu.Item className="menu-item" onClick={() => void copyDiagramJson(store)}>
                             <Icon icon={Braces} size={14} /> Copy as JSON
-                        </Menu.Item>
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        <div className={MENU_LABEL}>Export the diagram</div>
-                        <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDiagramPng(store)}>
-                            <Icon icon={Copy} size={14} /> Copy as PNG
-                        </Menu.Item>
-                        <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDiagramPng(store)}>
-                            <Icon icon={Download} size={14} /> Save PNG
-                        </Menu.Item>
-                        <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDiagramSvg(store)}>
-                            <Icon icon={Copy} size={14} /> Copy as SVG
-                        </Menu.Item>
-                        <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDiagramSvg(store)}>
-                            <Icon icon={Download} size={14} /> Save SVG
                         </Menu.Item>
                     </Menu.Popup>
                 </Menu.Positioner>

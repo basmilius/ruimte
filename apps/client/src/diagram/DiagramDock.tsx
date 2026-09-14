@@ -1,19 +1,22 @@
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, Maximize, Minus, Plus } from 'lucide-react';
+import { Check, Copy, Download, Maximize, Minus, MoreHorizontal, Plus } from 'lucide-react';
 import { activeZoomPreset, ZOOM_PRESETS } from '@/canvas/math';
+import { copyDiagramPng, copyDiagramSvg, saveDiagramPng, saveDiagramSvg } from '@/diagram/export';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
-import { BTN_GROUP, MENU_SEPARATOR } from '@/ui/classes';
+import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { DockShell } from '@/ui/DockShell';
 import { Icon } from '@/ui/Icon';
+import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
 
 /*
- * The diagram's dock: the zoom in the same place and the same shape as a canvas and a drawing have
- * it. What is about the file (the JSON, the exports) stays in the bar above the view.
+ * The diagram's dock: the zoom and the exports in the same place and the same shape as a drawing has
+ * them. The way to the JSON file stays in the bar above the view, since it is about the file.
  */
 export function DiagramDock() {
     const store = useDiagramStore();
     const zoom = useDiagram((s) => s.camera.zoom);
+    const empty = useDiagram((s) => s.content.nodes.length === 0);
     const preset = activeZoomPreset(zoom);
 
     return (
@@ -66,6 +69,37 @@ export function DiagramDock() {
                         <Icon icon={Maximize} size={16} />
                     </button>
                 </Tooltip>
+            </div>
+
+            <Separator />
+
+            <div className={BTN_GROUP}>
+                <Menu.Root>
+                    <Tooltip label="Export" name>
+                        <Menu.Trigger className="icon-btn">
+                            <Icon icon={MoreHorizontal} size={16} />
+                        </Menu.Trigger>
+                    </Tooltip>
+                    <Menu.Portal>
+                        <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="end">
+                            <Menu.Popup className="menu-popup min-w-52">
+                                <div className={MENU_LABEL}>Export the diagram</div>
+                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDiagramPng(store)}>
+                                    <Icon icon={Copy} size={14} /> Copy as PNG
+                                </Menu.Item>
+                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDiagramPng(store)}>
+                                    <Icon icon={Download} size={14} /> Save PNG
+                                </Menu.Item>
+                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDiagramSvg(store)}>
+                                    <Icon icon={Copy} size={14} /> Copy as SVG
+                                </Menu.Item>
+                                <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDiagramSvg(store)}>
+                                    <Icon icon={Download} size={14} /> Save SVG
+                                </Menu.Item>
+                            </Menu.Popup>
+                        </Menu.Positioner>
+                    </Menu.Portal>
+                </Menu.Root>
             </div>
         </DockShell>
     );
