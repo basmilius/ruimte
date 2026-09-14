@@ -809,15 +809,50 @@ What the report left open and what the build decided:
   that points back at a node still on the walk is left out of the layering and still drawn, routed
   underneath both boxes. A loop on one node never counts for a layer. The same file breaks the same
   edges on every machine, and a different order of the same graph may break a different one.
-- **Layers are centered across the flow.** The report only fixed the order inside a layer; aligning
-  every layer at its start made every chain of nodes of different widths a staircase. Where one
-  group ends and the next begins inside a layer, the gap grows by both paddings and the label band.
-  An edge whose ends are within 12 units of each other across the flow is drawn straight.
+- **Eighty lines were not enough.** The report expected a longest-path layering with file order
+  inside a layer to be readable. A demo of ten nodes, two groups and a cycle proved it was not:
+  edges that skipped layers ran through boxes and groups, labels lay on boxes and on other lines,
+  long labels ran out of their boxes and lines crossed that did not have to. The layout is now a
+  small Sugiyama in `packages/diagram`, still without a layout library and still deterministic:
+  - An edge that skips layers gets a point per layer it passes (`layout.ts`), so it runs through
+    the gaps between boxes. The points of one edge pull towards each other rather than towards
+    their neighbors (`across.ts`), since pulling towards neighbors made every long edge a staircase.
+  - An edge that closes a cycle is laid out from its target like any other and drawn with its head
+    the other way: it leaves its source against the flow and never goes around underneath, which
+    was what put the old detour under other boxes.
+  - The order inside a layer comes from twelve barycenter sweeps, up and down, keeping the order
+    with the fewest crossings; a tie keeps the order the layer had, file order to begin with
+    (`order.ts`). A group is one block in every layer it spans, at one place across the flow, the
+    blocks keep one order in every layer, and a node outside a group stays on the same side of it
+    from one layer to the next, so no edge crosses a group it has no end in. Where two neighbors
+    disagree about the side, the first in the file wins and that edge may still cross.
+  - Across the flow every node starts in the middle of its tightest packing and moves eight rounds
+    towards the median of its neighbors, clamped to its neighbors in the layer (`across.ts`). That
+    is simpler than Brandes and Köpf and good enough for straight chains.
+  - Every stretch of an edge between two layers has its own port on the box, spread in the order of
+    the other ends, and a vertical track of its own in the channel where its range meets another's,
+    in the order that crosses the fewest lines and never runs on top of another (`route.ts`). A
+    port within 6 units of the other end moves to it, so nearly straight edges are straight.
+  - A label sits in its channel: in a lane before the tracks beside the line it leaves on, beside
+    its own vertical stretch, or in a lane after the tracks. It prefers a place on no line; one on
+    no box, no group label and no other label is required, and the channel grows a column of lanes
+    until there is one. A loop in the last layer and an edge with a pinned end have no channel, so
+    their label moves down until it is clear.
+  - A channel keeps 20 units free on each side, plus a group's padding where a group ends or begins,
+    so no line runs along a border; a group keeps 16 units plus the node's own 16 from a node
+    outside it.
 - **A node with `pos` gives up its place in its layer**, and the rest close up. Keeping the slot
-  empty would leave a hole where a person dragged a node away from.
+  empty would leave a hole where a person dragged a node away from. Its edges take the shortest
+  elbow and none of the promises above hold for them; nothing on screen drags a node yet.
 - **Text is estimated, never measured.** `packages/diagram` has no DOM and the daemon draws the same
-  picture, so a label is 0.6 of its size per character and a box is 120 to 280 wide. A label past
-  that runs out of its box. The palette defaults and the sans stack come from `packages/drawing`.
+  picture, so a glyph is a share of its size per class of character (narrow, lowercase, uppercase,
+  wide, digits, CJK), measured in Chromium on the system face and on Helvetica as a stand-in for
+  Inter and Segoe UI, taking the wider of the two (`text.ts`). A box grows with its label from 120 to
+  280 wide and then wraps on words, with the height that goes with the lines; a word wider than a
+  line is cut. The layout hands out the wrapped lines (`NodeBox.label`, `sub`, `EdgeRoute.label`),
+  so the view and `toSvg` draw the same lines through `textLinesOf` and `edgeLabelLinesOf`. A
+  group's label does not widen a group that runs right, and may run past a narrow one. The palette
+  defaults and the sans stack come from `packages/drawing`.
 - **`DiagramStore.write` finds its project on disk, not among the open ones.** `ProjectStore.place`
   reads the project file under the project store's lock, and the diagram store writes under a lock of
   its own that `open`, `save` and `copy` also take, so a client's save and an agent's write never
