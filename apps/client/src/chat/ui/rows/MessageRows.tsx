@@ -10,6 +10,7 @@ import { tokenizeChips } from '@/chat/mentions';
 import { CHIP_IN_MESSAGE, MENTION_TONE, SKILL_TONE } from '@/chat/ui/chips';
 import { ImageThumb } from '@/chat/ui/ImageView';
 import { ReplyMarkdown } from '@/chat/ui/Markdown';
+import { settledBlocksText } from '@/chat/ui/markdown-blocks';
 import { FADE_CLASS, WHOLE_FADE_CLASS, isWhitespace, wordSegments } from '@/chat/ui/rehype-fade';
 import { useRevealedText } from '@/chat/ui/reveal';
 import { formatDuration } from '@/chat/logic/timeline';
@@ -105,27 +106,35 @@ const useCurrentItem = <T extends ChatAssistantItem | ChatThinkingItem>(chatId: 
         return item?.kind === derived.kind ? (item as T) : derived;
     });
 
+const WRITING = <span className="chat-live-text text-sm">Writing...</span>;
+
 /*
- * A reply. Streamed, it follows the text as it arrives, a word at a time. Not streamed, it says it is
- * being written and fades in whole once it is done, which only a row that saw it being written does:
- * an old reply scrolled back into view just stands there.
+ * A reply. A word at a time, it follows the text as it arrives. A block at a time, the blocks that
+ * closed are drawn and fade in as they land, with "Writing..." where the next one will stand. Whole,
+ * it says it is being written and fades in once it is done. Only a row that saw the reply being
+ * written fades anything: an old reply scrolled back into view just stands there.
  */
 export function AssistantRow({ chatId, item: derived }: { chatId: string; item: ChatAssistantItem }) {
     const item = useCurrentItem(chatId, derived);
-    const stream = useSettings((s) => s.chatStreaming);
+    const mode = useSettings((s) => s.chatStreaming);
     const [sawWriting] = useState(item.streaming);
-    const live = stream && item.streaming;
+    const live = mode === 'words' && item.streaming;
     const reveal = useRevealedText(item.text, live);
 
-    if (!stream && item.streaming) {
+    if (mode === 'blocks') {
+        const settled = item.streaming ? settledBlocksText(item.text) : item.text;
         return (
             <div className="-mx-1 px-1 pb-2">
-                <span className="chat-live-text text-sm">Writing...</span>
+                {settled !== '' && <ReplyMarkdown text={settled} streaming={false} arriving={sawWriting} />}
+                {item.streaming && WRITING}
             </div>
         );
     }
+    if (mode === 'whole' && item.streaming) {
+        return <div className="-mx-1 px-1 pb-2">{WRITING}</div>;
+    }
     return (
-        <div className={clsx('-mx-1 px-1 pb-2', !stream && sawWriting && WHOLE_FADE_CLASS)}>
+        <div className={clsx('-mx-1 px-1 pb-2', mode === 'whole' && sawWriting && WHOLE_FADE_CLASS)}>
             <ReplyMarkdown text={reveal.text} streaming={reveal.active} />
             {live && item.text === '' && <span className="inline-block h-3.5 w-1.5 animate-pulse rounded-sm bg-text-faint align-middle" />}
         </div>
@@ -156,11 +165,14 @@ function FadingWords({ text }: { text: string }) {
  */
 export function ThinkingRow({ chatId, item: derived }: { chatId: string; item: ChatThinkingItem }) {
     const item = useCurrentItem(chatId, derived);
-    const stream = useSettings((s) => s.chatStreaming);
+    const mode = useSettings((s) => s.chatStreaming);
     const [open, setOpen] = useState(false);
-    const reveal = useRevealedText(item.text, stream && item.streaming);
-    // Not streamed, the thought stays behind "Thinking..." until it is done and then folds like any other.
-    const shown = open || reveal.active;
+    const reveal = useRevealedText(item.text, mode === 'words' && item.streaming);
+    // A block at a time, the paragraphs of the thought that closed are shown as they land.
+    const settled = mode === 'blocks' && item.streaming ? settledBlocksText(item.text) : null;
+    // Whole, the thought stays behind "Thinking..." until it is done and then folds like any other.
+    const shown = open || reveal.active || (settled !== null && settled !== '');
+    const text = settled ?? reveal.text;
     return (
         <div className="-mx-1 px-1 pb-2">
             <button className="flex items-center gap-2 text-xs text-text-muted hover:text-text" disabled={item.streaming} onClick={() => setOpen((o) => !o)}>
@@ -176,9 +188,9 @@ export function ThinkingRow({ chatId, item: derived }: { chatId: string; item: C
                     </>
                 )}
             </button>
-            {shown && reveal.text !== '' && (
+            {shown && text !== '' && (
                 <div className="mt-1 border-l border-border pl-2.5 text-sm whitespace-pre-wrap text-text-faint select-text">
-                    {reveal.active ? <FadingWords text={reveal.text} /> : reveal.text}
+                    {reveal.active ? <FadingWords text={reveal.text} /> : text}
                 </div>
             )}
         </div>

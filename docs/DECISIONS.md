@@ -1258,9 +1258,19 @@ decided.
   the block again the moment its fence closes and throws its lines away.
 - The client ignored deltas on thinking items, so the thought stood still until it closed. It now
   grows like a reply, under the same switch.
-- "Stream replies" is one switch for everything an agent writes, the thought included, and it is the
-  client's: the daemon keeps sending deltas either way. Off, a reply fades in whole only on a row that
-  saw it being written, so scrolling back through an old thread does not animate it.
+- "Show replies" is one setting for everything an agent writes, the thought included, and it is the
+  client's: the daemon keeps sending deltas either way. It was a switch; a stored `true` reads as
+  `words` and a stored `false` as `whole`. Whole, a reply fades in only on a row that saw it being
+  written, so scrolling back through an old thread does not animate it.
+- The middle mode, `blocks` ("Paragraphs"), is for a reader who finds a word at a time restless and
+  whole too slow. It draws only the blocks of the splitter that are closed (`settledBlocksText`),
+  so half a block is never on screen, and a block is closed once the line after its blank line
+  starts, not at the blank line itself: that line may still be a list item or an indented paragraph
+  that continues the block. Each block fades in with `@starting-style` under `data-arriving`, which
+  only a row that saw the reply being written sets. A thought shows its closed paragraphs the same
+  way, without a fade. The fence rules the splitter follows are stricter now: a closing fence has no
+  info string and sits at most three spaces deeper than its opening, and a line holding a no-break
+  space is not blank.
 
 ### Shortcuts per platform
 

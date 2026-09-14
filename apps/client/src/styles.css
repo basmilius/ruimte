@@ -695,6 +695,12 @@
     .chat-fade { animation: chat-fade 300ms ease-in-out both; }
     /* A whole reply that was written out of sight. */
     .chat-fade-whole { animation: chat-fade 220ms ease-out both; }
+    /* A block of a reply streamed a block at a time, faded in when it is inserted and never when a
+       finished thread opens, which carries no `data-arriving`. */
+    .chat-markdown[data-arriving] > * {
+        transition: opacity 300ms ease-in-out;
+        @starting-style { opacity: 0; }
+    }
     @keyframes chat-fade { from { opacity: 0; } to { opacity: 1; } }
 
     /* ---------------------------------------------------------------- Files and git panels */

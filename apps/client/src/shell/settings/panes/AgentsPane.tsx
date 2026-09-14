@@ -12,7 +12,7 @@ import { canKeepAwake } from '@/desktop/bridge';
 import { DeleteAnyViewSection } from '@/shell/settings/DeleteAnyViewSection';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Badge, Skeleton, Toggle } from '@/shell/settings/controls';
+import { Badge, Segmented, Skeleton, Toggle } from '@/shell/settings/controls';
 import { useProviders } from '@/state/providers';
 import { useSettings } from '@/state/settings';
 import { Select, type SelectItem } from '@/ui/Select';
@@ -202,9 +202,20 @@ export function AgentsPane() {
             </SettingsSection>
             <SettingsSection title="Chats">
                 <SettingsRow
-                    label="Stream replies"
-                    description="On, a reply appears word by word as the agent writes it. Off, it appears once it is complete."
-                    control={<Toggle checked={chatStreaming} onChange={(checked) => update({ chatStreaming: checked })} label="Stream replies" />}
+                    label="Show replies"
+                    description="Words follow the agent as it writes. Paragraphs appear one at a time once each is complete. Whole waits until the reply is done."
+                    control={
+                        <Segmented
+                            value={chatStreaming}
+                            options={[
+                                { id: 'words', label: 'Words' },
+                                { id: 'blocks', label: 'Paragraphs' },
+                                { id: 'whole', label: 'Whole' }
+                            ]}
+                            label="Show replies"
+                            onChange={(value) => update({ chatStreaming: value })}
+                        />
+                    }
                 />
             </SettingsSection>
             <SettingsSection title="Providers" description="Agent CLIs found on the machine's PATH. To add one, install it and restart Ruimte on that machine.">

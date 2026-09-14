@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { splitMarkdownBlocks } from '@/chat/ui/markdown-blocks';
+import { settledBlocksText, splitMarkdownBlocks } from '@/chat/ui/markdown-blocks';
 
 const texts = (text: string): string[] => splitMarkdownBlocks(text).map((block) => block.text);
 
@@ -39,5 +39,38 @@ describe('splitMarkdownBlocks', () => {
 
     test('an empty text is one empty block', () => {
         expect(splitMarkdownBlocks('')).toEqual([{ text: '', openFence: false }]);
+    });
+
+    test('a fence line with an info string does not close a fence', () => {
+        const blocks = splitMarkdownBlocks('```\ncode\n```ts\n\nstill code');
+        expect(blocks).toHaveLength(1);
+        expect(blocks[0]!.openFence).toBe(true);
+    });
+
+    test('a closing fence more than three spaces deeper than its opening is a line of code', () => {
+        expect(splitMarkdownBlocks('```\ncode\n    ```\n\nstill code')[0]!.openFence).toBe(true);
+        expect(splitMarkdownBlocks('- item\n  ```\n  code\n     ```\n\nAfter').map((block) => block.openFence)).toEqual([false, false]);
+    });
+
+    test('a line with only a no-break space is not a blank line', () => {
+        const text = 'One\n\u00a0\nTwo';
+        expect(texts(text)).toEqual([text]);
+    });
+});
+
+describe('settledBlocksText', () => {
+    test('holds back the block still being written', () => {
+        expect(settledBlocksText('First paragraph.\n\nSecond, still')).toBe('First paragraph.\n\n');
+        expect(settledBlocksText('Only one so far')).toBe('');
+    });
+
+    test('a blank line alone does not settle a block, since the next line may continue it', () => {
+        expect(settledBlocksText('- one\n\n')).toBe('');
+        expect(settledBlocksText('- one\n\n- two')).toBe('');
+        expect(settledBlocksText('- one\n\nDone')).toBe('- one\n\n');
+    });
+
+    test('an open fence is never settled, blank lines inside it included', () => {
+        expect(settledBlocksText('Intro\n\n```ts\nconst a = 1;\n\nconst b')).toBe('Intro\n\n');
     });
 });

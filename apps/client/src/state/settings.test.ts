@@ -57,10 +57,18 @@ describe('being told a turn ended', () => {
 });
 
 describe('streaming replies', () => {
-    test('starts on, and only a stored false turns it off', () => {
-        expect(settingsFrom({}).chatStreaming).toBe(true);
-        expect(settingsFrom({ chatStreaming: false }).chatStreaming).toBe(false);
-        expect(settingsFrom({ chatStreaming: 0 as unknown as boolean }).chatStreaming).toBe(true);
+    test('starts a word at a time, and a mode that is stored is kept', () => {
+        expect(settingsFrom({}).chatStreaming).toBe('words');
+        expect(settingsFrom({ chatStreaming: 'blocks' }).chatStreaming).toBe('blocks');
+        expect(settingsFrom({ chatStreaming: 'whole' }).chatStreaming).toBe('whole');
+    });
+
+    test('the switch it used to be reads as the mode it meant, and anything else as words', () => {
+        const stored = (value: unknown) => settingsFrom({ chatStreaming: value as 'words' }).chatStreaming;
+        expect(stored(true)).toBe('words');
+        expect(stored(false)).toBe('whole');
+        expect(stored(0)).toBe('words');
+        expect(stored('paragraphs')).toBe('words');
     });
 });
 

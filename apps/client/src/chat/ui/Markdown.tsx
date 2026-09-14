@@ -127,12 +127,13 @@ const ReplyBlock = memo(function ReplyBlock({ text, fade, open }: { text: string
 /*
  * A reply in a chat thread, parsed a block at a time so a delta only parses the block that grows.
  * While it streams every new word fades in, and a fence that has not closed yet is highlighted a
- * line at a time as it grows.
+ * line at a time as it grows. `arriving` fades in each block as it is added instead, for a reply
+ * that is shown a block at a time.
  */
-export const ReplyMarkdown = memo(function ReplyMarkdown({ text, streaming }: { text: string; streaming: boolean }) {
+export const ReplyMarkdown = memo(function ReplyMarkdown({ text, streaming, arriving = false }: { text: string; streaming: boolean; arriving?: boolean }) {
     const blocks = useMemo(() => splitMarkdownBlocks(text), [text]);
     return (
-        <div className="chat-markdown prose prose-sm max-w-none text-sm">
+        <div className="chat-markdown prose prose-sm max-w-none text-sm" data-arriving={arriving || undefined}>
             {blocks.map((block, index) => (
                 // Blocks only ever grow at the end, so the place of a block is a stable key.
                 <ReplyBlock key={index} text={block.text} fade={streaming} open={streaming && block.openFence} />

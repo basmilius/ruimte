@@ -21,6 +21,22 @@ export type SidebarScope = 'project' | 'window';
 
 export const SIDEBAR_SCOPES: readonly SidebarScope[] = ['project', 'window'];
 
+/*
+ * How a reply appears while it is written: a word at a time, a block at a time once each block is
+ * closed, or whole once it is done.
+ */
+export type ChatStreamingMode = 'words' | 'blocks' | 'whole';
+
+export const CHAT_STREAMING_MODES: readonly ChatStreamingMode[] = ['words', 'blocks', 'whole'];
+
+/* A stored mode, or the switch it used to be: on was a word at a time, off was whole. */
+export const chatStreamingFrom = (stored: unknown): ChatStreamingMode => {
+    if (stored === false) {
+        return 'whole';
+    }
+    return CHAT_STREAMING_MODES.find((mode) => mode === stored) ?? 'words';
+};
+
 export const FONT_SIZE_RANGE = { min: 10, max: 20, step: 1 } as const;
 export const INTERFACE_FONT_SIZE_RANGE = { min: 14, max: 24, step: 1 } as const;
 export const FILES_TAB_LIMIT_RANGE = { min: 1, max: 20, step: 1 } as const;
@@ -55,9 +71,9 @@ export interface Settings {
     drawingSnap: boolean;
     /* Whether the dock of a canvas or a drawing waits below the edge until the pointer comes near. */
     dockAutoHide: boolean;
-    /* Whether a reply in a chat appears word by word as it streams, or in one piece once it is done.
-       Only how this client draws it: the daemon sends the deltas either way. */
-    chatStreaming: boolean;
+    /* How a reply in a chat appears while it is written. Only how this client draws it: the daemon
+       sends the deltas either way. */
+    chatStreaming: ChatStreamingMode;
     /* Whether the desktop shell downloads an update as soon as it finds one, or waits to be asked. */
     updatesAutoDownload: boolean;
     /* Whether a view an agent asks for takes the place of the one you are working in. Off, which is
@@ -104,7 +120,7 @@ const DEFAULT_SETTINGS: Settings = {
     diffWhitespace: true,
     drawingSnap: false,
     dockAutoHide: false,
-    chatStreaming: true,
+    chatStreaming: 'words',
     updatesAutoDownload: true,
     agentsShowViews: false,
     agentsApprovals: true,
@@ -140,7 +156,7 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     // The two that start on, so only a stored `false` turns either of them off.
     agentsApprovals: stored.agentsApprovals !== false,
     agentsTurnNotify: stored.agentsTurnNotify !== false,
-    chatStreaming: stored.chatStreaming !== false,
+    chatStreaming: chatStreamingFrom(stored.chatStreaming),
     // Same rule as the block: nothing makes a sound unless a stored `true` asked for it.
     agentsTurnSound: stored.agentsTurnSound === true
 });
