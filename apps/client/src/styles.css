@@ -390,6 +390,8 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     user-select: none;
+    /* The longhand, because the `text-wrap` shorthand also resets the wrap mode and would undo `whitespace-nowrap`. */
+    text-wrap-style: pretty;
 }
 
 
@@ -655,6 +657,8 @@ body {
     .chat-thread { user-select: text; --chat-answer-gap: 16px; --chat-turn-gap: 24px; --chat-block-gap: 12px; }
     .chat-column .chat-thread { --chat-answer-gap: 20px; --chat-turn-gap: 32px; --chat-block-gap: 16px; }
     .chat-thread button, .chat-thread kbd { user-select: none; }
+    /* The pretty wrap from `body` would be recomputed on the growing paragraph every frame a reply streams. */
+    .chat-thread { text-wrap-style: auto; }
 
     /*
      * A chat that is a view of its own reads in a column. The scroller keeps the full width of the
@@ -779,7 +783,8 @@ body {
         color: var(--text-faint);
         user-select: none;
     }
-    .file-code[data-wrap="true"] pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+    /* Wrapped code has no orphans worth balancing, and a large file would pay for it on every line. */
+    .file-code[data-wrap="true"] pre { white-space: pre-wrap; overflow-wrap: anywhere; text-wrap-style: auto; }
     /* The line a file reference asked for. The background is on the class and the animation fades it
        out, so with motion turned off the mark still shows and the timer is what ends it. */
     .file-code .line.is-revealed { background: var(--accent-soft); animation: file-line-flash 1.6s ease-out forwards; }
