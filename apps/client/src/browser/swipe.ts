@@ -12,7 +12,9 @@ export interface WheelSample {
     momentum: boolean;
     /* The page called `preventDefault`, which is how a map says the gesture is its own. */
     handled: boolean;
-    /* Something under the pointer can still scroll this way, or claims its overscroll. */
+    /* Ctrl was held, which is how Chromium reports a pinch: the page zooms and no swipe is involved. */
+    pinch: boolean;
+    /* Something under the pointer can still scroll this way, claims its overscroll, or is zoomed in and can still pan. */
     pageTakes: boolean;
 }
 
@@ -88,6 +90,10 @@ export const settleSwipe = (state: SwipeState, history: SwipeHistory, now: numbe
     state.phase === 'idle' ? { state, outcome: NONE } : finish(state, history, now);
 
 export const feedWheel = (state: SwipeState, sample: WheelSample, history: SwipeHistory, now: number): { state: SwipeState; outcome: SwipeOutcome } => {
+    // A pinch neither adds to a swipe nor, when the page prevents it, holds the next one.
+    if (sample.pinch) {
+        return { state, outcome: NONE };
+    }
     let current = state;
     let settled: SwipeOutcome = NONE;
     if (current.phase !== 'idle' && now - current.last > SWIPE_GESTURE_GAP_MS) {

@@ -18,6 +18,7 @@ const sample = (deltaX: number, deltaY = 0, extra: Partial<WheelSample> = {}): W
     deltaY,
     momentum: false,
     handled: false,
+    pinch: false,
     pageTakes: false,
     ...extra
 });
@@ -120,6 +121,26 @@ describe('feedWheel', () => {
         expect(navigations(soon.outcomes)).toEqual([]);
         const later = run(swipe, BOTH, soon.state, first.at + SWIPE_DEAF_MS + 100);
         expect(navigations(later.outcomes)).toHaveLength(1);
+    });
+
+    test('a pinch never shows or navigates anything', () => {
+        const pinch = Array.from({ length: 20 }, (_, i) => sample(i % 2 === 0 ? -30 : 0, -8, { pinch: true }));
+        const { outcomes, state, at } = run([...pinch, sample(0, 0, { momentum: true })]);
+        expect(outcomes.every((outcome) => outcome.kind === 'none')).toBe(true);
+        expect(settleSwipe(state, BOTH, at + SWIPE_GESTURE_GAP_MS).outcome).toEqual({ kind: 'none' });
+    });
+
+    test('a pinch inside a swipe leaves its travel alone', () => {
+        const half = Array.from({ length: 5 }, () => sample(-20));
+        const pinch = Array.from({ length: 3 }, () => sample(0, 400, { pinch: true }));
+        const { outcomes } = run([...half, ...pinch, ...half, sample(0, 0, { momentum: true })]);
+        expect(navigations(outcomes)).toEqual([{ kind: 'navigate', side: 'back' }]);
+    });
+
+    test('a pinch the page prevents does not hold the swipe after it', () => {
+        const pinch = Array.from({ length: 3 }, () => sample(0, 10, { pinch: true, handled: true }));
+        const { outcomes } = run([...pinch, ...Array.from({ length: 10 }, () => sample(-20)), sample(0, 0, { momentum: true })]);
+        expect(navigations(outcomes)).toHaveLength(1);
     });
 
     test('a pause longer than the gap starts a new gesture', () => {

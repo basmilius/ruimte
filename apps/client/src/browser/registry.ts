@@ -116,6 +116,7 @@ const isWheelSample = (value: unknown): value is WheelSample => {
         typeof sample.deltaY === 'number' &&
         typeof sample.momentum === 'boolean' &&
         typeof sample.handled === 'boolean' &&
+        typeof sample.pinch === 'boolean' &&
         typeof sample.pageTakes === 'boolean'
     );
 };

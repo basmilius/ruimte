@@ -11,6 +11,14 @@ const { ipcRenderer } = require('electron') as typeof import('electron');
 /* Whether the page would take this horizontal movement itself: something under the pointer can
    still scroll that way, or a scroll container on the way up says overscroll is its own business. */
 const pageTakesHorizontal = (event: WheelEvent): boolean => {
+    // Zoomed in with a pinch, the visual viewport pans across the layout viewport before anything scrolls.
+    const viewport = window.visualViewport;
+    if (viewport && viewport.scale > 1) {
+        const room = document.documentElement.clientWidth - viewport.width;
+        if (event.deltaX < 0 ? viewport.offsetLeft > 1 : viewport.offsetLeft < room - 1) {
+            return true;
+        }
+    }
     const root = document.scrollingElement;
     for (const target of event.composedPath()) {
         if (!(target instanceof Element)) {
@@ -41,12 +49,15 @@ const pageTakesHorizontal = (event: WheelEvent): boolean => {
 type MomentumWheelEvent = WheelEvent & { momentum?: boolean };
 
 const onWheel = (event: MomentumWheelEvent): void => {
-    const horizontal = event.deltaX !== 0 && event.momentum !== true;
+    // Chromium reports a trackpad pinch as a wheel with Ctrl held.
+    const pinch = event.ctrlKey;
+    const horizontal = event.deltaX !== 0 && event.momentum !== true && !pinch;
     ipcRenderer.sendToHost('ruimte:wheel', {
         deltaX: event.deltaX,
         deltaY: event.deltaY,
         momentum: event.momentum === true,
         handled: event.defaultPrevented,
+        pinch,
         // Only worth the style walk for a sample that can still start or steer a swipe.
         pageTakes: horizontal && pageTakesHorizontal(event)
     });
