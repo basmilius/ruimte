@@ -1240,13 +1240,15 @@ decided.
 
 ### Settings
 
-- Eight panes in five groups, with a separator between two groups: Appearance and Keyboard, Canvas
+- Eight panes in five groups, with a separator between two groups: Appearance and Keyboard, Views
   and Files and Git, Agents and Usage, Machines, About. `SETTINGS_SECTIONS` is the list of groups;
   the separator is no tab, so the arrow keys of Base UI Tabs pass over it.
 - A pane is a preference or it is not in the settings. Zoom, the locks and the layouts act on the
   canvas that is open and nothing about them is stored, so the old Canvas pane went: the dock and the
   palette have all three, and `LayoutDialog` stays because the dock opens it. The name Canvas went to
-  what used to be Drawing, which is where canvas preferences (a font size for chat and text) land.
+  what used to be Drawing, and then became Views once the browser's swipe joined the drawing's snap:
+  one pane with a section per kind of view, which is where canvas preferences (a font size for chat
+  and text) land as well. The section id was never stored, so `canvas` needed no alias.
 - Files and Git are one pane because they are the two panels beside the canvas and hold three rows
   each. Usage sits beside Agents because the only thing it sets is what agents cost.
 - The five accents in the open are blue, orange, lime, indigo and pink, spread around the wheel. The

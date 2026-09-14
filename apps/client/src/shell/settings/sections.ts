@@ -1,4 +1,4 @@
-import { Bot, ChartNoAxesColumn, Folder, Info, Keyboard, LayoutGrid, Palette, Server, type LucideIcon } from 'lucide-react';
+import { Bot, ChartNoAxesColumn, Folder, Info, Keyboard, Palette, PanelsTopLeft, Server, type LucideIcon } from 'lucide-react';
 import type { SettingsSectionId } from '@/state/ui';
 
 export interface SettingsSectionMeta {
@@ -20,7 +20,7 @@ export const SETTINGS_SECTIONS: readonly (readonly SettingsSectionMeta[])[] = [
         { id: 'keyboard', label: 'Keyboard', description: 'Every keyboard shortcut.', icon: Keyboard }
     ],
     [
-        { id: 'canvas', label: 'Canvas', description: 'How canvases and drawings behave.', icon: LayoutGrid },
+        { id: 'views', label: 'Views', description: 'How drawings and browser pages behave.', icon: PanelsTopLeft },
         { id: 'files', label: 'Files and Git', description: 'What the Files and Git panels show, and where browsing for a folder starts.', icon: Folder }
     ],
     [

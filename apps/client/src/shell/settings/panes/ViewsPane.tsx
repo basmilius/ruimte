@@ -7,8 +7,8 @@ import { shortcut } from '@/ui/shortcut';
 
 const MOD_HELD = shortcut('Mod');
 
-/* Only preferences: zoom, locks and layouts act on the canvas that is open, so they stay in the dock and the palette. */
-export function CanvasPane() {
+/* A section per kind of view. Only preferences: zoom, locks and layouts act on the canvas that is open, so they stay in the dock and the palette. */
+export function ViewsPane() {
     const drawingSnap = useSettings((s) => s.drawingSnap);
     const browserSwipe = useSettings((s) => s.browserSwipe);
     const update = useSettings((s) => s.update);
