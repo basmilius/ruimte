@@ -138,7 +138,7 @@ const OVERLAY_COLORS = { dark: { color: '#1b1b1f', symbolColor: '#ececf1' }, lig
    `trafficLightPosition` is the top left of the buttons' frame, lined up with the sidebar toggle beside it. */
 const titleBarOptions = (dark: boolean): Electron.BrowserWindowConstructorOptions =>
     process.platform === 'darwin'
-        ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 12, y: 15 } }
+        ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 17, y: 17 } }
         : { titleBarStyle: 'hidden', titleBarOverlay: { height: TITLEBAR_HEIGHT, ...OVERLAY_COLORS[dark ? 'dark' : 'light'] } };
 
 // The partition every browser node's page lives in; `apps/client/src/browser/registry.ts`.
@@ -627,7 +627,7 @@ ipcMain.on('update:install', () => updater?.quitAndInstall());
  */
 function appMenu(): Electron.MenuItemConstructorOptions {
     if (process.platform !== 'darwin') {
-        return { role: 'appMenu' };
+        return { role: 'fileMenu' };
     }
     const openSettings = (section: string | null): void => {
         mainWindow?.show();
@@ -648,6 +648,18 @@ function appMenu(): Electron.MenuItemConstructorOptions {
             { type: 'separator' },
             { role: 'quit' }
         ]
+    };
+}
+
+/*
+ * The stock View menu without reload and the zoom roles: their accelerators (Cmd+R, Cmd+0, Cmd+plus,
+ * Cmd+minus) are taken before the page sees them, and Cmd+0 is the canvas's zoom to 100%. A reload
+ * would also drop every node's live state without asking.
+ */
+function viewMenu(): Electron.MenuItemConstructorOptions {
+    return {
+        label: 'View',
+        submenu: [{ role: 'toggleDevTools' }, { type: 'separator' }, { role: 'togglefullscreen' }]
     };
 }
 
@@ -734,7 +746,7 @@ if (!app.requestSingleInstanceLock()) {
     });
 
     void app.whenReady().then(async () => {
-        Menu.setApplicationMenu(Menu.buildFromTemplate([appMenu(), { role: 'editMenu' }, { role: 'viewMenu' }, { role: 'windowMenu' }]));
+        Menu.setApplicationMenu(Menu.buildFromTemplate([appMenu(), { role: 'editMenu' }, viewMenu(), { role: 'windowMenu' }]));
         sealPreviewSession();
         startDaemon();
         try {
