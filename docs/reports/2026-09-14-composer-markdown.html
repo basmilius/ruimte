@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Markdown in de chatcomposer</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; white-space: nowrap; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 15px; }
+.diagram .label { fill: var(--muted); font-size: 13px; }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow { fill: var(--accent); }
+.diagram .mono { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 13px; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#summary">Naar de conclusie</a>
+<header>
+  <p class="eyebrow">Ruimte / Onderzoek / 14 september 2026</p>
+  <h1>Markdown in de chatcomposer</h1>
+  <p class="intro">Vervang de onzichtbare textarea met tekenlaag door een CodeMirror 6 editor met de markdown-grammatica van Lezer. De bron blijft zichtbaar (backticks, sterretjes, hekjes), maar inline code krijgt een monospace lettertype en een tint, vet wordt vet, en een fence wordt een blok. De chips voor <code>@bestand</code> en <code>$skill</code> worden decoraties in dezelfde editor. Wat naar Claude Code en Codex gaat blijft de platte string die er nu ook heen gaat.</p>
+  <p class="status">Onderzoek afgerond, niets gebouwd</p>
+  <p class="caption">Bron: <code>main</code> op <code>a19dd7f</code>. Regelnummers verwijzen naar die revisie. Pakketgroottes zijn van bundlephobia op 14 september 2026.</p>
+  <nav aria-label="Inhoud">
+    <a href="#summary">Conclusie</a>
+    <a href="#today">Hoe het nu werkt</a>
+    <a href="#meaning">Wat markdown hier betekent</a>
+    <a href="#options">Opties vergeleken</a>
+    <a href="#design">Ontwerp</a>
+    <a href="#phases">Fasen</a>
+    <a href="#tests">Tests</a>
+    <a href="#questions">Open vragen</a>
+  </nav>
+</header>
+<main>
+
+<section id="summary" class="recommendation">
+  <h2>Conclusie</h2>
+  <p>De huidige composer tekent de tekst twee keer: een textarea met transparante tekst voor het toetsenbord en de caret, en daarachter een <code>div</code> die dezelfde string tekent met de chips erin (<code>Composer.tsx</code> regel 763 tot 831). Dat werkt alleen zolang beide lagen elke glyph op dezelfde pixel zetten. De code zegt dat zelf: een chip mag een tint en een ring toevoegen, maar geen gewicht, geen lettergrootte en geen padding (<code>chips.ts</code> regel 11 tot 21, <code>DECISIONS.md</code> regel 292 tot 301). Precies wat markdown vraagt (een monospace lettertype voor <code>`&lt;span&gt;`</code>, vet voor <code>**woord**</code>) verschuift de getekende tekst ten opzichte van de caret. Een tokenizer op de tekenlaag zetten levert dus alleen een gekleurde tint op, nooit code die er als code uitziet.</p>
+  <p>De aanbeveling is CodeMirror 6 met <code>@lezer/markdown</code>, zonder het volledige <code>@codemirror/lang-markdown</code> pakket (dat trekt <code>lang-html</code> en <code>autocomplete</code> mee). CodeMirror tekent de tekst zelf, dus een decoratie mag het lettertype en het gewicht veranderen. Het brengt IME, undo, selectie en de caret mee, gebruikt in Electron het EditContext API al vanzelf, en de bestaande pure logica (<code>mentions.ts</code>, <code>guards.ts</code>, <code>drafts.ts</code>, <code>stash.ts</code>) blijft ongewijzigd. De prijs is ongeveer 105 tot 120 KB gzip bovenop een hoofdbundel van 474 KB gzip, en een dag of twee werk over vijf kleine, los te committen fasen.</p>
+  <p>Wat niet verandert: het draadprotocol. <code>chat.send</code> draagt <code>text: z.string()</code> (<code>packages/contracts/src/chat.ts</code> regel 375 tot 384) en de daemon zet die string ongewijzigd in het tekstblok van de CLI (<code>apps/server/src/chat/input.ts</code> regel 73 tot 86). Een tweede, kleinere stap is de eigen berichten in de tijdlijn ook als markdown tekenen, want nu staan daar de backticks letterlijk (<code>MessageRows.tsx</code> regel 45 tot 96).</p>
+  <div class="stats">
+    <div><strong>2</strong><span>lagen die nu elke glyph op dezelfde pixel moeten zetten</span></div>
+    <div><strong>~110 KB</strong><span>gzip erbij voor CodeMirror 6 met de markdown-grammatica (schatting)</span></div>
+    <div><strong>474 KB</strong><span>gzip van de huidige hoofdbundel (<code>dist/assets/index-*.js</code>)</span></div>
+    <div><strong>5</strong><span>fasen, elk apart te committen</span></div>
+  </div>
+</section>
+
+<section id="today">
+  <h2>Hoe de composer nu werkt</h2>
+  <p>Alles staat in <code>apps/client/src/chat/ui/Composer.tsx</code> (898 regels) met pure hulpmodules ernaast. De vermoedens van de gebruiker kloppen: het is een textarea over een tekenlaag.</p>
+
+  <h3>De twee lagen</h3>
+  <p><span class="badge confirmed">Geverifieerd</span> Regel 763 tot 831. Een <code>div</code> met <code>ref=backdropRef</code>, <code>aria-hidden</code> en <code>pointer-events-none</code> tekent de segmenten van <code>tokenizeChips(text, mentions, skills)</code> (regel 264, de functie in <code>mentions.ts</code> regel 105 tot 127). Daaroverheen ligt een <code>textarea</code> met <code>text-transparent caret-text bg-transparent</code>. Beide dragen <code>INPUT_CLASS</code> (regel 63): dezelfde padding, <code>text-sm leading-normal break-words whitespace-pre-wrap</code>. Het commentaar op regel 57 tot 62 legt uit waarom: de caret is van de textarea en wordt geplaatst op basis van haar eigen, onzichtbare tekst.</p>
+  <p><span class="badge confirmed">Geverifieerd</span> De chipstijl <code>CHIP_BEHIND_TEXT</code> in <code>chips.ts</code> regel 21 is daarom <code>box-decoration-clone rounded-[4px] py-0.5</code> en niets meer. Het commentaar erboven (regel 11 tot 20) noemt gewicht, grootte, letterafstand, horizontale padding, rand en marge als dingen die een glyph verschuiven. Negatieve marge als compensatie werkt niet, omdat een chip die over een regel breekt de padding per fragment opnieuw krijgt. De volledige pil met icoon leeft alleen in het verzonden bericht (<code>CHIP_IN_MESSAGE</code>).</p>
+
+  <h3>Wat er aan de textarea hangt</h3>
+  <div class="table"><table class="wide">
+    <caption>Gedrag dat een nieuwe editor moet overnemen, met de plek in <code>Composer.tsx</code></caption>
+    <thead><tr><th>Gedrag</th><th>Regels</th><th>Hoe het nu werkt</th></tr></thead>
+    <tbody>
+      <tr><td>Autosize</td><td>159 tot 165</td><td><code>el.style.height = auto</code>, dan <code>min(200, scrollHeight)</code> op elke tekstwijziging.</td></tr>
+      <tr><td>Scroll van de lagen</td><td>801 tot 805</td><td><code>onScroll</code> kopieert <code>scrollTop</code> naar de tekenlaag. Alleen op scroll-events, niet bij een herlayout.</td></tr>
+      <tr><td>Laatste lege regel</td><td>775</td><td><code>text.endsWith('\n') &amp;&amp; &lt;br /&gt;</code>, omdat een div een afsluitende newline niet als regel tekent en een textarea wel.</td></tr>
+      <tr><td>Concept</td><td>108, 167 tot 169</td><td><code>ChatDraft</code> (tekst, mentions, skills, bijlagen) in localStorage <code>ruimte.chat.drafts</code> via <code>drafts.ts</code>.</td></tr>
+      <tr><td>Triggers <code>@</code>, <code>$</code>, <code>/</code></td><td>238, 325 tot 332</td><td><code>trackTriggers</code> leest <code>selectionStart</code> uit de textarea op <code>onChange</code> en <code>onSelect</code>; <code>findMentionQuery</code> en <code>findSkillQuery</code> zijn puur (<code>mentions.ts</code> regel 24 tot 45). Het slash-menu leest alleen een eerste regel die met <code>/</code> begint.</td></tr>
+      <tr><td>Keuze invoegen</td><td>334 tot 363</td><td><code>insertMention</code> en <code>insertSkill</code> geven nieuwe tekst plus caret; <code>moveCaret</code> zet die in een <code>requestAnimationFrame</code> met <code>setSelectionRange</code>.</td></tr>
+      <tr><td>Toetsen</td><td>475 tot 576</td><td>Escape zet een teruggehaalde prompt terug; alles wat geen shell-shortcut is krijgt <code>stopPropagation</code> (regel 490 tot 492, <code>isShellShortcut</code> in <code>terminal/keymap.ts</code> regel 60 tot 65); PageUp/PageDown scrollen de tijdlijn; Cmd+S stasht; pijltjes en Tab/Enter lopen door de open menu's; Enter zonder Shift verzendt (562 tot 566); pijl omhoog en omlaag halen eerdere prompts terug vanaf een lege box of een ongewijzigde recall (567 tot 575).</td></tr>
+      <tr><td>Plakken</td><td>806 tot 828</td><td>Bestanden worden bijlagen; tekst vanaf 32 KiB wordt een <code>paste-n.txt</code> bijlage tenzij Cmd+Shift+V (<code>pasteInlineRef</code>, regel 122 en 477). Rijke tekst wordt nu al genegeerd: alleen <code>text/plain</code> wordt gelezen.</td></tr>
+      <tr><td>Slepen</td><td>610 tot 629</td><td>Bestanden en <code>application/x-ruimte-mention</code> uit het Files-paneel; paden komen achteraan in de tekst (<code>addMentions</code>, 367 tot 375).</td></tr>
+      <tr><td>Geschiedenis en stash</td><td>226 tot 236, 434 tot 473</td><td>De laatste vijftig user-items van de thread; de stash is een aparte zustand store.</td></tr>
+      <tr><td>Verzenden</td><td>404 tot 432</td><td><code>onSend(trimmed, { mentions: presentMentions(...), skills: presentSkills(...), attachments })</code>. Lokale commando's (<code>/model</code>, <code>/compact</code>, <code>/clear</code>) worden hier afgehandeld.</td></tr>
+      <tr><td>Undo</td><td>nergens</td><td>De native undo van de textarea. Cmd+Z komt door <code>stopPropagation</code> nooit bij <code>canvas-shortcuts.ts</code>; die controleert bovendien <code>isTypingTarget</code> (regel 42 tot 47), en dat sluit ook <code>isContentEditable</code> uit.</td></tr>
+      <tr><td>Uitgeschakeld en focus</td><td>153 tot 157, 786 tot 787</td><td><code>disabled</code> bij geen verbinding; <code>tabIndex</code> is 0 alleen in de cel met de focus.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Bekende zwakke plekken van de tekenlaag</h3>
+  <ul>
+    <li><span class="badge confirmed">Geverifieerd</span> Alleen een tint is mogelijk. Elke stijl die een advance width verandert is uitgesloten, en dat is de hele wens: monospace voor inline code, vet, een kop.</li>
+    <li><span class="badge confirmed">Geverifieerd</span> Twee bronnen van waarheid voor de layout. <code>INPUT_CLASS</code>, de <code>&lt;br&gt;</code> op regel 775 en de scroll-sync bestaan alleen om de lagen gelijk te houden. De scroll-sync loopt op events; wordt de textarea kleiner (autosize na een verwijdering) dan verspringt <code>scrollTop</code> zonder scroll-event en loopt de tekenlaag een frame achter.</li>
+    <li><span class="badge warning">Aanname</span> Spellingscontrole en de selectiekleur van de browser vallen op de transparante laag; de golfjes zijn zichtbaar, de gemarkeerde tekst is transparant. Niet nagemeten in de app.</li>
+    <li><span class="badge confirmed">Geverifieerd</span> Geen tests op dit component. Er is geen DOM-omgeving voor <code>bun test</code> (<code>bunfig.toml</code> negeert alleen <code>e2e</code>, er is geen <code>happy-dom</code> in de lockfile en geen enkel <code>.test.tsx</code>); <code>DECISIONS.md</code> regel 1720 noemt dat als punt 13 van Next.</li>
+  </ul>
+
+  <h3>De tijdlijn en de draad</h3>
+  <p><span class="badge confirmed">Geverifieerd</span> Een eigen bericht wordt in <code>UserRow</code> (<code>MessageRows.tsx</code> regel 45 tot 96) als platte tekst getekend: <code>whitespace-pre-wrap</code>, de chips via dezelfde <code>tokenizeChips</code>, geen <code>Markdown</code> component. Backticks staan er dus letterlijk. Antwoorden van de agent gaan wel door <code>ReplyMarkdown</code> (<code>Markdown.tsx</code>), waar inline code <code>INLINE_CODE</code> krijgt (regel 15) en via <code>useFileLinkTarget</code> een klikbaar bestandspad kan zijn (regel 40 tot 51). Een notitie gebruikt hetzelfde component met <code>breaks</code>.</p>
+  <p><span class="badge confirmed">Geverifieerd</span> Over de draad gaat een platte string. <code>ChatSendPayloadSchema</code> heeft <code>text: z.string()</code> naast <code>mentions</code>, <code>skills</code> en <code>attachments</code>. Voor Claude Code bouwt <code>buildUserMessage</code> daar een <code>{ type: 'text', text }</code> blok van (na de skill-splitsing die <code>DECISIONS.md</code> regel 335 tot 342 beschrijft); voor Codex gaat de tekst als tekst in de input items. Geen van beide CLIs krijgt blokken of HTML, en dat moet zo blijven: markdown is precies wat een model verwacht.</p>
+  <p><span class="badge confirmed">Geverifieerd</span> De andere tekstvelden in de app (<code>NoteNode.tsx</code> regel 54 tot 61, <code>CommitBox.tsx</code> regel 73 tot 79) zijn gewone textareas zonder tekenlaag. Ze staan buiten dit onderzoek, maar een editorcomponent die hier ontstaat kan de notitie later overnemen.</p>
+</section>
+
+<section id="meaning">
+  <h2>Wat markdown in de composer moet betekenen</h2>
+  <div class="split">
+    <div class="panel">
+      <h3>Bron met opmaak (aanbevolen)</h3>
+      <p>De tekens blijven staan. <code>`&lt;span&gt;`</code> toont de backticks, gedimd, met de inhoud in monospace op een tint. <code>**vet**</code> wordt vet met de sterretjes zichtbaar. Een fence wordt een blok met een achtergrond. Wat je typt is wat je verstuurt, en de caret staat altijd op een teken dat er echt is.</p>
+      <p>Dit is wat iedere code-editor met een markdown-modus doet en wat een persoon die "Kijk naar het <code>`&lt;span&gt;`</code> element" typt verwacht: bevestiging dat de backticks goed staan, geen verrassing.</p>
+    </div>
+    <div class="panel">
+      <h3>WYSIWYG (afgeraden)</h3>
+      <p>De syntaxis verdwijnt, de editor houdt een documentmodel bij en serialiseert bij verzenden terug naar markdown. Dat vraagt een tweede waarheid (het model) naast de string in <code>ChatDraft</code>, een serializer waarvan de uitvoer niet letterlijk is wat je zag, en een pad om een concept, een stash en een teruggehaalde prompt (allemaal strings) weer in dat model te laden.</p>
+      <p>Voor een prompt aan een agent, die in de tijdlijn en in de CLI toch als markdown-bron voortleeft, wint dat niets.</p>
+    </div>
+  </div>
+  <h3>Wat er opgemaakt wordt</h3>
+  <ul>
+    <li>Inline code: monospace, <code>--text-code</code>, een tint (<code>bg-surface-sunken</code>, dezelfde als <code>INLINE_CODE</code> in de tijdlijn), de backticks in <code>text-text-faint</code>.</li>
+    <li>Fenced code: de regels tussen de fences in monospace op een blokachtergrond; de fence-regels zelf gedimd. Geen syntaxkleuring in de composer in de eerste versies (zie open vragen).</li>
+    <li>Vet, cursief, doorgehaald: het gewicht of de stijl, de markers gedimd.</li>
+    <li>Koppen en lijsten: de <code>#</code> en het streepje gedimd, de tekst van een kop met <code>font-semibold</code>, geen andere grootte (een prompt heeft geen typografische schaal nodig).</li>
+    <li>Links: onderstreept in <code>text-accent</code>, niet klikbaar tijdens het typen.</li>
+    <li>Chips voor <code>@pad</code> en <code>$skill</code>: dezelfde tinten als nu (<code>MENTION_TONE</code>, <code>SKILL_TONE</code>), maar nu met de horizontale padding en de afgeronde hoeken die in de tijdlijn al mogen, omdat de editor zelf tekent wat de caret ziet.</li>
+  </ul>
+  <p>Een inline-codespan overrulet de chip: <code>`@foo.ts`</code> is code, geen mention. Dat is nu anders (<code>tokenizeChips</code> kent geen backticks) en verdient een test.</p>
+</section>
+
+<section id="options">
+  <h2>Opties vergeleken</h2>
+  <div class="table"><table class="wide">
+    <caption>Zes routes, gewogen voor deze codebase (React 19, Vite, Bun, Tailwind-tokens, Lucide, geen ruwe kleuren)</caption>
+    <thead><tr><th>Route</th><th>Bundel (gzip)</th><th>Wat je krijgt</th><th>Wat het kost</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Textarea plus tekenlaag met markdown-tokenizer</td>
+        <td>0 KB (<code>mdast-util-from-markdown</code> zit al in de bundel via react-markdown, met posities)</td>
+        <td>Een tint op inline code, fences en markers. Alle huidige toetsen blijven werken.</td>
+        <td>Geen monospace, geen vet, geen padding: exact de beperking van <code>CHIP_BEHIND_TEXT</code>. Het parsen van de hele tekst bij elke toets (100k tekens toegestaan, <code>guards.ts</code>) moet gethrottled worden. De lagen blijven een tweede waarheid. Dit is de goedkope stap, niet de oplossing.</td>
+      </tr>
+      <tr>
+        <td>Eigen <code>contenteditable</code> met eigen model</td>
+        <td>0 KB</td>
+        <td>Volledige vrijheid.</td>
+        <td>Alles wat een editorbibliotheek oplost moet zelf: IME-compositie, undo (de native undo breekt zodra React de DOM herschrijft), selectie-mapping na een decoratie, Android- en spellingcorrectie-quirks, beforeinput-verschillen tussen Chromium en WebKit. Ruim de duurste route in onderhoud.</td>
+      </tr>
+      <tr>
+        <td><strong>CodeMirror 6 met <code>@lezer/markdown</code></strong></td>
+        <td><code>@codemirror/language</code> 86,6 KB (dat is inclusief <code>view</code> 79,0 en <code>state</code>), <code>@lezer/markdown</code> 22,3 KB, <code>@codemirror/commands</code> een paar KB extra. Schatting samen 105 tot 120 KB.</td>
+        <td>Tekst met gemengde lettertypen, mark-decoraties voor chips, een syntaxboom om te weten of de caret in een fence staat, history, IME, <code>placeholder()</code>, <code>EditorView.editable</code>, keymaps met precedentie, <code>domEventHandlers</code> voor paste en drop. Ontworpen voor bron met opmaak.</td>
+        <td>Nieuwe afhankelijkheid van ~110 KB. Een thema moet in <code>styles.css</code> op tokens (de <code>.cm-*</code> klassen, zoals xterm en shiki daar al staan). Het volledige <code>@codemirror/lang-markdown</code> (174,7 KB inclusief <code>lang-html</code> en <code>autocomplete</code>) is te vermijden door de <code>Language</code> zelf uit <code>@lezer/markdown</code> op te bouwen.</td>
+      </tr>
+      <tr>
+        <td>Lexical</td>
+        <td><code>lexical</code> 0.50.0: 56,0 KB, plus <code>@lexical/react</code>, <code>@lexical/markdown</code>, <code>@lexical/history</code></td>
+        <td>Klein, van Meta, goede IME. React-first.</td>
+        <td>Documentmodel met nodes; markdown is een transform die de syntaxis opeet (<code>**x**</code> wordt een TextNode met format). Bron met opmaak vraagt tegen het model in werken. Serialiseren bij verzenden.</td>
+      </tr>
+      <tr>
+        <td>ProseMirror of Tiptap, Slate</td>
+        <td><code>prosemirror-view</code> 1.42.3: 54,5 KB inclusief model, state, transform; Tiptap ongeveer 66 KB volgens een vergelijking van derden (niet zelf gemeten); Slate niet gemeten</td>
+        <td>Rijpe WYSIWYG-modellen, plugins voor mentions.</td>
+        <td>Zelfde bezwaar als Lexical: een schema en een serializer (<code>prosemirror-markdown</code>) tussen wat je ziet en wat je stuurt. Tiptap's extensies met mentions zitten deels achter een betaald plan.</td>
+      </tr>
+      <tr>
+        <td>EditContext API rechtstreeks</td>
+        <td>0 KB</td>
+        <td>De browser levert tekstinvoer, IME en compositie aan een element dat je zelf tekent, zonder <code>contenteditable</code>.</td>
+        <td>Alleen Chromium (Chrome 121, januari 2024). Electron 44 draagt Chromium 152, dus de desktop-app kan het; de Server Edition (<code>--serve</code>) draait ook in Safari en Firefox, die het niet hebben. Het tekenen van tekst, caret, selectie en wrapping blijft eigen werk. CodeMirror 6 gebruikt EditContext sinds <code>@codemirror/view</code> 6.28.0 zelf op Chrome 126 en hoger, met daarna een reeks fixes in de changelog; die winst komt dus gratis mee met de aanbevolen route.</td>
+      </tr>
+    </tbody>
+  </table></div>
+  <p><span class="badge confirmed">Geverifieerd</span> De pakketgroottes komen van de bundlephobia API op 14 september 2026 (<code>@codemirror/view</code> 6.43.11, <code>@codemirror/language</code> 6.12.4, <code>@lezer/markdown</code> 1.7.2, <code>@codemirror/commands</code> 6.11.0, <code>@codemirror/lang-markdown</code> 6.5.2, <code>lexical</code> 0.50.0, <code>prosemirror-view</code> 1.42.3). Bundlephobia telt afhankelijkheden mee, dus de getallen overlappen; de som van 105 tot 120 KB is een schatting die de eerste fase meet met <code>vite build</code>. De 474 KB van de hoofdbundel is gemeten op de <code>dist</code> die lokaal stond; die kan van een oudere build zijn.</p>
+  <p><span class="badge confirmed">Geverifieerd</span> <code>@codemirror/lang-markdown</code> roept in <code>index.ts</code> op moduleniveau <code>html({ matchClosingTags: false })</code> aan; tree-shaking haalt <code>lang-html</code> er dus niet uit. <code>markdown.ts</code> in hetzelfde pakket importeert alleen <code>@codemirror/language</code> en <code>@lezer/markdown</code>; de tien regels die daar een <code>Language</code> van maken (<code>defineLanguageFacet</code>, <code>parser.configure</code>, <code>new Language(...)</code>) zijn publieke API en zo eigen te schrijven. Het pakket kan later alsnog, als de lijstvoortzetting op Enter (<code>insertNewlineContinueMarkup</code>) gewenst blijkt.</p>
+  <p><span class="badge warning">Aanname</span> Toegankelijkheid: een textarea is het beste wat een screenreader kan krijgen. CodeMirror zet <code>role="textbox"</code> en <code>aria-multiline</code> op zijn contenteditable en wordt door VoiceOver als tekstveld gelezen; hoe de placeholder wordt voorgelezen is niet nagemeten. Lexical en ProseMirror zitten op hetzelfde niveau.</p>
+</section>
+
+<section id="design">
+  <h2>Ontwerp van de aanbevolen route</h2>
+  <figure>
+    <svg class="diagram" viewBox="0 0 900 250" role="img" aria-labelledby="flow-title">
+      <title id="flow-title">De string in ChatDraft is de enige waarheid; CodeMirror tekent hem en meldt wijzigingen terug; verzenden stuurt dezelfde string</title>
+      <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="arrow"/></marker></defs>
+      <rect x="20" y="80" width="200" height="90" rx="12" class="node"/>
+      <text x="120" y="118" text-anchor="middle">ChatDraft.text</text>
+      <text x="120" y="142" text-anchor="middle" class="label">localStorage, stash, recall</text>
+      <rect x="350" y="80" width="200" height="90" rx="12" class="node"/>
+      <text x="450" y="112" text-anchor="middle">EditorView</text>
+      <text x="450" y="134" text-anchor="middle" class="label mono">@lezer/markdown</text>
+      <text x="450" y="154" text-anchor="middle" class="label">decoraties, keymap</text>
+      <rect x="680" y="80" width="200" height="90" rx="12" class="node"/>
+      <text x="780" y="118" text-anchor="middle">chat.send</text>
+      <text x="780" y="142" text-anchor="middle" class="label mono">text: string</text>
+      <path d="M220 110 L350 110" class="edge" marker-end="url(#arr)"/>
+      <text x="285" y="100" text-anchor="middle" class="label">dispatch als het verschilt</text>
+      <path d="M350 140 L220 140" class="edge" marker-end="url(#arr)"/>
+      <text x="285" y="162" text-anchor="middle" class="label">updateListener</text>
+      <path d="M550 125 L680 125" class="edge" marker-end="url(#arr)"/>
+      <text x="615" y="115" text-anchor="middle" class="label">submit()</text>
+      <text x="450" y="215" text-anchor="middle" class="label">tokenizeChips, findMentionQuery, promptGuard: ongewijzigd, ze lezen de string en de caret</text>
+    </svg>
+    <figcaption>De string blijft de waarheid. CodeMirror is een view erop, geen tweede model.</figcaption>
+  </figure>
+
+  <h3>Bestanden</h3>
+  <ul>
+    <li><code>apps/client/src/chat/ui/composer/editor.ts</code>: de extensiebundel. De markdown-<code>Language</code> uit <code>@lezer/markdown</code> (GFM-strikethrough en tabellen erbij), een <code>HighlightStyle</code> die per tag een klasse zet (<code>tags.monospace</code>, <code>tags.strong</code>, <code>tags.emphasis</code>, <code>tags.heading</code>, <code>tags.processingInstruction</code> voor de markers, <code>tags.link</code>), <code>history()</code>, <code>placeholder()</code>, <code>EditorView.lineWrapping</code>, en een <code>contentAttributes</code> facet voor <code>spellcheck</code> en <code>tabindex</code>.</li>
+    <li><code>apps/client/src/chat/ui/composer/chips.ts</code>: een <code>StateField&lt;DecorationSet&gt;</code> die uit <code>tokenizeChips(doc, mentions, skills)</code> mark-decoraties maakt. De mentions en skills komen van een <code>Facet</code> die de React-kant bij elke draft-wijziging reconfigureert. Een span binnen <code>InlineCode</code> in de syntaxboom wordt geen chip.</li>
+    <li><code>apps/client/src/chat/ui/composer/keys.ts</code>: pure beslissingen die een keymap aanroept. <code>enterAction(text, caret, { shift, mod })</code> geeft <code>'send'</code>, <code>'newline'</code>; <code>inFence(tree, pos)</code> leest de boom; <code>recallDirection(text, caret, key)</code> vervangt de <code>atStart</code>/<code>atEnd</code> logica op regel 567 tot 575. Deze module heeft geen DOM en is met <code>bun test</code> te dekken via <code>EditorState.create</code>.</li>
+    <li><code>apps/client/src/chat/ui/ComposerInput.tsx</code>: het React-component dat de <code>EditorView</code> in een <code>div</code> mount, <code>value</code> synchroniseert (een <code>changes: { from: 0, to: doc.length, insert }</code> transactie als de string verschilt), en callbacks biedt: <code>onChange(text, caret)</code>, <code>onCaret</code>, <code>onPaste</code>, <code>onKey</code> voor wat de Composer zelf beslist (de menu's). Het vervangt de <code>backdrop</code> div en de <code>textarea</code> in <code>Composer.tsx</code>; <code>INPUT_CLASS</code>, <code>CHIP_BEHIND_TEXT</code> en <code>MAX_ROWS_PX</code> verdwijnen.</li>
+    <li><code>apps/client/src/styles.css</code>: de <code>.cm-editor</code>, <code>.cm-scroller</code> (<code>max-height: 200px; overflow: auto</code>, de autosize van nu), <code>.cm-content</code> (padding, <code>--text-sm</code>) en de klassen van de <code>HighlightStyle</code>, allemaal op tokens, in de components-laag naast de xterm- en shiki-regels. Geen <code>EditorView.theme</code> met kleuren in TypeScript, want daar staan geen tokens.</li>
+  </ul>
+
+  <h3>Wat er anders wordt in <code>Composer.tsx</code></h3>
+  <ul>
+    <li><code>trackTriggers</code> krijgt tekst en caret uit de <code>updateListener</code> in plaats van uit <code>el.selectionStart</code>. <code>moveCaret</code> wordt een <code>view.dispatch({ selection: { anchor } })</code> plus <code>view.focus()</code>, zonder <code>requestAnimationFrame</code>.</li>
+    <li>De menu-navigatie (pijltjes, Tab, Enter in een open picker) blijft React: een <code>Prec.highest</code> keymap in de editor roept een callback aan die <code>true</code> teruggeeft als het menu de toets nam. Zo blijft de volgorde van regel 506 tot 561 letterlijk staan.</li>
+    <li><code>stopPropagation</code> voor niet-shell-shortcuts (regel 490 tot 492) blijft een <code>onKeyDown</code> op de wrapper-div: React's synthetische events bubbelen ook uit een contenteditable. CodeMirror's eigen keymap draait eerder, native op <code>contentDOM</code>, dus de wrapper ziet alleen wat de editor niet nam.</li>
+    <li>Plakken moet een <code>EditorView.domEventHandlers({ paste })</code> worden. CodeMirror's native paste-handler loopt vóór React's synthetische <code>onPaste</code> (React luistert op de root), dus de bijlage-logica van regel 806 tot 828 zit anders te laat. De handler geeft <code>true</code> terug als hij de paste nam. CodeMirror leest zelf alleen <code>text/plain</code>, dus rijke tekst blijft platte tekst, zoals nu.</li>
+    <li>Drop blijft op de kaart (regel 610 tot 629) staan; CodeMirror's eigen drop van tekst mag blijven, die van bestanden wordt met <code>preventDefault</code> op de kaart al afgevangen.</li>
+    <li><code>disabled</code> wordt <code>EditorView.editable.of(false)</code> plus <code>EditorState.readOnly</code> via een <code>Compartment</code>; de placeholder blijft die van regel 585.</li>
+    <li>Undo: <code>history()</code> met <code>historyKeymap</code>. De canvas-undo raakt de editor niet, want <code>isTypingTarget</code> sluit <code>isContentEditable</code> al uit (regel 46) en de wrapper stopt de propagatie toch.</li>
+  </ul>
+
+  <h3>Enter, Shift+Enter en een fence</h3>
+  <p>Nu verzendt Enter altijd (regel 562 tot 566), ook midden in een open fence. Voorstel: Enter in een fence (open of gesloten, bepaald met <code>syntaxTree(state).resolveInner(pos)</code> en de nodenaam <code>FencedCode</code>) voegt een regel in; Shift+Enter voegt overal een regel in; Cmd+Enter (Ctrl+Enter elders) verzendt overal, ook uit een fence, met <code>KEY_SHORTCUTS.modEnter</code> die de commit-box al gebruikt. De tooltip op de verzendknop toont dan nog steeds Enter. Of dit gewenst is staat bij de open vragen; de beslissing zit in één pure functie, dus het is een kleine wijziging welke kant het ook op gaat.</p>
+
+  <h3>De tijdlijn</h3>
+  <p><code>UserRow</code> tekent de tekst via <code>Markdown</code> met <code>breaks</code> (zoals een notitie: een persoon bedoelt met Enter een regeleinde) en houdt de vouw op acht regels of 600 tekens. Twee dingen vragen een plugin. Eén: de chips, nu segmenten van <code>tokenizeChips</code>, worden een rehype-plugin die tekstnodes splitst op de bekende <code>@pad</code> en <code>$naam</code> tokens en er de <code>Chip</code> van maakt, het patroon van <code>rehype-fade.ts</code>. Twee: react-markdown laat een <code>html</code> node (een <code>&lt;span&gt;</code> buiten backticks) weg. Een remark-plugin van tien regels zet <code>html</code> nodes om in <code>text</code>, zodat wat een persoon typte blijft staan. Winst die meekomt: inline code in een eigen bericht wordt door <code>InlineCode</code> een klikbaar bestandspad, net als in een antwoord.</p>
+</section>
+
+<section id="phases">
+  <h2>Fasen</h2>
+  <p>Elke fase is apart te committen en laat de app werkend achter. Conventional commits, geen attributieregels. <code>bun run format</code> en <code>bun run check</code> voor elke commit.</p>
+  <ol class="steps">
+    <li class="step"><div>
+      <h3>Pure kern: sleutelbeslissingen en chipbereiken</h3>
+      <p><strong>Raakt:</strong> nieuw <code>chat/ui/composer/keys.ts</code>, <code>chat/ui/composer/keys.test.ts</code>, <code>chat/mentions.ts</code> (een <code>chipRanges</code> die offsets geeft naast de segmenten van <code>tokenizeChips</code>), <code>mentions.test.ts</code>. Voegt <code>@codemirror/state</code>, <code>@codemirror/language</code>, <code>@lezer/markdown</code>, <code>@lezer/highlight</code> toe aan <code>apps/client/package.json</code>, nog zonder view.</p>
+      <p><strong>Klaar als:</strong> <code>enterAction</code>, <code>inFence</code> en <code>recallDirection</code> onder <code>bun test</code> staan met de gevallen uit de tabel hierboven; <code>chipRanges</code> geeft dezelfde tokens als <code>tokenizeChips</code> en slaat een token in een codespan over; niets in de UI verandert. Meet hier of <code>syntaxTree(EditorState.create(...))</code> zonder DOM een boom geeft voor een kort document; zo niet, dan test <code>inFence</code> tegen <code>@lezer/markdown</code>'s parser direct.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>De editor vervangt textarea en tekenlaag, zonder markdown</h3>
+      <p><strong>Raakt:</strong> nieuw <code>chat/ui/ComposerInput.tsx</code>, <code>chat/ui/composer/editor.ts</code>, <code>chat/ui/composer/chips.ts</code>; <code>Composer.tsx</code> (regel 57 tot 63, 119 tot 122, 153 tot 165, 325 tot 342, 475 tot 576, 763 tot 831); <code>chat/ui/chips.ts</code> (<code>CHIP_BEHIND_TEXT</code> weg, de chip krijgt <code>px-1</code> en <code>rounded-md</code>); <code>styles.css</code> (de <code>.cm-*</code> regels); <code>package.json</code> (<code>@codemirror/view</code>, <code>@codemirror/commands</code>).</p>
+      <p><strong>Klaar als:</strong> elk gedrag uit de tabel onder "Wat er aan de textarea hangt" hetzelfde werkt, nagelopen in de Electron dev-app: concept overleeft een reload, <code>@</code> en <code>$</code> en <code>/</code> openen hun menu op de juiste caret, Tab en Enter kiezen, Escape zet een recall terug, Cmd+S stasht, PageUp scrollt de tijdlijn, plakken van een groot stuk tekst wordt een bijlage en Cmd+Shift+V niet, slepen uit Files voegt chips toe, 200 px maximumhoogte met scrollen daarboven, uitgeschakeld zonder verbinding, focus alleen in de cel met focus, undo binnen de editor en niet op het canvas. De chips staan als pillen met padding. <code>vite build</code> meldt de bundelgroei; noteer die in de commit.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Markdown-opmaak tijdens het typen</h3>
+      <p><strong>Raakt:</strong> <code>chat/ui/composer/editor.ts</code> (de <code>Language</code> en de <code>HighlightStyle</code>), <code>styles.css</code> (de klassen op tokens: monospace en <code>--text-code</code> voor <code>InlineCode</code> en de regels van een <code>FencedCode</code>, <code>font-semibold</code> voor <code>StrongEmphasis</code> en koppen, <code>italic</code>, <code>line-through</code>, <code>text-text-faint</code> voor markers, <code>text-accent</code> voor links), <code>chat/ui/composer/chips.ts</code> (geen chip in een codespan, nu op de boom in plaats van op tekst).</p>
+      <p><strong>Klaar als:</strong> "Kijk naar het <code>`&lt;span&gt;`</code> element in bestand.ts" toont de span in monospace op een tint met gedimde backticks terwijl je typt, een fence krijgt een blokachtergrond vanaf de openingsregel, en de tekst die <code>chat.send</code> draagt is tekenidentiek aan de vorige fase (aantoonbaar: de draft in localStorage verandert niet van vorm). Licht en donker thema nagekeken. Geen ruwe kleur in TypeScript of CSS.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Enter in een fence en Cmd+Enter</h3>
+      <p><strong>Raakt:</strong> <code>chat/ui/composer/keys.ts</code> en test, <code>chat/ui/composer/editor.ts</code> (keymap), <code>Composer.tsx</code> (tooltip op de verzendknop), <code>docs/DECISIONS.md</code>.</p>
+      <p><strong>Klaar als:</strong> Enter in een open of gesloten fence een regel invoegt, Shift+Enter overal een regel invoegt, Cmd+Enter overal verzendt, en buiten een fence Enter verzendt zoals nu. Alleen bouwen als de open vraag hieronder met ja beantwoord is; anders vervalt deze fase en krijgt de fence alleen opmaak.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Eigen berichten als markdown in de tijdlijn</h3>
+      <p><strong>Raakt:</strong> <code>chat/ui/rows/MessageRows.tsx</code> (<code>UserRow</code>), <code>chat/ui/Markdown.tsx</code> (een <code>chips</code> prop met de mentions en skills), nieuw <code>chat/ui/rehype-chips.ts</code> met test, nieuw <code>chat/ui/remark-html-as-text.ts</code> met test, <code>chat/logic/timeline-copy.ts</code> als de kopie van een eigen bericht de bron moet blijven.</p>
+      <p><strong>Klaar als:</strong> een verzonden bericht met inline code die code toont, een chip op zijn plek houdt, een <code>&lt;span&gt;</code> buiten backticks letterlijk toont, op Enter een regeleinde geeft, nog steeds vouwt boven acht regels, en het kopiëren van het bericht de originele tekst met backticks oplevert. Een bestandspad in inline code opent in de preview zoals in een antwoord.</p>
+    </div></li>
+  </ol>
+  <p>Na fase 5: <code>docs/DECISIONS.md</code> bijwerken (de chip-beslissing op regel 292 tot 301 wordt de nieuwe, en de reden waarom <code>@codemirror/lang-markdown</code> niet gebruikt wordt), <code>CLAUDE.md</code> een zin over de composer, en het rapport opruimen als de gebruiker dat wil.</p>
+</section>
+
+<section id="tests">
+  <h2>Testplan</h2>
+  <p>Er is geen DOM in <code>bun test</code> en dit onderzoek stelt niet voor die nu toe te voegen; punt 13 in Next blijft staan. Alles wat beslist wordt puur, alles wat tekent wordt in de dev-app nagelopen.</p>
+  <ul>
+    <li><code>composer/keys.test.ts</code>: Enter buiten een fence is verzenden; Enter in een open fence, in een gesloten fence, op de fence-regel zelf; Shift+Enter; Cmd+Enter; pijl omhoog op een lege box, op de eerste regel van een ongewijzigde recall, midden in een tekst (geen recall); pijl omlaag op de laatste regel; Escape met en zonder recall.</li>
+    <li><code>mentions.test.ts</code> uitbreiden: <code>chipRanges</code> tegen <code>tokenizeChips</code> voor dezelfde invoer; een token in <code>`@a.ts`</code> wordt geen chip; een token direct na een backtick wel.</li>
+    <li><code>composer/chips.test.ts</code>: de <code>StateField</code> tegen <code>EditorState.create</code> met een <code>Facet</code> van mentions; de set decoraties na een wijziging die een chip breekt (<code>@a.ts</code> wordt <code>@a.t</code>) en na een die er een maakt.</li>
+    <li><code>rehype-chips.test.ts</code> en <code>remark-html-as-text.test.ts</code>: op een hast respectievelijk mdast van <code>unified</code>, zoals <code>rehype-fade.test.ts</code> dat nu doet.</li>
+    <li>Handmatig in de Electron dev-app, in beide thema's, in een node en in een view: de lijst onder fase 2, IME met een Japans of Koreaans toetsenbord (Chromium met EditContext), dead keys voor <code>é</code> en <code>ü</code>, een selectie plakken over een chip, een fence van vijftig regels (de 200 px met scrollen), een prompt van 100k tekens (de teller van <code>promptGuard</code> en de parseerkosten per toets), en de Server Edition in Safari, waar EditContext ontbreekt en CodeMirror op <code>contenteditable</code> valt.</li>
+  </ul>
+</section>
+
+<section id="questions">
+  <h2>Open vragen voor de gebruiker</h2>
+  <ol>
+    <li><span class="badge info">Open vraag</span> Enter in een fence: een regel invoegen (met Cmd+Enter om altijd te verzenden), of Enter blijft overal verzenden en de fence krijgt alleen opmaak? Fase 4 hangt hiervan af.</li>
+    <li><span class="badge info">Open vraag</span> Moet Shift+Enter in een lijst het streepje of nummer voortzetten? Dat is <code>insertNewlineContinueMarkup</code> uit <code>@codemirror/lang-markdown</code>; zelf schrijven is klein, het pakket erbij nemen kost ~55 KB gzip extra.</li>
+    <li><span class="badge info">Open vraag</span> Eigen berichten in de tijdlijn als markdown (fase 5), of alleen de composer? Zonder fase 5 staan de backticks na verzenden weer letterlijk in de rij.</li>
+    <li><span class="badge info">Open vraag</span> Is ~110 KB gzip erbij op de hoofdbundel goed, of moet de editor als aparte chunk laden (<code>React.lazy</code> op <code>ComposerInput</code>, met de textarea-loze placeholder tot hij er is)? Vite splitst het vanzelf als de import dynamisch is.</li>
+    <li><span class="badge info">Open vraag</span> Syntaxkleuring binnen een fence in de composer: nee in de eerste versies (Shiki is geen CodeMirror-grammatica, en de CodeMirror-talen zijn een tweede set grammatica's in de bundel). Akkoord?</li>
+    <li><span class="badge info">Open vraag</span> Spellingscontrole aan laten in de editor (de textarea heeft hem nu aan, de notitie zet hem uit)? Chromium tekent de golfjes ook onder inline code, wat bij <code>&lt;span&gt;</code> ruis is; een <code>spellcheck=false</code> alleen op codespans kan niet.</li>
+    <li><span class="badge info">Open vraag</span> Rijke tekst plakken: platte tekst houden (nu en straks hetzelfde), of HTML naar markdown omzetten (turndown, ~7 KB gzip, niet gemeten)? Advies: platte tekst, tot iemand er om vraagt.</li>
+    <li><span class="badge info">Open vraag</span> De notitie (<code>NoteNode</code>) later op dezelfde editor, zodat een notitie ook tijdens het typen markdown toont? Buiten dit werk, maar het bepaalt of <code>ComposerInput</code> van meet af aan geen chat-kennis mag hebben.</li>
+  </ol>
+</section>
+
+</main>
+<footer>
+  <p>Geverifieerd door de bronbestanden op <code>a19dd7f</code> te lezen, de lockfile en <code>bunfig.toml</code> te controleren, de bundlephobia API en de CodeMirror-changelog te raadplegen en de gebouwde <code>dist</code> te meten met <code>gzip</code>. Niet gedaan: de app draaien, de bundelgroei echt meten (dat is de eerste fase), IME en screenreaders proberen, en de groottes van Tiptap, Slate en turndown zelf meten. Beweringen over CodeMirror's interne gedrag (paste leest <code>text/plain</code>, <code>syntaxTree</code> zonder DOM) komen uit kennis van de bibliotheek en zijn als aanname gemarkeerd waar ze de fasen raken.</p>
+</footer>
+</body>
+</html>
