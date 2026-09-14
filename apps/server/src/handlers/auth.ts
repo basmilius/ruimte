@@ -1,3 +1,4 @@
+import { MachineIconSchema, machineRegistrationMessage } from '@ruimte/pulsar';
 import { RequestError, type ClientAccess, type Dispatcher } from '../dispatcher.ts';
 import { mayInvite } from '../auth/access.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
@@ -25,6 +26,7 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
         nameSource: identity.nameSource,
         icon: identity.icon,
         agentsDeleteAnyView: identity.agentsDeleteAnyView,
+        refuseStatements: identity.refuseStatements,
         platform: process.platform,
         version: host.version,
         reachability: access?.reachability ?? 'loopback',
@@ -40,8 +42,34 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
      * machines apart, so they belong to the machine and not to whichever client typed them.
      */
     dispatcher.register('endpoint.setIdentity', async (payload, client) => {
-        await identity.setIdentity(payload.name, payload.icon, payload.agentsDeleteAnyView);
+        await identity.setIdentity(payload.name, payload.icon, {
+            agentsDeleteAnyView: payload.agentsDeleteAnyView,
+            refuseStatements: payload.refuseStatements
+        });
         return info(client.access);
+    });
+
+    /*
+     * The machine agreeing to be listed on one address book account. Any client that got in may ask,
+     * since it already reaches everything the account would lead to; the client posts the answer with
+     * its own session, so no account token ever reaches the daemon. The name is signed as the machine
+     * calls itself, cut to what the address book stores, and the icon and the broker travel unsigned.
+     */
+    dispatcher.register('endpoint.signRegistration', (payload) => {
+        const name = identity.label.slice(0, 80);
+        const issuedAt = Date.now();
+        const icon = MachineIconSchema.safeParse(identity.icon);
+        return {
+            registration: {
+                id: identity.id,
+                name,
+                icon: icon.success ? icon.data : null,
+                brokerUrl: host.brokerUrl,
+                publicKey: identity.publicKey,
+                issuedAt,
+                signature: identity.sign(machineRegistrationMessage(payload.accountId, identity.id, identity.publicKey, name, issuedAt))
+            }
+        };
     });
 
     /*

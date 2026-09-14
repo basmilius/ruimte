@@ -27,7 +27,11 @@ const FileSchema = z.object({
     /* Whether an agent's `view delete` may remove any view of a project on this machine instead of
        only the ones it made. It is here rather than in a client's settings because the daemon is
        what enforces it, and a client setting would hold nothing back. Absent is off. */
-    agentsDeleteAnyView: z.boolean().optional().catch(undefined)
+    agentsDeleteAnyView: z.boolean().optional().catch(undefined),
+    /* Whether a statement from the address book is turned away, which leaves a pairing link as the only
+       way in. Here for the same reason as the switch above: the daemon is what takes a statement or
+       does not. Absent is off, which is what "logging in grants access" means. */
+    refuseStatements: z.boolean().optional().catch(undefined)
 });
 
 interface IdentityOptions {
@@ -40,6 +44,13 @@ interface IdentityOptions {
     name: string | null;
     icon: ProjectIconChoice | null;
     agentsDeleteAnyView: boolean;
+    refuseStatements: boolean;
+}
+
+/* The switches a client sets on the machine; one left out stays as it stands. */
+export interface IdentityFlags {
+    agentsDeleteAnyView?: boolean;
+    refuseStatements?: boolean;
 }
 
 /*
@@ -59,6 +70,7 @@ export class EndpointIdentity {
     private chosenName: string | null;
     private chosenIcon: ProjectIconChoice | null;
     private deleteAnyView: boolean;
+    private noStatements: boolean;
 
     constructor(options: IdentityOptions) {
         this.path = options.path;
@@ -69,6 +81,7 @@ export class EndpointIdentity {
         this.chosenName = options.name;
         this.chosenIcon = options.icon;
         this.deleteAnyView = options.agentsDeleteAnyView;
+        this.noStatements = options.refuseStatements;
     }
 
     /* What clients call this machine: the name a person gave it, or the one it started with. */
@@ -90,6 +103,11 @@ export class EndpointIdentity {
         return this.deleteAnyView;
     }
 
+    /* What an offer carrying a statement is asked about. Off on a fresh machine. */
+    get refuseStatements(): boolean {
+        return this.noStatements;
+    }
+
     /* Signs a message with the daemon's private key; the private half never leaves this object. */
     sign(message: string): string {
         return signMessage(this.privateKey, message);
@@ -106,17 +124,25 @@ export class EndpointIdentity {
 
     /*
      * A null name hands the machine back to the one it starts with; a null icon leaves it without
-     * one. What an agent may delete is left as it stands when it is not passed, since the dialog
-     * that names a machine is not the control that sets it.
+     * one. A switch is left as it stands when it is not passed, since the dialog that names a machine
+     * is not the control that sets either.
      */
-    async setIdentity(name: string | null, icon: ProjectIconChoice | null, agentsDeleteAnyView?: boolean): Promise<void> {
+    async setIdentity(name: string | null, icon: ProjectIconChoice | null, flags: IdentityFlags = {}): Promise<void> {
         this.chosenName = name;
         this.chosenIcon = icon;
-        this.deleteAnyView = agentsDeleteAnyView ?? this.deleteAnyView;
+        this.deleteAnyView = flags.agentsDeleteAnyView ?? this.deleteAnyView;
+        this.noStatements = flags.refuseStatements ?? this.noStatements;
         await this.persist();
         const event: SessionEvent = {
             event: 'endpoint.changed',
-            payload: { id: this.id, label: this.label, nameSource: this.nameSource, icon: this.chosenIcon, agentsDeleteAnyView: this.deleteAnyView }
+            payload: {
+                id: this.id,
+                label: this.label,
+                nameSource: this.nameSource,
+                icon: this.chosenIcon,
+                agentsDeleteAnyView: this.deleteAnyView,
+                refuseStatements: this.noStatements
+            }
         };
         for (const sink of this.sinks.values()) {
             sink(event);
@@ -132,7 +158,8 @@ export class EndpointIdentity {
             privateKey: this.privateKey,
             ...(this.chosenName === null ? {} : { name: this.chosenName }),
             ...(this.chosenIcon === null ? {} : { icon: this.chosenIcon }),
-            ...(this.deleteAnyView ? { agentsDeleteAnyView: true } : {})
+            ...(this.deleteAnyView ? { agentsDeleteAnyView: true } : {}),
+            ...(this.noStatements ? { refuseStatements: true } : {})
         };
         await mkdir(dirname(this.path), { recursive: true, mode: 0o700 });
         await writeAtomic(this.path, `${JSON.stringify(file, null, 2)}\n`, 0o600);
@@ -162,7 +189,8 @@ export const readOrCreateEndpointIdentity = async (home: string, defaultName: st
         defaultName,
         name: file?.name ?? null,
         icon: file?.icon ?? null,
-        agentsDeleteAnyView: file?.agentsDeleteAnyView ?? false
+        agentsDeleteAnyView: file?.agentsDeleteAnyView ?? false,
+        refuseStatements: file?.refuseStatements ?? false
     });
     if (!keys) {
         await identity.persist();

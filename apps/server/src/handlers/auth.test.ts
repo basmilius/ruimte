@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ServerFrame } from '@ruimte/contracts';
 import { AuthStore } from '../auth/auth-store.ts';
-import { generateKeyPair } from '../auth/keys.ts';
+import { machineRegistrationMessage } from '@ruimte/pulsar';
+import { generateKeyPair, verifySignature } from '../auth/keys.ts';
 import { Dispatcher, type ClientAccess, type ClientConnection } from '../dispatcher.ts';
 import { readOrCreateEndpointIdentity, type EndpointIdentity } from '../endpoint-id.ts';
 import { registerAuthHandlers } from './auth.ts';
@@ -109,7 +110,8 @@ describe('auth handlers', () => {
                     label: 'The one under the desk',
                     nameSource: 'chosen',
                     icon: { kind: 'lucide', value: 'server' },
-                    agentsDeleteAnyView: false
+                    agentsDeleteAnyView: false,
+                    refuseStatements: false
                 }
             }
         ]);
@@ -156,5 +158,40 @@ describe('auth handlers', () => {
             ok: true,
             result: { registered: false }
         });
+    });
+    test('the switch that refuses statements is set from any client, travels in endpoint.info and leaves the name alone', async () => {
+        expect(await ask({ reachability: 'loopback', sessionId: null }, 'endpoint.info')).toMatchObject({ ok: true, result: { refuseStatements: false } });
+        const refused = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: 'Studio', icon: null, refuseStatements: true });
+        expect(refused).toMatchObject({ ok: true, result: { label: 'Studio', refuseStatements: true, agentsDeleteAnyView: false } });
+        expect(identity.refuseStatements).toBe(true);
+        const renamed = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: 'Studio 2', icon: null });
+        expect(renamed).toMatchObject({ ok: true, result: { refuseStatements: true } });
+    });
+
+    test('a registration is signed by the machine for the account a client names, with what a client needs to reach it', async () => {
+        await identity.setIdentity('Studio', { kind: 'lucide', value: 'server' });
+        const frame = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.signRegistration', { accountId: 'account-1' });
+        if (!('ok' in frame) || !frame.ok) {
+            throw new Error(`Expected an answer, got ${JSON.stringify(frame)}`);
+        }
+        const { registration } = frame.result as {
+            registration: { id: string; name: string; publicKey: string; issuedAt: number; signature: string; icon: unknown; brokerUrl: unknown };
+        };
+        expect(registration).toMatchObject({
+            id: identity.id,
+            name: 'Studio',
+            publicKey: identity.publicKey,
+            icon: { kind: 'lucide', value: 'server' },
+            brokerUrl: null
+        });
+        const message = machineRegistrationMessage('account-1', identity.id, identity.publicKey, 'Studio', registration.issuedAt);
+        expect(verifySignature(identity.publicKey, message, registration.signature)).toBe(true);
+        expect(
+            verifySignature(
+                identity.publicKey,
+                machineRegistrationMessage('account-2', identity.id, identity.publicKey, 'Studio', registration.issuedAt),
+                registration.signature
+            )
+        ).toBe(false);
     });
 });

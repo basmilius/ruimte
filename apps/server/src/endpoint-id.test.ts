@@ -111,7 +111,10 @@ describe('readOrCreateEndpointIdentity', () => {
 
         await identity.setIdentity('Studio', null);
         expect(first).toEqual([
-            { event: 'endpoint.changed', payload: { id: identity.id, label: 'Studio', nameSource: 'chosen', icon: null, agentsDeleteAnyView: false } }
+            {
+                event: 'endpoint.changed',
+                payload: { id: identity.id, label: 'Studio', nameSource: 'chosen', icon: null, agentsDeleteAnyView: false, refuseStatements: false }
+            }
         ]);
         expect(second).toHaveLength(1);
 
@@ -125,7 +128,7 @@ describe('readOrCreateEndpointIdentity', () => {
         const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
         expect(identity.agentsDeleteAnyView).toBe(false);
 
-        await identity.setIdentity('Studio', null, true);
+        await identity.setIdentity('Studio', null, { agentsDeleteAnyView: true });
         expect(identity.agentsDeleteAnyView).toBe(true);
         expect((await readOrCreateEndpointIdentity(home, 'the-hostname')).agentsDeleteAnyView).toBe(true);
 
@@ -133,7 +136,7 @@ describe('readOrCreateEndpointIdentity', () => {
         await identity.setIdentity('Studio again', null);
         expect(identity.agentsDeleteAnyView).toBe(true);
 
-        await identity.setIdentity('Studio again', null, false);
+        await identity.setIdentity('Studio again', null, { agentsDeleteAnyView: false });
         const written = JSON.parse(await readFile(join(home, 'endpoint.json'), 'utf8')) as Record<string, unknown>;
         expect(written.agentsDeleteAnyView).toBeUndefined();
     });

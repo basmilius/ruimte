@@ -31,6 +31,8 @@ const binary = join(outDir, values.os === 'win' ? 'ruimte.exe' : 'ruimte');
 await mkdir(outDir, { recursive: true });
 
 const args = ['build', '--compile', `--target=bun-${bunOs[values.os]}-${values.arch}`, '--minify', join(root, 'src', 'main.ts'), '--outfile', binary];
+// A release believes the pinned statement keys and nothing else, whatever its environment holds.
+args.push('--define', 'process.env.RUIMTE_PULSAR_TEST_STATEMENT_KEY=""');
 if (process.env.RUIMTE_VERSION) {
     args.push('--define', `process.env.RUIMTE_VERSION=${JSON.stringify(process.env.RUIMTE_VERSION)}`);
 }

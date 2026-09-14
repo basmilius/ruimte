@@ -39,7 +39,7 @@ describe('AuthStore', () => {
         expect(file).toContain(paired!.id);
 
         const sessions = await store.list(paired!.id);
-        expect(sessions).toEqual([{ id: paired!.id, label: 'laptop', createdAt: clock, lastSeenAt: clock, current: true }]);
+        expect(sessions).toEqual([{ id: paired!.id, label: 'laptop', origin: 'link', createdAt: clock, lastSeenAt: clock, current: true }]);
         expect(await store.revoke(paired!.id)).toBe(true);
         expect(await store.revoke(paired!.id)).toBe(false);
         expect(await store.authenticate(paired!.sessionToken!)).toBeNull();
@@ -106,7 +106,7 @@ describe('AuthStore', () => {
             JSON.stringify({ sessions: [{ id: 'old', label: 'docker', tokenHash: 'a'.repeat(64), createdAt: 1, lastSeenAt: 2 }] })
         );
         const again = new AuthStore(home, () => clock);
-        expect(await again.list(null)).toEqual([{ id: 'old', label: 'docker', createdAt: 1, lastSeenAt: 2, current: false }]);
+        expect(await again.list(null)).toEqual([{ id: 'old', label: 'docker', origin: 'link', createdAt: 1, lastSeenAt: 2, current: false }]);
     });
 });
 

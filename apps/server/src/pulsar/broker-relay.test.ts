@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { BrokerPeerFrameSchema, brokerHelloMessage, signalMessage, type BrokerPeerFrame, type SignalEnvelope } from '@ruimte/pulsar';
+import { BrokerPeerFrameSchema, brokerHelloMessage, signalMessage, type BrokerPeerFrame, type SignalAccess, type SignalEnvelope } from '@ruimte/pulsar';
 import { generateKeyPair, signMessage, verifySignature } from '../auth/keys.ts';
 import { BrokerRelay } from './broker-relay.ts';
 
@@ -44,7 +44,7 @@ const waitUntil = async (ready: () => boolean): Promise<void> => {
 
 const quiet = { log: () => undefined, warn: () => undefined };
 
-const setup = async () => {
+const setup = async (admitStatement?: (publicKey: string, access: SignalAccess) => Promise<'admitted' | 'refused' | 'statements-refused'>) => {
     const machine = generateKeyPair();
     const paired = generateKeyPair();
     const sockets: FakeSocket[] = [];
@@ -56,6 +56,7 @@ const setup = async () => {
         publicKey: machine.publicKey,
         sign: (message) => signMessage(machine.privateKey, message),
         isPaired: async (publicKey) => pairedKeys.has(publicKey),
+        ...(admitStatement ? { admitStatement } : {}),
         receive: (envelope, reply) => {
             received.push(envelope);
             replies.push(reply);
@@ -163,5 +164,48 @@ describe('BrokerRelay', () => {
         await waitUntil(() => sockets.length === 3);
         await relay.stop();
         expect(sockets[2]!.closed).toBe(true);
+    });
+    test('an offer with a statement the gate takes pairs the key before it is answered, and one it refuses gets the reason', async () => {
+        const access: SignalAccess = {
+            statement: { machineId: 'm', clientPublicKey: 'A'.repeat(43), nonce: 'n'.repeat(22), issuedAt: 0, expiresAt: 1, signature: 's'.repeat(86) },
+            label: 'Laptop'
+        };
+        const verdicts = new Map<string, 'admitted' | 'refused' | 'statements-refused'>();
+        const asked: string[] = [];
+        const { relay, machine, pairedKeys, socket, received } = await setup(async (publicKey, carried) => {
+            asked.push(`${publicKey}:${carried.label}`);
+            const verdict = verdicts.get(publicKey) ?? 'refused';
+            if (verdict === 'admitted') {
+                pairedKeys.add(publicKey);
+            }
+            return verdict;
+        });
+        const newcomer = generateKeyPair();
+        verdicts.set(newcomer.publicKey, 'admitted');
+        const carrying: SignalEnvelope = { connectionId: 'attempt-0002', signal: { kind: 'offer', sdp: 'v=0', access } };
+        socket.deliver(relayedFrom(newcomer, machine.publicKey, carrying));
+        await waitUntil(() => received.length === 1);
+        expect(asked).toEqual([`${newcomer.publicKey}:Laptop`]);
+
+        const refusedByFlag = generateKeyPair();
+        verdicts.set(refusedByFlag.publicKey, 'statements-refused');
+        socket.deliver(relayedFrom(refusedByFlag, machine.publicKey, { ...carrying, connectionId: 'attempt-0003' }));
+        const refusedOutright = generateKeyPair();
+        socket.deliver(relayedFrom(refusedOutright, machine.publicKey, { ...carrying, connectionId: 'attempt-0004' }));
+        await waitUntil(() => socket.sent.length === 4);
+        const reasons = socket.sent.slice(2).map((frame) => {
+            const relayFrame = frame as Extract<BrokerPeerFrame, { type: 'relay' }>;
+            return [relayFrame.to, relayFrame.envelope.signal.kind === 'close' ? relayFrame.envelope.signal.reason : null];
+        });
+        expect(reasons).toContainEqual([refusedByFlag.publicKey, 'statements-refused']);
+        expect(reasons).toContainEqual([refusedOutright.publicKey, 'not-paired']);
+        expect(received).toHaveLength(1);
+
+        // A key that is paired already is never asked about the statement it carries.
+        const before = asked.length;
+        socket.deliver(relayedFrom(newcomer, machine.publicKey, { ...carrying, connectionId: 'attempt-0005' }));
+        await waitUntil(() => received.length === 2);
+        expect(asked).toHaveLength(before);
+        await relay.stop();
     });
 });

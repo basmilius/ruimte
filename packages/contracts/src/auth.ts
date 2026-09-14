@@ -1,3 +1,4 @@
+import { RegisterMachinePayloadSchema } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { ProjectIconChoiceSchema } from './project.ts';
 
@@ -26,6 +27,10 @@ export const EndpointInfoSchema = z.object({
        `endpoint.json` and not in a client's settings; a client only shows what it stands at.
        Absent from a daemon that predates the canvas view verbs, which is the same as false. */
     agentsDeleteAnyView: z.boolean().optional(),
+    /* Whether this machine turns away every statement from the address book, so a pairing link is
+       the only way in. Enforced by the daemon, kept in `endpoint.json`. Absent from a daemon from
+       before statements, which takes none anyway. */
+    refuseStatements: z.boolean().optional(),
     platform: z.string(),
     version: z.string(),
     reachability: ReachabilitySchema,
@@ -67,7 +72,9 @@ export const EndpointSetIdentityPayloadSchema = z.object({
     icon: ProjectIconChoiceSchema.nullable(),
     /* What an agent may delete, set from the same pane. Optional rather than nullable: the dialog
        that names a machine does not touch it, so leaving it out leaves the machine as it stands. */
-    agentsDeleteAnyView: z.boolean().optional()
+    agentsDeleteAnyView: z.boolean().optional(),
+    // Whether statements from the address book are turned away; left out, the machine stays as it stands.
+    refuseStatements: z.boolean().optional()
 });
 export type EndpointSetIdentityPayload = z.infer<typeof EndpointSetIdentityPayloadSchema>;
 
@@ -77,13 +84,21 @@ export const EndpointChangedEventSchema = z.object({
     label: z.string(),
     nameSource: EndpointNameSourceSchema,
     icon: ProjectIconChoiceSchema.nullable(),
-    agentsDeleteAnyView: z.boolean().optional()
+    agentsDeleteAnyView: z.boolean().optional(),
+    refuseStatements: z.boolean().optional()
 });
 export type EndpointChangedEvent = z.infer<typeof EndpointChangedEventSchema>;
+
+/* How a client got its access: a pairing link a person handed over, or a statement from the address
+   book that it is signed in to the same account as the machine. */
+export const PairingOriginSchema = z.enum(['link', 'statement']);
+export type PairingOrigin = z.infer<typeof PairingOriginSchema>;
 
 export const AuthSessionSchema = z.object({
     id: z.string().min(1),
     label: z.string(),
+    // Optional: a daemon from before statements answers without one, and all of its clients came in on a link.
+    origin: PairingOriginSchema.optional(),
     createdAt: z.number(),
     lastSeenAt: z.number(),
     // The session the asking client itself holds.
@@ -158,3 +173,18 @@ export const daemonChallengeMessage = (daemonId: string, challenge: string): str
 
 export const clientAuthMessage = (daemonId: string, challenge: string, publicKey: string): string =>
     `ruimte-client-v1\n${daemonId}\n${challenge}\n${publicKey}`;
+
+/*
+ * `endpoint.signRegistration`: the daemon's agreement to join one address book account, which the
+ * client posts to the address book with its own session. The daemon signs and holds no account token,
+ * so a machine is only ever on an account a client it already trusts asked for.
+ */
+export const EndpointSignRegistrationPayloadSchema = z.object({
+    accountId: z.string().min(1).max(64)
+});
+export type EndpointSignRegistrationPayload = z.infer<typeof EndpointSignRegistrationPayloadSchema>;
+
+export const EndpointSignRegistrationResultSchema = z.object({
+    registration: RegisterMachinePayloadSchema
+});
+export type EndpointSignRegistrationResult = z.infer<typeof EndpointSignRegistrationResultSchema>;

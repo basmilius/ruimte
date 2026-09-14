@@ -10,6 +10,7 @@ import { connectionOpener, socketChannel, type ClientChannel, type OpenConnectio
 import { authenticateChannel } from './pulsar/channel-auth.ts';
 import { AUTHENTICATED_FRAME_CHARS } from './pulsar/data-channel.ts';
 import { BrokerRelay } from './pulsar/broker-relay.ts';
+import { StatementGate, TEST_STATEMENT_KEY_VARIABLE, trustedStatementKeys } from './pulsar/statement.ts';
 import { DirectPeers } from './pulsar/peers.ts';
 import { registerDirectHandlers } from './handlers/direct.ts';
 import { suggestChatTitle } from './chat/chat-title.ts';
@@ -280,6 +281,17 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         }
     });
     registerDirectHandlers(dispatcher, peers);
+    const statementKeys = trustedStatementKeys(process.env, compiled);
+    if (statementKeys.length === 1 && statementKeys[0] === process.env[TEST_STATEMENT_KEY_VARIABLE]?.trim()) {
+        console.warn(`Believing statements signed by the test key in ${TEST_STATEMENT_KEY_VARIABLE} instead of the address book`);
+    }
+    // What lets a key nobody paired in on a statement from the address book, when the machine takes them.
+    const statements = new StatementGate({
+        machineId: identity.id,
+        trustedKeys: statementKeys,
+        refusesStatements: () => identity.refuseStatements,
+        store: auth
+    });
     // The broker is the second way a signal reaches `peers`, next to `direct.signal` on a socket.
     const relay: Relay =
         config.broker === null
@@ -289,6 +301,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                   publicKey: identity.publicKey,
                   sign: (message) => identity.sign(message),
                   isPaired: async (publicKey) => (await auth.sessionForPublicKey(publicKey)) !== null,
+                  admitStatement: (publicKey, access) => statements.admit(publicKey, access),
                   receive: (envelope, reply) => peers.receive(envelope, reply)
               });
 
@@ -333,6 +346,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         nameSource: identity.nameSource,
         icon: identity.icon,
         agentsDeleteAnyView: identity.agentsDeleteAnyView,
+        refuseStatements: identity.refuseStatements,
         platform: process.platform,
         version: VERSION,
         reachability,

@@ -76,6 +76,8 @@ import {
     EndpointChangedEventSchema,
     EndpointInfoSchema,
     EndpointSetIdentityPayloadSchema,
+    EndpointSignRegistrationPayloadSchema,
+    EndpointSignRegistrationResultSchema,
     PairingTokenResultSchema
 } from './auth.ts';
 import { DirectSignalPayloadSchema } from './direct.ts';
@@ -246,6 +248,7 @@ export const REQUEST_SCHEMAS = {
     'processes.dismiss': { payload: ProcessesDismissPayloadSchema, result: EmptySchema },
     'endpoint.info': { payload: EmptySchema, result: EndpointInfoSchema },
     'endpoint.setIdentity': { payload: EndpointSetIdentityPayloadSchema, result: EndpointInfoSchema },
+    'endpoint.signRegistration': { payload: EndpointSignRegistrationPayloadSchema, result: EndpointSignRegistrationResultSchema },
     'auth.sessions': { payload: EmptySchema, result: AuthSessionsResultSchema },
     'auth.revoke': { payload: AuthRevokePayloadSchema, result: EmptySchema },
     'auth.pairingToken': { payload: EmptySchema, result: PairingTokenResultSchema },

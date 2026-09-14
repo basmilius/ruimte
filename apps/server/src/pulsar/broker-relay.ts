@@ -1,4 +1,4 @@
-import { BrokerPeer, brokerHostOf, signalMessage, type BrokerRelayed, type SignalEnvelope } from '@ruimte/pulsar';
+import { BrokerPeer, brokerHostOf, signalMessage, type BrokerRelayed, type SignalAccess, type SignalEnvelope } from '@ruimte/pulsar';
 import { verifySignature } from '../auth/keys.ts';
 import type { Relay } from '../auth/relay.ts';
 
@@ -19,6 +19,8 @@ export interface BrokerRelayOptions {
     sign(message: string): string;
     /* Whether a client key is one a person paired with this machine. */
     isPaired(publicKey: string): Promise<boolean>;
+    /* What an offer from a key nobody paired gets for the statement it carries (`StatementGate`); without it no statement is taken. */
+    admitStatement?(publicKey: string, access: SignalAccess): Promise<'admitted' | 'refused' | 'statements-refused'>;
     /* The WebRTC answer code, which takes a signal and a way back and knows nothing of where either goes. */
     receive(envelope: SignalEnvelope, reply: (envelope: SignalEnvelope) => void): void;
     createSocket?(url: string): WebSocket;
@@ -208,7 +210,8 @@ export class BrokerRelay implements Relay {
      * One signal from a client. A signature that does not verify is dropped without a word: answering
      * it would let anyone make this machine sign messages for keys of their choosing. A signature that
      * verifies from a key nobody paired gets one signed `not-paired` for an offer, so a revoked client
-     * hears why at once instead of waiting out its timeout, and no peer connection is ever made for it.
+     * hears why at once instead of waiting out its timeout, and no peer connection is ever made for it,
+     * unless the offer carries a statement the gate takes, which pairs the key before it is answered.
      */
     private async relayed(frame: BrokerRelayed): Promise<void> {
         const { from, envelope, signature } = frame;
@@ -220,10 +223,18 @@ export class BrokerRelay implements Relay {
             void this.peer?.relay(from, answer);
         };
         if (!(await this.options.isPaired(from))) {
-            if (envelope.signal.kind === 'offer') {
-                reply({ connectionId: envelope.connectionId, signal: { kind: 'close', reason: 'not-paired' } });
+            const { signal } = envelope;
+            if (signal.kind !== 'offer') {
+                return;
             }
-            return;
+            const verdict = signal.access && this.options.admitStatement ? await this.options.admitStatement(from, signal.access) : 'refused';
+            if (verdict !== 'admitted') {
+                reply({
+                    connectionId: envelope.connectionId,
+                    signal: { kind: 'close', reason: verdict === 'statements-refused' ? 'statements-refused' : 'not-paired' }
+                });
+                return;
+            }
         }
         const now = Date.now();
         for (const [connectionId, owner] of this.owners) {
