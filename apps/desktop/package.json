@@ -15,12 +15,13 @@
         "smoke": "bun run build:main && RUIMTE_DEV_URL=http://localhost:5173 RUIMTE_SMOKE=1 bun scripts/launch.ts",
         "build": "bun run build:main",
         "icon": "bun scripts/icon.ts",
-        "typecheck": "tsc --noEmit",
+        "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
         "start": "bun run build:main && bun scripts/launch.ts",
         "pack": "bun run build:main && electron-builder --publish never",
         "pack:dir": "bun run build:main && electron-builder --dir --publish never"
     },
     "devDependencies": {
+        "@types/bun": "^1.4.0",
         "@types/node": "^24.13.3",
         "electron": "^44.3.0",
         "electron-builder": "^26.15.3",

@@ -47,5 +47,6 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
     configureUpdates: (autoDownload: boolean): Promise<void> => ipcRenderer.invoke('update:configure', autoDownload),
     checkForUpdate: (): Promise<void> => ipcRenderer.invoke('update:check'),
     downloadUpdate: (): Promise<void> => ipcRenderer.invoke('update:download'),
-    installUpdate: (): void => ipcRenderer.send('update:install')
+    installUpdate: (): void => ipcRenderer.send('update:install'),
+    releaseNotes: (refresh?: boolean): Promise<unknown> => ipcRenderer.invoke('releases:list', refresh === true)
 });

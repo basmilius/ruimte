@@ -3,9 +3,10 @@ import { existsSync, mkdirSync, openSync, writeFileSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { createReleaseNotes } from './release-notes';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
-const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, powerSaveBlocker, screen, session, shell, webContents } =
+const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, powerSaveBlocker, screen, session, shell, webContents } =
     require('electron') as typeof import('electron');
 
 /*
@@ -608,6 +609,8 @@ const checkForUpdate = async (): Promise<void> => {
     if (!updater || updateState.status === 'checking' || updateState.status === 'downloading' || updateState.status === 'ready') {
         return;
     }
+    // Refreshed with the check, so the notes of a version it finds are on disk before anyone asks.
+    void releaseNotes.list(true);
     try {
         await updater.checkForUpdates();
     } catch (e) {
@@ -642,6 +645,15 @@ ipcMain.handle('update:download', async () => {
 });
 
 ipcMain.on('update:install', () => updater?.quitAndInstall());
+
+/* From the REST API rather than the updater's atom feed: the feed carries GitHub's rendered HTML,
+   only the versions between this one and the next, and a tag whose release is still a draft. */
+const releaseNotes = createReleaseNotes({
+    fetch: (url, init) => net.fetch(url, init),
+    cacheFile: join(app.getPath('userData'), 'release-notes.json')
+});
+
+ipcMain.handle('releases:list', (_event, refresh?: boolean) => releaseNotes.list(refresh === true));
 
 /*
  * The application menu's first column. On macOS the stock `appMenu` role opens Electron's own About

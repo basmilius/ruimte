@@ -6,16 +6,12 @@
       "DOM"
     ],
     "types": [
-      "node"
+      "bun"
     ],
     "module": "ESNext",
     "moduleResolution": "bundler"
   },
   "include": [
-    "src",
-    "scripts"
-  ],
-  "exclude": [
     "src/**/*.test.ts"
   ]
 }

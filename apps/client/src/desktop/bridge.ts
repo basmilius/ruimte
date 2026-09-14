@@ -39,6 +39,21 @@ export interface UpdateState {
     error?: string | null;
 }
 
+/* One published release. Mirrors `apps/desktop/src/release-notes.ts`, which says what each field holds. */
+export interface Release {
+    version: string;
+    publishedAt: string;
+    body: string;
+    url: string;
+    compareUrl: string | null;
+}
+
+export interface ReleaseNotesState {
+    releases: Release[];
+    fetchedAt: string | null;
+    error: string | null;
+}
+
 /* What the agents of this window add up to, as the shell needs it. Mirrors `apps/desktop/src/main.ts`. */
 export interface AgentActivity {
     /* Agents in the middle of a turn. What the quit dialog names, and never an attached shell. */
@@ -101,6 +116,9 @@ export interface DesktopBridge {
     checkForUpdate?(): Promise<void>;
     downloadUpdate?(): Promise<void>;
     installUpdate?(): void;
+    /* The notes of the last releases, from the shell's copy on disk. `refresh` asks GitHub first.
+       Optional for the same reason `onBrowserContextMenu` is; without it About offers no notes. */
+    releaseNotes?(refresh?: boolean): Promise<ReleaseNotesState>;
 }
 
 declare global {
