@@ -63,7 +63,7 @@ function AccentSwatches() {
                     </Menu.Trigger>
                 </Tooltip>
                 <Menu.Portal>
-                    <Menu.Positioner className="z-[var(--z-popup)]" side="bottom" align="end" sideOffset={6}>
+                    <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
                         <Menu.Popup className="menu-popup max-h-96 overflow-y-auto">
                             <Menu.RadioGroup value={accent} onValueChange={(value: AccentId) => pick(value)}>
                                 {rest.map((entry) => (

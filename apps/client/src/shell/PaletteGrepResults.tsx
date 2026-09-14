@@ -15,7 +15,7 @@ interface LineProps {
 /* One line of the file as the list draws it: its number, then the source, with the hit picked out. */
 function GrepLine({ number, text, hit }: LineProps) {
     return (
-        <div className="flex gap-3 font-mono text-code leading-[var(--text-code--line-height)]">
+        <div className="flex gap-3 font-mono text-code leading-(--text-code--line-height)">
             <span className={clsx('w-10 shrink-0 text-right tabular-nums', hit ? 'text-text-muted' : 'text-text-faint')}>{number}</span>
             <span className={clsx('min-w-0 truncate whitespace-pre', hit ? 'text-text' : 'text-text-faint')}>
                 {hit ? (

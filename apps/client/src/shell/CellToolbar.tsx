@@ -134,7 +134,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                             </Popover.Trigger>
                         </Tooltip>
                         <Popover.Portal>
-                            <Popover.Positioner side="bottom" sideOffset={6} align="end" className="z-[var(--z-popup)]">
+                            <Popover.Positioner side="bottom" sideOffset={6} align="end" className="z-(--z-popup)">
                                 {/* A popover and not a menu: a browser's address field is among these,
                                     and a menu would take its keys for moving between items. */}
                                 <Popover.Popup className="menu-popup flex min-w-72 items-center gap-2 p-2 text-xs">{controls}</Popover.Popup>

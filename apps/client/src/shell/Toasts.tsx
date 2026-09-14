@@ -40,7 +40,7 @@ function ToastCard({ toast }: { toast: Toast }) {
         <div className={`flex items-start gap-2 rounded-[10px] p-2.5 pl-3 ${FLOAT}`}>
             {/* The box is as tall as the title's own line, so the mark centers on that line instead
                of on a square that is a little shorter than it. */}
-            <span className="grid h-[var(--text-sm--line-height)] w-5 shrink-0 place-items-center">
+            <span className="grid h-(--text-sm--line-height) w-5 shrink-0 place-items-center">
                 <Icon icon={ICON[toast.kind]} size={16} className={clsx(TONE[toast.kind], toast.kind === 'progress' && 'animate-spin')} />
             </span>
             <div className="flex min-w-0 grow flex-col gap-1">
@@ -82,7 +82,7 @@ export function Toasts() {
         return null;
     }
     return (
-        <div className="fixed right-4 bottom-4 z-[var(--z-popup)] flex w-90 max-w-[calc(100vw-32px)] flex-col gap-2" role="status" aria-live="polite">
+        <div className="fixed right-4 bottom-4 z-(--z-popup) flex w-90 max-w-[calc(100vw-32px)] flex-col gap-2" role="status" aria-live="polite">
             {toasts.map((toast) => (
                 <ToastCard key={toast.id} toast={toast} />
             ))}

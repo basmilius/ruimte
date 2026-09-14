@@ -204,9 +204,9 @@ export function Timeline({ chatId }: { chatId: string }) {
                                     ref={virtualizer.measureElement}
                                     className={clsx(
                                         'absolute left-0 top-0 w-full',
-                                        question && 'pb-[var(--chat-answer-gap)]',
-                                        question && virtualRow.index > 0 && 'pt-[var(--chat-turn-gap)]',
-                                        seam && 'pt-[var(--chat-block-gap)]'
+                                        question && 'pb-(--chat-answer-gap)',
+                                        question && virtualRow.index > 0 && 'pt-(--chat-turn-gap)',
+                                        seam && 'pt-(--chat-block-gap)'
                                     )}
                                     style={{ transform: `translateY(${virtualRow.start}px)` }}
                                 >

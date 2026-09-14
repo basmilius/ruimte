@@ -121,7 +121,7 @@ export function ViewMenu() {
                 <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
             </Menu.Trigger>
             <Menu.Portal>
-                <Menu.Positioner className="z-[var(--z-popup)]" side="bottom" sideOffset={6} align="start">
+                <Menu.Positioner className="z-(--z-popup)" side="bottom" sideOffset={6} align="start">
                     <Menu.Popup className="menu-popup min-w-52">
                         <div className={MENU_LABEL}>Views</div>
                         {views.filter(isOpenableView).map((view, index) => (

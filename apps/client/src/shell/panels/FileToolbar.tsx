@@ -98,7 +98,7 @@ function FileMenu() {
                 </Menu.Trigger>
             </Tooltip>
             <Menu.Portal>
-                <Menu.Positioner className="z-[var(--z-popup)]" side="bottom" align="end" sideOffset={6}>
+                <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
                     <Menu.Popup className="menu-popup">
                         {actions.tabKey === undefined ? (
                             <FileActionItems path={actions.path} on={actions.on} onRefresh={actions.refresh} />

@@ -33,7 +33,7 @@ export function UsageLimitsCard({ children }: { children: ReactElement<Record<st
         <PreviewCard.Root onOpenChange={(open) => open && setOpened(true)}>
             <PreviewCard.Trigger render={children} delay={500} />
             <PreviewCard.Portal>
-                <PreviewCard.Positioner side="top" align="end" sideOffset={8} className="z-[var(--z-popup)]">
+                <PreviewCard.Positioner side="top" align="end" sideOffset={8} className="z-(--z-popup)">
                     <PreviewCard.Popup className="menu-popup w-64 p-3">
                         <h2 className={clsx(SECTION_LABEL, 'mb-3 block')}>Limits</h2>
                         {opened && <CardBody />}

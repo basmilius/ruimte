@@ -109,7 +109,7 @@ export function ProjectMenu() {
                     <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
                 </Menu.Trigger>
                 <Menu.Portal>
-                    <Menu.Positioner className="z-[var(--z-popup)]" side="bottom" sideOffset={6} align="start">
+                    <Menu.Positioner className="z-(--z-popup)" side="bottom" sideOffset={6} align="start">
                         <Menu.Popup className="menu-popup min-w-60">
                             {open.length > 0 && <div className={MENU_LABEL}>Projects</div>}
                             {open.map((row) => (
@@ -124,7 +124,7 @@ export function ProjectMenu() {
                                             <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
                                         </Menu.SubmenuTrigger>
                                         <Menu.Portal>
-                                            <Menu.Positioner className="z-[var(--z-popup)]" sideOffset={4} alignOffset={-4}>
+                                            <Menu.Positioner className="z-(--z-popup)" sideOffset={4} alignOffset={-4}>
                                                 <Menu.Popup className="menu-popup min-w-60">
                                                     {recent.map((row) => (
                                                         <ProjectRow

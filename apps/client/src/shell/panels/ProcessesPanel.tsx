@@ -136,7 +136,7 @@ function Numbers({ row }: { row: { cpu: number | null; memory: number | null; di
 function SignalMenu({ target, onSignal, onForce }: { target: Target; onSignal(target: Target, signal: ProcessSignal): void; onForce(target: Target): void }) {
     return (
         <ContextMenu.Portal>
-            <ContextMenu.Positioner className="z-[var(--z-popup)]">
+            <ContextMenu.Positioner className="z-(--z-popup)">
                 <ContextMenu.Popup className="menu-popup">
                     <div className={MENU_LABEL}>
                         {target.name} ({target.pid})

@@ -308,7 +308,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
                 )}
             </ContextMenu.Trigger>
             <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-[var(--z-popup)]">
+                <ContextMenu.Positioner className="z-(--z-popup)">
                     <ContextMenu.Popup className="menu-popup">
                         <ContextMenu.Item className="menu-item" disabled={!selected} onClick={() => copyText(termRef.current?.getSelection() ?? '')}>
                             <Icon icon={Copy} size={14} /> Copy

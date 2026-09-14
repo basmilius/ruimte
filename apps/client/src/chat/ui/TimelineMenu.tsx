@@ -30,7 +30,7 @@ export function TimelineMenuPopup({ target, scroller }: { target: TimelineTarget
     };
     return (
         <ContextMenu.Portal>
-            <ContextMenu.Positioner className="z-[var(--z-popup)]">
+            <ContextMenu.Positioner className="z-(--z-popup)">
                 <ContextMenu.Popup className="menu-popup">
                     <ContextMenu.Item className="menu-item" disabled={target.selection === ''} onClick={() => copyText(target.selection)}>
                         <Icon icon={Copy} size={14} /> Copy <kbd>⌘C</kbd>

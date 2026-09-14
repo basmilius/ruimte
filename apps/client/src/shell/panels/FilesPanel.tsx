@@ -496,7 +496,7 @@ export function FilesPanel() {
                         </Menu.Trigger>
                     </Tooltip>
                     <Menu.Portal>
-                        <Menu.Positioner className="z-[var(--z-popup)]" side="bottom" align="end" sideOffset={6}>
+                        <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
                             <Menu.Popup className="menu-popup">
                                 <Menu.Item className="menu-item" onClick={() => useUi.getState().openFindInFiles()}>
                                     <Icon icon={FileSearch} size={14} /> Find in files <kbd>⇧⌘F</kbd>
@@ -563,7 +563,7 @@ export function FilesPanel() {
                         />
                     </ContextMenu.Trigger>
                     <ContextMenu.Portal>
-                        <ContextMenu.Positioner className="z-[var(--z-popup)]">
+                        <ContextMenu.Positioner className="z-(--z-popup)">
                             <ContextMenu.Popup className="menu-popup">
                                 <ContextMenu.Item className="menu-item" onClick={onMenuPath((_absolute, treePath) => openPath(treePath))}>
                                     <Icon icon={FolderOpen} size={14} /> Open

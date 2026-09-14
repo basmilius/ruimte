@@ -549,7 +549,7 @@ export function Canvas() {
                                         <Icon icon={ChevronDown} size={12} />
                                     </Menu.Trigger>
                                     <Menu.Portal>
-                                        <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={6} align="center">
+                                        <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={6} align="center">
                                             <Menu.Popup className="menu-popup">
                                                 <Menu.Item className="menu-item" onClick={() => addNodeAtCenter('terminal')}>
                                                     <Icon icon={Terminal} size={14} /> Terminal <kbd>⌥T</kbd>

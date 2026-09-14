@@ -79,7 +79,7 @@ export function BranchMenu({ target, targets, branch, detached, refs, loading, o
                 </Menu.Trigger>
             </Tooltip>
             <Menu.Portal>
-                <Menu.Positioner className="z-[var(--z-popup)]" side="bottom" align="start" sideOffset={6}>
+                <Menu.Positioner className="z-(--z-popup)" side="bottom" align="start" sideOffset={6}>
                     <Menu.Popup className="menu-popup max-h-96 w-80 overflow-y-auto">
                         <div className={MENU_LABEL}>Checkout</div>
                         <Menu.RadioGroup

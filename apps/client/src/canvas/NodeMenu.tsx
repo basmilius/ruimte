@@ -101,7 +101,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
 
     return (
         <ContextMenu.Portal>
-            <ContextMenu.Positioner className="z-[var(--z-popup)]">
+            <ContextMenu.Positioner className="z-(--z-popup)">
                 <ContextMenu.Popup className="menu-popup">
                     <ContextMenu.Item className="menu-item" onClick={onRename}>
                         <Icon icon={Pencil} size={14} /> Rename <span className={MENU_HINT}>dbl-click</span>
@@ -174,7 +174,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                                     <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
                                 </ContextMenu.SubmenuTrigger>
                                 <ContextMenu.Portal>
-                                    <ContextMenu.Positioner className="z-[var(--z-popup)]" sideOffset={4} alignOffset={-4}>
+                                    <ContextMenu.Positioner className="z-(--z-popup)" sideOffset={4} alignOffset={-4}>
                                         <ContextMenu.Popup className="menu-popup min-w-40">
                                             {NOTE_COLORS.map((color) => (
                                                 <ContextMenu.Item
@@ -198,7 +198,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                             <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
                         </ContextMenu.SubmenuTrigger>
                         <ContextMenu.Portal>
-                            <ContextMenu.Positioner className="z-[var(--z-popup)]" sideOffset={4} alignOffset={-4}>
+                            <ContextMenu.Positioner className="z-(--z-popup)" sideOffset={4} alignOffset={-4}>
                                 {/* Every hue at once, so the labels give way to a grid the eye
                                     reads in one pass; the name of a color lives in its tooltip. */}
                                 <ContextMenu.Popup className="menu-popup grid min-w-0 grid-cols-6 gap-1 p-2">

@@ -73,7 +73,7 @@ export function ProjectActionsMenu() {
                     </Menu.Trigger>
                 </Tooltip>
                 <Menu.Portal>
-                    <Menu.Positioner className="z-[var(--z-popup)]" side="bottom" align="end" sideOffset={6}>
+                    <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
                         <Menu.Popup className="menu-popup min-w-52">
                             {current.folder && (
                                 <Menu.Item className="menu-item" onClick={() => void reveal(current.folder!)}>

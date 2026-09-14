@@ -123,7 +123,7 @@ export function BrowserContextMenu() {
             <ContextMenu.Trigger ref={trigger} className="fixed top-0 left-0 h-0 w-0" aria-hidden />
             {groups !== null && (
                 <ContextMenu.Portal>
-                    <ContextMenu.Positioner className="z-[var(--z-popup)]">
+                    <ContextMenu.Positioner className="z-(--z-popup)">
                         <ContextMenu.Popup className="menu-popup">
                             {groups.map((group, index) => (
                                 <Fragment key={group[0]?.id ?? index}>

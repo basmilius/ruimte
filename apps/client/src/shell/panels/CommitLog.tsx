@@ -126,7 +126,7 @@ export function CommitLog({ cwd, revision, reading, onOpen }: CommitLogProps) {
                                 <span className="shrink-0 text-text-faint">{relativeTime(commit.at, now)}</span>
                             </ContextMenu.Trigger>
                             <ContextMenu.Portal>
-                                <ContextMenu.Positioner className="z-[var(--z-popup)]">
+                                <ContextMenu.Positioner className="z-(--z-popup)">
                                     <ContextMenu.Popup className="menu-popup">
                                         <ContextMenu.Item className="menu-item" onClick={() => onOpen(commit)}>
                                             <Icon icon={GitCommitHorizontal} size={14} /> Open the commit

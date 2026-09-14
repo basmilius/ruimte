@@ -18,7 +18,7 @@ const triggerClass =
 function Popup({ children, minWidth }: { children: React.ReactNode; minWidth?: string }) {
     return (
         <Menu.Portal>
-            <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={8} align="start">
+            <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={8} align="start">
                 <Menu.Popup className={clsx('menu-popup', minWidth)}>{children}</Menu.Popup>
             </Menu.Positioner>
         </Menu.Portal>
@@ -144,7 +144,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                 </Popover.Trigger>
             </Tooltip>
             <Popover.Portal>
-                <Popover.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={8} align="start">
+                <Popover.Positioner className="z-(--z-popup)" side="top" sideOffset={8} align="start">
                     <Popover.Popup className="picker-popup" initialFocus={inputRef}>
                         <div className="flex items-center gap-2 border-b border-border px-2.5">
                             <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />
@@ -312,7 +312,7 @@ export function StashPicker({ onRestore }: { onRestore(prompt: StashedPrompt): v
                 </Popover.Trigger>
             </Tooltip>
             <Popover.Portal>
-                <Popover.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={8} align="start">
+                <Popover.Positioner className="z-(--z-popup)" side="top" sideOffset={8} align="start">
                     <Popover.Popup className="picker-popup w-80">
                         <div className={`${SECTION_LABEL} px-3 pt-2`}>Stashed prompts</div>
                         <div className="max-h-72 overflow-auto p-1">

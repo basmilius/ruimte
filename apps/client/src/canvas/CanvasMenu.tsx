@@ -20,7 +20,7 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
     };
     return (
         <ContextMenu.Portal>
-            <ContextMenu.Positioner className="z-[var(--z-popup)]">
+            <ContextMenu.Positioner className="z-(--z-popup)">
                 <ContextMenu.Popup className="menu-popup">
                     <div className={MENU_LABEL}>Add here</div>
                     <ContextMenu.Item className="menu-item" onClick={() => add('terminal')}>

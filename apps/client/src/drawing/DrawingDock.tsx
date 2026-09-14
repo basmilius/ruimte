@@ -161,7 +161,7 @@ export function DrawingDock() {
                         </Menu.Trigger>
                     </Tooltip>
                     <Menu.Portal>
-                        <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={10} align="center">
+                        <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="center">
                             <Menu.Popup className="menu-popup">
                                 <div className={MENU_LABEL}>Stroke</div>
                                 <Swatches value={style.stroke} onPick={(stroke) => set({ stroke })} />
@@ -183,7 +183,7 @@ export function DrawingDock() {
                         </Menu.Trigger>
                     </Tooltip>
                     <Menu.Portal>
-                        <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={10} align="center">
+                        <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="center">
                             <Menu.Popup className="menu-popup min-w-44">
                                 <div className={MENU_LABEL}>Stroke width</div>
                                 <Menu.RadioGroup value={style.strokeWidth} onValueChange={(value: DrawingStyle['strokeWidth']) => set({ strokeWidth: value })}>
@@ -261,7 +261,7 @@ export function DrawingDock() {
                         </Menu.Trigger>
                     </Tooltip>
                     <Menu.Portal>
-                        <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={10} align="center">
+                        <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="center">
                             <Menu.Popup className="menu-popup min-w-44">
                                 <Menu.RadioGroup value={preset} onValueChange={(value: number) => drawingStore.getState().zoomTo(value / 100)}>
                                     {ZOOM_PRESETS.map((pct) => (
@@ -315,7 +315,7 @@ export function DrawingDock() {
                         </Menu.Trigger>
                     </Tooltip>
                     <Menu.Portal>
-                        <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={10} align="end">
+                        <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="end">
                             <Menu.Popup className="menu-popup min-w-52">
                                 <div className={MENU_LABEL}>{hasSelection ? 'Export the selection' : 'Export the drawing'}</div>
                                 <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDrawingPng(drawingStore)}>

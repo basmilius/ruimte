@@ -107,7 +107,7 @@ export function FileTabs() {
                             </Tooltip>
                         </ContextMenu.Trigger>
                         <ContextMenu.Portal>
-                            <ContextMenu.Positioner className="z-[var(--z-popup)]">
+                            <ContextMenu.Positioner className="z-(--z-popup)">
                                 <ContextMenu.Popup className="menu-popup">
                                     <FileMenuItems tabKey={tab.key} />
                                 </ContextMenu.Popup>

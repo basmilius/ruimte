@@ -90,7 +90,7 @@ export function Dock() {
                     </Menu.Trigger>
                 </Tooltip>
                 <Menu.Portal>
-                    <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={10} align="start">
+                    <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="start">
                         <Menu.Popup className="menu-popup">
                             <Menu.Item className="menu-item" onClick={() => add('terminal')}>
                                 <Icon icon={Terminal} size={14} /> Terminal <kbd>⌥T</kbd>
@@ -131,7 +131,7 @@ export function Dock() {
                         </Menu.Trigger>
                     </Tooltip>
                     <Menu.Portal>
-                        <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={10} align="center">
+                        <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="center">
                             <Menu.Popup className="menu-popup min-w-44">
                                 <Menu.RadioGroup value={preset} onValueChange={(value: number) => canvasStore.getState().zoomTo(value / 100)}>
                                     {ZOOM_PRESETS.map((pct) => (
@@ -185,7 +185,7 @@ export function Dock() {
                         </Menu.Trigger>
                     </Tooltip>
                     <Menu.Portal>
-                        <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={10} align="end">
+                        <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="end">
                             <Menu.Popup className="menu-popup">
                                 <div className={MENU_LABEL}>Refuse gestures</div>
                                 {LOCK_ROWS.map((row) => (
@@ -225,7 +225,7 @@ export function Dock() {
                         </Menu.Trigger>
                     </Tooltip>
                     <Menu.Portal>
-                        <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={10} align="end">
+                        <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="end">
                             <Menu.Popup className="menu-popup min-w-48">
                                 <div className={MENU_LABEL}>Saved layouts</div>
                                 {layouts.length === 0 && <div className="px-2.5 pb-1.5 text-xs text-text-faint">Nothing saved yet.</div>}

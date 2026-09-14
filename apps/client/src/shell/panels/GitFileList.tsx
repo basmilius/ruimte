@@ -238,7 +238,7 @@ function GitDirectoryRow({
                 <span className={`${GIT_ROW_ACTIONS} ${BTN_GROUP}`} />
             </ContextMenu.Trigger>
             <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-[var(--z-popup)]">
+                <ContextMenu.Positioner className="z-(--z-popup)">
                     <ContextMenu.Popup className="menu-popup">
                         <ContextMenu.Item className="menu-item" onClick={() => useGit.getState().toggleDir(row.path)}>
                             <Icon icon={collapsed ? ChevronsUpDown : ChevronsDownUp} size={14} /> {collapsed ? 'Expand this folder' : 'Collapse this folder'}
@@ -322,7 +322,7 @@ function GitFileRow({
                 </span>
             </ContextMenu.Trigger>
             <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-[var(--z-popup)]">
+                <ContextMenu.Positioner className="z-(--z-popup)">
                     <ContextMenu.Popup className="menu-popup">
                         <ContextMenu.Item className="menu-item" onClick={onOpen}>
                             <Icon icon={FileDiff} size={14} /> Open changes

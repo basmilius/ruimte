@@ -33,7 +33,7 @@ export function Segmented<T extends string>({
                     aria-checked={value === option.id}
                     className={clsx(
                         'h-7 rounded-md px-3 transition-colors',
-                        value === option.id ? 'bg-surface-raised text-text shadow-sm' : 'text-text-muted hover:text-text'
+                        value === option.id ? 'bg-surface-raised text-text shadow-node' : 'text-text-muted hover:text-text'
                     )}
                     onClick={() => onChange(option.id)}
                 >
@@ -53,7 +53,7 @@ export function Toggle({ checked, onChange, label, disabled }: { checked: boolea
             disabled={disabled}
             className="relative h-5 w-9 shrink-0 rounded-full bg-border-strong p-0.5 transition-colors data-checked:bg-accent data-disabled:opacity-50"
         >
-            <Switch.Thumb className="block h-4 w-4 rounded-full bg-surface-raised shadow-sm transition-transform data-checked:translate-x-4" />
+            <Switch.Thumb className="block h-4 w-4 rounded-full bg-surface-raised shadow-node transition-transform data-checked:translate-x-4" />
         </Switch.Root>
     );
 }

@@ -19,7 +19,7 @@ function Submenu({ label, icon, children }: { label: string; icon: ReactNode; ch
                 <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
             </Menu.SubmenuTrigger>
             <Menu.Portal>
-                <Menu.Positioner className="z-[var(--z-popup)]" sideOffset={4} alignOffset={-4}>
+                <Menu.Positioner className="z-(--z-popup)" sideOffset={4} alignOffset={-4}>
                     <Menu.Popup className="menu-popup min-w-48">{children}</Menu.Popup>
                 </Menu.Positioner>
             </Menu.Portal>

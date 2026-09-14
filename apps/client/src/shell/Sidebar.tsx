@@ -280,7 +280,7 @@ function SeparatorRow({ row, tabbable, onFocus, onArrow, onDelete, onDrag }: Omi
                 <span className="h-px grow bg-border" />
             </ContextMenu.Trigger>
             <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-[var(--z-popup)]">
+                <ContextMenu.Positioner className="z-(--z-popup)">
                     <ContextMenu.Popup className="menu-popup">
                         <ContextMenu.Item className="menu-item text-status-error" onClick={onDelete}>
                             <Icon icon={Trash} size={14} /> Delete
@@ -391,7 +391,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
                 {row.status && <StatusDot status={row.status} plain />}
             </ContextMenu.Trigger>
             <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-[var(--z-popup)]">
+                <ContextMenu.Positioner className="z-(--z-popup)">
                     <ContextMenu.Popup className="menu-popup">
                         <ContextMenu.Item className="menu-item" onClick={() => setRenaming(true)}>
                             <Icon icon={Pencil} size={14} /> Rename <kbd>F2</kbd>
@@ -723,7 +723,7 @@ export function Sidebar() {
                             <Icon icon={Plus} size={14} /> New view
                         </Menu.Trigger>
                         <Menu.Portal>
-                            <Menu.Positioner className="z-[var(--z-popup)]" side="top" sideOffset={6} align="start">
+                            <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={6} align="start">
                                 <Menu.Popup className="menu-popup min-w-52">
                                     <NewViewItems />
                                 </Menu.Popup>
