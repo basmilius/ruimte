@@ -5,6 +5,29 @@ export const PROMPT_MAX_CHARS = 120000;
 // Below this the counter would only be noise; a prompt this long is already unusual.
 export const PROMPT_COUNTER_FROM = 100000;
 
+/*
+ * From this many bytes a paste of text becomes a file beside the prompt instead of text in it. A log
+ * or a file that large is something to read with a tool, not words for the model to take in on
+ * every turn, and in the textarea it buries what the person actually wants to say.
+ */
+export const PASTE_ATTACHMENT_FROM_BYTES = 32 * 1024;
+
+const encoder = new TextEncoder();
+
+/* Whether pasted text is large enough to go in as an attachment. Bytes, since that is what the file weighs. */
+export const pasteBecomesAttachment = (text: string): boolean =>
+    text.length * 3 >= PASTE_ATTACHMENT_FROM_BYTES && encoder.encode(text).length >= PASTE_ATTACHMENT_FROM_BYTES;
+
+/* A name for pasted text that no attachment of the draft has yet: paste-1.txt, paste-2.txt, ... */
+export const pastedTextName = (taken: string[]): string => {
+    const names = new Set(taken);
+    let index = 1;
+    while (names.has(`paste-${index}.txt`)) {
+        index += 1;
+    }
+    return `paste-${index}.txt`;
+};
+
 export interface PromptGuard {
     count: number;
     // Whether the counter is worth drawing at all.

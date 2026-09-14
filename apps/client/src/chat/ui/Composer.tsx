@@ -18,7 +18,7 @@ import {
     tokenizeChips,
     type MentionQuery
 } from '@/chat/mentions';
-import { PROMPT_MAX_CHARS, promptGuard, usableSlashCommands } from '@/chat/guards';
+import { PROMPT_MAX_CHARS, pasteBecomesAttachment, pastedTextName, promptGuard, usableSlashCommands } from '@/chat/guards';
 import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferences';
 import { STASH_SHORTCUT, stashDraft, type StashedPrompt, useStash } from '@/chat/stash';
 import { pageTimeline, scrollTimelineToEnd, subscribeTimelineEnd, timelineAtEnd } from '@/chat/timeline-scroll';
@@ -116,6 +116,8 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
     const [confirmClear, setConfirmClear] = useState(false);
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const backdropRef = useRef<HTMLDivElement>(null);
+    // A paste event says nothing about the keys behind it, so the key that asked for text inline is remembered here.
+    const pasteInlineRef = useRef(false);
     const providers = useProviders((s) => s.providers);
     const { approvals, questions } = usePendingRequests(chatId);
     const order = useChatRow(chatId, (row) => row?.order);
@@ -468,6 +470,8 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
     };
 
     const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+        // Shift with the paste shortcut pastes a large text inline after all; any other key forgets it.
+        pasteInlineRef.current = e.shiftKey && e.key.toLowerCase() === 'v' && (isApplePlatform() ? e.metaKey : e.ctrlKey);
         if (e.key === 'Escape') {
             // Escape leaves the node, unless it first has a recalled prompt to put back.
             if (historyIndex !== null) {
@@ -805,7 +809,23 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                             if (pasted.length > 0) {
                                 e.preventDefault();
                                 addFiles(pasted);
+                                return;
                             }
+                            const inline = pasteInlineRef.current;
+                            pasteInlineRef.current = false;
+                            const clip = e.clipboardData.getData('text/plain');
+                            // Without attachments there is nowhere else for the text to go, so it pastes as it always did.
+                            if (inline || capabilities?.attachments === false || !pasteBecomesAttachment(clip)) {
+                                return;
+                            }
+                            e.preventDefault();
+                            const el = e.currentTarget;
+                            // The paste still replaces what was selected; it just puts nothing in its place.
+                            if (el.selectionStart !== el.selectionEnd) {
+                                setText(text.slice(0, el.selectionStart) + text.slice(el.selectionEnd));
+                            }
+                            const name = pastedTextName(draft.attachments.map((attachment) => attachment.name));
+                            addFiles([new File([clip], name, { type: 'text/plain' })]);
                         }}
                         onKeyDown={onKeyDown}
                     />

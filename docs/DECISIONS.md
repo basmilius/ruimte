@@ -344,7 +344,13 @@ canvas, against Ruimte, one verdict each.
 - Codex chats hear about linked context too: the app-server has no system prompt, so the
   `ruimte-context` sentence goes in front of the first prompt instead of on a flag.
 - The composer guards a long prompt: past 100k characters a counter appears, past 120k the send
-  is refused, which is the size where a turn gets slower than the answer is worth. Commands only
+  is refused, which is the size where a turn gets slower than the answer is worth. A paste of text
+  from 32 KiB (UTF-8 bytes, `PASTE_ATTACHMENT_FROM_BYTES`) never reaches that far: it becomes a
+  `paste-<n>.txt` attachment, so the prompt names a file the agent reads with its own tools instead
+  of carrying a log in every turn. A selection the paste lands on is still replaced, by nothing.
+  Cmd+Shift+V (Ctrl+Shift+V elsewhere) pastes it inline after all; a paste event carries no keys, so
+  the composer remembers that the last key down was that one. A provider that takes no attachments
+  gets the text inline, since there is nowhere else for it to go. Commands only
   the CLI's own terminal can run (`/login`, `/theme`, `/doctor`, ...) are filtered out of the slash
   menu even though the init frame lists them (`chat/guards.ts`). PageUp and PageDown page the thread from the composer, through a scroller the
   timeline registers per chat (`chat/timeline-scroll.ts`), and a chat node with an unsent draft
