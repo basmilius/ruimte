@@ -2,6 +2,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import type { Subprocess } from 'bun';
+import { BrokerPeer, brokerHostOf, signalMessage, type BrokerRelayed, type SignalEnvelope } from '@ruimte/pulsar';
 import { generateKeyPair, signMessage, verifySignature } from '../auth/keys.ts';
 import { readLocalSecret } from '../auth/local-secret.ts';
 import { DirectClient, type DirectCredential } from '../pulsar/direct-client.ts';
@@ -1252,4 +1254,170 @@ describe.skipIf(!ENABLED)('two projects side by side', () => {
         mineRev = saved.rev;
         expect(await Bun.file(join(folder, '.ruimte/project.json')).text()).toContain('saved while the other machine is gone');
     }, 120_000);
+});
+
+/*
+ * The same channel with no socket to the container at all. A broker runs on this machine, the
+ * container dials it at `host.docker.internal` (`compose.yml`), and a client here signals through it
+ * alone: port 4320 is used for pairing and nothing after it. Stopping the broker afterwards shows
+ * that a channel that is in never needed it again.
+ */
+describe.skipIf(!ENABLED)('a direct connection signaled through the broker', () => {
+    const BROKER_PORT = 4420;
+    const BROKER_URL = `ws://127.0.0.1:${BROKER_PORT}`;
+    const BROKER_HEALTH = `http://127.0.0.1:${BROKER_PORT}/health`;
+    let broker: Subprocess | null = null;
+    const clients: DirectClient[] = [];
+    const sockets: WebSocket[] = [];
+
+    beforeAll(async () => {
+        broker = Bun.spawn(['bun', join(import.meta.dir, '..', '..', '..', 'pulsar-broker', 'src', 'main.ts'), '--port', String(BROKER_PORT)], {
+            stdout: 'ignore',
+            stderr: 'inherit'
+        });
+        await waitUntil('the broker to answer', async () => (await fetch(BROKER_HEALTH).catch(() => null))?.ok === true);
+    });
+
+    afterAll(async () => {
+        for (const client of clients) {
+            client.close();
+        }
+        for (const socket of sockets) {
+            socket.close();
+        }
+        broker?.kill();
+        await broker?.exited;
+    });
+
+    /* The container retries the broker with a backoff of up to 30 seconds, and it was started before the broker was. */
+    const machineAnnounced = (): Promise<void> =>
+        waitUntil(
+            'the machine in the container to announce itself to the broker',
+            async () => (((await (await fetch(BROKER_HEALTH)).json()) as { machines: number }).machines ?? 0) >= 1,
+            45_000
+        );
+
+    /* A client on the broker, the way the app signs in: its own key, the host it dialed, every relay signed. */
+    const onBroker = async (key: { publicKey: string; privateKey: string }) => {
+        const socket = new WebSocket(BROKER_URL);
+        sockets.push(socket);
+        const relayed: BrokerRelayed[] = [];
+        const listeners = new Set<(frame: BrokerRelayed) => void>();
+        let ready = false;
+        const peer = new BrokerPeer({
+            role: 'client',
+            publicKey: key.publicKey,
+            host: brokerHostOf(BROKER_URL),
+            sign: (message) => signMessage(key.privateKey, message),
+            send: (frame) => socket.send(frame),
+            events: {
+                ready: () => {
+                    ready = true;
+                },
+                relayed: (frame) => {
+                    relayed.push(frame);
+                    for (const listener of listeners) {
+                        listener(frame);
+                    }
+                },
+                refused: (frame) => {
+                    throw new Error(`The broker refused: ${JSON.stringify(frame)}`);
+                },
+                failed: (reason) => {
+                    throw new Error(reason);
+                }
+            }
+        });
+        socket.onopen = () => peer.start();
+        socket.onmessage = (message) => void peer.receive(String(message.data));
+        await waitUntil('the client to sign in to the broker', () => ready);
+        return { socket, peer, relayed, listen: (listener: (frame: BrokerRelayed) => void) => listeners.add(listener) };
+    };
+
+    test('the pairing answer names the broker the machine announces itself to', async () => {
+        const paired = await pair(generateKeyPair().publicKey);
+        expect(paired.endpoint.brokerUrl).toBe(BROKER_URL);
+        await machineAnnounced();
+    }, 60_000);
+
+    test('a key nobody paired gets a signed not-paired, and a signal a paired key did not sign gets nothing', async () => {
+        await machineAnnounced();
+        const machineKey = (await pair(generateKeyPair().publicKey)).endpoint.publicKey!;
+        const offer: SignalEnvelope = { connectionId: `stranger-${Date.now()}`, signal: { kind: 'offer', sdp: 'v=0' } };
+
+        const stranger = generateKeyPair();
+        const strangerOnBroker = await onBroker(stranger);
+        await strangerOnBroker.peer.relay(machineKey, offer);
+        await waitUntil('the refusal', () => strangerOnBroker.relayed.length === 1);
+        const refusal = strangerOnBroker.relayed[0]!;
+        expect(refusal.from).toBe(machineKey);
+        expect(refusal.envelope).toEqual({ connectionId: offer.connectionId, signal: { kind: 'close', reason: 'not-paired' } });
+        expect(verifySignature(machineKey, signalMessage(machineKey, stranger.publicKey, refusal.envelope), refusal.signature)).toBe(true);
+
+        const pairedKey = generateKeyPair();
+        await pair(pairedKey.publicKey);
+        const pairedOnBroker = await onBroker(pairedKey);
+        const forged: SignalEnvelope = { connectionId: `forged-${Date.now()}`, signal: { kind: 'offer', sdp: 'v=0' } };
+        pairedOnBroker.socket.send(
+            JSON.stringify({
+                type: 'relay',
+                id: 'forged',
+                to: machineKey,
+                envelope: forged,
+                signature: signMessage(generateKeyPair().privateKey, signalMessage(pairedKey.publicKey, machineKey, forged))
+            })
+        );
+        await new Promise((resolve) => setTimeout(resolve, 3_000));
+        expect(pairedOnBroker.relayed).toEqual([]);
+    }, 60_000);
+
+    test('a paired key opens the channel through the broker alone, and the channel outlives the broker', async () => {
+        await machineAnnounced();
+        const key = generateKeyPair();
+        const paired = await pair(key.publicKey);
+        const machineKey = paired.endpoint.publicKey!;
+        const onTheBroker = await onBroker(key);
+        const client = new DirectClient({
+            stunServers: [],
+            credential: { kind: 'key', publicKey: key.publicKey, privateKey: key.privateKey, daemonId: paired.endpoint.id, daemonPublicKey: machineKey },
+            timeoutMs: 20_000,
+            signal: (envelope) => void onTheBroker.peer.relay(machineKey, envelope)
+        });
+        clients.push(client);
+        onTheBroker.listen((frame) => {
+            // Believed only from the pinned key and only with its signature, the way the app does it.
+            if (frame.from === machineKey && verifySignature(machineKey, signalMessage(machineKey, key.publicKey, frame.envelope), frame.signature)) {
+                client.receiveSignal(frame.envelope);
+            }
+        });
+        await client.open();
+        // Like the app: the broker socket is only for the signals.
+        onTheBroker.socket.close();
+        expect((await client.request<EndpointInfo>('endpoint.info', {})).authenticated).toBe(true);
+        console.log(`direct channel through the broker: open after ${client.timings.channelOpenMs} ms, signed in after ${client.timings.authenticatedMs} ms`);
+
+        let output = '';
+        client.onFrame((raw) => {
+            const frame = JSON.parse(raw) as { event?: string; payload?: { data?: string } };
+            if (frame.event === 'session.output') {
+                output += frame.payload?.data ?? '';
+            }
+        });
+        const sessionId = `docker-broker-${Date.now()}`;
+        await client.request<SessionInfo>('session.create', { sessionId, cwd: REPO, cols: 80, rows: 24 });
+        try {
+            await client.request<SessionAttachResult>('session.attach', { sessionId, cols: 80, rows: 24 });
+            await client.request('session.write', { sessionId, data: 'echo brokered-$((6*7)) && uname -s\n' });
+            await waitUntil('the shell to answer over the channel', () => output.includes('brokered-42') && output.includes('Linux'));
+
+            broker!.kill();
+            await broker!.exited;
+            expect(await fetch(BROKER_HEALTH).catch(() => null)).toBeNull();
+            await client.request('session.write', { sessionId, data: 'echo without-broker-$((6*7))\n' });
+            await waitUntil('the shell to answer with the broker gone', () => output.includes('without-broker-42'));
+            expect(client.isOpen).toBe(true);
+        } finally {
+            await client.request('session.kill', { sessionId }).catch(() => undefined);
+        }
+    }, 90_000);
 });
