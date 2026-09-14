@@ -75,7 +75,8 @@ interface ComposerProps {
 }
 
 const usePendingRequests = (chatId: string) => {
-    const items = useChatRow(chatId, (row) => row?.items);
+    // The structure, which a delta leaves alone: the prompts and the requests are items of their own.
+    const items = useChatRow(chatId, (row) => row?.structure);
     const order = useChatRow(chatId, (row) => row?.order);
     return useMemo(() => {
         const approvals: ChatApprovalItem[] = [];
@@ -122,7 +123,8 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
     const providers = useProviders((s) => s.providers);
     const { approvals, questions } = usePendingRequests(chatId);
     const order = useChatRow(chatId, (row) => row?.order);
-    const items = useChatRow(chatId, (row) => row?.items);
+    // The structure, which a delta leaves alone: the prompts and the requests are items of their own.
+    const items = useChatRow(chatId, (row) => row?.structure);
 
     // The dock shows one request at a time and says how many others are behind it.
     const question = questions[0] ?? null;
