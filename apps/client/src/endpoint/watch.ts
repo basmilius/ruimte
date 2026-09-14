@@ -34,7 +34,8 @@ export const startEndpointWatch = (): (() => void) => {
                         label: payload.label,
                         nameSource: payload.nameSource,
                         icon: payload.icon,
-                        agentsDeleteAnyView: payload.agentsDeleteAnyView === true
+                        agentsDeleteAnyView: payload.agentsDeleteAnyView === true,
+                        refuseStatements: payload.refuseStatements === true
                     });
                     adoptMachineName(endpointId, payload.label, payload.nameSource);
                 })

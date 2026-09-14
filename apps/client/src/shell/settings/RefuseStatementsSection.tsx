@@ -10,17 +10,14 @@ import { pool, transportFor } from '@/transport';
 import { useEndpointConnection } from '@/transport/status';
 
 /*
- * What an agent on one machine may take away. It is the machine's own setting, in `endpoint.json`
- * beside the name and the icon, because the daemon is what enforces it and a client's own switch
- * would hold nothing back. The wire takes name, icon and this together, so the row sends the name
- * and the icon the machine already carries back unchanged.
+ * Whether one machine takes a statement from the address book at all. It is the machine's own switch,
+ * in `endpoint.json` beside what an agent may delete, because the daemon is what lets a key in; the
+ * wire takes name, icon and switches together, so the row sends back the name and icon the machine has.
  */
-function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
+function RefuseStatementsRow({ endpoint }: { endpoint: Endpoint }) {
     const info = useServers((s) => s.byEndpoint[endpoint.id]);
     const connected = useEndpointConnection(endpoint.id).status === 'open';
     const [busy, setBusy] = useState(false);
-    // The row is one of several machines, so the switch says which one it speaks for.
-    const label = `Agents on ${endpoint.label} may delete any view or node`;
 
     const set = async (checked: boolean): Promise<void> => {
         const link = transportFor(endpoint.id);
@@ -33,7 +30,7 @@ function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
                 // A machine nobody named answers to its own default, and sending that name back would make it chosen.
                 name: info?.nameSource === 'chosen' ? (info.label ?? null) : null,
                 icon: info?.icon ?? null,
-                agentsDeleteAnyView: checked
+                refuseStatements: checked
             });
             useServers.getState().setIdentity(endpoint.id, {
                 label: next.label,
@@ -44,7 +41,7 @@ function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
             });
         } catch (e) {
             useToasts.getState().show({
-                id: `endpoint-delete-any-view-${endpoint.id}`,
+                id: `endpoint-refuse-statements-${endpoint.id}`,
                 kind: 'error',
                 title: `${endpoint.label} could not save the change`,
                 description: e instanceof Error ? e.message : 'The setting is unchanged.'
@@ -64,21 +61,23 @@ function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
             }
             description={
                 connected
-                    ? 'Off, an agent only deletes views and nodes it created. On, it can delete any view or node in any project there, including yours.'
+                    ? 'On, only a pairing link lets a new client in. Off, a client signed in to an account this machine is on gets in, and shows up under Apps with access.'
                     : 'Not answering. Change this once the machine is back.'
             }
             control={
-                <Toggle checked={info?.agentsDeleteAnyView === true} onChange={(checked) => void set(checked)} label={label} disabled={busy || !connected} />
+                <Toggle
+                    checked={info?.refuseStatements === true}
+                    onChange={(checked) => void set(checked)}
+                    label={`Refuse sign-in through an account on ${endpoint.label}`}
+                    disabled={busy || !connected}
+                />
             }
         />
     );
 }
 
-/*
- * One switch per machine, under the settings about what an agent may do rather than in the Machines
- * pane: the pane is about pairing a machine and whether it answers, and this is about an agent.
- */
-export function DeleteAnyViewSection() {
+/* One switch per machine, in the Machines pane next to the list of who has access. */
+export function RefuseStatementsSection() {
     const endpoints = useEndpoints((s) => s.endpoints);
     // Every machine on the list keeps a socket while the pane is open, or its switch has nothing to read.
     useEffect(() => {
@@ -90,16 +89,15 @@ export function DeleteAnyViewSection() {
         };
     }, [endpoints]);
 
-    // This machine first, which is the one a person with a single machine is looking at.
     const ordered = [
         ...endpoints.filter((endpoint) => endpoint.id === LOCAL_ENDPOINT_ID),
         ...endpoints.filter((endpoint) => endpoint.id !== LOCAL_ENDPOINT_ID)
     ];
 
     return (
-        <SettingsSection title="What an agent may delete" description="Saved per machine. Applies to every client connected to it.">
+        <SettingsSection title="Refuse sign-in through an account" description="Saved per machine. Clients that already have access keep it.">
             {ordered.map((endpoint) => (
-                <DeleteAnyViewRow key={endpoint.id} endpoint={endpoint} />
+                <RefuseStatementsRow key={endpoint.id} endpoint={endpoint} />
             ))}
         </SettingsSection>
     );

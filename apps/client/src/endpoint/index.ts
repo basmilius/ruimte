@@ -18,7 +18,7 @@ import { connectionAddressFor, pool, transport } from '@/transport';
 import { dropMachine } from '@/transport/connections';
 import { useProcesses, useProcessWarnings } from '@/state/processes';
 import { clientKey } from './client-key';
-import { clientLabelFrom } from './client-label';
+import { currentClientLabel } from './client-label';
 import { forgetTicket } from './credentials';
 
 /*
@@ -176,16 +176,7 @@ export const revokePairedClient = async (session: AuthSession): Promise<void> =>
 };
 
 /* What the daemon lists this client as; `client-label.ts` holds the reading of it. */
-const clientLabel = (): string => {
-    const data = (navigator as Navigator & { userAgentData?: { brands?: { brand: string }[]; platform?: string } }).userAgentData;
-    return clientLabelFrom({
-        desktopPlatform: window.ruimteDesktop?.platform ?? null,
-        brands: data?.brands ?? null,
-        uaPlatform: data?.platform ?? null,
-        userAgent: navigator.userAgent,
-        platform: navigator.platform
-    });
-};
+const clientLabel = (): string => currentClientLabel();
 
 /* Opens the sockets this client keeps up on its own: the daemon that served the page, and the machine that is active. */
 export const startEndpointSelection = (): (() => void) => {

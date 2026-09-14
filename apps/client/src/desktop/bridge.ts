@@ -1,3 +1,5 @@
+import type { SessionExchangePayload } from '@ruimte/pulsar';
+
 /*
  * What the shell forwards when a page asks for a context menu: Electron's own params, trimmed to
  * what a row needs, plus the guest that asked. The menu itself is drawn by the client, except over
@@ -62,6 +64,26 @@ export interface AgentActivity {
     attention: number;
 }
 
+/*
+ * Signing in to the Pulsar address book, the part only the shell can do. Mirrors `pulsar` in
+ * `apps/desktop/src/preload.ts`. The answers are unknown on purpose: they crossed a process boundary,
+ * and `pulsar/desktop.ts` parses each one.
+ */
+export interface PulsarBridge {
+    /* The address book the shell signs in to, which the page uses for the machine list and statements. */
+    addressBook(): Promise<string>;
+    /* Opens a loopback listener for the login redirect; a second call gives up on the first. */
+    listen(): Promise<{ redirectUri: string }>;
+    /* The redirect, once the browser comes back with it. */
+    callback(): Promise<unknown>;
+    cancel(): Promise<void>;
+    /* Trades a login code for a session; the shell keeps the refresh token and answers with the rest. */
+    exchange(payload: SessionExchangePayload): Promise<unknown>;
+    refresh(): Promise<unknown>;
+    restore(): Promise<unknown>;
+    signOut(): Promise<void>;
+}
+
 /* The shell's API, present only inside the desktop app. Mirrors `apps/desktop/src/preload.ts`. */
 export interface DesktopBridge {
     platform: string;
@@ -123,6 +145,9 @@ export interface DesktopBridge {
        pairing: a loopback address is no proof of anything. Null while the daemon has not written it.
        Optional for the same reason `onBrowserContextMenu` is; without it the local row has to pair. */
     localSecret?(): Promise<string | null>;
+    /* Signing in to an account. Optional for the same reason `onBrowserContextMenu` is; without it
+       the account section says signing in works in the desktop app, which is also what a browser gets. */
+    pulsar?: PulsarBridge;
 }
 
 declare global {

@@ -1,4 +1,13 @@
-import { BrokerPeer, brokerHostOf, signalMessage, type BrokerError, type BrokerRateLimited, type BrokerRelayed, type SignalEnvelope } from '@ruimte/pulsar';
+import {
+    BrokerPeer,
+    brokerHostOf,
+    signalMessage,
+    type BrokerError,
+    type BrokerRateLimited,
+    type BrokerRelayed,
+    type SignalAccess,
+    type SignalEnvelope
+} from '@ruimte/pulsar';
 import type { ClientKey } from '@/endpoint/client-key';
 import type { SignalingOpener } from './signaling';
 
@@ -142,6 +151,8 @@ export interface BrokerSignalingOptions {
     machineKey: string;
     key(): Promise<ClientKey | null>;
     verify(publicKey: string, message: string, signature: string): Promise<boolean>;
+    /* A statement for the offer, for a machine that does not know this client's key yet; asked per offer, since the machine spends each one. */
+    access?(key: ClientKey): Promise<SignalAccess>;
     sockets?: BrokerSockets;
 }
 
@@ -158,6 +169,7 @@ export const brokerSignaling =
         const host = brokerHostOf(options.brokerUrl);
         const ids = new Set<string>();
         let membership: BrokerMembership | null = null;
+        let signer: ClientKey | null = null;
         let closed = false;
 
         const fail = (reason: string): void => {
@@ -193,6 +205,7 @@ export const brokerSignaling =
                     fail('A direct connection over the broker signs in with a key, and this browser cannot make one');
                     return;
                 }
+                signer = key;
                 membership = sockets.join(options.brokerUrl, key, {
                     ready: () => {
                         if (!closed) {
@@ -221,10 +234,25 @@ export const brokerSignaling =
 
         return {
             send: (signal) => {
-                void membership?.relay(options.machineKey, { connectionId, signal }).then((id) => {
-                    if (id !== null) {
-                        ids.add(id);
+                const outgoing =
+                    signal.kind === 'offer' && options.access && signer
+                        ? options
+                              .access(signer)
+                              .then((access) => ({ ...signal, access }))
+                              .catch((e: unknown) => {
+                                  fail(`Your account could not vouch for this client: ${e instanceof Error ? e.message : String(e)}`);
+                                  return null;
+                              })
+                        : Promise.resolve(signal);
+                void outgoing.then((ready) => {
+                    if (ready === null || closed) {
+                        return;
                     }
+                    void membership?.relay(options.machineKey, { connectionId, signal: ready }).then((id) => {
+                        if (id !== null) {
+                            ids.add(id);
+                        }
+                    });
                 });
             },
             close: () => {

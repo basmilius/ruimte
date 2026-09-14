@@ -12,6 +12,7 @@ import { startProjectList } from '@/project/list';
 import { startShowViewWatch } from '@/project/show-view-watch';
 import { restoreLastEndpoint } from '@/project/open';
 import { startConnections } from '@/transport/connections';
+import { startPulsarAccount } from '@/pulsar/account';
 import { desktop } from '@/desktop/bridge';
 import { startKeepAwake } from '@/state/keep-awake';
 import { startInputModality } from '@/ui/modality';
@@ -38,6 +39,7 @@ startProjectList();
 startShowViewWatch();
 startInputModality();
 startKeepAwake();
+void startPulsarAccount();
 /* The shell dresses its native chrome and every page it hosts in the theme the client is in. The
    background travels with it, so `styles.css` stays the only place the token is written down. */
 const reportTheme = (): void => {

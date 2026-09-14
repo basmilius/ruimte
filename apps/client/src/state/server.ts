@@ -18,6 +18,9 @@ export interface ServerInfo {
     /* Whether an agent on this machine may remove a view it did not make. The daemon enforces it, so
        this is only what the Machines pane stands at; false for a daemon that predates the setting. */
     agentsDeleteAnyView: boolean;
+    /* Whether this machine turns away a statement from the address book, so only a pairing link lets a
+       client in. Enforced by the daemon; false for a daemon that predates statements. */
+    refuseStatements: boolean;
     reachability: Reachability | null;
 }
 
@@ -31,15 +34,22 @@ const UNKNOWN: ServerInfo = {
     nameSource: null,
     icon: null,
     agentsDeleteAnyView: false,
+    refuseStatements: false,
     reachability: null
 };
 
 interface ServersStore {
     byEndpoint: Record<string, ServerInfo>;
     setInfo(endpointId: string, info: Pick<ServerInfo, 'platform' | 'home' | 'version' | 'model'>): void;
-    setEndpoint(endpointId: string, info: Pick<ServerInfo, 'label' | 'nameSource' | 'icon' | 'agentsDeleteAnyView' | 'reachability'>): void;
-    /* What someone set on this machine, from `endpoint.changed` or from setting it here. */
-    setIdentity(endpointId: string, info: Pick<ServerInfo, 'label' | 'nameSource' | 'icon' | 'agentsDeleteAnyView'>): void;
+    setEndpoint(
+        endpointId: string,
+        info: Pick<ServerInfo, 'label' | 'nameSource' | 'icon' | 'agentsDeleteAnyView' | 'refuseStatements' | 'reachability'>
+    ): void;
+    /* What someone set on this machine, from `endpoint.changed` or from setting it here. A switch left out stays where it stands. */
+    setIdentity(
+        endpointId: string,
+        info: Pick<ServerInfo, 'label' | 'nameSource' | 'icon' | 'agentsDeleteAnyView'> & Partial<Pick<ServerInfo, 'refuseStatements'>>
+    ): void;
     /* A machine that is forgotten takes what it said about itself with it. */
     forget(endpointId: string): void;
 }

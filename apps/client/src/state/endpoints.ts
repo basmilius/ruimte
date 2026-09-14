@@ -51,6 +51,16 @@ export interface Endpoint {
      * Absent on a row from before the broker.
      */
     brokerUrl?: string | null;
+    /*
+     * How this client got in: a pairing link, or a statement from the account it is signed in to.
+     * Absent is a link, which is every row from before accounts.
+     */
+    pairedBy?: 'link' | 'statement';
+    /*
+     * Whether the next offer to this machine carries a statement. True for a row opened from the
+     * account list, until the machine has let this client in once; from then on it knows the key.
+     */
+    needsStatement?: boolean;
 }
 
 interface EndpointsStore {
@@ -73,6 +83,8 @@ interface EndpointsStore {
     noteMismatch(id: string, daemonId: string): void;
     setDirect(id: string, direct: boolean): void;
     learnBrokerUrl(id: string, brokerUrl: string | null): void;
+    /* The machine let this client in on a statement, so the next attempt needs none. */
+    settleStatement(id: string): void;
 }
 
 /* The daemon this page was served by, or in dev the Vite origin that proxies to it. */
@@ -239,6 +251,14 @@ export const useEndpoints = create<EndpointsStore>((set, get) => ({
             return;
         }
         const endpoints = get().endpoints.map((entry) => (entry.id === id ? { ...entry, brokerUrl } : entry));
+        set({ endpoints });
+        persist({ endpoints, activeId: get().activeId });
+    },
+    settleStatement(id) {
+        if (!get().endpoints.some((entry) => entry.id === id && entry.needsStatement === true)) {
+            return;
+        }
+        const endpoints = get().endpoints.map((entry) => (entry.id === id ? { ...entry, needsStatement: false } : entry));
         set({ endpoints });
         persist({ endpoints, activeId: get().activeId });
     }

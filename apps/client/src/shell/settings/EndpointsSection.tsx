@@ -11,7 +11,9 @@ import { pool, transport, type TransportStatus } from '@/transport';
 import { useLatency } from '@/transport/ping';
 import { useEndpointConnection } from '@/transport/status';
 import { describeConnection, describePing, REACHABILITY_LABELS } from '@/shell/connection-info';
+import { AccountSection, AddToAccountButton } from '@/shell/settings/AccountSection';
 import { MachineIdentityDialog } from '@/shell/settings/MachineIdentityDialog';
+import { RefuseStatementsSection } from '@/shell/settings/RefuseStatementsSection';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Skeleton, Toggle } from '@/shell/settings/controls';
@@ -58,7 +60,7 @@ function EndpointState({ endpoint }: { endpoint: Endpoint }) {
         <span className="flex flex-col items-start gap-0.5">
             <span>{describeConnection(connection, null)}</span>
             <span className="text-text-muted">{REACHABILITY_LABELS[reachability]}</span>
-            <span className="font-mono text-text-muted">{endpoint.httpBaseUrl}</span>
+            <span className="font-mono text-text-muted">{endpoint.httpBaseUrl === '' ? 'Reached through the broker only' : endpoint.httpBaseUrl}</span>
             {endpoint.direct === true && (
                 <span className="text-text-muted">
                     {brokerRouteOf(endpoint) === null ? 'Direct connection (experimental)' : 'Direct connection through the broker (experimental)'}
@@ -100,6 +102,10 @@ function MachineName({ icon, name, note }: { icon: ProjectIconChoice | null; nam
  * with the reason under the machine's name, rather than quietly turning back into a socket.
  */
 function DirectToggle({ endpoint }: { endpoint: Endpoint }) {
+    // A machine opened from the account has no address to fall back to, so the broker is its only way.
+    if (endpoint.httpBaseUrl === '') {
+        return null;
+    }
     const toggle = (direct: boolean): void => {
         useEndpoints.getState().setDirect(endpoint.id, direct);
         pool.reconnect(endpoint.id);
@@ -155,6 +161,7 @@ function EndpointRow({ endpoint }: { endpoint: Endpoint }) {
                     <DirectToggle endpoint={endpoint} />
                     <EndpointState endpoint={endpoint} />
                     <span className={BTN_GROUP}>
+                        <AddToAccountButton endpoint={endpoint} />
                         {/* The name and the icon live on the machine, so a machine that is not answering cannot be given either. */}
                         <Tooltip label={connected ? 'Name and icon' : 'Available once the machine answers'} name>
                             <button className="icon-btn h-8 w-8" disabled={!connected} onClick={() => setIdentityOpen(true)}>
@@ -302,7 +309,7 @@ function PairedClients() {
                             {session.current && <span className="ml-1.5 text-xs text-accent">this client</span>}
                         </span>
                     }
-                    description={`Paired ${new Date(session.createdAt).toLocaleDateString()}, last seen ${ago(session.lastSeenAt)}`}
+                    description={`${session.origin === 'statement' ? 'Signed in through an account' : 'Paired with a link'} ${new Date(session.createdAt).toLocaleDateString()}, last seen ${ago(session.lastSeenAt)}`}
                     control={
                         <Tooltip label="Revoke access">
                             <button className="icon-btn h-8 w-8 shrink-0" aria-label={`Revoke ${session.label}`} onClick={() => setTarget(session)}>
@@ -321,7 +328,9 @@ function PairedClients() {
                         <p className="mt-1 text-xs text-text-muted">
                             {target?.current
                                 ? 'This is the client you are using. It loses access to this machine and switches back to the machine it runs on. Pair again to regain access.'
-                                : 'It loses access the next time it connects. Pairing again needs a new link.'}
+                                : target?.origin === 'statement'
+                                  ? 'It loses access the next time it connects, and signing in through an account will not let it back in. Pairing again needs a link.'
+                                  : 'It loses access the next time it connects. Pairing again needs a new link.'}
                         </p>
                         <div className="mt-4 flex items-center justify-end gap-2">
                             <Button onClick={() => setTarget(null)}>Cancel</Button>
@@ -434,11 +443,14 @@ function LocalRow({ endpoint }: { endpoint: Endpoint }) {
             control={
                 <>
                     <DirectToggle endpoint={endpoint} />
-                    <Tooltip label={connected ? 'Name and icon' : 'Available once the machine answers'} name>
-                        <button className="icon-btn h-8 w-8" disabled={!connected} onClick={() => setIdentityOpen(true)}>
-                            <Icon icon={Pencil} size={16} />
-                        </button>
-                    </Tooltip>
+                    <span className={BTN_GROUP}>
+                        <AddToAccountButton endpoint={endpoint} />
+                        <Tooltip label={connected ? 'Name and icon' : 'Available once the machine answers'} name>
+                            <button className="icon-btn h-8 w-8" disabled={!connected} onClick={() => setIdentityOpen(true)}>
+                                <Icon icon={Pencil} size={16} />
+                            </button>
+                        </Tooltip>
+                    </span>
                     <MachineIdentityDialog endpointId={endpoint.id} label={endpoint.label} open={identityOpen} onOpenChange={setIdentityOpen} />
                 </>
             }
@@ -528,8 +540,10 @@ export function EndpointsSection() {
                     <EndpointRow key={endpoint.id} endpoint={endpoint} />
                 ))}
             </SettingsSection>
+            <AccountSection />
             <DirectConnectionSection />
             <PairedClients key={activeId} />
+            <RefuseStatementsSection />
             <AddMachineDialog open={addOpen} onOpenChange={setAddOpen} />
         </>
     );

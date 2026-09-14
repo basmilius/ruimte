@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { createPublicKey, generateKeyPairSync, sign, verify } from 'node:crypto';
-import { BrokerPeerFrameSchema, brokerHelloMessage, signalMessage, type BrokerPeerFrame, type SignalEnvelope } from '@ruimte/pulsar';
+import { BrokerPeerFrameSchema, brokerHelloMessage, signalMessage, type BrokerPeerFrame, type SignalAccess, type SignalEnvelope } from '@ruimte/pulsar';
 import type { ClientKey } from '@/endpoint/client-key';
 import { BrokerSockets, brokerSignaling } from './broker-signaling';
 import type { Signal, SignalingEvents } from './signaling';
@@ -45,7 +45,7 @@ class FakeSocket {
 
 const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 5));
 
-const setup = () => {
+const setup = (access?: (key: ClientKey) => Promise<SignalAccess>) => {
     const client = newKey();
     const machine = newKey();
     const sockets: FakeSocket[] = [];
@@ -55,7 +55,14 @@ const setup = () => {
         return socket as unknown as WebSocket;
     });
     const key: ClientKey = { publicKey: client.publicKey, sign: async (message) => client.sign(message) };
-    const open = brokerSignaling({ brokerUrl: BROKER_URL, machineKey: machine.publicKey, key: async () => key, verify: verifies, sockets: brokers });
+    const open = brokerSignaling({
+        brokerUrl: BROKER_URL,
+        machineKey: machine.publicKey,
+        key: async () => key,
+        verify: verifies,
+        sockets: brokers,
+        ...(access ? { access } : {})
+    });
     const attempt = (connectionId: string) => {
         const log = { ready: 0, signals: [] as Signal[], failures: [] as string[] };
         const events: SignalingEvents = {
@@ -163,5 +170,36 @@ describe('brokerSignaling', () => {
         next.deliver({ type: 'error', code: 'replaced', message: 'The same key announced on another socket' });
         await settle();
         expect(second.log.failures).toEqual(['The broker at broker.example.com refused this client: The same key announced on another socket']);
+    });
+    test('an offer to a machine that needs a statement carries one asked for with this client key, signed along with the offer', async () => {
+        const asked: string[] = [];
+        const statement = { machineId: 'm', clientPublicKey: 'A'.repeat(43), nonce: 'n'.repeat(22), issuedAt: 0, expiresAt: 1, signature: 's'.repeat(86) };
+        const { client, machine, attempt, announce } = setup(async (key) => {
+            asked.push(key.publicKey);
+            return { statement, label: 'Laptop' };
+        });
+        const { signaling } = attempt('attempt-0001');
+        const socket = await announce();
+        signaling.send({ kind: 'offer', sdp: 'v=0' });
+        signaling.send({ kind: 'candidate', candidate: '', sdpMid: null, sdpMLineIndex: null });
+        await settle();
+        const relays = socket.sent.slice(2) as Extract<BrokerPeerFrame, { type: 'relay' }>[];
+        const offer = relays.find((relay) => relay.envelope.signal.kind === 'offer')!;
+        expect(offer.envelope.signal).toEqual({ kind: 'offer', sdp: 'v=0', access: { statement, label: 'Laptop' } });
+        expect(await verifies(client.publicKey, signalMessage(client.publicKey, machine.publicKey, offer.envelope), offer.signature)).toBe(true);
+        expect(relays.find((relay) => relay.envelope.signal.kind === 'candidate')?.envelope.signal).not.toHaveProperty('access');
+        expect(asked).toEqual([client.publicKey]);
+    });
+
+    test('an account that cannot vouch ends the attempt with why, and sends no offer', async () => {
+        const { attempt, announce } = setup(async () => {
+            throw new Error('Sign in to your account first');
+        });
+        const { signaling, log } = attempt('attempt-0001');
+        const socket = await announce();
+        signaling.send({ kind: 'offer', sdp: 'v=0' });
+        await settle();
+        expect(log.failures).toEqual(['Your account could not vouch for this client: Sign in to your account first']);
+        expect(socket.sent.filter((frame) => frame.type === 'relay')).toEqual([]);
     });
 });

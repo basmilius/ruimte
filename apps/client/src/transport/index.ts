@@ -1,6 +1,7 @@
-import { clientKey } from '@/endpoint/client-key';
+import { clientKey, type ClientKey } from '@/endpoint/client-key';
 import { rememberTicket } from '@/endpoint/credentials';
 import { socketAddressFor, verifyDaemon } from '@/endpoint/handshake';
+import { machineAccess } from '@/pulsar/statements';
 import { brokerRouteOf, endpointById, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { iceServersFrom, useSettings } from '@/state/settings';
 import { ActiveTransport } from './active-transport';
@@ -29,9 +30,14 @@ const linkFor =
             return socketLink(url, events);
         }
         const route = brokerRouteOf(endpoint);
+        // A machine opened from the account list does not know this key until an offer carries a statement it takes.
+        const access = endpoint.needsStatement === true ? { access: (key: ClientKey) => machineAccess(endpoint.id, key) } : {};
         return webRtcLink({
             ...(route
-                ? { signaling: () => brokerSignaling({ brokerUrl: route.brokerUrl, machineKey: route.machineKey, key: clientKey, verify: verifyDaemon }) }
+                ? {
+                      signaling: () =>
+                          brokerSignaling({ brokerUrl: route.brokerUrl, machineKey: route.machineKey, key: clientKey, verify: verifyDaemon, ...access })
+                  }
                 : {}),
             iceServers: iceServersFrom(useSettings.getState().directStunServer),
             prove: (challenge, binding) => directProof(endpointId(), challenge, binding),
@@ -39,6 +45,7 @@ const linkFor =
                 if (ticket !== null) {
                     rememberTicket(endpointId(), ticket);
                 }
+                useEndpoints.getState().settleStatement(endpointId());
             }
         })(url, events);
     };

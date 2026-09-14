@@ -113,3 +113,22 @@ export const clientLabelFrom = (env: ClientEnvironment): string => {
             : (systemName(env.uaPlatform) ?? systemName(env.platform) ?? systemName(env.userAgent));
     return system === null ? app : `${app} on ${system}`;
 };
+
+/*
+ * What this client is called on the page it runs in, read from the page's own navigator. Here rather
+ * than beside pairing, so the account code can name a device without importing the transport.
+ */
+export const currentClientLabel = (): string => {
+    if (typeof navigator === 'undefined') {
+        return 'Ruimte';
+    }
+    const data = (navigator as Navigator & { userAgentData?: { brands?: { brand: string }[]; platform?: string } }).userAgentData;
+    const desktopPlatform = typeof window === 'undefined' ? null : (window.ruimteDesktop?.platform ?? null);
+    return clientLabelFrom({
+        desktopPlatform,
+        brands: data?.brands ?? null,
+        uaPlatform: data?.platform ?? null,
+        userAgent: navigator.userAgent,
+        platform: navigator.platform
+    });
+};

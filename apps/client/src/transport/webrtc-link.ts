@@ -49,7 +49,8 @@ const CLOSE_REASONS: Record<string, string> = {
     failed: 'The machine could not answer the direct connection',
     timeout: 'The machine gave up waiting for the direct connection',
     done: 'The machine ended the direct connection',
-    'not-paired': 'The machine does not know this client. Its access was revoked, or it lost the pairing; pair again to connect.'
+    'not-paired': 'The machine does not know this client. Its access was revoked, or it lost the pairing; pair again to connect.',
+    'statements-refused': 'The machine turns away sign-in through an account. Pair with a link to connect.'
 };
 
 const connectionIdOf = (): string => {
