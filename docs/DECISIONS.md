@@ -1414,6 +1414,55 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
 - **Not tested: the render itself.** The client has no DOM renderer, so `error-boundary.test.ts` covers the
   reset decision, the state transitions of the class and the copied report, and not a sibling that stays up.
 
+### Swiping between pages
+
+- Two fingers sideways go back and forward in a browser node or view, read from wheel events inside
+  the page. Nothing else carries the gesture: Chrome's history swiper lives in the Chrome browser and
+  not in the content layer Electron ships, `input-event` in the shell reports a wheel without its
+  deltas, and the window's `swipe` event needs three fingers and the system setting to match. The
+  page that follows the finger and springs back is `trackSwipeEventWithOptions:`, which takes a
+  native addon or Electron PR #53522. Either one only yields a side and a progress, so the decider
+  and the arrow stay when one of them arrives.
+- The page measures and the client decides. `apps/desktop/src/guest.ts` is registered on the browser
+  partition with `registerPreloadScript`, runs in a main frame only and sends to its own `<webview>`
+  (`sendToHost`, heard as `ipc-message` in `browser/registry.ts`), so the shell never sits between
+  and no web contents id is looked up. A swipe over an iframe never navigates: its wheel never
+  reaches the main frame's window.
+- Off is really off. The preload starts without a wheel listener, and the registry tells every new
+  document (`dom-ready`) and every page on a change of `browserSwipe` whether to add one. The setting
+  is drawn on macOS only (`canSwipeBetweenPages`), since a sideways wheel elsewhere is a mouse and
+  back belongs to its side buttons, which the same preload forwards on every platform.
+- The rules are pure in `browser/swipe.ts`: 150 px of net horizontal travel, horizontal at more
+  than three times the vertical, and nothing a momentum sample says counts. Chromium 151's
+  `WheelEvent.momentum` is what makes that a fact instead of a timing guess. The first momentum
+  sample or 70 ms without one ends the gesture, and only then does it navigate, so moving back
+  below the threshold before lifting cancels it the way Chrome does. 500 ms after navigating the
+  tail of the same gesture is ignored. No history on that side, no arrow.
+- The page gets its turn first. The listener is passive in the bubble phase, so a page that called
+  `preventDefault` (a map, a canvas app) keeps the whole gesture. The first horizontal sample also
+  asks whether anything under the pointer can still scroll that way, or claims its overscroll with
+  `overscroll-behavior-x: contain` or `none`; if so the gesture is the page's until it ends, and a
+  carousel that reaches its end halfway does not hand it over. Most browsers ignore overscroll
+  behavior for swipe navigation, but it is the one thing a page has to say "this gesture is mine",
+  and Chromium's own macOS swiper reads it.
+- **The zoom is unmeasured.** On a canvas the host is scaled by the camera, and whether Chromium
+  scales a guest's wheel deltas with that transform has not been checked with a trackpad. The
+  reading of the source is that routing an event into a guest moves its point and leaves its deltas
+  alone, so the travel is the finger's at every zoom and nothing corrects for it.
+  `SWIPE_THRESHOLD_PX` is the one number to divide by the zoom if a swipe at 50% turns out to need
+  half the travel.
+- The arrow is Chrome's half circle at the edge, not Safari's page sliding along: `WebviewParking`
+  never moves a page, and sliding one needs a snapshot of the page before it underneath. It is
+  portaled into the parked host like the error plate, so a node and a view get it alike. Its
+  progress sits in a store of its own (`browser/swipe-overlay.ts`), because `WebviewParking` places
+  every page whenever `useBrowser` changes and a swipe writes every 16 ms. The fade out is the one
+  motion it has, and the reduced motion rule in `styles.css` already takes it away.
+- Cmd+[ and Cmd+] (Ctrl elsewhere) go back and forward in the focused browser: a browser view in the
+  focused cell or a browser node stepped into. With the keyboard inside the page the client never
+  sees the key, so the guest preload sends it, after the page had its turn, which is how an editor
+  in a page still outdents on Cmd+[. The chord is only taken with a browser focused: a drawing
+  keeps it for its order, and a canvas keeps it for the camera history in "Next".
+
 ### Skipped on purpose
 
 Skipped: kanban, loop and trigger nodes, minimap, dictation, notch HUD, agent-to-agent
@@ -1624,7 +1673,8 @@ a day, several days. Each of the larger ones becomes a GitHub issue when it star
    fenced block in the composer of the chat the node has an edge to) and port discovery: an `lsof`
    poll tied to the owning session, an "Open :5173" chip that adds a browser node with an edge.
 8. **Canvas ergonomics**, about two days, all client state. Directional focus on Cmd+Arrow,
-   maximize on Cmd+Shift+Enter, camera history on Cmd+[ and Cmd+] (Cmd+1..9 belongs to the views).
+   maximize on Cmd+Shift+Enter, camera history on Cmd+[ and Cmd+] (Cmd+1..9 belongs to the views,
+   and Cmd+[ to a browser while one is focused).
    Arrange, align and tidy as pure functions with palette entries; palette ranking (exact, prefix,
    substring), `>` for actions, recent nodes on an empty query, settings rows as entries. Images on
    the canvas from paste or drop, stored under `<folder>/.ruimte/images`. An image that is already
@@ -1668,5 +1718,4 @@ loud shell can still be the reason a client is dropped.
 
 Research that is written but not built: `docs/research/browser-streaming.md` (a headless Chromium
 on the daemon, streamed over the socket; it and a relay wait until a remote daemon is in daily
-use), `docs/research/windows.md`, and the reports under `docs/reports` for accounts, remote access
-and the swipe gestures.
+use), `docs/research/windows.md`, and the reports under `docs/reports` for accounts and remote access.
