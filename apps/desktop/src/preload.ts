@@ -49,5 +49,15 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
     downloadUpdate: (): Promise<void> => ipcRenderer.invoke('update:download'),
     installUpdate: (): void => ipcRenderer.send('update:install'),
     releaseNotes: (refresh?: boolean): Promise<unknown> => ipcRenderer.invoke('releases:list', refresh === true),
-    localSecret: (): Promise<string | null> => ipcRenderer.invoke('daemon:local-secret')
+    localSecret: (): Promise<string | null> => ipcRenderer.invoke('daemon:local-secret'),
+    pulsar: {
+        addressBook: (): Promise<string> => ipcRenderer.invoke('pulsar:address-book'),
+        listen: (): Promise<{ redirectUri: string }> => ipcRenderer.invoke('pulsar:login-listen'),
+        callback: (): Promise<unknown> => ipcRenderer.invoke('pulsar:login-callback'),
+        cancel: (): Promise<void> => ipcRenderer.invoke('pulsar:login-cancel'),
+        exchange: (payload: unknown): Promise<unknown> => ipcRenderer.invoke('pulsar:exchange', payload),
+        refresh: (): Promise<unknown> => ipcRenderer.invoke('pulsar:refresh'),
+        restore: (): Promise<unknown> => ipcRenderer.invoke('pulsar:restore'),
+        signOut: (): Promise<void> => ipcRenderer.invoke('pulsar:sign-out')
+    }
 });

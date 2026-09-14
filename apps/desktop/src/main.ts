@@ -3,10 +3,13 @@ import { existsSync, mkdirSync, openSync, writeFileSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { AddressBookClient, ADDRESS_BOOK_URL, SessionExchangePayloadSchema, SessionVault } from '@ruimte/pulsar';
+import { listenForLogin, type LoopbackLogin } from './pulsar-login';
+import { fileSessionStore } from './pulsar-store';
 import { createReleaseNotes } from './release-notes';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
-const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, powerSaveBlocker, screen, session, shell, webContents } =
+const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, powerSaveBlocker, safeStorage, screen, session, shell, webContents } =
     require('electron') as typeof import('electron');
 
 /*
@@ -557,6 +560,70 @@ ipcMain.handle('daemon:local-secret', async (event) => {
         return null;
     }
 });
+
+/*
+ * Signing in to the Pulsar address book. The page runs the login (PKCE, the state, the start URL) and
+ * this side does what a page should not: it listens on loopback for the redirect, and it holds the
+ * refresh token, encrypted with the OS keychain in `userData`. The page only ever gets access tokens,
+ * which live a quarter of an hour. Every handler answers the app's own window and nothing else.
+ */
+const addressBookUrl = process.env.RUIMTE_PULSAR_URL ?? ADDRESS_BOOK_URL;
+let pulsarVault: SessionVault | null = null;
+let pendingLogin: LoopbackLogin | null = null;
+
+const pulsarSessions = (): SessionVault => {
+    pulsarVault ??= new SessionVault({
+        client: new AddressBookClient({ baseUrl: addressBookUrl, fetch: (input, init) => net.fetch(input, init) }),
+        store: fileSessionStore(join(app.getPath('userData'), 'pulsar-session.bin'), safeStorage)
+    });
+    return pulsarVault;
+};
+
+const fromAppWindow = (event: Electron.IpcMainInvokeEvent): boolean => event.sender === mainWindow?.webContents;
+
+const refuseOtherPages = (): never => {
+    throw new Error('Only the app window signs in');
+};
+
+ipcMain.handle('pulsar:address-book', (event) => (fromAppWindow(event) ? addressBookUrl : refuseOtherPages()));
+
+ipcMain.handle('pulsar:login-listen', async (event) => {
+    if (!fromAppWindow(event)) {
+        return refuseOtherPages();
+    }
+    // One login at a time: a second click starts over rather than leaving a port open for the first.
+    pendingLogin?.cancel();
+    pendingLogin = await listenForLogin();
+    return { redirectUri: pendingLogin.redirectUri };
+});
+
+ipcMain.handle('pulsar:login-callback', async (event) => {
+    const login = fromAppWindow(event) ? pendingLogin : refuseOtherPages();
+    if (!login) {
+        throw new Error('No sign-in is waiting');
+    }
+    try {
+        return await login.callback;
+    } finally {
+        if (pendingLogin === login) {
+            pendingLogin = null;
+        }
+    }
+});
+
+ipcMain.handle('pulsar:login-cancel', (event) => {
+    if (fromAppWindow(event)) {
+        pendingLogin?.cancel();
+        pendingLogin = null;
+    }
+});
+
+ipcMain.handle('pulsar:exchange', (event, payload: unknown) =>
+    fromAppWindow(event) ? pulsarSessions().exchange(SessionExchangePayloadSchema.parse(payload)) : refuseOtherPages()
+);
+ipcMain.handle('pulsar:refresh', (event) => (fromAppWindow(event) ? pulsarSessions().refresh() : refuseOtherPages()));
+ipcMain.handle('pulsar:restore', (event) => (fromAppWindow(event) ? pulsarSessions().restore() : refuseOtherPages()));
+ipcMain.handle('pulsar:sign-out', (event) => (fromAppWindow(event) ? pulsarSessions().signOut() : refuseOtherPages()));
 
 ipcMain.handle('window:is-fullscreen', () => mainWindow?.isFullScreen() ?? false);
 

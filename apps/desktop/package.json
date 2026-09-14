@@ -20,6 +20,10 @@
         "pack": "bun run build:main && electron-builder --publish never",
         "pack:dir": "bun run build:main && electron-builder --dir --publish never"
     },
+    "dependencies": {
+        "@ruimte/pulsar": "workspace:*",
+        "zod": "^4.5.4"
+    },
     "devDependencies": {
         "@types/bun": "^1.4.0",
         "@types/node": "^24.13.3",
