@@ -1,16 +1,22 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { DiagramDocument, DiagramNode, EventMap, EventType, ProjectDocument, ProjectSummary, RequestMap, RequestType } from '@ruimte/contracts';
-import { useDocument } from '@/state/document';
-import { createDiagramStore, type DiagramState } from '@/state/diagram';
-import { createEditorRegistry } from '@/state/editors';
-import { useProject } from '@/state/project';
+import type { DiagramState } from '@/state/diagram';
+import { createWorkspaceStores } from '@/state/workspace';
 import { TransportError, type Transport, type TransportStatus } from '@/transport/transport';
 import { DiagramClient } from './diagram-client';
 
 type Call = { type: RequestType; payload: unknown };
 
-/* The client owns its editors, so the test hands it a registry of its own and reads what it opened. */
-const diagrams = createEditorRegistry(createDiagramStore);
+/*
+ * A workspace of the test's own: its registries and the document and project stores over them. The
+ * stores every module makes for the first workspace are shared by every test file in the process, and
+ * a document store reads cameras through the registries it was built with, so a diagram loaded there
+ * would depend on what other files did to those registries.
+ */
+const stores = createWorkspaceStores();
+const diagrams = stores.diagrams;
+const useDocument = stores.document;
+const useProject = stores.project;
 
 /* The diagram the client has open, or the blank one when it closed the last one. */
 const diagram = (): DiagramState => (diagrams.live()[0]?.[1] ?? diagrams.blank).getState();

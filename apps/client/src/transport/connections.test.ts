@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { pool } from '@/transport';
-import { openWorkspace } from './connections';
+import { dropMachine, openWorkspace } from './connections';
 
 // Past the pool's idle countdown, which is what closes a socket nobody holds.
 const PAST_IDLE_MS = 31_000;
@@ -25,6 +25,8 @@ describe('a workspace on a machine that is not the active one', () => {
     });
 
     afterEach(() => {
+        // The session and chat clients the workspace built stay registered until the machine is dropped, and would outlive this file.
+        dropMachine(other.id);
         pool.drop(other.id);
         useEndpoints.getState().remove(other.id);
         jest.useRealTimers();
