@@ -1,5 +1,13 @@
 import { randomBytes } from 'node:crypto';
-import { clientAuthMessage, daemonChallengeMessage, type AuthChallengeResult, type AuthTicketPayload, type AuthTicketResult } from '@ruimte/contracts';
+import {
+    clientAuthMessage,
+    clientChannelMessage,
+    daemonChallengeMessage,
+    daemonChannelMessage,
+    type AuthChallengeResult,
+    type AuthTicketPayload,
+    type AuthTicketResult
+} from '@ruimte/contracts';
 import type { AuthStore } from './auth-store.ts';
 import { verifySignature } from './keys.ts';
 
@@ -28,6 +36,12 @@ interface Ticket {
     expiresAt: number;
 }
 
+interface Challenge {
+    expiresAt: number;
+    // The DTLS session a challenge handed out on a direct channel belongs to; null for one asked for over HTTP.
+    binding: string | null;
+}
+
 interface SigningIdentity {
     id: string;
     publicKey: string;
@@ -48,7 +62,7 @@ export class Handshake {
     private readonly store: AuthStore;
     private readonly identity: SigningIdentity;
     private readonly now: () => number;
-    private readonly challenges = new Map<string, number>();
+    private readonly challenges = new Map<string, Challenge>();
     private readonly tickets = new Map<string, Ticket>();
 
     constructor(store: AuthStore, identity: SigningIdentity, now: () => number = Date.now) {
@@ -57,8 +71,12 @@ export class Handshake {
         this.now = now;
     }
 
-    /* A nonce to sign, and the daemon's own signature over it, which is what pins the daemon. */
-    challenge(): AuthChallengeResult {
+    /*
+     * A nonce to sign, and the daemon's own signature over it, which is what pins the daemon. On a
+     * direct channel the binding of that channel's DTLS session goes into both signatures, so a
+     * challenge handed out on one channel can be answered on that channel alone.
+     */
+    challenge(binding: string | null = null): AuthChallengeResult {
         this.sweep();
         /* Nobody has to be paired to ask for one, so the list is capped as well as swept: without it
            a caller that never signs anything decides how much memory this daemon holds. Dropping the
@@ -67,34 +85,47 @@ export class Handshake {
             this.challenges.delete(challenge);
         }
         const challenge = randomBytes(32).toString('base64url');
-        this.challenges.set(challenge, this.now() + CHALLENGE_TTL_MS);
+        this.challenges.set(challenge, { expiresAt: this.now() + CHALLENGE_TTL_MS, binding });
+        const message = binding === null ? daemonChallengeMessage(this.identity.id, challenge) : daemonChannelMessage(this.identity.id, challenge, binding);
         return {
             challenge,
             daemon: {
                 id: this.identity.id,
                 publicKey: this.identity.publicKey,
-                signature: this.identity.sign(daemonChallengeMessage(this.identity.id, challenge))
+                signature: this.identity.sign(message)
             }
         };
     }
 
     /* Checks a signed challenge and answers with a ticket; null when anything about it does not hold up. */
-    async redeem(payload: AuthTicketPayload): Promise<AuthTicketResult | null> {
-        // Taken out whatever happens next, so one nonce buys at most one attempt and never a replay.
-        const expiresAt = this.challenges.get(payload.challenge);
-        this.challenges.delete(payload.challenge);
-        if (expiresAt === undefined || this.now() > expiresAt) {
+    async redeem(payload: AuthTicketPayload, binding: string | null = null): Promise<AuthTicketResult | null> {
+        if (!this.spend(payload.challenge, binding)) {
             return null;
         }
         const sessionId = await this.store.sessionForPublicKey(payload.publicKey);
         if (!sessionId) {
             return null;
         }
-        if (!verifySignature(payload.publicKey, clientAuthMessage(this.identity.id, payload.challenge, payload.publicKey), payload.signature)) {
+        const message =
+            binding === null
+                ? clientAuthMessage(this.identity.id, payload.challenge, payload.publicKey)
+                : clientChannelMessage(this.identity.id, payload.challenge, payload.publicKey, binding);
+        if (!verifySignature(payload.publicKey, message, payload.signature)) {
             return null;
         }
         await this.store.noteSignedIn(sessionId);
         return { ticket: this.issueTicket(sessionId), expiresIn: TICKET_TTL_MS };
+    }
+
+    /*
+     * Takes a challenge out, answering whether it was still good for this binding. Taken out whatever
+     * the answer, so one nonce buys at most one attempt and never a replay; the local secret's proof
+     * on a channel spends it here too, since it has no key to check.
+     */
+    spend(challenge: string, binding: string | null): boolean {
+        const entry = this.challenges.get(challenge);
+        this.challenges.delete(challenge);
+        return entry !== undefined && this.now() <= entry.expiresAt && entry.binding === binding;
     }
 
     /* The session behind a ticket, with its life extended, or null when it is unknown or stale. */
@@ -132,7 +163,7 @@ export class Handshake {
 
     private sweep(): void {
         const now = this.now();
-        for (const [challenge, expiresAt] of this.challenges) {
+        for (const [challenge, { expiresAt }] of this.challenges) {
             if (now > expiresAt) {
                 this.challenges.delete(challenge);
             }

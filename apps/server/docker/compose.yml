@@ -28,6 +28,9 @@ services:
     # daemon on another machine, not a daemon on the network.
     ports:
       - '127.0.0.1:4310:4310'
+      # A direct connection is UDP; the container announces 127.0.0.1 on these ports, which Docker forwards in.
+      - '127.0.0.1:43100-43109:43100-43109/udp'
+    command: ['--no-stun', '--direct-ports', '43100-43109', '--direct-host-address', '127.0.0.1']
     environment:
       RUIMTE_LABEL: docker-linux
     # A named volume, not a bind mount: the file system has to be the container's own, which is
@@ -46,6 +49,8 @@ services:
     profiles: ['test']
     ports:
       - '127.0.0.1:4320:4320'
+      - '127.0.0.1:43200-43209:43200-43209/udp'
+    command: ['--no-stun', '--direct-ports', '43200-43209', '--direct-host-address', '127.0.0.1']
     environment:
       RUIMTE_LABEL: docker-linux
       RUIMTE_PORT: '4320'

@@ -23,9 +23,11 @@ COPY apps/server/package.json ./apps/server/package.json
 COPY packages/contracts/package.json ./packages/contracts/package.json
 COPY packages/drawing/package.json ./packages/drawing/package.json
 COPY packages/diagram/package.json ./packages/diagram/package.json
+COPY packages/pulsar/package.json ./packages/pulsar/package.json
 RUN bun install
 
 COPY packages/contracts/src ./packages/contracts/src
+COPY packages/pulsar/src ./packages/pulsar/src
 COPY packages/drawing/src ./packages/drawing/src
 COPY packages/diagram/src ./packages/diagram/src
 COPY apps/server/src ./apps/server/src

@@ -6,7 +6,11 @@ import { ClaudeTitleReader } from './agents/claude-title.ts';
 import { CodexTitleReader } from './agents/codex-title.ts';
 import { AgentLineageStore } from './agents/lineage.ts';
 import { PendingPromptStore } from './agents/pending-prompts.ts';
-import { connectionOpener, socketChannel, type OpenConnection, type SocketChannel } from './connection.ts';
+import { connectionOpener, socketChannel, type ClientChannel, type OpenConnection, type SocketChannel } from './connection.ts';
+import { authenticateChannel } from './pulsar/channel-auth.ts';
+import { AUTHENTICATED_FRAME_CHARS } from './pulsar/data-channel.ts';
+import { DirectPeers } from './pulsar/peers.ts';
+import { registerDirectHandlers } from './handlers/direct.ts';
 import { suggestChatTitle } from './chat/chat-title.ts';
 import { decideAccess, isLoopbackAddress, mayInvite, reachabilityOf } from './auth/access.ts';
 import { readOrCreateLocalSecret } from './auth/local-secret.ts';
@@ -232,7 +236,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         pairingUrl: () => pairingUrl(config.host, server.port ?? config.port, auth.issuePairingToken()),
         disconnect: (sessionId) => {
             handshake.revoke(sessionId);
-            for (const { channel, connection } of connections.values()) {
+            for (const { channel, connection } of [...connections.values(), ...directConnections]) {
                 if (connection.client.access?.sessionId === sessionId) {
                     channel.close(4001, 'Access revoked');
                 }
@@ -243,6 +247,29 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerUsageHandlers(dispatcher, usage, limits);
     registerProcessHandlers(dispatcher, processes);
     registerGitHandlers(dispatcher, worktrees, statuses, providers);
+
+    // A direct channel gets its access from its own handshake, never from the socket its signals came over.
+    const peers = new DirectPeers({
+        stunServers: config.stun,
+        portRange: config.directPorts,
+        hostAddresses: config.directHostAddresses,
+        authenticate: (channel, binding, remoteAddress) =>
+            authenticateChannel({
+                channel,
+                binding,
+                handshake,
+                daemonId: identity.id,
+                localSecret: access.localSecret,
+                reachability: reachabilityOf(remoteAddress ?? '')
+            }),
+        open: (channel, channelAccess) => {
+            const state = { channel, connection: openConnection(channel, channelAccess) };
+            directConnections.add(state);
+            channel.receiveWith((frame) => state.connection.receive(frame), AUTHENTICATED_FRAME_CHARS);
+            channel.onClose(() => directConnections.delete(state));
+        }
+    });
+    registerDirectHandlers(dispatcher, peers);
 
     if (config.installHooks) {
         // Only the CLIs the daemon has a normalizer for are listed; the others run without status.
@@ -263,6 +290,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     }
 
     const connections = new Map<ServerWebSocket<ClientAccess>, ConnectionState>();
+    const directConnections = new Set<{ channel: ClientChannel; connection: OpenConnection }>();
     const openConnection = connectionOpener({
         dispatcher,
         sessions: manager,
@@ -499,6 +527,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         projects.closeAll();
         drawings.closeAll();
         diagrams.closeAll();
+        peers.closeAll();
         await relay.stop();
         server.stop(true);
         process.exit(0);

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { clientAuthMessage, daemonChallengeMessage } from '@ruimte/contracts';
+import { clientAuthMessage, clientChannelMessage, daemonChallengeMessage, daemonChannelMessage } from '@ruimte/contracts';
 import { AuthStore } from './auth-store.ts';
 import { CHALLENGE_TTL_MS, Handshake, TICKET_TTL_MS } from './handshake.ts';
 import { generateKeyPair, signMessage, verifySignature } from './keys.ts';
@@ -162,5 +162,48 @@ describe('Handshake', () => {
 
         expect(await signIn(key)).not.toBeNull();
         expect(await store.authenticate(paired!.sessionToken!)).toBeNull();
+    });
+});
+
+describe('Handshake on a direct channel', () => {
+    const BINDING = '[["sha-256 AA"],["sha-256 BB"]]';
+
+    const pairedKey = async () => {
+        const paired = await store.pair(store.issuePairingToken(), { label: 'phone' });
+        const key = generateKeyPair();
+        await store.registerKey(paired!.id, key.publicKey);
+        return key;
+    };
+
+    test('the daemon signs the binding with the challenge, and not the message the HTTP handshake signs', () => {
+        const { challenge, daemon: signed } = handshake.challenge(BINDING);
+        expect(verifySignature(daemon.publicKey, daemonChannelMessage(DAEMON_ID, challenge, BINDING), signed.signature)).toBe(true);
+        expect(verifySignature(daemon.publicKey, daemonChallengeMessage(DAEMON_ID, challenge), signed.signature)).toBe(false);
+    });
+
+    test('a key that signs the same binding gets a ticket', async () => {
+        const key = await pairedKey();
+        const { challenge } = handshake.challenge(BINDING);
+        const signature = signMessage(key.privateKey, clientChannelMessage(DAEMON_ID, challenge, key.publicKey, BINDING));
+        expect(await handshake.redeem({ publicKey: key.publicKey, challenge, signature }, BINDING)).not.toBeNull();
+    });
+
+    test('a signature over another DTLS session, or over no session at all, gets nothing', async () => {
+        const key = await pairedKey();
+        const other = handshake.challenge(BINDING).challenge;
+        const elsewhere = signMessage(key.privateKey, clientChannelMessage(DAEMON_ID, other, key.publicKey, '[["sha-256 CC"],["sha-256 BB"]]'));
+        expect(await handshake.redeem({ publicKey: key.publicKey, challenge: other, signature: elsewhere }, BINDING)).toBeNull();
+
+        const plain = handshake.challenge(BINDING).challenge;
+        const http = signMessage(key.privateKey, clientAuthMessage(DAEMON_ID, plain, key.publicKey));
+        expect(await handshake.redeem({ publicKey: key.publicKey, challenge: plain, signature: http })).toBeNull();
+    });
+
+    test('a challenge from the HTTP route cannot be spent on a channel, nor one from a channel on another', () => {
+        expect(handshake.spend(handshake.challenge().challenge, BINDING)).toBe(false);
+        expect(handshake.spend(handshake.challenge(BINDING).challenge, '[[],[]]')).toBe(false);
+        const challenge = handshake.challenge(BINDING).challenge;
+        expect(handshake.spend(challenge, BINDING)).toBe(true);
+        expect(handshake.spend(challenge, BINDING)).toBe(false);
     });
 });
