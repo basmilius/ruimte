@@ -1,6 +1,6 @@
 import type { SyntaxNode, Tree } from '@lezer/common';
 
-export type EnterAction = 'send' | 'newline';
+export type EnterAction = 'send' | 'newline' | 'continue-list' | 'leave-list';
 
 export interface EnterKeys {
     shift: boolean;
@@ -8,18 +8,56 @@ export interface EnterKeys {
     mod: boolean;
 }
 
+export interface ListItem {
+    /* The indentation, the marker and the space after it, a task's box included. */
+    prefix: string;
+    /* The prefix the next item starts with: the next number, and an unchecked box for a task. */
+    next: string;
+    /* Nothing but the prefix on the line. */
+    empty: boolean;
+}
+
+export interface EnterContext {
+    inOpenFence: boolean;
+    /* The list item on the caret's line, or null outside a list and in code. */
+    list: ListItem | null;
+    /* The caret's offset in its line. */
+    column: number;
+}
+
+const LIST_ITEM = /^([ \t]*)(?:([-*+])|(\d{1,9})([.)]))([ \t]+)(\[[ xX]\](?:[ \t]+|$))?/;
+
+/* The list item a line starts, if it starts one. */
+export const listItemAt = (line: string): ListItem | null => {
+    const match = LIST_ITEM.exec(line);
+    if (match === null) {
+        return null;
+    }
+    const [prefix, indent, bullet, number, delimiter, space, task] = match;
+    const marker = bullet ?? `${Number(number) + 1}${delimiter}`;
+    return { prefix, next: `${indent}${marker}${space}${task ? '[ ] ' : ''}`, empty: line.slice(prefix.length).trim() === '' };
+};
+
 /*
- * Enter sends, except inside a fence nobody has closed yet: whoever types there is still writing
- * code, and a prompt cut off halfway through a block is worth less than one more key to send it.
+ * Enter sends, except where whoever types is still writing: inside a fence nobody has closed yet
+ * it adds a line, and in a list it starts the next item, or leaves the list from an empty one, so
+ * a second Enter breaks out. Shift adds a plain line and Mod sends from anywhere.
  */
-export const enterAction = (keys: EnterKeys, inOpenFence: boolean): EnterAction => {
+export const enterAction = (keys: EnterKeys, { inOpenFence, list, column }: EnterContext): EnterAction => {
     if (keys.mod) {
         return 'send';
     }
     if (keys.shift || inOpenFence) {
         return 'newline';
     }
-    return 'send';
+    if (list === null) {
+        return 'send';
+    }
+    // A caret in front of the marker moves the item down rather than splitting its marker.
+    if (column < list.prefix.length) {
+        return 'newline';
+    }
+    return list.empty ? 'leave-list' : 'continue-list';
 };
 
 /* Whether `pos` sits inside a fenced code block that has an opening fence and no closing one yet. */

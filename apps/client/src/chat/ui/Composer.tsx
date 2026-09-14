@@ -26,7 +26,7 @@ import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferenc
 import { STASH_SHORTCUT, stashDraft, type StashedPrompt, useStash } from '@/chat/stash';
 import { pageTimeline, scrollTimelineToEnd, subscribeTimelineEnd, timelineAtEnd } from '@/chat/timeline-scroll';
 import { chipDecorations } from '@/chat/ui/composer/chips';
-import { enterAction, inCode, inOpenFence, recallDirection } from '@/chat/ui/composer/keys';
+import { enterAction, inCode, inOpenFence, listItemAt, recallDirection } from '@/chat/ui/composer/keys';
 import { ComposerInput, type ComposerInputHandle } from '@/chat/ui/ComposerInput';
 import { ContextMeter } from '@/chat/ui/ContextMeter';
 import { ApprovalDock, QuestionDock } from '@/chat/ui/PendingDock';
@@ -544,11 +544,31 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
             }
         }
         if (e.key === 'Enter') {
-            const { head } = view.state.selection.main;
+            const { state } = view;
+            const { from, to, head } = state.selection.main;
             // Parsed to the end, since the fence that closes the block can sit after the caret.
-            const tree = ensureSyntaxTree(view.state, view.state.doc.length, 50) ?? syntaxTree(view.state);
-            if (enterAction({ shift: e.shiftKey, mod: isModHeld(e, isApplePlatform()) }, inOpenFence(tree, head)) === 'newline') {
+            const tree = ensureSyntaxTree(state, state.doc.length, 50) ?? syntaxTree(state);
+            const line = state.doc.lineAt(head);
+            const list = from === to && !inCode(tree, state.doc.toString(), head) ? listItemAt(line.text) : null;
+            const action = enterAction(
+                { shift: e.shiftKey, mod: isModHeld(e, isApplePlatform()) },
+                { inOpenFence: inOpenFence(tree, head), list, column: head - line.from }
+            );
+            if (action === 'newline') {
                 return insertNewline(view);
+            }
+            if (action === 'continue-list' && list) {
+                view.dispatch({
+                    changes: { from: head, insert: `\n${list.next}` },
+                    selection: { anchor: head + 1 + list.next.length },
+                    scrollIntoView: true,
+                    userEvent: 'input'
+                });
+                return true;
+            }
+            if (action === 'leave-list') {
+                view.dispatch({ changes: { from: line.from, to: line.to }, selection: { anchor: line.from }, userEvent: 'delete' });
+                return true;
             }
             submit();
             return true;
@@ -833,7 +853,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                     )}
                     {/* While a turn runs the same button queues the message instead of sending it. */}
                     {(!busy || !isEmptyDraft(draft)) && (
-                        <Tooltip label={busy ? 'Queue' : 'Send'} kbd={KEY_SHORTCUTS.enter} name>
+                        <Tooltip label={busy ? 'Queue' : 'Send'} kbd={KEY_SHORTCUTS.modEnter} name>
                             <button
                                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-accent-text disabled:opacity-40"
                                 disabled={isEmptyDraft(draft) || disabled || guard.tooLong}

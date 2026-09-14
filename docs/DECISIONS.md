@@ -310,8 +310,8 @@ canvas, against Ruimte, one verdict each.
   bold is bold. `chat.send` carries the same string it always did. The grammar is
   `@lezer/markdown` with strikethrough and tables, in a `Language` of our own (`markdownLanguage`
   in `src/chat/ui/composer/editor.ts`). `@codemirror/lang-markdown` builds the HTML language and
-  autocomplete at module level, where tree shaking cannot reach them, and what it would add on
-  top is list continuation on Enter, which a prompt box does not want. Code is decorated from the
+  autocomplete at module level, where tree shaking cannot reach them, and the one thing it adds
+  that the composer wants, list continuation on Enter, is a rule of a few lines of our own. Code is decorated from the
   syntax tree rather than through the highlighter, and a token inside a code span or a fence stays
   text instead of becoming a chip. In code `@` and `$` open no picker either (`inCode` in
   `src/chat/ui/composer/keys.ts`): a fence, open or closed, a code span, and a backtick nobody has
@@ -322,11 +322,19 @@ canvas, against Ruimte, one verdict each.
   Spellcheck stays on, as it was on the textarea, and a paste stays plain text. The editor loads
   with the main bundle rather than as a lazy chunk; measured with `vite build`, the main chunk
   went from 1,697.70 kB (496.32 kB gzip) to 1,996.03 kB (593.92 kB gzip).
-- Enter in the composer sends, except inside a fence nobody has closed yet, where it adds a line:
-  whoever types there is writing code. Shift+Enter adds a line anywhere, and Cmd+Enter (Ctrl+Enter
-  elsewhere) sends from anywhere, an open fence included (`enterAction` and `inOpenFence` in
-  `src/chat/ui/composer/keys.ts`). Once the fence is closed Enter sends again, so a prompt with a
-  finished block in it goes out the way it always did.
+- Enter in the composer sends, except where whoever types is still writing. Inside a fence nobody
+  has closed yet it adds a line. On a list item (`-`, `*`, `+`, `1.`, `1)`, a task's `[ ]`
+  included) it starts the next item with the same indentation and marker, the next number for an
+  ordered list and an unchecked box for a task; on an item with nothing after its marker it
+  removes that marker and leaves the list, so a second Enter breaks out. With the caret in front
+  of the marker it adds a plain line, and a line inside code is never an item. Shift+Enter adds a
+  plain line anywhere, a list included, which is how an item gets a second line without a new
+  marker. Cmd+Enter (Ctrl+Enter elsewhere) sends from anywhere, which is why the send button's
+  tooltip shows that key rather than Enter (`enterAction`, `listItemAt` and `inOpenFence` in
+  `src/chat/ui/composer/keys.ts`). An item is read off its line with a pattern rather than off the
+  syntax tree, so the number is not renumbered below the caret and a nested item that is left
+  loses its indentation with its marker. Once a fence is closed and outside a list Enter sends
+  again, so a prompt with a finished block in it goes out the way it always did.
 - An attachment goes over the wire as base64 in `chat.send` once (25 MB and 8 per message) and
   never again: the daemon writes it under `$RUIMTE_HOME/attachments` and the thread keeps its
   name, mime, size and path. The prompt names the file by path instead of carrying an `image`
