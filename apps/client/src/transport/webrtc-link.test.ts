@@ -237,4 +237,59 @@ describe('webRtcLink', () => {
         expect(log.closes).toEqual([]);
         expect(peer.channel.sent.some((piece) => piece.includes('"server.ping"'))).toBe(false);
     });
+
+    test('another signaling route carries the offer and the answer, opens no socket, and is closed once the channel is in', async () => {
+        const opened: string[] = [];
+        const sent: unknown[] = [];
+        let closed = 0;
+        let deliver: ((signal: { kind: 'answer'; sdp: string }) => void) | null = null;
+        const { peer, log } = setup({
+            createSocket: () => {
+                throw new Error('No socket should be opened');
+            },
+            signaling: (url) => (connectionId, events) => {
+                opened.push(`${url} ${connectionId.length > 0}`);
+                deliver = events.signal;
+                queueMicrotask(() => events.ready());
+                return {
+                    send: (signal) => sent.push(signal),
+                    close: () => {
+                        closed += 1;
+                    }
+                };
+            }
+        });
+        await tick();
+        await tick();
+        expect(opened).toEqual(['ws://machine/ws?token=ticket true']);
+        expect(sent).toEqual([{ kind: 'offer', sdp: OFFER }]);
+        deliver!({ kind: 'answer', sdp: ANSWER });
+        await tick();
+        expect(peer.remoteDescription?.sdp).toBe(ANSWER);
+        peer.channel.deliver(CHALLENGE);
+        await tick();
+        peer.channel.deliver({ type: 'direct.accepted', ticket: null, expiresIn: null });
+        await tick();
+        expect(log.opened).toBe(1);
+        expect(closed).toBe(1);
+    });
+
+    test('a machine that does not know the key says so through the signals, and a route that fails ends the link', async () => {
+        const refused = setup({
+            signaling: () => (_connectionId, events) => {
+                queueMicrotask(() => events.signal({ kind: 'close', reason: 'not-paired' }));
+                return { send: () => undefined, close: () => undefined };
+            }
+        });
+        await tick();
+        expect(refused.log.closes).toEqual(['The machine does not know this client. Its access was revoked, or it lost the pairing; pair again to connect.']);
+
+        const failed = setup({
+            signaling: () => (_connectionId, events) => {
+                events.fail('The broker at broker.example.com could not be reached');
+                return { send: () => undefined, close: () => undefined };
+            }
+        });
+        expect(failed.log.closes).toEqual(['The broker at broker.example.com could not be reached']);
+    });
 });

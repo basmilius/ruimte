@@ -45,6 +45,12 @@ export interface Endpoint {
      * experiment a person turns on per machine. Absent is off, which is every row from before it.
      */
     direct?: boolean;
+    /*
+     * The broker the machine announces itself to, as the pairing answer and `endpoint.info` last said.
+     * With it and Direct on, the signals go over the broker and nothing is asked of the address above.
+     * Absent on a row from before the broker.
+     */
+    brokerUrl?: string | null;
 }
 
 interface EndpointsStore {
@@ -66,6 +72,7 @@ interface EndpointsStore {
     rekeyEndpoint(oldId: string, newId: string): void;
     noteMismatch(id: string, daemonId: string): void;
     setDirect(id: string, direct: boolean): void;
+    learnBrokerUrl(id: string, brokerUrl: string | null): void;
 }
 
 /* The daemon this page was served by, or in dev the Vite origin that proxies to it. */
@@ -225,8 +232,29 @@ export const useEndpoints = create<EndpointsStore>((set, get) => ({
         const endpoints = get().endpoints.map((entry) => (entry.id === id ? { ...entry, direct } : entry));
         set({ endpoints });
         persist({ endpoints, activeId: get().activeId });
+    },
+    learnBrokerUrl(id, brokerUrl) {
+        // Asked on every connection, and nearly always the same answer; a write per connection would buy nothing.
+        if (!get().endpoints.some((entry) => entry.id === id && (entry.brokerUrl ?? null) !== brokerUrl)) {
+            return;
+        }
+        const endpoints = get().endpoints.map((entry) => (entry.id === id ? { ...entry, brokerUrl } : entry));
+        set({ endpoints });
+        persist({ endpoints, activeId: get().activeId });
     }
 }));
+
+/*
+ * The broker route of a row: Direct on, a broker the machine announced, and a machine key pinned to
+ * believe its signals by. The row of this machine never takes it, since it has no pinned key and its
+ * own address is always there.
+ */
+export const brokerRouteOf = (endpoint: Endpoint): { brokerUrl: string; machineKey: string } | null => {
+    if (endpoint.direct !== true || endpoint.id === LOCAL_ENDPOINT_ID || !endpoint.brokerUrl || endpoint.daemonPublicKey === null) {
+        return null;
+    }
+    return { brokerUrl: endpoint.brokerUrl, machineKey: endpoint.daemonPublicKey };
+};
 
 /* One machine by id, for code that is about a row rather than about the machine being worked on. */
 export const endpointById = (id: string): Endpoint | null => useEndpoints.getState().endpoints.find((entry) => entry.id === id) ?? null;

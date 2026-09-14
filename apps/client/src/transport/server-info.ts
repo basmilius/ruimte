@@ -19,6 +19,7 @@ const load = (endpointId: string): void => {
         .request('endpoint.info', {})
         .then(async (info) => {
             const settled = noteDaemonIdentity(endpointId, info);
+            useEndpoints.getState().learnBrokerUrl(settled, info.brokerUrl ?? null);
             useServers.getState().setEndpoint(settled, {
                 label: info.label,
                 nameSource: info.nameSource ?? null,

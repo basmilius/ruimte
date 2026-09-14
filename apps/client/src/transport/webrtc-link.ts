@@ -5,17 +5,14 @@ import {
     directPingFrame,
     DIRECT_CHANNEL_LABEL,
     DirectChallengeFrameSchema,
-    DirectSignalPayloadSchema,
     DirectVerdictFrameSchema,
     FrameAssembler,
     splitFrame,
     type DirectChallengeFrame,
-    type DirectProofFrame,
-    type DirectSignalPayload
+    type DirectProofFrame
 } from '@ruimte/contracts';
 import type { Link, LinkOpener } from './link-transport';
-
-type Signal = DirectSignalPayload['envelope']['signal'];
+import { socketSignaling, type Signal, type Signaling, type SignalingOpener } from './signaling';
 
 // Offer to handshake; ICE with a STUN server that answers slowly still fits, a path that does not exist does not.
 const CONNECT_TIMEOUT_MS = 20_000;
@@ -33,6 +30,8 @@ export interface WebRtcLinkOptions {
     prove(challenge: DirectChallengeFrame, binding: string): Promise<DirectProofFrame>;
     /* The daemon let this client in; the ticket is for the HTTP routes an `<img>` still fetches. */
     accepted?(ticket: string | null): void;
+    /* How this attempt's signals travel, given the address the transport resolved; a socket to the machine unless said otherwise. */
+    signaling?(url: string): SignalingOpener;
     createPeer?(configuration: RTCConfiguration): RTCPeerConnection;
     createSocket?(url: string): WebSocket;
     timeoutMs?: number;
@@ -46,7 +45,8 @@ const CLOSE_REASONS: Record<string, string> = {
     declined: 'The machine is opening too many direct connections at once',
     failed: 'The machine could not answer the direct connection',
     timeout: 'The machine gave up waiting for the direct connection',
-    done: 'The machine ended the direct connection'
+    done: 'The machine ended the direct connection',
+    'not-paired': 'The machine does not know this client. Its access was revoked, or it lost the pairing; pair again to connect.'
 };
 
 const connectionIdOf = (): string => {
@@ -60,12 +60,12 @@ const connectionIdOf = (): string => {
 const messageOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
 /*
- * A daemon's wire over a WebRTC DataChannel. The address is the socket URL the transport resolved for
- * this attempt, credential and all; that socket only carries the offer and the answer (there is no
- * broker yet) and is closed the moment the channel is in. The channel then runs its own handshake as
- * its first frames, bound to its DTLS fingerprints, and only after the daemon's verdict does the link
- * report open. Every way this can fail ends the link with a sentence for the machine's row, because a
- * direct connection that silently turned into a socket would test nothing.
+ * A daemon's wire over a WebRTC DataChannel. The offer and the answer travel however `signaling`
+ * says (a socket to the machine, or the broker), and that route is closed the moment the channel is
+ * in. The channel then runs its own handshake as its first frames, bound to its DTLS fingerprints,
+ * and only after the daemon's verdict does the link report open. Every way this can fail ends the
+ * link with a sentence for the machine's row, because a direct connection that silently turned into
+ * a socket would test nothing.
  */
 export const webRtcLink =
     (options: WebRtcLinkOptions): LinkOpener =>
@@ -78,20 +78,13 @@ export const webRtcLink =
         let binding: string | null = null;
         let peer: RTCPeerConnection | null = null;
         let channel: RTCDataChannel | null = null;
-        let socket: WebSocket | null = null;
-        let nextSignal = 1;
+        let signaling: Signaling | null = null;
         let liveness: ChannelLiveness | null = null;
         let livenessTimer: ReturnType<typeof setInterval> | null = null;
 
-        const closeSocket = (): void => {
-            if (!socket) {
-                return;
-            }
-            socket.onclose = null;
-            socket.onmessage = null;
-            socket.onopen = null;
-            socket.close();
-            socket = null;
+        const closeSignaling = (): void => {
+            signaling?.close();
+            signaling = null;
         };
 
         const end = (failure: string | null): void => {
@@ -103,7 +96,7 @@ export const webRtcLink =
             if (livenessTimer !== null) {
                 clearInterval(livenessTimer);
             }
-            closeSocket();
+            closeSignaling();
             if (channel) {
                 channel.onclose = null;
                 channel.onmessage = null;
@@ -121,10 +114,6 @@ export const webRtcLink =
             options.timeoutMs ?? CONNECT_TIMEOUT_MS
         );
 
-        const signal = (outgoing: Signal): void => {
-            socket?.send(JSON.stringify({ id: `direct-${nextSignal++}`, type: 'direct.signal', payload: { envelope: { connectionId, signal: outgoing } } }));
-        };
-
         const sendFrame = (data: string): void => {
             if (!channel || channel.readyState !== 'open') {
                 return;
@@ -139,6 +128,9 @@ export const webRtcLink =
         };
 
         const onSignal = (incoming: Signal): void => {
+            if (ended) {
+                return;
+            }
             if (incoming.kind === 'answer' && peer && offerSdp !== null && binding === null) {
                 binding = channelBinding(offerSdp, incoming.sdp);
                 void peer.setRemoteDescription({ type: 'answer', sdp: incoming.sdp }).catch((e) => end(`The machine's answer did not apply: ${messageOf(e)}`));
@@ -152,27 +144,6 @@ export const webRtcLink =
             }
             if (incoming.kind === 'close') {
                 end(CLOSE_REASONS[incoming.reason] ?? 'The machine closed the direct connection');
-            }
-        };
-
-        const onSignalingFrame = (raw: string): void => {
-            let frame: { id?: unknown; ok?: unknown; error?: { message?: string }; type?: unknown; event?: unknown; payload?: unknown };
-            try {
-                frame = JSON.parse(raw) as typeof frame;
-            } catch {
-                return;
-            }
-            if (typeof frame.id === 'string' && frame.id.startsWith('direct-') && frame.ok === false) {
-                // A daemon from before direct connections answers `unknown-request`, which is worth saying in so many words.
-                end(`The machine did not take the direct connection: ${frame.error?.message ?? 'no reason given'}`);
-                return;
-            }
-            if (frame.type !== 'event' || frame.event !== 'direct.signaled') {
-                return;
-            }
-            const parsed = DirectSignalPayloadSchema.safeParse(frame.payload);
-            if (parsed.success && parsed.data.envelope.connectionId === connectionId) {
-                onSignal(parsed.data.envelope.signal);
             }
         };
 
@@ -204,8 +175,8 @@ export const webRtcLink =
             });
             livenessTimer = setInterval(() => liveness?.tick(), options.pingTickMs ?? DIRECT_PING_TICK_MS);
             options.accepted?.(verdict.data.ticket);
-            // The channel stands on its own from here; the socket was only ever for the signals.
-            closeSocket();
+            // The channel stands on its own from here; the route the signals took was only ever for them.
+            closeSignaling();
             events.open();
         };
 
@@ -251,21 +222,25 @@ export const webRtcLink =
             if (offerSdp === null) {
                 throw new Error('The browser made no offer');
             }
-            signal({ kind: 'offer', sdp: offerSdp });
+            signaling?.send({ kind: 'offer', sdp: offerSdp });
         };
 
-        try {
-            socket = (options.createSocket ?? ((address) => new WebSocket(address)))(url);
-        } catch (e) {
-            end(`The machine could not be reached to set up a direct connection: ${messageOf(e)}`);
-            return { send: () => undefined, close: () => undefined };
+        const open = options.signaling ?? ((address: string) => socketSignaling(address, options.createSocket));
+        const opened = open(url)(connectionId, {
+            ready: () => {
+                if (!ended) {
+                    void negotiate().catch((e) => end(`Could not set up a direct connection: ${messageOf(e)}`));
+                }
+            },
+            signal: onSignal,
+            fail: (reason) => end(reason)
+        });
+        // A route that failed while it was being opened already ended the link, and is nothing to hold on to.
+        if (ended) {
+            opened.close();
+        } else {
+            signaling = opened;
         }
-        socket.onopen = () => {
-            void negotiate().catch((e) => end(`Could not set up a direct connection: ${messageOf(e)}`));
-        };
-        socket.onmessage = (message) => onSignalingFrame(String(message.data));
-        socket.onclose = () => end('The machine could not be reached to set up a direct connection');
-        socket.onerror = () => {};
 
         return {
             send: (data) => {

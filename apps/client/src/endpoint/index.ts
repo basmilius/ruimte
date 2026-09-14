@@ -14,13 +14,12 @@ import { useServers } from '@/state/server';
 import { useSessions } from '@/state/sessions';
 import { useToasts } from '@/state/toasts';
 import { useUsageStore } from '@/state/usage';
-import { pool, transport } from '@/transport';
+import { connectionAddressFor, pool, transport } from '@/transport';
 import { dropMachine } from '@/transport/connections';
 import { useProcesses, useProcessWarnings } from '@/state/processes';
 import { clientKey } from './client-key';
 import { clientLabelFrom } from './client-label';
 import { forgetTicket } from './credentials';
-import { socketAddressFor } from './handshake';
 
 /*
  * Pairs with a daemon on another machine: the pasted URL names the daemon and carries the one-time
@@ -66,13 +65,14 @@ export const pairEndpoint = async (pairingUrl: string): Promise<Endpoint> => {
         reachability: endpoint.reachability,
         token: sessionToken ?? null,
         daemonId: endpoint.id,
-        daemonPublicKey: key ? (endpoint.publicKey ?? null) : null
+        daemonPublicKey: key ? (endpoint.publicKey ?? null) : null,
+        brokerUrl: endpoint.brokerUrl ?? null
     };
     // A row under this id from an earlier pairing carried a ticket for a credential that is now gone.
     forgetTicket(record.id);
     useEndpoints.getState().add(record);
     // Pairing again with a machine that already has a socket hands out a new credential, so the socket follows the address it came on.
-    pool.readdress(record.id, () => socketAddressFor(record.id));
+    pool.readdress(record.id, () => connectionAddressFor(record.id));
     if (known) {
         useToasts.getState().show({
             id: `endpoint-merged-${record.id}`,

@@ -1,8 +1,10 @@
+import { clientKey } from '@/endpoint/client-key';
 import { rememberTicket } from '@/endpoint/credentials';
-import { socketAddressFor } from '@/endpoint/handshake';
-import { endpointById, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { socketAddressFor, verifyDaemon } from '@/endpoint/handshake';
+import { brokerRouteOf, endpointById, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { iceServersFrom, useSettings } from '@/state/settings';
 import { ActiveTransport } from './active-transport';
+import { brokerSignaling } from './broker-signaling';
 import { directProof } from './direct-auth';
 import { LinkTransport, type LinkOpener } from './link-transport';
 import { TransportPool } from './pool';
@@ -15,16 +17,22 @@ export { TransportError } from './transport';
 
 /*
  * Which link a machine's next connection opens: a WebSocket, or a WebRTC DataChannel when its row
- * says so. Decided per attempt rather than per transport, so switching a machine over reconnects
- * the transport every session and chat client is already built on instead of replacing it.
+ * says so, signaled over the broker when the row has one and over a socket to the machine otherwise.
+ * Decided per attempt rather than per transport, so switching a machine over reconnects the
+ * transport every session and chat client is already built on instead of replacing it.
  */
 const linkFor =
     (endpointId: () => string): LinkOpener =>
     (url, events) => {
-        if (endpointById(endpointId())?.direct !== true) {
+        const endpoint = endpointById(endpointId());
+        if (endpoint?.direct !== true) {
             return socketLink(url, events);
         }
+        const route = brokerRouteOf(endpoint);
         return webRtcLink({
+            ...(route
+                ? { signaling: () => brokerSignaling({ brokerUrl: route.brokerUrl, machineKey: route.machineKey, key: clientKey, verify: verifyDaemon }) }
+                : {}),
             iceServers: iceServersFrom(useSettings.getState().directStunServer),
             prove: (challenge, binding) => directProof(endpointId(), challenge, binding),
             accepted: (ticket) => {
@@ -36,11 +44,22 @@ const linkFor =
     };
 
 /*
+ * Where a machine's next connection opens. Over the broker that is the broker itself and nothing is
+ * asked of the machine's own address, which from another network is not there to ask; otherwise it
+ * is the socket URL with a ticket signed for over HTTP.
+ */
+export const connectionAddressFor = (endpointId: string): Promise<string> => {
+    const endpoint = endpointById(endpointId);
+    const route = endpoint ? brokerRouteOf(endpoint) : null;
+    return route ? Promise.resolve(route.brokerUrl) : socketAddressFor(endpointId);
+};
+
+/*
  * One connection per daemon, each with its own reconnect loop; nothing here opens one until it is
  * asked for. The address is worked out per attempt, because every connection signs for its own ticket.
  */
 export const pool = new TransportPool({
-    open: (_endpoint: Endpoint, currentId: () => string) => new LinkTransport(() => socketAddressFor(currentId()), linkFor(currentId))
+    open: (_endpoint: Endpoint, currentId: () => string) => new LinkTransport(() => connectionAddressFor(currentId()), linkFor(currentId))
 });
 
 /* The machine the person is working on, as one transport. Everything cwd-shaped and node-shaped talks through it. */

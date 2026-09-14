@@ -5,7 +5,7 @@ import { Check, Copy, Link2, Pencil, Plus, Trash } from 'lucide-react';
 import type { AuthSession, ProjectIconChoice } from '@ruimte/contracts';
 import { forgetEndpoint, listPairedClients, pairEndpoint, requestPairingUrl, revokePairedClient } from '@/endpoint';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { LOCAL_ENDPOINT_ID, localMachineLabel, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { LOCAL_ENDPOINT_ID, brokerRouteOf, localMachineLabel, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServer, useServers } from '@/state/server';
 import { pool, transport, type TransportStatus } from '@/transport';
 import { useLatency } from '@/transport/ping';
@@ -59,7 +59,11 @@ function EndpointState({ endpoint }: { endpoint: Endpoint }) {
             <span>{describeConnection(connection, null)}</span>
             <span className="text-text-muted">{REACHABILITY_LABELS[reachability]}</span>
             <span className="font-mono text-text-muted">{endpoint.httpBaseUrl}</span>
-            {endpoint.direct === true && <span className="text-text-muted">Direct connection (experimental)</span>}
+            {endpoint.direct === true && (
+                <span className="text-text-muted">
+                    {brokerRouteOf(endpoint) === null ? 'Direct connection (experimental)' : 'Direct connection through the broker (experimental)'}
+                </span>
+            )}
             <span className="text-text-muted">{describePing(latency)}</span>
         </span>
     );
@@ -102,7 +106,13 @@ function DirectToggle({ endpoint }: { endpoint: Endpoint }) {
     };
 
     return (
-        <Tooltip label="Connect directly over WebRTC (experimental).">
+        <Tooltip
+            label={
+                endpoint.brokerUrl
+                    ? `Connect directly over WebRTC, found through the broker at ${endpoint.brokerUrl} (experimental).`
+                    : 'Connect directly over WebRTC (experimental).'
+            }
+        >
             <label className="flex items-center gap-1.5 text-xs text-text-muted">
                 Direct
                 <Toggle checked={endpoint.direct === true} onChange={toggle} label={`Connect directly to ${endpoint.label} (experimental)`} />
@@ -443,10 +453,7 @@ function DirectConnectionSection() {
     const [draft, setDraft] = useState(stored);
 
     return (
-        <SettingsSection
-            title="Direct connections"
-            description="An experiment. A machine with Direct on is reached over WebRTC instead of its socket."
-        >
+        <SettingsSection title="Direct connections" description="An experiment. A machine with Direct on is reached over WebRTC instead of its socket.">
             <SettingsRow
                 label="STUN server"
                 description="Tells this app its public address, so a machine on another network can reach it. Separate several with spaces, or leave it empty to stay on this network."
