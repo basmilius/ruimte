@@ -18,7 +18,7 @@ import { readTerminalFont, readTerminalTheme } from '@/terminal/theme';
 import { webglBudget } from '@/terminal/webgl-budget';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
-import { closeHost, readNodeHost, updateHost } from '@/nodes/node-host';
+import { closeHost, readNodeHost, updateHost, useSuggestedTitle } from '@/nodes/node-host';
 import { Button } from '@/ui/Button';
 import { MENU_SEPARATOR } from '@/ui/classes';
 import { copyText, readClipboardText } from '@/ui/clipboard';
@@ -66,6 +66,8 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
     const endpointId = useEndpointId();
     const exited = useSessionRow(id, (row) => row?.exited);
     const agentRecord = useSessionRow(id, (row) => row?.agent);
+    // Only Claude Code writes a name down; the daemon sends none for the other CLIs either way.
+    useSuggestedTitle(id, agentRecord?.kind === 'claude' ? agentRecord.suggestedTitle : undefined);
     const resolvedTheme = useTheme((t) => t.resolved);
     const settingsVersion = useSettings((s) => s.version);
 

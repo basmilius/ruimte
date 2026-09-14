@@ -1,5 +1,28 @@
 import { describe, expect, test } from 'bun:test';
-import { deriveNodeTitle } from './title.ts';
+import { SUGGESTED_TITLE_LIMIT } from '@ruimte/contracts';
+import { deriveNodeTitle, suggestedTitleFor } from './title.ts';
+
+describe('suggestedTitleFor', () => {
+    test('replaces a title nobody named and one the session derived', () => {
+        expect(suggestedTitleFor({ title: 'Chat' }, 'Fix the flaky test')).toBe('Fix the flaky test');
+        expect(suggestedTitleFor({ title: 'Why does the test fail on…', titleSource: 'auto' }, 'Fix the flaky test')).toBe('Fix the flaky test');
+    });
+
+    test('never replaces a name a person gave', () => {
+        expect(suggestedTitleFor({ title: 'Mine', titleSource: 'user' }, 'Fix the flaky test')).toBeNull();
+    });
+
+    test('answers null for no suggestion and for the title the node already has, so nothing is written twice', () => {
+        expect(suggestedTitleFor({ title: 'Chat' }, undefined)).toBeNull();
+        expect(suggestedTitleFor({ title: 'Chat' }, '   ')).toBeNull();
+        expect(suggestedTitleFor({ title: 'Fix the flaky test', titleSource: 'auto' }, ' Fix the  flaky test ')).toBeNull();
+    });
+
+    test('flattens and caps what the model wrote', () => {
+        expect(suggestedTitleFor({ title: 'Chat' }, 'Two\nlines')).toBe('Two lines');
+        expect(suggestedTitleFor({ title: 'Chat' }, 'x'.repeat(200))).toHaveLength(SUGGESTED_TITLE_LIMIT);
+    });
+});
 
 describe('deriveNodeTitle', () => {
     test('takes the first line and leaves the rest of the prompt alone', () => {

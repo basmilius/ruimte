@@ -9,7 +9,7 @@ import { useChatRow } from '@/state/chats';
 import { useProject } from '@/state/project';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
-import { readNodeHost, renameHost, updateHost, useNodeHost } from '@/nodes/node-host';
+import { readNodeHost, renameHost, updateHost, useNodeHost, useSuggestedTitle } from '@/nodes/node-host';
 
 // The worker pool and its highlighter load with the first chat node, not with the app.
 const DiffPool = lazy(() => import('@/chat/ui/DiffPool'));
@@ -18,6 +18,7 @@ const DiffPool = lazy(() => import('@/chat/ui/DiffPool'));
 export function ChatBody({ id, focused }: { id: string; focused: boolean }) {
     const info = useChatRow(id, (row) => row?.info);
     const providerFixed = useNodeHost(id)?.providerFixed === true;
+    useSuggestedTitle(id, info?.suggestedTitle);
     const status = useTransportStatus();
     const [failure, setFailure] = useState<string | null>(null);
     const [generation, setGeneration] = useState(0);
@@ -56,8 +57,8 @@ export function ChatBody({ id, focused }: { id: string; focused: boolean }) {
     const send = (text: string, extras: ChatSendExtras): void => {
         const host = readNodeHost(id);
         const title = deriveNodeTitle(text);
-        // The prompt that opens a chat names it, once. After that it has a name of its own, and a
-        // rename by a person ends it for good.
+        // The prompt that opens a chat names it, once, until the CLI's own name for the session
+        // arrives. A rename by a person ends both for good.
         if (host && !host.titleSource && title) {
             renameHost(id, title, 'auto');
         }

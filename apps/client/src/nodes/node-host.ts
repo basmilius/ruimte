@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { isSessionView, type AgentKind, type CanvasNodeKind, type NodeTitleSource, type ProjectView, type RuntimeMode } from '@ruimte/contracts';
+import { suggestedTitleFor } from '@/chat/title';
 import { canvasOfNode, DEFAULT_TITLES, useCanvas, type CanvasNode } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
@@ -75,6 +76,25 @@ export const renameHost = (id: string, title: string, source: NodeTitleSource | 
         return;
     }
     useDocument.getState().renameView(id, title, source);
+};
+
+/*
+ * Names the node after what its CLI called the session, following that name while nobody renames it.
+ * The same suggestion arriving again finds the title it already set and writes nothing.
+ */
+export const useSuggestedTitle = (id: string, suggestion: string | undefined): void => {
+    const host = useNodeHost(id);
+    const title = host?.title;
+    const source = host?.titleSource;
+    useEffect(() => {
+        if (title === undefined) {
+            return;
+        }
+        const next = suggestedTitleFor({ title, titleSource: source }, suggestion);
+        if (next !== null) {
+            renameHost(id, next, 'auto');
+        }
+    }, [id, title, source, suggestion]);
 };
 
 export const updateHost = (id: string, patch: Partial<Pick<NodeHost, 'url' | 'cwd' | 'command' | 'resume' | 'provider'>>): void => {

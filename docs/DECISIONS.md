@@ -407,10 +407,24 @@ canvas, against Ruimte, one verdict each.
   (`deriveNodeTitle` in `apps/client/src/chat/title.ts`: the first line, cut around 48 characters
   on a word boundary, without the punctuation that ended the sentence), once, so a later prompt
   never renames a node you are looking at. Every rename goes through `renameNode`, which writes
-  `'user'` unless a caller says otherwise. A terminal agent cannot follow this rule yet: the hooks
-  of Claude Code and Codex carry `session_id`, `hook_event_name`, `transcript_path`, a tool name
-  and a notification type, and no name the CLI gave the session, so the name would have to come
-  out of the transcript file. That is a reader per CLI and is not built.
+  `'user'` unless a caller says otherwise.
+- A Claude Code session then takes the name the CLI gave it. Claude Code writes an `ai-title`
+  record into its own transcript about six seconds after the first prompt, in the stream-json mode
+  of a chat as well, anywhere in the file and more than once, and a `custom-title` after `/rename`
+  in the CLI, which wins. Neither protocol carries it, so the daemon reads the file
+  (`ClaudeTitleReader` in `apps/server/src/agents/claude-title.ts`), from the byte where its
+  previous read of that path stopped, since a transcript only grows and may be many megabytes. A
+  chat finds the file by its session id under the Claude projects folder and looks when the init
+  frame names the session, once more ten seconds later and at the end of every turn; the name rides
+  on `ChatInfo.suggestedTitle`. A terminal takes the `transcript_path` of its hooks and looks on a
+  hook that ends or blocks a turn, and at most every five seconds on the hooks of a turn in flight
+  while it has no name yet; the name rides on `AgentInfo.suggestedTitle` and stays with its
+  `agentSessionId`, so a new conversation in the same shell starts without one. The client applies
+  both with one rule (`suggestedTitleFor` and `useSuggestedTitle`): never over a `'user'` name, and
+  over a derived one, both `'auto'`, so the latest automatic name wins. A suggestion equal to the
+  title writes nothing. The text is a model's: capped at `SUGGESTED_TITLE_LIMIT`, flattened to one
+  line and drawn as plain text. About a quarter of sessions never get one, and then the derived
+  name stays. Codex and Gemini write no name down and get none from this.
 - A CLI that goes down with its shell is `exited`, not `error`. The daemon sees the PTY child end
   while its agent record is still live and writes `status: 'exited', live: false`
   (`SessionManager.handleExit`), the record outlives the shell, and the node shows `[session ended]`
