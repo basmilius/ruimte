@@ -88,6 +88,18 @@
         "typescript": "~6.0.2",
       },
     },
+    "packages/diagram": {
+      "name": "@ruimte/diagram",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/contracts": "workspace:*",
+        "@ruimte/drawing": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.4.0",
+        "typescript": "~6.0.2",
+      },
+    },
     "packages/drawing": {
       "name": "@ruimte/drawing",
       "version": "0.0.0",
@@ -255,6 +267,8 @@
     "@ruimte/contracts": ["@ruimte/contracts@workspace:packages/contracts"],
 
     "@ruimte/desktop": ["@ruimte/desktop@workspace:apps/desktop"],
+
+    "@ruimte/diagram": ["@ruimte/diagram@workspace:packages/diagram"],
 
     "@ruimte/drawing": ["@ruimte/drawing@workspace:packages/drawing"],
 
