@@ -1,16 +1,20 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
-import { Braces, FileJson, MoreHorizontal } from 'lucide-react';
+import { Braces, FileJson, MoreHorizontal, Pencil, RotateCcw } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
+import { DEFAULT_NODE_TONE } from '@ruimte/diagram';
 import { GRID, type Point } from '@/canvas/math';
 import { isApplePlatform } from '@/desktop/bridge';
 import { DiagramDock } from '@/diagram/DiagramDock';
 import { DiagramScene } from '@/diagram/DiagramScene';
 import { copyDiagramJson, openDiagramJson } from '@/diagram/export';
+import { Swatches } from '@/drawing/DrawingDock';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
 import { useProject } from '@/state/project';
+import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { isInFloatingLayer } from '@/ui/floating';
 import { Icon } from '@/ui/Icon';
 import { isModHeld } from '@/ui/shortcut';
@@ -21,6 +25,21 @@ const isChrome = (target: EventTarget | null): boolean =>
 
 /* The wheel settles on a whole percent this long after the last tick, as the canvas does. */
 const ZOOM_SETTLE_MS = 160;
+
+/* Screen pixels a press on a node may travel before it is a drag rather than a click. */
+const DRAG_THRESHOLD = 3;
+
+/* The node a pointer event landed on, by the mark `DiagramScene` puts on every node. */
+const nodeIdAt = (target: EventTarget | null): string | null =>
+    target instanceof Element ? (target.closest('[data-diagram-node]')?.getAttribute('data-diagram-node') ?? null) : null;
+
+/* A press on a node: where it started on screen and where the node stood, so a drag moves it by the difference. */
+interface NodeDrag {
+    id: string;
+    from: Point;
+    origin: Point;
+    moved: boolean;
+}
 
 /*
  * What a diagram can be asked from the bar above it: the way to its JSON file. The zoom and the
@@ -55,10 +74,88 @@ function DiagramControls({ viewId }: { viewId: string }) {
     );
 }
 
+/* The label of one node, typed over the box it names; Enter or leaving the field keeps it, Escape does not. */
+function RenameField({ id, onDone }: { id: string; onDone: () => void }) {
+    const store = useDiagramStore();
+    const camera = useDiagram(useShallow((s) => s.camera));
+    const box = useDiagram((s) => s.layout.nodes.find((candidate) => candidate.id === id) ?? null);
+    const label = useDiagram((s) => s.content.nodes.find((candidate) => candidate.id === id)?.label ?? '');
+    const done = useRef(false);
+    if (box === null) {
+        return null;
+    }
+    const finish = (value: string | null): void => {
+        // Enter blurs the field on its way out, which would otherwise commit a second time.
+        if (done.current) {
+            return;
+        }
+        done.current = true;
+        if (value !== null) {
+            store.getState().renameNode(id, value);
+        }
+        onDone();
+    };
+    const width = Math.max(Math.round(box.w * camera.zoom), 120);
+    return (
+        <input
+            data-diagram-chrome
+            autoFocus
+            defaultValue={label}
+            aria-label="Label"
+            className="absolute h-7 rounded-md bg-surface-sunken px-1.5 text-center text-sm font-medium text-text outline-none ring-1 ring-accent"
+            style={{
+                left: Math.round(camera.x + (box.x + box.w / 2) * camera.zoom - width / 2),
+                top: Math.round(camera.y + (box.y + box.h / 2) * camera.zoom - 14),
+                width
+            }}
+            onFocus={(e) => e.currentTarget.select()}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    finish(e.currentTarget.value);
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    finish(null);
+                }
+            }}
+            onBlur={(e) => finish(e.currentTarget.value)}
+        />
+    );
+}
+
+/* What a right-click on a node offers: its label, its tone and the way back to where the layout puts it. */
+function NodeMenuPopup({ id, onRename }: { id: string; onRename: () => void }) {
+    const store = useDiagramStore();
+    const node = useDiagram((s) => s.content.nodes.find((candidate) => candidate.id === id) ?? null);
+    if (node === null) {
+        return null;
+    }
+    return (
+        <ContextMenu.Portal>
+            <ContextMenu.Positioner className="z-(--z-popup)">
+                <ContextMenu.Popup className="menu-popup">
+                    <ContextMenu.Item className="menu-item" onClick={onRename}>
+                        <Icon icon={Pencil} size={14} /> Rename
+                    </ContextMenu.Item>
+                    <ContextMenu.Separator className={MENU_SEPARATOR} />
+                    <div className={MENU_LABEL}>Tone</div>
+                    <Swatches value={node.tone ?? DEFAULT_NODE_TONE} onPick={(tone) => store.getState().setNodeTone(id, tone)} paper />
+                    <ContextMenu.Separator className={MENU_SEPARATOR} />
+                    <ContextMenu.Item className="menu-item" disabled={!node.pos} onClick={() => store.getState().resetPosition(id)}>
+                        <Icon icon={RotateCcw} size={14} /> Reset position
+                    </ContextMenu.Item>
+                </ContextMenu.Popup>
+            </ContextMenu.Positioner>
+        </ContextMenu.Portal>
+    );
+}
+
 /*
  * A diagram on screen, as SVG in the DOM rather than on a canvas: a few dozen boxes with text in
- * them, where the DOM gives text rendering and selection for nothing. A person pans and zooms; the
- * graph itself is written, by hand in its file or by an agent.
+ * them, where the DOM gives text rendering and selection for nothing. A person pans, zooms, drags a
+ * node to where it should stand, renames it and gives it a tone; the graph itself is written, by hand
+ * in its file or by an agent.
  */
 export function DiagramView({ id }: { id: string }) {
     /* The editor of this cell, never the focused one: two diagrams can stand side by side. */
@@ -67,7 +164,10 @@ export function DiagramView({ id }: { id: string }) {
     const zoomAnchor = useRef<Point>({ x: 0, y: 0 });
     const zoomTimer = useRef<number | null>(null);
     const panFrom = useRef<Point | null>(null);
-    const [panning, setPanning] = useState(false);
+    const drag = useRef<NodeDrag | null>(null);
+    const [gesture, setGesture] = useState<'pan' | 'drag' | null>(null);
+    const [renaming, setRenaming] = useState<string | null>(null);
+    const [menuNode, setMenuNode] = useState<string | null>(null);
     const camera = useDiagram(useShallow((s) => s.camera));
     const content = useDiagram((s) => s.content);
     const layout = useDiagram((s) => s.layout);
@@ -116,16 +216,36 @@ export function DiagramView({ id }: { id: string }) {
     const onPointerDown = (e: React.PointerEvent<HTMLDivElement>): void => {
         // The controls are portaled into the bar and their menus into the body, yet React still
         // bubbles their presses through here; capturing the pointer for those would eat the click.
-        // The dock sits inside the surface, so it is told apart by its mark.
+        // The dock and the rename field sit inside the surface, so they are told apart by their mark.
         if ((e.button !== 0 && e.button !== 1) || !e.currentTarget.contains(e.target as Node) || isChrome(e.target)) {
             return;
         }
+        const nodeId = e.button === 0 ? nodeIdAt(e.target) : null;
+        const box = nodeId === null ? undefined : store.getState().layout.nodes.find((candidate) => candidate.id === nodeId);
         e.currentTarget.setPointerCapture(e.pointerId);
+        if (nodeId !== null && box) {
+            drag.current = { id: nodeId, from: { x: e.clientX, y: e.clientY }, origin: { x: box.x, y: box.y }, moved: false };
+            setGesture('drag');
+            return;
+        }
         panFrom.current = { x: e.clientX, y: e.clientY };
-        setPanning(true);
+        setGesture('pan');
     };
 
     const onPointerMove = (e: React.PointerEvent<HTMLDivElement>): void => {
+        const moving = drag.current;
+        if (moving !== null) {
+            const dx = e.clientX - moving.from.x;
+            const dy = e.clientY - moving.from.y;
+            if (!moving.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) {
+                return;
+            }
+            const { zoom } = store.getState().camera;
+            // The node leaves its layer the moment it moves; the rest of the layout closes up behind it.
+            store.getState().moveNode(moving.id, [moving.origin.x + dx / zoom, moving.origin.y + dy / zoom], !moving.moved);
+            moving.moved = true;
+            return;
+        }
         const from = panFrom.current;
         if (from === null) {
             return;
@@ -136,7 +256,15 @@ export function DiagramView({ id }: { id: string }) {
 
     const onPointerUp = (): void => {
         panFrom.current = null;
-        setPanning(false);
+        drag.current = null;
+        setGesture(null);
+    };
+
+    const onDoubleClick = (e: React.MouseEvent<HTMLDivElement>): void => {
+        const nodeId = isChrome(e.target) ? null : nodeIdAt(e.target);
+        if (nodeId !== null) {
+            setRenaming(nodeId);
+        }
     };
 
     const gridStep = GRID * 3 * camera.zoom;
@@ -149,23 +277,41 @@ export function DiagramView({ id }: { id: string }) {
             style={{
                 backgroundSize: `${gridStep}px ${gridStep}px`,
                 backgroundPosition: `${camera.x}px ${camera.y}px`,
-                cursor: panning ? 'grabbing' : 'grab'
+                cursor: gesture === 'pan' ? 'grabbing' : gesture === 'drag' ? 'move' : 'grab'
             }}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
+            onDoubleClick={onDoubleClick}
         >
-            <svg
-                className="absolute inset-0 h-full w-full select-none"
-                role="img"
-                aria-label={content.meta.title || 'Diagram'}
-                style={{ fontFamily: 'var(--font-sans)' }}
-            >
-                <g transform={`translate(${camera.x} ${camera.y}) scale(${camera.zoom})`}>
-                    <DiagramScene content={content} layout={layout} />
-                </g>
-            </svg>
+            <ContextMenu.Root>
+                <ContextMenu.Trigger
+                    className="absolute inset-0"
+                    onContextMenu={(e) => {
+                        const nodeId = nodeIdAt(e.target);
+                        // Only a node has a menu; a right-click on the paper opens nothing.
+                        if (nodeId === null) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return;
+                        }
+                        setMenuNode(nodeId);
+                    }}
+                >
+                    <svg
+                        className="h-full w-full select-none"
+                        role="img"
+                        aria-label={content.meta.title || 'Diagram'}
+                        style={{ fontFamily: 'var(--font-sans)' }}
+                    >
+                        <g transform={`translate(${camera.x} ${camera.y}) scale(${camera.zoom})`}>
+                            <DiagramScene content={content} layout={layout} interactive />
+                        </g>
+                    </svg>
+                </ContextMenu.Trigger>
+                {menuNode !== null && <NodeMenuPopup id={menuNode} onRename={() => setRenaming(menuNode)} />}
+            </ContextMenu.Root>
             {empty && (
                 <div className="pointer-events-none absolute inset-0 grid place-items-center p-6">
                     <p className="max-w-80 text-center text-sm text-text-muted">
@@ -173,6 +319,7 @@ export function DiagramView({ id }: { id: string }) {
                     </p>
                 </div>
             )}
+            {renaming !== null && <RenameField key={renaming} id={renaming} onDone={() => setRenaming(null)} />}
             <DiagramDock />
             {host !== null && createPortal(<DiagramControls viewId={id} />, host)}
         </div>

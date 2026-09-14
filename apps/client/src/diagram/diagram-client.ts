@@ -165,6 +165,8 @@ export class DiagramClient {
         }
         state.setConflict(null);
         if (choice === 'theirs') {
+            // The edit that caused the conflict still has a save waiting; it would write their file back as ours.
+            this.cancelSave(diagram);
             state.applyDocument(conflict);
             return;
         }

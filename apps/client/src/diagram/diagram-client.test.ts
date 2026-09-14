@@ -222,6 +222,40 @@ describe('DiagramClient', () => {
         expect(diagram().rev).toBe(9);
     });
 
+    test('a node dragged while an agent writes the diagram goes to the banner, and keeping mine writes the drag over their rev', async () => {
+        useDocument.getState().setActiveView('view-1');
+        await tick();
+        diagram().moveNode('a', [300, 120], true);
+        // The agent's write lands before the pause after the drag is over.
+        transport.emit('diagram.changed', { projectId: 'p1', viewId: 'view-1', document: doc(8, node('a'), node('agent')) });
+        expect(diagram().conflict).toMatchObject({ rev: 8 });
+        await tick(20);
+        // Nothing is written while the banner stands.
+        expect(transport.of('diagram.save')).toHaveLength(0);
+
+        await client.resolveConflict('mine');
+        await tick(20);
+        const saves = transport.of('diagram.save');
+        expect(saves).toHaveLength(1);
+        const written = saves[0]!.payload as { baseRev: number; content: { nodes: DiagramNode[] } };
+        expect(written.baseRev).toBe(8);
+        expect(written.content.nodes).toEqual([{ id: 'a', label: 'a', pos: [300, 120] }]);
+        expect(diagram().rev).toBe(9);
+        expect(diagram().conflict).toBeNull();
+    });
+
+    test('taking theirs after a drag drops the drag and the step back to it', async () => {
+        useDocument.getState().setActiveView('view-1');
+        await tick();
+        diagram().moveNode('a', [300, 120], true);
+        transport.emit('diagram.changed', { projectId: 'p1', viewId: 'view-1', document: doc(8, node('a')) });
+        await client.resolveConflict('theirs');
+        expect(diagram().content.nodes).toEqual([{ id: 'a', label: 'a' }]);
+        expect(diagram().past).toHaveLength(0);
+        await tick(20);
+        expect(transport.of('diagram.save')).toHaveLength(0);
+    });
+
     test('a change from disk with nothing unsaved is loaded in place', async () => {
         useDocument.getState().setActiveView('view-1');
         await tick();

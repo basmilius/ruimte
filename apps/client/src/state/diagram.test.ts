@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { DiagramDocument } from '@ruimte/contracts';
-import { createDiagramStore } from './diagram';
+import type { DiagramDocument, DiagramNode } from '@ruimte/contracts';
+import { createDiagramStore, DIAGRAM_HISTORY_LIMIT } from './diagram';
 
 const document: DiagramDocument = {
     version: 1,
@@ -53,5 +53,110 @@ describe('the diagram store', () => {
         store.getState().replaceContent({ ...store.getState().content, nodes: [...document.nodes, { id: 'c', label: 'C' }] });
         expect(store.getState().edits).toBe(1);
         expect(store.getState().layout.nodes).toHaveLength(3);
+    });
+});
+
+const doc = (rev: number, ...nodes: DiagramNode[]): DiagramDocument => ({
+    version: 1,
+    rev,
+    meta: { title: '', direction: 'right' },
+    nodes,
+    groups: [],
+    edges: [{ from: 'a', to: 'b' }]
+});
+
+/* A store with a small graph loaded, the way the client hands one to a cell. */
+const loaded = () => {
+    const store = createDiagramStore();
+    store.getState().load('view-1', doc(3, { id: 'a', label: 'Client' }, { id: 'b', label: 'Daemon' }), null);
+    return store;
+};
+
+const nodeOf = (store: ReturnType<typeof loaded>, id: string): DiagramNode => store.getState().content.nodes.find((node) => node.id === id)!;
+
+describe('the handles of the diagram store', () => {
+    test('dragging a node writes whole numbers into pos, and the layout puts the box there', () => {
+        const store = loaded();
+        store.getState().moveNode('b', [400.4, 219.6], true);
+        expect(nodeOf(store, 'b').pos).toEqual([400, 220]);
+        expect(store.getState().layout.nodes.find((box) => box.id === 'b')).toMatchObject({ x: 400, y: 220, pinned: true });
+        expect(store.getState().edits).toBe(1);
+    });
+
+    test('a drag is one step back, however many moves it took', () => {
+        const store = loaded();
+        store.getState().moveNode('b', [100, 100], true);
+        store.getState().moveNode('b', [140, 120], false);
+        store.getState().moveNode('b', [180, 140], false);
+        expect(store.getState().past).toHaveLength(1);
+        expect(store.getState().edits).toBe(3);
+        store.getState().undo();
+        expect(nodeOf(store, 'b').pos).toBeUndefined();
+    });
+
+    test('renaming keeps a label with something in it, and an empty one is no change', () => {
+        const store = loaded();
+        store.getState().renameNode('a', '  Browser  ');
+        expect(nodeOf(store, 'a').label).toBe('Browser');
+        store.getState().renameNode('a', '   ');
+        store.getState().renameNode('a', 'Browser');
+        expect(nodeOf(store, 'a').label).toBe('Browser');
+        expect(store.getState().past).toHaveLength(1);
+    });
+
+    test('a tone is a palette name on the node, and picking the same one twice is one change', () => {
+        const store = loaded();
+        store.getState().setNodeTone('a', 'blue');
+        store.getState().setNodeTone('a', 'blue');
+        expect(nodeOf(store, 'a').tone).toBe('blue');
+        expect(store.getState().edits).toBe(1);
+    });
+
+    test('resetting a position hands the node back to the layout, and does nothing on a node that has none', () => {
+        const store = loaded();
+        store.getState().resetPosition('a');
+        expect(store.getState().edits).toBe(0);
+        store.getState().moveNode('a', [500, 500], true);
+        store.getState().resetPosition('a');
+        expect('pos' in nodeOf(store, 'a')).toBe(false);
+        expect(store.getState().layout.nodes.find((box) => box.id === 'a')?.pinned).toBe(false);
+    });
+
+    test('undo and redo step through every handle and count as edits, so the client saves them', () => {
+        const store = loaded();
+        store.getState().renameNode('a', 'Browser');
+        store.getState().setNodeTone('b', 'green');
+        store.getState().undo();
+        expect(nodeOf(store, 'b').tone).toBeUndefined();
+        expect(nodeOf(store, 'a').label).toBe('Browser');
+        store.getState().undo();
+        expect(nodeOf(store, 'a').label).toBe('Client');
+        store.getState().redo();
+        expect(nodeOf(store, 'a').label).toBe('Browser');
+        expect(store.getState().future).toHaveLength(1);
+        expect(store.getState().edits).toBe(5);
+        // A new change after an undo drops the steps that were ahead of it.
+        store.getState().moveNode('a', [0, 0], true);
+        expect(store.getState().future).toHaveLength(0);
+    });
+
+    test('an unknown node id changes nothing', () => {
+        const store = loaded();
+        store.getState().moveNode('nope', [1, 2], true);
+        store.getState().renameNode('nope', 'x');
+        store.getState().setNodeTone('nope', 'red');
+        expect(store.getState().edits).toBe(0);
+        expect(store.getState().past).toHaveLength(0);
+    });
+
+    test('the history keeps its limit, and a document from disk starts it over', () => {
+        const store = loaded();
+        for (let i = 0; i < DIAGRAM_HISTORY_LIMIT + 5; i++) {
+            store.getState().moveNode('a', [i * 10, 0], true);
+        }
+        expect(store.getState().past).toHaveLength(DIAGRAM_HISTORY_LIMIT);
+        store.getState().applyDocument(doc(9, { id: 'a', label: 'Client' }));
+        expect(store.getState().past).toHaveLength(0);
+        expect(store.getState().future).toHaveLength(0);
     });
 });

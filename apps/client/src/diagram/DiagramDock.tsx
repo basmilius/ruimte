@@ -1,6 +1,7 @@
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, Copy, Download, Maximize, Minus, MoreHorizontal, Plus } from 'lucide-react';
+import { Check, Copy, Download, Maximize, Minus, MoreHorizontal, Plus, Redo2, Undo2 } from 'lucide-react';
 import { activeZoomPreset, ZOOM_PRESETS } from '@/canvas/math';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { copyDiagramPng, copyDiagramSvg, saveDiagramPng, saveDiagramSvg } from '@/diagram/export';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
 import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
@@ -10,13 +11,15 @@ import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
 
 /*
- * The diagram's dock: the zoom and the exports in the same place and the same shape as a drawing has
- * them. The way to the JSON file stays in the bar above the view, since it is about the file.
+ * The diagram's dock: the zoom, the exports and the way back in the same place and the same shape as
+ * a drawing has them. The way to the JSON file stays in the bar above the view, since it is about the file.
  */
 export function DiagramDock() {
     const store = useDiagramStore();
     const zoom = useDiagram((s) => s.camera.zoom);
     const empty = useDiagram((s) => s.content.nodes.length === 0);
+    const canUndo = useDiagram((s) => s.past.length > 0);
+    const canRedo = useDiagram((s) => s.future.length > 0);
     const preset = activeZoomPreset(zoom);
 
     return (
@@ -100,6 +103,16 @@ export function DiagramDock() {
                         </Menu.Positioner>
                     </Menu.Portal>
                 </Menu.Root>
+                <Tooltip label="Undo" kbd={CANVAS_SHORTCUTS.undo} name>
+                    <button className="icon-btn" disabled={!canUndo} onClick={() => store.getState().undo()}>
+                        <Icon icon={Undo2} size={16} />
+                    </button>
+                </Tooltip>
+                <Tooltip label="Redo" kbd={CANVAS_SHORTCUTS.redo} name>
+                    <button className="icon-btn" disabled={!canRedo} onClick={() => store.getState().redo()}>
+                        <Icon icon={Redo2} size={16} />
+                    </button>
+                </Tooltip>
             </div>
         </DockShell>
     );

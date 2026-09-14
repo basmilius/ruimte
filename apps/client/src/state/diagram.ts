@@ -1,5 +1,13 @@
 import { createStore, type StoreApi } from 'zustand';
-import { EMPTY_DIAGRAM, type DiagramContent, type DiagramDocument, type ProjectViewLocal, type ViewCamera } from '@ruimte/contracts';
+import {
+    EMPTY_DIAGRAM,
+    type DiagramContent,
+    type DiagramDocument,
+    type DiagramNode,
+    type DrawingColor,
+    type ProjectViewLocal,
+    type ViewCamera
+} from '@ruimte/contracts';
 import { layoutOf, type DiagramLayout } from '@ruimte/diagram';
 import { cameraOfView, cameraToFit, clampZoom, isMeasured, snapZoom, viewCameraOf, zoomAround, type Camera, type Point } from '@/canvas/math';
 import type { CameraRequest } from '@/state/canvas';
@@ -23,6 +31,9 @@ export interface DiagramState {
     dirty: boolean;
     /* Counts changes to the content, which is what the client saves on. */
     edits: number;
+    /* What undo and redo step through: whole contents, since a diagram is a few dozen entries. */
+    past: DiagramContent[];
+    future: DiagramContent[];
     loading: boolean;
     /* Where the camera goes the moment the diagram has a size. */
     pendingCamera: Extract<CameraRequest, { kind: 'fit' | 'view' }> | null;
@@ -33,8 +44,16 @@ export interface DiagramState {
     /* Takes the diagram off screen without saving; the client flushes before it calls this. */
     unload(): void;
     exportContent(): DiagramContent;
-    /* A change a person made. Nothing on screen makes one yet; dragging a node will. */
+    /* A change a person made, as a whole new content; the handles below are the ones the view offers. */
     replaceContent(content: DiagramContent): void;
+    /* `first` says this is the first step of a drag, which is the one that goes into the history. */
+    moveNode(id: string, pos: [number, number], first: boolean): void;
+    renameNode(id: string, label: string): void;
+    setNodeTone(id: string, tone: DrawingColor): void;
+    /* Gives a dragged node back to the layout. */
+    resetPosition(id: string): void;
+    undo(): void;
+    redo(): void;
 
     setViewport(viewport: Viewport): void;
     setCamera(camera: Camera): void;
@@ -64,9 +83,33 @@ export const contentOf = (document: DiagramDocument): DiagramContent => ({
 
 const EMPTY_CONTENT = contentOf(EMPTY_DIAGRAM);
 
+export const DIAGRAM_HISTORY_LIMIT = 100;
+
+/* Every change to the content is an edit, laid out again; the client saves on the counter. */
+const changed = (state: DiagramState, content: DiagramContent, first = true): Partial<DiagramState> => ({
+    content,
+    layout: layoutOf(content),
+    edits: state.edits + 1,
+    ...(first ? { past: [...state.past.slice(-(DIAGRAM_HISTORY_LIMIT - 1)), state.content], future: [] } : {})
+});
+
+/* The content with one node rewritten, or null when there is no such node or nothing would change. */
+const withNode = (content: DiagramContent, id: string, rewrite: (node: DiagramNode) => DiagramNode): DiagramContent | null => {
+    const node = content.nodes.find((candidate) => candidate.id === id);
+    if (!node) {
+        return null;
+    }
+    const next = rewrite(node);
+    if (next === node) {
+        return null;
+    }
+    return { ...content, nodes: content.nodes.map((candidate) => (candidate.id === id ? next : candidate)) };
+};
+
 /*
  * The diagram on screen: the graph, its layout and where the camera is. Shaped after the drawing
- * store, without tools, a selection or an undo, because a diagram is written rather than drawn.
+ * store, without tools or a selection, because a diagram is written rather than drawn: a person only
+ * moves, renames and colors what an agent or the file put there.
  */
 export const createDiagramStore = (): StoreApi<DiagramState> =>
     createStore<DiagramState>((set, get) => ({
@@ -78,6 +121,8 @@ export const createDiagramStore = (): StoreApi<DiagramState> =>
         rev: 0,
         dirty: false,
         edits: 0,
+        past: [],
+        future: [],
         loading: false,
         pendingCamera: null,
         conflict: null,
@@ -93,6 +138,8 @@ export const createDiagramStore = (): StoreApi<DiagramState> =>
                 rev: document.rev,
                 dirty: false,
                 edits: 0,
+                past: [],
+                future: [],
                 conflict: null,
                 error: null,
                 pendingCamera: null
@@ -109,7 +156,18 @@ export const createDiagramStore = (): StoreApi<DiagramState> =>
         },
 
         unload() {
-            set({ viewId: null, content: EMPTY_CONTENT, layout: layoutOf(EMPTY_CONTENT), rev: 0, dirty: false, edits: 0, conflict: null, error: null });
+            set({
+                viewId: null,
+                content: EMPTY_CONTENT,
+                layout: layoutOf(EMPTY_CONTENT),
+                rev: 0,
+                dirty: false,
+                edits: 0,
+                past: [],
+                future: [],
+                conflict: null,
+                error: null
+            });
         },
 
         exportContent() {
@@ -117,7 +175,67 @@ export const createDiagramStore = (): StoreApi<DiagramState> =>
         },
 
         replaceContent(content) {
-            set((state) => ({ content, layout: layoutOf(content), edits: state.edits + 1 }));
+            set((state) => changed(state, content));
+        },
+        moveNode(id, [x, y], first) {
+            const state = get();
+            const pos: [number, number] = [Math.round(x), Math.round(y)];
+            const content = withNode(state.content, id, (node) => (node.pos?.[0] === pos[0] && node.pos[1] === pos[1] ? node : { ...node, pos }));
+            if (content !== null) {
+                set(changed(state, content, first));
+            }
+        },
+        renameNode(id, label) {
+            const state = get();
+            // An empty label would leave a box nobody can find again, so it keeps the one it had.
+            const next = label.trim();
+            const content = withNode(state.content, id, (node) => (next === '' || next === node.label ? node : { ...node, label: next }));
+            if (content !== null) {
+                set(changed(state, content));
+            }
+        },
+        setNodeTone(id, tone) {
+            const state = get();
+            const content = withNode(state.content, id, (node) => (node.tone === tone ? node : { ...node, tone }));
+            if (content !== null) {
+                set(changed(state, content));
+            }
+        },
+        resetPosition(id) {
+            const state = get();
+            const content = withNode(state.content, id, (node) => {
+                if (!node.pos) {
+                    return node;
+                }
+                const rest = { ...node };
+                delete rest.pos;
+                return rest;
+            });
+            if (content !== null) {
+                set(changed(state, content));
+            }
+        },
+        undo() {
+            const state = get();
+            const previous = state.past.at(-1);
+            if (!previous) {
+                return;
+            }
+            set({
+                content: previous,
+                layout: layoutOf(previous),
+                past: state.past.slice(0, -1),
+                future: [state.content, ...state.future],
+                edits: state.edits + 1
+            });
+        },
+        redo() {
+            const state = get();
+            const next = state.future[0];
+            if (!next) {
+                return;
+            }
+            set({ content: next, layout: layoutOf(next), past: [...state.past, state.content], future: state.future.slice(1), edits: state.edits + 1 });
         },
 
         setViewport(viewport) {
@@ -183,7 +301,8 @@ export const createDiagramStore = (): StoreApi<DiagramState> =>
         },
         applyDocument(document) {
             const content = contentOf(document);
-            set({ loading: true, content, layout: layoutOf(content), rev: document.rev, dirty: false, conflict: null });
+            // What is on disk now is another starting point, so the steps back from the old one are gone.
+            set({ loading: true, content, layout: layoutOf(content), rev: document.rev, dirty: false, conflict: null, past: [], future: [] });
             set({ loading: false });
         }
     }));

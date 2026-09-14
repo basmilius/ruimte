@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
-import { isCanvasView } from '@ruimte/contracts';
+import { isCanvasView, isDiagramView } from '@ruimte/contracts';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, VIEW_SHORTCUTS } from '@/canvas/shortcuts';
 import { isApplePlatform } from '@/desktop/bridge';
 import { addNodeAtCenter } from '@/shell/commands';
 import { newCanvasView, showView, splitFocusedCell, stepView, viewAtIndex } from '@/project/views';
 import { focusedCanvas } from '@/state/canvas';
+import { focusedDiagram } from '@/state/diagram';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { cellCount, type SplitDirection } from '@/shell/split';
@@ -134,6 +135,21 @@ export const useCanvasShortcuts = (stores: WorkspaceStores | null): void => {
             if (is(CANVAS_SHORTCUTS.togglePanel)) {
                 e.preventDefault();
                 useUi.getState().togglePanel();
+                return;
+            }
+            /* A diagram has an undo of its own and nothing else a key reaches; a drawing binds its keys
+               in its view, since a drawing has the keyboard the way a terminal has it. */
+            const active = activeViewOf(useDocument.getState());
+            if (active !== null && isDiagramView(active) && (is(CANVAS_SHORTCUTS.undo) || is(CANVAS_SHORTCUTS.redo))) {
+                if (isTypingTarget(e.target) || isInFloatingLayer(e.target) || useUi.getState().settings.open) {
+                    return;
+                }
+                e.preventDefault();
+                if (is(CANVAS_SHORTCUTS.redo)) {
+                    focusedDiagram().getState().redo();
+                } else {
+                    focusedDiagram().getState().undo();
+                }
                 return;
             }
             // A dialog owns the keyboard while it is up; Backspace there must not delete nodes. Nor may

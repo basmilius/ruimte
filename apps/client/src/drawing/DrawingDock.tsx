@@ -365,8 +365,8 @@ export function DrawingDock() {
     );
 }
 
-/* The ten palette names as circles; the file keeps the name, the theme keeps the value. */
-function Swatches({ value, onPick, paper = false }: { value: DrawingColor; onPick: (color: DrawingColor) => void; paper?: boolean }) {
+/* The ten palette names as circles; the file keeps the name, the theme keeps the value. A diagram picks its tones here too. */
+export function Swatches({ value, onPick, paper = false }: { value: DrawingColor; onPick: (color: DrawingColor) => void; paper?: boolean }) {
     return (
         <div className="flex gap-1 px-2 py-1.5">
             {DRAWING_COLORS.map((color) => (

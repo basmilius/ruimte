@@ -18,8 +18,8 @@ import {
 const ink = (tone: DrawingColor): string => `var(--draw-${tone})`;
 const paper = (tone: DrawingColor): string => `var(--draw-paper-${tone})`;
 
-/* The graph as elements: the same layout and paths as the export, with the colors left to CSS. */
-export function DiagramScene({ content, layout }: { content: DiagramContent; layout: DiagramLayout }) {
+/* The graph as elements: the same layout and paths as the export, with the colors left to CSS. `interactive` is the view, where a node is dragged. */
+export function DiagramScene({ content, layout, interactive = false }: { content: DiagramContent; layout: DiagramLayout; interactive?: boolean }) {
     const nodes = new Map(content.nodes.map((node) => [node.id, node]));
     const groups = new Map(content.groups.map((group) => [group.id, group]));
     return (
@@ -80,7 +80,8 @@ export function DiagramScene({ content, layout }: { content: DiagramContent; lay
                 const tone = node.tone ?? DEFAULT_NODE_TONE;
                 const paths = shapePaths(node.shape, box);
                 return (
-                    <g key={box.id}>
+                    // The mark is how the view finds the node under the pointer; the node on a canvas takes no pointer at all.
+                    <g key={box.id} data-diagram-node={box.id} style={interactive ? { cursor: 'move' } : undefined}>
                         <path d={paths.body} strokeWidth={2} style={{ fill: paper(tone), stroke: ink(tone) }} />
                         {paths.detail && <path d={paths.detail} strokeWidth={2} style={{ fill: 'none', stroke: ink(tone) }} />}
                         {textLinesOf(box, node.shape).map((line, index) => (
