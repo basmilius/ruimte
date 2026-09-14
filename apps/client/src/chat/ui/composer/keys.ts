@@ -32,6 +32,39 @@ export const inOpenFence = (tree: Tree, pos: number): boolean => {
     return false;
 };
 
+const INLINE_BLOCK = /^(Paragraph|ATXHeading\d|SetextHeading\d)$/;
+
+/*
+ * Whether `pos` sits inside code: a fence, open or closed, or a code span. The parser only calls a
+ * span code once it is closed, so a backtick nobody has closed yet earlier in the same paragraph
+ * counts as well: whoever types after it is writing code.
+ */
+export const inCode = (tree: Tree, text: string, pos: number): boolean => {
+    let blockFrom: number | null = null;
+    for (let node: SyntaxNode | null = tree.resolveInner(pos, -1); node !== null; node = node.parent) {
+        if (node.name === 'FencedCode') {
+            return pos > node.from && (pos < node.to || node.getChildren('CodeMark').length < 2);
+        }
+        if (node.name === 'InlineCode' && pos > node.from && pos < node.to) {
+            return true;
+        }
+        if (blockFrom === null && INLINE_BLOCK.test(node.name)) {
+            blockFrom = node.from;
+        }
+    }
+    let from = blockFrom ?? text.lastIndexOf('\n', pos - 1) + 1;
+    tree.iterate({
+        from,
+        to: pos,
+        enter: (node) => {
+            if (node.name === 'InlineCode' && node.to <= pos) {
+                from = Math.max(from, node.to);
+            }
+        }
+    });
+    return /(^|[^\\])`/.test(text.slice(from, pos));
+};
+
 export interface RecallContext {
     key: string;
     text: string;

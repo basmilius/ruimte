@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import { Dialog } from '@base-ui-components/react/dialog';
 import { insertNewline } from '@codemirror/commands';
 import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
+import type { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import clsx from 'clsx';
 import { ArrowUp, ChevronDown, Clock, FastForward, Paperclip, Square, SquareSlash, X, Zap } from 'lucide-react';
@@ -25,7 +26,7 @@ import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferenc
 import { STASH_SHORTCUT, stashDraft, type StashedPrompt, useStash } from '@/chat/stash';
 import { pageTimeline, scrollTimelineToEnd, subscribeTimelineEnd, timelineAtEnd } from '@/chat/timeline-scroll';
 import { chipDecorations } from '@/chat/ui/composer/chips';
-import { enterAction, inOpenFence, recallDirection } from '@/chat/ui/composer/keys';
+import { enterAction, inCode, inOpenFence, recallDirection } from '@/chat/ui/composer/keys';
 import { ComposerInput, type ComposerInputHandle } from '@/chat/ui/ComposerInput';
 import { ContextMeter } from '@/chat/ui/ContextMeter';
 import { ApprovalDock, QuestionDock } from '@/chat/ui/PendingDock';
@@ -316,9 +317,11 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
 
     const same = (a: MentionQuery | null, b: MentionQuery | null): boolean => a?.start === b?.start && a?.query === b?.query;
 
-    /* Which picker the caret opens: `@` for a file, `$` for a skill, or neither. */
-    const trackTriggers = (value: string, selection: TextRange): void => {
-        const caret = selection.from === selection.to ? selection.from : null;
+    /* Which picker the caret opens: `@` for a file, `$` for a skill, or neither. In code a sigil is just text. */
+    const trackTriggers = (value: string, selection: TextRange, state: EditorState): void => {
+        const empty = selection.from === selection.to;
+        const tree = empty ? (ensureSyntaxTree(state, selection.from, 50) ?? syntaxTree(state)) : null;
+        const caret = tree !== null && !inCode(tree, value, selection.from) ? selection.from : null;
         const skill = caret === null ? null : findSkillQuery(value, caret);
         setSkillQuery((current) => (same(current, skill) ? current : skill));
         // A CLI that does not expand `@path` gets the text as it is, so the picker stays out of the way.
@@ -777,10 +780,10 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                     disabled={disabled}
                     tabbable={focused}
                     extensions={editorExtensions}
-                    onChange={(value, selection) => {
+                    onChange={(value, selection, state) => {
                         setText(value);
                         setMenuIndex(0);
-                        trackTriggers(value, selection);
+                        trackTriggers(value, selection, state);
                         if (historyIndex !== null && value !== history[historyIndex]?.text) {
                             setHistoryIndex(null);
                         }

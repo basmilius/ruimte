@@ -24,8 +24,8 @@ interface ComposerInputProps {
     className?: string;
     /* Keep the reference stable: a new one reconfigures the editor. */
     extensions?: Extension;
-    onChange(text: string, selection: InputSelection): void;
-    onSelectionChange?(text: string, selection: InputSelection): void;
+    onChange(text: string, selection: InputSelection, state: EditorState): void;
+    onSelectionChange?(text: string, selection: InputSelection, state: EditorState): void;
     onBlur?(): void;
     /* Runs before the editor's own keymap; true means the key is handled and its default prevented. */
     onKeyDown?(event: KeyboardEvent, view: EditorView): boolean;
@@ -92,9 +92,9 @@ export function ComposerInput({ ref, value, placeholder, disabled, tabbable, cla
                         const { from, to } = update.state.selection.main;
                         if (update.docChanged) {
                             reported.current = text;
-                            current.onChange(text, { from, to });
+                            current.onChange(text, { from, to }, update.state);
                         } else {
-                            current.onSelectionChange?.(text, { from, to });
+                            current.onSelectionChange?.(text, { from, to }, update.state);
                         }
                     })
                 ]

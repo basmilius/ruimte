@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { parser } from '@lezer/markdown';
-import { enterAction, inOpenFence, recallDirection } from './keys';
+import { enterAction, inCode, inOpenFence, recallDirection } from './keys';
 
 const fenceAt = (doc: string, pos: number = doc.length): boolean => inOpenFence(parser.parse(doc), pos);
 
@@ -44,6 +44,31 @@ describe('inOpenFence', () => {
         expect(fenceAt('plain text')).toBe(false);
         expect(fenceAt('see `code')).toBe(false);
         expect(fenceAt('see `code`')).toBe(false);
+    });
+});
+
+describe('inCode', () => {
+    const codeAt = (doc: string, pos: number = doc.length): boolean => inCode(parser.parse(doc), doc, pos);
+
+    test('is true in the body of a fence, open or closed', () => {
+        expect(codeAt('```php\n<?php\n$basmilius')).toBe(true);
+        const closed = '```\n$a\n```\nafter';
+        expect(codeAt(closed, 6)).toBe(true);
+        expect(codeAt(closed)).toBe(false);
+    });
+
+    test('is true inside a code span and after a backtick nobody closed', () => {
+        expect(codeAt('see `$a` here', 6)).toBe(true);
+        expect(codeAt('see `$a')).toBe(true);
+        expect(codeAt('- item `@a')).toBe(true);
+        expect(codeAt('see `one\n$two')).toBe(true);
+    });
+
+    test('is false in prose, after a closed span and after an escaped backtick', () => {
+        expect(codeAt('plain $a')).toBe(false);
+        expect(codeAt('see `a` and $b')).toBe(false);
+        expect(codeAt('see \\` and $b')).toBe(false);
+        expect(codeAt('see `a`\n\n$b')).toBe(false);
     });
 });
 
