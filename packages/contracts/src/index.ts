@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BytesReadPayloadSchema, BytesReadResultSchema } from './bytes.ts';
 import {
     AgentResumePayloadSchema,
     ApprovalAnswerPayloadSchema,
@@ -136,9 +137,11 @@ import { UsageChangedEventSchema, UsageLimitsSnapshotSchema, UsageSummaryPayload
 
 export * from './agent.ts';
 export * from './auth.ts';
+export * from './bytes.ts';
 export * from './chat.ts';
 export * from './context.ts';
 export * from './direct.ts';
+export * from './direct-liveness.ts';
 export * from './context-sources.ts';
 export * from './diagram.ts';
 export * from './drawing.ts';
@@ -215,6 +218,7 @@ export const REQUEST_SCHEMAS = {
     'fs.read': { payload: FsReadPayloadSchema, result: FsReadResultSchema },
     'fs.watch': { payload: FsWatchPayloadSchema, result: EmptySchema },
     'fs.unwatch': { payload: FsWatchPayloadSchema, result: EmptySchema },
+    'bytes.read': { payload: BytesReadPayloadSchema, result: BytesReadResultSchema },
     'git.worktree-add': { payload: WorktreeAddPayloadSchema, result: WorktreeAddResultSchema },
     'git.worktree-list': { payload: WorktreeListPayloadSchema, result: WorktreeListResultSchema },
     'git.worktree-remove': { payload: WorktreeRemovePayloadSchema, result: EmptySchema },
