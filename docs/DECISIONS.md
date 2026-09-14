@@ -547,6 +547,21 @@ canvas, against Ruimte, one verdict each.
   with the list of the ones that do. A flag an agent writes out of habit must not turn a real call
   into a silent nothing. A dry run runs under the same lock a write takes and returns a mutation
   with no content, so `ProjectStore.mutate` writes nothing and the rev stays where it was.
+- The verb set leaves out `write` and `close`, a `--cmd` that starts a command, and browser control.
+  Typing into another node's session or closing it has to ask a person first, and a single pending
+  confirmation holds every other sensitive verb for two minutes; without those two no verb needs a
+  dialog, since `view delete` and `node delete` decide by lineage and the machine setting before
+  they run. A command started by a verb nobody confirms is how a bug in a canvas turns
+  into code execution, so `agent` is the only verb that starts anything. A browser node is a webview
+  in the client, which the daemon cannot drive. The context an agent reads is untrusted input (a
+  neighbor's transcript can carry a web page), and for a chat agent with limited tools the
+  boundary that holds is that `--cwd` stays inside the project folder or a worktree of it.
+- Two questions the design left open, answered by what the build does (checked against a real
+  daemon on 2026-09-14). A maker is a node id, not a session: a new session on the same node id may
+  delete what the old one made, and a view whose maker is gone is left to a person or the machine
+  setting. A verb from a session that outlives `project.close` still writes into that project,
+  since `ProjectStore.mutate` works on the file and leaves `closedAt` alone, so the project stays
+  under Recent with the addition in it; `team` is one write, so nothing is left half made.
 - `--group G` takes a group by id, and the node lands inside the frame: geometry is what membership
   is for an open group, so nothing else would make it a member. A collapsed group keeps its members
   in the file, so the id joins `memberIds` there as well, and the frame grows when it has no room,
@@ -789,10 +804,19 @@ canvas, against Ruimte, one verdict each.
 
 ### A diagram
 
-Built on 2026-09-14 after `docs/reports/2026-09-12-diagram-view.html`, all five phases of it (the
-`diagram` kind of `node`, which the report put in phase 4, came with the node itself in phase 5).
-What the report left open and what the build decided:
+Built on 2026-09-14 after a design report of 2026-09-12, all five phases of it (the `diagram` kind
+of `node`, which the report put in phase 4, came with the node itself in phase 5). What the report
+left open and what the build decided:
 
+- **The idea is archify's, the code is not.** A diagram is a typed document an agent writes, with
+  refusals it can repair against, not a picture it tries to draw. What stayed out: archify's five
+  diagram types (one directed graph with groups covers architecture, data flow and a workflow; a
+  sequence diagram is another renderer and waits until someone misses it), coordinates chosen by
+  the agent, semantic node types like `backend` that only fit web architecture, hex colors, its
+  viewer and a standalone HTML artifact (the file in the project is the artifact). Mermaid is not
+  an input, because its parser and edge cases would come along and the file would no longer be
+  what the agent wrote; as an export it could come later. A node that points at a path and a line,
+  opened in the preview on a click, is the one later addition the report named.
 - **Two view kinds, not a second sort inside a drawing.** The report's advice, kept: a diagram
   inheriting the bare letter keys, the dock and the undo of a drawing would have been a question in
   every drawing branch of the client, and the file of one is nothing like the file of the other.
@@ -1432,7 +1456,10 @@ Also decided against for now: a scheduler, checkpoint restore and telemetry.
   CLI has a flag for one (Claude Code) and in front of the first prompt where it has none
   (Codex), with the sentence about the links behind it when the chat has links at that moment; a
   Claude Code agent inside a shell gets it as `additionalContext` from its `SessionStart` hook,
-  which is why the hook command prints curl's reply now. Everything after that is about links
+  which is why the hook command prints curl's reply now. No skill file or instruction block is
+  written into anyone's `$HOME`: a file per CLI and per SSH host is a copy that
+  goes stale unnoticed, while a sentence from the daemon travels with it and `help` renders from
+  the registry. Everything after that is about links
   only: `UserPromptSubmit` answers with the linked-context hint plus whatever only this turn has
   to hear (`hookContext`), a chat whose set of links changed between turns gets a note in front of
   the next prompt (also shown as an info note in the thread), and a plain shell keeps one dimmed
@@ -1498,16 +1525,14 @@ a day, several days. Each of the larger ones becomes a GitHub issue when it star
 5. **The rest of the git panel**: commit, push and a PR through `gh` as one stacked action with
    its progress as a toast, the branch chip with a ref picker, pull when behind, and a commit
    message written by the chat CLI when the field is left empty.
-6. **Agents on the canvas** is done, and what is left of it is one verb and three CLIs. The diagram
-   view (`docs/reports/2026-09-12-diagram-view.html`) hangs its write verb on the same registry and
-   is still a proposal. Hook-reply approvals are Claude Code's alone, because it is the only
-   terminal CLI with a hook that offers one: Codex waits on the contract in 1 above, Gemini and
-   Copilot on their hooks in 4. Everything else of it stands: the verbs in 66 commits between
-   `323d4dd` and `fd202cd`, then keeping the machine awake, attention and the approvals in 28 more
-   up to `6313ae8`. The design and what the build changed about it are in
-   `docs/reports/2026-09-11-agents-op-het-canvas.html`; every decision is above, from "The daemon
-   parses a verb's arguments" onward for the verbs, and under "Staying awake while an agent works",
-   "Attention" and the permission bullets for the rest.
+6. **Agents on the canvas** is done, and what is left of it is three CLIs. Hook-reply approvals are
+   Claude Code's alone, because it is the only terminal CLI with a hook that offers one: Codex
+   waits on the contract in 1 above, Gemini and Copilot on their hooks in 4. Everything else of it
+   stands: the verbs in 66 commits between `323d4dd` and `fd202cd`, then keeping the machine awake,
+   attention and the approvals in 28 more up to `6313ae8`, and the `diagram` verb with the diagram
+   view (see "A diagram"). Every decision is above, from "The daemon parses a verb's arguments"
+   onward for the verbs, and under "Staying awake while an agent works", "Attention" and the
+   permission bullets for the rest.
 7. **Terminal basics**, about two days. Search on Cmd+F, clickable file paths and URLs across
    wrapped rows, OSC 52 clipboard, a dropped file types its quoted path, Unicode 11 widths on both
    xterms, "Clear" in the node menu. Then "Send to linked chat" (a terminal selection lands as a
