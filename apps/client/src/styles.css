@@ -642,8 +642,8 @@
 
     /* xterm paints into a fixed-size box of its own; the box fills the node body and the body sets
        the size. The elements below the host are the addon's, not ours. */
-    .term-host { position: absolute; inset: 0; padding: 6px 0 0 8px; }
-    .term-host .xterm { height: 100%; }
+    .term-host { position: absolute; inset: 0; overflow: hidden; padding: 0 0 0 8px; }
+    .term-host .xterm { height: 100%; top: var(--term-offset, 6px); }
     .term-host .xterm .xterm-viewport { background-color: transparent !important; }
 
     /* ---------------------------------------------------------------- Chat */

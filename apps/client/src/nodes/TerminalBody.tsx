@@ -38,6 +38,24 @@ const createTerminal = (): Terminal =>
         macOptionIsMeta: true
     });
 
+/*
+ * FitAddon measures the host's border box, so a vertical padding on the host would count as room for a
+ * row that is cut off. The host has none; what a whole row does not fill is split above and below, as an
+ * offset rather than a padding, since FitAddon subtracts the terminal element's own padding too.
+ */
+const fitToHost = (term: Terminal, fit: FitAddon): void => {
+    fit.fit();
+    const host = term.element?.parentElement;
+    // The same private dimensions FitAddon itself divides by.
+    const cellHeight: number = (term as unknown as { _core: { _renderService: { dimensions: { css: { cell: { height: number } } } } } })._core._renderService
+        .dimensions.css.cell.height;
+    if (!host || cellHeight === 0) {
+        return;
+    }
+    const slack = host.clientHeight - term.rows * cellHeight;
+    host.style.setProperty('--term-offset', `${Math.max(0, Math.floor(slack / 2))}px`);
+};
+
 /* What the placeholder for an offscreen terminal shows: the text of its last screen. */
 export function TerminalPlate({ id }: { id: string }) {
     const ref = useRef<HTMLDivElement>(null);
@@ -49,7 +67,13 @@ export function TerminalPlate({ id }: { id: string }) {
             ref.current.textContent = lastScreenOf(endpointId, id).join('\n');
         }
     }, [endpointId, id]);
-    return <div ref={ref} className="term-host overflow-hidden whitespace-pre bg-term-bg font-mono text-code leading-[1.2] text-term-dim" aria-hidden="true" />;
+    return (
+        <div
+            ref={ref}
+            className="term-host overflow-hidden whitespace-pre pt-1.5 bg-term-bg font-mono text-code leading-[1.2] text-term-dim"
+            aria-hidden="true"
+        />
+    );
 }
 
 /* The body of a terminal, the same on a canvas inside a frame and filling a view of its own. */
@@ -81,7 +105,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
         term.loadAddon(fit);
         term.loadAddon(new WebLinksAddon());
         term.open(host);
-        fit.fit();
+        fitToHost(term, fit);
         termRef.current = term;
         fitRef.current = fit;
 
@@ -89,7 +113,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
         // DOM measure a glyph differently, so a swap can change how many cells fit.
         const refit = (): void => {
             const { cols, rows } = term;
-            fit.fit();
+            fitToHost(term, fit);
             if (term.cols !== cols || term.rows !== rows) {
                 sessionClient.resize(id, term.cols, term.rows);
             }
@@ -232,7 +256,9 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
         term.options.fontSize = useSettings.getState().fontSize;
         // A new glyph size changes how many cells fit; the observer only fires on a host resize.
         const { cols, rows } = term;
-        fitRef.current?.fit();
+        if (fitRef.current) {
+            fitToHost(term, fitRef.current);
+        }
         if (term.cols !== cols || term.rows !== rows) {
             sessionClient.resize(id, term.cols, term.rows);
         }
