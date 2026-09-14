@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { Compartment, EditorState } from '@codemirror/state';
 import { EditorView, type DecorationSet } from '@codemirror/view';
 import { chipDecorations } from './chips';
+import { markdownLanguage } from './editor';
 
 const chipsOf = (state: EditorState): string[] => {
     const found: string[] = [];
@@ -26,6 +27,18 @@ describe('chipDecorations', () => {
         expect(chipsOf(broken)).toEqual([]);
         const mended = broken.update({ changes: { from: 8, insert: 's' } }).state;
         expect(chipsOf(mended)).toEqual(['@a.ts']);
+    });
+
+    test('leaves a token inside a code span or a fence as text', () => {
+        const doc = 'see `@a.ts` and @a.ts\n```\n@a.ts\n```';
+        const state = EditorState.create({ doc, extensions: [markdownLanguage, chipDecorations({ mentions: ['a.ts'], skills: [] })] });
+        const ranges: number[] = [];
+        for (const source of state.facet(EditorView.decorations)) {
+            (source as DecorationSet).between(0, state.doc.length, (from) => {
+                ranges.push(from);
+            });
+        }
+        expect(ranges).toEqual([16]);
     });
 
     test('redraws when the choices change without an edit', () => {

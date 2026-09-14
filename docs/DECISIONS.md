@@ -305,6 +305,19 @@ canvas, against Ruimte, one verdict each.
   picker searches through
   `fs.search`: `git ls-files` (tracked plus untracked, minus .gitignore) inside a repo, a
   bounded walk elsewhere, ranked by a small fuzzy score on the daemon.
+- Markdown in the composer is source with formatting: the backticks, asterisks and hashes stay
+  where they were typed and dim, inline code and a fence take the monospace font on a tint, and
+  bold is bold. `chat.send` carries the same string it always did. The grammar is
+  `@lezer/markdown` with strikethrough and tables, in a `Language` of our own (`markdownLanguage`
+  in `src/chat/ui/composer/editor.ts`). `@codemirror/lang-markdown` builds the HTML language and
+  autocomplete at module level, where tree shaking cannot reach them, and what it would add on
+  top is list continuation on Enter, which a prompt box does not want. Code is decorated from the
+  syntax tree rather than through the highlighter, and a token inside a code span or a fence stays
+  text instead of becoming a chip. A fence gets no syntax colors: Shiki is not a CodeMirror
+  grammar, and CodeMirror's own languages would be a second set of grammars in the bundle.
+  Spellcheck stays on, as it was on the textarea, and a paste stays plain text. The editor loads
+  with the main bundle rather than as a lazy chunk; measured with `vite build`, the main chunk
+  went from 1,697.70 kB (496.32 kB gzip) to 1,996.03 kB (593.92 kB gzip).
 - An attachment goes over the wire as base64 in `chat.send` once (25 MB and 8 per message) and
   never again: the daemon writes it under `$RUIMTE_HOME/attachments` and the thread keeps its
   name, mime, size and path. The prompt names the file by path instead of carrying an `image`

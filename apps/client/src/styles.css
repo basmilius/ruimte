@@ -880,3 +880,13 @@
 .composer-input .cm-editor .cm-scroller .cm-content { padding: 12px 14px 4px; caret-color: var(--text); }
 .composer-input .cm-scroller .cm-content .cm-line { padding: 0; }
 .composer-input .cm-scroller .cm-content .cm-placeholder { color: var(--text-faint); }
+/* Markdown stays source while you type: the markers stay put and dim, and what they wrap takes its look. */
+.composer-input .cm-md-mark { color: var(--text-faint); }
+.composer-input .cm-md-strong, .composer-input .cm-md-heading { font-weight: 600; }
+.composer-input .cm-md-emphasis { font-style: italic; }
+.composer-input .cm-md-strike { text-decoration: line-through; }
+.composer-input .cm-md-link { color: var(--accent); text-decoration: underline; }
+.composer-input .cm-md-code { padding: 1px 2px; border-radius: 4px; background: var(--surface-sunken); font-family: var(--font-mono); font-size: var(--text-code); }
+.composer-input .cm-content .cm-line.cm-md-fence { padding: 0 8px; background: var(--surface-sunken); font-family: var(--font-mono); font-size: var(--text-code); }
+.composer-input .cm-content .cm-line.cm-md-fence-start { padding-top: 4px; border-top-left-radius: 6px; border-top-right-radius: 6px; }
+.composer-input .cm-content .cm-line.cm-md-fence-end { padding-bottom: 4px; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }

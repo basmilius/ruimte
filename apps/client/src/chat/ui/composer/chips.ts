@@ -1,7 +1,9 @@
+import { syntaxTree } from '@codemirror/language';
 import { Facet, RangeSetBuilder, StateField, type EditorState, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
 import { chipRanges } from '@/chat/mentions';
 import { CHIP_IN_EDITOR, MENTION_TONE, SKILL_TONE } from '@/chat/ui/chips';
+import { codeRanges } from '@/chat/ui/composer/editor';
 
 export interface ChipChoices {
     mentions: string[];
@@ -18,7 +20,8 @@ const skillMark = Decoration.mark({ class: `${SKILL_TONE} ${CHIP_IN_EDITOR}` });
 const chipMarks = (state: EditorState): DecorationSet => {
     const { mentions, skills } = state.facet(choices);
     const builder = new RangeSetBuilder<Decoration>();
-    for (const range of chipRanges(state.doc.toString(), mentions, skills)) {
+    // `@a.ts` in backticks is code, not a mention.
+    for (const range of chipRanges(state.doc.toString(), mentions, skills, codeRanges(state))) {
         builder.add(range.from, range.to, range.kind === 'skill' ? skillMark : mentionMark);
     }
     return builder.finish();
@@ -26,7 +29,11 @@ const chipMarks = (state: EditorState): DecorationSet => {
 
 const chipField = StateField.define<DecorationSet>({
     create: chipMarks,
-    update: (marks, tr) => (tr.docChanged || tr.startState.facet(choices) !== tr.state.facet(choices) ? chipMarks(tr.state) : marks),
+    // The parser finishes a long text after the edit that asked for it, and a code span it finds then unmakes a chip.
+    update: (marks, tr) =>
+        tr.docChanged || tr.startState.facet(choices) !== tr.state.facet(choices) || syntaxTree(tr.startState) !== syntaxTree(tr.state)
+            ? chipMarks(tr.state)
+            : marks,
     provide: (field) => EditorView.decorations.from(field)
 });
 
