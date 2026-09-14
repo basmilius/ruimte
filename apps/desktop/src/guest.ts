@@ -11,14 +11,6 @@ const { ipcRenderer } = require('electron') as typeof import('electron');
 /* Whether the page would take this horizontal movement itself: something under the pointer can
    still scroll that way, or a scroll container on the way up says overscroll is its own business. */
 const pageTakesHorizontal = (event: WheelEvent): boolean => {
-    // Zoomed in with a pinch, the visual viewport pans across the layout viewport before anything scrolls.
-    const viewport = window.visualViewport;
-    if (viewport && viewport.scale > 1) {
-        const room = document.documentElement.clientWidth - viewport.width;
-        if (event.deltaX < 0 ? viewport.offsetLeft > 1 : viewport.offsetLeft < room - 1) {
-            return true;
-        }
-    }
     const root = document.scrollingElement;
     for (const target of event.composedPath()) {
         if (!(target instanceof Element)) {

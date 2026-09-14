@@ -141,8 +141,8 @@ export function Canvas() {
             const ownerId = target.closest('[data-node-body]')?.closest('[data-node-id]')?.getAttribute('data-node-id');
             const isZoom = wheelZooms(e);
             /* A focused node owns the wheel inside its body, and a pinch that reaches the canvas is the
-               camera's. A focused browser node's page never reaches it: `WebviewParking` hands that
-               page the pointer, so a pinch there zooms the page itself (`allowPinchZoom` in the shell). */
+               camera's. A pinch over a page that owns the pointer goes nowhere: a guest page cannot
+               zoom (see docs/DECISIONS.md) and the canvas never sees the event. */
             if (!isZoom && s.mode.kind === 'node' && ownerId === s.mode.nodeId) {
                 return;
             }

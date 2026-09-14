@@ -1464,15 +1464,20 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   sees the key, so the guest preload sends it, after the page had its turn, which is how an editor
   in a page still outdents on Cmd+[. The chord is only taken with a browser focused: a drawing
   keeps it for its order, and a canvas keeps it for the camera history in "Next".
-- A pinch zooms the page, Chrome's visual zoom without reflow, in a browser view and a focused
-  browser node, up to 3x as Chrome on macOS allows. A node that is not focused has no pointer, so a
-  pinch over it stays the camera's. Electron pins every web contents to 1..1 in its web preferences
-  and applies them again to a new renderer and on a theme change, so `allowPinchZoom` in
-  `apps/desktop/src/main.ts` runs on every `dom-ready` and after `applyTheme`. The preview partition
-  stays at 1. A pinch is a wheel with Ctrl held, and the guest marks it: the decider ignores it
-  whole, so it neither adds to a swipe nor holds the next one when the page prevents it. A page
-  zoomed in pans its visual viewport before it scrolls, so the edge check counts a
-  `visualViewport` that is not at its edge as a page that takes the gesture.
+- **A page does not pinch-zoom.** Chromium applies the page scale only in the top-most widget, the
+  client's window. A `<webview>` guest's main frame is a GuestView, not the top-most main frame, so
+  its widget takes the page scale as external, and a touchpad pinch over it is forwarded to the
+  root. `setVisualZoomLevelLimits` on the guest changes nothing (checked in Chromium 152 and tried on
+  Electron 44.3: the pinch did nothing). A pinch over a page that owns the pointer goes nowhere.
+  It still arrives as a wheel with Ctrl held, so the guest marks it and the decider ignores it
+  whole: it neither adds to a swipe nor holds the next one when the page prevents it.
+- Real visual zoom needs a `WebContentsView` per page instead of a `<webview>`, and that costs a
+  lot: a native view only moves and resizes, so it no longer scales with the camera; its bounds
+  cross IPC, so it lags a frame behind a pan; it always sits above the HTML, so every menu,
+  tooltip, dialog, palette and toast has to hide it or show a `capturePage` snapshot; it clips only
+  to a rounded rectangle; and page management moves to the main process (`WebviewParking`,
+  `browser/registry.ts`, the context menu, `guest-focus.ts`, favicons, the guest preload). A reflow
+  zoom through `setZoomFactor` on a Ctrl-wheel was considered and not chosen.
 
 ### Skipped on purpose
 

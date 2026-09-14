@@ -12,7 +12,7 @@ export interface WheelSample {
     momentum: boolean;
     /* The page called `preventDefault`, which is how a map says the gesture is its own. */
     handled: boolean;
-    /* Ctrl was held, which is how Chromium reports a pinch: the page zooms and no swipe is involved. */
+    /* Ctrl was held, which is how Chromium reports a pinch: no swipe is involved. */
     pinch: boolean;
     /* Something under the pointer can still scroll this way, claims its overscroll, or is zoomed in and can still pan. */
     pageTakes: boolean;
