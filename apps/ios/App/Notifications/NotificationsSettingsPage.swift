@@ -5,7 +5,7 @@ import UIKit
 struct NotificationsSettingsPage: View {
     @Bindable var coordinator: NotificationCoordinator
     var body: some View {
-        Form {
+        MobileForm {
             Section {
                 Toggle(
                     "Notifications",
@@ -17,13 +17,13 @@ struct NotificationsSettingsPage: View {
                 ).disabled(coordinator.busy)
                 Text(
                     "Receive updates from followed sessions and respond to approval requests when Ruimte is in the background."
-                ).font(.footnote).foregroundStyle(.secondary)
+                ).font(.footnote).foregroundStyle(MobileStyle.muted)
             }
             if coordinator.enabled {
                 Section {
                     Toggle("Approval requests", isOn: $coordinator.approvals)
                     Text("Approval messages are encrypted for this device.")
-                        .font(.footnote).foregroundStyle(.secondary)
+                        .font(.footnote).foregroundStyle(MobileStyle.muted)
                 }.onChange(of: coordinator.approvals) { Task { await coordinator.savePreferences() } }
                 Section("Follow sessions") {
                     ForEach(coordinator.machines, id: \.id) { machine in
@@ -32,7 +32,7 @@ struct NotificationsSettingsPage: View {
                         }
                     }
                     if coordinator.machines.isEmpty {
-                        Text("Sign in and add a machine to follow its sessions.").foregroundStyle(.secondary)
+                        Text("Sign in and add a machine to follow its sessions.").foregroundStyle(MobileStyle.muted)
                     }
                 }
             }
@@ -71,7 +71,7 @@ private struct FollowMachineNotificationsPage: View {
     @State private var loading = true
     @State private var problem: String?
     var body: some View {
-        List {
+        MobileList {
             if loading { ProgressView().accessibilityLabel("Loading sessions") }
             if let problem { Text(problem).foregroundStyle(.red) }
             ForEach(sessions, id: \.stableID) { session in
@@ -86,7 +86,7 @@ private struct FollowMachineNotificationsPage: View {
                                         machineID: machine.id, nodeID: session.stableID, enabled: value)
                                 }
                             }))
-                    Text(session.text("cwd")).font(.caption).foregroundStyle(.secondary)
+                    Text(session.text("cwd")).font(.caption).foregroundStyle(MobileStyle.muted)
                 }.padding(.vertical, 5)
             }
             if !loading && sessions.isEmpty { ContentUnavailableView("No active sessions", lucideIcon: "terminal") }

@@ -516,3 +516,11 @@ Project chats now mount their screen and conversation menu before session prepar
 The usage period picker sits above the list without a section background. Files no longer shows the absolute folder path as a separate row. The iPad sidebar separator uses the existing border color at 35% opacity.
 
 The signed device build, format and repository checks passed; existing lint warnings remain. Installed on both physical devices. No simulator or additional test suite was used. The animated toolbar transition still needs visual acceptance on a device.
+
+## Web sidebar rows and gray palette
+
+iPad sidebar items now follow the web sidebar reference: ungrouped rows, muted labels, rounded selected backgrounds and thin separators between view groups. Rows have a minimum 44-point touch target, 16-point Dynamic Type text and 20-point icons. Selection is exposed to accessibility. Hover uses the web hover shade; the native List button action handles activation. Main sidebar items use the same styling. iPhone keeps its grouped row layout, navigation and tabbar.
+
+The shared mobile theme now uses the light and dark gray values from `apps/client/src/styles.css`. Native lists and forms receive those page and row backgrounds; custom text, chat, terminal and canvas surfaces use the corresponding semantic colors. Liquid Glass and system toggle behavior remain native. Projects no longer repeats pairing and machine actions below Recently closed; those actions remain in the plus menu, with Machines also available in the iPad sidebar.
+
+Build, format and repository checks passed. The existing phone/tablet row-activation test passed after retaining the native button action, including opening the real canvas and navigating back on iPhone. Its screenshot confirms the iPad view-row styling. Actual screenshots from both installed devices confirm the dark palette and simplified Projects list; the iPad capture also confirms the main sidebar selection. Both apps were installed and launched. No simulator was used. Light appearance, pointer hover and a physical swipe were not visually checked in this iteration.

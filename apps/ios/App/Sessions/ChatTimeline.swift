@@ -197,7 +197,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         super.viewDidLoad()
         var configuration = UICollectionLayoutListConfiguration(appearance: .plain)
         configuration.showsSeparators = false
-        configuration.backgroundColor = .systemBackground
+        configuration.backgroundColor = MobileStyle.surfaceColor
         let layout = UICollectionViewCompositionalLayout { _, environment in
             NSCollectionLayoutSection.list(using: configuration, layoutEnvironment: environment)
         }
@@ -463,7 +463,7 @@ private struct ChatDisclosureStyle: DisclosureGroupStyle {
                     configuration.label
                     Spacer(minLength: 0)
                     Image(lucide: configuration.isExpanded ? "chevron-down" : "chevron-right", size: 12)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(MobileStyle.muted)
                 }
                 .frame(minHeight: 44).contentShape(Rectangle())
             }
@@ -500,7 +500,7 @@ private struct ChatWorkLog: View {
                     Spacer(minLength: 0)
                     Image(lucide: expanded ? "chevron-down" : "chevron-right", size: 12)
                 }
-                .foregroundStyle(.secondary).frame(minHeight: 44).contentShape(Rectangle())
+                .foregroundStyle(MobileStyle.muted).frame(minHeight: 44).contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityValue(expanded ? "Expanded" : "Collapsed")
             if expanded {
                 VStack(alignment: .leading, spacing: 6) {
@@ -569,10 +569,10 @@ private struct ChatTimelineRow: View {
                             ? "circle-alert"
                             : item["state"]?.stringValue == "done" ? "circle-check" : "terminal", size: 14
                     )
-                    .foregroundStyle(.secondary)
-                    Text(item["name"]?.stringValue ?? "Tool").font(.subheadline).foregroundStyle(.secondary)
+                    .foregroundStyle(MobileStyle.muted)
+                    Text(item["name"]?.stringValue ?? "Tool").font(.subheadline).foregroundStyle(MobileStyle.muted)
                     Spacer()
-                    Text(item["state"]?.stringValue ?? "").font(.caption).foregroundStyle(.secondary)
+                    Text(item["state"]?.stringValue ?? "").font(.caption).foregroundStyle(MobileStyle.muted)
                 }.frame(minHeight: 44)
             case "subagent":
                 DisclosureGroup(item["description"]?.stringValue ?? "Agent") {
@@ -586,21 +586,21 @@ private struct ChatTimelineRow: View {
                     Image(lucide: "hand")
                     Text(item["toolName"]?.stringValue ?? "Permission")
                     Text(item["decision"]?.stringValue ?? "")
-                }.font(.caption).foregroundStyle(.secondary)
+                }.font(.caption).foregroundStyle(MobileStyle.muted)
             case "question":
                 Label("Questions", lucideIcon: "circle-question-mark")
-                Text(item["state"]?.stringValue ?? "").font(.caption).foregroundStyle(.secondary)
+                Text(item["state"]?.stringValue ?? "").font(.caption).foregroundStyle(MobileStyle.muted)
                 ForEach(Array((item["questions"]?.arrayValue ?? []).enumerated()), id: \.offset) { _, question in
                     Text(question["question"]?.stringValue ?? "").font(.subheadline)
                     if let id = question["id"]?.stringValue, let answer = item["answers"]?[id]?.stringValue {
-                        Text(answer).foregroundStyle(.secondary)
+                        Text(answer).foregroundStyle(MobileStyle.muted)
                     }
                 }
             case "turn":
                 Label(
                     item["label"]?.stringValue ?? "Turn \(item["state"]?.stringValue ?? "")",
                     lucideIcon: "circle-dashed", iconSize: 14
-                ).font(.caption).foregroundStyle(.secondary)
+                ).font(.caption).foregroundStyle(MobileStyle.muted)
                 if let files = item["checkpointDiff"]?["files"]?.arrayValue, !files.isEmpty {
                     DisclosureGroup("\(files.count) changed files") {
                         ForEach(Array(files.enumerated()), id: \.offset) { _, file in
@@ -611,7 +611,7 @@ private struct ChatTimelineRow: View {
                 }
             case "compaction":
                 Label("Context compacted", lucideIcon: "minimize-2", iconSize: 14).font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(MobileStyle.muted)
             default: MarkdownMessage(text: item["text"]?.stringValue ?? "")
             }
         }.frame(maxWidth: .infinity, alignment: .leading)

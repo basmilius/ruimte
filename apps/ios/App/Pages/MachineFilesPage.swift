@@ -18,7 +18,7 @@ struct MachineFilesPage: View {
         } ?? []
     }
     var body: some View {
-        List {
+        MobileList {
             RemotePageStatus(state: state) { Task { await load() } }
             ForEach(entries, id: \.stableID) { entry in
                 NavigationLink {
@@ -34,7 +34,7 @@ struct MachineFilesPage: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(entry.text("name"))
                             if let size = entry["size"]?.numberValue {
-                                Text(mobileByteCount(size)).font(.caption).foregroundStyle(.secondary)
+                                Text(mobileByteCount(size)).font(.caption).foregroundStyle(MobileStyle.muted)
                             }
                         }
                     }.padding(.vertical, 3)

@@ -23,7 +23,7 @@ struct WelcomePage: View {
                     }
                     Text("Projects and sessions stay on your computer.")
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(MobileStyle.muted)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -68,7 +68,7 @@ struct WelcomePage: View {
                     .accessibilityAddTraits(.isHeader)
                 Text("Pick up your projects and check in on your agents.")
                     .font(.body)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(MobileStyle.muted)
             }
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
@@ -94,7 +94,7 @@ struct WelcomePage: View {
                 if runtime.providers.isEmpty {
                     Text("Account sign-in is unavailable right now.")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(MobileStyle.muted)
                         .multilineTextAlignment(.center)
                     Button("Try again", action: retry)
                         .frame(minHeight: 44)
@@ -108,7 +108,7 @@ struct WelcomePage: View {
         VStack(spacing: 12) {
             HStack(spacing: 16) {
                 Rectangle().fill(MobileStyle.border).frame(height: 1)
-                Text("or").font(.footnote).foregroundStyle(.secondary)
+                Text("or").font(.footnote).foregroundStyle(MobileStyle.muted)
                 Rectangle().fill(MobileStyle.border).frame(height: 1)
             }
             .padding(.bottom, 8)
@@ -124,7 +124,7 @@ struct WelcomePage: View {
             .disabled(runtime.signingIn || runtime.signingOut)
             Text("Connect directly to your computer.")
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(MobileStyle.muted)
                 .multilineTextAlignment(.center)
         }
     }

@@ -8,6 +8,8 @@ struct RuimteApp: App {
     var body: some Scene {
         WindowGroup {
             AppHome(runtime: runtime)
+                .foregroundStyle(MobileStyle.text)
+                .background(MobileStyle.canvas)
                 .tint(MobileStyle.accent)
                 .toggleStyle(SystemToggleStyle())
         }

@@ -3,11 +3,11 @@ import SwiftUI
 private struct MobileSheetSurface: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .foregroundStyle(Color.primary)
+            .foregroundStyle(MobileStyle.text)
             .tint(MobileStyle.accent)
             .toggleStyle(SystemToggleStyle())
             // Sheets have their own surface instead of borrowing color from the view underneath.
-            .presentationBackground(Color(uiColor: .systemBackground))
+            .presentationBackground(MobileStyle.surface)
     }
 }
 

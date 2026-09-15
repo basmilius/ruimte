@@ -39,7 +39,7 @@ struct PairMachinePage: View {
     @State private var pairing = false
     var body: some View {
         NavigationStack {
-            Form {
+            MobileForm {
                 Section {
                     VStack(alignment: .leading, spacing: 14) {
                         MobileIcon(symbol: "link")
@@ -47,7 +47,7 @@ struct PairMachinePage: View {
                         Text(
                             "In Ruimte on your computer, open Remote settings and create a pairing link. Paste it below to bring your projects here."
                         )
-                        .font(.body).foregroundStyle(.secondary)
+                        .font(.body).foregroundStyle(MobileStyle.muted)
                     }.padding(.vertical, 12)
                 }.listRowBackground(Color.clear)
                 Section("Pairing link") {

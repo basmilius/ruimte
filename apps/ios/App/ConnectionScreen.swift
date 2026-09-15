@@ -11,10 +11,10 @@ struct ConnectionScreen: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            MobileList {
                 Section {
                     Text("Connect to one of your machines to test sign-in, WebRTC and reconnecting.")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(MobileStyle.muted)
                     LabeledContent("Protocol", value: String(WireConstants.protocolVersion))
                     Toggle("Require relay for this test", isOn: $runtime.relayOnly)
                         .onChange(of: runtime.relayOnly) { _, _ in probe.reconnect(runtime: runtime) }
@@ -40,7 +40,7 @@ struct ConnectionScreen: View {
                             .disabled(runtime.signingIn || runtime.signingOut || window == nil)
                         }
                         if runtime.providers.isEmpty {
-                            Text("No sign-in providers are available.").foregroundStyle(.secondary)
+                            Text("No sign-in providers are available.").foregroundStyle(MobileStyle.muted)
                             Button("Retry") { Task { await runtime.start() } }
                         }
                         if runtime.signingIn {
@@ -55,7 +55,9 @@ struct ConnectionScreen: View {
                 }
                 if runtime.account != nil {
                     Section("Machines") {
-                        if runtime.machines.isEmpty { Text("No machines on this account.").foregroundStyle(.secondary) }
+                        if runtime.machines.isEmpty {
+                            Text("No machines on this account.").foregroundStyle(MobileStyle.muted)
+                        }
                         ForEach(runtime.machines, id: \.id) { machine in
                             Button {
                                 probe.connect(machine, runtime: runtime)
@@ -63,7 +65,7 @@ struct ConnectionScreen: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(machine.name)
                                     Text(machine.brokerUrl == nil ? "No broker configured" : machine.id)
-                                        .font(.caption).foregroundStyle(.secondary)
+                                        .font(.caption).foregroundStyle(MobileStyle.muted)
                                 }
                             }
                             .disabled(machine.brokerUrl == nil)
@@ -103,7 +105,7 @@ struct ConnectionScreen: View {
                     Section("Device key") {
                         Text(publicKey).font(.caption.monospaced()).textSelection(.enabled)
                         Text("Match this public key in the machine's Apps with access list.").font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(MobileStyle.muted)
                     }
                 }
             }

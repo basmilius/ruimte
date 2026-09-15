@@ -29,10 +29,10 @@ struct ChatAttachmentButton: View {
                             .font(.caption.weight(.medium)).lineLimit(1).truncationMode(.middle)
                         if let size = attachment["size"]?.numberValue {
                             Text(ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file))
-                                .font(.caption2).foregroundStyle(.secondary).monospacedDigit()
+                                .font(.caption2).foregroundStyle(MobileStyle.muted).monospacedDigit()
                         }
                     }
-                    Image(lucide: "circle-arrow-down", size: 14).foregroundStyle(.secondary)
+                    Image(lucide: "circle-arrow-down", size: 14).foregroundStyle(MobileStyle.muted)
                 }.padding(.horizontal, 12).frame(minHeight: 48)
                     .background(MobileStyle.surface, in: RoundedRectangle(cornerRadius: 12))
             }.buttonStyle(.plain).disabled(loading)

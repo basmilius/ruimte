@@ -101,7 +101,7 @@ struct CanvasPage: View {
         }
         .mobileSheet(isPresented: Binding(get: { linkID != nil }, set: { if !$0 { linkID = nil } })) {
             NavigationStack {
-                List {
+                MobileList {
                     Section("Link to a node") {
                         ForEach(canvas.list("nodes").filter { $0.stableID != linkID }, id: \.stableID) { node in
                             Button(node.text("title")) { Task { await link(to: node.stableID) } }
@@ -256,7 +256,7 @@ final class CanvasScrollView: UIScrollView, UIScrollViewDelegate {
         maximumZoomScale = 4
         alwaysBounceVertical = true
         alwaysBounceHorizontal = true
-        backgroundColor = .systemGroupedBackground
+        backgroundColor = MobileStyle.canvasColor
         addSubview(surface)
         addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapped(_:))))
         addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(held(_:))))
@@ -478,7 +478,7 @@ private final class CanvasSurface: UIView {
             let frame = nodeRect(node)
             guard frame.intersects(viewport) else { continue }
             let path = UIBezierPath(roundedRect: frame, cornerRadius: 16)
-            UIColor.secondarySystemGroupedBackground.setFill()
+            MobileStyle.panelColor.setFill()
             path.fill()
             UIColor.separator.setStroke()
             path.lineWidth = 1

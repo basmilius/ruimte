@@ -9,7 +9,7 @@ struct MachineDetailsPage: View {
     @State private var dirty = false
     @State private var revoke: JSONValue?
     var body: some View {
-        Form {
+        MobileForm {
             RemotePageStatus(state: state) { Task { await load() } }
             if let endpoint = state.value {
                 Section("Identity") {
@@ -26,17 +26,17 @@ struct MachineDetailsPage: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(client.text("label"))
                                 if client["current"] == .bool(true) {
-                                    Text("This device").font(.caption).foregroundStyle(.secondary)
+                                    Text("This device").font(.caption).foregroundStyle(MobileStyle.muted)
                                 }
                                 Text(
                                     "Last seen \(Date(timeIntervalSince1970: client.number("lastSeenAt") / 1000), style: .relative)"
-                                ).font(.caption).foregroundStyle(.secondary)
+                                ).font(.caption).foregroundStyle(MobileStyle.muted)
                             }
                             Spacer()
                             Button("Revoke", role: .destructive) { revoke = client }.disabled(state.busy)
                         }
                     }
-                    if clients.isEmpty { Text("No paired clients.").foregroundStyle(.secondary) }
+                    if clients.isEmpty { Text("No paired clients.").foregroundStyle(MobileStyle.muted) }
                 }
             }
         }

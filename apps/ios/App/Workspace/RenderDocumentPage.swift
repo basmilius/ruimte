@@ -83,7 +83,7 @@ private final class SceneScrollView: UIScrollView, UIScrollViewDelegate {
         contentInsetAdjustmentBehavior = .never
         minimumZoomScale = 0.05
         maximumZoomScale = 6
-        backgroundColor = .systemBackground
+        backgroundColor = MobileStyle.surfaceColor
         addSubview(surface)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }

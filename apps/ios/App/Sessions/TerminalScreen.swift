@@ -33,14 +33,14 @@ struct TerminalScreen: View {
                     color: model.exited ? .secondary : model.connected ? .green : .orange)
                 Spacer()
                 Label("\(model.cols) × \(model.rows)", lucideIcon: "grid-3x3")
-                    .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                    .font(.caption.monospacedDigit()).foregroundStyle(MobileStyle.muted)
                     .accessibilityLabel("Following desktop terminal, \(model.cols) columns and \(model.rows) rows")
             }
             .padding(.horizontal, 18).padding(.vertical, 12)
             .background(MobileStyle.canvas)
             NativeTerminal(model: model, fontSize: fontSize, theme: theme)
                 .padding(.horizontal, 12).padding(.top, 12)
-                .background(Color(uiColor: .systemBackground))
+                .background(MobileStyle.surface)
             HStack(spacing: 8) {
                 terminalKey("esc", label: "Escape", input: "\u{1b}")
                 terminalKey("tab", label: "Tab", input: "\t")
@@ -110,7 +110,7 @@ struct TerminalScreen: View {
                 Label(request["toolName"]?.stringValue ?? "Permission", lucideIcon: "hand").font(.headline)
                 Spacer()
                 let seconds = max(0, Int((request["expiresAt"]?.numberValue ?? 0) / 1000 - now.timeIntervalSince1970))
-                Text("\(seconds)s").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                Text("\(seconds)s").font(.caption.monospacedDigit()).foregroundStyle(MobileStyle.muted)
             }
             Text(request["summary"]?.stringValue ?? "").font(.callout).lineLimit(6).textSelection(.enabled)
             ScrollView(.horizontal) {
@@ -217,9 +217,9 @@ private final class TerminalContainer: UIScrollView {
         if chosenTheme != theme {
             chosenTheme = theme
             overrideUserInterfaceStyle = theme == "dark" ? .dark : theme == "light" ? .light : .unspecified
-            terminal.nativeBackgroundColor = .systemBackground
-            terminal.nativeForegroundColor = .label
-            backgroundColor = .systemBackground
+            terminal.nativeBackgroundColor = MobileStyle.surfaceColor
+            terminal.nativeForegroundColor = MobileStyle.textColor
+            backgroundColor = MobileStyle.surfaceColor
         }
     }
 

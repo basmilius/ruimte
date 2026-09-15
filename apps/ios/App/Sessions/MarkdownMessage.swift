@@ -103,7 +103,7 @@ struct MarkdownMessage: View {
                 case .quote:
                     HStack {
                         RoundedRectangle(cornerRadius: 2).fill(.tertiary).frame(width: 3)
-                        inline(block.text).foregroundStyle(.secondary)
+                        inline(block.text).foregroundStyle(MobileStyle.muted)
                     }
                 case .table:
                     ScrollView(.horizontal) {
@@ -173,7 +173,7 @@ struct CodeMessage: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 0) {
                     Text(language.isEmpty ? "Code" : language)
-                        .font(.caption.weight(.medium)).foregroundStyle(.secondary)
+                        .font(.caption.weight(.medium)).foregroundStyle(MobileStyle.muted)
                         .padding(.leading, 14)
                     Spacer()
                     Button {
@@ -191,7 +191,7 @@ struct CodeMessage: View {
                             .frame(width: 44, height: 44)
                     }.accessibilityLabel(copied ? "Copied" : "Copy code")
                 }
-                .font(.footnote).buttonStyle(.plain).foregroundStyle(.secondary)
+                .font(.footnote).buttonStyle(.plain).foregroundStyle(MobileStyle.muted)
                 Divider().overlay(MobileStyle.border)
                 if wrapsLines {
                     codeText.frame(maxWidth: .infinity, alignment: .leading)

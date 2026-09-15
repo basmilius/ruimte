@@ -97,7 +97,7 @@ struct ChatScreen: View {
             viewportWidth = $0
         }
         .ignoresSafeArea(.container, edges: .bottom)
-        .background(Color(uiColor: .systemBackground).ignoresSafeArea())
+        .background(MobileStyle.surface.ignoresSafeArea())
         .tint(MobileStyle.accent)
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
@@ -252,7 +252,7 @@ struct ChatScreen: View {
             .accessibilityIdentifier("chat.composer")
             if let queue = model.info["queue"]?.arrayValue, !queue.isEmpty {
                 Text("\(queue.count) message\(queue.count == 1 ? "" : "s") queued")
-                    .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                    .font(.caption).foregroundStyle(MobileStyle.muted).monospacedDigit()
                     .padding(.horizontal, 16).padding(.bottom, 6)
             }
             HStack(spacing: 0) {
@@ -273,7 +273,7 @@ struct ChatScreen: View {
                 primaryAction
             }
             .font(.system(.subheadline, weight: .medium))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(MobileStyle.muted)
             .padding(.horizontal, 14).padding(.bottom, 10)
         }
         .background {
@@ -324,7 +324,7 @@ struct ChatScreen: View {
             Task { await model.perform("chat.cancel") }
         } label: {
             Image(lucide: "square", size: 12)
-                .foregroundStyle(.primary).frame(width: 32, height: 32)
+                .foregroundStyle(MobileStyle.text).frame(width: 32, height: 32)
                 .background(MobileStyle.inset, in: Circle()).frame(width: 44, height: 44)
         }.buttonStyle(.plain).accessibilityLabel("Stop turn")
     }
@@ -370,7 +370,7 @@ struct ChatScreen: View {
             HStack(spacing: 4) {
                 Text(model.info["selection"]?["model"]?.stringValue ?? "Model").lineLimit(1)
                 Image(lucide: "chevron-down", size: 12)
-            }.font(.caption.weight(.medium)).foregroundStyle(.secondary).frame(minHeight: 44)
+            }.font(.caption.weight(.medium)).foregroundStyle(MobileStyle.muted).frame(minHeight: 44)
                 .accessibilityValue(model.info["runtimeMode"]?.stringValue ?? "Permissions")
         }
     }
@@ -416,9 +416,10 @@ struct ChatScreen: View {
                                     ? item["description"]?.stringValue ?? "The agent needs permission to continue."
                                     : "The agent has a question"
                             )
-                            .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                            .font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(2)
                         }
-                        Image(lucide: expanded ? "chevron-up" : "chevron-down", size: 12).foregroundStyle(.secondary)
+                        Image(lucide: expanded ? "chevron-up" : "chevron-down", size: 12).foregroundStyle(
+                            MobileStyle.muted)
                     }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                         .contentShape(Rectangle())
                 }.buttonStyle(.plain).accessibilityLabel("Request details")
@@ -444,7 +445,7 @@ struct ChatScreen: View {
             if expanded {
                 if isApproval {
                     Text(item["description"]?.stringValue ?? "The agent needs permission to continue.")
-                        .font(.subheadline).foregroundStyle(.secondary)
+                        .font(.subheadline).foregroundStyle(MobileStyle.muted)
                     if let input = item["input"], let data = try? input.encoded(),
                         let text = String(data: data, encoding: .utf8)
                     {
@@ -457,7 +458,7 @@ struct ChatScreen: View {
                 }
                 if model.pending.count > 1 {
                     Text("\(model.pending.count - 1) more requests waiting")
-                        .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                        .font(.caption).foregroundStyle(MobileStyle.muted).monospacedDigit()
                 }
             }
         }
@@ -522,7 +523,7 @@ private struct ChatQuestionSheet: View {
     private var questions: [JSONValue] { item["questions"]?.arrayValue ?? [] }
     var body: some View {
         NavigationStack {
-            Form {
+            MobileForm {
                 ForEach(Array(questions.enumerated()), id: \.offset) { _, question in
                     let id = question["id"]?.stringValue ?? ""
                     Section(question["header"]?.stringValue ?? "Question") {

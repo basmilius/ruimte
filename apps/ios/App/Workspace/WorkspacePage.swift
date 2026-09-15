@@ -202,16 +202,22 @@ struct WorkspacePage: View {
     }
 
     private func viewList(query: String) -> some View {
-        List {
-            ForEach(WorkspaceViewSections.split(workspace.views, search: query)) { section in
+        let sections = WorkspaceViewSections.split(workspace.views, search: query)
+        return List {
+            ForEach(sections) { section in
                 Section {
                     ForEach(section.items, id: \.stableID) { item in
+                        let selected =
+                            navigation.selectedViewID == item.stableID
+                            && (navigation.section == .views || navigation.section == .search)
                         Button {
                             openView(item.stableID)
                         } label: {
                             viewRow(item)
+                                .modifier(MobileSidebarLabel(enabled: isSidebar, selected: selected))
                         }
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(MobileStyle.text)
+                        .modifier(MobileSidebarRow(enabled: isSidebar, selected: selected))
                         .accessibilityIdentifier("workspace.view.\(item.stableID)")
                         .contextMenu {
                             Button("Rename", lucideIcon: "pencil") {
@@ -242,17 +248,25 @@ struct WorkspacePage: View {
                         }
                     }
                 } header: {
-                    if let title = section.title { Text(title).textCase(nil) }
+                    if isSidebar {
+                        VStack(alignment: .leading, spacing: 8) {
+                            if section.id != sections.first?.id {
+                                MobileStyle.border.frame(height: 1).padding(.vertical, 10)
+                            }
+                            if let title = section.title {
+                                Text(title).font(.footnote).foregroundStyle(MobileStyle.muted).textCase(nil)
+                            }
+                        }
+                        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                    } else if let title = section.title {
+                        Text(title).textCase(nil)
+                    }
                 }
+                .listSectionSeparator(isSidebar ? .hidden : .automatic)
+                .listRowBackground(isSidebar ? Color.clear : MobileStyle.panel)
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(isSidebar ? .hidden : .automatic)
-        .background {
-            if isSidebar {
-                sidebarBackground.ignoresSafeArea(.container, edges: .vertical)
-            }
-        }
+        .modifier(MobileSidebarList(enabled: isSidebar))
         .accessibilityIdentifier("workspace.views")
     }
 
@@ -267,23 +281,16 @@ struct WorkspacePage: View {
         }
     }
 
-    private var sidebarBackground: Color {
-        Color(uiColor: .systemBackground)
-    }
-
     private func viewRow(_ item: JSONValue) -> some View {
-        HStack(spacing: 12) {
-            WorkspaceViewIcon(item: item).foregroundStyle(.secondary)
+        HStack(spacing: isSidebar ? 10 : 12) {
+            WorkspaceViewIcon(item: item).foregroundStyle(MobileStyle.muted)
             Text(item.text("name", fallback: item.text("kind")))
-                .font(.body).foregroundStyle(.primary).lineLimit(1).truncationMode(.tail)
+                .font(isSidebar ? .callout : .body).lineLimit(1).truncationMode(.tail)
                 .frame(maxWidth: .infinity, alignment: .leading)
             AttentionMark(store: workspace.session.attention, id: item.stableID)
-            if isSidebar && navigation.selectedViewID == item.stableID {
-                Image(lucide: "check")
-                    .foregroundStyle(MobileStyle.accent).accessibilityLabel("Selected")
-            } else if !isSidebar {
+            if !isSidebar {
                 Image(lucide: "chevron-right", size: 12)
-                    .foregroundStyle(.tertiary).accessibilityHidden(true)
+                    .foregroundStyle(MobileStyle.faint).accessibilityHidden(true)
             }
         }
         .contentShape(Rectangle())
@@ -403,7 +410,7 @@ struct AddProjectItem: View {
     @State private var saving = false
     var body: some View {
         NavigationStack {
-            Form {
+            MobileForm {
                 Picker("Kind", selection: $kind) {
                     ForEach(
                         canvasID == nil

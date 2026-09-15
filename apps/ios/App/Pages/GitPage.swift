@@ -11,7 +11,7 @@ struct GitPage: View {
     @State private var commitSheet = false
     @State private var resultMessage: String?
     var body: some View {
-        List {
+        MobileList {
             RemotePageStatus(state: state) { Task { await load() } }
             if let status = state.value {
                 if status["repo"] == .bool(false) {
@@ -32,7 +32,7 @@ struct GitPage: View {
                             Label("Pull to refresh this repository", lucideIcon: "refresh-cw", iconSize: 14).font(
                                 .caption
                             )
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(MobileStyle.muted)
                         }
                     }
                     ForEach(["conflicted", "staged", "unstaged", "untracked"], id: \.self) { group in
@@ -49,7 +49,7 @@ struct GitPage: View {
                                             Text(file.text("path")).lineLimit(2)
                                             Text("+\(Int(file.number("added")))  −\(Int(file.number("deleted")))").font(
                                                 .caption.monospacedDigit()
-                                            ).foregroundStyle(.secondary)
+                                            ).foregroundStyle(MobileStyle.muted)
                                         }
                                     }
                                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -70,9 +70,9 @@ struct GitPage: View {
                         ContentUnavailableView("Working tree clean", lucideIcon: "circle-check")
                     }
                     if status["truncated"] == .bool(true) {
-                        Text("Some changed files were omitted from this list.").foregroundStyle(.secondary)
+                        Text("Some changed files were omitted from this list.").foregroundStyle(MobileStyle.muted)
                     }
-                    if let resultMessage { Text(resultMessage).foregroundStyle(.secondary) }
+                    if let resultMessage { Text(resultMessage).foregroundStyle(MobileStyle.muted) }
                 }
             }
         }
@@ -93,7 +93,7 @@ struct GitPage: View {
         .refreshable { await load() }
         .mobileSheet(isPresented: $commitSheet) {
             NavigationStack {
-                Form {
+                MobileForm {
                     Section("Commit message") {
                         TextField("Subject", text: $subject)
                         TextField("Description (optional)", text: $message, axis: .vertical).lineLimit(4...10)

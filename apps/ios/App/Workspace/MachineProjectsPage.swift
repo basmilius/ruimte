@@ -17,14 +17,15 @@ struct MachineProjectsPage: View {
     @State private var loadGeneration = 0
     @State private var unsubscribe: (() -> Void)?
     var body: some View {
-        List {
+        MobileList {
             Section {
                 HStack {
                     MobileStatus(
                         title: session.connected ? "Connected" : "Connecting",
                         color: session.connected ? .green : .secondary)
                     Spacer()
-                    Text("\(projects.count) projects").font(.caption).monospacedDigit().foregroundStyle(.secondary)
+                    Text("\(projects.count) projects").font(.caption).monospacedDigit().foregroundStyle(
+                        MobileStyle.muted)
                 }.padding(.vertical, 3)
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
@@ -106,7 +107,7 @@ struct MachineProjectsPage: View {
         }
         .mobileSheet(isPresented: $newProject) {
             NavigationStack {
-                Form {
+                MobileForm {
                     TextField("Name", text: $projectName)
                     TextField("Folder on this machine (optional)", text: $folder).textInputAutocapitalization(.never)
                         .autocorrectionDisabled()

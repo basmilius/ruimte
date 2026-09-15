@@ -35,7 +35,7 @@ struct MachineUsagePage: View {
     }
 
     private var usageList: some View {
-        List {
+        MobileList {
             RemotePageStatus(state: state) { Task { await load() } }
             if let value = state.value {
                 Section("Overview") {
@@ -44,11 +44,11 @@ struct MachineUsagePage: View {
                         "Known cost",
                         value: money.string(usd: models.reduce(0) { $0 + $1.number("costUsd") }))
                     if let explanation = money.explanation {
-                        Text(explanation).font(.caption).foregroundStyle(.secondary)
+                        Text(explanation).font(.caption).foregroundStyle(MobileStyle.muted)
                     }
                     if models.contains(where: { $0["costUsd"] == .null }) {
                         Text("Some models have no known price and are excluded from the total.").font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(MobileStyle.muted)
                     }
                     if value["scan"]?["failed"] == .bool(true) {
                         Text("The latest usage scan failed. These are the last available totals.").foregroundStyle(
@@ -92,10 +92,10 @@ struct MachineUsagePage: View {
                             }
                             Text(
                                 "\(model.text("provider")) · \(Int(model["totals"]?.number("calls") ?? 0).formatted()) calls"
-                            ).font(.caption).foregroundStyle(.secondary)
+                            ).font(.caption).foregroundStyle(MobileStyle.muted)
                         }.monospacedDigit().padding(.vertical, 4)
                     }
-                    if models.isEmpty { Text("No usage in this period.").foregroundStyle(.secondary) }
+                    if models.isEmpty { Text("No usage in this period.").foregroundStyle(MobileStyle.muted) }
                 }
             }
             ForEach(Array((limits?.list("providers") ?? []).enumerated()), id: \.offset) { item in
@@ -118,7 +118,7 @@ struct MachineUsagePage: View {
                             if let resets = window["resetsAt"]?.numberValue {
                                 Text("Resets \(Date(timeIntervalSince1970: resets / 1000), style: .relative)").font(
                                     .caption
-                                ).foregroundStyle(.secondary)
+                                ).foregroundStyle(MobileStyle.muted)
                             }
                         }.padding(.vertical, 4)
                     }

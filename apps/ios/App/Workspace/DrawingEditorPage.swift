@@ -182,7 +182,7 @@ struct DrawingEditorPage: View {
     }
     private var styleSheet: some View {
         NavigationStack {
-            Form {
+            MobileForm {
                 Section("Color") {
                     colorPicker("Stroke", selection: binding(\.stroke, "stroke"))
                     colorPicker("Fill", selection: binding(\.fillColor, "fillColor"))

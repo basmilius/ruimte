@@ -106,18 +106,16 @@ struct AppHome: View {
                             Button {
                                 withAnimation(reduceMotion ? nil : .default) { homeSection = section }
                             } label: {
-                                HStack(spacing: 12) {
-                                    Image(lucide: section.icon).foregroundStyle(.secondary)
-                                    Text(section.title).frame(maxWidth: .infinity, alignment: .leading)
-                                    if homeSection == section {
-                                        Image(lucide: "check").accessibilityLabel("Selected")
-                                    }
+                                HStack(spacing: 10) {
+                                    Image(lucide: section.icon, size: 20)
+                                    Text(section.title).lineLimit(1).truncationMode(.tail)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                 }
-                                .foregroundStyle(.primary)
-                                .contentShape(Rectangle())
+                                .modifier(MobileSidebarLabel(selected: homeSection == section && activeProject == nil))
                             }
+                            .modifier(MobileSidebarRow(selected: homeSection == section && activeProject == nil))
                         }
-                    }
+                    }.listSectionSeparator(.hidden)
                 }
                 .modifier(MobileSidebarList())
                 .navigationTitle("")
@@ -126,7 +124,7 @@ struct AppHome: View {
                     WorkspacePage(navigation: project, isSidebar: true)
                 }
             }
-            .containerBackground(Color(uiColor: .systemBackground), for: .navigation)
+            .containerBackground(MobileStyle.surface, for: .navigation)
             .overlay(alignment: .trailing) {
                 MobileStyle.border.frame(width: 1)
                     .ignoresSafeArea(.container, edges: .vertical)
@@ -143,6 +141,7 @@ struct AppHome: View {
                         NotificationSessionPage(runtime: runtime, destination: destination)
                     }
             }
+            .containerBackground(MobileStyle.surface, for: .navigation)
         }
         .navigationSplitViewStyle(.balanced)
         .onChange(of: homeSection) { _, _ in detailPath = NavigationPath() }
@@ -214,7 +213,7 @@ struct AppHome: View {
     }
 
     private var projectList: some View {
-        List {
+        MobileList {
             if !visibleProjects.isEmpty {
                 Section {
                     ProjectLinks(runtime: runtime, rows: visibleProjects)
@@ -238,11 +237,6 @@ struct AppHome: View {
                             runtime.machines.isEmpty
                                 ? "Connect your computer to pick up your projects and conversations."
                                 : "Open a project on your computer or choose one from Recently closed.")
-                    } actions: {
-                        if runtime.machines.isEmpty {
-                            Button("Use a pairing link") { pairing = true }
-                                .buttonStyle(.borderedProminent).foregroundStyle(MobileStyle.onAccent)
-                        }
                     }
                 }.listRowBackground(Color.clear).listRowSeparator(.hidden)
             }
@@ -251,7 +245,7 @@ struct AppHome: View {
                     RecentProjectsPage(runtime: runtime, projects: projects)
                 } label: {
                     Label("Recently closed", lucideIcon: "clock-arrow-left")
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(MobileStyle.text)
                 }.accessibilityIdentifier("projects.recent")
             }
             if !projects.problems.isEmpty {
@@ -259,7 +253,7 @@ struct AppHome: View {
                     ForEach(runtime.machines.filter { projects.problems[$0.id] != nil }, id: \.id) { machine in
                         VStack(alignment: .leading, spacing: 5) {
                             Text(machine.name).font(.subheadline.weight(.medium))
-                            Text(projects.problems[machine.id] ?? "").font(.caption).foregroundStyle(.secondary)
+                            Text(projects.problems[machine.id] ?? "").font(.caption).foregroundStyle(MobileStyle.muted)
                             Button("Reconnect") { runtime.session(for: machine).reconnect() }.font(.subheadline)
                         }
                     }
@@ -267,18 +261,6 @@ struct AppHome: View {
             }
             if let problem = runtime.problem {
                 Section { Text(problem).font(.callout).foregroundStyle(.red) }
-            }
-            Section {
-                Button {
-                    pairing = true
-                } label: {
-                    Label("Use a pairing link", lucideIcon: "link")
-                }
-                Button {
-                    showMachines()
-                } label: {
-                    Label("Machines", lucideIcon: "monitor")
-                }
             }
         }
         .listStyle(.insetGrouped)
@@ -312,7 +294,7 @@ struct RecentProjectsPage: View {
     @State private var search = ""
 
     var body: some View {
-        List {
+        MobileList {
             let visible = projects.recent.filter { $0.matches(search) }
             if !visible.isEmpty {
                 Section { ProjectLinks(runtime: runtime, rows: visible) }
@@ -385,14 +367,14 @@ struct ProjectHomeRow: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(summary.text("name", fallback: "Untitled project"))
-                    .font(.body).foregroundStyle(.primary).lineLimit(1).truncationMode(.tail)
+                    .font(.body).foregroundStyle(MobileStyle.text).lineLimit(1).truncationMode(.tail)
                 HStack(spacing: 5) {
                     ProjectMachineGlyph(icon: session?.icons.icon)
                     Text(machine).truncationMode(.tail)
                     if !connected { Text("· Offline").fixedSize() }
-                }.font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }.font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1)
                 if summary["available"] == .bool(false) {
-                    Text("Folder unavailable").font(.caption).foregroundStyle(.secondary)
+                    Text("Folder unavailable").font(.caption).foregroundStyle(MobileStyle.muted)
                 }
             }
         }.frame(minHeight: 44)
@@ -445,7 +427,7 @@ private struct MachinesSheet: View {
         if embedded { content } else { NavigationStack { content } }
     }
     private var content: some View {
-        List {
+        MobileList {
             Section("Your machines") {
                 ForEach(runtime.machines, id: \.id) { machine in
                     NavigationLink {
@@ -496,7 +478,7 @@ struct MobileSettings: View {
         if embedded { content } else { NavigationStack { content } }
     }
     private var content: some View {
-        Form {
+        MobileForm {
             Section("Appearance") {
                 Picker("Theme", selection: $appearance) {
                     Text("System").tag("system")
@@ -525,7 +507,7 @@ struct MobileSettings: View {
                     "Ruimte", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0"
                 )
                 Text("Projects and sessions stay on your machines. This app connects to them remotely.")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(MobileStyle.muted)
             }
         }.navigationTitle("Settings")
             .toolbar { if !embedded { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } } }

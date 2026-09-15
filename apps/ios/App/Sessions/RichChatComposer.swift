@@ -112,13 +112,13 @@ struct RichChatComposer: UIViewRepresentable {
             // Attribute-only edits retain UIKit's text undo, selection and raw wire representation.
             view.textStorage.beginEditing()
             view.textStorage.setAttributes(
-                [.font: font, .foregroundColor: UIColor.label],
+                [.font: font, .foregroundColor: MobileStyle.textColor],
                 range: NSRange(location: 0, length: view.textStorage.length))
             attributes.enumerateAttributes(in: NSRange(location: 0, length: attributes.length)) { values, range, _ in
                 view.textStorage.addAttributes(values, range: range)
             }
             view.textStorage.endEditing()
-            view.typingAttributes = [.font: font, .foregroundColor: UIColor.label]
+            view.typingAttributes = [.font: font, .foregroundColor: MobileStyle.textColor]
             view.selectedRange = selected
             view.setContentOffset(offset, animated: false)
         }
@@ -169,7 +169,7 @@ private enum ChatDraftStyle {
 
     static func attributed(_ text: String, font: UIFont, mentions: [String], skills: [String]) -> NSAttributedString {
         let result = NSMutableAttributedString(
-            string: text, attributes: [.font: font, .foregroundColor: UIColor.label])
+            string: text, attributes: [.font: font, .foregroundColor: MobileStyle.textColor])
         let code = ChatDraftSyntax.codeRanges(in: text)
         func apply(_ pattern: String, _ values: [NSAttributedString.Key: Any]) {
             for match in ChatDraftSyntax.matches(pattern, in: text)
@@ -186,8 +186,8 @@ private enum ChatDraftStyle {
         apply(#"(?<!\*)\*[^*\n]+\*(?!\*)|(?<![\w_])_[^_\n]+_(?![\w_])"#, [.font: weight(.traitItalic)])
         apply(#"~~[^~\n]+~~"#, [.strikethroughStyle: NSUnderlineStyle.single.rawValue])
         apply(#"\[[^\]\n]+\]\([^\s)]+\)"#, [.underlineStyle: NSUnderlineStyle.single.rawValue])
-        apply(#"(?m)^\s*(?:>\s|[-+*]\s|\d+\.\s)"#, [.foregroundColor: UIColor.secondaryLabel])
-        apply(#"(?m)^#{1,6}(?= )|\*\*|__|~~|(?<!\*)\*(?!\*)"#, [.foregroundColor: UIColor.secondaryLabel])
+        apply(#"(?m)^\s*(?:>\s|[-+*]\s|\d+\.\s)"#, [.foregroundColor: MobileStyle.mutedColor])
+        apply(#"(?m)^#{1,6}(?= )|\*\*|__|~~|(?<!\*)\*(?!\*)"#, [.foregroundColor: MobileStyle.mutedColor])
         for range in code {
             result.addAttributes(
                 [
