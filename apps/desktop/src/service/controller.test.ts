@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServiceController, type ServiceControllerDeps } from './controller';
 import type { BuildIdentity, MachineWork } from './decide';
-import type { ServiceManager } from './manager';
+import type { ServiceManager } from '@ruimte/service';
 import { keepRunningSetting, serviceSupport, type KeepRunningSetting, type ServiceSupport } from './settings';
 
 const EXPECTED: BuildIdentity = { version: '0.1.0', build: 'new' };

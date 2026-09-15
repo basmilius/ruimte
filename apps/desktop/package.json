@@ -22,6 +22,7 @@
     },
     "dependencies": {
         "@ruimte/pulsar": "workspace:*",
+        "@ruimte/service": "workspace:*",
         "zod": "^4.5.4"
     },
     "devDependencies": {

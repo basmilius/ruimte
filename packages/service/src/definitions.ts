@@ -105,3 +105,12 @@ export const systemdUnit = (spec: ServiceSpec): string => {
     ];
     return lines.join('\n');
 };
+
+/*
+ * Whether a definition on disk starts this program. The desktop app and `ruimte service` write the
+ * same label and unit name, so each checks this before it rewrites or removes the other's service.
+ */
+export const definitionRunsProgram = (definition: string, program: string): boolean =>
+    definition.includes(`<string>${xmlText(program)}</string>`) ||
+    definition.includes(`ExecStart=${unitWord(program, true)} `) ||
+    definition.includes(`ExecStart=${unitWord(program, true)}\n`);

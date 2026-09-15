@@ -1,6 +1,5 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import type { ServiceFiles } from './manager';
 
 /*
  * Where a background service can run. The dev app never gets one: it runs its own daemon on 4211
@@ -60,21 +59,3 @@ export const keepRunningSetting = (path: string, support: ServiceSupport): KeepR
         writeFileSync(path, `${JSON.stringify({ keepRunning }, null, 2)}\n`);
     }
 });
-
-/* The real file system under a service manager. */
-export const diskFiles: ServiceFiles = {
-    read(path) {
-        try {
-            return readFileSync(path, 'utf8');
-        } catch {
-            return null;
-        }
-    },
-    write(path, text) {
-        mkdirSync(dirname(path), { recursive: true });
-        writeFileSync(path, text);
-    },
-    remove(path) {
-        rmSync(path, { force: true });
-    }
-};

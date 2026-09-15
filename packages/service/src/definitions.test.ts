@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { LAUNCH_AGENT_LABEL, launchAgentPlist, systemdUnit, type ServiceSpec } from './definitions';
+import { LAUNCH_AGENT_LABEL, definitionRunsProgram, launchAgentPlist, systemdUnit, type ServiceSpec } from './definitions';
 
 const MAC: ServiceSpec = {
     label: LAUNCH_AGENT_LABEL,
@@ -44,5 +44,38 @@ describe('systemdUnit', () => {
     test('doubles a dollar in the command line, where systemd expands variables', () => {
         const unit = systemdUnit({ ...LINUX, args: ['--label', 'a$b'] });
         expect(unit).toContain('"a$$b"');
+    });
+});
+
+describe('the service of the npm package', () => {
+    const NPM_MAC: ServiceSpec = {
+        ...MAC,
+        program: '/Users/bas/.ruimte/bin/ruimte',
+        args: []
+    };
+    const NPM_LINUX: ServiceSpec = {
+        ...LINUX,
+        program: '/home/bas/.ruimte/bin/ruimte',
+        args: ['--host', '0.0.0.0']
+    };
+
+    test('points the LaunchAgent at the copy under the home', () => {
+        const plist = launchAgentPlist(NPM_MAC);
+        expect(plist).toContain('<string>/Users/bas/.ruimte/bin/ruimte</string>');
+        expect(plist).not.toContain('_npx');
+    });
+
+    test('points the user unit at the copy under the home', () => {
+        expect(systemdUnit(NPM_LINUX)).toContain('ExecStart="/home/bas/.ruimte/bin/ruimte" "--host" "0.0.0.0"');
+    });
+
+    test('tells a definition that runs a program from one that runs another', () => {
+        expect(definitionRunsProgram(launchAgentPlist(NPM_MAC), NPM_MAC.program)).toBe(true);
+        expect(definitionRunsProgram(launchAgentPlist(MAC), NPM_MAC.program)).toBe(false);
+        expect(definitionRunsProgram(systemdUnit(NPM_LINUX), NPM_LINUX.program)).toBe(true);
+        expect(definitionRunsProgram(systemdUnit({ ...NPM_LINUX, args: [] }), NPM_LINUX.program)).toBe(true);
+        expect(definitionRunsProgram(systemdUnit(LINUX), NPM_LINUX.program)).toBe(false);
+        // A path that only starts the same way is another program.
+        expect(definitionRunsProgram(launchAgentPlist({ ...NPM_MAC, program: '/Users/bas/.ruimte/bin/ruimte-old' }), NPM_MAC.program)).toBe(false);
     });
 });

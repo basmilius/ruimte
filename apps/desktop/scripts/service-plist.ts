@@ -2,7 +2,7 @@ import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { launchAgentPlist } from '../src/service/definitions';
+import { launchAgentPlist } from '@ruimte/service';
 
 /*
  * Prints the LaunchAgent the packaged app writes, pointed at a daemon compiled in this checkout, so

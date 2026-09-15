@@ -9,9 +9,18 @@ import { fileSessionKey, fileSessionStore } from './pulsar-store';
 import { createReleaseNotes } from './release-notes';
 import { createServiceController, type BackgroundServiceState } from './service/controller';
 import { healthFrom, workFrom, type BuildIdentity, type MachineWork } from './service/decide';
-import { LAUNCH_AGENT_LABEL, launchAgentPlist, systemdUnit, type ServiceSpec } from './service/definitions';
-import { launchdManager, systemdManager, type CommandRunner, type ServiceManager } from './service/manager';
-import { diskFiles, keepRunningSetting, serviceSupport } from './service/settings';
+import {
+    LAUNCH_AGENT_LABEL,
+    diskFiles,
+    launchAgentPlist,
+    launchdManager,
+    runCommand,
+    systemdManager,
+    systemdUnit,
+    type ServiceManager,
+    type ServiceSpec
+} from '@ruimte/service';
+import { keepRunningSetting, serviceSupport } from './service/settings';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
 const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, powerSaveBlocker, safeStorage, screen, session, shell, webContents } =
@@ -176,11 +185,6 @@ const bundledBuild = (): string | null => {
     } catch {
         return null;
     }
-};
-
-const runCommand: CommandRunner = (command, args) => {
-    const result = spawnSync(command, args, { encoding: 'utf8', timeout: 15_000, stdio: ['ignore', 'pipe', 'pipe'] });
-    return { code: result.status ?? 1, stdout: result.stdout ?? '', stderr: result.stderr ?? result.error?.message ?? '' };
 };
 
 const support = serviceSupport({ packaged: app.isPackaged, platform: process.platform, appImage: process.env.APPIMAGE });

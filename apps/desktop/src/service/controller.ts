@@ -1,5 +1,5 @@
 import { decideRestart, decideStart, sameBuild, type BuildIdentity, type MachineWork } from './decide';
-import type { ServiceManager } from './manager';
+import type { ServiceManager } from '@ruimte/service';
 import type { KeepRunningSetting, ServiceSupport } from './settings';
 
 /* Who runs the daemon the window talks to. `external` is one the app found answering and does not manage. */
