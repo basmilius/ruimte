@@ -10,7 +10,7 @@
  * sends a ping every second and a burst every minute, and both sides print a line every ten seconds
  * until `--minutes` is up (default 60) or the connection drops.
  *
- * Flags: --stun <url> (repeatable, default stun:stun.l.google.com:19302), --no-stun, --minutes <n>,
+ * Flags: --stun <url> (repeatable, default stun:turn.ruimte.app:3478), --no-stun, --minutes <n>,
  * --burst-mb <n> (default 4), --ports <first-last> (the UDP range to bind, for a firewall).
  *
  * TURN: --turn <url> --turn-user <username> --turn-pass <password> adds a relay (werift takes the first
@@ -21,7 +21,7 @@
 import { createInterface } from 'node:readline';
 import { parseArgs } from 'node:util';
 import { RTCPeerConnection, type RTCDataChannel } from 'werift';
-import { parsePortRange } from '../src/config.ts';
+import { DEFAULT_STUN_SERVER, parsePortRange } from '../src/config.ts';
 
 const { values, positionals } = parseArgs({
     args: process.argv.slice(2),
@@ -55,7 +55,7 @@ if (values['relay-only'] && values.turn === undefined) {
     process.exit(2);
 }
 
-const stun = values['no-stun'] ? [] : values.stun.length > 0 ? values.stun : ['stun:stun.l.google.com:19302'];
+const stun = values['no-stun'] ? [] : values.stun.length > 0 ? values.stun : [DEFAULT_STUN_SERVER];
 const minutes = Number(values.minutes);
 const burstBytes = Number(values['burst-mb']) * 1024 * 1024;
 const PIECE = 16_000;

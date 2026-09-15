@@ -27,6 +27,12 @@ describe('parseServerArgs', () => {
         expect(config.installHooks).toBe(true);
     });
 
+    test('asks the coturn Ruimte runs for STUN unless --stun or --no-stun says otherwise', () => {
+        expect(parseServerArgs([], {}).stun).toEqual(['stun:turn.ruimte.app:3478']);
+        expect(parseServerArgs(['--stun', 'stun:a.example.com:3478'], {}).stun).toEqual(['stun:a.example.com:3478']);
+        expect(parseServerArgs(['--no-stun'], {}).stun).toEqual([]);
+    });
+
     test('--no-hooks skips the installers and --serve names a client build', () => {
         expect(parseServerArgs(['--no-hooks'], {}).installHooks).toBe(false);
         expect(parseServerArgs([], {}).serve).toBeNull();

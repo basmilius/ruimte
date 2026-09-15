@@ -54,8 +54,9 @@ export const forgetInheritedSession = (env: Record<string, string | undefined>):
 export const DEFAULT_HOST = '127.0.0.1';
 export const DEFAULT_PORT = 4210;
 
-// A public STUN server, so a machine behind NAT learns the address a direct connection can reach it on.
-export const DEFAULT_STUN_SERVER = 'stun:stun.l.google.com:19302';
+// Ruimte's own coturn answers STUN without credentials, so a machine behind NAT learns the address a direct
+// connection can reach it on without asking a third party, with or without a broker.
+export const DEFAULT_STUN_SERVER = 'stun:turn.ruimte.app:3478';
 
 /* `4330-4339` as the first and last port; one port on its own is a range of one. */
 export const parsePortRange = (value: string): [number, number] => {
