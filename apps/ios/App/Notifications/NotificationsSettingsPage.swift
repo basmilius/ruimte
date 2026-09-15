@@ -81,7 +81,7 @@ private struct FollowMachineNotificationsPage: View {
                             }))
                     Text(session.text("cwd")).font(.caption).foregroundStyle(.secondary)
                     if coordinator.activities {
-                        Button("Show Live Activity", systemImage: "waveform.path") {
+                        Button("Show Live Activity", lucideIcon: "activity") {
                             Task {
                                 await coordinator.startActivity(
                                     machineID: machine.id, nodeID: session.stableID,
@@ -91,7 +91,7 @@ private struct FollowMachineNotificationsPage: View {
                     }
                 }.padding(.vertical, 5)
             }
-            if !loading && sessions.isEmpty { ContentUnavailableView("No active sessions", systemImage: "terminal") }
+            if !loading && sessions.isEmpty { ContentUnavailableView("No active sessions", lucideIcon: "terminal") }
         }.navigationTitle(machine.name)
             .task { await load() }.refreshable { await load() }
     }

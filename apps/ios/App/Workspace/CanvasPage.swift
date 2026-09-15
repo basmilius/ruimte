@@ -22,7 +22,12 @@ struct CanvasPage: View {
                     Button {
                         selectedID = node.stableID
                     } label: {
-                        Label(node.text("title"), systemImage: iconForKind(node.text("kind"))).padding(.vertical, 6)
+                        Label {
+                            Text(node.text("title"))
+                        } icon: {
+                            WorkspaceViewIcon(item: node)
+                        }
+                        .padding(.vertical, 6)
                     }.contextMenu { nodeActions(node) }
                 }
             } else {
@@ -40,7 +45,7 @@ struct CanvasPage: View {
                 .overlay {
                     if canvas.list("nodes").isEmpty && canvas.list("texts").isEmpty {
                         ContentUnavailableView {
-                            Label("An open canvas", systemImage: "square.grid.2x2")
+                            Label("An open canvas", lucideIcon: "layout-grid", iconSize: 48)
                         } description: {
                             Text("Add a chat, terminal, note or file to get started.")
                         } actions: {
@@ -53,13 +58,13 @@ struct CanvasPage: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .bottomBar) {
-                Button(listed ? "Show canvas" : "Show list", systemImage: listed ? "square.grid.2x2" : "list.bullet") {
+                Button(listed ? "Show canvas" : "Show list", lucideIcon: listed ? "layout-grid" : "list") {
                     listed.toggle()
                 }
                 Spacer()
-                Button("Fit canvas", systemImage: "arrow.up.left.and.arrow.down.right") { fit += 1 }.disabled(listed)
+                Button("Fit canvas", lucideIcon: "maximize-2") { fit += 1 }.disabled(listed)
                 Spacer()
-                Button("Add node", systemImage: "plus") { adding = true }
+                Button("Add node", lucideIcon: "plus") { adding = true }
             }
         }
         .navigationDestination(item: $selectedID) { id in
@@ -110,7 +115,7 @@ struct CanvasPage: View {
                             HStack {
                                 Text(edgeName(edge))
                                 Spacer()
-                                Button("Remove", systemImage: "trash", role: .destructive) {
+                                Button("Remove", lucideIcon: "trash", role: .destructive) {
                                     Task {
                                         await workspace.updateView(viewID) {
                                             $0.setting(
@@ -140,18 +145,18 @@ struct CanvasPage: View {
         }
     }
     @ViewBuilder private func nodeActions(_ node: JSONValue) -> some View {
-        Button("Open", systemImage: "arrow.up.right.square") { selectedID = node.stableID }
+        Button("Open", lucideIcon: "square-arrow-out-up-right") { selectedID = node.stableID }
         if node.text("kind") != "unknown" {
-            Button("Rename", systemImage: "pencil") {
+            Button("Rename", lucideIcon: "pencil") {
                 name = node.text("title")
                 renameID = node.stableID
             }
         }
-        Button("Context links", systemImage: "link") { linkID = node.stableID }
+        Button("Context links", lucideIcon: "link") { linkID = node.stableID }
         if ["chat", "terminal", "browser"].contains(node.text("kind")) {
-            Button("Open as view", systemImage: "sidebar.left") { Task { await promote(node) } }
+            Button("Open as view", lucideIcon: "panel-left") { Task { await promote(node) } }
         }
-        Button("Remove", systemImage: "trash", role: .destructive) { deleteID = node.stableID }
+        Button("Remove", lucideIcon: "trash", role: .destructive) { deleteID = node.stableID }
     }
     private func edgeName(_ edge: JSONValue) -> String {
         let names = [edge.text("from"), edge.text("to")].map { id in

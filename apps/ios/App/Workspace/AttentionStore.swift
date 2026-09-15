@@ -104,11 +104,11 @@ struct AttentionMark: View {
     let id: String
     var body: some View {
         if store.needsYou(id) {
-            Image(systemName: "hand.raised.fill").foregroundStyle(.orange).accessibilityLabel("Needs you")
+            Image(lucide: "hand").foregroundStyle(.orange).accessibilityLabel("Needs you")
         } else if store.statuses[id] == "running" {
-            Image(systemName: "circle.fill").font(.caption2).foregroundStyle(.green).accessibilityLabel("Running")
+            Circle().frame(width: 8, height: 8).foregroundStyle(.green).accessibilityLabel("Running")
         } else if store.unseen.contains(id) {
-            Image(systemName: "circle.fill").font(.caption2).foregroundStyle(MobileStyle.accent).accessibilityLabel(
+            Circle().frame(width: 8, height: 8).foregroundStyle(MobileStyle.accent).accessibilityLabel(
                 "New activity")
         }
     }

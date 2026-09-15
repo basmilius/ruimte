@@ -417,8 +417,8 @@ private struct ChatDisclosureStyle: DisclosureGroupStyle {
                 HStack(spacing: 8) {
                     configuration.label
                     Spacer(minLength: 0)
-                    Image(systemName: configuration.isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
+                    Image(lucide: configuration.isExpanded ? "chevron-down" : "chevron-right", size: 12)
+                        .foregroundStyle(.secondary)
                 }
                 .frame(minHeight: 44).contentShape(Rectangle())
             }
@@ -448,13 +448,12 @@ private struct ChatWorkLog: View {
                 expanded.toggle()
             } label: {
                 HStack(spacing: 7) {
-                    Image(systemName: "terminal").font(.footnote)
+                    Image(lucide: "terminal", size: 14)
                     Text("Work log").font(.system(.footnote, design: .monospaced))
                     Text("· \(items.count)").font(.footnote).monospacedDigit()
                     if active { ProgressView().controlSize(.mini) }
                     Spacer(minLength: 0)
-                    Image(systemName: expanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 11, weight: .medium))
+                    Image(lucide: expanded ? "chevron-down" : "chevron-right", size: 12)
                 }
                 .foregroundStyle(.secondary).frame(minHeight: 44).contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityValue(expanded ? "Expanded" : "Collapsed")
@@ -521,11 +520,11 @@ private struct ChatTimelineRow: View {
                     }
                 } label: {
                     Image(
-                        systemName: item["state"]?.stringValue == "error"
-                            ? "exclamationmark.circle"
-                            : item["state"]?.stringValue == "done" ? "checkmark.circle" : "terminal"
+                        lucide: item["state"]?.stringValue == "error"
+                            ? "circle-alert"
+                            : item["state"]?.stringValue == "done" ? "circle-check" : "terminal", size: 14
                     )
-                    .font(.system(size: 14)).foregroundStyle(.secondary)
+                    .foregroundStyle(.secondary)
                     Text(item["name"]?.stringValue ?? "Tool").font(.subheadline).foregroundStyle(.secondary)
                     Spacer()
                     Text(item["state"]?.stringValue ?? "").font(.caption).foregroundStyle(.secondary)
@@ -539,12 +538,12 @@ private struct ChatTimelineRow: View {
                 }
             case "approval":
                 HStack(spacing: 6) {
-                    Image(systemName: "hand.raised")
+                    Image(lucide: "hand")
                     Text(item["toolName"]?.stringValue ?? "Permission")
                     Text(item["decision"]?.stringValue ?? "")
                 }.font(.caption).foregroundStyle(.secondary)
             case "question":
-                Label("Questions", systemImage: "questionmark.circle")
+                Label("Questions", lucideIcon: "circle-question-mark")
                 Text(item["state"]?.stringValue ?? "").font(.caption).foregroundStyle(.secondary)
                 ForEach(Array((item["questions"]?.arrayValue ?? []).enumerated()), id: \.offset) { _, question in
                     Text(question["question"]?.stringValue ?? "").font(.subheadline)
@@ -555,7 +554,7 @@ private struct ChatTimelineRow: View {
             case "turn":
                 Label(
                     item["label"]?.stringValue ?? "Turn \(item["state"]?.stringValue ?? "")",
-                    systemImage: "circle.dotted"
+                    lucideIcon: "circle-dashed", iconSize: 14
                 ).font(.caption).foregroundStyle(.secondary)
                 if let files = item["checkpointDiff"]?["files"]?.arrayValue, !files.isEmpty {
                     DisclosureGroup("\(files.count) changed files") {
@@ -566,7 +565,7 @@ private struct ChatTimelineRow: View {
                     }
                 }
             case "compaction":
-                Label("Context compacted", systemImage: "arrow.down.right.and.arrow.up.left").font(.caption)
+                Label("Context compacted", lucideIcon: "minimize-2", iconSize: 14).font(.caption)
                     .foregroundStyle(.secondary)
             default: MarkdownMessage(text: item["text"]?.stringValue ?? "")
             }

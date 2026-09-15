@@ -179,7 +179,7 @@ struct CodeMessage: View {
                     Button {
                         wrapsLines.toggle()
                     } label: {
-                        Image(systemName: "arrow.turn.down.left")
+                        Image(lucide: "corner-down-left")
                             .foregroundStyle(wrapsLines ? MobileStyle.accent : Color.secondary)
                             .frame(width: 44, height: 44)
                     }.accessibilityLabel(wrapsLines ? "Scroll code horizontally" : "Wrap code lines")
@@ -187,7 +187,7 @@ struct CodeMessage: View {
                         UIPasteboard.general.string = text
                         copied = true
                     } label: {
-                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                        Image(lucide: copied ? "check" : "copy")
                             .frame(width: 44, height: 44)
                     }.accessibilityLabel(copied ? "Copied" : "Copy code")
                 }
@@ -202,7 +202,7 @@ struct CodeMessage: View {
             }
             .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 12))
             .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(MobileStyle.border) }
-            .contextMenu { Button("Copy", systemImage: "doc.on.doc") { UIPasteboard.general.string = text } }
+            .contextMenu { Button("Copy", lucideIcon: "copy") { UIPasteboard.general.string = text } }
             .task(id: copied) {
                 guard copied else { return }
                 do { try await Task.sleep(for: .seconds(1.5)) } catch { return }

@@ -22,7 +22,7 @@ struct ChatAttachmentButton: View {
                     if loading {
                         ProgressView()
                     } else {
-                        Image(systemName: "doc").font(.system(size: 18)).foregroundStyle(.tint)
+                        Image(lucide: "file-text", size: 18).foregroundStyle(.tint)
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(attachment["name"]?.stringValue ?? "Attachment")
@@ -32,7 +32,7 @@ struct ChatAttachmentButton: View {
                                 .font(.caption2).foregroundStyle(.secondary).monospacedDigit()
                         }
                     }
-                    Image(systemName: "arrow.down.circle").font(.system(size: 14)).foregroundStyle(.secondary)
+                    Image(lucide: "circle-arrow-down", size: 14).foregroundStyle(.secondary)
                 }.padding(.horizontal, 12).frame(minHeight: 48)
                     .background(MobileStyle.surface, in: RoundedRectangle(cornerRadius: 12))
             }.buttonStyle(.plain).disabled(loading)

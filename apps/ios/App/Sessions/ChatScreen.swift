@@ -45,7 +45,7 @@ struct ChatScreen: View {
                         .allowsHitTesting(false)
                 } else if model.items.isEmpty {
                     ContentUnavailableView(
-                        "Start a conversation", systemImage: "bubble.left.and.bubble.right",
+                        "Start a conversation", lucideIcon: "messages-square",
                         description: Text("Messages and agent work appear here.")
                     )
                     .allowsHitTesting(false)
@@ -72,7 +72,7 @@ struct ChatScreen: View {
                         Button {
                             scrollToLatest += 1
                         } label: {
-                            Image(systemName: "arrow.down").font(.body.weight(.semibold))
+                            Image(lucide: "arrow-down")
                                 .frame(width: 44, height: 44)
                         }
                         .buttonStyle(.glass)
@@ -92,10 +92,10 @@ struct ChatScreen: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Button("Clear conversation", systemImage: "trash", role: .destructive) { showingClear = true }
-                    Button("Reload", systemImage: "arrow.clockwise") { model.attach() }
+                    Button("Clear conversation", lucideIcon: "trash", role: .destructive) { showingClear = true }
+                    Button("Reload", lucideIcon: "refresh-cw") { model.attach() }
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Image(lucide: "ellipsis")
                 }
                 .accessibilityLabel("Conversation actions")
             }
@@ -158,18 +158,19 @@ struct ChatScreen: View {
         }
     }
 
-    private var isEditing: Bool {
-        composerFocused || !model.draft.isEmpty || !model.attachments.isEmpty
-    }
-
     private var hasDraft: Bool {
         !model.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !model.attachments.isEmpty
     }
 
     private var isWorking: Bool { model.info["activeTurnId"]?.stringValue != nil }
 
+    private var composerShape: ConcentricRectangle {
+        ConcentricRectangle(corners: .concentric(minimum: 24))
+    }
+
     private var composer: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let photoIcon = Image(lucide: "image")
+        return VStack(alignment: .leading, spacing: 0) {
             if !model.attachments.isEmpty {
                 ScrollView(.horizontal) {
                     HStack(spacing: 6) {
@@ -177,7 +178,7 @@ struct ChatScreen: View {
                             Button {
                                 model.attachments.removeAll { $0.id == upload.id }
                             } label: {
-                                Label(upload.name, systemImage: "xmark.circle.fill")
+                                Label(upload.name, lucideIcon: "circle-x", iconSize: 14)
                                     .font(.caption).lineLimit(1).padding(.horizontal, 10).frame(minHeight: 44)
                             }
                             .buttonStyle(.plain)
@@ -187,53 +188,48 @@ struct ChatScreen: View {
                     }
                 }.scrollIndicators(.hidden).padding(.horizontal, 12).padding(.top, 10)
             }
-            HStack(alignment: .bottom, spacing: 4) {
-                RichChatComposer(
-                    text: $model.draft, selection: $composerSelection,
-                    mentions: model.mentions, skills: model.skills, focused: $composerFocused
-                )
-                .padding(.leading, 16)
-                .padding(.trailing, isEditing ? 16 : 0)
-                .padding(.vertical, isEditing ? 15 : 10)
-                .frame(maxWidth: .infinity, minHeight: 52)
-                .contentShape(Rectangle())
-                .onTapGesture { composerFocused = true }
-                .accessibilityIdentifier("chat.composer")
-                if !isEditing { primaryAction.padding(.trailing, 6).padding(.bottom, 4) }
+            RichChatComposer(
+                text: $model.draft, selection: $composerSelection,
+                mentions: model.mentions, skills: model.skills, focused: $composerFocused
+            )
+            .padding(.horizontal, 20)
+            .padding(.top, 18)
+            .padding(.bottom, 10)
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .contentShape(Rectangle())
+            .onTapGesture { composerFocused = true }
+            .accessibilityIdentifier("chat.composer")
+            if let queue = model.info["queue"]?.arrayValue, !queue.isEmpty {
+                Text("\(queue.count) message\(queue.count == 1 ? "" : "s") queued")
+                    .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                    .padding(.horizontal, 16).padding(.bottom, 6)
             }
-            if isEditing {
-                if let queue = model.info["queue"]?.arrayValue, !queue.isEmpty {
-                    Text("\(queue.count) message\(queue.count == 1 ? "" : "s") queued")
-                        .font(.caption).foregroundStyle(.secondary).monospacedDigit()
-                        .padding(.horizontal, 16).padding(.bottom, 6)
-                }
-                HStack(spacing: 0) {
-                    Menu {
-                        Button("Attach files", systemImage: "doc") { showingFiles = true }
-                        Button("Mention a file", systemImage: "at") { pickerKind = "@" }
-                        Button("Use a skill", systemImage: "sparkles") { pickerKind = "$" }
-                        Button("Command", systemImage: "slash.circle") { pickerKind = "/" }
-                    } label: {
-                        Image(systemName: "plus").frame(width: 44, height: 44)
-                    }.accessibilityLabel("Add context")
-                    PhotosPicker(selection: $photo, matching: .images) {
-                        Image(systemName: "photo").frame(width: 44, height: 44)
-                    }.accessibilityLabel("Attach photo")
-                    modelMenu.frame(maxWidth: 200, alignment: .leading)
-                    Spacer(minLength: 0)
-                    if isWorking && hasDraft { stopAction }
-                    primaryAction
-                }
-                .font(.system(.subheadline, weight: .medium))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 6).padding(.bottom, 6)
+            HStack(spacing: 0) {
+                Menu {
+                    Button("Attach files", lucideIcon: "file-text") { showingFiles = true }
+                    Button("Mention a file", lucideIcon: "at-sign") { pickerKind = "@" }
+                    Button("Use a skill", lucideIcon: "sparkles") { pickerKind = "$" }
+                    Button("Command", lucideIcon: "circle-slash") { pickerKind = "/" }
+                } label: {
+                    Image(lucide: "plus").frame(width: 44, height: 44)
+                }.accessibilityLabel("Add context")
+                PhotosPicker(selection: $photo, matching: .images) {
+                    photoIcon.frame(width: 44, height: 44)
+                }.accessibilityLabel("Attach photo")
+                modelMenu.frame(maxWidth: 200, alignment: .leading)
+                Spacer(minLength: 0)
+                if isWorking && hasDraft { stopAction }
+                primaryAction
             }
+            .font(.system(.subheadline, weight: .medium))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 14).padding(.bottom, 10)
         }
         .background {
-            Color.clear.contentShape(RoundedRectangle(cornerRadius: 24))
+            Color.clear.contentShape(composerShape)
                 .onTapGesture { composerFocused = true }
         }
-        .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 24))
+        .glassEffect(.regular.interactive(), in: composerShape)
         .disabled(!model.connected || model.loading)
     }
 
@@ -248,7 +244,7 @@ struct ChatScreen: View {
                     if model.sending {
                         ProgressView()
                     } else {
-                        Image(systemName: "arrow.up").font(.system(size: 15, weight: .semibold))
+                        Image(lucide: "arrow-up", size: 15)
                     }
                 }
                 .foregroundStyle(colorScheme == .dark ? Color.black : Color.white)
@@ -267,7 +263,7 @@ struct ChatScreen: View {
         Button {
             Task { await model.perform("chat.cancel") }
         } label: {
-            Image(systemName: "stop.fill").font(.system(size: 12, weight: .semibold))
+            Image(lucide: "square", size: 12)
                 .foregroundStyle(.primary).frame(width: 32, height: 32)
                 .background(MobileStyle.inset, in: Circle()).frame(width: 44, height: 44)
         }.buttonStyle(.plain).accessibilityLabel("Stop turn")
@@ -313,7 +309,7 @@ struct ChatScreen: View {
         } label: {
             HStack(spacing: 4) {
                 Text(model.info["selection"]?["model"]?.stringValue ?? "Model").lineLimit(1)
-                Image(systemName: "chevron.down").font(.system(size: 8, weight: .semibold))
+                Image(lucide: "chevron-down", size: 12)
             }.font(.caption.weight(.medium)).foregroundStyle(.secondary).frame(minHeight: 44)
                 .accessibilityValue(model.info["runtimeMode"]?.stringValue ?? "Permissions")
         }
@@ -350,7 +346,7 @@ struct ChatScreen: View {
                     expandedRequest = expanded ? nil : requestID
                 } label: {
                     HStack(spacing: 10) {
-                        Image(systemName: isApproval ? "hand.raised" : "questionmark.bubble")
+                        Image(lucide: isApproval ? "hand" : "message-circle-question-mark")
                             .foregroundStyle(.orange)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(item["toolName"]?.stringValue ?? "Answer needed")
@@ -362,8 +358,7 @@ struct ChatScreen: View {
                             )
                             .font(.caption).foregroundStyle(.secondary).lineLimit(2)
                         }
-                        Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                            .font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
+                        Image(lucide: expanded ? "chevron-up" : "chevron-down", size: 12).foregroundStyle(.secondary)
                     }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                         .contentShape(Rectangle())
                 }.buttonStyle(.plain).accessibilityLabel("Request details")
@@ -428,7 +423,7 @@ struct SessionErrorBanner: View {
     let retry: () -> Void
     var body: some View {
         HStack(alignment: .top) {
-            Image(systemName: "exclamationmark.circle")
+            Image(lucide: "circle-alert")
             Text(message).font(.callout).frame(maxWidth: .infinity, alignment: .leading)
             Button("Retry", action: retry)
         }.padding().background(.regularMaterial).accessibilityElement(children: .contain)
@@ -493,7 +488,7 @@ private struct ChatQuestionSheet: View {
                                     }
                                     Spacer()
                                     if answers[id] == label || selected[id]?.contains(label) == true {
-                                        Image(systemName: "checkmark")
+                                        Image(lucide: "check")
                                     }
                                 }
                             }

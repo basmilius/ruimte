@@ -1,4 +1,5 @@
 import ActivityKit
+import LucideSwift
 import RuimtePulsar
 import SwiftUI
 import WidgetKit
@@ -7,7 +8,7 @@ import WidgetKit
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: RuimteActivityAttributes.self) { context in
             HStack(spacing: 12) {
-                Image(systemName: icon(context.state.phase)).font(.title2).foregroundStyle(.indigo)
+                activityIcon(context.state.phase, size: 24).foregroundStyle(.primary)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(context.state.title).font(.headline).lineLimit(1)
                     Text(label(context.state.phase)).font(.caption).foregroundStyle(.secondary)
@@ -26,7 +27,7 @@ import WidgetKit
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    Image(systemName: icon(context.state.phase)).foregroundStyle(.indigo)
+                    activityIcon(context.state.phase, size: 20).foregroundStyle(.primary)
                 }
                 DynamicIslandExpandedRegion(.center) { Text(context.state.title).font(.headline).lineLimit(1) }
                 DynamicIslandExpandedRegion(.bottom) {
@@ -38,11 +39,11 @@ import WidgetKit
                     }.font(.caption)
                 }
             } compactLeading: {
-                Image(systemName: icon(context.state.phase))
+                activityIcon(context.state.phase, size: 16)
             } compactTrailing: {
                 Text(context.state.phase == .needsYou ? "!" : context.state.phase == .done ? "✓" : "···")
             } minimal: {
-                Image(systemName: icon(context.state.phase))
+                activityIcon(context.state.phase, size: 16)
             }
             .widgetURL(
                 URL(
@@ -51,12 +52,16 @@ import WidgetKit
                 ))
         }
     }
-    private func icon(_ phase: PushActivityContentPhase) -> String {
+    private func activityIcon(_ phase: PushActivityContentPhase, size: CGFloat) -> Image {
+        Image(lucide: icon(phase), size: CGSize(width: size, height: size), strokeWidth: size / 12)
+    }
+
+    private func icon(_ phase: PushActivityContentPhase) -> LucideIconName {
         switch phase {
-        case .running: "sparkles"
-        case .tool: "wrench.and.screwdriver"
-        case .needsYou: "hand.raised"
-        case .done: "checkmark.circle"
+        case .running: .sparkles
+        case .tool: .wrench
+        case .needsYou: .hand
+        case .done: .circleCheck
         }
     }
     private func label(_ phase: PushActivityContentPhase) -> String {

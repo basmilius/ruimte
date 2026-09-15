@@ -72,7 +72,7 @@ struct RemotePageStatus: View {
         if state.loading { ProgressView("Loading").frame(maxWidth: .infinity).padding() }
         if let problem = state.problem {
             VStack(alignment: .leading, spacing: 12) {
-                Label(problem, systemImage: "exclamationmark.triangle").foregroundStyle(.red)
+                Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red)
                 Button("Try again", action: retry)
             }.padding(.vertical, 8)
         }

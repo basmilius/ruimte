@@ -17,13 +17,13 @@ struct NotificationSessionPage: View {
                     TerminalScreen(client: session.rpc, sessionID: destination.nodeID, title: "Terminal")
                 } else if let problem {
                     ContentUnavailableView(
-                        "Session unavailable", systemImage: "exclamationmark.triangle", description: Text(problem))
+                        "Session unavailable", lucideIcon: "triangle-alert", description: Text(problem))
                 } else {
                     ProgressView("Finding session")
                 }
             } else if let problem {
                 ContentUnavailableView(
-                    "Machine unavailable", systemImage: "wifi.exclamationmark", description: Text(problem))
+                    "Machine unavailable", lucideIcon: "wifi-off", description: Text(problem))
             } else {
                 ProgressView("Connecting to your machine")
             }

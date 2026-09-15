@@ -13,13 +13,60 @@ struct LucideIcon: View {
             .accessibilityHidden(true)
     }
 
+    private static let names: [String: LucideIconName] = {
+        var names = Dictionary(
+            LucideIconName.allCases.map { ($0.rawValue.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
+        names["package"] = .packageIcon
+        return names
+    }()
+
     static func icon(named name: String) -> LucideIconName? {
-        if name == "package" { return .packageIcon }
-        let words = name.split(separator: "-")
-        let key =
-            (words.first.map(String.init) ?? "")
-            + words.dropFirst().map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
-        return LucideIconName(rawValue: key)
+        names[name.replacingOccurrences(of: "-", with: "").lowercased()]
+    }
+
+    @MainActor private static var images: [String: Image] = [:]
+
+    @MainActor static func image(named name: String, size: CGFloat) -> Image {
+        let key = "\(name):\(size)"
+        if let image = images[key] { return image }
+        let image = Image(
+            lucide: icon(named: name) ?? .circleQuestionMark,
+            size: CGSize(width: size, height: size), strokeWidth: size / 12)
+        if images.count >= 256, let cachedKey = images.keys.first { images.removeValue(forKey: cachedKey) }
+        images[key] = image
+        return image
+    }
+}
+
+extension Image {
+    @MainActor init(lucide name: String, size: CGFloat = 20) {
+        self = LucideIcon.image(named: name, size: size)
+    }
+}
+
+extension Label where Title == Text, Icon == Image {
+    @MainActor init(_ title: String, lucideIcon name: String, iconSize: CGFloat = 20) {
+        self.init {
+            Text(title)
+        } icon: {
+            Image(lucide: name, size: iconSize)
+        }
+    }
+}
+
+extension Button where Label == SwiftUI.Label<Text, Image> {
+    @MainActor init(_ title: String, lucideIcon name: String, role: ButtonRole? = nil, action: @escaping () -> Void) {
+        self.init(role: role, action: action) { SwiftUI.Label(title, lucideIcon: name) }
+    }
+}
+
+extension ContentUnavailableView where Label == SwiftUI.Label<Text, Image>, Description == Text?, Actions == EmptyView {
+    @MainActor init(_ title: String, lucideIcon name: String, description: Text? = nil) {
+        self.init {
+            SwiftUI.Label(title, lucideIcon: name, iconSize: 48)
+        } description: {
+            description
+        }
     }
 }
 

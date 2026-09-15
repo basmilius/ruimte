@@ -52,7 +52,7 @@ struct MachineProjectsPage: View {
                     ProgressView("Loading projects")
                 } else if session.connected && projects.isEmpty {
                     ContentUnavailableView(
-                        "No projects yet", systemImage: "folder",
+                        "No projects yet", lucideIcon: "folder",
                         description: Text("Open a folder on this machine or create a new workspace."))
                 }
             }
@@ -67,17 +67,17 @@ struct MachineProjectsPage: View {
                     NavigationLink {
                         MachineFilesPage(client: session.rpc, path: "~")
                     } label: {
-                        Label("Files", systemImage: "folder")
+                        Label("Files", lucideIcon: "folder")
                     }
                     NavigationLink {
                         MachineUsagePage(client: session.rpc)
                     } label: {
-                        Label("Usage", systemImage: "chart.bar")
+                        Label("Usage", lucideIcon: "chart-no-axes-column")
                     }
                     NavigationLink {
                         MachineDetailsPage(session: session)
                     } label: {
-                        Label("Machine settings", systemImage: "gearshape")
+                        Label("Machine settings", lucideIcon: "settings")
                     }
                 }
             }
@@ -87,7 +87,7 @@ struct MachineProjectsPage: View {
         .searchable(text: $search, prompt: "Find a project")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("New project", systemImage: "plus") { newProject = true }.disabled(!session.connected)
+                Button("New project", lucideIcon: "plus") { newProject = true }.disabled(!session.connected)
             }
         }
         .task {

@@ -16,7 +16,7 @@ struct GitPage: View {
             if let status = state.value {
                 if status["repo"] == .bool(false) {
                     ContentUnavailableView(
-                        "No Git repository", systemImage: "arrow.triangle.branch", description: Text(cwd))
+                        "No Git repository", lucideIcon: "git-branch", description: Text(cwd))
                 } else {
                     Section {
                         LabeledContent(
@@ -29,8 +29,10 @@ struct GitPage: View {
                         LabeledContent(
                             "Ahead / behind", value: "\(Int(status.number("ahead"))) / \(Int(status.number("behind")))")
                         if status["live"] == .bool(false) {
-                            Label("Pull to refresh this repository", systemImage: "arrow.clockwise").font(.caption)
-                                .foregroundStyle(.secondary)
+                            Label("Pull to refresh this repository", lucideIcon: "refresh-cw", iconSize: 14).font(
+                                .caption
+                            )
+                            .foregroundStyle(.secondary)
                         }
                     }
                     ForEach(["conflicted", "staged", "unstaged", "untracked"], id: \.self) { group in
@@ -65,7 +67,7 @@ struct GitPage: View {
                         }
                     }
                     if status.list("files").isEmpty {
-                        ContentUnavailableView("Working tree clean", systemImage: "checkmark.circle")
+                        ContentUnavailableView("Working tree clean", lucideIcon: "circle-check")
                     }
                     if status["truncated"] == .bool(true) {
                         Text("Some changed files were omitted from this list.").foregroundStyle(.secondary)
@@ -76,7 +78,7 @@ struct GitPage: View {
         }
         .navigationTitle("Git")
         .toolbar {
-            Button("Commit", systemImage: "checkmark.circle") { commitSheet = true }.disabled(
+            Button("Commit", lucideIcon: "circle-check") { commitSheet = true }.disabled(
                 state.busy || !(state.value?.list("files").contains { $0.text("state") == "staged" } ?? false))
         }
         .task(id: cwd) {
@@ -158,7 +160,7 @@ struct GitDiffPage: View {
                 if let diff = state.value {
                     if let omitted = diff["omitted"]?.stringValue {
                         ContentUnavailableView(
-                            omitted == "binary" ? "Binary file" : "Diff too large", systemImage: "doc")
+                            omitted == "binary" ? "Binary file" : "Diff too large", lucideIcon: "file-text")
                     } else {
                         ForEach(Array(diff.text("diff").components(separatedBy: "\n").enumerated()), id: \.offset) {
                             item in

@@ -21,7 +21,7 @@ struct RenderDocumentPage: View {
                 }
             } else if let problem {
                 ContentUnavailableView(
-                    "Could not load \(kind)", systemImage: "exclamationmark.triangle", description: Text(problem))
+                    "Could not load \(kind)", lucideIcon: "triangle-alert", description: Text(problem))
             } else {
                 ProgressView("Loading \(kind)")
             }
@@ -29,7 +29,7 @@ struct RenderDocumentPage: View {
         .overlay(alignment: .bottom) {
             if scene != nil, let problem { Text(problem).font(.caption).padding().background(.regularMaterial) }
         }
-        .toolbar { Button("Refresh", systemImage: "arrow.clockwise") { generation += 1 } }
+        .toolbar { Button("Refresh", lucideIcon: "refresh-cw") { generation += 1 } }
         .task {
             if subscription == nil {
                 subscription = client.subscribe(kind + ".changed") { event in

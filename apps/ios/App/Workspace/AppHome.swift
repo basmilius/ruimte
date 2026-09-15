@@ -42,17 +42,17 @@ struct AppHome: View {
             .toolbar {
                 if hasWorkspace {
                     ToolbarItem(placement: .topBarLeading) {
-                        Button("Settings", systemImage: "person.crop.circle") { settings = true }
+                        Button("Settings", lucideIcon: "circle-user-round") { settings = true }
                     }
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {
-                            Button("Use a pairing link", systemImage: "link") { pairing = true }
-                            Button("Machines", systemImage: "desktopcomputer") { machines = true }
+                            Button("Use a pairing link", lucideIcon: "link") { pairing = true }
+                            Button("Machines", lucideIcon: "monitor") { machines = true }
                             if runtime.account == nil {
-                                Button("Sign in", systemImage: "person.crop.circle") { signIn = true }
+                                Button("Sign in", lucideIcon: "circle-user-round") { signIn = true }
                             }
                         } label: {
-                            Image(systemName: "plus").accessibilityLabel("Add or connect")
+                            Image(lucide: "plus").accessibilityLabel("Add or connect")
                         }
                     }
                 }
@@ -127,7 +127,7 @@ struct AppHome: View {
             } else {
                 Section {
                     ContentUnavailableView {
-                        Label("No open projects", systemImage: "folder")
+                        Label("No open projects", lucideIcon: "folder", iconSize: 48)
                     } description: {
                         Text(
                             runtime.machines.isEmpty
@@ -145,7 +145,7 @@ struct AppHome: View {
                 NavigationLink {
                     RecentProjectsPage(runtime: runtime, projects: projects)
                 } label: {
-                    Label("Recently closed", systemImage: "clock.arrow.circlepath")
+                    Label("Recently closed", lucideIcon: "clock-arrow-left")
                         .foregroundStyle(.primary)
                 }.accessibilityIdentifier("projects.recent")
             }
@@ -167,12 +167,12 @@ struct AppHome: View {
                 Button {
                     pairing = true
                 } label: {
-                    Label("Use a pairing link", systemImage: "link")
+                    Label("Use a pairing link", lucideIcon: "link")
                 }
                 Button {
                     machines = true
                 } label: {
-                    Label("Machines", systemImage: "desktopcomputer")
+                    Label("Machines", lucideIcon: "monitor")
                 }
             }
         }
@@ -219,7 +219,7 @@ struct RecentProjectsPage: View {
                 ContentUnavailableView.search(text: search)
                     .listRowBackground(Color.clear).listRowSeparator(.hidden)
             } else {
-                ContentUnavailableView("No recently closed projects", systemImage: "clock.arrow.circlepath")
+                ContentUnavailableView("No recently closed projects", lucideIcon: "clock-arrow-left")
                     .listRowBackground(Color.clear).listRowSeparator(.hidden)
             }
         }
@@ -344,12 +344,12 @@ private struct MachinesSheet: View {
                             MachineProjectsPage(session: runtime.session(for: machine), runtime: runtime)
                         } label: {
                             MobileRow(
-                                title: machine.name, subtitle: "Projects, files and settings", symbol: "desktopcomputer"
+                                title: machine.name, subtitle: "Projects, files and settings", symbol: "monitor"
                             )
                         }
                     }
                 }
-                Button("Use a pairing link", systemImage: "link") {
+                Button("Use a pairing link", lucideIcon: "link") {
                     dismiss()
                     pair()
                 }

@@ -35,12 +35,13 @@
 		4F55FC08F38F77B99650C774 /* SessionWorkspaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1813EA5208B26BEDB337A946 /* SessionWorkspaceTests.swift */; };
 		525328BF92CFEE7D18F48DD5 /* AppRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE323EA02FEEF12048A2D3A8 /* AppRuntime.swift */; };
 		52B0FA0AC6066442114E416D /* RuimtePulsar in Frameworks */ = {isa = PBXBuildFile; productRef = 3E8822A475571AAC0CFCF10F /* RuimtePulsar */; };
-		537CCF8C7593D02A36693C89 /* RuimtePulsar in Frameworks */ = {isa = PBXBuildFile; productRef = 7BBC3D3E95A8FFA51AEDDEE1 /* RuimtePulsar */; };
+		537CCF8C7593D02A36693C89 /* LucideSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 2E14885FED297F540167B50D /* LucideSwift */; };
 		53D62364DA576BC5C95FD341 /* TerminalScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17236BE0F16BF4DE8C134009 /* TerminalScreen.swift */; };
 		5789AC87C3A36DD33EE7D7DD /* NotificationsSettingsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8692B2C68758104DF29256D0 /* NotificationsSettingsPage.swift */; };
 		59959A4B0DD426A2CB3F1DCF /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7152C947C98B90BAB9EC4D82 /* PrivacyInfo.xcprivacy */; };
 		5C706502AEBC21A671990235 /* MobileJSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EE2B3374AED0CCAB042E24 /* MobileJSON.swift */; };
 		62D36AE12D4AFBB7A1AECA5C /* MobileWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4494CB22D3C1F93514921B21 /* MobileWorkspace.swift */; };
+		637DA61429D380AEEAE04902 /* RuimtePulsar in Frameworks */ = {isa = PBXBuildFile; productRef = 7BBC3D3E95A8FFA51AEDDEE1 /* RuimtePulsar */; };
 		6DB0A1C6FE1BF1BEB67EFF37 /* RuimtePulsar in Frameworks */ = {isa = PBXBuildFile; productRef = D356DC5C4DF0605AD7A64646 /* RuimtePulsar */; };
 		6E1E9DBFECB1FDABD1209FFE /* DocumentSceneLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1872DE55827E2897B8AFB130 /* DocumentSceneLoader.swift */; };
 		6FA11605D9DE166F6C21D25C /* GitPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DE8F49A62B6E21105CD8F6A /* GitPage.swift */; };
@@ -236,7 +237,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				537CCF8C7593D02A36693C89 /* RuimtePulsar in Frameworks */,
+				537CCF8C7593D02A36693C89 /* LucideSwift in Frameworks */,
+				637DA61429D380AEEAE04902 /* RuimtePulsar in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -510,6 +512,7 @@
 			);
 			name = RuimteActivityWidget;
 			packageProductDependencies = (
+				2E14885FED297F540167B50D /* LucideSwift */,
 				7BBC3D3E95A8FFA51AEDDEE1 /* RuimtePulsar */,
 			);
 			productName = RuimteActivityWidget;
@@ -1173,6 +1176,11 @@
 		11D5B18726EAC79012111C1C /* RuimteTransport */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = RuimteTransport;
+		};
+		2E14885FED297F540167B50D /* LucideSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A8B13974FE087991024A3FCD /* XCRemoteSwiftPackageReference "lucide-swift" */;
+			productName = LucideSwift;
 		};
 		37621C952E69C77E98AD85B1 /* Highlightr */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -24,7 +24,7 @@ struct ProcessesPage: View {
             RemotePageStatus(state: state) { Task { await load() } }
             if state.value?["supported"] == .bool(false) {
                 ContentUnavailableView(
-                    "Process monitoring unavailable", systemImage: "waveform.path",
+                    "Process monitoring unavailable", lucideIcon: "activity",
                     description: Text("This machine does not support process sampling."))
             }
             if let sample {
@@ -74,7 +74,7 @@ struct ProcessesPage: View {
                     }
                 }
                 if sample.list("groups").isEmpty {
-                    ContentUnavailableView("No processes", systemImage: "waveform.path")
+                    ContentUnavailableView("No processes", lucideIcon: "activity")
                 }
             }
         }.navigationTitle("Processes")

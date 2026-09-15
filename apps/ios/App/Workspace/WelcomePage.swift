@@ -113,7 +113,7 @@ struct WelcomePage: View {
             }
             .padding(.bottom, 8)
             Button(action: pair) {
-                Label("Use a pairing link", systemImage: "link")
+                Label("Use a pairing link", lucideIcon: "link")
                     .font(.body.weight(.medium))
                     .frame(maxWidth: .infinity, minHeight: buttonHeight)
                     .background(MobileStyle.surface, in: RoundedRectangle(cornerRadius: 12))

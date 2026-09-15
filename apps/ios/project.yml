@@ -118,6 +118,7 @@ targets:
       - path: Extensions/ActivityWidget
       - path: App/PrivacyInfo.xcprivacy
     dependencies:
+      - package: LucideSwift
       - package: RuimtePulsar
     settings:
       base:

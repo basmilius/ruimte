@@ -16,8 +16,7 @@ struct MobileIcon: View {
     let symbol: String
     var color: Color = MobileStyle.accent
     var body: some View {
-        Image(systemName: symbol)
-            .font(.system(size: 19, weight: .medium))
+        Image(lucide: symbol, size: 19)
             .foregroundStyle(color)
             .frame(width: 42, height: 42)
             .background(color.opacity(0.09), in: RoundedRectangle(cornerRadius: 12))

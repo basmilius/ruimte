@@ -231,3 +231,44 @@ Physical continuous typing and deliberate keyboard dismissal remain device accep
 No simulator run was performed for this fix.
 The signed build, `bun run format` and `bun run check` passed. Installed on Bas's
 iPhone and iPad Pro. Build log: `/tmp/ruimte-ios-composer-focus-device.log`.
+
+## Full composer and Lucide throughout the app
+
+Full source review of the composer and app-authored icons, including Live Activities.
+Use the existing LucideSwift dependency and SwiftUI glass styling.
+
+| Category | Evidence inspected | Result |
+| --- | --- | --- |
+| Typography | Composer text, model selector and compact icon labels | Keep text sizes; rasterize icons at their intended point sizes |
+| Surfaces | Composer shape, text insets and bottom controls | Concentric corners with a 24-point minimum, 12-point outer margins and more inner clearance |
+| Animations | Focus-dependent composer layout | Remove the compact/full switch; keep one stable editor and controls |
+| Icons | App UI and ActivityWidget | Replace authored SF Symbol calls with Lucide; preserve native system controls and brand artwork |
+| Performance | Lucide image conversion and name lookup | Bound template-image cache to 256 entries and resolve normalized names through a dictionary |
+
+| Severity | Location | Before | After | Why |
+| --- | --- | --- | --- | --- |
+| MEDIUM | `ChatScreen.swift` | Plus, photo and model controls disappear in the empty unfocused state | Keep the full controls visible | Make available actions discoverable without first focusing the editor |
+| MEDIUM | `ChatScreen.swift` | Fixed 24-point glass corners | Use `ConcentricRectangle` with a 24-point minimum and matching touch shape | Follow the containing screen/window curvature without device-specific radius guesses |
+| MEDIUM | App design, sessions, workspace, pages, notifications and `RuimteActivityWidget.swift` | Mixed app-authored SF Symbols and Lucide | Use Lucide paths and template images, including menu labels and empty states | Apply one icon family and stroke proportion throughout the app |
+| MEDIUM | `LucideIcon.swift` | Kebab-case conversion misses internal capitals such as `grid3X3` | Match normalized names against the package enum | Prevent valid numeric icon names from falling back to a question mark |
+
+Status dots and the drawing color swatch remain filled geometric indicators. Native
+menus receive template Images so iOS can display the icons alongside their labels.
+Custom project artwork, emoji and provider logos retain their own rendering.
+
+| Location | Candidate | Rejected because |
+| --- | --- | --- |
+| Composer | Guess a radius for each iPhone model | The system provides screen/window-relative corners |
+| Menus | Pass only a custom stroked Shape as the icon | Native menu presentation needs an image-compatible label |
+| Navigation | Replace system-generated back/search controls | Preserve their native behavior and accessibility |
+
+Verification: all 56 literal and conditional app icon names resolve against the pinned
+package. No authored `systemName:` or `systemImage:` calls remain in the app or its
+extensions. Repository format and type/lint checks passed. No simulator run was made.
+Device curvature, native menu icon rendering, Dynamic Type and physical typing remain
+acceptance checks. Apple's [ConcentricRectangle documentation](https://developer.apple.com/documentation/swiftui/concentricrectangle)
+describes the corner behavior used here.
+
+The signed app and Live Activity extension built successfully and were installed on
+Bas's iPhone and iPad Pro. Log: `/tmp/ruimte-ios-lucide-composer-device.log`.
+Verdict: approve the inspected code, with the physical checks above still unverified.

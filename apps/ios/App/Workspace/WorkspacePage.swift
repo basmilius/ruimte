@@ -25,7 +25,7 @@ struct WorkspacePage: View {
                             if let item = workspace.views.first(where: { $0.stableID == workspace.selectedID }) {
                                 ProjectItemPage(workspace: workspace, item: item).id(item.stableID)
                             } else {
-                                ContentUnavailableView("Choose a view", systemImage: "sidebar.left")
+                                ContentUnavailableView("Choose a view", lucideIcon: "panel-left")
                             }
                         }
                         .toolbar(removing: .sidebarToggle)
@@ -36,7 +36,7 @@ struct WorkspacePage: View {
                 }
             } else if let problem = workspace.problem {
                 ContentUnavailableView {
-                    Label("Could not open project", systemImage: "wifi.exclamationmark")
+                    Label("Could not open project", lucideIcon: "wifi-off", iconSize: 48)
                 } description: {
                     Text(problem)
                 } actions: {
@@ -52,7 +52,7 @@ struct WorkspacePage: View {
             if sizeClass == .regular && workspace.ready {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(
-                        columnVisibility == .detailOnly ? "Show sidebar" : "Hide sidebar", systemImage: "sidebar.left"
+                        columnVisibility == .detailOnly ? "Show sidebar" : "Hide sidebar", lucideIcon: "panel-left"
                     ) {
                         withAnimation(reduceMotion ? nil : .default) {
                             columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
@@ -62,15 +62,15 @@ struct WorkspacePage: View {
                 }
             }
             ToolbarItemGroup(placement: .topBarTrailing) {
-                Button("Project tools", systemImage: "folder.badge.gearshape") { showTools = true }.disabled(
+                Button("Project tools", lucideIcon: "folder-cog") { showTools = true }.disabled(
                     !workspace.ready)
-                Button("Add view", systemImage: "plus") { adding = true }.disabled(!workspace.ready)
+                Button("Add view", lucideIcon: "plus") { adding = true }.disabled(!workspace.ready)
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
                 if !workspace.session.connected {
-                    Label("Reconnecting to your machine…", systemImage: "wifi.slash").font(.caption).frame(
+                    Label("Reconnecting to your machine…", lucideIcon: "wifi-off").font(.caption).frame(
                         maxWidth: .infinity
                     ).padding(8).background(.thinMaterial)
                 }
@@ -82,7 +82,7 @@ struct WorkspacePage: View {
                             openView(notice.text("viewId"))
                             workspace.notice = nil
                         }
-                        Button("Dismiss", systemImage: "xmark") { workspace.notice = nil }
+                        Button("Dismiss", lucideIcon: "x") { workspace.notice = nil }
                             .labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
                     }.padding().background(.thinMaterial)
                 }
@@ -100,7 +100,7 @@ struct WorkspacePage: View {
             if let item = workspace.views.first(where: { $0.stableID == id }) {
                 ProjectItemPage(workspace: workspace, item: item).id(id)
             } else {
-                ContentUnavailableView("This view was removed", systemImage: "rectangle.slash")
+                ContentUnavailableView("This view was removed", lucideIcon: "square-x")
             }
         }
         .sheet(isPresented: $adding) { AddProjectItem(workspace: workspace, canvasID: nil) }
@@ -160,11 +160,11 @@ struct WorkspacePage: View {
                         .foregroundStyle(.primary)
                         .accessibilityIdentifier("workspace.view.\(item.stableID)")
                         .contextMenu {
-                            Button("Rename", systemImage: "pencil") {
+                            Button("Rename", lucideIcon: "pencil") {
                                 renameText = item.text("name")
                                 renamed = item
                             }.disabled(item.text("kind") == "unknown")
-                            Button("Delete", systemImage: "trash", role: .destructive) {
+                            Button("Delete", lucideIcon: "trash", role: .destructive) {
                                 deleteView = item
                             }
                         }
@@ -220,30 +220,15 @@ struct WorkspacePage: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             AttentionMark(store: workspace.session.attention, id: item.stableID)
             if sizeClass == .regular && workspace.selectedID == item.stableID {
-                Image(systemName: "checkmark").font(.body.weight(.semibold))
+                Image(lucide: "check")
                     .foregroundStyle(MobileStyle.accent).accessibilityLabel("Selected")
             } else if sizeClass != .regular {
-                Image(systemName: "chevron.right").font(.caption.weight(.semibold))
+                Image(lucide: "chevron-right", size: 12)
                     .foregroundStyle(.tertiary).accessibilityHidden(true)
             }
         }
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-    }
-}
-
-func iconForKind(_ kind: String) -> String {
-    switch kind {
-    case "canvas": "square.grid.2x2"
-    case "chat": "bubble.left.and.bubble.right"
-    case "terminal": "terminal"
-    case "browser": "globe"
-    case "file": "doc"
-    case "drawing": "pencil.tip.crop.circle"
-    case "diagram": "point.3.connected.trianglepath.dotted"
-    case "group": "square.stack.3d.up"
-    case "note": "note.text"
-    default: "questionmark.square.dashed"
     }
 }
 
@@ -272,11 +257,11 @@ struct ProjectItemPage: View {
         Group {
             if !isPresent {
                 ContentUnavailableView(
-                    "This view was removed", systemImage: "rectangle.slash",
+                    "This view was removed", lucideIcon: "square-x",
                     description: Text("Return to the project to choose another view."))
             } else if let problem {
                 ContentUnavailableView {
-                    Label("Could not open", systemImage: "exclamationmark.triangle")
+                    Label("Could not open", lucideIcon: "triangle-alert", iconSize: 48)
                 } description: {
                     Text(problem)
                 } actions: {
@@ -309,7 +294,7 @@ struct ProjectItemPage: View {
                     }
                 default:
                     ContentUnavailableView(
-                        "A newer view", systemImage: "questionmark.square",
+                        "A newer view", lucideIcon: "circle-question-mark",
                         description: Text(
                             "Open this view in a newer Ruimte. Its content is preserved when you edit this project."))
                 }
@@ -475,22 +460,22 @@ struct ProjectTools: View {
             NavigationLink {
                 MachineFilesPage(client: workspace.client, path: workspace.folder)
             } label: {
-                Label("Files", systemImage: "folder")
+                Label("Files", lucideIcon: "folder")
             }
             NavigationLink {
                 GitPage(client: workspace.client, cwd: workspace.folder)
             } label: {
-                Label("Git", systemImage: "point.3.connected.trianglepath.dotted")
+                Label("Git", lucideIcon: "git-branch")
             }
             NavigationLink {
                 ProcessesPage(client: workspace.client, cwd: workspace.folder)
             } label: {
-                Label("Processes", systemImage: "waveform.path.ecg")
+                Label("Processes", lucideIcon: "activity")
             }
             NavigationLink {
                 MachineUsagePage(client: workspace.client)
             } label: {
-                Label("Usage", systemImage: "chart.bar")
+                Label("Usage", lucideIcon: "chart-no-axes-column")
             }
         }.navigationTitle("Project tools").toolbar {
             ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }

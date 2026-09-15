@@ -27,7 +27,7 @@ struct DrawingEditorPage: View {
                     )
                 }
             } else if let problem = model.problem {
-                ContentUnavailableView("Could not open drawing", systemImage: "pencil.tip", description: Text(problem))
+                ContentUnavailableView("Could not open drawing", lucideIcon: "pen-tool", description: Text(problem))
             } else {
                 ProgressView("Loading drawing").frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -46,7 +46,7 @@ struct DrawingEditorPage: View {
                         Button {
                             tool = option
                         } label: {
-                            Image(systemName: option.symbol).frame(width: 44, height: 44)
+                            Image(lucide: option.symbol).frame(width: 44, height: 44)
                                 .foregroundStyle(tool == option ? Color.primary : Color.secondary)
                         }.accessibilityLabel(option.rawValue).accessibilityAddTraits(tool == option ? .isSelected : [])
                     }
@@ -66,12 +66,12 @@ struct DrawingEditorPage: View {
                             Text("Bold").tag(4)
                         }
                     } label: {
-                        Image(systemName: "circle.fill").foregroundStyle(
+                        Circle().frame(width: 20, height: 20).foregroundStyle(
                             Color(uiColor: DrawingInputSurface.color(color))
                         )
                         .frame(width: 44, height: 44)
                     }.accessibilityLabel("Pen color and width")
-                    Button("Undo", systemImage: "arrow.uturn.backward") { model.undo() }
+                    Button("Undo", lucideIcon: "undo-2") { model.undo() }
                         .labelStyle(.iconOnly).frame(width: 44, height: 44).disabled(model.history.isEmpty)
                     if model.saving { ProgressView().controlSize(.mini).accessibilityLabel("Saving drawing") }
                 }
@@ -94,9 +94,9 @@ enum DrawingTool: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var symbol: String {
         switch self {
-        case .pen: "pencil.tip"
+        case .pen: "pen-tool"
         case .eraser: "eraser"
-        case .pan: "hand.draw"
+        case .pan: "hand"
         }
     }
 }

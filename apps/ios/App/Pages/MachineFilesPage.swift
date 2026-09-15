@@ -31,7 +31,7 @@ struct MachineFilesPage: View {
                     }
                 } label: {
                     HStack(spacing: 12) {
-                        Image(systemName: entry.text("kind") == "directory" ? "folder.fill" : "doc").foregroundStyle(
+                        Image(lucide: entry.text("kind") == "directory" ? "folder" : "file-text").foregroundStyle(
                             .tint)
                         VStack(alignment: .leading, spacing: 3) {
                             Text(entry.text("name"))
@@ -43,7 +43,7 @@ struct MachineFilesPage: View {
                 }
             }
             if state.value != nil && entries.isEmpty {
-                ContentUnavailableView(search.isEmpty ? "Empty folder" : "No matching files", systemImage: "folder")
+                ContentUnavailableView(search.isEmpty ? "Empty folder" : "No matching files", lucideIcon: "folder")
             }
             if state.value?["truncated"] == .bool(true) {
                 Text("This folder has more entries than the machine can list at once.").font(.footnote).foregroundStyle(
@@ -56,7 +56,7 @@ struct MachineFilesPage: View {
             Menu {
                 Toggle("Show hidden files", isOn: $hidden)
             } label: {
-                Label("File options", systemImage: "ellipsis.circle")
+                Label("File options", lucideIcon: "ellipsis")
             }
         }
         .task(id: "\(path):\(hidden)") {
@@ -115,13 +115,13 @@ struct FileContentPage: View {
                         VideoPlayer(player: player).frame(minHeight: 300)
                     } else if value.text("kind") == "too-large" {
                         ContentUnavailableView(
-                            "File too large", systemImage: "doc",
+                            "File too large", lucideIcon: "file-text",
                             description: Text(
                                 "This text file is \(mobileByteCount(value["size"]?.numberValue)). Open it on the machine."
                             ))
                     } else if !state.loading {
                         ContentUnavailableView(
-                            "Preview unavailable", systemImage: "doc", description: Text(value.text("mime")))
+                            "Preview unavailable", lucideIcon: "file-text", description: Text(value.text("mime")))
                     }
                 }
             }.padding()

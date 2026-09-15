@@ -32,7 +32,7 @@ struct TerminalScreen: View {
                     title: model.exited ? "Exited" : model.connected ? "Connected" : "Reconnecting",
                     color: model.exited ? .secondary : model.connected ? .green : .orange)
                 Spacer()
-                Label("\(model.cols) × \(model.rows)", systemImage: "rectangle.split.3x3")
+                Label("\(model.cols) × \(model.rows)", lucideIcon: "grid-3x3")
                     .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                     .accessibilityLabel("Following desktop terminal, \(model.cols) columns and \(model.rows) rows")
             }
@@ -50,7 +50,7 @@ struct TerminalScreen: View {
                 Button {
                     clearing = true
                 } label: {
-                    Image(systemName: "eraser").frame(width: 44, height: 44)
+                    Image(lucide: "eraser").frame(width: 44, height: 44)
                 }
                 .accessibilityLabel("Clear scrollback")
                 .keyboardShortcut("k", modifiers: .command)
@@ -75,9 +75,9 @@ struct TerminalScreen: View {
                         Text("Light").tag("light")
                         Text("Dark").tag("dark")
                     }
-                    Button("Reload screen", systemImage: "arrow.clockwise") { model.attach() }
+                    Button("Reload screen", lucideIcon: "refresh-cw") { model.attach() }
                 } label: {
-                    Image(systemName: "textformat.size")
+                    Image(lucide: "type")
                 }
                 .accessibilityLabel("Terminal appearance")
             }
@@ -107,7 +107,7 @@ struct TerminalScreen: View {
     private func approvalStrip(_ request: JSONValue, now: Date) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Label(request["toolName"]?.stringValue ?? "Permission", systemImage: "hand.raised").font(.headline)
+                Label(request["toolName"]?.stringValue ?? "Permission", lucideIcon: "hand").font(.headline)
                 Spacer()
                 let seconds = max(0, Int((request["expiresAt"]?.numberValue ?? 0) / 1000 - now.timeIntervalSince1970))
                 Text("\(seconds)s").font(.caption.monospacedDigit()).foregroundStyle(.secondary)

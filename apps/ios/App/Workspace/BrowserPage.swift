@@ -33,7 +33,7 @@ struct BrowserPage: View {
                 TextField("Address", text: $state.address).keyboardType(.URL).textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .submitLabel(.go).onSubmit { state.navigate() }
-                Button(state.loading ? "Stop" : "Reload", systemImage: state.loading ? "xmark" : "arrow.clockwise") {
+                Button(state.loading ? "Stop" : "Reload", lucideIcon: state.loading ? "x" : "refresh-cw") {
                     if state.loading { state.webView?.stopLoading() } else { state.navigate() }
                 }.labelStyle(.iconOnly)
             }.padding(12).background(.bar)
@@ -43,8 +43,8 @@ struct BrowserPage: View {
             }
         }.toolbar {
             ToolbarItemGroup(placement: .bottomBar) {
-                Button("Back", systemImage: "chevron.left") { state.webView?.goBack() }.disabled(!state.back)
-                Button("Forward", systemImage: "chevron.right") { state.webView?.goForward() }.disabled(!state.forward)
+                Button("Back", lucideIcon: "chevron-left") { state.webView?.goBack() }.disabled(!state.back)
+                Button("Forward", lucideIcon: "chevron-right") { state.webView?.goForward() }.disabled(!state.forward)
                 Spacer()
                 if let url = URL(string: state.address), ["http", "https"].contains(url.scheme ?? "") {
                     ShareLink(item: url)
