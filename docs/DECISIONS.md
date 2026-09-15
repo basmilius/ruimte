@@ -1968,6 +1968,10 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   of machines behind one predicate (`hasLocalMachine` in `state/local-machine.ts`), counted out of the
   "one machine opens straight on its folders" rule too, and the local row being active means the welcome
   screen rather than a machine.
+- `endpoint.info` and `server.hello` are asked of every machine whose link opens and again on its
+  `endpoint.changed` (`transport/open-machines.ts`), not only of the active one. The account record of a
+  paired machine that was not active only synced after a switch to it, and the lists of machines had no
+  icon for it.
 
 ### Skipped on purpose
 

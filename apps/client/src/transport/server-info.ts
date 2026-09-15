@@ -1,9 +1,9 @@
 import type { EndpointNameSource } from '@ruimte/contracts';
 import { noteDaemonIdentity } from '@/endpoint/identity';
 import { LOCAL_ENDPOINT_ID, localMachineLabel, useEndpoints } from '@/state/endpoints';
-import { currentEndpointId } from '@/state/keys';
 import { serverInfoOf, useServers } from '@/state/server';
-import { transport, transportFor } from '@/transport';
+import { pool, transportFor } from '@/transport';
+import { watchOpenMachines } from './open-machines';
 
 /*
  * Who the daemon is comes first and the rest waits for it: a row that was keyed on an address moves
@@ -56,27 +56,14 @@ export const adoptMachineName = (endpointId: string, label: string, nameSource: 
     }
 };
 
-/* Asks the daemon who it is on every connection; the answer feeds platform-specific labels. */
-export const startServerInfo = (): (() => void) => {
-    const sync = (): void => {
-        if (transport.status === 'open') {
-            load(currentEndpointId());
-        }
-    };
-    sync();
-    const offStatus = transport.subscribeStatus((status) => {
-        if (status === 'open') {
-            sync();
-        }
-    });
-    // Another machine whose socket was already open changes no status, so the switch itself has to ask.
-    const offActive = useEndpoints.subscribe((state, before) => {
-        if (state.activeId !== before.activeId) {
-            sync();
-        }
-    });
-    return () => {
-        offStatus();
-        offActive();
-    };
-};
+/* Asks every machine who it is on every connection it opens and whenever it changed; the answer feeds labels, icons and the account record. */
+export const startServerInfo = (): (() => void) =>
+    watchOpenMachines(
+        {
+            ids: () => pool.ids(),
+            statusOf: (endpointId) => pool.statusOf(endpointId),
+            subscribe: (handler) => pool.subscribe(handler),
+            onChanged: (endpointId, handler) => pool.peek(endpointId)?.on('endpoint.changed', handler) ?? null
+        },
+        load
+    );
