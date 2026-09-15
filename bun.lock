@@ -121,6 +121,16 @@
         "typescript": "~6.0.2",
       },
     },
+    "apps/station": {
+      "name": "@ruimte/station",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@cloudflare/workers-types": "^5.20260914.1",
+        "@types/bun": "^1.4.0",
+        "typescript": "~6.0.2",
+        "wrangler": "^4.131.2",
+      },
+    },
     "packages/contracts": {
       "name": "@ruimte/contracts",
       "version": "0.0.0",
@@ -513,6 +523,8 @@
     "@ruimte/pulsar-worker": ["@ruimte/pulsar-worker@workspace:apps/pulsar-worker"],
 
     "@ruimte/server": ["@ruimte/server@workspace:apps/server"],
+
+    "@ruimte/station": ["@ruimte/station@workspace:apps/station"],
 
     "@shikijs/core": ["@shikijs/core@4.4.3", "", { "dependencies": { "@shikijs/primitive": "4.4.3", "@shikijs/types": "4.4.3", "@shikijs/vscode-textmate": "^10.0.2", "@types/hast": "^3.0.5", "hast-util-to-html": "^9.0.5" } }, "sha512-QCR4q2ZO/ILJEuwiBMel4wdcTDb1JGwfjKTxPDF6x8ixOaluPrVqIn06C99AcRPhmYlBR56d/Fb+GN58GzExpg=="],
 

@@ -14,6 +14,7 @@ import { useServers } from '@/state/server';
 import { useSessions } from '@/state/sessions';
 import { useToasts } from '@/state/toasts';
 import { useUsageStore } from '@/state/usage';
+import { mixedContentRefusal } from '@/station';
 import { connectionAddressFor, pool, transport } from '@/transport';
 import { dropMachine } from '@/transport/connections';
 import { useProcesses, useProcessWarnings } from '@/state/processes';
@@ -37,6 +38,10 @@ export const pairEndpoint = async (pairingUrl: string): Promise<Endpoint> => {
     const parsed = parsePairingUrl(pairingUrl);
     if (!parsed) {
         throw new Error('That is not a pairing link. A pairing link looks like http://machine:4210/pair#token');
+    }
+    const refusal = typeof location === 'undefined' ? null : mixedContentRefusal(location.protocol, parsed.httpBaseUrl);
+    if (refusal !== null) {
+        throw new Error(refusal);
     }
     // Asked before the one-time token is spent, so a link for this machine's own daemon leaves no paired client behind.
     refuseOwnDaemon(await daemonAt(parsed.httpBaseUrl));

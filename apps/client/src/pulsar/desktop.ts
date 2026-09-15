@@ -2,14 +2,18 @@ import { z } from 'zod';
 import { desktop } from '@/desktop/bridge';
 import type { LoginRedirect } from './login';
 import { RestoredSessionSchema, SessionViewSchema, type SessionKeeper } from './session';
+import type { LoginStorage } from './web';
 
 const LoginCallbackSchema = z.object({ code: z.string().nullable(), state: z.string().nullable(), error: z.string().nullable() });
 
 /* What a login needs from the platform it runs on. */
 export interface PulsarPlatform {
-    redirect: LoginRedirect;
     keeper: SessionKeeper;
     addressBook(): Promise<string>;
+    /* A login that comes back while this page waits for it: the desktop shell's loopback listener. */
+    redirect?: LoginRedirect;
+    /* A login that leaves this page and comes back to it on `redirectUri`: the web client. */
+    web?: { redirectUri: string; storage: LoginStorage };
 }
 
 /*

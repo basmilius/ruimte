@@ -1,13 +1,30 @@
 import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 
 // The dev daemon sits on 4211 so an installed Ruimte can keep 4210.
 const daemon = process.env.RUIMTE_DAEMON ?? 'ws://localhost:4211';
 
-export default defineConfig({
-    plugins: [react(), tailwindcss()],
+/*
+ * The web client at `station.ruimte.app` (`vite build --mode station`). It is the same page, plus what
+ * lets a person put it on a Home Screen: Safari clears a site's storage after seven days without a
+ * visit, and a Home Screen app is exempt, which is where the session and the client key live.
+ */
+const stationHead = (): Plugin => ({
+    name: 'ruimte-station-head',
+    transformIndexHtml: () => [
+        { tag: 'link', attrs: { rel: 'manifest', href: '/manifest.webmanifest' }, injectTo: 'head' },
+        { tag: 'link', attrs: { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' }, injectTo: 'head' },
+        { tag: 'link', attrs: { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32.png' }, injectTo: 'head' },
+        { tag: 'link', attrs: { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16.png' }, injectTo: 'head' },
+        { tag: 'meta', attrs: { name: 'apple-mobile-web-app-capable', content: 'yes' }, injectTo: 'head' },
+        { tag: 'meta', attrs: { name: 'apple-mobile-web-app-title', content: 'Ruimte' }, injectTo: 'head' }
+    ]
+});
+
+export default defineConfig(({ mode }) => ({
+    plugins: [react(), tailwindcss(), ...(mode === 'station' ? [stationHead()] : [])],
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./src', import.meta.url))
@@ -37,4 +54,4 @@ export default defineConfig({
             }
         }
     }
-});
+}));

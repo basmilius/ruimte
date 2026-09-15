@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:station": "tsc -b && vite build --mode station --outDir ../station/dist --emptyOutDir",
     "typecheck": "tsc -b",
     "preview": "vite preview"
   },

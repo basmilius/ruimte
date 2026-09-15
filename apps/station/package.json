@@ -1,0 +1,17 @@
+{
+  "name": "@ruimte/station",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "bun run --cwd ../client build:station && cp -R public/. dist/",
+    "deploy": "bun run build && wrangler deploy",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260914.1",
+    "@types/bun": "^1.4.0",
+    "typescript": "~6.0.2",
+    "wrangler": "^4.131.2"
+  }
+}
