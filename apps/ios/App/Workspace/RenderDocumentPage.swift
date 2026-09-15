@@ -38,9 +38,8 @@ struct RenderDocumentPage: View {
         }
         .task(id: generation) {
             do {
-                let result = try await client.request(
-                    kind == "diagram" ? "diagram.layout" : "drawing.paths",
-                    payload: .object(["projectId": .string(projectID), "viewId": .string(viewID)]))
+                let result = try await DocumentSceneLoader.load(
+                    client: client, projectID: projectID, viewID: viewID, kind: kind)
                 guard !Task.isCancelled else { return }
                 scene = result
                 problem = nil

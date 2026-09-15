@@ -30,6 +30,16 @@ final class SessionVisualTests: XCTestCase {
             await displayFrame()
             capture(window, name: name)
             XCTAssertTrue(host.view.recursiveContains(identifier: "chat.timeline"))
+            let timeline = try XCTUnwrap(host.view.descendant(of: ChatTimelineCollection.self))
+            XCTAssertEqual(timeline.keyboardDismissMode, .interactive)
+            XCTAssertGreaterThan(timeline.contentInset.bottom, 72)
+            let timelineFrame = timeline.convert(timeline.bounds, to: window)
+            XCTAssertGreaterThan(timelineFrame.maxY, window.bounds.maxY - 60)
+            XCTAssertEqual(timeline.verticalScrollIndicatorInsets.bottom, timeline.contentInset.bottom)
+            XCTAssertTrue(
+                timeline.gestureRecognizers?.contains {
+                    $0 is UITapGestureRecognizer && !$0.cancelsTouchesInView
+                } == true)
             window.isHidden = true
             window.rootViewController = nil
         }
@@ -289,6 +299,11 @@ final class SessionVisualTests: XCTestCase {
 }
 
 extension UIView {
+    fileprivate func descendant<T: UIView>(of type: T.Type) -> T? {
+        if let match = self as? T { return match }
+        return subviews.lazy.compactMap { $0.descendant(of: type) }.first
+    }
+
     fileprivate func recursiveContains(identifier: String) -> Bool {
         accessibilityIdentifier == identifier || subviews.contains { $0.recursiveContains(identifier: identifier) }
     }

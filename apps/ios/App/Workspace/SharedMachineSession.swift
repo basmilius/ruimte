@@ -20,6 +20,7 @@ final class SharedMachineSession {
     }
     private weak var runtime: AppRuntime?
     @ObservationIgnored lazy var attention = AttentionStore(client: rpc)
+    @ObservationIgnored lazy var icons = MachineIconState(client: rpc, fallback: machine.icon)
     @ObservationIgnored lazy var rpc = MachineClient(send: { [weak self] text in
         guard let lease = self?.lease else { throw TransportFailure.invalid("This machine is not connected.") }
         try lease.send(text)
@@ -81,12 +82,14 @@ final class SharedMachineSession {
                     })
             }, events: events)
         attention.start()
+        icons.start()
     }
 
     func release() {
         references = max(0, references - 1)
         guard references == 0 else { return }
         attention.stop()
+        icons.stop()
         lease?.release()
         lease = nil
         connected = false
@@ -102,6 +105,7 @@ final class SharedMachineSession {
     func invalidate() {
         invalidated = true
         attention.stop()
+        icons.stop()
         projectSubscriptions.invalidate()
         lease?.release()
         lease = nil

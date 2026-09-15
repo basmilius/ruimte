@@ -53,6 +53,10 @@ Lucide assets are checked in as template vectors. After changing the desktop ico
 run `bun apps/ios/Scripts/generate-lucide-icons.ts` to regenerate them from the installed
 `lucide-react` package. Its ISC license is included in `App/Design/Lucide-LICENSE.txt`.
 
+For small UI iterations, build and install directly on the development iPhone for
+review. Use targeted regression tests for connection, protocol and state changes;
+reserve the full simulator suite for changes that need broader coverage.
+
 For simulator tests, replace the destination with an installed simulator if needed:
 
 ```sh

@@ -8,8 +8,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit && bun run check:swift",
-    "generate:swift": "bun scripts/generate-swift.ts",
-    "check:swift": "bun scripts/generate-swift.ts --check"
+    "generate:swift": "bun scripts/generate-swift.ts && bun ../../apps/ios/Scripts/generate-renderer.ts",
+    "check:swift": "bun scripts/generate-swift.ts --check && bun ../../apps/ios/Scripts/generate-renderer.ts --check"
   },
   "dependencies": {
     "@ruimte/pulsar": "workspace:*",

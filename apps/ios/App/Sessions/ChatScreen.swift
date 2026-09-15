@@ -13,6 +13,7 @@ struct ChatScreen: View {
     @State private var question: JSONValue?
     @State private var expandedRequest: String?
     @FocusState private var composerFocused: Bool
+    @State private var composerHeight: CGFloat = 72
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.colorScheme) private var colorScheme
     let title: String
@@ -28,28 +29,41 @@ struct ChatScreen: View {
                 SessionErrorBanner(message: error) { model.attach() }
             }
             if model.loading { ProgressView("Loading conversation…").padding() }
-            ChatTimeline(items: model.items, revision: model.revision, client: model.client, chatID: model.chatID)
-                .overlay {
-                    if model.items.isEmpty && !model.loading {
-                        ContentUnavailableView(
-                            "Start a conversation", systemImage: "bubble.left.and.bubble.right",
-                            description: Text("Messages and agent work appear here."))
+            ChatTimeline(
+                items: model.items, revision: model.revision, client: model.client, chatID: model.chatID,
+                bottomInset: composerHeight, dismissKeyboard: { composerFocused = false }
+            )
+            .overlay {
+                if model.items.isEmpty && !model.loading {
+                    ContentUnavailableView(
+                        "Start a conversation", systemImage: "bubble.left.and.bubble.right",
+                        description: Text("Messages and agent work appear here.")
+                    )
+                    .allowsHitTesting(false)
+                }
+            }
+            .overlay(alignment: .bottom) {
+                GlassEffectContainer(spacing: 8) {
+                    VStack(spacing: 8) {
+                        if let pending = model.pending.first { pendingDock(pending) }
+                        composer
                     }
                 }
-            VStack(spacing: 8) {
-                if let pending = model.pending.first { pendingDock(pending) }
-                composer
+                .frame(maxWidth: 760)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity)
+                .onGeometryChange(for: CGFloat.self) {
+                    $0.size.height
+                } action: {
+                    composerHeight = $0
+                }
             }
-            .frame(maxWidth: 760)
-            .padding(.horizontal, 12)
-            .padding(.top, 10)
-            .padding(.bottom, 10)
-            .frame(maxWidth: .infinity)
-            .background(Color(uiColor: .systemBackground))
         }
         .tint(MobileStyle.accent)
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+        .accessibilityAction(.escape) { composerFocused = false }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -149,7 +163,9 @@ struct ChatScreen: View {
                     .padding(.leading, 16)
                     .padding(.trailing, isEditing ? 16 : 0)
                     .padding(.vertical, isEditing ? 15 : 10)
-                    .frame(minHeight: 52)
+                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .contentShape(Rectangle())
+                    .onTapGesture { composerFocused = true }
                     .accessibilityIdentifier("chat.composer")
                 if !isEditing { primaryAction.padding(.trailing, 6).padding(.bottom, 4) }
             }
@@ -173,13 +189,6 @@ struct ChatScreen: View {
                     }.accessibilityLabel("Attach photo")
                     modelMenu.frame(maxWidth: 200, alignment: .leading)
                     Spacer(minLength: 0)
-                    if composerFocused {
-                        Button {
-                            composerFocused = false
-                        } label: {
-                            Image(systemName: "keyboard.chevron.compact.down").frame(width: 44, height: 44)
-                        }.accessibilityLabel("Hide keyboard")
-                    }
                     if isWorking && hasDraft { stopAction }
                     primaryAction
                 }
@@ -188,8 +197,11 @@ struct ChatScreen: View {
                 .padding(.horizontal, 6).padding(.bottom, 6)
             }
         }
-        .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay { RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(MobileStyle.border) }
+        .background {
+            Color.clear.contentShape(RoundedRectangle(cornerRadius: 24))
+                .onTapGesture { composerFocused = true }
+        }
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 24))
         .disabled(!model.connected || model.loading)
     }
 
@@ -363,7 +375,7 @@ struct ChatScreen: View {
             }
         }
         .padding(.horizontal, 12).padding(.vertical, 8)
-        .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 18))
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 18))
         .disabled(!model.connected)
     }
 

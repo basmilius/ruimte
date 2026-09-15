@@ -75,6 +75,7 @@ import RuimtePulsar
     private let scheduler: any TransportScheduling
     private var monitor: NWPathMonitor?
     private var pathFingerprint: String?
+    private var lastPath: NWPath?
     private var pathRevision = 0
 
     public init(scheduler: any TransportScheduling = TaskTransportScheduler(), monitorPaths: Bool = true) {
@@ -84,7 +85,8 @@ import RuimtePulsar
             self.monitor = monitor
             monitor.pathUpdateHandler = { [weak self] path in
                 Task { @MainActor [weak self] in
-                    guard let self else { return }
+                    guard let self, self.lastPath != path else { return }
+                    self.lastPath = path
                     self.pathRevision += 1
                     self.pathChanged(fingerprint: String(self.pathRevision), reachable: path.status == .satisfied)
                 }
@@ -115,6 +117,9 @@ import RuimtePulsar
         guard pathFingerprint != fingerprint else { return }
         if pathFingerprint == nil { return }
         for (id, entry) in Array(machines) {
+            // The default route can change while ICE still has a working path to the machine.
+            // Let the channel's liveness checks decide when an authenticated link has failed.
+            if entry.connected { continue }
             suspend(entry)
             if entry.members.isEmpty {
                 machines.removeValue(forKey: id)

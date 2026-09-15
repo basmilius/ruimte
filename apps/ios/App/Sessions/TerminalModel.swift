@@ -91,7 +91,8 @@ final class TerminalModel {
             guard let self else { return }
             do {
                 guard let attachment else { throw CancellationError() }
-                _ = try await attachment.snapshot(payload: target(["follow": .bool(true)])) { [weak self] snapshot in
+                _ = try await TerminalSnapshot.load(attachment: attachment, client: client, sessionID: sessionID) {
+                    [weak self] snapshot in
                     guard let self, self.generation == current else { return }
                     self.cols = Int(snapshot["cols"]?.numberValue ?? 80)
                     self.rows = Int(snapshot["rows"]?.numberValue ?? 24)

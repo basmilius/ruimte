@@ -173,8 +173,9 @@ final class TransportTests: XCTestCase {
 @MainActor private final class FakeLink: MachineLink {
     let events: LinkEvents
     var closes = 0
+    var onSend: (String) throws -> Void = { _ in }
     init(events: LinkEvents) { self.events = events }
-    func send(_ text: String) throws {}
+    func send(_ text: String) throws { try onSend(text) }
     func close() {
         closes += 1
         events.closed(nil)
@@ -182,6 +183,61 @@ final class TransportTests: XCTestCase {
 }
 
 final class BrokerAndLifecycleTests: XCTestCase {
+    @MainActor func testPathUpdatesPreserveAnInFlightChatSend() async throws {
+        let scheduler = FakeScheduler()
+        let pool = MachineConnections(scheduler: scheduler, monitorPaths: false)
+        pool.setScene("scene", foreground: true)
+        pool.pathChanged(fingerprint: "wifi", reachable: true)
+        var links: [FakeLink] = []
+        var lease: MachineLease!
+        let client = MachineClient(send: { try lease.send($0) }, scheduler: scheduler)
+        lease = pool.hold(
+            machineID: "machine",
+            open: {
+                let link = FakeLink(events: $0)
+                links.append(link)
+                return link
+            },
+            events: LinkEvents(
+                opened: { client.connected() }, message: { client.receive($0) },
+                closed: { client.disconnected(error: $0) }))
+        let original = links[0]
+        original.events.opened()
+        var sends = 0
+        original.onSend = { text in
+            sends += 1
+            let request = try JSONValue.decode(Data(text.utf8))
+            pool.pathChanged(fingerprint: "wifi-updated", reachable: true)
+            pool.pathChanged(fingerprint: "no-default-route", reachable: false)
+            pool.pathChanged(fingerprint: "cellular", reachable: true)
+            XCTAssertTrue(client.isConnected)
+            XCTAssertEqual(client.pendingRequestCount, 1)
+            original.events.message(
+                try wireText(
+                    .object([
+                        "id": request["id"]!, "ok": .bool(true),
+                        "result": .object(["queued": .bool(false)]),
+                    ])))
+        }
+        let result = try await client.request(
+            "chat.send", payload: .object(["chatId": .string("chat"), "text": .string("Hello")]))
+        XCTAssertEqual(result["queued"], .bool(false))
+        XCTAssertEqual(sends, 1)
+        XCTAssertEqual(links.count, 1)
+        XCTAssertEqual(original.closes, 0)
+        XCTAssertEqual(client.pendingRequestCount, 0)
+        XCTAssertTrue(scheduler.pending.isEmpty)
+
+        original.events.closed(TransportFailure.invalid("The channel stopped answering."))
+        XCTAssertFalse(client.isConnected)
+        XCTAssertEqual(scheduler.pending.count, 1)
+        pool.pathChanged(fingerprint: "wifi-restored", reachable: true)
+        XCTAssertEqual(links.count, 2)
+        XCTAssertTrue(scheduler.pending.isEmpty)
+        lease.release()
+        pool.shutdown()
+    }
+
     @MainActor func testForgetInvalidatesOldLinkAndLeaseWithoutTouchingReplacement() throws {
         let scheduler = FakeScheduler()
         let pool = MachineConnections(scheduler: scheduler, monitorPaths: false)

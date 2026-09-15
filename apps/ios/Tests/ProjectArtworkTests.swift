@@ -49,6 +49,8 @@ final class ProjectArtworkTests: XCTestCase {
         window.rootViewController = UIViewController()
         window.rootViewController?.view.backgroundColor = .white
         window.makeKeyAndVisible()
+        window.layoutIfNeeded()
+        XCTAssertGreaterThan(window.safeAreaInsets.top, 0, "Exercise the phone's real top safe area")
         defer {
             window.isHidden = true
             window.rootViewController = nil
@@ -66,6 +68,12 @@ final class ProjectArtworkTests: XCTestCase {
         XCTAssertGreaterThan(right[2], 230)
         XCTAssertLessThan(right[0], 25)
         XCTAssertGreaterThan(right[1], 60)
+        for y in [2, image.height - 3] {
+            let topOrBottom = try pixel(image, x: image.width / 4, y: y)
+            XCTAssertGreaterThan(
+                topOrBottom[0], 230, "The SVG must reach both vertical edges without a safe-area offset")
+            XCTAssertGreaterThan(topOrBottom[3], 230)
+        }
         let attachment = XCTAttachment(image: result)
         attachment.name = "project-artwork-svg"
         attachment.lifetime = .keepAlways

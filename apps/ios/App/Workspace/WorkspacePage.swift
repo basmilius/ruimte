@@ -188,7 +188,7 @@ struct WorkspacePage: View {
         HStack(spacing: 12) {
             WorkspaceViewIcon(item: item).foregroundStyle(.secondary)
             Text(item.text("name", fallback: item.text("kind")))
-                .font(.body).foregroundStyle(.primary).lineLimit(2)
+                .font(.body).foregroundStyle(.primary).lineLimit(1).truncationMode(.tail)
                 .frame(maxWidth: .infinity, alignment: .leading)
             AttentionMark(store: workspace.session.attention, id: item.stableID)
             if sizeClass == .regular && workspace.selectedID == item.stableID {

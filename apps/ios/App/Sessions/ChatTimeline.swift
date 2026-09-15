@@ -8,11 +8,15 @@ struct ChatTimeline: UIViewControllerRepresentable {
     let revision: Int
     let client: any MachineRequesting
     let chatID: String
+    var bottomInset: CGFloat = 0
+    var dismissKeyboard: () -> Void = {}
 
     func makeUIViewController(context: Context) -> ChatTimelineController {
         ChatTimelineController(client: client, chatID: chatID)
     }
     func updateUIViewController(_ controller: ChatTimelineController, context: Context) {
+        controller.dismissKeyboard = dismissKeyboard
+        controller.setComposerInset(bottomInset)
         controller.update(items: items, revision: revision)
     }
 }
@@ -117,7 +121,8 @@ final class ChatTimelineCollection: UICollectionView {
 }
 
 @MainActor
-final class ChatTimelineController: UIViewController, UICollectionViewDelegate {
+final class ChatTimelineController: UIViewController, UICollectionViewDelegate, UIGestureRecognizerDelegate {
+    var dismissKeyboard: () -> Void = {}
     private let client: any MachineRequesting
     private let chatID: String
     init(client: any MachineRequesting, chatID: String) {
@@ -143,10 +148,15 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate {
         collection = ChatTimelineCollection(
             frame: .zero, collectionViewLayout: UICollectionViewCompositionalLayout.list(using: configuration))
         collection.keyboardDismissMode = .interactive
+        collection.contentInsetAdjustmentBehavior = .never
         collection.alwaysBounceVertical = true
         collection.translatesAutoresizingMaskIntoConstraints = false
         collection.accessibilityIdentifier = "chat.timeline"
         collection.delegate = self
+        let tap = UITapGestureRecognizer(target: self, action: #selector(dismissComposerKeyboard))
+        tap.cancelsTouchesInView = false
+        tap.delegate = self
+        collection.addGestureRecognizer(tap)
         collection.captureReadingAnchor = { [weak self] in self?.visibleAnchor() }
         collection.itemTop = { [weak self] id in
             guard let self, let index = self.source.indexPath(for: id) else { return nil }
@@ -184,6 +194,25 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate {
             collection.dequeueConfiguredReusableCell(using: registration, for: index, item: id)
         }
     }
+
+    func setComposerInset(_ height: CGFloat) {
+        loadViewIfNeeded()
+        let inset = max(0, height)
+        guard collection.contentInset.bottom != inset else { return }
+        collection.prepareForContentChange()
+        collection.contentInset.bottom = inset
+        collection.verticalScrollIndicatorInsets.bottom = inset
+        collection.setNeedsLayout()
+    }
+
+    @objc private func dismissComposerKeyboard() {
+        dismissKeyboard()
+    }
+
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool { true }
 
     func update(items values: [JSONValue], revision: Int) {
         guard revision != lastRevision else { return }

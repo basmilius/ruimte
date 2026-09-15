@@ -1,4 +1,3 @@
-import AuthenticationServices
 import RuimtePulsar
 import SwiftUI
 import UIKit
@@ -177,26 +176,17 @@ private struct ProviderAccountButton: View {
 
     var body: some View {
         Button(action: action) {
-            Group {
-                if provider == .apple {
-                    AppleAccountButton(dark: colorScheme == .dark)
-                        .id(colorScheme)
-                        .frame(height: visualHeight)
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
-                } else {
-                    HStack(spacing: logoSpacing) {
-                        // Official mark: https://brand.github.com/foundations/logo
-                        Image("GitHubMark").renderingMode(.template).resizable().scaledToFit()
-                            .frame(width: logoSize, height: logoSize)
-                            .accessibilityHidden(true)
-                        Text(title).font(.body.weight(.medium))
-                    }
-                    .foregroundStyle(buttonText)
-                    .frame(maxWidth: .infinity, minHeight: visualHeight)
-                    .background(buttonFill, in: RoundedRectangle(cornerRadius: 12))
-                }
+            HStack(spacing: logoSpacing) {
+                // Reuse the provider marks from the desktop sign-in buttons.
+                Image(provider == .apple ? "AppleMark" : "GitHubMark")
+                    .renderingMode(.template).resizable().scaledToFit()
+                    .frame(width: logoSize, height: logoSize)
+                    .accessibilityHidden(true)
+                Text(title).font(.body.weight(.medium))
             }
+            .foregroundStyle(buttonText)
+            .frame(maxWidth: .infinity, minHeight: visualHeight)
+            .background(buttonFill, in: RoundedRectangle(cornerRadius: 12))
             .frame(maxWidth: .infinity, minHeight: 44)
             .contentShape(Rectangle())
         }
@@ -205,18 +195,4 @@ private struct ProviderAccountButton: View {
         .accessibilityLabel(title)
         .accessibilityIdentifier("welcome.sign-in.\(provider.rawValue)")
     }
-}
-
-private struct AppleAccountButton: UIViewRepresentable {
-    let dark: Bool
-
-    func makeUIView(context: Context) -> ASAuthorizationAppleIDButton {
-        let button = ASAuthorizationAppleIDButton(type: .signIn, style: dark ? .white : .black)
-        button.cornerRadius = 12
-        // The enclosing SwiftUI button owns the full 44-point hit area and the single sign-in action.
-        button.isUserInteractionEnabled = false
-        return button
-    }
-
-    func updateUIView(_ button: ASAuthorizationAppleIDButton, context: Context) {}
 }

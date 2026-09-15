@@ -65,6 +65,9 @@ private final class SVGSnapshotOperation: NSObject, WKNavigationDelegate {
                 view.isOpaque = false
                 view.backgroundColor = .clear
                 view.scrollView.backgroundColor = .clear
+                // A snapshot has no navigation chrome; inheriting the phone's safe area shifts the icon down.
+                view.scrollView.contentInsetAdjustmentBehavior = .never
+                view.scrollView.isScrollEnabled = false
                 view.isUserInteractionEnabled = false
                 view.accessibilityElementsHidden = true
                 // A real window keeps WebKit painting; the app's root view covers this temporary renderer.

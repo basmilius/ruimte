@@ -7,6 +7,42 @@ import XCTest
 @testable import Ruimte
 
 final class WorkspaceVisualTests: XCTestCase {
+    @MainActor func testLongProjectNamesKeepTheSameRowHeight() async throws {
+        for typeSize in [DynamicTypeSize.large, .xxxLarge] {
+            let runtime = AppRuntime(connections: MachineConnections(monitorPaths: false))
+            let machine = Machine(
+                id: "project-long-name-\(UUID().uuidString)", name: "MacBook Pro",
+                icon: MachineIcon(kind: .lucide, value: "laptop"),
+                publicKey: DeviceKey().publicKey, brokerUrl: nil, lastSeenAt: nil)
+            let session = runtime.session(for: machine)
+            let host = UIHostingController(
+                rootView: NavigationStack {
+                    List {
+                        ForEach(["Ruimte", "A project with a very long name that must fit on one line"], id: \.self) {
+                            name in
+                            ProjectHomeRow(
+                                summary: .object(["name": .string(name)]), machine: machine.name,
+                                connected: true, session: session
+                            )
+                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                        }
+                    }.listStyle(.insetGrouped).navigationTitle("Projects")
+                }.dynamicTypeSize(typeSize))
+            let window = makeWindow(host, size: CGSize(width: 402, height: 874))
+            defer {
+                window.isHidden = true
+                window.rootViewController = nil
+                runtime.connections.shutdown()
+            }
+            for _ in 0..<20 { await displayFrame() }
+            let list = try XCTUnwrap(descendant(UICollectionView.self, in: host.view))
+            let heights = list.visibleCells.map(\.bounds.height)
+            XCTAssertEqual(heights.count, 2)
+            XCTAssertEqual(try XCTUnwrap(heights.min()), try XCTUnwrap(heights.max()), accuracy: 1)
+            capture(window, name: typeSize == .large ? "project-long-name-iphone" : "project-long-name-large-type")
+        }
+    }
+
     @MainActor func testRealWorkspaceSectionsAcrossPhoneTabletAndTypeSizes() async throws {
         for (name, size, dark, typeSize, horizontalClass) in [
             (
@@ -126,7 +162,8 @@ final class WorkspaceVisualTests: XCTestCase {
     private var snapshot: JSONValue {
         let views: [JSONValue] = [
             .object([
-                "id": .string("overview"), "kind": .string("canvas"), "name": .string("Overview"),
+                "id": .string("overview"), "kind": .string("canvas"),
+                "name": .string("Overview of the workspace and all its running projects"),
                 "nodes": .array([]), "texts": .array([]), "edges": .array([]), "layouts": .array([]),
             ]),
             .object(["id": .string("adjacent-empty"), "kind": .string("separator")]),

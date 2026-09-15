@@ -264,17 +264,32 @@ struct ProjectHomeRow: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(summary.text("name", fallback: "Untitled project"))
-                    .font(.body).foregroundStyle(.primary).lineLimit(2)
+                    .font(.body).foregroundStyle(.primary).lineLimit(1).truncationMode(.tail)
                 HStack(spacing: 5) {
-                    Image(systemName: connected ? "desktopcomputer" : "wifi.slash")
-                    Text(machine)
-                    if !connected { Text("· Offline") }
+                    ProjectMachineGlyph(icon: session?.icons.icon)
+                    Text(machine).truncationMode(.tail)
+                    if !connected { Text("· Offline").fixedSize() }
                 }.font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 if summary["available"] == .bool(false) {
                     Text("Folder unavailable").font(.caption).foregroundStyle(.secondary)
                 }
             }
         }.frame(minHeight: 44)
+    }
+}
+
+private struct ProjectMachineGlyph: View {
+    let icon: MachineIcon?
+    @ScaledMetric(relativeTo: .caption) private var size = 12.0
+
+    var body: some View {
+        Group {
+            if let icon, icon.kind == .emoji {
+                Text(icon.value).font(.system(size: size - 2)).frame(width: size, height: size)
+            } else {
+                LucideIcon(name: icon?.value ?? "server", size: size)
+            }
+        }.accessibilityHidden(true)
     }
 }
 
