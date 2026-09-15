@@ -43,8 +43,11 @@ const TRIGGER_SIZE = {
 
 const TRIGGER_VARIANT = {
     outlined: 'max-w-56 rounded-lg border border-border bg-surface-raised text-text focus-visible:ring-1 focus-visible:ring-accent',
-    ghost: 'rounded-md text-text-muted hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active data-[popup-open]:text-text'
+    ghost: 'rounded-md text-text-muted hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active data-[popup-open]:text-text data-disabled:hover:bg-transparent data-disabled:hover:text-text-muted'
 } as const;
+
+/* The dimmed look `Toggle` and `Button` wear when disabled, so a select that cannot open reads as such. */
+const TRIGGER_DISABLED = 'data-disabled:cursor-default data-disabled:opacity-50';
 
 /* A description makes the row two lines high; the check and the icon then belong on the label's
    line box, which the 20 pixel boxes around them give them. */
@@ -93,7 +96,13 @@ export function Select<T extends string>({
         >
             <BaseSelect.Trigger
                 aria-label={label}
-                className={clsx('flex shrink-0 items-center whitespace-nowrap text-xs outline-none', TRIGGER_SIZE[size], TRIGGER_VARIANT[variant], className)}
+                className={clsx(
+                    'flex shrink-0 items-center whitespace-nowrap text-xs outline-none',
+                    TRIGGER_SIZE[size],
+                    TRIGGER_VARIANT[variant],
+                    TRIGGER_DISABLED,
+                    className
+                )}
             >
                 {selected?.icon}
                 <BaseSelect.Value className="truncate">{() => selected?.label ?? placeholder}</BaseSelect.Value>
