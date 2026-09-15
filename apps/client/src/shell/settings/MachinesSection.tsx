@@ -89,7 +89,8 @@ const useRowFailure = (endpoint: Endpoint | null): string | null => {
     if (mismatch !== undefined) {
         return 'A different machine answers at this address. Pair again to connect.';
     }
-    return endpoint.direct === true && connection.status !== 'open' ? (connection.failure ?? null) : null;
+    // A socket reports a failure only for a refusal (another wire version), so any failure is worth the line.
+    return connection.status !== 'open' ? (connection.failure ?? null) : null;
 };
 
 function MachineRow({ entry, onOpen }: { entry: MachineEntry; onOpen(): void }) {

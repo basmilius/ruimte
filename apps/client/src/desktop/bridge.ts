@@ -98,6 +98,8 @@ export interface BackgroundServiceState {
     failure: string | null;
     /* Linux only: whether the person's services outlive their session. */
     linger: boolean | null;
+    /* An older build still runs this machine because work was running on it: what a restart ends (null when unknown) and whether "When idle" was picked. Absent from an older shell. */
+    pendingRestart?: { work: number | null; answered: boolean } | null;
 }
 
 /* The switch and the stop button of This machine, which only the shell can carry out. */
@@ -107,6 +109,10 @@ export interface BackgroundServiceBridge {
     setKeepRunning(keepRunning: boolean): Promise<BackgroundServiceState>;
     /* Runs `loginctl enable-linger`, which is a person's decision and never taken on their behalf. */
     enableLinger(): Promise<BackgroundServiceState>;
+    /* Restarts the machine onto the updated build, ending what runs on it. Optional: an older shell has neither. */
+    restartNow?(): Promise<BackgroundServiceState>;
+    /* Leaves the older build running until nothing runs on it. */
+    restartWhenIdle?(): Promise<BackgroundServiceState>;
     /* Stops the service and quits the app; the next start of the app brings the machine back. */
     stopMachine(): void;
 }

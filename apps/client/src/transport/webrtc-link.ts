@@ -7,11 +7,13 @@ import {
     DirectChallengeFrameSchema,
     DirectVerdictFrameSchema,
     FrameAssembler,
+    protocolMismatch,
     splitFrame,
     type DirectChallengeFrame,
     type DirectProofFrame
 } from '@ruimte/contracts';
 import type { Link, LinkOpener } from './link-transport';
+import { protocolRefusal } from './protocol';
 import { socketSignaling, type Signal, type Signaling, type SignalingOpener } from './signaling';
 
 // Offer to handshake; ICE with a STUN server that answers slowly still fits, a path that does not exist does not.
@@ -171,6 +173,12 @@ export const webRtcLink =
                 if (binding === null) {
                     throw new Error('The channel opened before the answer that describes it');
                 }
+                // Checked before anything is proved: a machine on another wire could not read what follows anyway.
+                const mismatch = protocolMismatch(challenge.data.protocol);
+                if (mismatch !== null) {
+                    end(protocolRefusal(mismatch));
+                    return;
+                }
                 sendFrame(JSON.stringify(await options.prove(challenge.data, binding)));
                 return;
             }
@@ -179,7 +187,8 @@ export const webRtcLink =
                 throw new Error('The machine answered the direct connection with something other than its handshake');
             }
             if (verdict.data.type === 'direct.refused') {
-                end(`The machine refused the direct connection: ${verdict.data.reason}`);
+                const mismatch = verdict.data.protocol === undefined ? null : protocolMismatch(verdict.data.protocol);
+                end(mismatch !== null ? protocolRefusal(mismatch) : `The machine refused the direct connection: ${verdict.data.reason}`);
                 return;
             }
             authenticated = true;

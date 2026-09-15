@@ -1,4 +1,11 @@
-import { clientChannelMessage, daemonChannelMessage, localSecretChannelMessage, type DirectChallengeFrame, type DirectProofFrame } from '@ruimte/contracts';
+import {
+    clientChannelMessage,
+    daemonChannelMessage,
+    localSecretChannelMessage,
+    PROTOCOL_VERSION,
+    type DirectChallengeFrame,
+    type DirectProofFrame
+} from '@ruimte/contracts';
 import { clientKey, type ClientKey } from '@/endpoint/client-key';
 import { localSecretOf } from '@/endpoint/credentials';
 import { verifyDaemon } from '@/endpoint/handshake';
@@ -46,11 +53,12 @@ export const proveChallenge = async (credentials: ProofCredentials, challenge: D
         const signature = await credentials.key.sign(
             clientChannelMessage(pinned.daemonId ?? daemon.id, challenge.challenge, credentials.key.publicKey, binding)
         );
-        return { type: 'direct.key', challenge: challenge.challenge, publicKey: credentials.key.publicKey, signature };
+        return { type: 'direct.key', protocol: PROTOCOL_VERSION, challenge: challenge.challenge, publicKey: credentials.key.publicKey, signature };
     }
     if (credentials.secret !== null) {
         return {
             type: 'direct.secret',
+            protocol: PROTOCOL_VERSION,
             challenge: challenge.challenge,
             proof: await hmac(credentials.secret, localSecretChannelMessage(daemon.id, challenge.challenge, binding))
         };

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
-import { channelBinding, splitFrame, type DirectChallengeFrame } from '@ruimte/contracts';
+import { channelBinding, PROTOCOL_VERSION, splitFrame, type DirectChallengeFrame } from '@ruimte/contracts';
 import type { LinkEvents } from './link-transport';
 import { webRtcLink, type WebRtcLinkOptions } from './webrtc-link';
 
@@ -151,7 +151,12 @@ const setup = (extra: Partial<WebRtcLinkOptions> = {}) => {
     return { socket, peer, link, proved, tickets, log };
 };
 
-const CHALLENGE: DirectChallengeFrame = { type: 'direct.challenge', challenge: 'nonce', daemon: { id: 'daemon-a', publicKey: 'key', signature: 'signature' } };
+const CHALLENGE: DirectChallengeFrame = {
+    type: 'direct.challenge',
+    protocol: PROTOCOL_VERSION,
+    challenge: 'nonce',
+    daemon: { id: 'daemon-a', publicKey: 'key', signature: 'signature' }
+};
 
 /* Everything up to the moment the daemon has answered the offer. */
 const negotiated = async (extra: Partial<WebRtcLinkOptions> = {}) => {
@@ -192,6 +197,25 @@ describe('webRtcLink', () => {
         const large = JSON.stringify({ id: '1', type: 'session.write', payload: { data: 'x'.repeat(40_000) } });
         link.send(large);
         expect(peer.channel.sent.slice(-3)).toEqual(splitFrame(large));
+    });
+
+    test('a daemon from before versions is refused as older, before anything is proved', async () => {
+        const { peer, proved, log } = await negotiated();
+        const { protocol: _protocol, ...unversioned } = CHALLENGE;
+        peer.channel.deliver(unversioned);
+        await tick();
+        expect(proved).toEqual([]);
+        expect(log.opened).toBe(0);
+        expect(log.closes).toEqual(['This machine runs an older Ruimte. Update Ruimte there, or restart it to pick up the update.']);
+    });
+
+    test('a refusal about the version says which side is behind', async () => {
+        const { peer, log } = await negotiated();
+        peer.channel.deliver(CHALLENGE);
+        await tick();
+        peer.channel.deliver({ type: 'direct.refused', reason: 'different versions', protocol: PROTOCOL_VERSION + 1 });
+        await tick();
+        expect(log.closes).toEqual(['This machine runs a newer Ruimte than this app. Update this app.']);
     });
 
     test('closing an open link takes the peer down only after the channel closed, or after the grace', async () => {

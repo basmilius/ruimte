@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { createHmac } from 'node:crypto';
-import { clientChannelMessage, daemonChannelMessage, localSecretChannelMessage, type DirectChallengeFrame } from '@ruimte/contracts';
+import { clientChannelMessage, daemonChannelMessage, localSecretChannelMessage, PROTOCOL_VERSION, type DirectChallengeFrame } from '@ruimte/contracts';
 import type { ClientKey } from '@/endpoint/client-key';
 import { proveChallenge } from './direct-auth';
 
@@ -66,7 +66,7 @@ describe('proveChallenge', () => {
         const expected = createHmac('sha256', 'local-secret')
             .update(localSecretChannelMessage(DAEMON_ID, 'nonce-1', BINDING))
             .digest('base64url');
-        expect(proof).toEqual({ type: 'direct.secret', challenge: 'nonce-1', proof: expected });
+        expect(proof).toEqual({ type: 'direct.secret', protocol: PROTOCOL_VERSION, challenge: 'nonce-1', proof: expected });
     });
 
     test('a row with neither a pinned key nor the secret cannot connect directly', async () => {

@@ -14,6 +14,7 @@ import { ALL_SETTINGS_SECTIONS } from '@/shell/settings/sections';
 import { Panel } from '@/shell/Panel';
 import { PreviewPanel } from '@/shell/PreviewPanel';
 import { ProjectBanner } from '@/shell/ProjectBanner';
+import { MachineUpdateDialog } from '@/shell/MachineUpdateDialog';
 import { ReleaseNotesDialog } from '@/shell/ReleaseNotesDialog';
 import { Sidebar } from '@/shell/Sidebar';
 import { Toasts } from '@/shell/Toasts';
@@ -102,6 +103,7 @@ export function App() {
                 <SettingsDialog />
                 <Toasts />
                 <ReleaseNotesDialog />
+                <MachineUpdateDialog />
             </ErrorBoundary>
         </TooltipProvider>
     );

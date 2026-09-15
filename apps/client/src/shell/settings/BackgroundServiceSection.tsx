@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Power } from 'lucide-react';
 import { desktop, type BackgroundServiceState } from '@/desktop/bridge';
+import { pendingRestartLine } from '@/shell/machine-update';
 import { ConfirmDialog } from '@/shell/settings/ConfirmDialog';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -9,7 +10,7 @@ import { Toggle } from '@/shell/settings/controls';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 
-type Confirming = 'stop' | 'linger' | null;
+type Confirming = 'stop' | 'linger' | 'restart' | null;
 
 /*
  * Whether This machine outlives the app. Drawn only where the shell carries the bridge for it, so a
@@ -42,6 +43,7 @@ export function BackgroundServiceSection() {
         return null;
     }
     const row = backgroundServiceRow(state);
+    const restartLine = pendingRestartLine(state);
 
     const setKeepRunning = async (keepRunning: boolean): Promise<void> => {
         setBusy(true);
@@ -73,6 +75,17 @@ export function BackgroundServiceSection() {
                 }
             />
             {row.pending && <p className="px-4 pb-3 text-xs break-words text-text-muted">{row.pending}</p>}
+            {restartLine && bridge.restartNow && (
+                <SettingsRow
+                    label="Restart to finish the update"
+                    description={restartLine}
+                    control={
+                        <Button variant="secondary" onClick={() => setConfirming('restart')}>
+                            Restart
+                        </Button>
+                    }
+                />
+            )}
             {row.failure && (
                 <p className="px-4 pb-3 text-xs break-words text-status-error" role="alert">
                     The background service did not run this machine: {row.failure}
@@ -113,6 +126,22 @@ export function BackgroundServiceSection() {
                 description="Every terminal and agent on this machine ends, and no other client can reach it until you open Ruimte again."
                 confirmLabel="Stop and quit"
                 onConfirm={async () => bridge.stopMachine()}
+            />
+            <ConfirmDialog
+                open={confirming === 'restart'}
+                onOpenChange={(next) => setConfirming(next ? 'restart' : null)}
+                title="Restart this machine now?"
+                description="Every terminal and agent on this machine ends, and it comes back on the updated version."
+                confirmLabel="Restart now"
+                onConfirm={async () => {
+                    const next = await bridge.restartNow?.();
+                    if (next) {
+                        setState(next);
+                        if (next.failure) {
+                            throw new Error(next.failure);
+                        }
+                    }
+                }}
             />
             <ConfirmDialog
                 open={confirming === 'linger'}
