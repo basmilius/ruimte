@@ -10,6 +10,8 @@ export const WINDOW_MS = 60_000;
 export const LIMITS = {
     loginIp: 20,
     sessionIp: 30,
+    // A person adds a provider once; a few tries cover a cancelled browser.
+    linkAccount: 10,
     registerAccount: 20,
     registerIp: 30,
     statementAccount: 30,

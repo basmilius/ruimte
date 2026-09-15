@@ -2,13 +2,21 @@ import type { z } from 'zod';
 import {
     ADDRESS_BOOK_URL,
     AccessStatementSchema,
+    AccountResultSchema,
     AddressBookErrorSchema,
+    IdentityLinkStartResultSchema,
     MachineListResultSchema,
+    ProvidersResultSchema,
     RegisterMachineResultSchema,
     SessionResultSchema,
     type AccessRequestPayload,
     type AccessStatement,
+    type AccountResult,
     type AddressBookErrorCode,
+    type IdentityLinkCompletePayload,
+    type IdentityLinkStartPayload,
+    type IdentityLinkStartResult,
+    type ProviderId,
     type Machine,
     type MachineListResult,
     type RegisterMachinePayload,
@@ -95,6 +103,26 @@ export class AddressBookClient {
 
     async deleteMachine(accessToken: string, machineId: string): Promise<void> {
         await this.call({ method: 'DELETE', path: `/v1/machines/${encodeURIComponent(machineId)}`, token: accessToken, schema: null });
+    }
+
+    async providers(): Promise<string[]> {
+        return (await this.call({ method: 'GET', path: '/v1/providers', schema: ProvidersResultSchema })).providers;
+    }
+
+    account(accessToken: string): Promise<AccountResult> {
+        return this.call({ method: 'GET', path: '/v1/account', token: accessToken, schema: AccountResultSchema });
+    }
+
+    startIdentityLink(accessToken: string, payload: IdentityLinkStartPayload): Promise<IdentityLinkStartResult> {
+        return this.call({ method: 'POST', path: '/v1/account/link', token: accessToken, body: payload, schema: IdentityLinkStartResultSchema });
+    }
+
+    completeIdentityLink(accessToken: string, payload: IdentityLinkCompletePayload): Promise<AccountResult> {
+        return this.call({ method: 'POST', path: '/v1/account/identities', token: accessToken, body: payload, schema: AccountResultSchema });
+    }
+
+    unlinkIdentity(accessToken: string, provider: ProviderId): Promise<AccountResult> {
+        return this.call({ method: 'DELETE', path: `/v1/account/identities/${provider}`, token: accessToken, schema: AccountResultSchema });
     }
 
     requestStatement(accessToken: string, payload: AccessRequestPayload): Promise<AccessStatement> {

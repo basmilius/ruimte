@@ -1,4 +1,5 @@
 import type { ProviderId } from '@ruimte/pulsar';
+import { apple } from './apple.ts';
 import type { Env } from './env.ts';
 
 export interface ProviderIdentity {
@@ -9,11 +10,17 @@ export interface ProviderIdentity {
 
 /*
  * One sign-in provider. Everything around it (the state, both PKCE legs, the app's redirect, the
- * account row) is the same for every provider, so adding Apple is one more entry in `PROVIDERS`.
+ * account and its identities) is the same for every provider, so a provider is one entry in `PROVIDERS`.
  */
 export interface OAuthProvider {
     readonly id: ProviderId;
+    /*
+     * How the provider sends the browser back. A `POST` is a cross-site form post, which a `SameSite=Lax`
+     * cookie does not ride along with, so the login cookie is `SameSite=None` for such a provider.
+     */
+    readonly callbackMethod: 'GET' | 'POST';
     configured(env: Env): boolean;
+    /* `codeChallenge` is the SHA-256 of the verifier `identify` gets: a PKCE challenge, or a nonce for a provider without PKCE. */
     authorizeUrl(env: Env, input: { state: string; codeChallenge: string; redirectUri: string }): string;
     // Throws when the provider refuses the code; the caller turns that into an error for the app.
     identify(env: Env, input: { code: string; codeVerifier: string; redirectUri: string }): Promise<ProviderIdentity>;
@@ -23,6 +30,7 @@ const USER_AGENT = 'ruimte-pulsar';
 
 const github: OAuthProvider = {
     id: 'github',
+    callbackMethod: 'GET',
     configured(env) {
         return Boolean(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET);
     },
@@ -65,4 +73,4 @@ const github: OAuthProvider = {
     }
 };
 
-export const PROVIDERS: Partial<Record<ProviderId, OAuthProvider>> = { github };
+export const PROVIDERS: Record<ProviderId, OAuthProvider> = { github, apple };

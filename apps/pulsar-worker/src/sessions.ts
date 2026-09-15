@@ -7,6 +7,20 @@ export const ACCESS_LIFETIME_MS = 15 * 60_000;
 // Counted from sign-in, never extended, so a lost device falls out on its own.
 export const SESSION_LIFETIME_MS = 30 * 24 * 60 * 60_000;
 
+/*
+ * The identity an account is shown as, as SQL over the account id `ref` names: the oldest with a login,
+ * else the oldest. An account with no identity row is one a Worker from before identities made while the
+ * migration had already run, and falls back to what that Worker wrote on the account itself.
+ */
+const DISPLAY_IDENTITY = (ref: string, column: 'provider' | 'login'): string =>
+    `(SELECT identity.${column} FROM identity WHERE identity.account_id = ${ref} ORDER BY identity.login IS NULL, identity.created_at, identity.provider LIMIT 1)`;
+
+export const accountProviderSql = (ref: string): string =>
+    `COALESCE(${DISPLAY_IDENTITY(ref, 'provider')}, (SELECT account.provider FROM account WHERE account.id = ${ref}))`;
+
+export const accountLoginSql = (ref: string): string =>
+    `CASE WHEN EXISTS (SELECT 1 FROM identity WHERE identity.account_id = ${ref}) THEN ${DISPLAY_IDENTITY(ref, 'login')} ELSE (SELECT account.login FROM account WHERE account.id = ${ref}) END`;
+
 export interface AccountRow {
     id: string;
     provider: ProviderId;
@@ -76,8 +90,8 @@ export const rotateSession = async (db: D1Database, payload: SessionRefreshPaylo
             `UPDATE session SET access_hash = ?1, access_expires_at = ?2, refresh_hash = ?3, previous_refresh_hash = refresh_hash
              WHERE id = ?4 AND refresh_hash = ?5 AND revoked_at IS NULL
              RETURNING expires_at, (SELECT id FROM account WHERE account.id = session.account_id) AS account_id,
-                 (SELECT provider FROM account WHERE account.id = session.account_id) AS provider,
-                 (SELECT login FROM account WHERE account.id = session.account_id) AS login`
+                 ${accountProviderSql('session.account_id')} AS provider,
+                 ${accountLoginSql('session.account_id')} AS login`
         )
         .bind(await sha256(accessToken), accessExpiresAt, await sha256(nextRefreshToken), session.id, hash)
         .first<{ expires_at: number; account_id: string; provider: ProviderId; login: string | null }>();
@@ -102,8 +116,8 @@ export const authenticate = async (request: Request, db: D1Database): Promise<Se
     const now = Date.now();
     const row = await db
         .prepare(
-            `SELECT session.id, session.label, account.id AS account_id, account.provider, account.login FROM session
-             JOIN account ON account.id = session.account_id
+            `SELECT session.id, session.label, account.id AS account_id, ${accountProviderSql('account.id')} AS provider, ${accountLoginSql('account.id')} AS login
+             FROM session JOIN account ON account.id = session.account_id
              WHERE session.access_hash = ?1 AND session.revoked_at IS NULL AND session.access_expires_at > ?2 AND session.expires_at > ?2`
         )
         .bind(await sha256(match[1]), now)

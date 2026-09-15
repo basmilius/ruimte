@@ -27,7 +27,7 @@ import type { Env } from './env.ts';
 import { clientIp, failure, json, noContent, readBody } from './http.ts';
 import { storeMachine } from './machines.ts';
 import { LIMITS, overAnyLimit } from './rate-limit.ts';
-import { authenticate, type SessionContext } from './sessions.ts';
+import { accountLoginSql, accountProviderSql, authenticate, type SessionContext } from './sessions.ts';
 
 /*
  * Linking a machine with a code (`ruimte login`). The terminal starts a link and holds the device
@@ -193,7 +193,8 @@ const linkOfDeviceCode = async (env: Env, deviceCode: string) =>
     env.DB.prepare(
         `SELECT ${LINK_COLUMNS.split(', ')
             .map((column) => `device_link.${column}`)
-            .join(', ')}, account.provider, account.login
+            .join(', ')}, CASE WHEN account.id IS NULL THEN NULL ELSE ${accountProviderSql('account.id')} END AS provider,
+             CASE WHEN account.id IS NULL THEN NULL ELSE ${accountLoginSql('account.id')} END AS login
          FROM device_link LEFT JOIN account ON account.id = device_link.account_id
          WHERE device_link.device_code_hash = ?1 AND device_link.status != 'done'`
     )

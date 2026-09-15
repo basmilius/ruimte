@@ -4,6 +4,7 @@ import type { Env } from './env.ts';
 import { allowedOrigin, corsHeaders, failure, json } from './http.ts';
 import { endSession, exchangeLoginCode, finishLogin, refreshSession, startLogin } from './login.ts';
 import { approveDeviceLink, cancelDeviceLink, completeDeviceLink, denyDeviceLink, lookupDeviceLink, pollDeviceLink, startDeviceLink } from './device.ts';
+import { completeIdentityLink, getAccount, listProviders, startIdentityLink, unlinkIdentity } from './identities.ts';
 import { deleteMachine, listMachines, registerMachine } from './machines.ts';
 import { PROVIDERS } from './providers.ts';
 import { issueStatement } from './statements.ts';
@@ -34,6 +35,22 @@ const health = async (env: Env): Promise<Response> => {
 
 const api = async (request: Request, env: Env, path: string): Promise<Response> => {
     const method = request.method;
+    if (path === '/v1/providers' && method === 'GET') {
+        return listProviders(env);
+    }
+    if (path === '/v1/account' && method === 'GET') {
+        return getAccount(request, env);
+    }
+    if (path === '/v1/account/link' && method === 'POST') {
+        return startIdentityLink(request, env);
+    }
+    if (path === '/v1/account/identities' && method === 'POST') {
+        return completeIdentityLink(request, env);
+    }
+    const identity = /^\/v1\/account\/identities\/([a-z]+)$/.exec(path)?.[1];
+    if (identity !== undefined && method === 'DELETE') {
+        return unlinkIdentity(request, env, identity);
+    }
     if (path === '/v1/machines') {
         if (method === 'GET') {
             return listMachines(request, env);
@@ -75,14 +92,23 @@ const route = async (request: Request, env: Env): Promise<Response> => {
     if (path === '/health' && request.method === 'GET') {
         return health(env);
     }
+    if (path === '/.well-known/apple-developer-domain-association.txt' && request.method === 'GET' && env.APPLE_DOMAIN_ASSOCIATION) {
+        return new Response(env.APPLE_DOMAIN_ASSOCIATION, { headers: { 'content-type': 'text/plain; charset=utf-8' } });
+    }
     const auth = /^\/auth\/([a-z]+)\/(start|callback)$/.exec(path);
-    if (auth && request.method === 'GET') {
+    if (auth) {
         const providerId = ProviderIdSchema.safeParse(auth[1]);
         const provider = providerId.success ? PROVIDERS[providerId.data] : undefined;
         if (!provider) {
             return failure('not-found', 'No such sign-in provider');
         }
-        return auth[2] === 'start' ? startLogin(request, env, provider) : finishLogin(request, env, provider);
+        if (auth[2] === 'start' && request.method === 'GET') {
+            return startLogin(request, env, provider);
+        }
+        if (auth[2] === 'callback' && request.method === provider.callbackMethod) {
+            return finishLogin(request, env, provider);
+        }
+        return failure('not-found', 'No such route');
     }
     if (path.startsWith('/v1/')) {
         const cors = corsHeaders(allowedOrigin(request, env));
@@ -113,6 +139,8 @@ export default {
         await env.DB.batch([
             env.DB.prepare('DELETE FROM login_attempt WHERE expires_at <= ?1').bind(now),
             env.DB.prepare('DELETE FROM login_code WHERE expires_at <= ?1').bind(now),
+            env.DB.prepare('DELETE FROM identity_link_request WHERE expires_at <= ?1').bind(now),
+            env.DB.prepare('DELETE FROM identity_link_code WHERE expires_at <= ?1').bind(now),
             env.DB.prepare('DELETE FROM device_link WHERE expires_at <= ?1').bind(now),
             env.DB.prepare('DELETE FROM rate_limit WHERE window_start < ?1').bind(now - 60 * 60_000),
             env.DB.prepare('DELETE FROM session WHERE expires_at <= ?1 OR revoked_at <= ?2').bind(now, now - REVOKED_SESSION_RETENTION_MS)

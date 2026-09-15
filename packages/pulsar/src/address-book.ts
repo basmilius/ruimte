@@ -15,9 +15,12 @@ export const ACCESS_STATEMENT_LIFETIME_MS = 120_000;
 // How far a registration's `issuedAt` may lie from the address book's clock, either way.
 export const MACHINE_REGISTRATION_MAX_SKEW_MS = 600_000;
 
-// Apple and Google are next; an account row already names its provider.
-export const ProviderIdSchema = z.enum(['github']);
+// A provider is a way to sign in; an account holds one identity per provider.
+export const ProviderIdSchema = z.enum(['github', 'apple']);
 export type ProviderId = z.infer<typeof ProviderIdSchema>;
+
+// What a person reads for a provider, in a sentence or on a button.
+export const PROVIDER_NAMES: Record<ProviderId, string> = { github: 'GitHub', apple: 'Apple' };
 
 // 32 random bytes in base64url: access and refresh tokens, and the one-time login code.
 export const TokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/, 'Expected a token');
@@ -67,7 +70,15 @@ export const LoginStartQuerySchema = z.object({
     redirect_uri: z.string().refine(isAppRedirectUri, 'Not a redirect the app listens on'),
     state: z.string().regex(/^[A-Za-z0-9_-]{16,128}$/, 'Expected at least 12 random bytes in base64url'),
     code_challenge: z.string().regex(/^[A-Za-z0-9_-]{43}$/, 'Expected a SHA-256 PKCE challenge in base64url'),
-    code_challenge_method: z.literal('S256')
+    code_challenge_method: z.literal('S256'),
+    /*
+     * A link token from `POST /v1/account/link`: this login adds an identity to the signed-in account
+     * instead of opening a session, and the code it ends in goes to `POST /v1/account/identities`.
+     */
+    link: z
+        .string()
+        .regex(/^[A-Za-z0-9_-]{43}$/, 'Expected a token')
+        .optional()
 });
 export type LoginStartQuery = z.infer<typeof LoginStartQuerySchema>;
 
@@ -105,10 +116,59 @@ export type SessionRefreshPayload = z.infer<typeof SessionRefreshPayloadSchema>;
 export const AccountSchema = z.object({
     // What `machineRegistrationMessage` names, so a daemon agrees to exactly this account.
     id: z.string().min(1).max(64),
+    /*
+     * The identity the account is shown as: the first one with a login (Apple hands out none), else
+     * the oldest. Not the one this session signed in with, so every client names the account alike.
+     */
     provider: ProviderIdSchema,
     login: z.string().nullable()
 });
 export type Account = z.infer<typeof AccountSchema>;
+
+// One way to sign in to an account. The provider's subject stays on the address book.
+export const IdentitySchema = z.object({
+    provider: ProviderIdSchema,
+    login: z.string().nullable(),
+    createdAt: z.number().int()
+});
+export type Identity = z.infer<typeof IdentitySchema>;
+
+// `GET /v1/account`, and the answer to linking or unlinking an identity.
+export const AccountResultSchema = z.object({
+    account: AccountSchema,
+    identities: z.array(IdentitySchema)
+});
+export type AccountResult = z.infer<typeof AccountResultSchema>;
+
+/*
+ * `GET /v1/providers`: the providers this address book can sign in with right now. Strings rather than
+ * `ProviderIdSchema`, so a client older than a new provider still reads the list and skips that entry.
+ */
+export const ProvidersResultSchema = z.object({
+    providers: z.array(z.string().max(32))
+});
+export type ProvidersResult = z.infer<typeof ProvidersResultSchema>;
+
+// `POST /v1/account/link`: a signed-in client asks to add another provider to its account.
+export const IdentityLinkStartPayloadSchema = z.object({
+    provider: ProviderIdSchema
+});
+export type IdentityLinkStartPayload = z.infer<typeof IdentityLinkStartPayloadSchema>;
+
+/*
+ * A single-use token for the start URL, bound to the session that asked for it. It only starts the
+ * provider's login: the identity lands on the account once the same session trades the code with its
+ * PKCE verifier, so a token that leaks from a URL adds nobody's identity.
+ */
+export const IdentityLinkStartResultSchema = z.object({
+    linkToken: TokenSchema,
+    expiresAt: z.number().int()
+});
+export type IdentityLinkStartResult = z.infer<typeof IdentityLinkStartResultSchema>;
+
+// `POST /v1/account/identities`: the code a link login came back with, sent with the session that started it.
+export const IdentityLinkCompletePayloadSchema = SessionExchangePayloadSchema.pick({ code: true, codeVerifier: true, redirectUri: true });
+export type IdentityLinkCompletePayload = z.infer<typeof IdentityLinkCompletePayloadSchema>;
 
 // The answer to both session routes. `DELETE /v1/session` revokes the session the bearer belongs to.
 export const SessionResultSchema = z.object({
@@ -220,6 +280,12 @@ export const AddressBookErrorCodeSchema = z.enum([
     'bad-signature',
     'not-found',
     'removed',
+    // The identity signs in to another account; accounts are never merged.
+    'identity-taken',
+    // The account already has an identity of this provider.
+    'provider-linked',
+    // Removing this identity would leave the account without a way in.
+    'last-identity',
     'rate-limited',
     'not-configured',
     'internal'

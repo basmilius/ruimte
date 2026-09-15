@@ -11,12 +11,15 @@ import {
     sessionKeyMessage,
     sessionRefreshMessage,
     type AccessStatement,
+    type AccountResult,
     type AddressBookError,
     type DeviceLinkCompleteResult,
     type DeviceLinkLookupResult,
     type DeviceLinkPollResult,
     type DeviceLinkStartResult,
+    type IdentityLinkStartResult,
     type MachineListResult,
+    type ProviderId,
     type SessionResult
 } from '@ruimte/pulsar';
 import { Miniflare } from 'miniflare';
@@ -24,7 +27,7 @@ import { LIMITS, WINDOW_MS, retryAfterSeconds, windowStartOf } from './rate-wind
 
 /*
  * The Worker bundled the way wrangler would, in workerd through Miniflare, against an in-memory D1
- * with the real migrations. GitHub is the outbound service: nothing leaves the process.
+ * with the real migrations. GitHub and Apple are the outbound service: nothing leaves the process.
  */
 
 const APP_ROOT = join(import.meta.dir, '..');
@@ -70,10 +73,13 @@ const bundle = async (): Promise<string> => {
     return output.text();
 };
 
-const migrate = async (mf: Miniflare): Promise<void> => {
+// Every migration by default; `files` picks some, so a test can seed the database the way an older Worker left it.
+const migrate = async (mf: Miniflare, files?: (file: string) => boolean): Promise<void> => {
     const db = await mf.getD1Database('DB');
     const folder = join(APP_ROOT, 'migrations');
-    for (const file of readdirSync(folder).sort()) {
+    for (const file of readdirSync(folder)
+        .sort()
+        .filter(files ?? (() => true))) {
         const sql = readFileSync(join(folder, file), 'utf8')
             .split('\n')
             .filter((line) => !line.trim().startsWith('--'))
@@ -90,8 +96,83 @@ const migrate = async (mf: Miniflare): Promise<void> => {
 const githubCodes = new Map<string, { userId: number; challenge: string }>();
 const githubTokens = new Map<string, number>();
 
-const github = async (request: Request): Promise<Response> => {
+const APPLE_TEAM_ID = 'TEAMID0001';
+const APPLE_KEY_ID = 'APPLEKEY01';
+const APPLE_CLIENT_ID = 'app.ruimte.test';
+const APPLE_ISSUER = 'https://appleid.apple.com';
+// The .p8 the Worker signs its client secret with, and the key Apple signs every id_token with.
+const appleClientKey = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+const appleSigningKey = generateKeyPairSync('rsa', { modulusLength: 2048 });
+const APPLE_SIGNING_KID = 'apple-test-key';
+
+// What one Apple code turns into; a test bends a claim or the signer to see the Worker refuse it.
+interface AppleCode {
+    sub: string;
+    nonce: string;
+    claims?: Record<string, unknown>;
+    signer?: KeyObject;
+}
+const appleCodes = new Map<string, AppleCode>();
+
+const signRs256 = (payload: Record<string, unknown>, signer: KeyObject): string => {
+    const input = `${base64url(Buffer.from(JSON.stringify({ alg: 'RS256', kid: APPLE_SIGNING_KID })))}.${base64url(Buffer.from(JSON.stringify(payload)))}`;
+    return `${input}.${base64url(sign('sha256', Buffer.from(input), signer))}`;
+};
+
+// Checks the client secret the way Apple does: an ES256 JWT from the team's key, for this Services ID.
+const appleClientSecretHolds = (secret: string): boolean => {
+    const [header, payload, signature] = secret.split('.');
+    if (!header || !payload || !signature) {
+        return false;
+    }
+    const head = JSON.parse(Buffer.from(header, 'base64url').toString()) as Record<string, unknown>;
+    const claims = JSON.parse(Buffer.from(payload, 'base64url').toString()) as Record<string, number | string>;
+    return (
+        head.alg === 'ES256' &&
+        head.kid === APPLE_KEY_ID &&
+        claims.iss === APPLE_TEAM_ID &&
+        claims.sub === APPLE_CLIENT_ID &&
+        claims.aud === APPLE_ISSUER &&
+        Number(claims.exp) > Number(claims.iat) &&
+        verify('sha256', Buffer.from(`${header}.${payload}`), { key: appleClientKey.publicKey, dsaEncoding: 'ieee-p1363' }, Buffer.from(signature, 'base64url'))
+    );
+};
+
+const apple = async (request: Request, url: URL): Promise<Response> => {
+    if (url.href === `${APPLE_ISSUER}/auth/keys`) {
+        return Response.json({ keys: [{ ...appleSigningKey.publicKey.export({ format: 'jwk' }), kid: APPLE_SIGNING_KID, alg: 'RS256', use: 'sig' }] });
+    }
+    if (url.href === `${APPLE_ISSUER}/auth/token`) {
+        const form = new URLSearchParams(await request.text());
+        const code = form.get('code') ?? '';
+        const entry = appleCodes.get(code);
+        appleCodes.delete(code);
+        if (
+            !entry ||
+            form.get('client_id') !== APPLE_CLIENT_ID ||
+            form.get('grant_type') !== 'authorization_code' ||
+            form.get('redirect_uri') !== `${PUBLIC_ORIGIN}/auth/apple/callback` ||
+            !appleClientSecretHolds(form.get('client_secret') ?? '')
+        ) {
+            return Response.json({ error: 'invalid_grant' }, { status: 400 });
+        }
+        const now = Math.floor(Date.now() / 1000);
+        const claims = { iss: APPLE_ISSUER, aud: APPLE_CLIENT_ID, iat: now, exp: now + 600, sub: entry.sub, nonce: entry.nonce, ...entry.claims };
+        return Response.json({
+            access_token: 'apple-access',
+            token_type: 'Bearer',
+            expires_in: 3600,
+            id_token: signRs256(claims, entry.signer ?? appleSigningKey.privateKey)
+        });
+    }
+    return new Response(`unexpected outbound request to ${url.href}`, { status: 599 });
+};
+
+const outbound = async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
+    if (url.origin === APPLE_ISSUER) {
+        return apple(request, url);
+    }
     if (url.href === 'https://github.com/login/oauth/access_token') {
         const form = new URLSearchParams(await request.text());
         const code = form.get('code') ?? '';
@@ -123,17 +204,28 @@ let ipCounter = 0;
 // Every flow gets an address of its own, so one test never spends another's rate limit.
 const nextIp = (): string => `192.0.2.${++ipCounter}`;
 
-const dispatch = async (path: string, init: { method?: string; headers?: Record<string, string>; body?: unknown; ip?: string } = {}): Promise<Response> => {
+interface DispatchInit {
+    method?: string;
+    headers?: Record<string, string>;
+    body?: unknown;
+    // A form body instead of JSON, the way Apple posts its answer.
+    form?: Record<string, string>;
+    ip?: string;
+    // Another Worker than the one every other test shares.
+    on?: Miniflare;
+}
+
+const dispatch = async (path: string, init: DispatchInit = {}): Promise<Response> => {
     const headers: Record<string, string> = { 'cf-connecting-ip': init.ip ?? nextIp(), ...init.headers };
-    if (init.body !== undefined) {
+    let body: string | undefined;
+    if (init.form !== undefined) {
+        headers['content-type'] = 'application/x-www-form-urlencoded';
+        body = new URLSearchParams(init.form).toString();
+    } else if (init.body !== undefined) {
         headers['content-type'] = 'application/json';
+        body = JSON.stringify(init.body);
     }
-    const response = await mf.dispatchFetch(`${PUBLIC_ORIGIN}${path}`, {
-        method: init.method ?? 'GET',
-        headers,
-        body: init.body === undefined ? undefined : JSON.stringify(init.body),
-        redirect: 'manual'
-    });
+    const response = await (init.on ?? mf).dispatchFetch(`${PUBLIC_ORIGIN}${path}`, { method: init.method ?? 'GET', headers, body, redirect: 'manual' });
     return response as unknown as Response;
 };
 
@@ -143,28 +235,42 @@ interface LoginStart {
     verifier: string;
     appState: string;
     cookie: string;
+    setCookie: string;
     providerState: string;
+    // The PKCE challenge the address book sent GitHub, or the nonce it sent Apple.
     providerChallenge: string;
     ip: string;
+    on?: Miniflare;
 }
 
-const startLogin = async (): Promise<LoginStart> => {
+const AUTHORIZE_URLS: Record<ProviderId, string> = {
+    github: 'https://github.com/login/oauth/authorize',
+    apple: `${APPLE_ISSUER}/auth/authorize`
+};
+
+// The app's side of a start: the query it opens, answered with the provider's authorize URL.
+const startLogin = async (provider: ProviderId = 'github', options: { link?: string; on?: Miniflare } = {}): Promise<LoginStart> => {
     const verifier = base64url(randomBytes(32));
     const appState = base64url(randomBytes(16));
     const ip = nextIp();
     const query = new URLSearchParams({ redirect_uri: REDIRECT_URI, state: appState, code_challenge: sha256(verifier), code_challenge_method: 'S256' });
-    const response = await dispatch(`/auth/github/start?${query}`, { ip });
+    if (options.link !== undefined) {
+        query.set('link', options.link);
+    }
+    const response = await dispatch(`/auth/${provider}/start?${query}`, { ip, on: options.on });
     expect(response.status).toBe(302);
     const authorize = new URL(response.headers.get('location') ?? '');
-    expect(authorize.origin + authorize.pathname).toBe('https://github.com/login/oauth/authorize');
-    expect(authorize.searchParams.get('code_challenge_method')).toBe('S256');
+    expect(authorize.origin + authorize.pathname).toBe(AUTHORIZE_URLS[provider]);
+    const setCookie = response.headers.get('set-cookie') ?? '';
     return {
         verifier,
         appState,
-        cookie: (response.headers.get('set-cookie') ?? '').split(';')[0] ?? '',
+        cookie: setCookie.split(';')[0] ?? '',
+        setCookie,
         providerState: authorize.searchParams.get('state') ?? '',
-        providerChallenge: authorize.searchParams.get('code_challenge') ?? '',
-        ip
+        providerChallenge: authorize.searchParams.get(provider === 'apple' ? 'nonce' : 'code_challenge') ?? '',
+        ip,
+        on: options.on
     };
 };
 
@@ -172,8 +278,30 @@ const startLogin = async (): Promise<LoginStart> => {
 const githubCallback = async (start: LoginStart, userId: number, cookie = start.cookie): Promise<Response> => {
     const code = randomBytes(8).toString('hex');
     githubCodes.set(code, { userId, challenge: start.providerChallenge });
-    return dispatch(`/auth/github/callback?${new URLSearchParams({ code, state: start.providerState })}`, { headers: { cookie }, ip: start.ip });
+    return dispatch(`/auth/github/callback?${new URLSearchParams({ code, state: start.providerState })}`, { headers: { cookie }, ip: start.ip, on: start.on });
 };
+
+// Apple posting the browser back with a form, the way `response_mode=form_post` does.
+const appleCallback = async (start: LoginStart, sub: string, options: { cookie?: string; code?: Partial<AppleCode> } = {}): Promise<Response> => {
+    const code = randomBytes(8).toString('hex');
+    appleCodes.set(code, { sub, nonce: start.providerChallenge, ...options.code });
+    return dispatch('/auth/apple/callback', {
+        method: 'POST',
+        form: { code, state: start.providerState },
+        headers: { cookie: options.cookie ?? start.cookie, origin: APPLE_ISSUER },
+        ip: start.ip,
+        on: start.on
+    });
+};
+
+// The code the app gets back from a callback that went well.
+const codeOf = (callback: Response): string => {
+    expect(callback.status).toBe(302);
+    return new URL(callback.headers.get('location') ?? '').searchParams.get('code') ?? '';
+};
+
+const callbackFor = (provider: ProviderId, start: LoginStart, subject: string): Promise<Response> =>
+    provider === 'apple' ? appleCallback(start, subject) : githubCallback(start, Number(subject));
 
 // What `/v1/session` takes besides the code: the key the session is bound to, proven over that code.
 const bindKey = (code: string, key: KeyPair, signer = key) => ({
@@ -185,9 +313,9 @@ interface SignedIn extends SessionResult {
     key: KeyPair;
 }
 
-const signIn = async (userId: number, key = newKeyPair()): Promise<SignedIn> => {
-    const start = await startLogin();
-    const callback = await githubCallback(start, userId);
+const signInWith = async (provider: ProviderId, subject: string, key = newKeyPair(), on?: Miniflare): Promise<SignedIn> => {
+    const start = await startLogin(provider, { on });
+    const callback = await callbackFor(provider, start, subject);
     expect(callback.status).toBe(302);
     const back = new URL(callback.headers.get('location') ?? '');
     expect(back.searchParams.get('state')).toBe(start.appState);
@@ -195,10 +323,46 @@ const signIn = async (userId: number, key = newKeyPair()): Promise<SignedIn> => 
     const response = await dispatch('/v1/session', {
         method: 'POST',
         body: { code, codeVerifier: start.verifier, redirectUri: REDIRECT_URI, label: 'Test device', ...bindKey(code, key) },
-        ip: start.ip
+        ip: start.ip,
+        on
     });
     expect(response.status).toBe(200);
     return { ...((await response.json()) as SessionResult), key };
+};
+
+const signIn = (userId: number, key = newKeyPair(), on?: Miniflare): Promise<SignedIn> => signInWith('github', String(userId), key, on);
+
+const signInWithApple = (sub: string): Promise<SignedIn> => signInWith('apple', sub);
+
+// A link token for the provider, asked with the session's access token.
+const requestLink = async (session: SessionResult, provider: ProviderId): Promise<string> => {
+    const response = await dispatch('/v1/account/link', { method: 'POST', body: { provider }, headers: bearer(session) });
+    expect(response.status).toBe(200);
+    return ((await response.json()) as IdentityLinkStartResult).linkToken;
+};
+
+interface LinkLogin {
+    start: LoginStart;
+    code: string;
+}
+
+// A link token, the provider's login started with it, and the code the callback hands the app.
+const linkLogin = async (session: SessionResult, provider: ProviderId, subject: string): Promise<LinkLogin> => {
+    const start = await startLogin(provider, { link: await requestLink(session, provider) });
+    return { start, code: codeOf(await callbackFor(provider, start, subject)) };
+};
+
+const completeLink = (session: SessionResult, login: LinkLogin, verifier = login.start.verifier): Promise<Response> =>
+    dispatch('/v1/account/identities', {
+        method: 'POST',
+        body: { code: login.code, codeVerifier: verifier, redirectUri: REDIRECT_URI },
+        headers: bearer(session)
+    });
+
+const accountOf = async (session: SessionResult): Promise<AccountResult> => {
+    const response = await dispatch('/v1/account', { headers: bearer(session) });
+    expect(response.status).toBe(200);
+    return (await response.json()) as AccountResult;
 };
 
 // A refresh signed with the given key, the session's own by default.
@@ -245,6 +409,13 @@ const spendLimit = async (bucket: string, limit: number): Promise<void> => {
     }
 };
 
+const APPLE_BINDINGS = {
+    APPLE_TEAM_ID,
+    APPLE_KEY_ID,
+    APPLE_PRIVATE_KEY: appleClientKey.privateKey.export({ format: 'pem', type: 'pkcs8' }).toString(),
+    APPLE_CLIENT_ID
+};
+
 beforeAll(async () => {
     script = await bundle();
     mf = new Miniflare({
@@ -257,9 +428,10 @@ beforeAll(async () => {
             ALLOWED_ORIGINS: 'https://app.example.com',
             GITHUB_CLIENT_ID: 'github-client',
             GITHUB_CLIENT_SECRET: GITHUB_SECRET,
+            ...APPLE_BINDINGS,
             STATEMENT_PRIVATE_KEY: statementSecret
         },
-        outboundService: github
+        outboundService: outbound
     });
     await migrate(mf);
 }, 30_000);
@@ -287,7 +459,7 @@ describe('rate limit windows', () => {
 describe('health', () => {
     test('names the statement key and the providers that are configured', async () => {
         const response = await dispatch('/health');
-        expect(await response.json()).toEqual({ ok: true, statementKey: statementPublicKey, providers: { github: true } });
+        expect(await response.json()).toEqual({ ok: true, statementKey: statementPublicKey, providers: { github: true, apple: true } });
     });
 });
 
@@ -910,6 +1082,307 @@ describe('linking a machine with a code', () => {
     });
 });
 
+describe('sign in with Apple', () => {
+    test('a whole login ends in a session for the Apple subject, and the next one opens the same account', async () => {
+        const session = await signInWithApple('apple-1001');
+        expect(session.account.provider).toBe('apple');
+        expect(session.account.login).toBeNull();
+        const again = await signInWithApple('apple-1001');
+        expect(again.account.id).toBe(session.account.id);
+    });
+
+    test('the start asks for a form post with a nonce and no scope, with a cookie that survives a cross-site post', async () => {
+        const start = await startLogin('apple');
+        const response = await dispatch(
+            `/auth/apple/start?${new URLSearchParams({ redirect_uri: REDIRECT_URI, state: base64url(randomBytes(16)), code_challenge: sha256('y'.repeat(43)), code_challenge_method: 'S256' })}`
+        );
+        const authorize = new URL(response.headers.get('location') ?? '');
+        expect(authorize.searchParams.get('response_mode')).toBe('form_post');
+        expect(authorize.searchParams.get('response_type')).toBe('code');
+        expect(authorize.searchParams.get('client_id')).toBe(APPLE_CLIENT_ID);
+        expect(authorize.searchParams.get('redirect_uri')).toBe(`${PUBLIC_ORIGIN}/auth/apple/callback`);
+        expect(authorize.searchParams.has('scope')).toBe(false);
+        expect(start.providerChallenge.length).toBe(43);
+        expect(start.setCookie).toContain('SameSite=None');
+        expect(start.setCookie).toContain('Secure');
+        expect(start.setCookie).toContain('HttpOnly');
+    });
+
+    test('providers lists Apple once its secrets are set', async () => {
+        const response = await dispatch('/v1/providers', { headers: { origin: 'https://app.example.com' } });
+        expect(await response.json()).toEqual({ providers: ['github', 'apple'] });
+        expect(response.headers.get('access-control-allow-origin')).toBe('https://app.example.com');
+    });
+
+    test('a state is good for one callback', async () => {
+        const start = await startLogin('apple');
+        expect((await appleCallback(start, 'apple-1002')).status).toBe(302);
+        expect((await appleCallback(start, 'apple-1002')).status).toBe(400);
+    });
+
+    test('a state past its lifetime is refused', async () => {
+        const start = await startLogin('apple');
+        const db = await mf.getD1Database('DB');
+        await db.prepare('UPDATE login_attempt SET expires_at = 0 WHERE state_hash = ?1').bind(sha256(start.providerState)).run();
+        const response = await appleCallback(start, 'apple-1003');
+        expect(response.status).toBe(400);
+        expect(response.headers.get('location')).toBeNull();
+    });
+
+    test('a callback in another browser or without the cookie is refused', async () => {
+        const start = await startLogin('apple');
+        expect((await appleCallback(start, 'apple-1004', { cookie: '' })).status).toBe(400);
+        const other = await startLogin('apple');
+        expect((await appleCallback(other, 'apple-1004', { cookie: '__Host-pulsar-login=someone-else' })).status).toBe(400);
+    });
+
+    test('Apple answers with a post, so a GET on its callback is no route', async () => {
+        const start = await startLogin('apple');
+        const response = await dispatch(`/auth/apple/callback?${new URLSearchParams({ code: 'x', state: start.providerState })}`, {
+            headers: { cookie: start.cookie },
+            ip: start.ip
+        });
+        expect(response.status).toBe(404);
+    });
+
+    test('an id_token that fails any check sends the app an error and opens no account', async () => {
+        const otherKey = generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey;
+        const now = Math.floor(Date.now() / 1000);
+        const bent: Partial<AppleCode>[] = [
+            { nonce: sha256('another login') },
+            { signer: otherKey },
+            { claims: { aud: 'app.someone-else' } },
+            { claims: { iss: 'https://evil.example.com' } },
+            { claims: { exp: now - 3600 } }
+        ];
+        for (const code of bent) {
+            const start = await startLogin('apple');
+            const response = await appleCallback(start, 'apple-1005', { code });
+            const back = new URL(response.headers.get('location') ?? '');
+            expect(back.searchParams.get('error')).toBe('server_error');
+            expect(back.searchParams.get('state')).toBe(start.appState);
+            expect(back.searchParams.get('code')).toBeNull();
+        }
+        const db = await mf.getD1Database('DB');
+        expect(await db.prepare("SELECT account_id FROM identity WHERE provider = 'apple' AND subject = 'apple-1005'").first()).toBeNull();
+    });
+
+    test('a person who cancels at Apple is sent back with access_denied', async () => {
+        const start = await startLogin('apple');
+        const response = await dispatch('/auth/apple/callback', {
+            method: 'POST',
+            form: { error: 'user_cancelled_authorize', state: start.providerState },
+            headers: { cookie: start.cookie },
+            ip: start.ip
+        });
+        const back = new URL(response.headers.get('location') ?? '');
+        expect(back.searchParams.get('error')).toBe('access_denied');
+        expect(back.searchParams.get('state')).toBe(start.appState);
+    });
+});
+
+describe('identities', () => {
+    test('an account a Worker from before identities made during a deploy gets its identity on the next sign-in', async () => {
+        const db = await mf.getD1Database('DB');
+        await db.prepare("INSERT INTO account (id, provider, subject, login, created_at) VALUES ('window-account', 'github', '7101', 'user-7101', 1)").run();
+        const session = await signIn(7101);
+        expect(session.account.id).toBe('window-account');
+        expect((await accountOf(session)).identities.map((identity) => identity.provider)).toEqual(['github']);
+    });
+
+    test('a signed-in person adds Apple, and signing in with either lands on the same account', async () => {
+        const session = await signIn(7201);
+        const login = await linkLogin(session, 'apple', 'apple-7201');
+        const linked = await completeLink(session, login);
+        expect(linked.status).toBe(200);
+        const result = (await linked.json()) as AccountResult;
+        expect(result.identities.map((identity) => identity.provider)).toEqual(['github', 'apple']);
+        // The account keeps being shown as the identity that has a login.
+        expect(result.account).toEqual({ id: session.account.id, provider: 'github', login: 'user-7201' });
+
+        const withApple = await signInWithApple('apple-7201');
+        expect(withApple.account).toEqual(result.account);
+        expect((await signIn(7201)).account.id).toBe(session.account.id);
+    });
+
+    test('an account made with Apple adds GitHub and is shown as the GitHub login from then on', async () => {
+        const session = await signInWithApple('apple-7202');
+        expect((await completeLink(session, await linkLogin(session, 'github', '7202'))).status).toBe(200);
+        expect((await accountOf(session)).account).toEqual({ id: session.account.id, provider: 'github', login: 'user-7202' });
+    });
+
+    test('a link token is spent by the first start, and only works for the provider it was asked for', async () => {
+        const session = await signIn(7203);
+        const token = await requestLink(session, 'apple');
+        const query = (link: string) =>
+            new URLSearchParams({
+                redirect_uri: REDIRECT_URI,
+                state: base64url(randomBytes(16)),
+                code_challenge: sha256('z'.repeat(43)),
+                code_challenge_method: 'S256',
+                link
+            });
+        const wrongProvider = await dispatch(`/auth/github/start?${query(token)}`);
+        expect(wrongProvider.status).toBe(401);
+        expect((await dispatch(`/auth/apple/start?${query(token)}`)).status).toBe(401);
+
+        const fresh = await requestLink(session, 'apple');
+        expect((await dispatch(`/auth/apple/start?${query(fresh)}`)).status).toBe(302);
+        expect((await dispatch(`/auth/apple/start?${query(fresh)}`)).status).toBe(401);
+        expect((await dispatch(`/auth/apple/start?${query(base64url(randomBytes(32)))}`)).status).toBe(401);
+    });
+
+    test('a link token past its lifetime, or from a session that signed out, starts nothing', async () => {
+        const session = await signIn(7204);
+        const db = await mf.getD1Database('DB');
+        const expired = await requestLink(session, 'apple');
+        await db.prepare('UPDATE identity_link_request SET expires_at = 0 WHERE token_hash = ?1').bind(sha256(expired)).run();
+        const query = (link: string) =>
+            new URLSearchParams({
+                redirect_uri: REDIRECT_URI,
+                state: base64url(randomBytes(16)),
+                code_challenge: sha256('z'.repeat(43)),
+                code_challenge_method: 'S256',
+                link
+            });
+        expect((await dispatch(`/auth/apple/start?${query(expired)}`)).status).toBe(401);
+
+        const token = await requestLink(session, 'apple');
+        expect((await dispatch('/v1/session', { method: 'DELETE', headers: bearer(session) })).status).toBe(204);
+        expect((await dispatch(`/auth/apple/start?${query(token)}`)).status).toBe(401);
+    });
+
+    test('the code of a link belongs to the session that asked for it, with the verifier of that login', async () => {
+        const session = await signIn(7205);
+        const otherSession = await signIn(7205);
+        expect(otherSession.account.id).toBe(session.account.id);
+
+        const login = await linkLogin(session, 'apple', 'apple-7205');
+        const fromAnotherSession = await completeLink(otherSession, login);
+        expect(fromAnotherSession.status).toBe(401);
+        // Spent by that try, like a login code.
+        expect((await completeLink(session, login)).status).toBe(401);
+
+        const second = await linkLogin(session, 'apple', 'apple-7205');
+        expect((await completeLink(session, second, base64url(randomBytes(32)))).status).toBe(401);
+
+        const third = await linkLogin(session, 'apple', 'apple-7205');
+        const asSession = await dispatch('/v1/session', {
+            method: 'POST',
+            body: { code: third.code, codeVerifier: third.start.verifier, redirectUri: REDIRECT_URI, ...bindKey(third.code, newKeyPair()) },
+            ip: third.start.ip
+        });
+        expect(asSession.status).toBe(401);
+        expect((await accountOf(session)).identities.map((identity) => identity.provider)).toEqual(['github']);
+    });
+
+    test('nothing without a session', async () => {
+        expect((await dispatch('/v1/account')).status).toBe(401);
+        expect((await dispatch('/v1/account/link', { method: 'POST', body: { provider: 'apple' } })).status).toBe(401);
+        expect((await dispatch('/v1/account/identities', { method: 'POST', body: {} })).status).toBe(401);
+        expect((await dispatch('/v1/account/identities/github', { method: 'DELETE' })).status).toBe(401);
+    });
+
+    test('an identity that signs in to another account is refused, and nothing is merged', async () => {
+        const someoneElse = await signInWithApple('apple-taken');
+        const session = await signIn(7206);
+        const refused = await completeLink(session, await linkLogin(session, 'apple', 'apple-taken'));
+        expect(refused.status).toBe(409);
+        const error = ((await refused.json()) as AddressBookError).error;
+        expect(error.code).toBe('identity-taken');
+        expect(error.message).toBe('This Apple ID already belongs to another Ruimte account, so it was not added. Accounts are never merged.');
+        expect((await accountOf(session)).identities.map((identity) => identity.provider)).toEqual(['github']);
+        expect((await signInWithApple('apple-taken')).account.id).toBe(someoneElse.account.id);
+    });
+
+    test('an account adds one identity per provider', async () => {
+        const session = await signIn(7207);
+        const again = await dispatch('/v1/account/link', { method: 'POST', body: { provider: 'github' }, headers: bearer(session) });
+        expect(again.status).toBe(409);
+        expect(await errorCode(again)).toBe('provider-linked');
+    });
+
+    test('an identity comes off while another remains, and the last one stays', async () => {
+        const session = await signIn(7208);
+        expect((await completeLink(session, await linkLogin(session, 'apple', 'apple-7208'))).status).toBe(200);
+
+        const unlinked = await dispatch('/v1/account/identities/apple', { method: 'DELETE', headers: bearer(session) });
+        expect(unlinked.status).toBe(200);
+        expect(((await unlinked.json()) as AccountResult).identities.map((identity) => identity.provider)).toEqual(['github']);
+
+        const last = await dispatch('/v1/account/identities/github', { method: 'DELETE', headers: bearer(session) });
+        expect(last.status).toBe(409);
+        expect(await errorCode(last)).toBe('last-identity');
+        expect((await dispatch('/v1/machines', { headers: bearer(session) })).status).toBe(200);
+
+        expect((await dispatch('/v1/account/identities/apple', { method: 'DELETE', headers: bearer(session) })).status).toBe(404);
+        // Apple on its own is a new account now.
+        expect((await signInWithApple('apple-7208')).account.id).not.toBe(session.account.id);
+    });
+
+    test('the identity an account was made with can come off, and signing in with it later makes a new account', async () => {
+        const session = await signInWithApple('apple-7209');
+        expect((await completeLink(session, await linkLogin(session, 'github', '7209'))).status).toBe(200);
+        expect((await dispatch('/v1/account/identities/apple', { method: 'DELETE', headers: bearer(session) })).status).toBe(200);
+        const fresh = await signInWithApple('apple-7209');
+        expect(fresh.account.id).not.toBe(session.account.id);
+        expect((await signIn(7209)).account.id).toBe(session.account.id);
+    });
+});
+
+describe('the identity migration', () => {
+    let old: Miniflare;
+
+    beforeAll(async () => {
+        old = new Miniflare({
+            modules: true,
+            script,
+            compatibilityDate: '2026-08-01',
+            d1Databases: { DB: 'pulsar-migration' },
+            bindings: { PUBLIC_ORIGIN, GITHUB_CLIENT_ID: 'github-client', GITHUB_CLIENT_SECRET: GITHUB_SECRET, ...APPLE_BINDINGS },
+            outboundService: outbound
+        });
+        await migrate(old, (file) => file < '0005');
+    }, 30_000);
+
+    afterAll(async () => {
+        await old.dispose();
+    });
+
+    test('a GitHub account from before keeps its session and machines, and signs in to the same account', async () => {
+        const db = await old.getD1Database('DB');
+        const accessToken = base64url(randomBytes(32));
+        const now = Date.now();
+        await db.batch([
+            db.prepare("INSERT INTO account (id, provider, subject, login, created_at) VALUES ('before', 'github', '9001', 'user-before', 1)"),
+            db
+                .prepare(
+                    `INSERT INTO session (id, account_id, label, access_hash, access_expires_at, refresh_hash, expires_at, created_at, session_key)
+                     VALUES ('session-before', 'before', 'Old device', ?1, ?2, ?3, ?4, 1, ?5)`
+                )
+                .bind(sha256(accessToken), now + 10 * 60_000, sha256(base64url(randomBytes(32))), now + 24 * 60 * 60_000, newKeyPair().publicKey),
+            db.prepare(
+                "INSERT INTO machine (account_id, id, name, icon, public_key, last_seen_at, created_at) VALUES ('before', 'machine-before', 'Old machine', NULL, 'key', 1, 1)"
+            )
+        ]);
+
+        await migrate(old, (file) => file >= '0005');
+
+        const headers = { authorization: `Bearer ${accessToken}` };
+        const account = await dispatch('/v1/account', { headers, on: old });
+        expect(account.status).toBe(200);
+        expect(await account.json()).toEqual({
+            account: { id: 'before', provider: 'github', login: 'user-before' },
+            identities: [{ provider: 'github', login: 'user-before', createdAt: 1 }]
+        });
+        const machines = (await (await dispatch('/v1/machines', { headers, on: old })).json()) as MachineListResult;
+        expect(machines.machines.map((machine) => machine.id)).toEqual(['machine-before']);
+
+        const again = await signIn(9001, newKeyPair(), old);
+        expect(again.account).toEqual({ id: 'before', provider: 'github', login: 'user-9001' });
+    });
+});
+
 describe('cors', () => {
     test('a loopback page and a listed origin may read the answers, another page may not', async () => {
         const loopback = await dispatch('/v1/machines', { method: 'OPTIONS', headers: { origin: 'http://127.0.0.1:4210' } });
@@ -958,9 +1431,11 @@ describe('an address book nobody configured', () => {
         expect(response.status).toBe(503);
         expect(((await response.json()) as AddressBookError).error).toEqual({
             code: 'not-configured',
-            message: 'Signing in with github is not configured on this address book yet'
+            message: 'Signing in with GitHub is not configured on this address book yet'
         });
         const health = (await bare.dispatchFetch(`${PUBLIC_ORIGIN}/health`)) as unknown as Response;
-        expect(await health.json()).toEqual({ ok: true, statementKey: null, providers: { github: false } });
+        expect(await health.json()).toEqual({ ok: true, statementKey: null, providers: { github: false, apple: false } });
+        const providers = (await bare.dispatchFetch(`${PUBLIC_ORIGIN}/v1/providers`)) as unknown as Response;
+        expect(await providers.json()).toEqual({ providers: [] });
     });
 });
