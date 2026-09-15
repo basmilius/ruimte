@@ -872,7 +872,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                     {(!busy || !isEmptyDraft(draft)) && (
                         <Tooltip label={busy ? 'Queue' : 'Send'} kbd={KEY_SHORTCUTS.modEnter} name>
                             <button
-                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-accent-text disabled:opacity-40"
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-accent-text hover:brightness-90 disabled:opacity-40 disabled:hover:brightness-100"
                                 disabled={isEmptyDraft(draft) || disabled || guard.tooLong}
                                 onClick={submit}
                             >
