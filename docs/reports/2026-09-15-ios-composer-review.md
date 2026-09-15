@@ -550,3 +550,9 @@ The shared page surface now fills the viewport with the app's surface color befo
 Ruimte branding is limited to the main iPad sidebar. A project's sidebar toolbar has no title or branding; its project name uses a larger semibold heading within the scrolling list. iPhone project titles keep their existing toolbar placement.
 
 The signed device build, Swift formatting, repository format and check commands passed. No simulator or additional device test suite was used in this iteration. Transient loading appearance and navigation transitions still need visual acceptance on a device.
+
+## iPhone view-list spacing
+
+The phone view list now explicitly removes the default top content margin and uses a 24-point bottom content margin. These scroll-content margins retain the native toolbar and tabbar safe areas. The same spacing applies when searching views; iPad sidebar margins remain automatic.
+
+The signed build, format and repository checks passed. No additional tests or simulator were used. The physical iPhone was showing Projects when captured, so the view-list spacing still needs visual acceptance.

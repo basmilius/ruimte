@@ -275,6 +275,8 @@ struct WorkspacePage: View {
             }
         }
         .modifier(MobileSidebarList(minimumRowHeight: 0))
+        .contentMargins(.top, isSidebar ? nil : 0, for: .scrollContent)
+        .contentMargins(.bottom, isSidebar ? nil : 24, for: .scrollContent)
         .accessibilityIdentifier("workspace.views")
     }
 
