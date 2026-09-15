@@ -7,7 +7,9 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit && bun run check:swift",
+    "generate:swift": "bun scripts/generate-swift.ts",
+    "check:swift": "bun scripts/generate-swift.ts --check"
   },
   "dependencies": {
     "@ruimte/pulsar": "workspace:*",

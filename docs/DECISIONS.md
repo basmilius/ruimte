@@ -2582,3 +2582,37 @@ loud shell can still be the reason a client is dropped.
 Research that is written but not built: `docs/research/browser-streaming.md` (a headless Chromium
 on the daemon, streamed over the socket; it and a relay wait until a remote daemon is in daily
 use), `docs/research/windows.md`, and the reports under `docs/reports` for accounts and remote access.
+
+
+### iPhone and iPad, phase 0
+
+- `apps/ios` begins with a connection test, following the report reviewed against `8b3fe06`.
+  Bas accepts each phase on a device before the next begins. The minimum is iOS/iPadOS 26;
+  the bundle is `app.ruimte.mobile`. No daemon runs on the phone. Nodes will open as pages;
+  the mobile canvas will not move or resize existing nodes.
+- The app uses one ed25519 key for the account session and machine access. Unlike Electron,
+  there is no separate trusted shell process that needs its own key. The key and refresh
+  session stay in a nonsynchronizing, device-only Keychain item accessible after first unlock.
+  Every scene shares one vault so two windows cannot spend the same refresh token twice.
+- Login uses the existing Worker PKCE redirect and exactly `ruimte://pulsar/callback`.
+  The browser session checks the whole callback and its state before exchanging the code.
+  Provider discovery already exposes Apple when configured; native Apple token exchange is
+  separate future work. Pairing-link entry waits for the shell phase and will accept HTTPS only.
+- Phase 0 generates its used models from Zod before introducing native requests. The same
+  generator emits TypeScript signing/framing fixtures and the protocol constant. JSON Schema
+  drops custom refinements, so the access-statement lifetime check is explicitly retained.
+  A small projection of the existing canvas schema tests defaults without adding canvas UI.
+  Full API generation remains phase 1.
+- The default ICE policy allows libwebrtc to select the path. The test app's relay-only switch
+  exists to measure TURN, since reaching a machine over a direct candidate proves nothing about
+  relay configuration. No production broker or TURN deployment is part of this work.
+- A visible iPad scene keeps held links alive when another scene backgrounds. Once all scenes
+  background, connections close and foreground builds new peers. There is no background audio,
+  VoIP or daemon workaround. Path changes come from `NWPathMonitor`; it does not claim to
+  observe libwebrtc through a separate `NWConnection`.
+- With the local CryptoKit runtime, repeated ed25519 signing produced different valid
+  signatures for the same message. Interoperability fixtures therefore assert identical message
+  bytes and verify each side's signatures, rather than requiring identical signature output.
+- Simulator Keychain tests require local signing. An unsigned app returned status -34018,
+  missing entitlement; this is distinct from a malformed Keychain query. Real browser login,
+  Wi-Fi/5G relay reachability and reconnect targets still require Bas's device checks.

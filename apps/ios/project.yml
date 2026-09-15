@@ -1,0 +1,71 @@
+name: Ruimte
+options:
+  minimumXcodeGenVersion: 2.44.0
+  deploymentTarget:
+    iOS: '26.0'
+  createIntermediateGroups: true
+packages:
+  RuimtePulsar:
+    path: Packages/RuimtePulsar
+  RuimteTransport:
+    path: Packages/RuimteTransport
+settings:
+  base:
+    SWIFT_VERSION: '6.0'
+    MARKETING_VERSION: 0.1.0
+    CURRENT_PROJECT_VERSION: 1
+    IPHONEOS_DEPLOYMENT_TARGET: '26.0'
+    TARGETED_DEVICE_FAMILY: '1,2'
+    CODE_SIGN_STYLE: Automatic
+targets:
+  Ruimte:
+    type: application
+    platform: iOS
+    sources: [App]
+    dependencies:
+      - package: RuimtePulsar
+      - package: RuimteTransport
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.ruimte.mobile
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Ruimte
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleURLTypes:
+          - CFBundleURLName: app.ruimte.mobile.pulsar
+            CFBundleURLSchemes: [ruimte]
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+  RuimteTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests]
+    dependencies:
+      - target: Ruimte
+      - package: RuimtePulsar
+      - package: RuimteTransport
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.ruimte.mobile.tests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  Ruimte:
+    build:
+      targets:
+        Ruimte: all
+    test:
+      targets: [RuimteTests]
