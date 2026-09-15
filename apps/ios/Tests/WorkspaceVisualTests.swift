@@ -79,7 +79,7 @@ final class WorkspaceVisualTests: XCTestCase {
             if horizontalClass == .regular { workspace.selectedID = nil }
 
             let host = UIHostingController(
-                rootView: WorkspacePage(workspace: workspace, close: {})
+                rootView: WorkspaceNavigationFixture(workspace: workspace, sidebar: horizontalClass == .regular)
                     .tint(MobileStyle.accent)
                     .preferredColorScheme(dark ? .dark : .light)
                     .dynamicTypeSize(typeSize)
@@ -118,7 +118,7 @@ final class WorkspaceVisualTests: XCTestCase {
             XCTAssertTrue(workspace.ready)
             workspace.selectedID = nil
             let host = UIHostingController(
-                rootView: WorkspacePage(workspace: workspace, close: {})
+                rootView: WorkspaceNavigationFixture(workspace: workspace, sidebar: horizontalClass == .regular)
                     .tint(MobileStyle.accent)
                     .environment(\.horizontalSizeClass, horizontalClass))
             host.traitOverrides.horizontalSizeClass = horizontalClass == .regular ? .regular : .compact
@@ -129,15 +129,17 @@ final class WorkspaceVisualTests: XCTestCase {
                 window.rootViewController = nil
             }
             for _ in 0..<20 { await displayFrame() }
-            let tabs = try XCTUnwrap(childController(UITabBarController.self, in: host))
-            let searchTab = try XCTUnwrap(tabs.tabs.first { $0 is UISearchTab } as? UISearchTab)
-            XCTAssertTrue(searchTab.automaticallyActivatesSearch)
-            if horizontalClass == .regular {
-                let split = try XCTUnwrap(childController(UISplitViewController.self, in: host))
-                let sidebar = try XCTUnwrap(split.viewController(for: .primary))
-                let barFrame = tabs.tabBar.convert(tabs.tabBar.bounds, to: sidebar.view)
-                XCTAssertLessThanOrEqual(barFrame.maxX, sidebar.view.bounds.width + 1)
-                XCTAssertGreaterThan(barFrame.minY, sidebar.view.bounds.height / 2)
+            if horizontalClass == .compact {
+                let tabs = try XCTUnwrap(childController(UITabBarController.self, in: host))
+                let searchTab = try XCTUnwrap(tabs.tabs.first { $0 is UISearchTab } as? UISearchTab)
+                XCTAssertTrue(searchTab.automaticallyActivatesSearch)
+                let navigation = try XCTUnwrap(childController(UINavigationController.self, in: host))
+                XCTAssertEqual(navigation.viewControllers.count, 2)
+                XCTAssertFalse(navigation.isNavigationBarHidden)
+                XCTAssertEqual(navigation.interactivePopGestureRecognizer?.isEnabled, true)
+            } else {
+                XCTAssertNotNil(childController(UISplitViewController.self, in: host))
+                XCTAssertNil(childController(UITabBarController.self, in: host))
             }
             let list = try XCTUnwrap(descendant(UICollectionView.self, in: host.view))
             let first = try XCTUnwrap(
@@ -157,6 +159,18 @@ final class WorkspaceVisualTests: XCTestCase {
             XCTAssertNotNil(
                 descendant(CanvasScrollView.self, in: host.view), "Activating the row must mount the real canvas")
             capture(window, name: horizontalClass == .regular ? "workspace-opened-ipad" : "workspace-opened-iphone")
+            if horizontalClass == .compact {
+                let navigation = try XCTUnwrap(childController(UINavigationController.self, in: host))
+                XCTAssertEqual(navigation.viewControllers.count, 3)
+                navigation.popViewController(animated: false)
+                for _ in 0..<20 { await displayFrame() }
+                XCTAssertEqual(navigation.viewControllers.count, 2)
+                XCTAssertNotNil(childController(UITabBarController.self, in: navigation.topViewController!))
+                navigation.popViewController(animated: false)
+                for _ in 0..<20 { await displayFrame() }
+                XCTAssertEqual(navigation.viewControllers.count, 1)
+            }
+
         }
     }
 
@@ -300,5 +314,33 @@ final class WorkspaceVisualTests: XCTestCase {
         link = nil
         completion?()
         completion = nil
+    }
+}
+
+private struct WorkspaceNavigationFixture: View {
+    @State private var navigation: WorkspaceNavigation
+    @State private var opened = false
+    let sidebar: Bool
+
+    init(workspace: MobileWorkspace, sidebar: Bool) {
+        _navigation = State(initialValue: WorkspaceNavigation(workspace: workspace))
+        self.sidebar = sidebar
+    }
+
+    var body: some View {
+        if sidebar {
+            NavigationSplitView {
+                NavigationStack { WorkspacePage(navigation: navigation, isSidebar: true) }
+            } detail: {
+                NavigationStack { WorkspaceDetail(navigation: navigation) }
+            }
+        } else {
+            NavigationStack {
+                Text("Projects")
+                    .navigationTitle("Projects")
+                    .navigationDestination(isPresented: $opened) { WorkspacePage(navigation: navigation) }
+            }
+            .onAppear { opened = true }
+        }
     }
 }

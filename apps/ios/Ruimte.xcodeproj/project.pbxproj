@@ -13,7 +13,6 @@
 		0A14CC9ED096B72837DF02F5 /* IceCandidateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F29B9E631BA0053CAC8D2A6 /* IceCandidateTests.swift */; };
 		0ADF4AA4572DAF49C8A26900 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = A84B645FE2D16EFA24FD14F6 /* AppIcon.icon */; };
 		0B547D0A6B2838F62FB295E9 /* LucideSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 06F665001E0BC007A06510C8 /* LucideSwift */; };
-		0C002F0A85CF8534153EEFAF /* ProjectNavigationHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC89A0F42949A02861795904 /* ProjectNavigationHost.swift */; };
 		0C50DA276AE717B500B6D27B /* ViewIconPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B68348C7C35F8C9CAC737CA /* ViewIconPicker.swift */; };
 		0C7BBCCED0B7814415E137A6 /* DrawingCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 732B16DF3002A0A3499B1ADF /* DrawingCanvas.swift */; };
 		0E75E028596697B06343F2F1 /* CanvasRenderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5B1DCD63DC630D3ABFE455 /* CanvasRenderTests.swift */; };
@@ -70,6 +69,7 @@
 		9DE1A20BEBFF846DDB83A793 /* UsageMoneyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D74F291DD8E4AE6C0AC54175 /* UsageMoneyTests.swift */; };
 		9DEFD88C67729CA71F4C0DD5 /* ChatScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111FDB97EC13D539638EFBEC /* ChatScreen.swift */; };
 		9E88FFD2A389FE45658CA72E /* RuimteActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B79DEDEC6E3DBF60AE5EA23 /* RuimteActivityWidget.swift */; };
+		9F7A6C18F309CBA783F95A4E /* WorkspaceNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F87147CB968B3A1A350EF934 /* WorkspaceNavigation.swift */; };
 		A0DBF00425A7018625CCB128 /* LucideIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92115E2E20A2788AC95AD41F /* LucideIcon.swift */; };
 		A11951888F286F8452A731D0 /* MachineFilesPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49F9EC9D98983F163B9AE62C /* MachineFilesPage.swift */; };
 		A29BA09E98A9386B690A002A /* RuimteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09CCDDD483546BE641151534 /* RuimteApp.swift */; };
@@ -93,7 +93,6 @@
 		D6FD6C3785D1017DC74B3E80 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 360CC2CFC02B68B045C92968 /* NotificationService.swift */; };
 		DCDA9FE7463803051C29BB51 /* TerminalModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A531355B6DBA1AEA2747E700 /* TerminalModel.swift */; };
 		DD033916C188637B3EA2D645 /* DrawingEditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 073C4EC8E14E8D8910DEF111 /* DrawingEditorTests.swift */; };
-		E08F674F1BAA77B31240017E /* ProjectSplitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29D03F55A4071C6A3F6955D8 /* ProjectSplitView.swift */; };
 		E2188F2FE2D263B6F0876E58 /* RichChatComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3831E0DF8E82C62D0BB8F805 /* RichChatComposer.swift */; };
 		E95A1AC133CF67657CEA99A3 /* ProjectArtworkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ABABCDEEE659AD8B4D227A8 /* ProjectArtworkTests.swift */; };
 		EE74DF5514DD201C33ACEA3E /* NotificationSessionPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8658D05270F5D27871DF224 /* NotificationSessionPage.swift */; };
@@ -166,7 +165,6 @@
 		25A4F1FA154BE05D96BDFC6E /* ConnectionProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionProbe.swift; sourceTree = "<group>"; };
 		277C90606C3586426EE8CE7F /* RuimtePulsar */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RuimtePulsar; path = Packages/RuimtePulsar; sourceTree = SOURCE_ROOT; };
 		28AB5F59239AB27AD0434DE3 /* PhaseZeroTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhaseZeroTests.swift; sourceTree = "<group>"; };
-		29D03F55A4071C6A3F6955D8 /* ProjectSplitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectSplitView.swift; sourceTree = "<group>"; };
 		2C204ABF7BF115B3485C914E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		313990724FDCDDA5DE155DCF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		360CC2CFC02B68B045C92968 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
@@ -216,7 +214,6 @@
 		A8C83388F2EE72EDED082639 /* document-renderer.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "document-renderer.js"; sourceTree = "<group>"; };
 		AA81AFC7F3E726AB38C0EE96 /* TerminalCompatibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalCompatibilityTests.swift; sourceTree = "<group>"; };
 		ABE8B97161FC6E9CE587F95C /* MachineRemovalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineRemovalTests.swift; sourceTree = "<group>"; };
-		AC89A0F42949A02861795904 /* ProjectNavigationHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectNavigationHost.swift; sourceTree = "<group>"; };
 		AEE3E762A08E656C5BF5C92C /* WorkspaceViewSectionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceViewSectionsTests.swift; sourceTree = "<group>"; };
 		C62961727B814F8C43E406CD /* DrawingAuthoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawingAuthoring.swift; sourceTree = "<group>"; };
 		C65C2B371130F2E65C92BBD2 /* Ruimte.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ruimte.entitlements; sourceTree = "<group>"; };
@@ -235,6 +232,7 @@
 		EE323EA02FEEF12048A2D3A8 /* AppRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRuntime.swift; sourceTree = "<group>"; };
 		EE5B1DCD63DC630D3ABFE455 /* CanvasRenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasRenderTests.swift; sourceTree = "<group>"; };
 		F056296AB12E6228D09966E2 /* UnifiedProjectsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedProjectsTests.swift; sourceTree = "<group>"; };
+		F87147CB968B3A1A350EF934 /* WorkspaceNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceNavigation.swift; sourceTree = "<group>"; };
 		FC93B189294B4D798A653EDC /* ChatAttachmentButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAttachmentButton.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -309,14 +307,13 @@
 				4494CB22D3C1F93514921B21 /* MobileWorkspace.swift */,
 				7C81823373467CED5DF67CB7 /* PairMachinePage.swift */,
 				62D07C5E01735816B53D3E59 /* ProjectArtwork.swift */,
-				AC89A0F42949A02861795904 /* ProjectNavigationHost.swift */,
-				29D03F55A4071C6A3F6955D8 /* ProjectSplitView.swift */,
 				9AB9B459492C2AF8E3631D88 /* ProjectSVGRasterizer.swift */,
 				089B611A941366002AA1307E /* RenderDocumentPage.swift */,
 				653536E5B98BEFB676B13733 /* SharedMachineSession.swift */,
 				5A672F255CAFCD537E1F2A74 /* UnifiedProjects.swift */,
 				0B68348C7C35F8C9CAC737CA /* ViewIconPicker.swift */,
 				1FAE5DD971FEE4F7A8B224B1 /* WelcomePage.swift */,
+				F87147CB968B3A1A350EF934 /* WorkspaceNavigation.swift */,
 				9447D15E48181E5F166E22A6 /* WorkspacePage.swift */,
 				19E795084D99E041A22F82D5 /* WorkspaceViewSections.swift */,
 			);
@@ -784,9 +781,7 @@
 				5789AC87C3A36DD33EE7D7DD /* NotificationsSettingsPage.swift in Sources */,
 				2A5A29AD37DB5525CEEB9105 /* PairMachinePage.swift in Sources */,
 				F4C315E3ABE645471F0C04C1 /* ProjectArtwork.swift in Sources */,
-				0C002F0A85CF8534153EEFAF /* ProjectNavigationHost.swift in Sources */,
 				8B77DAF04DE9F9840327A5CC /* ProjectSVGRasterizer.swift in Sources */,
-				E08F674F1BAA77B31240017E /* ProjectSplitView.swift in Sources */,
 				BA4E5634A953498E6EC34816 /* RemotePage.swift in Sources */,
 				F6559A2EF1AE52B8885568D7 /* RenderDocumentPage.swift in Sources */,
 				E2188F2FE2D263B6F0876E58 /* RichChatComposer.swift in Sources */,
@@ -799,6 +794,7 @@
 				036421AA923C27CCC1A4FE3A /* UsageMoneyFormatter.swift in Sources */,
 				0C50DA276AE717B500B6D27B /* ViewIconPicker.swift in Sources */,
 				7A520DCC7261AB8C8C61F18C /* WelcomePage.swift in Sources */,
+				9F7A6C18F309CBA783F95A4E /* WorkspaceNavigation.swift in Sources */,
 				008FD13D8AE76883BA6E4C0A /* WorkspacePage.swift in Sources */,
 				74C49C8FF69574D8408DE421 /* WorkspaceViewSections.swift in Sources */,
 			);

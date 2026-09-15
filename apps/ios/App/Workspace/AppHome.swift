@@ -5,7 +5,10 @@ import UIKit
 struct AppHome: View {
     @Bindable var runtime: AppRuntime
     @State private var projects = UnifiedProjects()
-    @State private var activeWorkspace: MobileWorkspace?
+    @State private var activeProject: WorkspaceNavigation?
+    @State private var homeSection: HomeSection? = .projects
+    @State private var detailPath = NavigationPath()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var window: UIWindow?
     @State private var settings = false
     @State private var pairing = false
@@ -32,26 +35,24 @@ struct AppHome: View {
     }
 
     var body: some View {
-        ProjectNavigationHost(
-            isProjectOpen: Binding(get: { activeWorkspace != nil }, set: { if !$0 { activeWorkspace = nil } })
-        ) {
-            projectNavigation
-                .environment(\.openMobileWorkspace) { workspace in
-                    machines = false
-                    activeWorkspace = workspace
-                }
-                .tint(MobileStyle.accent)
-                .toggleStyle(SystemToggleStyle())
-        } project: {
-            Group {
-                if let activeWorkspace {
-                    WorkspacePage(workspace: activeWorkspace) { self.activeWorkspace = nil }
-                }
-            }
-            .tint(MobileStyle.accent)
-            .toggleStyle(SystemToggleStyle())
+        Group {
+            if usesSidebar { tabletNavigation } else { projectNavigation }
         }
-        .ignoresSafeArea(.container)
+        .environment(\.openMobileWorkspace, openWorkspace)
+        .mobileSheet(isPresented: $pairing) { PairMachinePage(runtime: runtime) }
+        .mobileSheet(isPresented: $settings) { MobileSettings(runtime: runtime) }
+        .mobileSheet(isPresented: $machines, onDismiss: presentPendingPairing) {
+            MachinesSheet(runtime: runtime) { pairAfterDismiss = true }
+        }
+        .mobileSheet(isPresented: $signIn, onDismiss: presentPendingPairing) {
+            NavigationStack {
+                WelcomePage(runtime: runtime, window: window) {
+                    pairAfterDismiss = true
+                    signIn = false
+                }
+                .toolbar { Button("Done") { signIn = false } }
+            }
+        }
         .id(runtime.account?.id ?? "signed-out")
         .background(PresentationWindow { window = $0 }.frame(width: 0, height: 0))
         .task {
@@ -62,9 +63,12 @@ struct AppHome: View {
         .task(id: runtime.attentionKeys) { await runtime.notifications.syncBadge(liveKeys: runtime.attentionKeys) }
         .onOpenURL { runtime.notifications.openActivityURL($0) }
         .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)
-        .onChange(of: runtime.account?.id) { _, _ in activeWorkspace = nil }
+        .onChange(of: runtime.account?.id) { _, account in
+            activeProject = nil
+            if account != nil { signIn = false }
+        }
         .onChange(of: runtime.notifications.destination) { _, destination in
-            if destination != nil { activeWorkspace = nil }
+            if destination != nil { activeProject = nil }
         }
         .onChange(of: phase, initial: true) { _, current in
             runtime.connections.setScene(sceneID, foreground: current != .background)
@@ -76,57 +80,110 @@ struct AppHome: View {
         }
     }
 
+    private var usesSidebar: Bool { UIDevice.current.userInterfaceIdiom == .pad && hasWorkspace }
+
     private var projectNavigation: some View {
         NavigationStack {
-            Group {
-                if hasWorkspace {
-                    projectList
-                } else {
-                    WelcomePage(runtime: runtime, window: window) { pairing = true }
+            homeContent
+                .navigationDestination(item: $activeProject) { project in
+                    WorkspacePage(navigation: project)
+                }
+                .navigationDestination(
+                    item: Binding(
+                        get: { runtime.notifications.destination }, set: { runtime.notifications.destination = $0 })
+                ) { destination in
+                    NotificationSessionPage(runtime: runtime, destination: destination)
+                }
+        }
+    }
+
+    private var tabletNavigation: some View {
+        NavigationSplitView {
+            NavigationStack {
+                List(HomeSection.allCases, selection: $homeSection) { section in
+                    Label(section.title, lucideIcon: section.icon)
+                        .foregroundStyle(homeSection == section ? MobileStyle.onAccent : Color.primary)
+                        .tag(section)
+                }
+                .listStyle(.sidebar)
+                .navigationTitle("")
+                .navigationBarTitleDisplayMode(.inline)
+                .navigationDestination(item: $activeProject) { project in
+                    WorkspacePage(navigation: project, isSidebar: true)
                 }
             }
-            .navigationTitle(hasWorkspace ? "Projects" : "")
-            .navigationBarTitleDisplayMode(sizeClass == .regular ? .inline : .automatic)
-            .toolbar {
-                if hasWorkspace {
+            .navigationSplitViewColumnWidth(min: 280, ideal: 340, max: 420)
+        } detail: {
+            NavigationStack(path: $detailPath) {
+                tabletDetail
+                    .navigationDestination(
+                        item: Binding(
+                            get: { runtime.notifications.destination }, set: { runtime.notifications.destination = $0 })
+                    ) { destination in
+                        NotificationSessionPage(runtime: runtime, destination: destination)
+                    }
+            }
+        }
+        .navigationSplitViewStyle(.balanced)
+        .onChange(of: homeSection) { _, _ in detailPath = NavigationPath() }
+        .onChange(of: activeProject?.id) { _, _ in detailPath = NavigationPath() }
+        .onChange(of: activeProject?.section) { _, _ in detailPath = NavigationPath() }
+        .onChange(of: activeProject?.selectedViewID) { _, _ in detailPath = NavigationPath() }
+    }
+
+    @ViewBuilder private var tabletDetail: some View {
+        if let activeProject {
+            WorkspaceDetail(navigation: activeProject)
+        } else {
+            switch homeSection ?? .projects {
+            case .projects: homeContent
+            case .machines: MachinesSheet(runtime: runtime, embedded: true) { pairing = true }
+            case .settings: MobileSettings(runtime: runtime, embedded: true)
+            }
+        }
+    }
+
+    private var homeContent: some View {
+        Group {
+            if hasWorkspace {
+                projectList
+            } else {
+                WelcomePage(runtime: runtime, window: window) { pairing = true }
+            }
+        }
+        .navigationTitle(hasWorkspace ? "Projects" : "")
+        .navigationBarTitleDisplayMode(sizeClass == .regular ? .inline : .automatic)
+        .toolbar {
+            if hasWorkspace {
+                if !usesSidebar {
                     ToolbarItem(placement: .topBarLeading) {
                         Button("Settings", lucideIcon: "circle-user-round") { settings = true }
                     }
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Menu {
-                            Button("Use a pairing link", lucideIcon: "link") { pairing = true }
-                            Button("Machines", lucideIcon: "monitor") { machines = true }
-                            if runtime.account == nil {
-                                Button("Sign in", lucideIcon: "circle-user-round") { signIn = true }
-                            }
-                        } label: {
-                            Image(lucide: "plus").accessibilityLabel("Add or connect")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button("Use a pairing link", lucideIcon: "link") { pairing = true }
+                        Button("Machines", lucideIcon: "monitor") { showMachines() }
+                        if runtime.account == nil {
+                            Button("Sign in", lucideIcon: "circle-user-round") { signIn = true }
                         }
+                    } label: {
+                        Image(lucide: "plus").accessibilityLabel("Add or connect")
                     }
                 }
-            }
-            .mobileSheet(isPresented: $pairing) { PairMachinePage(runtime: runtime) }
-            .mobileSheet(isPresented: $settings) { MobileSettings(runtime: runtime) }
-            .mobileSheet(isPresented: $machines, onDismiss: presentPendingPairing) {
-                MachinesSheet(runtime: runtime) { pairAfterDismiss = true }
-            }
-            .mobileSheet(isPresented: $signIn, onDismiss: presentPendingPairing) {
-                NavigationStack {
-                    WelcomePage(runtime: runtime, window: window) {
-                        pairAfterDismiss = true
-                        signIn = false
-                    }
-                    .toolbar { Button("Done") { signIn = false } }
-                }
-            }
-            .onChange(of: runtime.account?.id) { _, account in if account != nil { signIn = false } }
-            .navigationDestination(
-                item: Binding(
-                    get: { runtime.notifications.destination }, set: { runtime.notifications.destination = $0 })
-            ) { destination in
-                NotificationSessionPage(runtime: runtime, destination: destination)
             }
         }
+    }
+
+    private func openWorkspace(_ workspace: MobileWorkspace) {
+        machines = false
+        withAnimation(reduceMotion ? nil : .default) {
+            activeProject = WorkspaceNavigation(workspace: workspace)
+        }
+    }
+
+    private func showMachines() {
+        if usesSidebar { homeSection = .machines } else { machines = true }
     }
 
     private func presentPendingPairing() {
@@ -198,7 +255,7 @@ struct AppHome: View {
                     Label("Use a pairing link", lucideIcon: "link")
                 }
                 Button {
-                    machines = true
+                    showMachines()
                 } label: {
                     Label("Machines", lucideIcon: "monitor")
                 }
@@ -266,7 +323,8 @@ private struct ProjectListWidth: ViewModifier {
     func body(content: Content) -> some View {
         if sizeClass == .regular {
             GeometryReader { geometry in
-                content.contentMargins(.horizontal, max(20, (geometry.size.width - 760) / 2), for: .scrollContent)
+                let width = geometry.size.width - geometry.safeAreaInsets.leading - geometry.safeAreaInsets.trailing
+                content.safeAreaPadding(.horizontal, max(0, (width - 760) / 2))
             }
         } else {
             content
@@ -360,30 +418,32 @@ private struct ProjectHomeGlyph: View {
 
 private struct MachinesSheet: View {
     let runtime: AppRuntime
+    var embedded = false
     let pair: () -> Void
     @Environment(\.dismiss) private var dismiss
     var body: some View {
-        NavigationStack {
-            List {
-                Section("Your machines") {
-                    ForEach(runtime.machines, id: \.id) { machine in
-                        NavigationLink {
-                            MachineProjectsPage(session: runtime.session(for: machine), runtime: runtime)
-                        } label: {
-                            MobileRow(
-                                title: machine.name, subtitle: "Projects, files and settings", symbol: "monitor"
-                            )
-                        }
+        if embedded { content } else { NavigationStack { content } }
+    }
+    private var content: some View {
+        List {
+            Section("Your machines") {
+                ForEach(runtime.machines, id: \.id) { machine in
+                    NavigationLink {
+                        MachineProjectsPage(session: runtime.session(for: machine), runtime: runtime)
+                    } label: {
+                        MobileRow(
+                            title: machine.name, subtitle: "Projects, files and settings", symbol: "monitor"
+                        )
                     }
                 }
-                Button("Use a pairing link", lucideIcon: "link") {
-                    dismiss()
-                    pair()
-                }
             }
-            .navigationTitle("Machines")
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+            Button("Use a pairing link", lucideIcon: "link") {
+                if !embedded { dismiss() }
+                pair()
+            }
         }
+        .navigationTitle("Machines")
+        .toolbar { if !embedded { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } } }
     }
 }
 
@@ -406,54 +466,69 @@ private struct PresentationWindow: UIViewRepresentable {
 
 struct MobileSettings: View {
     let runtime: AppRuntime
+    var embedded = false
     @Environment(\.dismiss) private var dismiss
     @AppStorage("ruimte.ios.appearance") private var appearance = "system"
     @AppStorage("ruimte.ios.terminalFontSize") private var fontSize = 14.0
     @AppStorage("ruimte.ios.showHiddenFiles") private var hiddenFiles = false
     @State private var confirmSignOut = false
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Appearance") {
-                    Picker("Theme", selection: $appearance) {
-                        Text("System").tag("system")
-                        Text("Light").tag("light")
-                        Text("Dark").tag("dark")
+        if embedded { content } else { NavigationStack { content } }
+    }
+    private var content: some View {
+        Form {
+            Section("Appearance") {
+                Picker("Theme", selection: $appearance) {
+                    Text("System").tag("system")
+                    Text("Light").tag("light")
+                    Text("Dark").tag("dark")
+                }
+                Stepper("Terminal size: \(Int(fontSize))", value: $fontSize, in: 10...26).monospacedDigit()
+            }
+            Section("Files and agents") {
+                Toggle("Show hidden files", isOn: $hiddenFiles)
+            }
+            Section("Notifications") {
+                NavigationLink("Notifications and Live Activities") {
+                    NotificationsSettingsPage(coordinator: runtime.notifications)
+                }
+            }
+            Section("Account") {
+                if let account = runtime.account {
+                    LabeledContent("Signed in", value: account.login ?? account.provider.rawValue)
+                }
+                NavigationLink("Connection diagnostics") { ConnectionScreen(runtime: runtime) }
+                if runtime.account != nil { Button("Sign out", role: .destructive) { confirmSignOut = true } }
+            }
+            Section("About") {
+                LabeledContent(
+                    "Ruimte", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0"
+                )
+                Text("Projects and sessions stay on your machines. This app connects to them remotely.")
+                    .foregroundStyle(.secondary)
+            }
+        }.navigationTitle("Settings")
+            .toolbar { if !embedded { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } } }
+            .confirmationDialog("Sign out on this device?", isPresented: $confirmSignOut) {
+                Button("Sign out", role: .destructive) {
+                    Task {
+                        await runtime.signOut()
+                        if !embedded { dismiss() }
                     }
-                    Stepper("Terminal size: \(Int(fontSize))", value: $fontSize, in: 10...26).monospacedDigit()
                 }
-                Section("Files and agents") {
-                    Toggle("Show hidden files", isOn: $hiddenFiles)
-                }
-                Section("Notifications") {
-                    NavigationLink("Notifications and Live Activities") {
-                        NotificationsSettingsPage(coordinator: runtime.notifications)
-                    }
-                }
-                Section("Account") {
-                    if let account = runtime.account {
-                        LabeledContent("Signed in", value: account.login ?? account.provider.rawValue)
-                    }
-                    NavigationLink("Connection diagnostics") { ConnectionScreen(runtime: runtime) }
-                    if runtime.account != nil { Button("Sign out", role: .destructive) { confirmSignOut = true } }
-                }
-                Section("About") {
-                    LabeledContent(
-                        "Ruimte", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0"
-                    )
-                    Text("Projects and sessions stay on your machines. This app connects to them remotely.")
-                        .foregroundStyle(.secondary)
-                }
-            }.navigationTitle("Settings")
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
-                .confirmationDialog("Sign out on this device?", isPresented: $confirmSignOut) {
-                    Button("Sign out", role: .destructive) {
-                        Task {
-                            await runtime.signOut()
-                            dismiss()
-                        }
-                    }
-                }
+            }
+    }
+}
+
+private enum HomeSection: String, CaseIterable, Identifiable {
+    case projects, machines, settings
+    var id: Self { self }
+    var title: String { rawValue.capitalized }
+    var icon: String {
+        switch self {
+        case .projects: "folders"
+        case .machines: "monitor"
+        case .settings: "settings"
         }
     }
 }
