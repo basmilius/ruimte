@@ -2015,6 +2015,26 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   rather than connecting to it. A machine without a link is not a failure, so its dot is hollow and says
   "Not connected" with when it was last connected, kept per machine in localStorage.
 
+### A protocol version on the wire
+
+- One integer, `PROTOCOL_VERSION` in `packages/contracts/src/protocol.ts`, bumped when the wire changes
+  in a way the other side cannot read and never for an addition an older side ignores. Today a client
+  and a daemon work only on the same version.
+- A socket carries `?protocol=N`. A daemon that runs another version upgrades it and closes it at once
+  with code 4406 and `protocol <its version>` as the reason, because a browser reads the code and reason
+  of a close and never the status of a refused upgrade. A client from before versions offers none and is
+  let in, since it could not read a refusal anyway.
+- A daemon from before versions takes every socket, so the client asks `endpoint.info` (which now
+  carries `protocol`) before it calls the link open (`protocolGate` in `transport/protocol.ts`), holds any
+  frame that arrives first, and refuses an answer without a version as the older case.
+- A direct channel carries the version in `direct.challenge`, checked before the client proves anything,
+  and in the proof frames; a daemon that refuses one for its version sends `protocol` on
+  `direct.refused`.
+- What a person reads, on the machine's row and in the palette where a connection fails: "This machine
+  runs an older Ruimte. Update Ruimte there, or restart it to pick up the update." or "This machine runs a
+  newer Ruimte than this app. Update this app." The reconnect loop keeps trying, so a machine that
+  restarts onto the matching version comes back on its own.
+
 ### The machine as a background service
 
 - Phase 6 of remote access: the daemon outlives the app, so a machine stays reachable from station and
@@ -2075,6 +2095,31 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   pointed at `apps/server/dist/mac-<arch>/ruimte` with another label, port 4212 and
   `~/.ruimte-service-try`, so it never meets an installed Ruimte. That exercises launchd, `PATH` and the
   logs; the attach decisions need a packaged app.
+- An update never ends work without asking. The daemon updates itself: the service definition carries
+  `RUIMTE_SERVICE=1`, and a daemon with it and a build id reads `ruimte.build` beside its own binary
+  (`process.execPath`) every minute and a few seconds after a shell exits or a terminal turn ends, never
+  running the new binary to learn its id (`apps/server/src/service/self-update.ts`). A different id with
+  the machine idle is a shutdown as on SIGTERM (snapshots flushed, chats persisted) and an exit, and
+  launchd's `KeepAlive` or systemd's `Restart=always` starts the new binary. A missing or empty id (a
+  bundle halfway through being replaced) is no reason to exit. Every change of verdict is one line in
+  the log. The app's own child and the dev daemon never carry the variable, and the daemon removes it
+  from its environment so a shell does not pass it on.
+- Idle is `workOf` in `apps/server/src/service/work.ts`: no terminal agent in a turn (hook status
+  `running` or `needs-you`, and still live), no chat with an active turn, and no shell with a child
+  process. A child is how the process table says "something runs in this shell"; a background job counts
+  too, and without a process table every live shell counts as work. An agent between turns still has its
+  CLI as the child, so its terminal is not idle either.
+- The app asks `GET /machine/work` before it restarts an older build, with the local secret as a bearer
+  and a 403 for anything else. It answers two counts and nothing more; `/health` stays without it, since
+  what runs on a machine is nobody's business on an unauthenticated route. Nothing running restarts as
+  before. Work running, or a daemon from before the route that cannot say, leaves the old daemon attached
+  (`pendingRestart` in the controller) and the client asks "Ruimte was updated. Restart this machine
+  now?" with the count, "When idle" being the default and what Escape means. The dialog is the client's
+  (`shell/MachineUpdateDialog.tsx`): the old daemon serves the client from the bundle folder, which the
+  update already replaced, so the page is the new one. "When idle" leaves the question answered for the
+  session, a row in This machine keeps "Restart" within reach, and the shell asks the port every 30
+  seconds until the new build answers. A daemon from before this change does not update itself, so on
+  that one transition "When idle" means the next start of the app asks again.
 - Not done: log rotation for `daemon.log`, `LANG` and the rest of the login environment beyond `PATH`
   (the app's own spawn never had them either), and the process panel still looks for the app around the
   daemon, which is launchd now.
@@ -2275,7 +2320,9 @@ a day, several days. Each of the larger ones becomes a GitHub issue when it star
    window, not for the platform). Linux runs, see `docs/LINUX.md`; the signed and notarized
    macOS build, the icon and the update path are done, see `docs/RELEASE.md`.
 3. **The daemon as a background service** is built (see "The machine as a background service")
-   and waits for a packaged release to be tried. The ruimte.app landing page comes later and gets
+   and waits for a packaged release to be tried, updates included (see "A protocol version on the
+   wire"). Accepting a window of previous protocol versions (the last three, say) instead of only the
+   same one is for later, once a bump is in sight. The ruimte.app landing page comes later and gets
    an issue when it starts. A known gap in the checkpoints: the turn diff is of the whole folder,
    so an edit the person made during a turn lands in the card too.
 4. **A third chat provider** (Gemini, Copilot or opencode) as the proof that the backend seam
