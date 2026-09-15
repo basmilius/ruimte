@@ -10,6 +10,11 @@ struct GitPage: View {
     @State private var message = ""
     @State private var commitSheet = false
     @State private var resultMessage: String?
+    @State private var selectedDiff: DiffDestination?
+    private struct DiffDestination: Hashable {
+        let path: String
+        let staged: Bool
+    }
     var body: some View {
         MobileList {
             RemotePageStatus(state: state) { Task { await load() } }
@@ -40,10 +45,9 @@ struct GitPage: View {
                         if !files.isEmpty {
                             Section(group.capitalized) {
                                 ForEach(files, id: \.stableID) { file in
-                                    NavigationLink {
-                                        GitDiffPage(
-                                            client: client, cwd: cwd, path: file.text("path"), staged: group == "staged"
-                                        )
+                                    Button {
+                                        selectedDiff = DiffDestination(
+                                            path: file.text("path"), staged: group == "staged")
                                     } label: {
                                         VStack(alignment: .leading, spacing: 5) {
                                             Text(file.text("path")).lineLimit(2)
@@ -51,7 +55,9 @@ struct GitPage: View {
                                                 .caption.monospacedDigit()
                                             ).foregroundStyle(MobileStyle.muted)
                                         }
+                                        .modifier(MobileSidebarLabel(disclosure: true))
                                     }
+                                    .modifier(MobileSidebarRow())
                                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                         Button(group == "staged" ? "Unstage" : "Stage") {
                                             Task { await stage(file, staged: group != "staged") }
@@ -77,6 +83,9 @@ struct GitPage: View {
             }
         }
         .navigationTitle("Git")
+        .navigationDestination(item: $selectedDiff) { diff in
+            GitDiffPage(client: client, cwd: cwd, path: diff.path, staged: diff.staged)
+        }
         .toolbar {
             Button("Commit", lucideIcon: "circle-check") { commitSheet = true }.disabled(
                 state.busy || !(state.value?.list("files").contains { $0.text("state") == "staged" } ?? false))

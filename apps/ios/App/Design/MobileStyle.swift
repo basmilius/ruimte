@@ -55,6 +55,7 @@ struct MobileList<Content: View>: View {
                 .listRowInsets(EdgeInsets(top: 8, leading: 28, bottom: 8, trailing: 28))
         }
         .modifier(MobileSidebarList())
+        .buttonStyle(MobileListActionStyle())
         .font(.callout)
         .foregroundStyle(MobileStyle.text)
     }

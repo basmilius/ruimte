@@ -320,6 +320,7 @@ struct ProjectItemPage: View {
     let item: JSONValue
     @State private var ready = false
     @State private var problem: String?
+    @State private var selectedMember: String?
     private var isPresent: Bool {
         workspace.views.contains {
             $0.stableID == item.stableID || $0.list("nodes").contains { $0.stableID == item.stableID }
@@ -369,10 +370,23 @@ struct ProjectItemPage: View {
                         client: workspace.client, projectID: workspace.projectID,
                         viewID: current.text("viewId", fallback: current.stableID), kind: current.text("kind"))
                 case "group":
-                    List(current.list("memberIds").compactMap(\.stringValue), id: \.self) { id in
-                        if let node = workspace.views.flatMap({ $0.list("nodes") }).first(where: { $0.stableID == id })
-                        {
-                            NavigationLink(node.text("title")) { ProjectItemPage(workspace: workspace, item: node) }
+                    MobileList {
+                        ForEach(current.list("memberIds").compactMap(\.stringValue), id: \.self) { id in
+                            if let node = workspace.views.flatMap({ $0.list("nodes") }).first(where: {
+                                $0.stableID == id
+                            }) {
+                                Button {
+                                    selectedMember = id
+                                } label: {
+                                    Label {
+                                        Text(node.text("title")).lineLimit(1).truncationMode(.tail)
+                                    } icon: {
+                                        WorkspaceViewIcon(item: node)
+                                    }
+                                    .modifier(MobileSidebarLabel(disclosure: true))
+                                }
+                                .modifier(MobileSidebarRow())
+                            }
                         }
                     }
                 default:
@@ -385,6 +399,11 @@ struct ProjectItemPage: View {
         }
         .modifier(MobilePageSurface())
         .accessibilityIdentifier("workspace.destination.\(item.stableID)")
+        .navigationDestination(item: $selectedMember) { id in
+            if let node = workspace.views.flatMap({ $0.list("nodes") }).first(where: { $0.stableID == id }) {
+                ProjectItemPage(workspace: workspace, item: node)
+            }
+        }
         .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
         .onAppear {
             workspace.session.attention.focus(item.stableID)

@@ -18,17 +18,21 @@ struct CanvasPage: View {
     var body: some View {
         Group {
             if listed {
-                List(canvas.list("nodes"), id: \.stableID) { node in
-                    Button {
-                        selectedID = node.stableID
-                    } label: {
-                        Label {
-                            Text(node.text("title"))
-                        } icon: {
-                            WorkspaceViewIcon(item: node)
+                MobileList {
+                    ForEach(canvas.list("nodes"), id: \.stableID) { node in
+                        Button {
+                            selectedID = node.stableID
+                        } label: {
+                            Label {
+                                Text(node.text("title"))
+                            } icon: {
+                                WorkspaceViewIcon(item: node)
+                            }
+                            .modifier(MobileSidebarLabel(disclosure: true))
                         }
-                        .padding(.vertical, 6)
-                    }.contextMenu { nodeActions(node) }
+                        .modifier(MobileSidebarRow())
+                        .contextMenu { nodeActions(node) }
+                    }
                 }
             } else {
                 MobileScrollViewport { insets in

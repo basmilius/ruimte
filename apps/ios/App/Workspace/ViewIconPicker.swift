@@ -96,12 +96,13 @@ struct ViewIconPicker: View {
                             } label: {
                                 LucideIcon(name: name, size: 24)
                                     .frame(maxWidth: .infinity, minHeight: 52)
-                                    .background(
-                                        item["icon"]?.text("value") == name ? Color.primary.opacity(0.12) : Color.clear,
-                                        in: RoundedRectangle(cornerRadius: 14)
-                                    )
                                     .contentShape(Rectangle())
-                            }.buttonStyle(.plain).accessibilityLabel(name.replacingOccurrences(of: "-", with: " "))
+                            }
+                            .buttonStyle(
+                                MobileSidebarButtonStyle(
+                                    selected: item["icon"]?.text("value") == name, cornerRadius: 14)
+                            )
+                            .accessibilityLabel(name.replacingOccurrences(of: "-", with: " "))
                         }
                     }
                 }.padding()

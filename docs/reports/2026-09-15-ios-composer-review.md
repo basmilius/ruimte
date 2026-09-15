@@ -607,3 +607,11 @@ The final physical iPhone check explicitly opened Ruimte → App: Codex and wait
 Machines and Settings now use the native inline navigation title on iPad, placing their names in the toolbar from the start. iPhone keeps its automatic title behavior. This is a title-display change only; no additional automated tests or simulator were used.
 
 The signed build, formatting and repository checks passed, with existing lint warnings. Installed and launched on both physical devices. Title appearance was not separately captured in this iteration.
+
+## Consistent press feedback across browsing lists, September 16
+
+Audited the app's list actions. Recently closed, machine rows, file entries, Git diffs and machine tools now open through styled Buttons with native navigation destinations registered outside the list rows. This makes their press state follow the same path as project and view buttons. Disclosure icons stay visible. Canvas node lists and group-member lists also use the shared row design.
+
+The plain MobileList supplies the same animated press style to remaining actions, including reconnect/retry and diagnostic controls. Explicit row styles override that default. The pairing-link row and icon-picker grid use the shared feedback too. Disabled buttons dim and destructive actions retain their red foreground. Native settings forms, toolbar controls and menus retain their system interaction styling.
+
+The iPhone build, Swift formatting and repository checks passed, with existing lint warnings. No UI tests, simulator or iPad installation were run, following the revised iteration workflow. Press appearance and navigation remain for hands-on acceptance on the installed iPhone build.

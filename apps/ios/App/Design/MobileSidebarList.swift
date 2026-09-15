@@ -27,38 +27,64 @@ struct MobileSidebarRow: ViewModifier {
 }
 
 struct MobileSidebarLabel: ViewModifier {
+    var disclosure = false
+
     func body(content: Content) -> some View {
-        content
-            .font(.callout)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-            .contentShape(RoundedRectangle(cornerRadius: 8))
+        HStack(spacing: 10) {
+            content.frame(maxWidth: .infinity, alignment: .leading)
+            if disclosure {
+                Image(lucide: "chevron-right", size: 14)
+                    .foregroundStyle(MobileStyle.faint).accessibilityHidden(true)
+            }
+        }
+        .font(.callout)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .contentShape(RoundedRectangle(cornerRadius: 8))
     }
 }
 
-private struct MobileSidebarButtonStyle: ButtonStyle {
-    var selected: Bool
+struct MobileSidebarButtonStyle: ButtonStyle {
+    var selected = false
+    var cornerRadius: CGFloat = 8
 
     func makeBody(configuration: Configuration) -> some View {
-        MobileSidebarButtonSurface(selected: selected, pressed: configuration.isPressed, label: configuration.label)
+        MobileSidebarButtonSurface(
+            selected: selected, pressed: configuration.isPressed, destructive: configuration.role == .destructive,
+            cornerRadius: cornerRadius, label: configuration.label)
+    }
+}
+
+struct MobileListActionStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        MobileSidebarButtonSurface(
+            selected: false, pressed: configuration.isPressed, destructive: configuration.role == .destructive,
+            cornerRadius: 8,
+            label: configuration.label.modifier(MobileSidebarLabel())
+        )
+        .padding(.horizontal, -10)
     }
 }
 
 private struct MobileSidebarButtonSurface<Label: View>: View {
     let selected: Bool
     let pressed: Bool
+    let destructive: Bool
+    let cornerRadius: CGFloat
     let label: Label
     @State private var hovered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isEnabled) private var enabled
 
     var body: some View {
         label
-            .foregroundStyle(selected || hovered || pressed ? MobileStyle.text : MobileStyle.muted)
+            .foregroundStyle(destructive ? .red : selected || hovered || pressed ? MobileStyle.text : MobileStyle.muted)
             .background(
                 pressed ? MobileStyle.pressed : selected ? MobileStyle.active : hovered ? MobileStyle.hover : .clear,
-                in: RoundedRectangle(cornerRadius: 8)
+                in: RoundedRectangle(cornerRadius: cornerRadius)
             )
+            .opacity(enabled ? 1 : 0.45)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: pressed)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovered)
             .onHover { hovered = $0 }

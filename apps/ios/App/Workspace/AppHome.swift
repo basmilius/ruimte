@@ -14,6 +14,7 @@ struct AppHome: View {
     @State private var settings = false
     @State private var pairing = false
     @State private var machines = false
+    @State private var recentProjects = false
     @State private var signIn = false
     @State private var pairAfterDismiss = false
     @State private var search = ""
@@ -260,12 +261,12 @@ struct AppHome: View {
                 MobileStyle.border.frame(height: 1).padding(.vertical, 10)
                     .listRowInsets(EdgeInsets(top: 0, leading: 28, bottom: 0, trailing: 28))
                     .accessibilityHidden(true)
-                NavigationLink {
-                    RecentProjectsPage(runtime: runtime, projects: projects)
+                Button {
+                    recentProjects = true
                 } label: {
                     Label("Recently closed", lucideIcon: "clock-arrow-left")
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .modifier(MobileSidebarLabel())
+                        .modifier(MobileSidebarLabel(disclosure: true))
                 }
                 .modifier(MobileSidebarRow())
                 .accessibilityIdentifier("projects.recent")
@@ -286,6 +287,9 @@ struct AppHome: View {
             }
         }
         .modifier(ProjectListWidth())
+        .navigationDestination(isPresented: $recentProjects) {
+            RecentProjectsPage(runtime: runtime, projects: projects)
+        }
         .searchable(text: $search, prompt: "Search projects or machines")
         .toolbar {
             if (runtime.loading || projects.loading) && !visibleProjects.isEmpty {
@@ -445,6 +449,7 @@ private struct MachinesSheet: View {
     let runtime: AppRuntime
     var embedded = false
     let pair: () -> Void
+    @State private var selectedMachine: String?
     @Environment(\.dismiss) private var dismiss
     var body: some View {
         if embedded { content } else { NavigationStack { content } }
@@ -453,20 +458,28 @@ private struct MachinesSheet: View {
         MobileList {
             Section("Your machines") {
                 ForEach(runtime.machines, id: \.id) { machine in
-                    NavigationLink {
-                        MachineProjectsPage(session: runtime.session(for: machine), runtime: runtime)
+                    Button {
+                        selectedMachine = machine.id
                     } label: {
                         MobileRow(
                             title: machine.name, subtitle: "Projects, files and settings", symbol: "monitor"
                         )
-                        .modifier(MobileSidebarLabel())
+                        .modifier(MobileSidebarLabel(disclosure: true))
                     }
                     .modifier(MobileSidebarRow())
                 }
             }
-            Button("Use a pairing link", lucideIcon: "link") {
+            Button {
                 if !embedded { dismiss() }
                 pair()
+            } label: {
+                Label("Use a pairing link", lucideIcon: "link").modifier(MobileSidebarLabel())
+            }
+            .modifier(MobileSidebarRow())
+        }
+        .navigationDestination(item: $selectedMachine) { id in
+            if let machine = runtime.machines.first(where: { $0.id == id }) {
+                MachineProjectsPage(session: runtime.session(for: machine), runtime: runtime)
             }
         }
         .navigationTitle("Machines")

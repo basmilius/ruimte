@@ -16,6 +16,8 @@ struct MachineProjectsPage: View {
     @State private var createFolder = false
     @State private var loadGeneration = 0
     @State private var unsubscribe: (() -> Void)?
+    @State private var destination: MachineDestination?
+    private enum MachineDestination: Hashable { case files, usage, settings }
     var body: some View {
         MobileList {
             Section {
@@ -66,25 +68,38 @@ struct MachineProjectsPage: View {
             }
             if session.connected {
                 Section("Machine") {
-                    NavigationLink {
-                        MachineFilesPage(client: session.rpc, path: "~")
+                    Button {
+                        destination = .files
                     } label: {
                         Label("Files", lucideIcon: "folder")
+                            .modifier(MobileSidebarLabel(disclosure: true))
                     }
-                    NavigationLink {
-                        MachineUsagePage(client: session.rpc)
+                    .modifier(MobileSidebarRow())
+                    Button {
+                        destination = .usage
                     } label: {
                         Label("Usage", lucideIcon: "chart-no-axes-column")
+                            .modifier(MobileSidebarLabel(disclosure: true))
                     }
-                    NavigationLink {
-                        MachineDetailsPage(session: session)
+                    .modifier(MobileSidebarRow())
+                    Button {
+                        destination = .settings
                     } label: {
                         Label("Machine settings", lucideIcon: "settings")
+                            .modifier(MobileSidebarLabel(disclosure: true))
                     }
+                    .modifier(MobileSidebarRow())
                 }
             }
         }
         .navigationTitle(session.machine.name)
+        .navigationDestination(item: $destination) { destination in
+            switch destination {
+            case .files: MachineFilesPage(client: session.rpc, path: "~")
+            case .usage: MachineUsagePage(client: session.rpc)
+            case .settings: MachineDetailsPage(session: session)
+            }
+        }
         .searchable(text: $search, prompt: "Find a project")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {

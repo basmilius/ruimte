@@ -11,6 +11,11 @@ struct MachineFilesPage: View {
     @State private var state = RemotePageState()
     @AppStorage("ruimte.ios.showHiddenFiles") private var hidden = false
     @State private var search = ""
+    @State private var selectedEntry: FileDestination?
+    private struct FileDestination: Hashable {
+        let path: String
+        let directory: Bool
+    }
     @Environment(\.inProjectSidebar) private var inProjectSidebar
     private var entries: [JSONValue] {
         state.value?.list("entries").filter {
@@ -21,12 +26,9 @@ struct MachineFilesPage: View {
         MobileList {
             RemotePageStatus(state: state) { Task { await load() } }
             ForEach(entries, id: \.stableID) { entry in
-                NavigationLink {
-                    if entry.text("kind") == "directory" {
-                        MachineFilesPage(client: client, path: entry.text("path"))
-                    } else {
-                        FileContentPage(client: client, path: entry.text("path"))
-                    }
+                Button {
+                    selectedEntry = FileDestination(
+                        path: entry.text("path"), directory: entry.text("kind") == "directory")
                 } label: {
                     HStack(spacing: 10) {
                         Image(lucide: entry.text("kind") == "directory" ? "folder" : "file-text", size: 20)
@@ -38,7 +40,7 @@ struct MachineFilesPage: View {
                             }
                         }
                     }
-                    .modifier(MobileSidebarLabel())
+                    .modifier(MobileSidebarLabel(disclosure: true))
                 }
                 .modifier(MobileSidebarRow())
             }
@@ -51,6 +53,13 @@ struct MachineFilesPage: View {
             }
         }
         .navigationTitle(path == "~" ? "Files" : URL(fileURLWithPath: path).lastPathComponent)
+        .navigationDestination(item: $selectedEntry) { entry in
+            if entry.directory {
+                MachineFilesPage(client: client, path: entry.path)
+            } else {
+                FileContentPage(client: client, path: entry.path)
+            }
+        }
         .modifier(FolderSearch(text: $search, inSidebar: inProjectSidebar))
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
