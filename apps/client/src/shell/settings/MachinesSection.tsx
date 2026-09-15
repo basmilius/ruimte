@@ -181,8 +181,8 @@ function IdentityRow({ provider }: { provider: ProviderId }) {
 }
 
 /*
- * How the last sign-in or added provider went, first in the section it came back to: a success that
- * takes itself away, or a failure that waits until it is dismissed or the next attempt starts.
+ * How the last sign-in or added provider went, first in the section it came back to. A success and a
+ * failure alike stay until they are dismissed or the next attempt starts.
  */
 function AccountOutcome() {
     const confirmation = useAccountConfirmation((s) => s.text);

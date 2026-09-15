@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { PROVIDER_NAMES, type Account, type ProviderId } from '@ruimte/pulsar';
-import { SUCCESS_MS } from '@/state/toasts';
 
 /*
  * The line at the top of the account section that says a sign-in or an added provider went through.
@@ -14,27 +13,12 @@ interface ConfirmationState {
 
 export const useAccountConfirmation = create<ConfirmationState>(() => ({ text: null }));
 
-let timer: ReturnType<typeof setTimeout> | null = null;
-
-const stopTimer = (): void => {
-    if (timer !== null) {
-        clearTimeout(timer);
-        timer = null;
-    }
-};
-
-/* Shows the line and takes it away on its own after as long as a toast that went well stays up. */
+/* Stays until the person dismisses it or the next attempt starts, since they may come back to it late. */
 export const confirmAccount = (text: string): void => {
-    stopTimer();
     useAccountConfirmation.setState({ text });
-    timer = setTimeout(() => {
-        timer = null;
-        useAccountConfirmation.setState({ text: null });
-    }, SUCCESS_MS);
 };
 
 export const dismissAccountConfirmation = (): void => {
-    stopTimer();
     useAccountConfirmation.setState({ text: null });
 };
 
