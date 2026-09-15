@@ -3,6 +3,7 @@ import { BrokerPeerFrameSchema, brokerHelloMessage, type BrokerRole, type Broker
 import type { BrokerLimits } from './config.ts';
 import { verifySignature } from './keys.ts';
 import { RateLimiter } from './rate-limit.ts';
+import { noTurn, type TurnProvider } from './turn.ts';
 
 /* What the broker needs of a socket, so the rules can be tested without one. */
 export interface PeerSocket {
@@ -64,10 +65,16 @@ export class Broker {
     private readonly frames: RateLimiter;
     private readonly relays: RateLimiter;
     private readonly announcements: RateLimiter;
+    private readonly iceRequests: RateLimiter;
+    private readonly turn: TurnProvider;
+    private readonly log: Pick<Console, 'warn'>;
 
-    constructor(limits: BrokerLimits, now: () => number = Date.now) {
+    constructor(limits: BrokerLimits, now: () => number = Date.now, turn: TurnProvider = noTurn, log: Pick<Console, 'warn'> = console) {
         this.limits = limits;
         this.now = now;
+        this.turn = turn;
+        this.log = log;
+        this.iceRequests = new RateLimiter(limits.iceRequestsPerMinutePerKey, 60_000, now);
         this.connections = new RateLimiter(limits.connectionsPerMinutePerIp, 60_000, now);
         this.frames = new RateLimiter(limits.framesPerSecondPerIp, 1_000, now);
         this.relays = new RateLimiter(limits.relaysPerMinutePerKey, 60_000, now);
@@ -169,6 +176,9 @@ export class Broker {
                 this.send(peer, { type: 'delivered', id: frame.id });
                 return;
             }
+            case 'ice':
+                void this.ice(peer, frame.id);
+                return;
         }
     }
 
@@ -214,7 +224,7 @@ export class Broker {
                 peer.socket.ping();
             }
         }
-        for (const limiter of [this.connections, this.frames, this.relays, this.announcements]) {
+        for (const limiter of [this.connections, this.frames, this.relays, this.announcements, this.iceRequests]) {
             limiter.prune();
         }
     }
@@ -247,6 +257,34 @@ export class Broker {
         this.announced.set(peer.publicKey, peer);
         peer.state = 'ready';
         this.send(peer, { type: 'ready' });
+    }
+
+    /*
+     * TURN credentials for a key that proved itself, and only for one: they are what lets a stranger
+     * send traffic through the relay, so a socket that never signed gets none, and a key that asks too
+     * often waits like one that relays too often.
+     */
+    private async ice(peer: Peer, id: string): Promise<void> {
+        if (peer.state !== 'ready' || peer.role === null || peer.publicKey === null) {
+            this.refuseFrame(peer, 'Announce before asking for ICE servers');
+            return;
+        }
+        const wait = this.iceRequests.take(peer.publicKey);
+        if (wait > 0) {
+            this.send(peer, { type: 'rate-limited', scope: 'key', retryAfterMs: wait, id });
+            return;
+        }
+        try {
+            const grant = await this.turn.iceServersFor({ role: peer.role, publicKey: peer.publicKey });
+            if (peer.state === 'ready') {
+                this.send(peer, { type: 'ice', id, servers: grant.servers, expiresAt: grant.expiresAt });
+            }
+        } catch (e) {
+            this.log.warn(`Could not hand out ICE servers: ${e instanceof Error ? e.message : String(e)}`);
+            if (peer.state === 'ready') {
+                this.send(peer, { type: 'error', code: 'internal', message: 'The broker could not hand out ICE servers', id });
+            }
+        }
     }
 
     /* A frame that is wrong: said, and before `ready` the end of the socket, since a peer that cannot announce has nothing else to do here. */

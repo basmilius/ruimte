@@ -45,7 +45,15 @@ afterEach(async () => {
 });
 
 const start = (limits: Partial<BrokerLimits> = {}): RunningBroker => {
-    const broker = startBroker({ host: '127.0.0.1', port: 0, names: [], trustProxy: false, trustCloudflare: false, limits: { ...DEFAULT_LIMITS, ...limits } });
+    const broker = startBroker({
+        host: '127.0.0.1',
+        port: 0,
+        names: [],
+        trustProxy: false,
+        trustCloudflare: false,
+        limits: { ...DEFAULT_LIMITS, ...limits },
+        turn: { kind: 'none' }
+    });
     running.push(broker);
     return broker;
 };

@@ -12,7 +12,8 @@ try {
 const running = startBroker(config);
 const names = config.names.length > 0 ? config.names.join(', ') : 'any Host header';
 const behind = [config.trustProxy ? 'a proxy' : null, config.trustCloudflare ? 'Cloudflare' : null].filter((entry) => entry !== null).join(' and ');
-console.log(`pulsar broker listening on ws://${config.host}:${running.port} (answers to ${names}${behind === '' ? '' : `, behind ${behind}`})`);
+const turn = config.turn.kind === 'none' ? 'no TURN' : config.turn.kind === 'shared-secret' ? `TURN at ${config.turn.urls.join(', ')}` : 'TURN from Cloudflare';
+console.log(`pulsar broker listening on ws://${config.host}:${running.port} (answers to ${names}${behind === '' ? '' : `, behind ${behind}`}, ${turn})`);
 
 const shutdown = (signal: string): void => {
     console.log(`pulsar broker received ${signal}, closing sockets`);

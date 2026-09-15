@@ -39,6 +39,13 @@ Every flag also reads an environment variable, `PULSAR_BROKER_` plus the flag in
 | `--key-announces-per-minute`  | `10`        | Announcements per key per minute; one over it gets `rate-limited` and a closed socket, and the socket that already holds the key stays.                                                                                                     |
 | `--heartbeat-seconds`         | `25`        | A ping this often; a socket that answers nothing for two heartbeats is dropped. At most 40, because a daemon gives up on a broker it has not heard from in 90 seconds.                                                                      |
 | `--hello-timeout-seconds`     | `10`        | Time from open to a verified signature.                                                                                                                                                                                                     |
+| `--key-ice-per-minute`        | `10`        | `ice` questions per key per minute; one over it gets `rate-limited` with its id.                                                                                                                                                           |
+| `--turn`                      | `none`      | Where TURN credentials come from: `none`, `shared-secret` or `cloudflare`. See "TURN" below.                                                                                                                                                |
+| `--turn-secret-file`          | none        | With `shared-secret`: the file with coturn's `static-auth-secret`, read on every question.                                                                                                                                                  |
+| `--turn-url`                  | none        | With `shared-secret`: a `turn:` or `turns:` URL to hand out. Repeatable (`PULSAR_BROKER_TURN_URLS` takes a comma-separated list).                                                                                                          |
+| `--turn-ttl-seconds`          | `86400`     | How long a credential lives, from 60 seconds to a week.                                                                                                                                                                                    |
+| `--cloudflare-turn-key-id`    | none        | With `cloudflare`: the TURN key id of Cloudflare's service.                                                                                                                                                                                |
+| `--cloudflare-turn-token-file` | none       | With `cloudflare`: a file with that key's API token.                                                                                                                                                                                       |
 
 A bucket fills to its limit and refills evenly over its window, so the limits are also the bursts.
 
@@ -63,6 +70,8 @@ One JSON frame per WebSocket message, all shapes in `packages/pulsar/src/broker.
 2. peer `prove { signature }` over `brokerHelloMessage(broker, role, publicKey, nonce)`, broker `ready`
 3. peer `relay { id, to, envelope, signature }`, broker `delivered { id }` to the sender and
    `relayed { from, envelope, signature }` to the receiver, or `error not-connected` with the id
+4. peer `ice { id }`, broker `ice { id, servers, expiresAt }` with the ICE servers this key may use (none
+   without TURN), `rate-limited` or `error internal` with the id
 
 A machine relays to clients and a client to machines; a relay to the same role is `not-connected`. A
 second announcement of a key replaces the first socket, which hears `error replaced` and is closed with 4009. The close codes: 4002 a bad frame before `ready`, 4003 a bad signature, 4008 a hello timeout or a
@@ -146,6 +155,51 @@ The unit raises the descriptor limit to 65536, since every machine that is onlin
 update: `git pull`, `bun install`, `sudo systemctl restart pulsar-broker`. A restart drops every socket;
 the daemons come back within their backoff (at most 30 seconds, with jitter), and open channels are not
 affected.
+
+## TURN
+
+A direct connection that ICE cannot make runs through a TURN relay, and the broker hands out the
+credentials in its `ice` frame: TURN REST credentials (`use-auth-secret`) bound to the key that asked,
+valid for a day. ICE still prefers a direct pair; the relay is only one more candidate. Nothing changes
+until `--turn` is set.
+
+To run coturn on the broker's host:
+
+1. Point a DNS-only name at the host (`turn.ruimte.app`, no Cloudflare proxy: it carries no UDP), and open
+   UDP and TCP 3478, TCP 5349 and UDP 49152 to 49999.
+2. Install coturn from the distribution, and create one secret for coturn and the broker:
+
+    ```sh
+    sudo groupadd --system ruimte-turn
+    sudo install -d -m 0750 -o root -g ruimte-turn /etc/ruimte
+    sudo sh -c 'umask 027; openssl rand -base64 48 > /etc/ruimte/turn-secret'
+    sudo chgrp ruimte-turn /etc/ruimte/turn-secret
+    ```
+
+3. Copy `deploy/turnserver.conf` to `/etc/coturn/turnserver.conf` with `PUBLIC_IP` replaced by the host's
+   address, and `deploy/coturn.service.d/ruimte.conf` to `/etc/systemd/system/coturn.service.d/`. The
+   drop-in writes the secret into a runtime copy of the config at start, since coturn cannot read it from
+   a file and a flag would show it in the process list.
+4. For TLS on 5349, put a certificate for the name at `/etc/coturn/certs/turn.ruimte.app.crt` and `.key`,
+   readable by the `turnserver` user. Without one coturn starts without its TLS listener.
+5. `sudo systemctl daemon-reload && sudo systemctl enable --now coturn`, then copy
+   `deploy/pulsar-broker.service.d/turn.conf` to `/etc/systemd/system/pulsar-broker.service.d/` (add the
+   `turns:` URL once the certificate is there) and restart the broker.
+6. Check it on the host: `turnutils_uclient -u <username> -w <password> -e 1.1.1.1 127.0.0.1` with a
+   credential from the broker's `ice` frame gets an allocation, and `journalctl -u coturn` logs it.
+
+The config refuses private, loopback, link-local, CGNAT and multicast peers, and the host's own address,
+so the relay reaches nothing behind it. It also refuses two peers that are both relayed on this host,
+since their allocations live on that address; `allowed-peer-ip=<address>` after the deny list allows
+that. `bps-capacity` counts allocations more than traffic: coturn sets `max-bps` aside for each one.
+
+To use Cloudflare's TURN service instead, create a TURN key there, put its API token in a file only the
+broker can read, and start the broker with `--turn cloudflare --cloudflare-turn-key-id <id>
+--cloudflare-turn-token-file <file>`. One set of credentials serves every peer until two thirds of its
+lifetime, so the API is asked a handful of times a day.
+
+`apps/server/scripts/webrtc-probe.ts` takes `--turn <url> --turn-user <u> --turn-pass <p>` and
+`--relay-only`, to try the relay between two machines with werift on both ends.
 
 ## Behind Cloudflare's proxy
 

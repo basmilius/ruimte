@@ -6,7 +6,15 @@ import { RateLimiter } from './rate-limit.ts';
 describe('parseBrokerArgs', () => {
     test('defaults to loopback, its own port and the default limits', () => {
         const config = parseBrokerArgs([], {});
-        expect(config).toEqual({ host: '127.0.0.1', port: DEFAULT_PORT, names: [], trustProxy: false, trustCloudflare: false, limits: DEFAULT_LIMITS });
+        expect(config).toEqual({
+            host: '127.0.0.1',
+            port: DEFAULT_PORT,
+            names: [],
+            trustProxy: false,
+            trustCloudflare: false,
+            limits: DEFAULT_LIMITS,
+            turn: { kind: 'none' }
+        });
     });
 
     test('flags win over the environment, and the environment over the defaults', () => {
@@ -30,6 +38,43 @@ describe('parseBrokerArgs', () => {
         expect(() => parseBrokerArgs(['--heartbeat-seconds', '90'], {})).toThrow(/--heartbeat-seconds/);
         expect(() => parseBrokerArgs([], { PULSAR_BROKER_IP_FRAMES_PER_SECOND: '2.5' })).toThrow(/--ip-frames-per-second/);
         expect(() => parseBrokerArgs(['--database', 'x'], {})).toThrow();
+    });
+});
+
+describe('the TURN flags', () => {
+    test('pick a provider from a flag or the environment, with the ttl a day unless said', () => {
+        expect(
+            parseBrokerArgs(['--turn', 'shared-secret', '--turn-secret-file', '/etc/turn-secret', '--turn-url', 'turn:turn.example.com:3478?transport=udp'], {})
+                .turn
+        ).toEqual({ kind: 'shared-secret', secretFile: '/etc/turn-secret', urls: ['turn:turn.example.com:3478?transport=udp'], ttlSeconds: 86_400 });
+        expect(
+            parseBrokerArgs([], {
+                PULSAR_BROKER_TURN: 'shared-secret',
+                PULSAR_BROKER_TURN_SECRET_FILE: '/etc/turn-secret',
+                PULSAR_BROKER_TURN_URLS: 'turn:a.example.com:3478, turns:a.example.com:5349?transport=tcp',
+                PULSAR_BROKER_TURN_TTL_SECONDS: '3600'
+            }).turn
+        ).toEqual({
+            kind: 'shared-secret',
+            secretFile: '/etc/turn-secret',
+            urls: ['turn:a.example.com:3478', 'turns:a.example.com:5349?transport=tcp'],
+            ttlSeconds: 3600
+        });
+        expect(parseBrokerArgs(['--turn', 'cloudflare', '--cloudflare-turn-key-id', 'k', '--cloudflare-turn-token-file', '/etc/cf'], {}).turn).toEqual({
+            kind: 'cloudflare',
+            keyId: 'k',
+            tokenFile: '/etc/cf',
+            ttlSeconds: 86_400
+        });
+        expect(parseBrokerArgs(['--key-ice-per-minute', '3'], {}).limits.iceRequestsPerMinutePerKey).toBe(3);
+    });
+
+    test('refuse a provider without what it needs, a URL that is no TURN URL and a kind they do not know', () => {
+        expect(() => parseBrokerArgs(['--turn', 'shared-secret', '--turn-url', 'turn:a.example.com'], {})).toThrow(/--turn-secret-file/);
+        expect(() => parseBrokerArgs(['--turn', 'shared-secret', '--turn-secret-file', '/s', '--turn-url', 'stun:a.example.com'], {})).toThrow(/--turn-url/);
+        expect(() => parseBrokerArgs(['--turn', 'cloudflare'], {})).toThrow(/--cloudflare-turn-key-id/);
+        expect(() => parseBrokerArgs(['--turn', 'twilio'], {})).toThrow(/--turn/);
+        expect(() => parseBrokerArgs(['--turn-ttl-seconds', '5'], {})).toThrow(/--turn-ttl-seconds/);
     });
 });
 

@@ -1,5 +1,6 @@
 import { Broker, type Peer } from './broker.ts';
-import { clientIpOf, nameFor, type BrokerConfig } from './config.ts';
+import { clientIpOf, nameFor, type BrokerConfig, type TurnConfig } from './config.ts';
+import { cloudflareTurn, noTurn, sharedSecretTurn, type TurnProvider } from './turn.ts';
 
 interface SocketData {
     ip: string;
@@ -13,9 +14,20 @@ export interface RunningBroker {
     stop(): Promise<void>;
 }
 
+export const turnProviderFor = (turn: TurnConfig): TurnProvider => {
+    switch (turn.kind) {
+        case 'none':
+            return noTurn;
+        case 'shared-secret':
+            return sharedSecretTurn(turn);
+        case 'cloudflare':
+            return cloudflareTurn(turn);
+    }
+};
+
 /* The broker on a Bun server: `/health` for a monitor, and a WebSocket upgrade on any other path. */
 export const startBroker = (config: BrokerConfig): RunningBroker => {
-    const broker = new Broker(config.limits);
+    const broker = new Broker(config.limits, Date.now, turnProviderFor(config.turn));
 
     const server = Bun.serve<SocketData>({
         hostname: config.host,

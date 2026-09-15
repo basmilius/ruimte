@@ -10,6 +10,8 @@ export interface BrokerLimits {
     framesPerSecondPerIp: number;
     relaysPerMinutePerKey: number;
     announcesPerMinutePerKey: number;
+    /* A daemon asks after every announcement and before its credentials expire, a client once per attempt. */
+    iceRequestsPerMinutePerKey: number;
     /* How often a socket is pinged; one that answers nothing for twice this long is dropped. */
     heartbeatMs: number;
     /* How long a socket may take from opening to a verified signature. */
@@ -30,7 +32,16 @@ export interface BrokerConfig {
     /* Read the client address from `CF-Connecting-IP`, but only on a connection that came from Cloudflare's edge. */
     trustCloudflare: boolean;
     limits: BrokerLimits;
+    turn: TurnConfig;
 }
+
+/* Where TURN credentials come from; `none` unless configured, so a broker hands out nothing by default. */
+export type TurnConfig =
+    | { kind: 'none' }
+    | { kind: 'shared-secret'; secretFile: string; urls: string[]; ttlSeconds: number }
+    | { kind: 'cloudflare'; keyId: string; tokenFile: string; ttlSeconds: number };
+
+export const DEFAULT_TURN_TTL_SECONDS = 86_400;
 
 export const DEFAULT_HOST = '127.0.0.1';
 export const DEFAULT_PORT = 4400;
@@ -42,6 +53,7 @@ export const DEFAULT_LIMITS: BrokerLimits = {
     framesPerSecondPerIp: 20,
     relaysPerMinutePerKey: 60,
     announcesPerMinutePerKey: 10,
+    iceRequestsPerMinutePerKey: 10,
     heartbeatMs: 25_000,
     helloTimeoutMs: 10_000
 };
@@ -75,6 +87,7 @@ const LIMIT_FLAGS = [
     'ip-frames-per-second',
     'key-relays-per-minute',
     'key-announces-per-minute',
+    'key-ice-per-minute',
     'heartbeat-seconds',
     'hello-timeout-seconds'
 ] as const;
@@ -88,6 +101,12 @@ export const parseBrokerArgs = (argv: string[], env: Record<string, string | und
             name: { type: 'string', multiple: true, default: [] },
             'trust-proxy': { type: 'boolean', default: false },
             'trust-cloudflare': { type: 'boolean', default: false },
+            turn: { type: 'string' },
+            'turn-secret-file': { type: 'string' },
+            'turn-url': { type: 'string', multiple: true, default: [] },
+            'turn-ttl-seconds': { type: 'string' },
+            'cloudflare-turn-key-id': { type: 'string' },
+            'cloudflare-turn-token-file': { type: 'string' },
             ...Object.fromEntries(LIMIT_FLAGS.map((flag) => [flag, { type: 'string' as const }]))
         },
         strict: true,
@@ -110,11 +129,49 @@ export const parseBrokerArgs = (argv: string[], env: Record<string, string | und
             framesPerSecondPerIp: number('ip-frames-per-second', 1, 100_000, DEFAULT_LIMITS.framesPerSecondPerIp),
             relaysPerMinutePerKey: number('key-relays-per-minute', 1, 100_000, DEFAULT_LIMITS.relaysPerMinutePerKey),
             announcesPerMinutePerKey: number('key-announces-per-minute', 1, 100_000, DEFAULT_LIMITS.announcesPerMinutePerKey),
+            iceRequestsPerMinutePerKey: number('key-ice-per-minute', 1, 100_000, DEFAULT_LIMITS.iceRequestsPerMinutePerKey),
             // A peer gives up on a broker it has not heard from in 90 seconds, so a ping has to come well inside that.
             heartbeatMs: number('heartbeat-seconds', 1, 40, DEFAULT_LIMITS.heartbeatMs / 1000) * 1000,
             helloTimeoutMs: number('hello-timeout-seconds', 1, 120, DEFAULT_LIMITS.helloTimeoutMs / 1000) * 1000
-        }
+        },
+        turn: turnConfigOf(flags, values['turn-url'], env, number)
     };
+};
+
+const turnConfigOf = (
+    flags: Record<string, string | undefined>,
+    urlFlags: string[],
+    env: Record<string, string | undefined>,
+    number: (flag: string, min: number, max: number, fallback: number) => number
+): TurnConfig => {
+    const text = (flag: string): string => (flags[flag] ?? env[envNameOf(flag)] ?? '').trim();
+    const kind = text('turn') || 'none';
+    // Credentials that outlive a day are what a leaked one costs; a minute is shorter than an attempt.
+    const ttlSeconds = number('turn-ttl-seconds', 60, 7 * 86_400, DEFAULT_TURN_TTL_SECONDS);
+    if (kind === 'none') {
+        return { kind: 'none' };
+    }
+    if (kind === 'shared-secret') {
+        const urls = (urlFlags.length > 0 ? urlFlags : (env.PULSAR_BROKER_TURN_URLS ?? '').split(',')).map((url) => url.trim()).filter((url) => url !== '');
+        const secretFile = text('turn-secret-file');
+        if (secretFile === '' || urls.length === 0) {
+            throw new Error('--turn shared-secret needs --turn-secret-file and at least one --turn-url');
+        }
+        const wrong = urls.find((url) => !/^turns?:/.test(url));
+        if (wrong !== undefined) {
+            throw new Error(`Invalid --turn-url: ${wrong} (a turn: or turns: URL)`);
+        }
+        return { kind, secretFile, urls, ttlSeconds };
+    }
+    if (kind === 'cloudflare') {
+        const keyId = text('cloudflare-turn-key-id');
+        const tokenFile = text('cloudflare-turn-token-file');
+        if (keyId === '' || tokenFile === '') {
+            throw new Error('--turn cloudflare needs --cloudflare-turn-key-id and --cloudflare-turn-token-file');
+        }
+        return { kind, keyId, tokenFile, ttlSeconds };
+    }
+    throw new Error(`Invalid --turn: ${kind} (none, shared-secret or cloudflare)`);
 };
 
 /*

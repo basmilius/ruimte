@@ -11,6 +11,7 @@ import {
 } from '@ruimte/pulsar';
 import { Broker, CLOSE, type Peer, type PeerSocket } from './broker.ts';
 import { DEFAULT_LIMITS, type BrokerLimits } from './config.ts';
+import type { TurnPeer, TurnProvider } from './turn.ts';
 
 interface TestKey {
     publicKey: string;
@@ -58,7 +59,8 @@ class FakeSocket implements PeerSocket {
 }
 
 /* A broker on a clock that stands still, so no rate limit refills halfway through a test. */
-const newBroker = (limits: Partial<BrokerLimits> = {}): Broker => new Broker({ ...DEFAULT_LIMITS, ...limits }, () => 0);
+const newBroker = (limits: Partial<BrokerLimits> = {}, turn?: TurnProvider): Broker =>
+    new Broker({ ...DEFAULT_LIMITS, ...limits }, () => 0, turn, { warn: () => undefined });
 
 let nextAddress = 1;
 
@@ -267,6 +269,91 @@ describe('the broker between peers', () => {
         const other = new FakeSocket();
         broker.message(broker.open(other, '192.0.2.2', BROKER_NAME), 'not json');
         expect(other.closed).toBe(CLOSE.badFrame);
+    });
+});
+
+describe('ICE servers from the broker', () => {
+    const fakeTurn = () => {
+        const asked: TurnPeer[] = [];
+        let failing = false;
+        const provider: TurnProvider = {
+            iceServersFor: async (peer) => {
+                asked.push(peer);
+                if (failing) {
+                    throw new Error('secret file missing');
+                }
+                return { servers: [{ urls: 'turn:turn.example.com:3478', username: `1:${peer.publicKey.slice(0, 4)}`, credential: 'x' }], expiresAt: 5_000 };
+            }
+        };
+        return {
+            provider,
+            asked,
+            fail: () => {
+                failing = true;
+            }
+        };
+    };
+
+    test('a key that proved itself gets the servers of the provider for its role and key, under the id it asked with', async () => {
+        const turn = fakeTurn();
+        const broker = newBroker({}, turn.provider);
+        const machine = connect(broker, 'machine', newKey());
+        await settle();
+        const id = machine.peer.ice();
+        await settle();
+        expect(turn.asked).toEqual([{ role: 'machine', publicKey: machine.key.publicKey }]);
+        expect(framesOf(machine.state, 'ice')).toEqual([
+            {
+                type: 'ice',
+                id: id!,
+                servers: [{ urls: 'turn:turn.example.com:3478', username: `1:${machine.key.publicKey.slice(0, 4)}`, credential: 'x' }],
+                expiresAt: 5_000
+            }
+        ]);
+    });
+
+    test('a broker without TURN answers no servers', async () => {
+        const broker = newBroker();
+        const client = connect(broker, 'client', newKey());
+        await settle();
+        const id = client.peer.ice();
+        await settle();
+        expect(framesOf(client.state, 'ice')).toEqual([{ type: 'ice', id: id!, servers: [], expiresAt: null }]);
+    });
+
+    test('a socket that never signed gets nothing, and is closed like any frame before its signature', async () => {
+        const turn = fakeTurn();
+        const broker = newBroker({}, turn.provider);
+        const socket = new FakeSocket();
+        broker.message(broker.open(socket, '192.0.2.9', BROKER_NAME), JSON.stringify({ type: 'ice', id: 'ice-1' }));
+        await settle();
+        expect(turn.asked).toEqual([]);
+        expect(socket.closed).toBe(CLOSE.badFrame);
+        expect(socket.sent.map((frame) => frame.type)).toEqual(['error']);
+    });
+
+    test('a key that asks too often is told to wait with the id, and a provider that fails is an internal error with the id', async () => {
+        const turn = fakeTurn();
+        const broker = newBroker({ iceRequestsPerMinutePerKey: 2 }, turn.provider);
+        const client = connect(broker, 'client', newKey());
+        await settle();
+        const ids = [client.peer.ice(), client.peer.ice(), client.peer.ice()];
+        await settle();
+        expect(framesOf(client.state, 'ice').map((frame) => frame.id)).toEqual([ids[0]!, ids[1]!]);
+        const limited = framesOf(client.state, 'rate-limited');
+        expect(limited).toHaveLength(1);
+        expect(limited[0]).toMatchObject({ scope: 'key', id: ids[2]! });
+        expect(turn.asked).toHaveLength(2);
+
+        turn.fail();
+        const other = connect(broker, 'machine', newKey());
+        await settle();
+        const failedId = other.peer.ice();
+        await settle();
+        expect(framesOf(other.state, 'error')).toEqual([
+            { type: 'error', code: 'internal', message: 'The broker could not hand out ICE servers', id: failedId! }
+        ]);
+        expect(other.state.closed).toBeNull();
     });
 });
 
