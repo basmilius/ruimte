@@ -124,6 +124,7 @@ struct AppHome: View {
                     } actions: {
                         if runtime.machines.isEmpty {
                             Button("Use a pairing link") { pairing = true }.buttonStyle(.borderedProminent)
+                                .foregroundStyle(MobileStyle.onAccent)
                         } else {
                             Button("View machines") { machines = true }
                         }
@@ -234,6 +235,9 @@ private struct ProjectHomeGlyph: View {
         Group {
             if summary["icon"]?.text("kind") == "emoji" {
                 Text(summary["icon"]!.text("value")).font(.title2)
+            } else if summary["icon"]?.text("kind") == "lucide" {
+                LucideIcon(name: summary["icon"]!.text("value"), size: 22)
+                    .foregroundStyle(MobileStyle.accent)
             } else {
                 Text(initial).font(.title3.weight(.semibold)).foregroundStyle(MobileStyle.accent)
             }

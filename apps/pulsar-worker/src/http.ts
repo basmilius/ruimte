@@ -33,9 +33,9 @@ export const noContent = (): Response => new Response(null, { status: 204, heade
 export const clientIp = (request: Request): string => request.headers.get('cf-connecting-ip') ?? 'unknown';
 
 // A parsed body, or the response that says why there is none.
-export const readBody = async <T>(request: Request, schema: z.ZodType<T>): Promise<{ value: T } | { response: Response }> => {
+export const readBody = async <T>(request: Request, schema: z.ZodType<T>, maxBytes = MAX_BODY_BYTES): Promise<{ value: T } | { response: Response }> => {
     const text = await request.text();
-    if (text.length > MAX_BODY_BYTES) {
+    if (text.length > maxBytes) {
         return { response: failure('bad-request', 'The body is too large') };
     }
     let raw: unknown;

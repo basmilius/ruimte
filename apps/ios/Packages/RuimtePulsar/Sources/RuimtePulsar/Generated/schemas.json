@@ -516,6 +516,81 @@
       "lastSeenAt"
     ]
   },
+  "NativeAppleCompletePayloadSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "attempt": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{43}$"
+      },
+      "identityToken": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 16384
+      },
+      "authorizationCode": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096
+      }
+    },
+    "required": [
+      "attempt",
+      "identityToken",
+      "authorizationCode"
+    ]
+  },
+  "NativeAppleCompleteResultSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "code": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{43}$"
+      }
+    },
+    "required": [
+      "code"
+    ]
+  },
+  "NativeAppleStartPayloadSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "codeChallenge": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{43}$"
+      }
+    },
+    "required": [
+      "codeChallenge"
+    ]
+  },
+  "NativeAppleStartResultSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "attempt": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{43}$"
+      },
+      "nonce": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_-]{43}$"
+      },
+      "expiresAt": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      }
+    },
+    "required": [
+      "attempt",
+      "nonce",
+      "expiresAt"
+    ]
+  },
   "ProviderIdSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "string",

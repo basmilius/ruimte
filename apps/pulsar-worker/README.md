@@ -11,24 +11,26 @@ are under "The address book" in `docs/DECISIONS.md`.
 
 ## Routes
 
-| Route                              | What                                                                    |
-| ---------------------------------- | ----------------------------------------------------------------------- |
-| `GET /health`                      | The public statement key the Worker signs with and which providers work |
-| `GET /auth/<provider>/start`       | Opened by the app in the system browser; `link` adds the provider to the signed-in account |
-| `GET /auth/github/callback`        | Where GitHub sends the browser back                                     |
-| `POST /auth/apple/callback`        | Where Apple posts the browser back (`response_mode=form_post`)          |
-| `POST /v1/session`                 | The one-time code, the PKCE verifier and the key the session is bound to |
-| `POST /v1/session/refresh`         | A new access and refresh token, signed with the session key             |
-| `DELETE /v1/session`               | Sign out                                                                |
-| `GET /v1/providers`                | The providers that are configured, so a client only offers those       |
-| `GET /v1/account`                  | The account and its identities                                          |
-| `POST /v1/account/link`            | A single-use link token for the start URL, bound to this session        |
-| `POST /v1/account/identities`      | The code of a link login with its verifier, from the same session        |
-| `DELETE /v1/account/identities/<provider>` | Remove an identity; the last one is refused                     |
-| `GET /v1/machines`                 | The machines on this account, and the ids a person removed from it      |
-| `POST /v1/machines`                | Register a machine with the daemon's signature; `automatic` skips a removed one |
-| `DELETE /v1/machines/<id>`         | Take a machine off the list and remember that it was removed            |
-| `POST /v1/statements`              | A signed statement for one machine and one client key, two minutes      |
+| Route                                      | What                                                                                       |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `GET /health`                              | The public statement key the Worker signs with and which providers work                    |
+| `GET /auth/<provider>/start`               | Opened by the app in the system browser; `link` adds the provider to the signed-in account |
+| `GET /auth/github/callback`                | Where GitHub sends the browser back                                                        |
+| `POST /auth/apple/callback`                | Where Apple posts the browser back (`response_mode=form_post`)                             |
+| `POST /v1/apple/start`                     | Native Apple sign-in attempt and nonce, bound to the app's PKCE challenge                  |
+| `POST /v1/apple/complete`                  | Apple credentials become a one-time code for the standard session exchange                 |
+| `POST /v1/session`                         | The one-time code, the PKCE verifier and the key the session is bound to                   |
+| `POST /v1/session/refresh`                 | A new access and refresh token, signed with the session key                                |
+| `DELETE /v1/session`                       | Sign out                                                                                   |
+| `GET /v1/providers`                        | The providers that are configured, so a client only offers those                           |
+| `GET /v1/account`                          | The account and its identities                                                             |
+| `POST /v1/account/link`                    | A single-use link token for the start URL, bound to this session                           |
+| `POST /v1/account/identities`              | The code of a link login with its verifier, from the same session                          |
+| `DELETE /v1/account/identities/<provider>` | Remove an identity; the last one is refused                                                |
+| `GET /v1/machines`                         | The machines on this account, and the ids a person removed from it                         |
+| `POST /v1/machines`                        | Register a machine with the daemon's signature; `automatic` skips a removed one            |
+| `DELETE /v1/machines/<id>`                 | Take a machine off the list and remember that it was removed                               |
+| `POST /v1/statements`                      | A signed statement for one machine and one client key, two minutes                         |
 
 ## Local dev
 
@@ -100,15 +102,15 @@ loopback listener, `https://station.ruimte.app/pulsar/callback` and the Vite dev
 
 ## Secrets
 
-| Secret                  | What                                                             |
-| ----------------------- | ---------------------------------------------------------------- |
-| `STATEMENT_PRIVATE_KEY` | The private half of the statement key, pkcs8 DER in base64url    |
-| `GITHUB_CLIENT_ID`      | From the GitHub OAuth app                                        |
-| `GITHUB_CLIENT_SECRET`  | From the GitHub OAuth app                                        |
-| `APPLE_TEAM_ID`         | The team id of the Apple Developer account, ten characters       |
-| `APPLE_KEY_ID`          | The id of the Sign in with Apple key, ten characters             |
-| `APPLE_PRIVATE_KEY`     | The whole `.p8` file of that key, armor lines included           |
-| `APPLE_CLIENT_ID`       | The Services ID, `app.ruimte.pulsar`                             |
+| Secret                  | What                                                          |
+| ----------------------- | ------------------------------------------------------------- |
+| `STATEMENT_PRIVATE_KEY` | The private half of the statement key, pkcs8 DER in base64url |
+| `GITHUB_CLIENT_ID`      | From the GitHub OAuth app                                     |
+| `GITHUB_CLIENT_SECRET`  | From the GitHub OAuth app                                     |
+| `APPLE_TEAM_ID`         | The team id of the Apple Developer account, ten characters    |
+| `APPLE_KEY_ID`          | The id of the Sign in with Apple key, ten characters          |
+| `APPLE_PRIVATE_KEY`     | The whole `.p8` file of that key, armor lines included        |
+| `APPLE_CLIENT_ID`       | The Services ID, `app.ruimte.pulsar`                          |
 
 ```sh
 cd apps/pulsar-worker
@@ -157,9 +159,40 @@ No scope is asked, so no email relay has to be configured. If the portal asks to
 the file it hands out in the `APPLE_DOMAIN_ASSOCIATION` secret: the Worker serves it at
 `/.well-known/apple-developer-domain-association.txt`.
 
-The iOS app will sign in natively later, and its `id_token` carries `app.ruimte.mobile` as the audience
-rather than the Services ID; `verifyAppleIdToken` takes a list of audiences for that. A key stays valid
-until it is revoked; a new key means a new `APPLE_KEY_ID` and `APPLE_PRIVATE_KEY`.
+### Native iOS sign-in
+
+The iOS app uses Apple's system authorization sheet. It sends a PKCE challenge to `/v1/apple/start`,
+then passes the returned nonce unchanged to `ASAuthorizationAppleIDRequest`. The attempt expires after
+ten minutes. `/v1/apple/complete` spends it atomically before verifying the identity token and exchanging
+the authorization code with Apple. Both identity tokens must have Apple's signature, the native audience,
+the same subject and the attempt's nonce. Expired tokens and attempts are refused.
+
+The native audience and client-secret subject are fixed to `app.ruimte.mobile` through
+`APPLE_NATIVE_CLIENT_ID` in `packages/pulsar`. The native token request has no `redirect_uri`.
+The web route keeps `APPLE_CLIENT_ID`, the Services ID. Because that Services ID is grouped under the
+same primary App ID, native and web Apple identities resolve to the same Ruimte account.
+
+A successful completion returns a login code valid for sixty seconds. The app exchanges it at
+`/v1/session` with its original PKCE verifier, the existing `ruimte://pulsar/callback` redirect value and
+a signature from its device session key. This redirect value binds the exchange; native login opens no
+browser or callback URL. Both native routes share the existing login IP rate limit. They never store
+Apple identity, access or refresh tokens.
+
+Apply migration `0007_native_apple.sql` before deploying this Worker. It only adds the attempt table and
+its expiry index, so the previous Worker can keep serving requests during migration. The daily cleanup
+removes unused expired attempts. Existing Apple configuration needs no new secrets: native login uses
+`APPLE_TEAM_ID`, `APPLE_KEY_ID` and `APPLE_PRIVATE_KEY`, with the key authorized for the primary App ID
+`app.ruimte.mobile`. The iOS app needs the matching Sign in with Apple capability and provisioning profile.
+Until this Worker is deployed, the two native routes return `404` from the previous version. With missing
+Apple signing credentials, the new Worker returns `503` with `not-configured`.
+
+The tests mock Apple's public keys and token endpoint with throwaway signing keys and run the routes
+against real D1 through Miniflare. They cover native and web account consistency, one-time consumption,
+wrong signatures, audiences and nonces, mismatched subjects, expiry, rate limits and the final signed
+session exchange. Provisioned-device authorization against Apple still requires a configured deployment.
+
+A key stays valid until it is revoked; a new key means a new `APPLE_KEY_ID` and `APPLE_PRIVATE_KEY`.
+Apple documents native code exchange in [Token validation](https://developer.apple.com/documentation/signinwithapplerestapi/generate-and-validate-tokens).
 
 ## Rotating the statement key
 

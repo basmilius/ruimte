@@ -67,11 +67,12 @@ struct PairMachinePage: View {
                         Task { await pair() }
                     } label: {
                         HStack {
-                            if pairing { ProgressView().tint(.primary) }
+                            if pairing { ProgressView().tint(MobileStyle.onAccent) }
                             Text(pairing ? "Connecting…" : "Connect computer")
                         }.font(.body.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 32)
                     }
                     .buttonStyle(.borderedProminent)
+                    .foregroundStyle(MobileStyle.onAccent)
                     .disabled(pairing || (try? SecurePairingLink(text)) == nil)
                 } footer: {
                     Text("No account needed. Your projects stay on your computer.")

@@ -82,6 +82,30 @@ export const LoginStartQuerySchema = z.object({
 });
 export type LoginStartQuery = z.infer<typeof LoginStartQuerySchema>;
 
+// The primary App ID grouped with the web Services ID in Apple Developer.
+export const APPLE_NATIVE_CLIENT_ID = 'app.ruimte.mobile';
+
+export const NativeAppleStartPayloadSchema = z.object({ codeChallenge: TokenSchema });
+export type NativeAppleStartPayload = z.infer<typeof NativeAppleStartPayloadSchema>;
+
+export const NativeAppleStartResultSchema = z.object({
+    attempt: TokenSchema,
+    nonce: TokenSchema,
+    expiresAt: z.number().int()
+});
+export type NativeAppleStartResult = z.infer<typeof NativeAppleStartResultSchema>;
+
+export const NativeAppleCompletePayloadSchema = z.object({
+    attempt: TokenSchema,
+    identityToken: z.string().min(1).max(16384),
+    authorizationCode: z.string().min(1).max(4096)
+});
+export type NativeAppleCompletePayload = z.infer<typeof NativeAppleCompletePayloadSchema>;
+
+// The same PKCE- and device-key-bound exchange as web login, without a browser redirect.
+export const NativeAppleCompleteResultSchema = z.object({ code: TokenSchema });
+export type NativeAppleCompleteResult = z.infer<typeof NativeAppleCompleteResultSchema>;
+
 // `POST /v1/session`: the one-time code from the redirect, with the verifier only the app that started the login holds.
 export const SessionExchangePayloadSchema = z.object({
     code: TokenSchema,

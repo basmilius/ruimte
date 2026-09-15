@@ -462,6 +462,118 @@ public struct Machine: Codable, Sendable, Equatable {
     }
 }
 
+public struct NativeAppleCompletePayload: Codable, Sendable, Equatable {
+    public let `attempt`: String
+    public let `identityToken`: String
+    public let `authorizationCode`: String
+
+    public init(`attempt`: String, `identityToken`: String, `authorizationCode`: String) {
+        self.`attempt` = `attempt`
+        self.`identityToken` = `identityToken`
+        self.`authorizationCode` = `authorizationCode`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("NativeAppleCompletePayloadSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `attempt` = try container.decode(String.self, forKey: .`attempt`)
+        `identityToken` = try container.decode(String.self, forKey: .`identityToken`)
+        `authorizationCode` = try container.decode(String.self, forKey: .`authorizationCode`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`attempt`, forKey: .`attempt`)
+        try container.encode(`identityToken`, forKey: .`identityToken`)
+        try container.encode(`authorizationCode`, forKey: .`authorizationCode`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `attempt` = "attempt"
+        case `identityToken` = "identityToken"
+        case `authorizationCode` = "authorizationCode"
+    }
+}
+
+public struct NativeAppleCompleteResult: Codable, Sendable, Equatable {
+    public let `code`: String
+
+    public init(`code`: String) {
+        self.`code` = `code`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("NativeAppleCompleteResultSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `code` = try container.decode(String.self, forKey: .`code`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`code`, forKey: .`code`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `code` = "code"
+    }
+}
+
+public struct NativeAppleStartPayload: Codable, Sendable, Equatable {
+    public let `codeChallenge`: String
+
+    public init(`codeChallenge`: String) {
+        self.`codeChallenge` = `codeChallenge`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("NativeAppleStartPayloadSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `codeChallenge` = try container.decode(String.self, forKey: .`codeChallenge`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`codeChallenge`, forKey: .`codeChallenge`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `codeChallenge` = "codeChallenge"
+    }
+}
+
+public struct NativeAppleStartResult: Codable, Sendable, Equatable {
+    public let `attempt`: String
+    public let `nonce`: String
+    public let `expiresAt`: Int64
+
+    public init(`attempt`: String, `nonce`: String, `expiresAt`: Int64) {
+        self.`attempt` = `attempt`
+        self.`nonce` = `nonce`
+        self.`expiresAt` = `expiresAt`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("NativeAppleStartResultSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `attempt` = try container.decode(String.self, forKey: .`attempt`)
+        `nonce` = try container.decode(String.self, forKey: .`nonce`)
+        `expiresAt` = try container.decode(Int64.self, forKey: .`expiresAt`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`attempt`, forKey: .`attempt`)
+        try container.encode(`nonce`, forKey: .`nonce`)
+        try container.encode(`expiresAt`, forKey: .`expiresAt`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `attempt` = "attempt"
+        case `nonce` = "nonce"
+        case `expiresAt` = "expiresAt"
+    }
+}
+
 public struct ProvidersResult: Codable, Sendable, Equatable {
     public let `providers`: [String]
 

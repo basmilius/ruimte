@@ -4,6 +4,9 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
     PULSAR_STATEMENT_PUBLIC_KEYS,
+    APPLE_NATIVE_CLIENT_ID,
+    APP_REDIRECT_SCHEME_URI,
+    type NativeAppleStartResult,
     accessRequestMessage,
     accessStatementMessage,
     deviceLinkStartMessage,
@@ -111,6 +114,7 @@ interface AppleCode {
     nonce: string;
     claims?: Record<string, unknown>;
     signer?: KeyObject;
+    native?: boolean;
 }
 const appleCodes = new Map<string, AppleCode>();
 
@@ -119,8 +123,8 @@ const signRs256 = (payload: Record<string, unknown>, signer: KeyObject): string 
     return `${input}.${base64url(sign('sha256', Buffer.from(input), signer))}`;
 };
 
-// Checks the client secret the way Apple does: an ES256 JWT from the team's key, for this Services ID.
-const appleClientSecretHolds = (secret: string): boolean => {
+// Checks the client secret against the Services ID or native App ID used for this code.
+const appleClientSecretHolds = (secret: string, clientId: string): boolean => {
     const [header, payload, signature] = secret.split('.');
     if (!header || !payload || !signature) {
         return false;
@@ -131,7 +135,7 @@ const appleClientSecretHolds = (secret: string): boolean => {
         head.alg === 'ES256' &&
         head.kid === APPLE_KEY_ID &&
         claims.iss === APPLE_TEAM_ID &&
-        claims.sub === APPLE_CLIENT_ID &&
+        claims.sub === clientId &&
         claims.aud === APPLE_ISSUER &&
         Number(claims.exp) > Number(claims.iat) &&
         verify('sha256', Buffer.from(`${header}.${payload}`), { key: appleClientKey.publicKey, dsaEncoding: 'ieee-p1363' }, Buffer.from(signature, 'base64url'))
@@ -147,17 +151,18 @@ const apple = async (request: Request, url: URL): Promise<Response> => {
         const code = form.get('code') ?? '';
         const entry = appleCodes.get(code);
         appleCodes.delete(code);
+        const clientId = entry?.native ? APPLE_NATIVE_CLIENT_ID : APPLE_CLIENT_ID;
         if (
             !entry ||
-            form.get('client_id') !== APPLE_CLIENT_ID ||
+            form.get('client_id') !== clientId ||
             form.get('grant_type') !== 'authorization_code' ||
-            form.get('redirect_uri') !== `${PUBLIC_ORIGIN}/auth/apple/callback` ||
-            !appleClientSecretHolds(form.get('client_secret') ?? '')
+            form.get('redirect_uri') !== (entry.native ? null : `${PUBLIC_ORIGIN}/auth/apple/callback`) ||
+            !appleClientSecretHolds(form.get('client_secret') ?? '', clientId)
         ) {
             return Response.json({ error: 'invalid_grant' }, { status: 400 });
         }
         const now = Math.floor(Date.now() / 1000);
-        const claims = { iss: APPLE_ISSUER, aud: APPLE_CLIENT_ID, iat: now, exp: now + 600, sub: entry.sub, nonce: entry.nonce, ...entry.claims };
+        const claims = { iss: APPLE_ISSUER, aud: clientId, iat: now, exp: now + 600, sub: entry.sub, nonce: entry.nonce, ...entry.claims };
         return Response.json({
             access_token: 'apple-access',
             token_type: 'Bearer',
@@ -1082,6 +1087,168 @@ describe('linking a machine with a code', () => {
     });
 });
 
+describe('native sign in with Apple', () => {
+    const start = async (): Promise<NativeAppleStartResult & { verifier: string }> => {
+        const verifier = base64url(randomBytes(32));
+        const response = await dispatch('/v1/apple/start', { method: 'POST', body: { codeChallenge: sha256(verifier) } });
+        expect(response.status).toBe(200);
+        expect(response.headers.get('set-cookie')).toBeNull();
+        const result = (await response.json()) as NativeAppleStartResult;
+        return { ...result, verifier };
+    };
+    const credentials = (attempt: NativeAppleStartResult, sub: string, changes: Partial<AppleCode> = {}) => {
+        const authorizationCode = base64url(randomBytes(32));
+        appleCodes.set(authorizationCode, { native: true, sub, nonce: attempt.nonce, ...changes });
+        const identityToken = signRs256(
+            { iss: APPLE_ISSUER, aud: APPLE_NATIVE_CLIENT_ID, sub, nonce: attempt.nonce, exp: Math.floor(Date.now() / 1000) + 600 },
+            appleSigningKey.privateKey
+        );
+        return { attempt: attempt.attempt, identityToken, authorizationCode };
+    };
+    const complete = (body: ReturnType<typeof credentials>) => dispatch('/v1/apple/complete', { method: 'POST', body });
+    const exchange = (code: string, verifier: string, key = newKeyPair(), signer = key, redirectUri = APP_REDIRECT_SCHEME_URI) =>
+        dispatch('/v1/session', {
+            method: 'POST',
+            body: { code, codeVerifier: verifier, redirectUri, ...bindKey(code, key, signer) }
+        });
+
+    test('native and web Apple logins resolve the same identity and exchange a code bound to PKCE and a signed key', async () => {
+        const existing = await signInWithApple('native-shared-subject');
+        const attempt = await start();
+        expect(attempt.attempt).toMatch(/^[A-Za-z0-9_-]{43}$/);
+        expect(attempt.nonce).toMatch(/^[A-Za-z0-9_-]{43}$/);
+        expect(attempt.expiresAt).toBeGreaterThan(Date.now());
+        const db = await mf.getD1Database('DB');
+        expect(await db.prepare('SELECT attempt_hash FROM native_apple_login WHERE attempt_hash = ?1').bind(sha256(attempt.attempt)).first()).not.toBeNull();
+        const response = await complete(credentials(attempt, 'native-shared-subject'));
+        expect(response.status).toBe(200);
+        expect(response.headers.get('location')).toBeNull();
+        const { code } = (await response.json()) as { code: string };
+        const key = newKeyPair();
+        const session = await exchange(code, attempt.verifier, key);
+        expect(session.status).toBe(200);
+        const result = (await session.json()) as SessionResult;
+        expect(result.account).toEqual(existing.account);
+        expect((await exchange(code, attempt.verifier, key)).status).toBe(401);
+        expect((await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(result.refreshToken, key) })).status).toBe(200);
+    });
+
+    test('only one concurrent completion spends an attempt', async () => {
+        const attempt = await start();
+        const body = credentials(attempt, 'native-concurrent');
+        const responses = await Promise.all([complete(body), complete(body)]);
+        expect(responses.map((response) => response.status).sort()).toEqual([200, 401]);
+        expect((await complete(body)).status).toBe(401);
+    });
+
+    test('expired attempts are spent before Apple is called', async () => {
+        const attempt = await start();
+        const body = credentials(attempt, 'native-expired');
+        const db = await mf.getD1Database('DB');
+        await db.prepare('UPDATE native_apple_login SET expires_at = 0 WHERE attempt_hash = ?1').bind(sha256(attempt.attempt)).run();
+        expect((await complete(body)).status).toBe(401);
+        expect(appleCodes.has(body.authorizationCode)).toBe(true);
+        expect(await db.prepare('SELECT * FROM native_apple_login WHERE attempt_hash = ?1').bind(sha256(attempt.attempt)).first()).toBeNull();
+    });
+
+    test('a token from another attempt cannot be moved to a fresh nonce', async () => {
+        const first = await start();
+        const second = await start();
+        const body = credentials(first, 'native-swapped-attempt');
+        expect((await complete({ ...body, attempt: second.attempt })).status).toBe(401);
+        expect(appleCodes.has(body.authorizationCode)).toBe(true);
+        expect((await complete(body)).status).toBe(200);
+        expect((await complete(credentials(second, 'native-swapped-attempt'))).status).toBe(401);
+    });
+
+    test('forged, expired, wrong issuer, audience and nonce client tokens spend their attempts without exchanging the Apple code', async () => {
+        const otherSigner = generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey;
+        const cases = [
+            { claims: { aud: APPLE_CLIENT_ID } },
+            { claims: { aud: [APPLE_NATIVE_CLIENT_ID, APPLE_CLIENT_ID] } },
+            { claims: { nonce: 'other' } },
+            { claims: { iss: 'https://not-apple.test' } },
+            { claims: { exp: 1 } },
+            { claims: {}, signer: otherSigner }
+        ];
+        for (const invalid of cases) {
+            const attempt = await start();
+            const body = credentials(attempt, 'native-invalid-client');
+            const valid = body.identityToken;
+            body.identityToken = signRs256(
+                {
+                    iss: APPLE_ISSUER,
+                    aud: APPLE_NATIVE_CLIENT_ID,
+                    sub: 'native-invalid-client',
+                    nonce: attempt.nonce,
+                    exp: Math.floor(Date.now() / 1000) + 600,
+                    ...invalid.claims
+                },
+                invalid.signer ?? appleSigningKey.privateKey
+            );
+            expect((await complete(body)).status).toBe(401);
+            expect(appleCodes.has(body.authorizationCode)).toBe(true);
+            expect((await complete({ ...body, identityToken: valid })).status).toBe(401);
+        }
+    });
+
+    test('Apple must confirm the client subject and nonce with a valid native token', async () => {
+        const otherSigner = generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey;
+        const changes: Partial<AppleCode>[] = [
+            { sub: 'another-subject' },
+            { nonce: 'another-nonce' },
+            { claims: { aud: APPLE_CLIENT_ID } },
+            { claims: { exp: 1 } },
+            { signer: otherSigner }
+        ];
+        for (const change of changes) {
+            const attempt = await start();
+            const body = credentials(attempt, 'native-invalid-exchange', change);
+            expect((await complete(body)).status).toBe(401);
+            expect(appleCodes.has(body.authorizationCode)).toBe(false);
+            expect((await complete(body)).status).toBe(401);
+        }
+        const db = await mf.getD1Database('DB');
+        expect(await db.prepare("SELECT * FROM identity WHERE provider = 'apple' AND subject = 'native-invalid-exchange'").first()).toBeNull();
+    });
+
+    test('native login codes refuse a wrong verifier, redirect or key signature, and expire after a minute', async () => {
+        for (const mode of ['verifier', 'redirect', 'signature', 'expired']) {
+            const attempt = await start();
+            const response = await complete(credentials(attempt, 'native-code-guards'));
+            expect(response.status).toBe(200);
+            const { code } = (await response.json()) as { code: string };
+            const db = await mf.getD1Database('DB');
+            const row = await db.prepare('SELECT expires_at FROM login_code WHERE code_hash = ?1').bind(sha256(code)).first<{ expires_at: number }>();
+            expect(row!.expires_at).toBeLessThanOrEqual(Date.now() + 60_000);
+            if (mode === 'expired') {
+                await db.prepare('UPDATE login_code SET expires_at = 0 WHERE code_hash = ?1').bind(sha256(code)).run();
+            }
+            const key = newKeyPair();
+            const result = await exchange(
+                code,
+                mode === 'verifier' ? 'x'.repeat(43) : attempt.verifier,
+                key,
+                mode === 'signature' ? newKeyPair() : key,
+                mode === 'redirect' ? REDIRECT_URI : APP_REDIRECT_SCHEME_URI
+            );
+            expect(result.status).toBe(mode === 'signature' ? 403 : 401);
+            expect((await exchange(code, attempt.verifier, key)).status).toBe(401);
+        }
+    });
+
+    test('native start applies the existing login IP budget and rejects invalid PKCE challenges', async () => {
+        expect((await dispatch('/v1/apple/start', { method: 'POST', body: { codeChallenge: 'short' } })).status).toBe(400);
+        const ip = nextIp();
+        const db = await mf.getD1Database('DB');
+        await db
+            .prepare('INSERT INTO rate_limit (bucket, window_start, count) VALUES (?1, ?2, ?3)')
+            .bind(`ip:${ip}:login`, windowStartOf(Date.now()), LIMITS.loginIp)
+            .run();
+        expect((await dispatch('/v1/apple/start', { method: 'POST', ip, body: { codeChallenge: sha256('x'.repeat(43)) } })).status).toBe(429);
+    });
+});
+
 describe('sign in with Apple', () => {
     test('a whole login ends in a session for the Apple subject, and the next one opens the same account', async () => {
         const session = await signInWithApple('apple-1001');
@@ -1418,6 +1585,14 @@ describe('an address book nobody configured', () => {
 
     afterAll(async () => {
         await bare.dispose();
+    });
+
+    test('native Apple routes fail closed before reading an attempt without signing credentials', async () => {
+        for (const path of ['/v1/apple/start', '/v1/apple/complete']) {
+            const response = await dispatch(path, { method: 'POST', on: bare, body: {} });
+            expect(response.status).toBe(503);
+            expect(await errorCode(response)).toBe('not-configured');
+        }
     });
 
     test('says login is not configured instead of sending anyone to GitHub', async () => {

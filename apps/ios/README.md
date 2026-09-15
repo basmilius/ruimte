@@ -7,11 +7,12 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
 
 ## Included
 
-- Account login through the existing GitHub/Apple Worker flow, HTTPS pairing links and
+- Native Sign in with Apple, GitHub web sign-in, HTTPS pairing links and
   shared authenticated WebRTC connections. Normal ICE selection allows direct connections;
   TURN is a fallback. The relay-only switch is confined to connection diagnostics.
 - Project creation and navigation, view ordering and names, local camera/selection, and
   three-way merges with explicit conflict resolution. Unknown view/node kinds survive saves.
+  Separators group the view list into sections; rows show the name and desktop Lucide or chosen emoji icon.
 - Native chat timeline, streaming, markdown/code highlighting, model options, drafts,
   attachments, context selection, approvals and questions.
 - SwiftTerm terminals with snapshots, output, resync, keyboard controls and paste confirmation.
@@ -44,6 +45,10 @@ Commit the generated project and resolved packages, excluding user state and bui
 SwiftTerm is pinned to 1.15.0, Highlightr to 2.3.0 and WebRTC to 153.0.0. SwiftTerm's
 shader compilation requires Apple's separate Metal Toolchain.
 
+Lucide assets are checked in as template vectors. After changing the desktop icon set,
+run `bun apps/ios/Scripts/generate-lucide-icons.ts` to regenerate them from the installed
+`lucide-react` package. Its ISC license is included in `App/Design/Lucide-LICENSE.txt`.
+
 For simulator tests, replace the destination with an installed simulator if needed:
 
 ```sh
@@ -64,6 +69,21 @@ swift test --package-path apps/ios/Packages/RuimteTransport --scratch-path /tmp/
 bun run check
 bun test
 ```
+
+## Native Apple sign-in
+
+Apple uses the system authorization sheet, with no browser callback. The app asks
+Pulsar for a one-time nonce and sends Apple's identity token and authorization code
+back over HTTPS. Pulsar verifies both tokens for `app.ruimte.mobile` and returns a
+short-lived login code. The existing PKCE and device-key exchange creates the session.
+Apple and web sign-in resolve the same account when their App ID and Services ID are
+grouped in Apple Developer.
+
+Deploy Pulsar's `0007_native_apple.sql` migration and `/v1/apple/start` and
+`/v1/apple/complete` routes before installing a build that uses native Apple sign-in.
+The app requires the Sign in with Apple capability on its provisioning profile.
+There is no automatic web fallback when the native service is unavailable. Existing
+GitHub sign-in is unchanged. See the Worker README for the Apple configuration.
 
 ## How the connection is built
 

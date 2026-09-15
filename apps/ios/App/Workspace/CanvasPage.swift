@@ -43,6 +43,7 @@ struct CanvasPage: View {
                             Text("Add a chat, terminal, note or file to get started.")
                         } actions: {
                             Button("Add node") { adding = true }.buttonStyle(.borderedProminent)
+                                .foregroundStyle(MobileStyle.onAccent)
                         }
                     }
                 }
@@ -471,7 +472,8 @@ private final class CanvasSurface: UIView {
             let id = node.stableID
             if needingYou.contains(id) || statuses[id] == "running" || unseen.contains(id) {
                 let color: UIColor =
-                    needingYou.contains(id) ? .systemOrange : statuses[id] == "running" ? .systemGreen : .systemBlue
+                    needingYou.contains(id)
+                    ? .systemOrange : statuses[id] == "running" ? .systemGreen : MobileStyle.accentColor
                 color.setFill()
                 UIBezierPath(ovalIn: CGRect(x: frame.maxX - 28, y: frame.minY + 20, width: 10, height: 10)).fill()
             }

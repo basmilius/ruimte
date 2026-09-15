@@ -108,7 +108,8 @@ struct AttentionMark: View {
         } else if store.statuses[id] == "running" {
             Image(systemName: "circle.fill").font(.caption2).foregroundStyle(.green).accessibilityLabel("Running")
         } else if store.unseen.contains(id) {
-            Image(systemName: "circle.fill").font(.caption2).foregroundStyle(.blue).accessibilityLabel("New activity")
+            Image(systemName: "circle.fill").font(.caption2).foregroundStyle(MobileStyle.accent).accessibilityLabel(
+                "New activity")
         }
     }
 }

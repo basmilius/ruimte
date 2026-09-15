@@ -53,7 +53,7 @@ struct GitPage: View {
                                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                         Button(group == "staged" ? "Unstage" : "Stage") {
                                             Task { await stage(file, staged: group != "staged") }
-                                        }.tint(.indigo).disabled(state.busy)
+                                        }.tint(MobileStyle.accent).disabled(state.busy)
                                     }
                                     .contextMenu {
                                         Button(group == "staged" ? "Unstage file" : "Stage file") {

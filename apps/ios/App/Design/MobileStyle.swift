@@ -2,12 +2,9 @@ import SwiftUI
 import UIKit
 
 enum MobileStyle {
-    static let accent = Color(
-        uiColor: UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(red: 0.40, green: 0.64, blue: 1, alpha: 1)
-                : UIColor(red: 0.082, green: 0.365, blue: 0.988, alpha: 1)
-        })
+    static let accentColor = UIColor { $0.userInterfaceStyle == .dark ? .white : .black }
+    static let accent = Color(uiColor: accentColor)
+    static let onAccent = Color(uiColor: UIColor { $0.userInterfaceStyle == .dark ? .black : .white })
     static let canvas = Color(uiColor: .systemGroupedBackground)
     static let surface = Color(uiColor: .secondarySystemGroupedBackground)
     static let panel = Color(uiColor: .secondarySystemBackground)

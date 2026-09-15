@@ -38,12 +38,24 @@ struct WelcomePage: View {
             .scrollBounceBehavior(.basedOnSize)
         }
         .background(MobileStyle.canvas)
+        .alert(
+            "Sign-in failed",
+            isPresented: Binding(
+                get: { runtime.problem != nil },
+                set: { if !$0 { runtime.problem = nil } }
+            ), presenting: runtime.problem
+        ) { _ in
+            Button("OK", role: .cancel) { runtime.problem = nil }
+        } message: { problem in
+            Text(problem)
+        }
     }
 
     private var introduction: some View {
         VStack(spacing: 28) {
             VStack(spacing: 12) {
                 Image("RuimteLogo")
+                    .renderingMode(.original)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 76, height: 76)
@@ -111,29 +123,6 @@ struct WelcomePage: View {
                         .disabled(busy)
                 }
             }
-            if runtime.signingIn {
-                HStack(spacing: 12) {
-                    ProgressView()
-                    Text("Signing in…").font(.subheadline).foregroundStyle(.secondary)
-                    Spacer()
-                    Button("Cancel") { runtime.cancelSignIn() }
-                        .frame(minHeight: 44)
-                }
-                .padding(.horizontal, 4)
-            }
-            if let problem = runtime.problem {
-                Label {
-                    Text(problem).fixedSize(horizontal: false, vertical: true)
-                } icon: {
-                    Image(systemName: "exclamationmark.circle")
-                }
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(16)
-                .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 12))
-                .textSelection(.enabled)
-            }
         }
     }
 
@@ -194,7 +183,6 @@ private struct WelcomeActionStyle: ButtonStyle {
     }
 }
 
-// The system button starts the existing web PKCE flow; it does not request separate native credentials.
 private struct AppleAccountButton: UIViewRepresentable {
     let dark: Bool
     let enabled: Bool

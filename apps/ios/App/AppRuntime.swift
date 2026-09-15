@@ -22,6 +22,7 @@ final class AppRuntime {
     private let defaults: UserDefaults
     private(set) var vault: SessionVault?
     private var authentication: WebAuthentication?
+    private var appleAuthentication: NativeAppleAuthentication?
     @ObservationIgnored lazy var notifications = NotificationCoordinator(runtime: self)
     private var sessions: [String: SharedMachineSession] = [:]
     private var initialized = false
@@ -98,25 +99,48 @@ final class AppRuntime {
         signingIn = true
         problem = nil
         defer {
-            signingIn = false
-            authentication = nil
+            if operation == sessionRevision {
+                signingIn = false
+                authentication = nil
+                appleAuthentication = nil
+            }
         }
         do {
-            let authentication = WebAuthentication(anchor: window)
-            self.authentication = authentication
-            let session = try await authentication.signIn(
-                provider: provider, client: client, vault: vault, label: "Ruimte on \(UIDevice.current.model)")
-            guard operation == sessionRevision else { return }
+            let session: SessionView
+            let label = "Ruimte on \(UIDevice.current.model)"
+            if provider == .apple {
+                let authentication = NativeAppleAuthentication(anchor: window)
+                appleAuthentication = authentication
+                session = try await authentication.signIn(client: client, vault: vault, label: label)
+            } else {
+                let authentication = WebAuthentication(anchor: window)
+                self.authentication = authentication
+                session = try await authentication.signIn(
+                    provider: provider, client: client, vault: vault, label: label)
+            }
+            guard operation == sessionRevision else {
+                await Task { await vault.discard(accessToken: session.accessToken) }.value
+                return
+            }
             account = session.account
             await refreshMachines()
         } catch LoginError.cancelled {
-            if operation == sessionRevision { problem = "Sign-in was canceled." }
+            return
         } catch {
             if operation == sessionRevision { problem = error.localizedDescription }
         }
     }
 
-    func cancelSignIn() { authentication?.cancel() }
+    func cancelSignIn() {
+        authentication?.cancel()
+        appleAuthentication?.cancel()
+        authentication = nil
+        appleAuthentication = nil
+        if signingIn {
+            sessionRevision += 1
+            signingIn = false
+        }
+    }
 
     func refreshMachines() async {
         let operation = sessionRevision
@@ -200,6 +224,7 @@ final class AppRuntime {
         guard !signingOut else { return }
         signingOut = true
         defer { signingOut = false }
+        cancelSignIn()
         sessionRevision += 1
         let operation = sessionRevision
         await notifications.disable()

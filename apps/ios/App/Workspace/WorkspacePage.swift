@@ -121,42 +121,55 @@ struct WorkspacePage: View {
 
     private var sidebar: some View {
         List {
-            ForEach(
-                workspace.views.filter { search.isEmpty || $0.text("name").localizedCaseInsensitiveContains(search) },
-                id: \.stableID
-            ) { item in
-                if item.text("kind") == "separator" {
-                    Text(item.text("name")).font(.caption).foregroundStyle(.secondary)
-                } else {
-                    Group {
-                        if sizeClass == .regular {
-                            Button {
-                                workspace.select(item.stableID)
-                            } label: {
-                                viewRow(item)
-                            }.foregroundStyle(.primary)
-                        } else {
-                            NavigationLink {
-                                ProjectItemPage(workspace: workspace, item: item).id(item.stableID)
-                            } label: {
-                                viewRow(item)
-                            }.simultaneousGesture(TapGesture().onEnded { workspace.select(item.stableID) })
+            ForEach(WorkspaceViewSections.split(workspace.views, search: search)) { section in
+                Section {
+                    ForEach(section.items, id: \.stableID) { item in
+                        Group {
+                            if sizeClass == .regular {
+                                Button {
+                                    workspace.select(item.stableID)
+                                } label: {
+                                    viewRow(item)
+                                }.foregroundStyle(.primary)
+                            } else {
+                                NavigationLink {
+                                    ProjectItemPage(workspace: workspace, item: item).id(
+                                        item.stableID)
+                                } label: {
+                                    viewRow(item)
+                                }.simultaneousGesture(
+                                    TapGesture().onEnded { workspace.select(item.stableID) })
+                            }
+                        }
+                        .contextMenu {
+                            Button("Rename", systemImage: "pencil") {
+                                renameText = item.text("name")
+                                renamed = item
+                            }.disabled(item.text("kind") == "unknown")
+                            Button("Delete", systemImage: "trash", role: .destructive) {
+                                deleteView = item
+                            }
+                        }
+                        .moveDisabled(!search.isEmpty)
+                    }
+                    .onMove { indices, destination in
+                        guard search.isEmpty else { return }
+                        let expectedIDs = section.items.map(\.stableID)
+                        Task {
+                            await workspace.edit { document in
+                                guard
+                                    let reordered = WorkspaceViewSections.moving(
+                                        document.list("views"), sectionID: section.id,
+                                        expectedIDs: expectedIDs,
+                                        from: indices, to: destination)
+                                else { return document }
+                                return document.setting("views", .array(reordered))
+                            }
                         }
                     }
-                    .contextMenu {
-                        Button("Rename", systemImage: "pencil") {
-                            renameText = item.text("name")
-                            renamed = item
-                        }.disabled(item.text("kind") == "unknown")
-                        Button("Delete", systemImage: "trash", role: .destructive) { deleteView = item }
-                    }
+                } header: {
+                    if let title = section.title { Text(title).textCase(nil) }
                 }
-            }
-            .onMove { indices, destination in
-                guard search.isEmpty else { return }
-                var reordered = workspace.views
-                reordered.move(fromOffsets: indices, toOffset: destination)
-                Task { await workspace.edit { $0.setting("views", .array(reordered)) } }
             }
         }
         .listStyle(.insetGrouped)
@@ -164,18 +177,20 @@ struct WorkspacePage: View {
     }
 
     private func viewRow(_ item: JSONValue) -> some View {
-        HStack(spacing: 10) {
-            MobileRow(
-                title: item.text("name", fallback: item.text("kind")),
-                subtitle: item.text("kind") == "canvas"
-                    ? "Canvas · \(item.list("nodes").count) nodes" : item.text("kind").capitalized,
-                symbol: iconForKind(item.text("kind")))
+        HStack(spacing: 12) {
+            WorkspaceViewIcon(item: item).foregroundStyle(.secondary)
+            Text(item.text("name", fallback: item.text("kind")))
+                .font(.body).foregroundStyle(.primary).lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
             AttentionMark(store: workspace.session.attention, id: item.stableID)
             if sizeClass == .regular && workspace.selectedID == item.stableID {
-                Image(systemName: "checkmark.circle.fill").foregroundStyle(MobileStyle.accent).accessibilityLabel(
-                    "Selected")
+                Image(systemName: "checkmark").font(.body.weight(.semibold))
+                    .foregroundStyle(MobileStyle.accent).accessibilityLabel("Selected")
             }
         }
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
     }
 }
 

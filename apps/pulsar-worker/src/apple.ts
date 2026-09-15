@@ -1,3 +1,4 @@
+import { APPLE_NATIVE_CLIENT_ID } from '@ruimte/pulsar';
 import { sha256 } from './encoding.ts';
 import type { Env } from './env.ts';
 import { decodeJwt, signEs256Jwt, verifyRs256 } from './jwt.ts';
@@ -32,12 +33,12 @@ const signingKeyOf = (secret: string): Promise<CryptoKey> => {
 };
 
 // Apple has no static client secret: every token request carries a JWT signed with the key from the portal.
-export const appleClientSecret = async (env: Env, now = Date.now()): Promise<string> => {
+export const appleClientSecret = async (env: Env, now = Date.now(), clientId = env.APPLE_CLIENT_ID): Promise<string> => {
     const issuedAt = Math.floor(now / 1000);
     return signEs256Jwt(
         await signingKeyOf(env.APPLE_PRIVATE_KEY ?? ''),
         { kid: env.APPLE_KEY_ID },
-        { iss: env.APPLE_TEAM_ID, iat: issuedAt, exp: issuedAt + CLIENT_SECRET_LIFETIME_S, aud: APPLE_ISSUER, sub: env.APPLE_CLIENT_ID }
+        { iss: env.APPLE_TEAM_ID, iat: issuedAt, exp: issuedAt + CLIENT_SECRET_LIFETIME_S, aud: APPLE_ISSUER, sub: clientId }
     );
 };
 
@@ -80,7 +81,7 @@ export const verifyAppleIdToken = async (idToken: string, input: { audiences: re
     if (claims.iss !== APPLE_ISSUER || !audience.some((entry) => typeof entry === 'string' && input.audiences.includes(entry))) {
         throw new Error('The id_token is for another issuer or audience');
     }
-    if (typeof claims.exp !== 'number' || claims.exp + CLOCK_SKEW_S <= nowS) {
+    if (typeof claims.exp !== 'number' || !Number.isFinite(claims.exp) || claims.exp + CLOCK_SKEW_S <= nowS) {
         throw new Error('The id_token expired');
     }
     if (claims.nonce !== input.nonce) {
@@ -90,6 +91,34 @@ export const verifyAppleIdToken = async (idToken: string, input: { audiences: re
         throw new Error('The id_token names nobody');
     }
     return claims.sub;
+};
+
+export const nativeAppleConfigured = (env: Env): boolean => Boolean(env.APPLE_TEAM_ID && env.APPLE_KEY_ID && env.APPLE_PRIVATE_KEY);
+
+export const identifyNativeApple = async (env: Env, input: { identityToken: string; authorizationCode: string; nonce: string }): Promise<string> => {
+    const verify = async (token: string): Promise<string> => {
+        if (decodeJwt(token)?.payload.aud !== APPLE_NATIVE_CLIENT_ID) {
+            throw new Error('The native Apple token is for another app');
+        }
+        return verifyAppleIdToken(token, { audiences: [APPLE_NATIVE_CLIENT_ID], nonce: input.nonce });
+    };
+    const subject = await verify(input.identityToken);
+    // Native authorization has no redirect URI: https://developer.apple.com/documentation/signinwithapplerestapi/generate-and-validate-tokens
+    const response = await fetch(TOKEN_URL, {
+        method: 'POST',
+        headers: { accept: 'application/json', 'content-type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            client_id: APPLE_NATIVE_CLIENT_ID,
+            client_secret: await appleClientSecret(env, Date.now(), APPLE_NATIVE_CLIENT_ID),
+            code: input.authorizationCode,
+            grant_type: 'authorization_code'
+        })
+    });
+    const token = (await response.json().catch(() => null)) as { id_token?: unknown } | null;
+    if (!response.ok || typeof token?.id_token !== 'string' || (await verify(token.id_token)) !== subject) {
+        throw new Error('Apple did not confirm this sign-in');
+    }
+    return subject;
 };
 
 /*

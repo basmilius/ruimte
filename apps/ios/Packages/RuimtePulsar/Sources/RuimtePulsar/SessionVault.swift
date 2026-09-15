@@ -35,12 +35,15 @@ public actor SessionVault {
     private let signer: @Sendable () async throws -> (any SessionSigner)?
     private let now: @Sendable () -> Int64
     private var current: SessionView?
+    private var currentRevision: Int?
     private var refreshing: Task<SessionView?, Error>?
     private var revision = 0
 
-    public init(client: any SessionAPI, store: any SessionStore,
-                signer: @escaping @Sendable () async throws -> (any SessionSigner)?,
-                now: @escaping @Sendable () -> Int64 = { Int64(Date().timeIntervalSince1970 * 1000) }) {
+    public init(
+        client: any SessionAPI, store: any SessionStore,
+        signer: @escaping @Sendable () async throws -> (any SessionSigner)?,
+        now: @escaping @Sendable () -> Int64 = { Int64(Date().timeIntervalSince1970 * 1000) }
+    ) {
         self.client = client
         self.store = store
         self.signer = signer
@@ -48,18 +51,23 @@ public actor SessionVault {
     }
 
     public func exchange(_ login: SessionLoginCode) async throws -> SessionView {
+        try Task.checkCancellation()
         revision += 1
         let operation = revision
         refreshing?.cancel()
         refreshing = nil
         guard let key = try await signer() else {
-            throw AddressBookRequestError(code: "unauthorized", status: 0, message: "This device has no key to bind a session to.")
+            throw AddressBookRequestError(
+                code: "unauthorized", status: 0, message: "This device has no key to bind a session to.")
         }
+        try Task.checkCancellation()
+        guard operation == revision else { throw CancellationError() }
         let signature = try key.sign(SigningBytes.sessionKey(code: login.code, publicKey: key.publicKey))
-        let result = try await client.exchange(SessionExchangePayload(
-            code: login.code, codeVerifier: login.codeVerifier, redirectUri: login.redirectUri,
-            label: login.label, sessionKey: key.publicKey, sessionKeySignature: signature
-        ))
+        let result = try await client.exchange(
+            SessionExchangePayload(
+                code: login.code, codeVerifier: login.codeVerifier, redirectUri: login.redirectUri,
+                label: login.label, sessionKey: key.publicKey, sessionKeySignature: signature
+            ))
         try Task.checkCancellation()
         guard operation == revision else {
             throw CancellationError()
@@ -117,10 +125,24 @@ public actor SessionVault {
         refreshing?.cancel()
         refreshing = nil
         current = nil
+        currentRevision = nil
         try store.write(nil)
         if let token {
             try? await client.endSession(accessToken: token)
         }
+    }
+
+    public func discard(accessToken: String) async {
+        // A canceled login must never erase a newer login that finished during cleanup.
+        if current?.accessToken == accessToken {
+            if currentRevision == revision { revision += 1 }
+            refreshing?.cancel()
+            refreshing = nil
+            current = nil
+            currentRevision = nil
+            try? store.write(nil)
+        }
+        try? await client.endSession(accessToken: accessToken)
     }
 
     private func rotate(operation: Int) async throws -> SessionView? {
@@ -140,8 +162,11 @@ public actor SessionVault {
         let signature = try key.sign(SigningBytes.sessionRefresh(token: stored.refreshToken, issuedAt: issuedAt))
         let result: SessionResult
         do {
-            result = try await client.refresh(SessionRefreshPayload(refreshToken: stored.refreshToken, issuedAt: issuedAt, signature: signature))
-        } catch let error as AddressBookRequestError where ["unauthorized", "bad-request", "bad-signature"].contains(error.code) {
+            result = try await client.refresh(
+                SessionRefreshPayload(refreshToken: stored.refreshToken, issuedAt: issuedAt, signature: signature))
+        } catch let error as AddressBookRequestError
+            where ["unauthorized", "bad-request", "bad-signature"].contains(error.code)
+        {
             guard operation == revision else {
                 throw CancellationError()
             }
@@ -149,6 +174,7 @@ public actor SessionVault {
             try store.write(nil)
             return nil
         }
+        try Task.checkCancellation()
         // A late response must not restore a session after sign-out or another login.
         guard operation == revision else {
             throw CancellationError()
@@ -157,9 +183,13 @@ public actor SessionVault {
     }
 
     private func keep(_ result: SessionResult) throws -> SessionView {
-        try store.write(StoredSession(refreshToken: result.refreshToken, expiresAt: result.expiresAt, account: result.account))
-        let view = SessionView(accessToken: result.accessToken, accessExpiresAt: result.accessExpiresAt, expiresAt: result.expiresAt, account: result.account)
+        try store.write(
+            StoredSession(refreshToken: result.refreshToken, expiresAt: result.expiresAt, account: result.account))
+        let view = SessionView(
+            accessToken: result.accessToken, accessExpiresAt: result.accessExpiresAt, expiresAt: result.expiresAt,
+            account: result.account)
         current = view
+        currentRevision = revision
         return view
     }
 }

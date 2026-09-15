@@ -9,6 +9,7 @@ import { completeIdentityLink, getAccount, listProviders, startIdentityLink, unl
 import { deleteMachine, listMachines, registerMachine } from './machines.ts';
 import { PROVIDERS } from './providers.ts';
 import { issueStatement } from './statements.ts';
+import { completeNativeApple, startNativeApple } from './native-apple.ts';
 
 // Rows past use for this long are dropped by the daily cleanup; the statement log is kept.
 const REVOKED_SESSION_RETENTION_MS = 30 * 24 * 60 * 60_000;
@@ -36,6 +37,12 @@ const health = async (env: Env): Promise<Response> => {
 
 const api = async (request: Request, env: Env, path: string): Promise<Response> => {
     const method = request.method;
+    if (path === '/v1/apple/start' && method === 'POST') {
+        return startNativeApple(request, env);
+    }
+    if (path === '/v1/apple/complete' && method === 'POST') {
+        return completeNativeApple(request, env);
+    }
     if (path === '/v1/push/devices' && method === 'POST') {
         return registerPushDevice(request, env);
     }
@@ -152,6 +159,7 @@ export default {
             env.DB.prepare('DELETE FROM push_receipt WHERE expires_at <= ?1').bind(now),
             env.DB.prepare('DELETE FROM push_device WHERE session_id IN (SELECT id FROM session WHERE revoked_at IS NOT NULL OR expires_at <= ?1)').bind(now),
             env.DB.prepare('DELETE FROM login_attempt WHERE expires_at <= ?1').bind(now),
+            env.DB.prepare('DELETE FROM native_apple_login WHERE expires_at <= ?1').bind(now),
             env.DB.prepare('DELETE FROM login_code WHERE expires_at <= ?1').bind(now),
             env.DB.prepare('DELETE FROM identity_link_request WHERE expires_at <= ?1').bind(now),
             env.DB.prepare('DELETE FROM identity_link_code WHERE expires_at <= ?1').bind(now),

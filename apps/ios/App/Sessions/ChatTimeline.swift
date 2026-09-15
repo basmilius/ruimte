@@ -17,8 +17,107 @@ struct ChatTimeline: UIViewControllerRepresentable {
     }
 }
 
+struct ChatViewportGeometry {
+    let contentHeight: CGFloat
+    let height: CGFloat
+    var topInset: CGFloat = 0
+    var bottomInset: CGFloat = 0
+
+    var bottom: CGFloat { max(-topInset, contentHeight - height + bottomInset) }
+    func clamped(_ offset: CGFloat) -> CGFloat { min(bottom, max(-topInset, offset)) }
+    func isNearBottom(_ offset: CGFloat) -> Bool { bottom - offset <= 80 }
+}
+
+struct ChatViewportState {
+    private(set) var followsLatest = true
+    private(set) var isInteracting = false
+    private(set) var interactionRevision = 0
+
+    mutating func beginInteraction() {
+        interactionRevision += 1
+        isInteracting = true
+        followsLatest = false
+    }
+
+    mutating func finishInteraction(geometry: ChatViewportGeometry, offset: CGFloat) {
+        isInteracting = false
+        followsLatest = geometry.isNearBottom(offset)
+    }
+
+    mutating func readHere() {
+        interactionRevision += 1
+        followsLatest = false
+    }
+
+    func offset(geometry: ChatViewportGeometry, readingAnchor: CGFloat?) -> CGFloat? {
+        guard !isInteracting else { return nil }
+        if followsLatest { return geometry.bottom }
+        return readingAnchor.map(geometry.clamped)
+    }
+}
+
+struct ChatReadingAnchor {
+    let id: String
+    let distanceFromTop: CGFloat
+
+    func offset(itemTop: CGFloat, inset: CGFloat) -> CGFloat { itemTop - distanceFromTop - inset }
+}
+
 @MainActor
-final class ChatTimelineController: UIViewController {
+final class ChatTimelineCollection: UICollectionView {
+    private(set) var viewport = ChatViewportState()
+    var captureReadingAnchor: (() -> ChatReadingAnchor?)?
+    var itemTop: ((String) -> CGFloat?)?
+    private var readingAnchor: ChatReadingAnchor?
+    private var adjustingOffset = false
+
+    var geometry: ChatViewportGeometry {
+        ChatViewportGeometry(
+            contentHeight: contentSize.height, height: bounds.height,
+            topInset: adjustedContentInset.top, bottomInset: adjustedContentInset.bottom)
+    }
+    var userIsScrolling: Bool { isTracking || isDragging || isDecelerating || viewport.isInteracting }
+
+    func prepareForContentChange() {
+        if !viewport.followsLatest && !userIsScrolling { readingAnchor = captureReadingAnchor?() }
+    }
+
+    func beginUserScroll() {
+        viewport.beginInteraction()
+        readingAnchor = nil
+    }
+
+    func finishUserScroll() {
+        viewport.finishInteraction(geometry: geometry, offset: contentOffset.y)
+        readingAnchor = viewport.followsLatest ? nil : captureReadingAnchor?()
+        setNeedsLayout()
+    }
+
+    func expandAtCurrentPosition() {
+        viewport.readHere()
+        readingAnchor = captureReadingAnchor?()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard !adjustingOffset, !userIsScrolling, bounds.height > 0 else { return }
+        let anchorOffset = readingAnchor.flatMap { anchor in
+            itemTop?(anchor.id).map { anchor.offset(itemTop: $0, inset: adjustedContentInset.top) }
+        }
+        if let offset = viewport.offset(geometry: geometry, readingAnchor: anchorOffset),
+            abs(contentOffset.y - offset) >= 1
+        {
+            adjustingOffset = true
+            setContentOffset(CGPoint(x: contentOffset.x, y: offset), animated: false)
+            adjustingOffset = false
+        }
+        // Hosted text can finish measuring after a snapshot. Keep the same reading position on those later passes too.
+        if !viewport.followsLatest { readingAnchor = captureReadingAnchor?() }
+    }
+}
+
+@MainActor
+final class ChatTimelineController: UIViewController, UICollectionViewDelegate {
     private let client: any MachineRequesting
     private let chatID: String
     init(client: any MachineRequesting, chatID: String) {
@@ -28,24 +127,31 @@ final class ChatTimelineController: UIViewController {
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is unavailable") }
 
-    private var collection: UICollectionView!
+    private var collection: ChatTimelineCollection!
     private var source: UICollectionViewDiffableDataSource<Int, String>!
     private var items: [String: ChatTimelineEntry] = [:]
     private var lastRevision = -1
     private var pendingUpdate: ([JSONValue], Int)?
     private var displayLink: CADisplayLink?
+    private var applyingSnapshot = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
         var configuration = UICollectionLayoutListConfiguration(appearance: .plain)
         configuration.showsSeparators = false
         configuration.backgroundColor = .systemBackground
-        collection = UICollectionView(
+        collection = ChatTimelineCollection(
             frame: .zero, collectionViewLayout: UICollectionViewCompositionalLayout.list(using: configuration))
         collection.keyboardDismissMode = .interactive
         collection.alwaysBounceVertical = true
         collection.translatesAutoresizingMaskIntoConstraints = false
         collection.accessibilityIdentifier = "chat.timeline"
+        collection.delegate = self
+        collection.captureReadingAnchor = { [weak self] in self?.visibleAnchor() }
+        collection.itemTop = { [weak self] id in
+            guard let self, let index = self.source.indexPath(for: id) else { return nil }
+            return self.collection.layoutAttributesForItem(at: index)?.frame.minY
+        }
         view.addSubview(collection)
         NSLayoutConstraint.activate([
             collection.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -59,10 +165,17 @@ final class ChatTimelineController: UIViewController {
             cell.contentConfiguration = UIHostingConfiguration {
                 Group {
                     if item.isWork {
-                        ChatWorkLog(items: item.items, client: self.client, chatID: self.chatID)
+                        ChatWorkLog(
+                            items: item.items, client: self.client, chatID: self.chatID,
+                            onToggle: { [weak self] in self?.collection.expandAtCurrentPosition() })
                     } else if let message = item.items.first {
                         ChatTimelineRow(item: message, client: self.client, chatID: self.chatID)
                     }
+                }
+                .id(id)
+                .transaction { transaction in
+                    transaction.animation = nil
+                    transaction.disablesAnimations = true
                 }
             }.margins(.horizontal, 20).margins(.vertical, 10)
             cell.backgroundConfiguration = .clear()
@@ -76,7 +189,11 @@ final class ChatTimelineController: UIViewController {
         guard revision != lastRevision else { return }
         loadViewIfNeeded()
         pendingUpdate = (values, revision)
-        guard displayLink == nil else { return }
+        scheduleUpdate()
+    }
+
+    private func scheduleUpdate() {
+        guard displayLink == nil, !applyingSnapshot, pendingUpdate != nil else { return }
         let link = CADisplayLink(target: self, selector: #selector(flushUpdate))
         link.add(to: .main, forMode: .common)
         displayLink = link
@@ -85,23 +202,66 @@ final class ChatTimelineController: UIViewController {
     @objc private func flushUpdate() {
         displayLink?.invalidate()
         displayLink = nil
-        guard let (values, revision) = pendingUpdate else { return }
+        guard let (values, revision) = pendingUpdate, !applyingSnapshot else { return }
         pendingUpdate = nil
-        let atBottom = collection.contentOffset.y + collection.bounds.height >= collection.contentSize.height - 100
+        collection.prepareForContentChange()
+        let interactionRevision = collection.viewport.interactionRevision
         let previous = items
         let entries = ChatTimelineEntry.group(values)
         items = Dictionary(entries.map { ($0.id, $0) }, uniquingKeysWith: { _, newest in newest })
-        var snapshot = NSDiffableDataSourceSnapshot<Int, String>()
-        snapshot.appendSections([0])
         let ids = entries.map(\.id)
-        snapshot.appendItems(ids)
-        let existing = Set(source.snapshot().itemIdentifiers)
-        snapshot.reconfigureItems(ids.filter { existing.contains($0) && previous[$0] != items[$0] })
-        lastRevision = revision
-        source.apply(snapshot, animatingDifferences: false) { [weak self] in
-            guard let self, atBottom, !ids.isEmpty else { return }
-            self.collection.scrollToItem(at: IndexPath(item: ids.count - 1, section: 0), at: .bottom, animated: false)
+        let existingIDs = source.snapshot().itemIdentifiers
+        var snapshot = source.snapshot()
+        if snapshot.sectionIdentifiers.isEmpty { snapshot.appendSections([0]) }
+        if ids.starts(with: existingIDs) {
+            snapshot.appendItems(Array(ids.dropFirst(existingIDs.count)))
+        } else {
+            snapshot.deleteAllItems()
+            snapshot.appendSections([0])
+            snapshot.appendItems(ids)
         }
+        let existing = Set(existingIDs)
+        let changed = ids.filter { existing.contains($0) && previous[$0] != items[$0] }
+        snapshot.reconfigureItems(changed)
+        lastRevision = revision
+        applyingSnapshot = true
+        source.apply(snapshot, animatingDifferences: false) { [weak self] in
+            guard let self else { return }
+            self.applyingSnapshot = false
+            if self.lastRevision == revision,
+                self.collection.viewport.interactionRevision == interactionRevision,
+                !self.collection.userIsScrolling
+            {
+                self.collection.setNeedsLayout()
+                self.collection.layoutIfNeeded()
+            }
+            self.scheduleUpdate()
+        }
+    }
+
+    private func visibleAnchor() -> ChatReadingAnchor? {
+        let visibleTop = collection.contentOffset.y + collection.adjustedContentInset.top
+        let visibleBottom =
+            collection.contentOffset.y + collection.bounds.height - collection.adjustedContentInset.bottom
+        for index in collection.indexPathsForVisibleItems.sorted() {
+            guard let id = source.itemIdentifier(for: index),
+                let frame = collection.layoutAttributesForItem(at: index)?.frame,
+                frame.maxY > visibleTop, frame.minY < visibleBottom
+            else { continue }
+            return ChatReadingAnchor(id: id, distanceFromTop: frame.minY - visibleTop)
+        }
+        return nil
+    }
+
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) { collection.beginUserScroll() }
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if !decelerate { collection.finishUserScroll() }
+    }
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) { collection.finishUserScroll() }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        scheduleUpdate()
     }
 
     override func viewDidDisappear(_ animated: Bool) {
@@ -136,6 +296,7 @@ private struct ChatWorkLog: View {
     let items: [JSONValue]
     let client: any MachineRequesting
     let chatID: String
+    let onToggle: () -> Void
     @State private var expanded = false
 
     private var active: Bool {
@@ -145,6 +306,7 @@ private struct ChatWorkLog: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Button {
+                onToggle()
                 expanded.toggle()
             } label: {
                 HStack(spacing: 7) {
