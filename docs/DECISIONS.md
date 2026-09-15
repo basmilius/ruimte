@@ -1853,10 +1853,11 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   kept only as SHA-256, ending 30 days after sign-in whatever happens. A refresh rotates both. A refresh
   token that was already spent revokes the session, since two holders of one token means a copy; a client
   that lost the answer to a refresh pays for that by signing in again.
-- An account is the provider plus the provider's user id (GitHub's numeric id), never an email. The login
-  is kept for display and updated at every sign-in. No scope is asked, and the GitHub token is dropped after
-  one request to `/user`. A provider is an entry in `PROVIDERS` (`providers.ts`) and in `ProviderIdSchema`,
-  so Apple is one of each.
+- An account is found through an identity: the provider plus the provider's user id (GitHub's numeric id,
+  Apple's `sub`), never an email. The login is kept for display and updated at every sign-in. No scope is
+  asked, and the provider's tokens are dropped once it said who signed in. A provider is an entry in
+  `PROVIDERS` (`providers.ts`) and in `ProviderIdSchema`. Since 2026-09-15 an account holds one identity per
+  provider; see "Two ways to sign in" below.
 - A machine is keyed on the account plus its id, so a daemon two people share can be in both lists. A
   registration needs the daemon's signature over `machineRegistrationMessage`, which names the account, and
   an `issuedAt` within 10 minutes of the Worker's clock. Registering again with the key the machine is
@@ -2008,6 +2009,63 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   out: CORS with credentials for one origin, a second storage model beside the desktop shell's, a Vite dev
   origin that is not same-site and so would not send the cookie, and script injected into the page could
   drive a refresh with credentials anyway. The key binding is the one rule for both clients.
+
+### Two ways to sign in
+
+- An account holds identities, one per provider, in a table of their own (`identity`, the primary key is
+  provider plus subject, unique on account plus provider), so GitHub and Apple open the same account.
+  Migration `0005` copies every account's provider and subject into it and leaves those columns on
+  `account`: the Worker still running while it applies keeps writing them, and dropping columns of a table
+  sessions and machines reference would mean rebuilding it under their foreign keys. A GitHub account that
+  Worker makes in the seconds before the deploy gets its identity on its next sign-in. When the identity an
+  account was made with is removed, its subject on `account` is rewritten, so signing in with it later makes
+  a new account instead of meeting the old unique pair.
+- What an account is shown as is the oldest identity with a login, else the oldest (`accountProviderSql`),
+  worked out in every query rather than stored. Apple hands out no login, so an account made with Apple is
+  "Signed in with Apple" until GitHub is added, and every client names the same account the same way
+  whichever provider it signed in with. `Account` keeps its shape, so a stored session and an older client
+  read it as before; `GET /v1/account` adds the identities.
+- Apple asks for nothing: no `name`, no `email`. The subject is all an account needs, an email is an
+  address that changes hands (and often a relay), and Apple sends a name only on the first authorization,
+  which a second device or a link never sees. Without a scope Apple would allow `response_mode=query`; the
+  form post is used anyway, since it keeps the code out of the address bar, the history and any log of URLs.
+- A form post from `appleid.apple.com` is a cross-site POST, which a `SameSite=Lax` cookie does not ride
+  along with. The state was already server-side (hashed in `login_attempt`, ten minutes, spent by the first
+  callback), so the question was only the cookie that binds the callback to the browser that started it.
+  Dropping it for Apple would let a login started in one browser finish in another; so for a provider that
+  posts back the cookie is `SameSite=None` (still `__Host-`, `Secure`, `HttpOnly`). A top-level navigation
+  carries it in Safari and Chrome alike, and a forged post has no state to finish. GitHub keeps `Lax`.
+- Apple offers no PKCE for a web client. The address book's verifier hash rides as the `nonce` instead, and
+  the `id_token` has to carry it back, which ties Apple's code to the login that stored the verifier. The
+  token is checked although it came straight from Apple over TLS: an RS256 signature from a key in Apple's
+  JWKS (cached per isolate, fetched again for an unknown key id), Apple as the issuer, an accepted audience,
+  `exp` with a minute of skew, and the nonce. The audience is a list, because the iOS app will sign in
+  natively with `app.ruimte.mobile` as the audience, where the web flow has the Services ID
+  `app.ruimte.pulsar`. The client secret is an ES256 JWT signed with the `.p8` per exchange and lives an
+  hour, where Apple would allow six months.
+- Linking is bound to the session, never to a cookie or a URL alone. `POST /v1/account/link` with the access
+  token hands out a link token (five minutes, stored as a hash, with the account and the session), which the
+  start URL carries and spends before the provider is asked; a start refuses a token that is spent, expired,
+  for another provider or from a session that has since ended. The callback does not touch the account: it
+  keeps the identity under a one-time code in `identity_link_code`, a table apart from `login_code` so
+  `/v1/session` can never turn it into a session, and redirects to the app as a login does. The identity
+  lands only when `POST /v1/account/identities` presents that code with the same session's access token and
+  the login's PKCE verifier. So a link token that leaks from a browser's history adds nobody: whoever finishes
+  the provider's login with it still needs the session and the verifier.
+- An identity already on another account is refused with `identity-taken` and a sentence that says
+  accounts are never merged. Merging would move machines, devices and sessions between two people's
+  lists on the strength of one login, and a person who really has two accounts can remove the identity
+  from one and add it to the other. An account with an identity of that provider already gets
+  `provider-linked`; removing an identity is one conditional delete that refuses the last one
+  (`last-identity`), so two removals at once cannot both pass.
+- The providers a client offers come from `GET /v1/providers` (strings, so an older client skips a provider
+  it does not know), with GitHub as the choice until it answers. Deploying the Worker before the Apple
+  secrets exist is safe: Apple is left out of the list, `/health` says `"apple": false` and the start
+  answers `not-configured`.
+- Both choices are the same inverse button (dark on a light theme, light on a dark one) with the mark before
+  "Sign in with ...", so neither is less prominent, which is what Apple's guidelines ask of its button; adding
+  a provider says "Continue with ...", the other title they allow. The marks are paths in `ui/SignInMark.tsx`
+  in `currentColor`, the way `ProviderLogo` draws brand marks Lucide does not have.
 
 ### Machines join the account on their own
 
