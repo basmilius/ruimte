@@ -19,13 +19,21 @@ struct NotificationSessionPage: View {
                     ContentUnavailableView(
                         "Session unavailable", lucideIcon: "triangle-alert", description: Text(problem))
                 } else {
-                    ProgressView("Finding session")
+                    ProgressView().accessibilityLabel("Finding session")
                 }
             } else if let problem {
                 ContentUnavailableView(
-                    "Machine unavailable", lucideIcon: "wifi-off", description: Text(problem))
+                    "Machine unavailable", lucideIcon: "triangle-alert", description: Text(problem))
+            } else if let session, session.failedAttempts >= 3 {
+                ContentUnavailableView {
+                    Label("Machine unavailable", lucideIcon: "triangle-alert")
+                } description: {
+                    Text("Could not reconnect to your machine.")
+                } actions: {
+                    Button("Try again") { session.reconnect() }
+                }
             } else {
-                ProgressView("Connecting to your machine")
+                ProgressView().accessibilityLabel("Connecting to your machine")
             }
         }
         .task {

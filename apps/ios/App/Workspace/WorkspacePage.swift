@@ -5,11 +5,13 @@ struct WorkspacePage: View {
     @State var workspace: MobileWorkspace
     let close: () -> Void
     @State private var adding = false
+    @State private var iconView: JSONValue?
     @State private var renamed: JSONValue?
     @State private var renameText = ""
     @State private var deleteView: JSONValue?
     @State private var search = ""
     @State private var searching = false
+    @FocusState private var sidebarSearchFocused: Bool
     @State private var showUsage = false
     @State private var section = ProjectSection.views
     @State private var openedViewID: String?
@@ -30,10 +32,16 @@ struct WorkspacePage: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
-                if !workspace.session.connected {
-                    Label("Reconnecting to your machine…", lucideIcon: "wifi-off").font(.caption).frame(
-                        maxWidth: .infinity
-                    ).padding(8).background(.thinMaterial)
+                if workspace.ready && !workspace.session.connected {
+                    HStack {
+                        if workspace.session.failedAttempts >= 3 {
+                            Text("Could not reconnect to your machine.").font(.caption)
+                            Spacer()
+                            Button("Try again") { workspace.session.reconnect() }
+                        } else {
+                            ProgressView().accessibilityLabel("Reconnecting to your machine")
+                        }
+                    }.frame(maxWidth: .infinity).padding(8).background(.thinMaterial)
                 }
                 if let notice = workspace.notice {
                     HStack {
@@ -57,6 +65,9 @@ struct WorkspacePage: View {
             }
         }
         .task { workspace.start() }
+        .sheet(isPresented: Binding(get: { iconView != nil }, set: { if !$0 { iconView = nil } })) {
+            if let item = iconView { ViewIconPicker(workspace: workspace, item: item) }
+        }
         .sheet(isPresented: $adding) { AddProjectItem(workspace: workspace, canvasID: nil) }
         .sheet(isPresented: $showUsage) {
             NavigationStack {
@@ -109,16 +120,25 @@ struct WorkspacePage: View {
     }
 
     @ViewBuilder private var openingStatus: some View {
-        if let problem = workspace.problem {
+        if let problem = workspace.problem
+            ?? (workspace.session.failedAttempts >= 3 ? "Could not connect to your machine." : nil)
+        {
             ContentUnavailableView {
-                Label("Could not open project", lucideIcon: "wifi-off", iconSize: 48)
+                Label("Could not open project", lucideIcon: "triangle-alert", iconSize: 48)
             } description: {
                 Text(problem)
             } actions: {
-                Button("Try again") { Task { await workspace.open() } }
+                Button("Try again") {
+                    if workspace.session.connected {
+                        Task { await workspace.open() }
+                    } else {
+                        workspace.problem = nil
+                        workspace.session.reconnect()
+                    }
+                }
             }
         } else {
-            ProgressView("Opening project")
+            ProgressView().accessibilityLabel("Opening project")
         }
     }
 
@@ -148,15 +168,7 @@ struct WorkspacePage: View {
                 Label("Processes", lucideIcon: "activity")
             }
             Tab(value: ProjectSection.search, role: .search) {
-                projectNavigation {
-                    viewList(query: search)
-                        .overlay {
-                            if !search.isEmpty && WorkspaceViewSections.split(workspace.views, search: search).isEmpty {
-                                ContentUnavailableView("No matching views", lucideIcon: "search")
-                            }
-                        }
-                }
-                .searchable(text: $search, isPresented: $searching, prompt: "Find a view")
+                searchPage
             } label: {
                 Label("Search", lucideIcon: "search")
             }
@@ -167,6 +179,35 @@ struct WorkspacePage: View {
         // Only the narrow project navigator uses compact tabs; the detail keeps its iPad traits.
         .environment(\.horizontalSizeClass, .compact)
         .tint(MobileStyle.accent)
+    }
+
+    @ViewBuilder private var searchPage: some View {
+        if sizeClass == .regular {
+            projectNavigation {
+                searchResults
+                    .safeAreaInset(edge: .bottom) {
+                        HStack(spacing: 10) {
+                            Image(lucide: "search").foregroundStyle(.secondary)
+                            TextField("Find a view", text: $search)
+                                .focused($sidebarSearchFocused)
+                                .onAppear { sidebarSearchFocused = true }
+                                .textInputAutocapitalization(.never).autocorrectionDisabled()
+                        }.padding(14).glassEffect(.regular, in: Capsule()).padding(12)
+                    }
+            }
+        } else {
+            projectNavigation { searchResults }
+                .searchable(text: $search, isPresented: $searching, prompt: "Find a view")
+        }
+    }
+
+    private var searchResults: some View {
+        viewList(query: search)
+            .overlay {
+                if !search.isEmpty && WorkspaceViewSections.split(workspace.views, search: search).isEmpty {
+                    ContentUnavailableView("No matching views", lucideIcon: "search")
+                }
+            }
     }
 
     private var projectSplit: some View {
@@ -203,6 +244,11 @@ struct WorkspacePage: View {
     private func projectNavigation<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         NavigationStack {
             content()
+                .scrollContentBackground(sizeClass == .regular ? .hidden : .automatic)
+                .background {
+                    if sizeClass == .regular { sidebarBackground.ignoresSafeArea(.container) }
+                }
+                .environment(\.inProjectSidebar, sizeClass == .regular)
                 .navigationTitle(sizeClass == .regular ? "" : workspace.title)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -257,6 +303,8 @@ struct WorkspacePage: View {
                                 renameText = item.text("name")
                                 renamed = item
                             }.disabled(item.text("kind") == "unknown")
+                            Button("Change icon", lucideIcon: "palette") { iconView = item }
+                                .disabled(item.text("kind") == "unknown")
                             Button("Delete", lucideIcon: "trash", role: .destructive) {
                                 deleteView = item
                             }
@@ -366,7 +414,7 @@ struct ProjectItemPage: View {
                     Button("Retry") { Task { await prepare() } }
                 }
             } else if !ready {
-                ProgressView("Opening")
+                ProgressView().accessibilityLabel("Opening")
             } else {
                 switch current.text("kind") {
                 case "canvas": CanvasPage(workspace: workspace, viewID: current.stableID)
@@ -551,5 +599,6 @@ struct NotePage: View {
 }
 
 extension EnvironmentValues {
+    @Entry var inProjectSidebar = false
     @Entry var openMobileWorkspace: (MobileWorkspace) -> Void = { _ in }
 }

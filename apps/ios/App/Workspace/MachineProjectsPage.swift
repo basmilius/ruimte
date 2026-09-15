@@ -48,7 +48,7 @@ struct MachineProjectsPage: View {
                         .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                 }
                 if loading {
-                    ProgressView("Loading projects")
+                    ProgressView().accessibilityLabel("Loading projects")
                 } else if session.connected && projects.isEmpty {
                     ContentUnavailableView(
                         "No projects yet", lucideIcon: "folder",

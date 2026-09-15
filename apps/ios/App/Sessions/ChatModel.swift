@@ -65,8 +65,7 @@ final class ChatModel {
                     self.generation += 1
                     self.attachTask?.cancel()
                     self.loading = false
-                    self.error =
-                        "Connection lost. Your draft is saved; the chat will reload when the machine reconnects."
+                    error = nil
                 }
             })
     }
@@ -91,6 +90,7 @@ final class ChatModel {
             guard let self else { return }
             do {
                 guard let attachment else { throw CancellationError() }
+                async let providerResult = loadProviders()
                 _ = try await attachment.snapshot(payload: target()) { [weak self] snapshot in
                     guard let self, self.generation == current else { return }
                     self.replace(snapshot)
@@ -98,7 +98,7 @@ final class ChatModel {
                     self.error = nil
                 }
                 guard !Task.isCancelled, generation == current else { return }
-                let result = try await client.request("provider.list", payload: .object([:]))
+                let result = try await providerResult
                 guard !Task.isCancelled, generation == current else { return }
                 providers = result["providers"]?.arrayValue ?? []
             } catch is CancellationError {} catch {
@@ -107,6 +107,10 @@ final class ChatModel {
                 self.error = error.localizedDescription
             }
         }
+    }
+
+    private func loadProviders() async throws -> JSONValue {
+        try await client.request("provider.list", payload: .object([:]))
     }
 
     func replace(_ snapshot: JSONValue) {

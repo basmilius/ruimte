@@ -42,7 +42,7 @@ struct ChatScreen: View {
             }
             .overlay {
                 if model.loading {
-                    ProgressView("Loading conversation…")
+                    ProgressView().accessibilityLabel("Loading conversation…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .allowsHitTesting(false)
                 } else if model.items.isEmpty {

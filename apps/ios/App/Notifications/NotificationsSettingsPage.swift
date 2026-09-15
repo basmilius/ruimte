@@ -65,7 +65,7 @@ private struct FollowMachineNotificationsPage: View {
     @State private var problem: String?
     var body: some View {
         List {
-            if loading { ProgressView("Loading sessions") }
+            if loading { ProgressView().accessibilityLabel("Loading sessions") }
             if let problem { Text(problem).foregroundStyle(.red) }
             ForEach(sessions, id: \.stableID) { session in
                 VStack(alignment: .leading, spacing: 10) {

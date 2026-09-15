@@ -96,7 +96,7 @@ final class MobileWorkspace {
             }
             problem = nil
             if pendingSave && conflict == nil { await save() }
-        } catch { if !Task.isCancelled { problem = error.localizedDescription } }
+        } catch { if !Task.isCancelled && session.connected { problem = error.localizedDescription } }
     }
 
     func receive(_ incoming: JSONValue) {

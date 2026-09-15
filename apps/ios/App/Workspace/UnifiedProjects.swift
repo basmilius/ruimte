@@ -115,7 +115,9 @@ final class UnifiedProjects {
                 if let valid = try? WireEvent.projectSummary.validatePayload(event)["summary"] {
                     entry.summaries.removeAll { $0.text("projectId") == valid.text("projectId") }
                     entry.summaries.append(valid)
+                    if entry.task != nil { entry.changedSummaries[valid.text("projectId")] = valid }
                     writeCache(entry)
+                    return
                 }
                 _ = beginLoad(entry)
             }
@@ -167,9 +169,10 @@ final class UnifiedProjects {
     }
 
     private func beginLoad(_ entry: UnifiedProjectMachine) -> Task<Void, Never> {
+        if let task = entry.task { return task }
+        entry.changedSummaries.removeAll()
         entry.operation += 1
         let operation = entry.operation
-        entry.task?.cancel()
         entry.loading = true
         let task = Task { [weak self, weak entry] in
             guard let self, let entry else { return }
@@ -189,8 +192,12 @@ final class UnifiedProjects {
                     entry.connected
                 else { return }
                 let validated = try WireRequest.projectList.validateResult(response)
-                // A project id is local to one daemon; duplicate rows never replace another machine's project.
-                entry.summaries = unique(validated.list("projects"))
+                // Events received during this request are newer than its snapshot.
+                entry.summaries = unique(
+                    validated.list("projects").map {
+                        entry.changedSummaries[$0.text("projectId")] ?? $0
+                    } + Array(entry.changedSummaries.values))
+                entry.changedSummaries.removeAll()
                 entry.problem = nil
                 writeCache(entry)
             } catch {
@@ -258,6 +265,7 @@ private final class UnifiedProjectMachine {
     var problem: String?
     @ObservationIgnored var connection: UnifiedProjectConnection?
     @ObservationIgnored var binding = UUID()
+    @ObservationIgnored var changedSummaries: [String: JSONValue] = [:]
     @ObservationIgnored var operation = 0
     @ObservationIgnored var task: Task<Void, Never>?
     @ObservationIgnored var unsubscribe: (() -> Void)?

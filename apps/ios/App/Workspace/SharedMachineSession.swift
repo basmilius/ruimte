@@ -9,6 +9,7 @@ final class SharedMachineSession {
     let machine: Machine
     private(set) var connected = false
     private(set) var generation = 0
+    private(set) var failedAttempts = 0
     private(set) var problem: String?
     private(set) var relayed: Bool?
     private var lease: MachineLease?
@@ -44,6 +45,7 @@ final class SharedMachineSession {
                 Task { @MainActor [weak self] in
                     guard let self, lease != nil else { return }
                     connected = true
+                    failedAttempts = 0
                     problem = nil
                     generation += 1
                     rpc.connected()
@@ -51,6 +53,7 @@ final class SharedMachineSession {
             }, message: { [weak self] text in self?.rpc.receive(text) },
             closed: { [weak self] error in
                 guard let self else { return }
+                if error != nil || !connected { failedAttempts += 1 }
                 connected = false
                 relayed = nil
                 problem = error?.localizedDescription
@@ -120,7 +123,11 @@ final class SharedMachineSession {
         await runtime?.notifications.markSeen(machineID: machine.id, nodeID: nodeID)
     }
 
-    func reconnect() { runtime?.connections.reconnect(machineID: machine.id) }
+    func reconnect() {
+        failedAttempts = 0
+        problem = nil
+        runtime?.connections.reconnect(machineID: machine.id)
+    }
 }
 
 @MainActor

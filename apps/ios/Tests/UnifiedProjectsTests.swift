@@ -121,7 +121,7 @@ final class UnifiedProjectsTests: XCTestCase {
         XCTAssertEqual(cached.arrayValue, [])
     }
 
-    @MainActor func testSummaryEventMovesOpenProjectToRecentAndRefreshesList() async throws {
+    @MainActor func testSummaryEventMovesOpenProjectToRecentWithoutReloadingList() async throws {
         let fixture = try ProjectListFixture()
         defer { fixture.clean() }
         let machine = fixture.machine("machine")
@@ -136,8 +136,29 @@ final class UnifiedProjectsTests: XCTestCase {
         client.emit(.object(["summary": closed]))
         XCTAssertTrue(fixture.model.open.isEmpty)
         XCTAssertEqual(fixture.model.recent.first?.summary.text("name"), "Renamed")
-        await fixture.model.refresh()
+        XCTAssertEqual(client.requests, 1)
         XCTAssertEqual(fixture.model.recent.count, 1)
+    }
+
+    @MainActor func testSummaryReceivedDuringRefreshSurvivesOlderSnapshot() async throws {
+        let fixture = try ProjectListFixture()
+        defer { fixture.clean() }
+        let client = ProjectListClient()
+        let project = fixture.summary(opened: 5)
+        client.response = .object(["projects": .array([project])])
+        fixture.model.reconcile(machines: [fixture.machine("machine")], connect: { _ in client.connection })
+        client.setConnected(true)
+        await fixture.model.refresh()
+        XCTAssertEqual(client.requests, 1)
+        client.holdResponses = true
+        let refresh = Task { await fixture.model.refresh() }
+        await client.waitForHeldRequest()
+        let renamed = project.setting("name", .string("New name"))
+        client.emit(.object(["summary": renamed]))
+        client.finishHeld(.object(["projects": .array([project])]))
+        await refresh.value
+        XCTAssertEqual(client.requests, 2)
+        XCTAssertEqual(fixture.model.open.first?.summary.text("name"), "New name")
     }
 
     @MainActor func testInvalidCacheRowsAreDiscardedAndCacheIsBounded() async throws {
@@ -207,6 +228,7 @@ final class UnifiedProjectsTests: XCTestCase {
     var connected = false
     var current = true
     var holds = 0
+    var requests = 0
     var holdResponses = false
     private var held: CheckedContinuation<JSONValue, Error>?
     private var waiting: CheckedContinuation<Void, Never>?
@@ -217,6 +239,7 @@ final class UnifiedProjectsTests: XCTestCase {
     }
     func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
         XCTAssertEqual(type, "project.list")
+        requests += 1
         guard holdResponses else { return response }
         return try await withCheckedThrowingContinuation {
             held = $0

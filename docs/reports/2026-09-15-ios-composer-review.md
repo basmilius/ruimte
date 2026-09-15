@@ -438,3 +438,15 @@ test log: `/tmp/ruimte-ios-sidebar-search-test.log`.
 Verdict: ready for device review; physical search tapping/canceling and sidebar
 collapse/reopen remain unverified. The inspected fixture screenshots confirm the
 small sidebar tabbar and aligned back/collapse controls without the sidebar title.
+
+
+## Sidebar cleanup, loading and view icons
+
+- Hide UIKit's automatic split controls; retain the back and sidebar buttons in the project toolbar.
+- Apply the same sidebar background to Views, Files, Git and Processes. Files has no top search field in the sidebar. On iPad, view search uses a focused field above the bottom tabbar; iPhone retains native search-tab presentation.
+- Show loading spinners with VoiceOver labels, without visible loading captions. Reconnection shows a spinner until three failed attempts, then an error with manual retry. Automatic reconnection continues and clears the error on success.
+- Add Change icon beside Rename, with the protocol's 60 Lucide choices, emoji and reset to default. Updates use the existing project save and conflict handling.
+- Reuse in-flight project-list requests, apply summary events without reloading the list, and preserve events received during an older snapshot request.
+- Remove the initial duplicate folder listing for absolute paths. Processes renders the subscription's initial snapshot directly. Chat provider choices load alongside the conversation snapshot.
+
+Validation: eight project-list tests passed on the physical iPad, including an event racing an older snapshot and request-count checks. The signed device build passed. No simulator was used. These changes reduce request count and sequential waits; no before/after timings were measured on live projects. Sidebar appearance, search focus and icon selection still need device acceptance.

@@ -30,7 +30,7 @@ struct DrawingEditorPage: View {
             } else if let problem = model.problem {
                 ContentUnavailableView("Could not open drawing", lucideIcon: "pen-tool", description: Text(problem))
             } else {
-                ProgressView("Loading drawing").frame(maxWidth: .infinity, maxHeight: .infinity)
+                ProgressView().accessibilityLabel("Loading drawing").frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {

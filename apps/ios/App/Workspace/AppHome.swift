@@ -136,11 +136,9 @@ struct AppHome: View {
                 .listSectionSeparator(.hidden, edges: .top)
             } else if loadingProjects {
                 Section {
-                    ProgressView(
-                        runtime.loading || projects.loading ? "Loading projects" : "Connecting to your computers"
-                    )
-                    .frame(maxWidth: .infinity, minHeight: 120)
-                    .accessibilityIdentifier("projects.loading")
+                    ProgressView().accessibilityLabel("Loading projects")
+                        .frame(maxWidth: .infinity, minHeight: 120)
+                        .accessibilityIdentifier("projects.loading")
                 }.listRowBackground(Color.clear).listRowSeparator(.hidden)
             } else if !search.isEmpty {
                 ContentUnavailableView.search(text: search)
@@ -234,7 +232,7 @@ struct RecentProjectsPage: View {
                 Section { ProjectLinks(runtime: runtime, rows: visible) }
                     .listSectionSeparator(.hidden, edges: .top)
             } else if projects.loading {
-                ProgressView("Loading projects").frame(maxWidth: .infinity, minHeight: 120)
+                ProgressView().accessibilityLabel("Loading projects").frame(maxWidth: .infinity, minHeight: 120)
                     .listRowBackground(Color.clear).listRowSeparator(.hidden)
             } else if !search.isEmpty {
                 ContentUnavailableView.search(text: search)

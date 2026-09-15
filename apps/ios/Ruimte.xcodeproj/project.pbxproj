@@ -12,6 +12,7 @@
 		036421AA923C27CCC1A4FE3A /* UsageMoneyFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13B248061C8BA76C3B7DC1F8 /* UsageMoneyFormatter.swift */; };
 		0ADF4AA4572DAF49C8A26900 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = A84B645FE2D16EFA24FD14F6 /* AppIcon.icon */; };
 		0B547D0A6B2838F62FB295E9 /* LucideSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 06F665001E0BC007A06510C8 /* LucideSwift */; };
+		0C50DA276AE717B500B6D27B /* ViewIconPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B68348C7C35F8C9CAC737CA /* ViewIconPicker.swift */; };
 		0C7BBCCED0B7814415E137A6 /* DrawingCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 732B16DF3002A0A3499B1ADF /* DrawingCanvas.swift */; };
 		0E75E028596697B06343F2F1 /* CanvasRenderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5B1DCD63DC630D3ABFE455 /* CanvasRenderTests.swift */; };
 		10DF53C41E4349033B09883C /* MachineProjectsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA401CA82CE41046F457D507 /* MachineProjectsPage.swift */; };
@@ -148,6 +149,7 @@
 		089B611A941366002AA1307E /* RenderDocumentPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderDocumentPage.swift; sourceTree = "<group>"; };
 		09CCDDD483546BE641151534 /* RuimteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuimteApp.swift; sourceTree = "<group>"; };
 		09EE2B3374AED0CCAB042E24 /* MobileJSON.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileJSON.swift; sourceTree = "<group>"; };
+		0B68348C7C35F8C9CAC737CA /* ViewIconPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewIconPicker.swift; sourceTree = "<group>"; };
 		0E13420E1D28A681FA26B33B /* MachineIconState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineIconState.swift; sourceTree = "<group>"; };
 		111FDB97EC13D539638EFBEC /* ChatScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatScreen.swift; sourceTree = "<group>"; };
 		13B248061C8BA76C3B7DC1F8 /* UsageMoneyFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageMoneyFormatter.swift; sourceTree = "<group>"; };
@@ -308,6 +310,7 @@
 				089B611A941366002AA1307E /* RenderDocumentPage.swift */,
 				653536E5B98BEFB676B13733 /* SharedMachineSession.swift */,
 				5A672F255CAFCD537E1F2A74 /* UnifiedProjects.swift */,
+				0B68348C7C35F8C9CAC737CA /* ViewIconPicker.swift */,
 				1FAE5DD971FEE4F7A8B224B1 /* WelcomePage.swift */,
 				9447D15E48181E5F166E22A6 /* WorkspacePage.swift */,
 				19E795084D99E041A22F82D5 /* WorkspaceViewSections.swift */,
@@ -786,6 +789,7 @@
 				4A72905CB7BB90167D5186BD /* TerminalSnapshot.swift in Sources */,
 				BA623D7F1AD8EA29890E9E41 /* UnifiedProjects.swift in Sources */,
 				036421AA923C27CCC1A4FE3A /* UsageMoneyFormatter.swift in Sources */,
+				0C50DA276AE717B500B6D27B /* ViewIconPicker.swift in Sources */,
 				7A520DCC7261AB8C8C61F18C /* WelcomePage.swift in Sources */,
 				008FD13D8AE76883BA6E4C0A /* WorkspacePage.swift in Sources */,
 				74C49C8FF69574D8408DE421 /* WorkspaceViewSections.swift in Sources */,

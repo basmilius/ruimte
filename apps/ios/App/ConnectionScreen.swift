@@ -18,7 +18,9 @@ struct ConnectionScreen: View {
                     LabeledContent("Protocol", value: String(WireConstants.protocolVersion))
                     Toggle("Require relay for this test", isOn: $runtime.relayOnly)
                         .onChange(of: runtime.relayOnly) { _, _ in probe.reconnect(runtime: runtime) }
-                } header: { Text("Connection test") }
+                } header: {
+                    Text("Connection test")
+                }
                 Section("Account") {
                     if let account = runtime.account {
                         LabeledContent("Signed in", value: account.login ?? account.provider.rawValue.capitalized)
@@ -28,7 +30,7 @@ struct ConnectionScreen: View {
                             Task { await runtime.signOut() }
                         }
                     } else if runtime.loading {
-                        ProgressView("Loading sign-in options")
+                        ProgressView().accessibilityLabel("Loading sign-in options")
                     } else {
                         ForEach(runtime.providers, id: \.rawValue) { provider in
                             Button(provider == .github ? "Continue with GitHub" : "Continue with Apple") {
@@ -42,10 +44,10 @@ struct ConnectionScreen: View {
                             Button("Retry") { Task { await runtime.start() } }
                         }
                         if runtime.signingIn {
-                            ProgressView("Signing in")
+                            ProgressView().accessibilityLabel("Signing in")
                             Button("Cancel sign-in") { runtime.cancelSignIn() }
                         }
-                        if runtime.signingOut { ProgressView("Signing out") }
+                        if runtime.signingOut { ProgressView().accessibilityLabel("Signing out") }
                     }
                     if let problem = runtime.problem {
                         Text(problem).foregroundStyle(.red).textSelection(.enabled)
@@ -71,7 +73,9 @@ struct ConnectionScreen: View {
                 if let machine = probe.machine {
                     Section(machine.name) {
                         LabeledContent("Status", value: probe.status)
-                        LabeledContent("Selected ICE path", value: probe.relayed.map { $0 ? "Via relay" : "Direct" } ?? "Not measured")
+                        LabeledContent(
+                            "Selected ICE path",
+                            value: probe.relayed.map { $0 ? "Via relay" : "Direct" } ?? "Not measured")
                         if let elapsed = probe.elapsedMilliseconds {
                             LabeledContent("Connection to server.hello", value: "\(elapsed) ms").monospacedDigit()
                         }
@@ -98,7 +102,8 @@ struct ConnectionScreen: View {
                 if let publicKey = runtime.key?.publicKey {
                     Section("Device key") {
                         Text(publicKey).font(.caption.monospaced()).textSelection(.enabled)
-                        Text("Match this public key in the machine's Apps with access list.").font(.caption).foregroundStyle(.secondary)
+                        Text("Match this public key in the machine's Apps with access list.").font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }

@@ -58,7 +58,7 @@ final class TerminalModel {
                     writeTask?.cancel()
                     queuedInput.removeAll()
                     loading = false
-                    error = "Connection lost. The terminal will reload when the machine reconnects."
+                    error = nil
                 }
             })
     }

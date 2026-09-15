@@ -79,6 +79,7 @@ struct ProcessesPage: View {
             }
         }.navigationTitle("Processes")
             .task {
+                state.loading = state.value == nil
                 let cancelSample = client.subscribe("processes.sample") { value in sample = value }
                 defer { cancelSample() }
                 await RemotePageLifecycle.run(
@@ -88,6 +89,12 @@ struct ProcessesPage: View {
                             start: "processes.subscribe", stop: "processes.unsubscribe",
                             payload: .object(["scope": .string("all"), "sort": .string("cpu")]),
                             stopPayload: .object([:]))
+                    },
+                    onSubscribed: { result in
+                        state.loading = false
+                        state.value = result
+                        state.problem = nil
+                        sample = result["sample"] == .null ? nil : result["sample"]
                     }, load: load)
             }
             .confirmationDialog(

@@ -11,6 +11,7 @@ struct MachineFilesPage: View {
     @State private var state = RemotePageState()
     @AppStorage("ruimte.ios.showHiddenFiles") private var hidden = false
     @State private var search = ""
+    @Environment(\.inProjectSidebar) private var inProjectSidebar
     private var entries: [JSONValue] {
         state.value?.list("entries").filter {
             search.isEmpty || $0.text("name").localizedCaseInsensitiveContains(search)
@@ -51,7 +52,7 @@ struct MachineFilesPage: View {
             }
         }
         .navigationTitle(path == "~" ? "Files" : URL(fileURLWithPath: path).lastPathComponent)
-        .searchable(text: $search, prompt: "Filter this folder")
+        .modifier(FolderSearch(text: $search, inSidebar: inProjectSidebar))
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -74,7 +75,7 @@ struct MachineFilesPage: View {
                     let payload: JSONValue = .object(["path": .string(state.value?.text("path") ?? path)])
                     return client.acquireSubscription(
                         start: "fs.watch", stop: "fs.unwatch", payload: payload, stopPayload: payload)
-                }, start: { await load() }, load: load)
+                }, start: { if path == "~" { await load() } }, load: load)
         }
         .refreshable { await load() }
     }
@@ -201,5 +202,13 @@ private struct SafeSVGPreview: UIViewRepresentable {
         view.loadHTMLString(
             "<meta name='viewport' content='width=device-width,initial-scale=1'><meta http-equiv='Content-Security-Policy' content=\"default-src 'none'; img-src data:; style-src 'unsafe-inline'\"><style>body{margin:0}img{width:100%;height:auto}</style><img alt='File preview' src='data:image/svg+xml;base64,\(base64)'>",
             baseURL: nil)
+    }
+}
+
+private struct FolderSearch: ViewModifier {
+    @Binding var text: String
+    let inSidebar: Bool
+    func body(content: Content) -> some View {
+        if inSidebar { content } else { content.searchable(text: $text, prompt: "Filter this folder") }
     }
 }

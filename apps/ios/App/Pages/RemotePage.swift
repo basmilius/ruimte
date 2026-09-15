@@ -36,7 +36,8 @@ import SwiftUI
         client: any MachineRequesting, events: [String] = [],
         matches: @escaping @MainActor @Sendable (JSONValue) -> Bool = { _ in true },
         subscription: (() -> MachineSubscription)? = nil, start: @escaping () async throws -> Void = {},
-        stop: @escaping () async -> Void = {}, load: @escaping () async -> Void
+        stop: @escaping () async -> Void = {}, onSubscribed: ((JSONValue) -> Void)? = nil,
+        load: @escaping () async -> Void
     ) async {
         var lease: MachineSubscription?
         let (stream, continuation) = AsyncStream<Bool>.makeStream(bufferingPolicy: .bufferingNewest(1))
@@ -58,7 +59,10 @@ import SwiftUI
             if connected {
                 try? await start()
                 if lease == nil { lease = subscription?() }
-                _ = try? await lease?.refresh()
+                if let snapshot = try? await lease?.refresh(), let onSubscribed {
+                    onSubscribed(snapshot)
+                    continue
+                }
             }
             await load()
         }
@@ -69,7 +73,7 @@ struct RemotePageStatus: View {
     let state: RemotePageState
     let retry: () -> Void
     var body: some View {
-        if state.loading { ProgressView("Loading").frame(maxWidth: .infinity).padding() }
+        if state.loading { ProgressView().accessibilityLabel("Loading").frame(maxWidth: .infinity).padding() }
         if let problem = state.problem {
             VStack(alignment: .leading, spacing: 12) {
                 Label(problem, lucideIcon: "triangle-alert").foregroundStyle(.red)
