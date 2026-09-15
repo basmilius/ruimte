@@ -1928,8 +1928,12 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   machine the list does not have. A machine the list has is registered again when the name, icon, broker or
   key it announces in `endpoint.info` (or `endpoint.changed`) differs from its record, once per state it is
   in, since the list may answer a moment behind the write; without that a record kept the host name and the
-  broker (or none) of the first registration forever. A failure waits 30 seconds, doubling up to 30
-  minutes, so an address book that is down or a machine that cannot sign costs a request now and then.
+  broker (or none) of the first registration forever. The key compared is the one the row pinned, else
+  the one `endpoint.info` announces: the row of this machine reaches it with the local secret and never
+  pins one, and waiting for a pinned key left its record on the first registration for good. A failure
+  waits 30 seconds, doubling up to 30 minutes, so an address book that is down or a machine that cannot
+  sign costs a request now and then; its reason goes to the console and stands in the machine's dialog
+  until it registers.
 - A machine a person removes is remembered on the account (`removed_machine`), not in one client: a list
   kept per client would let the next client that reaches the machine put it straight back. An `automatic`
   registration of such a machine answers `removed`; a registration without the flag clears the row, and

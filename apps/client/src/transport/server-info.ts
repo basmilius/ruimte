@@ -28,7 +28,8 @@ const load = (endpointId: string): void => {
                 refuseStatements: info.refuseStatements === true,
                 broker: info.broker ?? null,
                 brokerFixed: info.brokerFixed === true,
-                reachability: info.reachability
+                reachability: info.reachability,
+                publicKey: info.publicKey ?? null
             });
             adoptMachineName(settled, info.label, info.nameSource ?? null);
             const hello = await link.request('server.hello', {});

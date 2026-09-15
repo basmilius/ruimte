@@ -4,6 +4,7 @@ import { CloudUpload, Plug, X } from 'lucide-react';
 import { forgetEndpoint } from '@/endpoint';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { messageOf, usePulsarAccount, withAccessToken } from '@/pulsar/account';
+import { useRegistrationFailures } from '@/pulsar/auto-register-watch';
 import { addMachineToAccount, openAccountMachine, refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
 import { ConfirmDialog } from '@/shell/settings/ConfirmDialog';
 import { MachineIdentityForm } from '@/shell/settings/MachineIdentityForm';
@@ -35,6 +36,7 @@ function MachineDialogBody({ entry }: { entry: MachineEntry }) {
     const removedMachineIds = usePulsarMachines((s) => s.removedMachineIds);
     const info = useServers((s) => (entry.endpoint ? s.byEndpoint[entry.endpoint.id] : undefined));
     const icon = useMachineIcon(entry);
+    const registrationFailure = useRegistrationFailures((s) => s.byMachine[entry.endpoint?.daemonId ?? entry.id] ?? null);
     const [confirming, setConfirming] = useState<Confirming>(null);
     const [busy, setBusy] = useState(false);
     const model = machineDialogModel(entry, { connected: connection.status === 'open', signedIn, removedMachineIds });
@@ -115,6 +117,11 @@ function MachineDialogBody({ entry }: { entry: MachineEntry }) {
                             <BrokerRow endpoint={entry.endpoint} reason={reason} />
                         </SettingsSection>
                         <SettingsSection title="Account">
+                            {registrationFailure && (
+                                <p className="px-4 py-3 text-xs break-words text-status-error" role="alert">
+                                    Could not update this machine on your account: {registrationFailure}
+                                </p>
+                            )}
                             <RefuseStatementsRow endpoint={entry.endpoint} reason={reason} />
                             {model.canAddToAccountAgain && (
                                 <SettingsRow

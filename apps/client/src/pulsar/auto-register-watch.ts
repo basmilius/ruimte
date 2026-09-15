@@ -1,9 +1,13 @@
+import { create } from 'zustand';
 import { useEndpoints } from '@/state/endpoints';
 import { serverInfoOf, useServers } from '@/state/server';
 import { pool, transportFor } from '@/transport';
-import { usePulsarAccount, withAccessToken } from './account';
-import { AutoRegistrar } from './auto-register';
+import { messageOf, usePulsarAccount, withAccessToken } from './account';
+import { AutoRegistrar, announcedRecordOf } from './auto-register';
 import { refreshAccountMachines, usePulsarMachines } from './machines';
+
+/* Why a machine's last registration or record update failed, per machine id, while it waits for its retry. */
+export const useRegistrationFailures = create<{ byMachine: Record<string, string> }>(() => ({ byMachine: {} }));
 
 /*
  * Wires `AutoRegistrar` to what this client knows: the account it is signed in to, the list the address
@@ -31,12 +35,21 @@ export const startAutoRegistration = (): (() => void) => {
     let listAsked: string | null = null;
     const statusOffs = new Map<string, () => void>();
 
+    const publishFailures = (): void => {
+        const byMachine = Object.fromEntries([...registrar.failedMachines()].map(([machineId, error]) => [machineId, messageOf(error)]));
+        const before = useRegistrationFailures.getState().byMachine;
+        if (JSON.stringify(byMachine) !== JSON.stringify(before)) {
+            useRegistrationFailures.setState({ byMachine });
+        }
+    };
+
     const sweep = async (): Promise<void> => {
         const { status, account } = usePulsarAccount.getState();
         const accountId = status === 'signed-in' ? (account?.id ?? null) : null;
         registrar.setAccount(accountId);
         if (accountId === null) {
             listAsked = null;
+            publishFailures();
             return;
         }
         const { machines, removedMachineIds } = usePulsarMachines.getState();
@@ -52,16 +65,16 @@ export const startAutoRegistration = (): (() => void) => {
         const { endpoints } = useEndpoints.getState();
         const open = endpoints.filter((endpoint) => endpoint.daemonId !== null && pool.statusOf(endpoint.id).status === 'open');
         const outcomes = await Promise.all(
-            open.map((endpoint) => {
-                const { label, icon } = serverInfoOf(endpoint.id);
-                // The label and the broker arrive in one `endpoint.info`, so a known label means the broker is known too.
-                const current =
-                    label === null || endpoint.daemonPublicKey === null
-                        ? null
-                        : { name: label, icon, brokerUrl: endpoint.brokerUrl ?? null, publicKey: endpoint.daemonPublicKey };
-                return registrar.consider(endpoint.id, endpoint.daemonId!, list, current);
+            open.map(async (endpoint) => {
+                const machineId = endpoint.daemonId!;
+                const outcome = await registrar.consider(endpoint.id, machineId, list, announcedRecordOf(endpoint, serverInfoOf(endpoint.id)));
+                if (outcome === 'failed') {
+                    console.warn(`Could not update machine ${machineId} on the account`, registrar.failedMachines().get(machineId));
+                }
+                return outcome;
             })
         );
+        publishFailures();
         if (outcomes.some((outcome) => outcome === 'registered' || outcome === 'removed')) {
             await refreshAccountMachines();
         }

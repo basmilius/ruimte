@@ -27,6 +27,8 @@ export interface ServerInfo {
     /* Whether a flag or the environment on the machine decides the broker, which leaves the setting without effect. */
     brokerFixed: boolean;
     reachability: Reachability | null;
+    /* The key the machine announces, which the record on an account carries; null until it answers. */
+    publicKey: string | null;
 }
 
 /* One object for a machine that has not said hello yet, so a selector gets a stable snapshot. */
@@ -42,7 +44,8 @@ const UNKNOWN: ServerInfo = {
     refuseStatements: false,
     broker: null,
     brokerFixed: false,
-    reachability: null
+    reachability: null,
+    publicKey: null
 };
 
 interface ServersStore {
@@ -50,7 +53,10 @@ interface ServersStore {
     setInfo(endpointId: string, info: Pick<ServerInfo, 'platform' | 'home' | 'version' | 'model'>): void;
     setEndpoint(
         endpointId: string,
-        info: Pick<ServerInfo, 'label' | 'nameSource' | 'icon' | 'agentsDeleteAnyView' | 'refuseStatements' | 'broker' | 'brokerFixed' | 'reachability'>
+        info: Pick<
+            ServerInfo,
+            'label' | 'nameSource' | 'icon' | 'agentsDeleteAnyView' | 'refuseStatements' | 'broker' | 'brokerFixed' | 'reachability' | 'publicKey'
+        >
     ): void;
     /* What someone set on this machine, from `endpoint.changed` or from setting it here. A switch left out stays where it stands. */
     setIdentity(

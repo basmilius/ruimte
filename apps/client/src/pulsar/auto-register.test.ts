@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { AddressBookRequestError, type RegisterMachinePayload } from '@ruimte/pulsar';
-import { AutoRegistrar, REGISTER_RETRY_MAX_MS, REGISTER_RETRY_MIN_MS, type AccountList, type MachineRecord } from './auto-register';
+import { LOCAL_ENDPOINT_ID, type Endpoint } from '@/state/endpoints';
+import { AutoRegistrar, REGISTER_RETRY_MAX_MS, REGISTER_RETRY_MIN_MS, announcedRecordOf, type AccountList, type MachineRecord } from './auto-register';
 
 const KEY = 'A'.repeat(43);
 
@@ -167,6 +168,26 @@ describe('AutoRegistrar', () => {
         expect(registrar.nextRetryAt()).toBe(REGISTER_RETRY_MIN_MS);
     });
 
+    test('keeps the reason a machine failed with until it registers, and forgets it with the account', async () => {
+        let failing = true;
+        const { registrar, advance } = setup(async () => {
+            if (failing) {
+                throw new AddressBookRequestError('bad-signature', 403, 'The machine did not sign this registration for this account');
+            }
+        });
+        expect(await registrar.consider('studio', 'studio', emptyList, null)).toBe('failed');
+        expect((registrar.failedMachines().get('studio') as Error).message).toBe('The machine did not sign this registration for this account');
+        failing = false;
+        advance(REGISTER_RETRY_MIN_MS);
+        expect(await registrar.consider('studio', 'studio', emptyList, null)).toBe('registered');
+        expect(registrar.failedMachines().size).toBe(0);
+
+        failing = true;
+        expect(await registrar.consider('desk', 'desk', emptyList, null)).toBe('failed');
+        registrar.setAccount('account-2');
+        expect(registrar.failedMachines().size).toBe(0);
+    });
+
     test('nothing without an account, and another account starts over', async () => {
         const { registrar, posted } = setup();
         registrar.setAccount(null);
@@ -176,5 +197,36 @@ describe('AutoRegistrar', () => {
         registrar.setAccount('account-2');
         expect(await registrar.consider('studio', 'studio', emptyList, null)).toBe('registered');
         expect(posted).toHaveLength(2);
+    });
+});
+
+describe('announcedRecordOf', () => {
+    // The row of the machine the app runs on reaches it with the local secret, so it never pins a key.
+    const localRow: Endpoint = {
+        id: LOCAL_ENDPOINT_ID,
+        label: 'This MacBook Pro',
+        httpBaseUrl: 'http://127.0.0.1:4211',
+        wsBaseUrl: 'ws://127.0.0.1:4211',
+        reachability: 'loopback',
+        token: null,
+        daemonId: 'macbook',
+        daemonPublicKey: null,
+        brokerUrl: 'wss://broker.ruimte.test'
+    };
+
+    test('the local row brings a stale record on the signed-in account up to date', async () => {
+        const { registrar, posted } = setup();
+        const stale = listWith('macbook', recordOf({ name: 'MacBook-Pro.local', icon: null, brokerUrl: null }));
+        const current = announcedRecordOf(localRow, { label: 'MacBook Pro', icon: { kind: 'lucide', value: 'laptop' }, publicKey: KEY });
+        expect(current).toEqual({ name: 'MacBook Pro', icon: { kind: 'lucide', value: 'laptop' }, brokerUrl: 'wss://broker.ruimte.test', publicKey: KEY });
+        expect(await registrar.consider(localRow.id, 'macbook', stale, current)).toBe('registered');
+        expect(posted).toHaveLength(1);
+    });
+
+    test('a pinned key wins over the one the machine announces, and nothing is known before the machine answers', () => {
+        const paired = { ...localRow, id: 'studio', daemonPublicKey: 'B'.repeat(43) };
+        expect(announcedRecordOf(paired, { label: 'Studio', icon: null, publicKey: KEY })?.publicKey).toBe('B'.repeat(43));
+        expect(announcedRecordOf(localRow, { label: null, icon: null, publicKey: KEY })).toBeNull();
+        expect(announcedRecordOf(localRow, { label: 'MacBook Pro', icon: null, publicKey: null })).toBeNull();
     });
 });

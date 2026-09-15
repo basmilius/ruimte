@@ -1,4 +1,5 @@
 import { AddressBookRequestError, MachineIconSchema, type RegisterMachinePayload } from '@ruimte/pulsar';
+import type { Endpoint } from '@/state/endpoints';
 
 // The first wait after a failed registration, doubled with every failure after it up to the cap.
 export const REGISTER_RETRY_MIN_MS = 30_000;
@@ -28,11 +29,33 @@ export interface AccountList {
     removed: ReadonlySet<string>;
 }
 
+/* What a machine said in its last `endpoint.info`, as far as its record goes. */
+export interface AnnouncedIdentity {
+    label: string | null;
+    icon: unknown;
+    publicKey: string | null;
+}
+
+/*
+ * What the machine behind a row says about itself right now; null until it has said who it is. The row
+ * of this machine reaches it with the local secret and never pins a key, so the key it announces stands
+ * in; a key a row pinned still wins.
+ */
+export const announcedRecordOf = (endpoint: Pick<Endpoint, 'brokerUrl' | 'daemonPublicKey'>, info: AnnouncedIdentity): MachineRecord | null => {
+    const publicKey = endpoint.daemonPublicKey ?? info.publicKey;
+    // The label and the broker arrive in one `endpoint.info`, so a known label means the broker is known too.
+    if (info.label === null || publicKey === null) {
+        return null;
+    }
+    return { name: info.label, icon: info.icon, brokerUrl: endpoint.brokerUrl ?? null, publicKey };
+};
+
 export type RegisterOutcome = 'registered' | 'removed' | 'skipped' | 'failed';
 
 interface Failure {
     count: number;
     retryAt: number;
+    error: unknown;
 }
 
 /*
@@ -123,11 +146,20 @@ export class AutoRegistrar {
                 return 'removed';
             }
             const count = (failure?.count ?? 0) + 1;
-            this.failures.set(machineId, { count, retryAt: this.now() + Math.min(REGISTER_RETRY_MIN_MS * 2 ** (count - 1), REGISTER_RETRY_MAX_MS) });
+            this.failures.set(machineId, {
+                count,
+                retryAt: this.now() + Math.min(REGISTER_RETRY_MIN_MS * 2 ** (count - 1), REGISTER_RETRY_MAX_MS),
+                error: e
+            });
             return 'failed';
         } finally {
             this.inFlight.delete(machineId);
         }
+    }
+
+    /* The error each machine's last registration failed with, so a person can see why rather than only a retry. */
+    failedMachines(): ReadonlyMap<string, unknown> {
+        return new Map([...this.failures].map(([machineId, failure]) => [machineId, failure.error]));
     }
 
     /* When the earliest machine that failed may be asked again, for a timer; null when none is waiting. */
