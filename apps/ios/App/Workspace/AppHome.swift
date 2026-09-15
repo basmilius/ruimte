@@ -470,6 +470,7 @@ private struct MachinesSheet: View {
             }
         }
         .navigationTitle("Machines")
+        .navigationBarTitleDisplayMode(UIDevice.current.userInterfaceIdiom == .pad ? .inline : .automatic)
         .toolbar { if !embedded { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } } }
     }
 }
@@ -535,6 +536,7 @@ struct MobileSettings: View {
                     .foregroundStyle(MobileStyle.muted)
             }
         }.navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(UIDevice.current.userInterfaceIdiom == .pad ? .inline : .automatic)
             .toolbar { if !embedded { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } } }
             .confirmationDialog("Sign out on this device?", isPresented: $confirmSignOut) {
                 Button("Sign out", role: .destructive) {

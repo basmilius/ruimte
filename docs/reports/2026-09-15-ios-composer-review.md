@@ -601,3 +601,9 @@ The mobile receiver now accepts authenticated frames up to 64 Mi UTF-16 units. T
 Two focused transport tests passed: a 17 Mi-character synthetic history demonstrates failure at the old ceiling, succeeds at the new ceiling and leaves the following frame intact; the other verifies the unchanged handshake limit and separate malformed/oversized failure reasons. The opt-in device check now accepts explicit project and chat IDs through its runner environment so recent-project ordering cannot silently change its target. No user conversation data is copied into test fixtures.
 
 The final physical iPhone check explicitly opened Ruimte → App: Codex and waited for message cells in the chat timeline. It passed. An earlier attempt selected a different project because its recent-use order had changed; that failure led to the explicit project parameter. Both devices received the signed build. Swift formatting, build and repository checks passed, with existing lint warnings. No simulator was used. The larger receive ceiling resolves this reproduced failure, while paginated loading and the remaining device acceptance criteria prevent a feature-complete claim.
+
+## Inline iPad page titles
+
+Machines and Settings now use the native inline navigation title on iPad, placing their names in the toolbar from the start. iPhone keeps its automatic title behavior. This is a title-display change only; no additional automated tests or simulator were used.
+
+The signed build, formatting and repository checks passed, with existing lint warnings. Installed and launched on both physical devices. Title appearance was not separately captured in this iteration.
