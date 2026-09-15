@@ -77,7 +77,7 @@ export const openAccountMachine = (machine: Machine): Endpoint => {
     }
     const row = endpointForAccountMachine(machine);
     if (!row) {
-        throw new Error(`${machine.name} is not on a broker, so this client cannot find it`);
+        throw new Error(`${machine.name} is not connected to a broker yet, so it can only be reached on its own network`);
     }
     useEndpoints.getState().add(row);
     return row;

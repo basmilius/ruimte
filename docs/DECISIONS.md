@@ -1747,9 +1747,11 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   so Apple is one of each.
 - A machine is keyed on the account plus its id, so a daemon two people share can be in both lists. A
   registration needs the daemon's signature over `machineRegistrationMessage`, which names the account, and
-  an `issuedAt` within 10 minutes of the Worker's clock. Registering again replaces the name, the icon and
-  the key. The icon was not in the schemas and is added unsigned, as decoration a signed-in client may set
-  anyway. `lastSeenAt` is the latest registration: the Worker never sees a machine online.
+  an `issuedAt` within 10 minutes of the Worker's clock. Registering again with the key the machine is
+  listed with replaces the name, the icon and the broker; another key for a listed machine is refused with
+  `bad-signature` (since 2026-09-15), because every client that opens it from the list pins that key. A
+  machine with a new key comes back after a person removes it. The icon was not in the schemas and is added
+  unsigned, as decoration a signed-in client may set anyway. `lastSeenAt` is the latest registration: the Worker never sees a machine online.
 - A statement: the request's signature proves the client key, the machine has to be on the session's
   account (a machine on another account answers `not-found`, like one that does not exist), and the answer
   is signed over `accessStatementMessage` with the key in the `STATEMENT_PRIVATE_KEY` secret. Every one lands
@@ -1899,9 +1901,12 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
 
 - A signed-in client puts every machine it reaches on the account, this machine and every paired one,
   without a button (`pulsar/auto-register.ts`). The machine signs `endpoint.signRegistration` as before
-  and the client posts it marked `automatic`. Once per machine per account for the life of the page, and
-  only for a machine the list does not have; a failure waits 30 seconds, doubling up to 30 minutes, so an
-  address book that is down or a machine that cannot sign costs a request now and then.
+  and the client posts it marked `automatic`. Once per machine per account for the life of the page for a
+  machine the list does not have. A machine the list has is registered again when the name, icon, broker or
+  key it announces in `endpoint.info` (or `endpoint.changed`) differs from its record, once per state it is
+  in, since the list may answer a moment behind the write; without that a record kept the host name and the
+  broker (or none) of the first registration forever. A failure waits 30 seconds, doubling up to 30
+  minutes, so an address book that is down or a machine that cannot sign costs a request now and then.
 - A machine a person removes is remembered on the account (`removed_machine`), not in one client: a list
   kept per client would let the next client that reaches the machine put it straight back. An `automatic`
   registration of such a machine answers `removed`; a registration without the flag clears the row, and

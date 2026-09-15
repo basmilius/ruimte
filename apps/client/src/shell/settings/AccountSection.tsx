@@ -93,7 +93,7 @@ function AccountMachineRow({ machine }: { machine: Machine }) {
         onClient !== null
             ? `On this client as ${onClient.label}`
             : machine.brokerUrl === null
-              ? 'Not on a broker, so it cannot be opened from another network'
+              ? 'This machine is not connected to a broker yet, so it can only be reached on its own network'
               : `Added ${machine.lastSeenAt === null ? '' : new Date(machine.lastSeenAt).toLocaleDateString()}`.trim();
 
     return (

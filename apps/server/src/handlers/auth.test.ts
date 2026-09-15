@@ -168,6 +168,21 @@ describe('auth handlers', () => {
         expect(renamed).toMatchObject({ ok: true, result: { refuseStatements: true } });
     });
 
+    test('a registration carries the name and icon a person chose, and the name the machine started with until then', async () => {
+        const sign = async () => {
+            const frame = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.signRegistration', { accountId: 'account-1' });
+            if (!('ok' in frame) || !frame.ok) {
+                throw new Error(`Expected an answer, got ${JSON.stringify(frame)}`);
+            }
+            return (frame.result as { registration: { name: string; icon: unknown } }).registration;
+        };
+        expect(await sign()).toMatchObject({ name: 'box', icon: null });
+        await identity.setIdentity('Studio', { kind: 'emoji', value: '🎛️' });
+        expect(await sign()).toMatchObject({ name: 'Studio', icon: { kind: 'emoji', value: '🎛️' } });
+        await identity.setIdentity(null, null);
+        expect(await sign()).toMatchObject({ name: 'box', icon: null });
+    });
+
     test('a registration is signed by the machine for the account a client names, with what a client needs to reach it', async () => {
         await identity.setIdentity('Studio', { kind: 'lucide', value: 'server' });
         const frame = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.signRegistration', { accountId: 'account-1' });

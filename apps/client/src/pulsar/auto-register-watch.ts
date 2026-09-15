@@ -1,4 +1,5 @@
 import { useEndpoints } from '@/state/endpoints';
+import { serverInfoOf, useServers } from '@/state/server';
 import { pool, transportFor } from '@/transport';
 import { usePulsarAccount, withAccessToken } from './account';
 import { AutoRegistrar } from './auto-register';
@@ -7,7 +8,8 @@ import { refreshAccountMachines, usePulsarMachines } from './machines';
 /*
  * Wires `AutoRegistrar` to what this client knows: the account it is signed in to, the list the address
  * book last answered, and the machines whose connection is open. The daemon signs, this client posts
- * with its own session, as the button did. A sweep runs when any of those change, and once more when
+ * with its own session, as the button did. A sweep runs when any of those or what a machine says about
+ * itself change, and once more when
  * the earliest machine that failed may be asked again.
  */
 export const startAutoRegistration = (): (() => void) => {
@@ -46,10 +48,20 @@ export const startAutoRegistration = (): (() => void) => {
             }
             return;
         }
-        const list = { onAccount: new Set(machines.map((machine) => machine.id)), removed: new Set(removedMachineIds) };
+        const list = { records: new Map(machines.map((machine) => [machine.id, machine])), removed: new Set(removedMachineIds) };
         const { endpoints } = useEndpoints.getState();
         const open = endpoints.filter((endpoint) => endpoint.daemonId !== null && pool.statusOf(endpoint.id).status === 'open');
-        const outcomes = await Promise.all(open.map((endpoint) => registrar.consider(endpoint.id, endpoint.daemonId!, list)));
+        const outcomes = await Promise.all(
+            open.map((endpoint) => {
+                const { label, icon } = serverInfoOf(endpoint.id);
+                // The label and the broker arrive in one `endpoint.info`, so a known label means the broker is known too.
+                const current =
+                    label === null || endpoint.daemonPublicKey === null
+                        ? null
+                        : { name: label, icon, brokerUrl: endpoint.brokerUrl ?? null, publicKey: endpoint.daemonPublicKey };
+                return registrar.consider(endpoint.id, endpoint.daemonId!, list, current);
+            })
+        );
         if (outcomes.some((outcome) => outcome === 'registered' || outcome === 'removed')) {
             await refreshAccountMachines();
         }
@@ -98,6 +110,8 @@ export const startAutoRegistration = (): (() => void) => {
     const offAccount = usePulsarAccount.subscribe(queue);
     const offMachines = usePulsarMachines.subscribe(queue);
     const offEndpoints = useEndpoints.subscribe(queue);
+    // `endpoint.changed` lands here, so a machine renamed from any client updates its record.
+    const offServers = useServers.subscribe(queue);
     queue();
 
     return () => {
@@ -105,6 +119,7 @@ export const startAutoRegistration = (): (() => void) => {
         offAccount();
         offMachines();
         offEndpoints();
+        offServers();
         for (const off of statusOffs.values()) {
             off();
         }
