@@ -1,4 +1,4 @@
-import { chmod, copyFile, mkdir } from 'node:fs/promises';
+import { chmod, copyFile, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 
@@ -36,6 +36,10 @@ args.push('--define', 'process.env.RUIMTE_PULSAR_TEST_STATEMENT_KEY=""');
 if (process.env.RUIMTE_VERSION) {
     args.push('--define', `process.env.RUIMTE_VERSION=${JSON.stringify(process.env.RUIMTE_VERSION)}`);
 }
+// The same id goes into the binary and into `ruimte.build` beside it, which is how the desktop app
+// tells the daemon in its bundle from an older one still running as the background service.
+const buildId = `${process.env.RUIMTE_VERSION ?? 'dev'}-${crypto.randomUUID()}`;
+args.push('--define', `process.env.RUIMTE_BUILD=${JSON.stringify(buildId)}`);
 const build = Bun.spawnSync(['bun', ...args], { cwd: root, stdio: ['ignore', 'inherit', 'inherit'] });
 if (build.exitCode !== 0) {
     process.exit(build.exitCode);
@@ -51,4 +55,5 @@ if (values.os === 'mac' && process.platform === 'darwin') {
 
 await copyFile(join(root, 'bin', 'ruimte-context'), join(outDir, 'ruimte-context'));
 await chmod(join(outDir, 'ruimte-context'), 0o755);
+await writeFile(join(outDir, 'ruimte.build'), `${buildId}\n`);
 console.log(`Compiled ${binary}`);

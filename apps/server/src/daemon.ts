@@ -35,7 +35,7 @@ import { ChatStore } from './chat/chat-store.ts';
 import type { ServerConfig } from './config.ts';
 import { Dispatcher, type ClientAccess } from './dispatcher.ts';
 import { readOrCreateEndpointIdentity } from './endpoint-id.ts';
-import { VERSION } from './version.ts';
+import { BUILD, VERSION } from './version.ts';
 import { registerAuthHandlers } from './handlers/auth.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
 import { FS_FILE_PATH, handleFsFileRequest } from './fs/file-route.ts';
@@ -372,7 +372,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 if (request.method !== 'GET') {
                     return new Response('Method not allowed', { status: 405 });
                 }
-                return Response.json({ ok: true, version: VERSION });
+                return Response.json({ ok: true, version: VERSION, build: BUILD });
             }
 
             if (url.pathname === '/auth/pairing-token') {
