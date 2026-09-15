@@ -206,7 +206,6 @@ export function CommandPalette() {
        already fetched one does not have the typing effect ask for it a second time. */
     const [listing, setListing] = useState<{ key: string; result: FsBrowseResult | null } | null>(null);
     const [failure, setFailure] = useState<string | null>(null);
-    const [busy, setBusy] = useState(false);
     const [recents, setRecents] = useState<string[]>(readRecents);
     const [fileMatches, setFileMatches] = useState<readonly string[]>([]);
     const [grepOptions, setGrepOptions] = useState<GrepOptions>(DEFAULT_GREP_OPTIONS);
@@ -503,17 +502,10 @@ export function CommandPalette() {
     /* What the daemon says about the path in the field: there, not there, or a daemon too old to say. */
     const presence = browsing && !machineStep && query.trim() !== '' ? folderPresence(query, listing?.result ?? null, sep) : 'unknown';
 
-    const submitPath = async (path: string): Promise<void> => {
-        setBusy(true);
-        setFailure(null);
-        try {
-            await openFolderOn(browseEndpointId, path, presence === 'missing');
-            setOpen(false);
-        } catch (e) {
-            setFailure(e instanceof Error ? e.message : 'That folder cannot be opened');
-        } finally {
-            setBusy(false);
-        }
+    /* The main column says how the open goes from here, and why it failed, so the palette is out of the way at once. */
+    const submitPath = (path: string): void => {
+        setOpen(false);
+        void openFolderOn(browseEndpointId, path, presence === 'missing');
     };
 
     const entries = useMemo<Entry[]>(() => {
@@ -933,7 +925,7 @@ export function CommandPalette() {
                             carrying the one shortcut that does the same thing. */}
                         {browsing && !machineStep && linkWait === null && (
                             <Tooltip label={submitLabel} kbd={submitShortcut}>
-                                <Button size="sm" variant="secondary" disabled={busy || query.trim() === ''} onClick={() => void submitPath(query)}>
+                                <Button size="sm" variant="secondary" disabled={query.trim() === ''} onClick={() => submitPath(query)}>
                                     {submitLabel}
                                     <Kbd shortcut={submitShortcut} className={TOOLTIP_KBD} />
                                 </Button>

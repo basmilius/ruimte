@@ -1,10 +1,9 @@
-import { useState } from 'react';
 import clsx from 'clsx';
 import { LogIn, MonitorSmartphone } from 'lucide-react';
-import { activateEndpoint } from '@/endpoint';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { ensureMachine } from '@/endpoint/reach';
-import { messageOf, usePulsarAccount } from '@/pulsar/account';
+import { usePulsarAccount } from '@/pulsar/account';
+import { openMachine, useProjectSwitch } from '@/project/open';
+import type { SwitchState } from '@/project/project-switch';
 import { usePulsarMachines } from '@/pulsar/machines';
 import { linkDot, linkHint, machineLink, type LinkWait } from '@/shell/palette-browse';
 import { SignInButtons } from '@/shell/SignInButtons';
@@ -17,6 +16,14 @@ import { useEndpointConnection } from '@/transport/status';
 import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
+
+/* The row's own line for the moment before the switch screen takes over the column. */
+const waitOf = (state: SwitchState, entry: MachineEntry): LinkWait | null => {
+    if (state.kind === 'idle' || (state.target.endpointId !== entry.id && state.target.endpointId !== entry.endpoint?.id)) {
+        return null;
+    }
+    return state.kind === 'failed' ? { state: 'failed', reason: state.reason } : { state: 'connecting' };
+};
 
 interface MachineChoiceProps {
     entry: MachineEntry;
@@ -58,7 +65,7 @@ export function StationWelcome() {
     const notice = usePulsarAccount((s) => s.notice);
     const error = usePulsarAccount((s) => s.error);
     const machines = usePulsarMachines((s) => s.machines);
-    const [waits, setWaits] = useState<Record<string, LinkWait>>({});
+    const switching = useProjectSwitch((s) => s);
     const boot = stationBoot({ station: !hasLocalMachine(), activeEndpointId, accountStatus, machines });
 
     if (boot === null) {
@@ -67,18 +74,9 @@ export function StationWelcome() {
 
     const entries = mergeMachines({ endpoints, accountMachines: machines, showLocal: hasLocalMachine() });
 
-    /* Connects first and moves the client only once the machine answers, so a failure stays on this screen with its reason. */
+    /* Through the same switch as a project, so the wait and a failure read the same as they do there. */
     const pick = (entry: MachineEntry): void => {
-        const key = entry.id;
-        setWaits((current) => ({ ...current, [key]: { state: 'connecting' } }));
-        ensureMachine(entry.endpoint?.id ?? entry.id)
-            .then(async (endpointId) => {
-                await activateEndpoint(endpointId);
-                setWaits(({ [key]: _done, ...rest }) => rest);
-            })
-            .catch((e: unknown) => {
-                setWaits((current) => ({ ...current, [key]: { state: 'failed', reason: messageOf(e) } }));
-            });
+        void openMachine(entry.endpoint?.id ?? entry.id);
     };
 
     return (
@@ -100,7 +98,7 @@ export function StationWelcome() {
                         entries.length === 0 ? undefined : (
                             <div className="flex w-96 max-w-full flex-col gap-2">
                                 {entries.map((entry) => (
-                                    <MachineChoice key={entry.id} entry={entry} wait={waits[entry.id] ?? null} onPick={() => pick(entry)} />
+                                    <MachineChoice key={entry.id} entry={entry} wait={waitOf(switching, entry)} onPick={() => pick(entry)} />
                                 ))}
                             </div>
                         )

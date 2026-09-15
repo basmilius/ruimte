@@ -15,6 +15,7 @@ import { ALL_SETTINGS_SECTIONS } from '@/shell/settings/sections';
 import { Panel } from '@/shell/Panel';
 import { PreviewPanel } from '@/shell/PreviewPanel';
 import { ProjectBanner } from '@/shell/ProjectBanner';
+import { ProjectSwitchScreen } from '@/shell/ProjectSwitchScreen';
 import { MachineUpdateDialog } from '@/shell/MachineUpdateDialog';
 import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
 import { closeLinkRequest, useLinkRequest } from '@/pulsar/link-request';
@@ -58,6 +59,8 @@ function Workspace() {
                             <div className="relative min-h-0 grow">
                                 <ViewHost />
                                 <WebviewParking />
+                                {/* After the parked pages, which carry no z-index of their own and would otherwise draw over it. */}
+                                <ProjectSwitchScreen />
                                 <ProjectBanner />
                             </div>
                         </div>
