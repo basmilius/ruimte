@@ -13,6 +13,7 @@ import { startShowViewWatch } from '@/project/show-view-watch';
 import { restoreLastEndpoint } from '@/project/open';
 import { startConnections } from '@/transport/connections';
 import { startPulsarAccount } from '@/pulsar/account';
+import { startAutoRegistration } from '@/pulsar/auto-register-watch';
 import { pool } from '@/transport';
 import { startWakeReconnect } from '@/transport/wake';
 import { desktop } from '@/desktop/bridge';
@@ -42,6 +43,7 @@ startShowViewWatch();
 startInputModality();
 startKeepAwake();
 void startPulsarAccount();
+startAutoRegistration();
 startWakeReconnect(pool);
 /* The shell dresses its native chrome and every page it hosts in the theme the client is in. The
    background travels with it, so `styles.css` stays the only place the token is written down. */

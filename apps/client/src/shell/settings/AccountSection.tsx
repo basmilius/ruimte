@@ -28,17 +28,19 @@ const failed = (title: string, e: unknown): void => {
 };
 
 /*
- * The button on a machine's row that puts it on the account. The machine signs its agreement and this
- * client posts it, so it only shows while the machine answers and nobody put it on the account yet.
+ * The way back for a machine a person took off the account. Every other machine this client reaches
+ * joins on its own (`pulsar/auto-register.ts`); a removed one stays off until someone presses this, and
+ * pressing it is the only thing that clears the removal at the address book.
  */
 export function AddToAccountButton({ endpoint }: { endpoint: Endpoint }) {
     const status = usePulsarAccount((s) => s.status);
     const machines = usePulsarMachines((s) => s.machines);
+    const removedMachineIds = usePulsarMachines((s) => s.removedMachineIds);
     const connected = useEndpointConnection(endpoint.id).status === 'open';
     const [busy, setBusy] = useState(false);
     const machineId = endpoint.daemonId ?? endpoint.id;
 
-    if (status !== 'signed-in' || machines === null || machines.some((machine) => machine.id === machineId)) {
+    if (status !== 'signed-in' || machines === null || machines.some((machine) => machine.id === machineId) || !removedMachineIds.includes(machineId)) {
         return null;
     }
 
@@ -54,7 +56,7 @@ export function AddToAccountButton({ endpoint }: { endpoint: Endpoint }) {
     };
 
     return (
-        <Tooltip label={connected ? 'Add to your account' : 'Available once the machine answers'} name>
+        <Tooltip label={connected ? 'Add to your account again' : 'Available once the machine answers'} name>
             <button className="icon-btn h-8 w-8" disabled={!connected || busy} onClick={() => void add()}>
                 <Icon icon={CloudUpload} size={16} />
             </button>
@@ -132,6 +134,7 @@ export function AccountSection() {
     const status = usePulsarAccount((s) => s.status);
     const account = usePulsarAccount((s) => s.account);
     const error = usePulsarAccount((s) => s.error);
+    const notice = usePulsarAccount((s) => s.notice);
     const machines = usePulsarMachines((s) => s.machines);
     const machinesError = usePulsarMachines((s) => s.error);
 
@@ -146,7 +149,11 @@ export function AccountSection() {
     if (status === 'unavailable') {
         return (
             <SettingsSection title="Account" description="Reach your machines from another network.">
-                <SettingsRow muted label="Signing in works in the desktop app." description="A browser has no safe place to keep the session." />
+                <SettingsRow
+                    muted
+                    label="Signing in works in the desktop app and at station.ruimte.app."
+                    description="The account sends a sign-in back to those places only."
+                />
             </SettingsSection>
         );
     }
@@ -164,7 +171,7 @@ export function AccountSection() {
             {status === 'signed-out' && (
                 <SettingsRow
                     label="Not signed in"
-                    description="Signing in opens GitHub in your browser."
+                    description={notice ?? 'Signing in opens GitHub. Machines you reach while signed in join your account on their own.'}
                     control={
                         <Button variant="primary" onClick={() => void signInToPulsar()}>
                             <Icon icon={LogIn} size={12} /> Sign in with GitHub
@@ -174,8 +181,8 @@ export function AccountSection() {
             )}
             {status === 'signing-in' && (
                 <SettingsRow
-                    label="Waiting for your browser"
-                    description="Finish signing in there, then come back."
+                    label="Signing in"
+                    description="Finish signing in with GitHub, then come back here."
                     control={<Button onClick={() => void cancelPulsarSignIn()}>Cancel</Button>}
                 />
             )}
@@ -195,7 +202,7 @@ export function AccountSection() {
                 <SettingsRow label={<Skeleton className="w-40" />} control={<Skeleton className="w-8" />} />
             )}
             {status === 'signed-in' && machines?.length === 0 && (
-                <SettingsRow muted label="No machines on your account yet" description="Add one with the upload button on its row above." />
+                <SettingsRow muted label="No machines on your account yet" description="A machine this client reaches joins your account on its own." />
             )}
             {status === 'signed-in' && machines?.map((machine) => <AccountMachineRow key={machine.id} machine={machine} />)}
             {status === 'signed-in' && machinesError !== null && <SettingsRow muted label={<span className="text-status-error">{machinesError}</span>} />}
