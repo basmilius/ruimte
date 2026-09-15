@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { ChevronRight, Link2, LogIn, LogOut, Plus } from 'lucide-react';
+import { ChevronRight, KeyRound, Link2, LogIn, LogOut, Plus } from 'lucide-react';
+import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
 import { pairEndpoint } from '@/endpoint';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { cancelPulsarSignIn, messageOf, signInToPulsar, signOutOfPulsar, usePulsarAccount } from '@/pulsar/account';
@@ -96,6 +97,7 @@ const useRowFailure = (endpoint: Endpoint | null): string | null => {
 function MachineRow({ entry, onOpen }: { entry: MachineEntry; onOpen(): void }) {
     const icon = useMachineIcon(entry);
     const failure = useRowFailure(entry.endpoint);
+    const relayed = useEndpointConnection(entry.endpoint?.id ?? '').relayed === true;
     const name = nameOf(entry);
 
     return (
@@ -109,7 +111,7 @@ function MachineRow({ entry, onOpen }: { entry: MachineEntry; onOpen(): void }) 
                 <MachineGlyph icon={icon} className="shrink-0 text-text-muted" />
                 <span className="flex min-w-0 grow flex-col">
                     <span className="truncate text-sm text-text">{name}</span>
-                    <span className="text-xs leading-snug break-words text-text-faint">{reachLabel(entry)}</span>
+                    <span className="text-xs leading-snug break-words text-text-faint">{relayed ? `${reachLabel(entry)} · via relay` : reachLabel(entry)}</span>
                     {failure !== null && <span className="text-xs leading-snug break-words text-status-error">{failure}</span>}
                 </span>
                 <Icon icon={ChevronRight} size={16} className="shrink-0 text-text-faint" />
@@ -177,7 +179,7 @@ function AccountRows() {
  * per machine and the list is what the pane is for. The dialog is about "a machine" rather than "a
  * pairing link", which leaves room for a second way in (a code for a phone) without renaming anything.
  */
-function AddMachineDialog({ open, onOpenChange }: { open: boolean; onOpenChange(open: boolean): void }) {
+function AddMachineDialog({ open, onOpenChange, onLinkWithCode }: { open: boolean; onOpenChange(open: boolean): void; onLinkWithCode(): void }) {
     const [link, setLink] = useState('');
     const [busy, setBusy] = useState(false);
     const [failure, setFailure] = useState<string | null>(null);
@@ -236,6 +238,11 @@ function AddMachineDialog({ open, onOpenChange }: { open: boolean; onOpenChange(
                         </p>
                     )}
                     <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+                        <Tooltip label="For a machine without the app that ran `ruimte login`">
+                            <Button className="mr-auto" onClick={onLinkWithCode}>
+                                <Icon icon={KeyRound} size={12} /> Link a machine with a code
+                            </Button>
+                        </Tooltip>
                         <Button onClick={() => onOpenChange(false)}>Cancel</Button>
                         <Button variant="primary" disabled={busy || !link.trim()} onClick={() => void pair()}>
                             <Icon icon={Link2} size={12} /> Pair
@@ -258,6 +265,7 @@ export function MachinesSection() {
     const machines = usePulsarMachines((s) => s.machines);
     const machinesError = usePulsarMachines((s) => s.error);
     const [addOpen, setAddOpen] = useState(false);
+    const [linkOpen, setLinkOpen] = useState(false);
     const [dialog, setDialog] = useState<{ id: string; open: boolean } | null>(null);
 
     // An open pane is one of the moments a client learns what the account says, removals included.
@@ -303,7 +311,15 @@ export function MachinesSection() {
                 open={dialog?.open === true}
                 onOpenChange={(open) => setDialog((current) => (current ? { ...current, open } : null))}
             />
-            <AddMachineDialog open={addOpen} onOpenChange={setAddOpen} />
+            <AddMachineDialog
+                open={addOpen}
+                onOpenChange={setAddOpen}
+                onLinkWithCode={() => {
+                    setAddOpen(false);
+                    setLinkOpen(true);
+                }}
+            />
+            <LinkMachineDialog nested open={linkOpen} initialCode={null} onOpenChange={setLinkOpen} />
         </>
     );
 }

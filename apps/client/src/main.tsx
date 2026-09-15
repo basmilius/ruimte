@@ -12,6 +12,7 @@ import { startShowViewWatch } from '@/project/show-view-watch';
 import { restoreLastEndpoint } from '@/project/open';
 import { startConnections } from '@/transport/connections';
 import { startPulsarAccount } from '@/pulsar/account';
+import { startLinkRequest } from '@/pulsar/link-request';
 import { startAutoRegistration } from '@/pulsar/auto-register-watch';
 import { startRemovalWatch } from '@/pulsar/removal-watch';
 import { pool } from '@/transport';
@@ -42,6 +43,8 @@ startProjectList();
 startShowViewWatch();
 startInputModality();
 startKeepAwake();
+/* Before the account: a `/link` address leaves the address bar and waits for whoever signs in. */
+startLinkRequest();
 void startPulsarAccount();
 startAutoRegistration();
 startRemovalWatch();

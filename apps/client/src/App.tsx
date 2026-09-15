@@ -15,6 +15,8 @@ import { Panel } from '@/shell/Panel';
 import { PreviewPanel } from '@/shell/PreviewPanel';
 import { ProjectBanner } from '@/shell/ProjectBanner';
 import { MachineUpdateDialog } from '@/shell/MachineUpdateDialog';
+import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
+import { closeLinkRequest, useLinkRequest } from '@/pulsar/link-request';
 import { ReleaseNotesDialog } from '@/shell/ReleaseNotesDialog';
 import { Sidebar } from '@/shell/Sidebar';
 import { Toasts } from '@/shell/Toasts';
@@ -71,6 +73,13 @@ function Workspace() {
     );
 }
 
+/* The approval a `/link` address opened, outside every workspace: the web client shows it before a machine is picked. */
+function LinkRequestDialog() {
+    const open = useLinkRequest((s) => s.open);
+    const code = useLinkRequest((s) => s.code);
+    return <LinkMachineDialog open={open} initialCode={code} onOpenChange={(next) => (next ? undefined : closeLinkRequest())} />;
+}
+
 export function App() {
     const name = useProject((s) => s.current?.name ?? null);
     useAppShortcuts();
@@ -104,6 +113,7 @@ export function App() {
                 <Toasts />
                 <ReleaseNotesDialog />
                 <MachineUpdateDialog />
+                <LinkRequestDialog />
             </ErrorBoundary>
         </TooltipProvider>
     );
