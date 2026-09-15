@@ -1973,6 +1973,30 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   paired machine that was not active only synced after a switch to it, and the lists of machines had no
   icon for it.
 
+### A machine connects only when it is used
+
+- Every paired machine used to connect at boot and stay connected: the project list asked `project.list`
+  of every machine through `transportFor`, which opened and held a link, and the status dots, the Remote
+  pane and the agent settings held every machine while they were on screen. Over a broker each of those
+  is a WebRTC channel, which costs an iPad its battery and the broker its load.
+- The rule (2026-09-15): a machine has a live link while a workspace has a project open or opening on it
+  (a project a boot restores counts until the boot tried it), while an explicit action waits for it
+  through `ensureMachine` (the palette, the station welcome, `openProject`, `openFolderOn`), or while its
+  dialog in the Remote pane is open. After the last of those the pool's 30-second idle close is the grace
+  period. Nothing else opens a link.
+- `pool.require` is gone and `transportFor` only peeks, so a call site cannot open a link by accident;
+  `pool.hold` is the one way in. The active machine and the page's own daemon are no longer held for
+  being what they are: an empty canvas on the desktop app connects to nothing.
+- The clients of a workspace are built on `machineTransport(id)`, which follows the link rather than
+  being it. Before, a workspace was built on the link itself, had to hold it for good (081ae74) and was
+  rebuilt when the pool replaced it; now a link may close under an empty workspace and come back without
+  a rebuild. A row that learns its daemon id moves that transport before the pool moves the link, so the
+  clients on it never see the link close.
+- Accepted: agents, attention, the dock badge, auto-registration and the account record sync only cover
+  machines with an open link, and the usage page of a machine without one says it is not connected
+  rather than connecting to it. A machine without a link is not a failure, so its dot is hollow and says
+  "Not connected" with when it was last connected, kept per machine in localStorage.
+
 ### The machine as a background service
 
 - Phase 6 of remote access: the daemon outlives the app, so a machine stays reachable from station and
