@@ -1,12 +1,17 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { existsSync, mkdirSync, openSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
-import { homedir } from 'node:os';
+import { homedir, userInfo } from 'node:os';
 import { join, resolve } from 'node:path';
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
 import { listenForLogin, type LoopbackLogin } from './pulsar-login';
 import { fileSessionKey, fileSessionStore } from './pulsar-store';
 import { createReleaseNotes } from './release-notes';
+import { createServiceController, type BackgroundServiceState } from './service/controller';
+import { healthFrom, type BuildIdentity } from './service/decide';
+import { LAUNCH_AGENT_LABEL, launchAgentPlist, systemdUnit, type ServiceSpec } from './service/definitions';
+import { launchdManager, systemdManager, type CommandRunner, type ServiceManager } from './service/manager';
+import { diskFiles, keepRunningSetting, serviceSupport } from './service/settings';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
 const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, powerSaveBlocker, safeStorage, screen, session, shell, webContents } =
@@ -46,7 +51,17 @@ const devtoolsWindows = new Map<number, Electron.BrowserWindow>();
  * builds in its rc files, and the daemon finds `claude` and friends through PATH. Asking the login
  * shell once is what every packaged Electron app does.
  */
+let loginPath: string | null | undefined;
+
 const loginShellPath = (): string | null => {
+    if (loginPath !== undefined) {
+        return loginPath;
+    }
+    loginPath = askLoginShellPath();
+    return loginPath;
+};
+
+const askLoginShellPath = (): string | null => {
     if (process.platform === 'win32' || !process.env.SHELL) {
         return null;
     }
@@ -76,15 +91,13 @@ const daemonCommand = (): { command: string; args: string[] } | null => {
     return { command: 'bun', args: [entry, '--port', String(port), '--serve', join(repoRoot, 'apps', 'client', 'dist')] };
 };
 
-const startDaemon = (): void => {
-    if (devUrl) {
-        return;
-    }
+const MISSING_DAEMON = 'The background service is missing. Run the desktop app from the repository or install a release.';
+
+/* The app's own daemon, a child that ends with the app: the dev app always, a packaged one with the service off. */
+const spawnDaemon = (): void => {
     const target = daemonCommand();
     if (!target) {
-        dialog.showErrorBox('Ruimte', 'The background service is missing. Run the desktop app from the repository or install a release.');
-        app.quit();
-        return;
+        throw new Error(MISSING_DAEMON);
     }
     const env = { ...process.env };
     if (app.isPackaged) {
@@ -116,24 +129,123 @@ const startDaemon = (): void => {
     });
 };
 
-const waitForDaemon = async (): Promise<void> => {
-    if (devUrl) {
-        return;
+/* One ask of the port, bounded, so a daemon that hangs is no answer rather than a start that never ends. */
+const probeDaemon = async (): Promise<BuildIdentity | null> => {
+    try {
+        const response = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(1000) });
+        return response.ok ? healthFrom(await response.json()) : null;
+    } catch {
+        return null;
     }
-    const deadline = Date.now() + 15_000;
+};
+
+/* Long enough for a daemon that is snapshotting its sessions on the way out of a restart. */
+const waitForDaemon = async (accept: (health: BuildIdentity) => boolean): Promise<void> => {
+    const deadline = Date.now() + 20_000;
     while (Date.now() < deadline) {
-        try {
-            const response = await fetch(`http://127.0.0.1:${port}/health`);
-            if (response.ok) {
-                return;
-            }
-        } catch {
-            // Not up yet.
+        const health = await probeDaemon();
+        if (health && accept(health)) {
+            return;
         }
         await new Promise((resolve) => setTimeout(resolve, 150));
     }
     throw new Error('The background service did not come up');
 };
+
+/* The id `apps/server/scripts/compile.ts` wrote beside the binary this bundle carries. */
+const bundledBuild = (): string | null => {
+    if (!app.isPackaged) {
+        return null;
+    }
+    try {
+        return readFileSync(join(process.resourcesPath, 'bin', 'ruimte.build'), 'utf8').trim() || null;
+    } catch {
+        return null;
+    }
+};
+
+const runCommand: CommandRunner = (command, args) => {
+    const result = spawnSync(command, args, { encoding: 'utf8', timeout: 15_000, stdio: ['ignore', 'pipe', 'pipe'] });
+    return { code: result.status ?? 1, stdout: result.stdout ?? '', stderr: result.stderr ?? result.error?.message ?? '' };
+};
+
+const support = serviceSupport({ packaged: app.isPackaged, platform: process.platform, appImage: process.env.APPIMAGE });
+
+/* Only a packaged app on macOS or Linux gets one; the dev app has none to touch, whatever it is asked. */
+const createServiceManager = (): ServiceManager | null => {
+    if (support !== 'supported') {
+        return null;
+    }
+    if (process.platform === 'darwin') {
+        return launchdManager({
+            uid: process.getuid?.() ?? 0,
+            home: homedir(),
+            run: runCommand,
+            files: diskFiles,
+            sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+        });
+    }
+    return systemdManager({
+        configHome: process.env.XDG_CONFIG_HOME || join(homedir(), '.config'),
+        user: userInfo().username,
+        run: runCommand,
+        files: diskFiles
+    });
+};
+
+const serviceDefinition = (): string => {
+    const target = daemonCommand();
+    if (!target) {
+        throw new Error(MISSING_DAEMON);
+    }
+    const spec: ServiceSpec = {
+        label: LAUNCH_AGENT_LABEL,
+        program: target.command,
+        args: target.args,
+        environment: { RUIMTE_HOME: ruimteHome, PATH: loginShellPath() ?? process.env.PATH ?? '/usr/bin:/bin' },
+        workingDirectory: homedir(),
+        logFile: join(app.getPath('logs'), 'daemon.log')
+    };
+    return process.platform === 'darwin' ? launchAgentPlist(spec) : systemdUnit(spec);
+};
+
+const serviceController = createServiceController({
+    support,
+    manager: createServiceManager(),
+    setting: keepRunningSetting(join(app.getPath('userData'), 'background-service.json'), support),
+    definition: serviceDefinition,
+    expected: { version: app.getVersion(), build: bundledBuild() },
+    probe: probeDaemon,
+    waitForHealth: waitForDaemon,
+    spawnDaemon,
+    killDaemon: () => daemon?.kill('SIGTERM')
+});
+
+const pushServiceState = (state: BackgroundServiceState): BackgroundServiceState => {
+    mainWindow?.webContents.send('service:state', state);
+    return state;
+};
+
+/* Set by "Stop the machine", which is a quit that takes the service down with it. */
+let stopMachineOnQuit = false;
+
+const stopMachine = (): void => {
+    stopMachineOnQuit = true;
+    app.quit();
+};
+
+ipcMain.handle('service:state', () => serviceController.state());
+ipcMain.handle('service:set-keep-running', (event, keepRunning: boolean) =>
+    event.sender === mainWindow?.webContents ? pushServiceState(serviceController.setKeepRunning(keepRunning === true)) : serviceController.state()
+);
+ipcMain.handle('service:enable-linger', (event) =>
+    event.sender === mainWindow?.webContents ? pushServiceState(serviceController.enableLinger()) : serviceController.state()
+);
+ipcMain.on('service:stop-machine', (event) => {
+    if (event.sender === mainWindow?.webContents) {
+        stopMachine();
+    }
+});
 
 // The band the client reserves across the sidebar's strip and the toolbar, which the overlay controls share on Windows and Linux.
 const TITLEBAR_HEIGHT = 48;
@@ -758,8 +870,11 @@ ipcMain.handle('releases:list', (_event, refresh?: boolean) => releaseNotes.list
  * dialog where it was. Elsewhere that column is the File menu, which has neither item.
  */
 function appMenu(): Electron.MenuItemConstructorOptions {
+    // Only where a service can run: anywhere else quitting already stops the machine.
+    const stopItems: Electron.MenuItemConstructorOptions[] =
+        support === 'supported' ? [{ label: 'Stop the Machine and Quit', click: () => stopMachine() }] : [];
     if (process.platform !== 'darwin') {
-        return { role: 'fileMenu' };
+        return stopItems.length > 0 ? { label: 'File', submenu: [...stopItems, { type: 'separator' }, { role: 'quit' }] } : { role: 'fileMenu' };
     }
     const openSettings = (section: string | null): void => {
         mainWindow?.show();
@@ -778,6 +893,7 @@ function appMenu(): Electron.MenuItemConstructorOptions {
             { role: 'hideOthers' },
             { role: 'unhide' },
             { type: 'separator' },
+            ...stopItems,
             { role: 'quit' }
         ]
     };
@@ -884,9 +1000,11 @@ if (!app.requestSingleInstanceLock()) {
         Menu.setApplicationMenu(Menu.buildFromTemplate([appMenu(), { role: 'editMenu' }, viewMenu(), { role: 'windowMenu' }]));
         sealPreviewSession();
         registerGuestPreload();
-        startDaemon();
         try {
-            await waitForDaemon();
+            // `bun dev` runs the daemon itself; the shell only opens the dev URL.
+            if (!devUrl) {
+                await serviceController.start();
+            }
         } catch (e) {
             dialog.showErrorBox('Ruimte', e instanceof Error ? e.message : 'The background service did not start');
             app.quit();
@@ -916,24 +1034,28 @@ if (!app.requestSingleInstanceLock()) {
     });
 
     app.on('before-quit', (event) => {
-        // Quitting takes the daemon and every session with it, so a turn in flight is work thrown
-        // away. Asked once: a quit that a person confirmed must not ask again on its second pass.
+        // With the background service the agents keep working, and the question only says so. Without it
+        // quitting takes the daemon and every session with it, so a turn in flight is work thrown away.
+        // Asked once: a quit that a person confirmed must not ask again on its second pass.
         if (!quitConfirmed && agentActivity.working > 0 && mainWindow !== null && !mainWindow.isDestroyed()) {
+            const survives = serviceController.survivesQuit(stopMachineOnQuit);
             const choice = dialog.showMessageBoxSync(mainWindow, {
                 type: 'question',
-                buttons: ['Quit anyway', 'Keep working'],
-                defaultId: 1,
+                buttons: survives ? ['Quit', 'Cancel'] : ['Quit anyway', 'Keep working'],
+                defaultId: survives ? 0 : 1,
                 cancelId: 1,
                 message: agentActivity.working === 1 ? 'An agent is still working.' : `${agentActivity.working} agents are still working.`,
-                detail: 'Quitting ends their sessions on this machine.'
+                detail: survives
+                    ? 'They keep running on this machine after Ruimte quits, and you can pick them up from any client.'
+                    : 'Quitting ends their sessions on this machine.'
             });
             if (choice !== 0) {
+                stopMachineOnQuit = false;
                 event.preventDefault();
                 return;
             }
             quitConfirmed = true;
         }
-        // The daemon belongs to the app here; sessions end with it until the background service of a later phase.
-        daemon?.kill('SIGTERM');
+        serviceController.quit(stopMachineOnQuit);
     });
 }

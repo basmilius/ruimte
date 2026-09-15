@@ -1,0 +1,58 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`launchAgentPlist the LaunchAgent of a packaged app 1`] = `
+"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>app.ruimte.daemon</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Applications/Ruimte.app/Contents/Resources/bin/ruimte</string>
+        <string>--port</string>
+        <string>4210</string>
+        <string>--serve</string>
+        <string>/Applications/Ruimte.app/Contents/Resources/client</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>RUIMTE_HOME</key>
+        <string>/Users/bas/.ruimte</string>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/bin:/bin</string>
+    </dict>
+    <key>WorkingDirectory</key>
+    <string>/Users/bas</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ProcessType</key>
+    <string>Interactive</string>
+    <key>StandardOutPath</key>
+    <string>/Users/bas/Library/Logs/Ruimte/daemon.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/bas/Library/Logs/Ruimte/daemon.log</string>
+</dict>
+</plist>
+"
+`;
+
+exports[`systemdUnit the user unit of a packaged app 1`] = `
+"[Unit]
+Description=Ruimte machine
+
+[Service]
+Type=simple
+ExecStart="/opt/Ruimte/resources/bin/ruimte" "--port" "4210" "--serve" "/opt/Ruimte/resources/client"
+Environment="RUIMTE_HOME=/home/bas/.ruimte"
+Environment="PATH=/home/bas/.local/bin:/usr/bin:/bin"
+WorkingDirectory=/home/bas
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target
+"
+`;
