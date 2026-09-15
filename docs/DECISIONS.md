@@ -1716,6 +1716,29 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   301 ms and signed in after 304 ms through the broker alone, against 274 and 283 ms signaled over a
   socket. Killing the broker afterwards leaves the terminal on that channel answering. Not measured yet:
   two machines on two networks through a broker on the VPS, and nothing is deployed.
+- A daemon is on a broker without any flag: the build carries `wss://broker.ruimte.app` as the default,
+  a name rather than an address so the broker moves hosts through DNS alone. The rule, highest first:
+  `--no-broker`, `--broker` or `RUIMTE_BROKER_URL` (where `off` is off), then `broker` in `endpoint.json`
+  (default, a custom URL or off), then the default. Off wins wherever it stands, over everything below it.
+  A flag decides for the person who started the process, which is why it beats a setting any paired
+  client can change; the setting is still kept, and `brokerFixed` in `endpoint.info` tells the client it
+  waits. The setting lives beside `refuseStatements` because the daemon is what dials, and a change is
+  applied at once by `BrokerSwitch`, which stops the old relay before it starts the new one, one change at
+  a time. A custom URL is `wss:`, or `ws:` for a host on this machine, a container's host or the local
+  network (`brokerUrlProblem`); a flag is held to the same rule. `brokerUrl` follows the effective broker
+  (or `--broker-advertise` while one is on), in `endpoint.changed` as well, so a signed-in client
+  re-registers the machine with its new broker without asking. Compose passes `off` for an unset variable,
+  so the Docker container never announces itself to the public broker by accident.
+- The broker runs behind Cloudflare's proxy. Only signaling crosses it, a few frames per attempt, while
+  the channel itself goes direct, so the proxy costs no bandwidth and hides the origin. Behind it every
+  socket comes from an edge address, which would put everyone near one edge in one bucket, so
+  `--trust-cloudflare` counts against `CF-Connecting-IP`, and only when the address the connection came
+  from (the socket, or the last `X-Forwarded-For` entry of a trusted local proxy) is in Cloudflare's
+  published ranges, which the broker carries in `src/cloudflare.ts`. From anyone else the header is
+  ignored, or a client could pick the bucket it is counted in. Cloudflare closes a WebSocket that is idle
+  for 100 seconds; the broker pings every 25 and at most every 40, so a socket is never idle that long,
+  and a socket Cloudflare resets anyway comes back through the daemon's backoff and the client's next
+  attempt.
 
 ### The address book
 

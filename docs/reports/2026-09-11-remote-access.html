@@ -727,6 +727,7 @@ Niet doen in deze beurt: de andere fases vast voorbereiden, of afhankelijkheden 
         <li><code>ulimit -n</code> omhoog, want de standaard is lager dan het aantal sockets dat je wilt kunnen houden.</li>
       </ol>
       <p>Sinds fase 4 staan de systemd-unit (met <code>LimitNOFILE=65536</code>) en de Caddyfile in <code>apps/pulsar-broker/deploy</code>, en de stappen om ze te installeren in <code>apps/pulsar-broker/README.md</code>. Er is nog niets gedeployd.</p>
+      <p>Sinds 15 september draait een daemon zonder vlag op <code>wss://broker.ruimte.app</code>, dat nu nog naar de testdroplet wijst, achter de proxy van Cloudflare. Een vlag of <code>RUIMTE_BROKER_URL</code> gaat voor, daarna de instelling per machine onder Settings, Machines (standaard, een eigen URL of uit), daarna die standaard. De verhuizing naar de TransIP-VPS is alleen een DNS-wijziging.</p>
     </div>
     <div class="panel">
       <h3>Cloudflare</h3>
