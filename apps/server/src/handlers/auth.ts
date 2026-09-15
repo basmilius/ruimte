@@ -1,3 +1,4 @@
+import { PROTOCOL_VERSION } from '@ruimte/contracts';
 import { MachineIconSchema, machineRegistrationMessage } from '@ruimte/pulsar';
 import { RequestError, type ClientAccess, type Dispatcher } from '../dispatcher.ts';
 import { mayInvite } from '../auth/access.ts';
@@ -30,6 +31,7 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
         refuseStatements: identity.refuseStatements,
         platform: process.platform,
         version: host.version,
+        protocol: PROTOCOL_VERSION,
         reachability: access?.reachability ?? 'loopback',
         authenticated: access?.sessionId !== null && access?.sessionId !== undefined,
         publicKey: identity.publicKey,

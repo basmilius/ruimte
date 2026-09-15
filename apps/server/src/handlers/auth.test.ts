@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ServerFrame } from '@ruimte/contracts';
+import { PROTOCOL_VERSION, type ServerFrame } from '@ruimte/contracts';
 import { AuthStore } from '../auth/auth-store.ts';
 import { machineRegistrationMessage } from '@ruimte/pulsar';
 import { generateKeyPair, verifySignature } from '../auth/keys.ts';
@@ -86,6 +86,11 @@ describe('auth handlers', () => {
     test('endpoint.info carries the key a client pins the machine on', async () => {
         const info = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.info');
         expect(info).toMatchObject({ ok: true, result: { id: identity.id, publicKey: identity.publicKey, authenticated: true } });
+    });
+
+    test('endpoint.info carries the protocol version a client refuses the machine without', async () => {
+        const info = await ask({ reachability: 'loopback', sessionId: null }, 'endpoint.info');
+        expect(info).toMatchObject({ ok: true, result: { protocol: PROTOCOL_VERSION } });
     });
 
     test('a machine nobody has named answers to the name it started with', async () => {
