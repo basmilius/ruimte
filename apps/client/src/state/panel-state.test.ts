@@ -58,9 +58,9 @@ describe('panels in the machine-local file', () => {
         expect(parsePanels({ panelWidth: 0, previewWidth: -20 }, defaults)).toMatchObject({ panelWidth: null, previewWidth: null });
     });
 
-    test('a preview without a file to show stays closed', () => {
+    test('the preview is open exactly while a file is, whatever was stored', () => {
         expect(parsePanels({ preview: { open: true } }, defaults).preview).toEqual({ open: false });
-        expect(parsePanels({ preview: { open: true }, tabs: [{ path: 'a', pinned: false }] }, defaults).preview).toEqual({ open: true });
+        expect(parsePanels({ preview: { open: false }, tabs: [{ path: 'a', pinned: false }] }, defaults).preview).toEqual({ open: true });
     });
 
     test('an active tab that is not open is not what the viewer points at', () => {

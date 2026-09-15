@@ -148,8 +148,8 @@ export function PreviewPanel() {
                     >
                         <FileTabs />
                         <Separator />
-                        <Tooltip label="Close preview" name>
-                            <button className="icon-btn" onClick={() => useUi.getState().setPreviewOpen(false)}>
+                        <Tooltip label="Close all tabs" name>
+                            <button className="icon-btn" onClick={() => useFiles.getState().closeAll()}>
                                 <Icon icon={X} size={16} />
                             </button>
                         </Tooltip>

@@ -48,7 +48,7 @@ describe('ui', () => {
 
     test('the preview opens and closes on its own, next to whichever panel is up', () => {
         useUi.getState().togglePanel('files');
-        useUi.getState().togglePreview();
+        useUi.getState().setPreviewOpen(true);
         expect(useUi.getState().preview).toEqual({ open: true });
         expect(useUi.getState().panel).toEqual({ open: true, kind: 'files' });
         useUi.getState().togglePanel('files');

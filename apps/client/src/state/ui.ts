@@ -163,8 +163,8 @@ interface UiStore {
     setSettings(patch: Partial<SettingsState>): void;
     setPanel(patch: Partial<PanelState>): void;
     togglePanel(kind?: PanelKind): void;
+    /* Only the file tabs call this: the preview is up exactly while a file is open. */
     setPreviewOpen(open: boolean): void;
-    togglePreview(): void;
     setPanelWidth(width: number): void;
     setPreviewWidth(width: number): void;
     /* Puts a project's panels on screen in one go, when it opens; they land without sliding. */
@@ -257,9 +257,6 @@ export const useUi = create<UiStore>((set, get) => ({
             return;
         }
         set({ preview: { open }, panelsRestoring: false });
-    },
-    togglePreview() {
-        get().setPreviewOpen(!get().preview.open);
     },
     setPanelWidth(width) {
         set({ panelWidth: width, panelsRestoring: false });
