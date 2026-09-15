@@ -6,6 +6,14 @@ struct PendingIceCandidates {
     private var answered = false
     private var sent = Set<String>()
 
+    static func hasInitialRoute(_ sdp: String, relayOnly: Bool) -> Bool {
+        sdp.components(separatedBy: .newlines).contains { line in
+            guard line.hasPrefix("a=candidate:") else { return false }
+            let fields = line.split(whereSeparator: { $0.isWhitespace })
+            return fields.count >= 8 && fields[6] == "typ" && (!relayOnly || fields[7] == "relay")
+        }
+    }
+
     mutating func offered(_ sdp: String) {
         // Replaying routes already in the SDP can exhaust the broker limit before ICE connects.
         let included = Set(

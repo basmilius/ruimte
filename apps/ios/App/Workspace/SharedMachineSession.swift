@@ -15,6 +15,12 @@ final class SharedMachineSession {
     private var lease: MachineLease?
     private var references = 0
     private var invalidated = false
+    private struct ChatEntry {
+        let model: ChatModel
+        var viewers: Int
+        var expiry: Task<Void, Never>?
+    }
+    @ObservationIgnored private var chats: [String: ChatEntry] = [:]
     @ObservationIgnored private lazy var projectSubscriptions = ProjectSubscriptions { [weak self] type, payload in
         guard let self else { throw CancellationError() }
         return try await self.rpc.request(type, payload: payload)
@@ -50,13 +56,14 @@ final class SharedMachineSession {
                     generation += 1
                     rpc.connected()
                 }
-            }, message: { [weak self] text in self?.rpc.receive(text) },
+            }, message: { [weak self] text in self?.rpc.receiveInOrder(text) },
             closed: { [weak self] error in
                 guard let self else { return }
                 if error != nil || !connected { failedAttempts += 1 }
                 connected = false
                 relayed = nil
                 problem = error?.localizedDescription
+                discardIdleChats()
                 rpc.disconnected(error: error)
             }, route: { [weak self] in self?.relayed = $0 })
         lease = runtime.connections.hold(
@@ -91,6 +98,7 @@ final class SharedMachineSession {
     func release() {
         references = max(0, references - 1)
         guard references == 0 else { return }
+        clearChats()
         attention.stop()
         icons.stop()
         lease?.release()
@@ -101,12 +109,62 @@ final class SharedMachineSession {
 
     func retainProject(_ id: String) { projectSubscriptions.retain(id) }
 
+    func retainChat(_ fallback: ChatModel) -> ChatModel {
+        let id = fallback.chatID
+        var entry = chats[id] ?? ChatEntry(model: fallback, viewers: 0)
+        entry.expiry?.cancel()
+        entry.expiry = nil
+        entry.viewers += 1
+        chats[id] = entry
+        entry.model.start()
+        return entry.model
+    }
+
+    func releaseChat(_ model: ChatModel) {
+        let id = model.chatID
+        guard var entry = chats[id], entry.model === model else {
+            model.stop()
+            return
+        }
+        entry.viewers = max(0, entry.viewers - 1)
+        chats[id] = entry
+        guard entry.viewers == 0 else { return }
+        // Keep just the last hidden chat live; its events prevent a stale snapshot on quick return.
+        discardIdleChats(except: connected ? id : nil)
+        guard connected else { return }
+        entry.expiry = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(30)) } catch { return }
+            self?.removeChat(id)
+        }
+        chats[id] = entry
+    }
+
+    func hasLiveChat(_ id: String) -> Bool {
+        guard connected, let model = chats[id]?.model else { return false }
+        return model.connected && !model.loading && model.info != .null && model.error == nil
+    }
+
+    private func discardIdleChats(except retainedID: String? = nil) {
+        for (id, entry) in chats where entry.viewers == 0 && id != retainedID { removeChat(id) }
+    }
+
+    private func removeChat(_ id: String) {
+        guard let entry = chats.removeValue(forKey: id) else { return }
+        entry.expiry?.cancel()
+        entry.model.stop()
+    }
+
+    private func clearChats() {
+        for id in Array(chats.keys) { removeChat(id) }
+    }
+
     func openProject(_ id: String) async throws -> JSONValue { try await projectSubscriptions.open(id) }
 
     func releaseProject(_ id: String) async { await projectSubscriptions.release(id, connected: connected).value }
 
     func invalidate() {
         invalidated = true
+        clearChats()
         attention.stop()
         icons.stop()
         projectSubscriptions.invalidate()

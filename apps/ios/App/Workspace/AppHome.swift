@@ -264,9 +264,11 @@ struct AppHome: View {
                 Button {
                     recentProjects = true
                 } label: {
-                    Label("Recently closed", lucideIcon: "clock-arrow-left")
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .modifier(MobileSidebarLabel(disclosure: true))
+                    HStack(spacing: 12) {
+                        Image(lucide: "clock-arrow-left").frame(width: 20, height: 20).frame(width: 32)
+                        Text("Recently closed")
+                    }
+                    .modifier(MobileSidebarLabel(disclosure: true))
                 }
                 .modifier(MobileSidebarRow())
                 .accessibilityIdentifier("projects.recent")

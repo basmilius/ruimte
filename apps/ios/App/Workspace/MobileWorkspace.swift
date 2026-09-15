@@ -210,6 +210,7 @@ final class MobileWorkspace {
     func ensureSession(_ item: JSONValue) async throws {
         let kind = item.text("kind")
         guard kind == "chat" || kind == "terminal" else { return }
+        if kind == "chat", session.hasLiveChat(item.stableID) { return }
         let metadata = item["node"] ?? item
         let cwd = metadata.text("cwd")
         let resolved = cwd.hasPrefix("/") || cwd.hasPrefix("~") ? cwd : (cwd.isEmpty ? folder : folder + "/" + cwd)

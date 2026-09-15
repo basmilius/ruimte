@@ -130,10 +130,12 @@ public enum WireSchema {
             if let maximum = schema["exclusiveMaximum"]?.numberValue, number >= maximum { throw fail() }
         case "string":
             guard let string = value.stringValue else { throw fail() }
-            // Zod's limits count UTF-16 units, including both halves of an emoji.
-            let length = Double(string.utf16.count)
-            if let minimum = schema["minLength"]?.numberValue, length < minimum { throw fail() }
-            if let maximum = schema["maxLength"]?.numberValue, length > maximum { throw fail() }
+            if schema["minLength"] != nil || schema["maxLength"] != nil {
+                // Zod's limits count UTF-16 units, including both halves of an emoji.
+                let length = Double(string.utf16.count)
+                if let minimum = schema["minLength"]?.numberValue, length < minimum { throw fail() }
+                if let maximum = schema["maxLength"]?.numberValue, length > maximum { throw fail() }
+            }
             if let pattern = schema["pattern"]?.stringValue {
                 let expression = try NSRegularExpression(pattern: pattern)
                 guard expression.firstMatch(in: string, range: NSRange(string.startIndex..., in: string)) != nil else {

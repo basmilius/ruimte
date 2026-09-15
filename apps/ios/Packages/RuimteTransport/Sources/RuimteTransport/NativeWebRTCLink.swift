@@ -32,12 +32,18 @@ import RuimtePulsar
     private var binding: String?
     private var cancelTimeout: (() -> Void)?
     private var cancelGather: (() -> Void)?
+    private var cancelInitialGather: (() -> Void)?
+    private var initialGatherElapsed = false
     private var cancelTick: (() -> Void)?
     private var gatherDone: (() -> Void)?
     private var candidates = PendingIceCandidates()
     private var accessTask: Task<Void, Never>?
 
-    public init(machineID: String, machineKey: String, signer: any SessionSigner, brokerURL: URL, sockets: BrokerSockets, iceServers: [JSONValue], relayOnly: Bool = false, access: (() async throws -> JSONValue)? = nil, scheduler: any TransportScheduling = TaskTransportScheduler(), events: LinkEvents) throws {
+    public init(
+        machineID: String, machineKey: String, signer: any SessionSigner, brokerURL: URL, sockets: BrokerSockets,
+        iceServers: [JSONValue], relayOnly: Bool = false, access: (() async throws -> JSONValue)? = nil,
+        scheduler: any TransportScheduling = TaskTransportScheduler(), events: LinkEvents
+    ) throws {
         self.machineID = machineID
         self.machineKey = machineKey
         self.signer = signer
@@ -126,13 +132,28 @@ import RuimtePulsar
 
     private func waitForGathering() {
         guard let peer else { return }
-        // Keep initial routes in the offer until candidate-free negotiation is verified with deployed daemons.
         if peer.iceGatheringState == .complete { offer(); return }
         gatherDone = { [weak self] in self?.offer() }
+        // Include initial routes for deployed daemons; slow interfaces and TURN can trickle after the answer.
+        cancelInitialGather = scheduler.after(milliseconds: 250) { [weak self] in
+            guard let self else { return }
+            self.initialGatherElapsed = true
+            self.offerIfReady()
+        }
         cancelGather = scheduler.after(milliseconds: 5_000) { [weak self] in self?.finishGathering() }
     }
 
+    private func offerIfReady() {
+        guard initialGatherElapsed, gatherDone != nil,
+            let sdp = peer?.localDescription?.sdp,
+            PendingIceCandidates.hasInitialRoute(sdp, relayOnly: relayOnly)
+        else { return }
+        finishGathering()
+    }
+
     private func finishGathering() {
+        cancelInitialGather?()
+        cancelInitialGather = nil
         cancelGather?()
         cancelGather = nil
         let finish = gatherDone
@@ -217,6 +238,7 @@ import RuimtePulsar
             "sdpMLineIndex": .number(Double(candidate.sdpMLineIndex)),
         ])
         if let ready = candidates.generated(signal) { relayCandidate(ready) }
+        offerIfReady()
     }
 
     private func receivePiece(_ text: String) {
@@ -352,6 +374,7 @@ import RuimtePulsar
         cancelTimeout?()
         cancelGather?()
         cancelTick?()
+        cancelInitialGather?()
         gatherDone = nil
         accessTask?.cancel()
         accessTask = nil

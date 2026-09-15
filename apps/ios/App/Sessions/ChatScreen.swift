@@ -8,6 +8,7 @@ struct ChatScreen: View {
     @State private var model: ChatModel
     @Environment(\.mobileMachineSession) private var machineSession
     @State private var visible = false
+    @State private var holdingChat = false
     @State private var showingFiles = false
     @State private var showingClear = false
     @State private var pickerKind: String?
@@ -126,7 +127,10 @@ struct ChatScreen: View {
         }
         .onDisappear {
             visible = false
-            model.stop()
+            if holdingChat {
+                holdingChat = false
+                if let machineSession { machineSession.releaseChat(model) } else { model.stop() }
+            }
         }
         .alert("Clear this conversation?", isPresented: $showingClear) {
             Button("Cancel", role: .cancel) {}
@@ -186,7 +190,9 @@ struct ChatScreen: View {
     }
 
     private func start() {
-        model.start()
+        guard !holdingChat else { return }
+        holdingChat = true
+        if let machineSession { model = machineSession.retainChat(model) } else { model.start() }
         machineSession?.viewedChat(model.chatID, title: title, info: model.info)
     }
 

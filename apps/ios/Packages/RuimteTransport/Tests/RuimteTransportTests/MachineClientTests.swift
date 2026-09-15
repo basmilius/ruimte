@@ -15,6 +15,51 @@ import Testing
 }
 
 @MainActor struct MachineClientTests {
+    @Test func queuedFramesKeepOrderAndDiscardPreviousConnections() async throws {
+        let client = MachineClient(send: { _ in }, connected: true)
+        var received: [String] = []
+        let stop = client.subscribe("session.output") { received.append($0["data"]!.stringValue!) }
+        defer { stop() }
+        func frame(_ data: String) throws -> String {
+            String(
+                decoding: try JSONValue.object([
+                    "type": .string("event"), "event": .string("session.output"),
+                    "payload": .object(["sessionId": .string("s"), "data": .string(data)]),
+                ]).encoded(), as: UTF8.self)
+        }
+        let large = String(repeating: "history 🌍", count: 100_000)
+        client.receiveInOrder(try frame(large))
+        client.receiveInOrder("invalid JSON")
+        await client.receiveInOrder(try frame("delta")).value
+        #expect(received == [large, "delta"])
+        let stale = client.receiveInOrder(try frame("old connection"))
+        client.disconnected()
+        client.connected()
+        await stale.value
+        await client.receiveInOrder(try frame("new connection")).value
+        #expect(received == [large, "delta", "new connection"])
+    }
+
+    @Test func initialRoutesPreserveRelayFallbackAndCandidateDeduplication() {
+        let host = "candidate:1 1 udp 123 192.168.1.2 4567 typ host"
+        let relay = "candidate:2 1 udp 100 203.0.113.2 4568 typ relay"
+        let sdp = "v=0\r\na=\(host)\r\n"
+        #expect(!PendingIceCandidates.hasInitialRoute("v=0\r\n", relayOnly: false))
+        #expect(PendingIceCandidates.hasInitialRoute(sdp, relayOnly: false))
+        #expect(!PendingIceCandidates.hasInitialRoute(sdp, relayOnly: true))
+        #expect(PendingIceCandidates.hasInitialRoute(sdp + "a=\(relay)\r\n", relayOnly: true))
+        var candidates = PendingIceCandidates()
+        let hostSignal = JSONValue.object(["candidate": .string(host)])
+        let relaySignal = JSONValue.object(["candidate": .string(relay)])
+        #expect(candidates.generated(hostSignal) == nil)
+        candidates.offered(sdp)
+        #expect(candidates.generated(relaySignal) == nil)
+        #expect(candidates.answerApplied() == [relaySignal])
+        #expect(candidates.generated(hostSignal) == nil)
+        #expect(candidates.generated(relaySignal) == nil)
+        #expect(candidates.answerApplied().isEmpty)
+    }
+
     private func answer(_ client: MachineClient, _ frame: JSONValue, _ result: JSONValue) throws {
         client.receive(
             String(

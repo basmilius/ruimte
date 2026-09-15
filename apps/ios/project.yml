@@ -71,6 +71,7 @@ targets:
         RuimtePushKeychainGroup: $(AppIdentifierPrefix)app.ruimte.mobile.push
         UIBackgroundModes: [remote-notification]
         NSSupportsLiveActivities: true
+        NSLocalNetworkUsageDescription: Connect directly to your machines on the same Wi-Fi network.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoadsInWebContent: true
         CFBundleURLTypes:

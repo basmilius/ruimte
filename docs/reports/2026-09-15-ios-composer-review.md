@@ -615,3 +615,28 @@ Audited the app's list actions. Recently closed, machine rows, file entries, Git
 The plain MobileList supplies the same animated press style to remaining actions, including reconnect/retry and diagnostic controls. Explicit row styles override that default. The pairing-link row and icon-picker grid use the shared feedback too. Disabled buttons dim and destructive actions retain their red foreground. Native settings forms, toolbar controls and menus retain their system interaction styling.
 
 The iPhone build, Swift formatting and repository checks passed, with existing lint warnings. No UI tests, simulator or iPad installation were run, following the revised iteration workflow. Press appearance and navigation remain for hands-on acceptance on the installed iPhone build.
+
+## Faster iPhone connections and chat reopening, September 16
+
+Recently closed now uses the same 32-point artwork column and 12-point gap as the project rows above it, aligning its text with project names.
+
+Native WebRTC now sends its offer after a 250 ms gathering window when the local SDP contains a usable candidate. Gathering completion can send it sooner; the existing five-second fallback remains when no candidate is available. Relay-only diagnostics require a relay candidate for the early path. Later candidates remain buffered until the daemon applies the offer and answers, with existing SDP deduplication preserved. Normal connections retain ICE policy `all`. The app also declares its local-network usage description.
+
+The installed iPhone build connected to this Mac in 709 ms, compared with the previous 5,625 ms measurement, about 87% less setup time. The other machine connected in 681 ms versus 5,528 ms. These are individual cold-launch measurements from link creation, excluding account discovery and data loading.
+
+| Stage, connection to this Mac | Previous iPhone build | Updated iPhone build |
+| --- | ---: | ---: |
+| Broker and ICE configuration ready | 107 ms | 110 ms |
+| First host candidate | 109 ms | 140 ms |
+| Offer sent | 5,265 ms | 406 ms |
+| Answer received | 5,439 ms | 508 ms |
+| Authenticated | 5,625 ms | 709 ms |
+| First sampled round-trip time | 7 ms | 7 ms |
+
+The Mac connection `90-vMBUB` was correlated with the running daemon log. Both machines selected host/host pairs without TURN. One additional candidate per connection was forwarded after the answer. The trace is `/tmp/ruimte-connection-iphone-fast.log`. No daemon restart was needed. Host/host confirms no relay, but does not independently prove that all traffic stays within the LAN.
+
+Chat screens now share their live model per machine and chat. The last hidden chat stays subscribed for up to 30 seconds, so reopening it can reuse current messages and provider information without another full snapshot. Only one hidden chat is retained per machine; visible windows share ownership. Disconnects discard hidden chats, and releasing or invalidating the machine session clears the cache. A successfully attached live chat also skips the redundant `chat.create` request when reopened.
+
+Machine frames are decoded outside the main actor and delivered in their original order. Connection generations discard delayed frames from an older connection. Schema validation avoids counting UTF-16 units for unconstrained strings. First-time chat loading still transfers the daemon's complete history; pagination remains a separate protocol change. Chat opening times and cache behavior have not been measured through device UI automation in this iteration.
+
+The signed iPhone build and repository checks passed, with existing lint warnings. Eleven focused transport tests passed on the Mac, including ordered delivery across a large frame, malformed-frame handling, reconnect invalidation, initial candidate selection and late-candidate deduplication. Installed on the physical iPhone only. No UI tests, simulator or iPad installation were run.

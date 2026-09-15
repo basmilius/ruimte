@@ -127,6 +127,8 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
     private var attachments: [String: Set<UUID>] = [:]
     private var subscribers: [String: [UUID: @MainActor @Sendable (JSONValue) -> Void]] = [:]
     private var observers: [UUID: @MainActor @Sendable (Bool) -> Void] = [:]
+    private var incoming: Task<Void, Never>?
+    private var connectionGeneration = 0
     public private(set) var isConnected: Bool
     public var pendingRequestCount: Int { pending.count }
 
@@ -147,6 +149,9 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
     }
 
     public func disconnected(error: Error? = nil) {
+        connectionGeneration += 1
+        incoming?.cancel()
+        incoming = nil
         let wasConnected = isConnected
         isConnected = false
         // Mutations may already have reached the daemon; never replay them on a new connection.
@@ -269,6 +274,30 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
 
     public func receive(_ text: String) {
         guard isConnected, let frame = try? JSONValue.decode(Data(text.utf8)) else { return }
+        receive(frame)
+    }
+
+    @discardableResult public func receiveInOrder(_ text: String) -> Task<Void, Never> {
+        guard isConnected else { return Task {} }
+        let previous = incoming
+        let generation = connectionGeneration
+        // Await delivery as well as decoding: a snapshot must precede its following deltas.
+        let task = Task.detached(priority: .userInitiated) { [weak self] in
+            await previous?.value
+            guard !Task.isCancelled, let frame = try? JSONValue.decode(Data(text.utf8)) else { return }
+            await self?.receive(frame, generation: generation)
+        }
+        incoming = task
+        return task
+    }
+
+    private func receive(_ frame: JSONValue, generation: Int) {
+        guard generation == connectionGeneration else { return }
+        receive(frame)
+    }
+
+    private func receive(_ frame: JSONValue) {
+        guard isConnected else { return }
         if let id = frame["id"]?.stringValue {
             guard let request = pending[id] else { return }
             do {

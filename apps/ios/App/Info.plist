@@ -34,6 +34,8 @@
 		<key>NSAllowsArbitraryLoadsInWebContent</key>
 		<true/>
 	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Connect directly to your machines on the same Wi-Fi network.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>RuimtePushKeychainGroup</key>
