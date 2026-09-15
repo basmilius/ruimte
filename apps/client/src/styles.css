@@ -394,6 +394,13 @@
         overscroll-behavior: none;
     }
 
+    /* A Home Screen app on iPadOS draws under the status bar and its fade, and a phone under the notch
+       and the home indicator; the insets are 0 everywhere else. The body's background fills the strip. */
+    #root {
+        box-sizing: border-box;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
     body {
         font-family: var(--font-sans);
         font-size: var(--text-sm);
