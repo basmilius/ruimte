@@ -6,8 +6,10 @@ final class NavigationRowTests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
 
-        let project = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "projects.project."))
-            .firstMatch
+        let configuredProject = ProcessInfo.processInfo.environment["RUIMTE_TEST_PROJECT_ID"]
+        let project =
+            configuredProject.map { app.buttons["projects.project.\($0)"] }
+            ?? app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "projects.project.")).firstMatch
         guard project.waitForExistence(timeout: 30) else {
             throw XCTSkip("This device check needs a signed-in app with an available project.")
         }
@@ -29,12 +31,22 @@ final class NavigationRowTests: XCTestCase {
         }
 
         project.tap()
-        let view = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "workspace.view.")).firstMatch
+        let configuredChat = ProcessInfo.processInfo.environment["RUIMTE_TEST_CHAT_ID"]
+        let view =
+            configuredChat.map { app.buttons["workspace.view.\($0)"] }
+            ?? app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "workspace.view.")).firstMatch
         XCTAssertTrue(view.waitForExistence(timeout: 20))
+        if !view.isHittable { app.swipeUp() }
         let destinationID = view.identifier.replacingOccurrences(of: "workspace.view.", with: "workspace.destination.")
         view.tap()
         let destination = app.descendants(matching: .any).matching(identifier: destinationID).firstMatch
         XCTAssertTrue(destination.waitForExistence(timeout: 10), app.debugDescription)
+
+        if configuredChat != nil {
+            let messages = app.collectionViews["chat.timeline"].cells
+            XCTAssertTrue(
+                messages.firstMatch.waitForExistence(timeout: 30), "The chat must render its received history.")
+        }
 
         let capture = XCTAttachment(screenshot: app.screenshot())
         capture.name = "view-opened-by-touch"

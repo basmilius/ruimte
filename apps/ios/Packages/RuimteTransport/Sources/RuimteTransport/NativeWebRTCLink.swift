@@ -222,13 +222,22 @@ import RuimtePulsar
     private func receivePiece(_ text: String) {
         guard !ended else { return }
         liveness?.heard(now: now)
-        switch assembler.push(text, maxChars: authenticated ? 16 * 1_024 * 1_024 : 4_096) {
-        case .invalid: end(TransportFailure.invalid("The machine sent a frame this app cannot read."))
+        let limit = authenticated ? DirectFraming.authenticatedFrameChars : DirectFraming.handshakeFrameChars
+        switch assembler.push(text, maxChars: limit) {
+        case .invalid:
+            let message: String
+            if case .tooLarge = assembler.failure {
+                message = "The machine response is too large to load on this device."
+            } else {
+                message = "The machine sent an invalid message fragment."
+            }
+            trace(message)
+            end(TransportFailure.invalid(message))
         case .partial: break
         case .frame(let frame):
+            if frame.utf16.count > 1_024 * 1_024 { trace("received large frame: \(frame.utf16.count) UTF-16 units") }
             if authenticated { events.message(frame); return }
-            do { try handshake(JSONValue.decode(Data(frame.utf8))) }
-            catch { end(error) }
+            do { try handshake(JSONValue.decode(Data(frame.utf8))) } catch { end(error) }
         }
     }
 

@@ -5,6 +5,36 @@ import XCTest
 @testable import RuimteTransport
 
 final class TransportTests: XCTestCase {
+    func testLongChatSnapshotExceedsLegacyLimitAndKeepsTheFollowingFrame() {
+        let snapshot =
+            "{\"items\":[{\"kind\":\"tool\",\"output\":\"" + String(repeating: "x", count: 17 * 1_024 * 1_024) + "\"}]}"
+        var legacy = FrameAssembler()
+        var current = FrameAssembler()
+        var rejectedByLegacy = false
+        let pieces = DirectFraming.split(snapshot)
+        for (index, piece) in pieces.enumerated() {
+            if !rejectedByLegacy { rejectedByLegacy = legacy.push(piece, maxChars: 16 * 1_024 * 1_024) == .invalid }
+            let result = current.push(piece, maxChars: DirectFraming.authenticatedFrameChars)
+            XCTAssertEqual(result, index == pieces.count - 1 ? .frame(snapshot) : .partial)
+        }
+        XCTAssertTrue(rejectedByLegacy)
+        XCTAssertEqual(legacy.failure, .tooLarge(limit: 16 * 1_024 * 1_024))
+        XCTAssertEqual(
+            current.push("={\"ok\":true}", maxChars: DirectFraming.authenticatedFrameChars), .frame("{\"ok\":true}"))
+    }
+
+    func testHandshakeStillRejectsOversizedFrames() {
+        var assembler = FrameAssembler()
+        XCTAssertEqual(
+            assembler.push("=" + String(repeating: "x", count: 4_097), maxChars: DirectFraming.handshakeFrameChars),
+            .invalid)
+        XCTAssertEqual(assembler.failure, .tooLarge(limit: 4_096))
+        XCTAssertEqual(assembler.push("no marker", maxChars: DirectFraming.handshakeFrameChars), .invalid)
+        XCTAssertEqual(assembler.failure, .missingMarker)
+        XCTAssertEqual(assembler.push("=ok", maxChars: DirectFraming.handshakeFrameChars), .frame("ok"))
+        XCTAssertNil(assembler.failure)
+    }
+
     func testUTF16FramingAndLimit() {
         let text = "a🚀e\u{301}😀z"
         let pieces = DirectFraming.split(text, pieceChars: 3)

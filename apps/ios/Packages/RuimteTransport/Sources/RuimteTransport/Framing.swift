@@ -8,6 +8,10 @@ public enum FramePiece: Equatable {
 }
 
 public enum DirectFraming {
+    // Deployed daemons send complete chat histories, which can exceed the WebSocket default of 16 Mi characters.
+    public static let authenticatedFrameChars = 64 * 1_024 * 1_024
+    public static let handshakeFrameChars = 4_096
+
     public static func split(_ frame: String, pieceChars: Int = WireConstants.directPieceChars) -> [String] {
         precondition(pieceChars >= 2)
         let units = Array(frame.utf16)
@@ -29,18 +33,29 @@ public enum DirectFraming {
 }
 
 public struct FrameAssembler {
+    public enum Failure: Equatable {
+        case missingMarker
+        case tooLarge(limit: Int)
+    }
+
     private var parts: [String] = []
     private var length = 0
+    public private(set) var failure: Failure?
 
     public init() {}
 
     public mutating func push(_ piece: String, maxChars: Int) -> FramePiece {
+        failure = nil
         guard let mark = piece.unicodeScalars.first, mark == "+" || mark == "=" else {
+            failure = .missingMarker
+            parts.removeAll()
+            length = 0
             return .invalid
         }
         let body = String(piece.unicodeScalars.dropFirst())
         length += body.utf16.count
         if length > maxChars {
+            failure = .tooLarge(limit: maxChars)
             parts.removeAll()
             length = 0
             return .invalid
@@ -70,7 +85,10 @@ public struct ChannelLiveness {
     private let idleMs: Double
     private let timeoutMs: Double
 
-    public init(now: Double, idleMs: Double = WireConstants.directPingIdleMs, timeoutMs: Double = WireConstants.directPingTimeoutMs) {
+    public init(
+        now: Double, idleMs: Double = WireConstants.directPingIdleMs,
+        timeoutMs: Double = WireConstants.directPingTimeoutMs
+    ) {
         lastHeard = now
         self.idleMs = idleMs
         self.timeoutMs = timeoutMs
