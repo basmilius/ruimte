@@ -22,6 +22,7 @@
 		3AF2536CFF4F274E9CA1F5B2 /* CanvasPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78AF6CD8C27D406B882C8FA0 /* CanvasPage.swift */; };
 		3D31A6E3A8580B2F81EE4763 /* ChatTimeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5566FA42E11FDC5B932C0F2E /* ChatTimeline.swift */; };
 		3F688FC111081CCF1B4670DF /* ChatModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 070AB913E963308BAD40498B /* ChatModel.swift */; };
+		451BCDFFE5D34B03207983C4 /* MobileStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8954363C79663F275CDF04A /* MobileStyle.swift */; };
 		4F55FC08F38F77B99650C774 /* SessionWorkspaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1813EA5208B26BEDB337A946 /* SessionWorkspaceTests.swift */; };
 		525328BF92CFEE7D18F48DD5 /* AppRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE323EA02FEEF12048A2D3A8 /* AppRuntime.swift */; };
 		52B0FA0AC6066442114E416D /* RuimtePulsar in Frameworks */ = {isa = PBXBuildFile; productRef = 3E8822A475571AAC0CFCF10F /* RuimtePulsar */; };
@@ -133,6 +134,7 @@
 		6E5C2124CCC572A4A3D407AB /* NotificationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationCoordinator.swift; sourceTree = "<group>"; };
 		7152C947C98B90BAB9EC4D82 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		78AF6CD8C27D406B882C8FA0 /* CanvasPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasPage.swift; sourceTree = "<group>"; };
+		7B61834D13B0B0A358C25F44 /* Build.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Build.xcconfig; sourceTree = "<group>"; };
 		7C81823373467CED5DF67CB7 /* PairMachinePage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairMachinePage.swift; sourceTree = "<group>"; };
 		7D4311D2D50AD0CC27A0D10A /* RuimteTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RuimteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7FABC4BE334FDFA06C4FC1B6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -144,6 +146,7 @@
 		A531355B6DBA1AEA2747E700 /* TerminalModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalModel.swift; sourceTree = "<group>"; };
 		A793E7CE1817A4DDD5543A82 /* ProcessesPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessesPage.swift; sourceTree = "<group>"; };
 		A84B645FE2D16EFA24FD14F6 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		A8954363C79663F275CDF04A /* MobileStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileStyle.swift; sourceTree = "<group>"; };
 		ABE8B97161FC6E9CE587F95C /* MachineRemovalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineRemovalTests.swift; sourceTree = "<group>"; };
 		C65C2B371130F2E65C92BBD2 /* Ruimte.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ruimte.entitlements; sourceTree = "<group>"; };
 		CA401CA82CE41046F457D507 /* MachineProjectsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineProjectsPage.swift; sourceTree = "<group>"; };
@@ -224,6 +227,14 @@
 			path = Notifications;
 			sourceTree = "<group>";
 		};
+		216D77BAC36FAAC08D0296C5 /* Design */ = {
+			isa = PBXGroup;
+			children = (
+				A8954363C79663F275CDF04A /* MobileStyle.swift */,
+			);
+			path = Design;
+			sourceTree = "<group>";
+		};
 		2ADCAE68B145C9F52DCE079C /* ActivityWidget */ = {
 			isa = PBXGroup;
 			children = (
@@ -231,6 +242,14 @@
 				9B79DEDEC6E3DBF60AE5EA23 /* RuimteActivityWidget.swift */,
 			);
 			path = ActivityWidget;
+			sourceTree = "<group>";
+		};
+		3C3B62CB8A399F181539F779 /* Configuration */ = {
+			isa = PBXGroup;
+			children = (
+				7B61834D13B0B0A358C25F44 /* Build.xcconfig */,
+			);
+			path = Configuration;
 			sourceTree = "<group>";
 		};
 		3DD005D49356DB2CE59D9766 /* Pages */ = {
@@ -256,6 +275,7 @@
 				7152C947C98B90BAB9EC4D82 /* PrivacyInfo.xcprivacy */,
 				C65C2B371130F2E65C92BBD2 /* Ruimte.entitlements */,
 				09CCDDD483546BE641151534 /* RuimteApp.swift */,
+				216D77BAC36FAAC08D0296C5 /* Design */,
 				15FDFABDC1FBE3D6072F16D8 /* Notifications */,
 				3DD005D49356DB2CE59D9766 /* Pages */,
 				F89F7730201891FA1B8685A6 /* Sessions */,
@@ -319,6 +339,7 @@
 			isa = PBXGroup;
 			children = (
 				708C224944B4027467FF1534 /* App */,
+				3C3B62CB8A399F181539F779 /* Configuration */,
 				C1745C6D84A901A991566B0C /* Extensions */,
 				E7D2E16C602F28AE55AEFEF8 /* Packages */,
 				DED6F5F29F409BC49D8E06BF /* ruimte */,
@@ -580,6 +601,7 @@
 				27F033AF6D9F55F874FD2E76 /* MachineUsagePage.swift in Sources */,
 				7A56FE4D5A125ECE0A147680 /* MarkdownMessage.swift in Sources */,
 				5C706502AEBC21A671990235 /* MobileJSON.swift in Sources */,
+				451BCDFFE5D34B03207983C4 /* MobileStyle.swift in Sources */,
 				62D36AE12D4AFBB7A1AECA5C /* MobileWorkspace.swift in Sources */,
 				D3AE70D4B71CD32DD8D34D42 /* NotificationCoordinator.swift in Sources */,
 				EE74DF5514DD201C33ACEA3E /* NotificationSessionPage.swift in Sources */,
@@ -657,6 +679,7 @@
 		};
 		353BCA88064C0FE9551E49A4 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7B61834D13B0B0A358C25F44 /* Build.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -816,6 +839,7 @@
 		};
 		F27EA5CF5BD0CD21F745AA03 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7B61834D13B0B0A358C25F44 /* Build.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;

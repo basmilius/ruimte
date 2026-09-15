@@ -28,18 +28,37 @@ struct TerminalScreen: View {
             }
             if model.loading { ProgressView("Loading terminal…").padding() }
             HStack {
-                Text(model.exited ? "Session exited" : "Following \(model.cols) × \(model.rows)")
+                MobileStatus(
+                    title: model.exited ? "Exited" : model.connected ? "Connected" : "Reconnecting",
+                    color: model.exited ? .secondary : model.connected ? .green : .orange)
                 Spacer()
-                Text("Desktop size preserved")
-            }.font(.caption).foregroundStyle(.secondary).padding(.horizontal).padding(.vertical, 6)
+                Label("\(model.cols) × \(model.rows)", systemImage: "rectangle.split.3x3")
+                    .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                    .accessibilityLabel("Following desktop terminal, \(model.cols) columns and \(model.rows) rows")
+            }
+            .padding(.horizontal, 18).padding(.vertical, 12)
+            .background(MobileStyle.canvas)
             NativeTerminal(model: model, fontSize: fontSize, theme: theme)
-            HStack(spacing: 4) {
-                Button("Ctrl+C") { model.write("\u{03}") }.frame(minWidth: 64, minHeight: 44)
-                Button("Ctrl+D") { model.write("\u{04}") }.frame(minWidth: 64, minHeight: 44)
-                Spacer()
-                Button("Clear", systemImage: "eraser") { clearing = true }.frame(minHeight: 44)
-                    .keyboardShortcut("k", modifiers: .command)
-            }.padding(.horizontal).background(.bar).disabled(!model.connected || model.loading || model.exited)
+                .padding(.horizontal, 12).padding(.top, 12)
+                .background(Color(uiColor: .systemBackground))
+            HStack(spacing: 8) {
+                terminalKey("esc", label: "Escape", input: "\u{1b}")
+                terminalKey("tab", label: "Tab", input: "\t")
+                terminalKey("⌃C", label: "Control C, interrupt", input: "\u{03}")
+                terminalKey("⌃D", label: "Control D, end input", input: "\u{04}")
+                Spacer(minLength: 0)
+                Button {
+                    clearing = true
+                } label: {
+                    Image(systemName: "eraser").frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("Clear scrollback")
+                .keyboardShortcut("k", modifiers: .command)
+            }
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .background(.bar)
+            .overlay(alignment: .top) { Rectangle().fill(MobileStyle.border).frame(height: 0.5) }
+            .disabled(!model.connected || model.loading || model.exited)
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
@@ -70,6 +89,19 @@ struct TerminalScreen: View {
         } message: {
             Text("This clears the shared terminal scrollback on every client.")
         }
+    }
+
+    private func terminalKey(_ title: String, label: String, input: String) -> some View {
+        Button {
+            model.write(input)
+        } label: {
+            Text(title).font(.system(.subheadline, design: .monospaced).weight(.medium))
+                .frame(minWidth: 44, minHeight: 44)
+                .background(MobileStyle.surface, in: RoundedRectangle(cornerRadius: 10))
+                .overlay { RoundedRectangle(cornerRadius: 10).strokeBorder(MobileStyle.border, lineWidth: 0.5) }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 
     private func approvalStrip(_ request: JSONValue, now: Date) -> some View {

@@ -58,7 +58,7 @@ final class ChatTimelineController: UIViewController {
             guard let self, let item = self.items[id] else { return }
             cell.contentConfiguration = UIHostingConfiguration {
                 ChatTimelineRow(item: item, client: self.client, chatID: self.chatID)
-            }.margins(.all, 12)
+            }.margins(.horizontal, 20).margins(.vertical, 10)
             cell.backgroundConfiguration = .clear()
         }
         source = UICollectionViewDiffableDataSource<Int, String>(collectionView: collection) { collection, index, id in
@@ -113,15 +113,32 @@ private struct ChatTimelineRow: View {
     let chatID: String
     private var kind: String { item["kind"]?.stringValue ?? "" }
     var body: some View {
+        content
+            .frame(maxWidth: 720, alignment: kind == "user" ? .trailing : .leading)
+            .frame(maxWidth: .infinity)
+            .tint(MobileStyle.accent)
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: 8) {
             switch kind {
             case "user":
-                Label("You", systemImage: "person.circle").font(.caption).foregroundStyle(.secondary)
-                Text(item["text"]?.stringValue ?? "").textSelection(.enabled)
-                ForEach(Array((item["attachments"]?.arrayValue ?? []).enumerated()), id: \.offset) { _, attachment in
-                    ChatAttachmentButton(client: client, chatID: chatID, attachment: attachment)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(item["text"]?.stringValue ?? "").textSelection(.enabled).lineSpacing(3)
+                    ForEach(Array((item["attachments"]?.arrayValue ?? []).enumerated()), id: \.offset) {
+                        _, attachment in
+                        ChatAttachmentButton(client: client, chatID: chatID, attachment: attachment)
+                    }
                 }
-            case "assistant": MarkdownMessage(text: item["text"]?.stringValue ?? "")
+                .padding(.horizontal, 16).padding(.vertical, 12)
+                .background(MobileStyle.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 20))
+                .frame(maxWidth: 620, alignment: .trailing)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .accessibilityLabel("You")
+            case "assistant":
+                Label("Assistant", systemImage: "sparkle")
+                    .font(.caption.weight(.medium)).foregroundStyle(.secondary)
+                MarkdownMessage(text: item["text"]?.stringValue ?? "")
             case "thinking":
                 DisclosureGroup("Reasoning") { MarkdownMessage(text: item["text"]?.stringValue ?? "") }.foregroundStyle(
                     .secondary)
@@ -138,13 +155,16 @@ private struct ChatTimelineRow: View {
                         CodeMessage(text: change["diff"]?.stringValue ?? "")
                     }
                 } label: {
-                    Label(
-                        item["name"]?.stringValue ?? "Tool",
-                        systemImage: item["state"]?.stringValue == "error"
-                            ? "exclamationmark.circle" : "wrench.and.screwdriver")
+                    Image(
+                        systemName: item["state"]?.stringValue == "error"
+                            ? "exclamationmark.circle"
+                            : item["state"]?.stringValue == "done" ? "checkmark.circle" : "terminal"
+                    )
+                    .font(.system(size: 14)).foregroundStyle(.secondary)
+                    Text(item["name"]?.stringValue ?? "Tool").font(.subheadline).foregroundStyle(.secondary)
                     Spacer()
                     Text(item["state"]?.stringValue ?? "").font(.caption).foregroundStyle(.secondary)
-                }
+                }.frame(minHeight: 44)
             case "subagent":
                 DisclosureGroup(item["description"]?.stringValue ?? "Agent") {
                     Text(item["status"]?.stringValue ?? "").font(.caption)
@@ -153,8 +173,11 @@ private struct ChatTimelineRow: View {
                             ?? "")
                 }
             case "approval":
-                Label(item["toolName"]?.stringValue ?? "Permission", systemImage: "hand.raised")
-                Text(item["decision"]?.stringValue ?? "").font(.caption).foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    Image(systemName: "hand.raised")
+                    Text(item["toolName"]?.stringValue ?? "Permission")
+                    Text(item["decision"]?.stringValue ?? "")
+                }.font(.caption).foregroundStyle(.secondary)
             case "question":
                 Label("Questions", systemImage: "questionmark.circle")
                 Text(item["state"]?.stringValue ?? "").font(.caption).foregroundStyle(.secondary)

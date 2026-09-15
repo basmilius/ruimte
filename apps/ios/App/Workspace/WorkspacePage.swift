@@ -61,7 +61,8 @@ struct WorkspacePage: View {
                             workspace.select(notice.text("viewId"))
                             workspace.notice = nil
                         }
-                        Button("Dismiss", systemImage: "xmark") { workspace.notice = nil }.labelStyle(.iconOnly)
+                        Button("Dismiss", systemImage: "xmark") { workspace.notice = nil }
+                            .labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
                     }.padding().background(.thinMaterial)
                 }
                 if let problem = workspace.problem, workspace.ready {
@@ -132,28 +133,13 @@ struct WorkspacePage: View {
                             Button {
                                 workspace.select(item.stableID)
                             } label: {
-                                HStack {
-                                    Label(
-                                        item.text("name", fallback: item.text("kind")),
-                                        systemImage: iconForKind(item.text("kind")))
-                                    Spacer()
-                                    AttentionMark(store: workspace.session.attention, id: item.stableID)
-                                    if workspace.selectedID == item.stableID {
-                                        Image(systemName: "checkmark").accessibilityLabel("Selected")
-                                    }
-                                }.padding(.vertical, 6)
+                                viewRow(item)
                             }.foregroundStyle(.primary)
                         } else {
                             NavigationLink {
                                 ProjectItemPage(workspace: workspace, item: item).id(item.stableID)
                             } label: {
-                                HStack {
-                                    Label(
-                                        item.text("name", fallback: item.text("kind")),
-                                        systemImage: iconForKind(item.text("kind")))
-                                    Spacer()
-                                    AttentionMark(store: workspace.session.attention, id: item.stableID)
-                                }.padding(.vertical, 6)
+                                viewRow(item)
                             }.simultaneousGesture(TapGesture().onEnded { workspace.select(item.stableID) })
                         }
                     }
@@ -172,7 +158,24 @@ struct WorkspacePage: View {
                 reordered.move(fromOffsets: indices, toOffset: destination)
                 Task { await workspace.edit { $0.setting("views", .array(reordered)) } }
             }
-        }.searchable(text: $search, prompt: "Find a view")
+        }
+        .listStyle(.insetGrouped)
+        .searchable(text: $search, prompt: "Find a view")
+    }
+
+    private func viewRow(_ item: JSONValue) -> some View {
+        HStack(spacing: 10) {
+            MobileRow(
+                title: item.text("name", fallback: item.text("kind")),
+                subtitle: item.text("kind") == "canvas"
+                    ? "Canvas · \(item.list("nodes").count) nodes" : item.text("kind").capitalized,
+                symbol: iconForKind(item.text("kind")))
+            AttentionMark(store: workspace.session.attention, id: item.stableID)
+            if sizeClass == .regular && workspace.selectedID == item.stableID {
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(MobileStyle.accent).accessibilityLabel(
+                    "Selected")
+            }
+        }
     }
 }
 

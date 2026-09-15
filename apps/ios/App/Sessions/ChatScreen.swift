@@ -11,6 +11,9 @@ struct ChatScreen: View {
     @State private var pickerKind: String?
     @State private var photo: PhotosPickerItem?
     @State private var question: JSONValue?
+    @State private var expandedRequest: String?
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.colorScheme) private var colorScheme
     let title: String
 
     init(client: any MachineRequesting, chatID: String, title: String) {
@@ -32,9 +35,18 @@ struct ChatScreen: View {
                             description: Text("Messages and agent work appear here."))
                     }
                 }
-            if let pending = model.pending.first { pendingDock(pending) }
-            composer
+            VStack(spacing: 8) {
+                if let pending = model.pending.first { pendingDock(pending) }
+                composer
+            }
+            .frame(maxWidth: 760)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 10)
+            .frame(maxWidth: .infinity)
+            .background(Color(uiColor: .systemBackground))
         }
+        .tint(MobileStyle.accent)
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -100,7 +112,7 @@ struct ChatScreen: View {
     }
 
     private var composer: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
             if !model.attachments.isEmpty {
                 ScrollView(.horizontal) {
                     HStack {
@@ -118,12 +130,15 @@ struct ChatScreen: View {
             }
             if let queue = model.info["queue"]?.arrayValue, !queue.isEmpty {
                 Text("\(queue.count) message\(queue.count == 1 ? "" : "s") queued").font(.caption).foregroundStyle(
-                    .secondary)
+                    .secondary
+                ).monospacedDigit()
             }
             TextField("Message", text: $model.draft, axis: .vertical)
-                .lineLimit(2...8)
-                .padding(12)
-                .background(.background, in: RoundedRectangle(cornerRadius: 12))
+                .lineLimit(1...6)
+                .font(.body)
+                .padding(.horizontal, 8)
+                .padding(.top, 10)
+                .padding(.bottom, 4)
                 .accessibilityIdentifier("chat.composer")
             HStack(spacing: 4) {
                 Menu {
@@ -145,7 +160,10 @@ struct ChatScreen: View {
                     Button {
                         Task { await model.perform("chat.cancel") }
                     } label: {
-                        Image(systemName: "stop.circle.fill").frame(width: 44, height: 44)
+                        Image(systemName: "stop.fill").font(.system(size: 14, weight: .semibold))
+                            .frame(width: 32, height: 32)
+                            .background(MobileStyle.inset, in: Circle())
+                            .frame(width: 44, height: 44)
                     }.accessibilityLabel("Stop turn")
                 }
                 Button {
@@ -154,7 +172,8 @@ struct ChatScreen: View {
                     if model.sending {
                         ProgressView().frame(width: 44, height: 44)
                     } else {
-                        Image(systemName: "arrow.up.circle.fill").font(.title).frame(width: 44, height: 44)
+                        Image(systemName: "arrow.up.circle.fill").font(.system(size: 32, weight: .medium))
+                            .frame(width: 44, height: 44)
                     }
                 }
                 .disabled(
@@ -165,10 +184,12 @@ struct ChatScreen: View {
                 .accessibilityLabel("Send message")
                 .keyboardShortcut(.return, modifiers: .command)
             }
+            .font(.system(size: 18, weight: .regular))
             .disabled(!model.connected || model.loading)
         }
-        .padding(12)
-        .background(.bar)
+        .padding(6)
+        .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 22))
+        .overlay { RoundedRectangle(cornerRadius: 22).strokeBorder(MobileStyle.border) }
     }
 
     private var modelMenu: some View {
@@ -209,11 +230,11 @@ struct ChatScreen: View {
                 }
             }
         } label: {
-            VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 4) {
                 Text(model.info["selection"]?["model"]?.stringValue ?? "Model").lineLimit(1)
-                Text(model.info["runtimeMode"]?.stringValue ?? "Permissions").font(.caption2).foregroundStyle(
-                    .secondary)
-            }.font(.caption).frame(minHeight: 44)
+                Image(systemName: "chevron.down").font(.system(size: 8, weight: .semibold))
+            }.font(.caption.weight(.medium)).foregroundStyle(.secondary).frame(minHeight: 44)
+                .accessibilityValue(model.info["runtimeMode"]?.stringValue ?? "Permissions")
         }
     }
 
@@ -235,41 +256,88 @@ struct ChatScreen: View {
     }
 
     private func pendingDock(_ item: JSONValue) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Label(item["toolName"]?.stringValue ?? "Question", systemImage: "hand.raised").font(.headline)
-                Spacer()
-                if model.pending.count > 1 { Text("\(model.pending.count - 1) more").font(.caption) }
-            }
-            if item["kind"]?.stringValue == "approval" {
-                Text(item["description"]?.stringValue ?? "The agent needs permission to continue.").font(.subheadline)
-                    .lineLimit(5)
-                if let input = item["input"], let data = try? input.encoded(),
-                    let text = String(data: data, encoding: .utf8)
-                {
-                    DisclosureGroup("Request details") {
-                        CodeMessage(text: text, language: "json").frame(maxHeight: 180)
+        let requestID = item["requestId"]?.stringValue ?? ""
+        let expanded = expandedRequest == requestID
+        let isApproval = item["kind"]?.stringValue == "approval"
+        let layout =
+            dynamicTypeSize >= .xxxLarge
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 8))
+        return VStack(alignment: .leading, spacing: 10) {
+            layout {
+                Button {
+                    expandedRequest = expanded ? nil : requestID
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: isApproval ? "hand.raised" : "questionmark.bubble")
+                            .foregroundStyle(.orange)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(item["toolName"]?.stringValue ?? "Answer needed")
+                                .font(.subheadline.weight(.semibold)).lineLimit(1)
+                            Text(
+                                isApproval
+                                    ? item["description"]?.stringValue ?? "The agent needs permission to continue."
+                                    : "The agent has a question"
+                            )
+                            .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                        }
+                        Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
+                    }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                        .contentShape(Rectangle())
+                }.buttonStyle(.plain).accessibilityLabel("Request details")
+                    .accessibilityValue(expanded ? "Expanded" : "Collapsed")
+                HStack(spacing: 8) {
+                    if isApproval {
+                        approvalButton("Deny", decision: "deny", item: item)
+                            .buttonStyle(.borderless).font(.subheadline)
+                        approvalButton("Allow", decision: "allow", item: item)
+                            .buttonStyle(.plain).font(.subheadline.weight(.semibold))
+                            .foregroundStyle(colorScheme == .dark ? Color.black : Color.white)
+                            .padding(.horizontal, 8)
+                            .background(MobileStyle.accent, in: Capsule())
+                    } else {
+                        Button("Answer") { question = item }
+                            .buttonStyle(.borderedProminent).controlSize(.small)
+                            .foregroundStyle(colorScheme == .dark ? Color.black : Color.white)
+                            .font(.subheadline.weight(.semibold))
+                            .frame(minHeight: 44)
                     }
                 }
-                HStack {
-                    approvalButton("Deny", decision: "deny", item: item)
-                    approvalButton("Allow", decision: "allow", item: item)
-                    if item["canAllowAlways"]?.boolValue == true {
-                        approvalButton("Always allow", decision: "allow-always", item: item)
-                    }
-                }.buttonStyle(.bordered)
-            } else {
-                Button("Answer questions") { question = item }.buttonStyle(.borderedProminent)
             }
-        }.padding().background(.regularMaterial).disabled(!model.connected)
+            if expanded {
+                if isApproval {
+                    Text(item["description"]?.stringValue ?? "The agent needs permission to continue.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                    if let input = item["input"], let data = try? input.encoded(),
+                        let text = String(data: data, encoding: .utf8)
+                    {
+                        ScrollView { CodeMessage(text: text, language: "json") }.frame(maxHeight: 180)
+                    }
+                    if item["canAllowAlways"]?.boolValue == true {
+                        approvalButton("Always allow this tool", decision: "allow-always", item: item)
+                            .font(.subheadline)
+                    }
+                }
+                if model.pending.count > 1 {
+                    Text("\(model.pending.count - 1) more requests waiting")
+                        .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                }
+            }
+        }
+        .padding(.horizontal, 12).padding(.vertical, 8)
+        .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 18))
+        .disabled(!model.connected)
     }
 
     private func approvalButton(_ label: String, decision: String, item: JSONValue) -> some View {
-        Button(label) {
+        Button {
             Task {
                 await model.perform(
                     "chat.approve", ["requestId": item["requestId"] ?? .null, "decision": .string(decision)])
             }
+        } label: {
+            Text(label).frame(minWidth: 44, minHeight: 44)
         }
     }
 }

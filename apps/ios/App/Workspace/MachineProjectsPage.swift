@@ -19,11 +19,15 @@ struct MachineProjectsPage: View {
     var body: some View {
         List {
             Section {
-                Label(
-                    session.connected ? "Connected" : "Connecting",
-                    systemImage: session.connected ? "circle.fill" : "circle.dotted"
-                )
-                .foregroundStyle(session.connected ? Color.green : Color.secondary)
+                HStack {
+                    MobileStatus(
+                        title: session.connected ? "Connected" : "Connecting",
+                        color: session.connected ? .green : .secondary)
+                    Spacer()
+                    Text("\(projects.count) projects").font(.caption).monospacedDigit().foregroundStyle(.secondary)
+                }.padding(.vertical, 3)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
                 if let problem = session.problem {
                     Text(problem).foregroundStyle(.red)
                     Button("Reconnect") { session.reconnect() }
@@ -38,12 +42,7 @@ struct MachineProjectsPage: View {
                         WorkspacePage(
                             workspace: MobileWorkspace(session: session, projectID: project.text("projectId")))
                     } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Label(project.text("name"), systemImage: "square.stack").font(.headline)
-                            if let path = project["folder"]?.stringValue {
-                                Text(path).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                            }
-                        }.padding(.vertical, 5)
+                        MobileRow(title: project.text("name"), subtitle: project.text("folder"), symbol: "square.stack")
                     }.disabled(project["available"] == .bool(false))
                 }
                 if loading {
@@ -80,6 +79,7 @@ struct MachineProjectsPage: View {
                 }
             }
         }
+        .listStyle(.insetGrouped)
         .navigationTitle(session.machine.name)
         .searchable(text: $search, prompt: "Find a project")
         .toolbar {

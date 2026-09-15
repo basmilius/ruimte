@@ -1,4 +1,5 @@
 name: Ruimte
+fileGroups: [Configuration]
 options:
   minimumXcodeGenVersion: 2.44.0
   deploymentTarget:
@@ -15,6 +16,9 @@ packages:
     path: Packages/RuimtePulsar
   RuimteTransport:
     path: Packages/RuimteTransport
+configFiles:
+  Debug: Configuration/Build.xcconfig
+  Release: Configuration/Build.xcconfig
 settings:
   base:
     SWIFT_VERSION: '6.0'

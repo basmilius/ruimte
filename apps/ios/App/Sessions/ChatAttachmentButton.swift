@@ -18,15 +18,24 @@ struct ChatAttachmentButton: View {
             Button {
                 Task { await load() }
             } label: {
-                HStack {
-                    if loading { ProgressView() } else { Image(systemName: "paperclip") }
-                    Text(attachment["name"]?.stringValue ?? "Attachment")
-                    if let size = attachment["size"]?.numberValue {
-                        Text(ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file)).foregroundStyle(
-                            .secondary)
+                HStack(spacing: 10) {
+                    if loading {
+                        ProgressView()
+                    } else {
+                        Image(systemName: "doc").font(.system(size: 18)).foregroundStyle(.tint)
                     }
-                }.font(.caption).frame(minHeight: 44)
-            }.disabled(loading)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(attachment["name"]?.stringValue ?? "Attachment")
+                            .font(.caption.weight(.medium)).lineLimit(1).truncationMode(.middle)
+                        if let size = attachment["size"]?.numberValue {
+                            Text(ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file))
+                                .font(.caption2).foregroundStyle(.secondary).monospacedDigit()
+                        }
+                    }
+                    Image(systemName: "arrow.down.circle").font(.system(size: 14)).foregroundStyle(.secondary)
+                }.padding(.horizontal, 12).frame(minHeight: 48)
+                    .background(MobileStyle.surface, in: RoundedRectangle(cornerRadius: 12))
+            }.buttonStyle(.plain).disabled(loading)
             if let error { Text(error).font(.caption).foregroundStyle(.red) }
         }
         .quickLookPreview($preview)

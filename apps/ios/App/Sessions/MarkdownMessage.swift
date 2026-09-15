@@ -92,7 +92,7 @@ struct MarkdownMessage: View {
     let text: String
     @State private var blocks: [MarkdownBlock] = []
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 14) {
             if blocks.isEmpty { Text(text).textSelection(.enabled) }
             ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
                 switch block.kind {
@@ -107,23 +107,34 @@ struct MarkdownMessage: View {
                     }
                 case .table:
                     ScrollView(.horizontal) {
-                        Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 10) {
+                        Grid(alignment: .leading, horizontalSpacing: 0, verticalSpacing: 0) {
                             ForEach(Array(block.rows.enumerated()), id: \.offset) { rowIndex, row in
                                 GridRow {
                                     ForEach(Array(row.enumerated()), id: \.offset) { _, cell in
-                                        inline(cell).fontWeight(rowIndex == 0 ? .semibold : .regular).frame(
-                                            maxWidth: 300, alignment: .leading)
+                                        inline(cell).font(.subheadline)
+                                            .fontWeight(rowIndex == 0 ? .semibold : .regular)
+                                            .frame(maxWidth: 260, alignment: .leading)
+                                            .padding(.horizontal, 14).padding(.vertical, 10)
                                     }
                                 }
-                                if rowIndex == 0 { Divider().gridCellUnsizedAxes(.horizontal) }
+                                if rowIndex < block.rows.count - 1 {
+                                    Divider().opacity(0.45).gridCellUnsizedAxes(.horizontal)
+                                }
                             }
-                        }.fixedSize(horizontal: false, vertical: true).padding(12)
+                        }.fixedSize(horizontal: false, vertical: true)
+                            .background(
+                                MobileStyle.panel, in: RoundedRectangle(cornerRadius: 12)
+                            )
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 12).strokeBorder(MobileStyle.border)
+                            }
                     }.fixedSize(horizontal: false, vertical: true)
-                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
+                        .scrollIndicators(.hidden)
                 default: inline(block.text)
                 }
             }
         }
+        .lineSpacing(3)
         .textSelection(.enabled)
         .task(id: text) {
             let source = text
@@ -150,16 +161,18 @@ struct CodeMessage: View {
         if !text.isEmpty {
             VStack(alignment: .leading, spacing: 4) {
                 if !language.isEmpty {
-                    Text(language).font(.caption2).foregroundStyle(.secondary).padding(.horizontal, 12).padding(.top, 8)
+                    Text(language.uppercased()).font(.caption2.weight(.medium)).tracking(0.6)
+                        .foregroundStyle(.secondary).padding(.horizontal, 14).padding(.top, 10)
                 }
                 ScrollView(.horizontal) {
-                    Text(highlighted ?? AttributedString(text)).font(.system(.caption, design: .monospaced))
-                        .textSelection(.enabled).padding(12)
+                    Text(highlighted ?? AttributedString(text)).font(.system(.footnote, design: .monospaced))
+                        .textSelection(.enabled).padding(.horizontal, 14).padding(.vertical, 12)
                         .accessibilityIdentifier(highlighted == nil ? "code.loading" : "code.highlighted")
                 }
                 .fixedSize(horizontal: false, vertical: true)
             }
-            .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
+            .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 12))
+            .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(MobileStyle.border) }
             .contextMenu { Button("Copy", systemImage: "doc.on.doc") { UIPasteboard.general.string = text } }
             .task(id: taskID) {
                 highlighted = nil
@@ -181,7 +194,8 @@ actor CodeHighlighter {
 
     func highlight(_ text: String, language: String, dark: Bool) -> AttributedString? {
         guard !Task.isCancelled else { return nil }
-        let theme = dark ? "github-dark" : "github"
+        // Highlightr 2.3 parses descendant CSS selectors as unordered classes; these palettes avoid overlaps.
+        let theme = dark ? "tomorrow-night-bright" : "github-gist"
         let key = theme + ":" + language + ":" + text
         if let cached = cache[key] { return cached }
         if renderer == nil { renderer = Highlightr() }
@@ -193,10 +207,21 @@ actor CodeHighlighter {
         guard !Task.isCancelled, let rendered = renderer.highlight(text, as: language.isEmpty ? nil : language),
             var value = try? AttributedString(rendered, including: \.uiKit)
         else { return nil }
-        for run in value.runs {
-            if let color = run.uiKit.foregroundColor {
-                value[run.range].swiftUI.foregroundColor = Color(uiColor: color)
+        // Run views share storage with the string; copy their attributes before changing it.
+        let attributes = value.runs.map {
+            (
+                range: $0.range, color: $0.uiKit.foregroundColor,
+                traits: $0.uiKit.font?.fontDescriptor.symbolicTraits ?? []
+            )
+        }
+        for (range, color, traits) in attributes {
+            if let color {
+                value[range].swiftUI.foregroundColor = Color(uiColor: color)
             }
+            var font = Font.system(.footnote, design: .monospaced)
+                .weight(traits.contains(.traitBold) ? .semibold : .regular)
+            if traits.contains(.traitItalic) { font = font.italic() }
+            value[range].swiftUI.font = font
         }
         guard !Task.isCancelled else { return nil }
         cache[key] = value

@@ -1,0 +1,2 @@
+// Local signing survives regeneration; CI can supply its own team.
+#include? "../Signing.xcconfig"

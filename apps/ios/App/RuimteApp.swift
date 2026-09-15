@@ -8,6 +8,7 @@ struct RuimteApp: App {
     var body: some Scene {
         WindowGroup {
             AppHome(runtime: runtime)
+                .tint(MobileStyle.accent)
         }
     }
 }

@@ -17,7 +17,13 @@ struct AppHome: View {
                 if runtime.account != nil || !runtime.machines.isEmpty {
                     if let account = runtime.account {
                         Section {
-                            Label(account.login ?? "Your account", systemImage: "person.crop.circle").font(.headline)
+                            HStack(spacing: 12) {
+                                MobileIcon(symbol: "person.crop.circle", color: .secondary)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(account.login ?? "Your account").font(.subheadline.weight(.semibold))
+                                    Text("Your workspace, connected.").font(.caption).foregroundStyle(.secondary)
+                                }
+                            }.padding(.vertical, 4)
                         }
                     }
                     Section("Your machines") {
@@ -25,18 +31,11 @@ struct AppHome: View {
                             NavigationLink {
                                 MachineProjectsPage(session: runtime.session(for: machine), runtime: runtime)
                             } label: {
-                                HStack(spacing: 14) {
-                                    Image(systemName: "desktopcomputer").font(.title2).foregroundStyle(.tint).frame(
-                                        width: 36)
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(machine.name).font(.headline)
-                                        Text(
-                                            machine.brokerUrl == nil
-                                                ? "No remote connection configured" : "Open projects and sessions"
-                                        )
-                                        .font(.subheadline).foregroundStyle(.secondary)
-                                    }
-                                }.padding(.vertical, 7)
+                                MobileRow(
+                                    title: machine.name,
+                                    subtitle: machine.brokerUrl == nil
+                                        ? "Remote connection unavailable" : "Projects and sessions",
+                                    symbol: "desktopcomputer")
                             }.disabled(machine.brokerUrl == nil)
                         }
                         if runtime.machines.isEmpty {
@@ -49,24 +48,37 @@ struct AppHome: View {
                         Button("Refresh machines", systemImage: "arrow.clockwise") {
                             Task { await runtime.refreshMachines() }
                         }
+                        .font(.subheadline)
+                        .listRowBackground(Color.clear)
                     }
                 } else {
                     Section {
-                        VStack(alignment: .leading, spacing: 14) {
-                            Image(systemName: "square.stack.3d.up").font(.system(size: 42)).foregroundStyle(.tint)
-                                .accessibilityHidden(true)
-                            Text("Your workspace, wherever you are.").font(.largeTitle.bold())
-                            Text("Open projects, talk to agents and use your terminals on your own machines.")
-                                .foregroundStyle(.secondary)
-                        }.padding(.vertical, 20)
+                        WelcomeHeader()
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets(top: 24, leading: 0, bottom: 28, trailing: 0))
                     }
                     Section {
                         if runtime.loading { ProgressView("Loading your account") }
                         ForEach(runtime.providers, id: \.rawValue) { provider in
-                            Button(provider == .apple ? "Continue with Apple" : "Continue with GitHub") {
+                            Button {
                                 guard let window else { return }
                                 Task { await runtime.signIn(provider, window: window) }
-                            }.disabled(runtime.signingIn || window == nil)
+                            } label: {
+                                Label(
+                                    provider == .apple ? "Continue with Apple" : "Continue with GitHub",
+                                    systemImage: provider == .apple ? "apple.logo" : "arrow.right"
+                                )
+                                .font(.body.weight(.semibold))
+                                .frame(maxWidth: .infinity, minHeight: 36)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .labelStyle(.titleAndIcon)
+                            .foregroundStyle(Color(uiColor: .systemBackground))
+                            .buttonBorderShape(.roundedRectangle(radius: 14))
+                            .disabled(runtime.signingIn || window == nil)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
                         }
                         if runtime.signingIn {
                             ProgressView("Signing in")
@@ -81,6 +93,7 @@ struct AppHome: View {
                     Section { Text(problem).foregroundStyle(.red).textSelection(.enabled) }
                 }
             }
+            .listStyle(.insetGrouped)
             .navigationTitle("Ruimte")
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
@@ -112,6 +125,34 @@ struct AppHome: View {
             if current == .active { Task { await runtime.notifications.syncBadge(liveKeys: runtime.attentionKeys) } }
         }
         .onDisappear { runtime.connections.setScene(sceneID, foreground: false) }
+    }
+}
+
+struct WelcomeHeader: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            Image(systemName: "square.stack.3d.up")
+                .font(.system(size: 34, weight: .medium))
+                .foregroundStyle(MobileStyle.accent)
+                .frame(width: 72, height: 72)
+                .background(MobileStyle.accent.opacity(0.09), in: RoundedRectangle(cornerRadius: 22))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Make room\nfor your work.")
+                    .font(.largeTitle.weight(.bold))
+                    .tracking(-0.8)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Your projects, agents and terminals.\nRight where you left them.")
+                    .font(.body).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            HStack(spacing: 18) {
+                Label("Your machines", systemImage: "desktopcomputer")
+                Label("Your workspace", systemImage: "square.stack")
+            }.font(.caption).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 12)
     }
 }
 

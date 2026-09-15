@@ -33,8 +33,10 @@ xcodegen generate --spec apps/ios/project.yml
 open apps/ios/Ruimte.xcodeproj
 ```
 
-Choose the Ruimte scheme and your iPhone or iPad. Select your development team in
-Signing & Capabilities, enable Developer Mode on the device if requested, and run.
+Set `DEVELOPMENT_TEAM = YOUR_TEAM_ID` in `apps/ios/Signing.xcconfig` to keep your local
+team selection across project regeneration. This file is ignored by git and is optional
+for simulator builds and CI. Choose the Ruimte scheme and your iPhone or iPad, enable
+Developer Mode on the device if requested, and run.
 The bundle ID is `app.ruimte.mobile`; the extensions are `app.ruimte.mobile.notifications`
 and `app.ruimte.mobile.activity`. The project uses automatic signing. `project.yml` is the
 source of the committed Xcode project; regenerate it when adding files or dependencies.

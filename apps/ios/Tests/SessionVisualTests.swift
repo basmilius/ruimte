@@ -14,11 +14,15 @@ final class SessionVisualTests: XCTestCase {
             dark: false)
         XCTAssertNotNil(highlighted)
         XCTAssertGreaterThan(Set(highlighted?.runs.compactMap { $0.swiftUI.foregroundColor } ?? []).count, 1)
-        for (name, size) in [
-            ("chat-iphone", CGSize(width: 402, height: 874)), ("chat-ipad", CGSize(width: 1024, height: 768)),
+        for (name, size, dark, typeSize) in [
+            ("chat-iphone", CGSize(width: 402, height: 874), false, DynamicTypeSize.large),
+            ("chat-ipad", CGSize(width: 1024, height: 768), false, .large),
+            ("chat-dark", CGSize(width: 402, height: 874), true, .large),
+            ("chat-large-type", CGSize(width: 402, height: 874), false, .xxxLarge),
         ] {
             let host = UIHostingController(
-                rootView: NavigationStack { ChatScreen(client: client, chatID: name, title: "Native iOS app") })
+                rootView: NavigationStack { ChatScreen(client: client, chatID: name, title: "Native iOS app") }
+                    .tint(MobileStyle.accent).preferredColorScheme(dark ? .dark : .light).dynamicTypeSize(typeSize))
             let window = makeWindow(host, size: size)
             await client.waitFor("provider.list")
             // Capture after the highlighter's streaming coalescence window and native cell layout.
@@ -31,12 +35,49 @@ final class SessionVisualTests: XCTestCase {
         }
     }
 
+    @MainActor func testHomeAtPhoneWidths() async throws {
+        let client = AddressBookClient(fetch: { request in
+            (
+                Data(#"{"providers":["github","apple"]}"#.utf8),
+                HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            )
+        })
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "ruimte.visual.home"))
+        defer { defaults.removePersistentDomain(forName: "ruimte.visual.home") }
+        let runtime = AppRuntime(client: client, defaults: defaults)
+        await runtime.start()
+        for (name, dark, signedIn) in [
+            ("welcome-iphone", false, false), ("machines-iphone", false, true), ("machines-dark", true, true),
+        ] {
+            runtime.account = signedIn ? Account(id: "visual", provider: .github, login: "basmilius") : nil
+            runtime.machines =
+                signedIn
+                ? [
+                    Machine(
+                        id: "visual", name: "MacBook Pro", icon: nil, publicKey: DeviceKey().publicKey,
+                        brokerUrl: "wss://broker.example.test", lastSeenAt: nil),
+                    Machine(
+                        id: "studio", name: "Mac Studio", icon: nil, publicKey: DeviceKey().publicKey,
+                        brokerUrl: "wss://broker.example.test", lastSeenAt: nil),
+                ] : []
+            let host = UIHostingController(
+                rootView: AppHome(runtime: runtime).tint(MobileStyle.accent).preferredColorScheme(dark ? .dark : .light)
+            )
+            let window = makeWindow(host, size: CGSize(width: 402, height: 874))
+            for _ in 0..<20 { await displayFrame() }
+            capture(window, name: name)
+            window.isHidden = true
+            window.rootViewController = nil
+        }
+        runtime.connections.shutdown()
+    }
+
     @MainActor func testTerminalSnapshotAtPhoneWidth() async throws {
         let client = VisualSessionClient()
         let host = UIHostingController(
             rootView: NavigationStack {
                 TerminalScreen(client: client, sessionID: "terminal", title: "Project terminal")
-            })
+            }.tint(MobileStyle.accent))
         let window = makeWindow(host, size: CGSize(width: 402, height: 874))
         await client.waitFor("session.list")
         await displayFrame()

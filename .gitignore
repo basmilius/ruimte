@@ -13,3 +13,4 @@ apps/ios/**/*.xcuserstate
 apps/ios/**/.build/
 apps/ios/**/.swiftpm/
 apps/ios/DerivedData/
+apps/ios/Signing.xcconfig
