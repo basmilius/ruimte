@@ -3,6 +3,7 @@ import {
     brokerHostOf,
     signalMessage,
     type BrokerError,
+    type IceServer,
     type BrokerRateLimited,
     type BrokerRelayed,
     type SignalAccess,
@@ -12,7 +13,7 @@ import type { ClientKey } from '@/endpoint/client-key';
 import type { SignalingOpener } from './signaling';
 
 interface Member {
-    ready(): void;
+    ready(iceServers: IceServer[]): void;
     relayed(frame: BrokerRelayed): void;
     refused(frame: BrokerError | BrokerRateLimited): void;
     lost(reason: string): void;
@@ -22,6 +23,9 @@ interface Shared {
     socket: WebSocket;
     peer: BrokerPeer;
     members: Set<Member>;
+    /* What the broker handed out for this key, once it answered `ice`; null while the question is out. */
+    ice: { servers: IceServer[]; expiresAt: number | null } | null;
+    iceRequestId: string | null;
 }
 
 export interface BrokerMembership {
@@ -55,7 +59,13 @@ export class BrokerSockets {
         if (joined) {
             joined.members.add(member);
             if (joined.peer.isReady) {
-                queueMicrotask(() => member.ready());
+                if (joined.ice !== null && (joined.ice.expiresAt === null || joined.ice.expiresAt > Date.now())) {
+                    const servers = joined.ice.servers;
+                    queueMicrotask(() => member.ready(servers));
+                } else if (joined.iceRequestId === null) {
+                    // Credentials that lapsed while the socket stayed open are asked for again; the member waits for the answer.
+                    joined.iceRequestId = joined.peer.ice();
+                }
             }
         } else {
             queueMicrotask(() => member.lost(`The broker URL ${url} does not open`));
@@ -80,6 +90,13 @@ export class BrokerSockets {
             return null;
         }
         const members = new Set<Member>();
+        const settleIce = (servers: IceServer[], expiresAt: number | null): void => {
+            shared.ice = { servers, expiresAt };
+            shared.iceRequestId = null;
+            for (const member of [...members]) {
+                member.ready(servers);
+            }
+        };
         const lose = (reason: string): void => {
             if (this.open.get(id) !== shared) {
                 return;
@@ -96,9 +113,13 @@ export class BrokerSockets {
             sign: (message) => key.sign(message),
             send: (frame) => socket.send(frame),
             events: {
+                // Signals wait for the ICE servers, since the offer is gathered with them.
                 ready: () => {
-                    for (const member of [...members]) {
-                        member.ready();
+                    shared.iceRequestId = peer.ice();
+                },
+                ice: (frame) => {
+                    if (frame.id === shared.iceRequestId) {
+                        settleIce(frame.servers, frame.expiresAt);
                     }
                 },
                 relayed: (frame) => {
@@ -107,6 +128,16 @@ export class BrokerSockets {
                     }
                 },
                 refused: (frame) => {
+                    if (frame.id !== undefined && frame.id === shared.iceRequestId) {
+                        // A broker that could not hand out servers still signals; the attempt goes on with STUN alone.
+                        settleIce([], null);
+                        return;
+                    }
+                    if (frame.type === 'error' && frame.code === 'bad-frame' && frame.id === undefined && shared.iceRequestId !== null) {
+                        // A broker from before `ice` refuses the frame without its id and keeps the socket.
+                        settleIce([], null);
+                        return;
+                    }
                     if (frame.id !== undefined) {
                         for (const member of [...members]) {
                             member.refused(frame);
@@ -123,7 +154,7 @@ export class BrokerSockets {
                 failed: (reason) => lose(reason)
             }
         });
-        const shared: Shared = { socket, peer, members };
+        const shared: Shared = { socket, peer, members, ice: null, iceRequestId: null };
         this.open.set(id, shared);
         socket.onopen = () => peer.start();
         socket.onmessage = (message) => void peer.receive(String(message.data));
@@ -207,9 +238,9 @@ export const brokerSignaling =
                 }
                 signer = key;
                 membership = sockets.join(options.brokerUrl, key, {
-                    ready: () => {
+                    ready: (iceServers) => {
                         if (!closed) {
-                            events.ready();
+                            events.ready(iceServers);
                         }
                     },
                     relayed: (frame) => void accept(frame, key.publicKey),

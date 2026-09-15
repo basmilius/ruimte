@@ -25,7 +25,7 @@ export interface MachineInfo {
    `now` as null leaves the countdown off, which is what a screen reader wants to hear. */
 export const describeConnection = (connection: ConnectionState, now: number | null): string => {
     if (connection.status === 'open') {
-        return 'Connected';
+        return connection.relayed === true ? 'Connected via relay' : 'Connected';
     }
     if (connection.noLink === true) {
         return 'Not connected';

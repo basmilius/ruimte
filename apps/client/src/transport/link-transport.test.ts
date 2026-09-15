@@ -65,6 +65,25 @@ describe('LinkTransport', () => {
         expect(await reply).toEqual({});
     });
 
+    test('an open link that moves onto a relay says so to the subscribers, and a closed one is never relayed', async () => {
+        const { transport, links } = setup();
+        await tick();
+        const heard: TransportStatus[] = [];
+        transport.subscribeStatus((status) => heard.push(status));
+        links[0]!.events.open();
+        expect(transport.connection.relayed).toBe(false);
+        links[0]!.events.route?.(true);
+        expect(transport.connection.relayed).toBe(true);
+        expect(heard).toEqual(['open', 'open']);
+        links[0]!.events.route?.(true);
+        expect(heard).toHaveLength(2);
+
+        links[0]!.events.close('The machine stopped answering over the direct connection');
+        expect(transport.connection.relayed).toBe(false);
+        links[0]!.events.route?.(true);
+        expect(transport.connection.relayed).toBe(false);
+    });
+
     test('a link that fails says why, and the reason stays until a link opens again', async () => {
         const { transport, links } = setup();
         const statuses: TransportStatus[] = [];

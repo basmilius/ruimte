@@ -12,6 +12,8 @@ export interface ConnectionState {
     failure?: string | null;
     /* Set when this client has no link to the machine at all, which is a machine nobody is using rather than one that failed. */
     noLink?: boolean;
+    /* True while an open direct connection runs through a TURN relay rather than straight to the machine. */
+    relayed?: boolean;
 }
 
 export interface Transport {

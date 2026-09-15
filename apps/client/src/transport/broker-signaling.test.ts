@@ -64,24 +64,29 @@ const setup = (access?: (key: ClientKey) => Promise<SignalAccess>) => {
         ...(access ? { access } : {})
     });
     const attempt = (connectionId: string) => {
-        const log = { ready: 0, signals: [] as Signal[], failures: [] as string[] };
+        const log = { ready: 0, iceServers: [] as unknown[], signals: [] as Signal[], failures: [] as string[] };
         const events: SignalingEvents = {
-            ready: () => {
+            ready: (iceServers) => {
                 log.ready += 1;
+                log.iceServers.push(iceServers);
             },
             signal: (signal) => log.signals.push(signal),
             fail: (reason) => log.failures.push(reason)
         };
         return { signaling: open(connectionId, events), log };
     };
-    /* Opens the broker socket and walks it through the announcement. */
-    const announce = async (): Promise<FakeSocket> => {
+    /* Opens the broker socket and walks it through the announcement and the question for ICE servers, answered with `servers`. */
+    const announce = async (servers: unknown[] = []): Promise<FakeSocket> => {
         await settle();
         const socket = sockets.at(-1)!;
         socket.onopen?.();
         socket.deliver({ type: 'challenge', broker: 'broker.example.com', nonce: NONCE });
         await settle();
         socket.deliver({ type: 'ready' });
+        await settle();
+        const ice = socket.sent.at(-1) as Extract<BrokerPeerFrame, { type: 'ice' }>;
+        expect(ice.type).toBe('ice');
+        socket.deliver({ type: 'ice', id: ice.id, servers, expiresAt: servers.length > 0 ? Date.now() + 3_600_000 : null });
         await settle();
         return socket;
     };
@@ -106,7 +111,7 @@ describe('brokerSignaling', () => {
 
         signaling.send({ kind: 'offer', sdp: 'v=0' });
         await settle();
-        const relay = socket.sent[2] as Extract<BrokerPeerFrame, { type: 'relay' }>;
+        const relay = socket.sent[3] as Extract<BrokerPeerFrame, { type: 'relay' }>;
         expect(relay.to).toBe(machine.publicKey);
         expect(relay.envelope).toEqual({ connectionId: 'attempt-0001', signal: { kind: 'offer', sdp: 'v=0' } });
         expect(await verifies(client.publicKey, signalMessage(client.publicKey, machine.publicKey, relay.envelope), relay.signature)).toBe(true);
@@ -139,10 +144,58 @@ describe('brokerSignaling', () => {
         const socket = await announce();
         signaling.send({ kind: 'offer', sdp: 'v=0' });
         await settle();
-        const relay = socket.sent[2] as Extract<BrokerPeerFrame, { type: 'relay' }>;
+        const relay = socket.sent[3] as Extract<BrokerPeerFrame, { type: 'relay' }>;
         socket.deliver({ type: 'error', code: 'not-connected', message: 'Nobody with that key is connected', id: relay.id });
         await settle();
         expect(log.failures).toEqual(['The machine is not connected to the broker at broker.example.com. It needs to run with the broker switched on.']);
+    });
+
+    test('asks the broker for ICE servers before signals go out, and hands them to every attempt on the socket', async () => {
+        const { sockets, attempt, announce } = setup();
+        const turn = { urls: ['turn:turn.example.com:3478?transport=udp'], username: '1:c-x', credential: 'y' };
+        const first = attempt('attempt-0001');
+        const socket = await announce([turn]);
+        expect(first.log.iceServers).toEqual([[turn]]);
+
+        // A later attempt on the same socket gets the servers without asking again.
+        const second = attempt('attempt-0002');
+        await settle();
+        expect(second.log.iceServers).toEqual([[turn]]);
+        expect(sockets).toHaveLength(1);
+        expect(socket.sent.filter((frame) => frame.type === 'ice')).toHaveLength(1);
+    });
+
+    test('a broker that cannot hand out servers, or does not know the question, still lets the attempt signal', async () => {
+        const failing = setup();
+        const one = failing.attempt('attempt-0001');
+        await settle();
+        const socket = failing.sockets.at(-1)!;
+        socket.onopen?.();
+        socket.deliver({ type: 'challenge', broker: 'broker.example.com', nonce: NONCE });
+        await settle();
+        socket.deliver({ type: 'ready' });
+        await settle();
+        expect(one.log.ready).toBe(0);
+        const ice = socket.sent.at(-1) as Extract<BrokerPeerFrame, { type: 'ice' }>;
+        socket.deliver({ type: 'error', code: 'internal', message: 'The broker could not hand out ICE servers', id: ice.id });
+        await settle();
+        expect(one.log.iceServers).toEqual([[]]);
+        expect(one.log.failures).toEqual([]);
+
+        const old = setup();
+        const two = old.attempt('attempt-0001');
+        await settle();
+        const oldSocket = old.sockets.at(-1)!;
+        oldSocket.onopen?.();
+        oldSocket.deliver({ type: 'challenge', broker: 'broker.example.com', nonce: NONCE });
+        await settle();
+        oldSocket.deliver({ type: 'ready' });
+        await settle();
+        oldSocket.deliver({ type: 'error', code: 'bad-frame', message: 'That is not a broker frame' });
+        await settle();
+        expect(two.log.iceServers).toEqual([[]]);
+        expect(two.log.failures).toEqual([]);
+        expect(oldSocket.closed).toBe(false);
     });
 
     test('two attempts share one broker socket, which closes when the last one leaves', async () => {
@@ -183,7 +236,7 @@ describe('brokerSignaling', () => {
         signaling.send({ kind: 'offer', sdp: 'v=0' });
         signaling.send({ kind: 'candidate', candidate: '', sdpMid: null, sdpMLineIndex: null });
         await settle();
-        const relays = socket.sent.slice(2) as Extract<BrokerPeerFrame, { type: 'relay' }>[];
+        const relays = socket.sent.filter((frame) => frame.type === 'relay') as Extract<BrokerPeerFrame, { type: 'relay' }>[];
         const offer = relays.find((relay) => relay.envelope.signal.kind === 'offer')!;
         expect(offer.envelope.signal).toEqual({ kind: 'offer', sdp: 'v=0', access: { statement, label: 'Laptop' } });
         expect(await verifies(client.publicKey, signalMessage(client.publicKey, machine.publicKey, offer.envelope), offer.signature)).toBe(true);

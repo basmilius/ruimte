@@ -30,6 +30,8 @@ export interface Link {
 export interface LinkEvents {
     open(): void;
     message(data: string): void;
+    /* The path of an open link changed: through a TURN relay or not. Only a direct connection says. */
+    route?(relayed: boolean): void;
     /* The link is gone. `failure` says why when that is worth showing a person; null for an ordinary close. */
     close(failure: string | null): void;
 }
@@ -175,7 +177,8 @@ export class LinkTransport implements PooledTransport {
        that hears the status has the attempt count and the countdown that go with it. */
     private setConnection(next: Partial<ConnectionState>): void {
         const merged = { ...this.currentConnection, ...next };
-        const changed = this.currentConnection.status !== merged.status;
+        // The path is drawn on the machine's row as well, so a link that moved onto a relay or off one is news too.
+        const changed = this.currentConnection.status !== merged.status || this.currentConnection.relayed !== merged.relayed;
         this.currentConnection = merged;
         if (!changed) {
             return;
@@ -216,7 +219,12 @@ export class LinkTransport implements PooledTransport {
         const events: LinkEvents = {
             open: () => {
                 if (this.linkToken === token) {
-                    this.setConnection({ status: 'open', attempts: 0, retryAt: null, failure: null });
+                    this.setConnection({ status: 'open', attempts: 0, retryAt: null, failure: null, relayed: false });
+                }
+            },
+            route: (relayed) => {
+                if (this.linkToken === token && this.currentConnection.status === 'open') {
+                    this.setConnection({ relayed });
                 }
             },
             message: (data) => {
@@ -237,7 +245,7 @@ export class LinkTransport implements PooledTransport {
                 }
                 // Scheduling first, so the closed status arrives with the attempt it announces.
                 this.scheduleReconnect();
-                this.setConnection({ status: 'closed', failure });
+                this.setConnection({ status: 'closed', failure, relayed: false });
                 this.rejectPending('disconnected', 'The connection closed before the machine answered');
             }
         };

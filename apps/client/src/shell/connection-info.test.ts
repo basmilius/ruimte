@@ -5,6 +5,7 @@ import { describeConnection, describeLastSeen, describeMachine, describePing, de
 describe('describeConnection', () => {
     test('says connected while the socket is open', () => {
         expect(describeConnection({ status: 'open', attempts: 0, retryAt: null }, 0)).toBe('Connected');
+        expect(describeConnection({ status: 'open', attempts: 0, retryAt: null, relayed: true }, 0)).toBe('Connected via relay');
     });
 
     test('counts the attempt and the wait while a retry is pending', () => {

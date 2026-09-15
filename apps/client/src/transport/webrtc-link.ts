@@ -12,6 +12,7 @@ import {
     type DirectChallengeFrame,
     type DirectProofFrame
 } from '@ruimte/contracts';
+import { mergeIceServers, relayedFromStats } from './ice';
 import type { Link, LinkOpener } from './link-transport';
 import { protocolRefusal } from './protocol';
 import { socketSignaling, type Signal, type Signaling, type SignalingOpener } from './signaling';
@@ -30,6 +31,7 @@ const HANDSHAKE_FRAME_CHARS = 4_096;
 const CLOSE_GRACE_MS = 2_000;
 
 export interface WebRtcLinkOptions {
+    /* This client's own servers; the signaling route may add its own for the attempt (TURN from the broker). */
     iceServers: RTCIceServer[];
     /* The answer to the daemon's challenge; throws when the daemon did not prove itself. */
     prove(challenge: DirectChallengeFrame, binding: string): Promise<DirectProofFrame>;
@@ -194,6 +196,7 @@ export const webRtcLink =
             authenticated = true;
             clearTimeout(timer);
             let received: number | null = null;
+            let relayed: boolean | null = null;
             let sampling = false;
             liveness = new ChannelLiveness({
                 ping: (id) => sendFrame(directPingFrame(id)),
@@ -210,14 +213,20 @@ export const webRtcLink =
                     return;
                 }
                 sampling = true;
-                void bytesReceivedOf(measured).then((bytes) => {
+                void statsOf(measured).then((stats) => {
                     sampling = false;
-                    if (bytes !== null) {
-                        received = bytes;
+                    if (stats.bytes !== null) {
+                        received = stats.bytes;
                     }
-                    if (!ended) {
-                        liveness?.tick();
+                    if (ended) {
+                        return;
                     }
+                    // ICE may settle on a direct pair after it first sent over the relay, so the path is read every tick.
+                    if (stats.relayed !== null && stats.relayed !== relayed) {
+                        relayed = stats.relayed;
+                        events.route?.(relayed);
+                    }
+                    liveness?.tick();
                 });
             }, options.pingTickMs ?? DIRECT_PING_TICK_MS);
             options.accepted?.(verdict.data.ticket);
@@ -248,15 +257,21 @@ export const webRtcLink =
             void onHandshakeFrame(result.frame).catch((e) => end(messageOf(e)));
         };
 
-        const negotiate = async (): Promise<void> => {
-            const created = (options.createPeer ?? ((configuration) => new RTCPeerConnection(configuration)))({ iceServers: options.iceServers });
+        const negotiate = async (routeServers: RTCIceServer[]): Promise<void> => {
+            const created = (options.createPeer ?? ((configuration) => new RTCPeerConnection(configuration)))({
+                iceServers: mergeIceServers(options.iceServers, routeServers)
+            });
             peer = created;
             channel = created.createDataChannel(DIRECT_CHANNEL_LABEL, { ordered: true });
             channel.onmessage = (message) => onPiece(message.data);
             channel.onclose = () => end(authenticated ? 'The direct connection closed' : 'The channel closed before the machine let this client in');
             created.onconnectionstatechange = () => {
                 if (created.connectionState === 'failed') {
-                    end('No network path to the machine: ICE failed. A direct connection needs UDP between both sides, and there is no relay yet.');
+                    end(
+                        routeServers.some((server) => (Array.isArray(server.urls) ? server.urls : [server.urls]).some((url) => /^turns?:/.test(url)))
+                            ? 'No network path to the machine: ICE failed, through the relay as well.'
+                            : 'No network path to the machine: ICE failed. A direct connection needs UDP between both sides, and this route offers no relay.'
+                    );
                 }
             };
             await created.setLocalDescription(await created.createOffer());
@@ -273,9 +288,9 @@ export const webRtcLink =
 
         const open = options.signaling ?? ((address: string) => socketSignaling(address, options.createSocket));
         const opened = open(url)(connectionId, {
-            ready: () => {
+            ready: (routeServers) => {
                 if (!ended) {
-                    void negotiate().catch((e) => end(`Could not set up a direct connection: ${messageOf(e)}`));
+                    void negotiate(routeServers ?? []).catch((e) => end(`Could not set up a direct connection: ${messageOf(e)}`));
                 }
             },
             signal: onSignal,
@@ -299,10 +314,11 @@ export const webRtcLink =
     };
 
 /*
- * The bytes the DTLS transport under the channel received, the packets of a message that is not
- * whole yet included, or null where the browser does not say.
+ * From one stats report: the bytes the DTLS transport under the channel received, the packets of a
+ * message that is not whole yet included, and whether the pair in use is relayed; null where the
+ * browser does not say.
  */
-const bytesReceivedOf = async (peer: RTCPeerConnection): Promise<number | null> => {
+const statsOf = async (peer: RTCPeerConnection): Promise<{ bytes: number | null; relayed: boolean | null }> => {
     try {
         const report = await peer.getStats();
         let total: number | null = null;
@@ -311,9 +327,9 @@ const bytesReceivedOf = async (peer: RTCPeerConnection): Promise<number | null> 
                 total = (total ?? 0) + entry.bytesReceived;
             }
         }
-        return total;
+        return { bytes: total, relayed: relayedFromStats(report) };
     } catch {
-        return null;
+        return { bytes: null, relayed: null };
     }
 };
 

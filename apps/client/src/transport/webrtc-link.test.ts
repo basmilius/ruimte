@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { channelBinding, PROTOCOL_VERSION, splitFrame, type DirectChallengeFrame } from '@ruimte/contracts';
 import type { LinkEvents } from './link-transport';
+import type { SignalingEvents } from './signaling';
 import { webRtcLink, type WebRtcLinkOptions } from './webrtc-link';
 
 const OFFER = 'v=0\r\na=fingerprint:sha-256 AA:AA\r\n';
@@ -67,9 +68,14 @@ class FakePeer {
     onconnectionstatechange: (() => void) | null = null;
     // What the transport stats say arrived, which a test grows to stand for packets of a frame that is not whole yet.
     bytesReceived = 0;
+    // The candidate pair in use and its two candidates, for a test about the path.
+    pathEntries: Array<Record<string, unknown>> = [];
 
-    async getStats(): Promise<Map<string, { type: string; bytesReceived: number }>> {
-        return new Map([['T01', { type: 'transport', bytesReceived: this.bytesReceived }]]);
+    async getStats(): Promise<Map<string, Record<string, unknown>>> {
+        return new Map([
+            ['T01', { type: 'transport', bytesReceived: this.bytesReceived, ...(this.pathEntries.length > 0 ? { selectedCandidatePairId: 'P01' } : {}) }],
+            ...this.pathEntries.map((entry): [string, Record<string, unknown>] => [String(entry.id), entry])
+        ]);
     }
 
     createDataChannel(): FakeChannel {
@@ -171,6 +177,65 @@ const negotiated = async (extra: Partial<WebRtcLinkOptions> = {}) => {
     await tick();
     return { ...context, offer };
 };
+
+const pathThrough = (localType: string): Array<Record<string, unknown>> => [
+    { id: 'P01', type: 'candidate-pair', localCandidateId: 'L01', remoteCandidateId: 'R01' },
+    { id: 'L01', type: 'local-candidate', candidateType: localType },
+    { id: 'R01', type: 'remote-candidate', candidateType: 'srflx' }
+];
+
+describe('webRtcLink and the relay', () => {
+    test('the servers a route hands out join the own ones of this client, and the path of the open channel is reported as it changes', async () => {
+        const turn = { urls: ['turn:turn.example.com:3478?transport=udp'], username: '1:c-x', credential: 'y' };
+        const configurations: RTCConfiguration[] = [];
+        let routeEvents: SignalingEvents | null = null;
+        const sent: Array<{ kind: string }> = [];
+        const peer = new FakePeer();
+        const routes: boolean[] = [];
+        const opened: number[] = [];
+        webRtcLink({
+            iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }],
+            timeoutMs: 60_000,
+            pingTickMs: 10,
+            createPeer: (configuration) => {
+                configurations.push(configuration);
+                return peer as unknown as RTCPeerConnection;
+            },
+            signaling: () => (_connectionId, events) => {
+                routeEvents = events;
+                queueMicrotask(() => events.ready([turn]));
+                return { send: (signal) => sent.push(signal), close: () => undefined };
+            },
+            prove: async (challenge) => ({ type: 'direct.secret', challenge: challenge.challenge, proof: 'proof' })
+        })('wss://broker.example.com', {
+            open: () => opened.push(1),
+            message: () => undefined,
+            close: () => undefined,
+            route: (relayed) => routes.push(relayed)
+        });
+        await tick();
+        expect(configurations).toEqual([{ iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }, turn] }]);
+        expect(sent.map((signal) => signal.kind)).toEqual(['offer']);
+
+        routeEvents!.signal({ kind: 'answer', sdp: ANSWER });
+        await tick();
+        peer.channel.deliver(CHALLENGE);
+        await tick();
+        peer.channel.deliver({ type: 'direct.accepted', ticket: null, expiresIn: 1000 });
+        await tick();
+        expect(opened).toHaveLength(1);
+
+        peer.pathEntries = pathThrough('relay');
+        await sleep(10);
+        expect(routes).toEqual([true]);
+        // The same path again is no news.
+        await sleep(10);
+        expect(routes).toEqual([true]);
+        peer.pathEntries = pathThrough('host');
+        await sleep(10);
+        expect(routes).toEqual([true, false]);
+    });
+});
 
 describe('webRtcLink', () => {
     test('the offer goes out over the socket, and the channel opens only once the handshake is through', async () => {
