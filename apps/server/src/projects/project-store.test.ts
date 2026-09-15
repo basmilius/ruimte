@@ -5,7 +5,6 @@ import { dirname, join } from 'node:path';
 import type { ProjectCanvasView, ProjectContent, ProjectDocument } from '@ruimte/contracts';
 import { FakeWatch } from '../fs/watch-test-helpers.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
-import { waitFor } from '../sessions/test-helpers.ts';
 import { DiagramStore } from './diagram-store.ts';
 import { DrawingStore } from './drawing-store.ts';
 import { documentPathInFolder, fromPortable, toPortable } from './project-files.ts';
@@ -18,6 +17,13 @@ let fake: FakeWatch;
 let store: ProjectStore;
 let changed: SessionEvent[];
 let summaries: SessionEvent[];
+
+/* The summary is written to disk before it goes out, so the loop yields until it has; no clock decides. */
+const summarySent = async (): Promise<void> => {
+    while (summaries.length === 0) {
+        await new Promise((resolve) => setImmediate(resolve));
+    }
+};
 let unsubscribe: () => void;
 
 beforeEach(async () => {
@@ -349,7 +355,7 @@ describe('ProjectStore', () => {
         expect(listed.closedAt).toBeNumber();
         /* The other clients hear it, so every machine draws the same list. The summary goes out
            after the answer does, so it is waited for rather than read off the call before it. */
-        await waitFor(() => summaries.length >= 1, 'the summary event');
+        await summarySent();
         expect(summaries.at(-1)).toMatchObject({ event: 'project.summary', payload: { summary: { projectId, closedAt: listed.closedAt } } });
         // It is only a place in the menu: the project itself is untouched and still opens.
         expect(listed.available).toBe(true);
@@ -358,7 +364,7 @@ describe('ProjectStore', () => {
         const again = await store.openProject({ projectId });
         expect(again.summary.closedAt).toBeNull();
         expect((await store.list())[0]?.closedAt).toBeNull();
-        await waitFor(() => summaries.length >= 1, 'the summary event');
+        await summarySent();
         expect(summaries.at(-1)).toMatchObject({ event: 'project.summary', payload: { summary: { projectId, closedAt: null } } });
     });
 
