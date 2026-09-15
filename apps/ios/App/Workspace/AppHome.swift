@@ -32,17 +32,26 @@ struct AppHome: View {
     }
 
     var body: some View {
-        Group {
-            if let activeWorkspace {
-                WorkspacePage(workspace: activeWorkspace) { self.activeWorkspace = nil }
-            } else {
-                projectNavigation
+        ProjectNavigationHost(
+            isProjectOpen: Binding(get: { activeWorkspace != nil }, set: { if !$0 { activeWorkspace = nil } })
+        ) {
+            projectNavigation
+                .environment(\.openMobileWorkspace) { workspace in
+                    machines = false
+                    activeWorkspace = workspace
+                }
+                .tint(MobileStyle.accent)
+                .toggleStyle(SystemToggleStyle())
+        } project: {
+            Group {
+                if let activeWorkspace {
+                    WorkspacePage(workspace: activeWorkspace) { self.activeWorkspace = nil }
+                }
             }
+            .tint(MobileStyle.accent)
+            .toggleStyle(SystemToggleStyle())
         }
-        .environment(\.openMobileWorkspace) { workspace in
-            machines = false
-            activeWorkspace = workspace
-        }
+        .ignoresSafeArea(.container)
         .id(runtime.account?.id ?? "signed-out")
         .background(PresentationWindow { window = $0 }.frame(width: 0, height: 0))
         .task {
@@ -96,12 +105,12 @@ struct AppHome: View {
                     }
                 }
             }
-            .sheet(isPresented: $pairing) { PairMachinePage(runtime: runtime) }
-            .sheet(isPresented: $settings) { MobileSettings(runtime: runtime) }
-            .sheet(isPresented: $machines, onDismiss: presentPendingPairing) {
+            .mobileSheet(isPresented: $pairing) { PairMachinePage(runtime: runtime) }
+            .mobileSheet(isPresented: $settings) { MobileSettings(runtime: runtime) }
+            .mobileSheet(isPresented: $machines, onDismiss: presentPendingPairing) {
                 MachinesSheet(runtime: runtime) { pairAfterDismiss = true }
             }
-            .sheet(isPresented: $signIn, onDismiss: presentPendingPairing) {
+            .mobileSheet(isPresented: $signIn, onDismiss: presentPendingPairing) {
                 NavigationStack {
                     WelcomePage(runtime: runtime, window: window) {
                         pairAfterDismiss = true

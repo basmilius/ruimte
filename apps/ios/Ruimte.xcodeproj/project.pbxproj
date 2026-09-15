@@ -13,6 +13,7 @@
 		0A14CC9ED096B72837DF02F5 /* IceCandidateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F29B9E631BA0053CAC8D2A6 /* IceCandidateTests.swift */; };
 		0ADF4AA4572DAF49C8A26900 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = A84B645FE2D16EFA24FD14F6 /* AppIcon.icon */; };
 		0B547D0A6B2838F62FB295E9 /* LucideSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 06F665001E0BC007A06510C8 /* LucideSwift */; };
+		0C002F0A85CF8534153EEFAF /* ProjectNavigationHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC89A0F42949A02861795904 /* ProjectNavigationHost.swift */; };
 		0C50DA276AE717B500B6D27B /* ViewIconPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B68348C7C35F8C9CAC737CA /* ViewIconPicker.swift */; };
 		0C7BBCCED0B7814415E137A6 /* DrawingCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 732B16DF3002A0A3499B1ADF /* DrawingCanvas.swift */; };
 		0E75E028596697B06343F2F1 /* CanvasRenderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5B1DCD63DC630D3ABFE455 /* CanvasRenderTests.swift */; };
@@ -57,6 +58,7 @@
 		7A520DCC7261AB8C8C61F18C /* WelcomePage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FAE5DD971FEE4F7A8B224B1 /* WelcomePage.swift */; };
 		7A56FE4D5A125ECE0A147680 /* MarkdownMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BE4363568E169F410A081A3 /* MarkdownMessage.swift */; };
 		802A9A9A193CDB146D037CE7 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7152C947C98B90BAB9EC4D82 /* PrivacyInfo.xcprivacy */; };
+		8270B0185E659FCCEDE90765 /* MobileSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5196DB934834DA206C75471E /* MobileSheet.swift */; };
 		85A5AD591051CFA625E43D32 /* SessionVisualTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58EC9A184CB76F10292FAF1E /* SessionVisualTests.swift */; };
 		8B2254D79E8EC2C6114D483C /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7152C947C98B90BAB9EC4D82 /* PrivacyInfo.xcprivacy */; };
 		8B77DAF04DE9F9840327A5CC /* ProjectSVGRasterizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AB9B459492C2AF8E3631D88 /* ProjectSVGRasterizer.swift */; };
@@ -100,7 +102,6 @@
 		F4C315E3ABE645471F0C04C1 /* ProjectArtwork.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62D07C5E01735816B53D3E59 /* ProjectArtwork.swift */; };
 		F6559A2EF1AE52B8885568D7 /* RenderDocumentPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 089B611A941366002AA1307E /* RenderDocumentPage.swift */; };
 		F874D15FCB67EC40A7D42242 /* ChatScrollTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CDF5772B5F82C25BC5C9B54 /* ChatScrollTests.swift */; };
-		F8FE181D581863FFFEA0A108 /* ProcessesPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A793E7CE1817A4DDD5543A82 /* ProcessesPage.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -182,6 +183,7 @@
 		4DE8F49A62B6E21105CD8F6A /* GitPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitPage.swift; sourceTree = "<group>"; };
 		4F29B9E631BA0053CAC8D2A6 /* IceCandidateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IceCandidateTests.swift; sourceTree = "<group>"; };
 		50F5AB9F07A9DA47A43714BB /* ChatDraftSyntax.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatDraftSyntax.swift; sourceTree = "<group>"; };
+		5196DB934834DA206C75471E /* MobileSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileSheet.swift; sourceTree = "<group>"; };
 		5566FA42E11FDC5B932C0F2E /* ChatTimeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTimeline.swift; sourceTree = "<group>"; };
 		5748DC9D2A5D211B6913A122 /* RuimteTransport */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RuimteTransport; path = Packages/RuimteTransport; sourceTree = SOURCE_ROOT; };
 		58EC9A184CB76F10292FAF1E /* SessionVisualTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionVisualTests.swift; sourceTree = "<group>"; };
@@ -209,12 +211,12 @@
 		9B79DEDEC6E3DBF60AE5EA23 /* RuimteActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuimteActivityWidget.swift; sourceTree = "<group>"; };
 		9BE4363568E169F410A081A3 /* MarkdownMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownMessage.swift; sourceTree = "<group>"; };
 		A531355B6DBA1AEA2747E700 /* TerminalModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalModel.swift; sourceTree = "<group>"; };
-		A793E7CE1817A4DDD5543A82 /* ProcessesPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessesPage.swift; sourceTree = "<group>"; };
 		A84B645FE2D16EFA24FD14F6 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		A8954363C79663F275CDF04A /* MobileStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileStyle.swift; sourceTree = "<group>"; };
 		A8C83388F2EE72EDED082639 /* document-renderer.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "document-renderer.js"; sourceTree = "<group>"; };
 		AA81AFC7F3E726AB38C0EE96 /* TerminalCompatibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalCompatibilityTests.swift; sourceTree = "<group>"; };
 		ABE8B97161FC6E9CE587F95C /* MachineRemovalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineRemovalTests.swift; sourceTree = "<group>"; };
+		AC89A0F42949A02861795904 /* ProjectNavigationHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectNavigationHost.swift; sourceTree = "<group>"; };
 		AEE3E762A08E656C5BF5C92C /* WorkspaceViewSectionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceViewSectionsTests.swift; sourceTree = "<group>"; };
 		C62961727B814F8C43E406CD /* DrawingAuthoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawingAuthoring.swift; sourceTree = "<group>"; };
 		C65C2B371130F2E65C92BBD2 /* Ruimte.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ruimte.entitlements; sourceTree = "<group>"; };
@@ -307,6 +309,7 @@
 				4494CB22D3C1F93514921B21 /* MobileWorkspace.swift */,
 				7C81823373467CED5DF67CB7 /* PairMachinePage.swift */,
 				62D07C5E01735816B53D3E59 /* ProjectArtwork.swift */,
+				AC89A0F42949A02861795904 /* ProjectNavigationHost.swift */,
 				29D03F55A4071C6A3F6955D8 /* ProjectSplitView.swift */,
 				9AB9B459492C2AF8E3631D88 /* ProjectSVGRasterizer.swift */,
 				089B611A941366002AA1307E /* RenderDocumentPage.swift */,
@@ -336,6 +339,7 @@
 				3B40C228DD8D4FB4A5D62BB5 /* Lucide-LICENSE.txt */,
 				92115E2E20A2788AC95AD41F /* LucideIcon.swift */,
 				8449B851575DF02B5169572E /* MobileScrollViewport.swift */,
+				5196DB934834DA206C75471E /* MobileSheet.swift */,
 				A8954363C79663F275CDF04A /* MobileStyle.swift */,
 			);
 			path = Design;
@@ -365,7 +369,6 @@
 				17E81862798892622B5D43D1 /* MachineDetailsPage.swift */,
 				49F9EC9D98983F163B9AE62C /* MachineFilesPage.swift */,
 				055B44926C3693450CF4C1FC /* MachineUsagePage.swift */,
-				A793E7CE1817A4DDD5543A82 /* ProcessesPage.swift */,
 				4717D1FF657FE5861D33BE92 /* RemotePage.swift */,
 				13B248061C8BA76C3B7DC1F8 /* UsageMoneyFormatter.swift */,
 			);
@@ -773,14 +776,15 @@
 				7A56FE4D5A125ECE0A147680 /* MarkdownMessage.swift in Sources */,
 				5C706502AEBC21A671990235 /* MobileJSON.swift in Sources */,
 				CAF7E05732303B93FF25B469 /* MobileScrollViewport.swift in Sources */,
+				8270B0185E659FCCEDE90765 /* MobileSheet.swift in Sources */,
 				451BCDFFE5D34B03207983C4 /* MobileStyle.swift in Sources */,
 				62D36AE12D4AFBB7A1AECA5C /* MobileWorkspace.swift in Sources */,
 				D3AE70D4B71CD32DD8D34D42 /* NotificationCoordinator.swift in Sources */,
 				EE74DF5514DD201C33ACEA3E /* NotificationSessionPage.swift in Sources */,
 				5789AC87C3A36DD33EE7D7DD /* NotificationsSettingsPage.swift in Sources */,
 				2A5A29AD37DB5525CEEB9105 /* PairMachinePage.swift in Sources */,
-				F8FE181D581863FFFEA0A108 /* ProcessesPage.swift in Sources */,
 				F4C315E3ABE645471F0C04C1 /* ProjectArtwork.swift in Sources */,
+				0C002F0A85CF8534153EEFAF /* ProjectNavigationHost.swift in Sources */,
 				8B77DAF04DE9F9840327A5CC /* ProjectSVGRasterizer.swift in Sources */,
 				E08F674F1BAA77B31240017E /* ProjectSplitView.swift in Sources */,
 				BA4E5634A953498E6EC34816 /* RemotePage.swift in Sources */,

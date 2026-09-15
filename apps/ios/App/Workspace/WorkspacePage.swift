@@ -66,11 +66,11 @@ struct WorkspacePage: View {
         }
         .environment(\.mobileMachineSession, workspace.session)
         .task { workspace.start() }
-        .sheet(isPresented: Binding(get: { iconView != nil }, set: { if !$0 { iconView = nil } })) {
+        .mobileSheet(isPresented: Binding(get: { iconView != nil }, set: { if !$0 { iconView = nil } })) {
             if let item = iconView { ViewIconPicker(workspace: workspace, item: item) }
         }
-        .sheet(isPresented: $adding) { AddProjectItem(workspace: workspace, canvasID: nil) }
-        .sheet(isPresented: $showUsage) {
+        .mobileSheet(isPresented: $adding) { AddProjectItem(workspace: workspace, canvasID: nil) }
+        .mobileSheet(isPresented: $showUsage) {
             NavigationStack {
                 MachineUsagePage(client: workspace.client)
                     .toolbar {
@@ -148,7 +148,9 @@ struct WorkspacePage: View {
             Tab(value: ProjectSection.views) {
                 projectNavigation {
                     viewList(query: "")
-                        .navigationDestination(item: $openedViewID) { viewDestination($0) }
+                        .navigationDestination(item: $openedViewID) { id in
+                            viewDestination(id).toolbar(.hidden, for: .tabBar)
+                        }
                 }
             } label: {
                 Label("Views", lucideIcon: "layout-grid")
@@ -162,11 +164,6 @@ struct WorkspacePage: View {
                 projectNavigation { GitPage(client: workspace.client, cwd: workspace.folder) }
             } label: {
                 Label("Git", lucideIcon: "git-branch")
-            }
-            Tab(value: ProjectSection.processes) {
-                projectNavigation { ProcessesPage(client: workspace.client, cwd: workspace.folder) }
-            } label: {
-                Label("Processes", lucideIcon: "activity")
             }
             Tab(value: ProjectSection.search, role: .search) {
                 searchPage
@@ -258,7 +255,10 @@ struct WorkspacePage: View {
     private func projectNavigation<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         NavigationStack {
             content()
-                .toolbar(sizeClass == .regular && section == .search ? .hidden : .visible, for: .tabBar)
+                .toolbar(
+                    (sizeClass == .regular && section == .search) || (sizeClass != .regular && openedViewID != nil)
+                        ? .hidden : .visible, for: .tabBar
+                )
                 .scrollContentBackground(sizeClass == .regular ? .hidden : .automatic)
                 .background {
                     if sizeClass == .regular { sidebarBackground.ignoresSafeArea(.container) }
@@ -390,7 +390,7 @@ struct WorkspacePage: View {
 }
 
 private enum ProjectSection: Hashable {
-    case views, files, git, processes, search
+    case views, files, git, search
 }
 
 func newCanvas() -> JSONValue {

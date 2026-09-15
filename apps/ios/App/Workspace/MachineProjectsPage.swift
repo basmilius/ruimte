@@ -104,7 +104,7 @@ struct MachineProjectsPage: View {
             unsubscribe?()
             unsubscribe = nil
         }
-        .sheet(isPresented: $newProject) {
+        .mobileSheet(isPresented: $newProject) {
             NavigationStack {
                 Form {
                     TextField("Name", text: $projectName)

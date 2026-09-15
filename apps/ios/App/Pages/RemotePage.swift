@@ -36,8 +36,7 @@ import SwiftUI
         client: any MachineRequesting, events: [String] = [],
         matches: @escaping @MainActor @Sendable (JSONValue) -> Bool = { _ in true },
         subscription: (() -> MachineSubscription)? = nil, start: @escaping () async throws -> Void = {},
-        stop: @escaping () async -> Void = {}, onSubscribed: ((JSONValue) -> Void)? = nil,
-        load: @escaping () async -> Void
+        stop: @escaping () async -> Void = {}, load: @escaping () async -> Void
     ) async {
         var lease: MachineSubscription?
         let (stream, continuation) = AsyncStream<Bool>.makeStream(bufferingPolicy: .bufferingNewest(1))
@@ -59,10 +58,7 @@ import SwiftUI
             if connected {
                 try? await start()
                 if lease == nil { lease = subscription?() }
-                if let snapshot = try? await lease?.refresh(), let onSubscribed {
-                    onSubscribed(snapshot)
-                    continue
-                }
+                _ = try? await lease?.refresh()
             }
             await load()
         }

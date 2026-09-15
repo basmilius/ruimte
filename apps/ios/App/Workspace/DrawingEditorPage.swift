@@ -49,8 +49,8 @@ struct DrawingEditorPage: View {
         {
             Button("Discard local changes", role: .destructive) { model.discardDraft() }
         }
-        .sheet(isPresented: $showStyle) { styleSheet.presentationDetents([.medium, .large]) }
-        .sheet(item: $edit) { editing in
+        .mobileSheet(isPresented: $showStyle) { styleSheet.presentationDetents([.medium, .large]) }
+        .mobileSheet(item: $edit) { editing in
             DrawingTextSheet(edit: editing) { text in
                 model.updateText(editing.element, text: text, isNew: editing.isNew)
             }

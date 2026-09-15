@@ -91,7 +91,7 @@ struct GitPage: View {
                 }, load: load)
         }
         .refreshable { await load() }
-        .sheet(isPresented: $commitSheet) {
+        .mobileSheet(isPresented: $commitSheet) {
             NavigationStack {
                 Form {
                     Section("Commit message") {

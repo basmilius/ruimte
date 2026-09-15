@@ -123,7 +123,8 @@ struct ChatScreen: View {
             visible = false
             model.stop()
         }
-        .confirmationDialog("Clear this conversation?", isPresented: $showingClear, titleVisibility: .visible) {
+        .alert("Clear this conversation?", isPresented: $showingClear) {
+            Button("Cancel", role: .cancel) {}
             Button("Clear conversation", role: .destructive) {
                 Task { await model.perform("chat.clear", ["force": .bool(true)]) }
             }
@@ -164,7 +165,7 @@ struct ChatScreen: View {
                 photo = nil
             }
         }
-        .sheet(isPresented: Binding(get: { pickerKind != nil }, set: { if !$0 { pickerKind = nil } })) {
+        .mobileSheet(isPresented: Binding(get: { pickerKind != nil }, set: { if !$0 { pickerKind = nil } })) {
             ChatSuggestionPicker(
                 model: model, kind: pickerKind ?? "@",
                 choose: { value in
@@ -174,7 +175,7 @@ struct ChatScreen: View {
                 }
             ) { pickerKind = nil }
         }
-        .sheet(isPresented: Binding(get: { question != nil }, set: { if !$0 { question = nil } })) {
+        .mobileSheet(isPresented: Binding(get: { question != nil }, set: { if !$0 { question = nil } })) {
             if let question { ChatQuestionSheet(model: model, item: question) }
         }
     }
@@ -266,12 +267,12 @@ struct ChatScreen: View {
             .padding(.horizontal, 14).padding(.bottom, 10)
         }
         .background {
-            composerShape.fill(.clear)
-                .glassEffect(.regular.interactive(), in: composerShape)
+            Color.clear
                 .contentShape(composerShape)
                 .onTapGesture { composerFocused = true }
         }
         .contentShape(composerShape)
+        .glassEffect(.regular, in: composerShape)
         .overlay {
             composerShape.fill(.primary.opacity(composerPressed ? 0.07 : 0))
                 .allowsHitTesting(false)

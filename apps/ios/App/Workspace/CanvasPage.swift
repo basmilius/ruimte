@@ -72,7 +72,7 @@ struct CanvasPage: View {
                 ProjectItemPage(workspace: workspace, item: node)
             }
         }
-        .sheet(isPresented: $adding) { AddProjectItem(workspace: workspace, canvasID: viewID) }
+        .mobileSheet(isPresented: $adding) { AddProjectItem(workspace: workspace, canvasID: viewID) }
         .confirmationDialog(
             "Node", isPresented: Binding(get: { menuID != nil }, set: { if !$0 { menuID = nil } }),
             titleVisibility: .visible
@@ -99,7 +99,7 @@ struct CanvasPage: View {
             }
             Button("Cancel", role: .cancel) { renameID = nil }
         }
-        .sheet(isPresented: Binding(get: { linkID != nil }, set: { if !$0 { linkID = nil } })) {
+        .mobileSheet(isPresented: Binding(get: { linkID != nil }, set: { if !$0 { linkID = nil } })) {
             NavigationStack {
                 List {
                     Section("Link to a node") {

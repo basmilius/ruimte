@@ -30,7 +30,9 @@ import RuimtePulsar
     private var offerSDP: String?
     private var binding: String?
     private var cancelTimeout: (() -> Void)?
+    private var cancelGather: (() -> Void)?
     private var cancelTick: (() -> Void)?
+    private var gatherDone: (() -> Void)?
     private var candidates = PendingIceCandidates()
     private var accessTask: Task<Void, Never>?
 
@@ -104,12 +106,28 @@ import RuimtePulsar
                         Task { @MainActor in
                             guard let self, !self.ended else { return }
                             if let error { self.end(error); return }
-                            self.offer()
+                            self.waitForGathering()
                         }
                     }
                 }
             }
         } catch { end(error) }
+    }
+
+    private func waitForGathering() {
+        guard let peer else { return }
+        // Keep initial routes in the offer until candidate-free negotiation is verified with deployed daemons.
+        if peer.iceGatheringState == .complete { offer(); return }
+        gatherDone = { [weak self] in self?.offer() }
+        cancelGather = scheduler.after(milliseconds: 5_000) { [weak self] in self?.finishGathering() }
+    }
+
+    private func finishGathering() {
+        cancelGather?()
+        cancelGather = nil
+        let finish = gatherDone
+        gatherDone = nil
+        finish?()
     }
 
     private func offer() {
@@ -286,7 +304,9 @@ import RuimtePulsar
         guard !ended else { return }
         ended = true
         cancelTimeout?()
+        cancelGather?()
         cancelTick?()
+        gatherDone = nil
         accessTask?.cancel()
         accessTask = nil
         membership?.leave()
@@ -332,7 +352,11 @@ extension NativeWebRTCLink: RTCPeerConnectionDelegate, RTCDataChannelDelegate {
             if newState == .failed { self?.end(TransportFailure.invalid("No network path to the machine: ICE failed.")) }
         }
     }
-    nonisolated public func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCIceGatheringState) {}
+    nonisolated public func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCIceGatheringState) {
+        Task { @MainActor [weak self] in
+            if newState == .complete { self?.finishGathering() }
+        }
+    }
     nonisolated public func peerConnection(_ peerConnection: RTCPeerConnection, didGenerate candidate: RTCIceCandidate) {
         Task { @MainActor [weak self] in self?.generatedCandidate(candidate) }
     }

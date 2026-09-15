@@ -463,3 +463,22 @@ Validation: eight project-list tests passed on the physical iPad, including an e
 - Live Activity defaults to the latest opened chat on iPhone, replaces previous activities and updates local status. The setting is hidden on iPad. Per-session activity buttons are removed. Remote push-to-start registration is cleared so other followed sessions cannot create extra activities; notification following remains separate.
 
 A device test compares actual Markdown pixels before and after an 80-point scroll in the full chat screen. It also passes with the previous hosting implementation: it does not reproduce the user's intermittent freeze and must not be cited as proof that freeze is fixed. The hosting change still needs live conversation acceptance. ICE candidate ordering is covered by a separate focused test. There is no measured before/after connection benchmark and no simulator installation.
+
+
+## Sheet surfaces and project navigation
+
+App-owned sheets now use an opaque system background, primary foreground styling and the monochrome app tint. Native switch styling is retained. This prevents the underlying screen or inherited foreground styling from coloring a sheet. The OS share sheet keeps its system presentation.
+
+Clear conversation uses a centered system alert with explicit Cancel and destructive Clear conversation actions on both device families. Processes and its monitoring screen are removed from the mobile app; project navigation now has Views, Files, Git and Search. The unused process-subscription snapshot callback was removed from the shared page lifecycle.
+
+Validation is limited to the signed device build and repository format/check commands for this UI iteration. No simulator or additional device test suite was used. Sheet appearance still needs device review.
+
+## Composer overlap and project back gesture
+
+A screenshot captured from the user's iPhone with Xcode's `devicectl device capture screenshot` shows the project tabbar covering the composer and blurring its contents. Compact project navigation now hides the tabbar while a view is open. The composer applies its glass effect to the content container, keeping the editor and buttons in front of the material. Its background focus target and explicit touch feedback remain in place.
+
+Projects now open through a public UIKit navigation controller with an interactive edge-pop gesture. The project screen stays mounted during the transition, including canceled swipes. Nested view and folder navigation takes precedence over leaving the project.
+
+The signed build passed and was installed and launched on the physical iPhone and iPad. No simulator or additional device test suite was used. Live screenshots and gesture acceptance are recorded separately below.
+
+The first device check was blocked by connection failures. The daemon log showed repeated negotiation timeouts after the previous iteration's candidate-free offer change. Initial ICE gathering was restored with its existing five-second cap; late candidate forwarding and the direct/relay policy remain unchanged. A new connection opened after installing this recovery build, but the log does not identify which device connected. The final captured iPhone screen was Projects, so the chat appearance and back gesture are not yet visually verified. Both devices received the recovery build, and the build, format and check commands passed.
