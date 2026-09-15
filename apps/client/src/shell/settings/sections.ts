@@ -27,7 +27,7 @@ export const SETTINGS_SECTIONS: readonly (readonly SettingsSectionMeta[])[] = [
         { id: 'agents', label: 'Agents', description: 'Defaults, permissions and notifications for agents.', icon: Bot },
         { id: 'usage', label: 'Usage', description: 'The currency of the usage page.', icon: ChartNoAxesColumn }
     ],
-    [{ id: 'machines', label: 'Machines', description: 'Your machines, the account they share, and how each one is reached.', icon: Server }],
+    [{ id: 'machines', label: 'Remote', description: 'Your machines, the account they share, and how each one is reached.', icon: Server }],
     [{ id: 'about', label: 'About', description: 'Version, machine details and links.', icon: Info }]
 ];
 

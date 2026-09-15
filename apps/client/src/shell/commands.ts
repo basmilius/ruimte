@@ -274,8 +274,8 @@ export const appCommands = (): Command[] => {
         { id: 'settings-keyboard', label: 'Keyboard shortcuts', run: () => useUi.getState().setSettings({ open: true, section: 'keyboard' }) },
         {
             id: 'settings-machines',
-            label: 'Machines',
-            hint: 'Pair with a machine elsewhere',
+            label: 'Remote',
+            hint: 'Your machines, your account and pairing',
             run: () => useUi.getState().setSettings({ open: true, section: 'machines' })
         }
     ];
