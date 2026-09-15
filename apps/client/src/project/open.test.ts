@@ -45,8 +45,12 @@ describe('the machine a cold boot lands on', () => {
 const spyDeps = (over: Partial<FolderDeps> = {}): { deps: FolderDeps; steps: string[] } => {
     const steps: string[] = [];
     const deps: FolderDeps = {
+        ensure: async (endpointId) => {
+            steps.push(`ensure:${endpointId}`);
+            return endpointId;
+        },
         activate: async (endpointId) => void steps.push(`activate:${endpointId}`),
-        reach: async (endpointId) => void steps.push(`reach:${endpointId}`),
+        settle: async () => void steps.push('settle'),
         openFolder: async (folder, createFolder) => void steps.push(`open:${folder}:${createFolder}`),
         ...over
     };
@@ -60,23 +64,28 @@ describe('opening a folder on the machine it is on', () => {
         expect(steps).toEqual(['open:/work/atlas:false']);
     });
 
-    test('another machine takes over first, and only then is the folder opened', async () => {
+    test('another machine is reached first, then takes over, and only then is the folder opened', async () => {
         const { deps, steps } = spyDeps();
         await openFolderOn('daemon-b', '/work/atlas', true, deps);
-        expect(steps).toEqual(['activate:daemon-b', 'reach:daemon-b', 'open:/work/atlas:true']);
+        expect(steps).toEqual(['ensure:daemon-b', 'activate:daemon-b', 'settle', 'open:/work/atlas:true']);
     });
 
-    test('a machine that never answers fails with what the wait says, and opens nothing', async () => {
+    test('a machine only the account knows is opened under the row the connect made for it', async () => {
         const { deps, steps } = spyDeps({
-            reach: () => Promise.reject(new Error('That machine is not answering'))
+            ensure: async (endpointId) => {
+                steps.push(`ensure:${endpointId}`);
+                return 'attic-row';
+            }
         });
-        await expect(openFolderOn('daemon-b', '/work/atlas', false, deps)).rejects.toThrow('That machine is not answering');
-        expect(steps).toEqual(['activate:daemon-b']);
+        await openFolderOn('attic', '/work/atlas', false, deps);
+        expect(steps).toEqual(['ensure:attic', 'activate:attic-row', 'settle', 'open:/work/atlas:false']);
     });
 
-    test('a machine this client has forgotten is not dialed at all', async () => {
-        const { deps, steps } = spyDeps();
-        await expect(openFolderOn('daemon-gone', '/work/atlas', false, deps)).rejects.toThrow('no longer in the list');
+    test('a machine that cannot be reached fails with its reason and leaves the client where it is', async () => {
+        const { deps, steps } = spyDeps({
+            ensure: () => Promise.reject(new Error('No network path to the machine'))
+        });
+        await expect(openFolderOn('daemon-b', '/work/atlas', false, deps)).rejects.toThrow('No network path to the machine');
         expect(steps).toEqual([]);
     });
 });

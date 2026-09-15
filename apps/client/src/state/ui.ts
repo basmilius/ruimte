@@ -129,6 +129,8 @@ interface UiStore {
        choosing it twice in a row has to start browsing twice. Which step browsing is on after that
        is the palette's own business. */
     paletteBrowseAt: number;
+    /* The machine the folder browser was asked to open on, or null to open on the machines as usual. */
+    paletteBrowseMachine: string | null;
     /* What the file mode does with the file that is chosen; null in every other mode. */
     filePick: FilePick | null;
     settings: SettingsState;
@@ -158,7 +160,7 @@ interface UiStore {
     openFindInFiles(seed?: string): void;
     /* The palette browsing folders, from its own command or from the project menu. Nothing is
        typed: with one machine it opens on that machine's start folder, with more on the machines. */
-    openFolderBrowser(): void;
+    openFolderBrowser(machineId?: string): void;
     /* The palette listing the files of the open folder, to make one of them a node or a view. */
     openFilePicker(pick: FilePick): void;
     setPaletteMode(mode: PaletteMode): void;
@@ -188,6 +190,7 @@ export const useUi = create<UiStore>((set, get) => ({
     page: null,
     paletteSeed: '',
     paletteBrowseAt: 0,
+    paletteBrowseMachine: null,
     filePick: null,
     sidebarOpen: readSidebarOpen(),
     sidebarExpanded: null,
@@ -230,8 +233,15 @@ export const useUi = create<UiStore>((set, get) => ({
     openFindInFiles(seed = '') {
         set({ paletteOpen: true, paletteMode: 'grep', paletteSeed: seed, filePick: null });
     },
-    openFolderBrowser() {
-        set({ paletteOpen: true, paletteMode: 'default', paletteSeed: '', paletteBrowseAt: get().paletteBrowseAt + 1, filePick: null });
+    openFolderBrowser(machineId) {
+        set({
+            paletteOpen: true,
+            paletteMode: 'default',
+            paletteSeed: '',
+            paletteBrowseAt: get().paletteBrowseAt + 1,
+            paletteBrowseMachine: machineId ?? null,
+            filePick: null
+        });
     },
     openFilePicker(pick) {
         set({ paletteOpen: true, paletteMode: 'file', paletteSeed: '', filePick: pick });

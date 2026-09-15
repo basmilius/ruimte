@@ -1,4 +1,5 @@
-import { LOCAL_ENDPOINT_ID, type Endpoint } from '@/state/endpoints';
+import { nameOf, type MachineEntry } from '@/shell/settings/machine-list';
+import type { ConnectionState } from '@/transport/transport';
 
 /* The daemon's separator, not this browser's: a Windows daemon answers in backslashes. */
 export const separatorFor = (platform: string | null): string => (platform === 'win32' ? '\\' : '/');
@@ -89,68 +90,150 @@ export const browseStart = (configured: string, home: string | null, sep: string
     return { start: endsWithSeparator(trimmed) ? trimmed : `${trimmed}${sep}`, home: homePath };
 };
 
+/* What a machine's link is doing, in the terms a row of machines draws it. */
+export type MachineLink =
+    | { kind: 'open' }
+    | { kind: 'connecting' }
+    | { kind: 'failed'; reason: string }
+    /* No link yet, and the account is the way in. */
+    | { kind: 'account' }
+    /* A paired machine nothing has asked for yet. */
+    | { kind: 'idle' }
+    /* On the account without a broker, which nothing outside its own network can reach. */
+    | { kind: 'network-only' };
+
+/* A wait for one machine that a person started by picking it: under way, or ended with a reason. */
+export type LinkWait = { state: 'connecting' } | { state: 'failed'; reason: string };
+
+/*
+ * The state of one machine in a list. An open link is the whole story; otherwise the wait a person
+ * started speaks first, since it is about the pick they just made, and then what the pool knows. A
+ * machine this client never dialed is not a broken one, so it says how it would be reached instead.
+ */
+export const machineLink = (entry: MachineEntry, connection: ConnectionState, wait: LinkWait | null): MachineLink => {
+    if (connection.status === 'open') {
+        return { kind: 'open' };
+    }
+    if (wait?.state === 'connecting') {
+        return { kind: 'connecting' };
+    }
+    if (wait?.state === 'failed') {
+        return { kind: 'failed', reason: wait.reason };
+    }
+    if (entry.endpoint === null) {
+        return entry.machine?.brokerUrl ? { kind: 'account' } : { kind: 'network-only' };
+    }
+    if (connection.status === 'connecting') {
+        return { kind: 'connecting' };
+    }
+    if (connection.failure) {
+        return { kind: 'failed', reason: connection.failure };
+    }
+    if (connection.attempts > 0) {
+        return { kind: 'failed', reason: 'That machine is not answering' };
+    }
+    return entry.endpoint.pairedBy === 'statement' ? { kind: 'account' } : { kind: 'idle' };
+};
+
+/* The one quiet line a row carries beside its name. An open machine says nothing: the dot is the whole of it. */
+export const linkHint = (link: MachineLink): string | undefined => {
+    switch (link.kind) {
+        case 'open':
+            return undefined;
+        case 'connecting':
+            return 'Connecting...';
+        case 'failed':
+            return `Not reachable: ${link.reason}`;
+        case 'account':
+            return 'Connects through your account';
+        case 'idle':
+            return 'Not connected';
+        case 'network-only':
+            return 'On its own network only';
+    }
+};
+
+/* The colors the settings page paints a machine in. */
+export const linkDot = (link: MachineLink): string => {
+    switch (link.kind) {
+        case 'open':
+            return 'bg-status-idle';
+        case 'connecting':
+            return 'bg-status-needs-you';
+        case 'failed':
+            return 'bg-status-error';
+        default:
+            return 'bg-text-faint';
+    }
+};
+
 export interface MachineRow {
+    /* The row this machine is under, or the id the row will be made under when it has none yet. */
     endpointId: string;
     label: string;
-    /* False when this client has no open socket to that machine; it is still a machine to browse. */
-    connected: boolean;
+    entry: MachineEntry;
     active: boolean;
 }
 
 /*
- * The machines the browser can be pointed at: the daemon that served this page first, then the rest
- * in the order the endpoint list has them. This machine keeps its place whichever machine is active,
- * because it is the one that is always there and the one the list is read against. Which machine is
- * active is carried on the row instead, as the one the step opens highlighted.
+ * The machines the browser can be pointed at, in the order of the Machines pane: this machine first
+ * where there is one, then the rows of this client, then what only the account has. Which machine is
+ * active is carried on the row, as the one the step opens highlighted.
  */
-export const browseMachines = (endpoints: readonly Endpoint[], activeId: string, connected: readonly string[]): MachineRow[] =>
-    [...endpoints]
-        .sort((a, b) => Number(b.id === LOCAL_ENDPOINT_ID) - Number(a.id === LOCAL_ENDPOINT_ID))
-        .map((endpoint) => ({
-            endpointId: endpoint.id,
-            label: endpoint.label,
-            connected: connected.includes(endpoint.id),
-            active: endpoint.id === activeId
-        }));
-
-/*
- * What a machine row says at its end, beside the dot. A machine that answers says nothing: the dot
- * is the whole of it. The other two states are worth a word, because a color alone is a thin thing
- * to wait on, and neither is a machine that is broken: picking one dials it.
- */
-export const machineHint = (connected: boolean, dialing: boolean): string | undefined => {
-    if (dialing) {
-        return 'Connecting';
-    }
-    return connected ? undefined : 'Not connected';
-};
-
-/* The same three states the settings page paints, in the same three colors. */
-export const machineDot = (connected: boolean, dialing: boolean): string => {
-    if (dialing) {
-        return 'bg-status-needs-you';
-    }
-    return connected ? 'bg-status-idle' : 'bg-text-faint';
-};
+export const browseMachines = (entries: readonly MachineEntry[], activeId: string): MachineRow[] =>
+    entries.map((entry) => {
+        const endpointId = entry.endpoint?.id ?? entry.id;
+        return { endpointId, label: nameOf(entry), entry, active: endpointId === activeId };
+    });
 
 /*
  * Where browsing is: which machine, whether the machines themselves are up instead of folders, and
  * the path the folders step was on. The machines step holds that path so stepping back returns to
  * it, and holds an empty one when browsing began on the machines and has no folders behind it.
+ * `link` is set while the folders of a machine wait for its link, or after that wait failed.
  */
 export interface BrowseStep {
     endpointId: string;
     machines: boolean;
     path: string;
+    link?: LinkWait;
 }
+
+/* The folders of one machine, behind a wait for its link when it is not open yet. */
+export const pickMachine = (endpointId: string, open: boolean): BrowseStep =>
+    open ? { endpointId, machines: false, path: '' } : { endpointId, machines: false, path: '', link: { state: 'connecting' } };
 
 /*
  * The step browsing opens on. One machine is nothing to choose between, so it goes straight to that
- * machine's folders; more than one asks first. Either way the field opens empty: the machines step
- * narrows its rows with what is typed, and the folders step is waiting for its start folder, which
- * arrives with the listing rather than a frame before it.
+ * machine's folders, connecting first when it has to; more than one asks first. Either way the field
+ * opens empty: the machines step narrows its rows with what is typed, and the folders step is waiting
+ * for its start folder, which arrives with the listing rather than a frame before it.
  */
-export const openBrowse = (endpointId: string, machineCount: number): BrowseStep => ({ endpointId, machines: machineCount > 1, path: '' });
+export const openBrowse = (activeId: string, machines: readonly { endpointId: string; open: boolean }[]): BrowseStep => {
+    const only = machines.length === 1 ? machines[0]! : null;
+    return only ? pickMachine(only.endpointId, only.open) : { endpointId: activeId, machines: true, path: '' };
+};
+
+/*
+ * A wait for a link that ended. Only the step still waiting on that machine takes it: a person who
+ * went back or picked another machine cancelled the wait, not the attempt, which may still finish.
+ */
+export const settleLink = (step: BrowseStep | null, endpointId: string, failure: string | null): BrowseStep | null => {
+    if (step === null || step.machines || step.endpointId !== endpointId || step.link?.state !== 'connecting') {
+        return step;
+    }
+    return failure === null ? { endpointId, machines: false, path: '' } : { ...step, link: { state: 'failed', reason: failure } };
+};
+
+/* Trying a failed machine again waits again, on the same step. */
+export const retryLink = (step: BrowseStep | null): BrowseStep | null => (step?.link?.state === 'failed' ? { ...step, link: { state: 'connecting' } } : step);
+
+/* Back to the machines, holding the path to come back to; a step still waiting on a link has none. */
+export const machinesStep = (step: BrowseStep, query: string): BrowseStep => ({
+    endpointId: step.endpointId,
+    machines: true,
+    path: step.link === undefined ? query : ''
+});
 
 /* `folders` carries the path to go back to, which has to be listed before it is shown. */
 export type BrowseBack = { to: 'palette' } | { to: 'machines' } | { to: 'folders'; path: string };

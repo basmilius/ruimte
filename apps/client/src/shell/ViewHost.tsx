@@ -12,10 +12,10 @@ import { ChatBody } from '@/nodes/ChatBody';
 import { TerminalBody } from '@/nodes/TerminalBody';
 import { FileSurface } from '@/shell/panels/FileSurface';
 import { useDocument } from '@/state/document';
-import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
+import { useEndpoints } from '@/state/endpoints';
 import { useProject } from '@/state/project';
 import { StationWelcome } from '@/shell/StationWelcome';
-import { IS_STATION } from '@/station';
+import { isRealMachine } from '@/state/local-machine';
 import { useUi } from '@/state/ui';
 import { UsagePage } from '@/shell/usage/UsagePage';
 import { isApplePlatform } from '@/desktop/bridge';
@@ -153,7 +153,7 @@ export function ViewHost() {
     const page = useUi((s) => s.page);
     const hasProject = useProject((s) => s.current !== null);
     // The web client before a machine is picked: nothing behind the page's own origin to open a project on.
-    const welcome = useEndpoints((s) => IS_STATION && s.activeId === LOCAL_ENDPOINT_ID);
+    const welcome = useEndpoints((s) => !isRealMachine(s.activeId));
     return (
         <>
             {page === null && hasProject && <SplitGrid />}

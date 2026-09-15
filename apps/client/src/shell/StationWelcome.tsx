@@ -1,35 +1,47 @@
+import { useState } from 'react';
+import clsx from 'clsx';
 import { LogIn, MonitorSmartphone } from 'lucide-react';
-import { ProjectIconChoiceSchema } from '@ruimte/contracts';
-import type { Machine } from '@ruimte/pulsar';
 import { activateEndpoint } from '@/endpoint';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
+import { ensureMachine } from '@/endpoint/reach';
 import { messageOf, signInToPulsar, usePulsarAccount } from '@/pulsar/account';
-import { openAccountMachine, usePulsarMachines } from '@/pulsar/machines';
-import { IS_STATION, stationBoot } from '@/station';
+import { usePulsarMachines } from '@/pulsar/machines';
+import { linkDot, linkHint, machineLink, type LinkWait } from '@/shell/palette-browse';
+import { useMachineIcon } from '@/shell/settings/machine-icon';
+import { mergeMachines, nameOf, type MachineEntry } from '@/shell/settings/machine-list';
+import { stationBoot } from '@/station';
 import { useEndpoints } from '@/state/endpoints';
-import { useToasts } from '@/state/toasts';
+import { hasLocalMachine } from '@/state/local-machine';
+import { useEndpointConnection } from '@/transport/status';
 import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 
-/* Picks a machine from the account: the row that reaches it over its broker, and the whole client moved onto it. */
-const openMachine = async (machine: Machine): Promise<void> => {
-    try {
-        const row = openAccountMachine(machine);
-        await activateEndpoint(row.id);
-    } catch (e) {
-        useToasts.getState().show({ id: `station-open-${machine.id}`, kind: 'error', title: `${machine.name} could not be opened`, description: messageOf(e) });
-    }
-};
+interface MachineChoiceProps {
+    entry: MachineEntry;
+    wait: LinkWait | null;
+    onPick: () => void;
+}
 
-function MachineButton({ machine }: { machine: Machine }) {
-    const icon = ProjectIconChoiceSchema.safeParse(machine.icon);
-    const reachable = machine.brokerUrl !== null;
+/* One machine to work on, with the same line of state the palette's machines step shows. */
+function MachineChoice({ entry, wait, onPick }: MachineChoiceProps) {
+    const endpointId = entry.endpoint?.id ?? entry.id;
+    const connection = useEndpointConnection(endpointId);
+    const icon = useMachineIcon(entry);
+    const link = machineLink(entry, connection, wait);
+    const hint = linkHint(link);
     return (
-        <Button variant="secondary" disabled={!reachable} onClick={() => void openMachine(machine)}>
-            <MachineGlyph icon={icon.success ? icon.data : null} className="shrink-0 text-text-muted" />
-            <span className="truncate">{machine.name}</span>
-        </Button>
+        <div className="flex w-full items-center gap-3 rounded-md border border-border bg-surface px-3 py-2 text-left">
+            <MachineGlyph icon={icon} className="shrink-0 text-text-muted" />
+            <span className="flex min-w-0 grow flex-col">
+                <span className="truncate text-sm text-text">{nameOf(entry)}</span>
+                {hint && <span className={clsx('text-xs', link.kind === 'failed' ? 'text-status-error' : 'text-text-faint')}>{hint}</span>}
+            </span>
+            <span className={clsx('h-1.5 w-1.5 shrink-0 rounded-full', linkDot(link))} />
+            <Button size="sm" variant="secondary" disabled={link.kind === 'connecting'} onClick={onPick}>
+                {link.kind === 'failed' ? 'Try again' : 'Open'}
+            </Button>
+        </div>
     );
 }
 
@@ -40,17 +52,33 @@ function MachineButton({ machine }: { machine: Machine }) {
  */
 export function StationWelcome() {
     const activeEndpointId = useEndpoints((s) => s.activeId);
+    const endpoints = useEndpoints((s) => s.endpoints);
     const accountStatus = usePulsarAccount((s) => s.status);
     const notice = usePulsarAccount((s) => s.notice);
     const error = usePulsarAccount((s) => s.error);
     const machines = usePulsarMachines((s) => s.machines);
-    const boot = stationBoot({ station: IS_STATION, activeEndpointId, accountStatus, machines });
+    const [waits, setWaits] = useState<Record<string, LinkWait>>({});
+    const boot = stationBoot({ station: !hasLocalMachine(), activeEndpointId, accountStatus, machines });
 
     if (boot === null) {
         return null;
     }
 
-    const reachable = machines?.filter((machine) => machine.brokerUrl !== null) ?? [];
+    const entries = mergeMachines({ endpoints, accountMachines: machines, showLocal: hasLocalMachine() });
+
+    /* Connects first and moves the client only once the machine answers, so a failure stays on this screen with its reason. */
+    const pick = (entry: MachineEntry): void => {
+        const key = entry.id;
+        setWaits((current) => ({ ...current, [key]: { state: 'connecting' } }));
+        ensureMachine(entry.endpoint?.id ?? entry.id)
+            .then(async (endpointId) => {
+                await activateEndpoint(endpointId);
+                setWaits(({ [key]: _done, ...rest }) => rest);
+            })
+            .catch((e: unknown) => {
+                setWaits((current) => ({ ...current, [key]: { state: 'failed', reason: messageOf(e) } }));
+            });
+    };
 
     return (
         <div className="absolute inset-0 grid place-items-center bg-surface-sunken">
@@ -75,17 +103,17 @@ export function StationWelcome() {
                 <EmptyState
                     icon={<Icon icon={MonitorSmartphone} size={20} />}
                     action={
-                        reachable.length === 0 ? undefined : (
-                            <div className="flex max-w-md flex-wrap items-center justify-center gap-2">
-                                {reachable.map((machine) => (
-                                    <MachineButton key={machine.id} machine={machine} />
+                        entries.length === 0 ? undefined : (
+                            <div className="flex w-96 max-w-full flex-col gap-2">
+                                {entries.map((entry) => (
+                                    <MachineChoice key={entry.id} entry={entry} wait={waits[entry.id] ?? null} onPick={() => pick(entry)} />
                                 ))}
                             </div>
                         )
                     }
                 >
-                    {reachable.length === 0
-                        ? 'No machine on your account can be reached from here yet. Sign in to the desktop app on a machine that runs with a broker, and it joins your account on its own.'
+                    {entries.length === 0
+                        ? 'No machine is on your account yet. Sign in to the desktop app on a machine that runs with a broker, and it joins your account on its own.'
                         : 'Pick a machine to work on.'}
                 </EmptyState>
             )}

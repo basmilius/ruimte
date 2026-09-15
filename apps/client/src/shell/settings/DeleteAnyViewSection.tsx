@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Toggle } from '@/shell/settings/controls';
 import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { listedEndpoints } from '@/state/local-machine';
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
 import { pool, transportFor } from '@/transport';
@@ -79,7 +80,8 @@ function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
  * pane: the pane is about pairing a machine and whether it answers, and this is about an agent.
  */
 export function DeleteAnyViewSection() {
-    const endpoints = useEndpoints((s) => s.endpoints);
+    const stored = useEndpoints((s) => s.endpoints);
+    const endpoints = useMemo(() => listedEndpoints(stored), [stored]);
     // Every machine on the list keeps a socket while the pane is open, or its switch has nothing to read.
     useEffect(() => {
         const released = endpoints.map((endpoint: Endpoint) => pool.hold(endpoint));

@@ -1,8 +1,9 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import clsx from 'clsx';
 import { ArrowLeft, ChartNoAxesColumn, RefreshCw } from 'lucide-react';
 import { Segmented, Skeleton } from '@/shell/settings/controls';
 import { useEndpoints } from '@/state/endpoints';
+import { listedEndpoints } from '@/state/local-machine';
 import { useEndpointId } from '@/state/keys';
 import { useUi } from '@/state/ui';
 import { askedKey, UsageEndpointContext, USAGE_PERIODS, useUsage, useUsageStore, windowFor, type UsageMetric, type UsagePeriod } from '@/state/usage';
@@ -167,7 +168,8 @@ function MachineNote({ endpointId, stale }: { endpointId: string; stale: boolean
 
 /* One tab per machine this client knows, in the order of the list; with one machine there is nothing to pick. */
 function MachinePicker({ endpointId }: { endpointId: string }) {
-    const endpoints = useEndpoints((s) => s.endpoints);
+    const stored = useEndpoints((s) => s.endpoints);
+    const endpoints = useMemo(() => listedEndpoints(stored), [stored]);
     if (endpoints.length < 2) {
         return null;
     }
@@ -264,7 +266,7 @@ export function UsagePage() {
     useCloseOnEscape();
     const endpointId = usageEndpointFor(
         chosen,
-        known.map((endpoint) => endpoint.id),
+        listedEndpoints(known).map((endpoint) => endpoint.id),
         workspaceId
     );
 

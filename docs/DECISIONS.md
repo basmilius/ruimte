@@ -1954,6 +1954,20 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   id (`shell/settings/machine-list.ts`), each saying "Paired", "On your account" or both. Everything
   that is done to a machine lives in the dialog its row opens, so the two separate lists that showed
   the same machine twice, and the sections of switches with a row per machine, are gone.
+- A machine on the account is opened on demand from wherever it is picked: the palette's machines step
+  (the same joined list as the Machines pane), a project in the switcher, a folder, the welcome screen of
+  the web client. One helper brings it up (`ensureMachine` in `endpoint/reach.ts`, the rules in
+  `endpoint/ensure-machine.ts`): it makes the row the account list would, holds the link, retries one
+  waiting out its backoff at once, and ends on the first attempt that fails with that attempt's reason
+  rather than sitting through the reconnect loop, which keeps running. Concurrent calls share one
+  attempt. A caller reaches the machine before it moves the client, so a machine that does not answer
+  leaves the work on screen. Leaving the palette's connecting step drops the wait and not the attempt.
+- The switcher lists no projects of a machine it has no list from, so such a machine is a row "Open a
+  project on <machine>" that opens the palette's browse step on it (`machinesToOpen` in `project/list.ts`).
+- The web client has no daemon behind its origin, so the row of this machine is left out of every list
+  of machines behind one predicate (`hasLocalMachine` in `state/local-machine.ts`), counted out of the
+  "one machine opens straight on its folders" rule too, and the local row being active means the welcome
+  screen rather than a machine.
 
 ### Skipped on purpose
 

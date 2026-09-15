@@ -16,7 +16,7 @@ import { mergeMachines, nameOf, reachLabel, type MachineEntry } from '@/shell/se
 import { brokerRouteOf, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
-import { IS_STATION } from '@/station';
+import { hasLocalMachine } from '@/state/local-machine';
 import { pool, type TransportStatus } from '@/transport';
 import { useLatency } from '@/transport/ping';
 import { useEndpointConnection } from '@/transport/status';
@@ -274,7 +274,7 @@ export function MachinesSection() {
     }, [status]);
 
     const signedIn = status === 'signed-in';
-    const entries = mergeMachines({ endpoints, accountMachines: signedIn ? machines : null, showLocal: !IS_STATION });
+    const entries = mergeMachines({ endpoints, accountMachines: signedIn ? machines : null, showLocal: hasLocalMachine() });
     const selected = dialog === null ? null : (entries.find((entry) => entry.id === dialog.id) ?? null);
 
     return (

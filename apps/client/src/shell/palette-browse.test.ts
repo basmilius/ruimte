@@ -1,17 +1,26 @@
 import { describe, expect, test } from 'bun:test';
+import type { Machine } from '@ruimte/pulsar';
+import { mergeMachines } from '@/shell/settings/machine-list';
 import type { Endpoint } from '@/state/endpoints';
+import type { ConnectionState } from '@/transport/transport';
 import {
     browseBack,
     browseMachines,
     browseStart,
     folderPresence,
     joinPath,
-    machineDot,
-    machineHint,
+    linkDot,
+    linkHint,
+    machineLink,
+    machinesStep,
     openBrowse,
     paletteStart,
     parentOf,
-    separatorFor
+    pickMachine,
+    retryLink,
+    separatorFor,
+    settleLink,
+    type BrowseStep
 } from './palette-browse';
 
 describe('separatorFor', () => {
@@ -88,43 +97,147 @@ describe('browseStart', () => {
     });
 });
 
-const endpoint = (id: string, label: string): Endpoint => ({
+const KEY = 'A'.repeat(43);
+
+const paired = (id: string, overrides: Partial<Endpoint> = {}): Endpoint => ({
     id,
-    label,
+    label: `Row ${id}`,
     httpBaseUrl: `http://${id}`,
     wsBaseUrl: `ws://${id}`,
     reachability: 'lan',
     token: null,
     daemonId: id,
-    daemonPublicKey: null
+    daemonPublicKey: KEY,
+    ...overrides
 });
 
+const record = (id: string, overrides: Partial<Machine> = {}): Machine => ({
+    id,
+    name: `Account ${id}`,
+    icon: null,
+    publicKey: KEY,
+    brokerUrl: 'wss://broker.example.com',
+    lastSeenAt: null,
+    ...overrides
+});
+
+const localRow = paired('local', { label: 'This machine', daemonId: 'home', daemonPublicKey: null, reachability: 'loopback' });
+
+const OPEN: ConnectionState = { status: 'open', attempts: 0, retryAt: null, failure: null };
+const NO_LINK: ConnectionState = { status: 'closed', attempts: 0, retryAt: null, failure: null };
+
 describe('browseMachines', () => {
-    const endpoints = [endpoint('daemon-b', 'Studio'), endpoint('local', 'This machine'), endpoint('daemon-c', 'Attic')];
-
-    test('this machine comes first whichever machine is active, the rest keep the list order', () => {
-        const rows = browseMachines(endpoints, 'daemon-b', ['local', 'daemon-b']);
-        expect(rows.map((row) => row.endpointId)).toEqual(['local', 'daemon-b', 'daemon-c']);
+    test('every machine the client knows, deduplicated with the account, this machine first', () => {
+        const entries = mergeMachines({
+            endpoints: [paired('studio'), localRow],
+            accountMachines: [record('studio'), record('home'), record('attic')],
+            showLocal: true
+        });
+        const rows = browseMachines(entries, 'studio');
+        expect(rows.map((row) => row.endpointId)).toEqual(['local', 'studio', 'attic']);
+        expect(rows.map((row) => row.label)).toEqual(['This machine', 'Row studio', 'Account attic']);
+        expect(rows.map((row) => row.active)).toEqual([false, true, false]);
     });
 
-    test('the machine being worked on is marked rather than moved, so the step can highlight it', () => {
-        expect(browseMachines(endpoints, 'daemon-b', []).map((row) => row.active)).toEqual([false, true, false]);
-        expect(browseMachines(endpoints, 'local', []).map((row) => row.active)).toEqual([true, false, false]);
+    test('where no daemon serves the page, the local row is not a machine to pick', () => {
+        const entries = mergeMachines({ endpoints: [localRow], accountMachines: [record('attic')], showLocal: false });
+        expect(browseMachines(entries, 'local').map((row) => row.endpointId)).toEqual(['attic']);
+    });
+});
+
+describe('machineLink', () => {
+    const entries = mergeMachines({
+        endpoints: [paired('studio'), paired('opened', { pairedBy: 'statement', needsStatement: true })],
+        accountMachines: [record('attic'), record('cellar', { brokerUrl: null })],
+        showLocal: false
+    });
+    const byId = (id: string) => entries.find((entry) => entry.id === id)!;
+
+    test('a machine that answers says nothing beside its dot', () => {
+        const link = machineLink(byId('studio'), OPEN, null);
+        expect(link).toEqual({ kind: 'open' });
+        expect(linkHint(link)).toBeUndefined();
+        expect(linkDot(link)).toBe('bg-status-idle');
     });
 
-    test('a machine without a socket is still a row, marked as one that has to be dialed', () => {
-        const rows = browseMachines(endpoints, 'local', ['local']);
-        expect(rows.map((row) => row.connected)).toEqual([true, false, false]);
+    test('a machine not dialed yet says how it is reached, or that nothing outside its network can', () => {
+        expect(linkHint(machineLink(byId('attic'), NO_LINK, null))).toBe('Connects through your account');
+        expect(linkHint(machineLink(byId('cellar'), NO_LINK, null))).toBe('On its own network only');
+        expect(linkHint(machineLink(byId('opened'), NO_LINK, null))).toBe('Connects through your account');
+        expect(linkHint(machineLink(byId('studio'), NO_LINK, null))).toBe('Not connected');
+    });
+
+    test('a link under way or one that failed says so, with the reason the attempt gave', () => {
+        expect(linkHint(machineLink(byId('studio'), { status: 'connecting', attempts: 0, retryAt: null }, null))).toBe('Connecting...');
+        const failed = machineLink(byId('studio'), { status: 'closed', attempts: 2, retryAt: 1, failure: 'ICE failed' }, null);
+        expect(linkHint(failed)).toBe('Not reachable: ICE failed');
+        expect(linkDot(failed)).toBe('bg-status-error');
+        expect(linkHint(machineLink(byId('studio'), { status: 'closed', attempts: 1, retryAt: 1, failure: null }, null))).toBe(
+            'Not reachable: That machine is not answering'
+        );
+    });
+
+    test('the wait a person started speaks before what the pool knows', () => {
+        expect(machineLink(byId('attic'), NO_LINK, { state: 'connecting' })).toEqual({ kind: 'connecting' });
+        expect(machineLink(byId('attic'), NO_LINK, { state: 'failed', reason: 'Refused' })).toEqual({ kind: 'failed', reason: 'Refused' });
     });
 });
 
 describe('openBrowse', () => {
-    test('one machine goes straight to its folders, which have no path behind them yet', () => {
-        expect(openBrowse('local', 1)).toEqual({ endpointId: 'local', machines: false, path: '' });
+    test('one open machine goes straight to its folders, which have no path behind them yet', () => {
+        expect(openBrowse('local', [{ endpointId: 'local', open: true }])).toEqual({ endpointId: 'local', machines: false, path: '' });
     });
 
-    test('more than one machine asks which', () => {
-        expect(openBrowse('local', 3)).toEqual({ endpointId: 'local', machines: true, path: '' });
+    test('one machine that is not open waits for its link on its folders step', () => {
+        expect(openBrowse('local', [{ endpointId: 'attic', open: false }])).toEqual({
+            endpointId: 'attic',
+            machines: false,
+            path: '',
+            link: { state: 'connecting' }
+        });
+    });
+
+    test('more than one machine asks which, and so does none', () => {
+        const two = [
+            { endpointId: 'local', open: true },
+            { endpointId: 'attic', open: false }
+        ];
+        expect(openBrowse('local', two)).toEqual({ endpointId: 'local', machines: true, path: '' });
+        expect(openBrowse('local', [])).toEqual({ endpointId: 'local', machines: true, path: '' });
+    });
+});
+
+describe('the wait for a machine picked in the palette', () => {
+    const machinesUp: BrowseStep = { endpointId: 'local', machines: true, path: '~/work/' };
+
+    test('a pick on a machine that is not open connects, then lists its folders', () => {
+        const connecting = pickMachine('attic', false);
+        expect(connecting.link).toEqual({ state: 'connecting' });
+        expect(settleLink(connecting, 'attic', null)).toEqual({ endpointId: 'attic', machines: false, path: '' });
+    });
+
+    test('a failure stays on the machine with its reason, and trying again waits again', () => {
+        const failed = settleLink(pickMachine('attic', false), 'attic', 'No network path to the machine');
+        expect(failed?.link).toEqual({ state: 'failed', reason: 'No network path to the machine' });
+        expect(retryLink(failed)?.link).toEqual({ state: 'connecting' });
+        expect(retryLink(machinesUp)).toBe(machinesUp);
+    });
+
+    test('going back cancels the wait: the machines step ignores a link that settles later', () => {
+        const back = machinesStep(pickMachine('attic', false), '');
+        expect(back).toEqual({ endpointId: 'attic', machines: true, path: '' });
+        expect(settleLink(back, 'attic', null)).toBe(back);
+        expect(browseBack(pickMachine('attic', false), 2)).toEqual({ to: 'machines' });
+    });
+
+    test('a link that settles for another machine, or after the palette closed, changes nothing', () => {
+        const other = pickMachine('studio', false);
+        expect(settleLink(other, 'attic', null)).toBe(other);
+        expect(settleLink(null, 'attic', 'Gone')).toBeNull();
+    });
+
+    test('the folders step keeps its path to come back to, a waiting step has none', () => {
+        expect(machinesStep({ endpointId: 'local', machines: false, path: '' }, '~/work/')).toEqual(machinesUp);
     });
 });
 
@@ -174,22 +287,5 @@ describe('browseBack', () => {
     test('folders go to the machines, but only when there is more than one', () => {
         expect(browseBack({ endpointId: 'local', machines: false, path: '/work/' }, 2)).toEqual({ to: 'machines' });
         expect(browseBack({ endpointId: 'local', machines: false, path: '/work/' }, 1)).toEqual({ to: 'palette' });
-    });
-});
-
-describe('a machine row', () => {
-    test('says nothing beside the dot while the machine answers, and says what it is doing otherwise', () => {
-        expect(machineHint(true, false)).toBeUndefined();
-        expect(machineHint(false, true)).toBe('Connecting');
-        expect(machineHint(false, false)).toBe('Not connected');
-        // Dialing wins: a socket that is closing and reopening is on its way, not gone.
-        expect(machineHint(true, true)).toBe('Connecting');
-    });
-
-    test('the dot carries the three states in the colors the settings page uses', () => {
-        expect(machineDot(true, false)).toBe('bg-status-idle');
-        expect(machineDot(false, true)).toBe('bg-status-needs-you');
-        expect(machineDot(true, true)).toBe('bg-status-needs-you');
-        expect(machineDot(false, false)).toBe('bg-text-faint');
     });
 });

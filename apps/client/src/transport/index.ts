@@ -2,7 +2,7 @@ import { clientKey, type ClientKey } from '@/endpoint/client-key';
 import { rememberTicket } from '@/endpoint/credentials';
 import { socketAddressFor, verifyDaemon } from '@/endpoint/handshake';
 import { machineAccess } from '@/pulsar/statements';
-import { IS_STATION } from '@/station';
+import { hasLocalMachine } from '@/state/local-machine';
 import { LOCAL_ENDPOINT_ID, brokerRouteOf, endpointById, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { iceServersFrom, useSettings } from '@/state/settings';
 import { ActiveTransport } from './active-transport';
@@ -70,7 +70,7 @@ export const connectionAddressFor = (endpointId: string): Promise<string> => {
  */
 export const pool = new TransportPool({
     open: (endpoint: Endpoint, currentId: () => string) =>
-        IS_STATION && endpoint.id === LOCAL_ENDPOINT_ID
+        !hasLocalMachine() && endpoint.id === LOCAL_ENDPOINT_ID
             ? new DormantTransport()
             : new LinkTransport(() => connectionAddressFor(currentId()), linkFor(currentId))
 });

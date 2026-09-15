@@ -28,7 +28,8 @@ import { AgentIcon } from '@/agents/AgentIcon';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ViewGlyph } from '@/project/ViewGlyph';
-import { openFolderOn, openProject, reachEndpoint } from '@/project/open';
+import { ensureMachine } from '@/endpoint/reach';
+import { openFolderOn, openProject } from '@/project/open';
 import { newFileView, revealNode, showFileOnCanvas, showView } from '@/project/views';
 import { appCommands, OPENING_COMMAND_IDS, type Command } from '@/shell/commands';
 import {
@@ -37,31 +38,41 @@ import {
     browseStart,
     endsWithSeparator,
     folderPresence,
-    machineDot,
-    machineHint,
+    linkDot,
+    linkHint,
+    machineLink,
+    machinesStep,
     openBrowse,
     paletteStart,
     parentOf,
+    pickMachine,
+    retryLink,
     separatorFor,
+    settleLink,
     type BrowseStep
 } from '@/shell/palette-browse';
 import { DEFAULT_GREP_OPTIONS, useGrepSearch, type GrepOptions } from '@/shell/palette-grep';
 import { PaletteGrepResults } from '@/shell/PaletteGrepResults';
 import { readRecents, rememberRecent, sortByRecency } from '@/shell/palette-recents';
 import { absoluteOf, basenameOf } from '@/shell/panels/files-tree';
+import { iconOfEntry } from '@/shell/settings/machine-icon';
+import { mergeMachines } from '@/shell/settings/machine-list';
+import { messageOf, usePulsarAccount } from '@/pulsar/account';
+import { refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
 import { useCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
+import { hasLocalMachine, isRealMachine } from '@/state/local-machine';
 import { useFiles } from '@/state/files';
 import { useProjectList } from '@/state/project-list';
 import { useProject } from '@/state/project';
 import { fileManagerName, serverInfoOf, useServers } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
-import { transportFor } from '@/transport';
+import { pool, transportFor, type ConnectionState } from '@/transport';
 import { useFocusedConnection } from '@/transport/connections';
 import type { Transport } from '@/transport/transport';
-import { useOpenEndpoints } from '@/transport/status';
+import { useConnections, useOpenEndpoints } from '@/transport/status';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP, SECTION_LABEL, TOOLTIP_KBD } from '@/ui/classes';
@@ -88,6 +99,9 @@ const KIND_ICON: Record<CanvasNodeKind, React.ReactNode> = {
 const isPathQuery = (query: string): boolean => query.startsWith('/') || query.startsWith('~') || query.startsWith('./') || query.startsWith('../');
 
 const BROWSE_DEBOUNCE_MS = 60;
+
+/* What a machine with no link in the pool reads as. */
+const NO_LINK: ConnectionState = { status: 'closed', attempts: 0, retryAt: null, failure: null };
 const FILE_DEBOUNCE_MS = 120;
 // Enough to recognize the file being looked for, few enough to leave room for what else matches.
 const FILE_RESULTS = 8;
@@ -177,7 +191,12 @@ export function CommandPalette() {
     /* The palette sits outside every workspace, so it works on the one the person has the focus in. */
     const { transport } = useFocusedConnection();
     const browseAt = useUi((s) => s.paletteBrowseAt);
+    /* The machine the switcher asked the browser to open on, for a machine it lists no projects of. */
+    const browseTarget = useUi((s) => s.paletteBrowseMachine);
     const browseStartFolder = useSettings((s) => s.browseStartFolder);
+    const accountStatus = usePulsarAccount((s) => s.status);
+    const accountMachines = usePulsarMachines((s) => s.machines);
+    const connections = useConnections();
     const [query, setQuery] = useState('');
     const [index, setIndex] = useState(0);
     /* Which step of browsing the palette is on, and null when it is not browsing at all. A step of
@@ -186,8 +205,6 @@ export function CommandPalette() {
     /* The listing on screen, under the machine and path it was asked for, so a navigation that
        already fetched one does not have the typing effect ask for it a second time. */
     const [listing, setListing] = useState<{ key: string; result: FsBrowseResult | null } | null>(null);
-    /* The machine a socket is being opened for; ours are dialed lazily, so this takes a moment. */
-    const [dialing, setDialing] = useState<string | null>(null);
     const [failure, setFailure] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
     const [recents, setRecents] = useState<string[]>(readRecents);
@@ -209,7 +226,19 @@ export function CommandPalette() {
     /* The whole map, because the machine rows draw an icon each and the icons arrive one machine at a time. */
     const servers = useServers((s) => s.byEndpoint);
     const sep = separatorFor(platform);
-    const machines = useMemo(() => browseMachines(endpoints, activeId, connected), [endpoints, activeId, connected]);
+    /* Every machine this client knows, joined the way the Machines pane joins them, so one the account
+       has and nothing here ever opened is a row to pick like any other. */
+    const machines = useMemo(
+        () =>
+            browseMachines(
+                mergeMachines({ endpoints, accountMachines: accountStatus === 'signed-in' ? accountMachines : null, showLocal: hasLocalMachine() }),
+                activeId
+            ),
+        [endpoints, accountMachines, accountStatus, activeId]
+    );
+    const connectionOf = useCallback((endpointId: string): ConnectionState => connections[endpointId] ?? NO_LINK, [connections]);
+    const linkWait = browse !== null && !browse.machines ? (browse.link ?? null) : null;
+    const browseRow = machines.find((row) => row.endpointId === browseEndpointId) ?? null;
     /* The machines list sorts this machine first but opens on the machine the client is pointed at,
        which is where the work is and usually where the folder being looked for is too. */
     const activeRow = Math.max(
@@ -220,11 +249,15 @@ export function CommandPalette() {
     /* A relative path counts from the open project's folder, and that folder is on one machine. */
     const cwdFor = useCallback((endpointId: string): string | null => (currentEndpointId === endpointId ? folder : null), [currentEndpointId, folder]);
 
+    /* A typed path browses the machine the app is pointed at, which the idle row of the web client is not. */
+    const pathStep = (next: string): BrowseStep | null =>
+        isPathQuery(next) && isRealMachine(activeId) ? { endpointId: activeId, machines: false, path: next } : null;
+
     /* Typing never leaves browsing and never empties the list: the field says where you are, the
        step says what you are doing. A path typed in the ordinary palette is the second way in. */
     const reset = (next: string): void => {
         setQuery(next);
-        setBrowse(browse ?? (isPathQuery(next) ? { endpointId: activeId, machines: false, path: next } : null));
+        setBrowse(browse ?? pathStep(next));
         setIndex(0);
         setFailure(null);
     };
@@ -236,12 +269,15 @@ export function CommandPalette() {
     const restart = (next: string, browseNow: boolean): void => {
         setListing(null);
         setFailure(null);
-        setDialing(null);
+        const isOpen = (endpointId: string): boolean => connectionOf(endpointId).status === 'open';
         const step: BrowseStep | null = browseNow
-            ? openBrowse(activeId, machines.length)
-            : isPathQuery(next)
-              ? { endpointId: activeId, machines: false, path: next }
-              : null;
+            ? browseTarget !== null
+                ? pickMachine(browseTarget, isOpen(browseTarget))
+                : openBrowse(
+                      activeId,
+                      machines.map((row) => ({ endpointId: row.endpointId, open: isOpen(row.endpointId) }))
+                  )
+            : pathStep(next);
         setBrowse(step);
         setQuery(browseNow ? '' : next);
         setIndex(step?.machines === true ? activeRow : 0);
@@ -263,7 +299,7 @@ export function CommandPalette() {
 
     useEffect(() => {
         // An empty field is a step with nothing to list yet; the last listing stays under it.
-        if (!browsing || machineStep || query.trim() === '') {
+        if (!browsing || machineStep || linkWait !== null || query.trim() === '') {
             return;
         }
         const key = browseKey(browseEndpointId, query);
@@ -286,7 +322,7 @@ export function CommandPalette() {
             listing === null ? 0 : BROWSE_DEBOUNCE_MS
         );
         return () => window.clearTimeout(timer);
-    }, [transport, listing, browsing, machineStep, browseEndpointId, query, cwdFor]);
+    }, [transport, listing, browsing, machineStep, linkWait, browseEndpointId, query, cwdFor]);
 
     /*
      * Every step fetches before it commits, so the path and the list change in the same frame and
@@ -345,33 +381,80 @@ export function CommandPalette() {
         /* A folders step that has not been anywhere yet is one the palette still has to open. The
            request goes out here rather than where the step was made, because that is a render.
            oxlint reads the call as a setState in an effect; every write in it is behind an await. */
-        if (browse === null || browse.machines || query !== '' || listing !== null) {
+        if (browse === null || browse.machines || browse.link !== undefined || query !== '' || listing !== null) {
             return;
         }
         void startBrowsing(browse.endpointId);
     }, [browse, listing, query, startBrowsing]);
 
     /*
-     * A machine that is not connected is usually one nothing has asked for yet, so picking it dials
-     * rather than refusing. The path resets to that machine's start folder: a path from one machine
-     * rarely exists on the next, and landing on "create this folder" by accident helps nobody.
+     * A step waiting on a machine's link brings it up through the helper every way in shares, and
+     * lists the folders once it is open. Leaving the step drops the wait and nothing else: the
+     * attempt goes on, and a machine that comes up later is simply open the next time.
      */
-    const pickMachine = useCallback(
-        async (endpointId: string): Promise<void> => {
-            setDialing(endpointId);
+    const waiting = browse !== null && browse.link?.state === 'connecting' ? browse : null;
+    useEffect(() => {
+        if (waiting === null) {
+            return;
+        }
+        // A listing still on its way from the machine before is about a step that was left, and must not land over this one.
+        generation.current += 1;
+        let live = true;
+        const { endpointId } = waiting;
+        ensureMachine(endpointId).then(
+            () => {
+                if (live) {
+                    setBrowse((step) => settleLink(step, endpointId, null));
+                }
+            },
+            (e: unknown) => {
+                if (live) {
+                    setBrowse((step) => settleLink(step, endpointId, messageOf(e)));
+                }
+            }
+        );
+        return () => {
+            live = false;
+        };
+    }, [waiting]);
+
+    /* The machine whose folders are up keeps its link for as long as they are, however long a person browses. */
+    const heldId = browse !== null && !browse.machines ? browse.endpointId : null;
+    const heldRow = useEndpoints((s) => (heldId === null ? null : (s.endpoints.find((entry) => entry.id === heldId) ?? null)));
+    useEffect(() => (heldRow === null ? undefined : pool.hold(heldRow)), [heldRow]);
+
+    /* The machines step is one of the moments the account list is asked again, so a machine that just joined is there. */
+    useEffect(() => {
+        if (open && machineStep && accountStatus === 'signed-in') {
+            void refreshAccountMachines();
+        }
+    }, [open, machineStep, accountStatus]);
+
+    /*
+     * Picking a machine that is open lists its folders straight away. Any other machine waits for its
+     * link on its own step first, a row that only the account has included. The path resets to that
+     * machine's start folder: a path from one machine rarely exists on the next, and landing on
+     * "create this folder" by accident helps nobody.
+     */
+    const chooseMachine = useCallback(
+        (endpointId: string): void => {
             setFailure(null);
-            try {
-                await reachEndpoint(endpointId);
-            } catch (e) {
-                setFailure(e instanceof Error ? e.message : 'That machine is not answering');
-                setDialing(null);
+            if (connectionOf(endpointId).status === 'open') {
+                void startBrowsing(endpointId);
                 return;
             }
-            setDialing(null);
-            await startBrowsing(endpointId);
+            setListing(null);
+            setQuery('');
+            setIndex(0);
+            setBrowse(pickMachine(endpointId, false));
         },
-        [startBrowsing]
+        [connectionOf, startBrowsing]
     );
+
+    const retry = (): void => {
+        setFailure(null);
+        setBrowse((step) => retryLink(step));
+    };
 
     useEffect(() => {
         const trimmed = query.trim();
@@ -443,25 +526,31 @@ export function CommandPalette() {
             return machines
                 .filter((row) => matches(query, row.label))
                 .map((row) => {
-                    const hint = machineHint(row.connected, dialing === row.endpointId);
+                    const link = machineLink(row.entry, connectionOf(row.endpointId), null);
+                    const hint = linkHint(link);
+                    const hintLine = hint === undefined ? null : <span className="max-w-64 truncate text-xs text-text-faint">{hint}</span>;
                     return {
                         id: `machine-${row.endpointId}`,
                         label: row.label,
                         /* The icon a machine was given, the same one the settings page and every menu
                            show; the daemon's own hostname behind the name said nothing the name did not. */
-                        icon: <MachineGlyph icon={servers[row.endpointId]?.icon ?? null} size={14} />,
+                        icon: <MachineGlyph icon={iconOfEntry(row.entry, servers[row.endpointId]?.icon ?? null)} size={14} />,
                         trailing: (
                             <>
-                                {hint && <span className="text-xs text-text-faint">{hint}</span>}
-                                <span className={clsx('h-1.5 w-1.5 shrink-0 rounded-full', machineDot(row.connected, dialing === row.endpointId))} />
+                                {link.kind === 'failed' && hintLine !== null ? <Tooltip label={link.reason}>{hintLine}</Tooltip> : hintLine}
+                                <span className={clsx('h-1.5 w-1.5 shrink-0 rounded-full', linkDot(link))} />
                             </>
                         ),
                         section: 'Machines' as const,
-                        run: () => void pickMachine(row.endpointId)
+                        run: () => chooseMachine(row.endpointId)
                     };
                 });
         }
         if (browsing) {
+            // A machine that is not open yet has no folders to show; its step says what it is waiting on.
+            if (linkWait !== null) {
+                return [];
+            }
             const up = parentOf(query, sep);
             const list: Entry[] = [];
             // The row that goes up is the first item inside the group, not a row of its own above it.
@@ -594,18 +683,19 @@ export function CommandPalette() {
     }, [
         browsing,
         listing,
+        chooseMachine,
         connected,
-        dialing,
+        connectionOf,
         endpoints,
         fileMatches,
         grepping,
         machines,
         machineStep,
+        linkWait,
         nodes,
         openFile,
         picking,
         order,
-        pickMachine,
         sep,
         views,
         activeViewId,
@@ -639,7 +729,7 @@ export function CommandPalette() {
         if (browse === null) {
             return;
         }
-        setBrowse({ ...browse, machines: true, path: query });
+        setBrowse(machinesStep(browse, query));
         setQuery('');
         setIndex(activeRow);
         setFailure(null);
@@ -666,7 +756,8 @@ export function CommandPalette() {
         }
     };
 
-    const browseLabel = endpoints.find((endpoint) => endpoint.id === browseEndpointId)?.label ?? 'This machine';
+    const browseLabel = browseRow?.label ?? endpoints.find((endpoint) => endpoint.id === browseEndpointId)?.label ?? 'This machine';
+    const browseIcon = browseRow ? iconOfEntry(browseRow.entry, servers[browseEndpointId]?.icon ?? null) : (servers[browseEndpointId]?.icon ?? null);
     const backTo = browse === null ? null : browseBack(browse, machines.length).to;
     const backLabel = backTo === 'folders' ? 'Back to the folders' : backTo === 'machines' ? 'Browse another machine' : 'Back to the palette';
     const submitLabel = presence === 'missing' ? 'Create and open' : 'Open folder';
@@ -729,7 +820,7 @@ export function CommandPalette() {
                                             {/* The icon, not a dot: it is the machine's own mark, the rows
                                                 behind this button carry the same one, and a machine whose
                                                 folders are on screen is answering by definition. */}
-                                            <MachineGlyph icon={servers[browseEndpointId]?.icon ?? null} size={14} />
+                                            <MachineGlyph icon={browseIcon} size={14} />
                                             <span className="max-w-32 truncate">{browseLabel}</span>
                                         </>
                                     )}
@@ -786,6 +877,10 @@ export function CommandPalette() {
                                     e.preventDefault();
                                     if (grepping) {
                                         runHit(activeHit);
+                                    } else if (linkWait !== null) {
+                                        if (linkWait.state === 'failed') {
+                                            retry();
+                                        }
                                     } else if (
                                         browsing &&
                                         !machineStep &&
@@ -836,7 +931,7 @@ export function CommandPalette() {
                         )}
                         {/* The button that opens what was typed sits in the field, at its right end,
                             carrying the one shortcut that does the same thing. */}
-                        {browsing && !machineStep && (
+                        {browsing && !machineStep && linkWait === null && (
                             <Tooltip label={submitLabel} kbd={submitShortcut}>
                                 <Button size="sm" variant="secondary" disabled={busy || query.trim() === ''} onClick={() => void submitPath(query)}>
                                     {submitLabel}
@@ -862,7 +957,35 @@ export function CommandPalette() {
                             {grepping && query.trim() === '' && (
                                 <div className="px-3 py-6 text-center text-xs text-text-faint">Type to search every file in this folder.</div>
                             )}
-                            {machineStep && entries.length === 0 && <div className="px-3 py-6 text-center text-xs text-text-faint">No machine matches</div>}
+                            {machineStep && entries.length === 0 && (
+                                <div className="px-3 py-6 text-center text-xs text-text-faint">
+                                    {machines.length === 0 ? 'No machine yet. Sign in to open the machines on your account.' : 'No machine matches'}
+                                </div>
+                            )}
+                            {/* The machine whose folders were asked for, while its link comes up or after it did not. */}
+                            {linkWait !== null && (
+                                <div className="flex flex-col items-center gap-2 px-3 py-6 text-center text-xs text-text-faint">
+                                    <MachineGlyph icon={browseIcon} size={20} className="text-text-muted" />
+                                    {linkWait.state === 'connecting' ? (
+                                        <span role="status">
+                                            {browseRow?.entry.endpoint?.pairedBy === 'statement' || browseRow?.entry.endpoint === null
+                                                ? `Connecting to ${browseLabel} through your account...`
+                                                : `Connecting to ${browseLabel}...`}
+                                        </span>
+                                    ) : (
+                                        <>
+                                            <span className="text-text-muted">{browseLabel} is not reachable</span>
+                                            <span className="max-w-md text-status-error" role="alert">
+                                                {linkWait.reason}
+                                            </span>
+                                            <Button size="sm" variant="secondary" onClick={retry}>
+                                                Try again
+                                                <Kbd shortcut={KEY_SHORTCUTS.enter} className={TOOLTIP_KBD} />
+                                            </Button>
+                                        </>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         {grepping && (
                             <PaletteGrepResults
@@ -875,7 +998,9 @@ export function CommandPalette() {
                         )}
                         {/* An empty folder is the label with nothing under it: no spinner, no message,
                             and the previous listing stays up until the next one lands. */}
-                        {browsing && !machineStep && entries.length === 0 && <div className={`${SECTION_LABEL} px-2.5 pt-1.5 pb-1`}>Folders</div>}
+                        {browsing && !machineStep && linkWait === null && entries.length === 0 && (
+                            <div className={`${SECTION_LABEL} px-2.5 pt-1.5 pb-1`}>Folders</div>
+                        )}
                         {entries.map((entry, i) => {
                             const first = i === 0 || entries[i - 1]!.section !== entry.section;
                             return (
@@ -933,7 +1058,7 @@ export function CommandPalette() {
                             </span>
                             {/* The Enter hint is left out once the typed path can be opened, because
                                 the button in the field is already saying so. */}
-                            {(active !== undefined || query.trim() === '') && (
+                            {linkWait === null && (active !== undefined || query.trim() === '') && (
                                 <span className="flex shrink-0 items-center gap-1.5">
                                     <Kbd shortcut={KEY_SHORTCUTS.enter} className={TOOLTIP_KBD} /> Select
                                 </span>
@@ -951,7 +1076,7 @@ export function CommandPalette() {
                                 </span>
                             )}
                             {/* A native dialog can only see the file system of the machine it runs on. */}
-                            {!machineStep && nativeDialog !== null && (
+                            {!machineStep && linkWait === null && nativeDialog !== null && (
                                 <Button
                                     size="sm"
                                     variant="secondary"

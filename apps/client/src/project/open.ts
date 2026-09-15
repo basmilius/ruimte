@@ -1,76 +1,30 @@
 import { activateEndpoint } from '@/endpoint';
+import { ensureMachine } from '@/endpoint/reach';
 import { projectClient } from '@/project';
 import { rememberProject, readLastProject, browserStorage } from '@/project/last-project';
 import { useEndpoints } from '@/state/endpoints';
 import { useProject } from '@/state/project';
-import { transportFor } from '@/transport';
-import type { Transport } from '@/transport/transport';
-
-/*
- * Long enough for a machine that is up to answer, short enough that a machine that is asleep says
- * so instead of leaving the menu waiting.
- */
-const CONNECT_TIMEOUT_MS = 5000;
-
-const waitForOpen = (transport: Transport, timeoutMs: number): Promise<void> =>
-    new Promise((resolve, reject) => {
-        if (transport.status === 'open') {
-            resolve();
-            return;
-        }
-        let off: (() => void) | null = null;
-        const timer = setTimeout(() => {
-            off?.();
-            reject(new Error('That machine is not answering'));
-        }, timeoutMs);
-        off = transport.subscribeStatus((status) => {
-            if (status !== 'open') {
-                return;
-            }
-            clearTimeout(timer);
-            off?.();
-            resolve();
-        });
-    });
-
-/*
- * Dials a machine and waits for its socket, with the budget every switch in the app uses. The pool
- * opens sockets lazily, so a machine that is not connected is usually one nothing has asked for yet.
- */
-export const reachEndpoint = async (endpointId: string, timeoutMs = CONNECT_TIMEOUT_MS): Promise<void> => {
-    const transport = transportFor(endpointId);
-    if (!transport) {
-        throw new Error('That machine is no longer in the list');
-    }
-    await waitForOpen(transport, timeoutMs);
-};
 
 /*
  * Opens a project on the machine it belongs to. The only way in: a project id means nothing without
- * the daemon that minted it, so picking one out of the union is also picking a machine. The old
- * project is flushed on its own endpoint's socket before anything moves, which is what the order
- * below is for.
+ * the daemon that minted it, so picking one out of the union is also picking a machine. That machine
+ * is reached before anything moves, so one that does not answer leaves the project on screen where
+ * it was; the old project is then flushed on its own endpoint's socket, which is what the order below
+ * is for.
  */
 export const openProject = async (endpointId: string, projectId: string): Promise<void> => {
     if (endpointId === useEndpoints.getState().activeId) {
         await projectClient.openProject(projectId);
         return;
     }
-    if (!useEndpoints.getState().endpoints.some((endpoint) => endpoint.id === endpointId)) {
-        return;
-    }
-    // Written before the switch, so the machine that takes over boots into this project and not into what it had last.
-    rememberProject(endpointId, projectId);
-    await activateEndpoint(endpointId);
-    const transport = transportFor(endpointId);
-    if (!transport) {
-        return;
-    }
     try {
-        await waitForOpen(transport, CONNECT_TIMEOUT_MS);
+        const id = await ensureMachine(endpointId);
+        // Written before the switch, so the machine that takes over boots into this project and not into what it had last.
+        rememberProject(id, projectId);
+        await activateEndpoint(id);
         await projectClient.settled();
         const { current, currentEndpointId } = useProject.getState();
-        if (current?.projectId !== projectId || currentEndpointId !== endpointId) {
+        if (current?.projectId !== projectId || currentEndpointId !== id) {
             await projectClient.openProject(projectId);
         }
     } catch (e) {
@@ -81,18 +35,16 @@ export const openProject = async (endpointId: string, projectId: string): Promis
 
 /* The pieces a test stands in for; every call site in the app passes none of them. */
 export interface FolderDeps {
+    ensure(endpointId: string): Promise<string>;
     activate(endpointId: string): Promise<void>;
-    reach(endpointId: string): Promise<void>;
+    settle(): Promise<void>;
     openFolder(folder: string, createFolder: boolean): Promise<void>;
 }
 
 const REAL_FOLDER_DEPS: FolderDeps = {
+    ensure: ensureMachine,
     activate: activateEndpoint,
-    reach: async (endpointId) => {
-        await reachEndpoint(endpointId);
-        // The machine that took over may still be opening what it had last; a folder on top of that would race.
-        await projectClient.settled();
-    },
+    settle: () => projectClient.settled(),
     openFolder: (folder, createFolder) => projectClient.openFolder(folder, createFolder)
 };
 
@@ -106,11 +58,10 @@ export const openFolderOn = async (endpointId: string, folder: string, createFol
         await deps.openFolder(folder, createFolder);
         return;
     }
-    if (!useEndpoints.getState().endpoints.some((endpoint) => endpoint.id === endpointId)) {
-        throw new Error('That machine is no longer in the list');
-    }
-    await deps.activate(endpointId);
-    await deps.reach(endpointId);
+    const id = await deps.ensure(endpointId);
+    await deps.activate(id);
+    // The machine that took over may still be opening what it had last; a folder on top of that would race.
+    await deps.settle();
     await deps.openFolder(folder, createFolder);
 };
 

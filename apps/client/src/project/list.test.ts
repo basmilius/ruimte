@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectSummary } from '@ruimte/contracts';
 import { useEndpoints, type Endpoint } from '../state/endpoints';
 import { useProjectList } from '../state/project-list';
-import { menuProjects, primeCachedLists, readCachedList, writeCachedList } from './list';
+import type { Machine } from '@ruimte/pulsar';
+import { mergeMachines } from '../shell/settings/machine-list';
+import { machinesToOpen, menuProjects, primeCachedLists, readCachedList, writeCachedList } from './list';
 
 const summary = (projectId: string, lastOpenedAt = 0, closedAt: number | null = null): ProjectSummary => ({
     projectId,
@@ -106,6 +108,35 @@ describe('the switcher as one list', () => {
             { endpointId: 'local', summary: summary('p1', 10) }
         ];
         expect(menuProjects(rows, endpoints, []).open.map((row) => row.summary.projectId)).toEqual(['p1']);
+    });
+});
+
+describe('the machines the switcher offers a way into', () => {
+    const record = (id: string, brokerUrl: string | null = 'wss://broker.example.com'): Machine => ({
+        id,
+        name: `Account ${id}`,
+        icon: null,
+        publicKey: 'A'.repeat(43),
+        brokerUrl,
+        lastSeenAt: null
+    });
+
+    test('a machine without listed projects is offered, this machine and one with projects are not', () => {
+        const entries = mergeMachines({
+            endpoints: [{ ...endpoint('local', 'This machine'), daemonId: 'home' }, endpoint('daemon-b', 'Work laptop'), endpoint('daemon-c', 'Attic')],
+            accountMachines: [record('daemon-b'), record('studio')],
+            showLocal: true
+        });
+        const rows = [{ endpointId: 'daemon-b', summary: summary('q1', 10) }];
+        expect(machinesToOpen(entries, rows).map((machine) => [machine.endpointId, machine.label])).toEqual([
+            ['daemon-c', 'Attic'],
+            ['studio', 'Account studio']
+        ]);
+    });
+
+    test('a record no broker reaches is left out, since nothing here could connect to it', () => {
+        const entries = mergeMachines({ endpoints: [], accountMachines: [record('cellar', null)], showLocal: false });
+        expect(machinesToOpen(entries, [])).toEqual([]);
     });
 });
 

@@ -58,5 +58,20 @@ const readOpenIds = (): string[] => {
     return openIds;
 };
 
+// The same object until a machine's state changes or the set does, for the same reason.
+let connections: Record<string, ConnectionState> = {};
+
+const readConnections = (): Record<string, ConnectionState> => {
+    const ids = pool.ids();
+    const same = ids.length === Object.keys(connections).length && ids.every((endpointId) => connections[endpointId] === pool.statusOf(endpointId));
+    if (!same) {
+        connections = Object.fromEntries(ids.map((endpointId) => [endpointId, pool.statusOf(endpointId)]));
+    }
+    return connections;
+};
+
+/* The state of every link the pool has, with the failure behind a closed one; a machine without a link is absent. */
+export const useConnections = (): Record<string, ConnectionState> => useSyncExternalStore(subscribePool, readConnections);
+
 /* The machines that are answering right now, for a list that spans them. */
 export const useOpenEndpoints = (): string[] => useSyncExternalStore(subscribePool, readOpenIds);
