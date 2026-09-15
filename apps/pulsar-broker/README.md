@@ -24,21 +24,21 @@ any other path is a peer.
 Every flag also reads an environment variable, `PULSAR_BROKER_` plus the flag in upper snake case
 (`--key-relays-per-minute` is `PULSAR_BROKER_KEY_RELAYS_PER_MINUTE`); a flag wins over the variable.
 
-| Flag                             | Default     | Meaning                                                                                                                                                                    |
-| -------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--host`                         | `127.0.0.1` | Interface to listen on.                                                                                                                                                    |
-| `--port`                         | `4400`      | Port for the peers and `/health`.                                                                                                                                          |
-| `--name <host>`                  | none        | A host name the broker answers to and signs into its challenge. Repeatable (`PULSAR_BROKER_NAMES` takes a comma-separated list). Without one the `Host` header is taken as it is. |
-| `--trust-proxy`                  | off         | Count limits against the last `X-Forwarded-For` entry, for a socket from loopback only. For a broker behind Caddy on the same host.                                       |
-| `--trust-cloudflare` | off | Count limits against `CF-Connecting-IP`, but only when the connection came from one of Cloudflare's published ranges (the socket itself, or the last `X-Forwarded-For` entry with `--trust-proxy`). For a broker behind Cloudflare's proxy. |
-| `--max-message-bytes`            | `65536`     | A frame larger than this closes the socket.                                                                                                                                |
-| `--max-sockets-per-ip`           | `32`        | Open sockets one address may hold; the next upgrade gets a 429.                                                                                                            |
-| `--ip-connections-per-minute`    | `30`        | Upgrades per address per minute; the next gets a 429 with `Retry-After`.                                                                                                   |
-| `--ip-frames-per-second`         | `20`        | Frames per address per second; a frame over it gets `rate-limited` and is dropped unread.                                                                                  |
-| `--key-relays-per-minute`        | `60`        | Relays per key per minute; a relay over it gets `rate-limited` with its id.                                                                                                |
-| `--key-announces-per-minute`     | `10`        | Announcements per key per minute; one over it gets `rate-limited` and a closed socket, and the socket that already holds the key stays.                                    |
-| `--heartbeat-seconds`            | `25`        | A ping this often; a socket that answers nothing for two heartbeats is dropped. At most 40, because a daemon gives up on a broker it has not heard from in 90 seconds.     |
-| `--hello-timeout-seconds`        | `10`        | Time from open to a verified signature.                                                                                                                                    |
+| Flag                          | Default     | Meaning                                                                                                                                                                                                                                     |
+| ----------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--host`                      | `127.0.0.1` | Interface to listen on.                                                                                                                                                                                                                     |
+| `--port`                      | `4400`      | Port for the peers and `/health`.                                                                                                                                                                                                           |
+| `--name <host>`               | none        | A host name the broker answers to and signs into its challenge. Repeatable (`PULSAR_BROKER_NAMES` takes a comma-separated list). Without one the `Host` header is taken as it is.                                                           |
+| `--trust-proxy`               | off         | Count limits against the last `X-Forwarded-For` entry, for a socket from loopback only. For a broker behind Caddy on the same host.                                                                                                         |
+| `--trust-cloudflare`          | off         | Count limits against `CF-Connecting-IP`, but only when the connection came from one of Cloudflare's published ranges (the socket itself, or the last `X-Forwarded-For` entry with `--trust-proxy`). For a broker behind Cloudflare's proxy. |
+| `--max-message-bytes`         | `65536`     | A frame larger than this closes the socket.                                                                                                                                                                                                 |
+| `--max-sockets-per-ip`        | `32`        | Open sockets one address may hold; the next upgrade gets a 429.                                                                                                                                                                             |
+| `--ip-connections-per-minute` | `30`        | Upgrades per address per minute; the next gets a 429 with `Retry-After`.                                                                                                                                                                    |
+| `--ip-frames-per-second`      | `20`        | Frames per address per second; a frame over it gets `rate-limited` and is dropped unread.                                                                                                                                                   |
+| `--key-relays-per-minute`     | `60`        | Relays per key per minute; a relay over it gets `rate-limited` with its id.                                                                                                                                                                 |
+| `--key-announces-per-minute`  | `10`        | Announcements per key per minute; one over it gets `rate-limited` and a closed socket, and the socket that already holds the key stays.                                                                                                     |
+| `--heartbeat-seconds`         | `25`        | A ping this often; a socket that answers nothing for two heartbeats is dropped. At most 40, because a daemon gives up on a broker it has not heard from in 90 seconds.                                                                      |
+| `--hello-timeout-seconds`     | `10`        | Time from open to a verified signature.                                                                                                                                                                                                     |
 
 A bucket fills to its limit and refills evenly over its window, so the limits are also the bursts.
 
@@ -65,8 +65,7 @@ One JSON frame per WebSocket message, all shapes in `packages/pulsar/src/broker.
    `relayed { from, envelope, signature }` to the receiver, or `error not-connected` with the id
 
 A machine relays to clients and a client to machines; a relay to the same role is `not-connected`. A
-second announcement of a key replaces the first socket, which hears `error replaced` and is closed with
-4009. The close codes: 4002 a bad frame before `ready`, 4003 a bad signature, 4008 a hello timeout or a
+second announcement of a key replaces the first socket, which hears `error replaced` and is closed with 4009. The close codes: 4002 a bad frame before `ready`, 4003 a bad signature, 4008 a hello timeout or a
 missed heartbeat, 4009 replaced, 4029 announcing too often, and 1006 or 1009 for a frame over the size cap.
 
 `BrokerPeer` in `@ruimte/pulsar` is the peer's side of this without a socket; the daemon
@@ -165,9 +164,9 @@ Cloudflare's proxy (the orange cloud) at no cost in bandwidth. Three things chan
   tries again on its next attempt, and an open channel does not notice.
 - **The origin.** Open ports 80 and 443 only to Cloudflare's ranges, for example with ufw, one rule per
   range from the two lists above. Caddy's `trusted_proxies` in `deploy/Caddyfile` lists the same ranges,
-  so its logs and `{client_ip}` name the client. Caddy gets its certificate with the HTTP challenge on
-  port 80, which passes the proxy as long as the zone does not redirect `/.well-known/acme-challenge/` to
-  HTTPS before it reaches the origin. If it does, or the challenge fails for another reason, use a
+  so its logs and `{client_ip}` name the client. Caddy 2.6.2 does not know the option and refuses the file;
+  on a Caddy that old leave the global block out, since the broker reads the header on its own. Caddy gets its certificate with the HTTP challenge on
+  port 80, which passed the proxy on a zone that redirects HTTP to HTTPS. If the challenge fails, use a
   Cloudflare Origin CA certificate in the site block (`tls /etc/caddy/origin.pem /etc/caddy/origin.key`),
   or a Caddy build with the Cloudflare DNS module and an API token that may edit the zone's DNS. Keep
   the zone's SSL mode on Full (strict) either way.
