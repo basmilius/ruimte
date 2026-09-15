@@ -54,6 +54,11 @@ bun test
 - Normal ICE selection prefers a usable direct route, as in the existing clients. TURN
   supplies a fallback when direct candidates cannot connect. Relay-only is off by default
   and is available solely through the test app's diagnostic switch.
+- A machine first admits the device with an account statement. After the pinned channel
+  handshake succeeds, the app persists that pairing in local preferences, bound to the
+  machine ID and both public keys. Later attempts omit the statement and need no account
+  request. A revoked pairing remains a refusal; the app does not silently regain access
+  through another statement. Every attempt still verifies the machine key and channel proof.
 - `stasel/WebRTC` is pinned to release `153.0.0`, commit
   `4266157cd08f92115de885ab12d87196a8db87e1`. The native adapter exchanges no audio/video
   tracks and declares no microphone, camera or background-audio capability.

@@ -43,17 +43,19 @@ final class ConnectionProbe {
             self?.relayed = relayed
         })
         lease = runtime.connections.hold(machineID: machine.id, open: { events in
-            try NativeWebRTCLink(machineID: machine.id, machineKey: machine.publicKey, signer: key,
-                                 brokerURL: brokerURL, sockets: runtime.sockets,
-                                 iceServers: [.object(["urls": .string("stun:turn.ruimte.app:3478")])],
-                                 relayOnly: runtime.relayOnly,
-                                 access: {
+            let identity = PairingIdentity(machineID: machine.id, machineKey: machine.publicKey, clientKey: key.publicKey)
+            return try runtime.pairings.open(identity: identity, requestAccess: {
                 guard let token = try await runtime.vault?.accessToken() else {
                     throw AddressBookRequestError(code: "unauthorized", status: 0, message: "Sign in to connect to this machine.")
                 }
                 let access = try await runtime.client.signalAccess(accessToken: token, machineID: machine.id, key: key, label: "Ruimte on \(UIDevice.current.model)")
                 return try JSONValue.decode(JSONEncoder().encode(access))
-            }, events: events)
+            }, events: events, makeLink: { access, authenticatedEvents in
+                try NativeWebRTCLink(machineID: machine.id, machineKey: machine.publicKey, signer: key,
+                                     brokerURL: brokerURL, sockets: runtime.sockets,
+                                     iceServers: [.object(["urls": .string("stun:turn.ruimte.app:3478")])],
+                                     relayOnly: runtime.relayOnly, access: access, events: authenticatedEvents)
+            })
         }, events: events)
     }
 

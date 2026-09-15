@@ -18,6 +18,7 @@ final class AppRuntime {
     let client: AddressBookClient
     let sockets = BrokerSockets()
     let connections = MachineConnections()
+    let pairings = StatementPairings()
     private(set) var vault: SessionVault?
     private var authentication: WebAuthentication?
     private var initialized = false
