@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { LoginStartQuerySchema, type SessionExchangePayload } from '@ruimte/pulsar';
+import { LoginStartQuerySchema, type SessionLoginCode } from '@ruimte/pulsar';
 import { signIn, type LoginRedirect } from './login';
 import type { LoginCallback } from './pkce';
 import type { SessionKeeper, SessionView } from './session';
@@ -23,7 +23,7 @@ const fakeRoute = (answer: (state: string) => LoginCallback) => {
             cancelled += 1;
         }
     };
-    const exchanged: SessionExchangePayload[] = [];
+    const exchanged: SessionLoginCode[] = [];
     const keeper: SessionKeeper = {
         exchange: async (payload) => {
             exchanged.push(payload);

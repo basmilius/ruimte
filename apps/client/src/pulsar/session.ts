@@ -1,4 +1,4 @@
-import { AccountSchema, SessionResultSchema, type SessionExchangePayload } from '@ruimte/pulsar';
+import { AccountSchema, SessionResultSchema, type SessionLoginCode } from '@ruimte/pulsar';
 import { z } from 'zod';
 
 /* A session as this page holds it: the access token and who it is for, never the refresh token. */
@@ -13,7 +13,7 @@ export type RestoredSession = z.infer<typeof RestoredSessionSchema>;
  * The page asks it for access tokens and never sees what it keeps.
  */
 export interface SessionKeeper {
-    exchange(payload: SessionExchangePayload): Promise<SessionView>;
+    exchange(payload: SessionLoginCode): Promise<SessionView>;
     /* A fresh access token, or null when there is no session any more. */
     refresh(): Promise<SessionView | null>;
     restore(): Promise<RestoredSession | null>;

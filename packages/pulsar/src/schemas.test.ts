@@ -174,11 +174,22 @@ describe('address book', () => {
         expect(RegisterMachinePayloadSchema.safeParse({ ...registration, brokerUrl: 'ws://127.0.0.1:4420' }).success).toBe(true);
     });
 
-    test('a login comes back only to the custom scheme or a loopback listener', () => {
+    test('a login comes back only to the custom scheme, a loopback listener, the web client or the dev origin', () => {
         expect(isAppRedirectUri(APP_REDIRECT_SCHEME_URI)).toBe(true);
         expect(isAppRedirectUri('http://127.0.0.1:53682/pulsar/callback')).toBe(true);
         expect(isAppRedirectUri('http://[::1]:53682/pulsar/callback')).toBe(true);
+        expect(isAppRedirectUri('https://station.ruimte.app/pulsar/callback')).toBe(true);
+        expect(isAppRedirectUri('http://localhost:5173/pulsar/callback')).toBe(true);
         for (const refused of [
+            'https://station.ruimte.app/pulsar/callback/',
+            'https://station.ruimte.app/pulsar/callback?next=evil',
+            'https://station.ruimte.app/pulsar/callback#x',
+            'https://station.ruimte.app/',
+            'http://station.ruimte.app/pulsar/callback',
+            'https://station.ruimte.app:444/pulsar/callback',
+            'https://station.ruimte.app.evil.example/pulsar/callback',
+            'https://evil.example/station.ruimte.app/pulsar/callback',
+            'http://localhost:5174/pulsar/callback',
             'ruimte://pulsar/callback?x=1',
             'http://127.0.0.1/pulsar/callback',
             'http://localhost:53682/pulsar/callback',

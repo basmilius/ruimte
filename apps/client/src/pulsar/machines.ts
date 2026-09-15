@@ -7,11 +7,13 @@ import { messageOf, usePulsarAccount, withAccessToken } from './account';
 interface MachinesState {
     // Null until the account list has been asked for once.
     machines: Machine[] | null;
+    // Machines a person took off the account, which only a person puts back.
+    removedMachineIds: string[];
     error: string | null;
 }
 
 /* The machines on the account this client is signed in to. */
-export const usePulsarMachines = create<MachinesState>(() => ({ machines: null, error: null }));
+export const usePulsarMachines = create<MachinesState>(() => ({ machines: null, removedMachineIds: [], error: null }));
 
 /* The row this client keeps for a machine on the account, whatever id the row is under. */
 export const rowForAccountMachine = (machineId: string, endpoints: readonly Endpoint[]): Endpoint | null =>
@@ -42,8 +44,8 @@ export const endpointForAccountMachine = (machine: Machine): Endpoint | null =>
 
 export const refreshAccountMachines = async (): Promise<void> => {
     try {
-        const machines = await withAccessToken((client, token) => client.listMachines(token));
-        usePulsarMachines.setState({ machines, error: null });
+        const list = await withAccessToken((client, token) => client.listMachines(token));
+        usePulsarMachines.setState({ machines: list.machines, removedMachineIds: list.removedMachineIds ?? [], error: null });
     } catch (e) {
         usePulsarMachines.setState({ error: messageOf(e) });
     }
@@ -82,5 +84,5 @@ export const openAccountMachine = (machine: Machine): Endpoint => {
 };
 
 export const forgetAccountMachines = (): void => {
-    usePulsarMachines.setState({ machines: null, error: null });
+    usePulsarMachines.setState({ machines: null, removedMachineIds: [], error: null });
 };

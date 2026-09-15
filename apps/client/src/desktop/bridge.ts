@@ -1,4 +1,4 @@
-import type { SessionExchangePayload } from '@ruimte/pulsar';
+import type { SessionLoginCode } from '@ruimte/pulsar';
 
 /*
  * What the shell forwards when a page asks for a context menu: Electron's own params, trimmed to
@@ -77,8 +77,8 @@ export interface PulsarBridge {
     /* The redirect, once the browser comes back with it. */
     callback(): Promise<unknown>;
     cancel(): Promise<void>;
-    /* Trades a login code for a session; the shell keeps the refresh token and answers with the rest. */
-    exchange(payload: SessionExchangePayload): Promise<unknown>;
+    /* Trades a login code for a session bound to the shell's own key; the shell keeps the refresh token and answers with the rest. */
+    exchange(payload: SessionLoginCode): Promise<unknown>;
     refresh(): Promise<unknown>;
     restore(): Promise<unknown>;
     signOut(): Promise<void>;

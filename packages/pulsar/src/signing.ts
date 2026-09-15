@@ -14,7 +14,9 @@ export const SIGNING_PURPOSES = {
     signal: 'pulsar-signal-v1',
     machineRegistration: 'pulsar-machine-registration-v1',
     accessRequest: 'pulsar-access-request-v1',
-    accessStatement: 'pulsar-access-statement-v1'
+    accessStatement: 'pulsar-access-statement-v1',
+    sessionKey: 'pulsar-session-key-v1',
+    sessionRefresh: 'pulsar-session-refresh-v1'
 } as const;
 export type SigningPurpose = (typeof SIGNING_PURPOSES)[keyof typeof SIGNING_PURPOSES];
 
@@ -77,3 +79,12 @@ export const accessRequestMessage = (machineId: string, clientPublicKey: string,
 // The address book vouching that this client key and this machine belong to the same account, until `expiresAt`.
 export const accessStatementMessage = (machineId: string, clientPublicKey: string, nonce: string, issuedAt: number, expiresAt: number): string =>
     signedBytes(SIGNING_PURPOSES.accessStatement, [machineId, clientPublicKey, nonce, issuedAt, expiresAt]);
+
+// The key a session is bound to, proven over the one-time login code so a key nobody holds is never bound.
+export const sessionKeyMessage = (code: string, sessionKey: string): string => signedBytes(SIGNING_PURPOSES.sessionKey, [code, sessionKey]);
+
+/*
+ * A refresh, signed by the key the session is bound to. The refresh token is in it, so a signature is
+ * good for one rotation only, and the time is in it, so one read off a request long ago is worth nothing.
+ */
+export const sessionRefreshMessage = (refreshToken: string, issuedAt: number): string => signedBytes(SIGNING_PURPOSES.sessionRefresh, [refreshToken, issuedAt]);

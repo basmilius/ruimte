@@ -10,8 +10,10 @@ import {
     type AccessStatement,
     type AddressBookErrorCode,
     type Machine,
+    type MachineListResult,
     type RegisterMachinePayload,
     type SessionExchangePayload,
+    type SessionRefreshPayload,
     type SessionResult
 } from './address-book.ts';
 
@@ -61,16 +63,16 @@ export class AddressBookClient {
         return this.call({ method: 'POST', path: '/v1/session', body: payload, schema: SessionResultSchema });
     }
 
-    refresh(refreshToken: string): Promise<SessionResult> {
-        return this.call({ method: 'POST', path: '/v1/session/refresh', body: { refreshToken }, schema: SessionResultSchema });
+    refresh(payload: SessionRefreshPayload): Promise<SessionResult> {
+        return this.call({ method: 'POST', path: '/v1/session/refresh', body: payload, schema: SessionResultSchema });
     }
 
     async endSession(accessToken: string): Promise<void> {
         await this.call({ method: 'DELETE', path: '/v1/session', token: accessToken, schema: null });
     }
 
-    async listMachines(accessToken: string): Promise<Machine[]> {
-        return (await this.call({ method: 'GET', path: '/v1/machines', token: accessToken, schema: MachineListResultSchema })).machines;
+    listMachines(accessToken: string): Promise<MachineListResult> {
+        return this.call({ method: 'GET', path: '/v1/machines', token: accessToken, schema: MachineListResultSchema });
     }
 
     async registerMachine(accessToken: string, payload: RegisterMachinePayload): Promise<Machine> {

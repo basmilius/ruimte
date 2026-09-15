@@ -7,6 +7,8 @@ import {
     accessRequestMessage,
     accessStatementMessage,
     machineRegistrationMessage,
+    sessionKeyMessage,
+    sessionRefreshMessage,
     type AccessStatement,
     type AddressBookError,
     type MachineListResult,
@@ -167,20 +169,38 @@ const githubCallback = async (start: LoginStart, userId: number, cookie = start.
     return dispatch(`/auth/github/callback?${new URLSearchParams({ code, state: start.providerState })}`, { headers: { cookie }, ip: start.ip });
 };
 
-const signIn = async (userId: number): Promise<SessionResult> => {
+// What `/v1/session` takes besides the code: the key the session is bound to, proven over that code.
+const bindKey = (code: string, key: KeyPair, signer = key) => ({
+    sessionKey: key.publicKey,
+    sessionKeySignature: signWith(signer, sessionKeyMessage(code, key.publicKey))
+});
+
+interface SignedIn extends SessionResult {
+    key: KeyPair;
+}
+
+const signIn = async (userId: number, key = newKeyPair()): Promise<SignedIn> => {
     const start = await startLogin();
     const callback = await githubCallback(start, userId);
     expect(callback.status).toBe(302);
     const back = new URL(callback.headers.get('location') ?? '');
     expect(back.searchParams.get('state')).toBe(start.appState);
+    const code = back.searchParams.get('code') ?? '';
     const response = await dispatch('/v1/session', {
         method: 'POST',
-        body: { code: back.searchParams.get('code'), codeVerifier: start.verifier, redirectUri: REDIRECT_URI, label: 'Test device' },
+        body: { code, codeVerifier: start.verifier, redirectUri: REDIRECT_URI, label: 'Test device', ...bindKey(code, key) },
         ip: start.ip
     });
     expect(response.status).toBe(200);
-    return (await response.json()) as SessionResult;
+    return { ...((await response.json()) as SessionResult), key };
 };
+
+// A refresh signed with the given key, the session's own by default.
+const refreshBody = (refreshToken: string, key: KeyPair, issuedAt = Date.now()) => ({
+    refreshToken,
+    issuedAt,
+    signature: signWith(key, sessionRefreshMessage(refreshToken, issuedAt))
+});
 
 const registration = (session: SessionResult, machine: KeyPair, id: string, accountId = session.account.id, signer = machine) => {
     const issuedAt = Date.now();
@@ -243,16 +263,31 @@ describe('login', () => {
         expect(again.accessToken).not.toBe(session.accessToken);
     });
 
-    test('refuses to send the browser anywhere but the app', async () => {
-        const query = new URLSearchParams({
-            redirect_uri: 'https://evil.example.com/pulsar/callback',
-            state: base64url(randomBytes(16)),
-            code_challenge: sha256('x'.repeat(43)),
-            code_challenge_method: 'S256'
-        });
-        const response = await dispatch(`/auth/github/start?${query}`);
-        expect(response.status).toBe(400);
-        expect(await errorCode(response)).toBe('bad-request');
+    test('refuses to send the browser anywhere but the app, the web client or the dev origin', async () => {
+        const startWith = (redirectUri: string) =>
+            dispatch(
+                `/auth/github/start?${new URLSearchParams({ redirect_uri: redirectUri, state: base64url(randomBytes(16)), code_challenge: sha256('x'.repeat(43)), code_challenge_method: 'S256' })}`
+            );
+        for (const refused of [
+            'https://evil.example.com/pulsar/callback',
+            'https://station.ruimte.app/elsewhere',
+            'https://station.ruimte.app.evil.example.com/pulsar/callback',
+            'http://station.ruimte.app/pulsar/callback',
+            'https://station.ruimte.app/pulsar/callback?next=https://evil.example.com',
+            'http://localhost:5174/pulsar/callback'
+        ]) {
+            const response = await startWith(refused);
+            expect(response.status).toBe(400);
+            expect(await errorCode(response)).toBe('bad-request');
+        }
+        for (const allowed of [
+            'https://station.ruimte.app/pulsar/callback',
+            'http://localhost:5173/pulsar/callback',
+            'ruimte://pulsar/callback',
+            REDIRECT_URI
+        ]) {
+            expect((await startWith(allowed)).status).toBe(302);
+        }
     });
 
     test('refuses a start without S256', async () => {
@@ -303,50 +338,124 @@ describe('login', () => {
     test('the code is worth nothing without the verifier, and a wrong verifier spends it', async () => {
         const start = await startLogin();
         const back = new URL((await githubCallback(start, 1005)).headers.get('location') ?? '');
-        const code = back.searchParams.get('code');
+        const code = back.searchParams.get('code') ?? '';
+        const key = newKeyPair();
         const wrong = await dispatch('/v1/session', {
             method: 'POST',
-            body: { code, codeVerifier: base64url(randomBytes(32)), redirectUri: REDIRECT_URI },
+            body: { code, codeVerifier: base64url(randomBytes(32)), redirectUri: REDIRECT_URI, ...bindKey(code, key) },
             ip: start.ip
         });
         expect(wrong.status).toBe(401);
-        const right = await dispatch('/v1/session', { method: 'POST', body: { code, codeVerifier: start.verifier, redirectUri: REDIRECT_URI }, ip: start.ip });
+        const right = await dispatch('/v1/session', {
+            method: 'POST',
+            body: { code, codeVerifier: start.verifier, redirectUri: REDIRECT_URI, ...bindKey(code, key) },
+            ip: start.ip
+        });
         expect(right.status).toBe(401);
     });
 
     test('the code is refused for another redirect than the one the login started with', async () => {
         const start = await startLogin();
         const back = new URL((await githubCallback(start, 1006)).headers.get('location') ?? '');
+        const code = back.searchParams.get('code') ?? '';
         const response = await dispatch('/v1/session', {
             method: 'POST',
-            body: { code: back.searchParams.get('code'), codeVerifier: start.verifier, redirectUri: 'http://127.0.0.1:9999/pulsar/callback' },
+            body: { code, codeVerifier: start.verifier, redirectUri: 'http://127.0.0.1:9999/pulsar/callback', ...bindKey(code, newKeyPair()) },
             ip: start.ip
         });
         expect(response.status).toBe(401);
+    });
+
+    test('a session is only opened for a key that signed the login code', async () => {
+        const start = await startLogin();
+        const back = new URL((await githubCallback(start, 1007)).headers.get('location') ?? '');
+        const code = back.searchParams.get('code') ?? '';
+        const unbound = await dispatch('/v1/session', {
+            method: 'POST',
+            body: { code, codeVerifier: start.verifier, redirectUri: REDIRECT_URI },
+            ip: start.ip
+        });
+        expect(unbound.status).toBe(400);
+
+        const forged = await dispatch('/v1/session', {
+            method: 'POST',
+            body: { code, codeVerifier: start.verifier, redirectUri: REDIRECT_URI, ...bindKey(code, newKeyPair(), newKeyPair()) },
+            ip: start.ip
+        });
+        expect(forged.status).toBe(403);
+        expect(await errorCode(forged)).toBe('bad-signature');
     });
 });
 
 describe('sessions', () => {
     test('a refresh rotates both tokens, and a spent refresh token ends the session', async () => {
         const session = await signIn(2001);
-        const refreshed = await dispatch('/v1/session/refresh', { method: 'POST', body: { refreshToken: session.refreshToken } });
+        const refreshed = await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(session.refreshToken, session.key) });
         expect(refreshed.status).toBe(200);
         const next = (await refreshed.json()) as SessionResult;
         expect(next.refreshToken).not.toBe(session.refreshToken);
         expect((await dispatch('/v1/machines', { headers: bearer(session) })).status).toBe(401);
         expect((await dispatch('/v1/machines', { headers: bearer(next) })).status).toBe(200);
 
-        const replay = await dispatch('/v1/session/refresh', { method: 'POST', body: { refreshToken: session.refreshToken } });
+        const replay = await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(session.refreshToken, session.key) });
         expect(replay.status).toBe(401);
         expect((await dispatch('/v1/machines', { headers: bearer(next) })).status).toBe(401);
-        expect((await dispatch('/v1/session/refresh', { method: 'POST', body: { refreshToken: next.refreshToken } })).status).toBe(401);
+        expect((await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(next.refreshToken, session.key) })).status).toBe(401);
+    });
+
+    test('a refresh without a signature is refused', async () => {
+        const session = await signIn(2003);
+        const response = await dispatch('/v1/session/refresh', { method: 'POST', body: { refreshToken: session.refreshToken } });
+        expect(response.status).toBe(400);
+        expect((await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(session.refreshToken, session.key) })).status).toBe(200);
+    });
+
+    test('a refresh token without its key is worth nothing, and cannot end the session it was copied from', async () => {
+        const session = await signIn(2004);
+        const stolen = await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(session.refreshToken, newKeyPair()) });
+        expect(stolen.status).toBe(401);
+        expect((await dispatch('/v1/machines', { headers: bearer(session) })).status).toBe(200);
+
+        const refreshed = await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(session.refreshToken, session.key) });
+        expect(refreshed.status).toBe(200);
+        const next = (await refreshed.json()) as SessionResult;
+        // A spent token without the key is not a second holder either, so the session carries on.
+        expect((await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(session.refreshToken, newKeyPair()) })).status).toBe(401);
+        expect((await dispatch('/v1/machines', { headers: bearer(next) })).status).toBe(200);
+    });
+
+    test('a signature from long ago is refused, and a signature for one token does not refresh another', async () => {
+        const session = await signIn(2005);
+        const old = await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(session.refreshToken, session.key, Date.now() - 11 * 60_000) });
+        expect(old.status).toBe(401);
+        const other = await signIn(2005, session.key);
+        const moved = { ...refreshBody(other.refreshToken, session.key), refreshToken: session.refreshToken };
+        expect((await dispatch('/v1/session/refresh', { method: 'POST', body: moved })).status).toBe(401);
+        expect((await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(session.refreshToken, session.key) })).status).toBe(200);
+    });
+
+    test('a replayed refresh with the right key ends the session', async () => {
+        const session = await signIn(2006);
+        const body = refreshBody(session.refreshToken, session.key);
+        const first = await dispatch('/v1/session/refresh', { method: 'POST', body });
+        expect(first.status).toBe(200);
+        const next = (await first.json()) as SessionResult;
+        expect((await dispatch('/v1/session/refresh', { method: 'POST', body })).status).toBe(401);
+        expect((await dispatch('/v1/machines', { headers: bearer(next) })).status).toBe(401);
+    });
+
+    test('a session from before the binding has to sign in again', async () => {
+        const session = await signIn(2007);
+        const db = await mf.getD1Database('DB');
+        await db.prepare('UPDATE session SET session_key = NULL WHERE refresh_hash = ?1').bind(sha256(session.refreshToken)).run();
+        expect((await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(session.refreshToken, session.key) })).status).toBe(401);
     });
 
     test('signing out revokes the session', async () => {
         const session = await signIn(2002);
         expect((await dispatch('/v1/session', { method: 'DELETE', headers: bearer(session) })).status).toBe(204);
         expect((await dispatch('/v1/machines', { headers: bearer(session) })).status).toBe(401);
-        expect((await dispatch('/v1/session/refresh', { method: 'POST', body: { refreshToken: session.refreshToken } })).status).toBe(401);
+        expect((await dispatch('/v1/session/refresh', { method: 'POST', body: refreshBody(session.refreshToken, session.key) })).status).toBe(401);
     });
 });
 
@@ -370,6 +479,35 @@ describe('machines', () => {
         expect((await dispatch('/v1/machines/studio', { method: 'DELETE', headers: bearer(session) })).status).toBe(404);
         const empty = (await (await dispatch('/v1/machines', { headers: bearer(session) })).json()) as MachineListResult;
         expect(empty.machines).toHaveLength(0);
+        expect(empty.removedMachineIds).toEqual(['studio']);
+    });
+
+    test('a machine a person removed is not put back by a client on its own, only by adding it again', async () => {
+        const session = await signIn(3005);
+        const machine = newKeyPair();
+        const automatic = () => ({ ...registration(session, machine, 'desk'), automatic: true });
+        expect((await dispatch('/v1/machines', { method: 'POST', headers: bearer(session), body: automatic() })).status).toBe(200);
+        // Registering again is harmless: the same row, with a new `lastSeenAt`.
+        expect((await dispatch('/v1/machines', { method: 'POST', headers: bearer(session), body: automatic() })).status).toBe(200);
+        expect((await dispatch('/v1/machines/desk', { method: 'DELETE', headers: bearer(session) })).status).toBe(204);
+
+        const refused = await dispatch('/v1/machines', { method: 'POST', headers: bearer(session), body: automatic() });
+        expect(refused.status).toBe(409);
+        expect(await errorCode(refused)).toBe('removed');
+        expect(((await (await dispatch('/v1/machines', { headers: bearer(session) })).json()) as MachineListResult).machines).toHaveLength(0);
+
+        // Removed on one account says nothing about another account the same machine is on.
+        const other = await signIn(3006);
+        expect(
+            (await dispatch('/v1/machines', { method: 'POST', headers: bearer(other), body: { ...registration(other, machine, 'desk'), automatic: true } }))
+                .status
+        ).toBe(200);
+
+        expect((await dispatch('/v1/machines', { method: 'POST', headers: bearer(session), body: registration(session, machine, 'desk') })).status).toBe(200);
+        const back = (await (await dispatch('/v1/machines', { headers: bearer(session) })).json()) as MachineListResult;
+        expect(back.machines.map((entry) => entry.id)).toEqual(['desk']);
+        expect(back.removedMachineIds).toEqual([]);
+        expect((await dispatch('/v1/machines', { method: 'POST', headers: bearer(session), body: automatic() })).status).toBe(200);
     });
 
     test('a registration without a broker lists the machine without one, and registering again replaces it', async () => {

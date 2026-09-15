@@ -38,12 +38,16 @@ export const listMachines = async (request: Request, env: Env): Promise<Response
     if (!session) {
         return signInAgain();
     }
-    const { results } = await env.DB.prepare(
-        'SELECT id, name, icon, broker_url, public_key, last_seen_at FROM machine WHERE account_id = ?1 ORDER BY name COLLATE NOCASE, id'
-    )
-        .bind(session.account.id)
-        .all<MachineRow>();
-    return json({ machines: results.map(machineOf) });
+    const [machines, removed] = await env.DB.batch([
+        env.DB.prepare('SELECT id, name, icon, broker_url, public_key, last_seen_at FROM machine WHERE account_id = ?1 ORDER BY name COLLATE NOCASE, id').bind(
+            session.account.id
+        ),
+        env.DB.prepare('SELECT machine_id FROM removed_machine WHERE account_id = ?1 ORDER BY machine_id').bind(session.account.id)
+    ]);
+    return json({
+        machines: ((machines?.results ?? []) as MachineRow[]).map(machineOf),
+        removedMachineIds: ((removed?.results ?? []) as { machine_id: string }[]).map((row) => row.machine_id)
+    });
 };
 
 // `POST /v1/machines`
@@ -71,6 +75,16 @@ export const registerMachine = async (request: Request, env: Env): Promise<Respo
     const message = machineRegistrationMessage(session.account.id, payload.id, payload.publicKey, payload.name, payload.issuedAt);
     if (!(await verifyEd25519(payload.publicKey, message, payload.signature))) {
         return failure('bad-signature', 'The machine did not sign this registration for this account');
+    }
+    if (payload.automatic === true) {
+        const removed = await env.DB.prepare('SELECT 1 AS removed FROM removed_machine WHERE account_id = ?1 AND machine_id = ?2')
+            .bind(session.account.id, payload.id)
+            .first<{ removed: number }>();
+        if (removed) {
+            return failure('removed', 'This machine was taken off the account; add it again from its row');
+        }
+    } else {
+        await env.DB.prepare('DELETE FROM removed_machine WHERE account_id = ?1 AND machine_id = ?2').bind(session.account.id, payload.id).run();
     }
     const row = await env.DB.prepare(
         `INSERT INTO machine (account_id, id, name, icon, broker_url, public_key, last_seen_at, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
@@ -108,8 +122,14 @@ export const deleteMachine = async (request: Request, env: Env, rawId: string): 
     if (!MachineIdSchema.safeParse(id).success) {
         return failure('bad-request', 'The machine id is not valid');
     }
-    const result = await env.DB.prepare('DELETE FROM machine WHERE account_id = ?1 AND id = ?2').bind(session.account.id, id).run();
-    if (result.meta.changes === 0) {
+    const [result] = await env.DB.batch([
+        env.DB.prepare('DELETE FROM machine WHERE account_id = ?1 AND id = ?2').bind(session.account.id, id),
+        // Remembered whether or not the machine was listed, so a client that registers it a moment later does not undo the removal.
+        env.DB.prepare(
+            'INSERT INTO removed_machine (account_id, machine_id, removed_at) VALUES (?1, ?2, ?3) ON CONFLICT (account_id, machine_id) DO UPDATE SET removed_at = excluded.removed_at'
+        ).bind(session.account.id, id, Date.now())
+    ]);
+    if (!result || result.meta.changes === 0) {
         return failure('not-found', 'No machine with that id on this account');
     }
     return noContent();

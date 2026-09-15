@@ -1,4 +1,5 @@
-import { LoginStartQuerySchema, SessionExchangePayloadSchema, SessionRefreshPayloadSchema, type ProviderId } from '@ruimte/pulsar';
+import { LoginStartQuerySchema, SessionExchangePayloadSchema, SessionRefreshPayloadSchema, sessionKeyMessage, type ProviderId } from '@ruimte/pulsar';
+import { verifyEd25519 } from './crypto.ts';
 import { randomToken, sha256 } from './encoding.ts';
 import type { Env } from './env.ts';
 import { clientIp, failure, json, noContent, readBody } from './http.ts';
@@ -170,7 +171,7 @@ export const exchangeLoginCode = async (request: Request, env: Env): Promise<Res
     if ('response' in body) {
         return body.response;
     }
-    const { code, codeVerifier, redirectUri, label } = body.value;
+    const { code, codeVerifier, redirectUri, label, sessionKey, sessionKeySignature } = body.value;
     // Spent on the first try, so a guessed or stolen verifier gets one attempt at most.
     const row = await env.DB.prepare(
         `DELETE FROM login_code WHERE code_hash = ?1 RETURNING app_redirect_uri, app_code_challenge, expires_at,
@@ -193,8 +194,12 @@ export const exchangeLoginCode = async (request: Request, env: Env): Promise<Res
     if (row.app_redirect_uri !== redirectUri || (await sha256(codeVerifier)) !== row.app_code_challenge) {
         return failure('unauthorized', 'The login code belongs to another login');
     }
+    // After the code is spent, so a key that does not sign costs the login rather than leaving the code for another try.
+    if (!(await verifyEd25519(sessionKey, sessionKeyMessage(code, sessionKey), sessionKeySignature))) {
+        return failure('bad-signature', 'The session key did not sign this login');
+    }
     const account: AccountRow = { id: row.account_id, provider: row.provider, login: row.login };
-    return json(await createSession(env.DB, account, label ?? null));
+    return json(await createSession(env.DB, account, label ?? null, sessionKey));
 };
 
 // `POST /v1/session/refresh`
@@ -207,7 +212,7 @@ export const refreshSession = async (request: Request, env: Env): Promise<Respon
     if ('response' in body) {
         return body.response;
     }
-    const result = await rotateSession(env.DB, body.value.refreshToken);
+    const result = await rotateSession(env.DB, body.value);
     return result ? json(result) : failure('unauthorized', 'Sign in again');
 };
 

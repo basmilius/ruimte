@@ -3,9 +3,9 @@ import { existsSync, mkdirSync, openSync, writeFileSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { AddressBookClient, ADDRESS_BOOK_URL, SessionExchangePayloadSchema, SessionVault } from '@ruimte/pulsar';
+import { AddressBookClient, ADDRESS_BOOK_URL, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
 import { listenForLogin, type LoopbackLogin } from './pulsar-login';
-import { fileSessionStore } from './pulsar-store';
+import { fileSessionKey, fileSessionStore } from './pulsar-store';
 import { createReleaseNotes } from './release-notes';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
@@ -564,7 +564,7 @@ ipcMain.handle('daemon:local-secret', async (event) => {
 /*
  * Signing in to the Pulsar address book. The page runs the login (PKCE, the state, the start URL) and
  * this side does what a page should not: it listens on loopback for the redirect, and it holds the
- * refresh token, encrypted with the OS keychain in `userData`. The page only ever gets access tokens,
+ * refresh token and the key the session is bound to, both encrypted with the OS keychain in `userData`. The page only ever gets access tokens,
  * which live a quarter of an hour. Every handler answers the app's own window and nothing else.
  */
 const addressBookUrl = process.env.RUIMTE_PULSAR_URL ?? ADDRESS_BOOK_URL;
@@ -574,7 +574,8 @@ let pendingLogin: LoopbackLogin | null = null;
 const pulsarSessions = (): SessionVault => {
     pulsarVault ??= new SessionVault({
         client: new AddressBookClient({ baseUrl: addressBookUrl, fetch: (input, init) => net.fetch(input, init) }),
-        store: fileSessionStore(join(app.getPath('userData'), 'pulsar-session.bin'), safeStorage)
+        store: fileSessionStore(join(app.getPath('userData'), 'pulsar-session.bin'), safeStorage),
+        signer: fileSessionKey(join(app.getPath('userData'), 'pulsar-key.bin'), safeStorage)
     });
     return pulsarVault;
 };
@@ -619,7 +620,7 @@ ipcMain.handle('pulsar:login-cancel', (event) => {
 });
 
 ipcMain.handle('pulsar:exchange', (event, payload: unknown) =>
-    fromAppWindow(event) ? pulsarSessions().exchange(SessionExchangePayloadSchema.parse(payload)) : refuseOtherPages()
+    fromAppWindow(event) ? pulsarSessions().exchange(SessionLoginCodeSchema.parse(payload)) : refuseOtherPages()
 );
 ipcMain.handle('pulsar:refresh', (event) => (fromAppWindow(event) ? pulsarSessions().refresh() : refuseOtherPages()));
 ipcMain.handle('pulsar:restore', (event) => (fromAppWindow(event) ? pulsarSessions().restore() : refuseOtherPages()));

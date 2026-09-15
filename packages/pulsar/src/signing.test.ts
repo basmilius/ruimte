@@ -6,6 +6,8 @@ import {
     accessStatementMessage,
     brokerHelloMessage,
     machineRegistrationMessage,
+    sessionKeyMessage,
+    sessionRefreshMessage,
     signalMessage,
     type SignalEnvelope
 } from './index.ts';
@@ -20,7 +22,9 @@ const everyPurpose = (): Record<keyof typeof SIGNING_PURPOSES, string> => ({
     signal: signalMessage(key, otherKey, { connectionId: 'machine-1', signal: { kind: 'close', reason: 'done' } }),
     machineRegistration: machineRegistrationMessage('machine-1', 'machine-1', key, 'machine', 0),
     accessRequest: accessRequestMessage('machine-1', key, nonce),
-    accessStatement: accessStatementMessage('machine-1', key, nonce, 0, 120_000)
+    accessStatement: accessStatementMessage('machine-1', key, nonce, 0, 120_000),
+    sessionKey: sessionKeyMessage(nonce, key),
+    sessionRefresh: sessionRefreshMessage(nonce, 0)
 });
 
 describe('signed bytes', () => {

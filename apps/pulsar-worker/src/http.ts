@@ -10,6 +10,7 @@ const STATUS_OF: Record<AddressBookErrorCode, number> = {
     unauthorized: 401,
     'bad-signature': 403,
     'not-found': 404,
+    removed: 409,
     'rate-limited': 429,
     'not-configured': 503,
     internal: 500

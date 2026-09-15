@@ -22,16 +22,22 @@ export type ProviderId = z.infer<typeof ProviderIdSchema>;
 // 32 random bytes in base64url: access and refresh tokens, and the one-time login code.
 export const TokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/, 'Expected a token');
 
+// How far a refresh's `issuedAt` may lie from the address book's clock, either way.
+export const SESSION_REFRESH_MAX_SKEW_MS = 600_000;
+
 /*
  * Where the address book sends the browser back after a login: a custom scheme for an app that can
- * register one, or a loopback listener on any port for one that cannot (RFC 8252, 7.1 and 7.3).
- * Nothing else, so a login started from a page elsewhere cannot hand its code to that page.
+ * register one, a loopback listener on any port for one that cannot (RFC 8252, 7.1 and 7.3), or the
+ * web client on its own origin. Nothing else: signing in opens machines, so an open redirect would let
+ * a page anywhere start a login and collect the code. The dev entry is Vite's own origin, which only a
+ * process on the same computer can serve.
  */
 export const APP_REDIRECT_SCHEME_URI = 'ruimte://pulsar/callback';
 export const APP_REDIRECT_LOOPBACK_PATH = '/pulsar/callback';
+export const WEB_REDIRECT_URIS: readonly string[] = ['https://station.ruimte.app/pulsar/callback', 'http://localhost:5173/pulsar/callback'];
 
 export const isAppRedirectUri = (value: string): boolean => {
-    if (value === APP_REDIRECT_SCHEME_URI) {
+    if (value === APP_REDIRECT_SCHEME_URI || WEB_REDIRECT_URIS.includes(value)) {
         return true;
     }
     let url: URL;
@@ -71,13 +77,28 @@ export const SessionExchangePayloadSchema = z.object({
     codeVerifier: z.string().regex(/^[A-Za-z0-9._~-]{43,128}$/, 'Expected a PKCE verifier'),
     redirectUri: z.string(),
     // What this device is called in the list of who got access, such as the machine's host name.
-    label: z.string().min(1).max(80).optional()
+    label: z.string().min(1).max(80).optional(),
+    /*
+     * The key every refresh of this session has to be signed with, and its signature over
+     * `sessionKeyMessage`. A refresh token read off a disk or out of a page is worth nothing without it.
+     */
+    sessionKey: PublicKeySchema,
+    sessionKeySignature: SignatureSchema
 });
 export type SessionExchangePayload = z.infer<typeof SessionExchangePayloadSchema>;
 
-// `POST /v1/session/refresh`. A refresh token works once; presenting a spent one ends the session.
+// What a page hands the side that holds the session key: the exchange without the key, which that side adds.
+export const SessionLoginCodeSchema = SessionExchangePayloadSchema.omit({ sessionKey: true, sessionKeySignature: true });
+export type SessionLoginCode = z.infer<typeof SessionLoginCodeSchema>;
+
+/*
+ * `POST /v1/session/refresh`. A refresh token works once; presenting a spent one ends the session. The
+ * signature is over `sessionRefreshMessage` with the key the session was opened with.
+ */
 export const SessionRefreshPayloadSchema = z.object({
-    refreshToken: TokenSchema
+    refreshToken: TokenSchema,
+    issuedAt: z.number().int().min(0),
+    signature: SignatureSchema
 });
 export type SessionRefreshPayload = z.infer<typeof SessionRefreshPayloadSchema>;
 
@@ -125,7 +146,9 @@ export type Machine = z.infer<typeof MachineSchema>;
 
 // `GET /v1/machines`
 export const MachineListResultSchema = z.object({
-    machines: z.array(MachineSchema)
+    machines: z.array(MachineSchema),
+    // Machines a person took off this account, which no client puts back on its own. Absent from an older address book.
+    removedMachineIds: z.array(MachineIdSchema).optional()
 });
 export type MachineListResult = z.infer<typeof MachineListResultSchema>;
 
@@ -146,7 +169,13 @@ export const RegisterMachinePayloadSchema = z.object({
     brokerUrl: BrokerUrlSchema.nullable().optional(),
     publicKey: PublicKeySchema,
     issuedAt: z.number().int().min(0),
-    signature: SignatureSchema
+    signature: SignatureSchema,
+    /*
+     * A client registering a machine it reached, rather than a person pressing a button. Refused with
+     * `removed` for a machine a person took off the account; a registration without it takes the machine
+     * back, which is the way back from a removal.
+     */
+    automatic: z.boolean().optional()
 });
 export type RegisterMachinePayload = z.infer<typeof RegisterMachinePayloadSchema>;
 
@@ -184,7 +213,16 @@ export const AccessStatementSchema = z
     });
 export type AccessStatement = z.infer<typeof AccessStatementSchema>;
 
-export const AddressBookErrorCodeSchema = z.enum(['bad-request', 'unauthorized', 'bad-signature', 'not-found', 'rate-limited', 'not-configured', 'internal']);
+export const AddressBookErrorCodeSchema = z.enum([
+    'bad-request',
+    'unauthorized',
+    'bad-signature',
+    'not-found',
+    'removed',
+    'rate-limited',
+    'not-configured',
+    'internal'
+]);
 export type AddressBookErrorCode = z.infer<typeof AddressBookErrorCodeSchema>;
 
 export const AddressBookErrorSchema = z.object({

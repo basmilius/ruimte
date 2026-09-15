@@ -18,7 +18,7 @@
   ],
   "vars": {
     "PUBLIC_ORIGIN": "https://pulsar.ruimte.app",
-    "ALLOWED_ORIGINS": ""
+    "ALLOWED_ORIGINS": "https://station.ruimte.app"
   },
   // Expired logins, codes, rate limit windows and dead sessions.
   "triggers": { "crons": ["17 4 * * *"] },
