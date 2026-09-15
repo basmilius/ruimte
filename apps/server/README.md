@@ -34,7 +34,23 @@ The `dev` script runs on port `4211` with `RUIMTE_HOME` defaulting to `~/.ruimte
 
 ## Compile
 
-`bun run compile` (`scripts/compile.ts`) builds one executable with `bun build --compile` into `dist/<os>-<arch>/ruimte`, with `ruimte-context` next to it, for this machine or with `--os mac|linux --arch arm64|x64` for another. `RUIMTE_VERSION` stamps a version in; the desktop app packages that folder as its `bin` resource.
+`bun run compile` (`scripts/compile.ts`) builds one executable with `bun build --compile` into `dist/<os>-<arch>/ruimte`, with `ruimte-context` and `ruimte.build` next to it, for this machine or with `--os mac|linux --arch arm64|x64` for another. `--target darwin-arm64` names the target the way the npm packages do and `--outdir` picks the folder. A macOS binary only compiles on macOS, since `codesign` has to repair the signature Bun leaves. `RUIMTE_VERSION` stamps a version in; the desktop app packages that folder as its `bin` resource.
+
+## Without the app: `npx ruimte`
+
+A machine without the desktop app runs the same binary from npm (`packages/npm`), with Node or Bun:
+
+```sh
+npx ruimte                                # the daemon, with every flag above
+npx ruimte pair                           # a pairing link
+npx ruimte login                          # onto an account with a code
+npx ruimte service install [flags]        # the background service for this user
+npx ruimte service status
+npx ruimte service uninstall
+npx ruimte --version
+```
+
+`ruimte service install` copies `ruimte`, `ruimte-context` and `ruimte.build` to `$RUIMTE_HOME/bin` and writes the LaunchAgent or systemd user unit the desktop app writes, pointing at that copy and never at the npx cache, with the flags after `install`, the PATH of the shell it ran in (without npx's own folders) and `RUIMTE_SERVICE=1`. Running it again with a newer version replaces the copy, and the daemon under the service moves to it once idle; different flags restart the service. It refuses to touch a service that runs another program, which is what the desktop app's service is to it, and on Linux it prints `loginctl enable-linger <user>` when lingering is off rather than turning it on. `uninstall` stops the service and removes the definition and the copy, and leaves the rest of `$RUIMTE_HOME` alone. `status` exits 0 only when it is installed and answers on `--port`.
 
 `GET /health` answers `{ ok: true, version }`. `POST /hooks/<claude|codex>` takes a hook payload from an agent CLI (see below); a kind the daemon has no normalizer for (`gemini`, `copilot`) answers 404. Everything else goes over `/ws` using the frames in `packages/contracts`.
 

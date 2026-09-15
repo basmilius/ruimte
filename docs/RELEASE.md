@@ -6,6 +6,36 @@ draft release. macOS is built for Apple silicon only: `minimumSystemVersion` is 
 Intel Macs that reach macOS 26 are frozen there, because 27 is Apple silicon only. Linux is built
 for x64 and arm64 on Ubuntu 22.04 runners, as AppImage, deb and rpm; see `docs/LINUX.md`.
 
+## npm
+
+Publishing a release also publishes `ruimte` on npm, Ruimte for a machine without the app, with the
+same version. `.github/workflows/npm.yml` runs on `release: published` and by hand
+(`gh workflow run npm.yml -f version=0.2.0`, for a tag that exists). It compiles the daemon for
+`darwin-arm64` and `darwin-x64` on macOS and for `linux-x64` and `linux-arm64` on Ubuntu, lays out
+the packages with `packages/npm/scripts/build.ts` and publishes them with
+`packages/npm/scripts/publish.ts`: the four `@ruimte/<os>-<cpu>` packages first and `ruimte` last,
+a version already on the registry skipped, and a prerelease under the `next` tag. A run that failed
+halfway can run again.
+
+There is no npm token. Every package trusts the workflow through Trusted Publishing, set on
+npmjs.com per package under Settings, Trusted publishing: GitHub Actions, owner `basmilius`,
+repository `ruimte`, workflow `npm.yml`, environment `npm`. npm only offers that setting for a
+package that exists, which is what the `0.0.0` folders in `packages/npm/placeholders` were published
+for, by hand and once. A new platform package needs the same two steps before its first release.
+
+A macOS binary is compiled on macOS: Bun writes the bundle after it signs, and a darwin binary that
+`codesign` did not sign again is killed at launch with an invalid signature.
+
+To try the packages without publishing:
+
+```sh
+RUIMTE_VERSION=0.0.0-local bun apps/server/scripts/compile.ts --target darwin-arm64 --outdir /tmp/npm/binaries/darwin-arm64
+bun packages/npm/scripts/build.ts --version 0.0.0-local --binaries /tmp/npm/binaries --out /tmp/npm/out --only darwin-arm64
+bun packages/npm/scripts/publish.ts --out /tmp/npm/out --dry-run    # wants all four platforms
+```
+
+`bun run test:integration` does the first two and runs `node <launcher> --version` against the result.
+
 ## The icon
 
 `assets/AppIcon.icon` is the Icon Composer document, and the only source. `bun run --cwd apps/desktop icon`
