@@ -60,6 +60,9 @@ struct WorkspacePage: View {
         .navigationTitle(workspace.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            if isSidebar {
+                ToolbarItem(placement: .principal) { SidebarBrand() }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Usage", lucideIcon: "chart-no-axes-column") { showUsage = true }
                     .disabled(!workspace.ready)
@@ -214,10 +217,10 @@ struct WorkspacePage: View {
                             openView(item.stableID)
                         } label: {
                             viewRow(item)
-                                .modifier(MobileSidebarLabel(enabled: isSidebar, selected: selected))
+                                .modifier(MobileSidebarLabel(selected: isSidebar && selected))
                         }
                         .foregroundStyle(MobileStyle.text)
-                        .modifier(MobileSidebarRow(enabled: isSidebar, selected: selected))
+                        .modifier(MobileSidebarRow(selected: isSidebar && selected))
                         .accessibilityIdentifier("workspace.view.\(item.stableID)")
                         .contextMenu {
                             Button("Rename", lucideIcon: "pencil") {
@@ -248,25 +251,26 @@ struct WorkspacePage: View {
                         }
                     }
                 } header: {
-                    if isSidebar {
-                        VStack(alignment: .leading, spacing: 8) {
-                            if section.id != sections.first?.id {
-                                MobileStyle.border.frame(height: 1).padding(.vertical, 10)
-                            }
-                            if let title = section.title {
-                                Text(title).font(.footnote).foregroundStyle(MobileStyle.muted).textCase(nil)
-                            }
+                    VStack(alignment: .leading, spacing: 8) {
+                        if isSidebar && section.id == sections.first?.id {
+                            Text(workspace.title).font(.footnote.weight(.medium))
+                                .foregroundStyle(MobileStyle.muted).lineLimit(1).truncationMode(.tail)
+                                .textCase(nil).padding(.bottom, 8)
                         }
-                        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
-                    } else if let title = section.title {
-                        Text(title).textCase(nil)
+                        if section.id != sections.first?.id {
+                            MobileStyle.border.frame(height: 1).padding(.vertical, 10)
+                        }
+                        if let title = section.title {
+                            Text(title).font(.footnote).foregroundStyle(MobileStyle.muted).textCase(nil)
+                        }
                     }
+                    .listRowInsets(EdgeInsets(top: 0, leading: 28, bottom: 0, trailing: 28))
                 }
-                .listSectionSeparator(isSidebar ? .hidden : .automatic)
-                .listRowBackground(isSidebar ? Color.clear : MobileStyle.panel)
+                .listSectionSeparator(.hidden)
+                .listRowBackground(Color.clear)
             }
         }
-        .modifier(MobileSidebarList(enabled: isSidebar))
+        .modifier(MobileSidebarList())
         .accessibilityIdentifier("workspace.views")
     }
 
@@ -282,10 +286,10 @@ struct WorkspacePage: View {
     }
 
     private func viewRow(_ item: JSONValue) -> some View {
-        HStack(spacing: isSidebar ? 10 : 12) {
+        HStack(spacing: 10) {
             WorkspaceViewIcon(item: item).foregroundStyle(MobileStyle.muted)
             Text(item.text("name", fallback: item.text("kind")))
-                .font(isSidebar ? .callout : .body).lineLimit(1).truncationMode(.tail)
+                .font(.callout).lineLimit(1).truncationMode(.tail)
                 .frame(maxWidth: .infinity, alignment: .leading)
             AttentionMark(store: workspace.session.attention, id: item.stableID)
             if !isSidebar {

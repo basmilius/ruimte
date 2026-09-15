@@ -44,9 +44,11 @@ struct MachineProjectsPage: View {
                     } label: {
                         ProjectHomeRow(
                             summary: project, machine: session.machine.name, connected: session.connected,
-                            session: session)
+                            session: session
+                        )
+                        .modifier(MobileSidebarLabel())
                     }.disabled(project["available"] == .bool(false))
-                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                        .modifier(MobileSidebarRow())
                 }
                 if loading {
                     ProgressView().accessibilityLabel("Loading projects")
@@ -82,7 +84,6 @@ struct MachineProjectsPage: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
         .navigationTitle(session.machine.name)
         .searchable(text: $search, prompt: "Find a project")
         .toolbar {

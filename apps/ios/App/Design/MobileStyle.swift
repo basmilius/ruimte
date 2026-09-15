@@ -38,10 +38,14 @@ struct MobileList<Content: View>: View {
 
     var body: some View {
         List {
-            content.listRowBackground(MobileStyle.panel)
+            content
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listSectionSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 8, leading: 28, bottom: 8, trailing: 28))
         }
-        .scrollContentBackground(.hidden)
-        .background(MobileStyle.canvas)
+        .modifier(MobileSidebarList())
+        .font(.callout)
         .foregroundStyle(MobileStyle.text)
     }
 }
@@ -77,10 +81,10 @@ struct MobileRow: View {
     let symbol: String
     var color: Color = MobileStyle.accent
     var body: some View {
-        HStack(spacing: 13) {
-            MobileIcon(symbol: symbol, color: color)
+        HStack(spacing: 10) {
+            Image(lucide: symbol, size: 20).foregroundStyle(MobileStyle.muted)
             VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.body.weight(.semibold)).foregroundStyle(MobileStyle.text).lineLimit(2)
+                Text(title).font(.callout).foregroundStyle(MobileStyle.text).lineLimit(1).truncationMode(.tail)
                 if !subtitle.isEmpty {
                     Text(subtitle).font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(1).truncationMode(
                         .middle)
@@ -88,7 +92,7 @@ struct MobileRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.vertical, 7)
+        .frame(minHeight: 44)
         .accessibilityElement(children: .combine)
     }
 }

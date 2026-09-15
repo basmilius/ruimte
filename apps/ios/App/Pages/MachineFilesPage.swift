@@ -28,17 +28,19 @@ struct MachineFilesPage: View {
                         FileContentPage(client: client, path: entry.text("path"))
                     }
                 } label: {
-                    HStack(spacing: 12) {
-                        Image(lucide: entry.text("kind") == "directory" ? "folder" : "file-text").foregroundStyle(
-                            .tint)
+                    HStack(spacing: 10) {
+                        Image(lucide: entry.text("kind") == "directory" ? "folder" : "file-text", size: 20)
+                            .foregroundStyle(MobileStyle.muted)
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(entry.text("name"))
+                            Text(entry.text("name")).lineLimit(1).truncationMode(.tail)
                             if let size = entry["size"]?.numberValue {
                                 Text(mobileByteCount(size)).font(.caption).foregroundStyle(MobileStyle.muted)
                             }
                         }
-                    }.padding(.vertical, 3)
+                    }
+                    .modifier(MobileSidebarLabel())
                 }
+                .modifier(MobileSidebarRow())
             }
             if state.value != nil && entries.isEmpty {
                 ContentUnavailableView(search.isEmpty ? "Empty folder" : "No matching files", lucideIcon: "folder")

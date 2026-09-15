@@ -1,65 +1,79 @@
 import SwiftUI
 
 struct MobileSidebarList: ViewModifier {
-    var enabled = true
-
-    @ViewBuilder
     func body(content: Content) -> some View {
-        if enabled {
-            content
-                .listStyle(.plain)
-                .listSectionSpacing(0)
-                .environment(\.defaultMinListRowHeight, 44)
-                .scrollContentBackground(.hidden)
-                .background(MobileStyle.surface)
-        } else {
-            content.listStyle(.insetGrouped)
-                .scrollContentBackground(.hidden)
-                .background(MobileStyle.canvas)
-        }
+        content
+            .listStyle(.plain)
+            .listSectionSpacing(0)
+            .environment(\.defaultMinListRowHeight, 44)
+            .scrollContentBackground(.hidden)
+            .background(MobileStyle.surface)
     }
 }
 
 struct MobileSidebarRow: ViewModifier {
-    var enabled = true
-    let selected: Bool
+    var selected = false
 
-    @ViewBuilder
     func body(content: Content) -> some View {
-        if enabled {
-            content
-                .listRowInsets(EdgeInsets(top: 1, leading: 10, bottom: 1, trailing: 10))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .accessibilityAddTraits(selected ? .isSelected : [])
-        } else {
-            content
-        }
+        content
+            .listRowInsets(EdgeInsets(top: 1, leading: 18, bottom: 1, trailing: 18))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
 struct MobileSidebarLabel: ViewModifier {
-    var enabled = true
-    let selected: Bool
+    var selected = false
     @State private var hovered = false
 
-    @ViewBuilder
     func body(content: Content) -> some View {
-        if enabled {
-            content
-                .font(.callout)
-                .foregroundStyle(selected || hovered ? MobileStyle.text : MobileStyle.muted)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .frame(minHeight: 44)
-                .background(
-                    selected ? MobileStyle.active : hovered ? MobileStyle.hover : .clear,
-                    in: RoundedRectangle(cornerRadius: 8)
-                )
-                .contentShape(RoundedRectangle(cornerRadius: 8))
-                .onHover { hovered = $0 }
-        } else {
-            content
+        content
+            .font(.callout)
+            .foregroundStyle(selected || hovered ? MobileStyle.text : MobileStyle.muted)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .background(
+                selected ? MobileStyle.active : hovered ? MobileStyle.hover : .clear,
+                in: RoundedRectangle(cornerRadius: 8)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 8))
+            .onHover { hovered = $0 }
+    }
+}
+
+struct SidebarBrand: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            Image("RuimteLogo").renderingMode(.original)
+                .resizable().scaledToFit()
+                .padding(4)
+                .frame(width: 28, height: 28)
+                .background(.white, in: RoundedRectangle(cornerRadius: 7))
+            Text("Ruimte").font(.headline).foregroundStyle(MobileStyle.text)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Ruimte")
+    }
+}
+
+struct SidebarBounds: PreferenceKey {
+    static let defaultValue: Anchor<CGRect>? = nil
+
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = nextValue() ?? value
+    }
+}
+
+struct SidebarDivider: View {
+    @Environment(\.displayScale) private var displayScale
+
+    var body: some View {
+        // Cover the native split divider before drawing one web-colored physical pixel.
+        MobileStyle.surface.frame(width: 2)
+            .overlay(alignment: .leading) {
+                MobileStyle.border.frame(width: 1 / displayScale).offset(x: 1)
+            }
     }
 }

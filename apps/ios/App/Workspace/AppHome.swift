@@ -8,6 +8,7 @@ struct AppHome: View {
     @State private var activeProject: WorkspaceNavigation?
     @State private var homeSection: HomeSection? = .projects
     @State private var detailPath = NavigationPath()
+    @State private var sidebarVisibility = NavigationSplitViewVisibility.automatic
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var window: UIWindow?
     @State private var settings = false
@@ -98,7 +99,7 @@ struct AppHome: View {
     }
 
     private var tabletNavigation: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $sidebarVisibility) {
             NavigationStack {
                 List {
                     Section {
@@ -120,16 +121,15 @@ struct AppHome: View {
                 .modifier(MobileSidebarList())
                 .navigationTitle("")
                 .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .principal) { SidebarBrand() }
+                }
                 .navigationDestination(item: $activeProject) { project in
                     WorkspacePage(navigation: project, isSidebar: true)
                 }
             }
             .containerBackground(MobileStyle.surface, for: .navigation)
-            .overlay(alignment: .trailing) {
-                MobileStyle.border.frame(width: 1)
-                    .ignoresSafeArea(.container, edges: .vertical)
-                    .allowsHitTesting(false)
-            }
+            .anchorPreference(key: SidebarBounds.self, value: .bounds) { $0 }
             .navigationSplitViewColumnWidth(min: 280, ideal: 340, max: 420)
         } detail: {
             NavigationStack(path: $detailPath) {
@@ -144,6 +144,18 @@ struct AppHome: View {
             .containerBackground(MobileStyle.surface, for: .navigation)
         }
         .navigationSplitViewStyle(.balanced)
+        .overlayPreferenceValue(SidebarBounds.self) { anchor in
+            GeometryReader { geometry in
+                if let anchor, sidebarVisibility != .detailOnly {
+                    let bounds = geometry[anchor]
+                    if bounds.minX >= 0 && bounds.maxX > 1 && bounds.maxX < geometry.size.width {
+                        SidebarDivider().offset(x: bounds.maxX - 1)
+                    }
+                }
+            }
+            .ignoresSafeArea(.container, edges: .vertical)
+            .allowsHitTesting(false)
+        }
         .onChange(of: homeSection) { _, _ in detailPath = NavigationPath() }
         .onChange(of: activeProject?.id) { _, _ in detailPath = NavigationPath() }
         .onChange(of: activeProject?.section) { _, _ in detailPath = NavigationPath() }
@@ -245,8 +257,14 @@ struct AppHome: View {
                     RecentProjectsPage(runtime: runtime, projects: projects)
                 } label: {
                     Label("Recently closed", lucideIcon: "clock-arrow-left")
-                        .foregroundStyle(MobileStyle.text)
-                }.accessibilityIdentifier("projects.recent")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .modifier(MobileSidebarLabel())
+                }
+                .modifier(MobileSidebarRow())
+                .accessibilityIdentifier("projects.recent")
+            } header: {
+                MobileStyle.border.frame(height: 1).padding(.vertical, 10)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 28, bottom: 0, trailing: 28))
             }
             if !projects.problems.isEmpty {
                 Section("Connections") {
@@ -263,7 +281,6 @@ struct AppHome: View {
                 Section { Text(problem).font(.callout).foregroundStyle(.red) }
             }
         }
-        .listStyle(.insetGrouped)
         .modifier(ProjectListWidth())
         .searchable(text: $search, prompt: "Search projects or machines")
         .toolbar {
@@ -310,7 +327,6 @@ struct RecentProjectsPage: View {
                     .listRowBackground(Color.clear).listRowSeparator(.hidden)
             }
         }
-        .listStyle(.insetGrouped)
         .modifier(ProjectListWidth())
         .navigationTitle("Recently closed")
         .navigationBarTitleDisplayMode(.inline)
@@ -345,10 +361,12 @@ private struct ProjectLinks: View {
             } label: {
                 ProjectHomeRow(
                     summary: row.summary, machine: row.machine.name, connected: row.connected,
-                    session: runtime.session(for: row.machine))
+                    session: runtime.session(for: row.machine)
+                )
+                .modifier(MobileSidebarLabel())
             }
             .disabled(row.summary["available"] == .bool(false))
-            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+            .modifier(MobileSidebarRow())
         }
     }
 }
@@ -367,7 +385,7 @@ struct ProjectHomeRow: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(summary.text("name", fallback: "Untitled project"))
-                    .font(.body).foregroundStyle(MobileStyle.text).lineLimit(1).truncationMode(.tail)
+                    .font(.callout).foregroundStyle(MobileStyle.text).lineLimit(1).truncationMode(.tail)
                 HStack(spacing: 5) {
                     ProjectMachineGlyph(icon: session?.icons.icon)
                     Text(machine).truncationMode(.tail)
@@ -436,7 +454,9 @@ private struct MachinesSheet: View {
                         MobileRow(
                             title: machine.name, subtitle: "Projects, files and settings", symbol: "monitor"
                         )
+                        .modifier(MobileSidebarLabel())
                     }
+                    .modifier(MobileSidebarRow())
                 }
             }
             Button("Use a pairing link", lucideIcon: "link") {

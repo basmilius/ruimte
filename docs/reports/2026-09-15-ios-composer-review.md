@@ -524,3 +524,13 @@ iPad sidebar items now follow the web sidebar reference: ungrouped rows, muted l
 The shared mobile theme now uses the light and dark gray values from `apps/client/src/styles.css`. Native lists and forms receive those page and row backgrounds; custom text, chat, terminal and canvas surfaces use the corresponding semantic colors. Liquid Glass and system toggle behavior remain native. Projects no longer repeats pairing and machine actions below Recently closed; those actions remain in the plus menu, with Machines also available in the iPad sidebar.
 
 Build, format and repository checks passed. The existing phone/tablet row-activation test passed after retaining the native button action, including opening the real canvas and navigating back on iPhone. Its screenshot confirms the iPad view-row styling. Actual screenshots from both installed devices confirm the dark palette and simplified Projects list; the iPad capture also confirms the main sidebar selection. Both apps were installed and launched. No simulator was used. Light appearance, pointer hover and a physical swipe were not visually checked in this iteration.
+
+## Shared list design variant
+
+The loose sidebar-row design now also applies to iPhone views, Projects, Recently closed and machine project lists. Other browsing lists use the same plain surface, typography and hidden row separators. Project icons and machine captions remain visible. Settings forms retain their native control grouping. Navigation labels have a full-width hit and hover area with a minimum 44-point height.
+
+Sidebar rows have 18-point outer margins plus 10-point inner padding, adding eight points of space on each side. The iPad sidebar shows the Ruimte app mark and name in its native navigation bar. Inside a project, its name appears above the view groups.
+
+Pixel inspection found that the previous sidebar edge combined the custom border with the native split divider. A noninteractive overlay now covers that divider and draws one physical pixel using the web border color. Its position follows the sidebar bounds and it is omitted when the detail column is shown alone. An actual iPad screenshot confirmed the single-pixel edge, branding and roomier rows. Both device screenshots confirmed the ungrouped Projects layout.
+
+The signed device build, Swift formatting, repository format and check commands passed. Both devices received the final build. This iteration used screenshots without a simulator or additional automated device tests. Sidebar collapse, project-header transitions and light appearance remain visual acceptance checks.
