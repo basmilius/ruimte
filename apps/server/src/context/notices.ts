@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { AgentInfo } from '@ruimte/contracts';
 import { takesHookContext } from '../agents/hooks.ts';
 import { isNotFound, writeAtomic } from '../fs.ts';
+import { errorText } from '../error-text.ts';
 
 /*
  * A message is a line or two an agent reads in front of its next turn, not a document. Anything
@@ -116,7 +117,7 @@ export class NoticeStore {
             return [];
         }
         this.queues.delete(targetId);
-        this.lastDrop = this.persist(targetId).catch((e) => console.error(`Dropping the messages of ${targetId} failed`, e));
+        this.lastDrop = this.persist(targetId).catch((e) => console.error(`Dropping the messages of ${targetId} failed:`, errorText(e)));
         return queue;
     }
 

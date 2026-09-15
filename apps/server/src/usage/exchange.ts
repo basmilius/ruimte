@@ -2,6 +2,7 @@ import { mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { UsageRate } from '@ruimte/contracts';
 import { isNotFound, writeAtomic } from '../fs.ts';
+import { errorText } from '../error-text.ts';
 
 export const FRANKFURTER_URL = 'https://api.frankfurter.app/latest';
 
@@ -65,7 +66,7 @@ export class ExchangeRates {
                 }
             } catch (e) {
                 if (!isNotFound(e)) {
-                    console.warn('The stored exchange rate would not read; asking for a new one', e);
+                    console.warn('The stored exchange rate would not read; asking for a new one:', errorText(e));
                 }
             }
         }
@@ -86,7 +87,7 @@ export class ExchangeRates {
             await writeAtomic(this.file, JSON.stringify(this.rate));
         } catch (e) {
             // Yesterday's rate still converts; a rate that could not be refreshed is not a failure.
-            console.warn('Could not refresh the exchange rate', e);
+            console.warn('Could not refresh the exchange rate:', errorText(e));
         }
     }
 }

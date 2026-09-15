@@ -1,3 +1,4 @@
+import { errorText } from './error-text.ts';
 import {
     REQUEST_SCHEMAS,
     isRequestType,
@@ -101,7 +102,7 @@ export class Dispatcher {
                 client.send(errorReply(id, e.code, e.message));
                 return;
             }
-            console.error(`Handler for ${type} failed`, e);
+            console.error(`Handler for ${type} failed:`, errorText(e));
             client.send(errorReply(id, 'internal', 'Request failed'));
         }
     }

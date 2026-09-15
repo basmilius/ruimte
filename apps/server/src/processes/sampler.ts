@@ -1,3 +1,4 @@
+import { errorText } from '../error-text.ts';
 /*
  * One reading of the process table. Every counter is cumulative, so a rate is always the difference
  * between two readings over the time between them; that is what keeps a five minute gap honest.
@@ -182,7 +183,7 @@ export const createSampler = async (platform: string = process.platform, home: s
             return new LinuxSampler(home);
         }
     } catch (e) {
-        console.error('The process sampler could not start', e);
+        console.error('The process sampler could not start:', errorText(e));
     }
     return null;
 };

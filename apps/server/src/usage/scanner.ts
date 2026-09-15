@@ -7,6 +7,7 @@ import { foldByKey, type UsageRecord } from './record.ts';
 import { claudeMightCarryUsage, parseClaudeLine } from './readers/claude.ts';
 import { cloneCodexState, codexMightCarryUsage, createCodexState, parseCodexLine, type CodexParserState } from './readers/codex.ts';
 import { usageRoots, type UsageRootPath } from './roots.ts';
+import { errorText } from '../error-text.ts';
 
 export interface ScanReport {
     at: number;
@@ -116,7 +117,7 @@ export class UsageScanner {
             this.index = decodeIndex(await readFile(this.file, 'utf8'));
         } catch (e) {
             if (!isNotFound(e)) {
-                console.warn('The usage index would not read; starting from a cold scan', e);
+                console.warn('The usage index would not read; starting from a cold scan:', errorText(e));
             }
         }
     }

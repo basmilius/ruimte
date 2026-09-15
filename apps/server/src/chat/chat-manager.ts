@@ -25,6 +25,7 @@ import type { ChatTitleInput } from './chat-title.ts';
 import type { ChatStore } from './chat-store.ts';
 import { DeltaCoalescer } from './delta-coalescer.ts';
 import { ChatError } from './errors.ts';
+import { errorText } from '../error-text.ts';
 interface ChatManagerOptions {
     providers: ProviderRegistry;
     store?: ChatStore;
@@ -200,7 +201,7 @@ export class ChatManager {
                 session.send(prompt);
             } catch (e) {
                 // A CLI that will not start must not take chat.create down with it: the node is there either way.
-                console.error(`The first prompt of chat ${payload.chatId} failed`, e);
+                console.error(`The first prompt of chat ${payload.chatId} failed:`, errorText(e));
             }
         }
         return session.info;
@@ -395,14 +396,14 @@ export class ChatManager {
             try {
                 this.store.writeSync(chatId, info, items);
             } catch (e) {
-                console.error(`Chat record for ${chatId} failed`, e);
+                console.error(`Chat record for ${chatId} failed:`, errorText(e));
             }
         }
     }
 
     private persist(chatId: string): void {
         this.cancelWaiting(chatId);
-        void this.persistNow(chatId).catch((e) => console.error(`Chat record for ${chatId} failed`, e));
+        void this.persistNow(chatId).catch((e) => console.error(`Chat record for ${chatId} failed:`, errorText(e)));
     }
 
     /* A write that may wait: a long thread is not rewritten for every tool call that settles. */

@@ -2,6 +2,7 @@ import { mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { UsagePriceBasis, UsagePricing, UsageTotals } from '@ruimte/contracts';
 import { isNotFound, writeAtomic } from '../fs.ts';
+import { errorText } from '../error-text.ts';
 import bundled from './prices-snapshot.json' with { type: 'json' };
 
 export const LITELLM_URL = 'https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json';
@@ -198,7 +199,7 @@ export class PriceBook {
                 }
             } catch (e) {
                 if (!isNotFound(e)) {
-                    console.warn('The stored price table would not read; using the bundled one', e);
+                    console.warn('The stored price table would not read; using the bundled one:', errorText(e));
                 }
             }
         }
@@ -222,7 +223,7 @@ export class PriceBook {
             await writeAtomic(this.file, JSON.stringify({ fetchedAt: this.fetchedAt, document } satisfies Snapshot));
         } catch (e) {
             // Whatever is loaded keeps pricing; a table that could not be refreshed is not a failure.
-            console.warn('Could not refresh the price table', e);
+            console.warn('Could not refresh the price table:', errorText(e));
         }
     }
 }

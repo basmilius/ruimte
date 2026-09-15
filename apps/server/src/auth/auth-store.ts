@@ -5,6 +5,7 @@ import type { AuthSession, PairingOrigin } from '@ruimte/contracts';
 import { z } from 'zod';
 import { isNotFound, writeAtomic } from '../fs.ts';
 import { isPublicKey } from './keys.ts';
+import { errorText } from '../error-text.ts';
 
 // A pairing URL that nobody used in ten minutes is not going to be.
 export const PAIRING_TTL_MS = 10 * 60 * 1000;
@@ -265,7 +266,7 @@ export class AuthStore {
                 : { sessions: [], spentNonces: [], revokedKeys: [] };
         } catch (e) {
             if (!isNotFound(e)) {
-                console.warn('The auth file would not parse; starting with no sessions', e);
+                console.warn('The auth file would not parse; starting with no sessions:', errorText(e));
             }
             this.state = { sessions: [], spentNonces: [], revokedKeys: [] };
         }

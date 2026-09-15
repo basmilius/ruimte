@@ -2,6 +2,7 @@ import { FrameAssembler, splitFrame } from '@ruimte/contracts';
 import type { RTCDataChannel } from 'werift';
 import { LOW_WATER_MARK } from '../backpressure.ts';
 import type { ClientChannel } from '../connection.ts';
+import { errorText } from '../error-text.ts';
 
 /* What the adapter needs of a DataChannel. werift's is one; a test hands in a fake with the same few members. */
 export interface RawDataChannel {
@@ -159,7 +160,7 @@ export const directChannel = (raw: RawDataChannel): DirectChannel => {
                 /* Every piece is under the size the peer accepts, so a throw means the channel is going
                    away under us. Half a frame may be out, and the stream after it would not parse, so
                    the channel goes rather than pretending the frame was merely dropped. */
-                console.warn('A direct channel refused a frame', e);
+                console.warn('A direct channel refused a frame:', errorText(e));
                 close();
                 return 0;
             }

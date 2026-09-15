@@ -1,6 +1,7 @@
 import { mkdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { isNotFound, writeAtomic } from '../fs.ts';
+import { errorText } from '../error-text.ts';
 
 const SNAPSHOT_INTERVAL_MS = 30_000;
 
@@ -67,7 +68,7 @@ export const scheduleSnapshots = (source: SnapshotSource, store: SnapshotStore, 
     };
 
     const timer = setInterval(() => {
-        flush().catch((e) => console.error('Snapshot pass failed', e));
+        flush().catch((e) => console.error('Snapshot pass failed:', errorText(e)));
     }, intervalMs);
 
     return {

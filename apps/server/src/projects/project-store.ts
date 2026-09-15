@@ -41,6 +41,7 @@ import {
 } from './project-files.ts';
 import { ProjectIndex } from './project-index.ts';
 import { IdentityCache, readIdeaName, sniffMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
+import { errorText } from '../error-text.ts';
 
 type ProjectErrorCode = 'project-not-found' | 'project-missing' | 'project-invalid' | 'rev-conflict' | 'folder-not-found' | 'folder-create-failed' | 'bad-icon';
 
@@ -758,7 +759,7 @@ export class ProjectStore {
             this.registry = parsed.success ? parsed.data.projects : [];
         } catch (e) {
             if (!isNotFound(e)) {
-                console.warn('The project registry would not parse; starting with an empty one', e);
+                console.warn('The project registry would not parse; starting with an empty one:', errorText(e));
             }
             this.registry = [];
         }

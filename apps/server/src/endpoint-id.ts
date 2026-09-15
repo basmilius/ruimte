@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { generateKeyPair, signMessage } from './auth/keys.ts';
 import { isNotFound, writeAtomic } from './fs.ts';
 import type { SessionEvent, SessionSink } from './sessions/manager.ts';
+import { errorText } from './error-text.ts';
 
 /*
  * The key pair arrived after the id did, and the name and icon after the keys; the version stays at
@@ -209,7 +210,7 @@ export const readOrCreateEndpointIdentity = async (home: string, defaultName: st
         }
     } catch (e) {
         if (!isNotFound(e)) {
-            console.warn('The endpoint id file would not parse; minting a new id', e);
+            console.warn('The endpoint id file would not parse; minting a new id:', errorText(e));
         }
     }
     const keys = file?.publicKey && file.privateKey ? { publicKey: file.publicKey, privateKey: file.privateKey } : null;

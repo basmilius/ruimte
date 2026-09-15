@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { ProjectError } from '../projects/project-store.ts';
 import { VerbRefusal, type CanvasHost } from './verb.ts';
 import { verbNamed, verbSummaryLines } from './verbs.ts';
+import { errorText } from '../error-text.ts';
 
 export const CANVAS_PATH = '/canvas';
 
@@ -72,7 +73,7 @@ export const handleCanvasRequest = async (request: Request, pathname: string, de
         if (e instanceof ProjectError) {
             return refusal(e.code, e.message);
         }
-        console.error(`Canvas verb ${name} failed`, e);
+        console.error(`Canvas verb ${name} failed:`, errorText(e));
         return new Response(`The verb failed: ${e instanceof Error ? e.message : 'unknown error'}`, { status: 500, headers: TEXT });
     }
 };

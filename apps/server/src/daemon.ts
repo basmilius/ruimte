@@ -84,6 +84,7 @@ import { SessionManager } from './sessions/manager.ts';
 import { SnapshotStore, scheduleSnapshots } from './sessions/snapshot-store.ts';
 import { UsageMonitor } from './usage/limits/monitor.ts';
 import { UsageService } from './usage/usage-service.ts';
+import { errorText } from './error-text.ts';
 
 // A client on another origin pairs and signs in from its own page, so the auth routes answer preflights and open CORS.
 // What would end if this daemon restarted, as counts; `service/work.ts` says what counts.
@@ -185,9 +186,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const projects = new ProjectStore(config.home);
     // A node deleted before anyone ran it takes its prompt with it, and a node that is gone frees the count its opener is held to.
     projects.index.onPlaces = (projectId, ids) => {
-        void prompts.prune(projectId, ids).catch((e) => console.error('Pruning pending prompts failed', e));
-        void lineage.prune(projectId, ids).catch((e) => console.error('Pruning agent lineage failed', e));
-        void notices.prune(projectId, ids).catch((e) => console.error('Pruning waiting messages failed', e));
+        void prompts.prune(projectId, ids).catch((e) => console.error('Pruning pending prompts failed:', errorText(e)));
+        void lineage.prune(projectId, ids).catch((e) => console.error('Pruning agent lineage failed:', errorText(e)));
+        void notices.prune(projectId, ids).catch((e) => console.error('Pruning waiting messages failed:', errorText(e)));
     };
     const drawings = new DrawingStore(projects);
     projects.attachDrawings(drawings);
@@ -371,7 +372,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                         console.log(`Installed ${kind} status hooks in ${path}${kind === 'codex' ? ' (trust them once with /hooks in Codex)' : ''}`);
                     }
                 })
-                .catch((e) => console.error(`Could not install ${kind} hooks`, e));
+                .catch((e) => console.error(`Could not install ${kind} hooks:`, errorText(e)));
         }
     }
 
@@ -655,7 +656,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             await snapshotSchedule.flush();
             await chats.shutdown();
         } catch (e) {
-            console.error('Snapshot on shutdown failed', e);
+            console.error('Snapshot on shutdown failed:', errorText(e));
         }
         manager.killAll();
         projects.closeAll();

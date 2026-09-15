@@ -10,6 +10,7 @@ import { contextHint } from '../context/context-note.ts';
 import { defaultShell, defaultShellArgs, type PtyAdapter } from '../pty/pty.ts';
 import { Session } from './session.ts';
 import type { SnapshotStore } from './snapshot-store.ts';
+import { errorText } from '../error-text.ts';
 
 type SessionErrorCode = 'session-exists' | 'session-not-found' | 'session-exited' | 'spawn-failed' | 'agent-not-found' | 'agent-live' | 'agent-resuming';
 
@@ -552,7 +553,7 @@ export class SessionManager {
                 await this.agents?.delete(session.id);
             }
         } catch (e) {
-            console.error(`Agent record for ${session.id} failed`, e);
+            console.error(`Agent record for ${session.id} failed:`, errorText(e));
         }
     }
 

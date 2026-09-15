@@ -26,6 +26,7 @@ import {
 } from './sampler.ts';
 import { StuckJudge, type ObservedGroup, type ObservedProcess, type Observation, type StuckThresholds } from './stuck.ts';
 import { groupsFor, indexTree, machineDisk, ruimteTotals, type TreeEntry, type TreeIndex } from './tree.ts';
+import { errorText } from '../error-text.ts';
 
 export const FINE_INTERVAL_MS = 2000;
 export const COARSE_INTERVAL_MS = 5 * 60_000;
@@ -233,7 +234,7 @@ export class ProcessMonitor {
         } catch (e) {
             if (!this.failureLogged) {
                 this.failureLogged = true;
-                console.error('Reading the process table failed', e);
+                console.error('Reading the process table failed:', errorText(e));
             }
             return;
         }

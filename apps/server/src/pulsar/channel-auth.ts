@@ -10,6 +10,7 @@ import {
 import { sameSecret } from '../auth/local-secret.ts';
 import type { ClientAccess } from '../dispatcher.ts';
 import { AUTHENTICATED_FRAME_CHARS, UNAUTHENTICATED_FRAME_CHARS, type DirectChannel } from './data-channel.ts';
+import { errorText } from '../error-text.ts';
 
 // Two round trips over a slow link fit easily; a peer that says nothing for this long is closed.
 export const CHANNEL_AUTH_TIMEOUT_MS = 15_000;
@@ -124,7 +125,7 @@ export const authenticateChannel = (options: ChannelAuthOptions): Promise<Client
         channel.receiveWith((raw) => {
             channel.receiveWith(() => undefined, UNAUTHENTICATED_FRAME_CHARS);
             void verify(raw).catch((e) => {
-                console.error('Checking a direct channel proof failed', e);
+                console.error('Checking a direct channel proof failed:', errorText(e));
                 refuse('The machine could not check the proof');
             });
         }, UNAUTHENTICATED_FRAME_CHARS);

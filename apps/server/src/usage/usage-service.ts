@@ -6,6 +6,7 @@ import { PriceBook } from './pricing.ts';
 import type { KnownProject } from './projects.ts';
 import { UsageScanner, type ScanReport } from './scanner.ts';
 import type { UsageRootPath } from './roots.ts';
+import { errorText } from '../error-text.ts';
 
 /* A scan this fresh answers the question the page is asking, so nothing is opened for it. */
 const SCAN_TTL_MS = 60_000;
@@ -119,7 +120,7 @@ export class UsageService {
         // The table and the rate are fetched beside the walk, so a slow answer never holds up the scan.
         const [report] = await Promise.all([
             this.scanner.scan().catch((e: unknown) => {
-                console.error('The usage scan failed', e);
+                console.error('The usage scan failed:', errorText(e));
                 return null;
             }),
             this.prices.ensure(),

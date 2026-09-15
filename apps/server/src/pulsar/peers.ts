@@ -3,6 +3,7 @@ import type { IceServer, SignalEnvelope } from '@ruimte/pulsar';
 import { RTCPeerConnection } from 'werift';
 import type { ClientAccess } from '../dispatcher.ts';
 import { directChannel, fromWerift, type DirectChannel } from './data-channel.ts';
+import { errorText } from '../error-text.ts';
 
 // Offer to open channel, handshake included; a peer that has not got that far by then is not coming.
 export const ATTEMPT_TIMEOUT_MS = 30_000;
@@ -148,7 +149,7 @@ export class DirectPeers {
             binding = channelBinding(offerSdp, answerSdp);
             reply({ connectionId, signal: { kind: 'answer', sdp: answerSdp } });
         } catch (e) {
-            this.log.warn('Answering a direct connection failed', e);
+            this.log.warn('Answering a direct connection failed:', errorText(e));
             reply({ connectionId, signal: { kind: 'close', reason: 'failed' } });
             this.end(connectionId, 'answering failed');
         }
