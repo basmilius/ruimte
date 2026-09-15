@@ -1962,8 +1962,8 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   rather than sitting through the reconnect loop, which keeps running. Concurrent calls share one
   attempt. A caller reaches the machine before it moves the client, so a machine that does not answer
   leaves the work on screen. Leaving the palette's connecting step drops the wait and not the attempt.
-- The switcher lists no projects of a machine it has no list from, so such a machine is a row "Open a
-  project on <machine>" that opens the palette's browse step on it (`machinesToOpen` in `project/list.ts`).
+- The switcher lists only projects; a machine it has no list from is opened through "Open folder" in the
+  palette, which lists every machine, rather than through a row of its own in the switcher.
 - The web client has no daemon behind its origin, so the row of this machine is left out of every list
   of machines behind one predicate (`hasLocalMachine` in `state/local-machine.ts`), counted out of the
   "one machine opens straight on its folders" rule too, and the local row being active means the welcome
