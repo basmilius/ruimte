@@ -1780,6 +1780,55 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   and a socket Cloudflare resets anyway comes back through the daemon's backoff and the client's next
   attempt.
 
+### TURN
+
+- The fallback for a direct connection that ICE cannot make: a TURN relay, coturn on the broker's host at
+  `turn.ruimte.app` (a DNS-only name, since Cloudflare's proxy carries no UDP), UDP and TCP on 3478, TLS
+  on 5349 once there is a certificate, relays on UDP 49152 to 49999. Nothing in Ruimte chooses the relay:
+  both ends hand ICE every server they have and ICE prefers a direct pair on its own. A fallback of our
+  own would second-guess the one component that measures the paths.
+- The broker hands out the credentials, because it is the one place that already knows a key proved
+  itself. After `ready` a peer sends `ice` and gets `ice` back with `servers` and `expiresAt`, limited per
+  key like announcements (`--key-ice-per-minute`, 10). The credential is TURN REST (`use-auth-secret`):
+  the username is the expiry in unix seconds and `m-` or `c-` plus the first 16 characters of the key,
+  the password the base64 HMAC-SHA1 of the username under a secret coturn and the broker read from one
+  file (`/etc/ruimte/turn-secret`, 0640, group `ruimte-turn`). They live 24 hours. A client paired by
+  link gets them as well as one from the account list, since both announce a key; a daemon never sees
+  the secret. The role letter rather than a fixed `m-` is so coturn's log says which side allocated.
+- The provider is a seam, `TurnProvider` in `apps/pulsar-broker/src/turn.ts`: `noTurn` (the default, so
+  a broker hands out nothing until it is told), `sharedSecretTurn` and `cloudflareTurn`, picked with
+  `--turn`. Cloudflare's credentials are not bound to a key, so one set serves every peer until two
+  thirds of its lifetime; it is tested with a fake fetch and configured nowhere.
+- A broker from before `ice` refuses the frame with `bad-frame` and no id and keeps the socket. The
+  daemon and the client read that as no servers rather than as a lost broker, so a new client against
+  an old broker still signals.
+- The daemon asks after every announcement and again with a third of the lifetime left, and keeps the
+  credentials when the broker goes away: a restarted broker revokes nothing. Past `expiresAt` it hands
+  werift none rather than credentials coturn would refuse.
+- werift 0.24.4 reads the first STUN URL and the first TURN URL of the whole list, so the daemon gets
+  every STUN URL and one TURN URL, UDP first. Its TURN client can reject a STUN transaction nobody awaits
+  when the TURN server restarts (werift issue 374), and an unhandled rejection ends a Bun process.
+  `guardWeriftTurn` logs that one and crashes on everything else as before. It matches the error by the
+  string its `str` getter returns, because a minified build keeps no class names or file paths.
+- `relayed` on `ConnectionState` is read from `getStats`: the pair the transport names as selected
+  (Chromium, Safari), else a selected or a nominated and succeeded pair (Firefox), relayed when either
+  candidate is. It is read on every liveness tick rather than once, since ICE may send over the relay
+  before a direct pair succeeds.
+- coturn's config (`deploy/turnserver.conf`) refuses every private, loopback, link-local, CGNAT,
+  documentation and multicast range as a peer, and the host's own address, so the relay is no way into
+  anything behind it. Measured on the droplet with `turnutils_uclient`: an Allocate works, a wrong
+  password gets none, a private peer and the host's own address get 403. The last one has a cost: every
+  allocation lives on that address, so two peers that both need the relay are refused as well. Allowing
+  it is one `allowed-peer-ip` line and opens UDP to anything else listening on the host; that choice is
+  still open.
+- `bps-capacity` is a reservation, not a measurement: coturn sets `max-bps` aside for every allocation,
+  used or not, and every attempt allocates on both ends. At 12 MB/s with 3 MB/s per session that was four
+  allocations on the whole server (486 on the fifth, measured), so the capacity is 60 MB/s, twenty
+  allocations. The traffic that crosses it is what a relayed connection sends, which is the same either way.
+- coturn cannot read `static-auth-secret` from a file, and a flag would put the secret in the process
+  list, so its drop-in writes a copy of the config with the secret into `/run/coturn` (0700, coturn's
+  own) before it starts.
+
 ### The address book
 
 - Phase 5a of remote access: `apps/pulsar-worker`, a Cloudflare Worker with D1 at `https://pulsar.ruimte.app`
