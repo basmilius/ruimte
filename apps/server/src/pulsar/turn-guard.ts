@@ -5,7 +5,7 @@
  * rest crash exactly as they would without a listener.
  */
 
-import { debugFrom, describeError } from '../cli/fatal.ts';
+import { errorText } from '../error-text.ts';
 
 interface ProcessEvents {
     on(event: 'uncaughtException' | 'unhandledRejection', listener: (error: unknown) => void): unknown;
@@ -36,12 +36,11 @@ export const guardWeriftTurn = (
     exit: (code: number) => void = (code) => process.exit(code)
 ): void => {
     const handle = (error: unknown): void => {
-        const debug = debugFrom(process.env);
         if (isWeriftTransactionFailure(error)) {
-            log.warn('A direct connection lost its ICE server (TURN or STUN) and the daemon carries on:', describeError(error, debug));
+            log.warn('A direct connection lost its ICE server (TURN or STUN) and the daemon carries on:', errorText(error));
             return;
         }
-        log.error(describeError(error, debug));
+        log.error(errorText(error));
         exit(1);
     };
     target.on('uncaughtException', handle);

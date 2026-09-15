@@ -1,28 +1,6 @@
 import { DEFAULT_PORT } from '../config.ts';
 
-/*
- * What a person reads when the binary cannot go on. Bun prints an uncaught error with a code frame
- * of the bundle it came from, which in a compiled binary is a few lines of minified source; only the
- * message says anything to someone who ran `npx ruimte`.
- */
-
-export const DEBUG_VARIABLE = 'RUIMTE_DEBUG';
-
-export const debugFrom = (env: Record<string, string | undefined>): boolean => env[DEBUG_VARIABLE] === '1';
-
-/**
- * The message of an error, or its whole stack with the debug variable set. Always a string, because
- * handing Bun's console the error itself is what draws the code frame.
- */
-export const describeError = (error: unknown, debug: boolean): string => {
-    if (!(error instanceof Error)) {
-        return String(error);
-    }
-    if (debug) {
-        return error.stack ?? `${error.name}: ${error.message}`;
-    }
-    return error.message === '' ? error.name : error.message;
-};
+/* What a person reads when a machine cannot start because its port is taken. */
 
 /** Whether an error is the listen call finding its port taken. */
 export const isAddressInUse = (error: unknown): boolean => typeof error === 'object' && error !== null && (error as { code?: unknown }).code === 'EADDRINUSE';

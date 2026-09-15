@@ -1,14 +1,16 @@
 // werift's @peculiar/x509 imports this before tsyringe, but a compiled bundle runs tsyringe first and the daemon dies on start.
 import 'reflect-metadata';
-import { askRunningMachine, debugFrom, describeError, isAddressInUse, portInUseMessage } from './cli/fatal.ts';
+import { askRunningMachine } from './cli/fatal.ts';
+import { portTaken, startMachine } from './cli/start.ts';
 import { forgetInheritedSession, parseServerArgs } from './config.ts';
+import { errorText } from './error-text.ts';
 
 /*
  * Without a listener Bun prints an uncaught error with a code frame, which in the compiled binary is
  * minified bundle source. A throw at the top level of this module lands here as well.
  */
 const fail = (error: unknown): never => {
-    console.error(describeError(error, debugFrom(process.env)));
+    console.error(errorText(error));
     process.exit(1);
 };
 process.on('uncaughtException', fail);
@@ -61,12 +63,18 @@ delete process.env.RUIMTE_SERVICE;
 process.off('uncaughtException', fail);
 process.off('unhandledRejection', fail);
 try {
-    const { startDaemon } = await import('./daemon.ts');
-    await startDaemon(config);
-} catch (e) {
-    if (!isAddressInUse(e)) {
-        fail(e);
+    const refused = await startMachine(config, {
+        portTaken,
+        askRunningMachine,
+        start: async () => {
+            const { startDaemon } = await import('./daemon.ts');
+            await startDaemon(config);
+        },
+        err: (line) => console.error(line)
+    });
+    if (refused !== null) {
+        process.exit(refused);
     }
-    console.error(portInUseMessage(config.port, await askRunningMachine(config.port)));
-    process.exit(1);
+} catch (e) {
+    fail(e);
 }
