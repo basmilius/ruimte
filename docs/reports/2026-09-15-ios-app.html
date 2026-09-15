@@ -224,7 +224,7 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
     <li><strong>WebRTC-binary of eigen build.</strong> Advies libwebrtc via stasel; libdatachannel alleen als de IPA-grootte een probleem blijkt na app thinning (nog ongemeten).</li>
   </ul>
 
-  <p class="note"><strong>Wat dit rapport niet doet.</strong> Het ontwerpt geen schermen tot op de pixel en het bouwt niets. Op het canvas verplaatst en resizet de app geen nodes, zoals gevraagd; al het andere mag hij schrijven. De Apple ID-login is buiten scope. Het browser-node (Electron <code>&lt;webview&gt;</code>) krijgt op iOS een <code>WKWebView</code>-pagina, aan het eind van het plan.</p>
+  <p class="note"><strong>Wat dit rapport niet doet.</strong> Het ontwerpt geen schermen tot op de pixel en het bouwt niets. Op het canvas verplaatst en resizet de app geen nodes, zoals gevraagd; al het andere mag hij schrijven. De Apple ID-login wordt apart in het adresboek gebouwd; de app gebruikt die later native onder bundle ID <code>app.ruimte.mobile</code> (zie <a href="#vragen">Besluiten</a>). Het browser-node (Electron <code>&lt;webview&gt;</code>) krijgt op iOS een <code>WKWebView</code>-pagina, aan het eind van het plan.</p>
 </section>
 
 <section id="uitgangspunt">
@@ -610,6 +610,7 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
       <tr><th scope="row">Browser-nodes</th><td>Ja, als <code>WKWebView</code>-pagina.</td></tr>
       <tr><th scope="row">CI</th><td>Xcode Cloud; voorlopig lokaal bouwen en testen.</td></tr>
       <tr><th scope="row">Schrijven</th><td>Alles, behalve nodes verplaatsen en resizen op het canvas.</td></tr>
+      <tr><th scope="row">Bundle ID</th><td><code>app.ruimte.mobile</code> voor iPhone en iPad, naast <code>app.ruimte.desktop</code> van de desktop-app. Het App ID is op 15 september geregistreerd met Sign in with Apple als primary App ID, waar de Services ID van het adresboek onder hangt. Daardoor krijgt een persoon in de app en op het web dezelfde <code>sub</code>. Een native login in de app levert een <code>id_token</code> met <code>aud</code> <code>app.ruimte.mobile</code>, dus het adresboek moet die audience naast de Services ID accepteren. Een bundle ID ligt vast zodra de app in App Store Connect staat.</td></tr>
     </tbody>
   </table>
   </div>
@@ -706,7 +707,6 @@ Houd je aan de conventies in CLAUDE.md waar ze op Swift passen: 4 spaties, altij
     <li><code>apps/client/src/nodes/TerminalBody.tsx</code>, <code>terminal/{keymap,session-client,lifecycle}.ts</code>, <code>chat/logic/timeline.ts</code>, <code>chat/ui/{Timeline,Composer,reveal,markdown-blocks}.ts(x)</code></li>
     <li><code>.github/workflows/{ci,release,station,pulsar-worker}.yml</code>, <code>apps/desktop/electron-builder.yml</code>, <code>apps/server/scripts/compile.ts</code>, root <code>package.json</code></li>
     <li><code>docs/DECISIONS.md</code>: "A direct connection", "The broker", "The address book", "Signing in and statements", "The web client", "A session bound to a key", "A machine connects only when it is used", "A protocol version on the wire", "Attention", "Kinds a newer Ruimte wrote", "Next"</li>
-    <li><code>docs/reports/2026-09-11-remote-access.html</code></li>
   </ul>
   <h3>Op het web, opgehaald op 15 september 2026</h3>
   <ul class="sources">
