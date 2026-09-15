@@ -149,7 +149,7 @@ export class SessionManager {
             options.approvals === false
                 ? null
                 : new ApprovalStore((sessionId, approvals) => {
-                      for (const sink of this.sinks.values()) {
+                      for (const sink of [...this.sinks.values(), ...this.observers]) {
                           sink({ event: 'session.approvals', payload: { sessionId, approvals } });
                       }
                   }, options.approvalHoldMs);
@@ -158,6 +158,16 @@ export class SessionManager {
     /* The session a hook or context token belongs to. */
     sessionIdForToken(token: string): string | null {
         return this.tokens.get(token) ?? null;
+    }
+
+    private readonly observers = new Set<SessionSink>();
+    offlineApprovals: (() => Promise<boolean>) | null = null;
+
+    observe(sink: SessionSink): () => void {
+        this.observers.add(sink);
+        return () => {
+            this.observers.delete(sink);
+        };
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
@@ -278,19 +288,20 @@ export class SessionManager {
      * Holds a permission hook open while a person decides, and answers with what they chose. Null is
      * the daemon staying out of it, which is what happens with the feature off, with nobody who wants
      * to be asked, and when the hold runs out: in all three the CLI's own prompt is what asks, exactly
-     * as without Ruimte. Never hold for a client that is not there or has said it will not ask, or a
-     * request would sit here for its whole life with nobody able to answer it.
+     * as without Ruimte. An offline device may answer through a push, but only while its paired
+     * key still has an active approval subscription.
      */
     holdApproval(token: string, body: unknown, signal: AbortSignal): Promise<ApprovalDecision | null> {
         const sessionId = this.tokens.get(token);
-        if (!this.approvals || sessionId === undefined || !this.wantsApprovals()) {
+        if (!this.approvals || sessionId === undefined) {
             return Promise.resolve(null);
         }
         const ask = parsePermissionAsk(body);
         if (ask === null) {
             return Promise.resolve(null);
         }
-        return this.approvals.hold({ sessionId, ask, signal });
+        const hold = (): Promise<ApprovalDecision | null> => this.approvals!.hold({ sessionId, ask, signal });
+        return this.wantsApprovals() ? hold() : (this.offlineApprovals?.() ?? Promise.resolve(false)).then((available) => (available ? hold() : null));
     }
 
     /* A client's answer to a held request. False when it was already settled, here or in the CLI's prompt. */
@@ -352,7 +363,7 @@ export class SessionManager {
         return [...this.sessions.values()].map((session) => this.info(session));
     }
 
-    async attach(sessionId: string, clientId: string, cols: number, rows: number): Promise<{ screen: string; cols: number; rows: number; exited: boolean }> {
+    async attach(sessionId: string, clientId: string, cols?: number, rows?: number): Promise<{ screen: string; cols: number; rows: number; exited: boolean }> {
         const session = this.require(sessionId);
         const screen = await session.attach(clientId, cols, rows);
         this.broadcastListChanged();
@@ -390,7 +401,11 @@ export class SessionManager {
     }
 
     resize(sessionId: string, cols: number, rows: number): void {
-        this.require(sessionId).resize(cols, rows);
+        const session = this.require(sessionId);
+        if (session.cols !== cols || session.rows !== rows) {
+            session.resize(cols, rows);
+            this.broadcastListChanged();
+        }
     }
 
     // Every attached client repaints from the screen the daemon owns, the same way it does after a resync.
@@ -543,7 +558,7 @@ export class SessionManager {
 
     private async setAgent(session: Session, agent: AgentInfo | null): Promise<void> {
         session.agent = agent;
-        for (const sink of this.sinks.values()) {
+        for (const sink of [...this.sinks.values(), ...this.observers]) {
             sink({ event: 'session.status', payload: { sessionId: session.id, agent } });
         }
         try {

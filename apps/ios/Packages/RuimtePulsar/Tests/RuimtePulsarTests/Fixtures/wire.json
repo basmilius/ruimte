@@ -1,4 +1,156 @@
 {
+  "pushEncryption": {
+    "privateKey": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc",
+    "machinePublicKey": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+    "push": {
+      "machineId": "machine-1",
+      "handle": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII",
+      "issuedAt": 1000,
+      "expiresAt": 121000,
+      "collapseId": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+      "pushType": "alert",
+      "ephemeralKey": "V9tLNZ8jrl4Ubk4lEgVnBHIlBjSMFQwUdT0Mkz0E1CE",
+      "nonce": "AwMDAwMDAwMDAwMD",
+      "ciphertext": "U54fNLMvdvnr753yPdxFiusPEm9C1--uvBueY23RJi5C87X34clAUyY4wc7Ox-FSK9vZld-6OGxsP2C8YTTZEyjUn8ihjSxxQPlHwZiZvSFdq5Iyqxm9_Rd9X4IFACabBk0Nz4WiHGt81rZSsWVirmxvObeXwwBoem0aviRZvCgIwi7rS17ngSdqZTnYPtnQN-o95RmtGjtszcS0MXu99R7DHhFJJnsiHEDRZ512zPhVqASy8A8mg4EzAXCqNqQhIGfOhLLPKa2vB5vz73UjWC1MxJ0bNqNJ_IAdD3nCRCy3MAo0RFhv",
+      "signature": "QBTvFNDfDAuwJjRHiWbqIPvqsoEkSiYXltNtuCfz_kslE_mE54CxixQgTzBPfxr699l85MhXANOQxjVdq5IuBA"
+    },
+    "content": {
+      "kind": "approval",
+      "target": "chat",
+      "nodeId": "node-1",
+      "title": "Bás 📱 needs approval",
+      "body": "Allow the command?",
+      "requestId": "request-1",
+      "choices": [
+        {
+          "id": "yes",
+          "kind": "allow",
+          "label": "Allow"
+        }
+      ],
+      "expiresAt": 121000
+    },
+    "now": 2000
+  },
+  "requestTypes": [
+    "server.hello",
+    "server.ping",
+    "session.create",
+    "push.subscribe",
+    "push.unsubscribe",
+    "session.attach",
+    "session.detach",
+    "session.write",
+    "session.resize",
+    "session.kill",
+    "session.clear",
+    "session.list",
+    "agent.resume",
+    "agent.answerApproval",
+    "agent.setApprovals",
+    "chat.create",
+    "chat.attach",
+    "chat.detach",
+    "chat.send",
+    "chat.unqueue",
+    "chat.sendNow",
+    "chat.cancel",
+    "chat.approve",
+    "chat.answer",
+    "chat.dismiss",
+    "chat.configure",
+    "chat.compact",
+    "chat.clear",
+    "chat.turnDiff",
+    "skills.list",
+    "provider.list",
+    "project.list",
+    "project.open",
+    "project.save",
+    "project.save-local",
+    "project.close",
+    "project.release",
+    "project.setIcon",
+    "project.delete",
+    "drawing.paths",
+    "drawing.open",
+    "drawing.save",
+    "drawing.close",
+    "drawing.copy",
+    "diagram.layout",
+    "diagram.open",
+    "diagram.save",
+    "diagram.close",
+    "diagram.copy",
+    "fs.browse",
+    "fs.reveal",
+    "fs.search",
+    "fs.grep",
+    "fs.list",
+    "fs.read",
+    "fs.watch",
+    "fs.unwatch",
+    "bytes.read",
+    "git.worktree-add",
+    "git.worktree-list",
+    "git.worktree-remove",
+    "git.status",
+    "git.watch",
+    "git.unwatch",
+    "git.diff",
+    "git.stage",
+    "git.discard",
+    "git.refs",
+    "git.log",
+    "git.action",
+    "git.cancel",
+    "git.capabilities",
+    "git.suggestMessage",
+    "usage.summary",
+    "usage.subscribe",
+    "usage.unsubscribe",
+    "usage.limits",
+    "usage.refreshLimits",
+    "processes.subscribe",
+    "processes.unsubscribe",
+    "processes.signal",
+    "processes.listAlerts",
+    "processes.dismiss",
+    "endpoint.info",
+    "endpoint.setIdentity",
+    "endpoint.signRegistration",
+    "auth.sessions",
+    "auth.revoke",
+    "auth.pairingToken",
+    "auth.registerKey",
+    "direct.signal",
+    "chat.kill",
+    "chat.list"
+  ],
+  "eventTypes": [
+    "session.output",
+    "session.resync",
+    "session.exit",
+    "session.status",
+    "session.approvals",
+    "session.list-changed",
+    "chat.event",
+    "endpoint.changed",
+    "direct.signaled",
+    "project.changed",
+    "project.showView",
+    "project.summary",
+    "drawing.changed",
+    "diagram.changed",
+    "fs.changed",
+    "git.status",
+    "git.progress",
+    "usage.changed",
+    "usage.limitsChanged",
+    "processes.sample",
+    "processes.alerts"
+  ],
   "crypto": [
     {
       "seed": "nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A",
@@ -160,6 +312,63 @@
     }
   ],
   "validations": [
+    {
+      "schema": "PairPayloadSchema",
+      "input": {
+        "token": "one-use",
+        "label": "iPhone",
+        "publicKey": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      },
+      "valid": true,
+      "output": {
+        "token": "one-use",
+        "label": "iPhone",
+        "publicKey": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      }
+    },
+    {
+      "schema": "PairPayloadSchema",
+      "input": {
+        "token": "",
+        "label": "iPhone"
+      },
+      "valid": false
+    },
+    {
+      "schema": "PairResultSchema",
+      "input": {
+        "endpoint": {
+          "id": "machine-1",
+          "label": "Mac",
+          "platform": "darwin",
+          "version": "1.0",
+          "protocol": 1,
+          "reachability": "public",
+          "authenticated": true
+        }
+      },
+      "valid": true,
+      "output": {
+        "endpoint": {
+          "id": "machine-1",
+          "label": "Mac",
+          "platform": "darwin",
+          "version": "1.0",
+          "protocol": 1,
+          "reachability": "public",
+          "authenticated": true
+        }
+      }
+    },
+    {
+      "schema": "PairResultSchema",
+      "input": {
+        "endpoint": {
+          "id": "machine-1"
+        }
+      },
+      "valid": false
+    },
     {
       "schema": "ProjectCanvasDefaultsSchema",
       "input": {
@@ -389,6 +598,546 @@
         "publicKey": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
         "issuedAt": 0,
         "signature": "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS"
+      }
+    },
+    {
+      "schema": "request.project.save.payload",
+      "input": {
+        "projectId": "p",
+        "baseRev": 0,
+        "content": {
+          "name": "Future",
+          "color": "",
+          "views": [
+            {
+              "id": "v",
+              "kind": "future-view",
+              "extension": {
+                "nested": [
+                  null,
+                  42
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "valid": true,
+      "output": {
+        "projectId": "p",
+        "baseRev": 0,
+        "content": {
+          "name": "Future",
+          "color": "",
+          "views": [
+            {
+              "kind": "unknown",
+              "id": "v",
+              "name": "future-view",
+              "raw": {
+                "id": "v",
+                "kind": "future-view",
+                "extension": {
+                  "nested": [
+                    null,
+                    42
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "schema": "request.project.save.payload",
+      "input": {
+        "projectId": "p",
+        "baseRev": 0,
+        "content": {
+          "name": "Future",
+          "color": "",
+          "views": [
+            {
+              "id": "v",
+              "kind": "canvas",
+              "name": "Canvas",
+              "nodes": [
+                {
+                  "id": "n",
+                  "kind": "future-node",
+                  "extension": {
+                    "nested": [
+                      null,
+                      42
+                    ]
+                  }
+                }
+              ],
+              "texts": [],
+              "edges": []
+            }
+          ]
+        }
+      },
+      "valid": true,
+      "output": {
+        "projectId": "p",
+        "baseRev": 0,
+        "content": {
+          "name": "Future",
+          "color": "",
+          "views": [
+            {
+              "id": "v",
+              "name": "Canvas",
+              "kind": "canvas",
+              "nodes": [
+                {
+                  "id": "n",
+                  "kind": "unknown",
+                  "title": "future-node",
+                  "x": 0,
+                  "y": 0,
+                  "w": 320,
+                  "h": 200,
+                  "raw": {
+                    "id": "n",
+                    "kind": "future-node",
+                    "extension": {
+                      "nested": [
+                        null,
+                        42
+                      ]
+                    }
+                  }
+                }
+              ],
+              "texts": [],
+              "edges": [],
+              "layouts": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "schema": "request.chat.send.payload",
+      "input": {
+        "chatId": "c",
+        "text": ""
+      },
+      "valid": false
+    },
+    {
+      "schema": "request.chat.send.payload",
+      "input": {
+        "chatId": "c",
+        "text": "Hello"
+      },
+      "valid": true,
+      "output": {
+        "chatId": "c",
+        "text": "Hello"
+      }
+    },
+    {
+      "schema": "request.session.attach.payload",
+      "input": {
+        "sessionId": "s"
+      },
+      "valid": false
+    },
+    {
+      "schema": "request.session.attach.payload",
+      "input": {
+        "sessionId": "s",
+        "follow": true
+      },
+      "valid": true,
+      "output": {
+        "sessionId": "s",
+        "follow": true
+      }
+    },
+    {
+      "schema": "request.session.attach.payload",
+      "input": {
+        "sessionId": "s",
+        "cols": 80
+      },
+      "valid": false
+    },
+    {
+      "schema": "request.session.attach.payload",
+      "input": {
+        "sessionId": "s",
+        "cols": 80,
+        "rows": 24
+      },
+      "valid": true,
+      "output": {
+        "sessionId": "s",
+        "cols": 80,
+        "rows": 24
+      }
+    },
+    {
+      "schema": "request.session.attach.payload",
+      "input": {
+        "sessionId": "s",
+        "follow": true,
+        "cols": 80
+      },
+      "valid": false
+    },
+    {
+      "schema": "request.diagram.save.payload",
+      "input": {
+        "projectId": "p",
+        "viewId": "v",
+        "baseRev": 0,
+        "content": {
+          "meta": {
+            "title": "",
+            "direction": "right"
+          },
+          "nodes": [
+            {
+              "id": "n",
+              "label": "Node",
+              "pos": [
+                1,
+                2
+              ]
+            }
+          ],
+          "groups": [],
+          "edges": []
+        }
+      },
+      "valid": true,
+      "output": {
+        "projectId": "p",
+        "viewId": "v",
+        "baseRev": 0,
+        "content": {
+          "meta": {
+            "title": "",
+            "direction": "right"
+          },
+          "nodes": [
+            {
+              "id": "n",
+              "label": "Node",
+              "pos": [
+                1,
+                2
+              ]
+            }
+          ],
+          "groups": [],
+          "edges": []
+        }
+      }
+    },
+    {
+      "schema": "request.diagram.save.payload",
+      "input": {
+        "projectId": "p",
+        "viewId": "v",
+        "baseRev": 0,
+        "content": {
+          "meta": {
+            "title": "",
+            "direction": "right"
+          },
+          "nodes": [
+            {
+              "id": "n",
+              "label": "Node",
+              "pos": [
+                1
+              ]
+            }
+          ],
+          "groups": [],
+          "edges": []
+        }
+      },
+      "valid": false
+    },
+    {
+      "schema": "request.diagram.save.payload",
+      "input": {
+        "projectId": "p",
+        "viewId": "v",
+        "baseRev": 0,
+        "content": {
+          "meta": {
+            "title": "",
+            "direction": "right"
+          },
+          "nodes": [
+            {
+              "id": "n",
+              "label": "Node",
+              "pos": [
+                1,
+                2,
+                3
+              ]
+            }
+          ],
+          "groups": [],
+          "edges": []
+        }
+      },
+      "valid": false
+    },
+    {
+      "schema": "request.diagram.save.payload",
+      "input": {
+        "projectId": "p",
+        "viewId": "v",
+        "baseRev": 0,
+        "content": {
+          "meta": {
+            "title": "",
+            "direction": "right"
+          },
+          "nodes": [
+            {
+              "id": "n",
+              "label": "Node",
+              "pos": [
+                1,
+                "two"
+              ]
+            }
+          ],
+          "groups": [],
+          "edges": []
+        }
+      },
+      "valid": false
+    },
+    {
+      "schema": "request.drawing.save.payload",
+      "input": {
+        "projectId": "p",
+        "viewId": "v",
+        "baseRev": 0,
+        "content": {
+          "elements": [
+            {
+              "id": "e",
+              "kind": "freehand",
+              "x": 0,
+              "y": 0,
+              "w": 1,
+              "h": 1,
+              "stroke": "ink",
+              "strokeWidth": 1,
+              "seed": 0,
+              "points": [
+                [
+                  1,
+                  2
+                ]
+              ]
+            }
+          ]
+        }
+      },
+      "valid": true,
+      "output": {
+        "projectId": "p",
+        "viewId": "v",
+        "baseRev": 0,
+        "content": {
+          "elements": [
+            {
+              "id": "e",
+              "x": 0,
+              "y": 0,
+              "w": 1,
+              "h": 1,
+              "stroke": "ink",
+              "strokeWidth": 1,
+              "seed": 0,
+              "kind": "freehand",
+              "points": [
+                [
+                  1,
+                  2
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "schema": "request.drawing.save.payload",
+      "input": {
+        "projectId": "p",
+        "viewId": "v",
+        "baseRev": 0,
+        "content": {
+          "elements": [
+            {
+              "id": "e",
+              "kind": "freehand",
+              "x": 0,
+              "y": 0,
+              "w": 1,
+              "h": 1,
+              "stroke": "ink",
+              "strokeWidth": 1,
+              "seed": 0,
+              "points": [
+                [
+                  1,
+                  2,
+                  0.5
+                ]
+              ]
+            }
+          ]
+        }
+      },
+      "valid": true,
+      "output": {
+        "projectId": "p",
+        "viewId": "v",
+        "baseRev": 0,
+        "content": {
+          "elements": [
+            {
+              "id": "e",
+              "x": 0,
+              "y": 0,
+              "w": 1,
+              "h": 1,
+              "stroke": "ink",
+              "strokeWidth": 1,
+              "seed": 0,
+              "kind": "freehand",
+              "points": [
+                [
+                  1,
+                  2,
+                  0.5
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "schema": "request.drawing.save.payload",
+      "input": {
+        "projectId": "p",
+        "viewId": "v",
+        "baseRev": 0,
+        "content": {
+          "elements": [
+            {
+              "id": "e",
+              "kind": "freehand",
+              "x": 0,
+              "y": 0,
+              "w": 1,
+              "h": 1,
+              "stroke": "ink",
+              "strokeWidth": 1,
+              "seed": 0,
+              "points": [
+                [
+                  1,
+                  2,
+                  0.5,
+                  1
+                ]
+              ]
+            }
+          ]
+        }
+      },
+      "valid": false
+    },
+    {
+      "schema": "request.drawing.save.payload",
+      "input": {
+        "projectId": "p",
+        "viewId": "v",
+        "baseRev": 0,
+        "content": {
+          "elements": [
+            {
+              "id": "e",
+              "kind": "freehand",
+              "x": 0,
+              "y": 0,
+              "w": 1,
+              "h": 1,
+              "stroke": "ink",
+              "strokeWidth": 1,
+              "seed": 0,
+              "points": [
+                [
+                  1,
+                  "two"
+                ]
+              ]
+            }
+          ]
+        }
+      },
+      "valid": false
+    },
+    {
+      "schema": "request.project.save-local.payload",
+      "input": {
+        "projectId": "p",
+        "local": {
+          "activeViewId": null,
+          "views": {
+            "canvas": {
+              "camera": {
+                "x": 1,
+                "y": 2,
+                "zoom": 1
+              },
+              "focusedNodeId": null
+            }
+          },
+          "panels": {
+            "favicons": {
+              "n": "data:image/png;base64,AQ=="
+            }
+          }
+        }
+      },
+      "valid": true,
+      "output": {
+        "projectId": "p",
+        "local": {
+          "activeViewId": null,
+          "views": {
+            "canvas": {
+              "camera": null,
+              "focusedNodeId": null
+            }
+          },
+          "panels": {
+            "favicons": {
+              "n": "data:image/png;base64,AQ=="
+            }
+          }
+        }
       }
     }
   ],

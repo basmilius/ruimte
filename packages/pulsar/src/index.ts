@@ -9,3 +9,4 @@ export * from './session-vault.ts';
 export * from './signaling.ts';
 export * from './signing.ts';
 export * from './statement-key.ts';
+export * from './push.ts';

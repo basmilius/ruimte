@@ -130,6 +130,15 @@ export class ChatManager {
         return this.tokens.get(token) ?? null;
     }
 
+    private readonly observers = new Set<SessionSink>();
+
+    observe(sink: SessionSink): () => void {
+        this.observers.add(sink);
+        return () => {
+            this.observers.delete(sink);
+        };
+    }
+
     subscribe(clientId: string, sink: SessionSink): () => void {
         this.sinks.set(clientId, sink);
         return () => {
@@ -463,6 +472,9 @@ export class ChatManager {
     }
 
     private broadcast(chatId: string, event: ChatEvent): void {
+        for (const sink of this.observers) {
+            sink({ event: 'chat.event', payload: { chatId, event } });
+        }
         const clients = this.attached.get(chatId);
         if (!clients) {
             return;

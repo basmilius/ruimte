@@ -12,7 +12,10 @@ import RuimtePulsar
     public var message: (String) -> Void
     public var closed: (Error?) -> Void
     public var route: (Bool?) -> Void
-    public init(opened: @escaping () -> Void, message: @escaping (String) -> Void, closed: @escaping (Error?) -> Void, route: @escaping (Bool?) -> Void = { _ in }) {
+    public init(
+        opened: @escaping () -> Void, message: @escaping (String) -> Void, closed: @escaping (Error?) -> Void,
+        route: @escaping (Bool?) -> Void = { _ in }
+    ) {
         self.opened = opened
         self.message = message
         self.closed = closed
@@ -28,8 +31,7 @@ import RuimtePulsar
     nonisolated public init() {}
     public func after(milliseconds: Double, _ action: @escaping @MainActor () -> Void) -> () -> Void {
         let task = Task { @MainActor in
-            do { try await Task.sleep(for: .milliseconds(milliseconds)) }
-            catch { return }
+            do { try await Task.sleep(for: .milliseconds(milliseconds)) } catch { return }
             if !Task.isCancelled { action() }
         }
         return { task.cancel() }
@@ -95,14 +97,16 @@ import RuimtePulsar
 
     public func setScene(_ id: String, foreground: Bool) {
         let wasForeground = !foregroundScenes.isEmpty
-        if foreground { foregroundScenes.insert(id) }
-        else { foregroundScenes.remove(id) }
+        if foreground { foregroundScenes.insert(id) } else { foregroundScenes.remove(id) }
         let isForeground = !foregroundScenes.isEmpty
         guard wasForeground != isForeground else { return }
         for (id, entry) in Array(machines) {
             suspend(entry)
-            if entry.members.isEmpty { machines.removeValue(forKey: id) }
-            else if isForeground { connect(id, entry: entry) }
+            if entry.members.isEmpty {
+                machines.removeValue(forKey: id)
+            } else if isForeground {
+                connect(id, entry: entry)
+            }
         }
     }
 
@@ -112,8 +116,11 @@ import RuimtePulsar
         if pathFingerprint == nil { return }
         for (id, entry) in Array(machines) {
             suspend(entry)
-            if entry.members.isEmpty { machines.removeValue(forKey: id) }
-            else if reachable && !foregroundScenes.isEmpty { connect(id, entry: entry) }
+            if entry.members.isEmpty {
+                machines.removeValue(forKey: id)
+            } else if reachable && !foregroundScenes.isEmpty {
+                connect(id, entry: entry)
+            }
         }
     }
 
@@ -130,43 +137,60 @@ import RuimtePulsar
         } else if entry.link == nil && entry.retry == nil && !foregroundScenes.isEmpty {
             connect(machineID, entry: entry)
         }
-        return MachineLease(send: { [weak entry] text in
-            guard let entry, entry.connected, let link = entry.link else {
-                throw TransportFailure.invalid("The machine is reconnecting.")
-            }
-            try link.send(text)
-        }, release: { [weak self, weak entry] in
-            guard let self, let entry else { return }
-            entry.members.removeValue(forKey: memberID)
-            if entry.members.isEmpty {
-                entry.retry?()
-                entry.retry = nil
-                if self.foregroundScenes.isEmpty {
-                    self.suspend(entry)
-                    self.machines.removeValue(forKey: machineID)
-                } else {
-                    entry.idleCleanup = self.scheduler.after(milliseconds: 30_000) { [weak self, weak entry] in
-                        guard let self, let entry, self.machines[machineID] === entry, entry.members.isEmpty else { return }
+        return MachineLease(
+            send: { [weak entry] text in
+                guard let entry, entry.connected, let link = entry.link else {
+                    throw TransportFailure.invalid("The machine is reconnecting.")
+                }
+                try link.send(text)
+            },
+            release: { [weak self, weak entry] in
+                guard let self, let entry, self.machines[machineID] === entry else { return }
+                entry.members.removeValue(forKey: memberID)
+                if entry.members.isEmpty {
+                    entry.retry?()
+                    entry.retry = nil
+                    if self.foregroundScenes.isEmpty {
                         self.suspend(entry)
                         self.machines.removeValue(forKey: machineID)
+                    } else {
+                        entry.idleCleanup = self.scheduler.after(milliseconds: 30_000) { [weak self, weak entry] in
+                            guard let self, let entry, self.machines[machineID] === entry, entry.members.isEmpty else {
+                                return
+                            }
+                            self.suspend(entry)
+                            self.machines.removeValue(forKey: machineID)
+                        }
                     }
                 }
-            }
-        })
+            })
     }
 
     public func reconnect(machineID: String) {
         guard let entry = machines[machineID] else { return }
         suspend(entry)
-        if entry.members.isEmpty { machines.removeValue(forKey: machineID) }
-        else if !foregroundScenes.isEmpty { connect(machineID, entry: entry) }
+        if entry.members.isEmpty {
+            machines.removeValue(forKey: machineID)
+        } else if !foregroundScenes.isEmpty {
+            connect(machineID, entry: entry)
+        }
+    }
+
+    public func forget(machineID: String) {
+        guard let entry = machines.removeValue(forKey: machineID) else { return }
+        suspend(entry)
+        entry.members.removeAll()
+    }
+
+    public func disconnectAll() {
+        for entry in machines.values { suspend(entry) }
+        machines.removeAll()
     }
 
     public func shutdown() {
         monitor?.cancel()
         monitor = nil
-        for entry in machines.values { suspend(entry) }
-        machines.removeAll()
+        disconnectAll()
     }
 
     private func suspend(_ entry: Entry) {
@@ -193,38 +217,41 @@ import RuimtePulsar
             guard let self, let entry else { return false }
             return self.machines[id] === entry && entry.generation == generation
         }
-        let events = LinkEvents(opened: { [weak entry] in
-            guard valid(), let entry else { return }
-            entry.connected = true
-            entry.attempt = 0
-            for member in Array(entry.members.values) { member.opened() }
-        }, message: { [weak entry] text in
-            guard valid(), let entry else { return }
-            for member in Array(entry.members.values) { member.message(text) }
-        }, closed: { [weak self, weak entry] error in
-            guard valid(), let self, let entry else { return }
-            entry.generation += 1
-            entry.link = nil
-            entry.connected = false
-            entry.relayed = nil
-            for member in Array(entry.members.values) { member.closed(error) }
-            guard !self.foregroundScenes.isEmpty, !entry.members.isEmpty else { return }
-            let delay = min(10_000, 500 * pow(2, Double(min(entry.attempt, 5))))
-            entry.attempt += 1
-            entry.retry = self.scheduler.after(milliseconds: delay) { [weak self, weak entry] in
-                guard let self, let entry, self.machines[id] === entry else { return }
-                entry.retry = nil
-                self.connect(id, entry: entry)
-            }
-        }, route: { [weak entry] route in
-            guard valid(), let entry else { return }
-            entry.relayed = route
-            for member in Array(entry.members.values) { member.route(route) }
-        })
+        let events = LinkEvents(
+            opened: { [weak entry] in
+                guard valid(), let entry else { return }
+                entry.connected = true
+                entry.attempt = 0
+                for member in Array(entry.members.values) { member.opened() }
+            },
+            message: { [weak entry] text in
+                guard valid(), let entry else { return }
+                for member in Array(entry.members.values) { member.message(text) }
+            },
+            closed: { [weak self, weak entry] error in
+                guard valid(), let self, let entry else { return }
+                entry.generation += 1
+                entry.link = nil
+                entry.connected = false
+                entry.relayed = nil
+                for member in Array(entry.members.values) { member.closed(error) }
+                guard !self.foregroundScenes.isEmpty, !entry.members.isEmpty else { return }
+                let delay = min(10_000, 500 * pow(2, Double(min(entry.attempt, 5))))
+                entry.attempt += 1
+                entry.retry = self.scheduler.after(milliseconds: delay) { [weak self, weak entry] in
+                    guard let self, let entry, self.machines[id] === entry else { return }
+                    entry.retry = nil
+                    self.connect(id, entry: entry)
+                }
+            },
+            route: { [weak entry] route in
+                guard valid(), let entry else { return }
+                entry.relayed = route
+                for member in Array(entry.members.values) { member.route(route) }
+            })
         do {
             let opened = try entry.open(events)
-            if valid() { entry.link = opened }
-            else { opened.close() }
+            if valid() { entry.link = opened } else { opened.close() }
         } catch { events.closed(error) }
     }
 }

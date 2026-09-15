@@ -2584,12 +2584,13 @@ on the daemon, streamed over the socket; it and a relay wait until a remote daem
 use), `docs/research/windows.md`, and the reports under `docs/reports` for accounts and remote access.
 
 
-### iPhone and iPad, phase 0
+### iPhone and iPad
 
-- `apps/ios` begins with a connection test, following the report reviewed against `8b3fe06`.
-  Bas accepts each phase on a device before the next begins. The minimum is iOS/iPadOS 26;
-  the bundle is `app.ruimte.mobile`. No daemon runs on the phone. Nodes will open as pages;
-  the mobile canvas will not move or resize existing nodes.
+- `apps/ios` follows the report reviewed against `8b3fe06`. Bas subsequently asked for the
+  complete app; the initial pause between phases no longer applies. Hardware acceptance is
+  recorded separately from local build and test results. The minimum is iOS/iPadOS 26;
+  the bundle is `app.ruimte.mobile`. No daemon runs on the phone. Nodes open as pages;
+  the mobile canvas does not move or resize existing nodes.
 - The app uses one ed25519 key for the account session and machine access. Unlike Electron,
   there is no separate trusted shell process that needs its own key. The key and refresh
   session stay in a nonsynchronizing, device-only Keychain item accessible after first unlock.
@@ -2597,12 +2598,11 @@ use), `docs/research/windows.md`, and the reports under `docs/reports` for accou
 - Login uses the existing Worker PKCE redirect and exactly `ruimte://pulsar/callback`.
   The browser session checks the whole callback and its state before exchanging the code.
   Provider discovery already exposes Apple when configured; native Apple token exchange is
-  separate future work. Pairing-link entry waits for the shell phase and will accept HTTPS only.
-- Phase 0 generates its used models from Zod before introducing native requests. The same
-  generator emits TypeScript signing/framing fixtures and the protocol constant. JSON Schema
-  drops custom refinements, so the access-statement lifetime check is explicitly retained.
-  A small projection of the existing canvas schema tests defaults without adding canvas UI.
-  Full API generation remains phase 1.
+  separate future work. Pairing-link entry accepts HTTPS only and refuses redirects before sending a one-time token elsewhere.
+- The full daemon API is generated from Zod, including request/result/event validation,
+  TypeScript signing/framing fixtures and the protocol constant. JSON Schema drops custom
+  refinements, so known refinements remain explicit generator overrides. Unknown node/view
+  kinds carry their raw content through saves. Conflicting edits stay local until resolved.
 - The default ICE policy allows libwebrtc to select the path. The test app's relay-only switch
   exists to measure TURN, since reaching a machine over a direct candidate proves nothing about
   relay configuration. No production broker or TURN deployment is part of this work.
@@ -2616,3 +2616,17 @@ use), `docs/research/windows.md`, and the reports under `docs/reports` for accou
 - Simulator Keychain tests require local signing. An unsigned app returned status -34018,
   missing entitlement; this is distinct from a malformed Keychain query. Real browser login,
   Wi-Fi/5G relay reachability and reconnect targets still require Bas's device checks.
+
+- A terminal attached with `follow:true` observes the existing PTY dimensions. It cannot resize
+  a desktop session just by opening on a smaller screen. Shared attachment leases keep one
+  iPad window from detaching another window from the same chat or terminal.
+- Push alerts use X25519, HKDF-SHA256 and AES-256-GCM, signed by the machine's ed25519 key.
+  AES-GCM is supported by both the deployed Bun runtime and CryptoKit; the tested Bun runtime
+  did not offer ChaCha20-Poly1305 through node:crypto. A shared test vector fixes the routing
+  bytes, AAD, key derivation, ciphertext and tag. The notification extension verifies the
+  machine key, handle, validity window and replay receipt before showing decrypted content.
+  ActivityKit title and phase are the explicit unencrypted exception.
+- XcodeGen remains the native project source. The generated Xcode project is committed so
+  Xcode Cloud can discover the app and its extensions, with resolved packages committed for
+  repeatable builds. Xcode user state and build output remain local. APNs credentials,
+  development-team signing and TestFlight configuration are external, never source secrets.

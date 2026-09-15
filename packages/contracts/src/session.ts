@@ -50,11 +50,17 @@ export const SessionCreatePayloadSchema = z.object({
 });
 export type SessionCreatePayload = z.infer<typeof SessionCreatePayloadSchema>;
 
-export const SessionAttachPayloadSchema = z.object({
-    sessionId: SessionIdSchema,
-    cols,
-    rows
-});
+export const SessionAttachPayloadSchema = z
+    .object({
+        sessionId: SessionIdSchema,
+        cols: cols.optional(),
+        rows: rows.optional(),
+        // A phone follows the shared PTY size without shrinking a desktop attached beside it.
+        follow: z.boolean().optional()
+    })
+    .refine((payload) => (payload.cols === undefined) === (payload.rows === undefined) && (payload.follow === true || payload.cols !== undefined), {
+        message: 'Supply both cols and rows, or follow the existing terminal size'
+    });
 export type SessionAttachPayload = z.infer<typeof SessionAttachPayloadSchema>;
 
 export const SessionAttachResultSchema = z.object({

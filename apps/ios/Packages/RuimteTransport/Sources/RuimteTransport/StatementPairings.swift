@@ -16,6 +16,7 @@ public struct PairingIdentity: Hashable, Sendable {
 @MainActor public protocol StatementPairingStore {
     func contains(_ identity: PairingIdentity) -> Bool
     func insert(_ identity: PairingIdentity)
+    func remove(machineID: String)
 }
 
 @MainActor public struct UserDefaultsPairingStore: StatementPairingStore {
@@ -30,7 +31,16 @@ public struct PairingIdentity: Hashable, Sendable {
     }
 
     public func insert(_ identity: PairingIdentity) {
+        remove(machineID: identity.machineID)
         defaults.set(true, forKey: storageKey(identity))
+    }
+
+    public func remove(machineID: String) {
+        let suffix = "." + Base64URL.encode(Data(machineID.utf8))
+        for key in defaults.dictionaryRepresentation().keys
+        where key.hasPrefix("ruimte.statement-pairing.v1.") && key.hasSuffix(suffix) {
+            defaults.removeObject(forKey: key)
+        }
     }
 
     private func storageKey(_ identity: PairingIdentity) -> String {
@@ -42,18 +52,27 @@ public struct PairingIdentity: Hashable, Sendable {
 @MainActor public final class StatementPairings {
     public typealias Access = () async throws -> JSONValue
     private let store: any StatementPairingStore
+    private var generations: [String: Int] = [:]
 
     public init(store: (any StatementPairingStore)? = nil) {
         self.store = store ?? UserDefaultsPairingStore()
     }
 
-    public func open(identity: PairingIdentity, requestAccess: @escaping Access, events: LinkEvents,
-                     makeLink: (Access?, LinkEvents) throws -> any MachineLink) rethrows -> any MachineLink {
+    public func forget(machineID: String) {
+        generations[machineID, default: 0] += 1
+        store.remove(machineID: machineID)
+    }
+
+    public func open(
+        identity: PairingIdentity, requestAccess: @escaping Access, events: LinkEvents,
+        makeLink: (Access?, LinkEvents) throws -> any MachineLink
+    ) rethrows -> any MachineLink {
+        let generation = generations[identity.machineID, default: 0]
         let access: Access? = store.contains(identity) ? nil : requestAccess
         var authenticatedEvents = events
         var ended = false
-        authenticatedEvents.opened = { [store] in
-            guard !ended else { return }
+        authenticatedEvents.opened = { [self, store] in
+            guard !ended, generations[identity.machineID, default: 0] == generation else { return }
             // NativeWebRTCLink opens only after its pinned challenge/proof and direct.accepted.
             store.insert(identity)
             events.opened()

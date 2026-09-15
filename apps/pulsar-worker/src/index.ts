@@ -1,4 +1,5 @@
 import { ProviderIdSchema } from '@ruimte/pulsar';
+import { changePushDevice, registerPushDevice, sendPush } from './push.ts';
 import { statementKeyOf } from './crypto.ts';
 import type { Env } from './env.ts';
 import { allowedOrigin, corsHeaders, failure, json } from './http.ts';
@@ -35,6 +36,16 @@ const health = async (env: Env): Promise<Response> => {
 
 const api = async (request: Request, env: Env, path: string): Promise<Response> => {
     const method = request.method;
+    if (path === '/v1/push/devices' && method === 'POST') {
+        return registerPushDevice(request, env);
+    }
+    if (path === '/v1/push' && method === 'POST') {
+        return sendPush(request, env);
+    }
+    const pushDevice = /^\/v1\/push\/devices\/([A-Za-z0-9_-]{43})(?:\/(activities|start-activity))?$/.exec(path);
+    if (pushDevice && ((method === 'DELETE' && !pushDevice[2]) || (method === 'PUT' && pushDevice[2]))) {
+        return changePushDevice(request, env, pushDevice[1]!, pushDevice[2] === 'activities' ? 'update' : pushDevice[2] === 'start-activity' ? 'start' : null);
+    }
     if (path === '/v1/providers' && method === 'GET') {
         return listProviders(env);
     }
@@ -137,6 +148,9 @@ export default {
     async scheduled(_controller, env) {
         const now = Date.now();
         await env.DB.batch([
+            env.DB.prepare('DELETE FROM push_activity_start WHERE expires_at <= ?1').bind(now),
+            env.DB.prepare('DELETE FROM push_receipt WHERE expires_at <= ?1').bind(now),
+            env.DB.prepare('DELETE FROM push_device WHERE session_id IN (SELECT id FROM session WHERE revoked_at IS NOT NULL OR expires_at <= ?1)').bind(now),
             env.DB.prepare('DELETE FROM login_attempt WHERE expires_at <= ?1').bind(now),
             env.DB.prepare('DELETE FROM login_code WHERE expires_at <= ?1').bind(now),
             env.DB.prepare('DELETE FROM identity_link_request WHERE expires_at <= ?1').bind(now),

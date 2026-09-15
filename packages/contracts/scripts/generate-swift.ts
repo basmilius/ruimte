@@ -1,13 +1,17 @@
-import { createPrivateKey, createPublicKey, sign } from 'node:crypto';
-import { ProjectCanvasViewSchema } from '../src/project.ts';
+import { createCipheriv, createPrivateKey, createPublicKey, diffieHellman, hkdfSync, sign } from 'node:crypto';
+import { CameraSchema, CanvasNodeSchema, NodeKindSchema, PROJECT_VIEW_KINDS, ProjectViewSchema, ProjectCanvasViewSchema } from '../src/project.ts';
+import { REQUEST_SCHEMAS, EVENT_SCHEMAS } from '../src/index.ts';
+import { BYTES_CHUNK_MAX, BYTES_READ_MAX_BYTES } from '../src/bytes.ts';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { z } from 'zod';
 import * as address from '../../pulsar/src/address-book.ts';
 import * as broker from '../../pulsar/src/broker.ts';
+import * as push from '../../pulsar/src/push.ts';
 import * as signaling from '../../pulsar/src/signaling.ts';
 import * as direct from '../src/direct.ts';
 import * as server from '../src/server.ts';
+import { PairPayloadSchema, PairResultSchema } from '../src/auth.ts';
 import * as envelope from '../src/envelope.ts';
 import * as signing from '../../pulsar/src/signing.ts';
 import * as liveness from '../src/direct-liveness.ts';
@@ -16,13 +20,15 @@ import { PULSAR_STATEMENT_PUBLIC_KEYS } from '../../pulsar/src/statement-key.ts'
 
 type Schema = Record<string, any>;
 const roots: Record<string, z.ZodType> = {};
-for (const module of [address, broker, signaling, direct, server, envelope]) {
+for (const module of [address, broker, signaling, direct, server, envelope, push]) {
     for (const [name, value] of Object.entries(module)) {
         if (name.endsWith('Schema') && value instanceof z.ZodType && name !== 'LoginStartQuerySchema') {
             roots[name] = value;
         }
     }
 }
+roots.PairPayloadSchema = PairPayloadSchema;
+roots.PairResultSchema = PairResultSchema;
 roots.ProjectCanvasDefaultsSchema = ProjectCanvasViewSchema.pick({ layouts: true });
 const schemas: Record<string, Schema> = {};
 for (const [name, schema] of Object.entries(roots)) {
@@ -123,7 +129,7 @@ const typeOf = (schema: Schema, suggested: string, force = false): string => {
             .join('\n');
         declarations.set(
             name,
-            `public struct ${name}: Codable, Sendable, Equatable {\n${fields}\n\n    public init(${parameters}) {\n${assignment}\n    }\n\n    public init(from decoder: Decoder) throws {\n${schemaName ? `        _ = try WireSchema.validate(${JSON.stringify(schemaName)}, JSONValue(from: decoder))\n` : ''}        let container = try decoder.container(keyedBy: CodingKeys.self)\n${decoding}\n    }\n\n    public func encode(to encoder: Encoder) throws {\n        var container = encoder.container(keyedBy: CodingKeys.self)\n${encoding}\n    }\n\n    private enum CodingKeys: String, CodingKey {\n${properties.length ? properties.map(({ key }) => `        case ${identifier(key)} = ${JSON.stringify(key)}`).join('\n') : '        case unused'}\n    }\n}`
+            `public struct ${name}: Codable, Sendable, Equatable {\n${fields}\n\n    public init(${parameters}) {\n${assignment}\n    }\n\n    public init(from decoder: Decoder) throws {\n${schemaName ? `        _ = try WireSchema.validate(${JSON.stringify(schemaName)}, JSONValue(from: decoder))\n` : ''}        ${properties.length ? 'let container' : '_'} = try decoder.container(keyedBy: CodingKeys.self)\n${decoding}\n    }\n\n    public func encode(to encoder: Encoder) throws {\n        ${properties.length ? 'var container' : '_'} = encoder.container(keyedBy: CodingKeys.self)\n${encoding}\n    }\n\n    private enum CodingKeys: String, CodingKey {\n${properties.length ? properties.map(({ key }) => `        case ${identifier(key)} = ${JSON.stringify(key)}`).join('\n') : '        case unused'}\n    }\n}`
         );
         return name;
     }
@@ -139,7 +145,7 @@ const typeOf = (schema: Schema, suggested: string, force = false): string => {
             label: tag ? String(member.properties[tag].const) : `variant${index}`
         }));
         const decoding = tag
-            ? `        let container = try decoder.container(keyedBy: Tag.self)\n        switch try container.decode(${typeof members[0].properties[tag].const === 'boolean' ? 'Bool' : 'String'}.self, forKey: .value) {\n${cases.map(({ label, type }: any) => `        case ${JSON.stringify(members[cases.findIndex((entry: any) => entry.label === label)].properties[tag].const)}: self = .${identifier(label)}(try ${type}(from: decoder))`).join('\n')}\n        default: throw WireValidationError.invalid("Unknown ${name} tag")\n        }`
+            ? `        let container = try decoder.container(keyedBy: Tag.self)\n        switch try container.decode(${typeof members[0].properties[tag].const === 'boolean' ? 'Bool' : 'String'}.self, forKey: .value) {\n${cases.map(({ label, type }: any) => `        case ${JSON.stringify(members[cases.findIndex((entry: any) => entry.label === label)].properties[tag].const)}: self = .${identifier(label)}(try ${type}(from: decoder))`).join('\n')}${typeof members[0].properties[tag].const === 'boolean' && cases.length === 2 ? '' : `\n        default: throw WireValidationError.invalid("Unknown ${name} tag")`}\n        }`
             : `${cases.map(({ label, type }: any) => `        if let value = try? ${type}(from: decoder) { self = .${identifier(label)}(value); return }`).join('\n')}\n        throw WireValidationError.invalid("Invalid ${name}")`;
         declarations.set(
             name,
@@ -176,6 +182,11 @@ for (const [name, schema] of Object.entries(schemas)) {
 }
 const constants = {
     protocolVersion: PROTOCOL_VERSION,
+    bytesChunkMax: BYTES_CHUNK_MAX,
+    pushMaxAgeMs: push.PUSH_MAX_AGE_MS,
+    pushMaxClockSkewMs: push.PUSH_MAX_CLOCK_SKEW_MS,
+    pushHKDFSalt: push.PUSH_HKDF_SALT,
+    bytesReadMaxBytes: BYTES_READ_MAX_BYTES,
     directChannelLabel: direct.DIRECT_CHANNEL_LABEL,
     directPieceChars: direct.DIRECT_PIECE_CHARS,
     directPingIdleMs: liveness.DIRECT_PING_IDLE_MS,
@@ -191,8 +202,59 @@ const constantSource = Object.entries(constants)
             `    public static let ${name}: ${Array.isArray(value) ? '[String]' : typeof value === 'string' ? 'String' : name === 'protocolVersion' ? 'Int64' : name === 'directPieceChars' ? 'Int' : 'Double'} = ${JSON.stringify(value)}`
     )
     .join('\n');
+// Keep the complete daemon API dynamic: thousands of nested Swift declarations slow every app build.
+const apiRoots: Record<string, z.ZodType> = {};
+for (const [name, pair] of Object.entries(REQUEST_SCHEMAS)) {
+    apiRoots[`request.${name}.payload`] = pair.payload;
+    apiRoots[`request.${name}.result`] = pair.result;
+}
+for (const [name, schema] of Object.entries(EVENT_SCHEMAS)) {
+    apiRoots[`event.${name}`] = schema;
+}
+for (const [name, schema] of Object.entries(apiRoots)) {
+    roots[name] = schema;
+    schemas[name] = z.toJSONSchema(schema, {
+        io: 'input',
+        unrepresentable: 'throw',
+        override: ({ zodSchema, jsonSchema }) => {
+            if (zodSchema instanceof z.ZodPipe && zodSchema.in === CameraSchema) {
+                jsonSchema['x-output-null'] = true;
+            }
+            if (zodSchema === CanvasNodeSchema || zodSchema === ProjectViewSchema) {
+                const isNode = zodSchema === CanvasNodeSchema;
+                const raw = { id: 'future-id', kind: 'future-kind' };
+                jsonSchema['x-project-entry'] = {
+                    knownKinds: isNode ? NodeKindSchema.options : PROJECT_VIEW_KINDS,
+                    template: (isNode ? CanvasNodeSchema : ProjectViewSchema).parse(raw),
+                    node: isNode
+                };
+            }
+        }
+    });
+    stampStatement(schemas[name]!);
+    if (name === 'request.chat.send.payload') schemas[name]!['x-message-content'] = true;
+    if (name === 'request.session.attach.payload') schemas[name]!['x-follow-dimensions'] = true;
+}
+const tableSource = (name: string, entries: string[], methods: string): string =>
+    `public enum ${name}: String, CaseIterable, Sendable {\n${entries.map((entry) => `    case ${identifier(entry)} = ${JSON.stringify(entry)}`).join('\n')}\n\n${methods}\n}`;
+const apiSource = [
+    tableSource(
+        'WireRequest',
+        Object.keys(REQUEST_SCHEMAS),
+        `    public func validatePayload(_ value: JSONValue) throws -> JSONValue { try WireSchema.validate("request.\\(rawValue).payload", value) }\n    public func validateResult(_ value: JSONValue) throws -> JSONValue { try WireSchema.validate("request.\\(rawValue).result", value) }`
+    ),
+    tableSource(
+        'WireEvent',
+        Object.keys(EVENT_SCHEMAS),
+        `    public func validatePayload(_ value: JSONValue) throws -> JSONValue { try WireSchema.validate("event.\\(rawValue)", value) }`
+    )
+].join('\n\n');
 const root = resolve(import.meta.dir, '../../../apps/ios/Packages/RuimtePulsar');
 const outputs = new Map<string, string>([
+    [
+        'Sources/RuimtePulsar/Generated/DaemonAPI.swift',
+        `// Generated by packages/contracts/scripts/generate-swift.ts; edit the TypeScript schemas.\n${apiSource}\n`
+    ],
     [
         'Sources/RuimtePulsar/Generated/Models.swift',
         `// Generated by packages/contracts/scripts/generate-swift.ts; edit the TypeScript schemas.\nimport Foundation\n\npublic enum WireConstants {\n${constantSource}\n}\n\n${[...declarations.values()].join('\n\n')}\n`
@@ -227,7 +289,24 @@ const signatureFixtures = [
     }
 ];
 const framingFixtures = ['hello', 'A'.repeat(15999) + '📱' + '終', 'e\u0301'.repeat(9000), ''].map((input) => ({ input, pieces: direct.splitFrame(input) }));
-const validationInputs = [
+const validationInputs: { schema: string; input: unknown }[] = [
+    { schema: 'PairPayloadSchema', input: { token: 'one-use', label: 'iPhone', publicKey: key } },
+    { schema: 'PairPayloadSchema', input: { token: '', label: 'iPhone' } },
+    {
+        schema: 'PairResultSchema',
+        input: {
+            endpoint: {
+                id: 'machine-1',
+                label: 'Mac',
+                platform: 'darwin',
+                version: '1.0',
+                protocol: PROTOCOL_VERSION,
+                reachability: 'public',
+                authenticated: true
+            }
+        }
+    },
+    { schema: 'PairResultSchema', input: { endpoint: { id: 'machine-1' } } },
     ...[0, -1, 1].map((width) => ({
         schema: 'ProjectCanvasDefaultsSchema',
         input: { layouts: [{ name: 'Canvas', nodes: { node: { x: 0, y: 0, w: width, h: 1 } }, texts: {} }] }
@@ -246,6 +325,81 @@ const validationInputs = [
         input: { id: 'machine-1', name: 'Mac', icon: null, brokerUrl: null, publicKey: key, issuedAt: 0, signature: 'S'.repeat(86) }
     }
 ];
+validationInputs.push(
+    {
+        schema: 'request.project.save.payload',
+        input: {
+            projectId: 'p',
+            baseRev: 0,
+            content: { name: 'Future', color: '', views: [{ id: 'v', kind: 'future-view', extension: { nested: [null, 42] } }] }
+        }
+    },
+    {
+        schema: 'request.project.save.payload',
+        input: {
+            projectId: 'p',
+            baseRev: 0,
+            content: {
+                name: 'Future',
+                color: '',
+                views: [
+                    {
+                        id: 'v',
+                        kind: 'canvas',
+                        name: 'Canvas',
+                        nodes: [{ id: 'n', kind: 'future-node', extension: { nested: [null, 42] } }],
+                        texts: [],
+                        edges: []
+                    }
+                ]
+            }
+        }
+    },
+    { schema: 'request.chat.send.payload', input: { chatId: 'c', text: '' } },
+    { schema: 'request.chat.send.payload', input: { chatId: 'c', text: 'Hello' } }
+);
+for (const payload of [
+    { sessionId: 's' },
+    { sessionId: 's', follow: true },
+    { sessionId: 's', cols: 80 },
+    { sessionId: 's', cols: 80, rows: 24 },
+    { sessionId: 's', follow: true, cols: 80 }
+]) {
+    validationInputs.push({ schema: 'request.session.attach.payload', input: payload });
+}
+for (const pos of [[1, 2], [1], [1, 2, 3], [1, 'two']]) {
+    validationInputs.push({
+        schema: 'request.diagram.save.payload',
+        input: {
+            projectId: 'p',
+            viewId: 'v',
+            baseRev: 0,
+            content: { meta: { title: '', direction: 'right' }, nodes: [{ id: 'n', label: 'Node', pos }], groups: [], edges: [] }
+        }
+    });
+}
+for (const points of [[[1, 2]], [[1, 2, 0.5]], [[1, 2, 0.5, 1]], [[1, 'two']]]) {
+    validationInputs.push({
+        schema: 'request.drawing.save.payload',
+        input: {
+            projectId: 'p',
+            viewId: 'v',
+            baseRev: 0,
+            content: { elements: [{ id: 'e', kind: 'freehand', x: 0, y: 0, w: 1, h: 1, stroke: 'ink', strokeWidth: 1, seed: 0, points }] }
+        }
+    });
+}
+validationInputs.push({
+    schema: 'request.project.save-local.payload',
+    input: {
+        projectId: 'p',
+        local: {
+            activeViewId: null,
+            views: { canvas: { camera: { x: 1, y: 2, zoom: 1 }, focusedNodeId: null } },
+            panels: { favicons: { n: 'data:image/png;base64,AQ==' } }
+        }
+    }
+});
 const validations = validationInputs.map((entry) => {
     const parsed = roots[entry.schema]!.safeParse(entry.input);
     return { ...entry, valid: parsed.success, ...(parsed.success ? { output: parsed.data } : {}) };
@@ -259,10 +413,53 @@ const crypto = signatureFixtures.map((fixture) => ({
     message: fixture.expected,
     signature: sign(null, Buffer.from(fixture.expected), privateKey).toString('base64url')
 }));
+const pushPrivateBytes = Buffer.alloc(32, 7);
+const recipientKey = createPrivateKey({
+    key: Buffer.concat([Buffer.from('302e020100300506032b656e04220420', 'hex'), pushPrivateBytes]),
+    format: 'der',
+    type: 'pkcs8'
+});
+const ephemeralKey = createPrivateKey({
+    key: Buffer.concat([Buffer.from('302e020100300506032b656e04220420', 'hex'), Buffer.alloc(32, 9)]),
+    format: 'der',
+    type: 'pkcs8'
+});
+const pushRouting = { machineId: 'machine-1', handle: key, id: 'I'.repeat(43), issuedAt: 1000, expiresAt: 121000, collapseId: 'C'.repeat(43) };
+const pushContent = {
+    kind: 'approval' as const,
+    target: 'chat' as const,
+    nodeId: 'node-1',
+    title: 'Bás 📱 needs approval',
+    body: 'Allow the command?',
+    requestId: 'request-1',
+    choices: [{ id: 'yes', kind: 'allow' as const, label: 'Allow' }],
+    expiresAt: 121000
+};
+const pushShared = diffieHellman({ privateKey: ephemeralKey, publicKey: createPublicKey(recipientKey) });
+const pushSymmetric = Buffer.from(
+    hkdfSync('sha256', pushShared, Buffer.from(push.PUSH_HKDF_SALT), Buffer.from(push.pushEncryptionInfo(pushRouting.machineId, pushRouting.handle)), 32)
+);
+const pushNonce = Buffer.alloc(12, 3);
+const pushCipher = createCipheriv('aes-256-gcm', pushSymmetric, pushNonce, { authTagLength: 16 });
+pushCipher.setAAD(Buffer.from(push.pushRoutingMessage(pushRouting)));
+const pushCiphertext = Buffer.concat([pushCipher.update(Buffer.from(JSON.stringify(pushContent))), pushCipher.final(), pushCipher.getAuthTag()]);
+const unsignedPush = {
+    ...pushRouting,
+    pushType: 'alert' as const,
+    ephemeralKey: createPublicKey(ephemeralKey).export({ format: 'jwk' }).x!,
+    nonce: pushNonce.toString('base64url'),
+    ciphertext: pushCiphertext.toString('base64url'),
+    signature: ''
+};
+const signedPush = { ...unsignedPush, signature: sign(null, Buffer.from(push.pushMessage(unsignedPush)), privateKey).toString('base64url') };
+const pushEncryption = { privateKey: pushPrivateBytes.toString('base64url'), machinePublicKey: publicKey, push: signedPush, content: pushContent, now: 2000 };
 outputs.set(
     'Tests/RuimtePulsarTests/Fixtures/wire.json',
     JSON.stringify(
         {
+            pushEncryption,
+            requestTypes: Object.keys(REQUEST_SCHEMAS),
+            eventTypes: Object.keys(EVENT_SCHEMAS),
             crypto,
             signatures: signatureFixtures,
             framing: framingFixtures,

@@ -17,16 +17,51 @@ final class AppRuntime {
     private(set) var key: DeviceKey?
     let client: AddressBookClient
     let sockets = BrokerSockets()
-    let connections = MachineConnections()
-    let pairings = StatementPairings()
+    let connections: MachineConnections
+    let pairings: StatementPairings
+    private let defaults: UserDefaults
     private(set) var vault: SessionVault?
     private var authentication: WebAuthentication?
+    @ObservationIgnored lazy var notifications = NotificationCoordinator(runtime: self)
+    private var sessions: [String: SharedMachineSession] = [:]
     private var initialized = false
     private var sessionRevision = 0
 
-    init(client: AddressBookClient = AddressBookClient(), vault: SessionVault? = nil) {
+    init(
+        client: AddressBookClient = AddressBookClient(), vault: SessionVault? = nil, defaults: UserDefaults = .standard,
+        connections: MachineConnections? = nil, pairings: StatementPairings? = nil
+    ) {
         self.client = client
         self.vault = vault
+        self.defaults = defaults
+        self.connections = connections ?? MachineConnections()
+        self.pairings = pairings ?? StatementPairings(store: UserDefaultsPairingStore(defaults: defaults))
+    }
+
+    var attentionKeys: Set<String> {
+        Set(
+            sessions.values.flatMap { session in
+                let attention = session.attention
+                let ids = attention.unseen.union(attention.statuses.keys.filter { attention.needsYou($0) })
+                return ids.compactMap { try? PushReplayLedger.nodeKey(machineID: session.machine.id, nodeID: $0) }
+            })
+    }
+
+    func session(for machine: Machine) -> SharedMachineSession {
+        guard let current = machines.first(where: { $0.id == machine.id }) else {
+            let removed = SharedMachineSession(machine: machine, runtime: self)
+            removed.invalidate()
+            return removed
+        }
+        if let existing = sessions[current.id] {
+            if existing.machine.publicKey == current.publicKey && existing.machine.brokerUrl == current.brokerUrl {
+                return existing
+            }
+            invalidateMachine(current.id, forgetPairing: existing.machine.publicKey != current.publicKey)
+        }
+        let session = SharedMachineSession(machine: current, runtime: self)
+        sessions[machine.id] = session
+        return session
     }
 
     func start() async {
@@ -38,10 +73,13 @@ final class AppRuntime {
             let store = KeychainStore()
             let key = try DeviceKey.loadOrCreate(in: store)
             self.key = key
-            let vault = SessionVault(client: client, store: store, signer: {
-                guard let bytes = try store.readData(account: "device-key") else { return nil }
-                return try DeviceKey(rawRepresentation: bytes)
-            })
+            machines = pairedMachines
+            let vault = SessionVault(
+                client: client, store: store,
+                signer: {
+                    guard let bytes = try store.readData(account: "device-key") else { return nil }
+                    return try DeviceKey(rawRepresentation: bytes)
+                })
             self.vault = vault
             account = try await vault.restore()?.account
             providers = try await client.providers().compactMap(ProviderId.init(rawValue:))
@@ -58,11 +96,15 @@ final class AppRuntime {
         let operation = sessionRevision
         signingIn = true
         problem = nil
-        defer { signingIn = false; authentication = nil }
+        defer {
+            signingIn = false
+            authentication = nil
+        }
         do {
             let authentication = WebAuthentication(anchor: window)
             self.authentication = authentication
-            let session = try await authentication.signIn(provider: provider, client: client, vault: vault, label: "Ruimte on \(UIDevice.current.model)")
+            let session = try await authentication.signIn(
+                provider: provider, client: client, vault: vault, label: "Ruimte on \(UIDevice.current.model)")
             guard operation == sessionRevision else { return }
             account = session.account
             await refreshMachines()
@@ -82,16 +124,74 @@ final class AppRuntime {
             guard operation == sessionRevision else { return }
             guard let token else {
                 account = nil
-                machines = []
+                applyMachines(pairedMachines)
+                await notifications.synchronize()
                 return
             }
             let result = try await client.listMachines(accessToken: token)
             guard operation == sessionRevision else { return }
-            machines = result.machines
+            applyMachineList(result)
+            await notifications.synchronize()
             problem = nil
         } catch {
             if operation == sessionRevision { problem = error.localizedDescription }
         }
+    }
+
+    func applyMachineList(_ result: MachineListResult) {
+        let removed = Set(result.removedMachineIds ?? [])
+        let accountMachines = result.machines.filter { !removed.contains($0.id) }
+        let accountByID = Dictionary(uniqueKeysWithValues: accountMachines.map { ($0.id, $0) })
+        let paired = pairedMachines.filter { !removed.contains($0.id) }.map { accountByID[$0.id] ?? $0 }
+        savePairedMachines(paired)
+        for id in removed { invalidateMachine(id, forgetPairing: true) }
+        applyMachines(accountMachines + paired.filter { accountByID[$0.id] == nil })
+    }
+
+    func forgetMachine(_ id: String) {
+        invalidateMachine(id, forgetPairing: true)
+        savePairedMachines(pairedMachines.filter { $0.id != id })
+        machines.removeAll { $0.id == id }
+    }
+
+    private func applyMachines(_ next: [Machine]) {
+        let byID = Dictionary(uniqueKeysWithValues: next.map { ($0.id, $0) })
+        let previous = Dictionary(
+            (machines + sessions.values.map(\.machine)).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        for (id, old) in previous {
+            guard let replacement = byID[id] else {
+                invalidateMachine(id, forgetPairing: true)
+                continue
+            }
+            if old.publicKey != replacement.publicKey || old.brokerUrl != replacement.brokerUrl {
+                invalidateMachine(id, forgetPairing: old.publicKey != replacement.publicKey)
+            }
+        }
+        machines = next
+    }
+
+    private func invalidateMachine(_ id: String, forgetPairing: Bool) {
+        sessions.removeValue(forKey: id)?.invalidate()
+        connections.forget(machineID: id)
+        if forgetPairing { pairings.forget(machineID: id) }
+    }
+
+    private func savePairedMachines(_ machines: [Machine]) {
+        if let data = try? JSONEncoder().encode(machines) { defaults.set(data, forKey: "ruimte.ios.pairedMachines") }
+    }
+
+    private var pairedMachines: [Machine] {
+        guard let data = defaults.data(forKey: "ruimte.ios.pairedMachines") else { return [] }
+        return (try? JSONDecoder().decode([Machine].self, from: data)) ?? []
+    }
+
+    func addPairedMachine(_ machine: Machine) {
+        var paired = pairedMachines.filter { $0.id != machine.id }
+        paired.append(machine)
+        savePairedMachines(paired)
+        invalidateMachine(machine.id, forgetPairing: false)
+        machines.removeAll { $0.id == machine.id }
+        machines.append(machine)
     }
 
     func signOut() async {
@@ -100,8 +200,13 @@ final class AppRuntime {
         defer { signingOut = false }
         sessionRevision += 1
         let operation = sessionRevision
+        await notifications.disable()
+        for id in Set(machines.map(\.id)).union(sessions.keys) { invalidateMachine(id, forgetPairing: true) }
+        sessions.removeAll()
+        connections.disconnectAll()
         account = nil
         machines = []
+        defaults.removeObject(forKey: "ruimte.ios.pairedMachines")
         problem = nil
         do {
             try await vault?.signOut()

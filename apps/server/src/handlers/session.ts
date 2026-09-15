@@ -15,7 +15,9 @@ const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
 export const registerSessionHandlers = (dispatcher: Dispatcher, manager: SessionManager): void => {
     dispatcher.register('session.create', (payload) => translate(() => manager.create(payload)));
 
-    dispatcher.register('session.attach', (payload, client) => translate(() => manager.attach(payload.sessionId, client.id, payload.cols, payload.rows)));
+    dispatcher.register('session.attach', (payload, client) =>
+        translate(() => manager.attach(payload.sessionId, client.id, payload.follow ? undefined : payload.cols, payload.follow ? undefined : payload.rows))
+    );
 
     dispatcher.register('session.detach', (payload, client) =>
         translate(() => {

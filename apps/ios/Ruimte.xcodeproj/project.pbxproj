@@ -1,0 +1,1013 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		008FD13D8AE76883BA6E4C0A /* WorkspacePage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9447D15E48181E5F166E22A6 /* WorkspacePage.swift */; };
+		0ADF4AA4572DAF49C8A26900 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = A84B645FE2D16EFA24FD14F6 /* AppIcon.icon */; };
+		0B547D0A6B2838F62FB295E9 /* RuimtePulsar in Frameworks */ = {isa = PBXBuildFile; productRef = D356DC5C4DF0605AD7A64646 /* RuimtePulsar */; };
+		0E75E028596697B06343F2F1 /* CanvasRenderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5B1DCD63DC630D3ABFE455 /* CanvasRenderTests.swift */; };
+		10DF53C41E4349033B09883C /* MachineProjectsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA401CA82CE41046F457D507 /* MachineProjectsPage.swift */; };
+		13BAE6AC89AFF1FD2B6383B4 /* AttentionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91AE65432A65D98C4A7FE2CA /* AttentionStore.swift */; };
+		163336C54358D26ACE3FBF53 /* ChatAttachmentButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC93B189294B4D798A653EDC /* ChatAttachmentButton.swift */; };
+		2039449EB696024C64A7D640 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = 37621C952E69C77E98AD85B1 /* Highlightr */; };
+		269F292047616E3FDBF0B071 /* SessionScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E238C46B1CEFBCE9B7DB5E24 /* SessionScreenTests.swift */; };
+		27F033AF6D9F55F874FD2E76 /* MachineUsagePage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B44926C3693450CF4C1FC /* MachineUsagePage.swift */; };
+		2A5A29AD37DB5525CEEB9105 /* PairMachinePage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C81823373467CED5DF67CB7 /* PairMachinePage.swift */; };
+		3391D7C7568ED8FABAA9E13F /* BrowserPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D779BA807ED5F459698AC2C0 /* BrowserPage.swift */; };
+		3AF2536CFF4F274E9CA1F5B2 /* CanvasPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78AF6CD8C27D406B882C8FA0 /* CanvasPage.swift */; };
+		3D31A6E3A8580B2F81EE4763 /* ChatTimeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5566FA42E11FDC5B932C0F2E /* ChatTimeline.swift */; };
+		3F688FC111081CCF1B4670DF /* ChatModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 070AB913E963308BAD40498B /* ChatModel.swift */; };
+		4F55FC08F38F77B99650C774 /* SessionWorkspaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1813EA5208B26BEDB337A946 /* SessionWorkspaceTests.swift */; };
+		525328BF92CFEE7D18F48DD5 /* AppRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE323EA02FEEF12048A2D3A8 /* AppRuntime.swift */; };
+		52B0FA0AC6066442114E416D /* RuimtePulsar in Frameworks */ = {isa = PBXBuildFile; productRef = 3E8822A475571AAC0CFCF10F /* RuimtePulsar */; };
+		537CCF8C7593D02A36693C89 /* RuimtePulsar in Frameworks */ = {isa = PBXBuildFile; productRef = 7BBC3D3E95A8FFA51AEDDEE1 /* RuimtePulsar */; };
+		53D62364DA576BC5C95FD341 /* TerminalScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17236BE0F16BF4DE8C134009 /* TerminalScreen.swift */; };
+		5789AC87C3A36DD33EE7D7DD /* NotificationsSettingsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8692B2C68758104DF29256D0 /* NotificationsSettingsPage.swift */; };
+		59959A4B0DD426A2CB3F1DCF /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7152C947C98B90BAB9EC4D82 /* PrivacyInfo.xcprivacy */; };
+		5C706502AEBC21A671990235 /* MobileJSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EE2B3374AED0CCAB042E24 /* MobileJSON.swift */; };
+		62D36AE12D4AFBB7A1AECA5C /* MobileWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4494CB22D3C1F93514921B21 /* MobileWorkspace.swift */; };
+		6DB0A1C6FE1BF1BEB67EFF37 /* RuimteTransport in Frameworks */ = {isa = PBXBuildFile; productRef = 11D5B18726EAC79012111C1C /* RuimteTransport */; };
+		6FA11605D9DE166F6C21D25C /* GitPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DE8F49A62B6E21105CD8F6A /* GitPage.swift */; };
+		71F165040D575E124BBD716E /* MachineDetailsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17E81862798892622B5D43D1 /* MachineDetailsPage.swift */; };
+		7790DAA9D3367EA110B768DD /* RuimteTransport in Frameworks */ = {isa = PBXBuildFile; productRef = 6FFA42FE75679D801B5D68D6 /* RuimteTransport */; };
+		7A56FE4D5A125ECE0A147680 /* MarkdownMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BE4363568E169F410A081A3 /* MarkdownMessage.swift */; };
+		802A9A9A193CDB146D037CE7 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7152C947C98B90BAB9EC4D82 /* PrivacyInfo.xcprivacy */; };
+		85A5AD591051CFA625E43D32 /* SessionVisualTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58EC9A184CB76F10292FAF1E /* SessionVisualTests.swift */; };
+		8B2254D79E8EC2C6114D483C /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7152C947C98B90BAB9EC4D82 /* PrivacyInfo.xcprivacy */; };
+		8C9FF1DDE620F87C9C84679C /* AppHome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22EEF67D1BFFD71DFA7FA021 /* AppHome.swift */; };
+		93B147F9D1DC4B6DFF986E91 /* RuimteNotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3DED45634E156A5B8CE75374 /* RuimteNotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		9DEFD88C67729CA71F4C0DD5 /* ChatScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111FDB97EC13D539638EFBEC /* ChatScreen.swift */; };
+		9E88FFD2A389FE45658CA72E /* RuimteActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B79DEDEC6E3DBF60AE5EA23 /* RuimteActivityWidget.swift */; };
+		A11951888F286F8452A731D0 /* MachineFilesPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49F9EC9D98983F163B9AE62C /* MachineFilesPage.swift */; };
+		A29BA09E98A9386B690A002A /* RuimteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09CCDDD483546BE641151534 /* RuimteApp.swift */; };
+		A4018BFBF14D0FA6CDCECEA2 /* RuimtePulsar in Frameworks */ = {isa = PBXBuildFile; productRef = 9C53340AF650FD1171130411 /* RuimtePulsar */; };
+		AEFABCFC364116F1A99CC8A8 /* SharedMachineSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653536E5B98BEFB676B13733 /* SharedMachineSession.swift */; };
+		AFB579E716E1378515894206 /* ConnectionProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25A4F1FA154BE05D96BDFC6E /* ConnectionProbe.swift */; };
+		B949A220D4C8ECC4FF9AA838 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 7DD6852AA11DD8F3D8DDDBDF /* SwiftTerm */; };
+		BA4E5634A953498E6EC34816 /* RemotePage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4717D1FF657FE5861D33BE92 /* RemotePage.swift */; };
+		C22613F143FD3C92F3C92D76 /* MachineRemovalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE8B97161FC6E9CE587F95C /* MachineRemovalTests.swift */; };
+		CBEDB2E1BC1FB79D8CF7BC7D /* PhaseZeroTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28AB5F59239AB27AD0434DE3 /* PhaseZeroTests.swift */; };
+		D3AE70D4B71CD32DD8D34D42 /* NotificationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E5C2124CCC572A4A3D407AB /* NotificationCoordinator.swift */; };
+		D43CDF040DF82F5E2C648BE7 /* RuimteActivityWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 453AE6630A2DEA42EDBA0A7D /* RuimteActivityWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D6FD6C3785D1017DC74B3E80 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 360CC2CFC02B68B045C92968 /* NotificationService.swift */; };
+		DCDA9FE7463803051C29BB51 /* TerminalModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A531355B6DBA1AEA2747E700 /* TerminalModel.swift */; };
+		EE74DF5514DD201C33ACEA3E /* NotificationSessionPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8658D05270F5D27871DF224 /* NotificationSessionPage.swift */; };
+		F224DF80655AF5E08A5C578A /* ConnectionScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49B30EC9B23C65C35FC2E1B0 /* ConnectionScreen.swift */; };
+		F6559A2EF1AE52B8885568D7 /* RenderDocumentPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 089B611A941366002AA1307E /* RenderDocumentPage.swift */; };
+		F8FE181D581863FFFEA0A108 /* ProcessesPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A793E7CE1817A4DDD5543A82 /* ProcessesPage.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		07297B38AD818700B9B377CB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 27157708FDFF436D10EB2555 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 20562AFB64029FA09F8FEB87;
+			remoteInfo = RuimteActivityWidget;
+		};
+		33A429305B9546FFA4096648 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 27157708FDFF436D10EB2555 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7BD22B99EFE8225CBEC272FF;
+			remoteInfo = Ruimte;
+		};
+		D9289AB9E9F1457CA1A5FAC2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 27157708FDFF436D10EB2555 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CC1E9C6B630AB02BD409FA1C;
+			remoteInfo = RuimteNotificationService;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		0C60767BE4C316094BAA5C98 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				93B147F9D1DC4B6DFF986E91 /* RuimteNotificationService.appex in Embed Foundation Extensions */,
+				D43CDF040DF82F5E2C648BE7 /* RuimteActivityWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		055B44926C3693450CF4C1FC /* MachineUsagePage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineUsagePage.swift; sourceTree = "<group>"; };
+		070AB913E963308BAD40498B /* ChatModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatModel.swift; sourceTree = "<group>"; };
+		089B611A941366002AA1307E /* RenderDocumentPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderDocumentPage.swift; sourceTree = "<group>"; };
+		09CCDDD483546BE641151534 /* RuimteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuimteApp.swift; sourceTree = "<group>"; };
+		09EE2B3374AED0CCAB042E24 /* MobileJSON.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileJSON.swift; sourceTree = "<group>"; };
+		111FDB97EC13D539638EFBEC /* ChatScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatScreen.swift; sourceTree = "<group>"; };
+		17236BE0F16BF4DE8C134009 /* TerminalScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalScreen.swift; sourceTree = "<group>"; };
+		17E81862798892622B5D43D1 /* MachineDetailsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineDetailsPage.swift; sourceTree = "<group>"; };
+		1813EA5208B26BEDB337A946 /* SessionWorkspaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWorkspaceTests.swift; sourceTree = "<group>"; };
+		1BE68222CFDCD5F3CD576D51 /* Ruimte.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Ruimte.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		22EEF67D1BFFD71DFA7FA021 /* AppHome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppHome.swift; sourceTree = "<group>"; };
+		25A4F1FA154BE05D96BDFC6E /* ConnectionProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionProbe.swift; sourceTree = "<group>"; };
+		277C90606C3586426EE8CE7F /* RuimtePulsar */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RuimtePulsar; path = Packages/RuimtePulsar; sourceTree = SOURCE_ROOT; };
+		28AB5F59239AB27AD0434DE3 /* PhaseZeroTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhaseZeroTests.swift; sourceTree = "<group>"; };
+		313990724FDCDDA5DE155DCF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		360CC2CFC02B68B045C92968 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		3DED45634E156A5B8CE75374 /* RuimteNotificationService.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = RuimteNotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		4494CB22D3C1F93514921B21 /* MobileWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileWorkspace.swift; sourceTree = "<group>"; };
+		453AE6630A2DEA42EDBA0A7D /* RuimteActivityWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = RuimteActivityWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		4717D1FF657FE5861D33BE92 /* RemotePage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemotePage.swift; sourceTree = "<group>"; };
+		49B30EC9B23C65C35FC2E1B0 /* ConnectionScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionScreen.swift; sourceTree = "<group>"; };
+		49F9EC9D98983F163B9AE62C /* MachineFilesPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineFilesPage.swift; sourceTree = "<group>"; };
+		4DE8F49A62B6E21105CD8F6A /* GitPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitPage.swift; sourceTree = "<group>"; };
+		5566FA42E11FDC5B932C0F2E /* ChatTimeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTimeline.swift; sourceTree = "<group>"; };
+		5748DC9D2A5D211B6913A122 /* RuimteTransport */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RuimteTransport; path = Packages/RuimteTransport; sourceTree = SOURCE_ROOT; };
+		58EC9A184CB76F10292FAF1E /* SessionVisualTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionVisualTests.swift; sourceTree = "<group>"; };
+		6121F187F1A5B808F82EE616 /* NotificationService.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NotificationService.entitlements; sourceTree = "<group>"; };
+		653536E5B98BEFB676B13733 /* SharedMachineSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedMachineSession.swift; sourceTree = "<group>"; };
+		6E5C2124CCC572A4A3D407AB /* NotificationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationCoordinator.swift; sourceTree = "<group>"; };
+		7152C947C98B90BAB9EC4D82 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		78AF6CD8C27D406B882C8FA0 /* CanvasPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasPage.swift; sourceTree = "<group>"; };
+		7C81823373467CED5DF67CB7 /* PairMachinePage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairMachinePage.swift; sourceTree = "<group>"; };
+		7D4311D2D50AD0CC27A0D10A /* RuimteTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RuimteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7FABC4BE334FDFA06C4FC1B6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		8692B2C68758104DF29256D0 /* NotificationsSettingsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsSettingsPage.swift; sourceTree = "<group>"; };
+		91AE65432A65D98C4A7FE2CA /* AttentionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttentionStore.swift; sourceTree = "<group>"; };
+		9447D15E48181E5F166E22A6 /* WorkspacePage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspacePage.swift; sourceTree = "<group>"; };
+		9B79DEDEC6E3DBF60AE5EA23 /* RuimteActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuimteActivityWidget.swift; sourceTree = "<group>"; };
+		9BE4363568E169F410A081A3 /* MarkdownMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownMessage.swift; sourceTree = "<group>"; };
+		A531355B6DBA1AEA2747E700 /* TerminalModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalModel.swift; sourceTree = "<group>"; };
+		A793E7CE1817A4DDD5543A82 /* ProcessesPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessesPage.swift; sourceTree = "<group>"; };
+		A84B645FE2D16EFA24FD14F6 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		ABE8B97161FC6E9CE587F95C /* MachineRemovalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineRemovalTests.swift; sourceTree = "<group>"; };
+		C65C2B371130F2E65C92BBD2 /* Ruimte.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ruimte.entitlements; sourceTree = "<group>"; };
+		CA401CA82CE41046F457D507 /* MachineProjectsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineProjectsPage.swift; sourceTree = "<group>"; };
+		D779BA807ED5F459698AC2C0 /* BrowserPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserPage.swift; sourceTree = "<group>"; };
+		E238C46B1CEFBCE9B7DB5E24 /* SessionScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionScreenTests.swift; sourceTree = "<group>"; };
+		E8658D05270F5D27871DF224 /* NotificationSessionPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSessionPage.swift; sourceTree = "<group>"; };
+		EB380C5765BB27F525DE31C0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		EE323EA02FEEF12048A2D3A8 /* AppRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRuntime.swift; sourceTree = "<group>"; };
+		EE5B1DCD63DC630D3ABFE455 /* CanvasRenderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasRenderTests.swift; sourceTree = "<group>"; };
+		FC93B189294B4D798A653EDC /* ChatAttachmentButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAttachmentButton.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9BBAC391E0F21B7AF1B91424 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				52B0FA0AC6066442114E416D /* RuimtePulsar in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C4961707BCDF47C566B3C564 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				537CCF8C7593D02A36693C89 /* RuimtePulsar in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C5DB0FE44A0A1B2DBC94B326 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A4018BFBF14D0FA6CDCECEA2 /* RuimtePulsar in Frameworks */,
+				7790DAA9D3367EA110B768DD /* RuimteTransport in Frameworks */,
+				B949A220D4C8ECC4FF9AA838 /* SwiftTerm in Frameworks */,
+				2039449EB696024C64A7D640 /* Highlightr in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F0E2BFCC7CAC96731C3E00E3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0B547D0A6B2838F62FB295E9 /* RuimtePulsar in Frameworks */,
+				6DB0A1C6FE1BF1BEB67EFF37 /* RuimteTransport in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		06FC0334C1991C94C881E007 /* Workspace */ = {
+			isa = PBXGroup;
+			children = (
+				22EEF67D1BFFD71DFA7FA021 /* AppHome.swift */,
+				91AE65432A65D98C4A7FE2CA /* AttentionStore.swift */,
+				D779BA807ED5F459698AC2C0 /* BrowserPage.swift */,
+				78AF6CD8C27D406B882C8FA0 /* CanvasPage.swift */,
+				CA401CA82CE41046F457D507 /* MachineProjectsPage.swift */,
+				09EE2B3374AED0CCAB042E24 /* MobileJSON.swift */,
+				4494CB22D3C1F93514921B21 /* MobileWorkspace.swift */,
+				7C81823373467CED5DF67CB7 /* PairMachinePage.swift */,
+				089B611A941366002AA1307E /* RenderDocumentPage.swift */,
+				653536E5B98BEFB676B13733 /* SharedMachineSession.swift */,
+				9447D15E48181E5F166E22A6 /* WorkspacePage.swift */,
+			);
+			path = Workspace;
+			sourceTree = "<group>";
+		};
+		15FDFABDC1FBE3D6072F16D8 /* Notifications */ = {
+			isa = PBXGroup;
+			children = (
+				6E5C2124CCC572A4A3D407AB /* NotificationCoordinator.swift */,
+				E8658D05270F5D27871DF224 /* NotificationSessionPage.swift */,
+				8692B2C68758104DF29256D0 /* NotificationsSettingsPage.swift */,
+			);
+			path = Notifications;
+			sourceTree = "<group>";
+		};
+		2ADCAE68B145C9F52DCE079C /* ActivityWidget */ = {
+			isa = PBXGroup;
+			children = (
+				7FABC4BE334FDFA06C4FC1B6 /* Info.plist */,
+				9B79DEDEC6E3DBF60AE5EA23 /* RuimteActivityWidget.swift */,
+			);
+			path = ActivityWidget;
+			sourceTree = "<group>";
+		};
+		3DD005D49356DB2CE59D9766 /* Pages */ = {
+			isa = PBXGroup;
+			children = (
+				4DE8F49A62B6E21105CD8F6A /* GitPage.swift */,
+				17E81862798892622B5D43D1 /* MachineDetailsPage.swift */,
+				49F9EC9D98983F163B9AE62C /* MachineFilesPage.swift */,
+				055B44926C3693450CF4C1FC /* MachineUsagePage.swift */,
+				A793E7CE1817A4DDD5543A82 /* ProcessesPage.swift */,
+				4717D1FF657FE5861D33BE92 /* RemotePage.swift */,
+			);
+			path = Pages;
+			sourceTree = "<group>";
+		};
+		708C224944B4027467FF1534 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				EE323EA02FEEF12048A2D3A8 /* AppRuntime.swift */,
+				25A4F1FA154BE05D96BDFC6E /* ConnectionProbe.swift */,
+				49B30EC9B23C65C35FC2E1B0 /* ConnectionScreen.swift */,
+				EB380C5765BB27F525DE31C0 /* Info.plist */,
+				7152C947C98B90BAB9EC4D82 /* PrivacyInfo.xcprivacy */,
+				C65C2B371130F2E65C92BBD2 /* Ruimte.entitlements */,
+				09CCDDD483546BE641151534 /* RuimteApp.swift */,
+				15FDFABDC1FBE3D6072F16D8 /* Notifications */,
+				3DD005D49356DB2CE59D9766 /* Pages */,
+				F89F7730201891FA1B8685A6 /* Sessions */,
+				06FC0334C1991C94C881E007 /* Workspace */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		73F389015C48C67AED5707FE /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1BE68222CFDCD5F3CD576D51 /* Ruimte.app */,
+				453AE6630A2DEA42EDBA0A7D /* RuimteActivityWidget.appex */,
+				3DED45634E156A5B8CE75374 /* RuimteNotificationService.appex */,
+				7D4311D2D50AD0CC27A0D10A /* RuimteTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		931D8A8CF648CE72B8A24E6B /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				EE5B1DCD63DC630D3ABFE455 /* CanvasRenderTests.swift */,
+				ABE8B97161FC6E9CE587F95C /* MachineRemovalTests.swift */,
+				28AB5F59239AB27AD0434DE3 /* PhaseZeroTests.swift */,
+				E238C46B1CEFBCE9B7DB5E24 /* SessionScreenTests.swift */,
+				58EC9A184CB76F10292FAF1E /* SessionVisualTests.swift */,
+				1813EA5208B26BEDB337A946 /* SessionWorkspaceTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		96C0AD17E8E9AE2F439B90D6 /* assets */ = {
+			isa = PBXGroup;
+			children = (
+				A84B645FE2D16EFA24FD14F6 /* AppIcon.icon */,
+			);
+			path = assets;
+			sourceTree = "<group>";
+		};
+		9833D6B20A0C2B52215FEE4A /* NotificationService */ = {
+			isa = PBXGroup;
+			children = (
+				313990724FDCDDA5DE155DCF /* Info.plist */,
+				6121F187F1A5B808F82EE616 /* NotificationService.entitlements */,
+				360CC2CFC02B68B045C92968 /* NotificationService.swift */,
+			);
+			path = NotificationService;
+			sourceTree = "<group>";
+		};
+		C1745C6D84A901A991566B0C /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				2ADCAE68B145C9F52DCE079C /* ActivityWidget */,
+				9833D6B20A0C2B52215FEE4A /* NotificationService */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		D927DFB4C45849E607D0FC81 = {
+			isa = PBXGroup;
+			children = (
+				708C224944B4027467FF1534 /* App */,
+				C1745C6D84A901A991566B0C /* Extensions */,
+				E7D2E16C602F28AE55AEFEF8 /* Packages */,
+				DED6F5F29F409BC49D8E06BF /* ruimte */,
+				931D8A8CF648CE72B8A24E6B /* Tests */,
+				73F389015C48C67AED5707FE /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		DED6F5F29F409BC49D8E06BF /* ruimte */ = {
+			isa = PBXGroup;
+			children = (
+				96C0AD17E8E9AE2F439B90D6 /* assets */,
+			);
+			name = ruimte;
+			path = ../..;
+			sourceTree = "<group>";
+		};
+		E7D2E16C602F28AE55AEFEF8 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				277C90606C3586426EE8CE7F /* RuimtePulsar */,
+				5748DC9D2A5D211B6913A122 /* RuimteTransport */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		F89F7730201891FA1B8685A6 /* Sessions */ = {
+			isa = PBXGroup;
+			children = (
+				FC93B189294B4D798A653EDC /* ChatAttachmentButton.swift */,
+				070AB913E963308BAD40498B /* ChatModel.swift */,
+				111FDB97EC13D539638EFBEC /* ChatScreen.swift */,
+				5566FA42E11FDC5B932C0F2E /* ChatTimeline.swift */,
+				9BE4363568E169F410A081A3 /* MarkdownMessage.swift */,
+				A531355B6DBA1AEA2747E700 /* TerminalModel.swift */,
+				17236BE0F16BF4DE8C134009 /* TerminalScreen.swift */,
+			);
+			path = Sessions;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		20562AFB64029FA09F8FEB87 /* RuimteActivityWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 16C9238F09D0646715680382 /* Build configuration list for PBXNativeTarget "RuimteActivityWidget" */;
+			buildPhases = (
+				10612AA9FFBC184EF33069B5 /* Sources */,
+				D33867D5A71A8D3D595395C4 /* Resources */,
+				C4961707BCDF47C566B3C564 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RuimteActivityWidget;
+			packageProductDependencies = (
+				7BBC3D3E95A8FFA51AEDDEE1 /* RuimtePulsar */,
+			);
+			productName = RuimteActivityWidget;
+			productReference = 453AE6630A2DEA42EDBA0A7D /* RuimteActivityWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		390F8A4420E764647BD7C81E /* RuimteTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C93D14CECDFC12F8547EA98A /* Build configuration list for PBXNativeTarget "RuimteTests" */;
+			buildPhases = (
+				4E31CD0744EBD4A9FCD6B78F /* Sources */,
+				F0E2BFCC7CAC96731C3E00E3 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				86FEE882B7C12E168DBF5A64 /* PBXTargetDependency */,
+			);
+			name = RuimteTests;
+			packageProductDependencies = (
+				D356DC5C4DF0605AD7A64646 /* RuimtePulsar */,
+				11D5B18726EAC79012111C1C /* RuimteTransport */,
+			);
+			productName = RuimteTests;
+			productReference = 7D4311D2D50AD0CC27A0D10A /* RuimteTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		7BD22B99EFE8225CBEC272FF /* Ruimte */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F21C154C11282F7550E79E87 /* Build configuration list for PBXNativeTarget "Ruimte" */;
+			buildPhases = (
+				ADE820AD3652E4E3E50F3730 /* Sources */,
+				386668DA34C5229FC97DA5CC /* Resources */,
+				C5DB0FE44A0A1B2DBC94B326 /* Frameworks */,
+				0C60767BE4C316094BAA5C98 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2EE63068175FDB1CBD735CAB /* PBXTargetDependency */,
+				7EA94F29AF0303FCBD8171CE /* PBXTargetDependency */,
+			);
+			name = Ruimte;
+			packageProductDependencies = (
+				9C53340AF650FD1171130411 /* RuimtePulsar */,
+				6FFA42FE75679D801B5D68D6 /* RuimteTransport */,
+				7DD6852AA11DD8F3D8DDDBDF /* SwiftTerm */,
+				37621C952E69C77E98AD85B1 /* Highlightr */,
+			);
+			productName = Ruimte;
+			productReference = 1BE68222CFDCD5F3CD576D51 /* Ruimte.app */;
+			productType = "com.apple.product-type.application";
+		};
+		CC1E9C6B630AB02BD409FA1C /* RuimteNotificationService */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BAE288A6E0EEC2F404E24BA2 /* Build configuration list for PBXNativeTarget "RuimteNotificationService" */;
+			buildPhases = (
+				85F66D187785D853ADF116AD /* Sources */,
+				47FB4F1B71B8E863E05FF1D6 /* Resources */,
+				9BBAC391E0F21B7AF1B91424 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RuimteNotificationService;
+			packageProductDependencies = (
+				3E8822A475571AAC0CFCF10F /* RuimtePulsar */,
+			);
+			productName = RuimteNotificationService;
+			productReference = 3DED45634E156A5B8CE75374 /* RuimteNotificationService.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		27157708FDFF436D10EB2555 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					20562AFB64029FA09F8FEB87 = {
+						ProvisioningStyle = Automatic;
+					};
+					390F8A4420E764647BD7C81E = {
+						ProvisioningStyle = Automatic;
+					};
+					7BD22B99EFE8225CBEC272FF = {
+						ProvisioningStyle = Automatic;
+					};
+					CC1E9C6B630AB02BD409FA1C = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 86FEE135152280027B602746 /* Build configuration list for PBXProject "Ruimte" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = D927DFB4C45849E607D0FC81;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				AEF0A7420442EE44D62A6523 /* XCRemoteSwiftPackageReference "Highlightr" */,
+				E4F09FC52CA242014D05DB21 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+				82AD56BBD81D53B5F164E4FA /* XCLocalSwiftPackageReference "Packages/RuimtePulsar" */,
+				26AAEDEB62D7609C88958B40 /* XCLocalSwiftPackageReference "Packages/RuimteTransport" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 73F389015C48C67AED5707FE /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				7BD22B99EFE8225CBEC272FF /* Ruimte */,
+				CC1E9C6B630AB02BD409FA1C /* RuimteNotificationService */,
+				20562AFB64029FA09F8FEB87 /* RuimteActivityWidget */,
+				390F8A4420E764647BD7C81E /* RuimteTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		386668DA34C5229FC97DA5CC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0ADF4AA4572DAF49C8A26900 /* AppIcon.icon in Resources */,
+				59959A4B0DD426A2CB3F1DCF /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		47FB4F1B71B8E863E05FF1D6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				802A9A9A193CDB146D037CE7 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D33867D5A71A8D3D595395C4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8B2254D79E8EC2C6114D483C /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		10612AA9FFBC184EF33069B5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9E88FFD2A389FE45658CA72E /* RuimteActivityWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4E31CD0744EBD4A9FCD6B78F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0E75E028596697B06343F2F1 /* CanvasRenderTests.swift in Sources */,
+				C22613F143FD3C92F3C92D76 /* MachineRemovalTests.swift in Sources */,
+				CBEDB2E1BC1FB79D8CF7BC7D /* PhaseZeroTests.swift in Sources */,
+				269F292047616E3FDBF0B071 /* SessionScreenTests.swift in Sources */,
+				85A5AD591051CFA625E43D32 /* SessionVisualTests.swift in Sources */,
+				4F55FC08F38F77B99650C774 /* SessionWorkspaceTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		85F66D187785D853ADF116AD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D6FD6C3785D1017DC74B3E80 /* NotificationService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		ADE820AD3652E4E3E50F3730 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8C9FF1DDE620F87C9C84679C /* AppHome.swift in Sources */,
+				525328BF92CFEE7D18F48DD5 /* AppRuntime.swift in Sources */,
+				13BAE6AC89AFF1FD2B6383B4 /* AttentionStore.swift in Sources */,
+				3391D7C7568ED8FABAA9E13F /* BrowserPage.swift in Sources */,
+				3AF2536CFF4F274E9CA1F5B2 /* CanvasPage.swift in Sources */,
+				163336C54358D26ACE3FBF53 /* ChatAttachmentButton.swift in Sources */,
+				3F688FC111081CCF1B4670DF /* ChatModel.swift in Sources */,
+				9DEFD88C67729CA71F4C0DD5 /* ChatScreen.swift in Sources */,
+				3D31A6E3A8580B2F81EE4763 /* ChatTimeline.swift in Sources */,
+				AFB579E716E1378515894206 /* ConnectionProbe.swift in Sources */,
+				F224DF80655AF5E08A5C578A /* ConnectionScreen.swift in Sources */,
+				6FA11605D9DE166F6C21D25C /* GitPage.swift in Sources */,
+				71F165040D575E124BBD716E /* MachineDetailsPage.swift in Sources */,
+				A11951888F286F8452A731D0 /* MachineFilesPage.swift in Sources */,
+				10DF53C41E4349033B09883C /* MachineProjectsPage.swift in Sources */,
+				27F033AF6D9F55F874FD2E76 /* MachineUsagePage.swift in Sources */,
+				7A56FE4D5A125ECE0A147680 /* MarkdownMessage.swift in Sources */,
+				5C706502AEBC21A671990235 /* MobileJSON.swift in Sources */,
+				62D36AE12D4AFBB7A1AECA5C /* MobileWorkspace.swift in Sources */,
+				D3AE70D4B71CD32DD8D34D42 /* NotificationCoordinator.swift in Sources */,
+				EE74DF5514DD201C33ACEA3E /* NotificationSessionPage.swift in Sources */,
+				5789AC87C3A36DD33EE7D7DD /* NotificationsSettingsPage.swift in Sources */,
+				2A5A29AD37DB5525CEEB9105 /* PairMachinePage.swift in Sources */,
+				F8FE181D581863FFFEA0A108 /* ProcessesPage.swift in Sources */,
+				BA4E5634A953498E6EC34816 /* RemotePage.swift in Sources */,
+				F6559A2EF1AE52B8885568D7 /* RenderDocumentPage.swift in Sources */,
+				A29BA09E98A9386B690A002A /* RuimteApp.swift in Sources */,
+				AEFABCFC364116F1A99CC8A8 /* SharedMachineSession.swift in Sources */,
+				DCDA9FE7463803051C29BB51 /* TerminalModel.swift in Sources */,
+				53D62364DA576BC5C95FD341 /* TerminalScreen.swift in Sources */,
+				008FD13D8AE76883BA6E4C0A /* WorkspacePage.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		2EE63068175FDB1CBD735CAB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CC1E9C6B630AB02BD409FA1C /* RuimteNotificationService */;
+			targetProxy = D9289AB9E9F1457CA1A5FAC2 /* PBXContainerItemProxy */;
+		};
+		7EA94F29AF0303FCBD8171CE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 20562AFB64029FA09F8FEB87 /* RuimteActivityWidget */;
+			targetProxy = 07297B38AD818700B9B377CB /* PBXContainerItemProxy */;
+		};
+		86FEE882B7C12E168DBF5A64 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7BD22B99EFE8225CBEC272FF /* Ruimte */;
+			targetProxy = 33A429305B9546FFA4096648 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0C54455B8132A3FA2110E5BC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.ruimte.mobile.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ruimte.app/Ruimte";
+			};
+			name = Release;
+		};
+		30377EBD8C187A5B9303249E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/Ruimte.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Ruimte;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.ruimte.mobile;
+				PUSH_ENVIRONMENT = development;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		353BCA88064C0FE9551E49A4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Debug;
+		};
+		3D16FC94E13E91346736759F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/Ruimte.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Ruimte;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.ruimte.mobile;
+				PUSH_ENVIRONMENT = production;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		83EA0782E916252D69B2B4E3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				INFOPLIST_FILE = Extensions/ActivityWidget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.ruimte.mobile.activity;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		B48936D74323A921F0739D40 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Extensions/NotificationService/NotificationService.entitlements;
+				INFOPLIST_FILE = Extensions/NotificationService/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.ruimte.mobile.notifications;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		D70BDDF64AD87D93109C3B9E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.ruimte.mobile.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ruimte.app/Ruimte";
+			};
+			name = Debug;
+		};
+		E231C5E4F9E11593D32EBE34 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Extensions/NotificationService/NotificationService.entitlements;
+				INFOPLIST_FILE = Extensions/NotificationService/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.ruimte.mobile.notifications;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F27EA5CF5BD0CD21F745AA03 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+		FF573E1EAAE3BCE8DE5BC990 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				INFOPLIST_FILE = Extensions/ActivityWidget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.ruimte.mobile.activity;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		16C9238F09D0646715680382 /* Build configuration list for PBXNativeTarget "RuimteActivityWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FF573E1EAAE3BCE8DE5BC990 /* Debug */,
+				83EA0782E916252D69B2B4E3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		86FEE135152280027B602746 /* Build configuration list for PBXProject "Ruimte" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				353BCA88064C0FE9551E49A4 /* Debug */,
+				F27EA5CF5BD0CD21F745AA03 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		BAE288A6E0EEC2F404E24BA2 /* Build configuration list for PBXNativeTarget "RuimteNotificationService" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E231C5E4F9E11593D32EBE34 /* Debug */,
+				B48936D74323A921F0739D40 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C93D14CECDFC12F8547EA98A /* Build configuration list for PBXNativeTarget "RuimteTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D70BDDF64AD87D93109C3B9E /* Debug */,
+				0C54455B8132A3FA2110E5BC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F21C154C11282F7550E79E87 /* Build configuration list for PBXNativeTarget "Ruimte" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				30377EBD8C187A5B9303249E /* Debug */,
+				3D16FC94E13E91346736759F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		26AAEDEB62D7609C88958B40 /* XCLocalSwiftPackageReference "Packages/RuimteTransport" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/RuimteTransport;
+		};
+		82AD56BBD81D53B5F164E4FA /* XCLocalSwiftPackageReference "Packages/RuimtePulsar" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/RuimtePulsar;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AEF0A7420442EE44D62A6523 /* XCRemoteSwiftPackageReference "Highlightr" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/raspu/Highlightr.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.3.0;
+			};
+		};
+		E4F09FC52CA242014D05DB21 /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/migueldeicaza/SwiftTerm.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.15.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		11D5B18726EAC79012111C1C /* RuimteTransport */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RuimteTransport;
+		};
+		37621C952E69C77E98AD85B1 /* Highlightr */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AEF0A7420442EE44D62A6523 /* XCRemoteSwiftPackageReference "Highlightr" */;
+			productName = Highlightr;
+		};
+		3E8822A475571AAC0CFCF10F /* RuimtePulsar */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RuimtePulsar;
+		};
+		6FFA42FE75679D801B5D68D6 /* RuimteTransport */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RuimteTransport;
+		};
+		7BBC3D3E95A8FFA51AEDDEE1 /* RuimtePulsar */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RuimtePulsar;
+		};
+		7DD6852AA11DD8F3D8DDDBDF /* SwiftTerm */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E4F09FC52CA242014D05DB21 /* XCRemoteSwiftPackageReference "SwiftTerm" */;
+			productName = SwiftTerm;
+		};
+		9C53340AF650FD1171130411 /* RuimtePulsar */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RuimtePulsar;
+		};
+		D356DC5C4DF0605AD7A64646 /* RuimtePulsar */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RuimtePulsar;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 27157708FDFF436D10EB2555 /* Project object */;
+}

@@ -5,6 +5,12 @@ options:
     iOS: '26.0'
   createIntermediateGroups: true
 packages:
+  Highlightr:
+    url: https://github.com/raspu/Highlightr.git
+    exactVersion: 2.3.0
+  SwiftTerm:
+    url: https://github.com/migueldeicaza/SwiftTerm.git
+    exactVersion: 1.15.0
   RuimtePulsar:
     path: Packages/RuimtePulsar
   RuimteTransport:
@@ -14,6 +20,7 @@ settings:
     SWIFT_VERSION: '6.0'
     MARKETING_VERSION: 0.1.0
     CURRENT_PROJECT_VERSION: 1
+    VERSIONING_SYSTEM: apple-generic
     IPHONEOS_DEPLOYMENT_TARGET: '26.0'
     TARGETED_DEVICE_FAMILY: '1,2'
     CODE_SIGN_STYLE: Automatic
@@ -21,21 +28,43 @@ targets:
   Ruimte:
     type: application
     platform: iOS
-    sources: [App]
+    sources:
+      - path: App
+      - path: ../../assets/AppIcon.icon
+        type: file
+        buildPhase: resources
     dependencies:
       - package: RuimtePulsar
       - package: RuimteTransport
+      - package: SwiftTerm
+      - package: Highlightr
+      - target: RuimteNotificationService
+        embed: true
+      - target: RuimteActivityWidget
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.ruimte.mobile
         GENERATE_INFOPLIST_FILE: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_ENTITLEMENTS: App/Ruimte.entitlements
         INFOPLIST_KEY_CFBundleDisplayName: Ruimte
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
+      configs:
+        Debug:
+          PUSH_ENVIRONMENT: development
+        Release:
+          PUSH_ENVIRONMENT: production
     info:
       path: App/Info.plist
       properties:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        RuimtePushKeychainGroup: $(AppIdentifierPrefix)app.ruimte.mobile.push
+        UIBackgroundModes: [remote-notification]
+        NSSupportsLiveActivities: true
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoadsInWebContent: true
         CFBundleURLTypes:
           - CFBundleURLName: app.ruimte.mobile.pulsar
             CFBundleURLSchemes: [ruimte]
@@ -50,6 +79,51 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
+  RuimteNotificationService:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Extensions/NotificationService
+      - path: App/PrivacyInfo.xcprivacy
+    dependencies:
+      - package: RuimtePulsar
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.ruimte.mobile.notifications
+        CODE_SIGN_ENTITLEMENTS: Extensions/NotificationService/NotificationService.entitlements
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
+    info:
+      path: Extensions/NotificationService/Info.plist
+      properties:
+        CFBundleDisplayName: Ruimte Notifications
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        RuimtePushKeychainGroup: $(AppIdentifierPrefix)app.ruimte.mobile.push
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
+  RuimteActivityWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Extensions/ActivityWidget
+      - path: App/PrivacyInfo.xcprivacy
+    dependencies:
+      - package: RuimtePulsar
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.ruimte.mobile.activity
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
+    info:
+      path: Extensions/ActivityWidget/Info.plist
+      properties:
+        CFBundleDisplayName: Ruimte Activity
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
   RuimteTests:
     type: bundle.unit-test
     platform: iOS

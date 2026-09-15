@@ -1,6 +1,7 @@
 import Foundation
-import XCTest
 import RuimtePulsar
+import XCTest
+
 @testable import RuimteTransport
 
 final class TransportTests: XCTestCase {
@@ -35,25 +36,52 @@ final class TransportTests: XCTestCase {
     func testProofRejectsIdentityBindingSignatureAndProtocol() throws {
         let machine = DeviceKey()
         let client = DeviceKey()
-        let binding = try DirectIdentity.channelBinding(offer: "a=fingerprint:sha-256 ab:cd\r\n", answer: "a=fingerprint:sha-256 ef:ab\r\n")
+        let binding = try DirectIdentity.channelBinding(
+            offer: "a=fingerprint:sha-256 ab:cd\r\n", answer: "a=fingerprint:sha-256 ef:ab\r\n")
         let nonce = "challenge"
         let message = "ruimte-daemon-channel-v1\nmachine\n\(nonce)\n\(binding)"
         let challenge: JSONValue = .object([
-            "type": .string("direct.challenge"), "protocol": .number(Double(WireConstants.protocolVersion)), "challenge": .string(nonce),
-            "daemon": .object(["id": .string("machine"), "publicKey": .string(machine.publicKey), "signature": .string(try machine.sign(message))])
+            "type": .string("direct.challenge"), "protocol": .number(Double(WireConstants.protocolVersion)),
+            "challenge": .string(nonce),
+            "daemon": .object([
+                "id": .string("machine"), "publicKey": .string(machine.publicKey),
+                "signature": .string(try machine.sign(message)),
+            ]),
         ])
-        let proof = try DirectIdentity.proof(challenge: challenge, binding: binding, machineID: "machine", machineKey: machine.publicKey, signer: client)
+        let proof = try DirectIdentity.proof(
+            challenge: challenge, binding: binding, machineID: "machine", machineKey: machine.publicKey, signer: client)
         XCTAssertEqual(proof["publicKey"]?.stringValue, client.publicKey)
-        XCTAssertTrue(DirectIdentity.verify(publicKey: client.publicKey, message: "ruimte-client-channel-v1\nmachine\nchallenge\n\(client.publicKey)\n\(binding)", signature: proof["signature"]!.stringValue!))
-        XCTAssertThrowsError(try DirectIdentity.proof(challenge: challenge, binding: "different", machineID: "machine", machineKey: machine.publicKey, signer: client))
-        XCTAssertThrowsError(try DirectIdentity.proof(challenge: challenge, binding: binding, machineID: "another", machineKey: machine.publicKey, signer: client))
-        XCTAssertThrowsError(try DirectIdentity.proof(challenge: challenge, binding: binding, machineID: "machine", machineKey: client.publicKey, signer: client))
+        XCTAssertTrue(
+            DirectIdentity.verify(
+                publicKey: client.publicKey,
+                message: "ruimte-client-channel-v1\nmachine\nchallenge\n\(client.publicKey)\n\(binding)",
+                signature: proof["signature"]!.stringValue!))
+        XCTAssertThrowsError(
+            try DirectIdentity.proof(
+                challenge: challenge, binding: "different", machineID: "machine", machineKey: machine.publicKey,
+                signer: client))
+        XCTAssertThrowsError(
+            try DirectIdentity.proof(
+                challenge: challenge, binding: binding, machineID: "another", machineKey: machine.publicKey,
+                signer: client))
+        XCTAssertThrowsError(
+            try DirectIdentity.proof(
+                challenge: challenge, binding: binding, machineID: "machine", machineKey: client.publicKey,
+                signer: client))
         var changed = challenge.objectValue!
         changed["protocol"] = .number(999)
-        XCTAssertThrowsError(try DirectIdentity.proof(challenge: .object(changed), binding: binding, machineID: "machine", machineKey: machine.publicKey, signer: client))
+        XCTAssertThrowsError(
+            try DirectIdentity.proof(
+                challenge: .object(changed), binding: binding, machineID: "machine", machineKey: machine.publicKey,
+                signer: client))
         changed.removeValue(forKey: "protocol")
-        XCTAssertThrowsError(try DirectIdentity.proof(challenge: .object(changed), binding: binding, machineID: "machine", machineKey: machine.publicKey, signer: client))
-        XCTAssertFalse(DirectIdentity.verify(publicKey: machine.publicKey, message: message + "tampered", signature: try machine.sign(message)))
+        XCTAssertThrowsError(
+            try DirectIdentity.proof(
+                challenge: .object(changed), binding: binding, machineID: "machine", machineKey: machine.publicKey,
+                signer: client))
+        XCTAssertFalse(
+            DirectIdentity.verify(
+                publicKey: machine.publicKey, message: message + "tampered", signature: try machine.sign(message)))
     }
 
     func testBrokerHostAndSignatures() throws {
@@ -62,15 +90,33 @@ final class TransportTests: XCTestCase {
         XCTAssertEqual(try peer.start().count, 1)
         XCTAssertEqual(try peer.start(), [])
         XCTAssertNil(try peer.ice())
-        let challenge: JSONValue = .object(["type": .string("challenge"), "broker": .string("broker.test:443"), "nonce": .string(String(repeating: "a", count: 22))])
+        let challenge: JSONValue = .object([
+            "type": .string("challenge"), "broker": .string("broker.test:443"),
+            "nonce": .string(String(repeating: "a", count: 22)),
+        ])
         let answer = try peer.receive(challenge)
         guard case .send(let frame) = answer.first else { return XCTFail("Missing proof") }
-        XCTAssertTrue(DirectIdentity.verify(publicKey: key.publicKey, message: "pulsar-broker-hello-v1\n[\"broker.test:443\",\"client\",\"\(key.publicKey)\",\"\(String(repeating: "a", count: 22))\"]", signature: frame["signature"]!.stringValue!))
+        XCTAssertTrue(
+            DirectIdentity.verify(
+                publicKey: key.publicKey,
+                message:
+                    "pulsar-broker-hello-v1\n[\"broker.test:443\",\"client\",\"\(key.publicKey)\",\"\(String(repeating: "a", count: 22))\"]",
+                signature: frame["signature"]!.stringValue!))
         XCTAssertEqual(try peer.receive(.object(["type": .string("ready")])), [.ready])
         XCTAssertNotNil(try peer.ice())
-        let envelope: JSONValue = .object(["connectionId": .string("connection_1"), "signal": .object(["kind": .string("candidate"), "candidate": .string(""), "sdpMid": .null, "sdpMLineIndex": .null])])
+        let envelope: JSONValue = .object([
+            "connectionId": .string("connection_1"),
+            "signal": .object([
+                "kind": .string("candidate"), "candidate": .string(""), "sdpMid": .null, "sdpMLineIndex": .null,
+            ]),
+        ])
         let relay = try XCTUnwrap(peer.relay(to: DeviceKey().publicKey, envelope: envelope))
-        XCTAssertTrue(DirectIdentity.verify(publicKey: key.publicKey, message: try DirectIdentity.signalMessage(from: key.publicKey, to: relay["to"]!.stringValue!, envelope: envelope), signature: relay["signature"]!.stringValue!))
+        XCTAssertTrue(
+            DirectIdentity.verify(
+                publicKey: key.publicKey,
+                message: try DirectIdentity.signalMessage(
+                    from: key.publicKey, to: relay["to"]!.stringValue!, envelope: envelope),
+                signature: relay["signature"]!.stringValue!))
         var wrongHost = BrokerPeer(host: "attacker.test", signer: key)
         _ = try wrongHost.start()
         XCTAssertThrowsError(try wrongHost.receive(challenge))
@@ -78,8 +124,13 @@ final class TransportTests: XCTestCase {
 
     func testIceDeduplicationPreservesDifferentTurnCredentials() throws {
         let own: JSONValue = .object(["urls": .string("stun:turn.test:3478")])
-        let route: JSONValue = .object(["urls": .array([.string("stun:turn.test:3478"), .string("turn:turn.test:3478")]), "username": .string("first"), "credential": .string("secret")])
-        let other: JSONValue = .object(["urls": .string("turn:turn.test:3478"), "username": .string("second"), "credential": .string("secret")])
+        let route: JSONValue = .object([
+            "urls": .array([.string("stun:turn.test:3478"), .string("turn:turn.test:3478")]),
+            "username": .string("first"), "credential": .string("secret"),
+        ])
+        let other: JSONValue = .object([
+            "urls": .string("turn:turn.test:3478"), "username": .string("second"), "credential": .string("secret"),
+        ])
         let merged = try IceServers.merge(own: [own], route: [route, route, other])
         XCTAssertEqual(merged.count, 3)
         XCTAssertEqual(merged[0]["urls"]?.arrayValue, [.string("stun:turn.test:3478")])
@@ -95,7 +146,11 @@ final class TransportTests: XCTestCase {
     var closed = false
     func start() {}
     func send(_ text: String) { writes.append(try! JSONValue.decode(Data(text.utf8))) }
-    func close() { closed = true; received = nil; failed = nil }
+    func close() {
+        closed = true
+        received = nil
+        failed = nil
+    }
     func receive(_ frame: JSONValue) throws { received?(try wireText(frame)) }
 }
 
@@ -120,19 +175,64 @@ final class TransportTests: XCTestCase {
     var closes = 0
     init(events: LinkEvents) { self.events = events }
     func send(_ text: String) throws {}
-    func close() { closes += 1; events.closed(nil) }
+    func close() {
+        closes += 1
+        events.closed(nil)
+    }
 }
 
 final class BrokerAndLifecycleTests: XCTestCase {
+    @MainActor func testForgetInvalidatesOldLinkAndLeaseWithoutTouchingReplacement() throws {
+        let scheduler = FakeScheduler()
+        let pool = MachineConnections(scheduler: scheduler, monitorPaths: false)
+        pool.setScene("scene", foreground: true)
+        var old: FakeLink!
+        var replacement: FakeLink!
+        var received: [String] = []
+        let events = LinkEvents(opened: {}, message: { received.append($0) }, closed: { _ in })
+        let oldLease = pool.hold(
+            machineID: "machine",
+            open: {
+                old = FakeLink(events: $0)
+                return old
+            }, events: events)
+        old.events.opened()
+        pool.forget(machineID: "machine")
+        XCTAssertEqual(old.closes, 1)
+        XCTAssertThrowsError(try oldLease.send("stale"))
+        let newLease = pool.hold(
+            machineID: "machine",
+            open: {
+                replacement = FakeLink(events: $0)
+                return replacement
+            }, events: events)
+        replacement.events.opened()
+        old.events.message("stale event")
+        replacement.events.message("current event")
+        XCTAssertEqual(received, ["current event"])
+        pool.setScene("scene", foreground: false)
+        oldLease.release()
+        XCTAssertEqual(pool.machineCount, 1)
+        pool.setScene("scene", foreground: true)
+        XCTAssertEqual(pool.machineCount, 1)
+        newLease.release()
+        pool.shutdown()
+    }
+
     @MainActor func testParallelAttemptsShareSocketWaitForIceAndRefreshExpiry() throws {
         var sockets: [FakeBrokerSocket] = []
         var now = 0.0
-        let pool = BrokerSockets(now: { now }, createSocket: { _ in
-            let socket = FakeBrokerSocket(); sockets.append(socket); return socket
-        })
+        let pool = BrokerSockets(
+            now: { now },
+            createSocket: { _ in
+                let socket = FakeBrokerSocket()
+                sockets.append(socket)
+                return socket
+            })
         let key = DeviceKey()
         var ready = 0
-        let member = BrokerSockets.Member(ready: { _ in ready += 1 }, relayed: { _ in }, refused: { _ in }, lost: { _ in XCTFail("Unexpected loss") })
+        let member = BrokerSockets.Member(
+            ready: { _ in ready += 1 }, relayed: { _ in }, refused: { _ in }, lost: { _ in XCTFail("Unexpected loss") })
         let first = try pool.join(url: URL(string: "wss://broker.test")!, signer: key, member: member)
         let second = try pool.join(url: URL(string: "wss://broker.test")!, signer: key, member: member)
         XCTAssertEqual(sockets.count, 1)
@@ -140,16 +240,19 @@ final class BrokerAndLifecycleTests: XCTestCase {
         XCTAssertEqual(ready, 0)
         XCTAssertEqual(sockets[0].writes.last?["type"]?.stringValue, "ice")
         let iceID = sockets[0].writes.last!["id"]!
-        try sockets[0].receive(.object(["type": .string("ice"), "id": iceID, "servers": .array([]), "expiresAt": .number(100)]))
+        try sockets[0].receive(
+            .object(["type": .string("ice"), "id": iceID, "servers": .array([]), "expiresAt": .number(100)]))
         XCTAssertEqual(ready, 2)
         now = 101
         let third = try pool.join(url: URL(string: "wss://broker.test")!, signer: key, member: member)
         XCTAssertEqual(ready, 2)
         XCTAssertNotEqual(sockets[0].writes.last?["id"], iceID)
         let refreshID = sockets[0].writes.last!["id"]!
-        try sockets[0].receive(.object(["type": .string("ice"), "id": refreshID, "servers": .array([]), "expiresAt": .number(200)]))
+        try sockets[0].receive(
+            .object(["type": .string("ice"), "id": refreshID, "servers": .array([]), "expiresAt": .number(200)]))
         XCTAssertEqual(ready, 3)
-        first.leave(); second.leave()
+        first.leave()
+        second.leave()
         XCTAssertFalse(sockets[0].closed)
         third.leave()
         XCTAssertTrue(sockets[0].closed)
@@ -160,11 +263,14 @@ final class BrokerAndLifecycleTests: XCTestCase {
         let socket = FakeBrokerSocket()
         let pool = BrokerSockets(now: { 100 }, createSocket: { _ in socket })
         var failures = 0
-        let member = BrokerSockets.Member(ready: { _ in XCTFail("Must not gather") }, relayed: { _ in }, refused: { _ in }, lost: { _ in failures += 1 })
+        let member = BrokerSockets.Member(
+            ready: { _ in XCTFail("Must not gather") }, relayed: { _ in }, refused: { _ in },
+            lost: { _ in failures += 1 })
         let first = try pool.join(url: URL(string: "wss://broker.test")!, signer: DeviceKey(), member: member)
         try socket.receive(.object(["type": .string("ready")]))
         let iceID = socket.writes.last!["id"]!
-        try socket.receive(.object(["type": .string("ice"), "id": iceID, "servers": .array([]), "expiresAt": .number(99)]))
+        try socket.receive(
+            .object(["type": .string("ice"), "id": iceID, "servers": .array([]), "expiresAt": .number(99)]))
         XCTAssertEqual(failures, 1)
         XCTAssertEqual(pool.socketCount, 0)
         first.leave()
@@ -175,11 +281,20 @@ final class BrokerAndLifecycleTests: XCTestCase {
         let pool = BrokerSockets(createSocket: { _ in socket })
         let key = DeviceKey()
         var ready = 0
-        let cancelled = try pool.join(url: URL(string: "wss://broker.test")!, signer: key, member: .init(ready: { _ in XCTFail("Cancelled member became ready") }, relayed: { _ in }, refused: { _ in }, lost: { _ in }))
-        let held = try pool.join(url: URL(string: "wss://broker.test")!, signer: key, member: .init(ready: { _ in ready += 1 }, relayed: { _ in }, refused: { _ in }, lost: { _ in }))
+        let cancelled = try pool.join(
+            url: URL(string: "wss://broker.test")!, signer: key,
+            member: .init(
+                ready: { _ in XCTFail("Cancelled member became ready") }, relayed: { _ in }, refused: { _ in },
+                lost: { _ in }))
+        let held = try pool.join(
+            url: URL(string: "wss://broker.test")!, signer: key,
+            member: .init(ready: { _ in ready += 1 }, relayed: { _ in }, refused: { _ in }, lost: { _ in }))
         try socket.receive(.object(["type": .string("ready")]))
         cancelled.leave()
-        try socket.receive(.object(["type": .string("ice"), "id": socket.writes.last!["id"]!, "servers": .array([]), "expiresAt": .null]))
+        try socket.receive(
+            .object([
+                "type": .string("ice"), "id": socket.writes.last!["id"]!, "servers": .array([]), "expiresAt": .null,
+            ]))
         XCTAssertEqual(ready, 1)
         held.leave()
         XCTAssertTrue(socket.closed)
@@ -190,7 +305,9 @@ final class BrokerAndLifecycleTests: XCTestCase {
         let pool = MachineConnections(scheduler: scheduler, monitorPaths: false)
         var links: [FakeLink] = []
         let opener: MachineConnections.Opener = { events in
-            let link = FakeLink(events: events); links.append(link); return link
+            let link = FakeLink(events: events)
+            links.append(link)
+            return link
         }
         let events = LinkEvents(opened: {}, message: { _ in }, closed: { _ in })
         pool.setScene("one", foreground: true)

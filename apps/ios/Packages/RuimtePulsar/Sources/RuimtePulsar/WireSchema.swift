@@ -27,12 +27,19 @@ public enum JSONValue: Codable, Sendable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
-        if container.decodeNil() { self = .null }
-        else if let value = try? container.decode(Bool.self) { self = .bool(value) }
-        else if let value = try? container.decode(String.self) { self = .string(value) }
-        else if let value = try? container.decode(Double.self) { self = .number(value) }
-        else if let value = try? container.decode([JSONValue].self) { self = .array(value) }
-        else { self = .object(try container.decode([String: JSONValue].self)) }
+        if container.decodeNil() {
+            self = .null
+        } else if let value = try? container.decode(Bool.self) {
+            self = .bool(value)
+        } else if let value = try? container.decode(String.self) {
+            self = .string(value)
+        } else if let value = try? container.decode(Double.self) {
+            self = .number(value)
+        } else if let value = try? container.decode([JSONValue].self) {
+            self = .array(value)
+        } else {
+            self = .object(try container.decode([String: JSONValue].self))
+        }
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -48,11 +55,26 @@ public enum JSONValue: Codable, Sendable, Equatable {
     }
 
     public subscript(_ key: String) -> JSONValue? { objectValue?[key] }
-    public var objectValue: [String: JSONValue]? { if case .object(let value) = self { return value }; return nil }
-    public var arrayValue: [JSONValue]? { if case .array(let value) = self { return value }; return nil }
-    public var stringValue: String? { if case .string(let value) = self { return value }; return nil }
-    public var numberValue: Double? { if case .number(let value) = self { return value }; return nil }
-    public var boolValue: Bool? { if case .bool(let value) = self { return value }; return nil }
+    public var objectValue: [String: JSONValue]? {
+        if case .object(let value) = self { return value }
+        return nil
+    }
+    public var arrayValue: [JSONValue]? {
+        if case .array(let value) = self { return value }
+        return nil
+    }
+    public var stringValue: String? {
+        if case .string(let value) = self { return value }
+        return nil
+    }
+    public var numberValue: Double? {
+        if case .number(let value) = self { return value }
+        return nil
+    }
+    public var boolValue: Bool? {
+        if case .bool(let value) = self { return value }
+        return nil
+    }
     public static func decode(_ data: Data) throws -> JSONValue { try JSONDecoder().decode(JSONValue.self, from: data) }
     public func encoded() throws -> Data {
         let encoder = JSONEncoder()
@@ -75,7 +97,8 @@ public enum WireSchema {
         return try parse(value, schema: schema, path: name)
     }
 
-    private static func parse(_ value: JSONValue, schema: JSONValue, path: String) throws -> JSONValue {
+    private static func parse(_ input: JSONValue, schema: JSONValue, path: String) throws -> JSONValue {
+        let value = try projectEntry(input, metadata: schema["x-project-entry"])
         let fail = { WireValidationError.invalid("Invalid \(path)") }
         if let options = (schema["oneOf"] ?? schema["anyOf"])?.arrayValue {
             for option in options {
@@ -113,21 +136,36 @@ public enum WireSchema {
             if let maximum = schema["maxLength"]?.numberValue, length > maximum { throw fail() }
             if let pattern = schema["pattern"]?.stringValue {
                 let expression = try NSRegularExpression(pattern: pattern)
-                guard expression.firstMatch(in: string, range: NSRange(string.startIndex..., in: string)) != nil else { throw fail() }
+                guard expression.firstMatch(in: string, range: NSRange(string.startIndex..., in: string)) != nil else {
+                    throw fail()
+                }
             }
         case "array":
             guard let array = value.arrayValue else { throw fail() }
             if let minimum = schema["minItems"]?.numberValue, Double(array.count) < minimum { throw fail() }
             if let maximum = schema["maxItems"]?.numberValue, Double(array.count) > maximum { throw fail() }
-            guard let item = schema["items"] else { throw fail() }
-            return .array(try array.enumerated().map { try parse($0.element, schema: item, path: "\(path)[\($0.offset)]") })
+            let prefix = schema["prefixItems"]?.arrayValue ?? []
+            return .array(
+                try array.enumerated().map { index, value in
+                    if index < prefix.count {
+                        return try parse(value, schema: prefix[index], path: "\(path)[\(index)]")
+                    }
+                    if schema["items"] == .bool(false) { throw fail() }
+                    guard let item = schema["items"], item.objectValue != nil else { return value }
+                    return try parse(value, schema: item, path: "\(path)[\(index)]")
+                })
         case "object":
             guard let object = value.objectValue else { throw fail() }
             let required = schema["required"]?.arrayValue?.compactMap(\.stringValue) ?? []
             let properties = schema["properties"]?.objectValue ?? [:]
             var result: [String: JSONValue] = [:]
-            if properties.isEmpty, let additional = schema["additionalProperties"], additional.objectValue != nil {
-                for (key, input) in object {
+            if let additional = schema["additionalProperties"] {
+                for (key, input) in object where properties[key] == nil {
+                    if additional == .bool(false) { throw fail() }
+                    if additional == .bool(true) {
+                        result[key] = input
+                        continue
+                    }
                     if let propertyNames = schema["propertyNames"] {
                         _ = try parse(.string(key), schema: propertyNames, path: "\(path).key")
                     }
@@ -143,14 +181,64 @@ public enum WireSchema {
                     throw WireValidationError.invalid("Missing \(path).\(key)")
                 }
             }
+            if schema["x-message-content"] == .bool(true) {
+                guard
+                    !(result["text"]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+                        || !(result["attachments"]?.arrayValue?.isEmpty ?? true)
+                else { throw fail() }
+            }
+            if schema["x-follow-dimensions"] == .bool(true) {
+                let hasColumns = result["cols"] != nil
+                let hasRows = result["rows"] != nil
+                guard hasColumns == hasRows, hasColumns || result["follow"] == .bool(true) else { throw fail() }
+            }
             if let lifetime = schema["x-statement-lifetime-ms"]?.numberValue {
                 guard let issuedAt = result["issuedAt"]?.numberValue, let expiresAt = result["expiresAt"]?.numberValue,
-                      expiresAt > issuedAt, expiresAt - issuedAt <= lifetime else { throw fail() }
+                    expiresAt > issuedAt, expiresAt - issuedAt <= lifetime
+                else { throw fail() }
             }
-            return .object(result)
+            return schema["x-output-null"] == .bool(true) ? .null : .object(result)
         case nil: break
         default: throw WireValidationError.invalid("Unsupported generated schema at \(path)")
         }
         return value
     }
+
+    private static func projectEntry(_ input: JSONValue, metadata: JSONValue?) throws -> JSONValue {
+        guard let metadata, var entry = input.objectValue else { return input }
+        let isNode = metadata["node"] == .bool(true)
+        if entry["kind"] == .string("unknown"), var raw = entry["raw"]?.objectValue {
+            if isNode {
+                let original = unknownEntry(raw, metadata: metadata)
+                for key in ["id", "x", "y", "w", "h"] where entry[key] != original[key] {
+                    raw[key] = entry[key]
+                }
+            }
+            entry = raw
+        }
+        guard let kind = entry["kind"]?.stringValue, !kind.isEmpty, kind != "unknown",
+            !(metadata["knownKinds"]?.arrayValue?.contains(.string(kind)) ?? false),
+            let id = entry["id"]?.stringValue, !id.isEmpty
+        else { return .object(entry) }
+        return .object(unknownEntry(entry, metadata: metadata))
+    }
+
+    private static func unknownEntry(_ raw: [String: JSONValue], metadata: JSONValue) -> [String: JSONValue] {
+        var result = metadata["template"]?.objectValue ?? [:]
+        result["id"] = raw["id"]
+        result["raw"] = .object(raw)
+        if metadata["node"] == .bool(true) {
+            result["title"] = raw["title"]?.stringValue.map(JSONValue.string) ?? raw["kind"]
+            for key in ["x", "y", "w", "h"] {
+                if let value = raw[key]?.numberValue, value.isFinite, !["w", "h"].contains(key) || value > 0 {
+                    result[key] = .number(value)
+                }
+            }
+        } else {
+            result["name"] = raw["name"]?.stringValue.flatMap { $0.isEmpty ? nil : .string($0) } ?? raw["kind"]
+            if let creator = raw["createdBy"]?.stringValue, !creator.isEmpty { result["createdBy"] = .string(creator) }
+        }
+        return result
+    }
+
 }

@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { PushSubscribePayloadSchema, PushUnsubscribePayloadSchema } from './push.ts';
+import { RenderSceneResultSchema } from './render.ts';
 import { BytesReadPayloadSchema, BytesReadResultSchema } from './bytes.ts';
 import {
     AgentResumePayloadSchema,
@@ -160,6 +162,8 @@ export * from './protocol.ts';
 export * from './project-views.ts';
 export * from './server.ts';
 export * from './session.ts';
+export * from './render.ts';
+export * from './push.ts';
 export * from './stored-path.ts';
 export * from './usage.ts';
 
@@ -171,6 +175,8 @@ export const REQUEST_SCHEMAS = {
     'server.hello': { payload: ServerHelloPayloadSchema, result: ServerHelloResultSchema },
     'server.ping': { payload: ServerPingPayloadSchema, result: ServerPingResultSchema },
     'session.create': { payload: SessionCreatePayloadSchema, result: SessionInfoSchema },
+    'push.subscribe': { payload: PushSubscribePayloadSchema, result: EmptySchema },
+    'push.unsubscribe': { payload: PushUnsubscribePayloadSchema, result: EmptySchema },
     'session.attach': { payload: SessionAttachPayloadSchema, result: SessionAttachResultSchema },
     'session.detach': { payload: SessionTargetPayloadSchema, result: EmptySchema },
     'session.write': { payload: SessionWritePayloadSchema, result: EmptySchema },
@@ -205,10 +211,12 @@ export const REQUEST_SCHEMAS = {
     'project.release': { payload: ProjectTargetPayloadSchema, result: EmptySchema },
     'project.setIcon': { payload: ProjectSetIconPayloadSchema, result: ProjectSummaryResultSchema },
     'project.delete': { payload: ProjectDeletePayloadSchema, result: EmptySchema },
+    'drawing.paths': { payload: DrawingTargetPayloadSchema, result: RenderSceneResultSchema },
     'drawing.open': { payload: DrawingTargetPayloadSchema, result: DrawingOpenResultSchema },
     'drawing.save': { payload: DrawingSavePayloadSchema, result: DrawingSaveResultSchema },
     'drawing.close': { payload: DrawingTargetPayloadSchema, result: EmptySchema },
     'drawing.copy': { payload: DrawingCopyPayloadSchema, result: EmptySchema },
+    'diagram.layout': { payload: DiagramTargetPayloadSchema, result: RenderSceneResultSchema },
     'diagram.open': { payload: DiagramTargetPayloadSchema, result: DiagramOpenResultSchema },
     'diagram.save': { payload: DiagramSavePayloadSchema, result: DiagramSaveResultSchema },
     'diagram.close': { payload: DiagramTargetPayloadSchema, result: EmptySchema },

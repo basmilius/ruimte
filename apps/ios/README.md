@@ -1,8 +1,25 @@
 # Ruimte for iPhone and iPad
 
-Phase 0 is a native connection test app. It signs in to Pulsar, lists account machines,
-connects through the broker and WebRTC, and displays `server.hello`. It requires iOS or
-iPadOS 26. Later phases wait for Bas to complete the device checks below.
+A native remote client for your Ruimte machines, requiring iOS or iPadOS 26. It opens
+projects, chats, terminals, files, drawings and diagrams without running a local daemon.
+The canvas supports navigation, nodes and context links; existing nodes keep their position
+and size. Browser pages use an isolated WKWebView without a machine bridge.
+
+## Included
+
+- Account login through the existing GitHub/Apple Worker flow, HTTPS pairing links and
+  shared authenticated WebRTC connections. Normal ICE selection allows direct connections;
+  TURN is a fallback. The relay-only switch is confined to connection diagnostics.
+- Project creation and navigation, view ordering and names, local camera/selection, and
+  three-way merges with explicit conflict resolution. Unknown view/node kinds survive saves.
+- Native chat timeline, streaming, markdown/code highlighting, model options, drafts,
+  attachments, context selection, approvals and questions.
+- SwiftTerm terminals with snapshots, output, resync, keyboard controls and paste confirmation.
+  `session.attach` uses `follow:true` so opening a phone never resizes the desktop PTY.
+- File and media previews, filesystem updates, Git changes/staging/commits, processes and
+  signals, usage and machine access management. Destructive actions require confirmation.
+- Optional encrypted push alerts and approval actions, per-session follows, a notification
+  service extension and Live Activities. APNs delivery requires the service configuration below.
 
 ## Build locally
 
@@ -11,14 +28,19 @@ From the repository root, with Xcode 27, XcodeGen and Bun installed:
 ```sh
 bun install --frozen-lockfile
 bun run --cwd packages/contracts generate:swift
+xcodebuild -downloadComponent MetalToolchain
 xcodegen generate --spec apps/ios/project.yml
 open apps/ios/Ruimte.xcodeproj
 ```
 
 Choose the Ruimte scheme and your iPhone or iPad. Select your development team in
 Signing & Capabilities, enable Developer Mode on the device if requested, and run.
-The bundle ID is `app.ruimte.mobile`. The project uses automatic signing. The generated
-Xcode project and build products stay outside Git.
+The bundle ID is `app.ruimte.mobile`; the extensions are `app.ruimte.mobile.notifications`
+and `app.ruimte.mobile.activity`. The project uses automatic signing. `project.yml` is the
+source of the committed Xcode project; regenerate it when adding files or dependencies.
+Commit the generated project and resolved packages, excluding user state and build products.
+SwiftTerm is pinned to 1.15.0, Highlightr to 2.3.0 and WebRTC to 153.0.0. SwiftTerm's
+shader compilation requires Apple's separate Metal Toolchain.
 
 For simulator tests, replace the destination with an installed simulator if needed:
 
@@ -62,11 +84,10 @@ bun test
 - `stasel/WebRTC` is pinned to release `153.0.0`, commit
   `4266157cd08f92115de885ab12d87196a8db87e1`. The native adapter exchanges no audio/video
   tracks and declares no microphone, camera or background-audio capability.
-- `packages/contracts/scripts/generate-swift.ts` generates the phase-0 models, JSON
-  schemas, constants and TypeScript fixtures from `packages/pulsar` and
-  `packages/contracts`. `bun run check` refuses stale output. Full daemon API generation
-  belongs to phase 1. The generated `ProjectCanvasDefaults` projection exists only to
-  test the source schema's default; the app does not open or edit a canvas.
+- `packages/contracts/scripts/generate-swift.ts` generates the full daemon request/result/event
+  API, JSON schemas, constants and TypeScript fixtures. `bun run check` refuses stale output.
+  `MachineClient` correlates responses, bounds timeouts, rejects pending requests on disconnect,
+  shares subscriptions/attachments and reads versioned resources in chunks.
 - Required nullable fields, optional fields and optional nullable fields remain distinct.
   `Presence` represents missing, null and value when all three occur. The validator strips
   unknown object keys like Zod. The statement lifetime refinement is an explicit generator
@@ -74,8 +95,8 @@ bun test
 
 The authentication callback is exactly `ruimte://pulsar/callback`, checked with the
 pending state before exchange. `/v1/providers` controls the login options; Apple uses
-its existing Worker redirect flow. Native Apple token exchange and HTTPS pairing-link
-entry are later phases. This app contains no local daemon.
+its existing Worker redirect flow. Native Apple token exchange remains separate future work. HTTPS pairing links are accepted
+from the Add machine sheet; redirects are refused to keep a token on its intended origin. This app contains no local daemon.
 
 ## Device checks for Bas
 
@@ -125,4 +146,77 @@ Keep a row for each attempt:
 
 Local build and unit tests cannot establish production relay reachability, browser
 login on a device, scene behavior under iPad multitasking, or reconnect latency on 5G.
-Phase 0 remains awaiting device acceptance until these measurements are recorded.
+Record these measurements separately from the local build and tests. Development does not
+wait between phases, but these criteria are not established by simulator success.
+
+## Notifications and Live Activities
+
+Notifications are opt-in in Settings. Follow sessions under each machine; approvals can
+be enabled independently. The phone registers its APNs token with the address book and
+sends its opaque handle, push public key and preferences to each authenticated machine.
+The machine sends alerts only when the paired key has no connected client. Live Activity
+updates are separate from alert visibility.
+
+Alert content uses ephemeral X25519, HKDF-SHA256 and AES-256-GCM. Routing fields are
+additional authenticated data, and the machine signs the full envelope with ed25519. The
+notification extension verifies the pinned machine key, device handle and validity window,
+then claims the message ID under a shared lock before displaying plaintext. The nonce,
+key derivation and ciphertext are checked against a generated Bun/CryptoKit fixture.
+Live Activity titles, phases and timing are the intentional plaintext exception.
+
+Required configuration, outside this repository's source:
+
+1. Enable Push Notifications and Time Sensitive Notifications for `app.ruimte.mobile`.
+   Register both extension IDs under the same Apple team. Enable app group
+   `group.app.ruimte.mobile` for the app and notification extension, with the shared
+   `app.ruimte.mobile.push` Keychain group. Regenerate provisioning profiles.
+2. Apply Worker migration `apps/pulsar-worker/migrations/0006_push.sql` to the intended
+   environment. Configure `APNS_KEY` (the .p8 contents), `APNS_KEY_ID`, `APNS_TEAM_ID`
+   and `APNS_TOPIC=app.ruimte.mobile` as Worker secrets/variables. Missing configuration
+   produces an explicit `not-configured` response; no credentials are embedded here.
+3. Deploy the matching Worker and daemon through the project's normal release process.
+   Registration is bound to an active account session. Delivery requires an authorized
+   machine on the same account; a manually paired machine outside that account cannot
+   use this account's push service.
+4. On a signed physical device, enable notifications, follow a live session, background
+   the app, and test turn completion and both approval choices. Also test an expired
+   request, a desktop answer arriving first, revocation, key loss and the generic fallback.
+5. Enable Live Activities and follow a turn. Check phase changes, completion, expiry and
+   push-to-start on the Lock Screen and Dynamic Island. Try the same node ID on two
+   machines to verify that activity routing stays separate.
+
+Production APNs delivery and background success rates require those device tests. Unit
+tests inject APNs transport and do not send real notifications.
+
+## Xcode Cloud and TestFlight
+
+The shared `Ruimte` scheme and generated Xcode project are committed for Xcode Cloud
+onboarding. `ci_scripts/ci_post_clone.sh` generates the project and installs the required
+Metal component; `ci_pre_xcodebuild.sh` uses `CI_BUILD_NUMBER` for the build number.
+Configure the workflow in Xcode/App Store Connect with this project, an iOS simulator
+Test action, and a Release Archive action. Add a TestFlight post-action to the release-tag
+workflow after signing and App Store Connect configuration are complete.
+
+The repository contains the existing Ruimte Icon Composer icon and a privacy manifest for
+local preferences, the shared notification store and elapsed connection timing. Review the archive's aggregated SDK
+privacy report and the account service's App Store privacy answers before distribution.
+No Apple distribution credentials, APNs credentials, Xcode Cloud workflow or TestFlight
+upload is created by a local source build.
+
+Apple references: [custom build scripts](https://developer.apple.com/documentation/xcode/writing-custom-build-scripts),
+[first workflow](https://developer.apple.com/documentation/xcode/configuring-your-first-xcode-cloud-workflow),
+[required-reason API declarations](https://developer.apple.com/documentation/technotes/tn3183-adding-required-reason-api-entries-to-your-privacy-manifest).
+
+## Feature acceptance on devices
+
+- Open one project in two iPad windows. Close one, and keep the other chat/terminal live.
+  Edit a view name on both clients to exercise conflict resolution; move a node on desktop
+  while renaming it on the phone to verify independent changes merge.
+- Stream a long chat with tools, images, an approval and a question. Check scrolling,
+  keyboard accessibility, draft recovery, reconnect and a 300-line code block.
+- Attach to `vim`/`htop`, reconnect, resync and paste multiple lines. Confirm desktop rows
+  and columns stay unchanged. Measure the memory and responsiveness of large output.
+- Pan a 30-node canvas with 20 edges, rotate the screen, return to the saved camera and
+  use VoiceOver/list view. Compare drawing paths and text against desktop.
+- Test file watching, image/video previews, Git stage/unstage/commit and confirmed process
+  signals against a disposable project before using them on active work.

@@ -1,11 +1,18 @@
 import Foundation
 import Testing
+
 @testable import RuimtePulsar
 
 struct WireSchemaTests {
     @Test func typeScriptValidationFixtures() throws {
         let url = try #require(Bundle.module.url(forResource: "wire", withExtension: "json"))
         let fixture = try JSONValue.decode(Data(contentsOf: url))
+        #expect(
+            Set(WireRequest.allCases.map(\.rawValue))
+                == Set(try #require(fixture["requestTypes"]?.arrayValue).compactMap(\.stringValue)))
+        #expect(
+            Set(WireEvent.allCases.map(\.rawValue))
+                == Set(try #require(fixture["eventTypes"]?.arrayValue).compactMap(\.stringValue)))
         for entry in try #require(fixture["validations"]?.arrayValue) {
             let name = try #require(entry["schema"]?.stringValue)
             let input = try #require(entry["input"])
@@ -22,10 +29,13 @@ struct WireSchemaTests {
         #expect(throws: (any Error).self) {
             try decoder.decode(Account.self, from: Data(#"{"id":"account","provider":"github"}"#.utf8))
         }
-        let account = try decoder.decode(Account.self, from: Data(#"{"id":"account","provider":"github","login":null}"#.utf8))
+        let account = try decoder.decode(
+            Account.self, from: Data(#"{"id":"account","provider":"github","login":null}"#.utf8))
         #expect(account.login == nil)
         #expect(throws: (any Error).self) {
-            try decoder.decode(ServerHelloResult.self, from: Data(#"{"version":"1","platform":"darwin","home":"/Users/bas","model":null}"#.utf8))
+            try decoder.decode(
+                ServerHelloResult.self,
+                from: Data(#"{"version":"1","platform":"darwin","home":"/Users/bas","model":null}"#.utf8))
         }
     }
 
@@ -36,8 +46,11 @@ struct WireSchemaTests {
     }
 
     @Test func optionalNullableHasThreeStates() throws {
-        let fixture = try JSONValue.decode(Data(contentsOf: #require(Bundle.module.url(forResource: "wire", withExtension: "json"))))
-        let entries = try #require(fixture["validations"]?.arrayValue).filter { $0["schema"] == .string("RegisterMachinePayloadSchema") }
+        let fixture = try JSONValue.decode(
+            Data(contentsOf: #require(Bundle.module.url(forResource: "wire", withExtension: "json"))))
+        let entries = try #require(fixture["validations"]?.arrayValue).filter {
+            $0["schema"] == .string("RegisterMachinePayloadSchema")
+        }
         let decoder = JSONDecoder()
         let absent = try decoder.decode(RegisterMachinePayload.self, from: #require(entries.first?["input"]).encoded())
         let null = try decoder.decode(RegisterMachinePayload.self, from: #require(entries.last?["input"]).encoded())
@@ -49,7 +62,8 @@ struct WireSchemaTests {
 
     @Test func stringBoundsUseTypeScriptUTF16() throws {
         #expect(throws: (any Error).self) {
-            try WireSchema.validate("ProvidersResultSchema", .object(["providers": .array([.string(String(repeating: "📱", count: 17))])]))
+            try WireSchema.validate(
+                "ProvidersResultSchema", .object(["providers": .array([.string(String(repeating: "📱", count: 17))])]))
         }
     }
 }

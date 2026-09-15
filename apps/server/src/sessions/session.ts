@@ -146,8 +146,10 @@ export class Session {
         return lines.join('\n');
     }
 
-    async attach(clientId: string, cols: number, rows: number): Promise<string> {
-        this.resize(cols, rows);
+    async attach(clientId: string, cols?: number, rows?: number): Promise<string> {
+        if (cols !== undefined && rows !== undefined) {
+            this.resize(cols, rows);
+        }
         const screen = await this.serializeScreen();
         // Registering after the serialize resolved (no await in between) is what keeps the screen
         // and the stream contiguous: nothing can land in both.

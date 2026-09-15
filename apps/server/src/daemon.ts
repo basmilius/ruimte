@@ -1,3 +1,5 @@
+import { PushService } from './push/service.ts';
+import { registerPushHandlers } from './handlers/push.ts';
 import { dirname, join, normalize, resolve } from 'node:path';
 import type { ServerWebSocket } from 'bun';
 import {
@@ -277,7 +279,18 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             )
     };
 
+    const push = new PushService({
+        auth,
+        identity,
+        titleFor: (nodeId) => projects.index.titleFor(nodeId),
+        onError: (error) => console.error('Push delivery failed:', errorText(error))
+    });
+    manager.observe((event) => push.consume(event));
+    chats.observe((event) => push.consume(event));
+    manager.offlineApprovals = () => push.hasOfflineApprovals();
+
     const dispatcher = new Dispatcher();
+    registerPushHandlers(dispatcher, auth);
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await readMachineModel() });
     registerSessionHandlers(dispatcher, manager);
     registerChatHandlers(dispatcher, chats, providers);
@@ -385,6 +398,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const directConnections = new Set<{ channel: ClientChannel; connection: OpenConnection }>();
     const openConnection = connectionOpener({
         dispatcher,
+        presence: push,
         sessions: manager,
         chats,
         identity,

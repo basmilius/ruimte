@@ -36,6 +36,7 @@ interface ScreenSource {
 // Structural, so a test can hand in fakes; `daemon.ts` hands in the real managers and stores.
 export interface ConnectionServices {
     dispatcher: Pick<Dispatcher, 'handle'>;
+    presence?: { connected(sessionId: string | null): () => void };
     sessions: Attachable & { get(sessionId: string): ScreenSource | undefined };
     chats: Attachable;
     identity: Subscribable;
@@ -82,6 +83,7 @@ export const connectionOpener = (services: ConnectionServices): ((channel: Clien
         };
         const sink: SessionSink = ({ event, payload }) => sendEvent(client, event, payload);
         const unsubscribes = [
+            services.presence?.connected(access.sessionId) ?? (() => undefined),
             services.sessions.subscribe(clientId, sink),
             services.chats.subscribe(clientId, sink),
             services.identity.subscribe(clientId, sink),

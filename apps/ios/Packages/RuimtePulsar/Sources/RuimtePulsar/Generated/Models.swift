@@ -3,6 +3,11 @@ import Foundation
 
 public enum WireConstants {
     public static let protocolVersion: Int64 = 1
+    public static let bytesChunkMax: Double = 262144
+    public static let pushMaxAgeMs: Double = 120000
+    public static let pushMaxClockSkewMs: Double = 30000
+    public static let pushHKDFSalt: String = "pulsar-push-encryption-v1"
+    public static let bytesReadMaxBytes: Double = 33554432
     public static let directChannelLabel: String = "ruimte"
     public static let directPieceChars: Int = 16000
     public static let directPingIdleMs: Double = 2000
@@ -839,9 +844,9 @@ public struct BrokerError: Codable, Sendable, Equatable {
 public struct BrokerHello: Codable, Sendable, Equatable {
     public let `type`: String
     public let `role`: BrokerRole
-    public let `publicKey`: Token
+    public let `publicKey`: String
 
-    public init(`type`: String = "hello", `role`: BrokerRole, `publicKey`: Token) {
+    public init(`type`: String = "hello", `role`: BrokerRole, `publicKey`: String) {
         self.`type` = `type`
         self.`role` = `role`
         self.`publicKey` = `publicKey`
@@ -852,7 +857,7 @@ public struct BrokerHello: Codable, Sendable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         `type` = try container.decode(String.self, forKey: .`type`)
         `role` = try container.decode(BrokerRole.self, forKey: .`role`)
-        `publicKey` = try container.decode(Token.self, forKey: .`publicKey`)
+        `publicKey` = try container.decode(String.self, forKey: .`publicKey`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -1051,11 +1056,11 @@ public struct BrokerProve: Codable, Sendable, Equatable {
 public struct BrokerRelay: Codable, Sendable, Equatable {
     public let `type`: String
     public let `id`: String
-    public let `to`: Token
+    public let `to`: String
     public let `envelope`: SignalEnvelope
     public let `signature`: String
 
-    public init(`type`: String = "relay", `id`: String, `to`: Token, `envelope`: SignalEnvelope, `signature`: String) {
+    public init(`type`: String = "relay", `id`: String, `to`: String, `envelope`: SignalEnvelope, `signature`: String) {
         self.`type` = `type`
         self.`id` = `id`
         self.`to` = `to`
@@ -1068,7 +1073,7 @@ public struct BrokerRelay: Codable, Sendable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         `type` = try container.decode(String.self, forKey: .`type`)
         `id` = try container.decode(String.self, forKey: .`id`)
-        `to` = try container.decode(Token.self, forKey: .`to`)
+        `to` = try container.decode(String.self, forKey: .`to`)
         `envelope` = try container.decode(SignalEnvelope.self, forKey: .`envelope`)
         `signature` = try container.decode(String.self, forKey: .`signature`)
     }
@@ -1380,11 +1385,11 @@ public struct BrokerReady: Codable, Sendable, Equatable {
 
 public struct BrokerRelayed: Codable, Sendable, Equatable {
     public let `type`: String
-    public let `from`: Token
+    public let `from`: String
     public let `envelope`: SignalEnvelope
     public let `signature`: String
 
-    public init(`type`: String = "relayed", `from`: Token, `envelope`: SignalEnvelope, `signature`: String) {
+    public init(`type`: String = "relayed", `from`: String, `envelope`: SignalEnvelope, `signature`: String) {
         self.`type` = `type`
         self.`from` = `from`
         self.`envelope` = `envelope`
@@ -1395,7 +1400,7 @@ public struct BrokerRelayed: Codable, Sendable, Equatable {
         _ = try WireSchema.validate("BrokerRelayedSchema", JSONValue(from: decoder))
         let container = try decoder.container(keyedBy: CodingKeys.self)
         `type` = try container.decode(String.self, forKey: .`type`)
-        `from` = try container.decode(Token.self, forKey: .`from`)
+        `from` = try container.decode(String.self, forKey: .`from`)
         `envelope` = try container.decode(SignalEnvelope.self, forKey: .`envelope`)
         `signature` = try container.decode(String.self, forKey: .`signature`)
     }
@@ -1749,12 +1754,12 @@ public struct ServerPingPayload: Codable, Sendable, Equatable {
 
     public init(from decoder: Decoder) throws {
         _ = try WireSchema.validate("ServerHelloPayloadSchema", JSONValue(from: decoder))
-        let container = try decoder.container(keyedBy: CodingKeys.self)
+        _ = try decoder.container(keyedBy: CodingKeys.self)
 
     }
 
     public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
+        _ = encoder.container(keyedBy: CodingKeys.self)
 
     }
 
@@ -1962,7 +1967,6 @@ public enum Reply: Codable, Sendable, Equatable {
         switch try container.decode(Bool.self, forKey: .value) {
         case true: self = .`true`(try ReplyOk(from: decoder))
         case false: self = .`false`(try ReplyError(from: decoder))
-        default: throw WireValidationError.invalid("Unknown Reply tag")
         }
     }
 
@@ -2024,6 +2028,910 @@ public enum ServerFrame: Codable, Sendable, Equatable {
         case .`variant0`(let value): try value.encode(to: encoder)
         case .`variant1`(let value): try value.encode(to: encoder)
         }
+    }
+}
+
+public struct PushActivityContent: Codable, Sendable, Equatable {
+    public let `title`: String
+    public let `phase`: PushActivityContentPhase
+    public let `startedAt`: Int64
+
+    public init(`title`: String, `phase`: PushActivityContentPhase, `startedAt`: Int64) {
+        self.`title` = `title`
+        self.`phase` = `phase`
+        self.`startedAt` = `startedAt`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("PushActivityContentSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `title` = try container.decode(String.self, forKey: .`title`)
+        `phase` = try container.decode(PushActivityContentPhase.self, forKey: .`phase`)
+        `startedAt` = try container.decode(Int64.self, forKey: .`startedAt`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`title`, forKey: .`title`)
+        try container.encode(`phase`, forKey: .`phase`)
+        try container.encode(`startedAt`, forKey: .`startedAt`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `title` = "title"
+        case `phase` = "phase"
+        case `startedAt` = "startedAt"
+    }
+}
+
+public enum PushActivityContentPhase: String, Codable, Sendable, Equatable {
+    case `running` = "running"
+    case `tool` = "tool"
+    case `needsYou` = "needs-you"
+    case `done` = "done"
+}
+
+public struct PushActivityRegistration: Codable, Sendable, Equatable {
+    public let `machineId`: String
+    public let `collapseId`: String
+    public let `token`: String?
+
+    public init(`machineId`: String, `collapseId`: String, `token`: String?) {
+        self.`machineId` = `machineId`
+        self.`collapseId` = `collapseId`
+        self.`token` = `token`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("PushActivityRegistrationSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `machineId` = try container.decode(String.self, forKey: .`machineId`)
+        `collapseId` = try container.decode(String.self, forKey: .`collapseId`)
+        `token` = try container.decode(String?.self, forKey: .`token`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`machineId`, forKey: .`machineId`)
+        try container.encode(`collapseId`, forKey: .`collapseId`)
+        try container.encode(`token`, forKey: .`token`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `machineId` = "machineId"
+        case `collapseId` = "collapseId"
+        case `token` = "token"
+    }
+}
+
+public struct PushAlertContent: Codable, Sendable, Equatable {
+    public let `kind`: PushAlertContentKind
+    public let `target`: PushAlertContentTarget
+    public let `nodeId`: String
+    public let `title`: String
+    public let `body`: String
+    public let `requestId`: String?
+    public let `choices`: [PushAlertContentChoicesItem]?
+    public let `expiresAt`: Int64
+
+    public init(`kind`: PushAlertContentKind, `target`: PushAlertContentTarget, `nodeId`: String, `title`: String, `body`: String, `requestId`: String? = nil, `choices`: [PushAlertContentChoicesItem]? = nil, `expiresAt`: Int64) {
+        self.`kind` = `kind`
+        self.`target` = `target`
+        self.`nodeId` = `nodeId`
+        self.`title` = `title`
+        self.`body` = `body`
+        self.`requestId` = `requestId`
+        self.`choices` = `choices`
+        self.`expiresAt` = `expiresAt`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("PushAlertContentSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `kind` = try container.decode(PushAlertContentKind.self, forKey: .`kind`)
+        `target` = try container.decode(PushAlertContentTarget.self, forKey: .`target`)
+        `nodeId` = try container.decode(String.self, forKey: .`nodeId`)
+        `title` = try container.decode(String.self, forKey: .`title`)
+        `body` = try container.decode(String.self, forKey: .`body`)
+        `requestId` = try container.decodeIfPresent(String.self, forKey: .`requestId`)
+        `choices` = try container.decodeIfPresent([PushAlertContentChoicesItem].self, forKey: .`choices`)
+        `expiresAt` = try container.decode(Int64.self, forKey: .`expiresAt`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`target`, forKey: .`target`)
+        try container.encode(`nodeId`, forKey: .`nodeId`)
+        try container.encode(`title`, forKey: .`title`)
+        try container.encode(`body`, forKey: .`body`)
+        try container.encodeIfPresent(`requestId`, forKey: .`requestId`)
+        try container.encodeIfPresent(`choices`, forKey: .`choices`)
+        try container.encode(`expiresAt`, forKey: .`expiresAt`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `kind` = "kind"
+        case `target` = "target"
+        case `nodeId` = "nodeId"
+        case `title` = "title"
+        case `body` = "body"
+        case `requestId` = "requestId"
+        case `choices` = "choices"
+        case `expiresAt` = "expiresAt"
+    }
+}
+
+public enum PushAlertContentKind: String, Codable, Sendable, Equatable {
+    case `turn` = "turn"
+    case `attention` = "attention"
+    case `approval` = "approval"
+}
+
+public enum PushAlertContentTarget: String, Codable, Sendable, Equatable {
+    case `terminal` = "terminal"
+    case `chat` = "chat"
+}
+
+public struct PushAlertContentChoicesItem: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `kind`: PushAlertContentChoicesItemKind
+    public let `label`: String
+
+    public init(`id`: String, `kind`: PushAlertContentChoicesItemKind, `label`: String) {
+        self.`id` = `id`
+        self.`kind` = `kind`
+        self.`label` = `label`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `kind` = try container.decode(PushAlertContentChoicesItemKind.self, forKey: .`kind`)
+        `label` = try container.decode(String.self, forKey: .`label`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`label`, forKey: .`label`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `kind` = "kind"
+        case `label` = "label"
+    }
+}
+
+public enum PushAlertContentChoicesItemKind: String, Codable, Sendable, Equatable {
+    case `allow` = "allow"
+    case `remember` = "remember"
+    case `deny` = "deny"
+}
+
+public enum PushEnvelope: Codable, Sendable, Equatable {
+    case `alert`(PushEnvelopeVariant0)
+    case `liveactivity`(PushEnvelopeVariant1)
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: Tag.self)
+        switch try container.decode(String.self, forKey: .value) {
+        case "alert": self = .`alert`(try PushEnvelopeVariant0(from: decoder))
+        case "liveactivity": self = .`liveactivity`(try PushEnvelopeVariant1(from: decoder))
+        default: throw WireValidationError.invalid("Unknown PushEnvelope tag")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        switch self {
+        case .`alert`(let value): try value.encode(to: encoder)
+        case .`liveactivity`(let value): try value.encode(to: encoder)
+        }
+    }
+
+    private enum Tag: String, CodingKey { case value = "pushType" }
+}
+
+public struct PushEnvelopeVariant0: Codable, Sendable, Equatable {
+    public let `machineId`: String
+    public let `handle`: String
+    public let `id`: String
+    public let `issuedAt`: Int64
+    public let `expiresAt`: Int64
+    public let `collapseId`: String
+    public let `pushType`: String
+    public let `ephemeralKey`: String
+    public let `nonce`: String
+    public let `ciphertext`: String
+    public let `signature`: String
+
+    public init(`machineId`: String, `handle`: String, `id`: String, `issuedAt`: Int64, `expiresAt`: Int64, `collapseId`: String, `pushType`: String = "alert", `ephemeralKey`: String, `nonce`: String, `ciphertext`: String, `signature`: String) {
+        self.`machineId` = `machineId`
+        self.`handle` = `handle`
+        self.`id` = `id`
+        self.`issuedAt` = `issuedAt`
+        self.`expiresAt` = `expiresAt`
+        self.`collapseId` = `collapseId`
+        self.`pushType` = `pushType`
+        self.`ephemeralKey` = `ephemeralKey`
+        self.`nonce` = `nonce`
+        self.`ciphertext` = `ciphertext`
+        self.`signature` = `signature`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `machineId` = try container.decode(String.self, forKey: .`machineId`)
+        `handle` = try container.decode(String.self, forKey: .`handle`)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `issuedAt` = try container.decode(Int64.self, forKey: .`issuedAt`)
+        `expiresAt` = try container.decode(Int64.self, forKey: .`expiresAt`)
+        `collapseId` = try container.decode(String.self, forKey: .`collapseId`)
+        `pushType` = try container.decode(String.self, forKey: .`pushType`)
+        `ephemeralKey` = try container.decode(String.self, forKey: .`ephemeralKey`)
+        `nonce` = try container.decode(String.self, forKey: .`nonce`)
+        `ciphertext` = try container.decode(String.self, forKey: .`ciphertext`)
+        `signature` = try container.decode(String.self, forKey: .`signature`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`machineId`, forKey: .`machineId`)
+        try container.encode(`handle`, forKey: .`handle`)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`issuedAt`, forKey: .`issuedAt`)
+        try container.encode(`expiresAt`, forKey: .`expiresAt`)
+        try container.encode(`collapseId`, forKey: .`collapseId`)
+        try container.encode(`pushType`, forKey: .`pushType`)
+        try container.encode(`ephemeralKey`, forKey: .`ephemeralKey`)
+        try container.encode(`nonce`, forKey: .`nonce`)
+        try container.encode(`ciphertext`, forKey: .`ciphertext`)
+        try container.encode(`signature`, forKey: .`signature`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `machineId` = "machineId"
+        case `handle` = "handle"
+        case `id` = "id"
+        case `issuedAt` = "issuedAt"
+        case `expiresAt` = "expiresAt"
+        case `collapseId` = "collapseId"
+        case `pushType` = "pushType"
+        case `ephemeralKey` = "ephemeralKey"
+        case `nonce` = "nonce"
+        case `ciphertext` = "ciphertext"
+        case `signature` = "signature"
+    }
+}
+
+public struct PushEnvelopeVariant1: Codable, Sendable, Equatable {
+    public let `machineId`: String
+    public let `handle`: String
+    public let `id`: String
+    public let `issuedAt`: Int64
+    public let `expiresAt`: Int64
+    public let `collapseId`: String
+    public let `pushType`: String
+    public let `activity`: PushActivityContent
+    public let `signature`: String
+
+    public init(`machineId`: String, `handle`: String, `id`: String, `issuedAt`: Int64, `expiresAt`: Int64, `collapseId`: String, `pushType`: String = "liveactivity", `activity`: PushActivityContent, `signature`: String) {
+        self.`machineId` = `machineId`
+        self.`handle` = `handle`
+        self.`id` = `id`
+        self.`issuedAt` = `issuedAt`
+        self.`expiresAt` = `expiresAt`
+        self.`collapseId` = `collapseId`
+        self.`pushType` = `pushType`
+        self.`activity` = `activity`
+        self.`signature` = `signature`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `machineId` = try container.decode(String.self, forKey: .`machineId`)
+        `handle` = try container.decode(String.self, forKey: .`handle`)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `issuedAt` = try container.decode(Int64.self, forKey: .`issuedAt`)
+        `expiresAt` = try container.decode(Int64.self, forKey: .`expiresAt`)
+        `collapseId` = try container.decode(String.self, forKey: .`collapseId`)
+        `pushType` = try container.decode(String.self, forKey: .`pushType`)
+        `activity` = try container.decode(PushActivityContent.self, forKey: .`activity`)
+        `signature` = try container.decode(String.self, forKey: .`signature`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`machineId`, forKey: .`machineId`)
+        try container.encode(`handle`, forKey: .`handle`)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`issuedAt`, forKey: .`issuedAt`)
+        try container.encode(`expiresAt`, forKey: .`expiresAt`)
+        try container.encode(`collapseId`, forKey: .`collapseId`)
+        try container.encode(`pushType`, forKey: .`pushType`)
+        try container.encode(`activity`, forKey: .`activity`)
+        try container.encode(`signature`, forKey: .`signature`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `machineId` = "machineId"
+        case `handle` = "handle"
+        case `id` = "id"
+        case `issuedAt` = "issuedAt"
+        case `expiresAt` = "expiresAt"
+        case `collapseId` = "collapseId"
+        case `pushType` = "pushType"
+        case `activity` = "activity"
+        case `signature` = "signature"
+    }
+}
+
+public typealias PushHandle = String
+
+public struct PushRegisterDevicePayload: Codable, Sendable, Equatable {
+    public let `token`: String
+    public let `environment`: PushRegisterDevicePayloadEnvironment
+
+    public init(`token`: String, `environment`: PushRegisterDevicePayloadEnvironment) {
+        self.`token` = `token`
+        self.`environment` = `environment`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("PushRegisterDevicePayloadSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `token` = try container.decode(String.self, forKey: .`token`)
+        `environment` = try container.decode(PushRegisterDevicePayloadEnvironment.self, forKey: .`environment`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`token`, forKey: .`token`)
+        try container.encode(`environment`, forKey: .`environment`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `token` = "token"
+        case `environment` = "environment"
+    }
+}
+
+public enum PushRegisterDevicePayloadEnvironment: String, Codable, Sendable, Equatable {
+    case `sandbox` = "sandbox"
+    case `production` = "production"
+}
+
+public struct PushRegisterDeviceResult: Codable, Sendable, Equatable {
+    public let `handle`: PushHandle
+
+    public init(`handle`: PushHandle) {
+        self.`handle` = `handle`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("PushRegisterDeviceResultSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `handle` = try container.decode(PushHandle.self, forKey: .`handle`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`handle`, forKey: .`handle`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `handle` = "handle"
+    }
+}
+
+public struct PushRouting: Codable, Sendable, Equatable {
+    public let `machineId`: String
+    public let `handle`: PushHandle
+    public let `id`: PushHandle
+    public let `issuedAt`: Int64
+    public let `expiresAt`: Int64
+    public let `collapseId`: PushHandle
+
+    public init(`machineId`: String, `handle`: PushHandle, `id`: PushHandle, `issuedAt`: Int64, `expiresAt`: Int64, `collapseId`: PushHandle) {
+        self.`machineId` = `machineId`
+        self.`handle` = `handle`
+        self.`id` = `id`
+        self.`issuedAt` = `issuedAt`
+        self.`expiresAt` = `expiresAt`
+        self.`collapseId` = `collapseId`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("PushRoutingSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `machineId` = try container.decode(String.self, forKey: .`machineId`)
+        `handle` = try container.decode(PushHandle.self, forKey: .`handle`)
+        `id` = try container.decode(PushHandle.self, forKey: .`id`)
+        `issuedAt` = try container.decode(Int64.self, forKey: .`issuedAt`)
+        `expiresAt` = try container.decode(Int64.self, forKey: .`expiresAt`)
+        `collapseId` = try container.decode(PushHandle.self, forKey: .`collapseId`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`machineId`, forKey: .`machineId`)
+        try container.encode(`handle`, forKey: .`handle`)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`issuedAt`, forKey: .`issuedAt`)
+        try container.encode(`expiresAt`, forKey: .`expiresAt`)
+        try container.encode(`collapseId`, forKey: .`collapseId`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `machineId` = "machineId"
+        case `handle` = "handle"
+        case `id` = "id"
+        case `issuedAt` = "issuedAt"
+        case `expiresAt` = "expiresAt"
+        case `collapseId` = "collapseId"
+    }
+}
+
+public struct PushStartActivityRegistration: Codable, Sendable, Equatable {
+    public let `token`: String?
+
+    public init(`token`: String?) {
+        self.`token` = `token`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("PushStartActivityRegistrationSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `token` = try container.decode(String?.self, forKey: .`token`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`token`, forKey: .`token`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `token` = "token"
+    }
+}
+
+public struct RuimteActivityAttributes: Codable, Sendable, Equatable {
+    public let `machineId`: String
+    public let `collapseId`: PushHandle
+
+    public init(`machineId`: String, `collapseId`: PushHandle) {
+        self.`machineId` = `machineId`
+        self.`collapseId` = `collapseId`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("RuimteActivityAttributesSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `machineId` = try container.decode(String.self, forKey: .`machineId`)
+        `collapseId` = try container.decode(PushHandle.self, forKey: .`collapseId`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`machineId`, forKey: .`machineId`)
+        try container.encode(`collapseId`, forKey: .`collapseId`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `machineId` = "machineId"
+        case `collapseId` = "collapseId"
+    }
+}
+
+public struct PairPayload: Codable, Sendable, Equatable {
+    public let `token`: String
+    public let `label`: String
+    public let `publicKey`: String?
+
+    public init(`token`: String, `label`: String, `publicKey`: String? = nil) {
+        self.`token` = `token`
+        self.`label` = `label`
+        self.`publicKey` = `publicKey`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("PairPayloadSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `token` = try container.decode(String.self, forKey: .`token`)
+        `label` = try container.decode(String.self, forKey: .`label`)
+        `publicKey` = try container.decodeIfPresent(String.self, forKey: .`publicKey`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`token`, forKey: .`token`)
+        try container.encode(`label`, forKey: .`label`)
+        try container.encodeIfPresent(`publicKey`, forKey: .`publicKey`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `token` = "token"
+        case `label` = "label"
+        case `publicKey` = "publicKey"
+    }
+}
+
+public struct PairResult: Codable, Sendable, Equatable {
+    public let `sessionToken`: String?
+    public let `endpoint`: PairResultEndpoint
+
+    public init(`sessionToken`: String? = nil, `endpoint`: PairResultEndpoint) {
+        self.`sessionToken` = `sessionToken`
+        self.`endpoint` = `endpoint`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("PairResultSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `sessionToken` = try container.decodeIfPresent(String.self, forKey: .`sessionToken`)
+        `endpoint` = try container.decode(PairResultEndpoint.self, forKey: .`endpoint`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(`sessionToken`, forKey: .`sessionToken`)
+        try container.encode(`endpoint`, forKey: .`endpoint`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `sessionToken` = "sessionToken"
+        case `endpoint` = "endpoint"
+    }
+}
+
+public struct PairResultEndpoint: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `label`: String
+    public let `nameSource`: PairResultEndpointNameSource?
+    public let `icon`: Presence<PairResultEndpointIcon>
+    public let `agentsDeleteAnyView`: Bool?
+    public let `refuseStatements`: Bool?
+    public let `platform`: String
+    public let `version`: String
+    public let `protocol`: Int64?
+    public let `reachability`: PairResultEndpointReachability
+    public let `authenticated`: Bool
+    public let `publicKey`: String?
+    public let `brokerUrl`: Presence<String>
+    public let `broker`: PairResultEndpointBroker?
+    public let `brokerFixed`: Bool?
+
+    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<PairResultEndpointIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `refuseStatements`: Bool? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil) {
+        self.`id` = `id`
+        self.`label` = `label`
+        self.`nameSource` = `nameSource`
+        self.`icon` = `icon`
+        self.`agentsDeleteAnyView` = `agentsDeleteAnyView`
+        self.`refuseStatements` = `refuseStatements`
+        self.`platform` = `platform`
+        self.`version` = `version`
+        self.`protocol` = `protocol`
+        self.`reachability` = `reachability`
+        self.`authenticated` = `authenticated`
+        self.`publicKey` = `publicKey`
+        self.`brokerUrl` = `brokerUrl`
+        self.`broker` = `broker`
+        self.`brokerFixed` = `brokerFixed`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `label` = try container.decode(String.self, forKey: .`label`)
+        `nameSource` = try container.decodeIfPresent(PairResultEndpointNameSource.self, forKey: .`nameSource`)
+        `icon` = try container.contains(.`icon`) ? (container.decodeNil(forKey: .`icon`) ? .null : .value(container.decode(PairResultEndpointIcon.self, forKey: .`icon`))) : .missing
+        `agentsDeleteAnyView` = try container.decodeIfPresent(Bool.self, forKey: .`agentsDeleteAnyView`)
+        `refuseStatements` = try container.decodeIfPresent(Bool.self, forKey: .`refuseStatements`)
+        `platform` = try container.decode(String.self, forKey: .`platform`)
+        `version` = try container.decode(String.self, forKey: .`version`)
+        `protocol` = try container.decodeIfPresent(Int64.self, forKey: .`protocol`)
+        `reachability` = try container.decode(PairResultEndpointReachability.self, forKey: .`reachability`)
+        `authenticated` = try container.decode(Bool.self, forKey: .`authenticated`)
+        `publicKey` = try container.decodeIfPresent(String.self, forKey: .`publicKey`)
+        `brokerUrl` = try container.contains(.`brokerUrl`) ? (container.decodeNil(forKey: .`brokerUrl`) ? .null : .value(container.decode(String.self, forKey: .`brokerUrl`))) : .missing
+        `broker` = try container.decodeIfPresent(PairResultEndpointBroker.self, forKey: .`broker`)
+        `brokerFixed` = try container.decodeIfPresent(Bool.self, forKey: .`brokerFixed`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`label`, forKey: .`label`)
+        try container.encodeIfPresent(`nameSource`, forKey: .`nameSource`)
+        switch `icon` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`icon`)
+        case .value(let value): try container.encode(value, forKey: .`icon`)
+        }
+        try container.encodeIfPresent(`agentsDeleteAnyView`, forKey: .`agentsDeleteAnyView`)
+        try container.encodeIfPresent(`refuseStatements`, forKey: .`refuseStatements`)
+        try container.encode(`platform`, forKey: .`platform`)
+        try container.encode(`version`, forKey: .`version`)
+        try container.encodeIfPresent(`protocol`, forKey: .`protocol`)
+        try container.encode(`reachability`, forKey: .`reachability`)
+        try container.encode(`authenticated`, forKey: .`authenticated`)
+        try container.encodeIfPresent(`publicKey`, forKey: .`publicKey`)
+        switch `brokerUrl` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`brokerUrl`)
+        case .value(let value): try container.encode(value, forKey: .`brokerUrl`)
+        }
+        try container.encodeIfPresent(`broker`, forKey: .`broker`)
+        try container.encodeIfPresent(`brokerFixed`, forKey: .`brokerFixed`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `label` = "label"
+        case `nameSource` = "nameSource"
+        case `icon` = "icon"
+        case `agentsDeleteAnyView` = "agentsDeleteAnyView"
+        case `refuseStatements` = "refuseStatements"
+        case `platform` = "platform"
+        case `version` = "version"
+        case `protocol` = "protocol"
+        case `reachability` = "reachability"
+        case `authenticated` = "authenticated"
+        case `publicKey` = "publicKey"
+        case `brokerUrl` = "brokerUrl"
+        case `broker` = "broker"
+        case `brokerFixed` = "brokerFixed"
+    }
+}
+
+public enum PairResultEndpointNameSource: String, Codable, Sendable, Equatable {
+    case `chosen` = "chosen"
+    case `default` = "default"
+}
+
+public enum PairResultEndpointIcon: Codable, Sendable, Equatable {
+    case `emoji`(PairResultEndpointIconVariant0)
+    case `lucide`(PairResultEndpointIconVariant1)
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: Tag.self)
+        switch try container.decode(String.self, forKey: .value) {
+        case "emoji": self = .`emoji`(try PairResultEndpointIconVariant0(from: decoder))
+        case "lucide": self = .`lucide`(try PairResultEndpointIconVariant1(from: decoder))
+        default: throw WireValidationError.invalid("Unknown PairResultEndpointIcon tag")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        switch self {
+        case .`emoji`(let value): try value.encode(to: encoder)
+        case .`lucide`(let value): try value.encode(to: encoder)
+        }
+    }
+
+    private enum Tag: String, CodingKey { case value = "kind" }
+}
+
+public struct PairResultEndpointIconVariant0: Codable, Sendable, Equatable {
+    public let `kind`: String
+    public let `value`: String
+
+    public init(`kind`: String = "emoji", `value`: String) {
+        self.`kind` = `kind`
+        self.`value` = `value`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `value` = try container.decode(String.self, forKey: .`value`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`value`, forKey: .`value`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `kind` = "kind"
+        case `value` = "value"
+    }
+}
+
+public struct PairResultEndpointIconVariant1: Codable, Sendable, Equatable {
+    public let `kind`: String
+    public let `value`: PairResultEndpointIconVariant1Value
+
+    public init(`kind`: String = "lucide", `value`: PairResultEndpointIconVariant1Value) {
+        self.`kind` = `kind`
+        self.`value` = `value`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
+        `value` = try container.decode(PairResultEndpointIconVariant1Value.self, forKey: .`value`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`value`, forKey: .`value`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `kind` = "kind"
+        case `value` = "value"
+    }
+}
+
+public enum PairResultEndpointIconVariant1Value: String, Codable, Sendable, Equatable {
+    case `box` = "box"
+    case `boxes` = "boxes"
+    case `package` = "package"
+    case `layers` = "layers"
+    case `code` = "code"
+    case `terminal` = "terminal"
+    case `cpu` = "cpu"
+    case `circuitBoard` = "circuit-board"
+    case `memoryStick` = "memory-stick"
+    case `pcCase` = "pc-case"
+    case `laptop` = "laptop"
+    case `monitor` = "monitor"
+    case `smartphone` = "smartphone"
+    case `tablet` = "tablet"
+    case `webcam` = "webcam"
+    case `printer` = "printer"
+    case `hardDrive` = "hard-drive"
+    case `usb` = "usb"
+    case `database` = "database"
+    case `server` = "server"
+    case `container` = "container"
+    case `network` = "network"
+    case `router` = "router"
+    case `ethernetPort` = "ethernet-port"
+    case `cable` = "cable"
+    case `plug` = "plug"
+    case `wifi` = "wifi"
+    case `radioTower` = "radio-tower"
+    case `satelliteDish` = "satellite-dish"
+    case `cloud` = "cloud"
+    case `globe` = "globe"
+    case `rocket` = "rocket"
+    case `zap` = "zap"
+    case `flame` = "flame"
+    case `sparkles` = "sparkles"
+    case `star` = "star"
+    case `heart` = "heart"
+    case `flag` = "flag"
+    case `bookmark` = "bookmark"
+    case `folder` = "folder"
+    case `fileText` = "file-text"
+    case `book` = "book"
+    case `puzzle` = "puzzle"
+    case `palette` = "palette"
+    case `brush` = "brush"
+    case `camera` = "camera"
+    case `music` = "music"
+    case `video` = "video"
+    case `gamepad2` = "gamepad-2"
+    case `bot` = "bot"
+    case `brain` = "brain"
+    case `beaker` = "beaker"
+    case `wrench` = "wrench"
+    case `hammer` = "hammer"
+    case `shield` = "shield"
+    case `key` = "key"
+    case `compass` = "compass"
+    case `map` = "map"
+    case `leaf` = "leaf"
+    case `coffee` = "coffee"
+}
+
+public enum PairResultEndpointReachability: String, Codable, Sendable, Equatable {
+    case `loopback` = "loopback"
+    case `lan` = "lan"
+    case `tunnel` = "tunnel"
+    case `public` = "public"
+}
+
+public enum PairResultEndpointBroker: Codable, Sendable, Equatable {
+    case `default`(PairResultEndpointBrokerVariant0)
+    case `off`(PairResultEndpointBrokerVariant1)
+    case `custom`(PairResultEndpointBrokerVariant2)
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: Tag.self)
+        switch try container.decode(String.self, forKey: .value) {
+        case "default": self = .`default`(try PairResultEndpointBrokerVariant0(from: decoder))
+        case "off": self = .`off`(try PairResultEndpointBrokerVariant1(from: decoder))
+        case "custom": self = .`custom`(try PairResultEndpointBrokerVariant2(from: decoder))
+        default: throw WireValidationError.invalid("Unknown PairResultEndpointBroker tag")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        switch self {
+        case .`default`(let value): try value.encode(to: encoder)
+        case .`off`(let value): try value.encode(to: encoder)
+        case .`custom`(let value): try value.encode(to: encoder)
+        }
+    }
+
+    private enum Tag: String, CodingKey { case value = "mode" }
+}
+
+public struct PairResultEndpointBrokerVariant0: Codable, Sendable, Equatable {
+    public let `mode`: String
+
+    public init(`mode`: String = "default") {
+        self.`mode` = `mode`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `mode` = try container.decode(String.self, forKey: .`mode`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`mode`, forKey: .`mode`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `mode` = "mode"
+    }
+}
+
+public struct PairResultEndpointBrokerVariant1: Codable, Sendable, Equatable {
+    public let `mode`: String
+
+    public init(`mode`: String = "off") {
+        self.`mode` = `mode`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `mode` = try container.decode(String.self, forKey: .`mode`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`mode`, forKey: .`mode`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `mode` = "mode"
+    }
+}
+
+public struct PairResultEndpointBrokerVariant2: Codable, Sendable, Equatable {
+    public let `mode`: String
+    public let `url`: String
+
+    public init(`mode`: String = "custom", `url`: String) {
+        self.`mode` = `mode`
+        self.`url` = `url`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `mode` = try container.decode(String.self, forKey: .`mode`)
+        `url` = try container.decode(String.self, forKey: .`url`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`mode`, forKey: .`mode`)
+        try container.encode(`url`, forKey: .`url`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `mode` = "mode"
+        case `url` = "url"
     }
 }
 

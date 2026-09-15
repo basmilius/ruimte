@@ -1,7 +1,7 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { AuthSession, PairingOrigin } from '@ruimte/contracts';
+import { PushSubscribePayloadSchema, type AuthSession, type PairingOrigin, type PushSubscribePayload } from '@ruimte/contracts';
 import { z } from 'zod';
 import { isNotFound, writeAtomic } from '../fs.ts';
 import { isPublicKey } from './keys.ts';
@@ -26,7 +26,8 @@ const SessionRecordSchema = z
         publicKey: z.string().min(1).optional(),
         origin: z.enum(['link', 'statement']).optional().catch(undefined),
         createdAt: z.number(),
-        lastSeenAt: z.number()
+        lastSeenAt: z.number(),
+        push: PushSubscribePayloadSchema.optional()
     })
     .refine((record) => record.tokenHash !== undefined || record.publicKey !== undefined);
 type SessionRecord = z.infer<typeof SessionRecordSchema>;
@@ -91,6 +92,7 @@ export type StatementAdmission = { sessionId: string; created: boolean } | { ref
 export class AuthStore {
     readonly path: string;
     private state: State | null = null;
+    private writes: Promise<void> = Promise.resolve();
     private pairing: Pairing | null = null;
     private readonly now: () => number;
 
@@ -225,6 +227,32 @@ export class AuthStore {
         return true;
     }
 
+    async setPush(sessionId: string, subscription: PushSubscribePayload): Promise<boolean> {
+        const state = await this.load();
+        const record = state.sessions.find((entry) => entry.id === sessionId && entry.publicKey !== undefined);
+        if (!record) {
+            return false;
+        }
+        record.push = PushSubscribePayloadSchema.parse(subscription);
+        await this.save(state);
+        return true;
+    }
+
+    async removePush(sessionId: string, handle: string): Promise<void> {
+        const state = await this.load();
+        const record = state.sessions.find((entry) => entry.id === sessionId && entry.push?.handle === handle);
+        if (record) {
+            delete record.push;
+            await this.save(state);
+        }
+    }
+
+    async pushSubscriptions(): Promise<Array<{ sessionId: string; subscription: PushSubscribePayload }>> {
+        return (await this.load()).sessions.flatMap((record) =>
+            record.publicKey && record.push ? [{ sessionId: record.id, subscription: structuredClone(record.push) }] : []
+        );
+    }
+
     async list(currentId: string | null): Promise<AuthSession[]> {
         return (await this.load()).sessions.map((entry) => ({
             id: entry.id,
@@ -275,7 +303,14 @@ export class AuthStore {
 
     private async save(state: State): Promise<void> {
         this.state = state;
-        await mkdir(join(this.path, '..'), { recursive: true, mode: 0o700 });
-        await writeAtomic(this.path, `${JSON.stringify(state, null, 2)}\n`);
+        const text = `${JSON.stringify(state, null, 2)}\n`;
+        const write = this.writes
+            .catch(() => undefined)
+            .then(async () => {
+                await mkdir(join(this.path, '..'), { recursive: true, mode: 0o700 });
+                await writeAtomic(this.path, text);
+            });
+        this.writes = write;
+        await write;
     }
 }

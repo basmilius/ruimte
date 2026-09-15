@@ -1,3 +1,4 @@
+import { renderDiagram } from '../render/scenes.ts';
 import { RequestError, type Dispatcher } from '../dispatcher.ts';
 import { DiagramError, type DiagramStore } from '../projects/diagram-store.ts';
 
@@ -12,6 +13,8 @@ const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
         });
 
 export const registerDiagramHandlers = (dispatcher: Dispatcher, store: DiagramStore): void => {
+    dispatcher.register('diagram.layout', (payload) => translate(async () => renderDiagram(await store.open(payload.projectId, payload.viewId))));
+
     dispatcher.register('diagram.open', (payload) => translate(async () => ({ document: await store.open(payload.projectId, payload.viewId) })));
 
     dispatcher.register('diagram.save', (payload) =>

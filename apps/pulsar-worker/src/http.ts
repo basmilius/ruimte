@@ -19,8 +19,11 @@ const STATUS_OF: Record<AddressBookErrorCode, number> = {
     internal: 500
 };
 
-export const json = (body: unknown, status = 200, headers: HeadersInit = {}): Response =>
-    new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...headers } });
+export const json = (body: unknown, status = 200, headers: HeadersInit = {}): Response => {
+    const outgoing = new Headers({ 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+    new Headers(headers).forEach((value, name) => outgoing.set(name, value));
+    return new Response(JSON.stringify(body), { status, headers: outgoing });
+};
 
 export const failure = (code: AddressBookErrorCode, message: string, headers: HeadersInit = {}): Response =>
     json({ error: { code, message } }, STATUS_OF[code], headers);

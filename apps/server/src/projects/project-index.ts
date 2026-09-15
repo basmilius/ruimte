@@ -63,6 +63,23 @@ export class ProjectIndex {
         return [];
     }
 
+    titleFor(id: string): string | null {
+        for (const project of this.projects.values()) {
+            for (const view of project.content.views) {
+                if (view.id === id) {
+                    return view.name ?? null;
+                }
+                if (isCanvasView(view)) {
+                    const node = view.nodes.find((node) => node.id === id);
+                    if (node) {
+                        return node.title;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
     locate(id: string): IndexedPlace | null {
         for (const [projectId, project] of this.projects) {
             const canvasId = project.places.get(id);

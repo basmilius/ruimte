@@ -7,8 +7,9 @@ release/
 .claude/worktrees/
 .ruimte/
 
-# XcodeGen and Swift build products are local.
-apps/ios/**/*.xcodeproj/
+# Xcode user state and Swift build products are local.
+apps/ios/**/xcuserdata/
+apps/ios/**/*.xcuserstate
 apps/ios/**/.build/
 apps/ios/**/.swiftpm/
 apps/ios/DerivedData/
