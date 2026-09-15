@@ -64,3 +64,16 @@ directly to an iPhone build; simulator runs are reserved for targeted regression
 
 References: Apple's [Liquid Glass guidance](https://developer.apple.com/documentation/SwiftUI/Applying-Liquid-Glass-to-custom-views)
 and [Sign in with Apple guidance](https://developer.apple.com/design/human-interface-guidelines/sign-in-with-apple).
+
+## Physical SVG follow-up
+
+Bas's 20:14 screenshot shows clipped content and black patches in project SVGs,
+including Flux. The earlier simulator edge checks did not capture this failure.
+The renderer now decodes the SVG image and draws it directly into a transparent
+128-pixel canvas, then loads the PNG bytes into UIImage. It no longer snapshots
+WebKit layers or inserts a hidden renderer into the app window. SVG content stays
+in image mode with scripts and external requests disabled; only the app's fixed
+conversion script runs in an isolated content world.
+
+The signed iPhone build passed. No simulator run was performed for this iteration;
+the physical rendering remains to be confirmed. Log: `/tmp/ruimte-ios-svg-device.log`.

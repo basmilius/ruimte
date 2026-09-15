@@ -16,7 +16,7 @@ final class ProjectSVGRasterizer {
         let task = Task {
             _ = await previous?.result
             try Task.checkCancellation()
-            let renderer = SVGSnapshotOperation()
+            let renderer = SVGImageOperation()
             return try await renderer.render(data)
         }
         queue = task
@@ -41,17 +41,13 @@ final class ProjectSVGRasterizer {
 }
 
 @MainActor
-private final class SVGSnapshotOperation: NSObject, WKNavigationDelegate {
+private final class SVGImageOperation: NSObject, WKNavigationDelegate {
     private var view: WKWebView?
     private var pending: CheckedContinuation<UIImage, Error>?
     private var timeout: Task<Void, Never>?
     private var finished = false
 
     func render(_ data: Data) async throws -> UIImage {
-        guard
-            let window = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene })
-                .flatMap(\.windows).first(where: \.isKeyWindow)
-        else { throw ProjectArtworkError.unavailable }
         return try await withTaskCancellationHandler {
             try Task.checkCancellation()
             return try await withCheckedThrowingContinuation { continuation in
@@ -65,13 +61,10 @@ private final class SVGSnapshotOperation: NSObject, WKNavigationDelegate {
                 view.isOpaque = false
                 view.backgroundColor = .clear
                 view.scrollView.backgroundColor = .clear
-                // A snapshot has no navigation chrome; inheriting the phone's safe area shifts the icon down.
                 view.scrollView.contentInsetAdjustmentBehavior = .never
                 view.scrollView.isScrollEnabled = false
                 view.isUserInteractionEnabled = false
                 view.accessibilityElementsHidden = true
-                // A real window keeps WebKit painting; the app's root view covers this temporary renderer.
-                window.insertSubview(view, at: 0)
                 view.loadHTMLString(ProjectSVGRasterizer.document(data), baseURL: nil)
                 timeout = Task { [weak self] in
                     do { try await Task.sleep(for: .seconds(8)) } catch { return }
@@ -92,11 +85,26 @@ private final class SVGSnapshotOperation: NSObject, WKNavigationDelegate {
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         Task {
             do {
-                let configuration = WKSnapshotConfiguration()
-                configuration.rect = CGRect(x: 0, y: 0, width: 128, height: 128)
-                configuration.snapshotWidth = 128
-                configuration.afterScreenUpdates = true
-                let image = try await webView.takeSnapshot(configuration: configuration)
+                // Decode the image itself; WebKit layer snapshots can corrupt SVGs on a physical device.
+                let result = try await webView.callAsyncJavaScript(
+                    """
+                    const image = document.querySelector('img');
+                    await image.decode();
+                    const width = image.naturalWidth;
+                    const height = image.naturalHeight;
+                    if (!(width > 0 && height > 0)) throw new Error('Invalid SVG dimensions');
+                    const canvas = document.createElement('canvas');
+                    canvas.width = canvas.height = 128;
+                    const scale = Math.min(128 / width, 128 / height);
+                    canvas.getContext('2d').drawImage(image,
+                        (128 - width * scale) / 2, (128 - height * scale) / 2,
+                        width * scale, height * scale);
+                    return canvas.toDataURL('image/png').split(',')[1];
+                    """,
+                    arguments: [:], in: nil, contentWorld: .defaultClient)
+                guard let base64 = result as? String,
+                    let data = Data(base64Encoded: base64), let image = UIImage(data: data)
+                else { throw ProjectArtworkError.invalidImage }
                 finish(.success(image))
             } catch { finish(.failure(error)) }
         }
