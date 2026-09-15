@@ -23,6 +23,7 @@ import { BrokerRelay } from './pulsar/broker-relay.ts';
 import { BrokerSwitch } from './pulsar/broker-switch.ts';
 import { StatementGate, TEST_STATEMENT_KEY_VARIABLE, trustedStatementKeys } from './pulsar/statement.ts';
 import { DirectPeers } from './pulsar/peers.ts';
+import { greetingLines } from './cli/greeting.ts';
 import { guardWeriftTurn } from './pulsar/turn-guard.ts';
 import { registerDirectHandlers } from './handlers/direct.ts';
 import { suggestChatTitle } from './chat/chat-title.ts';
@@ -670,5 +671,14 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     process.on('SIGTERM', () => void shutdown('SIGTERM'));
     selfUpdate.start();
 
-    console.log(`ruimte server ${VERSION} listening on ws://${server.hostname}:${server.port}/ws (home: ${config.home})`);
+    const greeting = greetingLines({
+        version: VERSION,
+        host: server.hostname ?? config.host,
+        port: server.port ?? config.port,
+        home: config.home,
+        interactive: process.stdout.isTTY === true && !config.underService
+    });
+    for (const line of greeting) {
+        console.log(line);
+    }
 };
