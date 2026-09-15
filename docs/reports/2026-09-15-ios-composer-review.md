@@ -534,3 +534,11 @@ Sidebar rows have 18-point outer margins plus 10-point inner padding, adding eig
 Pixel inspection found that the previous sidebar edge combined the custom border with the native split divider. A noninteractive overlay now covers that divider and draws one physical pixel using the web border color. Its position follows the sidebar bounds and it is omitted when the detail column is shown alone. An actual iPad screenshot confirmed the single-pixel edge, branding and roomier rows. Both device screenshots confirmed the ungrouped Projects layout.
 
 The signed device build, Swift formatting, repository format and check commands passed. Both devices received the final build. This iteration used screenshots without a simulator or additional automated device tests. Sidebar collapse, project-header transitions and light appearance remain visual acceptance checks.
+
+## Scrolling separators and press feedback
+
+View-group separators and labels now live in noninteractive list rows instead of pinned section headers. The separator before Recently closed also scrolls with its content. The project view rows retain section-local reordering. Ruimte branding uses the leading toolbar placement and its intrinsic width, with the shared glass background hidden through Apple's public [toolbar modifier](https://developer.apple.com/documentation/swiftui/toolbarcontent/sharedbackgroundvisibility(_:)). Projects uses an inline navigation title on iPhone.
+
+Navigation labels gain a lighter pressed background. A simultaneous gesture updates transient state and resets on release or movement, following SwiftUI's [gesture-state pattern](https://developer.apple.com/documentation/swiftui/gesturestate). The native button action remains responsible for opening the destination.
+
+Build, format and repository checks passed. The focused phone/tablet activation check passed; it now skips decorative rows before asserting that the first view opens the real canvas. Its final iPad screenshot confirms that the left-aligned Ruimte name is fully visible. The physical iPhone was showing Notifications when captured, so that screenshot does not verify the Projects title. Press appearance during a physical touch and scrolling separator behavior still need device acceptance. No simulator was used.

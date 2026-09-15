@@ -17,6 +17,7 @@ enum MobileStyle {
     static let inset = Color(uiColor: adaptive(light: 0xececef, dark: 0x08080a))
     static let hover = Color(uiColor: adaptive(light: 0xf3f3f5, dark: 0x202024))
     static let active = Color(uiColor: adaptive(light: 0xdcdce2, dark: 0x28282e))
+    static let pressed = Color(uiColor: adaptive(light: 0xe7e7ea, dark: 0x2c2c33))
     static let border = Color(uiColor: adaptive(light: 0xe2e2e6, dark: 0x1f1f24))
     static let text = Color(uiColor: textColor)
     static let muted = Color(uiColor: mutedColor)

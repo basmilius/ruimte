@@ -57,11 +57,12 @@ struct WorkspacePage: View {
                 }
             }
         }
-        .navigationTitle(workspace.title)
+        .navigationTitle(isSidebar ? "" : workspace.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if isSidebar {
-                ToolbarItem(placement: .principal) { SidebarBrand() }
+                ToolbarItem(placement: .topBarLeading) { SidebarBrand() }
+                    .sharedBackgroundVisibility(.hidden)
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Usage", lucideIcon: "chart-no-axes-column") { showUsage = true }
@@ -209,6 +210,26 @@ struct WorkspacePage: View {
         return List {
             ForEach(sections) { section in
                 Section {
+                    if section.id != sections.first?.id || section.title != nil || isSidebar {
+                        VStack(alignment: .leading, spacing: 8) {
+                            if isSidebar && section.id == sections.first?.id {
+                                Text(workspace.title).font(.footnote.weight(.medium))
+                                    .foregroundStyle(MobileStyle.muted).lineLimit(1).truncationMode(.tail)
+                                    .textCase(nil).padding(.bottom, 8)
+                            }
+                            if section.id != sections.first?.id {
+                                MobileStyle.border.frame(height: 1).padding(.vertical, 10)
+                            }
+                            if let title = section.title {
+                                Text(title).font(.footnote).foregroundStyle(MobileStyle.muted).textCase(nil)
+                            }
+                        }
+                        .listRowInsets(EdgeInsets(top: 0, leading: 28, bottom: 0, trailing: 28))
+                        .listRowSeparator(.hidden)
+                        .moveDisabled(true)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(section.title == nil && !(isSidebar && section.id == sections.first?.id))
+                    }
                     ForEach(section.items, id: \.stableID) { item in
                         let selected =
                             navigation.selectedViewID == item.stableID
@@ -250,27 +271,12 @@ struct WorkspacePage: View {
                             }
                         }
                     }
-                } header: {
-                    VStack(alignment: .leading, spacing: 8) {
-                        if isSidebar && section.id == sections.first?.id {
-                            Text(workspace.title).font(.footnote.weight(.medium))
-                                .foregroundStyle(MobileStyle.muted).lineLimit(1).truncationMode(.tail)
-                                .textCase(nil).padding(.bottom, 8)
-                        }
-                        if section.id != sections.first?.id {
-                            MobileStyle.border.frame(height: 1).padding(.vertical, 10)
-                        }
-                        if let title = section.title {
-                            Text(title).font(.footnote).foregroundStyle(MobileStyle.muted).textCase(nil)
-                        }
-                    }
-                    .listRowInsets(EdgeInsets(top: 0, leading: 28, bottom: 0, trailing: 28))
                 }
                 .listSectionSeparator(.hidden)
                 .listRowBackground(Color.clear)
             }
         }
-        .modifier(MobileSidebarList())
+        .modifier(MobileSidebarList(minimumRowHeight: 0))
         .accessibilityIdentifier("workspace.views")
     }
 

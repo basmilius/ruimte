@@ -147,19 +147,27 @@ final class WorkspaceVisualTests: XCTestCase {
                 XCTAssertEqual(tabs.tabs.count, 4)
             }
             let list = try XCTUnwrap(descendant(UICollectionView.self, in: host.view))
-            let first = try XCTUnwrap(
-                list.indexPathsForVisibleItems.min { left, right in
-                    let leftY = list.layoutAttributesForItem(at: left)?.frame.minY ?? .greatestFiniteMagnitude
-                    let rightY = list.layoutAttributesForItem(at: right)?.frame.minY ?? .greatestFiniteMagnitude
-                    return leftY < rightY
-                })
-            let row = try XCTUnwrap(list.cellForItem(at: first))
-            XCTAssertGreaterThanOrEqual(row.bounds.height, 44)
             XCTAssertNil(descendant(CanvasScrollView.self, in: host.view))
-            // UIKit separates row selection from its primary action, which activates a SwiftUI List button.
-            XCTAssertEqual(list.delegate?.collectionView?(list, canPerformPrimaryActionForItemAt: first), true)
-            list.delegate?.collectionView?(list, performPrimaryActionForItemAt: first)
-            for _ in 0..<20 { await displayFrame() }
+            let candidates = list.indexPathsForVisibleItems.sorted { left, right in
+                let leftY = list.layoutAttributesForItem(at: left)?.frame.minY ?? .greatestFiniteMagnitude
+                let rightY = list.layoutAttributesForItem(at: right)?.frame.minY ?? .greatestFiniteMagnitude
+                return leftY < rightY
+            }
+            var activatedRow: UICollectionViewCell?
+            for index in candidates {
+                guard list.delegate?.collectionView?(list, canPerformPrimaryActionForItemAt: index) == true else {
+                    continue
+                }
+                let row = list.cellForItem(at: index)
+                // UIKit also advertises a primary action for decorative SwiftUI rows; those do nothing.
+                list.delegate?.collectionView?(list, performPrimaryActionForItemAt: index)
+                for _ in 0..<20 { await displayFrame() }
+                if workspace.selectedID != nil {
+                    activatedRow = row
+                    break
+                }
+            }
+            XCTAssertGreaterThanOrEqual(try XCTUnwrap(activatedRow).bounds.height, 44)
             XCTAssertEqual(workspace.selectedID, "overview")
             XCTAssertNotNil(
                 descendant(CanvasScrollView.self, in: host.view), "Activating the row must mount the real canvas")

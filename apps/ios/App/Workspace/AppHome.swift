@@ -19,7 +19,6 @@ struct AppHome: View {
     @State private var search = ""
     @State private var sceneID = UUID().uuidString
     @Environment(\.scenePhase) private var phase
-    @Environment(\.horizontalSizeClass) private var sizeClass
     @AppStorage("ruimte.ios.appearance") private var appearance = "system"
 
     init(runtime: AppRuntime, projects: UnifiedProjects = UnifiedProjects()) {
@@ -122,7 +121,8 @@ struct AppHome: View {
                 .navigationTitle("")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .principal) { SidebarBrand() }
+                    ToolbarItem(placement: .topBarLeading) { SidebarBrand() }
+                        .sharedBackgroundVisibility(.hidden)
                 }
                 .navigationDestination(item: $activeProject) { project in
                     WorkspacePage(navigation: project, isSidebar: true)
@@ -183,7 +183,7 @@ struct AppHome: View {
             }
         }
         .navigationTitle(hasWorkspace ? "Projects" : "")
-        .navigationBarTitleDisplayMode(sizeClass == .regular ? .inline : .automatic)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if hasWorkspace {
                 if !usesSidebar {
@@ -253,6 +253,9 @@ struct AppHome: View {
                 }.listRowBackground(Color.clear).listRowSeparator(.hidden)
             }
             Section {
+                MobileStyle.border.frame(height: 1).padding(.vertical, 10)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 28, bottom: 0, trailing: 28))
+                    .accessibilityHidden(true)
                 NavigationLink {
                     RecentProjectsPage(runtime: runtime, projects: projects)
                 } label: {
@@ -262,9 +265,6 @@ struct AppHome: View {
                 }
                 .modifier(MobileSidebarRow())
                 .accessibilityIdentifier("projects.recent")
-            } header: {
-                MobileStyle.border.frame(height: 1).padding(.vertical, 10)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 28, bottom: 0, trailing: 28))
             }
             if !projects.problems.isEmpty {
                 Section("Connections") {

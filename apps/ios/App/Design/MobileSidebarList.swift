@@ -1,11 +1,13 @@
 import SwiftUI
 
 struct MobileSidebarList: ViewModifier {
+    var minimumRowHeight: CGFloat = 44
+
     func body(content: Content) -> some View {
         content
             .listStyle(.plain)
             .listSectionSpacing(0)
-            .environment(\.defaultMinListRowHeight, 44)
+            .environment(\.defaultMinListRowHeight, minimumRowHeight)
             .scrollContentBackground(.hidden)
             .background(MobileStyle.surface)
     }
@@ -26,20 +28,26 @@ struct MobileSidebarRow: ViewModifier {
 struct MobileSidebarLabel: ViewModifier {
     var selected = false
     @State private var hovered = false
+    @GestureState private var pressed = false
 
     func body(content: Content) -> some View {
         content
             .font(.callout)
-            .foregroundStyle(selected || hovered ? MobileStyle.text : MobileStyle.muted)
+            .foregroundStyle(selected || hovered || pressed ? MobileStyle.text : MobileStyle.muted)
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             .background(
-                selected ? MobileStyle.active : hovered ? MobileStyle.hover : .clear,
+                pressed ? MobileStyle.pressed : selected ? MobileStyle.active : hovered ? MobileStyle.hover : .clear,
                 in: RoundedRectangle(cornerRadius: 8)
             )
             .contentShape(RoundedRectangle(cornerRadius: 8))
             .onHover { hovered = $0 }
+            // Keep the native List button action; this gesture only tracks visual feedback.
+            .simultaneousGesture(
+                LongPressGesture(minimumDuration: .infinity, maximumDistance: 10)
+                    .updating($pressed) { value, pressed, _ in pressed = value }
+            )
     }
 }
 
@@ -53,6 +61,7 @@ struct SidebarBrand: View {
                 .background(.white, in: RoundedRectangle(cornerRadius: 7))
             Text("Ruimte").font(.headline).foregroundStyle(MobileStyle.text)
         }
+        .fixedSize(horizontal: true, vertical: false)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Ruimte")
     }
