@@ -25,7 +25,7 @@ import {
     type ProjectViewLocal,
     type StandaloneNode
 } from '@ruimte/contracts';
-import type { CanvasAddition } from '@/project/merge';
+import type { CanvasPatch } from '@/project/merge';
 import { NODE_SIZE, defaultCanvases, nextId, type CanvasState } from '@/state/canvas';
 import { defaultDiagrams, type DiagramState } from '@/state/diagram';
 import { defaultDrawings, type DrawingState } from '@/state/drawing';
@@ -79,11 +79,13 @@ export interface DocumentState {
 
     load(document: ProjectDocument | null, local: ProjectLocal | null): void;
     /*
-     * What another writer added, taken in beside what this machine is editing: the views it does not
-     * have, and what the canvases it does have gained. Not an edit, since it is already on disk, and
-     * no view opens by itself: a person's grid only moves when the person moves it.
+     * What another writer changed, taken in beside what this machine is editing: the merged list of
+     * views, and what each canvas on screen has to take in. Not an edit, since it is already on disk,
+     * and no view opens by itself: a person's grid only moves when the person moves it.
      */
-    applyAdditions(views: ProjectView[], canvases: Record<string, CanvasAddition>): void;
+    applyMerge(views: ProjectView[], canvases: Record<string, CanvasPatch>): void;
+    /* The nodes a gesture holds in any canvas on screen, which a merge leaves under the person's hand. */
+    heldNodeIds(): Set<string>;
     /* Puts a view in the cell that has the focus, or moves the focus to the cell it already stands in. */
     setActiveView(id: string): void;
     /* The same, for a view someone else asked for: it answers what moved, so a toast can put it back.
@@ -350,11 +352,15 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 set({ loading: false });
             },
 
-            applyAdditions(views, canvases) {
+            applyMerge(views, canvases) {
                 set((state) => ({ views, viewNotice: keptNotice(state.viewNotice, views) }));
-                for (const [viewId, addition] of Object.entries(canvases)) {
-                    peers.canvases.peek(viewId)?.getState().addExternal(addition);
+                for (const [viewId, patch] of Object.entries(canvases)) {
+                    peers.canvases.peek(viewId)?.getState().applyExternal(patch);
                 }
+            },
+
+            heldNodeIds() {
+                return new Set(peers.canvases.live().flatMap(([, store]) => store.getState().heldNodeIds()));
             },
 
             setActiveView(id) {

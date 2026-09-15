@@ -4,7 +4,7 @@ import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 import { dropClientLocal, overlayLocal, readClientLocal, writeClientLocal } from './client-local';
 import { browserStorage, readLastProject, rememberProject, type LastProjectStorage } from './last-project';
-import { mergeProject, type CanvasAddition } from './merge';
+import { mergeProject, type CanvasPatch } from './merge';
 import type { PanelsPort } from './panels-port';
 
 /* The slice of a canvas editor the client reads; the real store has more. */
@@ -35,7 +35,8 @@ interface DocumentAccess {
         edits: number;
         loading: boolean;
         load(document: ProjectDocument | null, local: ProjectLocal | null): void;
-        applyAdditions(views: ProjectView[], canvases: Record<string, CanvasAddition>): void;
+        applyMerge(views: ProjectView[], canvases: Record<string, CanvasPatch>): void;
+        heldNodeIds(): Set<string>;
         exportViews(): ProjectView[];
         exportLocal(): Pick<ProjectLocal, 'activeViewId' | 'views' | 'layout'>;
     };
@@ -110,8 +111,8 @@ const isConnectionError = (e: unknown): boolean => e instanceof TransportError &
 /*
  * Keeps the canvas on screen and the project file in step. Edits save after a short pause;
  * the camera and the panels go to this client's storage and the machine-local file on their own,
- * slower clock. A change that
- * arrives from disk replaces the canvas when nothing is unsaved, and otherwise waits for a decision.
+ * slower clock. A change that arrives from disk merges into the editors on screen, and only a real
+ * conflict replaces the canvas when nothing is unsaved or waits for a decision when something is.
  */
 export class ProjectClient {
     private readonly transport: Transport;
@@ -544,15 +545,16 @@ export class ProjectClient {
     }
 
     /*
-     * Takes what the daemon added while this client had edits of its own: an agent writing a node is
-     * not something to ask a person about. The rev goes along, so the next save is made against the
-     * file as it now stands; anything that is not an addition answers false and gets the dialog.
+     * Takes in what another writer changed, beside this client's own edits: an agent adding a node or
+     * a second client moving one is not something to ask a person about. The rev goes along, so the
+     * next save is made against the file as it now stands; a real conflict answers false and gets the
+     * dialog (or, on a clean screen, the whole document).
      */
     private adopt(document: ProjectDocument): boolean {
         if (!this.base) {
             return false;
         }
-        const merge = mergeProject(this.base, this.contentOfScreen(), contentOf(document));
+        const merge = mergeProject(this.base, this.contentOfScreen(), contentOf(document), this.documents.getState().heldNodeIds());
         if (!merge.ok) {
             this.refusal = merge.reason;
             console.debug(`[project] the canvas could not take in rev ${document.rev}: ${merge.reason}`);
@@ -561,7 +563,7 @@ export class ProjectClient {
         this.refusal = null;
         this.base = contentOf(document);
         this.sink.setRev(document.rev);
-        this.documents.getState().applyAdditions(merge.content.views, merge.additions.canvases);
+        this.documents.getState().applyMerge(merge.content.views, merge.changes.canvases);
         return true;
     }
 

@@ -18,7 +18,7 @@ import {
     type Rect
 } from '@/canvas/math';
 
-import type { CanvasAddition } from '@/project/merge';
+import type { CanvasPatch } from '@/project/merge';
 import type {
     AgentKind,
     AgentStatus,
@@ -210,11 +210,13 @@ export interface CanvasState {
     /* Replaces the canvas with one view of the project; the camera comes from the machine-local state. */
     loadView(view: ProjectCanvasView | null, local: ProjectViewLocal | null): void;
     /*
-     * What another writer (an agent through the daemon) added to this canvas, put in beside what the
-     * person is doing: no history step, no selection and no camera move, so a drag in progress and
-     * an undo stack both survive it.
+     * What another writer (an agent or a second client) changed on this canvas, put in beside what
+     * the person is doing: no history step and no camera move, so a drag in progress and an undo
+     * stack both survive it. Only what was deleted leaves the selection.
      */
-    addExternal(addition: CanvasAddition): void;
+    applyExternal(patch: CanvasPatch): void;
+    /* The nodes a gesture is moving or resizing right now, which a merge leaves where the person has them. */
+    heldNodeIds(): string[];
     exportContent(): Pick<ProjectCanvasView, 'nodes' | 'texts' | 'edges' | 'layouts'>;
     undo(): void;
     redo(): void;
@@ -722,42 +724,63 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 get().fitAll();
             }
         },
-        addExternal(addition) {
-            const { nodes: arriving, texts: arrivingTexts, edges: arrivingEdges, members } = addition;
-            // Marked as a load, like a project swapping in: these are already on disk, so they are no edit.
+        applyExternal(patch) {
+            // Marked as a load, like a project swapping in: all of it is already on disk, so none of it is an edit.
             set((s) => {
+                const gone = new Set([...patch.removed.nodes, ...patch.removed.texts, ...patch.removed.edges]);
                 const nodes: Record<string, CanvasNode> = { ...s.nodes };
-                const order = [...s.order];
-                for (const [id, grown] of Object.entries(members)) {
-                    const group = nodes[id];
-                    if (group) {
-                        const held = group.memberIds ?? [];
-                        nodes[id] = { ...group, memberIds: [...held, ...grown.filter((member) => !held.includes(member))] };
-                    }
+                for (const id of patch.removed.nodes) {
+                    delete nodes[id];
                 }
-                for (const node of arriving) {
-                    if (!nodes[node.id]) {
-                        nodes[node.id] = node;
-                        order.push(node.id);
-                    }
+                // Spread over what the editor holds, so what only lives here (a browser's status) stays.
+                for (const node of patch.nodes) {
+                    const held = nodes[node.id];
+                    nodes[node.id] = held ? { ...held, ...node } : node;
                 }
                 const texts = { ...s.texts };
-                for (const text of arrivingTexts) {
-                    if (!texts[text.id]) {
-                        texts[text.id] = text;
-                    }
+                for (const id of patch.removed.texts) {
+                    delete texts[id];
                 }
-                const held = new Set(s.edges.map((edge) => edge.id));
+                for (const text of patch.texts) {
+                    const held = texts[text.id];
+                    texts[text.id] = held ? { ...held, ...text } : text;
+                }
+                const arriving = new Map(patch.edges.map((edge) => [edge.id, edge]));
+                const edges = s.edges
+                    .filter((edge) => !gone.has(edge.id))
+                    .map((edge) => (arriving.has(edge.id) ? { ...edge, ...arriving.get(edge.id)! } : edge));
+                const present = new Set(edges.map((edge) => edge.id));
+                edges.push(...patch.edges.filter((edge) => !present.has(edge.id)));
+                const hidden = hiddenIn(nodes);
+                const lost = (id: string | null | undefined): boolean => id !== null && id !== undefined && gone.has(id);
                 return {
                     loading: true,
                     nodes,
-                    order,
+                    order: patch.order.filter((id) => nodes[id] !== undefined),
                     texts,
-                    edges: [...s.edges, ...arrivingEdges.filter((edge) => !held.has(edge.id))],
-                    hidden: hiddenIn(nodes)
+                    edges,
+                    layouts: patch.layouts ?? s.layouts,
+                    hidden,
+                    ...(gone.size === 0
+                        ? {}
+                        : {
+                              selection: s.selection.filter((id) => !gone.has(id) && !hidden.has(id)),
+                              mode: s.mode.kind === 'node' && gone.has(s.mode.nodeId) ? { kind: 'canvas' as const } : s.mode,
+                              editingTextId: lost(s.editingTextId) ? null : s.editingTextId,
+                              resizing: lost(s.resizing) ? null : s.resizing,
+                              linkDraft: lost(s.linkDraft?.from) ? null : s.linkDraft
+                          })
                 };
             });
             set({ loading: false });
+        },
+        heldNodeIds() {
+            const { gesturing, resizing, selection, nodes, texts } = get();
+            if (!gesturing && resizing === null) {
+                return [];
+            }
+            const held = gesturing ? [...selection, ...carriedByGroups(nodes, texts, selection)] : [];
+            return resizing === null ? held : [...held, resizing];
         },
         exportContent() {
             const { nodes, order, texts, edges, layouts } = get();

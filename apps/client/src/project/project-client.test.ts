@@ -413,7 +413,7 @@ describe('ProjectClient', () => {
         dispose();
     });
 
-    test('a change from disk replaces a clean canvas, and waits behind a conflict when there are edits', async () => {
+    test('a change from disk reaches a clean canvas, and a conflict waits behind the dialog when there are edits', async () => {
         const { transport, state, client, dispose } = setup();
         await tick();
         transport.emit('project.changed', {
@@ -426,7 +426,8 @@ describe('ProjectClient', () => {
 
         transport.rev = 9;
         focusedCanvas().getState().addNode('chat', { x: 0, y: 0 });
-        transport.emit('project.changed', { projectId: 'p1', document: document(10) });
+        // A rename of the project is nothing a merge takes in.
+        transport.emit('project.changed', { projectId: 'p1', document: { ...document(10), name: 'renamed' } });
         expect(state.conflict?.rev).toBe(10);
         expect(focusedCanvas().getState().order).toHaveLength(2);
 
@@ -510,6 +511,71 @@ describe('ProjectClient', () => {
         expect(state.rev).toBe(5);
         expect(state.dirty).toBe(false);
         expect(focusedCanvas().getState().order).toEqual([mine, 'agent']);
+        dispose();
+    });
+
+    test('a node moved and retitled in another client lands in the editor as a load, beside an edit here', async () => {
+        const { transport, state, client, dispose } = setup();
+        const note = (id: string, patch: Partial<ProjectCanvasView['nodes'][number]> = {}): ProjectCanvasView['nodes'][number] => ({
+            id,
+            kind: 'note',
+            title: id,
+            x: 0,
+            y: 0,
+            w: 10,
+            h: 10,
+            ...patch
+        });
+        transport.views = [canvasView('main', [note('a'), note('b')])];
+        await tick();
+        const editor = focusedCanvas();
+        editor.getState().select(['b']);
+        editor.getState().moveSelected(24, 0, true);
+        const past = editor.getState().past;
+        const camera = editor.getState().camera;
+
+        transport.emit('project.changed', { projectId: 'p1', document: document(4, [canvasView('main', [note('a', { x: 300, title: 'Moved' }), note('b')])]) });
+
+        expect(state.conflict).toBeNull();
+        expect(client.mergeRefusal).toBeNull();
+        expect(focusedCanvas()).toBe(editor);
+        expect(editor.getState().nodes.a).toMatchObject({ x: 300, title: 'Moved' });
+        expect(editor.getState().nodes.b).toMatchObject({ x: 24 });
+        expect(editor.getState().past).toBe(past);
+        expect(editor.getState().camera).toBe(camera);
+        expect(editor.getState().selection).toEqual(['b']);
+        expect(state.rev).toBe(4);
+
+        await tick(10);
+        const save = transport.of('project.save').at(-1)?.payload as { baseRev: number; content: { views: ProjectCanvasView[] } };
+        expect(save.baseRev).toBe(4);
+        expect(save.content.views[0]!.nodes.map((node) => [node.id, node.x])).toEqual([
+            ['a', 300],
+            ['b', 24]
+        ]);
+        dispose();
+    });
+
+    test('a node deleted in another client leaves a clean screen without an undo step or a load', async () => {
+        const { transport, state, dispose } = setup();
+        transport.views = [canvasView('main', [{ id: 'gone', kind: 'note', title: 'n', x: 0, y: 0, w: 10, h: 10 }])];
+        await tick();
+        const editor = focusedCanvas();
+        editor.getState().select(['gone']);
+        let loads = 0;
+        const off = useDocument.subscribe((next, previous) => {
+            loads += next.loading && !previous.loading ? 1 : 0;
+        });
+
+        transport.emit('project.changed', { projectId: 'p1', document: document(4, [canvasView('main')]) });
+
+        off();
+        expect(loads).toBe(0);
+        expect(focusedCanvas()).toBe(editor);
+        expect(editor.getState().order).toEqual([]);
+        expect(editor.getState().selection).toEqual([]);
+        expect(editor.getState().past).toEqual([]);
+        expect(state.dirty).toBe(false);
         dispose();
     });
 
