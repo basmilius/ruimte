@@ -123,6 +123,10 @@ final class SharedMachineSession {
         await runtime?.notifications.markSeen(machineID: machine.id, nodeID: nodeID)
     }
 
+    func viewedChat(_ chatID: String, title: String, info: JSONValue) {
+        runtime?.notifications.viewedChat(machineID: machine.id, nodeID: chatID, title: title, info: info)
+    }
+
     func reconnect() {
         failedAttempts = 0
         problem = nil

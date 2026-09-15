@@ -36,6 +36,7 @@ struct NotificationSessionPage: View {
                 ProgressView().accessibilityLabel("Connecting to your machine")
             }
         }
+        .environment(\.mobileMachineSession, session)
         .task {
             guard lease == nil else { return }
             guard let machine = runtime.machines.first(where: { $0.id == destination.machineID }) else {

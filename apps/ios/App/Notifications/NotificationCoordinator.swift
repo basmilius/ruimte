@@ -31,13 +31,16 @@ struct NotificationDestination: Identifiable, Hashable {
     private let api: PushAPI
     private(set) var enabled = UserDefaults.standard.bool(forKey: "ruimte.push.enabled")
     var approvals = UserDefaults.standard.object(forKey: "ruimte.push.approvals") as? Bool ?? true
-    var activities = UserDefaults.standard.bool(forKey: "ruimte.push.activities")
+    var activities = UserDefaults.standard.object(forKey: "ruimte.push.activities") as? Bool ?? true
+    var supportsActivities: Bool { UIDevice.current.userInterfaceIdiom == .phone }
+    private var latestChat: (machineID: String, nodeID: String, title: String, info: JSONValue)?
+    private var activitySelection = 0
+    private var latestActivityTask: Task<Void, Never>?
     var problem: String?
     var busy = false
     var destination: NotificationDestination?
     private var tokenObservers: [NSObjectProtocol] = []
     private var activityTasks: [String: Task<Void, Never>] = [:]
-    private var pushToStartTask: Task<Void, Never>?
     private var activityDiscoveryTask: Task<Void, Never>?
     private var liveAttentionKeys = Set<String>()
     private var restored = false
@@ -156,15 +159,16 @@ struct NotificationDestination: Identifiable, Hashable {
             payload: .object([
                 "handle": .string(context.handle), "publicKey": .string(key.publicKey),
                 "follow": .array((follows[machine.id] ?? []).map(JSONValue.string)), "approvals": .bool(approvals),
-                "activities": .bool(activities),
+                "activities": .bool(activities && supportsActivities),
             ]))
     }
     func disable() async {
         revision += 1
+        activitySelection += 1
+        latestActivityTask?.cancel()
+        latestChat = nil
         enabled = false
         UserDefaults.standard.set(false, forKey: "ruimte.push.enabled")
-        pushToStartTask?.cancel()
-        pushToStartTask = nil
         activityDiscoveryTask?.cancel()
         activityDiscoveryTask = nil
         activityTasks.values.forEach { $0.cancel() }
@@ -198,11 +202,16 @@ struct NotificationDestination: Identifiable, Hashable {
     func savePreferences() async {
         UserDefaults.standard.set(approvals, forKey: "ruimte.push.approvals")
         UserDefaults.standard.set(activities, forKey: "ruimte.push.activities")
-        if activities {
+        if activities && supportsActivities {
             startActivityObservers()
+            if let latestChat {
+                viewedChat(
+                    machineID: latestChat.machineID, nodeID: latestChat.nodeID, title: latestChat.title,
+                    info: latestChat.info)
+            }
         } else {
-            pushToStartTask?.cancel()
-            pushToStartTask = nil
+            activitySelection += 1
+            latestActivityTask?.cancel()
             activityDiscoveryTask?.cancel()
             activityDiscoveryTask = nil
             activityTasks.values.forEach { $0.cancel() }
@@ -250,31 +259,67 @@ struct NotificationDestination: Identifiable, Hashable {
         }
         return terminals + chats
     }
-    func startActivity(machineID: String, nodeID: String, title: String) async {
-        guard enabled, activities, ActivityAuthorizationInfo().areActivitiesEnabled else {
-            problem = "Enable Live Activities in Settings first."
-            return
-        }
-        do {
+    func viewedChat(machineID: String, nodeID: String, title: String, info: JSONValue) {
+        guard supportsActivities, info != .null else { return }
+        latestChat = (machineID, nodeID, title, info)
+        guard activities, ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        activitySelection += 1
+        let selection = activitySelection
+        latestActivityTask?.cancel()
+        latestActivityTask = Task { [weak self] in
+            guard let self else { return }
             let collapse = Self.collapseID(machineID: machineID, nodeID: nodeID)
-            if Activity<RuimteActivityAttributes>.activities.contains(where: {
-                $0.attributes.machineId == machineID && $0.attributes.collapseId == collapse
-            }) {
-                return
+            for activity in Activity<RuimteActivityAttributes>.activities
+            where activity.attributes.machineId != machineID || activity.attributes.collapseId != collapse {
+                activityTasks.removeValue(forKey: activity.id)?.cancel()
+                await activity.end(nil, dismissalPolicy: .immediate)
             }
-            let attributes = RuimteActivityAttributes(machineId: machineID, collapseId: collapse)
+            guard selection == activitySelection, !Task.isCancelled, activities else { return }
+            let phase: PushActivityContentPhase =
+                info.text("status") == "needs-you"
+                ? .needsYou
+                : info["running"] == .bool(true) ? .running : .done
+            let existing = Activity<RuimteActivityAttributes>.activities.first {
+                $0.attributes.machineId == machineID && $0.attributes.collapseId == collapse
+            }
             let content = PushActivityContent(
-                title: String(decoding: title.utf16.prefix(159), as: UTF16.self), phase: .running,
-                startedAt: Int64(Date().timeIntervalSince1970 * 1000))
-            let activity = try Activity.request(
-                attributes: attributes,
-                content: ActivityContent(state: content, staleDate: Date().addingTimeInterval(900)), pushType: .token)
-            observe(activity)
-            await follow(machineID: machineID, nodeID: nodeID, enabled: true)
-        } catch { problem = error.localizedDescription }
+                title: String(decoding: title.utf16.prefix(159), as: UTF16.self), phase: phase,
+                startedAt: existing?.content.state.startedAt ?? Int64(Date().timeIntervalSince1970 * 1000))
+            let value = ActivityContent(state: content, staleDate: Date().addingTimeInterval(900))
+            do {
+                if let existing {
+                    if existing.content.state != content { await Self.updateActivity(id: existing.id, state: content) }
+                } else {
+                    guard UIApplication.shared.applicationState == .active else { return }
+                    let activity = try Activity.request(
+                        attributes: RuimteActivityAttributes(machineId: machineID, collapseId: collapse),
+                        content: value, pushType: .token)
+                    if enabled { observe(activity) }
+                }
+                // Remember routing even if notifications are disabled; local Live Activities need no alert permission.
+                if !follows(machineID: machineID, nodeID: nodeID) {
+                    var followed = follows[machineID] ?? []
+                    if followed.count >= 500 { followed.removeFirst() }
+                    followed.append(nodeID)
+                    follows[machineID] = followed
+                    UserDefaults.standard.set(follows, forKey: "ruimte.push.follows")
+                    if enabled { await synchronize() }
+                }
+            } catch {
+                if selection == activitySelection { problem = error.localizedDescription }
+            }
+        }
     }
+
+    private nonisolated static func updateActivity(id: String, state: PushActivityContent) async {
+        guard !Task.isCancelled,
+            let activity = Activity<RuimteActivityAttributes>.activities.first(where: { $0.id == id })
+        else { return }
+        await activity.update(ActivityContent(state: state, staleDate: Date().addingTimeInterval(900)))
+    }
+
     private func startActivityObservers() {
-        guard enabled, activities else { return }
+        guard enabled, activities, supportsActivities else { return }
         for activity in Activity<RuimteActivityAttributes>.activities { observe(activity) }
         if activityDiscoveryTask == nil {
             activityDiscoveryTask = Task { [weak self] in
@@ -284,21 +329,14 @@ struct NotificationDestination: Identifiable, Hashable {
                 }
             }
         }
-        if pushToStartTask == nil {
-            pushToStartTask = Task { [weak self] in
-                for await token in Activity<RuimteActivityAttributes>.pushToStartTokenUpdates {
-                    guard let self, !Task.isCancelled, self.enabled, self.activities else { break }
-                    do {
-                        guard let context = try SharedPushStore().context(),
-                            let access = try await self.runtime?.vault?.accessToken()
-                        else { continue }
-                        try await self.api.startActivity(
-                            handle: context.handle, token: Self.hex(token), accessToken: access)
-                    } catch { self.problem = error.localizedDescription }
-                }
+        if let context = try? SharedPushStore().context() {
+            Task { [weak self] in
+                guard let self, let access = try? await self.runtime?.vault?.accessToken() else { return }
+                try? await self.api.startActivity(handle: context.handle, token: nil, accessToken: access)
             }
         }
     }
+
     private func observe(_ activity: Activity<RuimteActivityAttributes>) {
         guard activityTasks[activity.id] == nil else { return }
         activityTasks[activity.id] = Task { [weak self] in

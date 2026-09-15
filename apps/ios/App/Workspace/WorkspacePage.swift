@@ -64,6 +64,7 @@ struct WorkspacePage: View {
                 }
             }
         }
+        .environment(\.mobileMachineSession, workspace.session)
         .task { workspace.start() }
         .sheet(isPresented: Binding(get: { iconView != nil }, set: { if !$0 { iconView = nil } })) {
             if let item = iconView { ViewIconPicker(workspace: workspace, item: item) }
@@ -186,13 +187,23 @@ struct WorkspacePage: View {
             projectNavigation {
                 searchResults
                     .safeAreaInset(edge: .bottom) {
-                        HStack(spacing: 10) {
-                            Image(lucide: "search").foregroundStyle(.secondary)
-                            TextField("Find a view", text: $search)
-                                .focused($sidebarSearchFocused)
-                                .onAppear { sidebarSearchFocused = true }
-                                .textInputAutocapitalization(.never).autocorrectionDisabled()
-                        }.padding(14).glassEffect(.regular, in: Capsule()).padding(12)
+                        HStack(spacing: 8) {
+                            HStack(spacing: 10) {
+                                Image(lucide: "search").foregroundStyle(.secondary)
+                                TextField("Find a view", text: $search)
+                                    .focused($sidebarSearchFocused)
+                                    .onAppear { sidebarSearchFocused = true }
+                                    .textInputAutocapitalization(.never).autocorrectionDisabled()
+                            }.padding(14).glassEffect(.regular, in: Capsule())
+                            Button {
+                                sidebarSearchFocused = false
+                                searching = false
+                                search = ""
+                                section = .views
+                            } label: {
+                                Image(lucide: "x").frame(width: 48, height: 48)
+                            }.buttonStyle(.glass).buttonBorderShape(.circle).accessibilityLabel("Cancel search")
+                        }.padding(.horizontal, 12).padding(.vertical, 8)
                     }
             }
         } else {
@@ -213,6 +224,7 @@ struct WorkspacePage: View {
     private var projectSplit: some View {
         ProjectSplitView(sidebarVisible: $sidebarVisible) {
             projectTabs
+                .toggleStyle(SystemToggleStyle())
                 .overlay(alignment: .trailing) {
                     Color(uiColor: .separator).frame(width: 1)
                         .ignoresSafeArea(.container, edges: .vertical)
@@ -237,6 +249,8 @@ struct WorkspacePage: View {
                 }
             }
             .tint(MobileStyle.accent)
+            .environment(\.mobileMachineSession, workspace.session)
+            .toggleStyle(SystemToggleStyle())
         }
         .ignoresSafeArea(.container)
     }
@@ -244,6 +258,7 @@ struct WorkspacePage: View {
     private func projectNavigation<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         NavigationStack {
             content()
+                .toolbar(sizeClass == .regular && section == .search ? .hidden : .visible, for: .tabBar)
                 .scrollContentBackground(sizeClass == .regular ? .hidden : .automatic)
                 .background {
                     if sizeClass == .regular { sidebarBackground.ignoresSafeArea(.container) }
@@ -599,6 +614,7 @@ struct NotePage: View {
 }
 
 extension EnvironmentValues {
+    @Entry var mobileMachineSession: SharedMachineSession?
     @Entry var inProjectSidebar = false
     @Entry var openMobileWorkspace: (MobileWorkspace) -> Void = { _ in }
 }

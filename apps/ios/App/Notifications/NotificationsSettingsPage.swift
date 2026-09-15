@@ -22,12 +22,9 @@ struct NotificationsSettingsPage: View {
             if coordinator.enabled {
                 Section {
                     Toggle("Approval requests", isOn: $coordinator.approvals)
-                    Toggle("Live Activities", isOn: $coordinator.activities)
-                    Text(
-                        "Live Activities show a session title and status on the Lock Screen. Approval messages are encrypted for this device."
-                    ).font(.footnote).foregroundStyle(.secondary)
+                    Text("Approval messages are encrypted for this device.")
+                        .font(.footnote).foregroundStyle(.secondary)
                 }.onChange(of: coordinator.approvals) { Task { await coordinator.savePreferences() } }
-                    .onChange(of: coordinator.activities) { Task { await coordinator.savePreferences() } }
                 Section("Follow sessions") {
                     ForEach(coordinator.machines, id: \.id) { machine in
                         NavigationLink(machine.name) {
@@ -37,6 +34,16 @@ struct NotificationsSettingsPage: View {
                     if coordinator.machines.isEmpty {
                         Text("Sign in and add a machine to follow its sessions.").foregroundStyle(.secondary)
                     }
+                }
+            }
+            if coordinator.supportsActivities {
+                Section {
+                    Toggle("Live Activity", isOn: $coordinator.activities)
+                        .onChange(of: coordinator.activities) { Task { await coordinator.savePreferences() } }
+                } footer: {
+                    Text(
+                        "Shows the last chat you opened on your Lock Screen and Dynamic Island. Opening another chat replaces it. Enable notifications to keep it updated while Ruimte is closed."
+                    )
                 }
             }
             if let problem = coordinator.problem {
@@ -80,15 +87,6 @@ private struct FollowMachineNotificationsPage: View {
                                 }
                             }))
                     Text(session.text("cwd")).font(.caption).foregroundStyle(.secondary)
-                    if coordinator.activities {
-                        Button("Show Live Activity", lucideIcon: "activity") {
-                            Task {
-                                await coordinator.startActivity(
-                                    machineID: machine.id, nodeID: session.stableID,
-                                    title: session.text("title", fallback: "Agent session"))
-                            }
-                        }.font(.subheadline)
-                    }
                 }.padding(.vertical, 5)
             }
             if !loading && sessions.isEmpty { ContentUnavailableView("No active sessions", lucideIcon: "terminal") }

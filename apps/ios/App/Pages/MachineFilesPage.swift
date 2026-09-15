@@ -61,7 +61,6 @@ struct MachineFilesPage: View {
                     Label("File options", lucideIcon: "ellipsis")
                 }
             }
-            .sharedBackgroundVisibility(.hidden)
         }
         .task(id: "\(path):\(hidden)") {
             await RemotePageLifecycle.run(

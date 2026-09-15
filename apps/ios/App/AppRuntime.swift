@@ -26,6 +26,7 @@ final class AppRuntime {
     @ObservationIgnored lazy var notifications = NotificationCoordinator(runtime: self)
     private var sessions: [String: SharedMachineSession] = [:]
     private var initialized = false
+    @ObservationIgnored private var notificationSyncTask: Task<Void, Never>?
     @ObservationIgnored private var startupTask: Task<Void, Never>?
     private var startupRevision = 0
     private var sessionRevision = 0
@@ -202,20 +203,25 @@ final class AppRuntime {
             guard let token else {
                 account = nil
                 applyMachines(pairedMachines)
-                await notifications.synchronize()
+                scheduleNotificationSync()
                 if operation == sessionRevision { problem = nil }
                 return
             }
             let result = try await client.listMachines(accessToken: token)
             guard operation == sessionRevision else { return }
             applyMachineList(result)
-            await notifications.synchronize()
+            scheduleNotificationSync()
             if operation == sessionRevision { problem = nil }
         } catch is CancellationError {
             return
         } catch {
             if operation == sessionRevision { problem = error.localizedDescription }
         }
+    }
+
+    private func scheduleNotificationSync() {
+        notificationSyncTask?.cancel()
+        notificationSyncTask = Task { [weak self] in await self?.notifications.synchronize() }
     }
 
     func applyMachineList(_ result: MachineListResult) {
@@ -283,6 +289,8 @@ final class AppRuntime {
         cancelSignIn()
         sessionRevision += 1
         let operation = sessionRevision
+        notificationSyncTask?.cancel()
+        notificationSyncTask = nil
         await notifications.disable()
         for id in Set(machines.map(\.id)).union(sessions.keys) { invalidateMachine(id, forgetPairing: true) }
         sessions.removeAll()

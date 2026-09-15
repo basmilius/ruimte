@@ -227,10 +227,10 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
             collection.topAnchor.constraint(equalTo: view.topAnchor),
             collection.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
-        let registration = UICollectionView.CellRegistration<UICollectionViewListCell, String> {
+        let registration = UICollectionView.CellRegistration<ChatHostingCell, String> {
             [weak self] cell, _, id in
             guard let self, let item = self.items[id] else { return }
-            cell.contentConfiguration = UIHostingConfiguration {
+            cell.host(in: self) {
                 Group {
                     if item.isWork {
                         ChatWorkLog(
@@ -251,7 +251,8 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
                     transaction.animation = nil
                     transaction.disablesAnimations = true
                 }
-            }.margins(.horizontal, 20).margins(.vertical, 10)
+                .padding(.horizontal, 20).padding(.vertical, 10)
+            }
             cell.backgroundConfiguration = .clear()
         }
         source = UICollectionViewDiffableDataSource<Int, String>(collectionView: collection) { collection, index, id in
@@ -387,6 +388,40 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         super.viewDidDisappear(animated)
         displayLink?.invalidate()
         displayLink = nil
+    }
+}
+
+@MainActor
+final class ChatHostingCell: UICollectionViewListCell {
+    private let hosting = UIHostingController(rootView: AnyView(EmptyView()))
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        // Scroll cells own their insets. Window safe areas must never reposition a message inside its cell.
+        hosting.safeAreaRegions = []
+        hosting.sizingOptions = [.intrinsicContentSize]
+        hosting.view.backgroundColor = .clear
+        hosting.view.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(hosting.view)
+        NSLayoutConstraint.activate([
+            hosting.view.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            hosting.view.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            hosting.view.topAnchor.constraint(equalTo: contentView.topAnchor),
+            hosting.view.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+        ])
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) is unavailable") }
+
+    func host<Content: View>(in parent: UIViewController, @ViewBuilder content: () -> Content) {
+        if hosting.parent !== parent {
+            hosting.willMove(toParent: nil)
+            hosting.removeFromParent()
+            parent.addChild(hosting)
+            hosting.didMove(toParent: parent)
+        }
+        hosting.rootView = AnyView(content())
+        hosting.view.invalidateIntrinsicContentSize()
     }
 }
 

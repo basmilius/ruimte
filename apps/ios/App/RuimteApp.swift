@@ -9,6 +9,13 @@ struct RuimteApp: App {
         WindowGroup {
             AppHome(runtime: runtime)
                 .tint(MobileStyle.accent)
+                .toggleStyle(SystemToggleStyle())
         }
+    }
+}
+
+struct SystemToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Toggle(configuration).toggleStyle(.automatic).tint(nil)
     }
 }

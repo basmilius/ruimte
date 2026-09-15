@@ -6,6 +6,8 @@ import UniformTypeIdentifiers
 
 struct ChatScreen: View {
     @State private var model: ChatModel
+    @Environment(\.mobileMachineSession) private var machineSession
+    @State private var visible = false
     @State private var showingFiles = false
     @State private var showingClear = false
     @State private var pickerKind: String?
@@ -13,6 +15,7 @@ struct ChatScreen: View {
     @State private var question: JSONValue?
     @State private var expandedRequest: String?
     @State private var composerFocused = false
+    @GestureState private var composerPressed = false
     @State private var composerSelection = NSRange(location: 0, length: 0)
     @State private var composerHeight: CGFloat = 72
     @State private var messagesBelow = false
@@ -107,10 +110,19 @@ struct ChatScreen: View {
                 }
                 .accessibilityLabel("Conversation actions")
             }
-            .sharedBackgroundVisibility(.hidden)
         }
-        .onAppear { model.start() }
-        .onDisappear { model.stop() }
+        .onAppear {
+            visible = true
+            model.start()
+            machineSession?.viewedChat(model.chatID, title: title, info: model.info)
+        }
+        .onChange(of: model.info) { _, info in
+            if visible { machineSession?.viewedChat(model.chatID, title: title, info: info) }
+        }
+        .onDisappear {
+            visible = false
+            model.stop()
+        }
         .confirmationDialog("Clear this conversation?", isPresented: $showingClear, titleVisibility: .visible) {
             Button("Clear conversation", role: .destructive) {
                 Task { await model.perform("chat.clear", ["force": .bool(true)]) }
@@ -254,15 +266,19 @@ struct ChatScreen: View {
             .padding(.horizontal, 14).padding(.bottom, 10)
         }
         .background {
-            Color.clear.contentShape(composerShape)
+            composerShape.fill(.clear)
+                .glassEffect(.regular.interactive(), in: composerShape)
+                .contentShape(composerShape)
                 .onTapGesture { composerFocused = true }
         }
         .contentShape(composerShape)
-        .glassEffect(.regular, in: composerShape)
         .overlay {
-            composerShape.stroke(.primary.opacity(composerFocused ? 0.16 : 0), lineWidth: 1)
+            composerShape.fill(.primary.opacity(composerPressed ? 0.07 : 0))
                 .allowsHitTesting(false)
         }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0).updating($composerPressed) { _, pressed, _ in pressed = true }
+        )
         .disabled(!model.connected || model.loading)
     }
 

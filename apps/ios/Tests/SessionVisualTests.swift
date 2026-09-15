@@ -45,6 +45,71 @@ final class SessionVisualTests: XCTestCase {
         }
     }
 
+    @MainActor func testLongHostedMessagePixelsMoveWithTheScrollOffset() async throws {
+        let client = VisualSessionClient()
+        client.chatSnapshot = .object([
+            "info": .object(["provider": .string("codex")]),
+            "items": .array([
+                .object([
+                    "id": .string("long"), "kind": .string("assistant"),
+                    "text": .string(
+                        (0..<45).map {
+                            "Paragraph \($0): The visible message must move with its cell, including **bold text** and `inline code`."
+                        }.joined(separator: "\n\n")),
+                ]),
+                .object(["id": .string("next"), "kind": .string("user"), "text": .string("The next message")]),
+            ]),
+        ])
+        let controller = UIHostingController(
+            rootView: NavigationStack {
+                ChatScreen(client: client, chatID: "scroll-regression", title: "Scrolling")
+            })
+        let window = makeWindow(controller, size: CGSize(width: 402, height: 874))
+        defer {
+            window.isHidden = true
+            window.rootViewController = nil
+        }
+        await client.waitFor("provider.list")
+        for _ in 0..<24 { await displayFrame() }
+        let timeline = try XCTUnwrap(controller.view.descendant(of: ChatTimelineCollection.self))
+        timeline.beginUserScroll()
+        timeline.setContentOffset(CGPoint(x: 0, y: 120), animated: false)
+        for _ in 0..<4 { await displayFrame() }
+        let before = pixelRegion(window, rect: CGRect(x: 36, y: 240, width: 300, height: 300))
+        capture(window, name: "chat-scroll-before")
+        timeline.setContentOffset(CGPoint(x: 0, y: 200), animated: false)
+        for _ in 0..<4 { await displayFrame() }
+        let after = pixelRegion(window, rect: CGRect(x: 36, y: 160, width: 300, height: 300))
+        capture(window, name: "chat-scroll-after")
+        XCTAssertEqual(timeline.contentOffset.y, 200, accuracy: 1)
+        XCTAssertEqual(before.count, after.count)
+        let difference = zip(before, after).reduce(0.0) { $0 + abs(Double($1.0) - Double($1.1)) } / Double(before.count)
+        XCTAssertLessThan(
+            difference, 3,
+            "A visible message must translate by the same 80 points as the collection, instead of staying pinned inside its cell"
+        )
+        XCTAssertGreaterThan(Set(before).count, 30, "Compare rendered text, not an empty background")
+    }
+
+    @MainActor private func pixelRegion(_ window: UIWindow, rect: CGRect) -> [UInt8] {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let image = UIGraphicsImageRenderer(size: rect.size, format: format).image { context in
+            context.cgContext.translateBy(x: -rect.minX, y: -rect.minY)
+            window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+        }
+        guard let image = image.cgImage else { return [] }
+        var pixels = [UInt8](repeating: 0, count: image.width * image.height * 4)
+        pixels.withUnsafeMutableBytes { storage in
+            let context = CGContext(
+                data: storage.baseAddress, width: image.width, height: image.height,
+                bitsPerComponent: 8, bytesPerRow: image.width * 4,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+            context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        }
+        return pixels
+    }
+
     @MainActor func testHomeAtPhoneWidths() async throws {
         let client = AddressBookClient(fetch: { request in
             (
@@ -310,13 +375,14 @@ extension UIView {
 }
 
 @MainActor private final class VisualSessionClient: MachineRequesting {
+    var chatSnapshot: JSONValue?
     private var counts: [String: Int] = [:]
     private var waits: [String: CheckedContinuation<Void, Never>] = [:]
     func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
         counts[type, default: 0] += 1
         defer { waits.removeValue(forKey: type)?.resume() }
         switch type {
-        case "chat.attach": return try JSONValue.decode(Data(Self.chat.utf8))
+        case "chat.attach": return try chatSnapshot ?? JSONValue.decode(Data(Self.chat.utf8))
         case "provider.list": return .object(["providers": .array([])])
         case "session.attach":
             return .object([

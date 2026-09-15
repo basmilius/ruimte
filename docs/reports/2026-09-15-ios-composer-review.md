@@ -450,3 +450,16 @@ small sidebar tabbar and aligned back/collapse controls without the sidebar titl
 - Remove the initial duplicate folder listing for absolute paths. Processes renders the subscription's initial snapshot directly. Chat provider choices load alongside the conversation snapshot.
 
 Validation: eight project-list tests passed on the physical iPad, including an event racing an older snapshot and request-count checks. The signed device build passed. No simulator was used. These changes reduce request count and sequential waits; no before/after timings were measured on live projects. Sidebar appearance, search focus and icon selection still need device acceptance.
+
+
+## Chat scrolling, interaction and connection startup
+
+- Chat cells use contained `UIHostingController` instances with `safeAreaRegions = []` and intrinsic sizing. The collection owns all toolbar and composer insets. This follows Apple's [guidance for custom scroll containers](https://developer.apple.com/documentation/swiftui/uihostingcontroller/safearearegions).
+- The composer has an interactive glass background constrained to its full shape, plus touch feedback over the same shape. Editor and control gestures remain separate from the background's focus action.
+- On iPad, Search hides the tabbar and occupies its bottom position with a cancel control. iPhone keeps the native search-tab presentation.
+- Restore native glass backgrounds for ellipsis toolbar buttons and the default tint for toggles.
+- Start ICE gathering and the offer exchange together. Buffer local candidates until the answer is applied, then send them as they arrive. Authentication, signed signaling and the existing ICE route policy are retained. The initial offer no longer waits up to five seconds for local gathering.
+- Project refresh no longer waits for notification registration on offline machines.
+- Live Activity defaults to the latest opened chat on iPhone, replaces previous activities and updates local status. The setting is hidden on iPad. Per-session activity buttons are removed. Remote push-to-start registration is cleared so other followed sessions cannot create extra activities; notification following remains separate.
+
+A device test compares actual Markdown pixels before and after an 80-point scroll in the full chat screen. It also passes with the previous hosting implementation: it does not reproduce the user's intermittent freeze and must not be cited as proof that freeze is fixed. The hosting change still needs live conversation acceptance. ICE candidate ordering is covered by a separate focused test. There is no measured before/after connection benchmark and no simulator installation.

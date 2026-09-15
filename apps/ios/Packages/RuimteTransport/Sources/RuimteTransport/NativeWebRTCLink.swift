@@ -30,9 +30,8 @@ import RuimtePulsar
     private var offerSDP: String?
     private var binding: String?
     private var cancelTimeout: (() -> Void)?
-    private var cancelGather: (() -> Void)?
     private var cancelTick: (() -> Void)?
-    private var gatherDone: (() -> Void)?
+    private var candidates = PendingIceCandidates()
     private var accessTask: Task<Void, Never>?
 
     public init(machineID: String, machineKey: String, signer: any SessionSigner, brokerURL: URL, sockets: BrokerSockets, iceServers: [JSONValue], relayOnly: Bool = false, access: (() async throws -> JSONValue)? = nil, scheduler: any TransportScheduling = TaskTransportScheduler(), events: LinkEvents) throws {
@@ -105,7 +104,7 @@ import RuimtePulsar
                         Task { @MainActor in
                             guard let self, !self.ended else { return }
                             if let error { self.end(error); return }
-                            self.waitForGathering()
+                            self.offer()
                         }
                     }
                 }
@@ -113,23 +112,8 @@ import RuimtePulsar
         } catch { end(error) }
     }
 
-    private func waitForGathering() {
-        guard let peer else { return }
-        if peer.iceGatheringState == .complete { offer(); return }
-        gatherDone = { [weak self] in self?.offer() }
-        cancelGather = scheduler.after(milliseconds: 5_000) { [weak self] in self?.finishGathering() }
-    }
-
-    private func finishGathering() {
-        cancelGather?()
-        cancelGather = nil
-        let finish = gatherDone
-        gatherDone = nil
-        finish?()
-    }
-
     private func offer() {
-        guard !ended, let sdp = peer?.localDescription?.sdp else { return }
+        guard !ended, offerSDP == nil, let sdp = peer?.localDescription?.sdp else { return }
         offerSDP = sdp
         accessTask = Task { [weak self] in
             guard let self else { return }
@@ -160,7 +144,11 @@ import RuimtePulsar
                 let sdp = try string(signal, "sdp")
                 binding = try DirectIdentity.channelBinding(offer: offerSDP, answer: sdp)
                 peer.setRemoteDescription(RTCSessionDescription(type: .answer, sdp: sdp)) { [weak self] error in
-                    Task { @MainActor in if let error { self?.end(error) } }
+                    Task { @MainActor in
+                        guard let self, !self.ended else { return }
+                        if let error { self.end(error); return }
+                        for candidate in self.candidates.answerApplied() { self.relayCandidate(candidate) }
+                    }
                 }
             case "candidate":
                 let candidate = try string(signal, "candidate")
@@ -172,6 +160,26 @@ import RuimtePulsar
             default: break
             }
         } catch { end(error) }
+    }
+
+    private func relayCandidate(_ signal: JSONValue) {
+        guard !ended, !authenticated else { return }
+        do {
+            let envelope = try WireSchema.validate("SignalEnvelopeSchema", .object([
+                "connectionId": .string(connectionID), "signal": signal,
+            ]))
+            if let id = try membership?.relay(to: machineKey, envelope: envelope) { relayIDs.insert(id) }
+        } catch { end(error) }
+    }
+
+    private func generatedCandidate(_ candidate: RTCIceCandidate) {
+        guard !ended, !authenticated else { return }
+        let signal: JSONValue = .object([
+            "kind": .string("candidate"), "candidate": .string(candidate.sdp),
+            "sdpMid": candidate.sdpMid.map(JSONValue.string) ?? .null,
+            "sdpMLineIndex": .number(Double(candidate.sdpMLineIndex)),
+        ])
+        if let ready = candidates.generated(signal) { relayCandidate(ready) }
     }
 
     private func receivePiece(_ text: String) {
@@ -278,9 +286,7 @@ import RuimtePulsar
         guard !ended else { return }
         ended = true
         cancelTimeout?()
-        cancelGather?()
         cancelTick?()
-        gatherDone = nil
         accessTask?.cancel()
         accessTask = nil
         membership?.leave()
@@ -326,12 +332,10 @@ extension NativeWebRTCLink: RTCPeerConnectionDelegate, RTCDataChannelDelegate {
             if newState == .failed { self?.end(TransportFailure.invalid("No network path to the machine: ICE failed.")) }
         }
     }
-    nonisolated public func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCIceGatheringState) {
-        Task { @MainActor [weak self] in
-            if newState == .complete { self?.finishGathering() }
-        }
+    nonisolated public func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCIceGatheringState) {}
+    nonisolated public func peerConnection(_ peerConnection: RTCPeerConnection, didGenerate candidate: RTCIceCandidate) {
+        Task { @MainActor [weak self] in self?.generatedCandidate(candidate) }
     }
-    nonisolated public func peerConnection(_ peerConnection: RTCPeerConnection, didGenerate candidate: RTCIceCandidate) {}
     nonisolated public func peerConnection(_ peerConnection: RTCPeerConnection, didRemove candidates: [RTCIceCandidate]) {}
     nonisolated public func peerConnection(_ peerConnection: RTCPeerConnection, didOpen dataChannel: RTCDataChannel) {}
 }
