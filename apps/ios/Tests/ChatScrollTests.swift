@@ -1,9 +1,24 @@
+import SwiftUI
 import UIKit
 import XCTest
 
 @testable import Ruimte
 
 final class ChatScrollTests: XCTestCase {
+    @MainActor func testHostedRowsResizeWithoutReconfigurationWhenContentGrowsAndCollapses() async throws {
+        let fixture = ChatHostingFixture()
+        defer { fixture.close() }
+        for height in [80.0, 240, 60, 180] {
+            fixture.state.height = height
+            await fixture.renderFrames()
+            let first = try XCTUnwrap(fixture.list.layoutAttributesForItem(at: IndexPath(item: 0, section: 0)))
+            let next = try XCTUnwrap(fixture.list.layoutAttributesForItem(at: IndexPath(item: 1, section: 0)))
+            XCTAssertEqual(first.frame.height, height, accuracy: 1)
+            XCTAssertEqual(next.frame.minY, first.frame.maxY, accuracy: 1)
+        }
+        XCTAssertEqual(fixture.configurations, 2, "Content changes must resize existing cells without rebuilding them")
+    }
+
     func testLatestFollowsDelayedMeasurementAndKeyboardInsets() {
         let state = ChatViewportState()
         XCTAssertEqual(state.offset(geometry: .init(contentHeight: 1000, height: 600), readingAnchor: nil), 400)
@@ -110,6 +125,101 @@ final class ChatScrollTests: XCTestCase {
         fixture.layout.heights[11] = 600
         fixture.relayout()
         XCTAssertEqual(list.contentOffset.y, 420, accuracy: 1)
+    }
+}
+
+@MainActor @Observable
+private final class ChatHostingState {
+    var height: CGFloat = 80
+}
+
+private struct ChatResizingContent: View {
+    let state: ChatHostingState
+    var body: some View {
+        Text("Growing chat content")
+            .frame(maxWidth: .infinity)
+            .frame(height: state.height)
+            .fixedSize(horizontal: false, vertical: true)
+            .ignoresSafeArea()
+    }
+}
+
+@MainActor
+private final class ChatHostingFixture: NSObject, UICollectionViewDataSource {
+    let state = ChatHostingState()
+    let parent = UIViewController()
+    let window: UIWindow
+    let list: ChatTimelineCollection
+    private(set) var configurations = 0
+
+    override init() {
+        var configuration = UICollectionLayoutListConfiguration(appearance: .plain)
+        configuration.showsSeparators = false
+        let layout = UICollectionViewCompositionalLayout.list(using: configuration)
+        list = ChatTimelineCollection(frame: CGRect(x: 0, y: 0, width: 320, height: 600), collectionViewLayout: layout)
+        if let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first {
+            window = UIWindow(windowScene: scene)
+        } else {
+            window = UIWindow(frame: list.frame)
+        }
+        super.init()
+        list.contentInsetAdjustmentBehavior = .never
+        list.register(ChatHostingCell.self, forCellWithReuseIdentifier: "hosted")
+        list.dataSource = self
+        parent.view.addSubview(list)
+        window.rootViewController = parent
+        window.makeKeyAndVisible()
+        list.reloadData()
+    }
+
+    func close() {
+        window.isHidden = true
+        window.rootViewController = nil
+    }
+
+    func renderFrames() async {
+        for _ in 0..<8 {
+            await withCheckedContinuation { continuation in
+                _ = ChatLayoutFrame { continuation.resume() }
+            }
+        }
+    }
+
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int { 2 }
+
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell
+    {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "hosted", for: indexPath) as! ChatHostingCell
+        configurations += 1
+        cell.host(in: parent) {
+            if indexPath.item == 0 {
+                ChatResizingContent(state: state)
+            } else {
+                Text("Following message").frame(height: 44)
+            }
+        }
+        return cell
+    }
+}
+
+@MainActor
+private final class ChatLayoutFrame: NSObject {
+    private var link: CADisplayLink?
+    private var completion: (() -> Void)?
+
+    init(completion: @escaping () -> Void) {
+        self.completion = completion
+        super.init()
+        let link = CADisplayLink(target: self, selector: #selector(frame))
+        self.link = link
+        link.add(to: .main, forMode: .common)
+    }
+
+    @objc private func frame() {
+        link?.invalidate()
+        link = nil
+        completion?()
+        completion = nil
     }
 }
 

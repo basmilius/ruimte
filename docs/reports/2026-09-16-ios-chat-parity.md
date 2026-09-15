@@ -22,6 +22,16 @@ De rijstructuur en berichttekst hebben afzonderlijke updates. Tekstdeltas bouwen
 
 De controles zijn unit- en componentstatetests op de fysieke iPhone, geen UI-automatisering. Er zijn geen simulator, screenshots of iPad-installatie gebruikt. De visuele timing, tekstselectie tijdens streaming, VoiceOver, grotere tekst, energiegebruik en iPad-multitasking zijn nog niet in een echte gesprekssessie beoordeeld. Ook native Markdown is geen claim dat ieder denkbaar Markdown-dialect identiek rendert. Het oorspronkelijke onderzoek en de acceptatiecriteria hieronder blijven de referentie voor de visuele beoordeling.
 
+## Correctie: overlappende chatrijen
+
+Na de eindbuild meldde Bas dat chatelementen door elkaar kunnen lopen. De oorzaak is gereproduceerd in een gerichte componenttest op de fysieke iPhone: een gehoste SwiftUI-rij groeide van 80 naar 240 punten, terwijl de collectie de rij op 80 punten bleef indelen. Ook latere krimp werd niet overgenomen. Tekstdeltas en disclosures kunnen de inhoud bijwerken zonder een nieuwe collectiesnapshot.
+
+`ChatTimelineCollection` gebruikt nu `.enabledIncludingConstraints`, zodat UIKit de rijhoogte opnieuw meet wanneer de gehoste inhoud zijn Auto Layout-maat wijzigt. Dit is de [automatische self-sizing-modus van UIKit](https://developer.apple.com/documentation/uikit/uicollectionview/selfsizinginvalidation-swift.enum/enabledincludingconstraints). Berichten worden niet afgeknipt en tekstupdates hoeven de cellen niet opnieuw te configureren.
+
+De regressietest controleert opeenvolgend 80, 240, 60 en 180 punten, de positie van de volgende rij en het uitblijven van celherconfiguraties. Deze faalde vóór de wijziging en slaagt erna. Alle negen `ChatScrollTests` zijn geslaagd, inclusief leesanker, late metingen, toetsenbordinsets en scrollinteractie. Dit bewijst de hoogteoverdracht; de gemelde echte gesprekssituatie is nog niet visueel herbeoordeeld.
+
+De gecorrigeerde build is op de fysieke iPhone geïnstalleerd en gestart. `bun run format`, `bun run check` en de gerichte Swift-formatcontrole zijn geslaagd.
+
 ## Oorspronkelijk onderzoek en voorstel
 
 Onderstaande bevindingen beschrijven de situatie vóór goedkeuring. De actuele uitvoering staat hierboven.

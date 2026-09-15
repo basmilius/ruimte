@@ -81,6 +81,14 @@ struct ChatReadingAnchor {
 
 @MainActor
 final class ChatTimelineCollection: UICollectionView {
+    override init(frame: CGRect, collectionViewLayout layout: UICollectionViewLayout) {
+        super.init(frame: frame, collectionViewLayout: layout)
+        // Streaming and disclosures resize the hosted view without reconfiguring its collection cell.
+        selfSizingInvalidation = .enabledIncludingConstraints
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) is unavailable") }
+
     private(set) var viewport = ChatViewportState()
     var captureReadingAnchor: (() -> ChatReadingAnchor?)?
     var itemTop: ((String) -> CGFloat?)?
