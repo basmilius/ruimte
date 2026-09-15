@@ -1,4 +1,12 @@
-import { BrokerServerFrameSchema, type BrokerError, type BrokerRateLimited, type BrokerRelayed, type BrokerRole, type BrokerPeerFrame } from './broker.ts';
+import {
+    BrokerServerFrameSchema,
+    type BrokerError,
+    type BrokerIce,
+    type BrokerRateLimited,
+    type BrokerRelayed,
+    type BrokerRole,
+    type BrokerPeerFrame
+} from './broker.ts';
 import type { SignalEnvelope } from './signaling.ts';
 import { brokerHelloMessage, signalMessage } from './signing.ts';
 
@@ -11,6 +19,8 @@ export interface BrokerPeerEvents {
     refused(frame: BrokerError | BrokerRateLimited): void;
     /* The broker wrote a relay to the receiver's socket. */
     delivered?(id: string): void;
+    /* The answer to `ice`, with the id it returned. */
+    ice?(frame: BrokerIce): void;
     /* Something that makes this socket worthless, such as a challenge for a host this peer did not dial. */
     failed(reason: string): void;
 }
@@ -101,6 +111,11 @@ export class BrokerPeer {
             case 'delivered':
                 this.options.events.delivered?.(frame.id);
                 return;
+            case 'ice':
+                if (this.state === 'ready') {
+                    this.options.events.ice?.(frame);
+                }
+                return;
             case 'error':
             case 'rate-limited':
                 this.options.events.refused(frame);
@@ -116,6 +131,16 @@ export class BrokerPeer {
         const id = `relay-${this.nextId++}`;
         const signature = await this.options.sign(signalMessage(this.options.publicKey, to, envelope));
         this.write({ type: 'relay', id, to, envelope, signature });
+        return id;
+    }
+
+    /* Asks for the ICE servers this key may use; answers the frame id the answer or a refusal will name, or null before `ready`. */
+    ice(): string | null {
+        if (this.state !== 'ready') {
+            return null;
+        }
+        const id = `ice-${this.nextId++}`;
+        this.write({ type: 'ice', id });
         return id;
     }
 

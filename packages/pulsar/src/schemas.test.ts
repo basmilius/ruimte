@@ -29,7 +29,8 @@ describe('broker frames', () => {
     const peerFrames: BrokerPeerFrame[] = [
         { type: 'hello', role: 'machine', publicKey: key },
         { type: 'prove', signature },
-        { type: 'relay', id: 'r1', to: otherKey, envelope, signature }
+        { type: 'relay', id: 'r1', to: otherKey, envelope, signature },
+        { type: 'ice', id: 'ice-1' }
     ];
     const serverFrames: BrokerServerFrame[] = [
         { type: 'challenge', broker: 'broker.example.com', nonce },
@@ -37,7 +38,17 @@ describe('broker frames', () => {
         { type: 'delivered', id: 'r1' },
         { type: 'relayed', from: key, envelope, signature },
         { type: 'error', code: 'not-connected', message: 'Nobody with that key is connected', id: 'r1' },
-        { type: 'rate-limited', scope: 'key', retryAfterMs: 1000 }
+        { type: 'rate-limited', scope: 'key', retryAfterMs: 1000 },
+        {
+            type: 'ice',
+            id: 'ice-1',
+            servers: [
+                { urls: 'stun:turn.example.com:3478' },
+                { urls: ['turn:turn.example.com:3478?transport=udp', 'turns:turn.example.com:5349?transport=tcp'], username: '1:m-abc', credential: 'c2VjcmV0' }
+            ],
+            expiresAt: 1_800_000_000_000
+        },
+        { type: 'ice', id: 'ice-2', servers: [], expiresAt: null }
     ];
 
     test.each(peerFrames)('a peer frame survives a round trip: %p', (frame) => {
@@ -63,6 +74,14 @@ describe('broker frames', () => {
     test('refuses a relay without a signature or with a short nonce in the challenge', () => {
         expect(BrokerPeerFrameSchema.safeParse({ type: 'relay', id: 'r1', to: otherKey, envelope }).success).toBe(false);
         expect(BrokerServerFrameSchema.safeParse({ type: 'challenge', broker: 'broker.example.com', nonce: 'short' }).success).toBe(false);
+    });
+
+    test('refuses an ice answer with a URL that is no ICE server, or without an id', () => {
+        expect(BrokerServerFrameSchema.safeParse({ type: 'ice', id: 'ice-1', servers: [{ urls: 'https://turn.example.com' }], expiresAt: null }).success).toBe(
+            false
+        );
+        expect(BrokerServerFrameSchema.safeParse({ type: 'ice', servers: [], expiresAt: null }).success).toBe(false);
+        expect(BrokerPeerFrameSchema.safeParse({ type: 'ice' }).success).toBe(false);
     });
 
     test('refuses a negative or fractional retry', () => {

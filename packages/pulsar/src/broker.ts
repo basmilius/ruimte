@@ -42,7 +42,14 @@ export const BrokerRelaySchema = z.object({
 });
 export type BrokerRelay = z.infer<typeof BrokerRelaySchema>;
 
-export const BrokerPeerFrameSchema = z.discriminatedUnion('type', [BrokerHelloSchema, BrokerProveSchema, BrokerRelaySchema]);
+// Asks for the ICE servers this key may use, TURN credentials included; only after `ready`, since the credentials are bound to the key.
+export const BrokerIceRequestSchema = z.object({
+    type: z.literal('ice'),
+    id: FrameIdSchema
+});
+export type BrokerIceRequest = z.infer<typeof BrokerIceRequestSchema>;
+
+export const BrokerPeerFrameSchema = z.discriminatedUnion('type', [BrokerHelloSchema, BrokerProveSchema, BrokerRelaySchema, BrokerIceRequestSchema]);
 export type BrokerPeerFrame = z.infer<typeof BrokerPeerFrameSchema>;
 
 // `broker` is the host the peer signs into its answer; the peer compares it with the host it dialed.
@@ -73,6 +80,40 @@ export const BrokerRelayedSchema = z.object({
     signature: SignatureSchema
 });
 export type BrokerRelayed = z.infer<typeof BrokerRelayedSchema>;
+
+/* What `RTCPeerConnection` takes as one of its `iceServers`, with the URL schemes ICE knows. */
+export const IceServerSchema = z.object({
+    urls: z.union([
+        z
+            .string()
+            .regex(/^(stun|stuns|turn|turns):/)
+            .max(512),
+        z
+            .array(
+                z
+                    .string()
+                    .regex(/^(stun|stuns|turn|turns):/)
+                    .max(512)
+            )
+            .min(1)
+            .max(8)
+    ]),
+    username: z.string().max(256).optional(),
+    credential: z.string().max(256).optional()
+});
+export type IceServer = z.infer<typeof IceServerSchema>;
+
+/*
+ * The answer to `ice`: the servers and the moment their credentials stop working, epoch ms, or null
+ * when nothing in them expires (a broker without TURN answers no servers at all).
+ */
+export const BrokerIceSchema = z.object({
+    type: z.literal('ice'),
+    id: FrameIdSchema,
+    servers: z.array(IceServerSchema).max(8),
+    expiresAt: z.number().int().min(0).nullable()
+});
+export type BrokerIce = z.infer<typeof BrokerIceSchema>;
 
 export const BrokerErrorCodeSchema = z.enum([
     // The frame did not parse, or came before the step it needs (a relay before `ready`).
@@ -109,6 +150,7 @@ export const BrokerServerFrameSchema = z.discriminatedUnion('type', [
     BrokerReadySchema,
     BrokerDeliveredSchema,
     BrokerRelayedSchema,
+    BrokerIceSchema,
     BrokerErrorSchema,
     BrokerRateLimitedSchema
 ]);

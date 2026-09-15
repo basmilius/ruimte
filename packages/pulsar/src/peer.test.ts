@@ -9,14 +9,15 @@ const nonce = 'n'.repeat(22);
 const setup = (host = 'broker.example.com') => {
     const sent: unknown[] = [];
     const signed: string[] = [];
-    const log = { ready: 0, relayed: [] as unknown[], refused: [] as unknown[], failed: [] as string[] };
+    const log = { ready: 0, relayed: [] as unknown[], refused: [] as unknown[], failed: [] as string[], ice: [] as unknown[] };
     const events: BrokerPeerEvents = {
         ready: () => {
             log.ready += 1;
         },
         relayed: (frame) => log.relayed.push(frame),
         refused: (frame) => log.refused.push(frame),
-        failed: (reason) => log.failed.push(reason)
+        failed: (reason) => log.failed.push(reason),
+        ice: (frame) => log.ice.push(frame)
     };
     const peer = new BrokerPeer({
         role: 'client',
@@ -74,6 +75,22 @@ describe('BrokerPeer', () => {
         expect(log.failed).toHaveLength(1);
         await peer.receive(JSON.stringify(relayed));
         expect(log.relayed).toHaveLength(1);
+    });
+
+    test('asks for ICE servers only once ready, and hands the answer to its event', async () => {
+        const { peer, sent, log } = setup();
+        peer.start();
+        expect(peer.ice()).toBeNull();
+        await peer.receive(JSON.stringify({ type: 'challenge', broker: 'broker.example.com', nonce }));
+        const early = { type: 'ice', id: 'ice-0', servers: [], expiresAt: null };
+        await peer.receive(JSON.stringify(early));
+        expect(log.ice).toEqual([]);
+        await peer.receive(JSON.stringify({ type: 'ready' }));
+        const id = peer.ice();
+        expect(sent.at(-1)).toEqual({ type: 'ice', id });
+        const answer = { type: 'ice', id, servers: [{ urls: 'turn:turn.example.com:3478', username: '1:m-x', credential: 'y' }], expiresAt: 1000 };
+        await peer.receive(JSON.stringify(answer));
+        expect(log.ice).toEqual([answer]);
     });
 
     test('the host of a URL is what a broker names', () => {
