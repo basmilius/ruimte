@@ -12,7 +12,7 @@ struct MachineProjectsPage: View {
     @State private var newProject = false
     @State private var projectName = ""
     @State private var folder = ""
-    @State private var openedID: String?
+    @Environment(\.openMobileWorkspace) private var openWorkspace
     @State private var createFolder = false
     @State private var loadGeneration = 0
     @State private var unsubscribe: (() -> Void)?
@@ -38,9 +38,8 @@ struct MachineProjectsPage: View {
                     projects.filter { search.isEmpty || $0.text("name").localizedCaseInsensitiveContains(search) },
                     id: \.stableID
                 ) { project in
-                    NavigationLink {
-                        WorkspacePage(
-                            workspace: MobileWorkspace(session: session, projectID: project.text("projectId")))
+                    Button {
+                        openWorkspace(MobileWorkspace(session: session, projectID: project.text("projectId")))
                     } label: {
                         ProjectHomeRow(
                             summary: project, machine: session.machine.name, connected: session.connected,
@@ -105,9 +104,6 @@ struct MachineProjectsPage: View {
             unsubscribe?()
             unsubscribe = nil
         }
-        .navigationDestination(item: $openedID) { id in
-            WorkspacePage(workspace: MobileWorkspace(session: session, projectID: id))
-        }
         .sheet(isPresented: $newProject) {
             NavigationStack {
                 Form {
@@ -163,7 +159,7 @@ struct MachineProjectsPage: View {
             if let id = result["summary"]?["projectId"]?.stringValue {
                 session.retainProject(id)
                 await session.releaseProject(id)
-                openedID = id
+                openWorkspace(MobileWorkspace(session: session, projectID: id))
             }
             newProject = false
             problem = nil

@@ -5,6 +5,7 @@ import UIKit
 struct AppHome: View {
     @Bindable var runtime: AppRuntime
     @State private var projects = UnifiedProjects()
+    @State private var activeWorkspace: MobileWorkspace?
     @State private var window: UIWindow?
     @State private var settings = false
     @State private var pairing = false
@@ -31,6 +32,42 @@ struct AppHome: View {
     }
 
     var body: some View {
+        Group {
+            if let activeWorkspace {
+                WorkspacePage(workspace: activeWorkspace) { self.activeWorkspace = nil }
+            } else {
+                projectNavigation
+            }
+        }
+        .environment(\.openMobileWorkspace) { workspace in
+            machines = false
+            activeWorkspace = workspace
+        }
+        .id(runtime.account?.id ?? "signed-out")
+        .background(PresentationWindow { window = $0 }.frame(width: 0, height: 0))
+        .task {
+            await runtime.start()
+            await runtime.notifications.restore()
+        }
+        .task(id: machineRevision) { projects.reconcile(runtime: runtime) }
+        .task(id: runtime.attentionKeys) { await runtime.notifications.syncBadge(liveKeys: runtime.attentionKeys) }
+        .onOpenURL { runtime.notifications.openActivityURL($0) }
+        .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)
+        .onChange(of: runtime.account?.id) { _, _ in activeWorkspace = nil }
+        .onChange(of: runtime.notifications.destination) { _, destination in
+            if destination != nil { activeWorkspace = nil }
+        }
+        .onChange(of: phase, initial: true) { _, current in
+            runtime.connections.setScene(sceneID, foreground: current != .background)
+            if current == .active { Task { await runtime.notifications.syncBadge(liveKeys: runtime.attentionKeys) } }
+        }
+        .onDisappear {
+            projects.stop()
+            runtime.connections.setScene(sceneID, foreground: false)
+        }
+    }
+
+    private var projectNavigation: some View {
         NavigationStack {
             Group {
                 if hasWorkspace {
@@ -74,30 +111,12 @@ struct AppHome: View {
                 }
             }
             .onChange(of: runtime.account?.id) { _, account in if account != nil { signIn = false } }
-            .background(PresentationWindow { window = $0 }.frame(width: 0, height: 0))
-            .task {
-                await runtime.start()
-                await runtime.notifications.restore()
-            }
-            .task(id: machineRevision) { projects.reconcile(runtime: runtime) }
             .navigationDestination(
                 item: Binding(
                     get: { runtime.notifications.destination }, set: { runtime.notifications.destination = $0 })
             ) { destination in
                 NotificationSessionPage(runtime: runtime, destination: destination)
             }
-        }
-        .id(runtime.account?.id ?? "signed-out")
-        .task(id: runtime.attentionKeys) { await runtime.notifications.syncBadge(liveKeys: runtime.attentionKeys) }
-        .onOpenURL { runtime.notifications.openActivityURL($0) }
-        .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)
-        .onChange(of: phase, initial: true) { _, current in
-            runtime.connections.setScene(sceneID, foreground: current != .background)
-            if current == .active { Task { await runtime.notifications.syncBadge(liveKeys: runtime.attentionKeys) } }
-        }
-        .onDisappear {
-            projects.stop()
-            runtime.connections.setScene(sceneID, foreground: false)
         }
     }
 
@@ -251,12 +270,11 @@ private struct ProjectListWidth: ViewModifier {
 private struct ProjectLinks: View {
     let runtime: AppRuntime
     let rows: [UnifiedProjectRow]
+    @Environment(\.openMobileWorkspace) private var openWorkspace
     var body: some View {
         ForEach(rows) { row in
-            NavigationLink {
-                WorkspacePage(
-                    workspace: MobileWorkspace(
-                        session: runtime.session(for: row.machine), projectID: row.id.projectID))
+            Button {
+                openWorkspace(MobileWorkspace(session: runtime.session(for: row.machine), projectID: row.id.projectID))
             } label: {
                 ProjectHomeRow(
                     summary: row.summary, machine: row.machine.name, connected: row.connected,

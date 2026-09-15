@@ -3,52 +3,29 @@ import SwiftUI
 
 struct WorkspacePage: View {
     @State var workspace: MobileWorkspace
+    let close: () -> Void
     @State private var adding = false
     @State private var renamed: JSONValue?
     @State private var renameText = ""
     @State private var deleteView: JSONValue?
     @State private var search = ""
+    @State private var searching = false
     @State private var showUsage = false
     @State private var section = ProjectSection.views
     @State private var openedViewID: String?
-    @State private var columnVisibility = NavigationSplitViewVisibility.all
+    @State private var sidebarVisible = true
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         Group {
             if workspace.ready {
-                projectTabs
-            } else if let problem = workspace.problem {
-                ContentUnavailableView {
-                    Label("Could not open project", lucideIcon: "wifi-off", iconSize: 48)
-                } description: {
-                    Text(problem)
-                } actions: {
-                    Button("Try again") { Task { await workspace.open() } }
+                if sizeClass == .regular {
+                    projectSplit
+                } else {
+                    projectTabs
                 }
             } else {
-                ProgressView("Opening project")
-            }
-        }
-        .navigationTitle(workspace.title)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if sizeClass == .regular && workspace.ready && section == .views {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(
-                        columnVisibility == .detailOnly ? "Show sidebar" : "Hide sidebar", lucideIcon: "panel-left"
-                    ) {
-                        withAnimation(reduceMotion ? nil : .default) {
-                            columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
-                        }
-                    }
-                    .accessibilityIdentifier("workspace.toggle-sidebar")
-                }
-            }
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                Button("Usage", lucideIcon: "chart-no-axes-column") { showUsage = true }.disabled(
-                    !workspace.ready)
-                Button("Add view", lucideIcon: "plus") { adding = true }.disabled(!workspace.ready)
+                projectNavigation { openingStatus }
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
@@ -80,13 +57,6 @@ struct WorkspacePage: View {
             }
         }
         .task { workspace.start() }
-        .navigationDestination(item: $openedViewID) { id in
-            if let item = workspace.views.first(where: { $0.stableID == id }) {
-                ProjectItemPage(workspace: workspace, item: item).id(id)
-            } else {
-                ContentUnavailableView("This view was removed", lucideIcon: "square-x")
-            }
-        }
         .sheet(isPresented: $adding) { AddProjectItem(workspace: workspace, canvasID: nil) }
         .sheet(isPresented: $showUsage) {
             NavigationStack {
@@ -138,66 +108,135 @@ struct WorkspacePage: View {
         }
     }
 
+    @ViewBuilder private var openingStatus: some View {
+        if let problem = workspace.problem {
+            ContentUnavailableView {
+                Label("Could not open project", lucideIcon: "wifi-off", iconSize: 48)
+            } description: {
+                Text(problem)
+            } actions: {
+                Button("Try again") { Task { await workspace.open() } }
+            }
+        } else {
+            ProgressView("Opening project")
+        }
+    }
+
     private var projectTabs: some View {
         TabView(selection: $section) {
             Tab(value: ProjectSection.views) {
-                viewsPage
+                projectNavigation {
+                    viewList(query: "")
+                        .navigationDestination(item: $openedViewID) { viewDestination($0) }
+                }
             } label: {
                 Label("Views", lucideIcon: "layout-grid")
             }
             Tab(value: ProjectSection.files) {
-                MachineFilesPage(client: workspace.client, path: workspace.folder)
+                projectNavigation { MachineFilesPage(client: workspace.client, path: workspace.folder) }
             } label: {
                 Label("Files", lucideIcon: "folder")
             }
             Tab(value: ProjectSection.git) {
-                GitPage(client: workspace.client, cwd: workspace.folder)
+                projectNavigation { GitPage(client: workspace.client, cwd: workspace.folder) }
             } label: {
                 Label("Git", lucideIcon: "git-branch")
             }
             Tab(value: ProjectSection.processes) {
-                ProcessesPage(client: workspace.client, cwd: workspace.folder)
+                projectNavigation { ProcessesPage(client: workspace.client, cwd: workspace.folder) }
             } label: {
                 Label("Processes", lucideIcon: "activity")
             }
             Tab(value: ProjectSection.search, role: .search) {
-                viewList(query: search)
-                    .overlay {
-                        if !search.isEmpty && WorkspaceViewSections.split(workspace.views, search: search).isEmpty {
-                            ContentUnavailableView("No matching views", lucideIcon: "search")
+                projectNavigation {
+                    viewList(query: search)
+                        .overlay {
+                            if !search.isEmpty && WorkspaceViewSections.split(workspace.views, search: search).isEmpty {
+                                ContentUnavailableView("No matching views", lucideIcon: "search")
+                            }
                         }
-                    }
+                }
+                .searchable(text: $search, isPresented: $searching, prompt: "Find a view")
             } label: {
                 Label("Search", lucideIcon: "search")
             }
         }
         .tabViewStyle(.tabBarOnly)
-        .searchable(text: $search, prompt: "Find a view")
+        .tabViewSearchActivation(.searchTabSelection)
+        .onChange(of: section) { _, selected in searching = selected == .search }
+        // Only the narrow project navigator uses compact tabs; the detail keeps its iPad traits.
+        .environment(\.horizontalSizeClass, .compact)
+        .tint(MobileStyle.accent)
     }
 
-    @ViewBuilder private var viewsPage: some View {
-        if sizeClass == .regular {
-            NavigationSplitView(columnVisibility: $columnVisibility) {
-                viewList(query: "")
-                    .overlay(alignment: .trailing) {
-                        Color(uiColor: .separator).frame(width: 1)
-                            .ignoresSafeArea(.container, edges: .vertical)
-                            .allowsHitTesting(false)
-                    }
-                    .toolbar(removing: .sidebarToggle)
-            } detail: {
+    private var projectSplit: some View {
+        ProjectSplitView(sidebarVisible: $sidebarVisible) {
+            projectTabs
+                .overlay(alignment: .trailing) {
+                    Color(uiColor: .separator).frame(width: 1)
+                        .ignoresSafeArea(.container, edges: .vertical)
+                        .allowsHitTesting(false)
+                }
+        } detail: {
+            NavigationStack {
                 Group {
-                    if let item = workspace.views.first(where: { $0.stableID == workspace.selectedID }) {
-                        ProjectItemPage(workspace: workspace, item: item).id(item.stableID)
+                    if let id = workspace.selectedID {
+                        viewDestination(id)
                     } else {
                         ContentUnavailableView("Choose a view", lucideIcon: "panel-left")
                     }
                 }
-                .toolbar(removing: .sidebarToggle)
+                .toolbar {
+                    if !sidebarVisible {
+                        ToolbarItemGroup(placement: .topBarLeading) {
+                            backButton
+                            sidebarButton
+                        }
+                    }
+                }
             }
-            .navigationSplitViewStyle(.balanced)
+            .tint(MobileStyle.accent)
+        }
+        .ignoresSafeArea(.container)
+    }
+
+    private func projectNavigation<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        NavigationStack {
+            content()
+                .navigationTitle(sizeClass == .regular ? "" : workspace.title)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItemGroup(placement: .topBarLeading) {
+                        backButton
+                        if sizeClass == .regular && workspace.ready { sidebarButton }
+                    }
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        Button("Usage", lucideIcon: "chart-no-axes-column") { showUsage = true }
+                            .disabled(!workspace.ready)
+                        Button("Add view", lucideIcon: "plus") { adding = true }
+                            .disabled(!workspace.ready)
+                    }
+                }
+        }
+    }
+
+    private var backButton: some View {
+        Button("Projects", lucideIcon: "chevron-left", action: close)
+            .accessibilityIdentifier("workspace.back")
+    }
+
+    private var sidebarButton: some View {
+        Button(sidebarVisible ? "Hide sidebar" : "Show sidebar", lucideIcon: "panel-left") {
+            withAnimation(reduceMotion ? nil : .default) { sidebarVisible.toggle() }
+        }
+        .accessibilityIdentifier("workspace.toggle-sidebar")
+    }
+
+    @ViewBuilder private func viewDestination(_ id: String) -> some View {
+        if let item = workspace.views.first(where: { $0.stableID == id }) {
+            ProjectItemPage(workspace: workspace, item: item).id(id)
         } else {
-            viewList(query: "")
+            ContentUnavailableView("This view was removed", lucideIcon: "square-x")
         }
     }
 
@@ -257,11 +296,9 @@ struct WorkspacePage: View {
     private func openView(_ id: String) {
         guard workspace.views.contains(where: { $0.stableID == id && $0.text("kind") != "separator" }) else { return }
         workspace.select(id)
-        if sizeClass == .regular {
-            section = .views
-        } else {
-            openedViewID = id
-        }
+        section = .views
+        searching = false
+        if sizeClass != .regular { openedViewID = id }
     }
 
     private var sidebarBackground: Color {
@@ -511,4 +548,8 @@ struct NotePage: View {
             }
         }
     }
+}
+
+extension EnvironmentValues {
+    @Entry var openMobileWorkspace: (MobileWorkspace) -> Void = { _ in }
 }

@@ -382,3 +382,59 @@ The app was installed on Bas's iPhone and iPad Pro. Final build log:
 Verdict: the inspected implementation is ready for device review. Physical chat
 scrolling, composer touch feedback, tab transitions, native share sheets and Pencil
 interaction remain unverified. No simulator run was made.
+
+## Native search activation and a full-height iPad sidebar
+
+Full source review of the project navigation and its hosting controllers. The
+Homey viewer's public tab-controller setup was inspected for its compact panel
+behavior. This implementation uses SwiftUI TabView, UISplitViewController and
+public compact size-class overrides; it does not use private selectors or KVC.
+
+| Category | Evidence inspected | Result |
+| --- | --- | --- |
+| Typography | Project navigation titles | Omit the title in the iPad sidebar; keep view titles in the detail column |
+| Surfaces | AppHome routing and native split/tab containers | Give the project its own root; place compact tabs only in the sidebar |
+| Animations | Search activation and split visibility | Use native search presentation and split-column show/hide |
+| Icons | Back, sidebar, usage and five tab labels | Retain the existing Lucide icons and native control touch areas |
+| Performance | Hosting-controller updates | Keep both hosting controllers alive while updating their SwiftUI content |
+
+| Severity | Location | Before | After | Why |
+| --- | --- | --- | --- | --- |
+| HIGH | `WorkspacePage.swift` | Search tab could select without activating a field | Use the search tab activation API and bind native search presentation to tab selection | Selecting Search focuses the system search field |
+| MEDIUM | `WorkspacePage.swift` | Project-wide tabbar wraps the split-view | Put the tabbar in the primary column, with a navigation stack per tab | Keep project navigation within the sidebar |
+| MEDIUM | `AppHome.swift`, `MachineProjectsPage.swift` | Projects push a second navigation container inside Projects | Open the project as its own root and explicitly return to Projects | Remove the outer navigation bar above both columns |
+| MEDIUM | `ProjectSplitView.swift` | Sidebar begins below inherited navigation chrome | Native split controller owns the full project bounds; back and collapse share the sidebar toolbar | Let the sidebar extend to the top with its own controls |
+| MEDIUM | `WorkspacePage.swift`, `ProjectSplitView.swift` | Regular iPad tab presentation; inherited search on other tabs | Compact traits only on the sidebar, search attached only to Search | Use a small bottom tabbar and keep Views free of a search field |
+
+The implementation uses Apple's
+[tab search activation](https://developer.apple.com/documentation/swiftui/view/tabviewsearchactivation(_:)),
+[search presentation binding](https://developer.apple.com/documentation/swiftui/view/searchable(text:ispresented:placement:prompt:))
+and [trait overrides](https://developer.apple.com/documentation/uikit/uitraitoverrides).
+Search-field placement and transitions remain system-managed.
+
+| Location | Candidate | Rejected because |
+| --- | --- | --- |
+| App root | Hide the old outer navigation bar while retaining nested stacks | Search would still inherit the wrong navigation container |
+| iPad | Change the entire window to compact size class | The chat and other detail views need regular iPad layout |
+| Tabs | Copy private layout hooks from a reference app | Public size-class and tab APIs provide the required compact container |
+
+Verification uses the existing native navigation test on the physical iPad with
+compact and regular configurations. It checks that the native search tab is configured to activate search, tabbar
+bounds within the sidebar and opening an actual canvas from a row. Test screenshots
+are generated from fixture content, not the user's live project. Final results are
+recorded below. No simulator installation was performed.
+
+An attempted synthetic search tap was removed: setting UIKit selection and calling
+its delegates manually did not reproduce the SwiftUI selection lifecycle, and a
+direct UITabBar delegate call crashed the fixture. These attempts do not establish
+whether a physical tap focuses search. That interaction remains device acceptance.
+The final source uses `searchable(isPresented:)` with explicit tab-selection binding,
+and the native search-activation setting.
+
+Final verification: the retained native navigation/layout test passed on the iPad.
+`bun run format`, `bun run check` and the signed build passed. Installed on Bas's
+iPhone and iPad Pro. Build log: `/tmp/ruimte-ios-sidebar-search-device.log`;
+test log: `/tmp/ruimte-ios-sidebar-search-test.log`.
+Verdict: ready for device review; physical search tapping/canceling and sidebar
+collapse/reopen remain unverified. The inspected fixture screenshots confirm the
+small sidebar tabbar and aligned back/collapse controls without the sidebar title.

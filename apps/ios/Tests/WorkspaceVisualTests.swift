@@ -79,7 +79,7 @@ final class WorkspaceVisualTests: XCTestCase {
             if horizontalClass == .regular { workspace.selectedID = nil }
 
             let host = UIHostingController(
-                rootView: NavigationStack { WorkspacePage(workspace: workspace) }
+                rootView: WorkspacePage(workspace: workspace, close: {})
                     .tint(MobileStyle.accent)
                     .preferredColorScheme(dark ? .dark : .light)
                     .dynamicTypeSize(typeSize)
@@ -118,7 +118,7 @@ final class WorkspaceVisualTests: XCTestCase {
             XCTAssertTrue(workspace.ready)
             workspace.selectedID = nil
             let host = UIHostingController(
-                rootView: NavigationStack { WorkspacePage(workspace: workspace) }
+                rootView: WorkspacePage(workspace: workspace, close: {})
                     .tint(MobileStyle.accent)
                     .environment(\.horizontalSizeClass, horizontalClass))
             host.traitOverrides.horizontalSizeClass = horizontalClass == .regular ? .regular : .compact
@@ -129,6 +129,16 @@ final class WorkspaceVisualTests: XCTestCase {
                 window.rootViewController = nil
             }
             for _ in 0..<20 { await displayFrame() }
+            let tabs = try XCTUnwrap(childController(UITabBarController.self, in: host))
+            let searchTab = try XCTUnwrap(tabs.tabs.first { $0 is UISearchTab } as? UISearchTab)
+            XCTAssertTrue(searchTab.automaticallyActivatesSearch)
+            if horizontalClass == .regular {
+                let split = try XCTUnwrap(childController(UISplitViewController.self, in: host))
+                let sidebar = try XCTUnwrap(split.viewController(for: .primary))
+                let barFrame = tabs.tabBar.convert(tabs.tabBar.bounds, to: sidebar.view)
+                XCTAssertLessThanOrEqual(barFrame.maxX, sidebar.view.bounds.width + 1)
+                XCTAssertGreaterThan(barFrame.minY, sidebar.view.bounds.height / 2)
+            }
             let list = try XCTUnwrap(descendant(UICollectionView.self, in: host.view))
             let first = try XCTUnwrap(
                 list.indexPathsForVisibleItems.min { left, right in
@@ -148,6 +158,16 @@ final class WorkspaceVisualTests: XCTestCase {
                 descendant(CanvasScrollView.self, in: host.view), "Activating the row must mount the real canvas")
             capture(window, name: horizontalClass == .regular ? "workspace-opened-ipad" : "workspace-opened-iphone")
         }
+    }
+
+    @MainActor private func childController<Controller: UIViewController>(
+        _ type: Controller.Type, in controller: UIViewController
+    ) -> Controller? {
+        if let found = controller as? Controller { return found }
+        for child in controller.children {
+            if let found = childController(type, in: child) { return found }
+        }
+        return nil
     }
 
     @MainActor private func descendant<ViewType: UIView>(_ type: ViewType.Type, in view: UIView) -> ViewType? {
