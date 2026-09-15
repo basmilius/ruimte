@@ -5,10 +5,6 @@ export type SettingsSectionId = 'appearance' | 'keyboard' | 'views' | 'files' | 
 
 export type PanelKind = ProjectPanelKind;
 
-/* A surface of the app rather than of a project: it fills the main column and no view is active
-   while it is up. Not persisted, so a reload lands on the project's own view. */
-export type AppPage = 'usage';
-
 const PANEL_KINDS: readonly PanelKind[] = ['files', 'git', 'processes'];
 
 const SIDEBAR_STORAGE_KEY = 'ruimte.sidebar';
@@ -116,7 +112,7 @@ export type FilePick = { kind: 'node'; at: { x: number; y: number } } | { kind: 
 interface UiStore {
     paletteOpen: boolean;
     paletteMode: PaletteMode;
-    page: AppPage | null;
+    usageOpen: boolean;
     /* Whether the session list is in view; it survives a reload, like everything else on the canvas. */
     sidebarOpen: boolean;
     /* Which canvases the sidebar has folded open, per project, or null until the list seeds itself.
@@ -148,9 +144,7 @@ interface UiStore {
     worktreeDialogFor: string | null;
     /* What a view is being asked about, from the sidebar, the breadcrumb or the palette alike. */
     viewDialog: ViewDialog;
-    setPage(page: AppPage | null): void;
-    /* The same page again closes it, which is what the button in the sidebar does. */
-    togglePage(page: AppPage): void;
+    setUsageOpen(open: boolean): void;
     setWorktreeDialogFor(groupId: string | null): void;
     setViewDialog(dialog: ViewDialog): void;
     setSidebarOpen(open: boolean): void;
@@ -178,16 +172,12 @@ interface UiStore {
     setSidebarExpanded(ids: string[] | null): void;
 }
 
-/* Opening a panel is asking for the project back, so it takes the column from whatever page is up.
-   Closing one leaves the page where it is: nothing was asked of the project. */
-const leaves = (opening: boolean, page: AppPage | null): { page: AppPage | null } => ({ page: opening ? null : page });
-
 /* Which app-level dialog is up; nothing here belongs to a node. The panels do belong to a project:
    they are loaded from and saved to its machine-local file by `project/panels-port.ts`. */
 export const useUi = create<UiStore>((set, get) => ({
     paletteOpen: false,
     paletteMode: 'default',
-    page: null,
+    usageOpen: false,
     paletteSeed: '',
     paletteBrowseAt: 0,
     paletteBrowseMachine: null,
@@ -205,11 +195,8 @@ export const useUi = create<UiStore>((set, get) => ({
     layoutDialogOpen: false,
     worktreeDialogFor: null,
     viewDialog: null,
-    setPage(page) {
-        set({ page });
-    },
-    togglePage(page) {
-        set({ page: get().page === page ? null : page });
+    setUsageOpen(open) {
+        set({ usageOpen: open });
     },
     setWorktreeDialogFor(groupId) {
         set({ worktreeDialogFor: groupId });
@@ -257,19 +244,19 @@ export const useUi = create<UiStore>((set, get) => ({
     },
     setPanel(patch) {
         const panel = { ...get().panel, ...patch };
-        set({ panel, ...leaves(panel.open, get().page), panelsRestoring: false });
+        set({ panel, panelsRestoring: false });
     },
     togglePanel(kind) {
         const was = get().panel;
         /* Without a kind the shortcut reopens whatever was up last, so the panel has one toggle of its own. */
         const panel = kind ? { open: !(was.open && was.kind === kind), kind } : { ...was, open: !was.open };
-        set({ panel, ...leaves(panel.open, get().page), panelsRestoring: false });
+        set({ panel, panelsRestoring: false });
     },
     setPreviewOpen(open) {
         if (get().preview.open === open) {
             return;
         }
-        set({ preview: { open }, ...leaves(open, get().page), panelsRestoring: false });
+        set({ preview: { open }, panelsRestoring: false });
     },
     togglePreview() {
         get().setPreviewOpen(!get().preview.open);

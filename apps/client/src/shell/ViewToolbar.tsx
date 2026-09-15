@@ -4,7 +4,6 @@ import { BrowserToolbar } from '@/nodes/BrowserBody';
 import { useNodeHost, type NodeHost } from '@/nodes/node-host';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { activeViewOf, useDocument } from '@/state/document';
-import { useUi } from '@/state/ui';
 import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -17,15 +16,14 @@ const modeOf = (host: NodeHost | null) => RUNTIME_MODES.find((entry) => entry.id
    always brings its navigation, a file and a diagram their own controls, a terminal only the mode of an agent
    running in it; a canvas and a chat bring nothing. */
 export const useHasViewToolbar = (view: ProjectView | null): boolean => {
-    const page = useUi((s) => s.page);
     const host = useNodeHost(view && !isCanvasView(view) ? view.id : '');
-    if (page !== null || view === null || !KINDS_WITH_TOOLBAR.has(view.kind)) {
+    if (view === null || !KINDS_WITH_TOOLBAR.has(view.kind)) {
         return false;
     }
     return view.kind === 'browser' || view.kind === 'file' || view.kind === 'diagram' || modeOf(host) !== undefined;
 };
 
-/* The view the window's toolbar speaks for: the one in the focused cell, and none while a page is up. */
+/* The view the window's toolbar speaks for: the one in the focused cell. */
 export const useToolbarView = (): ProjectView | null => useDocument((s) => activeViewOf(s));
 
 /*
@@ -38,12 +36,10 @@ export const useToolbarView = (): ProjectView | null => useDocument((s) => activ
  * with the views side by side every cell carries its own (`shell/CellToolbar.tsx`).
  */
 export function ViewToolbar({ view, focused }: { view: ProjectView | null; focused: boolean }) {
-    const page = useUi((s) => s.page);
     const host = useNodeHost(view && !isCanvasView(view) ? view.id : '');
     const { mount } = useFileToolbarSlot();
 
-    // A page fills the column, so a terminal's mode pill would stand over it.
-    if (page !== null || !view || !KINDS_WITH_TOOLBAR.has(view.kind)) {
+    if (!view || !KINDS_WITH_TOOLBAR.has(view.kind)) {
         return null;
     }
     if (view.kind === 'browser') {

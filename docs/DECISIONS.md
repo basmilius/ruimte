@@ -2107,8 +2107,8 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
 - The rule (2026-09-15): a machine has a live link while a workspace has a project open or opening on it
   (a project a boot restores counts until the boot tried it), while an explicit action waits for it
   through `ensureMachine` (the palette, the station welcome, `openProject`, `openFolderOn`), or while its
-  dialog in the Remote pane is open. After the last of those the pool's 30-second idle close is the grace
-  period. Nothing else opens a link.
+  dialog in the Remote pane is open, or while the usage dialog shows it. After the last of those the
+  pool's 30-second idle close is the grace period. Nothing else opens a link.
 - `pool.require` is gone and `transportFor` only peeks, so a call site cannot open a link by accident;
   `pool.hold` is the one way in. The active machine and the page's own daemon are no longer held for
   being what they are: an empty canvas on the desktop app connects to nothing.
@@ -2118,8 +2118,7 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   a rebuild. A row that learns its daemon id moves that transport before the pool moves the link, so the
   clients on it never see the link close.
 - Accepted: agents, attention, the dock badge, auto-registration and the account record sync only cover
-  machines with an open link, and the usage page of a machine without one says it is not connected
-  rather than connecting to it. A machine without a link is not a failure, so its dot is hollow and says
+  machines with an open link. A machine without a link is not a failure, so its dot is hollow and says
   "Not connected" with when it was last connected, kept per machine in localStorage.
 
 ### A protocol version on the wire

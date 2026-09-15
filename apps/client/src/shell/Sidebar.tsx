@@ -498,7 +498,6 @@ export function Sidebar() {
     const warnings = useProcessWarnings((s) => s.byEndpoint);
     const unseen = useAttention((s) => s.unseen);
     const open = useUi((s) => s.sidebarOpen);
-    const usageOpen = useUi((s) => s.page === 'usage');
     const hasProject = useProject((s) => s.current !== null);
     const expanded = useUi(useShallow((s) => s.sidebarExpanded));
     const instant = useInstantWidth();
@@ -517,9 +516,8 @@ export function Sidebar() {
                 id: source.id,
                 name: source.name,
                 focused: source.focused,
-                // A page owns the main column, so no view is showing and no row in the list is the active one.
-                activeViewId: usageOpen ? null : source.activeViewId,
-                openViewIds: usageOpen ? [] : source.openViewIds,
+                activeViewId: source.activeViewId,
+                openViewIds: source.openViewIds,
                 views: source.views.map((view) => {
                     // The canvas store owns the view it holds, so its nodes are the fresher ones. It pairs on
                     // the store's own view, not on the active one, which flips a tick before the canvas follows.
@@ -548,7 +546,7 @@ export function Sidebar() {
                     };
                 })
             })),
-        [sources, sessions, chats, drafts, warnings, unseen, usageOpen]
+        [sources, sessions, chats, drafts, warnings, unseen]
     );
 
     const activeViewId = workspaces.find((workspace) => workspace.focused)?.activeViewId ?? null;
@@ -784,12 +782,7 @@ export function Sidebar() {
                         </Menu.Portal>
                     </Menu.Root>
                     <UsageLimitsCard>
-                        <button
-                            className="icon-btn"
-                            aria-label="Usage"
-                            data-active={usageOpen || undefined}
-                            onClick={() => useUi.getState().togglePage('usage')}
-                        >
+                        <button className="icon-btn" aria-label="Usage" onClick={() => useUi.getState().setUsageOpen(true)}>
                             <Icon icon={ChartNoAxesColumn} size={16} />
                         </button>
                     </UsageLimitsCard>

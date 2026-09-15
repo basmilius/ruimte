@@ -10,6 +10,7 @@ import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { ViewHost } from '@/shell/ViewHost';
 import { WorktreeDialog } from '@/shell/WorktreeDialog';
 import { SettingsDialog } from '@/shell/SettingsDialog';
+import { UsageDialog } from '@/shell/usage/UsageDialog';
 import { ALL_SETTINGS_SECTIONS } from '@/shell/settings/sections';
 import { Panel } from '@/shell/Panel';
 import { PreviewPanel } from '@/shell/PreviewPanel';
@@ -110,6 +111,7 @@ export function App() {
                 <Workspace />
                 <CommandPalette />
                 <SettingsDialog />
+                <UsageDialog />
                 <Toasts />
                 <ReleaseNotesDialog />
                 <MachineUpdateDialog />

@@ -263,7 +263,7 @@ export const appCommands = (): Command[] => {
                       : [])
               ]
             : []),
-        { id: 'usage', label: 'Usage', hint: 'Cost, tokens and plan limits', run: () => useUi.getState().togglePage('usage') },
+        { id: 'usage', label: 'Usage', hint: 'Cost, tokens and plan limits', run: () => useUi.getState().setUsageOpen(true) },
         { id: 'sidebar', label: 'Toggle sidebar', shortcut: APP_SHORTCUTS.sidebar, run: () => useUi.getState().toggleSidebar() },
         { id: 'panel-preview', label: 'Toggle preview panel', run: () => useUi.getState().togglePreview() },
         { id: 'panel-files', label: 'Toggle files panel', run: () => useUi.getState().togglePanel('files') },

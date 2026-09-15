@@ -41,9 +41,7 @@ function PanelBody({ kind }: { kind: PanelKind }) {
    while the panel slides in or out. */
 export function Panel() {
     const panel = useUi((s) => s.panel);
-    /* A page fills the main column, so the panels beside it step aside without giving up what they
-       hold: the project's own file keeps saying they are open and they come back with the project. */
-    const open = useUi((s) => s.panel.open && s.page === null);
+    const open = panel.open;
     /* Where a panel hangs its own header controls; a callback ref, so the portal has an element
        the first time the panel body renders and not one commit later. */
     const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);

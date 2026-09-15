@@ -1,7 +1,6 @@
 import { useState, type ReactElement } from 'react';
 import clsx from 'clsx';
 import { PreviewCard } from '@base-ui-components/react/preview-card';
-import { useUi } from '@/state/ui';
 import { SECTION_LABEL } from '@/ui/classes';
 import { LimitsList } from '@/shell/usage/LimitsList';
 import { useMinute, useUsageLimits } from '@/shell/usage/limits';
@@ -18,17 +17,11 @@ function CardBody() {
 }
 
 /*
- * What is left of each plan, without opening the usage page. A hover card rather than a tooltip:
+ * What is left of each plan, without opening the usage dialog. A hover card rather than a tooltip:
  * the bars take a moment to read, and it stays open while the pointer travels to it.
  */
 export function UsageLimitsCard({ children }: { children: ReactElement<Record<string, unknown>> }) {
     const [opened, setOpened] = useState(false);
-    const onPage = useUi((s) => s.page === 'usage');
-
-    // The page below already shows the same bars, and larger.
-    if (onPage) {
-        return children;
-    }
     return (
         <PreviewCard.Root onOpenChange={(open) => open && setOpened(true)}>
             <PreviewCard.Trigger render={children} delay={500} />

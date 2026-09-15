@@ -51,7 +51,6 @@ export function Dock() {
     /* The canvas under this dock. It is drawn in the focused cell only, so the focused editor would
        answer the same today, but reading the cell keeps that a coincidence rather than a rule. */
     const canvasStore = useCanvasStore();
-    const page = useUi((s) => s.page);
     /* No view at all is no canvas either: with no project open the column holds the empty state and
        these controls would act on a canvas nothing saves. */
     const onCanvas = useDocument((s) => {
@@ -75,8 +74,7 @@ export function Dock() {
         canvasStore.getState().addNode(kind, centerWorld(canvasStore));
     };
 
-    // A page fills the column: the canvas under it is inert and its controls have nothing to act on.
-    if (!onCanvas || page !== null) {
+    if (!onCanvas) {
         return null;
     }
     return (

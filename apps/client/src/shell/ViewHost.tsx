@@ -17,7 +17,6 @@ import { useProject } from '@/state/project';
 import { StationWelcome } from '@/shell/StationWelcome';
 import { isRealMachine } from '@/state/local-machine';
 import { useUi } from '@/state/ui';
-import { UsagePage } from '@/shell/usage/UsagePage';
 import { isApplePlatform } from '@/desktop/bridge';
 import { isLeaveNodeShortcut } from '@/terminal/keymap';
 import { focusViewRow } from '@/shell/sidebar-focus';
@@ -144,25 +143,15 @@ export function ViewSurface({ view }: { view: ProjectView }) {
     );
 }
 
-/*
- * The main column: the grid of cells, or what stands in for it. An app-level page belongs to the
- * machine and not to the project, so it covers the whole column and hands it back untouched when it
- * closes; with no project open there is no grid to draw at all.
- */
+/* The main column: the grid of cells, or what stands in for it when no project is open. */
 export function ViewHost() {
-    const page = useUi((s) => s.page);
     const hasProject = useProject((s) => s.current !== null);
     // The web client before a machine is picked: nothing behind the page's own origin to open a project on.
     const welcome = useEndpoints((s) => !isRealMachine(s.activeId));
     return (
         <>
-            {page === null && hasProject && <SplitGrid />}
-            {page === null && !hasProject && (welcome ? <StationWelcome /> : <NoProject />)}
-            {page === 'usage' && (
-                <ErrorBoundary label="This page failed to render">
-                    <UsagePage />
-                </ErrorBoundary>
-            )}
+            {hasProject && <SplitGrid />}
+            {!hasProject && (welcome ? <StationWelcome /> : <NoProject />)}
         </>
     );
 }
