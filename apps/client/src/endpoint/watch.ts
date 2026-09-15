@@ -1,3 +1,4 @@
+import { useEndpoints } from '@/state/endpoints';
 import { useServers } from '@/state/server';
 import { pool } from '@/transport';
 import { adoptMachineName } from '@/transport/server-info';
@@ -35,8 +36,13 @@ export const startEndpointWatch = (): (() => void) => {
                         nameSource: payload.nameSource,
                         icon: payload.icon,
                         agentsDeleteAnyView: payload.agentsDeleteAnyView === true,
-                        refuseStatements: payload.refuseStatements === true
+                        refuseStatements: payload.refuseStatements === true,
+                        ...(payload.broker === undefined ? {} : { broker: payload.broker, brokerFixed: payload.brokerFixed === true })
                     });
+                    // A daemon from before the broker setting sends no URL, which says nothing about its broker.
+                    if (payload.brokerUrl !== undefined) {
+                        useEndpoints.getState().learnBrokerUrl(endpointId, payload.brokerUrl);
+                    }
                     adoptMachineName(endpointId, payload.label, payload.nameSource);
                 })
             );

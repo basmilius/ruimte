@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { EndpointNameSource, ProjectIconChoice, Reachability } from '@ruimte/contracts';
+import type { BrokerSetting } from '@ruimte/pulsar';
 import { useEndpointId } from '@/state/keys';
 
 export interface ServerInfo {
@@ -21,6 +22,10 @@ export interface ServerInfo {
     /* Whether this machine turns away a statement from the address book, so only a pairing link lets a
        client in. Enforced by the daemon; false for a daemon that predates statements. */
     refuseStatements: boolean;
+    /* The broker a person picked for this machine; null for a daemon that predates the setting. */
+    broker: BrokerSetting | null;
+    /* Whether a flag or the environment on the machine decides the broker, which leaves the setting without effect. */
+    brokerFixed: boolean;
     reachability: Reachability | null;
 }
 
@@ -35,6 +40,8 @@ const UNKNOWN: ServerInfo = {
     icon: null,
     agentsDeleteAnyView: false,
     refuseStatements: false,
+    broker: null,
+    brokerFixed: false,
     reachability: null
 };
 
@@ -43,12 +50,13 @@ interface ServersStore {
     setInfo(endpointId: string, info: Pick<ServerInfo, 'platform' | 'home' | 'version' | 'model'>): void;
     setEndpoint(
         endpointId: string,
-        info: Pick<ServerInfo, 'label' | 'nameSource' | 'icon' | 'agentsDeleteAnyView' | 'refuseStatements' | 'reachability'>
+        info: Pick<ServerInfo, 'label' | 'nameSource' | 'icon' | 'agentsDeleteAnyView' | 'refuseStatements' | 'broker' | 'brokerFixed' | 'reachability'>
     ): void;
     /* What someone set on this machine, from `endpoint.changed` or from setting it here. A switch left out stays where it stands. */
     setIdentity(
         endpointId: string,
-        info: Pick<ServerInfo, 'label' | 'nameSource' | 'icon' | 'agentsDeleteAnyView'> & Partial<Pick<ServerInfo, 'refuseStatements'>>
+        info: Pick<ServerInfo, 'label' | 'nameSource' | 'icon' | 'agentsDeleteAnyView'> &
+            Partial<Pick<ServerInfo, 'refuseStatements' | 'broker' | 'brokerFixed'>>
     ): void;
     /* A machine that is forgotten takes what it said about itself with it. */
     forget(endpointId: string): void;

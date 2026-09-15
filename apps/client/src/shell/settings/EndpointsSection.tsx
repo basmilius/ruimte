@@ -12,6 +12,7 @@ import { useLatency } from '@/transport/ping';
 import { useEndpointConnection } from '@/transport/status';
 import { describeConnection, describePing, REACHABILITY_LABELS } from '@/shell/connection-info';
 import { AccountSection, AddToAccountButton } from '@/shell/settings/AccountSection';
+import { BrokerSection } from '@/shell/settings/BrokerSection';
 import { IS_STATION } from '@/station';
 import { MachineIdentityDialog } from '@/shell/settings/MachineIdentityDialog';
 import { RefuseStatementsSection } from '@/shell/settings/RefuseStatementsSection';
@@ -511,6 +512,7 @@ export function EndpointsSection() {
             <AccountSection />
             <PairedClients key={activeId} />
             <RefuseStatementsSection />
+            <BrokerSection />
             <AddMachineDialog open={addOpen} onOpenChange={setAddOpen} />
         </>
     );
