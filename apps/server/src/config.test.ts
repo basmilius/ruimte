@@ -48,6 +48,14 @@ describe('parseServerArgs', () => {
         expect(parseServerArgs([], { RUIMTE_LABEL: 'named' }).label).toBe('named');
         expect(() => parseServerArgs(['dance'], {})).toThrow('Unknown command');
         expect(parseServerArgs(['context', 'read', 'abc'], {})).toMatchObject({ command: 'context', args: ['read', 'abc'] });
+        expect(parseServerArgs(['--version'], {}).command).toBe('version');
+        expect(parseServerArgs(['service', 'install', '--port', '4300', '--no-broker'], {})).toMatchObject({
+            command: 'service',
+            port: 4300,
+            args: ['install', '--port', '4300', '--no-broker']
+        });
+        expect(() => parseServerArgs(['service'], {})).toThrow('Usage: ruimte service');
+        expect(() => parseServerArgs(['--port', '1', 'service', 'install'], {})).toThrow('Usage: ruimte service');
         expect(parseServerArgs(['context', 'node', 'note', '--text', 'hi', '--port=1'], {})).toMatchObject({
             command: 'context',
             args: ['node', 'note', '--text', 'hi', '--port=1']

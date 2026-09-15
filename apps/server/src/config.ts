@@ -31,9 +31,10 @@ export interface ServerConfig {
     brokerAdvertise: string | null;
     // Started by the background service (`RUIMTE_SERVICE=1` in its definition), which starts it again when it exits.
     underService: boolean;
-    // `pair` asks the running daemon for a pairing URL; `login` puts it on an account with a code; `context` is the agent-side CLI (`ruimte-context`).
-    command: 'serve' | 'pair' | 'login' | 'context';
-    // What follows the command, for `context`.
+    // `pair` asks the running daemon for a pairing URL; `login` puts it on an account with a code; `context` is the agent-side CLI (`ruimte-context`);
+    // `service` installs, removes or reports the background service; `version` prints the version.
+    command: 'serve' | 'pair' | 'login' | 'context' | 'service' | 'version';
+    // What follows the command: the words of `context`, and the action of `service` followed by the daemon flags its service runs with.
     args: string[];
 }
 
@@ -108,14 +109,20 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
             'direct-host-address': { type: 'string', multiple: true, default: [] },
             broker: { type: 'string' },
             'no-broker': { type: 'boolean', default: false },
-            'broker-advertise': { type: 'string' }
+            'broker-advertise': { type: 'string' },
+            version: { type: 'boolean', short: 'v', default: false }
         },
         strict: true,
         allowPositionals: true
     });
-    const command = positionals[0] ?? 'serve';
-    if (command !== 'serve' && command !== 'pair' && command !== 'login' && command !== 'context') {
+    const command = values.version ? 'version' : (positionals[0] ?? 'serve');
+    if (command !== 'serve' && command !== 'pair' && command !== 'login' && command !== 'context' && command !== 'service' && command !== 'version') {
         throw new Error(`Unknown command: ${command}`);
+    }
+    // The flags after `service install` are the ones the service runs the daemon with, so they are kept as written.
+    const service = command === 'service';
+    if (service && (argv[0] !== 'service' || positionals.length !== 2)) {
+        throw new Error('Usage: ruimte service install|uninstall|status [daemon flags]');
     }
 
     const port = Number(values.port);
@@ -140,6 +147,6 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
         brokerAdvertise: parseBrokerUrl(values['broker-advertise'] ?? env.RUIMTE_BROKER_ADVERTISE_URL, '--broker-advertise'),
         underService: env.RUIMTE_SERVICE === '1',
         command,
-        args: cli ? argv.slice(1) : positionals.slice(1)
+        args: cli || service ? argv.slice(1) : positionals.slice(1)
     };
 };

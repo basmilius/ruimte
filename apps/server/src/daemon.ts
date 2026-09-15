@@ -51,7 +51,7 @@ import { Dispatcher, type ClientAccess } from './dispatcher.ts';
 import { readOrCreateEndpointIdentity } from './endpoint-id.ts';
 import { SelfUpdater, buildFileOf, readBuildFile } from './service/self-update.ts';
 import { childCounter, isIdle, workOf, type MachineWork } from './service/work.ts';
-import { BUILD, VERSION } from './version.ts';
+import { BUILD, COMPILED as compiled, VERSION } from './version.ts';
 import { registerAuthHandlers } from './handlers/auth.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
 import { FS_FILE_PATH, handleFsFileRequest } from './fs/file-route.ts';
@@ -95,7 +95,6 @@ const RegistrationRequestSchema = z.object({ accountId: AccountSchema.shape.id }
 const AUTH_CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST', 'access-control-allow-headers': 'content-type' };
 
 // Inside a `bun build --compile` binary the sources live on a virtual file system, so paths next to the source mean nothing.
-const compiled = import.meta.dir.startsWith('/$bunfs') || import.meta.dir.includes('~BUN');
 
 /*
  * The policy the served client runs under, the twin of the `<meta http-equiv>` in

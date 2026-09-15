@@ -3,11 +3,24 @@ import 'reflect-metadata';
 import { forgetInheritedSession, parseServerArgs } from './config.ts';
 
 /*
- * One binary, four jobs: `ruimte` serves, `ruimte pair` prints a pairing URL, `ruimte login` puts
- * the machine on an account with a code, `ruimte context` is the agent-side CLI. The daemon is
- * imported only when it is needed, so the CLI commands do not pay for loading the terminal emulator.
+ * One binary, several jobs: `ruimte` serves, `ruimte pair` prints a pairing URL, `ruimte login` puts
+ * the machine on an account with a code, `ruimte service` sets up the background service, `ruimte
+ * context` is the agent-side CLI. The daemon is imported only when it is needed, so the CLI commands
+ * do not pay for loading the terminal emulator.
  */
 const config = parseServerArgs(process.argv.slice(2));
+
+if (config.command === 'version') {
+    const { VERSION } = await import('./version.ts');
+    console.log(VERSION);
+    process.exit(0);
+}
+
+if (config.command === 'service') {
+    const { runService } = await import('./cli/service.ts');
+    const { COMPILED } = await import('./version.ts');
+    process.exit(await runService(config.args, { port: config.port, ruimteHome: config.home, compiled: COMPILED }));
+}
 
 if (config.command === 'pair') {
     const { runPair } = await import('./cli/pairing.ts');
