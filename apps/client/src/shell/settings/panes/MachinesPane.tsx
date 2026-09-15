@@ -1,7 +1,6 @@
-import { EndpointsSection } from '@/shell/settings/EndpointsSection';
+import { MachinesSection } from '@/shell/settings/MachinesSection';
 
-/* This machine first, then the machines that were added to this client, then what has access to this
-   one. Those sections own naming, pairing and forgetting, so the pane only puts them on screen. */
+/* The account on top, then one list of machines; each machine's settings live in the dialog its row opens. */
 export function MachinesPane() {
-    return <EndpointsSection />;
+    return <MachinesSection />;
 }
