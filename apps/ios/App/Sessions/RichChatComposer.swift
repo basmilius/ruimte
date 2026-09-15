@@ -6,7 +6,7 @@ struct RichChatComposer: UIViewRepresentable {
     @Binding var selection: NSRange
     let mentions: [String]
     let skills: [String]
-    let focused: FocusState<Bool>.Binding
+    @Binding var focused: Bool
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.colorScheme) private var colorScheme
@@ -37,7 +37,7 @@ struct RichChatComposer: UIViewRepresentable {
         context.coordinator.parent = self
         context.coordinator.updating = true
         defer { context.coordinator.updating = false }
-        view.isEditable = isEnabled
+        if view.isEditable != isEnabled { view.isEditable = isEnabled }
         view.tintColor = .label
         // Replacing marked text interrupts composition for Chinese, Japanese and dictation.
         if view.markedTextRange == nil {
@@ -48,9 +48,9 @@ struct RichChatComposer: UIViewRepresentable {
             let desired = NSRange(location: location, length: min(selection.length, length - location))
             if view.selectedRange != desired { view.selectedRange = desired }
         }
-        if focused.wrappedValue && isEnabled && !view.isFirstResponder {
+        if focused && isEnabled && !view.isFirstResponder {
             view.becomeFirstResponder()
-        } else if !focused.wrappedValue && view.isFirstResponder {
+        } else if !focused && view.isFirstResponder {
             view.resignFirstResponder()
         }
     }
@@ -87,11 +87,11 @@ struct RichChatComposer: UIViewRepresentable {
         }
 
         func textViewDidBeginEditing(_ textView: UITextView) {
-            if !updating { parent.focused.wrappedValue = true }
+            if !updating { parent.focused = true }
         }
 
         func textViewDidEndEditing(_ textView: UITextView) {
-            if !updating { parent.focused.wrappedValue = false }
+            if !updating { parent.focused = false }
         }
 
         func decorate(_ view: ComposerTextView) {

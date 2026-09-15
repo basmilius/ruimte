@@ -214,3 +214,20 @@ The implementation uses Apple's supported
 and [scroll content margins](https://developer.apple.com/documentation/swiftui/view/contentmargins(_:for:)).
 Verdict: approve the inspected code; physical layout and sidebar transitions remain
 unverified.
+
+## Composer keyboard focus regression
+
+The rich UIKit composer retained a `FocusState` from the earlier SwiftUI TextField,
+but no SwiftUI field was bound to it. A text update could therefore read `false` and
+call `resignFirstResponder`, closing the keyboard after a keystroke. Apple's
+[FocusState documentation](https://developer.apple.com/documentation/swiftui/focusstate/wrappedvalue)
+describes that unbound state as false.
+
+The composer now uses ordinary state synchronized with UITextView's begin/end editing
+callbacks. Text and Markdown updates preserve that state; explicit dismiss and refocus
+actions still use the same binding. Editability is updated only when it changes.
+
+Physical continuous typing and deliberate keyboard dismissal remain device acceptance.
+No simulator run was performed for this fix.
+The signed build, `bun run format` and `bun run check` passed. Installed on Bas's
+iPhone and iPad Pro. Build log: `/tmp/ruimte-ios-composer-focus-device.log`.

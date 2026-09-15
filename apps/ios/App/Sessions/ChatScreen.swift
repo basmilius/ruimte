@@ -12,7 +12,7 @@ struct ChatScreen: View {
     @State private var photo: PhotosPickerItem?
     @State private var question: JSONValue?
     @State private var expandedRequest: String?
-    @FocusState private var composerFocused: Bool
+    @State private var composerFocused = false
     @State private var composerSelection = NSRange(location: 0, length: 0)
     @State private var composerHeight: CGFloat = 72
     @State private var messagesBelow = false
