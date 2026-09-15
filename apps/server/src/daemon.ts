@@ -1,6 +1,16 @@
 import { dirname, join, normalize, resolve } from 'node:path';
 import type { ServerWebSocket } from 'bun';
-import { AuthTicketPayloadSchema, PairPayloadSchema, type AgentKind, type DiagramContent } from '@ruimte/contracts';
+import {
+    AuthTicketPayloadSchema,
+    PairPayloadSchema,
+    PROTOCOL_PARAM,
+    PROTOCOL_REFUSED_CLOSE_CODE,
+    PROTOCOL_VERSION,
+    acceptsOfferedProtocol,
+    protocolRefusalReason,
+    type AgentKind,
+    type DiagramContent
+} from '@ruimte/contracts';
 import { AgentStore } from './agents/agent-store.ts';
 import { ClaudeTitleReader } from './agents/claude-title.ts';
 import { CodexTitleReader } from './agents/codex-title.ts';
@@ -35,6 +45,8 @@ import { ChatStore } from './chat/chat-store.ts';
 import type { ServerConfig } from './config.ts';
 import { Dispatcher, type ClientAccess } from './dispatcher.ts';
 import { readOrCreateEndpointIdentity } from './endpoint-id.ts';
+import { SelfUpdater, buildFileOf, readBuildFile } from './service/self-update.ts';
+import { childCounter, isIdle, workOf, type MachineWork } from './service/work.ts';
 import { BUILD, VERSION } from './version.ts';
 import { registerAuthHandlers } from './handlers/auth.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
@@ -69,6 +81,9 @@ import { UsageMonitor } from './usage/limits/monitor.ts';
 import { UsageService } from './usage/usage-service.ts';
 
 // A client on another origin pairs and signs in from its own page, so the auth routes answer preflights and open CORS.
+// What would end if this daemon restarted, as counts; `service/work.ts` says what counts.
+const MACHINE_WORK_PATH = '/machine/work';
+
 const AUTH_CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST', 'access-control-allow-headers': 'content-type' };
 
 // Inside a `bun build --compile` binary the sources live on a virtual file system, so paths next to the source mean nothing.
@@ -176,15 +191,41 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const statuses = new GitStatusWatcher();
     const usage = new UsageService({ home: config.home, allowPriceFetch: config.priceFetch, knownProjects: () => projects.known() });
     const limits = new UsageMonitor({ providers });
+    const sampler = await createSampler(process.platform, config.home);
     const processes = new ProcessMonitor({
-        sampler: await createSampler(process.platform, config.home),
+        sampler,
         sessions: () => manager.list().map((session) => ({ id: session.sessionId, pid: session.pid, exited: session.exited, agent: session.agent ?? null })),
         chats: () => chats.processTargets(),
         contextUrl: () => manager.contextUrl,
         // Without a SessionEnd a clean exit and a crash look the same, so only these CLIs can be missed.
         reportsEnd: (kind) => HOOK_EVENTS[kind]?.includes('SessionEnd') === true
     });
-    manager.onProcessChange = (_sessionId, phase) => (phase === 'before-kill' ? processes.beforeKill() : processes.nudge());
+    /* One reading of the process table per question, taken only when a question is asked. */
+    const machineWork = (): MachineWork => {
+        let children: ((pid: number) => number) | null = null;
+        try {
+            children = sampler === null ? null : childCounter(sampler.sample().processes);
+        } catch {
+            children = null;
+        }
+        return workOf({ sessions: manager.list(), chats: chats.list(), children });
+    };
+    const selfUpdate = new SelfUpdater({
+        underService: config.underService,
+        running: BUILD,
+        readOnDisk: () => readBuildFile(buildFileOf(process.execPath)),
+        idle: () => isIdle(machineWork()),
+        exit: () => void shutdown('a newer build on disk'),
+        log: (line) => console.log(line)
+    });
+    manager.onProcessChange = (_sessionId, phase) => {
+        if (phase === 'before-kill') {
+            processes.beforeKill();
+            return;
+        }
+        processes.nudge();
+        selfUpdate.nudge();
+    };
     manager.isAgentGone = (sessionId) => processes.isAgentGone(sessionId);
 
     const worktrees = new Worktrees(config.home);
@@ -354,6 +395,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         refuseStatements: identity.refuseStatements,
         platform: process.platform,
         version: VERSION,
+        protocol: PROTOCOL_VERSION,
         reachability,
         authenticated,
         publicKey: identity.publicKey,
@@ -361,7 +403,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         ...brokerSwitch.describe()
     });
 
-    const server = Bun.serve<ClientAccess>({
+    const server = Bun.serve<ClientAccess & { protocolRefused: boolean }>({
         hostname: config.host,
         port: config.port,
         async fetch(request, server) {
@@ -439,12 +481,26 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 return Response.json(ticket, { headers: AUTH_CORS });
             }
 
+            if (url.pathname === MACHINE_WORK_PATH) {
+                // Only for the local secret: the desktop app asks before it restarts the service, and nobody else needs to know.
+                if (request.method !== 'GET') {
+                    return new Response('Method not allowed', { status: 405 });
+                }
+                const decision = await decideAccess(request, remote, auth, access);
+                if (!decision.ok || decision.access.sessionId !== null) {
+                    return new Response('Forbidden', { status: 403 });
+                }
+                return Response.json(machineWork());
+            }
+
             if (url.pathname === '/ws') {
                 const decision = await decideAccess(request, remote, auth, access);
                 if (!decision.ok) {
                     return new Response(decision.reason, { status: decision.status });
                 }
-                if (server.upgrade(request, { data: decision.access })) {
+                // Upgraded and then closed, since a browser reads the code and reason of a close but never the status of a refused upgrade.
+                const protocolRefused = !acceptsOfferedProtocol(url.searchParams.get(PROTOCOL_PARAM));
+                if (server.upgrade(request, { data: { ...decision.access, protocolRefused } })) {
                     return undefined;
                 }
                 return new Response('Expected a WebSocket upgrade', { status: 426 });
@@ -497,6 +553,10 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         },
         websocket: {
             open(ws) {
+                if (ws.data.protocolRefused) {
+                    ws.close(PROTOCOL_REFUSED_CLOSE_CODE, protocolRefusalReason());
+                    return;
+                }
                 const channel = socketChannel(ws);
                 connections.set(ws, { channel, connection: openConnection(channel, ws.data) });
             },
@@ -546,12 +606,13 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     }
 
     let shuttingDown = false;
-    const shutdown = async (signal: string): Promise<void> => {
+    const shutdown = async (reason: string): Promise<void> => {
         if (shuttingDown) {
             return;
         }
         shuttingDown = true;
-        console.log(`ruimte server received ${signal}, writing snapshots`);
+        console.log(`ruimte server stopping for ${reason}, writing snapshots`);
+        selfUpdate.stop();
         snapshotSchedule.stop();
         usage.stop();
         limits.stop();
@@ -577,6 +638,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
 
     process.on('SIGINT', () => void shutdown('SIGINT'));
     process.on('SIGTERM', () => void shutdown('SIGTERM'));
+    selfUpdate.start();
 
     console.log(`ruimte server ${VERSION} listening on ws://${server.hostname}:${server.port}/ws (home: ${config.home})`);
 };

@@ -1,5 +1,12 @@
 import { createHmac } from 'node:crypto';
-import { DirectProofFrameSchema, localSecretChannelMessage, type AuthChallengeResult, type AuthTicketPayload, type AuthTicketResult } from '@ruimte/contracts';
+import {
+    DirectProofFrameSchema,
+    localSecretChannelMessage,
+    PROTOCOL_VERSION,
+    type AuthChallengeResult,
+    type AuthTicketPayload,
+    type AuthTicketResult
+} from '@ruimte/contracts';
 import { sameSecret } from '../auth/local-secret.ts';
 import type { ClientAccess } from '../dispatcher.ts';
 import { AUTHENTICATED_FRAME_CHARS, UNAUTHENTICATED_FRAME_CHARS, type DirectChannel } from './data-channel.ts';
@@ -55,12 +62,12 @@ export const authenticateChannel = (options: ChannelAuthOptions): Promise<Client
             resolve(access);
         };
 
-        const refuse = (reason: string): void => {
+        const refuse = (reason: string, protocol?: number): void => {
             if (settled) {
                 return;
             }
             channel.receiveWith(() => undefined, UNAUTHENTICATED_FRAME_CHARS);
-            channel.send(JSON.stringify({ type: 'direct.refused', reason }));
+            channel.send(JSON.stringify({ type: 'direct.refused', reason, ...(protocol === undefined ? {} : { protocol }) }));
             settle(null);
             setTimeout(() => channel.close(4003, reason), REFUSAL_LINGER_MS);
         };
@@ -82,6 +89,10 @@ export const authenticateChannel = (options: ChannelAuthOptions): Promise<Client
                 return;
             }
             const proof = parsed.data;
+            if (proof.protocol !== undefined && proof.protocol !== PROTOCOL_VERSION) {
+                refuse('This machine and this client run different versions of Ruimte', PROTOCOL_VERSION);
+                return;
+            }
             if (proof.type === 'direct.key') {
                 const ticket = await handshake.redeem({ publicKey: proof.publicKey, challenge: proof.challenge, signature: proof.signature }, binding);
                 const sessionId = ticket === null ? null : handshake.ticketSession(ticket.ticket);
@@ -117,5 +128,5 @@ export const authenticateChannel = (options: ChannelAuthOptions): Promise<Client
                 refuse('The machine could not check the proof');
             });
         }, UNAUTHENTICATED_FRAME_CHARS);
-        channel.send(JSON.stringify({ type: 'direct.challenge', challenge: issued.challenge, daemon: issued.daemon }));
+        channel.send(JSON.stringify({ type: 'direct.challenge', protocol: PROTOCOL_VERSION, challenge: issued.challenge, daemon: issued.daemon }));
     });

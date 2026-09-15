@@ -29,6 +29,8 @@ export interface ServerConfig {
     broker: BrokerOverride;
     // The broker URL clients are told to dial, when it is not the one this machine dials (a container reaching the host by another name).
     brokerAdvertise: string | null;
+    // Started by the background service (`RUIMTE_SERVICE=1` in its definition), which starts it again when it exits.
+    underService: boolean;
     // `pair` asks the running daemon for a pairing URL; `context` is the agent-side CLI (`ruimte-context`).
     command: 'serve' | 'pair' | 'context';
     // What follows the command, for `context`.
@@ -136,6 +138,7 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
         directHostAddresses: values['direct-host-address'],
         broker: parseBrokerOverride(values['no-broker'], values.broker ?? env.RUIMTE_BROKER_URL),
         brokerAdvertise: parseBrokerUrl(values['broker-advertise'] ?? env.RUIMTE_BROKER_ADVERTISE_URL, '--broker-advertise'),
+        underService: env.RUIMTE_SERVICE === '1',
         command,
         args: cli ? argv.slice(1) : positionals.slice(1)
     };

@@ -7,6 +7,7 @@ import {
     daemonChannelMessage,
     DIRECT_CHANNEL_LABEL,
     DirectChallengeFrameSchema,
+    PROTOCOL_VERSION,
     DirectVerdictFrameSchema,
     type DirectProofFrame
 } from '@ruimte/contracts';
@@ -225,6 +226,7 @@ export class DirectClient {
                         credential.kind === 'key'
                             ? {
                                   type: 'direct.key',
+                                  protocol: PROTOCOL_VERSION,
                                   challenge: challenge.data.challenge,
                                   publicKey: credential.publicKey,
                                   signature: signMessage(
@@ -234,6 +236,7 @@ export class DirectClient {
                               }
                             : {
                                   type: 'direct.secret',
+                                  protocol: PROTOCOL_VERSION,
                                   challenge: challenge.data.challenge,
                                   proof: localSecretProof(credential.secret, credential.daemonId, challenge.data.challenge, binding)
                               };

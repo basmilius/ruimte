@@ -19,6 +19,8 @@ if (config.command === 'context') {
 
 // Only after the CLI commands: `ruimte context` runs inside a session and needs these to find it.
 forgetInheritedSession(process.env);
+// Read into the config already; a shell must not pass it on to a daemon started by hand inside a session.
+delete process.env.RUIMTE_SERVICE;
 
 const { startDaemon } = await import('./daemon.ts');
 await startDaemon(config);
