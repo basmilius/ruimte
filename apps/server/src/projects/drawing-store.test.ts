@@ -3,8 +3,8 @@ import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { DrawingContent, DrawingElement, ProjectContent } from '@ruimte/contracts';
+import { FakeWatch } from '../fs/watch-test-helpers.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
-import { waitFor } from '../sessions/test-helpers.ts';
 import { DrawingStore } from './drawing-store.ts';
 import { ProjectStore } from './project-store.ts';
 import { serializeDrawing } from './project-files.ts';
@@ -12,6 +12,7 @@ import { serializeDrawing } from './project-files.ts';
 let root: string;
 let home: string;
 let folder: string;
+let fake: FakeWatch;
 let projects: ProjectStore;
 let drawings: DrawingStore;
 let events: SessionEvent[];
@@ -49,8 +50,9 @@ beforeEach(async () => {
     home = join(root, 'home');
     folder = join(root, 'repo');
     await mkdir(folder);
-    projects = new ProjectStore(home);
-    drawings = new DrawingStore(projects);
+    fake = new FakeWatch();
+    projects = new ProjectStore(home, fake);
+    drawings = new DrawingStore(projects, fake);
     projects.attachDrawings(drawings);
     events = [];
     drawings.subscribe('c1', (event) => events.push(event));
@@ -95,11 +97,20 @@ describe('DrawingStore', () => {
     test('an outside write is reported with what is on disk, and our own write is not', async () => {
         await drawings.open(projectId, 'view-a');
         await drawings.save(projectId, 'view-a', 0, drawn(element('el-1')));
-        await new Promise((resolve) => setTimeout(resolve, 250));
+        fake.on(drawingsDir()).emit('view-a.json');
+        await fake.settle();
         expect(events).toEqual([]);
 
+        // A file of a drawing nobody has open is not read.
+        fake.on(drawingsDir()).emit('view-z.json');
+        expect(fake.pending).toBe(0);
+
         await writeFile(drawingFile('view-a'), serializeDrawing({ version: 1, rev: 7, elements: [element('el-9')] }));
-        await waitFor(() => events.length === 1, 'the change event');
+        fake.on(drawingsDir()).emit('view-a.json');
+        fake.on(drawingsDir()).emit('view-a.json');
+        expect(fake.pending).toBe(1);
+        await fake.settle();
+        expect(events).toHaveLength(1);
         expect(events[0]).toMatchObject({
             event: 'drawing.changed',
             payload: { projectId, viewId: 'view-a', document: { rev: 7, elements: [{ id: 'el-9' }] } }

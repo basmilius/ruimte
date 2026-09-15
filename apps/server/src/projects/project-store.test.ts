@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import type { ProjectCanvasView, ProjectContent, ProjectDocument } from '@ruimte/contracts';
+import { FakeWatch } from '../fs/watch-test-helpers.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { waitFor } from '../sessions/test-helpers.ts';
 import { DiagramStore } from './diagram-store.ts';
@@ -13,6 +14,7 @@ import { ProjectStore } from './project-store.ts';
 let root: string;
 let home: string;
 let folder: string;
+let fake: FakeWatch;
 let store: ProjectStore;
 let changed: SessionEvent[];
 let summaries: SessionEvent[];
@@ -23,7 +25,8 @@ beforeEach(async () => {
     home = join(root, 'home');
     folder = join(root, 'repo');
     await mkdir(folder);
-    store = new ProjectStore(home);
+    fake = new FakeWatch();
+    store = new ProjectStore(home, fake);
     changed = [];
     summaries = [];
     unsubscribe = store.subscribe('c1', (event) => {
@@ -60,6 +63,9 @@ const content = (name = 'repo'): ProjectContent => ({
 /* Every test here works on projects whose views are canvases; this is the cast that says so. */
 const canvas = (document: Pick<ProjectContent, 'views'>, at = 0): ProjectCanvasView => document.views[at] as ProjectCanvasView;
 
+/* The watcher on the directory the project file lives in; the platform reports every write there, ours included. */
+const projectDirWatcher = () => fake.on(dirname(documentPathInFolder(folder)));
+
 describe('ProjectStore', () => {
     test('opening a folder creates the canvas file, lists it, and saves with a rising rev', async () => {
         const opened = await store.openProject({ folder });
@@ -89,13 +95,22 @@ describe('ProjectStore', () => {
     test('an outside edit is reported once with what is on disk, and our own write is not', async () => {
         const opened = await store.openProject({ folder });
         await store.save(opened.summary.projectId, 0, content());
-        await new Promise((resolve) => setTimeout(resolve, 250));
+        projectDirWatcher().emit('project.json');
+        await fake.settle();
         expect(changed).toEqual([]);
+
+        // Another file in `.ruimte` is none of the project's business.
+        projectDirWatcher().emit('notes.txt');
+        expect(fake.pending).toBe(0);
 
         const path = documentPathInFolder(folder);
         const pulled: ProjectDocument = { ...(JSON.parse(await readFile(path, 'utf8')) as ProjectDocument), rev: 7, name: 'from git' };
         await writeFile(path, JSON.stringify(pulled, null, 2));
-        await waitFor(() => changed.length === 1, 'the change event');
+        projectDirWatcher().emit('project.json');
+        projectDirWatcher().emit('project.json');
+        expect(fake.pending).toBe(1);
+        await fake.settle();
+        expect(changed).toHaveLength(1);
         expect(changed[0]).toMatchObject({
             event: 'project.changed',
             payload: { projectId: opened.summary.projectId, document: { rev: 7, name: 'from git' } }
@@ -176,10 +191,18 @@ describe('ProjectStore', () => {
         expect(opened.summary.icon).toEqual({ kind: 'initial', value: 'R' });
         expect(opened.summary.nameSource).toBe('folder');
 
-        summaries.length = 0;
+        // The summary goes out after the reload is done, so it is awaited as an event of its own.
+        const summary = new Promise<SessionEvent>((resolve) => {
+            store.subscribe('icon-listener', (event) => {
+                if (event.event === 'project.summary') {
+                    resolve(event);
+                }
+            });
+        });
         await writeFile(join(folder, '.ruimte', 'icon.png'), PNG);
-        await waitFor(() => summaries.length >= 1, 'the summary event');
-        expect(summaries.at(-1)).toMatchObject({ event: 'project.summary', payload: { summary: { icon: { kind: 'image', value: '.ruimte/icon.png' } } } });
+        projectDirWatcher().emit('icon.png');
+        await fake.settle();
+        expect(await summary).toMatchObject({ event: 'project.summary', payload: { summary: { icon: { kind: 'image', value: '.ruimte/icon.png' } } } });
 
         const cleared = await store.setIcon({ projectId: opened.summary.projectId, image: null });
         expect(cleared.icon).toEqual({ kind: 'initial', value: 'R' });
@@ -350,7 +373,7 @@ describe('ProjectStore', () => {
     test('closing survives a restart, because the registry carries it and not the client', async () => {
         const { summary } = await store.openProject({ folder });
         await store.closeProject(summary.projectId);
-        const restarted = new ProjectStore(home);
+        const restarted = new ProjectStore(home, fake);
         expect((await restarted.list())[0]?.closedAt).toBeNumber();
     });
 
@@ -440,7 +463,7 @@ describe('the project index', () => {
         await store.save(opened.summary.projectId, 0, linked('from disk'));
         await store.closeProject(opened.summary.projectId);
 
-        const restarted = new ProjectStore(home);
+        const restarted = new ProjectStore(home, fake);
         expect(restarted.index.sourcesFor('agent')).toEqual([]);
         await restarted.warmIndex();
         expect(restarted.index.sourcesFor('agent')[0]).toMatchObject({ text: 'from disk' });
@@ -452,7 +475,7 @@ describe('the project index', () => {
         await store.save(opened.summary.projectId, 0, linked('x'));
         await writeFile(documentPathInFolder(folder), '{ not json');
 
-        const restarted = new ProjectStore(home);
+        const restarted = new ProjectStore(home, fake);
         await restarted.warmIndex();
         expect(restarted.index.has(opened.summary.projectId)).toBe(false);
         // Nobody asked for that file, so it is not set aside the way an open would.
@@ -532,7 +555,8 @@ describe('mutate', () => {
         const projectId = opened.summary.projectId;
         changed = [];
         await store.mutate(projectId, addNote('note-1'));
-        await Bun.sleep(400);
+        projectDirWatcher().emit('project.json');
+        await fake.settle();
         // Our own write, not an outside edit: the watcher does not send it a second time.
         expect(changed).toHaveLength(1);
         await expect(store.save(projectId, opened.document.rev, content())).rejects.toMatchObject({ code: 'rev-conflict' });
@@ -656,8 +680,8 @@ describe('kinds a newer Ruimte wrote', () => {
     });
 
     test('removing a drawing and a diagram leaves the files of an unknown view alone', async () => {
-        const drawings = new DrawingStore(store);
-        const diagrams = new DiagramStore(store);
+        const drawings = new DrawingStore(store, fake);
+        const diagrams = new DiagramStore(store, fake);
         store.attachDrawings(drawings);
         store.attachDiagrams(diagrams);
         const opened = await store.openProject({ folder });

@@ -3,8 +3,8 @@ import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { EMPTY_DIAGRAM, type DiagramContent, type DiagramNode, type ProjectContent } from '@ruimte/contracts';
+import { FakeWatch } from '../fs/watch-test-helpers.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
-import { waitFor } from '../sessions/test-helpers.ts';
 import { DiagramStore } from './diagram-store.ts';
 import { DrawingStore } from './drawing-store.ts';
 import { ProjectStore } from './project-store.ts';
@@ -13,6 +13,7 @@ import { serializeDiagram } from './project-files.ts';
 let root: string;
 let home: string;
 let folder: string;
+let fake: FakeWatch;
 let projects: ProjectStore;
 let diagrams: DiagramStore;
 let events: SessionEvent[];
@@ -56,9 +57,10 @@ beforeEach(async () => {
     home = join(root, 'home');
     folder = join(root, 'repo');
     await mkdir(folder);
-    projects = new ProjectStore(home);
-    projects.attachDrawings(new DrawingStore(projects));
-    diagrams = new DiagramStore(projects);
+    fake = new FakeWatch();
+    projects = new ProjectStore(home, fake);
+    projects.attachDrawings(new DrawingStore(projects, fake));
+    diagrams = new DiagramStore(projects, fake);
     projects.attachDiagrams(diagrams);
     events = [];
     diagrams.subscribe('c1', (event) => events.push(event));
@@ -120,11 +122,15 @@ describe('DiagramStore', () => {
     test('an outside write is reported with what is on disk, and our own write is not', async () => {
         await diagrams.open(projectId, 'view-a');
         await diagrams.save(projectId, 'view-a', 0, graph([node('a')]));
-        await new Promise((resolve) => setTimeout(resolve, 250));
+        fake.on(diagramsDir()).emit('view-a.json');
+        await fake.settle();
         expect(events).toEqual([]);
 
         await writeFile(diagramFile('view-a'), serializeDiagram({ version: 1, rev: 7, ...graph([node('z', 'Zed')]) }));
-        await waitFor(() => events.length === 1, 'the change event');
+        // A platform that reports no name could have touched any open diagram.
+        fake.on(diagramsDir()).emit(null);
+        await fake.settle();
+        expect(events).toHaveLength(1);
         expect(events[0]).toMatchObject({
             event: 'diagram.changed',
             payload: { projectId, viewId: 'view-a', document: { rev: 7, nodes: [{ id: 'z', label: 'Zed' }] } }
@@ -201,7 +207,8 @@ describe('DiagramStore.write', () => {
         await diagrams.open(projectId, 'view-a');
         await diagrams.save(projectId, 'view-a', 0, graph([node('a')]));
         expect(await diagrams.write(projectId, 'view-a', graph([node('b')]))).toBe(2);
-        await new Promise((resolve) => setTimeout(resolve, 250));
+        fake.on(diagramsDir()).emit('view-a.json');
+        await fake.settle();
         expect(events).toHaveLength(1);
         expect(events[0]).toMatchObject({ event: 'diagram.changed', payload: { viewId: 'view-a', document: { rev: 2 } } });
         await expect(diagrams.save(projectId, 'view-a', 1, graph([]))).rejects.toMatchObject({ code: 'rev-conflict' });
