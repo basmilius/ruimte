@@ -42,8 +42,11 @@ struct MachineProjectsPage: View {
                         WorkspacePage(
                             workspace: MobileWorkspace(session: session, projectID: project.text("projectId")))
                     } label: {
-                        MobileRow(title: project.text("name"), subtitle: project.text("folder"), symbol: "square.stack")
+                        ProjectHomeRow(
+                            summary: project, machine: session.machine.name, connected: session.connected,
+                            session: session)
                     }.disabled(project["available"] == .bool(false))
+                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                 }
                 if loading {
                     ProgressView("Loading projects")

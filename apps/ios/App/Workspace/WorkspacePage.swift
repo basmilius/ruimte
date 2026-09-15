@@ -9,6 +9,7 @@ struct WorkspacePage: View {
     @State private var deleteView: JSONValue?
     @State private var search = ""
     @State private var showTools = false
+    @State private var openedViewID: String?
     @Environment(\.horizontalSizeClass) private var sizeClass
     var body: some View {
         Group {
@@ -39,6 +40,7 @@ struct WorkspacePage: View {
             }
         }
         .navigationTitle(workspace.title)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button("Project tools", systemImage: "folder.badge.gearshape") { showTools = true }.disabled(
@@ -58,7 +60,7 @@ struct WorkspacePage: View {
                         Text("An agent opened a view").font(.subheadline)
                         Spacer()
                         Button("Go there") {
-                            workspace.select(notice.text("viewId"))
+                            openView(notice.text("viewId"))
                             workspace.notice = nil
                         }
                         Button("Dismiss", systemImage: "xmark") { workspace.notice = nil }
@@ -75,6 +77,13 @@ struct WorkspacePage: View {
             }
         }
         .task { workspace.start() }
+        .navigationDestination(item: $openedViewID) { id in
+            if let item = workspace.views.first(where: { $0.stableID == id }) {
+                ProjectItemPage(workspace: workspace, item: item).id(id)
+            } else {
+                ContentUnavailableView("This view was removed", systemImage: "rectangle.slash")
+            }
+        }
         .sheet(isPresented: $adding) { AddProjectItem(workspace: workspace, canvasID: nil) }
         .sheet(isPresented: $showTools) { NavigationStack { ProjectTools(workspace: workspace) } }
         .alert("Rename view", isPresented: Binding(get: { renamed != nil }, set: { if !$0 { renamed = nil } })) {
@@ -124,23 +133,14 @@ struct WorkspacePage: View {
             ForEach(WorkspaceViewSections.split(workspace.views, search: search)) { section in
                 Section {
                     ForEach(section.items, id: \.stableID) { item in
-                        Group {
-                            if sizeClass == .regular {
-                                Button {
-                                    workspace.select(item.stableID)
-                                } label: {
-                                    viewRow(item)
-                                }.foregroundStyle(.primary)
-                            } else {
-                                NavigationLink {
-                                    ProjectItemPage(workspace: workspace, item: item).id(
-                                        item.stableID)
-                                } label: {
-                                    viewRow(item)
-                                }.simultaneousGesture(
-                                    TapGesture().onEnded { workspace.select(item.stableID) })
-                            }
+                        Button {
+                            openView(item.stableID)
+                        } label: {
+                            viewRow(item)
                         }
+                        .foregroundStyle(.primary)
+                        .accessibilityIdentifier("workspace.view.\(item.stableID)")
+                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                         .contextMenu {
                             Button("Rename", systemImage: "pencil") {
                                 renameText = item.text("name")
@@ -173,7 +173,15 @@ struct WorkspacePage: View {
             }
         }
         .listStyle(.insetGrouped)
+        .environment(\.defaultMinListRowHeight, 44)
         .searchable(text: $search, prompt: "Find a view")
+        .accessibilityIdentifier("workspace.views")
+    }
+
+    private func openView(_ id: String) {
+        guard workspace.views.contains(where: { $0.stableID == id && $0.text("kind") != "separator" }) else { return }
+        workspace.select(id)
+        if sizeClass != .regular { openedViewID = id }
     }
 
     private func viewRow(_ item: JSONValue) -> some View {
@@ -186,9 +194,11 @@ struct WorkspacePage: View {
             if sizeClass == .regular && workspace.selectedID == item.stableID {
                 Image(systemName: "checkmark").font(.body.weight(.semibold))
                     .foregroundStyle(MobileStyle.accent).accessibilityLabel("Selected")
+            } else if sizeClass != .regular {
+                Image(systemName: "chevron.right").font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary).accessibilityHidden(true)
             }
         }
-        .frame(minHeight: 44)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
@@ -272,20 +282,24 @@ struct ProjectItemPage: View {
                             "Open this view in a newer Ruimte. Its content is preserved when you edit this project."))
                 }
             }
-        }.navigationTitle(title).navigationBarTitleDisplayMode(.inline)
-            .onAppear {
-                workspace.session.attention.focus(item.stableID)
-                Task { await workspace.session.markSeen(item.stableID) }
-            }
-            .onDisappear { workspace.session.attention.blur(item.stableID) }
-            .task(id: workspace.session.generation) { await prepare() }
+        }
+        .accessibilityIdentifier("workspace.destination.\(item.stableID)")
+        .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            workspace.session.attention.focus(item.stableID)
+            Task { await workspace.session.markSeen(item.stableID) }
+        }
+        .onDisappear { workspace.session.attention.blur(item.stableID) }
+        .task(id: workspace.session.generation) { await prepare() }
     }
     private var title: String { current.text("name", fallback: current.text("title", fallback: current.text("kind"))) }
     private func absolutePath(_ path: String) -> String {
         path.hasPrefix("/") || path.hasPrefix("~") ? path : workspace.folder + "/" + path
     }
     private func prepare() async {
-        guard isPresent, workspace.session.connected else { return }
+        guard isPresent else { return }
+        let needsSession = ["chat", "terminal"].contains(current.text("kind"))
+        guard !needsSession || workspace.session.connected else { return }
         do {
             try await workspace.ensureSession(current)
             guard !Task.isCancelled, isPresent else { return }

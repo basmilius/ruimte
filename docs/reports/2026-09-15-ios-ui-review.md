@@ -1,70 +1,74 @@
 # Native iOS interface review
 
-15 September 2026. Full review of the revised project home, view sections, welcome,
-pairing and AI chat screens. This replaces the earlier machine-first design review. SwiftUI and
-UIKit use native navigation, semantic colors, Dynamic Type and shared `MobileStyle`
-tokens. Desktop project-switcher behavior is the source for project ordering.
+15 September 2026. Full review of project discovery, project and view lists,
+welcome buttons, custom project icons, and usage currency. SwiftUI and UIKit use
+native navigation, inset grouped lists, Dynamic Type and the existing monochrome
+`MobileStyle` colors. Chat remains covered by the existing regression suite; its
+layout was reviewed in the previous iteration.
 
-The [experimental T3 SwiftUI PR](https://github.com/pingdotgg/t3code/pull/5178), at
-`7a741eb7524e3cbac5b0fe3ac4a3a4eb09c73f18`, informed the compact composer, grouped
-work log and transcript-first layout. Its source and screenshots were inspected;
-the implementation here was written independently for Ruimte's existing contracts.
+## Platform references
+
+The implementation follows Apple's [iOS 26 design guidance](https://developer.apple.com/videos/play/wwdc2025/323/)
+for native floating toolbars and reachable search, [automatic search placement](https://developer.apple.com/documentation/swiftui/searchfieldplacement/automatic),
+and [inset grouped lists](https://developer.apple.com/documentation/SwiftUI/ListStyle/insetGrouped).
+Apple authentication retains the [system button](https://developer.apple.com/documentation/authenticationservices/asauthorizationappleidbutton/)
+at its standard 44-point height. The native authorization flow is unchanged.
 
 ## Coverage
 
 | Category | Evidence inspected | Result |
 | --- | --- | --- |
-| Typography | Welcome, project and chat phone/tablet-width fixtures, dark appearance and XXX Large text | Semantic text and bounded chat/welcome widths; controls remain readable |
-| Surfaces | Native screenshots and shared color tokens | Flat project list, grouped view sections and white/black accents with contrasting button labels |
-| Animations | Composer focus state, diffable transcript updates and collection layout anchoring | No new custom animations; scroll updates respect reading position and user gestures; slow-motion physical transitions not verified |
-| Icons | Welcome assets, Apple button, project/view glyphs, chat controls | Real Ruimte and GitHub artwork, system Apple button, 67 original Lucide vector assets for project/view marks, SF Symbols for native actions |
-| Performance | Shared connection leases, cache reconciliation, diffable timeline and bounded syntax cache | Project reads shared per machine; no per-token animation; physical frame rate not measured |
+| Typography | Welcome, project, recent-project and view-list captures in light/dark appearance and large text; locale formatter tests | System body text, compact rows that grow for larger text, matching sign-in title cap height |
+| Surfaces | Native phone/tablet-width captures and list geometry tests | Inset grouped lists; no top separator or hand-built search surface; secondary project title uses inline navigation |
+| Animations | Native row activation, destination mounting, startup cancellation and existing chat scroll tests | No new custom transitions; native push and split selection work; slow-motion physical transitions not verified |
+| Icons | Desktop protocol and detector, Lucide assets, original project image decoding, rendered SVG pixel checks | Custom image resources already exist in the protocol; SVG and raster icons retain original colors and dark variants |
+| Performance | Shared startup task, project connection leases, image request coalescing and bounded image cache | One startup request sequence; shared icon requests, 96 cached thumbnails, serialized transient SVG rendering |
 
 ## Changes
 
 | Severity | Location | Before | After | Why |
 | --- | --- | --- | --- | --- |
-| MEDIUM | `apps/ios/App/Workspace/AppHome.swift:5`, `UnifiedProjects.swift:5` | Machine selection before reaching projects | One list across machines, open projects by last use and recently closed by close time; direct project navigation | Match the desktop mental model and shorten navigation |
-| MEDIUM | `apps/ios/App/Workspace/UnifiedProjects.swift:27`, `apps/ios/App/AppRuntime.swift:30` | Independent per-page project lists | Cached offline rows, separate unavailable-folder state, machine/project identity and invalidation guards | Keep projects discoverable without confusing stale connections with missing folders |
-| MEDIUM | `apps/ios/App/Workspace/WelcomePage.swift:6` | Generic login controls, server-defined provider order and a placeholder app glyph | Welcome with Ruimte artwork, native Apple sign-in first, official GitHub mark, matching button sizes and state feedback | Recognizable authentication and clear hierarchy on iOS and iPadOS |
-| MEDIUM | `apps/ios/App/Workspace/AppHome.swift:5`, `PairMachinePage.swift:41` | Pairing behind an unlabeled plus button | Explicit pairing-link entry before and after sign-in, guided link entry, native Paste and a visible connect action | Make account-free connection discoverable |
-| MEDIUM | `apps/ios/App/Sessions/ChatScreen.swift:7` | Permanently expanded composer controls | Compact reading state, expanded editing tools, keyboard-dismiss control and contextual stop/send | Leave more room for the conversation |
-| MEDIUM | `apps/ios/App/Sessions/ChatTimeline.swift:116` | Separate tool entries and repeated Assistant labels | Consecutive tool/reasoning/subagent activity in an expandable work log; quiet message framing | Make answers easier to scan without losing tool details |
-| LOW | `apps/ios/App/Sessions/MarkdownMessage.swift:6` | Dense inline code and fixed horizontal code scrolling | Semantic body spacing, inline-code treatment and code wrap/copy controls | Improve long-answer reading and code interaction |
-| HIGH | `apps/ios/App/Sessions/ChatTimeline.swift` | One scroll-to-item call after each update, including during user scrolling; later Markdown measurement could move the content again | Explicit follow-latest state, visible message ID and offset anchoring after layout, and no automatic scrolling during drag/deceleration | Preserve reading position through streaming, keyboard resizing and work-log expansion |
-| MEDIUM | `apps/ios/App/Workspace/WorkspacePage.swift`, `WorkspaceViewSections.swift` | Separators appeared as empty rows; view rows repeated their kind as a subtitle | Separators form sections, empty sections disappear, and view rows show only their icon and name | Make the list easier to scan and match the desktop grouping |
-| MEDIUM | `apps/ios/App/Design/LucideIcon.swift`, `apps/ios/App/Workspace/AppHome.swift` | Different view symbols and a fallback initial for chosen Lucide project icons | Original vector glyphs from the installed desktop Lucide package, preserving chosen icons and emoji | Keep project and view recognition consistent across clients |
-| MEDIUM | `apps/ios/App/Design/MobileStyle.swift` | Blue accents throughout navigation and controls | White accents in dark appearance, black in light appearance, with inverse text on filled buttons | Follow the requested monochrome appearance without losing button contrast |
-| MEDIUM | `apps/ios/App/Workspace/WelcomePage.swift`, `apps/ios/App/AppRuntime.swift` | Extra signing-in row shifted the welcome layout; cancellation appeared in an inline notice | Stable disabled buttons during authentication, silent cancellation and a native alert for errors | Avoid unnecessary layout changes and reserve interruption for real failures |
-| MEDIUM | `apps/ios/App/Workspace/WelcomePage.swift` | The logo inherited the white foreground in dark appearance and disappeared on its white tile | Render the logo with its original colors | Preserve the brand mark in both appearances |
+| HIGH | `apps/ios/App/AppRuntime.swift`, `AddressBookClient.swift` | Restoring an account replaced the root view and canceled startup; cancellation became an address-book network error | Runtime owns one shared startup task; provider discovery is independent of machine loading; cancellation stays cancellation and successful refresh clears old errors | Projects load without requiring a manual pull-to-refresh after launch |
+| HIGH | `apps/ios/App/Workspace/WorkspacePage.swift` | Row navigation mixed a link with a selection gesture; every destination waited for a connected session, including cached canvas content | One row activation updates selection and opens a native destination; only chat and terminal session creation waits for connectivity | A tap opens the view and cached content remains usable while reconnecting |
+| MEDIUM | `apps/ios/App/Workspace/WorkspacePage.swift` | A 44-point inner row plus native button padding produced taller rows | List owns the 44-point minimum; row content has no extra minimum or vertical insets | Compact rows retain a full touch target and can grow for larger text |
+| MEDIUM | `apps/ios/App/Workspace/AppHome.swift`, `MachineProjectsPage.swift` | Plain project list, large row padding and a separator below the forced top search bar | Inset grouped lists, compact project rows and no section-leading separator | Match the requested view-list style and native list conventions |
+| MEDIUM | `apps/ios/App/Workspace/AppHome.swift` | Search was forced into the top navigation drawer | Automatic native search placement, including the bottom toolbar on iPhone | Keep search within reach using the current system control |
+| MEDIUM | `apps/ios/App/Workspace/AppHome.swift`, `UnifiedProjects.swift` | Initial discovery had no progress indicator | Loading/connecting state for an empty list and a small update indicator when cached projects are visible | Distinguish work in progress from an empty project collection |
+| MEDIUM | `apps/ios/App/Workspace/AppHome.swift` | Recently closed projects occupied the main list | One link opens a separate searchable, refreshable recent-project list | Keep current projects prominent while retaining history |
+| MEDIUM | `apps/ios/App/Workspace/ProjectArtwork.swift`, `ProjectSVGRasterizer.swift` | Image project icons fell back to initials | Read the existing authenticated `projectIcon` resource, including `.idea/icon.svg` and dark variants; display native cached thumbnails | Preserve the same project recognition as the desktop client without extending the protocol |
+| MEDIUM | `apps/ios/App/Pages/MachineUsagePage.swift`, `UsageMoneyFormatter.swift` | Usage always formatted dollars | OS regions using EUR select euros with the existing exchange rate; other regions use USD; missing rates explicitly fall back to dollars | Match regional expectations without relabeling unconverted dollar amounts |
+| LOW | `apps/ios/App/Workspace/WelcomePage.swift` | The 54-point Apple button rendered larger text than GitHub | Both controls use 44-point visual and touch height; GitHub keeps system body medium and Apple keeps native typography | Match title size while preserving the official Apple control |
+| LOW | `apps/ios/App/Workspace/WorkspacePage.swift` | A large project title reserved excess vertical space | Inline project title above the compact section list | Leave more room for views on a phone |
 
 ## Considered and rejected
 
 | Location | Candidate | Rejected because |
 | --- | --- | --- |
-| Project home | Group the entire list by machine | The user asked for the unified desktop switcher; recent use should determine order |
-| View icons | Approximate Lucide with SF Symbols | The desktop package already provides the exact vector artwork, which can be bundled without another runtime dependency |
-| Chat | Animate streaming tokens or composer resizing | Frequent movement would interrupt reading and add work during streaming |
-| Navigation | Copy T3's server/environment hierarchy | Ruimte owns projects per machine and already has shared connection/session lifetimes |
+| Lists | Add custom glass backgrounds to every row | Native inset grouped sections already provide the requested hierarchy; glass belongs to system navigation and toolbars |
+| Custom icons | Add an icon URL to the protocol | The authenticated byte-resource protocol already exposes the daemon's detected project icon and theme variant |
+| SVG icons | Keep one WebKit view per project row | That would make scrolling and memory use depend on the number of visible projects; snapshots become small native images instead |
+| Usage | Change the currency symbol without converting | Costs arrive in USD and must use the existing rate before displaying EUR |
+| Apple button | Modify its private label font | The native control has no public font setting; sizing the supported control matches the title without private API access |
 
 ## Verification
 
-- Full native simulator suite: 52 tests passed, 46 XCTest and 6 Swift Testing. This includes 7 scroll tests, 8 section/icon tests and a real workspace visual fixture through the existing RPC path.
-- Final project-home layout: targeted native test passed again after fixing the dark logo, with 8 welcome/project captures.
-- Reviewed native screenshots cover the new view sections in light/dark appearance, tablet width and XXX Large text, plus monochrome welcome, project and chat screens. Workspace fixtures intentionally show an offline machine. Code wrap/copy and composer editing paths were inspected in code.
-- `xcodebuild ... test CODE_SIGN_IDENTITY=-` used the iPhone 18 Pro iOS 27 simulator. The latest full result is `Test-Ruimte-2026.09.15_19-12-55-+0200.xcresult`. Section/chat captures are in `/tmp/ruimte-ios-refinements-captures`; final welcome/project captures are in `/tmp/ruimte-ios-monochrome-home-captures`.
-- The Pulsar Swift package passed 35 tests. The native Apple Worker suite passed 76 tests with one existing secret-dependent test skipped. The isolated Apple-only deployment bundle also passed its dry run and tests.
-- `bun run check`, `bun run format` and `git diff --check` passed. Existing client lint warnings remain unchanged.
-- Signed development build for Bas's iPhone 15 Pro Max passed, including both extensions. `codesign --verify --deep --strict` passed. `devicectl` installed and launched this revision on the device.
-- With Bas's approval, migration `0007_native_apple.sql` and the isolated Apple-only Pulsar update were deployed. Worker version: `30be96f9-baf9-4112-a02b-03c4f2c70882`. Live checks confirmed healthy service, Apple/GitHub availability, native nonce creation, invalid-credential rejection and one-use attempt enforcement. No account or authenticated session was created by these checks.
-- The first cache fixture exposed an unknown-schema lookup that silently discarded stored projects. It now uses the generated event schema; offline cache tests pass.
+- Full native simulator suite passed 66 tests, 60 XCTest and 6 Swift Testing, on iPhone 18 Pro with iOS 27. Result: `Test-Ruimte-2026.09.15_19-47-35-+0200.xcresult`.
+- Native row tests invoke UIKit's primary activation action, require 44-to-46-point row geometry and assert that the real `CanvasScrollView` mounts on phone and tablet widths.
+- Startup tests cover root-task cancellation and replacement, provider-discovery failure with a restored account, and sign-out while a machine response is pending.
+- SVG tests assert original red and gradient pixel values after actual WebKit rendering. Raster tests cover bounded resource loading, thumbnail size, identity/theme/version keys and cache reuse.
+- Currency tests cover euro regions with different languages, dollar fallback, invalid rates, local separators, sub-cent amounts and single conversion of chart values.
+- The Pulsar Swift package passed 37 tests. `bun run format`, `bun run check` and `git diff --check` passed; existing desktop lint warnings remain.
+- Captures are in `/tmp/ruimte-ios-native-navigation-final`. The sign-in title's capital S measures 37 pixels in both buttons at the captured default text size.
+- After the final icon and branding refinements, all 6 focused native tests passed. Welcome captures also assert that the original navy and silver logo fills remain visible. Result: `Test-Ruimte-2026.09.15_19-53-17-+0200.xcresult`; captures: `/tmp/ruimte-ios-native-navigation-brand-final`.
+- The signed Debug build passed strict code-signature verification, installed on Bas's iPhone, and launched successfully through `devicectl`. Build log: `/tmp/ruimte-ios-native-navigation-device.log`.
 
-Not verified: live Apple/GitHub authorization, a new physical pairing, live keyboard
-interaction, VoiceOver, physical iPad multitasking, all accessibility sizes, native
-transitions at 10% speed, and physical frame-rate measurements. Fixtures do not prove
-live network or push delivery. Direct ICE with TURN fallback remains unchanged.
+Not verified: physical VoiceOver and keyboard navigation, live first-launch network
+transitions, all accessibility sizes, physical iPad multitasking, transitions at
+10% speed, every custom SVG feature, and physical frame-rate measurements. A native
+fixture proves layout and routing, not a new live machine connection or Apple login.
+Direct ICE with TURN fallback is unchanged. These changes require no server deployment.
 
 ## Verdict
 
-Approve for the inspected screens after the recorded corrections. The unverified
-interaction and physical-device checks above remain acceptance work.
+Approve for the inspected scope after the recorded corrections. The physical-device
+and accessibility checks above remain acceptance work.

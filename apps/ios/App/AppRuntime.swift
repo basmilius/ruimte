@@ -26,15 +26,18 @@ final class AppRuntime {
     @ObservationIgnored lazy var notifications = NotificationCoordinator(runtime: self)
     private var sessions: [String: SharedMachineSession] = [:]
     private var initialized = false
+    @ObservationIgnored private var startupTask: Task<Void, Never>?
+    private var startupRevision = 0
     private var sessionRevision = 0
     private(set) var connectionRevision = 0
 
     init(
         client: AddressBookClient = AddressBookClient(), vault: SessionVault? = nil, defaults: UserDefaults = .standard,
-        connections: MachineConnections? = nil, pairings: StatementPairings? = nil
+        connections: MachineConnections? = nil, pairings: StatementPairings? = nil, deviceKey: DeviceKey? = nil
     ) {
         self.client = client
         self.vault = vault
+        self.key = deviceKey
         self.defaults = defaults
         self.connections = connections ?? MachineConnections()
         self.pairings = pairings ?? StatementPairings(store: UserDefaultsPairingStore(defaults: defaults))
@@ -67,33 +70,82 @@ final class AppRuntime {
     }
 
     func start() async {
-        guard !initialized else { return }
-        initialized = true
+        if let startupTask {
+            await startupTask.value
+            return
+        }
+        guard !initialized, !signingOut else { return }
+        startupRevision += 1
+        let startup = startupRevision
+        let operation = sessionRevision
+        // Restoring account changes the root view's identity. Its canceled .task must not cancel this shared startup.
+        let task = Task { [weak self] in
+            guard let self else { return }
+            await self.initialize(startup: startup, operation: operation)
+        }
+        startupTask = task
+        await task.value
+    }
+
+    private func initialize(startup: Int, operation: Int) async {
         loading = true
-        defer { loading = false }
+        defer {
+            if startup == startupRevision {
+                startupTask = nil
+                loading = false
+            }
+        }
         do {
             let store = KeychainStore()
-            let key = try DeviceKey.loadOrCreate(in: store)
-            self.key = key
+            if key == nil { key = try DeviceKey.loadOrCreate(in: store) }
             machines = pairedMachines
-            let vault = SessionVault(
-                client: client, store: store,
-                signer: {
-                    guard let bytes = try store.readData(account: "device-key") else { return nil }
-                    return try DeviceKey(rawRepresentation: bytes)
-                })
-            self.vault = vault
-            account = try await vault.restore()?.account
-            providers = try await client.providers().compactMap(ProviderId.init(rawValue:))
+            if vault == nil {
+                vault = SessionVault(
+                    client: client, store: store,
+                    signer: {
+                        guard let bytes = try store.readData(account: "device-key") else { return nil }
+                        return try DeviceKey(rawRepresentation: bytes)
+                    })
+            }
+            let restored = try await vault?.restore()
+            try Task.checkCancellation()
+            guard operation == sessionRevision else { return }
+            account = restored?.account
+            initialized = true
+            async let availableProviders = client.providers()
             if account != nil { await refreshMachines() }
+            do {
+                let available = try await availableProviders
+                try Task.checkCancellation()
+                guard operation == sessionRevision else { return }
+                providers = available.compactMap(ProviderId.init(rawValue:))
+                if account == nil { problem = nil }
+            } catch is CancellationError {
+                return
+            } catch {
+                // Provider discovery is optional for a restored account and must not hide its machine list.
+                if operation == sessionRevision, account == nil { problem = error.localizedDescription }
+            }
+        } catch is CancellationError {
+            return
         } catch {
-            problem = error.localizedDescription
-            initialized = false
+            if operation == sessionRevision {
+                problem = error.localizedDescription
+                initialized = false
+            }
         }
+    }
+
+    private func cancelStartup() {
+        startupRevision += 1
+        startupTask?.cancel()
+        startupTask = nil
+        loading = false
     }
 
     func signIn(_ provider: ProviderId, window: UIWindow) async {
         guard let vault, !signingIn, !signingOut else { return }
+        cancelStartup()
         sessionRevision += 1
         let operation = sessionRevision
         signingIn = true
@@ -151,13 +203,16 @@ final class AppRuntime {
                 account = nil
                 applyMachines(pairedMachines)
                 await notifications.synchronize()
+                if operation == sessionRevision { problem = nil }
                 return
             }
             let result = try await client.listMachines(accessToken: token)
             guard operation == sessionRevision else { return }
             applyMachineList(result)
             await notifications.synchronize()
-            problem = nil
+            if operation == sessionRevision { problem = nil }
+        } catch is CancellationError {
+            return
         } catch {
             if operation == sessionRevision { problem = error.localizedDescription }
         }
@@ -224,6 +279,7 @@ final class AppRuntime {
         guard !signingOut else { return }
         signingOut = true
         defer { signingOut = false }
+        cancelStartup()
         cancelSignIn()
         sessionRevision += 1
         let operation = sessionRevision

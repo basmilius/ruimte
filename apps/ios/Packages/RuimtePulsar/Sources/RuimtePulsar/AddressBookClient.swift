@@ -24,12 +24,20 @@ public struct AddressBookClient: SessionAPI, NativeAppleAPI, Sendable {
     public typealias Fetch = @Sendable (URLRequest) async throws -> (Data, HTTPURLResponse)
     public let baseURL: URL
     private let fetch: Fetch
+    private static let networkSession = URLSession(configuration: connectionConfiguration())
+
+    static func connectionConfiguration() -> URLSessionConfiguration {
+        let configuration = URLSessionConfiguration.default
+        configuration.waitsForConnectivity = true
+        configuration.timeoutIntervalForResource = 60
+        return configuration
+    }
 
     public init(baseURL: URL = URL(string: WireConstants.addressBookURL)!, fetch: Fetch? = nil) {
         self.baseURL = baseURL
         self.fetch =
             fetch ?? { request in
-                let (data, response) = try await URLSession.shared.data(for: request)
+                let (data, response) = try await Self.networkSession.data(for: request)
                 guard let response = response as? HTTPURLResponse else {
                     throw AddressBookRequestError(
                         code: "bad-answer", status: 0, message: "The address book returned no HTTP response.")
@@ -129,8 +137,12 @@ public struct AddressBookClient: SessionAPI, NativeAppleAPI, Sendable {
         let data: Data
         let response: HTTPURLResponse
         do {
+            try Task.checkCancellation()
             (data, response) = try await fetch(request)
+            try Task.checkCancellation()
         } catch is CancellationError {
+            throw CancellationError()
+        } catch let error as URLError where error.code == .cancelled {
             throw CancellationError()
         } catch let error as AddressBookRequestError {
             throw error

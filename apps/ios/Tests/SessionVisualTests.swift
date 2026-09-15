@@ -91,11 +91,40 @@ final class SessionVisualTests: XCTestCase {
             capture(window, name: name)
             if signedIn {
                 XCTAssertEqual(model.open.map { $0.summary.text("name") }, ["Ruimte", "Flux", "Homey dashboard"])
+                let recentHost = UIHostingController(
+                    rootView: NavigationStack { RecentProjectsPage(runtime: runtime, projects: model) }
+                        .tint(MobileStyle.accent)
+                        .preferredColorScheme(dark ? .dark : .light).dynamicTypeSize(typeSize))
+                window.rootViewController = recentHost
+                recentHost.view.frame = window.bounds
+                for _ in 0..<20 { await displayFrame() }
+                capture(window, name: name.replacingOccurrences(of: "projects", with: "recent-projects"))
             }
             window.isHidden = true
             window.rootViewController = nil
             model.stop()
         }
+        runtime.connections.shutdown()
+    }
+
+    @MainActor func testInitialProjectLoadingState() async {
+        let client = AddressBookClient(fetch: { request in
+            (
+                Data(#"{"providers":["github","apple"]}"#.utf8),
+                HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            )
+        })
+        let runtime = AppRuntime(client: client)
+        await runtime.start()
+        runtime.account = Account(id: "loading-fixture", provider: .github, login: "basmilius")
+        runtime.loading = true
+        let host = UIHostingController(rootView: AppHome(runtime: runtime).tint(MobileStyle.accent))
+        let window = makeWindow(host, size: CGSize(width: 402, height: 874))
+        for _ in 0..<20 { await displayFrame() }
+        capture(window, name: "projects-loading")
+        runtime.loading = false
+        window.isHidden = true
+        window.rootViewController = nil
         runtime.connections.shutdown()
     }
 
@@ -195,10 +224,45 @@ final class SessionVisualTests: XCTestCase {
         window.layoutIfNeeded()
         let renderer = UIGraphicsImageRenderer(bounds: window.bounds)
         let image = renderer.image { _ in window.drawHierarchy(in: window.bounds, afterScreenUpdates: true) }
+        if name.hasPrefix("welcome-") { assertLogoVisible(image, name: name) }
         let attachment = XCTAttachment(image: image)
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    @MainActor private func assertLogoVisible(_ image: UIImage, name: String) {
+        guard let source = image.cgImage else {
+            XCTFail("Missing screenshot pixels: \(name)")
+            return
+        }
+        var pixels = [UInt8](repeating: 0, count: source.width * source.height * 4)
+        pixels.withUnsafeMutableBytes { storage in
+            guard
+                let context = CGContext(
+                    data: storage.baseAddress, width: source.width, height: source.height,
+                    bitsPerComponent: 8, bytesPerRow: source.width * 4,
+                    space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+                )
+            else {
+                XCTFail("Cannot read screenshot pixels: \(name)")
+                return
+            }
+            context.draw(source, in: CGRect(x: 0, y: 0, width: source.width, height: source.height))
+        }
+        var navy = 0
+        var silver = 0
+        for offset in stride(from: 0, to: pixels.count, by: 4) {
+            let red = Int(pixels[offset])
+            let green = Int(pixels[offset + 1])
+            let blue = Int(pixels[offset + 2])
+            if abs(red - 15) <= 4 && abs(green - 21) <= 4 && abs(blue - 41) <= 4 { navy += 1 }
+            if abs(red - 214) <= 4 && abs(green - 217) <= 4 && abs(blue - 224) <= 4 { silver += 1 }
+        }
+        // Both original fills must survive initial rendering and the fixture's light/dark transitions.
+        XCTAssertGreaterThan(navy, 200, "Missing navy logo shape: \(name)")
+        XCTAssertGreaterThan(silver, 200, "Missing silver logo shape: \(name)")
     }
 
     @MainActor private func displayFrame() async {

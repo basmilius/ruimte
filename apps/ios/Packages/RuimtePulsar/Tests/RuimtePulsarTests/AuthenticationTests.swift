@@ -1,10 +1,13 @@
 import Foundation
 import Testing
+
 @testable import RuimtePulsar
 
 private let authNow: Int64 = 1_800_000_000_000
 private let authAccount = Account(id: "account-1", provider: .github, login: "someone")
-private let authLogin = SessionLoginCode(code: String(repeating: "c", count: 43), codeVerifier: String(repeating: "v", count: 43), redirectUri: PKCELogin.redirectURI, label: "iPhone")
+private let authLogin = SessionLoginCode(
+    code: String(repeating: "c", count: 43), codeVerifier: String(repeating: "v", count: 43),
+    redirectUri: PKCELogin.redirectURI, label: "iPhone")
 
 private final class MemorySessionStore: SessionStore, @unchecked Sendable {
     private let lock = NSLock()
@@ -39,9 +42,11 @@ private actor FakeSessionAPI: SessionAPI {
     }
 
     func exchange(_ payload: SessionExchangePayload) async throws -> SessionResult {
-        #expect(DeviceKey.verify(signature: payload.sessionKeySignature,
-                                 message: try SigningBytes.sessionKey(code: payload.code, publicKey: payload.sessionKey),
-                                 publicKey: payload.sessionKey))
+        #expect(
+            DeviceKey.verify(
+                signature: payload.sessionKeySignature,
+                message: try SigningBytes.sessionKey(code: payload.code, publicKey: payload.sessionKey),
+                publicKey: payload.sessionKey))
         publicKey = payload.sessionKey
         await exchangeGate?.wait()
         return nextSession()
@@ -54,9 +59,11 @@ private actor FakeSessionAPI: SessionAPI {
             throw AddressBookRequestError(code: failure, status: 401, message: "Rejected")
         }
         guard payload.refreshToken == refreshToken, let publicKey,
-              DeviceKey.verify(signature: payload.signature,
-                               message: try SigningBytes.sessionRefresh(token: payload.refreshToken, issuedAt: payload.issuedAt),
-                               publicKey: publicKey) else {
+            DeviceKey.verify(
+                signature: payload.signature,
+                message: try SigningBytes.sessionRefresh(token: payload.refreshToken, issuedAt: payload.issuedAt),
+                publicKey: publicKey)
+        else {
             throw AddressBookRequestError(code: "bad-signature", status: 403, message: "Rejected")
         }
         return nextSession()
@@ -73,8 +80,9 @@ private actor FakeSessionAPI: SessionAPI {
         generation += 1
         let refresh = String(repeating: String(generation), count: 43)
         refreshToken = refresh
-        return SessionResult(accessToken: "access-\(generation)", accessExpiresAt: authNow + 900_000,
-                             refreshToken: refresh, expiresAt: authNow + 86_400_000, account: authAccount)
+        return SessionResult(
+            accessToken: "access-\(generation)", accessExpiresAt: authNow + 900_000,
+            refreshToken: refresh, expiresAt: authNow + 86_400_000, account: authAccount)
     }
 }
 
@@ -112,6 +120,27 @@ private actor RefreshGate {
 
 @Suite("Authentication")
 struct AuthenticationTests {
+    @Test func urlSessionCancellationRemainsCancellationInsteadOfANetworkFailure() async {
+        let client = AddressBookClient(fetch: { _ in throw URLError(.cancelled) })
+        await #expect(throws: CancellationError.self) { try await client.providers() }
+    }
+
+    @Test func connectivityWaitIsBoundedAndRealNetworkFailuresStayVisible() async {
+        let configuration = AddressBookClient.connectionConfiguration()
+        #expect(configuration.waitsForConnectivity)
+        #expect(configuration.timeoutIntervalForResource == 60)
+        let client = AddressBookClient(fetch: { _ in throw URLError(.notConnectedToInternet) })
+        do {
+            _ = try await client.providers()
+            Issue.record("An offline request unexpectedly succeeded")
+        } catch let error as AddressBookRequestError {
+            #expect(error.code == "network")
+            #expect(error.status == 0)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+
     @MainActor @Test func cancelDuringExchangeDoesNotKeepTheSession() async throws {
         let gate = RefreshGate()
         let api = FakeSessionAPI(exchangeGate: gate)
@@ -225,19 +254,29 @@ struct AuthenticationTests {
         let code = String(repeating: "a", count: 43)
         let valid = URL(string: "ruimte://pulsar/callback?state=expected-state&code=\(code)")!
         #expect(try login.loginCode(callback: valid, label: "iPhone").code == code)
-        for prefix in ["ruimte://evil/callback", "ruimte://pulsar/callback/extra", "ruimte://pulsar:42/callback", "ruimte://user@pulsar/callback", "ruimte://pulsar/%63allback"] {
+        for prefix in [
+            "ruimte://evil/callback", "ruimte://pulsar/callback/extra", "ruimte://pulsar:42/callback",
+            "ruimte://user@pulsar/callback", "ruimte://pulsar/%63allback",
+        ] {
             #expect(throws: LoginError.invalidCallback) {
-                try login.loginCode(callback: URL(string: "\(prefix)?state=expected-state&code=\(code)")!, label: "iPhone")
+                try login.loginCode(
+                    callback: URL(string: "\(prefix)?state=expected-state&code=\(code)")!, label: "iPhone")
             }
         }
         #expect(throws: LoginError.wrongState) {
-            try login.loginCode(callback: URL(string: "ruimte://pulsar/callback?state=other&code=\(code)")!, label: "iPhone")
+            try login.loginCode(
+                callback: URL(string: "ruimte://pulsar/callback?state=other&code=\(code)")!, label: "iPhone")
         }
         #expect(throws: LoginError.wrongState) {
-            try login.loginCode(callback: URL(string: "ruimte://pulsar/callback?state=expected-state&state=expected-state&code=\(code)")!, label: "iPhone")
+            try login.loginCode(
+                callback: URL(
+                    string: "ruimte://pulsar/callback?state=expected-state&state=expected-state&code=\(code)")!,
+                label: "iPhone")
         }
         #expect(throws: LoginError.cancelled) {
-            try login.loginCode(callback: URL(string: "ruimte://pulsar/callback?state=expected-state&error=access_denied")!, label: "iPhone")
+            try login.loginCode(
+                callback: URL(string: "ruimte://pulsar/callback?state=expected-state&error=access_denied")!,
+                label: "iPhone")
         }
         #expect(throws: LoginError.invalidCallback) {
             try login.loginCode(callback: URL(string: valid.absoluteString + "#fragment")!, label: "iPhone")
@@ -250,8 +289,13 @@ struct AuthenticationTests {
     @Test func unknownProvidersAreRetainedAndMalformedAnswersRejected() async throws {
         let client = AddressBookClient(fetch: { request in
             #expect(request.url?.scheme == "https")
-            let body = request.url?.path == "/v1/providers" ? #"{"providers":["github","future"]}"# : #"{"machines":[{"id":"machine","name":""}]}"#
-            return (Data(body.utf8), HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+            let body =
+                request.url?.path == "/v1/providers"
+                ? #"{"providers":["github","future"]}"# : #"{"machines":[{"id":"machine","name":""}]}"#
+            return (
+                Data(body.utf8),
+                HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            )
         })
         #expect(try await client.providers() == ["github", "future"])
         await #expect(throws: AddressBookRequestError.self) { try await client.listMachines(accessToken: "access") }
@@ -281,13 +325,20 @@ struct AuthenticationTests {
         let client = AddressBookClient(fetch: { request in
             #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer access")
             let payload = try JSONDecoder().decode(AccessRequestPayload.self, from: request.httpBody!)
-            #expect(DeviceKey.verify(signature: payload.signature,
-                                     message: try SigningBytes.accessRequest(machineID: payload.machineId, publicKey: payload.clientPublicKey, nonce: payload.nonce),
-                                     publicKey: key.publicKey))
-            let statement = AccessStatement(machineId: "another-machine", clientPublicKey: payload.clientPublicKey,
-                                            nonce: payload.nonce, issuedAt: authNow, expiresAt: authNow + 120_000,
-                                            signature: String(repeating: "a", count: 86))
-            return (try JSONEncoder().encode(statement), HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+            #expect(
+                DeviceKey.verify(
+                    signature: payload.signature,
+                    message: try SigningBytes.accessRequest(
+                        machineID: payload.machineId, publicKey: payload.clientPublicKey, nonce: payload.nonce),
+                    publicKey: key.publicKey))
+            let statement = AccessStatement(
+                machineId: "another-machine", clientPublicKey: payload.clientPublicKey,
+                nonce: payload.nonce, issuedAt: authNow, expiresAt: authNow + 120_000,
+                signature: String(repeating: "a", count: 86))
+            return (
+                try JSONEncoder().encode(statement),
+                HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            )
         })
         await #expect(throws: AddressBookRequestError.self) {
             try await client.signalAccess(accessToken: "access", machineID: "machine", key: key, label: "iPhone")
@@ -305,11 +356,15 @@ struct AuthenticationTests {
             let actual: String
             switch kind {
             case "sessionKey":
-                actual = try SigningBytes.sessionKey(code: #require(arguments[0] as? String), publicKey: #require(arguments[1] as? String))
+                actual = try SigningBytes.sessionKey(
+                    code: #require(arguments[0] as? String), publicKey: #require(arguments[1] as? String))
             case "sessionRefresh":
-                actual = try SigningBytes.sessionRefresh(token: #require(arguments[0] as? String), issuedAt: #require(arguments[1] as? NSNumber).int64Value)
+                actual = try SigningBytes.sessionRefresh(
+                    token: #require(arguments[0] as? String), issuedAt: #require(arguments[1] as? NSNumber).int64Value)
             case "accessRequest":
-                actual = try SigningBytes.accessRequest(machineID: #require(arguments[0] as? String), publicKey: #require(arguments[1] as? String), nonce: #require(arguments[2] as? String))
+                actual = try SigningBytes.accessRequest(
+                    machineID: #require(arguments[0] as? String), publicKey: #require(arguments[1] as? String),
+                    nonce: #require(arguments[2] as? String))
             default: continue
             }
             #expect(actual == expected)

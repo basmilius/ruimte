@@ -12,8 +12,6 @@ struct WelcomePage: View {
     @State private var retrying = false
 
     private var busy: Bool { runtime.loading || runtime.signingIn || runtime.signingOut || retrying }
-    private var buttonFill: Color { colorScheme == .dark ? .white : .black }
-    private var buttonText: Color { colorScheme == .dark ? .black : .white }
 
     var body: some View {
         GeometryReader { geometry in
@@ -54,7 +52,7 @@ struct WelcomePage: View {
     private var introduction: some View {
         VStack(spacing: 28) {
             VStack(spacing: 12) {
-                Image("RuimteLogo")
+                Image(uiImage: UIImage(named: "RuimteLogo")?.withRenderingMode(.alwaysOriginal) ?? UIImage())
                     .renderingMode(.original)
                     .resizable()
                     .scaledToFit()
@@ -85,33 +83,14 @@ struct WelcomePage: View {
                     .frame(maxWidth: .infinity, minHeight: buttonHeight)
             } else {
                 if runtime.providers.contains(.apple) {
-                    AppleAccountButton(dark: colorScheme == .dark, enabled: !busy && window != nil) {
+                    ProviderAccountButton(provider: .apple, enabled: !busy && window != nil) {
                         signIn(.apple)
                     }
-                    .id(colorScheme)
-                    .frame(height: buttonHeight)
                 }
                 if runtime.providers.contains(.github) {
-                    Button {
+                    ProviderAccountButton(provider: .github, enabled: !busy && window != nil) {
                         signIn(.github)
-                    } label: {
-                        HStack(spacing: 10) {
-                            // Official mark: https://brand.github.com/foundations/logo
-                            Image("GitHubMark")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 24, height: 24)
-                                .accessibilityHidden(true)
-                            Text("Sign in with GitHub")
-                                .font(.body.weight(.medium))
-                        }
-                        .foregroundStyle(buttonText)
-                        .frame(maxWidth: .infinity, minHeight: buttonHeight)
-                        .background(buttonFill, in: RoundedRectangle(cornerRadius: 12))
-                        .contentShape(RoundedRectangle(cornerRadius: 12))
                     }
-                    .buttonStyle(WelcomeActionStyle())
-                    .disabled(busy || window == nil)
                 }
                 if runtime.providers.isEmpty {
                     Text("Account sign-in is unavailable right now.")
@@ -183,29 +162,61 @@ private struct WelcomeActionStyle: ButtonStyle {
     }
 }
 
-private struct AppleAccountButton: UIViewRepresentable {
-    let dark: Bool
+private struct ProviderAccountButton: View {
+    let provider: ProviderId
     let enabled: Bool
     let action: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
+    @ScaledMetric(relativeTo: .body) private var visualHeight = 44
+    @ScaledMetric(relativeTo: .body) private var logoSpacing = 10
+    @ScaledMetric(relativeTo: .body) private var logoSize = 24
 
-    func makeCoordinator() -> Coordinator { Coordinator(action: action) }
+    private var buttonFill: Color { colorScheme == .dark ? .white : .black }
+    private var buttonText: Color { colorScheme == .dark ? .black : .white }
+    private var title: String { provider == .apple ? "Sign in with Apple" : "Sign in with GitHub" }
+
+    var body: some View {
+        Button(action: action) {
+            Group {
+                if provider == .apple {
+                    AppleAccountButton(dark: colorScheme == .dark)
+                        .id(colorScheme)
+                        .frame(height: visualHeight)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                } else {
+                    HStack(spacing: logoSpacing) {
+                        // Official mark: https://brand.github.com/foundations/logo
+                        Image("GitHubMark").renderingMode(.template).resizable().scaledToFit()
+                            .frame(width: logoSize, height: logoSize)
+                            .accessibilityHidden(true)
+                        Text(title).font(.body.weight(.medium))
+                    }
+                    .foregroundStyle(buttonText)
+                    .frame(maxWidth: .infinity, minHeight: visualHeight)
+                    .background(buttonFill, in: RoundedRectangle(cornerRadius: 12))
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(WelcomeActionStyle())
+        .disabled(!enabled)
+        .accessibilityLabel(title)
+        .accessibilityIdentifier("welcome.sign-in.\(provider.rawValue)")
+    }
+}
+
+private struct AppleAccountButton: UIViewRepresentable {
+    let dark: Bool
 
     func makeUIView(context: Context) -> ASAuthorizationAppleIDButton {
         let button = ASAuthorizationAppleIDButton(type: .signIn, style: dark ? .white : .black)
         button.cornerRadius = 12
-        button.addTarget(context.coordinator, action: #selector(Coordinator.signIn), for: .touchUpInside)
+        // The enclosing SwiftUI button owns the full 44-point hit area and the single sign-in action.
+        button.isUserInteractionEnabled = false
         return button
     }
 
-    func updateUIView(_ button: ASAuthorizationAppleIDButton, context: Context) {
-        context.coordinator.action = action
-        button.isEnabled = enabled
-        button.alpha = enabled ? 1 : 0.5
-    }
-
-    @MainActor final class Coordinator: NSObject {
-        var action: () -> Void
-        init(action: @escaping () -> Void) { self.action = action }
-        @objc func signIn() { action() }
-    }
+    func updateUIView(_ button: ASAuthorizationAppleIDButton, context: Context) {}
 }

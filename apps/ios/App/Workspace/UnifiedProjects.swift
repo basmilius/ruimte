@@ -13,6 +13,11 @@ struct UnifiedProjectRow: Identifiable {
     let connected: Bool
     var id: ID { ID(machineID: machine.id, projectID: summary.text("projectId")) }
     var recent: Bool { summary["closedAt"] != nil && summary["closedAt"] != .null }
+
+    func matches(_ search: String) -> Bool {
+        search.isEmpty || summary.text("name").localizedCaseInsensitiveContains(search)
+            || machine.name.localizedCaseInsensitiveContains(search)
+    }
 }
 
 @MainActor
@@ -35,6 +40,7 @@ final class UnifiedProjects {
     var recent: [UnifiedProjectRow] { ordered(rows.filter(\.recent), by: "closedAt") }
     var unavailable: [UnifiedProjectRow] { rows.filter { $0.summary["available"] == .bool(false) } }
     var loading: Bool { entries.values.contains { $0.loading } }
+    var hasConnectedMachine: Bool { entries.values.contains { $0.connected } }
     var problems: [String: String] {
         Dictionary(
             uniqueKeysWithValues: entries.values.compactMap { entry in
@@ -188,8 +194,7 @@ final class UnifiedProjects {
                 entry.problem = nil
                 writeCache(entry)
             } catch {
-                if !Task.isCancelled, entry.operation == operation, current(entry), entry.connected
-                {
+                if !Task.isCancelled, entry.operation == operation, current(entry), entry.connected {
                     entry.problem = error.localizedDescription
                 }
             }

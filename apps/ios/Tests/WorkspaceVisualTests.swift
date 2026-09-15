@@ -59,6 +59,70 @@ final class WorkspaceVisualTests: XCTestCase {
         }
     }
 
+    @MainActor func testNativeRowActivationOpensCanvasOnPhoneAndTablet() async throws {
+        for horizontalClass in [UserInterfaceSizeClass.compact, .regular] {
+            let pool = MachineConnections(monitorPaths: false)
+            let runtime = AppRuntime(connections: pool)
+            let machine = Machine(
+                id: "workspace-navigation-\(UUID().uuidString)", name: "MacBook Pro", icon: nil,
+                publicKey: DeviceKey().publicKey, brokerUrl: nil, lastSeenAt: nil)
+            runtime.machines = [machine]
+            let session = runtime.session(for: machine)
+            let wire = try WorkspaceVisualWire(snapshot: snapshot)
+            session.rpc = wire.client
+            let workspace = MobileWorkspace(session: session, projectID: "visual-project")
+            defer {
+                workspace.stop()
+                wire.client.shutdown()
+                pool.shutdown()
+                UserDefaults.standard.removeObject(forKey: workspace.storageKey)
+            }
+            workspace.start()
+            await workspace.open()
+            XCTAssertTrue(workspace.ready)
+            workspace.selectedID = nil
+            let host = UIHostingController(
+                rootView: NavigationStack { WorkspacePage(workspace: workspace) }
+                    .tint(MobileStyle.accent)
+                    .environment(\.horizontalSizeClass, horizontalClass))
+            host.traitOverrides.horizontalSizeClass = horizontalClass == .regular ? .regular : .compact
+            let size = horizontalClass == .regular ? CGSize(width: 1194, height: 834) : CGSize(width: 402, height: 874)
+            let window = makeWindow(host, size: size)
+            defer {
+                window.isHidden = true
+                window.rootViewController = nil
+            }
+            for _ in 0..<20 { await displayFrame() }
+            let list = try XCTUnwrap(descendant(UICollectionView.self, in: host.view))
+            let first = try XCTUnwrap(
+                list.indexPathsForVisibleItems.min { left, right in
+                    let leftY = list.layoutAttributesForItem(at: left)?.frame.minY ?? .greatestFiniteMagnitude
+                    let rightY = list.layoutAttributesForItem(at: right)?.frame.minY ?? .greatestFiniteMagnitude
+                    return leftY < rightY
+                })
+            let row = try XCTUnwrap(list.cellForItem(at: first))
+            XCTAssertGreaterThanOrEqual(row.bounds.height, 44)
+            XCTAssertLessThanOrEqual(row.bounds.height, 46, "Insets must not add height beyond the 44-point row")
+            XCTAssertNil(descendant(CanvasScrollView.self, in: host.view))
+            // UIKit separates row selection from its primary action, which activates a SwiftUI List button.
+            XCTAssertEqual(list.delegate?.collectionView?(list, canPerformPrimaryActionForItemAt: first), true)
+            list.delegate?.collectionView?(list, performPrimaryActionForItemAt: first)
+            for _ in 0..<20 { await displayFrame() }
+            XCTAssertEqual(workspace.selectedID, "overview")
+            XCTAssertNotNil(
+                descendant(CanvasScrollView.self, in: host.view), "Activating the row must mount the real canvas")
+            capture(window, name: horizontalClass == .regular ? "workspace-opened-ipad" : "workspace-opened-iphone")
+        }
+    }
+
+    @MainActor private func descendant<ViewType: UIView>(_ type: ViewType.Type, in view: UIView) -> ViewType? {
+        if let found = view as? ViewType { return found }
+        for child in view.subviews {
+            if let found = descendant(type, in: child) { return found }
+        }
+        return nil
+    }
+
     private var snapshot: JSONValue {
         let views: [JSONValue] = [
             .object([

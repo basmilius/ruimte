@@ -8,8 +8,10 @@ struct MachineUsagePage: View {
     @State private var state = RemotePageState()
     @State private var limits: JSONValue?
     @State private var days = 7
+    @Environment(\.locale) private var locale
     private var models: [JSONValue] { state.value?.list("models") ?? [] }
     private var buckets: [JSONValue] { state.value?.list("buckets") ?? [] }
+    private var money: UsageMoneyFormatter { UsageMoneyFormatter(locale: locale, rate: state.value?["rate"]) }
     var body: some View {
         List {
             Picker("Period", selection: $days) {
@@ -22,7 +24,10 @@ struct MachineUsagePage: View {
                     LabeledContent("Sessions", value: Int(value.number("sessions")).formatted())
                     LabeledContent(
                         "Known cost",
-                        value: models.reduce(0) { $0 + $1.number("costUsd") }.formatted(.currency(code: "USD")))
+                        value: money.string(usd: models.reduce(0) { $0 + $1.number("costUsd") }))
+                    if let explanation = money.explanation {
+                        Text(explanation).font(.caption).foregroundStyle(.secondary)
+                    }
                     if models.contains(where: { $0["costUsd"] == .null }) {
                         Text("Some models have no known price and are excluded from the total.").font(.caption)
                             .foregroundStyle(.secondary)
@@ -37,10 +42,23 @@ struct MachineUsagePage: View {
                         Chart(Array(buckets.enumerated()), id: \.offset) { item in
                             BarMark(
                                 x: .value("Day", item.element.text("slot")),
-                                y: .value("USD", item.element.number("costUsd"))
+                                y: .value(money.currencyCode, money.amount(usd: item.element.number("costUsd")))
                             )
                             .foregroundStyle(by: .value("Provider", item.element.text("provider")))
-                        }.frame(height: 200).accessibilityLabel("Daily usage cost in US dollars")
+                        }
+                        .chartYAxis {
+                            AxisMarks { value in
+                                AxisGridLine()
+                                AxisTick()
+                                AxisValueLabel {
+                                    if let amount = value.as(Double.self) { Text(money.string(amount: amount)) }
+                                }
+                            }
+                        }
+                        .frame(height: 200)
+                        .accessibilityLabel(
+                            money.currencyCode == "EUR" ? "Daily usage cost in euros" : "Daily usage cost in US dollars"
+                        )
                     }
                 }
                 Section("Models") {
@@ -51,7 +69,7 @@ struct MachineUsagePage: View {
                                 Text(model.text("model")).font(.headline)
                                 Spacer()
                                 Text(
-                                    model["costUsd"]?.numberValue.map { $0.formatted(.currency(code: "USD")) }
+                                    model["costUsd"]?.numberValue.map { money.string(usd: $0) }
                                         ?? "Unknown cost")
                             }
                             Text(

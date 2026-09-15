@@ -13,12 +13,16 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
 - Project creation and navigation, view ordering and names, local camera/selection, and
   three-way merges with explicit conflict resolution. Unknown view/node kinds survive saves.
   Separators group the view list into sections; rows show the name and desktop Lucide or chosen emoji icon.
+  Projects use native grouped lists with a separate recently closed page. Custom image icons,
+  including `.idea/icon.svg`, use the existing authenticated `projectIcon` byte resource and dark variant.
 - Native chat timeline, streaming, markdown/code highlighting, model options, drafts,
   attachments, context selection, approvals and questions.
 - SwiftTerm terminals with snapshots, output, resync, keyboard controls and paste confirmation.
   `session.attach` uses `follow:true` so opening a phone never resizes the desktop PTY.
 - File and media previews, filesystem updates, Git changes/staging/commits, processes and
   signals, usage and machine access management. Destructive actions require confirmation.
+  Usage follows the OS region: EUR regions use the supplied exchange rate; other regions use USD.
+  Missing or invalid rates keep dollar amounts and show an explanation.
 - Optional encrypted push alerts and approval actions, per-session follows, a notification
   service extension and Live Activities. APNs delivery requires the service configuration below.
 
