@@ -628,8 +628,30 @@ canvas, against Ruimte, one verdict each.
   as before.
 - A document that arrives on a clean client goes through the merge first too, and is only loaded
   whole when the merge refuses. A load swaps every editor out and blanks the canvas until it is
-  measured, which a rename in another window should not cost. A node moved in another client still
-  takes the load.
+  measured, which a rename in another window should not cost.
+- Since 2026-09-15 nodes, texts and edges merge per field as well, so a node moved, resized,
+  retitled or deleted in another client lands live instead of taking the load or the dialog. The
+  rule is the one the view labels already had: by id, then per field, a side that left a field as
+  `base` had it takes the other side's. Some keys are one field because they only mean something
+  together (`x y w h` as the frame, the title with its source, `collapsed memberIds expandedHeight`
+  as the folding, a text's position, an edge's ends): taking `x` from one side and `y` from the other
+  would put a node where nobody put it. A group that gained a member merges through the folding
+  field, which replaces the special case for it. What still goes to the person is the same field
+  changed to different values, a deletion against a change, an edge left without an end, and the
+  project's own name, color and icon.
+- Two things are deliberately no conflict. The stacking order: a click into a node brings it to the
+  front and is saved, so two people clicking would be a dialog on every other save; when both sides
+  moved it this client's order stands. And a node under a gesture here (`heldNodeIds`, the selection
+  and what it carries while the canvas is gesturing, or the node being resized) keeps its local
+  frame when the other side moved it too: a dialog in the middle of a drag is worse than either
+  answer, and the save after the drag is made against the merged rev, so the file ends where the
+  person let go.
+- The merge hands the editor a patch (`CanvasPatch`: the entries to put in whole, the ids removed,
+  the stacking order, the arrangements) rather than the merged canvas. An entry is spread over the
+  one the editor holds, so what lives only in the editor (a browser node's status) survives and
+  every node the patch does not name keeps its object, which is what keeps a canvas of a few thousand
+  nodes from rendering all of them again. A field the other side dropped travels as `undefined` so
+  that spread clears it.
 - The first prompt of an agent node is held by the daemon against the node id, not written into
   `project.json` (`apps/server/src/agents/pending-prompts.ts`). It is not part of the canvas two
   people share, and a project open in two windows would deliver it twice; the daemon is the only
