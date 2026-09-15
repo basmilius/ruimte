@@ -11,6 +11,12 @@ const SETTLE_MS = 250;
 // client watches the folders it has open.
 const supportsRecursive = (platform: NodeJS.Platform): boolean => platform === 'darwin' || platform === 'win32';
 
+// On macOS `fs.watch` returns before its FSEvents stream runs, and a write in between is never
+// reported: with a dozen watchers starting at once about one write in eight right after the call went
+// missing, and none 100 ms later. The client reads a folder once its watch is answered, so the answer
+// waits this long.
+const STREAM_START_MS = 200;
+
 const isUnder = (path: string, ancestor: string): boolean => path === ancestor || path.startsWith(ancestor.endsWith(sep) ? ancestor : `${ancestor}${sep}`);
 
 interface Watch {
@@ -45,14 +51,15 @@ export class FolderWatcher {
         };
     }
 
-    watch(clientId: string, path: string): void {
+    /* Starts watching at once; the promise settles when a write is sure to be reported. */
+    watch(clientId: string, path: string): Promise<void> {
         const root = resolve(path);
         const watches = this.byClient.get(clientId) ?? new Map<string, Watch>();
         this.byClient.set(clientId, watches);
         for (const existing of watches.values()) {
             // A recursive watch above it already reports everything this one would.
             if (existing.recursive && isUnder(root, existing.root)) {
-                return;
+                return Promise.resolve();
             }
         }
         const recursive = supportsRecursive(this.platform);
@@ -61,7 +68,7 @@ export class FolderWatcher {
             watcher = watch(root, { recursive });
         } catch {
             // A folder that cannot be watched still lists; the tree just goes stale until a refresh.
-            return;
+            return Promise.resolve();
         }
         const state: Watch = { root, recursive, watcher, touched: new Set(), settle: null };
         watcher.on('error', () => undefined);
@@ -84,6 +91,7 @@ export class FolderWatcher {
             }
         }
         watches.set(root, state);
+        return this.platform === 'darwin' ? Bun.sleep(STREAM_START_MS) : Promise.resolve();
     }
 
     unwatch(clientId: string, path: string): void {

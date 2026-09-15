@@ -37,8 +37,8 @@ export const registerFsHandlers = (dispatcher: Dispatcher, watcher: FolderWatche
 
     dispatcher.register('fs.read', (payload) => translate(() => readFile(payload.path)));
 
-    dispatcher.register('fs.watch', (payload, client) => {
-        watcher.watch(client.id, payload.path);
+    dispatcher.register('fs.watch', async (payload, client) => {
+        await watcher.watch(client.id, payload.path);
         return {};
     });
 
