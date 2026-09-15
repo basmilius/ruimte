@@ -5,6 +5,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct ChatScreen: View {
+    @AppStorage("ruimte.chat.streaming") private var streamingMode: ChatStreamingMode = .words
     @State private var model: ChatModel
     @Environment(\.mobileMachineSession) private var machineSession
     @State private var visible = false
@@ -15,6 +16,7 @@ struct ChatScreen: View {
     @State private var photo: PhotosPickerItem?
     @State private var question: JSONValue?
     @State private var expandedRequest: String?
+    @State private var denialReason = ""
     @State private var composerFocused = false
     @GestureState private var composerPressed = false
     @State private var composerSelection = NSRange(location: 0, length: 0)
@@ -41,7 +43,7 @@ struct ChatScreen: View {
             }
             MobileScrollViewport(edges: .top) { insets in
                 ChatTimeline(
-                    items: model.items, revision: model.revision, client: model.client, chatID: model.chatID,
+                    presentation: model.presentation, client: model.client, chatID: model.chatID,
                     topInset: insets.top, bottomInset: composerHeight, dismissKeyboard: { composerFocused = false },
                     scrollToLatest: scrollToLatest, onMessagesBelowChanged: { messagesBelow = $0 }
                 )
@@ -51,7 +53,7 @@ struct ChatScreen: View {
                     ProgressView().accessibilityLabel("Loading conversation…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .allowsHitTesting(false)
-                } else if model.items.isEmpty {
+                } else if model.messageCount == 0 {
                     ContentUnavailableView(
                         "Start a conversation", lucideIcon: "messages-square",
                         description: Text("Messages and agent work appear here.")
@@ -106,6 +108,9 @@ struct ChatScreen: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
+                    Picker("Streaming", selection: $streamingMode) {
+                        ForEach(ChatStreamingMode.allCases, id: \.self) { mode in Text(mode.label).tag(mode) }
+                    }
                     Button("Clear conversation", lucideIcon: "trash", role: .destructive) { showingClear = true }
                     Button("Reload", lucideIcon: "refresh-cw") { model.attach() }
                 } label: {
@@ -452,10 +457,29 @@ struct ChatScreen: View {
                 if isApproval {
                     Text(item["description"]?.stringValue ?? "The agent needs permission to continue.")
                         .font(.subheadline).foregroundStyle(MobileStyle.muted)
-                    if let input = item["input"], let data = try? input.encoded(),
+                    let changes = ChatFileChanges.grouped(
+                        ChatFileChanges.fromTool(
+                            .object([
+                                "name": item["toolName"] ?? .null, "input": item["input"] ?? .null,
+                                "changes": item["input"]?["changes"] ?? .array([]),
+                            ])))
+                    if !changes.isEmpty {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(changes) { change in ChatFileChangeView(change: change) }
+                            }
+                        }.frame(maxHeight: 240)
+                    } else if let input = item["input"], let data = try? input.encoded(),
                         let text = String(data: data, encoding: .utf8)
                     {
                         ScrollView { CodeMessage(text: text, language: "json") }.frame(maxHeight: 180)
+                    }
+                    if model.providers.first(where: { $0["kind"] == model.info["provider"] })?["capabilities"]?[
+                        "denyReason"]?.boolValue == true
+                    {
+                        TextField("Reason for declining, optional", text: $denialReason, axis: .vertical)
+                            .font(.subheadline).textFieldStyle(.roundedBorder)
+                            .onChange(of: requestID) { _, _ in denialReason = "" }
                     }
                     if item["canAllowAlways"]?.boolValue == true {
                         approvalButton("Always allow this tool", decision: "allow-always", item: item)
@@ -473,11 +497,20 @@ struct ChatScreen: View {
         .disabled(!model.connected)
     }
 
+    private func approvalValues(_ item: JSONValue, decision: String) -> [String: JSONValue] {
+        var values: [String: JSONValue] = ["requestId": item["requestId"] ?? .null, "decision": .string(decision)]
+        let reason = denialReason.trimmingCharacters(in: .whitespacesAndNewlines)
+        if decision == "deny" && expandedRequest == item.text("requestId") && !reason.isEmpty {
+            values["message"] = .string(reason)
+        }
+        return values
+    }
+
     private func approvalButton(_ label: String, decision: String, item: JSONValue) -> some View {
         Button {
             Task {
                 await model.perform(
-                    "chat.approve", ["requestId": item["requestId"] ?? .null, "decision": .string(decision)])
+                    "chat.approve", approvalValues(item, decision: decision))
             }
         } label: {
             Text(label).frame(minWidth: 44, minHeight: 44)
@@ -578,7 +611,7 @@ private struct ChatQuestionSheet: View {
                 }
             }
             .navigationTitle("Answer questions")
-            .onChange(of: model.revision) { _, _ in
+            .onChange(of: model.pending) { _, _ in
                 if !model.pending.contains(where: { $0["requestId"] == item["requestId"] }) { dismiss() }
             }
             .toolbar {

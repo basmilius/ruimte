@@ -30,6 +30,35 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
 - Optional encrypted push alerts and approval actions, per-session follows, a notification
   service extension and Live Activities. APNs delivery requires the service configuration below.
 
+## AI conversations
+
+The timeline shows a Working timer, live Thinking text and individual running tools
+with summaries, elapsed time and the last output lines. Active labels shimmer; new
+words fade in. The conversation menu offers Words, Blocks and Whole streaming modes.
+Reduce Motion shows text directly and keeps static activity labels.
+
+Completed turns fold their work behind a duration label while keeping the answer and
+warnings visible. Subagent messages stay under their agent, with a separate result and
+links from automatic follow-up turns. Changed files use checkpoint diffs when available,
+then provider patches or replacement fragments. Tool output initially shows 4,000
+characters; large diffs initially show 400 lines, with explicit expansion controls.
+
+Messages support nested lists, tasks, quotes, tables, matching code fences and reference
+links. Long prompts can fold; mentions and skills retain their styling. Message context
+menus copy text or Markdown. File links open the machine's native file viewer, including
+line references. Raster attachments and supported image reads show thumbnails; tapping
+a thumbnail opens the original through Quick Look.
+
+Text deltas update observable message records without rebuilding the timeline structure.
+Completed Markdown segments are cached, code highlighting processes the latest pending
+text at bounded intervals, and the collection keeps its existing reading anchors.
+History still arrives as a full snapshot. This rendering work does not add pagination.
+
+The implementation and targeted state/parser/scroll tests are recorded in
+[`2026-09-16-ios-chat-parity.md`](../../docs/reports/2026-09-16-ios-chat-parity.md).
+Physical iPhone builds were installed at milestones. Visual timing, selection during
+streaming, VoiceOver, larger text and iPad multitasking still require hands-on acceptance.
+
 ## Build locally
 
 From the repository root, with Xcode 27, XcodeGen and Bun installed:

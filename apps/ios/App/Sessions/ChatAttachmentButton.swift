@@ -15,6 +15,13 @@ struct ChatAttachmentButton: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
+            if attachment.text("mime").hasPrefix("image/") {
+                ChatInlineImage(
+                    resource: .object([
+                        "kind": .string("attachment"), "chatId": .string(chatID),
+                        "attachmentId": attachment["id"] ?? .null,
+                    ]), name: attachment.text("name"))
+            }
             Button {
                 Task { await load() }
             } label: {
@@ -41,10 +48,15 @@ struct ChatAttachmentButton: View {
         .quickLookPreview($preview)
         .onDisappear {
             if let downloaded { try? FileManager.default.removeItem(at: downloaded.deletingLastPathComponent()) }
+            downloaded = nil
         }
     }
 
     private func load() async {
+        if let downloaded {
+            preview = downloaded
+            return
+        }
         loading = true
         defer { loading = false }
         do {

@@ -98,6 +98,7 @@ struct MachineFilesPage: View {
 struct FileContentPage: View {
     let client: any MachineRequesting
     let path: String
+    var initialLine: Int? = nil
     @State private var state = RemotePageState()
     @State private var image: UIImage?
     @State private var movie: URL?
@@ -105,57 +106,79 @@ struct FileContentPage: View {
     @State private var rawMarkdown = false
     @State private var svg: Data?
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                RemotePageStatus(state: state) { Task { await load() } }
-                if let value = state.value {
-                    if value.text("kind") == "text" {
-                        if ["md", "markdown"].contains(URL(fileURLWithPath: path).pathExtension.lowercased())
-                            && !rawMarkdown
-                        {
-                            MarkdownMessage(text: value.text("text")).frame(maxWidth: .infinity, alignment: .leading)
-                        } else {
-                            CodeMessage(text: value.text("text"), language: sourceLanguage)
+        ScrollViewReader { reader in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    RemotePageStatus(state: state) { Task { await load() } }
+                    if let value = state.value {
+                        if value.text("kind") == "text" {
+                            if ["md", "markdown"].contains(URL(fileURLWithPath: path).pathExtension.lowercased())
+                                && !rawMarkdown && initialLine == nil
+                            {
+                                MarkdownMessage(text: value.text("text")).frame(
+                                    maxWidth: .infinity, alignment: .leading)
+                            } else if let initialLine {
+                                LazyVStack(alignment: .leading, spacing: 3) {
+                                    ForEach(
+                                        Array(value.text("text").components(separatedBy: "\n").enumerated()),
+                                        id: \.offset
+                                    ) { index, line in
+                                        HStack(alignment: .top, spacing: 12) {
+                                            Text("\(index + 1)").foregroundStyle(MobileStyle.muted).frame(
+                                                width: 44, alignment: .trailing)
+                                            Text(line.isEmpty ? " " : line).textSelection(.enabled).frame(
+                                                maxWidth: .infinity, alignment: .leading)
+                                        }.font(.system(.caption, design: .monospaced)).monospacedDigit()
+                                            .background(index + 1 == initialLine ? MobileStyle.active : .clear).id(
+                                                index + 1)
+                                    }
+                                }
+                            } else {
+                                CodeMessage(text: value.text("text"), language: sourceLanguage)
+                            }
+                        } else if let image {
+                            Image(uiImage: image).resizable().scaledToFit().accessibilityLabel(
+                                URL(fileURLWithPath: path).lastPathComponent)
+                        } else if let svg {
+                            SafeSVGPreview(data: svg).frame(minHeight: 360)
+                        } else if let player {
+                            VideoPlayer(player: player).frame(minHeight: 300)
+                        } else if value.text("kind") == "too-large" {
+                            ContentUnavailableView(
+                                "File too large", lucideIcon: "file-text",
+                                description: Text(
+                                    "This text file is \(mobileByteCount(value["size"]?.numberValue)). Open it on the machine."
+                                ))
+                        } else if !state.loading {
+                            ContentUnavailableView(
+                                "Preview unavailable", lucideIcon: "file-text", description: Text(value.text("mime")))
                         }
-                    } else if let image {
-                        Image(uiImage: image).resizable().scaledToFit().accessibilityLabel(
-                            URL(fileURLWithPath: path).lastPathComponent)
-                    } else if let svg {
-                        SafeSVGPreview(data: svg).frame(minHeight: 360)
-                    } else if let player {
-                        VideoPlayer(player: player).frame(minHeight: 300)
-                    } else if value.text("kind") == "too-large" {
-                        ContentUnavailableView(
-                            "File too large", lucideIcon: "file-text",
-                            description: Text(
-                                "This text file is \(mobileByteCount(value["size"]?.numberValue)). Open it on the machine."
-                            ))
-                    } else if !state.loading {
-                        ContentUnavailableView(
-                            "Preview unavailable", lucideIcon: "file-text", description: Text(value.text("mime")))
                     }
+                }.padding()
+            }
+            .modifier(MobilePageSurface())
+            .navigationTitle(URL(fileURLWithPath: path).lastPathComponent)
+            .toolbar {
+                if ["md", "markdown"].contains(URL(fileURLWithPath: path).pathExtension.lowercased()) {
+                    Button(rawMarkdown ? "Preview" : "Source") { rawMarkdown.toggle() }
                 }
-            }.padding()
-        }
-        .modifier(MobilePageSurface())
-        .navigationTitle(URL(fileURLWithPath: path).lastPathComponent)
-        .toolbar {
-            if ["md", "markdown"].contains(URL(fileURLWithPath: path).pathExtension.lowercased()) {
-                Button(rawMarkdown ? "Preview" : "Source") { rawMarkdown.toggle() }
+            }
+            .task(id: path) {
+                let parent = URL(fileURLWithPath: path).deletingLastPathComponent().path
+                await RemotePageLifecycle.run(
+                    client: client, events: ["fs.changed"],
+                    matches: { parent == $0.text("root") || parent.hasPrefix($0.text("root") + "/") },
+                    subscription: {
+                        let payload: JSONValue = .object(["path": .string(parent)])
+                        return client.acquireSubscription(
+                            start: "fs.watch", stop: "fs.unwatch", payload: payload, stopPayload: payload)
+                    }, load: load)
+            }
+            .onDisappear { cleanMedia() }
+            .onChange(of: state.value) { _, _ in
+                if let initialLine { reader.scrollTo(initialLine, anchor: .center) }
             }
         }
-        .task(id: path) {
-            let parent = URL(fileURLWithPath: path).deletingLastPathComponent().path
-            await RemotePageLifecycle.run(
-                client: client, events: ["fs.changed"],
-                matches: { parent == $0.text("root") || parent.hasPrefix($0.text("root") + "/") },
-                subscription: {
-                    let payload: JSONValue = .object(["path": .string(parent)])
-                    return client.acquireSubscription(
-                        start: "fs.watch", stop: "fs.unwatch", payload: payload, stopPayload: payload)
-                }, load: load)
-        }
-        .onDisappear { cleanMedia() }
     }
     private var sourceLanguage: String {
         let ext = URL(fileURLWithPath: path).pathExtension.lowercased()

@@ -640,3 +640,28 @@ Chat screens now share their live model per machine and chat. The last hidden ch
 Machine frames are decoded outside the main actor and delivered in their original order. Connection generations discard delayed frames from an older connection. Schema validation avoids counting UTF-16 units for unconstrained strings. First-time chat loading still transfers the daemon's complete history; pagination remains a separate protocol change. Chat opening times and cache behavior have not been measured through device UI automation in this iteration.
 
 The signed iPhone build and repository checks passed, with existing lint warnings. Eleven focused transport tests passed on the Mac, including ordered delivery across a large frame, malformed-frame handling, reconnect invalidation, initial candidate selection and late-candidate deduplication. Installed on the physical iPhone only. No UI tests, simulator or iPad installation were run.
+# Conversation parity, September 16
+
+The approved conversation work adds native Working and Thinking states, shimmering
+activity labels, timed word reveals and Words/Blocks/Whole streaming choices. Running
+tools show summaries, elapsed time and bounded live output. Completed turns fold their
+work; subagent text stays under its source agent. Changed files use checkpoint or provider
+diffs, and warnings remain visible beside the final answer.
+
+Message rendering now handles nested lists, tasks, multiline quotes, reference links and
+matching fences. Long prompts fold, context tokens retain styling, and message menus copy
+plain text or Markdown. Machine file links support line references. Raster thumbnails
+open their original through Quick Look. Text records update independently from the row
+structure, finished Markdown segments are cached, and highlighting processes pending
+text at bounded intervals.
+
+All three milestones were built and installed on Bas's physical iPhone.
+The third passed its build and 33 targeted tests for presentation state, Markdown,
+file references, existing session behavior and scroll anchors. Repository formatting
+and checks passed with existing warnings. The final scroll navigation change passed
+19 targeted tests. Installation details are recorded in `2026-09-16-ios-chat-parity.md`.
+
+No simulator, UI automation, screenshots or iPad installation were used. Live visual
+timing, selection while streaming, VoiceOver, large text, iPad multitasking and physical
+performance remain acceptance work. Full-history transfer is unchanged. No daemon
+restart is required.

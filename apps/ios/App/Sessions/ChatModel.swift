@@ -7,8 +7,11 @@ import RuimteTransport
 final class ChatModel {
     let client: any MachineRequesting
     let chatID: String
+    let presentation = ChatPresentation()
     var info: JSONValue = .null
     var items: [JSONValue] = []
+    private(set) var messageCount = 0
+    private(set) var pending: [JSONValue] = []
     var draft: String { didSet { UserDefaults.standard.set(draft, forKey: draftKey) } }
     var attachments: [ChatUpload] = []
     var mentions: [String] = []
@@ -34,11 +37,13 @@ final class ChatModel {
         draft = UserDefaults.standard.string(forKey: "ruimte.chat.draft.\(chatID)") ?? ""
     }
 
-    var pending: [JSONValue] {
-        items.filter {
-            ($0["kind"]?.stringValue == "approval" && $0["decision"]?.stringValue == "pending")
-                || ($0["kind"]?.stringValue == "question" && $0["state"]?.stringValue == "pending")
+    private func refreshPending() {
+        messageCount = items.count
+        let requests = items.filter {
+            ($0.text("kind") == "approval" && $0.text("decision") == "pending")
+                || ($0.text("kind") == "question" && $0.text("state") == "pending")
         }
+        if requests != pending { pending = requests }
     }
 
     var models: [JSONValue] {
@@ -59,6 +64,7 @@ final class ChatModel {
             client.observeConnection { [weak self] available in
                 guard let self else { return }
                 self.connected = available
+                self.presentation.setConnected(available)
                 if available {
                     self.attach()
                 } else {
@@ -73,7 +79,7 @@ final class ChatModel {
     func stop() {
         generation += 1
         attachTask?.cancel()
-        unsubscribe.forEach { $0() }
+        for cancel in unsubscribe { cancel() }
         unsubscribe.removeAll()
         loading = false
         let held = attachment
@@ -120,13 +126,17 @@ final class ChatModel {
             items.enumerated().compactMap { index, item in
                 item["id"]?.stringValue.map { ($0, index) }
             }, uniquingKeysWith: { _, newest in newest })
+        refreshPending()
+        presentation.replace(items, info: info)
         revision += 1
     }
 
     func receive(_ event: JSONValue) {
         switch event["type"]?.stringValue {
         case "reset": replace(event)
-        case "info": info = event["info"] ?? .null
+        case "info":
+            info = event["info"] ?? .null
+            presentation.setInfo(info)
         case "item":
             guard let item = event["item"], let id = item["id"]?.stringValue else { return }
             if let index = positions[id] {
@@ -135,6 +145,8 @@ final class ChatModel {
                 positions[id] = items.count
                 items.append(item)
             }
+            refreshPending()
+            presentation.upsert(item)
             revision += 1
         case "delta":
             guard let id = event["itemId"]?.stringValue, let index = positions[id],
@@ -148,6 +160,7 @@ final class ChatModel {
                 item["text"] = .string((item["text"]?.stringValue ?? "") + delta)
             }
             items[index] = .object(item)
+            presentation.upsert(.object(item), textOnly: true)
             revision += 1
         default: break
         }

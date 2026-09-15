@@ -4,8 +4,7 @@ import SwiftUI
 import UIKit
 
 struct ChatTimeline: UIViewControllerRepresentable {
-    let items: [JSONValue]
-    let revision: Int
+    let presentation: ChatPresentation
     let client: any MachineRequesting
     let chatID: String
     var topInset: CGFloat = 0
@@ -15,14 +14,16 @@ struct ChatTimeline: UIViewControllerRepresentable {
     var onMessagesBelowChanged: (Bool) -> Void = { _ in }
 
     func makeUIViewController(context: Context) -> ChatTimelineController {
-        ChatTimelineController(client: client, chatID: chatID)
+        ChatTimelineController(client: client, chatID: chatID, presentation: presentation)
     }
     func updateUIViewController(_ controller: ChatTimelineController, context: Context) {
+        controller.bind(presentation)
         controller.dismissKeyboard = dismissKeyboard
         controller.onMessagesBelowChanged = onMessagesBelowChanged
         controller.setViewportInsets(top: topInset, bottom: bottomInset)
-        controller.update(items: items, revision: revision)
+        controller.update(entries: presentation.entries, revision: presentation.revision)
         controller.scrollToLatest(command: scrollToLatest)
+        controller.scrollToItem(presentation.requestedItemID, command: presentation.scrollRequest)
     }
 }
 
@@ -175,10 +176,15 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
     var dismissKeyboard: () -> Void = {}
     var onMessagesBelowChanged: (Bool) -> Void = { _ in }
     private var lastScrollCommand = 0
+    private var lastItemScrollCommand = 0
+    private var requestedItem: String?
     private var messagesBelow = false
     private let client: any MachineRequesting
     private let chatID: String
-    init(client: any MachineRequesting, chatID: String) {
+    private var presentation: ChatPresentation
+    init(client: any MachineRequesting, chatID: String, presentation: ChatPresentation) {
+        self.presentation = presentation
+        self.lastItemScrollCommand = presentation.scrollRequest
         self.client = client
         self.chatID = chatID
         super.init(nibName: nil, bundle: nil)
@@ -189,7 +195,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
     private var source: UICollectionViewDiffableDataSource<Int, String>!
     private var items: [String: ChatTimelineEntry] = [:]
     private var lastRevision = -1
-    private var pendingUpdate: ([JSONValue], Int)?
+    private var pendingUpdate: ([ChatTimelineEntry], Int)?
     private var displayLink: CADisplayLink?
     private var applyingSnapshot = false
 
@@ -231,33 +237,34 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
             [weak self] cell, _, id in
             guard let self, let item = self.items[id] else { return }
             cell.host(in: self) {
-                Group {
-                    if item.isWork {
-                        ChatWorkLog(
-                            items: item.items, client: self.client, chatID: self.chatID,
-                            onToggle: { [weak self] in self?.collection.expandAtCurrentPosition() })
-                    } else if let message = item.items.first {
-                        ChatTimelineRow(item: message, client: self.client, chatID: self.chatID)
+                ChatEntryView(entry: item, presentation: self.presentation, client: self.client, chatID: self.chatID)
+                    .id(id)
+                    .environment(\.chatWillExpand, { [weak self] in self?.collection.expandAtCurrentPosition() })
+                    .disclosureGroupStyle(ChatDisclosureStyle())
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    // The collection owns toolbar and keyboard insets; individual messages must scroll through them.
+                    .ignoresSafeArea()
+                    .transaction { transaction in
+                        transaction.animation = nil
+                        transaction.disablesAnimations = true
                     }
-                }
-                .id(id)
-                .environment(\.chatWillExpand, { [weak self] in self?.collection.expandAtCurrentPosition() })
-                .disclosureGroupStyle(ChatDisclosureStyle())
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-                .fixedSize(horizontal: false, vertical: true)
-                // The collection owns toolbar and keyboard insets; individual messages must scroll through them.
-                .ignoresSafeArea()
-                .transaction { transaction in
-                    transaction.animation = nil
-                    transaction.disablesAnimations = true
-                }
-                .padding(.horizontal, 20).padding(.vertical, 10)
+                    .padding(.horizontal, 20).padding(.vertical, 10)
             }
             cell.backgroundConfiguration = .clear()
         }
         source = UICollectionViewDiffableDataSource<Int, String>(collectionView: collection) { collection, index, id in
             collection.dequeueConfiguredReusableCell(using: registration, for: index, item: id)
         }
+    }
+
+    func bind(_ presentation: ChatPresentation) {
+        guard self.presentation !== presentation else { return }
+        self.presentation = presentation
+        lastItemScrollCommand = presentation.scrollRequest
+        requestedItem = nil
+        lastRevision = -1
+        items = [:]
     }
 
     func setViewportInsets(top: CGFloat, bottom: CGFloat) {
@@ -275,6 +282,24 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         lastScrollCommand = command
         loadViewIfNeeded()
         collection.scrollToLatest(animated: !UIAccessibility.isReduceMotionEnabled)
+    }
+
+    func scrollToItem(_ id: String?, command: Int) {
+        guard command != lastItemScrollCommand else { return }
+        lastItemScrollCommand = command
+        requestedItem = id
+        fulfillItemScroll()
+    }
+
+    private func fulfillItemScroll() {
+        guard pendingUpdate == nil, !applyingSnapshot, let id = requestedItem,
+            let index = source.indexPath(for: id)
+        else { return }
+        requestedItem = nil
+        collection.beginUserScroll()
+        collection.layoutIfNeeded()
+        collection.scrollToItem(at: index, at: .top, animated: false)
+        collection.finishUserScroll()
     }
 
     private func reportMessagesBelow() {
@@ -296,7 +321,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
     ) -> Bool { true }
 
-    func update(items values: [JSONValue], revision: Int) {
+    func update(entries values: [ChatTimelineEntry], revision: Int) {
         guard revision != lastRevision else { return }
         loadViewIfNeeded()
         pendingUpdate = (values, revision)
@@ -318,7 +343,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         collection.prepareForContentChange()
         let interactionRevision = collection.viewport.interactionRevision
         let previous = items
-        let entries = ChatTimelineEntry.group(values)
+        let entries = values
         items = Dictionary(entries.map { ($0.id, $0) }, uniquingKeysWith: { _, newest in newest })
         let ids = entries.map(\.id)
         let existingIDs = source.snapshot().itemIdentifiers
@@ -347,6 +372,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
                     self.collection.setNeedsLayout()
                     UIView.performWithoutAnimation { self.collection.layoutIfNeeded() }
                 }
+                self.fulfillItemScroll()
                 self.scheduleUpdate()
             }
         }
@@ -425,29 +451,8 @@ final class ChatHostingCell: UICollectionViewListCell {
     }
 }
 
-private struct ChatTimelineEntry: Equatable {
-    let id: String
-    let isWork: Bool
-    var items: [JSONValue]
-
-    static func group(_ values: [JSONValue]) -> [Self] {
-        var entries: [Self] = []
-        var seen = Set<String>()
-        for item in values {
-            guard let id = item["id"]?.stringValue, seen.insert(id).inserted else { continue }
-            let isWork = ["tool", "thinking", "subagent"].contains(item["kind"]?.stringValue ?? "")
-            if isWork, entries.last?.isWork == true {
-                entries[entries.count - 1].items.append(item)
-            } else {
-                entries.append(Self(id: id, isWork: isWork, items: [item]))
-            }
-        }
-        return entries
-    }
-}
-
 extension EnvironmentValues {
-    @Entry fileprivate var chatWillExpand: () -> Void = {}
+    @Entry var chatWillExpand: () -> Void = {}
 }
 
 private struct ChatDisclosureStyle: DisclosureGroupStyle {
@@ -475,46 +480,103 @@ private struct ChatDisclosureStyle: DisclosureGroupStyle {
     }
 }
 
-private struct ChatWorkLog: View {
-    let items: [JSONValue]
+struct ChatEntryView: View {
+    let entry: ChatTimelineEntry
+    let presentation: ChatPresentation
     let client: any MachineRequesting
     let chatID: String
-    let onToggle: () -> Void
+    @Environment(\.chatWillExpand) private var willExpand
     @State private var expanded = false
 
-    private var active: Bool {
-        items.contains { $0["state"]?.stringValue == "running" || $0["status"]?.stringValue == "running" }
-    }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Button {
-                onToggle()
-                expanded.toggle()
-            } label: {
-                HStack(spacing: 7) {
-                    Image(lucide: "terminal", size: 14)
-                    Text("Work log").font(.system(.footnote, design: .monospaced))
-                    Text("· \(items.count)").font(.footnote).monospacedDigit()
-                    if active { ProgressView().controlSize(.mini) }
-                    Spacer(minLength: 0)
-                    Image(lucide: expanded ? "chevron-down" : "chevron-right", size: 12)
+        Group {
+            switch entry.kind {
+            case .activity: ChatWorkingRow(presentation: presentation)
+            case .turnFold:
+                if let turn = entry.items.first {
+                    Button {
+                        willExpand()
+                        presentation.toggleTurn(turn.value.text("turnId", fallback: turn.id))
+                    } label: {
+                        Label(
+                            ChatPresentation.turnLabel(turn.value),
+                            lucideIcon: presentation.expandedTurns.contains(
+                                turn.value.text("turnId", fallback: turn.id)) ? "chevron-down" : "chevron-right",
+                            iconSize: 12
+                        )
+                        .font(.footnote).foregroundStyle(
+                            turn.value.text("state") == "error" ? Color.red : MobileStyle.muted
+                        )
+                        .padding(.horizontal, 10).frame(minHeight: 44)
+                        .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 8))
+                        .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(MobileStyle.border) }
+                    }.buttonStyle(.plain)
+                        .accessibilityValue(
+                            presentation.expandedTurns.contains(turn.value.text("turnId", fallback: turn.id))
+                                ? "Expanded" : "Collapsed")
                 }
-                .foregroundStyle(MobileStyle.muted).frame(minHeight: 44).contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityValue(expanded ? "Expanded" : "Collapsed")
-            if expanded {
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                        ChatTimelineRow(item: item, client: client, chatID: chatID)
+            case .turnStart:
+                if let turn = entry.items.first {
+                    Button {
+                        willExpand()
+                        presentation.openSubagent(toolUseID: turn.value.text("taskToolUseId"))
+                    } label: {
+                        Label(
+                            turn.value.text("label").isEmpty
+                                ? "Continued on its own" : "Sub-agent finished: \(turn.value.text("label"))",
+                            lucideIcon: "bot", iconSize: 14
+                        )
+                        .font(.footnote).foregroundStyle(MobileStyle.muted).frame(minHeight: 44)
+                    }.buttonStyle(.plain).disabled(turn.value.text("taskToolUseId").isEmpty)
+                }
+            case .changedFiles:
+                if let turn = entry.items.first {
+                    ChatChangedFilesRow(
+                        turn: turn, tools: Array(entry.items.dropFirst()), client: client, chatID: chatID)
+                }
+            case .subagent:
+                if let agent = entry.items.first {
+                    ChatSubagentRow(
+                        agent: agent, children: Array(entry.items.dropFirst()), presentation: presentation,
+                        client: client, chatID: chatID)
+                }
+
+            case .message:
+                if let item = entry.items.first { ChatObservedRow(record: item, client: client, chatID: chatID) }
+            case .tools:
+                if entry.items.count == 1, let item = entry.items.first {
+                    ChatObservedRow(record: item, client: client, chatID: chatID)
+                } else {
+                    DisclosureGroup(isExpanded: $expanded) {
+                        ForEach(entry.items) { item in
+                            ChatObservedRow(record: item, client: client, chatID: chatID)
+                        }
+                    } label: {
+                        Label(
+                            ChatToolPresentation.groupLabel(entry.items.map(\.value)), lucideIcon: "terminal",
+                            iconSize: 14
+                        )
+                        .font(.footnote).foregroundStyle(MobileStyle.muted)
                     }
                 }
-                .padding(.leading, 14)
-                .overlay(alignment: .leading) { Rectangle().fill(MobileStyle.border).frame(width: 1) }
             }
         }
-        .frame(maxWidth: 720)
+        .modifier(
+            ChatLinkRouting(
+                context: ChatContentContext(client: client, chatID: chatID, cwd: presentation.info.text("cwd")))
+        )
+        .frame(maxWidth: 720, alignment: .leading)
         .frame(maxWidth: .infinity)
-        .tint(MobileStyle.accent)
+    }
+}
+
+struct ChatObservedRow: View {
+    let record: ChatItemState
+    let client: any MachineRequesting
+    let chatID: String
+    var body: some View {
+        ChatTimelineRow(item: record.value, client: client, chatID: chatID)
+            .modifier(ChatMessageMenu(text: record.value.text("text")))
     }
 }
 
@@ -534,46 +596,14 @@ private struct ChatTimelineRow: View {
         VStack(alignment: .leading, spacing: 8) {
             switch kind {
             case "user":
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(item["text"]?.stringValue ?? "").textSelection(.enabled).lineSpacing(3)
-                    ForEach(Array((item["attachments"]?.arrayValue ?? []).enumerated()), id: \.offset) {
-                        _, attachment in
-                        ChatAttachmentButton(client: client, chatID: chatID, attachment: attachment)
-                    }
-                }
-                .padding(.horizontal, 16).padding(.vertical, 12)
-                .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 18))
-                .frame(maxWidth: 620, alignment: .trailing)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .accessibilityLabel("You")
+                ChatUserMessage(item: item, client: client, chatID: chatID)
             case "assistant":
-                MarkdownMessage(text: item["text"]?.stringValue ?? "")
+                ChatStreamingMessage(text: item.text("text"), streaming: item["streaming"]?.boolValue == true)
+                    .accessibilityElement(children: .contain).accessibilityLabel("Agent")
             case "thinking":
-                DisclosureGroup("Reasoning") { MarkdownMessage(text: item["text"]?.stringValue ?? "") }.foregroundStyle(
-                    .secondary)
+                ChatThinkingRow(item: item)
             case "tool":
-                DisclosureGroup {
-                    if let input = item["input"], let data = try? input.encoded(),
-                        let text = String(data: data, encoding: .utf8)
-                    {
-                        CodeMessage(text: text)
-                    }
-                    CodeMessage(text: item["output"]?.stringValue ?? item["progress"]?["output"]?.stringValue ?? "")
-                    ForEach(Array((item["changes"]?.arrayValue ?? []).enumerated()), id: \.offset) { _, change in
-                        Text(change["path"]?.stringValue ?? "").font(.caption.bold())
-                        CodeMessage(text: change["diff"]?.stringValue ?? "")
-                    }
-                } label: {
-                    Image(
-                        lucide: item["state"]?.stringValue == "error"
-                            ? "circle-alert"
-                            : item["state"]?.stringValue == "done" ? "circle-check" : "terminal", size: 14
-                    )
-                    .foregroundStyle(MobileStyle.muted)
-                    Text(item["name"]?.stringValue ?? "Tool").font(.subheadline).foregroundStyle(MobileStyle.muted)
-                    Spacer()
-                    Text(item["state"]?.stringValue ?? "").font(.caption).foregroundStyle(MobileStyle.muted)
-                }.frame(minHeight: 44)
+                ChatToolRow(item: item)
             case "subagent":
                 DisclosureGroup(item["description"]?.stringValue ?? "Agent") {
                     Text(item["status"]?.stringValue ?? "").font(.caption)
@@ -582,20 +612,37 @@ private struct ChatTimelineRow: View {
                             ?? "")
                 }
             case "approval":
-                HStack(spacing: 6) {
-                    Image(lucide: "hand")
-                    Text(item["toolName"]?.stringValue ?? "Permission")
-                    Text(item["decision"]?.stringValue ?? "")
-                }.font(.caption).foregroundStyle(MobileStyle.muted)
+                let decision = item.text("decision")
+                Label(
+                    [
+                        "allow": "Allowed", "allow-always": "Always allowed", "deny": "Declined",
+                        "cancelled": "No longer needed",
+                    ][decision, default: decision] + " · " + item.text("toolName"),
+                    lucideIcon: decision == "deny" ? "circle-x" : "circle-check", iconSize: 14
+                )
+                .font(.caption).foregroundStyle(decision == "deny" ? Color.red : MobileStyle.muted)
             case "question":
-                Label("Questions", lucideIcon: "circle-question-mark")
-                Text(item["state"]?.stringValue ?? "").font(.caption).foregroundStyle(MobileStyle.muted)
-                ForEach(Array((item["questions"]?.arrayValue ?? []).enumerated()), id: \.offset) { _, question in
-                    Text(question["question"]?.stringValue ?? "").font(.subheadline)
-                    if let id = question["id"]?.stringValue, let answer = item["answers"]?[id]?.stringValue {
-                        Text(answer).foregroundStyle(MobileStyle.muted)
+                ForEach(Array(item.list("questions").enumerated()), id: \.offset) { _, question in
+                    Label(question.text("question"), lucideIcon: "message-circle-question-mark", iconSize: 14).font(
+                        .subheadline)
+                    if let answer = item["answers"]?[question.text("id")]?.stringValue {
+                        Text(answer).font(.subheadline)
+                    } else {
+                        Text(item.text("state") == "dismissed" ? "Dismissed" : "Not answered").font(.caption)
+                            .foregroundStyle(MobileStyle.muted)
                     }
                 }
+            case "note":
+                let level = item.text("level")
+                Label(
+                    item.text("text"),
+                    lucideIcon: level == "error" ? "circle-alert" : level == "warning" ? "triangle-alert" : "info",
+                    iconSize: 14
+                )
+                .font(.callout).foregroundStyle(
+                    level == "error" ? Color.red : level == "warning" ? Color.orange : MobileStyle.muted
+                )
+                .accessibilityLabel("\(level.capitalized): \(item.text("text"))")
             case "turn":
                 Label(
                     item["label"]?.stringValue ?? "Turn \(item["state"]?.stringValue ?? "")",
@@ -610,7 +657,10 @@ private struct ChatTimelineRow: View {
                     }
                 }
             case "compaction":
-                Label("Context compacted", lucideIcon: "minimize-2", iconSize: 14).font(.caption)
+                Label(
+                    item["preTokens"]?.numberValue.map { "Context compacted from \(Int($0).formatted()) tokens" }
+                        ?? "Context compacted", lucideIcon: "minimize-2", iconSize: 14
+                ).font(.caption)
                     .foregroundStyle(MobileStyle.muted)
             default: MarkdownMessage(text: item["text"]?.stringValue ?? "")
             }
