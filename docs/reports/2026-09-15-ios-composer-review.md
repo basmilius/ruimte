@@ -177,3 +177,40 @@ Apple documents the separate UIKit resize animation in
 
 Verdict: approve the inspected code. Toolbar underlap, long streaming conversations,
 rotation, iPad window resizing and motion at 10% speed are not physically verified.
+
+## iPad sidebar and project width
+
+Full source review of the iPad project list and workspace sidebar, using existing
+SwiftUI navigation, grouped lists and system colors.
+
+| Category | Evidence inspected | Result |
+| --- | --- | --- |
+| Typography | Project names and sidebar rows | Existing single-line truncation retained |
+| Surfaces | Sidebar background and project-list margins | Match the selected content background; center project rows within 760 points |
+| Animations | Sidebar visibility toggle | Standard visibility animation; respect Reduce Motion |
+| Icons | Back button and sidebar toggle placement | Place the toggle in the same parent navigation bar as Back |
+| Performance | List rendering and width changes | Keep native List reuse and full-width scrolling |
+
+| Severity | Location | Before | After | Why |
+| --- | --- | --- | --- | --- |
+| MEDIUM | `WorkspacePage.swift` | Nested split-view toggle sits below the parent back button | Remove the split-view default toggles and bind a parent toolbar button to column visibility | Keep both navigation controls on one row |
+| MEDIUM | `WorkspacePage.swift` | Grouped-list backdrop differs from the detail | Hide that backdrop on regular-width layouts and use the selected content's system background | Give sidebar and content the same background |
+| MEDIUM | `AppHome.swift` | Project rows stretch across wide iPad windows | Center open and recently closed projects with a 760-point maximum content width | Keep project names and row actions within a comfortable reading width |
+
+| Location | Candidate | Rejected because |
+| --- | --- | --- |
+| Projects | Constrain the entire List frame | The scroll surface and toolbar underlap should still span the window |
+| Navigation | Replace the root navigation structure | Moving the toggle fixes the requested alignment without changing project navigation |
+
+The sidebar uses the canvas background when a canvas is selected and the standard
+content background otherwise. Compact-width layouts retain their existing navigation
+and list margins. Physical alignment, light/dark appearance and window resizing remain
+device acceptance; no simulator run was requested.
+
+Verification: `bun run format`, `bun run check` and the signed device build passed.
+Installed on Bas's iPad Pro and iPhone. Log: `/tmp/ruimte-ios-ipad-sidebar-device.log`.
+The implementation uses Apple's supported
+[default toolbar item removal](https://developer.apple.com/documentation/swiftui/view/toolbar(removing:))
+and [scroll content margins](https://developer.apple.com/documentation/swiftui/view/contentmargins(_:for:)).
+Verdict: approve the inspected code; physical layout and sidebar transitions remain
+unverified.

@@ -10,20 +10,27 @@ struct WorkspacePage: View {
     @State private var search = ""
     @State private var showTools = false
     @State private var openedViewID: String?
+    @State private var columnVisibility = NavigationSplitViewVisibility.all
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         Group {
             if workspace.ready {
                 if sizeClass == .regular {
-                    NavigationSplitView {
+                    NavigationSplitView(columnVisibility: $columnVisibility) {
                         sidebar
+                            .toolbar(removing: .sidebarToggle)
                     } detail: {
-                        if let item = workspace.views.first(where: { $0.stableID == workspace.selectedID }) {
-                            ProjectItemPage(workspace: workspace, item: item).id(item.stableID)
-                        } else {
-                            ContentUnavailableView("Choose a view", systemImage: "sidebar.left")
+                        Group {
+                            if let item = workspace.views.first(where: { $0.stableID == workspace.selectedID }) {
+                                ProjectItemPage(workspace: workspace, item: item).id(item.stableID)
+                            } else {
+                                ContentUnavailableView("Choose a view", systemImage: "sidebar.left")
+                            }
                         }
+                        .toolbar(removing: .sidebarToggle)
                     }
+                    .navigationSplitViewStyle(.balanced)
                 } else {
                     sidebar
                 }
@@ -42,6 +49,18 @@ struct WorkspacePage: View {
         .navigationTitle(workspace.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            if sizeClass == .regular && workspace.ready {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(
+                        columnVisibility == .detailOnly ? "Show sidebar" : "Hide sidebar", systemImage: "sidebar.left"
+                    ) {
+                        withAnimation(reduceMotion ? nil : .default) {
+                            columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
+                        }
+                    }
+                    .accessibilityIdentifier("workspace.toggle-sidebar")
+                }
+            }
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button("Project tools", systemImage: "folder.badge.gearshape") { showTools = true }.disabled(
                     !workspace.ready)
@@ -172,6 +191,12 @@ struct WorkspacePage: View {
             }
         }
         .listStyle(.insetGrouped)
+        .scrollContentBackground(sizeClass == .regular ? .hidden : .automatic)
+        .background {
+            if sizeClass == .regular {
+                sidebarBackground.ignoresSafeArea(.container, edges: .vertical)
+            }
+        }
         .searchable(text: $search, prompt: "Find a view")
         .accessibilityIdentifier("workspace.views")
     }
@@ -180,6 +205,11 @@ struct WorkspacePage: View {
         guard workspace.views.contains(where: { $0.stableID == id && $0.text("kind") != "separator" }) else { return }
         workspace.select(id)
         if sizeClass != .regular { openedViewID = id }
+    }
+
+    private var sidebarBackground: Color {
+        let selected = workspace.views.first { $0.stableID == workspace.selectedID }
+        return selected?.text("kind") == "canvas" ? MobileStyle.canvas : Color(uiColor: .systemBackground)
     }
 
     private func viewRow(_ item: JSONValue) -> some View {

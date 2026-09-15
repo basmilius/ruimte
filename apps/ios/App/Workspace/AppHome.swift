@@ -177,6 +177,7 @@ struct AppHome: View {
             }
         }
         .listStyle(.insetGrouped)
+        .modifier(ProjectListWidth())
         .searchable(text: $search, prompt: "Search projects or machines")
         .toolbar {
             if (runtime.loading || projects.loading) && !visibleProjects.isEmpty {
@@ -223,10 +224,25 @@ struct RecentProjectsPage: View {
             }
         }
         .listStyle(.insetGrouped)
+        .modifier(ProjectListWidth())
         .navigationTitle("Recently closed")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $search, prompt: "Search projects or machines")
         .refreshable { await projects.refresh() }
+    }
+}
+
+private struct ProjectListWidth: ViewModifier {
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    func body(content: Content) -> some View {
+        if sizeClass == .regular {
+            GeometryReader { geometry in
+                content.contentMargins(.horizontal, max(20, (geometry.size.width - 760) / 2), for: .scrollContent)
+            }
+        } else {
+            content
+        }
     }
 }
 
