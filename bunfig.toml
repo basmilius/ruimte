@@ -1,2 +1,4 @@
 [test]
-pathIgnorePatterns = ["**/e2e/**"]
+# A test that needs a real shell, a file watcher, a network stack or the clock lives in a
+# `*.integration.test.ts` file and runs with `bun run test:integration` (see integration.bunfig.toml).
+pathIgnorePatterns = ["**/e2e/**", "**/*.integration.test.ts"]

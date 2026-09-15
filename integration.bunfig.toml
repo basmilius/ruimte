@@ -1,0 +1,4 @@
+[test]
+# The integration suite: the same tree as the default run minus its ignore pattern, filtered to
+# `*.integration.test.ts` by the `test:integration` script.
+pathIgnorePatterns = ["**/e2e/**", "**/node_modules/**"]
