@@ -1586,6 +1586,24 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   read a file, and the browser version is meant to be self-hosted later, where pairing is the rule
   anyway. Its "This machine" row stays unreachable; the row the pairing adds is how it gets in.
 
+### Routes remote access did not take
+
+- A tunnel per machine: Cloudflare allows 1,000 tunnels and 1,000 routes per account, so it stops
+  at a thousand machines, and cloudflared terminates TLS on their side, which puts Cloudflare in the
+  data path.
+- Quick tunnels (trycloudflare.com): capped at two hundred concurrent requests, a new address on
+  every start, no uptime promise, and thousands of installs on someone else's free development
+  service can disappear without notice.
+- A relay of our own in the data path: cheap while idle, but every keystroke crosses our server,
+  which makes us the processor of other people's source code, turns an outage from annoying into
+  fatal, and needs end-to-end encryption on top that WebRTC gives for free. TURN is the exception
+  and carries only DTLS it cannot read, for the networks where no direct pair exists.
+- Tailscale: works well, but needs an install on every device a person looks from, which moves the
+  setup cost to the user. The lesson kept: a tunnel only supplies an endpoint and never needs a kind
+  of connection of its own, so a person's own domain (a tunnel or reverse proxy in front of the
+  daemon) and an address on their own network stay beside the broker, on the same daemon and the
+  same handshake.
+
 ### A direct connection
 
 - Phase 2b of remote access: the client's wire over a WebRTC DataChannel, with no broker yet. The
