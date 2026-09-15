@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { BrokerPeerFrameSchema, brokerHelloMessage, signalMessage, type BrokerPeerFrame, type SignalAccess, type SignalEnvelope } from '@ruimte/pulsar';
 import { generateKeyPair, signMessage, verifySignature } from '../auth/keys.ts';
-import { BrokerRelay } from './broker-relay.ts';
+import { BrokerRelay, weriftIceServers } from './broker-relay.ts';
 
 const BROKER_URL = 'ws://broker.test:4400';
 const NONCE = 'n'.repeat(32);
@@ -55,6 +55,8 @@ afterEach(() => {
 
 const quiet = { log: () => undefined, warn: () => undefined };
 
+let clock = 0;
+
 const setup = async (admitStatement?: (publicKey: string, access: SignalAccess) => Promise<'admitted' | 'refused' | 'statements-refused'>) => {
     const machine = generateKeyPair();
     const paired = generateKeyPair();
@@ -79,7 +81,8 @@ const setup = async (admitStatement?: (publicKey: string, access: SignalAccess) 
         },
         backoffMinMs: 10,
         backoffMaxMs: 20,
-        log: quiet
+        log: quiet,
+        now: () => clock
     });
     await relay.publish();
     const socket = sockets[0]!;
@@ -91,6 +94,9 @@ const setup = async (admitStatement?: (publicKey: string, access: SignalAccess) 
     expect(verifySignature(machine.publicKey, brokerHelloMessage('broker.test:4400', 'machine', machine.publicKey, NONCE), prove.signature)).toBe(true);
     socket.deliver({ type: 'ready' });
     await relay.whenReady();
+    // Every announcement asks for ICE servers straight away.
+    expect(socket.sent[2]).toEqual({ type: 'ice', id: expect.stringMatching(/^ice-/) });
+    socket.sent.splice(2, 1);
     return { relay, machine, paired, pairedKeys, sockets, socket, received, replies };
 };
 
@@ -101,6 +107,114 @@ const relayedFrom = (from: { publicKey: string; privateKey: string }, to: string
     from: from.publicKey,
     envelope,
     signature: signMessage(signer.privateKey, signalMessage(from.publicKey, to, envelope))
+});
+
+const TURN = { urls: ['turn:turn.example.com:3478?transport=udp', 'turn:turn.example.com:3478?transport=tcp'], username: '1:m-x', credential: 'one' };
+
+describe('BrokerRelay and ICE servers', () => {
+    const lastIce = (socket: FakeSocket) => socket.sent.filter((frame) => frame.type === 'ice').at(-1) as Extract<BrokerPeerFrame, { type: 'ice' }> | undefined;
+
+    const withIceRequest = async () => {
+        clock = 1_000_000;
+        const machine = generateKeyPair();
+        const sockets: FakeSocket[] = [];
+        const relay = new BrokerRelay({
+            url: BROKER_URL,
+            publicKey: machine.publicKey,
+            sign: (message) => signMessage(machine.privateKey, message),
+            isPaired: async () => true,
+            receive: () => undefined,
+            createSocket: () => {
+                const socket = new FakeSocket();
+                sockets.push(socket);
+                return socket as unknown as WebSocket;
+            },
+            backoffMinMs: 10,
+            backoffMaxMs: 20,
+            log: quiet,
+            now: () => clock
+        });
+        await relay.publish();
+        const socket = sockets[0]!;
+        socket.onopen?.();
+        socket.deliver({ type: 'challenge', broker: 'broker.test:4400', nonce: NONCE });
+        await tick();
+        socket.deliver({ type: 'ready' });
+        await relay.whenReady();
+        return { relay, socket, sockets };
+    };
+
+    test('asks after ready, keeps the servers, and asks again with a third of their lifetime left', async () => {
+        const { relay, socket } = await withIceRequest();
+        const first = lastIce(socket)!;
+        expect(relay.iceServers()).toEqual([]);
+        socket.deliver({ type: 'ice', id: first.id, servers: [{ urls: 'stun:turn.example.com:3478' }, TURN], expiresAt: clock + 90_000 });
+        expect(relay.iceServers()).toEqual([
+            { urls: 'stun:turn.example.com:3478' },
+            { urls: 'turn:turn.example.com:3478?transport=udp', username: '1:m-x', credential: 'one' }
+        ]);
+
+        jest.advanceTimersByTime(59_999);
+        expect(socket.sent.filter((frame) => frame.type === 'ice')).toHaveLength(1);
+        jest.advanceTimersByTime(1);
+        const second = lastIce(socket)!;
+        expect(second.id).not.toBe(first.id);
+
+        // An answer to a question nobody asked any more changes nothing.
+        socket.deliver({ type: 'ice', id: first.id, servers: [], expiresAt: null });
+        expect(relay.iceServers()).toHaveLength(2);
+        socket.deliver({ type: 'ice', id: second.id, servers: [{ ...TURN, credential: 'two' }], expiresAt: clock + 90_000 });
+        expect(relay.iceServers()).toEqual([{ urls: 'turn:turn.example.com:3478?transport=udp', username: '1:m-x', credential: 'two' }]);
+
+        // Past the expiry the credentials are worth nothing, and an attempt gets none rather than a refusal from the TURN server.
+        clock += 90_000;
+        expect(relay.iceServers()).toEqual([]);
+        await relay.stop();
+    });
+
+    test('a refusal is asked again after the wait it names, and a lost broker keeps the credentials it gave', async () => {
+        const { relay, socket, sockets } = await withIceRequest();
+        socket.deliver({ type: 'rate-limited', scope: 'key', retryAfterMs: 5_000, id: lastIce(socket)!.id });
+        expect(socket.closed).toBe(false);
+        jest.advanceTimersByTime(5_000);
+        const retried = lastIce(socket)!;
+        socket.deliver({ type: 'error', code: 'internal', message: 'no secret', id: retried.id });
+        jest.advanceTimersByTime(60_000);
+        const again = lastIce(socket)!;
+        expect(again.id).not.toBe(retried.id);
+        socket.deliver({ type: 'ice', id: again.id, servers: [TURN], expiresAt: clock + 3_600_000 });
+
+        socket.onclose?.();
+        expect(relay.iceServers()).toHaveLength(1);
+        await waitUntil(() => sockets.length === 2);
+        await relay.stop();
+    });
+
+    test('a broker from before ice refuses the frame without its id, and the socket stays', async () => {
+        const { relay, socket, sockets } = await withIceRequest();
+        socket.deliver({ type: 'error', code: 'bad-frame', message: 'That is not a broker frame' });
+        expect(socket.closed).toBe(false);
+        expect(sockets).toHaveLength(1);
+        expect(relay.iceServers()).toEqual([]);
+        await relay.stop();
+    });
+
+    test('werift gets every STUN URL and one TURN URL, UDP first', () => {
+        expect(
+            weriftIceServers([
+                { urls: 'stun:stun.example.com:3478' },
+                {
+                    urls: ['turns:turn.example.com:5349?transport=tcp', 'turn:turn.example.com:3478?transport=tcp', 'turn:turn.example.com:3478?transport=udp'],
+                    username: 'u',
+                    credential: 'c'
+                }
+            ])
+        ).toEqual([{ urls: 'stun:stun.example.com:3478' }, { urls: 'turn:turn.example.com:3478?transport=udp', username: 'u', credential: 'c' }]);
+        expect(weriftIceServers([{ urls: ['turns:turn.example.com:5349'], username: 'u', credential: 'c' }])).toEqual([
+            { urls: 'turns:turn.example.com:5349', username: 'u', credential: 'c' }
+        ]);
+        expect(weriftIceServers([])).toEqual([]);
+    });
 });
 
 describe('BrokerRelay', () => {

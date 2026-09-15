@@ -1,4 +1,13 @@
-import { BrokerPeer, brokerHostOf, signalMessage, type BrokerRelayed, type SignalAccess, type SignalEnvelope } from '@ruimte/pulsar';
+import {
+    BrokerPeer,
+    brokerHostOf,
+    signalMessage,
+    type BrokerIce,
+    type BrokerRelayed,
+    type IceServer,
+    type SignalAccess,
+    type SignalEnvelope
+} from '@ruimte/pulsar';
 import { verifySignature } from '../auth/keys.ts';
 import type { Relay } from '../auth/relay.ts';
 
@@ -11,6 +20,25 @@ const SILENCE_MS = 90_000;
 
 // How long a connection id stays tied to the key that offered it; well past the attempt timeout in `DirectPeers`.
 const OWNER_TTL_MS = 60_000;
+
+// A broker that could not hand out ICE servers is asked again after this, unless it said how long to wait.
+const ICE_RETRY_MS = 60_000;
+
+/*
+ * werift 0.24.4 reads the first STUN URL and the first TURN URL of the whole list and nothing else,
+ * so the daemon keeps every STUN server (the first still wins) and one TURN URL: UDP when the broker
+ * offers it, since a relay over TCP is what a TURN client falls back to anyway.
+ */
+export const weriftIceServers = (servers: IceServer[]): IceServer[] => {
+    const flat = servers.flatMap((server) => (Array.isArray(server.urls) ? server.urls : [server.urls]).map((url) => ({ ...server, urls: url })));
+    const stun = flat.filter((server) => /^stuns?:/.test(server.urls as string)).map((server) => ({ urls: server.urls }));
+    const turn = flat.filter((server) => /^turns?:/.test(server.urls as string));
+    const chosen =
+        turn.find((server) => /^turn:.*[?&]transport=udp/.test(server.urls as string)) ??
+        turn.find((server) => /^turn:[^?]*$/.test(server.urls as string)) ??
+        turn[0];
+    return chosen ? [...stun, chosen] : stun;
+};
 
 export interface BrokerRelayOptions {
     url: string;
@@ -28,6 +56,7 @@ export interface BrokerRelayOptions {
     backoffMaxMs?: number;
     silenceMs?: number;
     log?: Pick<Console, 'log' | 'warn'>;
+    now?(): number;
 }
 
 /*
@@ -51,6 +80,10 @@ export class BrokerRelay implements Relay {
     // Said once per outage rather than on every retry.
     private announcedFailure = false;
     private readonly readyListeners = new Set<() => void>();
+    // The last credentials the broker handed out; they outlive the socket, since a broker that restarts does not revoke them.
+    private grant: { servers: IceServer[]; expiresAt: number | null } | null = null;
+    private iceRequestId: string | null = null;
+    private iceTimer: ReturnType<typeof setTimeout> | null = null;
 
     constructor(options: BrokerRelayOptions) {
         this.options = options;
@@ -65,6 +98,14 @@ export class BrokerRelay implements Relay {
     async publish(): Promise<string | null> {
         this.connect();
         return null;
+    }
+
+    /* The servers for a direct connection, as werift reads them; none once the credentials expired. */
+    iceServers(): IceServer[] {
+        if (this.grant === null || (this.grant.expiresAt !== null && this.grant.expiresAt <= this.now())) {
+            return [];
+        }
+        return weriftIceServers(this.grant.servers);
     }
 
     async stop(): Promise<void> {
@@ -116,9 +157,21 @@ export class BrokerRelay implements Relay {
                     for (const listener of [...this.readyListeners]) {
                         listener();
                     }
+                    this.askIce();
                 },
                 relayed: (frame) => void this.relayed(frame),
+                ice: (frame) => this.receivedIce(frame),
                 refused: (frame) => {
+                    if (frame.id !== undefined && frame.id === this.iceRequestId) {
+                        this.iceRequestId = null;
+                        this.scheduleIce(frame.type === 'rate-limited' ? frame.retryAfterMs : ICE_RETRY_MS);
+                        return;
+                    }
+                    if (frame.type === 'error' && frame.code === 'bad-frame' && frame.id === undefined && this.iceRequestId !== null) {
+                        // A broker from before `ice` refuses the frame without its id and keeps the socket; it has no servers to give.
+                        this.iceRequestId = null;
+                        return;
+                    }
                     if (frame.id !== undefined) {
                         // A reply that did not reach its client; the client's own timeout says so on that side.
                         return;
@@ -191,7 +244,50 @@ export class BrokerRelay implements Relay {
         }, delay);
     }
 
+    private now(): number {
+        return (this.options.now ?? Date.now)();
+    }
+
+    private askIce(): void {
+        if (this.iceTimer) {
+            clearTimeout(this.iceTimer);
+            this.iceTimer = null;
+        }
+        this.iceRequestId = this.peer?.ice() ?? null;
+    }
+
+    private scheduleIce(delayMs: number): void {
+        if (this.iceTimer) {
+            clearTimeout(this.iceTimer);
+        }
+        this.iceTimer = setTimeout(() => {
+            this.iceTimer = null;
+            this.askIce();
+        }, delayMs);
+    }
+
+    private receivedIce(frame: BrokerIce): void {
+        if (frame.id !== this.iceRequestId) {
+            return;
+        }
+        this.iceRequestId = null;
+        const hadServers = this.grant !== null && this.grant.servers.length > 0;
+        this.grant = { servers: frame.servers, expiresAt: frame.expiresAt };
+        if (frame.servers.length > 0 && !hadServers) {
+            this.log.log(`The broker at ${this.options.url} handed out ICE servers for direct connections`);
+        }
+        if (frame.expiresAt !== null) {
+            // Asked again with a third of the lifetime left, so an attempt never starts on credentials about to lapse.
+            this.scheduleIce(Math.max(1_000, Math.floor(((frame.expiresAt - this.now()) * 2) / 3)));
+        }
+    }
+
     private drop(): void {
+        if (this.iceTimer) {
+            clearTimeout(this.iceTimer);
+            this.iceTimer = null;
+        }
+        this.iceRequestId = null;
         if (this.silenceTimer) {
             clearInterval(this.silenceTimer);
             this.silenceTimer = null;

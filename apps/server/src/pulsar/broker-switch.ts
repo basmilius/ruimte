@@ -1,4 +1,4 @@
-import { effectiveBrokerUrl, type BrokerOverride, type BrokerSetting } from '@ruimte/pulsar';
+import { effectiveBrokerUrl, type BrokerOverride, type BrokerSetting, type IceServer } from '@ruimte/pulsar';
 import type { Relay } from '../auth/relay.ts';
 
 export interface BrokerSwitchOptions {
@@ -49,6 +49,11 @@ export class BrokerSwitch implements Relay {
     describe(): BrokerDescription {
         const url = this.dialUrl;
         return { brokerUrl: url === null ? null : (this.options.advertise ?? url), brokerFixed: this.options.override !== null };
+    }
+
+    /* What the running relay hands out for a direct connection; nothing while no broker is on. */
+    iceServers(): IceServer[] {
+        return this.relay?.iceServers?.() ?? [];
     }
 
     async publish(local: { host: string; port: number }): Promise<string | null> {

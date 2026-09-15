@@ -1,5 +1,5 @@
 import { channelBinding, DIRECT_CHANNEL_LABEL } from '@ruimte/contracts';
-import type { SignalEnvelope } from '@ruimte/pulsar';
+import type { IceServer, SignalEnvelope } from '@ruimte/pulsar';
 import { RTCPeerConnection } from 'werift';
 import type { ClientAccess } from '../dispatcher.ts';
 import { directChannel, fromWerift, type DirectChannel } from './data-channel.ts';
@@ -14,8 +14,8 @@ const GATHER_TIMEOUT_MS = 5_000;
 const MAX_OPEN_ATTEMPTS = 32;
 
 export interface DirectPeersOptions {
-    // `stun:` URLs; empty gathers host candidates only.
-    stunServers: string[];
+    /* The STUN and TURN servers for one attempt, asked per offer because TURN credentials expire; empty gathers host candidates only. */
+    iceServers(): IceServer[];
     // The UDP ports ICE binds, for a daemon behind a firewall or a container that publishes a range.
     portRange: [number, number] | null;
     // Addresses to announce as host candidates on top of the interfaces, such as the address a container is published on.
@@ -26,6 +26,8 @@ export interface DirectPeersOptions {
     open(channel: DirectChannel, access: ClientAccess): void;
     attemptTimeoutMs?: number;
     log?: Pick<Console, 'log' | 'warn'>;
+    /* werift's peer connection unless a test says otherwise. */
+    createPeer?(configuration: ConstructorParameters<typeof RTCPeerConnection>[0]): RTCPeerConnection;
 }
 
 interface Attempt {
@@ -95,8 +97,8 @@ export class DirectPeers {
             reply({ connectionId, signal: { kind: 'close', reason: 'declined' } });
             return;
         }
-        const peer = new RTCPeerConnection({
-            iceServers: this.options.stunServers.map((urls) => ({ urls })),
+        const peer = (this.options.createPeer ?? ((configuration) => new RTCPeerConnection(configuration)))({
+            iceServers: this.options.iceServers(),
             icePortRange: this.options.portRange ?? undefined,
             iceAdditionalHostAddresses: this.options.hostAddresses.length > 0 ? this.options.hostAddresses : undefined
         });
@@ -146,7 +148,7 @@ export class DirectPeers {
             binding = channelBinding(offerSdp, answerSdp);
             reply({ connectionId, signal: { kind: 'answer', sdp: answerSdp } });
         } catch (e) {
-            console.warn('Answering a direct connection failed', e);
+            this.log.warn('Answering a direct connection failed', e);
             reply({ connectionId, signal: { kind: 'close', reason: 'failed' } });
             this.end(connectionId, 'answering failed');
         }

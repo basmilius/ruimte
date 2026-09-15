@@ -59,7 +59,7 @@ beforeAll(async () => {
     } as unknown as ConnectionServices;
     const openConnection = connectionOpener(services);
     peers = new DirectPeers({
-        stunServers: [],
+        iceServers: () => [],
         portRange: null,
         hostAddresses: [],
         attemptTimeoutMs: 10_000,
@@ -229,7 +229,7 @@ describe('a direct connection', () => {
     test('an attempt that times out is logged with that reason', async () => {
         const connectionId = `silent-${Date.now()}`;
         const quick = new DirectPeers({
-            stunServers: [],
+            iceServers: () => [],
             portRange: null,
             hostAddresses: [],
             attemptTimeoutMs: 300,

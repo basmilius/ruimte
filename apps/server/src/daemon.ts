@@ -23,6 +23,7 @@ import { BrokerRelay } from './pulsar/broker-relay.ts';
 import { BrokerSwitch } from './pulsar/broker-switch.ts';
 import { StatementGate, TEST_STATEMENT_KEY_VARIABLE, trustedStatementKeys } from './pulsar/statement.ts';
 import { DirectPeers } from './pulsar/peers.ts';
+import { guardWeriftTurn } from './pulsar/turn-guard.ts';
 import { registerDirectHandlers } from './handlers/direct.ts';
 import { suggestChatTitle } from './chat/chat-title.ts';
 import { decideAccess, isLoopbackAddress, mayInvite, reachabilityOf } from './auth/access.ts';
@@ -306,9 +307,12 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerProcessHandlers(dispatcher, processes);
     registerGitHandlers(dispatcher, worktrees, statuses, providers);
 
+    // A TURN server that restarts under an allocation must not take the daemon with it.
+    guardWeriftTurn(process);
     // A direct channel gets its access from its own handshake, never from the socket its signals came over.
     const peers = new DirectPeers({
-        stunServers: config.stun,
+        // The broker's TURN credentials are asked for per attempt, since they expire and the broker can change.
+        iceServers: () => [...config.stun.map((urls) => ({ urls })), ...brokerSwitch.iceServers()],
         portRange: config.directPorts,
         hostAddresses: config.directHostAddresses,
         authenticate: (channel, binding, remoteAddress) =>

@@ -12,6 +12,11 @@
  *
  * Flags: --stun <url> (repeatable, default stun:stun.l.google.com:19302), --no-stun, --minutes <n>,
  * --burst-mb <n> (default 4), --ports <first-last> (the UDP range to bind, for a firewall).
+ *
+ * TURN: --turn <url> --turn-user <username> --turn-pass <password> adds a relay (werift takes the first
+ * TURN URL only), and --relay-only gathers and checks relay candidates alone, which proves the TURN
+ * client works rather than a direct path that happened to be there. A credential from the broker's
+ * `ice` frame fits as it is.
  */
 import { createInterface } from 'node:readline';
 import { parseArgs } from 'node:util';
@@ -25,14 +30,28 @@ const { values, positionals } = parseArgs({
         'no-stun': { type: 'boolean', default: false },
         minutes: { type: 'string', default: '60' },
         'burst-mb': { type: 'string', default: '4' },
-        ports: { type: 'string' }
+        ports: { type: 'string' },
+        turn: { type: 'string' },
+        'turn-user': { type: 'string' },
+        'turn-pass': { type: 'string' },
+        'relay-only': { type: 'boolean', default: false }
     },
     allowPositionals: true
 });
 
 const role = positionals[0];
 if (role !== 'offer' && role !== 'answer') {
-    console.error('Usage: bun apps/server/scripts/webrtc-probe.ts offer|answer [--stun url] [--no-stun] [--minutes n] [--burst-mb n] [--ports a-b]');
+    console.error(
+        'Usage: bun apps/server/scripts/webrtc-probe.ts offer|answer [--stun url] [--no-stun] [--minutes n] [--burst-mb n] [--ports a-b] [--turn url --turn-user u --turn-pass p] [--relay-only]'
+    );
+    process.exit(2);
+}
+if (values.turn !== undefined && (values['turn-user'] === undefined || values['turn-pass'] === undefined)) {
+    console.error('--turn needs --turn-user and --turn-pass');
+    process.exit(2);
+}
+if (values['relay-only'] && values.turn === undefined) {
+    console.error('--relay-only needs --turn');
     process.exit(2);
 }
 
@@ -55,9 +74,12 @@ const nextLine = (prompt: string): Promise<string> =>
         lines.once('line', resolve);
     });
 
+const turn = values.turn === undefined ? [] : [{ urls: values.turn, username: values['turn-user'], credential: values['turn-pass'] }];
+
 const peer = new RTCPeerConnection({
-    iceServers: stun.map((urls) => ({ urls })),
-    icePortRange: values.ports ? parsePortRange(values.ports) : undefined
+    iceServers: [...stun.map((urls) => ({ urls })), ...turn],
+    icePortRange: values.ports ? parsePortRange(values.ports) : undefined,
+    iceTransportPolicy: values['relay-only'] ? 'relay' : 'all'
 });
 
 const gathered = async (): Promise<void> => {
@@ -94,7 +116,9 @@ const onChannel = (opened: RTCDataChannel): void => {
         log(`channel ${state}`);
         if (state === 'open') {
             const pair = peer.iceTransports[0]?.connection.nominated;
-            log(`open after ${Date.now() - started} ms over ${pair ? `${pair.localCandidate.type} -> ${pair.remoteCandidate.type} ${pair.remoteAddr.join(':')}` : 'an unknown pair'}`);
+            log(
+                `open after ${Date.now() - started} ms over ${pair ? `${pair.localCandidate.type} -> ${pair.remoteCandidate.type} ${pair.remoteAddr.join(':')}` : 'an unknown pair'}`
+            );
             if (role === 'offer') {
                 startClient(opened);
             }
@@ -121,7 +145,9 @@ const onChannel = (opened: RTCDataChannel): void => {
         }
         if (text.startsWith('burst-ack ')) {
             const seconds = (Date.now() - burstStarted) / 1000;
-            log(`burst of ${(burstExpected / 1024 / 1024).toFixed(1)} MB delivered in ${seconds.toFixed(2)} s, ${(burstExpected / 1024 / 1024 / seconds).toFixed(2)} MB/s`);
+            log(
+                `burst of ${(burstExpected / 1024 / 1024).toFixed(1)} MB delivered in ${seconds.toFixed(2)} s, ${(burstExpected / 1024 / 1024 / seconds).toFixed(2)} MB/s`
+            );
         }
     });
 };
@@ -172,7 +198,7 @@ const finish = (code: number): void => {
     void peer.close().finally(() => process.exit(code));
 };
 
-log(`probe as ${role}, STUN ${stun.length === 0 ? 'off' : stun.join(' ')}`);
+log(`probe as ${role}, STUN ${stun.length === 0 ? 'off' : stun.join(' ')}, TURN ${values.turn ?? 'off'}${values['relay-only'] ? ', relay only' : ''}`);
 if (role === 'offer') {
     onChannel(peer.createDataChannel('probe', { ordered: true }));
     await peer.setLocalDescription(await peer.createOffer());
