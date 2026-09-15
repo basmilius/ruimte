@@ -760,7 +760,19 @@ ipcMain.handle('pulsar:login-callback', async (event) => {
         throw new Error('No sign-in is waiting');
     }
     try {
-        return await login.callback;
+        const callback = await login.callback;
+        // The login ended in the system browser, which keeps the focus while the answer lands in this window.
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) {
+                mainWindow.restore();
+            }
+            mainWindow.show();
+            if (process.platform === 'darwin') {
+                app.focus({ steal: true });
+            }
+            mainWindow.focus();
+        }
+        return callback;
     } finally {
         if (pendingLogin === login) {
             pendingLogin = null;
