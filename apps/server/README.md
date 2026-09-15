@@ -30,7 +30,7 @@ The `dev` script runs on port `4211` with `RUIMTE_HOME` defaulting to `~/.ruimte
 | `--no-broker` | off | Announce this machine to no broker, whatever `--broker`, the environment or the machine's setting says. |
 | `--broker-advertise <url>` | the broker | The broker URL clients are told in the pairing answer and `endpoint.info` while a broker is on, when they reach it under another name than this machine does (`RUIMTE_BROKER_ADVERTISE_URL`). |
 
-`ruimte pair` (in a checkout: `bun src/main.ts pair`) asks the daemon running on this machine for a fresh pairing URL and prints it; tokens never travel as arguments. `ruimte context` is the agent-side CLI behind the `ruimte-context` script.
+`ruimte pair` (in a checkout: `bun src/main.ts pair`) asks the daemon running on this machine for a fresh pairing URL and prints it; tokens never travel as arguments. `ruimte login` puts the machine on a Pulsar account without the app: run it as the user and with the `RUIMTE_HOME` of the daemon (and `--port` when it is not `4210`), and it prints `https://station.ruimte.app/link?code=BCDF-GHJK`, the code and the machine's key fingerprint. A person opens that page anywhere, signs in, checks the name and the fingerprint and presses "Add to my account"; the command then has the daemon sign a registration for that account, prints `Added to <login>'s account` and exits 0. A denial, an expired or a withdrawn code exits 1, Ctrl+C withdraws the code and exits 130. Nothing is stored on the machine. `RUIMTE_PULSAR_URL` points it at another address book. `ruimte context` is the agent-side CLI behind the `ruimte-context` script.
 
 ## Compile
 

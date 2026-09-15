@@ -2013,6 +2013,42 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   paired machine that was not active only synced after a switch to it, and the lists of machines had no
   icon for it.
 
+### Linking a machine with a code
+
+- A machine without the app (a server, a droplet) joins an account from its own terminal with `ruimte login`,
+  the device flow of RFC 8628 without the token at the end. It runs where the daemon's home is and asks the
+  daemon to sign over the local secret (`POST /machine/link-request` and `POST /machine/registration`, local
+  secret only, like `/machine/work`); the terminal carries the signatures to the address book. The daemon
+  still never holds an account token, and neither does the terminal.
+- Two signatures rather than one. The brief was one registration signed at the start and stored on approval,
+  but `machineRegistrationMessage` names the account, which nobody knows at the start. A start signature over
+  no account (`deviceLinkStartMessage`) would put the machine on whichever account approves the code, and a
+  copy of that body started again elsewhere would do the same. So the start only proves the key the page
+  shows, and once a person approves, the terminal sees the account on its next poll, has the daemon sign the
+  ordinary registration bytes for exactly that account (the same as `endpoint.signRegistration`) and hands
+  them in with the device code (`POST /v1/device/complete`). An approval without the machine's own signature
+  for that account lists nothing.
+- The routes: `start`, `poll`, `complete` and `cancel` under `/v1/device/` with the device code and no
+  session; `lookup`, `approve` and `deny` with a session and the user code. Migration `0004` adds
+  `device_link`, a new table, so the running Worker never sees it while it applies. The device code is 32
+  random bytes, stored as a hash, and spent by `complete` (a conditional update, so two racing requests
+  register once). The user code is eight consonants from a 20-letter alphabet (no vowels, so no words, and
+  no digits, so no 0 and O), printed `BCDF-GHJK`, decided once by a conditional update and only with a
+  signed-in session. A code lives ten minutes; an approval leaves the terminal at least two more to finish.
+  The daily cron drops expired rows.
+- Rate limits: 10 starts per address, 60 polls, completes and cancels per address, and 20 lookups, approvals
+  and denials per account and 30 per address, counted before the code is read so every guess costs. A code
+  that does not exist, ran out or was used answers the same `not-found`.
+- A registration through a link is one a person asked for, so it clears a removal like pairing again by link
+  does. The name, icon and broker are the ones the start carried.
+- The page shows the machine's name, its icon and a key fingerprint (the first eight bytes of the key in hex,
+  in four groups), and the terminal prints the same fingerprint. It is `/link` on the web client with the code
+  in the query: the address leaves the address bar at boot and the request waits in localStorage
+  (`ruimte.pulsar.pendingLink`, as long as a code lives) through a sign-in round trip. The desktop app offers
+  the same dialog under "Link a machine with a code" in Add a machine.
+- No QR code in the terminal: there is no small encoder without a dependency, and the URL with the code in it
+  is short enough to type.
+
 ### A machine connects only when it is used
 
 - Every paired machine used to connect at boot and stay connected: the project list asked `project.list`
