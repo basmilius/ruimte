@@ -1,6 +1,14 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import type { ChatEvent, ChatItem } from '@ruimte/contracts';
 import { DeltaCoalescer } from './delta-coalescer.ts';
+
+beforeEach(() => {
+    jest.useFakeTimers();
+});
+
+afterEach(() => {
+    jest.useRealTimers();
+});
 
 const delta = (itemId: string, text: string): ChatEvent => ({ type: 'delta', itemId, text });
 
@@ -12,13 +20,15 @@ const recorder = () => {
 };
 
 describe('DeltaCoalescer', () => {
-    test('ten deltas on one item within a tick go out as one delta with the joined text', async () => {
+    test('ten deltas on one item within a tick go out as one delta with the joined text', () => {
         const { sent, coalescer } = recorder();
         for (let i = 0; i < 10; i++) {
             coalescer.push(delta('a', String(i)));
         }
         expect(sent).toEqual([]);
-        await Bun.sleep(20);
+        jest.advanceTimersByTime(4);
+        expect(sent).toEqual([]);
+        jest.advanceTimersByTime(1);
         expect(sent).toEqual([delta('a', '0123456789')]);
     });
 
@@ -41,11 +51,11 @@ describe('DeltaCoalescer', () => {
         expect(sent).toEqual([delta('a', 'x'), delta('b', 'y')]);
     });
 
-    test('dispose drops what was held and the tick sends nothing', async () => {
+    test('dispose drops what was held and the tick sends nothing', () => {
         const { sent, coalescer } = recorder();
         coalescer.push(delta('a', 'x'));
         coalescer.dispose();
-        await Bun.sleep(20);
+        jest.advanceTimersByTime(20);
         expect(sent).toEqual([]);
     });
 });

@@ -1563,12 +1563,13 @@ describe('view delete', () => {
         const opened = (await post('agent', ['claude', '--view', id, '--prompt', 'go'])).lines[0]!.split('\t')[0]!;
         expect(lineage.openedCount('term-1')).toBe(1);
         // The same hook the daemon wires up, which is what prunes a prompt and a lineage record.
+        let pruned: Promise<void> = Promise.resolve();
         store.index.onPlaces = (project, ids) => {
-            void lineage.prune(project, ids);
+            pruned = lineage.prune(project, ids);
         };
 
         await post('view', ['delete', id]);
-        await Bun.sleep(10);
+        await pruned;
         expect(lineage.depthOf(opened)).toBe(0);
         expect(lineage.openedCount('term-1')).toBe(0);
     });

@@ -1,10 +1,8 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, spyOn, test } from 'bun:test';
-import type { Server } from 'bun';
+import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { unescapeText } from '../canvas/text-escapes.ts';
 import { VERBS } from '../canvas/verbs.ts';
 import { runContext } from './context.ts';
 
-let server: Server<undefined>;
 let env: Record<string, string>;
 let stdout: string;
 let stderr: string;
@@ -13,57 +11,58 @@ let seen: { verb: string; argv: unknown; authorization: string | null }[];
 let sources: { id: string; kind: string; title: string }[];
 let tails: string[];
 
-beforeAll(() => {
-    server = Bun.serve({
-        port: 0,
-        hostname: '127.0.0.1',
-        async fetch(request) {
-            const url = new URL(request.url);
-            if (request.headers.get('authorization') === 'Bearer stale') {
-                return new Response('Unknown token', { status: 401 });
-            }
-            if (url.pathname === '/context') {
-                return Response.json({ sources });
-            }
-            if (url.pathname === '/context/n1') {
-                const tail = url.searchParams.get('tail');
-                if (tail === null) {
-                    return new Response('the plan');
-                }
-                tails.push(tail);
-                return new Response('the last lines');
-            }
-            if (url.pathname === '/context/boom') {
-                return new Response('no', { status: 500 });
-            }
-            if (!url.pathname.startsWith('/canvas/')) {
-                return new Response('Not found', { status: 404 });
-            }
-            const verb = decodeURIComponent(url.pathname.slice('/canvas/'.length));
-            const { argv } = (await request.json()) as { argv: string[] };
-            seen.push({ verb, argv, authorization: request.headers.get('authorization') });
-            switch (verb) {
-                case 'node':
-                    return new Response('note-12345678\tnote\tmain\n');
-                case 'diagram':
-                    return new Response('flow-1\t1\t0\t0\t0\n');
-                case 'nodes':
-                    return new Response('refused\tview-required\tname one with --view\ncanvas\tmain\tCanvas\n', { status: 422 });
-                case 'broken':
-                    return new Response('boom', { status: 500 });
-                default:
-                    return new Response(`refused\tunknown-verb\t${verb} is not a verb\n`, { status: 404 });
-            }
+/* The daemon's side of `/context` and `/canvas`, answered in the process instead of on a port. */
+const daemon = {
+    async fetch(request: Request): Promise<Response> {
+        const url = new URL(request.url);
+        if (request.headers.get('authorization') === 'Bearer stale') {
+            return new Response('Unknown token', { status: 401 });
         }
-    });
-});
-
-afterAll(() => {
-    server.stop(true);
-});
+        if (url.pathname === '/context') {
+            return Response.json({ sources });
+        }
+        if (url.pathname === '/context/n1') {
+            const tail = url.searchParams.get('tail');
+            if (tail === null) {
+                return new Response('the plan');
+            }
+            tails.push(tail);
+            return new Response('the last lines');
+        }
+        if (url.pathname === '/context/boom') {
+            return new Response('no', { status: 500 });
+        }
+        if (!url.pathname.startsWith('/canvas/')) {
+            return new Response('Not found', { status: 404 });
+        }
+        const verb = decodeURIComponent(url.pathname.slice('/canvas/'.length));
+        const { argv } = (await request.json()) as { argv: string[] };
+        seen.push({ verb, argv, authorization: request.headers.get('authorization') });
+        switch (verb) {
+            case 'node':
+                return new Response('note-12345678\tnote\tmain\n');
+            case 'diagram':
+                return new Response('flow-1\t1\t0\t0\t0\n');
+            case 'nodes':
+                return new Response('refused\tview-required\tname one with --view\ncanvas\tmain\tCanvas\n', { status: 422 });
+            case 'broken':
+                return new Response('boom', { status: 500 });
+            default:
+                return new Response(`refused\tunknown-verb\t${verb} is not a verb\n`, { status: 404 });
+        }
+    }
+};
 
 beforeEach(() => {
-    env = { RUIMTE_CONTEXT_URL: `http://127.0.0.1:${server.port}/context`, RUIMTE_HOOK_TOKEN: 'tok' };
+    env = { RUIMTE_CONTEXT_URL: 'http://daemon.test/context', RUIMTE_HOOK_TOKEN: 'tok' };
+    const requests = spyOn(globalThis, 'fetch').mockImplementation(((input: string | URL | Request, init?: RequestInit) => {
+        const request = new Request(input, init);
+        // Any other address is a daemon that is not there, which fetch reports by rejecting.
+        if (new URL(request.url).host !== 'daemon.test') {
+            return Promise.reject(new TypeError('Unable to connect'));
+        }
+        return daemon.fetch(request);
+    }) as typeof fetch);
     stdout = '';
     stderr = '';
     seen = [];
@@ -83,7 +82,7 @@ beforeEach(() => {
     const error = spyOn(console, 'error').mockImplementation((...parts) => {
         stderr += `${parts.join(' ')}\n`;
     });
-    restore = [out, err, log, error].map((spy) => () => spy.mockRestore());
+    restore = [requests, out, err, log, error].map((spy) => () => spy.mockRestore());
 });
 
 afterEach(() => {

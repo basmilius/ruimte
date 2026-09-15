@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, jest, test } from 'bun:test';
 import { ClaudeProtocol } from './claude-protocol.ts';
 
 const usage = { input_tokens: 8, cache_creation_input_tokens: 2671, cache_read_input_tokens: 24869, output_tokens: 1 };
@@ -150,10 +150,16 @@ describe('ClaudeProtocol', () => {
         expect(protocol.handle({ type: 'system', subtype: 'task_started', tool_use_id: 'toolu_2', description: 'Wait a while' })).toEqual([
             { type: 'tool.progress', ref: 'toolu_2', startedAt: null, description: 'Wait a while' }
         ]);
-        const before = Date.now();
-        const [progress] = protocol.handle({ type: 'tool_progress', tool_use_id: 'toolu_2', tool_name: 'Bash', elapsed_time_seconds: 30 });
-        expect(progress).toMatchObject({ type: 'tool.progress', ref: 'toolu_2', description: null });
-        expect(progress?.type === 'tool.progress' && progress.startedAt).toBeLessThanOrEqual(before - 30_000 + 5_000);
+        // A clock that stands still, so the start is exactly thirty seconds back however slow the runner is.
+        jest.useFakeTimers();
+        try {
+            const now = Date.now();
+            const [progress] = protocol.handle({ type: 'tool_progress', tool_use_id: 'toolu_2', tool_name: 'Bash', elapsed_time_seconds: 30 });
+            expect(progress).toMatchObject({ type: 'tool.progress', ref: 'toolu_2', description: null });
+            expect(progress?.type === 'tool.progress' && progress.startedAt).toBe(now - 30_000);
+        } finally {
+            jest.useRealTimers();
+        }
         // A heartbeat without a usable number says nothing.
         expect(protocol.handle({ type: 'tool_progress', tool_use_id: 'toolu_2', elapsed_time_seconds: 'soon' })).toEqual([]);
         // A background subagent reports through task_progress instead.

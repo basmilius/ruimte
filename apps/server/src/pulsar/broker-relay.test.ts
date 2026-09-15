@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { BrokerPeerFrameSchema, brokerHelloMessage, signalMessage, type BrokerPeerFrame, type SignalAccess, type SignalEnvelope } from '@ruimte/pulsar';
 import { generateKeyPair, signMessage, verifySignature } from '../auth/keys.ts';
 import { BrokerRelay } from './broker-relay.ts';
@@ -30,17 +30,28 @@ class FakeSocket {
     }
 }
 
-const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+// Fake timers leave setImmediate alone, so this drains every pending promise without letting a timer run.
+const tick = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 
+/* Steps the fake clock a millisecond at a time; the bound is fake time, well past the longest backoff with its jitter. */
 const waitUntil = async (ready: () => boolean): Promise<void> => {
-    const deadline = Date.now() + 2_000;
-    while (!ready()) {
-        if (Date.now() > deadline) {
-            throw new Error('Timed out');
+    await tick();
+    for (let elapsed = 0; !ready(); elapsed++) {
+        if (elapsed > 100) {
+            throw new Error('Not ready within 100 ms of fake time');
         }
-        await new Promise((resolve) => setTimeout(resolve, 5));
+        jest.advanceTimersByTime(1);
+        await tick();
     }
 };
+
+beforeEach(() => {
+    jest.useFakeTimers();
+});
+
+afterEach(() => {
+    jest.useRealTimers();
+});
 
 const quiet = { log: () => undefined, warn: () => undefined };
 
@@ -114,7 +125,7 @@ describe('BrokerRelay', () => {
         socket.deliver(relayedFrom(paired, machine.publicKey, offer, generateKeyPair()));
         // Signed for another receiver: the same bytes do not verify for this machine.
         socket.deliver(relayedFrom(paired, generateKeyPair().publicKey, offer));
-        await new Promise((resolve) => setTimeout(resolve, 30));
+        await tick();
         expect(received).toEqual([]);
         expect(socket.sent).toHaveLength(2);
         await relay.stop();
@@ -132,7 +143,7 @@ describe('BrokerRelay', () => {
 
         // Anything but an offer from that key is not worth an answer.
         socket.deliver(relayedFrom(stranger, machine.publicKey, { connectionId: offer.connectionId, signal: { kind: 'close', reason: 'done' } }));
-        await new Promise((resolve) => setTimeout(resolve, 30));
+        await tick();
         expect(socket.sent).toHaveLength(3);
         expect(received).toEqual([]);
         await relay.stop();
@@ -146,7 +157,7 @@ describe('BrokerRelay', () => {
         const other = generateKeyPair();
         pairedKeys.add(other.publicKey);
         socket.deliver(relayedFrom(other, machine.publicKey, { connectionId: offer.connectionId, signal: { kind: 'close', reason: 'done' } }));
-        await new Promise((resolve) => setTimeout(resolve, 30));
+        await tick();
         expect(received).toHaveLength(1);
         await relay.stop();
     });

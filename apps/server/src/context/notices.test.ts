@@ -43,7 +43,7 @@ describe('NoticeStore', () => {
         expect(store.take('term-2').map((notice) => notice.text)).toEqual(['the build is green']);
         expect(store.take('term-2')).toEqual([]);
         // The file follows the memory; taking is synchronous, so the write is still on its way here.
-        await Bun.sleep(20);
+        await store.settled();
         expect(await readdir(join(home, 'notices'))).toEqual([]);
     });
 
