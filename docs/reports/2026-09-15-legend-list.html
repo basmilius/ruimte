@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Legend List in Ruimte</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figcaption { margin-top: 10px; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#advies">Naar de inhoud</a>
+<header>
+  <p class="eyebrow">RUIMTE / ONDERZOEK / 15 SEPTEMBER 2026</p>
+  <h1>Legend List in Ruimte</h1>
+  <p class="intro">Legend List draait sinds versie 3 op React DOM en is voor chats gemaakt. Toch lost een overstap de scrollproblemen van Ruimte waarschijnlijk niet op. Er is maar één gevirtualiseerde lijst, de chat-timeline, en daar speelt hetzelfde probleem waar Legend List zelf nog open issues over heeft: onderaan blijven terwijl de laatste rij groeit. Daarbij meet de bibliotheek een deel van de hoogtes met <code>getBoundingClientRect</code>, en die maten kloppen niet in een chat-node op een ingezoomd canvas.</p>
+  <p class="status">Onderzoek afgerond, er is niets gebouwd</p>
+  <p class="caption">Ruimte op main bij 7ce21ad. Legend List <code>@legendapp/list</code> 3.3.11 (npm, 11 september 2026), de gebouwde <code>react.mjs</code> uit het npm-pakket gelezen. <span class="badge confirmed">Geverifieerd</span> betekent gecontroleerd in de broncode of op npm/GitHub. <span class="badge info">Afgeleid</span> betekent gelezen of beredeneerd, maar niet uitgeprobeerd. Er is geen scrollbug gereproduceerd en er is geen prototype gebouwd.</p>
+  <nav aria-label="Inhoud">
+    <a href="#advies">Advies</a>
+    <a href="#nu">Scrollen in Ruimte nu</a>
+    <a href="#legend">Legend List</a>
+    <a href="#oplossen">Wat het zou oplossen</a>
+    <a href="#risicos">Risico's</a>
+    <a href="#alternatief">Zonder overstap</a>
+    <a href="#stappen">Voorstel</a>
+    <a href="#vragen">Open vragen</a>
+    <a href="#bronnen">Bronnen</a>
+  </nav>
+</header>
+<main>
+  <section id="advies" class="recommendation">
+    <h2>Advies</h2>
+    <p>Stap nu niet over. Het terugkerende scrollprobleem in de chat is het volgen van de onderkant terwijl rijen na hun meting nog groeien (6aaca48). In de changelog van Legend List is dat precies het onderwerp waar de laatste zes patchreleases steeds opnieuw aan sleutelen. Tegelijk staan er issues open waarin het volgen permanent stopt (#525) of lege ruimte onder de lijst achterblijft, bevestigd in een Electron-app (#537).</p>
+    <p>Los eerst de twee zwakke plekken in de huidige timeline op. Die staan hieronder bij <a href="#alternatief">Zonder overstap</a>. Blijven er daarna scrollbugs over, bouw dan een spike met Legend List in de chat-view (zoom 1) en in een chat-node op een canvas met zoom 0,5, met de acceptatievoorwaarden uit het <a href="#stappen">voorstel</a>.</p>
+    <p class="note">De scrollbugs die jij in gedachten hebt, zijn niet benoemd. Dit advies rust op de code en de git-historie. Als het gaat om lijsten buiten de chat, zoals het palette, de sidebar of de bestandsboom, dan helpt Legend List daar niet: die lijsten virtualiseren niet of hangen aan een eigen component.</p>
+  </section>
+
+  <section id="nu">
+    <h2>Scrollen in Ruimte nu</h2>
+    <p>De chat-timeline is de enige lijst die Ruimte zelf virtualiseert, met <code>@tanstack/react-virtual</code> 3.14 (<code>apps/client/src/chat/ui/Timeline.tsx:114</code>). De andere oppervlakken tekenen alles, knippen het aantal resultaten af, of laten het scrollen over aan een bibliotheek.</p>
+    <div class="table" role="region" aria-label="Scrollende oppervlakken" tabindex="0">
+      <table class="wide">
+        <caption>Scrollende oppervlakken in apps/client en wat Legend List daar zou doen</caption>
+        <thead><tr><th scope="col">Oppervlak</th><th scope="col">Nu</th><th scope="col">Legend List</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Chat-timeline</th><td>TanStack Virtual, schatting 56 px, overscan 8, eigen volglogica</td><td>Kandidaat, zie de rest van dit rapport</td></tr>
+          <tr><th scope="row">Werk van een sub-agent in een chatrij</td><td>Geneste scroller, <code>scrollTop = scrollHeight</code> bij elke render (<code>SubagentRow.tsx:33</code>)</td><td>Geen winst, tientallen regels</td></tr>
+          <tr><th scope="row">Command palette, zoeken in bestanden, pickers</td><td>Niet gevirtualiseerd, resultaten afgekapt, <code>scrollIntoView</code></td><td>Geen winst</td></tr>
+          <tr><th scope="row">Sidebar, processen, instellingen, release notes</td><td>Niet gevirtualiseerd, tientallen rijen</td><td>Geen winst</td></tr>
+          <tr><th scope="row">Commitlog</td><td>Pagina's achteraan toegevoegd via een cursor</td><td>Alleen nodig bij heel lange geschiedenis</td></tr>
+          <tr><th scope="row">Bestandsboom, diffs</td><td><code>@pierre/trees</code> en <code>@pierre/diffs</code> met eigen scroller</td><td>Niet van toepassing</td></tr>
+          <tr><th scope="row">Codebestand in de preview</td><td>Eigen blokken van 400 regels met een <code>IntersectionObserver</code> (<code>CodeFile.tsx</code>)</td><td>Niet van toepassing, het is één document</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Hoe de chat de onderkant volgt</h3>
+    <p><span class="badge confirmed">Geverifieerd</span> Een <code>useLayoutEffect</code> zet <code>scrollTop</code> op <code>scrollHeight</code> zodra het aantal rijen, de tekstlengte van het laatste antwoord of de totale hoogte van de virtualizer verandert (<code>Timeline.tsx:137-145</code>). De handler <code>onScroll</code> bepaalt of er gevolgd wordt: minder dan 40 px plus de 168 px van de composer vanaf de onderkant (<code>Timeline.tsx:191-194</code>).</p>
+    <p>Commit 6aaca48 legde vast waarom: <code>scrollToIndex</code> mikt op waar een rij stond toen het werd gevraagd. Rijen die daarna groeien, zoals een diff die gekleurd wordt, een afbeelding die laadt of toolregels die erbij komen, lieten de thread boven de onderkant staan. De rest van de scrollhistorie bestaat uit kleinere dingen: PageUp en PageDown (106bb66), de knop "Jump to the end" (c6bfccc) en een palette dat met de pijltjes meescrollt (0529b61).</p>
+    <p>Wat er niet is: geen oudere items bijladen aan de bovenkant, geen herstel van de scrollpositie na een remount, geen <code>overflow-anchor</code> en geen <code>content-visibility</code>.</p>
+  </section>
+
+  <section id="legend">
+    <h2>Legend List in het kort</h2>
+    <div class="stats">
+      <div><strong>3.3.11</strong><span>laatste versie, 11 september 2026</span></div>
+      <div><strong>25</strong><span>releases sinds 3.0.0 op 28 mei 2026</span></div>
+      <div><strong>43 KB</strong><span><code>react.mjs</code> geminificeerd en gzip, esbuild</span></div>
+      <div><strong>60</strong><span>open issues op 15 september 2026</span></div>
+    </div>
+    <p><span class="badge confirmed">Geverifieerd</span> MIT-licentie. Eén dependency (<code>use-sync-external-store</code>), <code>react</code> als peer, <code>react-dom</code> en <code>react-native</code> optioneel. De web-entry <code>@legendapp/list/react</code> importeert alleen <code>react</code> en <code>react-dom</code>. Volgens de documentatie draait dezelfde JavaScript op beide platforms en verschillen de importpaden alleen in types.</p>
+    <p>Ter vergelijking: de ESM-bestanden van TanStack Virtual (core en React) zijn ongeminificeerd samen 12 KB gzip, Legend List 67 KB. Het verschil na minificatie is niet gemeten.</p>
+
+    <h3>Wat het biedt voor een chat</h3>
+    <ul>
+      <li><code>maintainScrollAtEnd</code> blijft onderaan zolang je binnen een drempel zit (standaard 10% van het scherm), met triggers voor datawijziging, layout en itemlayout.</li>
+      <li><code>alignItemsAtEnd</code> en <code>initialScrollAtEnd</code> beginnen onderaan zonder eerst de hele geschiedenis te tekenen.</li>
+      <li><code>maintainVisibleContentPosition</code> houdt de inhoud stil als rijen boven het beeld van grootte veranderen of er rijen bovenaan bijkomen.</li>
+      <li><code>contentInsetEndAdjustment</code> reserveert ruimte voor een zwevende composer als echte DOM-ruimte achter de laatste rij.</li>
+      <li><code>getState()</code> geeft <code>isAtEnd</code> en <code>isNearEnd</code>, genoeg voor de knop "Jump to the end".</li>
+    </ul>
+    <p><span class="badge confirmed">Geverifieerd</span> Op het web meet de lijst met een gedeelde <code>ResizeObserver</code> (<code>borderBoxSize</code>) en verplaatst hij rijen met <code>moveBefore</code> waar de browser dat kent, zodat focus en animaties blijven staan. De bibliotheek wil zijn eigen scrollcontainer. <code>useWindowScroll</code> is de enige uitweg, en een extern scrollelement zoals <code>getScrollElement</code> bij TanStack is een open feature request (#457).</p>
+  </section>
+
+  <section id="oplossen">
+    <h2>Wat het zou oplossen</h2>
+    <div class="split">
+      <div class="panel">
+        <h3>Wel</h3>
+        <p>De volglogica en de drempel verdwijnen uit Ruimte. Die logica zit dan in <code>maintainScrollAtEnd</code>, en de knop leest <code>getState().isNearEnd</code> in plaats van zijn eigen store. Mocht de chat later oudere berichten bijladen, dan houdt <code>maintainVisibleContentPosition</code> de positie vast. TanStack kent dat niet.</p>
+      </div>
+      <div class="panel">
+        <h3>Niet</h3>
+        <p>Lijsten buiten de chat, want die virtualiseren niet. Tekst selecteren over rijen die niet gemount zijn en "Select all" in het contextmenu blijven even beperkt als nu. Een groeiende rij tijdens het streamen is voor Legend List net zo goed een meting achteraf als voor TanStack. Het verschil zit alleen in wie de volglogica schrijft.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="risicos">
+    <h2>Risico's</h2>
+
+    <h3>Maten op een ingezoomd canvas</h3>
+    <p><span class="badge confirmed">Geverifieerd</span> Een chat-node staat onder <code>transform: translate(...) scale(zoom)</code> (<code>canvas/Canvas.tsx:541</code>). Een <code>ResizeObserver</code> en <code>offsetHeight</code> geven de layoutmaat, <code>getBoundingClientRect</code> geeft de maat na de transform. TanStack meet met <code>borderBoxSize</code> en valt terug op <code>offsetHeight</code>. Dat klopt op elke zoom.</p>
+    <p>Legend List gebruikt beide. De observer leest <code>borderBoxSize</code>, maar <code>measureContainersInLayoutEffect</code> en de uitgestelde meting bij een rij die krimpt lezen <code>getBoundingClientRect().height</code>.</p>
+    <details open>
+      <summary>Uit react.mjs, 3.3.11</summary>
+      <pre><code>function measureContainersInLayoutEffect(ctx, targetContainerIds = null) {
+  ...
+      const rect = element.getBoundingClientRect();
+      setContainerLayoutBaseline(element, rect);
+      measurements.push({ containerId, itemKey,
+        size: { height: rect.height, width: rect.width } });</code></pre>
+      <p><span class="badge info">Afgeleid</span> Op zoom 0,5 zou zo'n meting een rij half zo hoog maken als de observer hem opgeeft. Rijen kunnen dan over elkaar vallen of heen en weer springen tussen twee maten. Het is niet uitgeprobeerd. Of en hoe vaak dit pad op het web draait, hangt af van <code>containerLayoutEpoch</code>. Een patch in de bibliotheek of een issue upstream is dan nodig.</p>
+    </details>
+
+    <h3>Volgen tijdens streamen is upstream nog in beweging</h3>
+    <ul>
+      <li><a href="https://github.com/LegendApp/legend-list/issues/525">#525</a> (open, 3.3.5): een volgscroll die net te kort landt, zet het volgen voorgoed uit. Nieuwe berichten verschijnen dan onder de vouw.</li>
+      <li><a href="https://github.com/LegendApp/legend-list/issues/537">#537</a> (open, 3.3.9 en 3.3.10): op het web blijft tijdelijke <code>padding-bottom</code> staan, omdat de check een string met een onafgeronde float vergelijkt. Een reporter bevestigt het in een Electron-app en draait een patch. De changelog van 3.3.11 noemt "no longer leave extra padding at the end". Of dat hetzelfde lek dicht, is niet gecontroleerd.</li>
+      <li><a href="https://github.com/LegendApp/legend-list/issues/470">#470</a> (open): opnieuw vastpinnen tijdens animatie kon maar eens per 500 ms. In 3.3.11 is die code herschreven naar een promise-keten, de vaste 500 ms staat er niet meer. Het issue is niet gesloten.</li>
+      <li><a href="https://github.com/LegendApp/legend-list/issues/492">#492</a> (open): een chat voor transcripts van coding agents met toolrijen van 18 tot 322 px, waar correcties op de schatting het beeld laten verspringen.</li>
+    </ul>
+    <p>De changelog van 3.3.4 tot en met 3.3.11 bevat telkens een fix voor <code>maintainScrollAtEnd</code>. Dat is actief onderhoud, maar ook een teken dat dit gedrag nog niet stabiel is.</p>
+
+    <h3>Kleinere punten</h3>
+    <ul>
+      <li>De scroller is nu de <code>ContextMenu.Trigger</code> zelf. Met Legend List komt het contextmenu om de lijst heen en loopt <code>readTimelineTarget</code> via <code>refScrollView</code>.</li>
+      <li><code>timeline-scroll.ts</code> geeft PageUp, PageDown en "Jump to the end" een scrollelement. Dat kan blijven via <code>getScrollableNode</code>, maar het is nog een plek waar Ruimte en de bibliotheek allebei scrollen.</li>
+      <li>Bij <code>recycleItems</code> krijgt een rij de state van een ander item mee. Ruimte heeft state in rijen: open folds, <code>reveal.ts</code> en het fade-in-gedrag dat afhangt van of een rij het schrijven zag (<code>docs/DECISIONS.md</code>). Recycling moet dus uit.</li>
+    </ul>
+  </section>
+
+  <section id="alternatief">
+    <h2>Zonder overstap</h2>
+    <p>Twee plekken in de huidige code kunnen de onderkant laten ontsnappen. Beide zijn <span class="badge info">afgeleid</span> uit de code en niet gereproduceerd.</p>
+    <ol>
+      <li><strong>De eigen scroll telt als scroll van de gebruiker.</strong> <code>scrollTop = scrollHeight</code> vuurt <code>onScroll</code>, en die handler rekent het volgen opnieuw uit. Groeit een rij meer dan 208 px tussen het schrijven en het event, bijvoorbeeld een diff die klapt of een afbeelding die laadt, dan staat <code>followRef</code> op false en stopt het volgen. Dit is hetzelfde mechanisme als #525 bij Legend List.</li>
+      <li><strong>Een vloeiende scroll naar een bewegend doel.</strong> <code>scrollTimelineToEnd</code> scrollt <code>smooth</code> naar de <code>scrollHeight</code> van dat moment (<code>chat/timeline-scroll.ts:49</code>). Groeit de thread onderweg, dan landt de scroll te kort, en dat kan weer het eerste punt in gang zetten.</li>
+    </ol>
+    <p>Beide zijn op te lossen binnen <code>Timeline.tsx</code>: onthoud de positie die de code zelf schreef en negeer het scroll-event dat daarop antwoordt, en laat een sprong naar het einde het volgen aanzetten in plaats van het af te leiden uit waar de scroll landde. Dat is een kleinere wijziging dan een nieuwe bibliotheek, en het houdt de meting die op elke zoom klopt.</p>
+  </section>
+
+  <section id="stappen">
+    <h2>Voorstel</h2>
+    <ol class="steps">
+      <li class="step"><div>
+        <h3>Benoem de bugs</h3>
+        <p>Schrijf per scrollbug op waar hij zit (chat-view, chat-node, ander paneel) en hoe hij optreedt. Zonder die lijst valt niet te toetsen of een overstap iets oplost.</p>
+        <p>Klaar als elke bug een oppervlak en een reproductie heeft.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Repareer de volglogica in de huidige timeline</h3>
+        <p>De twee punten uit <a href="#alternatief">Zonder overstap</a>, met een test voor de pure delen.</p>
+        <p>Klaar als een reply die streamt met een codeblok en een diff die later kleurt onderaan blijft, en als "Jump to the end" midden in een stream de onderkant haalt, in de chat-view en in een node op zoom 0,5 en 1,5.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Alleen bij bugs die overblijven: een spike met Legend List</h3>
+        <p>Een branch waarop alleen <code>Timeline.tsx</code> Legend List gebruikt, met <code>recycleItems</code> uit, <code>alignItemsAtEnd</code>, <code>maintainScrollAtEnd</code> en <code>contentInsetEndAdjustment</code> voor de composer.</p>
+        <p>Klaar om te beslissen als dezelfde scenario's slagen, rijen op zoom 0,5 niet overlappen, er na een thread van honderden rijen geen lege ruimte onder de laatste rij blijft (#537), en PageUp, PageDown en het contextmenu werken.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <section id="vragen">
+    <h2>Open vragen</h2>
+    <ul>
+      <li>Welke scrollbugs zie je, en in welke oppervlakken?</li>
+      <li>Komt het bijladen van oudere berichten eraan? Dan weegt <code>maintainVisibleContentPosition</code> zwaarder mee, want dat moet je met TanStack zelf bouwen.</li>
+      <li>Draait <code>measureContainersInLayoutEffect</code> op het web vaak genoeg om op een ingezoomd canvas zichtbaar mis te gaan? Dat is alleen met een spike vast te stellen.</li>
+    </ul>
+  </section>
+
+  <section id="bronnen">
+    <h2>Bronnen</h2>
+    <ul>
+      <li><a href="https://github.com/LegendApp/legend-list">LegendApp/legend-list op GitHub</a> en de <a href="https://www.npmjs.com/package/@legendapp/list">npm-pagina</a>, versie 3.3.11 en het CHANGELOG uit het pakket</li>
+      <li><a href="https://legendapp.com/open-source/list/v3/overview/">Documentatie v3: overzicht</a>, <a href="https://www.legendapp.com/open-source/list/v3/api/">API</a> en <a href="https://legendapp.com/open-source/list/v3/guides/">guides</a></li>
+      <li>Issues <a href="https://github.com/LegendApp/legend-list/issues/457">#457</a>, <a href="https://github.com/LegendApp/legend-list/issues/470">#470</a>, <a href="https://github.com/LegendApp/legend-list/issues/492">#492</a>, <a href="https://github.com/LegendApp/legend-list/issues/525">#525</a>, <a href="https://github.com/LegendApp/legend-list/issues/537">#537</a></li>
+      <li>Ruimte: <code>apps/client/src/chat/ui/Timeline.tsx</code>, <code>chat/timeline-scroll.ts</code>, <code>canvas/Canvas.tsx</code>, commits 6aaca48, c6bfccc, 106bb66</li>
+      <li>TanStack Virtual core 3.17.9 in <code>node_modules</code>: <code>measureElement</code> leest <code>borderBoxSize</code> en anders <code>offsetHeight</code></li>
+    </ul>
+  </section>
+</main>
+<footer><p>Niet gedaan: geen prototype, geen reproductie van een scrollbug, geen meting in de app en geen vergelijking met virtua of react-virtuoso. Groottes gemeten met gzip en esbuild op de bestanden uit het npm-pakket en <code>node_modules</code>.</p></footer>
+</body>
+</html>

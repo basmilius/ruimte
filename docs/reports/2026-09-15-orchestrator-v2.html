@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Orchestrator V2 en complexer werken met agents</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .ref { fill: var(--panel); stroke: var(--reference); stroke-dasharray: 5 4; }
+.diagram .edge { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .edge.soft { stroke: var(--reference); stroke-dasharray: 5 4; }
+.diagram .arrow { fill: var(--accent); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+.accept { font-size: 15px; color: var(--muted); }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 13px; white-space: pre-wrap; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  .recommendation, .panel, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#kort">Naar de samenvatting</a>
+<header>
+  <p class="eyebrow">RUIMTE / ONDERZOEK / 15 SEPTEMBER 2026</p>
+  <h1>Orchestrator V2 en complexer werken met agents</h1>
+  <p class="intro">Orchestrator V2 maakt van een gesprek met een agent een duurzame uitvoeringsgraaf. Een beurt van de gebruiker wordt een run met pogingen en een boom van stappen, subagents worden echte kindgesprekken met een resultaat dat terugkomt, en alles staat in een event log dat een herstart overleeft. Ruimte kan de kern daarvan overnemen zonder herschrijving, in vijf stappen die elk los bruikbaar zijn.</p>
+  <p class="status">Onderzoek, nog geen code geschreven</p>
+  <p class="caption">Bronnen: de ontwerpdocumenten, contracts, migratie en pull requests van het project waarin Orchestrator V2 wordt gebouwd, gelezen op 15 september 2026 zonder de code te draaien. Ruimte bekeken op <code>e34cff7</code>.</p>
+  <nav aria-label="Inhoud">
+    <a href="#kort">Kort</a>
+    <a href="#probleem">Het probleem</a>
+    <a href="#model">Het model</a>
+    <a href="#opslag">Opslag en herstel</a>
+    <a href="#delegeren">Delegeren</a>
+    <a href="#stand">Stand</a>
+    <a href="#ruimte">Ruimte nu</a>
+    <a href="#haalbaar">Haalbaar?</a>
+    <a href="#voorstel">Voorstel</a>
+    <a href="#besluit">Besluit</a>
+    <a href="#vragen">Open vragen</a>
+    <a href="#startprompt">Startprompt</a>
+  </nav>
+</header>
+<main>
+  <section id="kort" class="recommendation">
+    <h2>Kort</h2>
+    <p>Orchestrator V2 lost één ontwerpfout op: de oude orchestrator gebruikte de beurt van de provider-CLI als grens van alles wat de app bijhield. Subagents, forks, een provider wisselen halverwege en herstel na een crash passen daar slecht in. V2 legt een eigen model over de provider heen. De app bezit de ids, een run is wat de gebruiker als één beurt ziet, en wat de provider doet hangt daar als refs onder.</p>
+    <p>Ruimte heeft hetzelfde probleem en nog een paar extra. Een kind-agent start pas als een client de node rendert. Een ouder hoort niet wanneer een kind klaar is. Tussen agents gaat alleen vrije tekst. Een herstart van de daemon breekt elke lopende beurt af. Dat zijn precies de punten waar complexer werken met agents op vastloopt.</p>
+    <p><strong>Advies:</strong> neem de primitieven over en niet de omvang. V2 loopt sinds mei, is niet gemerged en telt bijna 290.000 toegevoegde regels over web, mobiel en tien providers. Ruimte heeft twee providers en een canvas dat al laat zien wie wie opende. Begin bij de daemon die agents zonder client start en bij een taak met een resultaat dat de ouder wakker maakt. Het run-model met event log volgt daarna, voor chats en niet voor terminal-agents.</p>
+  </section>
+
+  <section id="probleem">
+    <h2>Wat Orchestrator V2 oplost</h2>
+    <p>De eerste orchestrator was al event-sourced: commands gaan door een decider, events komen in SQLite, projecties voeden de UI en reactors sturen de providers aan. Het domein was plat en draaide om één gesprek. Events heetten <code>thread.turn.start</code>, <code>thread.message.assistant.delta</code> of <code>thread.activity-appended</code>, en de levenscyclus van een beurt was die van de provider.</p>
+    <p>Dat werkt zolang één gesprek één proces van één provider is. Het breekt waar een agent subagents start, waar iemand midden in een gesprek van provider wil wisselen, waar een provider geen stabiele ids heeft of waar een gebruiker een lopende beurt wil bijsturen op een provider die dat niet kan. De ontwerpdocumenten noemen als doelen <span class="badge confirmed">geverifieerd</span>:</p>
+    <ul>
+      <li>App-ids zijn leidend, provider-ids zijn verwijzingen. Eén gesprek kan over tijd door meerdere provider-threads gedragen worden.</li>
+      <li>Root-beurt, subagents, tools, approvals, plannen en checkpoints vormen één uitvoeringsgraaf.</li>
+      <li>Alleen het afronden van de root-run rondt een zichtbare beurt af. Een kind dat klaar is sluit de ouder nooit.</li>
+      <li>Forken kan vanuit een gewoon gesprek en vanuit een afgerond subagent-gesprek.</li>
+      <li>Van provider wisselen tussen runs is een expliciete overdracht van context, geen verborgen prompt.</li>
+      <li>Gedrag hangt aan capabilities, nooit aan de naam van een provider.</li>
+    </ul>
+    <p>Het blijft een herschrijving van de orchestrator, niet van de app: de WebSocket-API, de persistentie en het streamen van projecties blijven in hetzelfde patroon, met een eigen eventschema en eigen tabellen.</p>
+  </section>
+
+  <section id="model">
+    <h2>Het model</h2>
+    <figure class="panel">
+      <div class="table" role="region" aria-label="Diagram van het datamodel, scrollbaar" tabindex="0">
+        <svg class="diagram plot" width="900" viewBox="0 0 900 330" role="img" aria-labelledby="model-title model-desc">
+          <title id="model-title">Datamodel van Orchestrator V2</title>
+          <desc id="model-desc">Een project bevat gesprekken. Een gesprek bevat runs. Een run heeft pogingen en een boom van uitvoeringsnodes. Een subagent-node verwijst naar een kindgesprek. Provider-threads en contextoverdrachten hangen als verwijzingen aan het gesprek.</desc>
+          <defs><marker id="m-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0 0 L8 4 L0 8 Z"/></marker></defs>
+          <rect class="node" x="20" y="40" width="140" height="64" rx="12"/>
+          <text x="90" y="78" text-anchor="middle">Project</text>
+          <rect class="node" x="210" y="40" width="160" height="64" rx="12"/>
+          <text x="290" y="70" text-anchor="middle">AppThread</text>
+          <text class="label" x="290" y="90" text-anchor="middle">het gesprek</text>
+          <rect class="node" x="420" y="40" width="160" height="64" rx="12"/>
+          <text x="500" y="70" text-anchor="middle">Run</text>
+          <text class="label" x="500" y="90" text-anchor="middle">één zichtbare beurt</text>
+          <rect class="node" x="640" y="10" width="220" height="56" rx="12"/>
+          <text x="750" y="36" text-anchor="middle">RunAttempt</text>
+          <text class="label" x="750" y="55" text-anchor="middle">poging: retry, steer, herstel</text>
+          <rect class="node" x="640" y="86" width="220" height="56" rx="12"/>
+          <text x="750" y="112" text-anchor="middle">ExecutionNode-boom</text>
+          <text class="label" x="750" y="131" text-anchor="middle">tekst, tool, approval, subagent</text>
+          <rect class="node" x="640" y="220" width="220" height="64" rx="12"/>
+          <text x="750" y="248" text-anchor="middle">Kind-AppThread</text>
+          <text class="label" x="750" y="268" text-anchor="middle">eigen runs en checkpoints</text>
+          <rect class="ref" x="130" y="180" width="200" height="56" rx="12"/>
+          <text x="230" y="206" text-anchor="middle">ProviderThread</text>
+          <text class="label" x="230" y="225" text-anchor="middle">native refs, runbereik</text>
+          <rect class="ref" x="360" y="220" width="220" height="64" rx="12"/>
+          <text x="470" y="248" text-anchor="middle">ContextTransfer</text>
+          <text class="label" x="470" y="268" text-anchor="middle">fork, merge, subagent-resultaat</text>
+          <path class="edge" d="M160 72 H198" marker-end="url(#m-arrow)"/>
+          <path class="edge" d="M370 72 H408" marker-end="url(#m-arrow)"/>
+          <path class="edge" d="M580 62 L628 42" marker-end="url(#m-arrow)"/>
+          <path class="edge" d="M580 84 L628 108" marker-end="url(#m-arrow)"/>
+          <path class="edge" d="M750 142 V208" marker-end="url(#m-arrow)"/>
+          <path class="edge soft" d="M270 104 L240 170"/>
+          <path class="edge soft" d="M628 252 H592"/>
+          <path class="edge soft" d="M330 104 L430 212"/>
+        </svg>
+      </div>
+      <figcaption>Een project bevat gesprekken, een gesprek bevat runs, een run heeft pogingen en een boom van stappen. Een subagent-stap verwijst naar een echt kindgesprek. Gestippeld: verwijzingen naar de provider en de overdrachten van context tussen gesprekken.</figcaption>
+    </figure>
+    <div class="table" role="region" aria-label="Begrippen van het model" tabindex="0">
+      <table class="wide">
+        <caption>De begrippen, zoals de contracts ze vastleggen</caption>
+        <thead><tr><th scope="col">Begrip</th><th scope="col">Wat het is</th><th scope="col">Waarom het bestaat</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>AppThread</code></th><td>Het gesprek zoals de gebruiker het ziet, met een actieve provider-thread en lineage (ouder, fork of subagent, root).</td><td>Eén gesprek kan eerst op de ene provider en daarna op een andere lopen.</td></tr>
+          <tr><th scope="row"><code>Run</code></th><td>Eén beurt: queued, starting, running, waiting, completed, interrupted, failed, cancelled of rolled_back. Draagt provider, model, plek in de wachtrij, checkpoint en overdracht.</td><td>Vervangt de beurt van de provider als grens van de levenscyclus.</td></tr>
+          <tr><th scope="row"><code>RunAttempt</code></th><td>Eén poging binnen een run, met als reden initial, steering_restart, retry of provider_recovery.</td><td>Bijsturen werkt ook op een provider die dat niet kan: onderbreken en een vervangende poging starten.</td></tr>
+          <tr><th scope="row"><code>ExecutionNode</code></th><td>Een boom binnen de run: root_turn, assistant_message, reasoning, plan, todo_list, tool_call, approval_request, user_input_request, subagent, hook, system.</td><td>Alles wat een beurt doet op één plek, met <code>countsForRun</code> zodat een kind de ouder niet afsluit.</td></tr>
+          <tr><th scope="row"><code>Subagent</code></th><td>Oorsprong <code>provider_native</code> (de eigen subagents van de CLI) of <code>app_owned</code> (een echt kindgesprek, eventueel op een andere provider), met resultaat, voortgang en <code>completionWake</code>.</td><td>Maakt delegeren zichtbaar, annuleerbaar en herstelbaar, en bepaalt of de ouder wakker wordt.</td></tr>
+          <tr><th scope="row"><code>CheckpointScope</code></th><td>Geneste checkpoints; die van een kind tellen niet mee voor de ouder.</td><td>Terugdraaien zet bestanden, provider-thread en latere runs samen terug.</td></tr>
+          <tr><th scope="row"><code>ContextTransfer</code> en <code>ContextHandoff</code></th><td>Een duurzame relatie tussen twee punten in gesprekken (fork, merge_back, subagent_spawn, subagent_result) en het artefact dat de context echt overbrengt, zoals een samenvatting van de delta.</td><td>Forken, samenvoegen, provider wisselen en subagents gebruiken één mechanisme dat achteraf te controleren is.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>De commands volgen dat model: <code>message.dispatch</code> met de intentie direct starten, achter de actieve run in de wachtrij of de actieve run bijsturen, verder <code>run.interrupt</code>, <code>provider.switch</code>, <code>thread.fork</code>, <code>thread.merge_back</code>, <code>checkpoint.rollback</code> en <code>delegated_task.request</code>.</p>
+  </section>
+
+  <section id="opslag">
+    <h2>Opslag en herstel</h2>
+    <p>Elk event krijgt een oplopend volgnummer in één eventtabel. Een client leest een snapshot op nummer N en krijgt daarna alleen de events na N. Naast de events staat een tabel met command receipts, zodat een herhaald command met hetzelfde id geen tweede actie start. Per begrip is er een projectietabel: gesprekken, runs, pogingen, nodes, berichten, plannen, checkpoints, provider-sessies, provider-threads, runtime requests en overdrachten.</p>
+    <p>Bijwerkingen, zoals een provider starten of een beurt versturen, lopen via een outbox met een worker. Een herstart vindt die outbox terug, en de afronding van een gedelegeerde taak speelt eerst de opgeslagen events af en volgt daarna de live events. Een taak die tijdens een herstart liep, rondt dus alsnog goed af.</p>
+    <p>De ruwe frames van een provider zijn geen duurzame staat. Ze gaan naar roterende diagnostiek die ook als opname voor replay-tests dient: in de integratietests is het transport naar de provider het enige wat nep mag zijn.</p>
+    <p>Oude gesprekken worden bij het opstarten als schil geïmporteerd. De eerste nieuwe run krijgt de zichtbare geschiedenis als handmatige contextoverdracht mee. Oude runs, checkpoints en forks worden niet gereconstrueerd.</p>
+  </section>
+
+  <section id="delegeren">
+    <h2>Delegeren via een orchestrator-server</h2>
+    <p>Elke provider-sessie krijgt een MCP-server mee waarmee de agent zelf de orchestrator aanspreekt. De tools zijn <code>orchestrator_capabilities</code>, <code>delegate_task</code>, <code>task_status</code>, <code>task_cancel</code>, <code>create_threads</code> en een set om gesprekken te starten, te lezen, bij te werken, een bericht te sturen, erop te wachten en ze te onderbreken.</p>
+    <div class="split">
+      <div class="panel">
+        <h3><code>delegate_task</code></h3>
+        <p>Maakt een kindgesprek dat de app bezit, met een rol en een doelprovider en model. De modus is <code>async</code> of <code>wait</code>, en een <code>clientRequestId</code> maakt een retry veilig. Het antwoord zegt <code>working</code>, <code>waiting_for_children</code> of <code>result_available</code>, dus kinderen kunnen zelf weer kinderen hebben.</p>
+      </div>
+      <div class="panel">
+        <h3>Plafonds</h3>
+        <p>Een kind mag niet hoger in runtime-modus dan zijn ouder, mag niet van planmodus naar de standaardmodus en ziet alleen het project van het aanroepende gesprek. Een weigering is getypeerd, zodat de agent weet waarom.</p>
+      </div>
+    </div>
+    <h3>Wat het mogelijk maakt</h3>
+    <ul>
+      <li>Een agent geeft werk aan een andere agent, op dezelfde of een andere provider, als echt gesprek met eigen runs en checkpoints. Het resultaat komt als expliciete overdracht terug in de ouder.</li>
+      <li>Een persoon forkt een gesprek, verkent een zijspoor en voegt het terug. Alleen een samenvatting van de delta gaat mee in de volgende run van het bron-gesprek.</li>
+      <li>Halverwege van provider wisselen, met een overdracht die je kunt nalezen.</li>
+      <li>Wachtrij, herordenen, een bericht in de wachtrij promoveren tot bijsturing, en onderbreken als gewone operaties.</li>
+      <li>Gedelegeerd werk dat een herstart van de server overleeft.</li>
+      <li>Een gesprek dat een agent overhandigt aan een worktree. <span class="badge info">alleen uit een PR-titel</span></li>
+    </ul>
+  </section>
+
+  <section id="stand">
+    <h2>Stand van de rewrite</h2>
+    <div class="stats">
+      <div><strong>mei 2026</strong><span>start van de integratiebranch</span></div>
+      <div><strong>73</strong><span>deel-PR's erin gemerged, 21 nog open</span></div>
+      <div><strong>~290k</strong><span>regels toegevoegd over 1.278 bestanden</span></div>
+      <div><strong>0</strong><span>keer naar main gemerged</span></div>
+    </div>
+    <p><span class="badge confirmed">geverifieerd</span> De hoofd-PR staat open en noemt zichzelf in de beschrijving nog een draft ter review. De branch is erg actief: op 15 september zijn meerdere deel-PR's gemerged, waaronder een die de overstap van oud naar nieuw bewijst op een kopie van een database.</p>
+    <p><span class="badge warning">afgeleid</span> Dat wijst op voorbereiding van een merge, maar er staat nergens een datum. Het aantal regels is grotendeels main die in de branch is opgenomen plus de migratie van web en mobiel; hoeveel de orchestrator zelf is, is niet gemeten.</p>
+    <p>Nog open volgens de takenlijst en de issues:</p>
+    <ul>
+      <li>consistente projecties bij terugdraaien, onderbreken en randgevallen in de wachtrij;</li>
+      <li>overdraagbare context bij een fork naar een andere provider en bij wisselen binnen een gesprek;</li>
+      <li>getypeerde fouten voor overdrachten die niet oplossen, en aparte rollback voor alleen gesprek of alleen bestanden;</li>
+      <li>subagent-statussen die op <code>running</code> blijven hangen;</li>
+      <li><code>wait</code>-modus van <code>delegate_task</code> die op het plafond van vijf minuten van de client sterft en dan dubbel dispatcht.</li>
+    </ul>
+    <p class="note">Die laatste twee zijn leerzaam voor Ruimte: wachten op een kind binnen één tool call botst op timeouts, en de status van een subagent die de CLI zelf beheert is lastig betrouwbaar te volgen.</p>
+  </section>
+
+  <section id="ruimte">
+    <h2>Waar Ruimte nu staat</h2>
+    <p>Ruimte heeft al veel van de buitenkant: agents openen agents (<code>agent</code>, <code>team</code>), lineage met een maximale diepte, edges als leesbare context, <code>notify</code> tussen nodes, approvals, worktrees en een checkpoint per chatbeurt. De binnenkant is een snapshot per chat en geen model van runs.</p>
+    <div class="table" role="region" aria-label="Vergelijking tussen Orchestrator V2 en Ruimte" tabindex="0">
+      <table class="wide">
+        <caption>Vergelijking per onderdeel</caption>
+        <thead><tr><th scope="col">Onderdeel</th><th scope="col">Orchestrator V2</th><th scope="col">Ruimte op <code>e34cff7</code></th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Eenheid van werk</th><td>Run met pogingen en een nodeboom</td><td>Een <code>turn</code>-item in de thread van een chat; terminal-agents alleen een hookstatus</td></tr>
+          <tr><th scope="row">Opslag</th><td>Event log met volgnummer, command receipts, projecties</td><td>Eén JSON-snapshot per chat, in zijn geheel herschreven; <code>ChatEvent</code>s worden na het uitzenden weggegooid</td></tr>
+          <tr><th scope="row">Na reconnect</th><td>Snapshot op N, events na N</td><td>Volledige snapshot bij <code>chat.attach</code>, daarna live</td></tr>
+          <tr><th scope="row">Herstart daemon</th><td>Outbox en replay ronden gedelegeerd werk af</td><td>Lopende beurten worden gestopt en op <code>error</code> gezet; approvals vervallen; hervatten pas bij het volgende bericht</td></tr>
+          <tr><th scope="row">Kind starten</th><td>De server start het kindgesprek</td><td>De daemon schrijft de node en houdt de prompt vast; het kind start pas als een client de node mount</td></tr>
+          <tr><th scope="row">Resultaat van een kind</th><td>Getypeerd resultaat en <code>completionWake</code></td><td>Geen; de ouder moet zelf <code>ruimte-context read</code> doen op een transcript of scherm</td></tr>
+          <tr><th scope="row">Berichten tussen agents</th><td>Sturen, wachten, onderbreken via MCP</td><td><code>notify</code>: maximaal 500 tekens, pas bij de volgende beurt van de ontvanger, wekt niemand</td></tr>
+          <tr><th scope="row">Isolatie</th><td>Worktree per gesprek, geneste checkpoints</td><td>Een team deelt één <code>cwd</code>; verbs maken geen worktree; de turn-diff omvat de hele map</td></tr>
+          <tr><th scope="row">Grenzen</th><td>Plafond op modus, scope per project, getypeerde weigering</td><td>Diepte 2, team diepte 1, 16 agents per aanroeper; geen plafond op modus of budget, geen cascade bij annuleren</td></tr>
+          <tr><th scope="row">Fork en provider wisselen</th><td>Eerste klasse, via overdrachten</td><td>Niet gebouwd; gesprek aftakken staat als roadmappunt 9</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="haalbaar">
+    <h2>Kan Ruimte dit ook?</h2>
+    <p>Ja, in delen. Drie verschillen bepalen hoe.</p>
+    <div class="split">
+      <div class="panel">
+        <h3>Wat Ruimte al meebrengt</h3>
+        <p>Het canvas is een relatiegraaf die V2 nog als UI moet bouwen: een edge van ouder naar kind is lineage, een groep is een team, een worktree hangt al aan een groep. De backends normaliseren al naar één <code>BackendEvent</code>-union met <code>task.started</code> en <code>task.done</code>, en <code>ThreadProjector</code> is al een projectie. Er zijn twee providers in plaats van tien, dus het capability-systeem kan klein blijven.</p>
+      </div>
+      <div class="panel">
+        <h3>Wat anders ligt</h3>
+        <p>Terminal-agents zijn een PTY met hooks. Daar valt geen nodeboom uit te halen, een ouder in een terminal kun je niet wekken en alleen Claude krijgt context in zijn prompt. Een orchestrerende agent moet dus een chatnode zijn. Verder koos Ruimte voor projecten bewust een documentmerge boven een operatielog, en DECISIONS zegt "a canvas is not a scheduler".</p>
+      </div>
+    </div>
+    <h3>Verbs of MCP</h3>
+    <p>V2 geeft agents een MCP-server. Ruimte heeft <code>ruimte-context</code> en een registry waarin validatie en help één object zijn. Verbs werken in elke CLI die een shell heeft, ook in een terminal-agent zonder MCP. Mijn advies is om bij verbs te blijven en een MCP-adapter op dezelfde registry pas te overwegen als een provider geen shell-tool heeft.</p>
+    <h3>Event log of snapshot</h3>
+    <p>Een volledig event-sourced model is voor Ruimte niet nodig om de doelen te halen. Wat wel nodig is: een run met een id en status die een herstart overleeft, een oplopend volgnummer zodat een client na een reconnect kan bijlezen, en een outbox voor bijwerkingen die de daemon moet afmaken, zoals een kind starten of een ouder wekken. Een append-only JSONL per chat past bij hoe tekeningen en diagrammen al een regel per element opslaan, en de huidige snapshot kan als projectie blijven bestaan.</p>
+    <p class="note">De grootste valkuil is de omvang. V2 bouwt fork, merge-back, provider wisselen, rollback over gesprekken heen en tien adapters tegelijk, en is na vier maanden nog niet op main. Voor Ruimte is delegeren met een resultaat het doel. De rest kan wachten tot dat staat.</p>
+  </section>
+
+  <section id="voorstel">
+    <h2>Voorstel in stappen</h2>
+    <p>Elke stap levert iets bruikbaars op zonder de volgende. De volgorde volgt waar complexer werken nu het eerst vastloopt.</p>
+    <ol class="steps">
+      <li class="step"><div>
+        <h3>De daemon start agents zelf</h3>
+        <p>Nu wacht een prompt van <code>agent</code> of <code>team</code> tot een client de node rendert. Laat de daemon de chat of sessie starten zodra de write geland is, met de node als eigenaar. Een client die later mount, attacht aan wat al loopt.</p>
+        <p class="accept">Klaar als: een agent een team van drie opent terwijl die view in geen enkel venster open staat, en alle drie hun eerste beurt afronden.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Een taak met een resultaat dat de ouder wekt</h3>
+        <p>Een verb (<code>agent --task</code> of een eigen <code>delegate</code>) legt bij de lineage een taakrecord vast: opdracht, status en resultaat. Het kind rondt af met <code>ruimte-context done --result</code>, of standaard met zijn laatste antwoord aan het einde van een beurt. De daemon dispatcht daarna een beurt naar de ouder met de resultaten, zoals <code>completionWake</code>, voor een ouder die een chat is. <code>tasks</code> toont de status. Er komt geen blokkerende wachtmodus, zodat het plafond van vijf minuten waar V2 op stukloopt hier niet ontstaat.</p>
+        <p class="accept">Klaar als: een chat-agent drie kinderen opent, zijn beurt beëindigt en precies één nieuwe beurt krijgt met drie resultaten, zonder zelf te pollen.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Een run die een herstart overleeft</h3>
+        <p>Maak van het <code>turn</code>-item in een chat een run met id, status, pogingen en een oplopend volgnummer op elk <code>ChatEvent</code>, weggeschreven als append-only log naast de snapshot. <code>chat.attach</code> neemt een volgnummer en stuurt alleen wat daarna kwam. De taken uit stap 2 en het wekken van ouders gaan via een outbox die de daemon bij het opstarten afwerkt.</p>
+        <p class="accept">Klaar als: de daemon stopt terwijl een kind werkt, na de start het kind met <code>--resume</code> verder gaat onder hetzelfde run-id met een nieuwe poging, en de ouder toch zijn resultaat krijgt.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Isolatie per rol</h3>
+        <p>Laat <code>agent</code> en <code>team</code> een worktree per rol aanmaken (<code>--worktree</code>) en maak het checkpoint per beurt beperkt tot de map van die node. Dat raakt roadmappunt 11 (merge en opruimen van worktrees) en het bekende gat dat de turn-diff de hele map omvat.</p>
+        <p class="accept">Klaar als: twee rollen hetzelfde bestand wijzigen zonder elkaars werk te overschrijven, en de turn-diff van elke rol alleen de eigen wijzigingen toont.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Annuleren en plafonds</h3>
+        <p>Een ouder stoppen of zijn node verwijderen stopt ook zijn kinderen, na een bevestiging die ze telt. Een kind mag geen ruimere runtime-modus hebben dan zijn ouder, en een weigering krijgt een eigen code in het <code>refused</code>-formaat.</p>
+        <p class="accept">Klaar als: het verwijderen van een ouder met twee lopende kinderen alle drie de processen beëindigt, en <code>agent --mode</code> boven de modus van de ouder een weigering met code geeft.</p>
+      </div></li>
+    </ol>
+    <p>Fork en merge-back, provider wisselen met een overdracht, en de native subagents van de CLI als nodes horen daarna, bij roadmappunt 9. Ze bouwen op de run en de overdracht uit stap 2 en 3.</p>
+  </section>
+
+  <section id="besluit">
+    <h2>Besluit van 15 september</h2>
+    <p>Ruimte bouwt een eigen orchestratie, in fasen en pas nadat het werk aan remote werken af is. Het inzicht in subagents gaat mee als fase 1, omdat de kinderen die Ruimte later zelf start dezelfde weergave gebruiken.</p>
+    <ol class="steps">
+      <li class="step"><div><h3>Ontwerp</h3><p>Run, poging, stap, subagent met oorsprong <code>native</code> of <code>ruimte</code>, en taak met resultaat, vastgelegd in <code>docs/DECISIONS.md</code>.</p></div></li>
+      <li class="step"><div>
+        <h3>Het gesprek van een subagent openen</h3>
+        <p>Een zijpaneel zonder knop in de toolbar dat alleen vanuit de chat opent, vanaf de subagent-rij. Het paneel toont het volledige gesprek alleen-lezen met de bestaande <code>Timeline</code>, in pagina's.</p>
+        <p>Claude Code (2.1.272) schrijft het volledige transcript naar <code>~/.claude/projects/&lt;cwd&gt;/&lt;sessionId&gt;/subagents/agent-&lt;id&gt;.jsonl</code>, met een <code>.meta.json</code> waarvan <code>toolUseId</code> de koppeling met de subagent-rij is. Codex gaat meteen mee: de rij bewaart het id van de kindthread en de daemon leest die met <code>thread/items/list</code>. Nu kapt de projector het werk van een kind af op 200 items of 64 KiB en bewaart hij het denkwerk van een kind niet, en zet <code>renderTranscript</code> dat werk plat tussen de ouder. <code>read --subagent</code> geeft een agent hetzelfde gesprek.</p>
+        <p class="accept">Klaar als: een subagent met meer dan 200 stappen in Claude en in Codex volledig te lezen is vanuit de chat, ook na een herstart van de daemon.</p>
+      </div></li>
+      <li class="step"><div><h3>De daemon start agents zelf</h3><p>Stap 1 uit het voorstel.</p></div></li>
+      <li class="step"><div><h3>Run-model met log en outbox</h3><p>Stap 3 uit het voorstel.</p></div></li>
+      <li class="step"><div><h3>Taken met resultaat</h3><p>Stap 2 uit het voorstel. Alleen een chat kan een ouder zijn die delegeert, omdat een terminal-agent niet te wekken is.</p></div></li>
+      <li class="step"><div><h3>Isolatie, annuleren en plafonds</h3><p>Stap 4 en 5 uit het voorstel.</p></div></li>
+    </ol>
+  </section>
+
+  <section id="vragen">
+    <h2>Open vragen</h2>
+    <ul>
+      <li><strong>Waar staat de taak?</strong> In de lineage (niet te bewerken door een agent, maar onzichtbaar) of in <code>project.json</code> (zichtbaar voor iedereen, maar een persoon kan hem slopen)? De keuze voor lineage buiten het projectbestand pleit voor het eerste, met een status op de edge als weergave.</li>
+      <li><strong>Ondergrens of scheduler?</strong> Een ouder wekken is iets anders dan taken plannen, maar het schuift richting de "not a scheduler"-beslissing. Die beslissing moet expliciet worden bijgesteld of begrensd.</li>
+      <li><strong>Een groeiend transcript.</strong> Het bestand van een subagent op de achtergrond groeit door na de beurt. Groeit het open paneel mee, en krijgt een kleinkind een eigen bestand?</li>
+      <li><strong>Budget.</strong> V2 heeft plafonds op modus maar niet op kosten. Met de usage-index kan Ruimte een tokenbudget per taak afdwingen; is dat gewenst?</li>
+      <li><strong>Hoe groot is het echt?</strong> Dit onderzoek las ontwerpdocumenten, contracts en PR-beschrijvingen, niet de volledige code. Hoe goed <code>completionWake</code> en het herstel van gedelegeerd werk in de praktijk werken, is niet getest.</li>
+    </ul>
+  </section>
+
+  <section id="startprompt">
+    <h2>Startprompt voor een schone sessie</h2>
+    <p>Plak dit in een nieuwe sessie in de map van Ruimte zodra het werk aan remote werken af is.</p>
+<pre><code>We beginnen aan de eigen orchestratie van Ruimte. Lees eerst docs/reports/2026-09-15-orchestrator-v2.html volledig, met name de secties "Besluit" en "Open vragen", en daarna CLAUDE.md en de delen van docs/DECISIONS.md over agents, verbs, lineage, chats en worktrees.
+
+Vastgestelde keuzes:
+- Werk in fasen: 0 ontwerp, 1 het gesprek van een subagent openen, 2 de daemon start agents zelf, 3 run-model met append-only log per chat, volgnummer bij attach en outbox, 4 taken met resultaat die de ouder wekken, 5 worktree per rol, annuleren doorzetten en een plafond op de modus.
+- Fase 1: een zijpaneel zonder knop in de toolbar, alleen te openen vanaf de subagent-rij in de chat. Claude Code en Codex allebei meteen. Claude via het transcript onder ~/.claude/projects/&lt;cwd&gt;/&lt;sessionId&gt;/subagents/ (koppeling via toolUseId in .meta.json), Codex via het id van de kindthread en thread/items/list. Ook read --subagent voor agents en renderTranscript die subagent-werk niet meer plat tussen de ouder zet.
+- Alleen een chat mag een ouder zijn die delegeert, geen terminal-agent.
+- Verbs op ruimte-context, geen MCP-server.
+
+Begin met fase 0: schrijf een ontwerp voor het model (run, poging, stap, subagent met oorsprong native of ruimte, taak met resultaat), de opslag en de wire-wijzigingen, en controleer de aannames uit het rapport eerst tegen de huidige code en de geïnstalleerde versies van claude en codex. Leg het ontwerp aan mij voor en wacht op akkoord voordat er code komt. Beslissingen die niet uit de code blijken gaan daarna naar docs/DECISIONS.md.
+
+Werkwijze: onderzoek en implementatie via sub-agents, commits per fase op main volgens CLAUDE.md, zonder Co-Authored-By. Noem in commits, code en docs geen ander product en niet de naam "Orchestrator V2"; het heet in Ruimte gewoon orchestratie.</code></pre>
+  </section>
+</main>
+<footer><p>Geverifieerd: doelen, datamodel, commands, tabellen, MCP-tools, plafonds, migratie en de open punten, uit ontwerpdocumenten, contracts, migratie, takenlijst en PR-beschrijvingen. Afgeleid: de rol van reactors en services uit hun namen, hoe dicht de merge naar main is, en het aandeel van de orchestrator in de diff. Ruimte-bevindingen komen uit de code op <code>e34cff7</code> en <code>docs/DECISIONS.md</code>. Niet gedaan: code van de rewrite draaien of volledig lezen, en dit rapport in een browser renderen.</p></footer>
+</body>
+</html>

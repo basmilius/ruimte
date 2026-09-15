@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte &middot; Een eigen app voor iPhone en iPad</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h4 { font-size: 16px; margin: 20px 0 8px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); margin-bottom: 16px; }
+.note p:last-child { margin-bottom: 0; }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 20px 0; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.panel p:last-child, .panel ul:last-child { margin-bottom: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; vertical-align: middle; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 15px; }
+.diagram .label { fill: var(--muted); font-size: 13px; }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .soft { fill: var(--panel); stroke: var(--reference); }
+.diagram .edge { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .edge.dashed { stroke-dasharray: 6 6; }
+.diagram .arrow { fill: var(--accent); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+.step p:last-child { margin-bottom: 0; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; line-height: 1.5; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+.sources li { margin-bottom: 6px; font-size: 14px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .badge, .note { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#samenvatting">Naar de samenvatting</a>
+<header>
+  <p class="eyebrow">Ruimte / Onderzoek / 15 september 2026</p>
+  <h1>Een eigen app voor iPhone en iPad, zonder machine aan boord</h1>
+  <p class="intro">Een native SwiftUI-app kan alles wat de webclient op <code>station.ruimte.app</code> vandaag doet en drie dingen die een browser nooit krijgt: een terminal met een echt toetsenbord, een melding als een agent klaar is of om toestemming vraagt, en een Live Activity die een lopende beurt volgt. Het pad naar een machine (adresboek, broker, WebRTC, handtekeningen) is al geschreven en hoeft alleen in Swift na te worden gebouwd. Wat ontbreekt is een manier om een push te sturen terwijl de app slaapt, een TURN-relay voor een iPhone op 5G, en een handvol kleine wijzigingen aan de daemon.</p>
+  <p class="status">Onderzoek afgerond, niets gebouwd, besluiten van Bas verwerkt op 15 september</p>
+  <p class="caption">Geschreven op 15 september 2026 tegen de stand van Ruimte op <code>44315a5</code> (main). Elke bestandsverwijzing is naar die commit. Platformfeiten over iOS, APNs, ActivityKit en de WebRTC-frameworks zijn op 15 september 2026 op het web opgezocht; de bronnen staan onderaan. Wat uit de code komt staat als geverifieerd gemarkeerd, wat een inschatting is staat als aanname.</p>
+  <nav aria-label="Inhoud">
+    <a href="#samenvatting">Samenvatting</a>
+    <a href="#uitgangspunt">Uitgangspunt</a>
+    <a href="#structuur">De structuur</a>
+    <a href="#verbinden">Verbinden</a>
+    <a href="#inloggen">Inloggen</a>
+    <a href="#meldingen">Meldingen</a>
+    <a href="#canvas">Het canvas</a>
+    <a href="#terminal">Terminal</a>
+    <a href="#chat">Chats</a>
+    <a href="#wire">Wire en types</a>
+    <a href="#repo">Repo en CI</a>
+    <a href="#server">Wijzigingen</a>
+    <a href="#risico">Risico's</a>
+    <a href="#vragen">Besluiten</a>
+    <a href="#plan">Het plan</a>
+    <a href="#prompt">Startprompt</a>
+    <a href="#bronnen">Bronnen</a>
+  </nav>
+</header>
+<main>
+
+<section id="samenvatting" class="recommendation">
+  <h2>Samenvatting en aanbeveling</h2>
+  <p><strong>Bouw hem, in deze volgorde: eerst de verbinding, dan chat en terminal als losse pagina's, dan het canvas als overzicht, dan pas meldingen.</strong> De app is een tweede client op dezelfde draad als de desktop en de webclient. Hij tekent niets zelf dat de daemon niet al levert, en hij wijzigt niets aan de projectbestanden dat de desktop niet ook doet.</p>
+  <div class="stats">
+    <div><strong>89</strong><span>request-types en 21 event-types in <code>packages/contracts</code>, alles zod 4, één protocolversie</span></div>
+    <div><strong>0</strong><span>nieuwe wire-shapes nodig voor fase 1 tot 5; de push-fase voegt er drie toe</span></div>
+    <div><strong>~30 s</strong><span>houdt iOS een socket of DataChannel open na het wegdrukken van de app</span></div>
+    <div><strong>45 MB</strong><span>gecomprimeerd WebRTC-framework (alle slices) als je libwebrtc kiest</span></div>
+  </div>
+
+  <h3>De zes conclusies</h3>
+  <ol>
+    <li><strong>Het remote-pad is compleet en portable.</strong> Adresboek, broker, statements, de handshake over het kanaal, het splitsen van frames en de liveness-ping zijn zuivere byte-afspraken (base64url, ed25519, JSON) zonder browser-eigenschappen. Alles staat in <code>packages/pulsar</code> en <code>packages/contracts/src/direct.ts</code> en past één op één in Swift. De rij die de webclient voor een account-machine aanmaakt (<code>endpointForAccountMachine</code>, geen adres, Direct aan, <code>needsStatement</code>) is precies de rij die de app voor elke machine bouwt.</li>
+    <li><strong>WebRTC: neem libwebrtc als binaire SPM-package (stasel/WebRTC).</strong> Zelfde stack als werift op de daemon en de browser, <code>restartIce</code>, <code>getStats</code> voor de liveness en de SDP met <code>a=fingerprint</code> voor de binding. Kosten: 45 MB gecomprimeerd en een maandelijkse rebuild die je niet zelf doet. libdatachannel is vijf tot tien keer kleiner maar je bouwt hem zelf. Zonder TURN komt een iPhone op 5G niet door (CGNAT, al gezien op 15 september); TURN is dus een voorwaarde voor de telefoon, niet een luxe.</li>
+    <li><strong>De achtergrond is het echte probleem, niet de UI.</strong> Zodra iOS de app opschort stopt al het netwerk. Geen achtergrondmodus past (VoIP eist CallKit, audio is een afwijzingsreden, <code>BGContinuedProcessingTask</code> is voor eigen eindig werk). De app moet dus "verbinding kwijt, melding via APNs, herverbinden bij openen" als normale toestand behandelen, precies zoals <code>transport/wake.ts</code> dat voor Safari doet.</li>
+    <li><strong>Wie de push stuurt: het adresboek, gesigneerd door de machine.</strong> De daemon heeft geen account-token en mag de APNs-sleutel niet hebben (die zou in elke installatie zitten). De broker heeft geen schijf en kent geen accounts. Het adresboek kent de machine-sleutel al (registratie) en de sessie van de telefoon. Voorstel: de telefoon meldt een push-handle bij het adresboek, geeft die over de geauthenticeerde verbinding aan de machine, en de machine post een door haarzelf gesigneerde, end-to-end versleutelde envelop naar het adresboek, dat hem doorzet naar APNs. Het adresboek ziet alleen "machine X wil telefoon Y wekken", nooit de inhoud. Cloudflare Workers bereiken APNs over HTTP/2 vanaf productie (lokaal in workerd niet).</li>
+    <li><strong>Terminal met SwiftTerm, timeline met UIKit, canvas met UIScrollView.</strong> SwiftTerm parseert alles wat <code>@xterm/addon-serialize</code> uitstuurt (1049, 2004, SGR, cursorposities) en heeft een iOS-toetsenbordbalk met Esc, Ctrl, Tab en pijlen. De chat-timeline hoort in een <code>UICollectionView</code> met diffable data source; het canvas is een <code>UIScrollView</code> met zoom waarin nodes kaarten zijn en edges één <code>CAShapeLayer</code>. SwiftUI voor de rest: sidebar, instellingen, palette, machines.</li>
+    <li><strong>Swift-types komen uit zod via een eigen generator.</strong> <code>z.toJSONSchema</code> werkt in zod 4.5.4 en zet <code>discriminatedUnion</code> om naar <code>oneOf</code> met <code>const</code>. quicktype en openapi-generator maken daar geen goede Swift-enums van; Apple's swift-openapi-generator wel, maar eist een OpenAPI-omhulsel en genereert een client die je niet gebruikt. Een Bun-script van een paar honderd regels in <code>packages/contracts</code> dat <code>Contracts.swift</code> schrijft en in CI vergelijkt met wat gecommit is, is kleiner en houdt <code>PROTOCOL_VERSION</code> in de pas.</li>
+  </ol>
+
+  <h3>Besloten</h3>
+  <p>De besluiten van Bas van 15 september staan in <a href="#vragen">Besluiten</a>. In het kort: minimum iOS en iPadOS 26, meldingen volgens het advies hieronder, de nodetitel mag in de Live Activity, één sleutel, het eigen schema als callback, koppellinks wel, browser-nodes als <code>WKWebView</code>, Xcode Cloud (voorlopig lokaal bouwen en testen), en de telefoon mag alles schrijven behalve nodes verplaatsen en resizen.</p>
+  <ul>
+    <li><strong>Opt-in voor meldingen.</strong> "Vraagt om toestemming" standaard aan per machine, "beurt klaar" alleen voor chats en terminals die je volgt, met de volgknop in de header van de pagina (paragraaf <a href="#meldingen">Meldingen</a>). Dat is opt-in per chat voor het geluid dat je kunt missen, en nooit een gemiste permissievraag.</li>
+    <li><strong>WebRTC-binary of eigen build.</strong> Advies libwebrtc via stasel; libdatachannel alleen als de IPA-grootte een probleem blijkt na app thinning (nog ongemeten).</li>
+  </ul>
+
+  <p class="note"><strong>Wat dit rapport niet doet.</strong> Het ontwerpt geen schermen tot op de pixel en het bouwt niets. Op het canvas verplaatst en resizet de app geen nodes, zoals gevraagd; al het andere mag hij schrijven. De Apple ID-login is buiten scope. Het browser-node (Electron <code>&lt;webview&gt;</code>) krijgt op iOS een <code>WKWebView</code>-pagina, aan het eind van het plan.</p>
+</section>
+
+<section id="uitgangspunt">
+  <h2>Uitgangspunt: nooit een machine aan boord</h2>
+  <p>De webclient is het bewijs dat de client zonder eigen daemon kan werken. Wat hij daarvoor doet is klein en staat op vijf plekken. <span class="badge confirmed">geverifieerd</span></p>
+  <ul>
+    <li><code>apps/client/src/station.ts</code>: <code>IS_STATION = import.meta.env.MODE === 'station'</code>, een <code>stationBoot</code> die uit de accountstatus afleidt wat het hoofdvlak toont (<code>loading</code>, <code>sign-in</code>, <code>signing-in</code>, <code>machines</code>), en <code>mixedContentRefusal</code> die een koppellink naar plain http weigert met een zin.</li>
+    <li><code>apps/client/src/transport/dormant-transport.ts</code>: de rij "This machine" blijft bestaan omdat veel code hem verwacht, maar zijn transport belt nooit en elke request faalt met <code>no-machine</code>: "No machine is picked. Sign in and open one of your machines."</li>
+    <li><code>apps/client/src/state/local-machine.ts</code>: <code>hasLocalMachine()</code> laat de lokale rij uit elke lijst (projectmenu, palette, usage-picker, machines-pane).</li>
+    <li><code>apps/client/src/shell/StationWelcome.tsx</code>: inloggen, dan één kaart per machine op het account met een statusregel en "Open", dat via <code>ensureMachine</code> verbindt voordat de client omschakelt.</li>
+    <li><code>apps/client/src/transport/wake.ts</code>: bij <code>visibilitychange</code> naar zichtbaar worden alle links die dicht zijn of in backoff staan opnieuw geprobeerd, omdat Safari op iPadOS sockets en timers in de achtergrond stopt.</li>
+  </ul>
+  <p>De native app hoeft die vijf niet na te bouwen als schakelaars: hij <em>is</em> die stand. Er is geen lokale rij, het welkomstscherm is het startscherm, en de wake-regel is de kern van het verbindingsmodel. Wat de app overneemt van <code>docs/DECISIONS.md</code>, "A machine connects only when it is used": een link bestaat alleen zolang iets hem vasthoudt (een open project, een expliciete actie, de machinedialoog), en 30 seconden daarna gaat hij dicht. Op een telefoon is dat geen zuinigheid maar noodzaak.</p>
+  <p>Wat de webclient wel kan en de app straks ook: een machine komt vanzelf op het account zodra een ingelogde client hem bereikt (<code>pulsar/auto-register.ts</code>, de machine tekent <code>endpoint.signRegistration</code>). De app hoeft dus geen koppellink te scannen; inloggen is genoeg, zoals het adresboek bedoeld is. Een koppellink (<code>http://machine:4210/pair#token</code>) neemt de app aan als tweede weg (besluit Bas), maar alleen naar een https-adres. Een plain http-adres kan een native app technisch wel, maar dan gaan het koppeltoken en de publieke sleutel onversleuteld over het netwerk, en wie dat onderschept koppelt zichzelf. Een http-link weigert de app met een zin, zoals <code>mixedContentRefusal</code> dat op de webclient doet. De link komt binnen door hem te plakken of te scannen in de machinelijst.</p>
+</section>
+
+<section id="structuur">
+  <h2>De structuur van de client, vertaald naar iPhone en iPad</h2>
+  <p>De desktop client is één venster met een sidebar, een toolbar, een hoofdkolom, een rechterpaneel en een aantal dialogen erboven. <code>apps/client/src/App.tsx</code> tekent in deze volgorde: <code>Sidebar</code>, dan een <code>main</code> met <code>Toolbar</code>, <code>ViewHost</code> (het raster van cellen, of <code>NoProject</code>, of <code>StationWelcome</code>, of <code>UsagePage</code>), <code>ProjectBanner</code>, <code>PreviewPanel</code> en <code>Panel</code> (files, git, processes); buiten de workspace staan <code>CommandPalette</code>, <code>SettingsDialog</code>, <code>Toasts</code>, <code>ReleaseNotesDialog</code> en <code>MachineUpdateDialog</code>. <span class="badge confirmed">geverifieerd</span></p>
+  <p>Het model eronder is wat de app overneemt, niet de pixels. Een <strong>workspace</strong> is één open project op één machine met vier stores (<code>document</code>, <code>project</code>, en registers van editors per view; <code>state/workspace.ts</code>). Alles wat over een machine gaat is gesleuteld op die machine (<code>state/keys.ts</code>, <code>endpointKey(endpointId, nodeId)</code>). De sidebar leest óf de workspace met focus óf alle workspaces in het venster (<code>settings.sidebarScope</code>). Dat model past in Swift als een <code>Workspace</code>-object met observeerbare stores per view, en een <code>MachineRegistry</code> met één <code>Connection</code> per machine.</p>
+
+  <div class="table" role="region" aria-label="Vertaaltabel van desktop-onderdelen naar iPhone en iPad" tabindex="0">
+    <table class="wide">
+      <caption>Elk onderdeel van de desktop client en waar het op iPhone (compact) en iPad (regular) terechtkomt</caption>
+      <thead><tr><th scope="col">Desktop</th><th scope="col">Wat het is (bestand)</th><th scope="col">iPhone</th><th scope="col">iPad</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Startscherm</th><td><code>StationWelcome.tsx</code>: inloggen, dan machines</td><td>Eerste scherm van de <code>NavigationStack</code>: machines op het account met statusregel, "Open"</td><td>Sidebar-kolom van een <code>NavigationSplitView</code>; hoofdkolom toont de welkomsttekst tot een project open is</td></tr>
+        <tr><th scope="row">Projectswitcher</th><td><code>ProjectMenu.tsx</code>: één lijst over alle machines, meest recent eerst, machine achter de naam, Recent als submenu; <code>project.list</code> per machine, gecachet in <code>ruimte.projects.&lt;endpointId&gt;</code></td><td>Lijst na de machine, of een <code>Menu</code> in de navigatiebalk</td><td>Kop van de sidebar als <code>Menu</code>, zoals de pill in de toolbar</td></tr>
+        <tr><th scope="row">Sidebar</th><td><code>Sidebar.tsx</code>, model in <code>sidebar-rows.ts</code>: sectie "Needs you", dan per workspace de views in bestandsvolgorde; een canvas klapt uit naar zijn sessienodes (terminal, chat, browser). Rij: glyph, naam, teller, draft-dot, <code>ProcessWarningMark</code>, <code>UnseenMark</code>, <code>StatusDot</code></td><td>De hoofdlijst van het project; een view opent als pagina; een canvas opent als overzichtspagina met daarin de nodes</td><td>Sidebar-kolom; een view opent in de detailkolom; twee views naast elkaar via een tweede scene (Stage Manager) in plaats van het 3x3-raster</td></tr>
+        <tr><th scope="row">Raster van cellen</th><td><code>shell/split.ts</code>, <code>SplitGrid.tsx</code>: hooguit 3x3, één view in hooguit één cel, layout lokaal per client</td><td>Niet. Eén view per scherm</td><td>Niet in fase 1. Meerdere vensters van de app (één project per scene) dekken de behoefte; het raster in één venster is later een optie</td></tr>
+        <tr><th scope="row">Toolbar</th><td><code>Toolbar.tsx</code>: sidebar-toggle, breadcrumb (project, view), <code>ViewToolbar</code> per kind, <code>ConnectionDot</code>, paneeltoggles, <code>ProjectActionsMenu</code>, update-knop, zoeken</td><td>Navigatiebalk van de pagina: titel, verbindingsstip, overflow-menu met de projectacties (rename, icon, close, delete)</td><td>Idem, plus toolbar-items voor het inspector-paneel</td></tr>
+        <tr><th scope="row">Panelen</th><td><code>panels.ts</code>: files (<code>fs.list</code>, <code>fs.watch</code>), git (<code>git.status</code>, <code>git.action</code>), processes (<code>processes.subscribe</code>); preview met tabs</td><td>Eigen pagina's onder een "Meer"-tab of via het overflow-menu; preview = bestand openen als pagina</td><td><code>.inspector</code> rechts, met een segmentkeuze files / git / processes</td></tr>
+        <tr><th scope="row">Palette</th><td><code>CommandPalette.tsx</code>: commando's, "Jump to" nodes, views, projecten, bestanden (<code>fs.search</code>), grep (<code>fs.grep</code>), mappen browsen met een machines-stap</td><td>Zoekveld bovenaan de projectlijst (<code>.searchable</code>) met dezelfde secties; mappen browsen als stap bij "Map openen"</td><td>Idem, plus Cmd+K via <code>.keyboardShortcut</code></td></tr>
+        <tr><th scope="row">Attention en status</th><td><code>state/attention.ts</code> (needsYou, working, finished), <code>StatusSummary.tsx</code> in de Dock, <code>UnseenMark</code>, <code>agent-work.ts</code></td><td>Badge op het app-icoon (needsYou + finished, zoals de dock-badge), tellers in de kop van de projectlijst, dezelfde marks op rijen</td><td>Idem; de tellers in de sidebar-kop</td></tr>
+        <tr><th scope="row">Instellingen</th><td><code>SettingsDialog.tsx</code>, panes: Appearance, Keyboard, Views, Files and Git, Agents, Usage, Remote, About; sleutels in <code>state/settings.ts</code></td><td>Een <code>Form</code> per pane, gegroepeerd zoals de desktop; Keyboard alleen met een hardwaretoetsenbord; Views zonder "Swipe between pages"; Agents zonder "Keep this computer awake" (geen bridge, dus geen rij, zoals nu)</td><td>Idem, als sheet of in de sidebar</td></tr>
+        <tr><th scope="row">Machines (Remote)</th><td><code>MachinesSection.tsx</code>, <code>MachineDialog.tsx</code>: account bovenaan, één lijst gekoppeld + account, dialoog per machine (naam, icoon, Direct, broker, statements weigeren, apps met toegang, forget, remove)</td><td>Een pagina per machine met dezelfde rijen; "Direct" is er altijd aan en verdwijnt als schakelaar</td><td>Idem</td></tr>
+        <tr><th scope="row">Usage</th><td><code>shell/usage/</code>: pagina per machine, periode, metric, <code>usage.summary</code>, limietbalken uit <code>usage.limits</code></td><td>Pagina per machine; de limietbalken als kaart op de machinepagina</td><td>Idem</td></tr>
+        <tr><th scope="row">Toasts en banner</th><td><code>Toasts</code>, <code>Banner.tsx</code> (save-conflict, save-failure, <code>viewNotice</code> van een agent)</td><td>Systeem-overlay bovenin; een "Go there" als knop</td><td>Idem</td></tr>
+        <tr><th scope="row">Node op het canvas</th><td><code>NodeFrame.tsx</code>: header (icoon, titel, status-pill, marks, menu) en body per kind</td><td>Kaart op de canvaspagina; tikken opent de node als eigen pagina</td><td>Idem; met een aanwijzer krijgt een kaart een hover-effect</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Navigatie</h3>
+  <p>Op de iPhone is de stapel: machines, project, view of node. Een chat en een terminal zijn al views van zichzelf in het projectbestand (<code>ProjectViewKind</code> bevat <code>chat</code>, <code>terminal</code>, <code>browser</code>, <code>file</code>, <code>drawing</code>, <code>diagram</code>), en een node op een canvas is hetzelfde ding een niveau dieper; de app opent beide als dezelfde soort pagina. Op de iPad is het een <code>NavigationSplitView</code> met de sidebar als eerste kolom en een view in de detailkolom, plus een <code>.inspector</code> voor de panelen. Met Stage Manager opent een tweede project in een tweede venster (<code>WindowGroup</code>, één workspace per scene), wat op de desktop nog niet eens bestaat ("Two projects side by side" staat als punt 15 in Next). <code>UIWindowScene.sizeRestrictions</code> zet een minimum zodat een terminal nooit onder de 40 kolommen zakt. <span class="badge warning">aanname</span> over Stage Manager: Apple zegt van Split View en Slide Over dat beide apps op de voorgrond draaien; voor Stage Manager is dat de praktijk, niet een gevonden zin.</p>
+
+  <h3>Wat verandert aan de semantiek</h3>
+  <ul>
+    <li><strong>"Gezien" op een telefoon.</strong> Op de desktop is een beurt gezien als het venster het toetsenbord heeft, de view in een cel staat en de node binnen de camera valt boven <code>READABLE_ZOOM</code>. Op iOS is de regel eenvoudiger: de app staat voor en de node is de pagina die open staat, of hij staat zichtbaar op de canvaspagina boven diezelfde zoom. De telling zelf (<code>nextUnseen</code>, alles opnieuw vanaf nul per pass) verhuist ongewijzigd.</li>
+    <li><strong>Attention over machines zonder link.</strong> Net als op de desktop dekken agents, attention en de badge alleen machines met een open link. Een telefoon heeft die zelden. Dat is precies het gat dat een push vult (paragraaf <a href="#meldingen">Meldingen</a>): de badge komt dan uit de laatste pushes, niet uit een telling.</li>
+    <li><strong>Sneltoetsen.</strong> <code>canvas/shortcuts.ts</code> en <code>shell/app-shortcuts.ts</code> zijn de lijst; op de iPad worden ze <code>UIKeyCommand</code>s, met dezelfde regel als nu: één binding per workspace, nooit per cel. Zonder hardwaretoetsenbord verdwijnt de Keyboard-pane.</li>
+    <li><strong>Lokale staat.</strong> <code>ruimte.local</code> (camera, open view, panelen per project) en <code>ruimte.lastProject</code> gaan naar <code>UserDefaults</code> of een klein bestand; <code>project.save-local</code> blijft de machine-kopie voeden zodat een client die het project nog nooit zag daar begint, zoals nu.</li>
+  </ul>
+</section>
+
+<section id="verbinden">
+  <h2>Verbinden met een machine op afstand</h2>
+  <p>De hele route is al gebouwd en gedocumenteerd, van <code>pkce.ts</code> tot <code>ChannelLiveness</code>. Hieronder de stappen die de app in Swift zet, met de byte-afspraken die exact moeten kloppen. <span class="badge confirmed">geverifieerd in <code>packages/pulsar</code>, <code>packages/contracts/src/direct.ts</code>, <code>apps/client/src/transport/webrtc-link.ts</code>, <code>apps/server/src/pulsar/*</code></span></p>
+
+  <figure>
+    <div class="table" role="region" aria-label="Diagram van de route van app naar machine, horizontaal scrollbaar" tabindex="0">
+      <svg class="diagram plot" width="900" viewBox="0 0 900 330" role="img" aria-labelledby="route-title route-desc">
+        <title id="route-title">Van app naar machine in zes stappen</title>
+        <desc id="route-desc">De app logt in bij het adresboek en haalt de machinelijst. Per machine vraagt hij een statement, opent een socket naar de broker, stuurt een gesigneerd WebRTC-aanbod naar de sleutel van de machine, en na het antwoord loopt de handshake over het DataChannel. Daarna gaan alle frames rechtstreeks tussen app en machine.</desc>
+        <defs><marker id="pijl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow" d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
+        <rect class="node" x="20" y="120" width="170" height="80" rx="12"/>
+        <text x="105" y="155" text-anchor="middle">iPhone / iPad</text>
+        <text class="label" x="105" y="177" text-anchor="middle">ed25519 in de Keychain</text>
+        <rect class="soft" x="365" y="20" width="170" height="70" rx="12"/>
+        <text x="450" y="50" text-anchor="middle">Adresboek</text>
+        <text class="label" x="450" y="72" text-anchor="middle">pulsar.ruimte.app, D1</text>
+        <rect class="soft" x="365" y="125" width="170" height="70" rx="12"/>
+        <text x="450" y="155" text-anchor="middle">Broker</text>
+        <text class="label" x="450" y="177" text-anchor="middle">broker.ruimte.app</text>
+        <rect class="soft" x="365" y="230" width="170" height="70" rx="12"/>
+        <text x="450" y="260" text-anchor="middle">TURN (nog te bouwen)</text>
+        <text class="label" x="450" y="282" text-anchor="middle">turn.ruimte.app, coturn</text>
+        <rect class="node" x="710" y="120" width="170" height="80" rx="12"/>
+        <text x="795" y="155" text-anchor="middle">Machine</text>
+        <text class="label" x="795" y="177" text-anchor="middle">daemon, werift, endpoint.json</text>
+        <path class="edge" d="M190 140 C 260 140, 300 55, 365 55" marker-end="url(#pijl)"/>
+        <text class="label" x="240" y="82">1 login, 2 machines, 3 statement</text>
+        <path class="edge" d="M190 160 H 365" marker-end="url(#pijl)"/>
+        <text class="label" x="215" y="152">4 hello, prove, relay(offer)</text>
+        <path class="edge" d="M535 160 H 710" marker-end="url(#pijl)"/>
+        <text class="label" x="560" y="152">relayed(offer), relay(answer)</text>
+        <path class="edge dashed" d="M190 195 C 300 320, 600 320, 710 195"/>
+        <text class="label" x="450" y="318" text-anchor="middle">5 DataChannel 'ruimte': challenge, key, accepted, dan 89 requests en 21 events</text>
+        <path class="edge dashed" d="M190 185 C 260 185, 300 265, 365 265"/>
+        <path class="edge dashed" d="M535 265 C 600 265, 640 185, 710 185"/>
+        <text class="label" x="600" y="235">6 relay als UDP niet doorkomt</text>
+      </svg>
+    </div>
+    <figcaption>Stap 1 tot 3 lopen over https naar het adresboek, stap 4 over één WebSocket naar de broker die dichtgaat zodra het kanaal staat, stap 5 rechtstreeks. Stap 6 bestaat nog niet en is voor een iPhone op mobiel netwerk de voorwaarde.</figcaption>
+  </figure>
+
+  <h3>Wat de app precies doet</h3>
+  <ol>
+    <li><strong>Sleutel.</strong> Eén <code>Curve25519.Signing.PrivateKey</code> (CryptoKit, iOS 13+) voor de hele app, 32 bytes raw, handtekening 64 bytes, publieke sleutel als base64url zonder padding van 43 tekens (<code>PublicKeySchema</code> in <code>packages/pulsar/src/keys.ts</code>). Opgeslagen als <code>kSecClassGenericPassword</code> (Apple's eigen aanwijzing voor Curve25519-sleutels) met <code>kSecAttrAccessibleAfterFirstUnlock</code> en een access group die de Notification Service Extension deelt. Niet in iCloud Keychain (<code>ThisDeviceOnly</code>): een machine koppelt een apparaat, niet een account. De Secure Enclave doet alleen P-256, dus de sleutel is een software-sleutel, zoals de niet-exporteerbare WebCrypto-sleutel in IndexedDB ook geen hardware-sleutel is. <span class="badge confirmed">geverifieerd</span></li>
+    <li><strong>Inloggen</strong> (volgende paragraaf) en <code>GET /v1/machines</code> met <code>Authorization: Bearer</code>. Elke <code>Machine</code> heeft <code>id</code>, <code>name</code>, <code>icon</code>, <code>publicKey</code>, <code>brokerUrl</code> (of null: alleen op eigen netwerk) en <code>lastSeenAt</code>.</li>
+    <li><strong>Statement per aanbod.</strong> Zolang de machine deze sleutel nog niet kent: <code>POST /v1/statements</code> met <code>{machineId, clientPublicKey, nonce (18 bytes), signature over accessRequestMessage}</code>; terug komt een statement van 120 seconden, gesigneerd met de sleutel die in <code>PULSAR_STATEMENT_PUBLIC_KEYS</code> gepind staat. Het statement reist mee in het aanbod (<code>access</code> op de offer). Na de eerste <code>direct.accepted</code> zet de app <code>needsStatement</code> uit, zoals <code>settleStatement</code> op de webclient.</li>
+    <li><strong>Broker.</strong> <code>URLSessionWebSocketTask</code> naar <code>brokerUrl</code>, dan <code>BrokerPeer</code> in Swift: <code>hello {role:'client', publicKey}</code>, <code>challenge {broker, nonce}</code> waarbij <code>broker</code> gelijk moet zijn aan de host die je belde, <code>prove {signature over brokerHelloMessage}</code>, <code>ready</code>. Elk gesigneerd bericht is <code>`${prefix}\n${JSON.stringify([...velden])}`</code>, prefixen als <code>pulsar-broker-hello-v1</code> en <code>pulsar-signal-v1</code> (<code>packages/pulsar/src/signing.ts</code>). Let op de veldvolgorde van <code>signalMessage</code>: een offer met statement heeft acht velden na de <code>kind</code>. De broker pingt elke 25 s; <code>URLSessionWebSocketTask</code> beantwoordt pongs zelf. Achter Cloudflare gaat een stille socket na 100 s dicht.</li>
+    <li><strong>WebRTC.</strong> <code>RTCPeerConnection</code> met alleen STUN (<code>stun:stun.l.google.com:19302</code>, <code>DEFAULT_STUN_SERVER</code>), één DataChannel met label <code>ruimte</code> en <code>isOrdered = true</code> (de daemon weigert elk ander label), volledige ICE-gathering afwachten (hooguit 5 s, geen trickle; kandidaten worden niet los gestuurd), aanbod als <code>relay {to: machineKey, envelope: {connectionId (16 random bytes), signal: {kind:'offer', sdp, access?}}}</code>. Het antwoord komt als <code>relayed {from, envelope, signature}</code>; alleen aannemen als <code>from</code> de machinesleutel is, het <code>connectionId</code> klopt en de handtekening over <code>signalMessage(machineKey, clientKey, envelope)</code> houdt.</li>
+    <li><strong>Handshake over het kanaal.</strong> Eerst <code>channelBinding(offerSdp, answerSdp)</code>: alle <code>a=fingerprint:</code>-regels uit beide SDP's, als <code>"sha-256 AB:CD:..."</code> (algoritme lowercase, hex uppercase), gededupliceerd en gesorteerd, als JSON van twee arrays. Dan wacht de app op <code>direct.challenge {protocol, challenge, daemon: {id, publicKey, signature}}</code>, controleert dat <code>daemon.publicKey</code> de gepinde sleutel is en dat de handtekening over <code>ruimte-daemon-channel-v1\n{id}\n{challenge}\n{binding}</code> houdt, vergelijkt <code>protocol</code> met 1 (<code>protocolMismatch</code>, exacte match), en antwoordt <code>direct.key {protocol: 1, challenge, publicKey, signature over ruimte-client-channel-v1\n{daemonId}\n{challenge}\n{publicKey}\n{binding}}</code>. Vóór <code>direct.accepted</code> mag een frame hooguit 4.096 tekens zijn; daarna 16 MiB.</li>
+    <li><strong>Frames.</strong> Elk JSON-frame gaat in stukken van 16.000 UTF-16-eenheden met een markeerteken vooraan: <code>+</code> voor "er komt meer", <code>=</code> voor het laatste stuk; nooit splitsen in een surrogaatpaar (<code>splitFrame</code>, <code>FrameAssembler</code>). Dat blijft ruim onder de 256 KiB die libwebrtc als <code>a=max-message-size</code> aankondigt en de 64 KiB die werift aankondigt. Requests zijn <code>{id, type, payload}</code>, antwoorden <code>{id, ok, result | error}</code>, events <code>{type:'event', event, payload}</code>.</li>
+    <li><strong>Liveness.</strong> Na 2 s zonder inkomende bytes een <code>server.ping</code>; na 10 s zonder een enkele ontvangen byte is het kanaal dood (<code>DIRECT_PING_IDLE_MS</code>, <code>DIRECT_PING_TIMEOUT_MS</code>). De bytes komen uit <code>statisticsWithCompletionHandler</code>, stats van <code>type == "transport"</code>, veld <code>bytesReceived</code>, precies wat <code>getStats</code> in de browser geeft. De les uit DECISIONS ("een pong-antwoord staat in de rij achter output en is geen maat voor een levend kanaal") gaat mee.</li>
+    <li><strong>Bytes.</strong> Een afbeelding, video of projecticoon komt via <code>bytes.read {resource, offset, length ≤ 262144}</code> in stukken die de app één na één opvraagt, hooguit 32 MB, <code>data</code> als standaard base64 (niet url). Een afwijkende <code>version</code> start één keer opnieuw. Er is geen http-route nodig en dus ook geen ticket op de telefoon.</li>
+  </ol>
+
+  <h3>Welke WebRTC-stack</h3>
+  <div class="split">
+    <div class="panel">
+      <h3>libwebrtc via stasel/WebRTC <span class="badge confirmed">advies</span></h3>
+      <p>Onbewerkte upstream-builds als binaire SPM-target, versienummers volgen Chromium (153.0.0 op 11 september 2026, ongeveer elke vier weken een release). iOS 12+, macOS, Catalyst. Alles wat de app nodig heeft zit erin: <code>RTCDataChannelConfiguration.isOrdered</code>, <code>restartIce</code>, <code>statisticsWithCompletionHandler</code> met transport-stats, de SDP als string voor de fingerprints. Geen microfoon- of camera-toestemming zolang er geen track is (zeer waarschijnlijk; testen in een build). Kosten: 45 MB gecomprimeerd voor alle slices, de per-slice grootte na thinning is ongemeten; codecs die je niet gebruikt zitten er wel in. Alternatief in dezelfde familie: <code>livekit/webrtc-xcframework</code> (69 MB, symbolen met <code>LK</code>-prefix, ook visionOS en tvOS).</p>
+    </div>
+    <div class="panel">
+      <h3>libdatachannel, str0m, Pion</h3>
+      <p><strong>libdatachannel</strong> (C++, C-API, MPL-2.0, v0.24.5): alleen DataChannels, vijf tot tien keer kleiner, SDP beschikbaar voor de fingerprints. Geen onderhouden SPM-wrapper; je bouwt zelf met CMake en kiest een TLS-bibliotheek. <strong>str0m</strong> of <strong>webrtc-rs</strong> (Rust) via UniFFI: alleen als er al Rust in het team zit. <strong>Pion</strong> via gomobile: sleept de Go-runtime mee, nee. Apple heeft geen publieke WebRTC-API; de WebRTC in WKWebView is niet bereikbaar vanuit Swift. Achtergrondgedrag is voor alle vier gelijk: iOS stopt de sockets, niet de bibliotheek.</p>
+    </div>
+  </div>
+
+  <h3>Wat de achtergrond doet met een verbinding</h3>
+  <p>Apple's regel, uit een DTS-antwoord: het gaat niet om voor- of achtergrond maar om draaiend of opgeschort. Draait de app, dan blijft elke verbinding werken; opgeschort, dan stopt al het netwerk op laag niveau. Na het wegdrukken krijgt de app 5 seconden, met <code>beginBackgroundTask</code> in de praktijk ongeveer 30. Daarna is de WebSocket naar de broker dood (de wachtende <code>receive</code> faalt met een <code>URLError</code>, soms pas laat) en ziet de daemon het kanaal binnen seconden als <code>disconnected</code> en na de write-timeout als <code>failed</code>; werift's timing kan afwijken van libwebrtc's 15 s. <span class="badge confirmed">geverifieerd op het web</span></p>
+  <ul>
+    <li><strong>Geen achtergrondmodus past.</strong> VoIP eist CallKit en een gemeld gesprek, anders wordt de app gedood en na herhaling van pushes afgesneden. Stille audio is een bekende afwijzingsreden onder richtlijn 2.5.4. <code>BGAppRefreshTask</code> en <code>BGProcessingTask</code> draaien wanneer het systeem wil. <code>BGContinuedProcessingTask</code> (iOS 26) is voor eindig werk dat de app zelf doet met een voortgang, niet voor "houd een kanaal open terwijl een agent op afstand werkt". WebSocket-tasks zijn in een background <code>URLSession</code> niet toegestaan.</li>
+    <li><strong>De regel voor de app.</strong> Bij <code>didEnterBackground</code> het kanaal netjes sluiten (dat scheelt de daemon 15 seconden onzekerheid en een <code>close</code>-signaal). Bij <code>didBecomeActive</code> alle gehouden links opnieuw opbouwen, zonder een volledige boot, zoals de reconnect op de desktop sinds de fix van 14 september. Een nieuwe <code>RTCPeerConnection</code> is eenvoudiger dan <code>restartIce</code>, omdat de challenge-handshake toch opnieuw moet.</li>
+    <li><strong>Op de iPad blijft alles draaien</strong> zolang de app zichtbaar is in Split View of Slide Over (Apple: beide apps op de voorgrond). Een iPad naast een Mac met Stage Manager houdt dus zijn terminals live.</li>
+    <li><strong>Netwerkwissel.</strong> Wi-Fi naar 5G: Network.framework meldt het via <code>viabilityUpdateHandler</code> en <code>betterPathUpdateHandler</code>; libwebrtc ziet het als ICE-verlies. Gedrag: kanaal weg, opnieuw opbouwen. Geen pad-migratie proberen.</li>
+  </ul>
+  <p class="note"><strong>TURN is een voorwaarde voor de iPhone.</strong> Op 15 september kwam een iPhone via een 5G-hotspot niet door (CGNAT bij KPN, Odido en Vodafone). Het TURN-onderzoek ligt er al (coturn op de droplet, <code>turn.ruimte.app</code>, credentials via een <code>ice</code>-frame van de broker na <code>ready</code>). De app leest die credentials uit hetzelfde frame en geeft ze als <code>RTCIceServer</code> mee. Zonder TURN werkt de app thuis op Wi-Fi naar een machine op een ander thuisnetwerk waarschijnlijk wel, en onderweg waarschijnlijk niet.</p>
+</section>
+
+<section id="inloggen">
+  <h2>Inloggen met GitHub, native</h2>
+  <p>De login is al zo geschreven dat een telefoon hem kan draaien: <code>apps/client/src/pulsar/pkce.ts</code> gebruikt alleen WebCrypto en <code>URL</code>, en DECISIONS zegt bij "Signing in and statements": "The scheme stays in <code>isAppRedirectUri</code> for the mobile app, which has no listener." <span class="badge confirmed">geverifieerd</span></p>
+  <ol>
+    <li>De app maakt een PKCE-verifier (32 random bytes, base64url, 43 tekens), de S256-challenge en een <code>state</code> (24 bytes), en opent met <code>ASWebAuthenticationSession</code> de URL <code>https://pulsar.ruimte.app/auth/github/start?redirect_uri=...&amp;state=...&amp;code_challenge=...&amp;code_challenge_method=S256</code>. De Worker zet de <code>__Host-pulsar-login</code>-cookie, stuurt door naar GitHub, ontvangt de callback op <code>/auth/github/callback</code>, en redirect 302 naar <code>redirect_uri?code=&amp;state=</code>. Het client secret blijft in de Worker; de app ziet het nooit.</li>
+    <li>Twee callback-vormen zijn mogelijk, beide al in de allowlist (<code>isAppRedirectUri</code> in <code>packages/pulsar/src/address-book.ts</code>): <code>ruimte://pulsar/callback</code> (<code>APP_REDIRECT_SCHEME_URI</code>, met <code>.customScheme("ruimte")</code>), of <code>https://station.ruimte.app/pulsar/callback</code> (in <code>WEB_REDIRECT_URIS</code>, met <code>.https(host:path:)</code>, iOS 17.4+). De https-vorm eist een Associated Domain (<code>webcredentials:station.ruimte.app</code>) en een <code>apple-app-site-association</code> die de station-Worker serveert. Voordeel van https: een andere app kan het schema niet kapen. <strong>Besluit Bas: het eigen schema.</strong> Dat kost geen Associated Domain en geen <code>apple-app-site-association</code>, en de allowlist hoeft niet te veranderen. Het kapen weegt licht: de code is 60 seconden geldig, wordt bij het eerste lezen verbrand en is zonder de PKCE-verifier van de app waardeloos. <span class="badge warning">aanname</span> GitHub accepteert custom-scheme redirect-URI's in de praktijk, maar een officiële zin is niet gevonden; met de https-vorm doet dat er niet toe, want de redirect naar GitHub is en blijft de Worker.</li>
+    <li>Met de <code>code</code> doet de app <code>POST /v1/session</code> met <code>{code, codeVerifier, redirectUri, label, sessionKey, sessionKeySignature}</code>, waar <code>sessionKey</code> de publieke helft van de app-sleutel is en de handtekening over <code>pulsar-session-key-v1\n["code","sessionKey"]</code> gaat. De code is 60 seconden geldig en wordt bij het eerste lezen verbrand.</li>
+    <li>Terug komen een access token (15 minuten) en een refresh token (sessie 30 dagen vanaf inloggen, nooit verlengd). Elke refresh is <code>POST /v1/session/refresh</code> met <code>{refreshToken, issuedAt, signature over sessionRefreshMessage}</code>, tien minuten klokspeling. <code>SessionVault</code> in <code>packages/pulsar</code> beschrijft het gedrag dat de Swift-versie kopieert: één refresh tegelijk, een gebruikt token beëindigt de sessie, netwerkfouten laten hem staan. De refresh token gaat in de Keychain (<code>AfterFirstUnlock</code>, zelfde access group), access tokens blijven in het geheugen.</li>
+  </ol>
+  <p><strong>Zelfde sleutel voor sessie en machines.</strong> Op de webclient bindt de sessie aan dezelfde ed25519-sleutel die met machines koppelt; de desktop heeft er een aparte (<code>pulsar-key.bin</code>). Besloten: de app gebruikt één sleutel, zoals de webclient. De desktop heeft er twee omdat de shell de sessie buiten de pagina bewaart; de app is één proces, dus die reden bestaat hier niet. Het adresboek en de machines zien dan dezelfde publieke sleutel, wat "Apps met toegang" in de machinedialoog leesbaar houdt (label en herkomst <code>statement</code>).</p>
+  <p><strong>Richtlijn 4.8.</strong> Een app die met een dienst van een derde inlogt om "het primaire account" op te zetten moet een gelijkwaardige optie bieden die data beperkt tot naam en e-mail. Sign in with Apple is daar het gangbare antwoord op, en die komt er al aan. Of "GitHub om je adresboek te openen" onder 4.8 valt is een oordeel dat Apple pas in review velt; met Apple ID erbij is de vraag weg. <span class="badge warning">aanname</span></p>
+  <p><strong>Sessie kwijt.</strong> Een sessie die verlopen is of een sleutel die weg is, is op de webclient "de sessie op dit apparaat is beëindigd" plus een inlogknop, geen fout. Dat neemt de app over; een verwijderde Keychain-sleutel betekent ook dat elke machine de app als nieuw ziet en er weer een statement nodig is.</p>
+</section>
+
+<section id="meldingen">
+  <h2>Meldingen en een Live Activity</h2>
+  <p>Wat de desktop vandaag meldt staat in <code>apps/client/src/shell/notifications.ts</code>: een beurt die eindigt terwijl het venster niet voor staat (<code>agentsTurnNotify</code> aan, <code>agentsTurnSound</code> uit, titel is de node, body het beurtlabel), een node die op <code>needs-you</code> springt, en een permissievraag van een terminal-agent (<code>session.approvals</code>, alleen als <code>agentsApprovals</code> aan staat, ingetrokken zodra het verzoek elders beantwoord is of de hold van 110 seconden verloopt). Al die meldingen komen uit een client met een open socket. Op een telefoon is er geen open socket op het moment dat het ertoe doet. <span class="badge confirmed">geverifieerd</span></p>
+
+  <h3>Wie stuurt de push</h3>
+  <p>Drie kandidaten, één past.</p>
+  <div class="table" role="region" aria-label="Afweging van wie de push naar APNs stuurt" tabindex="0">
+    <table class="wide">
+      <caption>Waar de APNs-sleutel en de device tokens kunnen wonen</caption>
+      <thead><tr><th scope="col">Afzender</th><th scope="col">Wat hij weet</th><th scope="col">Wat ontbreekt</th><th scope="col">Oordeel</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">De daemon rechtstreeks</th><td>Alles over de beurt, de gekoppelde sleutels, wie attached is</td><td>De APNs <code>.p8</code>-sleutel zou in elke installatie zitten en is dan van iedereen die de binary heeft; Apple behandelt hem als geheim. Bun heeft wel <code>node:http2</code>, dus technisch kan het</td><td><span class="badge danger">nee</span></td></tr>
+        <tr><th scope="row">De broker</th><td>Welke machine-sleutel online is</td><td>Geen schijf, geen accounts, en de telefoon is juist niet verbonden op het moment van de push; hij zou device tokens moeten bewaren die hij nu bewust niet heeft</td><td><span class="badge danger">nee</span></td></tr>
+        <tr><th scope="row">Het adresboek (Worker)</th><td>Het account, de sessies met hun sleutel, de geregistreerde machines met hun publieke sleutel, en D1 als opslag. Een Worker in productie bereikt APNs over HTTP/2 met <code>fetch</code> (lokaal in workerd faalt dat); er bestaan Workers-clients voor de JWT-signering</td><td>Het weet niets van beurten. Dat hoeft ook niet: de machine tekent het verzoek en het adresboek controleert alleen de handtekening en de relatie account, machine, telefoon</td><td><span class="badge confirmed">ja</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <figure>
+    <div class="table" role="region" aria-label="Diagram van de push-route, horizontaal scrollbaar" tabindex="0">
+      <svg class="diagram plot" width="900" viewBox="0 0 900 250" role="img" aria-labelledby="push-title push-desc">
+        <title id="push-title">De push-route</title>
+        <desc id="push-desc">De telefoon registreert zijn APNs-token bij het adresboek en krijgt een handle. Over de geauthenticeerde verbinding geeft hij de handle en een X25519-sleutel aan de machine. Als een beurt eindigt of een permissievraag opkomt, versleutelt de machine de inhoud voor de telefoon, tekent het verzoek en post het naar het adresboek, dat de handle opzoekt en de push naar APNs stuurt. De Notification Service Extension op de telefoon ontsleutelt.</desc>
+        <defs><marker id="pijl2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow" d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>
+        <rect class="node" x="20" y="90" width="180" height="80" rx="12"/>
+        <text x="110" y="125" text-anchor="middle">Telefoon</text>
+        <text class="label" x="110" y="147" text-anchor="middle">app + NSE, X25519 in Keychain</text>
+        <rect class="soft" x="360" y="20" width="180" height="70" rx="12"/>
+        <text x="450" y="50" text-anchor="middle">Adresboek</text>
+        <text class="label" x="450" y="72" text-anchor="middle">push_device(handle, token)</text>
+        <rect class="soft" x="360" y="160" width="180" height="70" rx="12"/>
+        <text x="450" y="190" text-anchor="middle">APNs</text>
+        <text class="label" x="450" y="212" text-anchor="middle">alert / liveactivity, 4 KB</text>
+        <rect class="node" x="700" y="90" width="180" height="80" rx="12"/>
+        <text x="790" y="125" text-anchor="middle">Machine</text>
+        <text class="label" x="790" y="147" text-anchor="middle">push.subscribe in auth.json</text>
+        <path class="edge" d="M200 110 C 260 110, 300 55, 360 55" marker-end="url(#pijl2)"/>
+        <text class="label" x="215" y="80">1 token, terug: handle</text>
+        <path class="edge" d="M200 130 H 700" marker-end="url(#pijl2)"/>
+        <text class="label" x="330" y="122">2 push.subscribe {handle, x25519, nodes}</text>
+        <path class="edge" d="M700 110 C 640 110, 600 55, 540 55" marker-end="url(#pijl2)"/>
+        <text class="label" x="560" y="80">3 POST /v1/push, gesigneerd</text>
+        <path class="edge" d="M450 90 V 160" marker-end="url(#pijl2)"/>
+        <text class="label" x="462" y="130">4 fetch, HTTP/2</text>
+        <path class="edge dashed" d="M360 195 C 300 195, 260 170, 200 150" marker-end="url(#pijl2)"/>
+        <text class="label" x="215" y="200">5 ciphertext, NSE ontsleutelt</text>
+      </svg>
+    </div>
+    <figcaption>Het adresboek ziet handle, machine-id, tijdstip en de grootte van de ciphertext. Het ziet nooit welke node, welk gereedschap of welke tekst.</figcaption>
+  </figure>
+
+  <h4>De stappen</h4>
+  <ol>
+    <li><strong>Registratie.</strong> De app vraagt toestemming voor meldingen, ontvangt het APNs device token en post het naar <code>POST /v1/push/devices</code> met de sessie. Het adresboek bewaart <code>(account, session, token, environment)</code> en antwoordt met een <code>handle</code> (32 random bytes). Een token verandert soms; de app herhaalt de stap bij elke <code>didRegisterForRemoteNotifications</code>. Later ook de push-to-start-token van ActivityKit en per activity de update-token.</li>
+    <li><strong>Abonneren bij de machine.</strong> Over de geauthenticeerde verbinding stuurt de app <code>push.subscribe {handle, publicKey (X25519), follow: nodeIds[], approvals: boolean}</code>. De daemon bewaart dat per gekoppelde sleutel in <code>auth.json</code> (naast <code>publicKey</code>, <code>origin</code>, <code>label</code>). <code>push.unsubscribe</code> haalt het weg; een sleutel die gerevoked wordt neemt het mee.</li>
+    <li><strong>Verzenden.</strong> Als een beurt eindigt, een node <code>needs-you</code> wordt of een <code>ApprovalRequest</code> opkomt, kijkt de daemon of de geabonneerde sleutel op dit moment een verbinding heeft. Heeft hij die niet, dan is dat "niemand kijkt" en wordt de push gebouwd: <code>{kind, nodeId, title, body, requestId?, choices?, expiresAt?}</code>, versleuteld met een ephemeral X25519-sleutel naar de telefoon (HKDF, ChaCha20-Poly1305; CryptoKit heeft dit alles), en gepost naar <code>POST /v1/push</code> als <code>{machineId, handle, ciphertext, ephemeralKey, collapseId, pushType, signature over pulsar-push-v1}</code>, getekend met de <code>endpoint.json</code>-sleutel. Er is geen account-token nodig: de handtekening bewijst de machine.</li>
+    <li><strong>Doorzetten.</strong> Het adresboek controleert de handtekening tegen de geregistreerde <code>public_key</code> van de machine, controleert dat de machine en de handle op hetzelfde account staan, telt tegen een limiet per machine en per handle, en post naar <code>api.push.apple.com</code> met een ES256-JWT van de <code>.p8</code>-sleutel (Team ID, Key ID; token één uur, vernieuwen hooguit elke 20 minuten). Headers: <code>apns-push-type: alert</code>, <code>apns-priority: 10</code>, <code>apns-collapse-id</code> per node, <code>apns-topic</code> de bundle id. De payload draagt <code>mutable-content: 1</code>, een generieke titel ("Ruimte") en body ("Een agent heeft je nodig") voor als de ontsleuteling mislukt, en de ciphertext in een eigen sleutel. Hooguit 4 KB.</li>
+    <li><strong>Ontsleutelen.</strong> De Notification Service Extension (ongeveer 30 s tijd, 24 MB geheugen, mag de Keychain-access-group lezen als de sleutel <code>AfterFirstUnlock</code> is) ontsleutelt, zet titel en body, hangt <code>threadIdentifier</code> op de node, kiest de categorie (<code>approval</code> met acties "Toestaan" en "Weigeren", of <code>turn</code>) en zet <code>interruptionLevel = .timeSensitive</code> voor een permissievraag (dat vereist de Time Sensitive-capability). Mislukt het, dan blijft de generieke tekst staan.</li>
+  </ol>
+  <p><strong>Antwoorden vanuit de melding.</strong> Een <code>UNNotificationAction</code> "Toestaan" start de app in de achtergrond met <code>didReceive response</code>; hij krijgt dan die ongeveer 30 seconden. Dat is genoeg voor broker plus handshake plus <code>agent.answerApproval {sessionId, requestId, choiceId}</code> of <code>chat.approve {chatId, requestId, decision}</code>, mits ICE doorkomt. Zonder TURN is dat op mobiel netwerk niet zeker; met TURN wel. De hold van 110 seconden op de daemon is de bovengrens; de push moet dus binnen enkele seconden na het verzoek weg. Als de app het niet haalt, opent het tikken op de melding de node en zie je de vraag daar, met "expires in" zoals <code>approval-notices.ts</code> die nu rekent. <span class="badge warning">aanname</span> over de tijd die het opbouwen kost op een echte telefoon.</p>
+
+  <h4>Opt-in: per chat of per machine</h4>
+  <p>Bas denkt aan opt-in per chat. De afweging:</p>
+  <div class="split">
+    <div class="panel">
+      <h3>Voor opt-in per chat</h3>
+      <ul>
+        <li>Een canvas met acht agents die elk om de twee minuten klaar zijn, is acht meldingen per twee minuten. Op een telefoon is dat spam; op de desktop vangt "het venster staat voor" dat op, en dat vangnet is er niet.</li>
+        <li>Volgen is een handeling met een duidelijk moment: je start iets langs en legt je telefoon weg.</li>
+        <li>Minder pushes is minder APNs-verkeer en minder kans op throttling.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Tegen alleen opt-in per chat</h3>
+      <ul>
+        <li>Een permissievraag die je mist omdat je vergat te volgen kost de agent 110 seconden en dan staat hij stil. Dat is de ene melding die je nooit wilt missen.</li>
+        <li>De desktop heeft één schakelaar (<code>agentsTurnNotify</code>) voor alle nodes; twee verschillende modellen op twee clients zijn verwarrend.</li>
+        <li>Een terminal-agent die je vanaf de desktop start, moet je op de telefoon nog vinden om te volgen.</li>
+      </ul>
+    </div>
+  </div>
+  <p><strong>Advies: twee schakelaars, twee niveaus.</strong> "Vraag om toestemming" staat per machine aan (dezelfde betekenis als <code>agentsApprovals</code>, doorgegeven met <code>agent.setApprovals</code>; de push volgt die instelling). "Beurt klaar" is per node en staat uit tot je op de pagina van de chat of terminal op "Volgen" tikt; een gevolgde node staat in de sidebar met een klein oog, en volgen eindigt vanzelf als de node verdwijnt. Een derde stand "alles op dit project" als menu-item in het project voor wie de desktop-gewoonte wil. De daemon krijgt de lijst van gevolgde nodes in <code>push.subscribe</code>, zodat hij niets stuurt wat de telefoon toch weggooit.</p>
+
+  <h3>Live Activity voor een lopende beurt</h3>
+  <p>Wat er is: ActivityKit vanaf iOS 16.1, op de iPad getoond vanaf iPadOS 17 (geen Dynamic Island, wel het toegangsscherm), op macOS 26 via iPhone Mirroring in de menubalk. Een activity leeft hooguit 8 uur en blijft tot 4 uur op het toegangsscherm; statische plus dynamische data hooguit 4 KB. Updaten kan uit de app of via <code>apns-push-type: liveactivity</code> met de update-token van die activity (<code>Activity.pushTokenUpdates</code>); starten uit de achtergrond alleen via push-to-start (iOS 17.2+, token uit <code>Activity.pushToStartTokenUpdates</code>, beschikbaar zonder dat er een activity bestaat). Het budget voor updates publiceert Apple niet; <code>NSSupportsLiveActivitiesFrequentUpdates</code> verhoogt het en geeft de gebruiker een schakelaar. Knoppen in een activity zijn <code>App Intents</code> (iOS 17). <span class="badge confirmed">geverifieerd op het web</span></p>
+  <p><strong>Ontwerp.</strong> Eén activity per gevolgde node, gestart door de app als hij voor staat en een beurt begint, anders via push-to-start door dezelfde push-route (de push-to-start-token is een tweede token op de handle). De <code>ContentState</code> is klein: nodetitel, provider, fase (<code>running</code>, <code>tool</code> met naam, <code>needs-you</code>, <code>done</code>), begintijd, en bij <code>needs-you</code> het requestId. Updates alleen bij een fasewissel, nooit per delta: een beurt van tien minuten is dan vijf tot tien pushes, ruim binnen elk budget. <code>relevance-score</code> hoger voor <code>needs-you</code>, <code>stale-date</code> op nu plus 15 minuten zodat een verloren verbinding zichtbaar "oud" wordt, <code>dismissal-date</code> op een kwartier na <code>done</code>. Een "Toestaan"-knop als App Intent in de activity is dezelfde 30-seconden-race als de notificatie-actie; eerst zonder, tikken opent de node.</p>
+  <p><strong>Wat het kost aan de daemon.</strong> Niets extra's boven de push-route: dezelfde <code>POST /v1/push</code> met <code>pushType: 'liveactivity'</code> en de <code>content-state</code> als ciphertext. Het adresboek kent de activity-token via een <code>PUT /v1/push/devices/{handle}/activities</code> vanuit de app. De inhoud van een Live Activity is niet via een NSE te ontsleutelen (die draait alleen voor alert-pushes), dus de <code>content-state</code> gaat hier in klare tekst: titel van de node en een fase. Dat is de ene plek waar het adresboek en Apple iets over de inhoud zien. <span class="badge confirmed">besloten</span> Bas vindt de nodetitel in klare tekst goed.</p>
+</section>
+
+<section id="canvas">
+  <h2>Het canvas: lezen, tikken, openen</h2>
+  <h3>Hoe het nu getekend wordt</h3>
+  <p>Het canvas is DOM, geen canvas-2D. <code>apps/client/src/canvas/Canvas.tsx</code> zet één <code>div</code> met <code>transform: translate(x, y) scale(zoom)</code> om alles heen; nodes zijn absoluut gepositioneerde <code>div</code>s met <code>left/top/width/height</code> uit het document (<code>NodeFrame.tsx</code>), texts zijn <code>contentEditable</code> divs (<code>TextElementView.tsx</code>, standaardgrootte 18), edges één SVG-overlay (<code>EdgeLayer.tsx</code>) met een cubic bezier per lijn en een cirkel van 4 px als kop (<code>edge-lines.ts</code>: <code>anchors</code> kiest de zijden die naar elkaar toe liggen, twee edges tussen dezelfde nodes worden één lijn met een kop aan beide kanten). Het raster is een CSS radial-gradient met stap 24 wereldeenheden, snap op 8 (<code>CANVAS_GRID</code>). Groepen zijn nodes van kind <code>group</code> met <code>memberIds</code>, <code>collapsed</code>, padding 32 en header 40. Een layout is een opgeslagen arrangement van posities (<code>ProjectLayoutSchema</code>), geen frame. <span class="badge confirmed">geverifieerd</span></p>
+  <p>Camera: <code>{x, y, zoom}</code> op het scherm, opgeslagen als wereldpunt in het midden plus zoom (<code>ViewCameraSchema</code>), <code>ZOOM_MIN 0.1</code>, <code>ZOOM_MAX 4</code>. Culling (<code>canvas/culling.ts</code>): <code>VIEW_MARGIN 96</code> px, een node blijft 10 s live na het verlaten van het beeld, en onder <code>READABLE_ZOOM = 0.4</code> toont een terminal, bestand of diagram een plaat in plaats van zijn body (<code>TerminalPlate</code> met de laatste schermtekst, <code>FilePlate</code> met icoon en naam, <code>DiagramPlate</code>, <code>UnknownNodePlate</code> voor een kind uit een nieuwere Ruimte). Standaardmaten: terminal 560x360, chat 480x520, browser 720x480, groep 800x600, notitie 320x240.</p>
+
+  <h3>Hoe de app het tekent</h3>
+  <p>Een <code>UIScrollView</code> met <code>viewForZooming</code>, <code>minimumZoomScale 0.1</code> en <code>maximumZoomScale 4</code>, met daarin één container-<code>UIView</code> waarvan de subviews de nodekaarten zijn en één <code>CAShapeLayer</code> alle edges draagt. Dat is de dichtste vertaling van "één div met een transform". SwiftUI's <code>Canvas</code> is er niet voor: immediate mode zonder hit-testing per element en zonder levende subviews. <code>CATiledLayer</code> is voor statische rasters (kaarten, PDF) en toont oude tegels na een wijziging. Metal is pas nodig voor een tekenview met honderden vrije-handlijnen, en daar komen we in fase 1 niet.</p>
+  <ul>
+    <li><strong>Kaarten in plaats van bodies.</strong> Op iOS is elke node een plaat: header zoals <code>NodeFrame</code> (kind-icoon of provider-icoon, titel, status-pill met <code>StatusDot</code>, <code>UnseenMark</code>, <code>ProcessAlertMark</code>) en een body die het kind samenvat: een terminal de laatste regels van zijn scherm (die zitten in het <code>session.attach</code>-antwoord; de app hoeft daarvoor niet attached te blijven, één attach en detach volstaat, of een kort <code>session.list</code> voor status), een chat het laatste bericht (<code>chat.attach</code> geeft <code>items</code>), een notitie zijn markdown, een bestand icoon en naam, een browser zijn favicon en URL, een groep een gestreepte rand met "N inside". Onder 0.4 zoom alleen icoon en titel, zoals nu.</li>
+    <li><strong>Tikken opent.</strong> Een tik op een kaart pusht de nodepagina (terminal, chat, bestand, diagram, tekening, notitie). Dat vervangt <code>enterNode</code> en het "in de node werken". De camera onthoudt de laatste positie per view in de lokale staat, zoals <code>pendingCamera</code> en <code>ViewCameraSchema</code>.</li>
+    <li><strong>Culling</strong> is <code>scrollView.bounds</code> omgerekend naar de container, plus dezelfde marge van 96 punten; kaarten buiten beeld worden verwijderd of <code>isHidden</code>. Een canvas met 30 nodes is 30 kleine views; dat kost niets. Het grote punt op de desktop (WebGL-budget van 10 terminals) bestaat hier niet, want er is geen levende terminal op het canvas.</li>
+    <li><strong>Geen slepen, geen resizen</strong>, zoals gevraagd. Twee-vinger pan en pinch zijn van de scroll view; een lange druk op een kaart geeft het contextmenu van de node (rename, open as view, delete) via <code>UIContextMenuInteraction</code>, die op de iPad ook met een rechterklik komt. Een node toevoegen kan wel: de app zoekt een vrije plek naast de nodes in beeld, zoals een agent-verb dat doet, en iemand schuift hem later op de desktop recht.</li>
+    <li><strong>Edges</strong>: dezelfde bezier als <code>curve()</code> in <code>edge-lines.ts</code>, een context-edge gestreept <code>6 6</code> in de accentkleur, kop een cirkel van 4 punten. De edge-labels zijn kleine <code>UILabel</code>s op het midden van de curve.</li>
+    <li><strong>Live.</strong> <code>project.changed</code> van de daemon (een save van een andere client, een verb van een agent) landt via dezelfde merge-regels. De app schrijft wel (toevoegen, hernoemen, verwijderen, edges), dus hij neemt <code>merge.ts</code> en de conflictdialoog over. Omdat hij nooit een positie of maat verandert, is een conflict hier zeldzamer dan op de desktop.</li>
+  </ul>
+
+  <h3>Tekeningen en diagrammen</h3>
+  <p><code>packages/diagram</code> is zuiver TypeScript zonder DOM en zonder layout-bibliotheek: <code>layoutOf(document)</code> geeft boxen met hele coördinaten, omgebroken regels, poorten, sporen en label-boxen; <code>shapePaths</code> geeft SVG-pad-data per vorm; <code>toSvg</code> zet het in elkaar. <code>packages/drawing</code> is half zuiver: <code>pathsOfElement(element)</code> geeft <code>{d, role, strokeWidth, dash}</code> per element, maar leunt op rough.js (met seed) en perfect-freehand, twee JS-bibliotheken zonder Swift-port. <span class="badge confirmed">geverifieerd</span></p>
+  <p><strong>Advies: de machine rekent, de telefoon tekent.</strong> Eén nieuwe request per kind, <code>diagram.layout {viewId}</code> en <code>drawing.paths {viewId}</code>, die precies de uitvoer van <code>layoutOf</code> en <code>pathsOfElement</code> teruggeeft, plus de tekstregels en de paletnamen. De app parseert alleen SVG-pad-data (<code>M</code>, <code>L</code>, <code>C</code>, <code>Q</code>, <code>Z</code>) naar een <code>CGPath</code> en vult kleuren uit zijn eigen thema, precies zoals de client de paletnamen nooit als hex opslaat. Dat volgt de bestaande scheidslijn ("het canvas-painter blijft in de client, de daemon gebruikt het pakket voor wat een agent leest") en houdt de seeds en de rough-look identiek op elk scherm. Een Swift-port van <code>packages/diagram</code> is haalbaar (deterministisch, geen randomness), van <code>packages/drawing</code> een week werk en dan nog niet pixelgelijk; beide zijn later een optie als een tekening offline getoond moet worden. Bewerken van tekeningen en diagrammen op de telefoon staat buiten dit rapport.</p>
+</section>
+
+<section id="terminal">
+  <h2>Terminal</h2>
+  <h3>Wat de daemon stuurt</h3>
+  <p><code>session.attach {sessionId, cols, rows}</code> antwoordt met <code>{screen, cols, rows, exited}</code>, waarbij <code>screen</code> de uitvoer is van <code>@xterm/addon-serialize</code> 0.14 met <code>scrollback: 10000</code>: regels als tekst met SGR-verschillen en cursorbewegingen, scrollback vooraf, cursor op de juiste cel, het alternatieve scherm via <code>?1049h</code> als dat actief is, en de modi (<code>?1h</code>, <code>?2004h</code> bracketed paste, <code>?1004h</code> focus events, <code>?7l</code>, muismodi) tenzij uitgesloten. Daarna komt <code>session.output {sessionId, data}</code> als UTF-8-string, per client gebufferd en elke 16 ms geleegd; over de high-water mark van 1 MiB wordt output weggegooid en volgt <code>session.resync {screen}</code>. De client doet dan <code>term.reset()</code> en schrijft het scherm. Invoer is <code>session.write {sessionId, data}</code>, maat <code>session.resize</code>. <span class="badge confirmed">geverifieerd in <code>apps/server/src/sessions/session.ts</code></span></p>
+  <p class="note"><strong>Wie attached bepaalt de maat.</strong> <code>attach</code> roept eerst <code>resize(cols, rows)</code> aan, en elke <code>session.resize</code> van welke client ook zet de PTY voor iedereen. Een iPhone die met 40 kolommen attached, verkleint het scherm van de MacBook ernaast. Dat is de ene wijziging aan de daemon die de terminal op de telefoon nodig heeft: een attach zonder resize (<code>cols</code> en <code>rows</code> optioneel, of een vlag <code>follow: true</code>), waarna de app de maat van de PTY volgt en zelf kiest tussen een kleiner font en horizontaal scrollen. Op een iPad met toetsenbord kan resizen wel, met dezelfde regel als nu (de laatste wint).</p>
+
+  <h3>SwiftTerm of xterm.js in een WKWebView</h3>
+  <div class="split">
+    <div class="panel">
+      <h3>SwiftTerm <span class="badge confirmed">advies</span></h3>
+      <p>MIT, actief (laatste push 14 september 2026, v1.20.0 als laatste 1.x, 2.0 in aantocht op <code>main</code> met een migratiegids). Parseert wat serialize uitstuurt: 47/1047/1048/1049, muis 1000 tot 1006, 2004, 2026 synchronized output, OSC 8 hyperlinks, OSC 52 klembord, kitty keyboard protocol, sixel en iTerm2/kitty-afbeeldingen, true color. Rendert met CoreText en optioneel Metal. De iOS <code>TerminalView</code> mapt een hardwaretoetsenbord met modifiers (Option als Meta, sticky Ctrl), en heeft een <code>inputAccessoryView</code> met Esc, Ctrl, Tab, pijlen met auto-repeat, <code>~ | / -</code> en F1 tot F10 als er ruimte is. Selectie per woord, regel en bereik. Open: mode 1004 staat in de changelog maar is niet in de bron nagekeken; prestaties bij zware uitvoer moeten vroeg getest worden met een <code>cat</code> van 10 MB.</p>
+    </div>
+    <div class="panel">
+      <h3>xterm.js in WKWebView</h3>
+      <p>Voordeel: exact dezelfde renderer en dezelfde serialize-semantiek als de webclient, één codepad voor thema en font. Nadelen: elke toets kruist de JS-brug, het zachte toetsenbord vraagt een verborgen textarea en een eigen accessoire-balk, Ctrl en Alt hangen af van WebKit, één WebKit-proces per view kost 30 tot 80 MB, en geen Metal. Blink Shell en a-Shell doen het zo met hterm en Blink documenteert throttling om WKWebView niet te overladen. Een bruikbaar vangnet als SwiftTerm op een sequentie stukloopt, geen eerste keus.</p>
+    </div>
+  </div>
+  <p>Ghostty's libghostty heeft geen iOS-plannen van de maintainers; een derde partij (<code>m96-chan/iOSSH</code>) bewijst dat de VT-kern op iOS bouwt, maar dat is dagen oud en ongetest.</p>
+
+  <h3>Toetsenbord op iPhone en iPad</h3>
+  <ul>
+    <li><strong>iPhone</strong>: de accessoire-balk van SwiftTerm boven het zachte toetsenbord, plus een rij eigen knoppen die de app toevoegt: <code>Ctrl+C</code>, <code>Ctrl+D</code>, "Clear" (<code>session.clear</code>), en de knop die op de desktop <code>Meta+Escape</code> is (de node verlaten), hier een gewone "Terug".</li>
+    <li><strong>iPad met Magic Keyboard</strong>: alles via <code>UIKeyCommand</code>; Cmd blijft van de app (Cmd+K clear, Cmd+W pagina sluiten, Cmd+1 tot 9 views), Ctrl en Option gaan naar de terminal, Escape gaat naar het programma zoals op de desktop (DECISIONS: "Escape in a terminal node goes to the program"). De macOS-bewegingen uit <code>terminal/keymap.ts</code> (Cmd+pijl naar <code>\x1b[H</code>/<code>\x1b[F</code>, Option+pijl naar <code>\x1bb</code>/<code>\x1bf</code>, Cmd+Backspace naar <code>\x15</code>) gaan mee, want een Magic Keyboard is een Mac-toetsenbord.</li>
+    <li><strong>Plakken</strong>: bracketed paste komt uit het serialized scherm, dus SwiftTerm weet het; een lange plak vraagt een bevestiging zoals de desktop bij een lange tekst een <code>.txt</code>-bijlage maakt in een chat.</li>
+    <li><strong>Font</strong>: <code>settings.fontSize</code> (standaard 13) en <code>MONO_FONTS</code>; op iOS SF Mono en Menlo, JetBrains Mono en Fira als gebundelde fonts.</li>
+  </ul>
+  <p><strong>Permissies in de header.</strong> <code>session.approvals</code> komt per sessie met <code>ApprovalRequest {requestId, toolName, summary, choices: [{id, kind, label}], expiresAt}</code>; de <code>ApprovalStrip</code> onder de header wordt op iOS een strook boven de terminalview met dezelfde knoppen, en een antwoord is <code>agent.answerApproval {sessionId, requestId, choiceId}</code>. De app zegt bij het verbinden <code>agent.setApprovals {enabled}</code> zoals elke client, zodat de daemon voor een telefoon die het niet wil ook niets vasthoudt.</p>
+</section>
+
+<section id="chat">
+  <h2>Chats: timeline, streaming, composer</h2>
+  <p>Een chat is <code>chat.create</code> gevolgd door <code>chat.attach {chatId}</code>, dat <code>{info, items}</code> geeft; daarna <code>chat.event {chatId, event}</code> met <code>item</code> (upsert op id), <code>delta {itemId, text}</code> (groeit een assistant- of thinking-item of de <code>progress.output</code> van een lopende tool), <code>info</code> en <code>reset</code>. De daemon bundelt deltas per item per 16 ms. Itemsoorten: <code>user</code>, <code>assistant</code>, <code>thinking</code>, <code>tool</code>, <code>subagent</code>, <code>approval</code>, <code>question</code>, <code>turn</code>, <code>note</code>, <code>compaction</code>. Providers met een chat-backend: Claude Code en Codex; Gemini en Copilot zijn terminal-only. <span class="badge confirmed">geverifieerd in <code>packages/contracts/src/chat.ts</code></span></p>
+  <ul>
+    <li><strong>Timeline</strong> in een <code>UICollectionView</code> met <code>UICollectionViewDiffableDataSource</code>, list-layout met zelfmetende cellen, SwiftUI-celinhoud via <code>UIHostingConfiguration</code> waar dat kan (rijen als <code>work-group</code>, <code>changed-files</code>, <code>turn-fold</code>), en een eigen <code>UITextView</code> op TextKit 2 voor een lang assistant-item. De rij-afleiding van <code>chat/logic/timeline.ts</code> (user, turn-start, assistant, thinking, work, work-group, work-live, subagent, approval, question, note, compaction, changed-files, turn-fold, working) is zuivere logica en gaat één op één over. Het "volg het einde binnen 40 px"-gedrag en de ruimte onder de composer (168 px) ook.</li>
+    <li><strong>Streaming</strong>: begin met de <code>blocks</code>-stand van <code>chatStreaming</code>. <code>swift-markdown</code> (Apple, cmark-gfm) parseert per blok, precies de scheiding die <code>markdown-blocks.ts</code> maakt op lege regels buiten een fence; gesloten blokken faden in, het laatste blok toont "Writing...". De <code>words</code>-stand (een woord per keer laten inhalen, <code>REVEAL_TAU_MS 250</code>) kan later op een <code>CADisplayLink</code>. <code>AttributedString(markdown:)</code> van Foundation is niet genoeg: alleen inline-stijlen, geen tabellen, fences vallen samen tot monospaced tekst.</li>
+    <li><strong>Code-highlighting</strong>: Highlightr (highlight.js in JavaScriptCore, 185 talen, ongeveer 50 ms voor 500 regels) op een achtergrondqueue, hele fence opnieuw per delta; dat is ruim onder de 16 ms-tick zolang een fence onder een paar honderd regels blijft. Tree-sitter via Neon is de upgrade als JSC te duur blijkt, met één grammatica-binary per taal. Een Shiki-equivalent met TextMate-grammatica's bestaat niet onderhouden in Swift, dus de thema's zullen niet pixelgelijk zijn met de desktop.</li>
+    <li><strong>Composer</strong>: geen CodeMirror. Een <code>UITextView</code> met eigen chips voor <code>@</code>-mentions (<code>fs.search</code> in <code>info.cwd</code>), <code>$</code>-skills (<code>skills.list</code>) en <code>/</code>-commando's (<code>LOCAL_COMMANDS</code> plus <code>info.slashCommands</code>), een fotokiezer en bestandskiezer voor bijlagen (<code>chat.send</code> neemt ze inline als base64, hooguit 8 van 25 MiB), de modelkiezer en de runtime-mode als menu's in de balk, Stop (<code>chat.cancel</code>) en Verstuur. Drafts per chat in <code>UserDefaults</code> zoals <code>ruimte.chat.drafts</code>.</li>
+    <li><strong>Vragen en toestemming</strong>: een <code>approval</code>-item wordt de <code>ApprovalDock</code> boven de composer met <code>chat.approve {requestId, decision}</code>, een <code>question</code>-item de <code>QuestionDock</code> met <code>chat.answer</code>. Eén tegelijk, met "N more", zoals <code>PendingDock.tsx</code>.</li>
+    <li><strong>Bijlagen tonen</strong>: via <code>bytes.read</code> met <code>{kind:'attachment', chatId, attachmentId}</code>, in een kleine LRU-cache (de desktop houdt 64 MiB aan ongebruikte blobs; de telefoon minder).</li>
+  </ul>
+  <p><strong>Een zorg voor lange threads.</strong> <code>chat.attach</code> geeft alle items in één antwoord. Op de desktop is dat nooit een probleem geweest; op een telefoon met een DataChannel van 16.000 tekens per stuk is een thread van een paar megabyte een merkbare wachttijd. Er is nog geen paging op de draad. Voor fase 3 volstaat het; een <code>chat.attach {chatId, tail: N}</code> met later <code>chat.history {before}</code> is een kleine toevoeging als het knelt. <span class="badge warning">aanname</span> over de omvang van echte threads.</p>
+</section>
+
+<section id="wire">
+  <h2>Wire en types: van zod naar Swift</h2>
+  <p><code>packages/contracts</code> is de enige bron voor elke wire-shape: <code>REQUEST_SCHEMAS</code> (89 types, elk <code>{payload, result}</code>) en <code>EVENT_SCHEMAS</code> (21 types) in <code>src/index.ts</code>, waaruit <code>RequestMap</code> en <code>EventMap</code> volgen. Zod <code>^4.5.4</code>. Er is nog geen <code>z.toJSONSchema</code>-aanroep of codegen in de repo. <span class="badge confirmed">geverifieerd</span></p>
+  <h3>Wat er in de schema's zit dat lastig vertaalt</h3>
+  <p>Twee keer <code>z.preprocess</code> (<code>CanvasNodeSchema</code> en <code>ProjectViewSchema</code>, het inpakken van een onbekend kind als <code>unknown</code> met <code>raw</code>), één <code>.transform(() =&gt; null)</code> (<code>StoredViewCameraSchema</code>, de oude cameravorm), één <code>.refine</code> (<code>chat.send</code>: tekst of bijlage), twee <code>.default([])</code> (<code>layouts</code>), drie <code>z.tuple</code> (punten), acht <code>z.record</code>, zes <code>z.unknown()</code> (envelop-payloads, <code>raw</code>, tool-<code>input</code>), twaalf <code>z.discriminatedUnion</code>. Geen <code>z.custom</code>, <code>.brand</code>, <code>.pipe</code>, <code>z.lazy</code>.</p>
+  <p><code>z.toJSONSchema</code> in 4.5.4 doet: <code>discriminatedUnion</code> naar <code>oneOf</code> met de discriminator als <code>const</code>; <code>.nullable()</code> als <code>"null"</code> in <code>type</code>; <code>.optional()</code> uit <code>required</code>; <code>record</code> als <code>propertyNames</code> plus <code>additionalProperties</code>; <code>tuple</code> als <code>prefixItems</code>; <code>.default</code> als <code>default</code> (in <code>io: "output"</code> verplicht, in <code>io: "input"</code> niet); <code>.refine</code> valt stil weg; <code>.transform</code> is <code>{}</code> in output-modus en het invoertype in input-modus; <code>z.preprocess</code> gedraagt zich als een transform op de invoer. Onvertaalbaar werpt standaard (<code>unrepresentable: "throw"</code>), of wordt <code>{}</code> met <code>"any"</code>. <code>reused: "ref"</code> zet gedeelde schema's in <code>$defs</code>; <code>.meta({id})</code> geeft ze een naam.</p>
+  <h3>Welke generator</h3>
+  <div class="table" role="region" aria-label="Vergelijking van generators van JSON Schema naar Swift" tabindex="0">
+    <table>
+      <thead><tr><th scope="col">Gereedschap</th><th scope="col">Discriminated unions</th><th scope="col">Oordeel</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">quicktype 26</th><td>Voegt objecttypes in een <code>oneOf</code> samen tot één klasse met alle velden; waar het wel een enum maakt, decodeert het door elke case te proberen, nooit op de tag (issues #493 en #1103)</td><td>Niet geschikt voor <code>ChatItem</code> of <code>ProjectView</code></td></tr>
+        <tr><th scope="row">openapi-generator swift6</th><td><code>oneOf</code>, <code>anyOf</code>, <code>allOf</code> staan als niet ondersteund in de eigen tabel</td><td>Nee</td></tr>
+        <tr><th scope="row">Apple swift-openapi-generator 1.13</th><td>Met een <code>discriminator</code> een Swift-enum met associated values, mits elk lid een <code>$ref</code> naar een objectschema is; zonder discriminator probeert het elk lid</td><td>Werkt, maar eist een OpenAPI-omhulsel met <code>$ref</code> per lid en een <code>discriminator.propertyName</code> die zod niet uitstuurt, en genereert clientcode die je niet gebruikt</td></tr>
+        <tr><th scope="row">Eigen script in <code>packages/contracts</code></th><td>Loopt over de JSON Schema; elke <code>oneOf</code> waarvan de leden één gedeelde <code>const</code>-eigenschap hebben wordt een enum met associated values en een handgeschreven <code>init(from:)</code> die eerst de tag leest</td><td><span class="badge confirmed">advies</span> Een paar honderd regels TypeScript, precies de gevallen die de repo heeft</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>De afspraak.</strong> <code>bun run --cwd packages/contracts generate:swift</code> schrijft <code>apps/ios/Packages/RuimteContracts/Sources/Contracts.swift</code>: <code>Codable</code> structs, <code>String</code>-enums voor <code>enum</code>, enums met associated values voor getagde unions, <code>RequestType</code> en <code>EventType</code> als enums met per case het payload- en result-type, en <code>public let protocolVersion = 1</code> uit <code>PROTOCOL_VERSION</code>. Genereer vanuit de client gezien met <code>io: "input"</code> voor request-payloads en <code>io: "output"</code> voor results en events, en met <code>unrepresentable: "throw"</code>, zodat de twee <code>z.preprocess</code>-schema's expliciet een uitzondering krijgen (de app leest een onbekend kind als <code>unknown</code> met <code>raw</code>, zoals de daemon dat doet) en niemand later ongemerkt een transform op de draad zet. In <code>ci.yml</code> een stap die de generator draait en faalt als <code>Contracts.swift</code> afwijkt van wat gecommit is. <code>z.unknown()</code> wordt een <code>JSONValue</code>-enum.</p>
+  <p><strong>Protocolversie.</strong> De app biedt <code>protocol=1</code> aan en leest <code>direct.challenge.protocol</code> vóór hij iets bewijst; de weigeringszinnen zijn de bestaande ("This machine runs an older Ruimte. Update Ruimte there, or restart it to pick up the update." en de tegenhanger). Een App Store-release loopt dagen achter op een daemon-release, en een daemon onder de achtergronddienst herstart zichzelf op een nieuwe build. Het punt uit Next ("een venster van de laatste drie protocolversies") wordt met een app in de store urgenter: een strikte gelijkheid betekent dat elke bump de app een paar dagen buitensluit. Dat hoeft niet voor fase 1, wel vóór de eerste bump.</p>
+</section>
+
+<section id="repo">
+  <h2>Plek in de monorepo, build, signing, TestFlight</h2>
+  <ul>
+    <li><strong><code>apps/ios</code></strong> met een <code>project.yml</code> voor XcodeGen (het <code>.xcodeproj</code> buiten git houden scheelt merge-conflicten), en lokale Swift-packages: <code>RuimteContracts</code> (gegenereerd), <code>RuimtePulsar</code> (signing, broker-peer, adresboek-client, session vault), <code>RuimteTransport</code> (WebRTC-link, frames, liveness, bytes), <code>RuimteKit</code> (stores, workspace, attention), en de app met twee extensies (Notification Service, Widget met de Live Activity). Een pure <code>Package.swift</code> kan geen app-target met entitlements en extensies dragen, dus het project blijft nodig. <span class="badge confirmed">geverifieerd</span> Bun neemt alleen mappen met een <code>package.json</code> als workspace, dus <code>apps/ios</code> zonder er een breekt <code>bun install</code> niet; <code>bun run --filter './apps/*' dev</code> en de prettier-globs (<code>apps/*/src/**/*.{ts,tsx}</code>) slaan hem ook over. Eén <code>bun install --frozen-lockfile</code> als controle in de eerste commit.</li>
+    <li><strong>Minimum-OS</strong>: iOS 26 en iPadOS 26. Bas vond 27 ook goed, maar 26 kost niets extra: alles in het plan bestaat vanaf 17.4 en 26 heeft het nieuwe uiterlijk al, dus er is geen tweede codepad. Blijkt een API van 27 onmisbaar, dan gaat het minimum naar 27.</li>
+    <li><strong>Signing.</strong> De release-workflow heeft al <code>APPLE_API_KEY_P8</code>, <code>APPLE_API_KEY_ID</code> en <code>APPLE_API_ISSUER</code> (App Store Connect API-sleutel voor notarisatie) en een Developer ID-certificaat in <code>CSC_LINK</code>. De API-sleutel is herbruikbaar voor het uploaden naar TestFlight (<code>xcrun altool --upload-app --apiKey --apiIssuer</code> of <code>xcodebuild -exportArchive</code> met <code>destination: upload</code>), mits de sleutel de rol App Manager of Developer heeft; controleren in App Store Connect. Nieuw nodig: een Apple Distribution-certificaat en profielen voor drie targets (app, NSE, widget), of automatische signing in CI met <code>xcodebuild -allowProvisioningUpdates -authenticationKeyPath ...</code> op dezelfde API-sleutel, wat het profielenbeheer wegneemt. Het <code>.p12</code>-probleem uit de macOS-setup (OpenSSL 3 en <code>-legacy</code>) geldt ook hier.</li>
+    <li><strong>CI.</strong> Een <code>ios.yml</code> op <code>macos-latest</code>: <code>xcodegen</code>, <code>xcodebuild -scheme Ruimte -destination generic/platform=iOS archive</code>, <code>-exportArchive</code>, upload. Reken op 15 tot 25 minuten per run; macOS-minuten tellen 10x (2.000 gratis minuten zijn 200 op macOS) of $0,062 per minuut betaald. Alternatief: Xcode Cloud, 25 rekenuren per maand in het Developer Program, signing en TestFlight beheerd, bouwt vanuit GitHub; voor één ontwikkelaar de kortste weg, minder te sturen dan een workflowbestand. <strong>Besluit Bas: Xcode Cloud</strong>, er is nog genoeg rekentijd over. Voorlopig bouwen en testen we lokaal (<code>xcodegen</code> en Xcode, of <code>xcodebuild test</code> op een simulator); Xcode Cloud komt er pas bij de eerste TestFlight-build. De contracts-check blijft in de bestaande <code>ci.yml</code>.</li>
+    <li><strong>Versie.</strong> De daemon krijgt zijn versie uit de git-tag (<code>RUIMTE_VERSION</code>); de app krijgt <code>MARKETING_VERSION</code> uit dezelfde tag en <code>CURRENT_PROJECT_VERSION</code> uit het run-nummer. Een app-release en een daemon-release hoeven niet samen te vallen zolang de protocolversie gelijk blijft.</li>
+    <li><strong>Review.</strong> SSH- en terminalclients staan al jaren in de store (Blink, Termius, Prompt, Secure ShellFish). Richtlijn 2.5.2 gaat over code die de app zelf lokaal downloadt en uitvoert, niet over commando's op je eigen machine; 4.2.7 (remote desktop) gaat over het spiegelen van specifieke software en eist dan LAN-only, wat een generieke client naar een eigen machine niet is. De bewoording in de review-notes doet ertoe: "bedien je eigen ontwikkelmachine op afstand".</li>
+  </ul>
+</section>
+
+<section id="server">
+  <h2>Wat er aan daemon, adresboek en broker verandert</h2>
+  <div class="table" role="region" aria-label="Wijzigingen per component en per fase" tabindex="0">
+    <table class="wide">
+      <caption>Nodig per fase; alles vóór fase 6 is klein</caption>
+      <thead><tr><th scope="col">Component</th><th scope="col">Wijziging</th><th scope="col">Fase</th><th scope="col">Omvang</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">packages/contracts</th><td>Generator <code>generate:swift</code> op <code>z.toJSONSchema</code>, CI-vergelijking van <code>Contracts.swift</code>; <code>.meta({id})</code> op gedeelde schema's zodat de namen in Swift leesbaar zijn</td><td>1</td><td>2 tot 3 dagen</td></tr>
+        <tr><th scope="row">Daemon</th><td><code>session.attach</code> zonder resize (<code>cols</code>/<code>rows</code> optioneel of <code>follow</code>), zodat een telefoon de PTY-maat volgt</td><td>4</td><td>Uren</td></tr>
+        <tr><th scope="row">Daemon</th><td><code>diagram.layout {viewId}</code> en <code>drawing.paths {viewId}</code>: de uitvoer van <code>layoutOf</code> en <code>pathsOfElement</code> op de draad, met paletnamen</td><td>5</td><td>1 dag</td></tr>
+        <tr><th scope="row">Daemon</th><td><code>push.subscribe</code> en <code>push.unsubscribe</code>, opslag per sleutel in <code>auth.json</code>, X25519 versleutelen, <code>POST /v1/push</code> naar het adresboek gesigneerd met de <code>endpoint.json</code>-sleutel, trigger bij beurt-einde, <code>needs-you</code> en <code>ApprovalRequest</code> als de sleutel geen verbinding heeft. Open: doet Bun's WebCrypto X25519? Anders <code>@noble/curves</code></td><td>6</td><td>3 tot 4 dagen</td></tr>
+        <tr><th scope="row">packages/pulsar</th><td>Prefix <code>pulsar-push-v1</code> in <code>signing.ts</code>, schema's voor devices, handles en de push-body</td><td>6</td><td>Uren</td></tr>
+        <tr><th scope="row">Adresboek (Worker)</th><td>Tabel <code>push_device (account, session, handle, token, environment, activity tokens)</code>, routes <code>POST /v1/push/devices</code>, <code>PUT .../activities</code>, <code>DELETE</code>, <code>POST /v1/push</code> met verificatie van de machine-handtekening en de account-relatie, APNs-JWT uit een secret <code>APNS_KEY</code>, rate limits per machine en per handle, opruimen van tokens die APNs als <code>Unregistered</code> (410) terugmeldt in de nachtelijke cron</td><td>6</td><td>3 dagen</td></tr>
+        <tr><th scope="row">Broker</th><td>Niets voor de app. TURN-credentials via het <code>ice</code>-frame komen uit het aparte TURN-werk en gelden voor elke client</td><td>0</td><td>Zie TURN</td></tr>
+        <tr><th scope="row">Daemon (later)</th><td>Een venster van protocolversies; <code>chat.attach</code> met <code>tail</code> en <code>chat.history</code> als lange threads knellen</td><td>later</td><td>1 tot 2 dagen</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="risico">
+  <h2>Risico's</h2>
+  <ol>
+    <li><strong>Geen TURN, geen telefoon onderweg.</strong> <span class="badge danger">hoog</span> Al waargenomen. De app is thuis bruikbaar en op 5G niet tot TURN staat. Het TURN-werk hoort vóór fase 0 of parallel eraan.</li>
+    <li><strong>Antwoorden vanuit een melding haalt de 30 seconden niet.</strong> <span class="badge warning">middel</span> Broker plus ICE plus handshake plus request in een achtergrondvenster op een slecht netwerk. Val terug op "tik opent de node" en meet de opbouwtijd in fase 0 op een echte telefoon; als het gemiddeld onder 5 s zit, is de actie haalbaar.</li>
+    <li><strong>SwiftTerm 2.0 breekt de API</strong> <span class="badge warning">middel</span> tijdens de bouw. Pin op de <code>v1.x</code>-branch en plan de migratie als aparte stap; of begin direct op <code>main</code> als 2.0 vóór fase 4 getagd is.</li>
+    <li><strong>De IPA is groot.</strong> <span class="badge info">laag</span> libwebrtc met codecs die niemand gebruikt. Meten na thinning; libdatachannel is de uitweg, tegen een eigen buildpipeline.</li>
+    <li><strong>Twee clients, twee looks.</strong> <span class="badge info">laag</span> Code-highlighting zonder Shiki, markdown zonder de rehype-pipeline, een canvas zonder rough.js op het apparaat. Aanvaardbaar zolang de daemon de paden voor tekeningen en diagrammen levert.</li>
+    <li><strong>Protocolbump sluit de app buiten.</strong> <span class="badge warning">middel</span> Strikte gelijkheid en een store-review van dagen. Het versievenster moet er zijn vóór de eerste bump na de store-release.</li>
+    <li><strong>De push-route lekt metadata.</strong> <span class="badge info">laag, maar benoemen</span> Het adresboek ziet wanneer welke machine welke telefoon wekt, en de Live Activity draagt een nodetitel in klare tekst. Alles wat een persoon leest is versleuteld; het ritme niet.</li>
+    <li><strong>Richtlijn 4.8 en een GitHub-only login.</strong> <span class="badge info">laag</span> Apple ID staat al op de rol; TestFlight-builds hebben er geen last van.</li>
+    <li><strong>Attach zet de PTY-maat van iedereen.</strong> <span class="badge warning">middel tot de fix</span> Zonder de daemon-wijziging maakt een telefoon die meekijkt het desktopscherm 40 kolommen breed. Fase 4 begint met die fix.</li>
+  </ol>
+</section>
+
+<section id="vragen">
+  <h2>Besluiten</h2>
+  <p>Bas beantwoordde de open vragen op 15 september.</p>
+  <div class="table" role="region" aria-label="Besluiten per vraag" tabindex="0">
+  <table>
+    <thead><tr><th scope="col">Vraag</th><th scope="col">Besluit</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">Minimum-OS</th><td>iOS en iPadOS 26. Bas vond 27 goed, tenzij 26 makkelijk mee kan; dat kan, want niets in het plan vraagt meer dan 17.4.</td></tr>
+      <tr><th scope="row">Meldingen</th><td>Volgens het advies: toestemming per machine aan, beurt klaar per gevolgde node.</td></tr>
+      <tr><th scope="row">Live Activity</th><td>De nodetitel mag in klare tekst in de <code>content-state</code>.</td></tr>
+      <tr><th scope="row">Sleutels</th><td>Eén sleutel voor sessie en machines, zoals de webclient (aan het rapport overgelaten).</td></tr>
+      <tr><th scope="row">Callback</th><td>Het eigen schema <code>ruimte://pulsar/callback</code>; geen Associated Domain.</td></tr>
+      <tr><th scope="row">Koppellinks</th><td>Ja, alleen naar https-adressen; een http-link wordt met een zin geweigerd.</td></tr>
+      <tr><th scope="row">Browser-nodes</th><td>Ja, als <code>WKWebView</code>-pagina.</td></tr>
+      <tr><th scope="row">CI</th><td>Xcode Cloud; voorlopig lokaal bouwen en testen.</td></tr>
+      <tr><th scope="row">Schrijven</th><td>Alles, behalve nodes verplaatsen en resizen op het canvas.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <h3>Nog open</h3>
+  <ul>
+    <li><strong>Bun en X25519</strong>: ondersteunt Bun's WebCrypto <code>X25519</code> voor <code>deriveBits</code>? Niet gecontroleerd; <code>@noble/curves</code> is het vangnet.</li>
+    <li><strong>Favicons</strong>: tellen de favicons van een browser-node op iOS mee in <code>panels.favicons</code>?</li>
+  </ul>
+</section>
+
+<section id="plan">
+  <h2>Het plan in fasen</h2>
+  <p>Elke fase eindigt in iets dat op een echte iPhone en iPad te proberen is. Omvang in weken voor één agent met Bas als tester; de eerste twee fasen kunnen parallel aan het TURN-werk.</p>
+  <ol class="steps">
+    <li class="step"><div>
+      <h3>Fase 0: de verbinding als Swift-package <span class="badge">1 week</span></h3>
+      <p><code>RuimtePulsar</code> en <code>RuimteTransport</code> zonder UI, met een command-line testapp: sleutel in de Keychain, PKCE-login via <code>ASWebAuthenticationSession</code>, <code>GET /v1/machines</code>, statement, broker-peer, libwebrtc via stasel, handshake met <code>channelBinding</code>, frames splitsen en samenvoegen, liveness, <code>server.hello</code>. Unit tests tegen de testvectoren van <code>signing.test.ts</code> en <code>direct.test.ts</code> (dezelfde bytes, dezelfde handtekeningen).</p>
+      <p><strong>Acceptatie:</strong> een iPhone op Wi-Fi thuis krijgt <code>server.hello</code> van de MacBook via de productiebroker binnen 5 s; met TURN ook op 5G; na wegdrukken en terugkomen staat de verbinding binnen 3 s weer; de handtekening van de app wordt door de daemon als <code>origin: statement</code> in <code>auth.sessions</code> gemeld; opbouwtijd is gemeten en opgeschreven.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Fase 1: contracts in Swift <span class="badge">1 week</span></h3>
+      <p>De generator in <code>packages/contracts</code>, <code>Contracts.swift</code>, de CI-vergelijking, een <code>MachineClient</code> met getypeerde <code>request</code> en <code>events</code>, <code>bytes.read</code> in stukken, protocolversie in de socket en de challenge.</p>
+      <p><strong>Acceptatie:</strong> <code>bun run check</code> faalt als iemand een schema wijzigt zonder te hergenereren; alle 89 requests en 21 events decoderen de fixtures uit de bestaande tests; een <code>ChatItem</code>-union decodeert op de tag.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Fase 2: de schil <span class="badge">2 weken</span></h3>
+      <p>SwiftUI: inloggen, machines, projecten (<code>project.list</code>, gecachet), project openen (<code>project.open</code>), de sidebar met views en sessienodes en hun marks, de status-tellers, instellingen (Appearance, Views, Files and Git, Agents, Usage, Remote, About), de machinepagina, zoeken met de secties van de palette, de banner en toasts, koppelen met een https-koppellink. iPhone als stapel, iPad als <code>NavigationSplitView</code> met inspector; tweede venster per project. Attention-telling overgezet met de iOS-regel voor "gezien". Badge op het app-icoon uit de telling zolang er een link is.</p>
+      <p><strong>Acceptatie:</strong> een project dat op de desktop open staat, staat op de iPad met dezelfde views in dezelfde volgorde; hernoemen van een view op de iPad landt op de desktop via <code>project.changed</code>; een machine zonder link toont "Not connected" met de laatste keer; de instellingen die op de desktop een bridge nodig hebben staan er niet.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Fase 3: de chatpagina <span class="badge">2 weken</span></h3>
+      <p><code>UICollectionView</code>-timeline, alle rijsoorten, streaming in de <code>blocks</code>-stand met <code>swift-markdown</code> en Highlightr, de composer met mentions, skills en slash-commando's, bijlagen, model- en modekiezer, approval- en question-dock, <code>chat.clear</code> met bevestiging, drafts, titels.</p>
+      <p><strong>Acceptatie:</strong> een beurt van Claude Code met tools, een subagent en een permissievraag speelt zonder haperen af terwijl de desktop hetzelfde toont; een fence van 300 regels blijft gehighlight zonder frame-drops op een iPhone van twee jaar oud; een thread van 500 items opent onder 2 s op Wi-Fi.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Fase 4: de terminalpagina <span class="badge">1,5 week</span></h3>
+      <p>Eerst de daemon: attach zonder resize. Dan SwiftTerm op de <code>v1.x</code>-branch (of 2.0 als getagd), scherm-dan-stroom, <code>session.resync</code>, de accessoire-balk plus de eigen rij (Ctrl+C, Ctrl+D, Clear), <code>UIKeyCommand</code>s op de iPad met de macOS-bewegingen, de <code>ApprovalStrip</code>, font en thema uit de instellingen.</p>
+      <p><strong>Acceptatie:</strong> een iPhone die meekijkt verandert de kolommen van de desktop niet; <code>vim</code>, <code>htop</code> en een Claude Code-TUI tekenen correct na attach en na een resync; Esc, Ctrl+C en de pijlen werken met en zonder hardwaretoetsenbord; een <code>cat</code> van 10 MB blijft onder 100 MB geheugen en de app blijft reageren.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Fase 5: het canvas en de overige pagina's <span class="badge">2 weken</span></h3>
+      <p>De canvaspagina als <code>UIScrollView</code> met kaarten en edges, culling, camera per view, contextmenu, tikken opent, nodes en edges toevoegen, hernoemen en verwijderen met <code>merge.ts</code> en de conflictdialoog. Bestandspagina met <code>fs.read</code> en <code>fs.watch</code> (code, markdown, afbeelding, video via <code>bytes.read</code>). Diagram- en tekeningpagina op <code>diagram.layout</code> en <code>drawing.paths</code> van de daemon. Files-, git- en processes-pagina's als inspector. Usage-pagina.</p>
+      <p><strong>Acceptatie:</strong> een canvas met 30 nodes en 20 edges pant en zoomt op 60 fps op een iPad; een node die op de desktop verschoven wordt verschijnt op de iPad op zijn nieuwe plek zonder herladen; een tekening en een diagram zien er hetzelfde uit als op de desktop op kleur en font na; een agent die met <code>ruimte-context open</code> een view vraagt geeft de banner met "Go there".</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Fase 6: meldingen <span class="badge">2 weken</span></h3>
+      <p>Adresboek: <code>push_device</code>, routes, APNs-JWT, limieten. Daemon: <code>push.subscribe</code>, X25519, trigger, <code>POST /v1/push</code>. App: registratie, volgen per node, de NSE met ontsleuteling, categorieën met acties, time-sensitive voor toestemming, de badge uit pushes als er geen link is, antwoorden uit de melding met de 30-seconden-poging en het vangnet.</p>
+      <p><strong>Acceptatie:</strong> een beurt die eindigt terwijl de telefoon in de zak zit geeft binnen 5 s een melding met de nodetitel en het beurtlabel, en het adresboek-log toont alleen handle, machine-id en tijd; een permissievraag komt als time-sensitive met "Toestaan" en "Weigeren", en een antwoord vanuit de melding bereikt de daemon in meer dan 9 van 10 pogingen op Wi-Fi (op 5G gemeten en opgeschreven); een melding voor een verzoek dat op de desktop al beantwoord is verdwijnt bij het openen; de generieke tekst verschijnt als de sleutel weg is.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Fase 7: Live Activity en TestFlight <span class="badge">1,5 week</span></h3>
+      <p>Widget-extensie met de activity (compact, expanded, Dynamic Island, toegangsscherm op de iPad), start uit de app en via push-to-start, updates per fasewissel, <code>stale-date</code> en <code>dismissal-date</code>. Xcode Cloud, distributiesigning, eerste TestFlight-build, privacy-manifest. Tot deze fase wordt alles lokaal gebouwd en getest.</p>
+      <p><strong>Acceptatie:</strong> een gevolgde beurt van tien minuten toont start, twee toolfases, klaar, en eindigt zelf na een kwartier met hooguit tien pushes; de activity verschijnt op de iPad op het toegangsscherm; een TestFlight-build komt uit een tag zonder handmatige stappen.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Daarna</h3>
+      <p>Browser-nodes als <code>WKWebView</code>-pagina; het 3x3-raster op de iPad; de <code>words</code>-stand van streaming; een protocolvenster; <code>chat.attach</code> met <code>tail</code>; Apple ID; tekenen op de tekeningpagina met de Apple Pencil (perfect-freehand in Swift, dan pas een echte port van <code>packages/drawing</code>).</p>
+    </div></li>
+  </ol>
+</section>
+
+<section id="prompt">
+  <h2>Startprompt voor een schone sessie</h2>
+  <p>Plak dit in een nieuwe sessie in de repo. Het begint met fase 0 en legt eerst een plan voor.</p>
+<pre><code>Lees docs/reports/2026-09-15-ios-app.html helemaal, plus CLAUDE.md en de delen van docs/DECISIONS.md over Pulsar, signing in and statements, direct connections en de station-build.
+
+Doel: een native app voor iPhone en iPad in apps/ios. SwiftUI, met UIKit waar performance telt (terminal, chat-timeline, canvas). Geen React Native. De app draait nooit een eigen daemon en werkt alleen remote, via het adresboek, de broker en een WebRTC DataChannel. De structuur van de interface volgt de desktop client. Het rapport bevat het plan in fasen met acceptatiecriteria, en de besluiten staan in de sectie "Besluiten": minimum iOS en iPadOS 26, één ed25519-sleutel, callback via ruimte://pulsar/callback, koppellinks alleen naar https, browser-nodes als WKWebView, en de app mag alles schrijven behalve nodes verplaatsen en resizen. Een tik op een canvasnode opent die node als eigen pagina. De Apple ID-login is buiten scope. Het rapport is geschreven op 44315a5; controleer bestandsverwijzingen voor je erop bouwt.
+
+Werkwijze:
+1. Maak een kort plan voor fase 0 (de verbinding als Swift-package, met XcodeGen-project en een testapp) en wacht op mijn akkoord. Zeg daarbij hoe TURN erbij komt, want zonder TURN komt een iPhone op 5G niet door. Volgende fasen pas na mijn test van de vorige.
+2. De nog open punten (X25519 in Bun's WebCrypto, favicons van browser-nodes) vraag je met AskUserQuestion zodra een fase ze nodig heeft, met jouw aanbeveling als eerste optie.
+3. Laat onderzoek over meerdere bestanden over aan Explore-subagents en implementatie aan subagents op opus. Zet in elke subagentprompt: geen Co-Authored-By of andere attributie in commits, en noem de producten uit de memory over verboden namen nergens.
+4. Bouw en test lokaal (xcodegen, xcodebuild test op een simulator); Xcode Cloud komt pas bij de eerste TestFlight-build in fase 7. Het xcodeproj blijft buiten git, en bun install moet blijven werken zonder package.json in apps/ios.
+5. Commit per afgeronde deelstap op main met conventional commits in het Engels. Raakt een stap TypeScript, dan moeten bun run format, bun run check en bun test slagen. Tests die op timing falen maak je deterministisch, nooit een langere timeout.
+6. Een wire-shape definieer je alleen in packages/contracts; Swift-types komen uit de generator van fase 1, nooit met de hand.
+7. Werk CLAUDE.md en docs/DECISIONS.md bij met apps/ios en elke beslissing die niet uit de code blijkt.
+8. Start geen dev server.
+
+Houd je aan de conventies in CLAUDE.md waar ze op Swift passen: 4 spaties, altijd accolades, geen éénlettervariabelen buiten i, e, x en y, commentaar alleen voor het waarom, Amerikaans Engels in code en UI, "machine" in alles wat een persoon leest.</code></pre>
+</section>
+
+<section id="bronnen">
+  <h2>Bronnen</h2>
+  <h3>In Ruimte, op <code>44315a5</code></h3>
+  <ul class="sources">
+    <li><code>apps/client/src/station.ts</code>, <code>transport/dormant-transport.ts</code>, <code>state/local-machine.ts</code>, <code>shell/StationWelcome.tsx</code>, <code>transport/wake.ts</code>, <code>pulsar/web.ts</code>, <code>pulsar/machines.ts</code> (<code>endpointForAccountMachine</code>)</li>
+    <li><code>apps/client/src/App.tsx</code>, <code>shell/Toolbar.tsx</code>, <code>shell/Sidebar.tsx</code>, <code>shell/sidebar-rows.ts</code>, <code>shell/CommandPalette.tsx</code>, <code>shell/SettingsDialog.tsx</code>, <code>shell/settings/panes/*</code>, <code>state/settings.ts</code>, <code>state/attention.ts</code>, <code>state/agent-work.ts</code>, <code>shell/notifications.ts</code>, <code>shell/approval-notices.ts</code>, <code>state/workspace.ts</code>, <code>transport/connections.ts</code></li>
+    <li><code>packages/pulsar/src/{keys,signing,broker,signaling,peer,broker-url,address-book,address-book-client,session-vault,statement-key}.ts</code></li>
+    <li><code>packages/contracts/src/{direct,direct-liveness,protocol,envelope,bytes,chat,session,agent,project,drawing,diagram,index}.ts</code></li>
+    <li><code>apps/client/src/transport/{webrtc-link,broker-signaling,signaling,direct-auth,link-transport,pool,workspace-hold,machine-url,byte-transfer,blob-cache,protocol}.ts</code>, <code>endpoint/{client-key,credentials,handshake,index,ensure-machine}.ts</code>, <code>state/endpoints.ts</code></li>
+    <li><code>apps/pulsar-worker/src/{index,login,sessions,machines,statements,rate-limit,providers}.ts</code>, <code>migrations/0001..0003</code>, <code>wrangler.jsonc</code>; <code>apps/pulsar-broker/src/{broker,config}.ts</code></li>
+    <li><code>apps/server/src/pulsar/{peers,channel-auth,statement,broker-relay,broker-switch}.ts</code>, <code>auth/{handshake,auth-store,access,local-secret}.ts</code>, <code>bytes/read-bytes.ts</code>, <code>daemon.ts</code>, <code>sessions/session.ts</code>, <code>chat/*</code></li>
+    <li><code>apps/client/src/canvas/{Canvas,NodeFrame,EdgeLayer,TextElementView}.tsx</code>, <code>canvas/{culling,edge-lines,math,shortcuts}.ts</code>, <code>packages/drawing/src/{paths,svg,text,geometry,reading-order}.ts</code>, <code>packages/diagram/src/{layout,shapes,svg,text,route}.ts</code></li>
+    <li><code>apps/client/src/nodes/TerminalBody.tsx</code>, <code>terminal/{keymap,session-client,lifecycle}.ts</code>, <code>chat/logic/timeline.ts</code>, <code>chat/ui/{Timeline,Composer,reveal,markdown-blocks}.ts(x)</code></li>
+    <li><code>.github/workflows/{ci,release,station,pulsar-worker}.yml</code>, <code>apps/desktop/electron-builder.yml</code>, <code>apps/server/scripts/compile.ts</code>, root <code>package.json</code></li>
+    <li><code>docs/DECISIONS.md</code>: "A direct connection", "The broker", "The address book", "Signing in and statements", "The web client", "A session bound to a key", "A machine connects only when it is used", "A protocol version on the wire", "Attention", "Kinds a newer Ruimte wrote", "Next"</li>
+    <li><code>docs/reports/2026-09-11-remote-access.html</code></li>
+  </ul>
+  <h3>Op het web, opgehaald op 15 september 2026</h3>
+  <ul class="sources">
+    <li>Apple DTS over netwerk en opschorten: <a href="https://developer.apple.com/forums/thread/716118">forums/thread/716118</a>, <a href="https://developer.apple.com/forums/thread/799259">forums/thread/799259</a> (WebRTC data-only in de achtergrond)</li>
+    <li><a href="https://developer.apple.com/documentation/uikit/extending-your-app-s-background-execution-time">Extending your app's background execution time</a>; <a href="https://developer.apple.com/documentation/backgroundtasks/bgcontinuedprocessingtask">BGContinuedProcessingTask</a>; <a href="https://developer.apple.com/videos/play/wwdc2025/227/">WWDC25 227</a>; <a href="https://developer.apple.com/documentation/pushkit/responding-to-voip-notifications-from-pushkit">PushKit en CallKit</a>; <a href="https://developer.apple.com/library/archive/documentation/WindowsViews/Conceptual/AdoptingMultitaskingOniPad/index.html">Multitasking op iPad</a></li>
+    <li>APNs: <a href="https://developer.apple.com/documentation/usernotifications/sending-notification-requests-to-apns">Sending notification requests to APNs</a>; <a href="https://developer.apple.com/documentation/usernotifications/pushing-background-updates-to-your-app">Pushing background updates</a>; <a href="https://developer.apple.com/documentation/usernotifications/modifying-content-in-newly-delivered-notifications">Modifying content (NSE)</a>; <a href="https://developer.apple.com/forums/thread/747624">forums/thread/747624</a>; <a href="https://blog.kulman.sk/dealing-with-memory-limits-in-app-extensions/">geheugenlimiet van extensies</a>; <a href="https://developer.apple.com/videos/play/wwdc2021/10091/">WWDC21 10091 (interruption levels)</a></li>
+    <li>APNs vanuit Workers: <a href="https://github.com/cloudflare/workerd/issues/4841">workerd #4841</a> (werkt in productie, niet lokaal); <a href="https://github.com/FiveSheepCo/cloudflare-apns2">cloudflare-apns2</a>; Bun <a href="https://bun.com/reference/node/http2">node:http2</a></li>
+    <li>ActivityKit: <a href="https://developer.apple.com/documentation/activitykit/displaying-live-data-with-live-activities">Displaying live data with Live Activities</a>; <a href="https://developer.apple.com/documentation/activitykit/starting-and-updating-live-activities-with-activitykit-push-notifications">ActivityKit push notifications</a>; <a href="https://developer.apple.com/documentation/activitykit/activity/pushtostarttokenupdates">pushToStartTokenUpdates</a>; <a href="https://developer.apple.com/documentation/bundleresources/information-property-list/nssupportsliveactivitiesfrequentupdates">NSSupportsLiveActivitiesFrequentUpdates</a>; <a href="https://developer.apple.com/videos/play/wwdc2023/10184/">WWDC23 10184</a> en <a href="https://developer.apple.com/videos/play/wwdc2023/10185/">10185</a>; <a href="https://9to5mac.com/2025/06/13/live-activities-are-coming-to-ipad-and-mac-heres-how-theyll-work/">Live Activities op iPad en Mac</a></li>
+    <li>CryptoKit: <a href="https://developer.apple.com/documentation/cryptokit/storing-cryptokit-keys-in-the-keychain">Storing CryptoKit keys in the keychain</a>; <a href="https://developer.apple.com/documentation/cryptokit/curve25519/signing/privatekey">Curve25519.Signing.PrivateKey</a>; <a href="https://developer.apple.com/documentation/cryptokit/secureenclave">SecureEnclave</a>; <a href="https://developer.apple.com/documentation/security/restricting-keychain-item-accessibility">Keychain accessibility</a></li>
+    <li>Login: <a href="https://developer.apple.com/documentation/authenticationservices/aswebauthenticationsession/callback">ASWebAuthenticationSession.Callback</a>; <a href="https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps">GitHub OAuth apps</a>; <a href="https://github.blog/changelog/2026-08-14-multiple-redirect-uris-and-token-refresh-for-oauth-apps/">GitHub changelog 14 augustus 2026</a>; <a href="https://developer.apple.com/app-store/review/guidelines/#login-services">App Store richtlijn 4.8</a></li>
+    <li>WebRTC: <a href="https://github.com/stasel/WebRTC">stasel/WebRTC</a> en <a href="https://github.com/stasel/WebRTC/releases">releases</a>; <a href="https://github.com/livekit/webrtc-xcframework">livekit/webrtc-xcframework</a>; <a href="https://github.com/webrtc-sdk/webrtc/blob/main/sdk/objc/api/peerconnection/RTCPeerConnection.h">RTCPeerConnection.h</a>, <a href="https://github.com/webrtc-sdk/webrtc/blob/main/sdk/objc/api/peerconnection/RTCDataChannel.h">RTCDataChannel.h</a>; <a href="https://www.w3.org/TR/webrtc-stats/">webrtc-stats</a>; <a href="https://lgrahl.de/articles/demystifying-webrtc-dc-size-limit.html">DataChannel size limit</a>; <a href="https://github.com/paullouisageneau/libdatachannel">libdatachannel</a>; <a href="https://github.com/algesten/str0m">str0m</a>; <a href="https://github.com/webrtc-sdk/webrtc/blob/main/p2p/base/p2p_constants.cc">p2p_constants.cc</a>; <a href="https://developer.apple.com/forums/thread/773942">URLSessionWebSocketTask na opschorten</a>; <a href="https://developer.apple.com/documentation/network/nwconnection/betterpathupdatehandler">betterPathUpdateHandler</a></li>
+    <li>Terminal: <a href="https://github.com/migueldeicaza/SwiftTerm">SwiftTerm</a>, <a href="https://github.com/migueldeicaza/SwiftTerm/releases">releases</a>, <a href="https://github.com/migueldeicaza/SwiftTerm/blob/main/Sources/SwiftTerm/iOS/iOSAccessoryView.swift">iOSAccessoryView.swift</a>; <a href="https://github.com/ghostty-org/ghostty/discussions/9285">Ghostty over iOS</a>; <a href="https://github.com/m96-chan/iOSSH">iOSSH</a>; <a href="https://docs.blink.sh/what-is">Blink Shell</a>; <a href="https://github.com/holzschu/a-shell/blob/master/hterm.html">a-Shell hterm</a></li>
+    <li>Markdown en highlighting: <a href="https://github.com/swiftlang/swift-markdown">swift-markdown</a>; <a href="https://github.com/gonzalezreal/textual">Textual</a>; <a href="https://github.com/gonzalezreal/swift-markdown-ui">MarkdownUI</a>; <a href="https://github.com/raspu/Highlightr">Highlightr</a>; <a href="https://github.com/ChimeHQ/Neon">Neon</a>; <a href="https://github.com/simonbs/Runestone">Runestone</a>; <a href="https://developer.apple.com/forums/thread/682711">AttributedString(markdown:) beperkingen</a></li>
+    <li>Codegen: <a href="https://zod.dev/json-schema">zod JSON Schema</a>; <a href="https://github.com/glideapps/quicktype/issues/493">quicktype #493</a>, <a href="https://github.com/glideapps/quicktype/issues/1103">#1103</a>; <a href="https://openapi-generator.tech/docs/generators/swift6/">openapi-generator swift6</a>; <a href="https://github.com/apple/swift-openapi-generator">swift-openapi-generator</a></li>
+    <li>UI en review: <a href="https://developer.apple.com/documentation/swiftui/canvas">SwiftUI Canvas</a>; <a href="https://developer.apple.com/videos/play/wwdc2022/10072/">WWDC22 10072 (UIHostingConfiguration)</a>; <a href="https://developer.apple.com/videos/play/wwdc2021/10061/">WWDC21 10061 (TextKit 2)</a>; <a href="https://developer.apple.com/documentation/swiftui/navigationsplitview">NavigationSplitView</a>; <a href="https://developer.apple.com/documentation/uikit/uiwindowscene/sizerestrictions">sizeRestrictions</a>; <a href="https://developer.apple.com/forums/thread/820296">CATiledLayer en SwiftUI op iOS 26</a>; <a href="https://developer.apple.com/app-store/review/guidelines/">App Store Review Guidelines</a></li>
+    <li>CI: <a href="https://docs.github.com/en/billing/managing-billing-for-your-products/managing-billing-for-github-actions/about-billing-for-github-actions">GitHub Actions billing</a>; <a href="https://developer.apple.com/xcode-cloud/">Xcode Cloud</a>; <a href="https://github.com/yonaskolb/XcodeGen">XcodeGen</a>; <a href="https://docs.fastlane.tools/actions/match/">fastlane match</a></li>
+  </ul>
+</section>
+</main>
+<footer>
+  <p>Geverifieerd: alle bestandsverwijzingen en constanten tegen <code>44315a5</code>; de wire-afspraken uit <code>packages/pulsar</code> en <code>packages/contracts</code> regel voor regel. Niet gedaan: een build op een echt apparaat, een meting van de IPA-grootte na thinning, een meting van de opbouwtijd van een kanaal op een telefoon, en een test of Bun's WebCrypto X25519 aankan. Platformgetallen komen van Apple-documentatie en DTS-antwoorden van 15 september 2026; waar Apple een getal niet publiceert (achtergrondtijd, update-budget van een Live Activity, aantal activities tegelijk) staat dat als aanname. Het rapport is op ankers, placeholders, streepjes en verboden namen gecontroleerd met een script; het is niet in een browser gerenderd nagekeken, dus licht, donker en print zijn onbekeken.</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Startschermen</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; font-variant-numeric: tabular-nums; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 720px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; white-space: nowrap; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+figcaption { margin-top: 10px; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+.prompt pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.6; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+
+/* Schetsen: geen ontwerp, alleen de ordening van wat er op een scherm staat. */
+.mock { background: var(--page); border-radius: 14px; box-shadow: var(--shadow-border); padding: 28px; }
+.mock-title { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 18px; margin-bottom: 4px; }
+.mock-mark { width: 22px; height: 22px; border-radius: 6px; background: var(--accent); }
+.mock-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+.mock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.mock-grid.small { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
+.tile { background: var(--paper); border-radius: 10px; box-shadow: var(--shadow-border); padding: 12px 14px; font-size: 13px; min-height: 64px; }
+.tile strong { display: block; font-size: 14px; }
+.tile span { color: var(--muted); font-size: 12px; }
+.tile.primary { background: var(--highlight); }
+.mock-label { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 18px 0 8px; }
+.mock-list { background: var(--paper); border-radius: 10px; box-shadow: var(--shadow-border); font-size: 13px; }
+.mock-list div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 14px; border-bottom: 1px solid var(--line); }
+.mock-list div:last-child { border-bottom: 0; }
+.mock-list span { color: var(--muted); }
+.mock-cols { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; }
+.mock-foot { margin-top: 18px; font-size: 12px; color: var(--muted); }
+
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --line: color-mix(in srgb, var(--accent) 16%, var(--paper));
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split, .mock-cols { grid-template-columns: 1fr; }
+  .mock { padding: 18px; }
+}
+@media (max-width: 420px) {
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel, .mock { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .badge, .mock, .tile { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#advies">Naar de inhoud</a>
+<header>
+  <p class="eyebrow">RUIMTE / VOORSTEL / 15 SEPTEMBER 2026</p>
+  <h1>Startschermen in plaats van "No project"</h1>
+  <p class="intro">Ruimte kent nu een toestand zonder project. De hele app draait dan door, met een lege kolom, een switcher die "No project" zegt en een sidebar, panelen en menu's die elk zelf controleren of er iets open is. Dit voorstel haalt die toestand weg. Het venster toont óf een startscherm, óf een workspace met een project erin. Daarnaast krijgt het lege canvas een raster met wat je er kunt neerzetten, en er staan zeven andere plekken in die een eigen startscherm verdienen.</p>
+  <p class="status">Voorstel, er is niets gebouwd</p>
+  <p class="caption">Ruimte op main bij c93327d. Onderzoek door twee Fable-subagents die de client en de daemon lazen. <span class="badge confirmed">Gelezen</span> betekent gevonden in de broncode met een regelnummer. <span class="badge info">Voorstel</span> betekent een ontwerpkeuze die nog niet beslist is. De app is niet gestart en de regelnummers zijn niet een voor een nagelopen. De schetsen tonen alleen wat er op een scherm staat, geen visueel ontwerp.</p>
+  <nav aria-label="Inhoud">
+    <a href="#advies">Advies</a>
+    <a href="#nu">No project nu</a>
+    <a href="#model">Het nieuwe model</a>
+    <a href="#start">Startscherm</a>
+    <a href="#canvas">Leeg canvas</a>
+    <a href="#elders">Andere plekken</a>
+    <a href="#risicos">Risico's</a>
+    <a href="#stappen">Stappen</a>
+    <a href="#vragen">Open vragen</a>
+    <a href="#prompt">Startprompt</a>
+  </nav>
+</header>
+<main>
+  <section id="advies" class="recommendation">
+    <h2>Advies</h2>
+    <p>Maak van het venster een keuze tussen twee dingen: <code>{ kind: 'start' }</code> of <code>{ kind: 'workspace', workspace }</code>. Een workspace bestaat alleen met een project en wordt gebouwd bij het openen en weggegooid bij sluiten, verwijderen of vergeten van de machine. Daarmee wordt <code>useProject().current</code> niet-nullable, en verdwijnen <code>NoProject</code>, de tekst "No project" in de switcher en ruim twintig null-controles vanzelf.</p>
+    <p>Het startscherm staat buiten elke workspace, net als het palette en de instellingen nu. Het neemt <code>StationWelcome</code> op, zodat station.ruimte.app en de desktop-app hetzelfde scherm tonen met een andere volgorde.</p>
+    <p>Bouw het in vier stappen: eerst het model met het startscherm als kale lijst, dan het ontwerp van het startscherm, dan het raster op het canvas, en pas daarna de andere plekken. Stap één raakt veel bestanden en tests. De rest is daarna vooral UI.</p>
+    <p class="note">In de opdracht staat "connect (remove machine)". Dit rapport leest dat als "remote machine": een machine op afstand koppelen. Een machine vergeten hoort in het Machines-paneel, niet op een startscherm.</p>
+  </section>
+
+  <section id="nu">
+    <h2>Waar "No project" nu leeft</h2>
+    <p><span class="badge confirmed">Gelezen</span> De daemon kent het begrip niet. <code>project.list</code> geeft een lege lijst en bij het opstarten opent de daemon niets (<code>apps/server/src/projects/project-store.ts:200-206</code>). Het concept zit helemaal in de client.</p>
+    <div class="table" role="region" aria-label="Plekken met No project" tabindex="0">
+      <table class="wide">
+        <caption>Plekken in apps/client/src die een toestand zonder project kennen</caption>
+        <thead><tr><th scope="col">Plek</th><th scope="col">Wat het doet</th><th scope="col">Na de wijziging</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>state/project.ts:8-10, 48-50</code></th><td><code>current</code> en <code>currentEndpointId</code> zijn nullable, <code>setCurrent(null)</code> maakt ook de machine leeg</td><td>Niet-nullable, gezet bij het bouwen van de workspace</td></tr>
+          <tr><th scope="row"><code>App.tsx:34-80</code></th><td>Bouwt altijd een workspace, titel "Ruimte" zonder project</td><td>Kiest tussen startscherm en workspace</td></tr>
+          <tr><th scope="row"><code>shell/ViewHost.tsx:103-160</code></th><td><code>NoProject</code> met twee knoppen, of <code>StationWelcome</code> in de station-build</td><td>Beide weg, ViewHost tekent altijd het raster</td></tr>
+          <tr><th scope="row"><code>shell/ProjectMenu.tsx:101-108</code></th><td>Grijs vierkant en de tekst "No project" (met een commentaar dat een splash dit moet vervangen)</td><td>Weg</td></tr>
+          <tr><th scope="row"><code>shell/ProjectActionsMenu.tsx:42</code>, <code>ViewMenu.tsx:37-42</code></th><td>Geven <code>null</code> terug zonder project</td><td>Guard weg</td></tr>
+          <tr><th scope="row"><code>shell/Sidebar.tsx:502, 655, 773</code></th><td>"No project is open yet.", "New view" uitgeschakeld</td><td>Guard weg, lege sidebar krijgt een eigen startscherm (zie <a href="#elders">Andere plekken</a>)</td></tr>
+          <tr><th scope="row"><code>shell/commands.ts:131-265</code></th><td>Elk view- en canvascommando achter <code>project</code></td><td>Workspacecommando's alleen met een workspace, de rest blijft</td></tr>
+          <tr><th scope="row"><code>project/views.ts:72-74</code></th><td><code>canAddView()</code>, de guard op elke nieuwe view</td><td>Weg</td></tr>
+          <tr><th scope="row"><code>shell/Dock.tsx:55-59</code></th><td>Verbergt de dock zonder canvasview</td><td>Blijft, maar alleen voor views die geen canvas zijn</td></tr>
+          <tr><th scope="row"><code>FilesPanel.tsx:447</code>, <code>GitPanel.tsx:301</code></th><td>"No project is open."</td><td>Tekst weg</td></tr>
+          <tr><th scope="row"><code>project/project-client.ts</code></th><td><code>if (!current) return</code> in negen methodes, <code>closeProject</code> zet <code>current</code> op null, <code>runBoot</code> kiest wat er opent</td><td>Client leeft zo lang als zijn project, boot gaat naar vensterniveau</td></tr>
+          <tr><th scope="row"><code>endpoint/index.ts:131-139</code></th><td><code>activateEndpoint</code> maakt document en project leeg bij een machinewissel</td><td>Een machine kiezen is een project openen of terug naar het startscherm</td></tr>
+          <tr><th scope="row"><code>state/workspace.ts:25-31</code>, <code>workspace-stores.ts:80</code></th><td>Standaardstores zonder project, <code>isFocusedWorkspace</code> ziet <code>current === null</code> als "alles heeft focus"</td><td>Standaardstores weg of alleen voor unit tests</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Daarnaast lezen ongeveer vijftien componenten <code>current?.folder</code> of <code>current?.id</code> (onder meer <code>TerminalBody.tsx:179</code>, <code>ChatBody.tsx:35</code>, <code>NodeMenu.tsx:54</code>, <code>CanvasMenu.tsx:20</code>, <code>TimelineMenu.tsx:26</code>). <code>folder</code> blijft nullable, want een project zonder map bestaat. De <code>?.</code> op <code>current</code> verdwijnt.</p>
+
+    <h3>Wat iemand nu ziet</h3>
+    <ul>
+      <li><strong>Koude start.</strong> <code>runBoot</code> (<code>project-client.ts:357-373</code>) opent het project uit <code>ruimte.lastProject.byEndpoint</code> als de machine het nog noemt. Anders: <code>NoProject</code>.</li>
+      <li><strong>Project sluiten of het laatste verwijderen.</strong> <code>NoProject</code>. Het gesloten project staat onder Recent in de switcher.</li>
+      <li><strong>Machine niet bereikbaar.</strong> Bij een koude start een lege kolom met een rode stip. Via <code>openProject</code> na 5 s de banner "That machine is not answering" boven een lege kolom (<code>open.ts:13</code>).</li>
+      <li><strong>Machine vergeten.</strong> Terug naar de lokale machine, die opent wat hij eerder open had, of niets.</li>
+    </ul>
+
+    <h3>Tests die de toestand aannemen</h3>
+    <p><code>project-client.test.ts:147, 344, 352, 563, 606, 695</code>, <code>drawing-client.test.ts:159</code>, <code>diagram-client.test.ts:177</code>, <code>station.test.ts:16-41</code> en <code>open.test.ts:29-77</code>. Ook <code>CLAUDE.md</code> ("with no project open the main column carries an empty state") en <code>docs/DECISIONS.md:1881-1884</code> beschrijven de toestand.</p>
+  </section>
+
+  <section id="model">
+    <h2>Het nieuwe model</h2>
+    <p><span class="badge info">Voorstel</span> Het venster heeft één veld dat zegt wat er staat. Een project openen bouwt een workspace, sluiten gooit hem weg. Er is geen moment waarop een workspace zonder project bestaat.</p>
+    <figure class="panel">
+      <div class="table" role="region" aria-label="Diagram van het venstermodel" tabindex="0">
+        <svg width="760" viewBox="0 0 760 250" role="img" aria-labelledby="model-title model-desc" style="max-width:100%;height:auto">
+          <title id="model-title">Overgangen tussen startscherm en workspace</title>
+          <desc id="model-desc">Een koude start gaat naar de workspace als het laatste project nog bestaat en de machine antwoordt, anders naar het startscherm. Vanaf het startscherm opent een project een workspace. Sluiten, verwijderen of de machine vergeten gaat terug naar het startscherm. Een ander project openen vervangt de workspace.</desc>
+          <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="var(--muted)"/></marker></defs>
+          <g fill="var(--paper)" stroke="var(--line)" stroke-width="2">
+            <rect x="20" y="95" width="150" height="60" rx="12"/>
+            <rect x="290" y="30" width="180" height="60" rx="12"/>
+            <rect x="290" y="160" width="180" height="60" rx="12"/>
+          </g>
+          <g stroke="var(--muted)" stroke-width="2" fill="none">
+            <path d="M170 115 L284 70" marker-end="url(#arrow)"/>
+            <path d="M170 135 L284 180" marker-end="url(#arrow)"/>
+            <path d="M400 90 V152" marker-end="url(#arrow)"/>
+            <path d="M360 160 V98" marker-end="url(#arrow)"/>
+            <path d="M470 175 C 560 175, 560 205, 478 205" marker-end="url(#arrow)"/>
+          </g>
+          <g fill="var(--ink)" font-size="15" text-anchor="middle">
+            <text x="95" y="130">Koude start</text>
+            <text x="380" y="65">Startscherm</text>
+            <text x="380" y="195">Workspace</text>
+          </g>
+          <g fill="var(--muted)" font-size="13">
+            <text x="150" y="68">geen project of machine weg</text>
+            <text x="150" y="190" text-anchor="start">laatste project bestaat</text>
+            <text x="410" y="126">project openen</text>
+            <text x="240" y="126" text-anchor="start">sluiten, verwijderen, vergeten</text>
+            <text x="570" y="194">ander project openen</text>
+          </g>
+        </svg>
+      </div>
+      <figcaption>Het startscherm is een toestand van het venster, geen toestand van een project. Een workspace ontstaat alleen met een project erin.</figcaption>
+    </figure>
+    <ul>
+      <li><strong>Boot.</strong> <code>runBoot</code> gaat uit <code>ProjectClient</code> naar vensterniveau: lees <code>ruimte.lastProject.last</code>, bereik die machine, vraag <code>project.list</code>, en bouw alleen een workspace als het onthouden project er staat en beschikbaar is.</li>
+      <li><strong>Machines zonder workspace.</strong> Een <code>Connection</code> heeft geen project nodig (<code>transport/connections.ts:148-187</code>). Het startscherm leest verbindingen via <code>useFocusedConnection</code> en <code>currentEndpointId()</code>, net als het palette nu.</li>
+      <li><strong>Sluiten.</strong> <code>closeProject</code> ruimt sessies op, stempelt <code>closedAt</code>, en geeft het venster terug aan het startscherm. <code>lifecycle-watch.ts:78</code> (sessies en chats wissen bij een projectwissel) verhuist naar het weggooien van de workspace.</li>
+      <li><strong>Station.</strong> <code>DormantTransport</code> blijft. Het startscherm bouwt in die build nooit een workspace op <code>LOCAL_ENDPOINT_ID</code>, en <code>stationBoot</code> bepaalt alleen welke sectie bovenaan staat.</li>
+    </ul>
+  </section>
+
+  <section id="start">
+    <h2>Het startscherm</h2>
+    <p>Het vult het hele venster, zonder sidebar of panelen. In Electron blijft er een sleepbare strook bovenaan voor de vensterknoppen. Links staat wat je kunt beginnen, rechts wat je al hebt.</p>
+    <figure class="mock" aria-label="Schets van het startscherm">
+      <div class="mock-title"><span class="mock-mark" aria-hidden="true"></span>Ruimte</div>
+      <div class="mock-sub">Terminals, agents en browsers op één canvas</div>
+      <div class="mock-cols">
+        <div>
+          <div class="mock-label">Beginnen</div>
+          <div class="mock-grid small">
+            <div class="tile primary"><strong>Open folder</strong><span>op een machine</span></div>
+            <div class="tile"><strong>New project</strong><span>zonder map</span></div>
+            <div class="tile"><strong>Connect machine</strong><span>met een koppellink</span></div>
+            <div class="tile"><strong>Sign in</strong><span>machines van je account</span></div>
+          </div>
+          <div class="mock-label">Machines</div>
+          <div class="mock-list">
+            <div>MacBook <span>verbonden</span></div>
+            <div>Test-VPS <span>antwoordt niet</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="mock-label">Recent</div>
+          <div class="mock-list">
+            <div>ruimte <span>MacBook · 2 uur geleden</span></div>
+            <div>homey-app <span>MacBook · gisteren</span></div>
+            <div>broker <span>Test-VPS · gesloten</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="mock-foot">⌘K palette · ⌘, instellingen · versie en release notes</div>
+    </figure>
+    <p class="caption">Schets. Machinenamen en projecten zijn voorbeelden, geen gegevens uit een installatie.</p>
+
+    <div class="table" role="region" aria-label="Onderdelen van het startscherm" tabindex="0">
+      <table class="wide">
+        <caption>Onderdelen en wat er al bestaat om ze aan te roepen</caption>
+        <thead><tr><th scope="col">Onderdeel</th><th scope="col">Bestaande ingang</th><th scope="col">Opmerking</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Open folder</th><td><code>useUi.getState().openFolderBrowser()</code> (<code>state/ui.ts:233</code>), eindigt in <code>openFolderOn</code> (<code>project/open.ts:104-115</code>)</td><td>Opent de bladerstap van het palette, die met meerdere machines eerst een machine vraagt</td></tr>
+          <tr><th scope="row">New project</th><td><code>projectClient.createProject(name)</code> (<code>project-client.ts:212</code>)</td><td>Hangt nu aan een <code>ProjectClient</code> in een workspace. Moet een functie op vensterniveau worden die een machine meekrijgt</td></tr>
+          <tr><th scope="row">Connect machine</th><td><code>AddMachineDialog</code> (<code>EndpointsSection.tsx:358</code>), <code>pairEndpoint(url)</code> (<code>endpoint/index.ts:37</code>)</td><td>In station geeft <code>mixedContentRefusal</code> hier zijn zin</td></tr>
+          <tr><th scope="row">Sign in</th><td><code>signInToPulsar()</code> (<code>pulsar/account.ts:92</code>), <code>usePulsarMachines</code>, <code>openAccountMachine</code></td><td>Neemt de inhoud van <code>StationWelcome</code> over. Na inloggen staan de accountmachines in de lijst Machines</td></tr>
+          <tr><th scope="row">Recent</th><td><code>useProjectList</code>, <code>menuProjects()</code> (<code>project/list.ts:110-123</code>), <code>openProject(endpointId, projectId)</code></td><td>Eén lijst over alle machines, gecachte rijen van een machine die niet antwoordt gedimd. Gesloten projecten horen erbij</td></tr>
+          <tr><th scope="row">Machines</th><td><code>useEndpoints</code>, <code>MachineGlyph</code>, <code>describeMachine</code> (<code>ConnectionDot.tsx:54-69</code>)</td><td>Een machine kiezen opent de bladerstap op die machine</td></tr>
+          <tr><th scope="row">Merk en versie</th><td><code>ui/Brand.tsx</code>, <code>versions</code> op de bridge, <code>ReleaseNotesDialog</code></td><td>Geen nieuw asset nodig</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Varianten</h3>
+    <div class="split">
+      <div class="panel">
+        <h3>Eerste start</h3>
+        <p>Geen projecten, alleen de lokale machine. Recent is leeg, dus de rechterkolom verdwijnt en "Open folder" staat groot in het midden, met één zin over wat een project in Ruimte is (een map met <code>.ruimte/project.json</code>).</p>
+      </div>
+      <div class="panel">
+        <h3>Station</h3>
+        <p>Geen lokale machine. Niet ingelogd: "Sign in" is de primaire tegel en de rest wacht. Ingelogd: de accountmachines bovenaan, want zonder machine kan niets anders.</p>
+      </div>
+      <div class="panel">
+        <h3>Laatste machine antwoordt niet</h3>
+        <p>Het onthouden project staat bovenaan Recent met "antwoordt niet" en een knop om het opnieuw te proberen. Geen stille lege kolom meer.</p>
+      </div>
+      <div class="panel">
+        <h3>Na sluiten</h3>
+        <p>Het net gesloten project staat eerst in Recent, zodat een verkeerde klik één klik terug is.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="canvas">
+    <h2>Het lege canvas</h2>
+    <p><span class="badge confirmed">Gelezen</span> Een canvas zonder nodes en teksten (<code>canvas/Canvas.tsx:552-584</code>) toont nu <code>EmptyState</code>: een zin over rechtsklikken en ⌘K, en een knop "Add" met een menu voor Terminal, Chat, de agents per provider en Browser. Groep, notitie, bestand en tekst ontbreken daar. Het blok staat in schermcoördinaten, dus zoom en pan raken het niet, en in een kleine cel kan het over de dock vallen (<code>SplitGrid.tsx:14, 156-161</code>).</p>
+    <p><span class="badge info">Voorstel</span> Vervang het menu door een raster van tegels. Een tegel zet de node in het midden van de camera, precies zoals de dock nu (<code>addNodeAtCenter</code>, <code>addAgentNodeAtCenter</code> in <code>shell/commands.ts:59-61</code>). Het raster verdwijnt bij de eerste node of tekst, zoals nu.</p>
+    <figure class="mock" aria-label="Schets van het raster op een leeg canvas">
+      <div class="mock-label" style="margin-top:0">Agents</div>
+      <div class="mock-grid">
+        <div class="tile primary"><strong>Claude</strong><span>chat · ⌥C</span></div>
+        <div class="tile"><strong>Codex</strong><span>chat</span></div>
+        <div class="tile"><strong>Claude</strong><span>in een terminal</span></div>
+        <div class="tile"><strong>Gemini</strong><span>niet geïnstalleerd</span></div>
+      </div>
+      <div class="mock-label">Neerzetten</div>
+      <div class="mock-grid">
+        <div class="tile"><strong>Terminal</strong><span>⌥T</span></div>
+        <div class="tile"><strong>Browser</strong><span>⌥B</span></div>
+        <div class="tile"><strong>File</strong><span>uit de projectmap</span></div>
+        <div class="tile"><strong>Note</strong><span>⌥N</span></div>
+        <div class="tile"><strong>Group</strong><span>⌥G</span></div>
+        <div class="tile"><strong>Text</strong><span>of dubbelklik</span></div>
+      </div>
+      <div class="mock-label">Van deze workspace</div>
+      <div class="mock-grid">
+        <div class="tile"><strong>Apply layout</strong><span>als het canvas er heeft</span></div>
+        <div class="tile"><strong>Show a view here</strong><span>tekening of diagram</span></div>
+      </div>
+      <div class="mock-foot">Sleep bestanden hierheen · rechtsklik voor meer · ⌘K</div>
+    </figure>
+
+    <div class="table" role="region" aria-label="Tegels op het lege canvas" tabindex="0">
+      <table class="wide">
+        <caption>Tegels en de functie die ze aanroepen</caption>
+        <thead><tr><th scope="col">Tegel</th><th scope="col">Functie</th><th scope="col">Wanneer zichtbaar</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Agent als chat, per provider</th><td><code>addAgentNodeAtCenter('chat', provider)</code>, icoon <code>AgentIcon</code></td><td><code>provider.installed &amp;&amp; capabilities.chat</code>, "Connecting" zolang <code>providers.loaded</code> onwaar is</td></tr>
+          <tr><th scope="row">Agent in een terminal</th><td><code>addAgentNodeAtCenter('terminal', provider)</code></td><td><code>capabilities.terminal</code></td></tr>
+          <tr><th scope="row">Chat met modelkeuze</th><td><code>addNodeAtCenter('chat')</code></td><td>Altijd, of samengevoegd met de agenttegels (zie <a href="#vragen">Open vragen</a>)</td></tr>
+          <tr><th scope="row">Terminal, Browser, Note, Group</th><td><code>addNodeAtCenter(kind)</code></td><td>Altijd</td></tr>
+          <tr><th scope="row">File</th><td><code>openFilePicker({ kind: 'node', at })</code></td><td>Alleen met een projectmap</td></tr>
+          <tr><th scope="row">Text</th><td><code>focusedCanvas().getState().addText(at)</code></td><td>Altijd</td></tr>
+          <tr><th scope="row">Apply layout</th><td><code>applyLayout(name)</code> (<code>commands.ts:205-221</code>)</td><td>Alleen als <code>canvas.layouts</code> niet leeg is</td></tr>
+          <tr><th scope="row">Show a view here</th><td><code>showOnCanvas(viewId)</code> (<code>project/views.ts:95</code>)</td><td>Alleen als het project een tekening of diagram heeft</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul>
+      <li><strong>Kleine cel.</strong> Onder een breedte of hoogte valt het raster terug op één rij met iconen en tooltips, of alleen de zin. De grens hoort bij de cel, niet bij het venster, dus meten via de <code>ResizeObserver</code> die <code>viewport</code> al levert (<code>Canvas.tsx:116-125</code>).</li>
+      <li><strong>Niet geïnstalleerde agents.</strong> Een gedimde tegel die naar het Agents-paneel wijst, of helemaal weg zoals in de menu's nu. Het tweede is consistent, het eerste leert iemand dat Gemini kan.</li>
+      <li><strong>Toetsenbord.</strong> De tegels zijn knoppen in tabvolgorde en tonen hun sneltoets met <code>Kbd</code>. Klikken op het canvas naast het raster moet box-select blijven doen (<code>Canvas.tsx:331-335</code> slaat alleen knoppen over).</li>
+      <li><strong>Bouwsteen.</strong> Er is nog geen gedeelde tegelcomponent. De kaart uit <code>shell/usage/UsageTiles.tsx:22-28</code> komt het dichtst in de buurt. Een <code>ui/Tile.tsx</code> dient het startscherm, het canvas en de plekken hieronder.</li>
+    </ul>
+  </section>
+
+  <section id="elders">
+    <h2>Andere plekken voor een startscherm</h2>
+    <p>Elke rij is gelezen in de huidige code. Het voorstel ernaast is een idee, geen besluit.</p>
+    <div class="table" role="region" aria-label="Andere lege schermen" tabindex="0">
+      <table class="wide">
+        <caption>Lege schermen nu en wat een startscherm er zou tonen</caption>
+        <thead><tr><th scope="col">Plek</th><th scope="col">Nu</th><th scope="col">Voorstel</th><th scope="col">Waarde</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Nieuwe tekening</th><td>Alleen gestippeld papier en de dock (<code>DrawingView.tsx:504-526</code>)</td><td>Een zin met de sneltoetsen van de gereedschappen en "plak een afbeelding", verdwijnt bij het eerste element</td><td><span class="badge confirmed">Hoog</span></td></tr>
+          <tr><th scope="row">Nieuw diagram</th><td>Een losse <code>&lt;p&gt;</code>: schrijf de JSON of vraag een agent (<code>DiagramView.tsx:315-320</code>)</td><td>Tegels "Ask an agent" (zet een agent op het canvas met een lijn en <code>help diagram</code> in de eerste vraag), "Open JSON", "Insert an example"</td><td><span class="badge confirmed">Hoog</span></td></tr>
+          <tr><th scope="row">Sidebar zonder views</th><td>"This project has no views yet." zonder actie (<code>Sidebar.tsx:655</code>)</td><td>De rijen uit <code>ViewMenu.tsx:45-62</code> als kleine tegels</td><td><span class="badge confirmed">Hoog</span></td></tr>
+          <tr><th scope="row">Machine antwoordt niet</th><td>Geen kolombreed scherm, alleen per node een <code>NodeNotice</code> en de banner</td><td>Over de cellen: naam en icoon van de machine, sinds wanneer, "Try again", "Open another project" (terug naar het startscherm)</td><td><span class="badge confirmed">Hoog</span></td></tr>
+          <tr><th scope="row">Preview zonder tabs</th><td>"Open a file from the Files panel." (<code>FileViewer.tsx:17</code>)</td><td>"Open file" (<code>openFilePicker</code>), "Find in files", de laatst geopende bestanden van dit project</td><td><span class="badge warning">Middel</span></td></tr>
+          <tr><th scope="row">Lege chat</th><td><code>EmptyState</code> "&lt;model&gt; is ready. Ask anything." (<code>Timeline.tsx:174-180</code>)</td><td>De lijnen die al naar deze node lopen als context, en eerdere gesprekken om te hervatten via <code>resumeCommand</code></td><td><span class="badge warning">Middel</span></td></tr>
+          <tr><th scope="row">Files-paneel zonder map</th><td>"This canvas has no folder." (<code>FilesPanel.tsx:445-469</code>)</td><td>Knop die een map aan het project koppelt</td><td><span class="badge warning">Middel</span></td></tr>
+          <tr><th scope="row">Usage zonder gegevens</th><td>"No Claude or Codex transcripts found..." (<code>UsagePage.tsx:226-233</code>)</td><td>Welke CLI's de machine heeft en een link naar het Agents-paneel</td><td><span class="badge">Laag</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Niet meegenomen: een lege terminal (die heeft altijd een prompt) en de browser (de foutplaat in <code>BrowserBody.tsx:200-235</code> doet al wat een startscherm zou doen).</p>
+  </section>
+
+  <section id="risicos">
+    <h2>Risico's</h2>
+    <ul>
+      <li><strong>Een workspace die wordt weggegooid.</strong> <code>mainWorkspace()</code> wordt nu één keer gebouwd in <code>startConnections</code> (<code>connections.ts:358-360</code>). Alles wat daar een abonnement op neemt (watchers, <code>show-view-watch</code>, sneltoetsen) moet opruimen bij weggooien. Een lek zie je pas na tien keer openen en sluiten.</li>
+      <li><strong>Hooks buiten een provider.</strong> <code>focusedCanvas</code> en <code>useProject</code> vallen buiten een provider terug op de standaardstores (<code>workspace.ts:25-31</code>), en <code>app-shortcuts.ts:73</code> leest <code>focusedCanvas()</code>. Op het startscherm mag zo'n sneltoets niets doen en niet crashen.</li>
+      <li><strong>Wisselen van machine.</strong> <code>openProject</code> op een andere machine rekent er nu op dat <code>activateEndpoint</code> alles leegmaakt en de boot van die machine <code>byEndpoint</code> heropent (<code>open.ts:62-75</code>). Met een expliciete workspace valt die race weg, maar dan moet beslist worden of <code>byEndpoint</code> nog iets betekent.</li>
+      <li><strong>Desktop.</strong> De venstertitel (<code>App.tsx:79</code>) en de luisteraar voor <code>menu:settings</code> (<code>App.tsx:85-93</code>) moeten ook op het startscherm werken. Het dock-badge en de vraag bij afsluiten tellen nodes, en die zijn er op het startscherm niet, maar sessies op een machine lopen door.</li>
+      <li><strong>Tests.</strong> De tien tests uit <a href="#nu">No project nu</a> gaan om. Een deel test gedrag dat verdwijnt en moet weg, niet omgebouwd.</li>
+    </ul>
+  </section>
+
+  <section id="stappen">
+    <h2>Stappen</h2>
+    <ol class="steps">
+      <li class="step"><div>
+        <h3>Het venstermodel, met een kaal startscherm</h3>
+        <p>Venstertoestand <code>start | workspace</code>, workspace bouwen en weggooien, <code>current</code> niet-nullable, boot op vensterniveau, <code>NoProject</code>, <code>StationWelcome</code> en alle guards uit <a href="#nu">de tabel</a> weg. Het startscherm is nog een simpele lijst met Recent en de vier acties.</p>
+        <p>Klaar als <code>rg -i "no project"</code> in <code>apps/client/src</code> niets meer vindt, <code>bun run check</code> en <code>bun test</code> slagen, en openen, sluiten, verwijderen en een machine vergeten elk op het startscherm of in een workspace eindigen. Twintig keer openen en sluiten laat geen extra listeners achter.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Het ontwerp van het startscherm</h3>
+        <p><code>ui/Tile.tsx</code>, de twee kolommen, de vier varianten uit <a href="#start">Het startscherm</a>, sleepstrook in Electron.</p>
+        <p>Klaar als eerste start, station niet ingelogd, station ingelogd, onbereikbare laatste machine en net gesloten project elk het juiste scherm geven, met toetsenbord alleen te bedienen.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Het raster op het lege canvas</h3>
+        <p>Menu vervangen door tegels, compacte vorm voor een kleine cel, tegels die alleen verschijnen als ze iets doen.</p>
+        <p>Klaar als elke tegel een node midden in de camera zet, het raster verdwijnt bij de eerste node, een cel van 15% niet over de dock tekent en box-select naast het raster blijft werken.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Andere plekken, in volgorde van waarde</h3>
+        <p>Eerst de vier met hoge waarde: tekening, diagram, sidebar, onbereikbare machine. Daarna de rest als er tijd voor is.</p>
+        <p>Klaar per plek als het lege scherm een actie heeft die het leeg maken opheft.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <section id="vragen">
+    <h2>Open vragen</h2>
+    <ul>
+      <li>Opent een koude start het laatste project, of altijd het startscherm? Dit rapport kiest het laatste project, zoals nu.</li>
+      <li>Blijft <code>byEndpoint</code> ("wat een wissel naar deze machine heropent") bestaan, of onthoudt Ruimte alleen het laatste project?</li>
+      <li>Staan niet geïnstalleerde agents gedimd in het raster, of weg zoals in de menu's?</li>
+      <li>Blijft de tegel "Chat" met modelkeuze naast de agenttegels, of vervangt de agentchat hem?</li>
+      <li>Hoort een machine op het startscherm alleen de bladerstap te openen, of ook zijn eigen projecten te filteren?</li>
+      <li>Moet "Recent" gesloten projecten apart tonen, zoals het submenu in de switcher nu, of als één lijst op tijd?</li>
+    </ul>
+  </section>
+
+  <section id="prompt" class="prompt">
+    <h2>Startprompt voor een schone sessie</h2>
+    <p>Plak dit in een nieuwe sessie in de repo. Het begint met stap één en vraagt eerst de open vragen uit.</p>
+<pre><code>Lees docs/reports/2026-09-15-startschermen.html helemaal, plus CLAUDE.md en de delen van docs/DECISIONS.md over projecten, workspaces en de station-build.
+
+Doel: het begrip "geen project open" verdwijnt uit Ruimte. Het venster toont een startscherm of een workspace met een project, nooit een workspace zonder project. Daarna krijgt het lege canvas een raster met tegels, en krijgen andere lege schermen een eigen startscherm. De stappen, acceptatievoorwaarden en regelnummers staan in het rapport; de regelnummers zijn van c93327d, controleer ze eerst.
+
+Werkwijze:
+1. Stel mij eerst de open vragen uit het rapport (sectie "Open vragen") met AskUserQuestion, met jouw aanbeveling als eerste optie.
+2. Maak daarna een kort plan voor stap 1 (het venstermodel met een kaal startscherm) en wacht op mijn akkoord. Stap 2 tot en met 4 pas na mijn test van stap 1.
+3. Laat onderzoek over meerdere bestanden over aan Explore-subagents en implementatie aan subagents op opus. Zet in elke subagentprompt: geen Co-Authored-By of andere attributie in commits, en noem de producten uit de memory over verboden namen nergens.
+4. Commit per afgeronde deelstap op main met conventional commits in het Engels. bun run format, bun run check en bun test moeten slagen voor een commit. Tests die op timing falen maak je deterministisch, nooit een langere timeout.
+5. Werk CLAUDE.md en docs/DECISIONS.md bij waar ze de oude toestand beschrijven.
+6. Start geen dev server; ik test in de Electron dev-app.
+
+Houd je aan de conventies in CLAUDE.md: semantische tokens, Lucide via Icon, Tooltip in plaats van title, geen halve pixels, "machine" in UI-tekst, een ErrorBoundary om een nieuw oppervlak met eigen data, sneltoetsen alleen in app-shortcuts.ts of canvas-shortcuts.ts.</code></pre>
+  </section>
+</main>
+<footer><p>Niet gedaan: de app niet gestart, geen schermafbeeldingen, geen prototype. Regelnummers komen uit het onderzoek van de subagents op c93327d en zijn niet een voor een nagelopen. De schetsen tonen indeling, geen kleuren of maten van de app.</p></footer>
+</body>
+</html>

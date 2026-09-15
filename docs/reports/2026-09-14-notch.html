@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Tekenen naast de notch</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  /* The mockups draw a screen: the notch is black on every Mac, so these stay the same in both schemes. */
+  --notch: #000;
+  --notch-ink: #f2f2f4;
+  --notch-muted: #9a9aa2;
+  --notch-line: #2a2a30;
+  --mock-screen: #c9cde0;
+  --mock-bar: #e4e6f0;
+  --mock-bar-ink: #3a3d4c;
+  --sprite-light: #d6d9e0;
+  --sprite-coral: rgb(217 120 87);
+  --sprite-warn: #f5a524;
+  --sprite-idle: #8fd0a8;
+  --button-on-notch: #3a3a42;
+  --button-accent-on-notch: #5b54e0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow { fill: var(--accent); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+button { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+
+/* Mockups and sprites */
+.mock text { font-family: inherit; }
+.mock .screen { fill: var(--mock-screen); }
+.mock .bar { fill: var(--mock-bar); }
+.mock .bar-ink { fill: var(--mock-bar-ink); font-size: 13px; }
+.mock .bar-item { fill: var(--mock-bar-ink); opacity: .55; }
+.mock .notch { fill: var(--notch); }
+.mock .ink { fill: var(--notch-ink); font-size: 13px; }
+.mock .ink-strong { fill: var(--notch-ink); font-size: 13px; font-weight: 600; }
+.mock .ink-muted { fill: var(--notch-muted); font-size: 12px; }
+.mock .rule { stroke: var(--notch-line); stroke-width: 1; }
+.mock .btn { fill: var(--button-on-notch); }
+.mock .btn-accent { fill: var(--button-accent-on-notch); }
+.mock .warn { fill: var(--sprite-warn); }
+.mock .idle { fill: none; stroke: var(--sprite-idle); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.mock .coral { fill: var(--sprite-coral); }
+.mock .light { fill: var(--sprite-light); }
+.mock .callout { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 4 4; }
+.mock .callout-text { fill: var(--ink); font-size: 13px; }
+.stage { background: var(--notch); border-radius: 12px; padding: 24px; display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-end; justify-content: center; }
+.stage figure { margin: 0; text-align: center; }
+.stage figcaption { color: var(--notch-muted); }
+.sprite { display: block; margin: 0 auto; shape-rendering: crispEdges; }
+.sprite .coral { fill: var(--sprite-coral); }
+.sprite .light { fill: var(--sprite-light); }
+.sprite .hole { fill: var(--notch); }
+.demo-controls { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+
+/* The walk: two frames, 0.4 s each, held with steps(1) so a frame never blends into the next. */
+@keyframes feet-a { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 0; } }
+@keyframes feet-b { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 1; } }
+@keyframes bob { 0% { transform: translateY(0); } 50% { transform: translateY(-3px); } 100% { transform: translateY(-3px); } }
+@keyframes bite { 0% { opacity: 1; } 25% { opacity: 0; } 100% { opacity: 0; } }
+.walk .feet-a { animation: feet-a .8s steps(1) infinite; }
+.walk .feet-b { opacity: 0; animation: feet-b .8s steps(1) infinite; }
+.walk .body { animation: bob .8s steps(1) infinite; }
+.orbit .bite { opacity: 0; animation: bite 1.2s steps(1) infinite; }
+.orbit .bite-1 { opacity: 1; animation-delay: 0s; }
+.orbit .bite-2 { animation-delay: .3s; }
+.orbit .bite-3 { animation-delay: .6s; }
+.orbit .bite-4 { animation-delay: .9s; }
+[data-playing="false"] .walk *, [data-playing="false"] .orbit * { animation-play-state: paused; }
+
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+    --notch-line: #34343c;
+    --mock-screen: #2c2f40;
+    --mock-bar: #3a3d50;
+    --mock-bar-ink: #e4e6f0;
+    --stage-edge: #3a3a42;
+  }
+  .stage { box-shadow: 0 0 0 1px var(--stage-edge); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+  .demo-controls { display: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, .demo-controls { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel, .stage { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .badge, .stage { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#summary">Naar de samenvatting</a>
+<header>
+  <p class="eyebrow">Ruimte / Onderzoek / 14 september 2026</p>
+  <h1>Tekenen naast de notch</h1>
+  <p class="intro">Een Electron-app kan naast de notch van een MacBook tekenen zonder native code. Het is één doorzichtig paneelvenster over de volle breedte van de bovenrand, dat klikken doorlaat behalve boven een zwarte capsule die aan de notch vastzit. De notch zelf meten kan Electron niet, dus de breedte is een aanname die een persoon bijstelt.</p>
+  <p class="status">Onderzoek, niets gebouwd, geen code aangepast</p>
+  <p class="caption">Bron: de broncode en ontwerpdocumenten van een open-source Electron-canvas met zo'n notch-HUD (stand 15 september 2026), het native Swift-voorbeeld <a href="https://github.com/realfishsam/agent-notch">agent-notch</a> (MIT, commit 443c0f5) waar dat HUD op leunt, en de typedefinities van Electron 44.3.0 uit Ruimte's eigen <code>node_modules</code>. Ruimte op main, 210ccad.</p>
+  <nav aria-label="Inhoud">
+    <a href="#summary">Samenvatting</a>
+    <a href="#window">Het venster</a>
+    <a href="#native">Native module</a>
+    <a href="#traps">Valkuilen</a>
+    <a href="#mascot">De mascotte</a>
+    <a href="#seams">Wat Ruimte al heeft</a>
+    <a href="#ideas">Ideeën</a>
+    <a href="#plan">Aanpak</a>
+    <a href="#open">Open vragen</a>
+  </nav>
+</header>
+<main>
+  <section id="summary" class="recommendation">
+    <h2>Samenvatting</h2>
+    <p>De techniek is klein en overdraagbaar. Het venster is een <code>BrowserWindow</code> van type <code>panel</code> dat over de menubalk mag staan dankzij <code>enableLargerThanScreen</code>, op niveau <code>screen-saver</code> en zichtbaar in elke Space, ook schermvullend. Het is standaard doorklikbaar met <code>setIgnoreMouseEvents(true, { forward: true })</code>; de pagina schakelt dat uit zodra de muis de capsule binnenkomt. Alles wat beweegt is CSS in een vaste venstermaat, het venster zelf verandert nooit van grootte.</p>
+    <p>De mascotte is geen afbeelding. Twee regels terminal-blokkarakters (<code>▐▛███▜▌</code>) worden bij het laden ontleed tot een raster van 18 bij 6 subpixels, op een offscreen canvas geschilderd en als data-URI-spritesheet in een <code>&lt;span&gt;</code> gezet. Een CSS-animatie met <code>steps(1)</code> wisselt de twee frames af, zonder JavaScript-timer per node.</p>
+    <p>Voor Ruimte raad ik een eigen notch aan die dezelfde vensterconstructie gebruikt maar iets anders laat zien: de drie lijsten die <code>groupAttention</code> al maakt, en vooral een toestemmingsvraag die je vanuit de notch beantwoordt. Dat laatste doet het onderzochte HUD niet, en Ruimte heeft er het hele pad al voor (<code>session.approvals</code>, <code>agent.answerApproval</code>, <code>approval-notices.ts</code>). Teken geen merkmascottes van Anthropic of OpenAI na, maar een figuurtje uit Ruimte's eigen symbool, als SVG in hele pixels.</p>
+    <p>Lever daarbij een kleine native module mee die de notch meet in plaats van raadt. AppKit geeft de exacte breedte en hoogte per scherm, zodat een persoon niets hoeft in te stellen. Ruimte bouwt alleen voor macOS 26 op arm64 en signeert de daemon al als los binair bestand, dus de module past in de bestaande release zonder nieuwe infrastructuur.</p>
+    <div class="stats">
+      <div><strong>1</strong><span>extra venster en één native module van één bestand</span></div>
+      <div><strong>Gemeten</strong><span>notchbreedte en -hoogte uit AppKit, geen schuifje</span></div>
+      <div><strong>0,03</strong><span>drempel als terugval zonder module: menubalkhoogte gedeeld door schermhoogte</span></div>
+      <div><strong>0</strong><span>timers per mascotte; alleen CSS</span></div>
+    </div>
+  </section>
+
+  <section id="window">
+    <h2>Hoe het venster naast de notch komt</h2>
+    <p>macOS duwt elk venster onder de menubalk. Om over de notch te tekenen moet een app daar omheen. Het onderzochte HUD doet dat met één venster over de volle breedte en een hoogte van menubalk plus 460 px, zodat het uitgeklapte paneel er ook in past.</p>
+    <div class="table" role="region" aria-label="Vensteropties" tabindex="0">
+      <table class="wide">
+        <caption>De opties die ertoe doen, en waarom</caption>
+        <thead><tr><th scope="col">Instelling</th><th scope="col">Wat het oplost</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>enableLargerThanScreen: true</code></th><td>Zonder dit klemt AppKit (<code>constrainFrameRect:toScreen:</code>) de gevraagde <code>y</code> op de onderkant van de menubalk. De capsule hing dan als los zwart blok onder de notch. Het HUD controleert na het tonen of <code>getBounds().y</code> alsnog lager ligt en valt dan terug op een zwevende pil.</td></tr>
+          <tr><th scope="row"><code>type: 'panel'</code>, <code>focusable: false</code></th><td>Een niet-activerend NSPanel: het pakt nooit de toetsenbordfocus en blijft staan boven schermvullende apps.</td></tr>
+          <tr><th scope="row"><code>setAlwaysOnTop(true, 'screen-saver')</code></th><td>Boven gewone vensters en de menubalk. Het native voorbeeld gebruikt het lagere <code>.statusBar</code>.</td></tr>
+          <tr><th scope="row"><code>setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })</code></th><td>In elke Space en in schermvullende apps. Native is dat <code>[.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]</code>.</td></tr>
+          <tr><th scope="row"><code>transparent</code>, <code>frame: false</code>, <code>hasShadow: false</code>, achtergrond <code>#00000000</code></th><td>Alleen de capsule is zichtbaar; de rest van het venster bestaat niet voor het oog.</td></tr>
+          <tr><th scope="row"><code>setIgnoreMouseEvents(true, { forward: true })</code></th><td>Klikken gaan door naar wat eronder staat, bewegingen komen wel binnen. De pagina hoort <code>pointerenter</code> op de capsule, vraagt via IPC om klikken toe te laten, en zet het bij <code>pointerleave</code> terug.</td></tr>
+          <tr><th scope="row"><code>showInactive()</code> na <code>did-finish-load</code></th><td>Tonen zonder focus te stelen, en pas nadat het hoofdvenster zichtbaar is.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Waar de notch zit</h3>
+    <p>AppKit kent <code>NSScreen.safeAreaInsets</code> en <code>auxiliaryTopLeftArea</code> / <code>auxiliaryTopRightArea</code>; daarmee rekent het native voorbeeld de exacte notchbreedte uit (schermbreedte min links min rechts). <span class="badge confirmed">Nagekeken</span> Electron 44.3.0 heeft geen van beide: <code>electron.d.ts</code> bevat geen <code>safeArea</code>, <code>auxiliary</code> of <code>notch</code>. Het Electron-HUD leidt daarom af wat het kan:</p>
+    <ul>
+      <li>De hoogte is <code>workArea.y - bounds.y</code> van het primaire scherm, met 24 px als ondergrens. Op een scherm met notch is de menubalk precies zo hoog als de notch.</li>
+      <li>Of er een notch is, beslist een verhouding en geen vast aantal pixels: <code>display.internal</code> en menubalkhoogte gedeeld door schermhoogte minstens 0,03. Een 15-inch Air geeft 37/1112 en 31/932 bij andere schaling, beide 0,0333. Een scherm zonder notch heeft een vaste 24 pt, dus 24/1080 = 0,022. De eerdere drempel van 32 px werkte alleen bij de standaardschaling.</li>
+      <li>De breedte is een aanname van 168 px rond het midden, in de instellingen te verschuiven tussen 100 en 320 met een schuifje dat de capsule live meeneemt. 200 px liet een zichtbaar gat.</li>
+      <li>Bij <code>display-metrics-changed</code>, <code>display-added</code> en <code>display-removed</code> wordt alles opnieuw berekend. Een extern scherm krijgt geen notch en dus de pil.</li>
+    </ul>
+
+    <figure class="panel">
+      <div class="table" role="region" aria-label="Opbouw van het venster, scrollbaar" tabindex="0">
+        <svg class="diagram plot mock" width="720" viewBox="0 0 720 230" role="img" aria-labelledby="window-title window-desc">
+          <title id="window-title">Het doorzichtige venster over de bovenrand</title>
+          <desc id="window-desc">Een scherm met menubalk en notch in het midden. Een gestippeld kader over de volle breedte en 170 pixels hoog is het venster. Links van de notch staat een zwarte capsule die aan de notch vastzit; alleen die capsule vangt klikken.</desc>
+          <rect class="screen" x="0" y="0" width="720" height="230" rx="10"/>
+          <rect class="bar" x="0" y="0" width="720" height="32" rx="10"/>
+          <rect class="bar" x="0" y="16" width="720" height="16"/>
+          <text class="bar-ink" x="18" y="21">Finder   Archief   Wijzig</text>
+          <rect class="bar-item" x="560" y="11" width="14" height="10" rx="2"/>
+          <rect class="bar-item" x="586" y="11" width="14" height="10" rx="2"/>
+          <rect class="bar-item" x="612" y="11" width="40" height="10" rx="2"/>
+          <path class="notch" d="M232 0 H360 V20 Q360 32 348 32 H244 Q232 32 232 20 Z"/>
+          <path class="notch" d="M300 0 H420 V20 Q420 32 408 32 H312 Q300 32 300 20 Z"/>
+          <g class="light" transform="translate(252 8)">
+            <rect x="0" y="2" width="16" height="12"/><rect x="2" y="0" width="12" height="16"/><rect class="notch" x="10" y="0" width="6" height="6"/>
+          </g>
+          <circle class="warn" cx="286" cy="16" r="4"/>
+          <rect class="callout" x="4" y="2" width="712" height="170" rx="6"/>
+          <text class="callout-text" x="16" y="160">Venster: volle breedte, menubalk + 460 px, doorklikbaar</text>
+          <path class="edge" d="M270 38 V80" marker-end="url(#win-arrow)"/>
+          <defs><marker id="win-arrow" markerWidth="8" markerHeight="8" refX="4" refY="8" orient="auto-start-reverse"><path class="arrow" d="M0 0 L4 8 L8 0 Z"/></marker></defs>
+          <text class="callout-text" x="178" y="100">Capsule: zelfde zwart als de notch,</text>
+          <text class="callout-text" x="178" y="118">groeit alleen naar links, vangt klikken</text>
+          <text class="callout-text" x="440" y="60">Notch: breedte aangenomen (168 px)</text>
+        </svg>
+      </div>
+      <figcaption>Schets, niet op schaal. De capsule deelt het zwart van de notch, zodat de notch breder lijkt en niet hoger. Uitgeklapt groeit hetzelfde oppervlak onder de notch door tot een paneel van 400 px breed.</figcaption>
+    </figure>
+
+    <h3>Wat het native voorbeeld anders doet</h3>
+    <p>agent-notch is één Swift-bestand. Het zet de app op <code>.accessory</code> (geen Dock-icoon), gebruikt twee vensters (een volle-breedte-paneel dat muisloos is en een klein NSPanel voor de indicator), vangt klikken met een globale muismonitor en tekent in <code>draw(_:)</code> met een timer. In een schermvullende Space ziet het dat de menubalk weg is (<code>visibleFrame.maxY &gt;= frame.maxY - 1</code>) en mag de balk de hele bovenrand gebruiken. Ruimte is een gewone Dock-app met een Electron-shell, dus die route past niet zonder een aparte helper.</p>
+  </section>
+
+  <section id="native">
+    <h2>Een native module voor de maten</h2>
+    <p>Het zwakke punt van de Electron-route is dat de notch geraden wordt: een aangenomen breedte, een verhouding als detectie en een schuifje om het recht te zetten. AppKit weet het precies. Een Node-API-module van één Objective-C++-bestand leest het uit en geeft het aan het hoofdproces, en de rest van de constructie blijft zoals hierboven.</p>
+    <p><span class="badge confirmed">Nagekeken</span> Ruimte's release maakt dit goedkoop. <code>electron-builder.yml</code> zet <code>minimumSystemVersion: '26.0'</code> en de release bouwt alleen <code>--arm64</code> op <code>macos-latest</code>, waar clang staat. <code>safeAreaInsets</code> en <code>auxiliaryTopLeftArea</code> bestaan sinds macOS 12, dus er is geen beschikbaarheidscontrole en geen universal build nodig. De gecompileerde daemon staat al onder <code>mac.binaries</code> om mee gesigneerd te worden; de module komt ernaast.</p>
+
+    <div class="table" role="region" aria-label="Electron alleen tegenover de module" tabindex="0">
+      <table class="wide">
+        <caption>Wat de module vervangt</caption>
+        <thead><tr><th scope="col">Vraag</th><th scope="col">Electron alleen</th><th scope="col">Met de module</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Breedte van de notch</th><td>Aangenomen 168 px, schuifje tussen 100 en 320</td><td>Schermbreedte min <code>auxiliaryTopLeftArea</code> en <code>auxiliaryTopRightArea</code></td></tr>
+          <tr><th scope="row">Hoogte van de strook</th><td><code>workArea.y - bounds.y</code>, ondergrens 24</td><td><code>safeAreaInsets.top</code></td></tr>
+          <tr><th scope="row">Is er een notch?</th><td><code>display.internal</code> en verhouding 0,03 of meer</td><td><code>safeAreaInsets.top &gt; 0</code></td></tr>
+          <tr><th scope="row">Welk scherm</th><td>Alleen het primaire</td><td>Het scherm dat een notch heeft, ook naast een extern scherm dat primair is</td></tr>
+          <tr><th scope="row">Vensterniveau</th><td><code>setAlwaysOnTop('screen-saver')</code> en <code>visibleOnFullScreen</code></td><td>Kan blijven, of via <code>getNativeWindowHandle()</code> direct <code>level</code> en <code>collectionBehavior</code> (<code>.canJoinAllSpaces</code>, <code>.stationary</code>, <code>.fullScreenAuxiliary</code>) zoals het native voorbeeld</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Wat de module niet oplost</h3>
+    <ul>
+      <li>Het Dock-icoon dat verdwijnt bij een <code>focusable: false</code>-paneel, en het aan- en uitzetten van doorklikken. Dat blijft Electron-gedrag; de oplossingen uit de valkuilen blijven nodig.</li>
+      <li>Een menubalk die automatisch verbergt of een schermvullende Space. Ook met exacte maten moet dat op een echte Mac geprobeerd worden.</li>
+    </ul>
+
+    <h3>Vier vormen</h3>
+    <div class="split">
+      <div class="panel">
+        <h3>Node-API-addon <span class="badge confirmed">Aanbevolen</span></h3>
+        <p>Eén <code>.mm</code>-bestand, geladen in het hoofdproces. Node-API is ABI-stabiel, dus een Electron-update vraagt geen nieuwe build. Leest maten én kan het venster vastzetten via de handle. Compileren is één <code>clang++</code>-aanroep, zonder node-gyp.</p>
+      </div>
+      <div class="panel">
+        <h3>Swift-hulpprogramma</h3>
+        <p>Het eenvoudigst te bouwen (<code>swiftc</code>) en print JSON. Maar het start een proces bij elke schermwijziging en kan niets aan het venster doen, dus de vensterniveau-winst valt weg.</p>
+      </div>
+      <div class="panel">
+        <h3>FFI met <code>objc_msgSend</code></h3>
+        <p>Niets te compileren in Ruimte, maar structs als <code>CGRect</code> en <code>NSEdgeInsets</code> met de hand uitlezen is broos en slecht leesbaar. De FFI-bibliotheek (koffi) is zelf ook een prebuilt <code>.node</code>, dus het scheelt minder dan het lijkt.</p>
+      </div>
+      <div class="panel">
+        <h3>Het hele paneel native</h3>
+        <p>Een eigen NSPanel in AppKit omzeilt ook het Dock-probleem, maar dan wordt de interface Swift of Objective-C in plaats van de client, zonder tokens, <code>Icon</code> of <code>ProviderLogo</code>. Te duur voor wat het oplost.</p>
+      </div>
+    </div>
+
+    <h3>Schets van de interface</h3>
+    <pre><code>interface NotchScreen {
+    displayId: number;     // NSScreenNumber; expected to equal Electron's display.id
+    frame: Rect;           // points, flipped to Electron's top-left origin
+    safeTop: number;       // safeAreaInsets.top, 0 on a screen without a notch
+    notch: Rect | null;    // the gap between auxiliaryTopLeftArea and auxiliaryTopRightArea
+}
+
+screens(): NotchScreen[];
+pinPanel(handle: Buffer): void;   // level and collectionBehavior on the panel's NSWindow</code></pre>
+    <p>AppKit rekent vanaf linksonder van het primaire scherm, Electron vanaf linksboven. Die omrekening hoort in de module of in een pure functie met een test, niet verspreid over de aanroepers. Een wijziging van schermen hoeft de module niet zelf te melden: Electron's <code>display-metrics-changed</code> is het moment om <code>screens()</code> opnieuw te vragen.</p>
+
+    <h3>Bouwen en meeleveren</h3>
+    <ol>
+      <li><code>apps/desktop/native/notch.mm</code>, gecompileerd door een Bun-script met <code>clang++ -bundle -undefined dynamic_lookup -framework AppKit</code> en de headers uit <code>node-api-headers</code>, naar <code>dist/native/notch.node</code>.</li>
+      <li>In <code>electron-builder.yml</code> via <code>extraResources</code> buiten de asar, en onder <code>mac.binaries</code> zodat hij gesigneerd en genotariseerd wordt zoals de daemon. Met hetzelfde team-ID gesigneerd zou de library validation van de hardened runtime hem moeten accepteren; dat moet de eerste gesigneerde build bevestigen.</li>
+      <li>Laden met <code>require</code> in een <code>try</code>, alleen op macOS. Laadt hij niet (Linux, Windows, <code>bun dev</code> zonder gebouwde module), dan valt de geometrie terug op de verhouding en een vaste breedte. Het schuifje verdwijnt; de terugval is voor ontwikkelaars, niet voor een persoon die de app installeert.</li>
+    </ol>
+  </section>
+
+  <section id="traps">
+    <h2>Valkuilen die al betaald zijn</h2>
+    <p>Het onderzochte HUD documenteert zijn eigen fouten. Deze gelden net zo voor Ruimte.</p>
+    <div class="table" role="region" aria-label="Valkuilen" tabindex="0">
+      <table class="wide">
+        <thead><tr><th scope="col">Wat misging</th><th scope="col">Oorzaak</th><th scope="col">Oplossing</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Dock-icoon verdween zodra het HUD verscheen</th><td>Een <code>focusable: false</code>-paneel als enige zichtbare venster laat macOS de app als accessory behandelen.</td><td><code>app.setActivationPolicy('regular')</code> en <code>app.dock.show()</code> opnieuw bij tonen van beide vensters; HUD pas maken na <code>show</code> van het hoofdvenster.</td></tr>
+          <tr><th scope="row">Capsule los onder de menubalk</th><td>AppKit klemt het frame.</td><td><code>enableLargerThanScreen</code>, plus een controle op de werkelijke <code>y</code>.</td></tr>
+          <tr><th scope="row">Klikken op menubalk-items werkten niet meer</th><td>De capsule groeide naar beide kanten en lag als klikgebied over de statusiconen rechts.</td><td>Alleen naar links groeien; de rechterrand ligt vast op de rechterrand van de notch.</td></tr>
+          <tr><th scope="row">Notch niet herkend bij andere schaling</th><td>Vaste drempel van 32 px.</td><td>Verhouding 0,03 plus <code>display.internal</code>; de terugvalpil hangt onder de menubalk, zodat een foute detectie nooit iets achter de notch verstopt.</td></tr>
+          <tr><th scope="row">Rijen sprongen heen en weer en verdwenen</th><td>Sortering op laatste update, die elke tool-aanroep verschuift, met een maximum van 6 rijen.</td><td>Sorteren op toestand (wacht op jou, ongelezen klaar, bezig) en daarbinnen op volgorde van eerste verschijnen; wat buiten het maximum valt wordt geteld: "+3 more · 1 needs you".</td></tr>
+          <tr><th scope="row">Na elke start oude "klaar"-markeringen</th><td>De spiegel op schijf bevat uren aan geschiedenis.</td><td>Een "klaar" die bij de eerste lezing al bestond geldt als gezien; alleen een beurt die eindigt terwijl het HUD draait telt.</td></tr>
+          <tr><th scope="row">Paneel openen wiste alle ongelezen sessies</th><td>Sluiten gold als "alles gezien".</td><td>Gezien is per rij: klikken op die rij, of wegklikken met het kruisje.</td></tr>
+          <tr><th scope="row">Een agent die halverwege stierf bleef eeuwig "bezig"</th><td>Het einde-event kwam nooit.</td><td>Een waakhond op tijd en een kruisje dat de rij verbergt tot de toestand echt verandert.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="mascot">
+    <h2>Hoe de mascotte wordt getekend</h2>
+    <p>De Claude-figuur is de pixelfiguur die Claude Code in de terminal toont, overgenomen als tekst: drie regels van negen blokkarakters per frame. Elk teken uit de Unicode-kwadrantblokken staat voor vier subpixels (linksboven, rechtsboven, linksonder, rechtsonder), dus 9 × 3 tekens worden 18 × 6 subpixels. De twee frames verschillen alleen in de onderste regel: de voetjes.</p>
+    <pre><code>frame 0:  " ▐▛███▜▌ "   frame 1:  " ▐▛███▜▌ "
+          "▝▜█████▛▘"             "▝▜█████▛▘"
+          "  ▘▘ ▝▝  "             "  ▝▝ ▘▘  "
+
+'▛' → [1,1,1,0]   '▘' → [1,0,0,0]   '▝' → [0,1,0,0]   '█' → [1,1,1,1]</code></pre>
+
+    <figure class="panel">
+      <div class="table" role="region" aria-label="Van tekst naar animatie, scrollbaar" tabindex="0">
+        <svg class="diagram plot" width="920" viewBox="0 0 920 150" role="img" aria-labelledby="pipe-title pipe-desc">
+          <title id="pipe-title">Van tekst naar animatie</title>
+          <desc id="pipe-desc">Vijf stappen: kwadranttekst, ontleden tot een raster van 18 bij 6, schilderen op een canvas met 4 bij 8 pixels per subpixel, exporteren als PNG data-URI met twee frames naast elkaar, en een span die met CSS steps door de frames loopt.</desc>
+          <defs><marker id="pipe-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0 0 L8 4 L0 8 Z"/></marker></defs>
+          <rect class="node" x="10" y="30" width="150" height="90" rx="12"/>
+          <rect class="node" x="195" y="30" width="150" height="90" rx="12"/>
+          <rect class="node" x="380" y="30" width="165" height="90" rx="12"/>
+          <rect class="node" x="580" y="30" width="150" height="90" rx="12"/>
+          <rect class="node" x="765" y="30" width="145" height="90" rx="12"/>
+          <path class="edge" d="M160 75 H183" marker-end="url(#pipe-arrow)"/>
+          <path class="edge" d="M345 75 H368" marker-end="url(#pipe-arrow)"/>
+          <path class="edge" d="M545 75 H568" marker-end="url(#pipe-arrow)"/>
+          <path class="edge" d="M730 75 H753" marker-end="url(#pipe-arrow)"/>
+          <text x="85" y="70" text-anchor="middle">Kwadranttekst</text>
+          <text class="label" x="85" y="92" text-anchor="middle">9 × 3 tekens</text>
+          <text x="270" y="70" text-anchor="middle">decodeFrame</text>
+          <text class="label" x="270" y="92" text-anchor="middle">18 × 6 booleans</text>
+          <text x="462" y="70" text-anchor="middle">Offscreen canvas</text>
+          <text class="label" x="462" y="92" text-anchor="middle">4 × 8 px, scherp</text>
+          <text x="655" y="70" text-anchor="middle">toDataURL</text>
+          <text class="label" x="655" y="92" text-anchor="middle">2 frames, 144 × 48</text>
+          <text x="837" y="70" text-anchor="middle">&lt;span&gt; + CSS</text>
+          <text class="label" x="837" y="92" text-anchor="middle">steps(1), 0,8 s</text>
+        </svg>
+      </div>
+      <figcaption>Het schilderen gebeurt één keer bij het laden van de module. Daarna kost een lopende mascotte geen JavaScript meer, ook niet met tientallen terminals op het canvas.</figcaption>
+    </figure>
+
+    <h3>De details die de figuur goed laten ogen</h3>
+    <ul>
+      <li><strong>Verhouding 1 : 2.</strong> Een terminalcel is ongeveer twee keer zo hoog als breed. Maak je de subpixels vierkant, dan wordt de figuur plat. Weergegeven is een frame 24 × 16 px, dus een subpixel is 1,333 × 2,667 px; daarom wordt op driemaal die maat geschilderd (4 × 8) en schaalt de browser met <code>image-rendering: pixelated</code> netjes terug.</li>
+      <li><strong>Twee frames met drie keyframes.</strong> <code>background-position-x</code> gaat van 0 via -1 naar -2 framebreedtes met <code>steps(1)</code>. Elke helft van de 0,8 s houdt zo één frame vast, en de sprong naar -2 valt samen met de herstart. Tegelijk gaat <code>translateY</code> 1,5 px omhoog in het tweede frame: het wiebelen bij het lopen.</li>
+      <li><strong>Eén bron voor twee oppervlakken.</strong> De node-header en het notch-HUD gebruiken dezelfde <code>CLAUDE_MASCOT</code>; het HUD rekent alleen de hoogte om (13 px, breedte afgerond naar 20).</li>
+      <li><strong>Niet elke agent loopt.</strong> Codex gebruikt een echte spritesheet (webp, 8 × 9 frames van 192 × 208, de eerste rij met <code>steps(8)</code> in 0,96 s). Agents zonder figuur laten hun eigen merkteken "ademen": opacity 0,55 naar 1 met een <code>drop-shadow</code> in <code>currentColor</code>, 1,6 s. Klaar-maar-ongezien is een groen rondje van 7 × 7 pixels met een pulserende opacity; het native voorbeeld tekent daar per frame ruis in.</li>
+      <li><strong>Pauze.</strong> Op het canvas hangt <code>animation-play-state</code> aan een variabele, zodat animaties stilstaan waar dat moet; het ademen respecteert <code>prefers-reduced-motion</code>.</li>
+    </ul>
+
+    <div class="panel" id="sprite-demo" data-playing="false">
+      <h3>De techniek nagebouwd, naast een eigen figuur voor Ruimte</h3>
+      <p>Links de twee frames als SVG-rechthoekjes, uit dezelfde tekst ontleed. Rechts een schets van een eigen figuur: het Ruimte-symbool is een vorm waar een hap uit is genomen, en in deze schets loopt die hap rond als teken dat er gewerkt wordt. Beide staan stil tot je ze laat lopen.</p>
+      <div class="stage">
+        <figure>
+          <svg class="sprite walk" width="144" height="96" viewBox="0 -4 72 44" role="img" aria-labelledby="claude-sprite-title">
+            <title id="claude-sprite-title">Pixelfiguur uit kwadranttekst, 18 bij 6 subpixels in verhouding 1 op 2</title>
+            <g class="body coral">
+              <rect x="12" y="0" width="4" height="8"/><rect x="12" y="8" width="4" height="8"/><rect x="16" y="0" width="4" height="8"/><rect x="20" y="0" width="4" height="8"/><rect x="16" y="8" width="4" height="8"/><rect x="24" y="0" width="4" height="8"/><rect x="28" y="0" width="4" height="8"/><rect x="24" y="8" width="4" height="8"/><rect x="28" y="8" width="4" height="8"/><rect x="32" y="0" width="4" height="8"/><rect x="36" y="0" width="4" height="8"/><rect x="32" y="8" width="4" height="8"/><rect x="36" y="8" width="4" height="8"/><rect x="40" y="0" width="4" height="8"/><rect x="44" y="0" width="4" height="8"/><rect x="40" y="8" width="4" height="8"/><rect x="44" y="8" width="4" height="8"/><rect x="48" y="0" width="4" height="8"/><rect x="52" y="0" width="4" height="8"/><rect x="52" y="8" width="4" height="8"/><rect x="56" y="0" width="4" height="8"/><rect x="56" y="8" width="4" height="8"/>
+              <rect x="4" y="16" width="4" height="8"/><rect x="8" y="16" width="4" height="8"/><rect x="12" y="16" width="4" height="8"/><rect x="12" y="24" width="4" height="8"/><rect x="16" y="16" width="4" height="8"/><rect x="20" y="16" width="4" height="8"/><rect x="16" y="24" width="4" height="8"/><rect x="20" y="24" width="4" height="8"/><rect x="24" y="16" width="4" height="8"/><rect x="28" y="16" width="4" height="8"/><rect x="24" y="24" width="4" height="8"/><rect x="28" y="24" width="4" height="8"/><rect x="32" y="16" width="4" height="8"/><rect x="36" y="16" width="4" height="8"/><rect x="32" y="24" width="4" height="8"/><rect x="36" y="24" width="4" height="8"/><rect x="40" y="16" width="4" height="8"/><rect x="44" y="16" width="4" height="8"/><rect x="40" y="24" width="4" height="8"/><rect x="44" y="24" width="4" height="8"/><rect x="48" y="16" width="4" height="8"/><rect x="52" y="16" width="4" height="8"/><rect x="48" y="24" width="4" height="8"/><rect x="52" y="24" width="4" height="8"/><rect x="56" y="16" width="4" height="8"/><rect x="60" y="16" width="4" height="8"/><rect x="56" y="24" width="4" height="8"/><rect x="64" y="16" width="4" height="8"/>
+              <g class="feet-a"><rect x="16" y="32" width="4" height="8"/><rect x="24" y="32" width="4" height="8"/><rect x="44" y="32" width="4" height="8"/><rect x="52" y="32" width="4" height="8"/></g>
+              <g class="feet-b"><rect x="20" y="32" width="4" height="8"/><rect x="28" y="32" width="4" height="8"/><rect x="40" y="32" width="4" height="8"/><rect x="48" y="32" width="4" height="8"/></g>
+            </g>
+          </svg>
+          <figcaption>Kwadrantfiguur, 2 frames</figcaption>
+        </figure>
+        <figure>
+          <svg class="sprite orbit" width="96" height="96" viewBox="0 0 16 16" role="img" aria-labelledby="ruimte-sprite-title">
+            <title id="ruimte-sprite-title">Schets van een Ruimte-figuur: een blok van 16 bij 16 pixels waar een hap van 6 pixels rondloopt</title>
+            <g class="light">
+              <rect x="1" y="0" width="14" height="16"/><rect x="0" y="1" width="16" height="14"/>
+            </g>
+            <rect class="hole bite bite-1" x="10" y="0" width="6" height="6"/>
+            <rect class="hole bite bite-2" x="10" y="10" width="6" height="6"/>
+            <rect class="hole bite bite-3" x="0" y="10" width="6" height="6"/>
+            <rect class="hole bite bite-4" x="0" y="0" width="6" height="6"/>
+          </svg>
+          <figcaption>Ruimte-blok, 4 frames, hele pixels</figcaption>
+        </figure>
+      </div>
+      <div class="demo-controls">
+        <button type="button" id="sprite-toggle" aria-pressed="false">Laat lopen</button>
+        <span class="caption" id="sprite-state">Staat stil op het eerste frame.</span>
+      </div>
+      <noscript><p class="caption">Zonder JavaScript blijven beide figuren op hun eerste frame staan.</p></noscript>
+    </div>
+
+    <h3>Wat Ruimte er anders aan zou doen</h3>
+    <p>De canvas-plus-data-URI-route botst met twee Ruimte-regels. Een subpixel van 1,333 px is een fractionele pixel, en een geschilderde PNG volgt het thema niet. Een SVG met een <code>&lt;rect&gt;</code> per pixel (of één <code>&lt;path&gt;</code> per frame), <code>shape-rendering="crispEdges"</code> en <code>fill="currentColor"</code> lost beide op: vierkante pixels van 1 of 2 px, een kleur uit de tokens, geen canvas en geen <code>img-src data:</code> in de CSP. De frames zijn <code>&lt;g&gt;</code>-groepen die een <code>steps(1)</code>-animatie aan- en uitzet, precies zoals de demo hierboven. De spritedefinitie blijft tekst (<code>#</code> en <code>.</code> per rij), ontleed door een pure functie met een test.</p>
+  </section>
+
+  <section id="seams">
+    <h2>Wat Ruimte al heeft</h2>
+    <p>Het meeste werk van een notch zit in weten wat er te melden is. Dat bestaat in Ruimte al, aan de clientkant, en de shell telt bewust niets zelf.</p>
+    <div class="table" role="region" aria-label="Bestaande aansluitpunten" tabindex="0">
+      <table class="wide">
+        <thead><tr><th scope="col">Bestaand</th><th scope="col">Waar</th><th scope="col">Rol in een notch</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>setAgentActivity({ working, attention })</code></th><td><code>apps/desktop/src/main.ts</code>, <code>preload.ts</code></td><td>Het patroon voor een nieuwe, optionele bridge-methode die rijen doorgeeft in plaats van twee getallen.</td></tr>
+          <tr><th scope="row"><code>groupAttention</code></th><td><code>state/attention.ts</code></td><td>De drie lijsten (needs you, working, finished) in projectvolgorde. De sortering die het HUD pas na een bug vond, is hier al het uitgangspunt.</td></tr>
+          <tr><th scope="row"><code>approvalNotices</code>, <code>approvalTitle</code>, <code>approvalBody</code></th><td><code>shell/approval-notices.ts</code></td><td>Wat er staat, wat het zegt en wanneer het weg moet, ook als de vraag elders beantwoord is of de wachttijd verloopt.</td></tr>
+          <tr><th scope="row"><code>agent.answerApproval</code></th><td>wire, <code>canvas/ApprovalStrip.tsx</code></td><td>Toestaan of weigeren vanuit de notch; het eerste antwoord wint.</td></tr>
+          <tr><th scope="row"><code>revealNode</code>, <code>openProject</code>, <code>showViewIn</code></th><td><code>project/views.ts</code>, <code>project/open.ts</code></td><td>Klik op een rij: venster naar voren en de node in beeld, ook in een project dat niet open staat.</td></tr>
+          <tr><th scope="row">processes-alerts, <code>stuck.ts</code></th><td><code>apps/server/src/processes</code></td><td>Een agent die vastzit krijgt een waarschuwing in plaats van eeuwig "bezig".</td></tr>
+          <tr><th scope="row"><code>UnseenMark</code>, <code>ProviderLogo</code>, <code>MachineGlyph</code></th><td><code>attention/</code>, <code>ui/</code>, <code>endpoint/</code></td><td>Dezelfde tekens als in de header en de zijbalk, zodat een node op twee plekken hetzelfde heet.</td></tr>
+          <tr><th scope="row"><code>agentsKeepAwake</code>-patroon</th><td>instellingen</td><td>Een client-instelling die uit staat tot iemand hem aanzet, en een rij die niet getekend wordt zonder bridge of buiten macOS.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="ideas">
+    <h2>Ideeën voor een eigen notch</h2>
+    <p>Gesorteerd van meest naar minst waardevol. De eerste twee zouden samen een eerste versie zijn.</p>
+
+    <div class="split">
+      <div class="panel">
+        <h3>1. De drie lijsten als stip, vinkje en figuur</h3>
+        <p>Ingeklapt toont de capsule, van links naar rechts: een oranje stip als iets op je wacht, het vinkje van <code>UnseenMark</code> in de idle-kleur als er ongeziene beurten zijn, en een lopend Ruimte-blok zolang er gewerkt wordt, met een getal ernaast bij meer dan één. Geen merkfiguur per provider; die zit in de uitgeklapte rij als <code>ProviderLogo</code>. Niets te melden betekent geen capsule.</p>
+      </div>
+      <div class="panel">
+        <h3>2. Toestemming geven vanuit de notch</h3>
+        <p>Vraagt een terminal-agent om toestemming, dan klapt de capsule uit tot één rij met de node, het commando uit <code>approvalBody</code>, de resterende tijd en twee knoppen. Wordt de vraag elders beantwoord, dan klapt hij in. Dit is de reden om een notch te bouwen: je hoeft niet terug naar het canvas voor één klik. Het vraagt focus in een venster dat geen focus neemt, dus alleen knoppen, geen tekstveld.</p>
+      </div>
+    </div>
+
+    <figure class="panel">
+      <div class="table" role="region" aria-label="Schets van de notch, scrollbaar" tabindex="0">
+        <svg class="diagram plot mock" width="720" viewBox="0 0 720 260" role="img" aria-labelledby="mock-title mock-desc">
+          <title id="mock-title">Schets: ingeklapte capsule en uitgeklapte toestemmingsvraag</title>
+          <desc id="mock-desc">Boven een ingeklapte capsule links van de notch met een oranje stip, een groen vinkje en het Ruimte-blok met het getal 2. Daaronder de uitgeklapte vorm: een zwart paneel onder de notch met de rij api-refactor, Claude vraagt Bash bun test, nog 4 minuten, met knoppen Weigeren en Toestaan, en een tweede rij docs-site, klaar, 2 minuten geleden.</desc>
+          <rect class="screen" x="0" y="0" width="720" height="260" rx="10"/>
+          <rect class="bar" x="0" y="0" width="720" height="32" rx="10"/>
+          <rect class="bar" x="0" y="16" width="720" height="16"/>
+          <text class="bar-ink" x="18" y="21">Ruimte   Archief   Wijzig</text>
+          <rect class="bar-item" x="586" y="11" width="14" height="10" rx="2"/>
+          <rect class="bar-item" x="612" y="11" width="40" height="10" rx="2"/>
+          <path class="notch" d="M170 0 H360 V180 Q360 196 344 196 H186 Q170 196 170 180 Z"/>
+          <path class="notch" d="M300 0 H550 V180 Q550 196 534 196 H316 Q300 196 300 180 Z"/>
+          <circle class="warn" cx="192" cy="16" r="4"/>
+          <path class="idle" d="M206 16 l4 4 l7 -8"/>
+          <g class="light" transform="translate(228 8)">
+            <rect x="1" y="0" width="14" height="16"/><rect x="0" y="1" width="16" height="14"/><rect class="notch" x="10" y="0" width="6" height="6"/>
+          </g>
+          <text class="ink" x="250" y="21">2</text>
+          <line class="rule" x1="186" y1="40" x2="534" y2="40"/>
+          <circle class="warn" cx="198" cy="62" r="4"/>
+          <text class="ink-strong" x="212" y="67">api-refactor</text>
+          <text class="ink-muted" x="310" y="67">Claude · MacBook · nog 4 min</text>
+          <text class="ink" x="212" y="90">Bash(bun test apps/server)</text>
+          <rect class="btn" x="382" y="104" width="70" height="26" rx="7"/>
+          <text class="ink" x="417" y="122" text-anchor="middle">Weigeren</text>
+          <rect class="btn-accent" x="458" y="104" width="70" height="26" rx="7"/>
+          <text class="ink" x="493" y="122" text-anchor="middle">Toestaan</text>
+          <line class="rule" x1="186" y1="142" x2="534" y2="142"/>
+          <path class="idle" d="M192 164 l4 4 l7 -8"/>
+          <text class="ink-strong" x="212" y="169">docs-site</text>
+          <text class="ink-muted" x="290" y="169">Codex · klaar · 2 min</text>
+          <text class="callout-text" x="570" y="70">Ingeklapt: stip,</text>
+          <text class="callout-text" x="570" y="88">vinkje, blok × 2</text>
+          <text class="callout-text" x="570" y="118">Uitgeklapt: vraag</text>
+          <text class="callout-text" x="570" y="136">bovenaan, knoppen</text>
+        </svg>
+      </div>
+      <figcaption>Schets van twee toestanden over elkaar heen getekend: de ingeklapte strook op de hoogte van de menubalk, en het paneel dat eronder uitgroeit. Kleuren en maten zijn indicatief.</figcaption>
+    </figure>
+
+    <div class="split">
+      <div class="panel">
+        <h3>3. Stil als Ruimte vooraan staat</h3>
+        <p>Ruimte's aandachtsregel zegt dat een beurt pas gezien is als het venster het toetsenbord heeft en de node in beeld is. Een notch voegt alleen iets toe als dat niet zo is. Laat de capsule weg (of toon alleen de stip) zolang Ruimte het key window is, zodat hij niet herhaalt wat op het scherm staat.</p>
+      </div>
+      <div class="panel">
+        <h3>4. Meerdere machines</h3>
+        <p>Een rij draagt het <code>MachineGlyph</code> zodra de client meer dan één machine kent, net als de projectlijst. Een agent op een server die via Pulsar verbonden is, meldt zich zo in de notch van de laptop. Het onderzochte HUD kent alleen de eigen machine.</p>
+      </div>
+      <div class="panel">
+        <h3>5. Vastgelopen agents</h3>
+        <p>Een waarschuwing uit <code>stuck.ts</code> vervangt het lopende blok door het waarschuwingsteken dat node en zijbalk al dragen, met in de rij de knop die het processenpaneel ook biedt. Ruimte hoeft dan geen eigen waakhond of verbergknop te verzinnen.</p>
+      </div>
+      <div class="panel">
+        <h3>6. Laatste regel van een antwoord</h3>
+        <p>Uitgeklapt kan een bezige chat-rij de laatste zin tonen die binnenkomt, afgekapt op één regel. De deltas zijn er al per node. Het kost wel een stroom IPC-berichten per 16 ms, dus alleen terwijl het paneel open is.</p>
+      </div>
+      <div class="panel">
+        <h3>7. Limieten naast de figuur</h3>
+        <p>Een smalle balk voor het planvenster van de provider die bijna op is, uit <code>usage.limits</code>. Alleen tonen boven een drempel, zodat de capsule niet permanent breder wordt.</p>
+      </div>
+      <div class="panel">
+        <h3>8. Bestand op de notch laten vallen</h3>
+        <p>Een bestand uit Finder op een uitgeklapte rij slepen legt het als bestandsnode met een lijn naar die agent. Speculatief: het venster laat klikken door en moet voor een sleepactie juist vangen. Pas na de rest proberen.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="plan">
+    <h2>Mogelijke aanpak</h2>
+    <p>Een voorstel om te bespreken, geen goedgekeurd plan. Het houdt de bestaande grens aan: de client beslist wat er staat, de shell tekent het venster en geeft klikken door.</p>
+    <ol class="steps">
+      <li class="step"><div>
+        <h3>Native module en geometrie</h3>
+        <p><code>apps/desktop/native/notch.mm</code> met <code>screens()</code>, het bouwscript en de regels in <code>electron-builder.yml</code>. Daarnaast <code>apps/desktop/src/notch-geometry.ts</code> als pure functie met een test: de schermen uit de module omgerekend naar Electron-coördinaten, en zonder module de verhouding 0,03 met een vaste breedte.</p>
+        <p>Klaar als de test een MacBook met notch, een extern scherm als primair en de terugval goed indeelt, en een gesigneerde build de module laadt.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Het venster in de shell</h3>
+        <p><code>apps/desktop/src/notch.ts</code> met de opties uit de tabel, een eigen preload zoals <code>guest.ts</code>, het herstel van het Dock-beleid, en pas starten na <code>show</code> van het hoofdvenster.</p>
+        <p>Klaar als een lege capsule vast aan de notch staat, schermvullende apps overleeft, klikken op de menubalk doorlaat en het Dock-icoon laat staan.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Een tweede Vite-entry in de client</h3>
+        <p><code>apps/client/notch.html</code> met React, de tokens en <code>Icon</code>, en geen stores: alleen wat de bridge aanreikt. Het hoofdvenster stuurt rijen via een optionele <code>setNotch</code>; klikken gaan terug als <code>notch:reveal</code> en <code>notch:answer</code>.</p>
+        <p>Klaar als een rij klikken het hoofdvenster naar voren haalt en de node in beeld zet.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Toestemming en de figuur</h3>
+        <p>Rijen uit <code>groupAttention</code> en <code>approvalNotices</code>; antwoorden via <code>agent.answerApproval</code>. De sprite als tekst plus een pure decoder naar SVG, gedeeld met de node-header.</p>
+        <p>Klaar als een vraag die in de TUI beantwoord wordt binnen een seconde uit de notch verdwijnt.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Instelling en beslissingen vastleggen</h3>
+        <p>Een rij onder Agents, uit tot iemand hem aanzet, zonder instellingen voor de maten; niet getekend buiten macOS of zonder bridge. De keuzes in <code>docs/DECISIONS.md</code>.</p>
+        <p>Klaar als uitzetten het venster sluit zonder herstart.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <section id="open">
+    <h2>Open vragen</h2>
+    <ul>
+      <li><span class="badge warning">Onzeker</span> Of Electron's <code>display.id</code> op macOS de <code>CGDirectDisplayID</code> is, zodat een scherm uit de module aan een Electron-display gekoppeld kan worden. Ik verwacht van wel, maar heb het niet nagekeken. Klopt het niet, dan koppelt de module op <code>frame</code>.</li>
+      <li><span class="badge warning">Onzeker</span> Of de hardened runtime een los gesigneerde <code>.node</code> zonder extra entitlement laadt. Dat laat pas de eerste gesigneerde en genotariseerde build zien.</li>
+      <li><span class="badge warning">Onzeker</span> Hoe het zich gedraagt met Stage Manager en met apps die de menubalk verbergen. Het onderzochte HUD noemt het niet, en ik heb niets op een Mac met notch gedraaid.</li>
+      <li><span class="badge info">Beslissing</span> Merkfiguren. De Claude-figuur en de Codex-spritesheet horen bij hun makers. Ruimte tekent providers nu alleen als woordmerk; een eigen figuur houdt dat zo.</li>
+      <li><span class="badge info">Beslissing</span> Welk scherm. Het onderzochte HUD tekent alleen op het primaire scherm. Als de laptop dicht is met een extern scherm, is er geen notch; dan de pil onder de menubalk, of niets?</li>
+      <li><span class="badge info">Beslissing</span> Staat de notch standaard aan? Het onderzochte HUD zet hem aan; Ruimte's gewoonte voor dit soort gedrag is uit.</li>
+    </ul>
+  </section>
+</main>
+<footer><p>Gelezen, niet uitgevoerd: de vensterconstructie, geometrie, datamodel, renderer, CSS en ontwerpdocumenten van het onderzochte HUD, en het native Swift-voorbeeld. Nagekeken: de afwezigheid van safe-area-API's in Electron 44.3.0 en de genoemde aansluitpunten in Ruimte op 210ccad, en de doelen, architectuur en signering in <code>electron-builder.yml</code> en <code>release.yml</code>. Niet gedaan: iets draaien op een Mac met notch, de maten in de schetsen meten, de native module bouwen of laden. De schetsen zijn illustraties, geen screenshots. Er is geen code in Ruimte aangepast.</p></footer>
+<script>
+{
+  const demo = document.getElementById('sprite-demo');
+  const toggle = document.getElementById('sprite-toggle');
+  const state = document.getElementById('sprite-state');
+  toggle.addEventListener('click', () => {
+    const playing = demo.dataset.playing !== 'true';
+    demo.dataset.playing = String(playing);
+    toggle.setAttribute('aria-pressed', String(playing));
+    toggle.textContent = playing ? 'Stilzetten' : 'Laat lopen';
+    state.textContent = playing ? 'Loopt.' : 'Staat stil.';
+  });
+}
+</script>
+</body>
+</html>
