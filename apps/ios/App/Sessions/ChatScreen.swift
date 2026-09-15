@@ -17,6 +17,8 @@ struct ChatScreen: View {
     @State private var composerHeight: CGFloat = 72
     @State private var messagesBelow = false
     @State private var scrollToLatest = 0
+    @State private var viewportWidth: CGFloat = 0
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.colorScheme) private var colorScheme
     let title: String
@@ -52,13 +54,23 @@ struct ChatScreen: View {
                 }
             }
             .overlay(alignment: .bottom) {
-                GlassEffectContainer(spacing: 8) {
-                    VStack(spacing: 8) {
-                        if let pending = model.pending.first { pendingDock(pending) }
-                        composer
+                HStack(alignment: .bottom, spacing: 16) {
+                    GlassEffectContainer(spacing: 8) {
+                        VStack(spacing: 8) {
+                            if let pending = model.pending.first { pendingDock(pending) }
+                            composer
+                        }
+                    }
+                    .frame(maxWidth: 760)
+                    if scrollButtonBesideComposer {
+                        scrollToBottomButton
+                            .opacity(showScrollButton ? 1 : 0)
+                            .allowsHitTesting(showScrollButton)
+                            .accessibilityHidden(!showScrollButton)
+                            .padding(.bottom, 8)
                     }
                 }
-                .frame(maxWidth: 760)
+                .frame(maxWidth: scrollButtonBesideComposer ? 820 : 760)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 12)
                 .frame(maxWidth: .infinity)
@@ -68,20 +80,16 @@ struct ChatScreen: View {
                     composerHeight = $0
                 }
                 .overlay(alignment: .top) {
-                    if messagesBelow && !model.loading {
-                        Button {
-                            scrollToLatest += 1
-                        } label: {
-                            Image(lucide: "arrow-down")
-                                .frame(width: 44, height: 44)
-                        }
-                        .buttonStyle(.glass)
-                        .accessibilityLabel("Scroll to latest message")
-                        .accessibilityIdentifier("chat.scroll-to-bottom")
-                        .offset(y: -48)
+                    if showScrollButton && !scrollButtonBesideComposer {
+                        scrollToBottomButton.offset(y: -64)
                     }
                 }
             }
+        }
+        .onGeometryChange(for: CGFloat.self) {
+            $0.size.width
+        } action: {
+            viewportWidth = $0
         }
         .ignoresSafeArea(.container, edges: .bottom)
         .background(Color(uiColor: .systemBackground).ignoresSafeArea())
@@ -99,6 +107,7 @@ struct ChatScreen: View {
                 }
                 .accessibilityLabel("Conversation actions")
             }
+            .sharedBackgroundVisibility(.hidden)
         }
         .onAppear { model.start() }
         .onDisappear { model.stop() }
@@ -160,6 +169,25 @@ struct ChatScreen: View {
 
     private var hasDraft: Bool {
         !model.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !model.attachments.isEmpty
+    }
+
+    private var showScrollButton: Bool { messagesBelow && !model.loading }
+    private var scrollButtonBesideComposer: Bool { sizeClass == .regular && viewportWidth >= 640 }
+
+    private var scrollToBottomButton: some View {
+        Button {
+            scrollToLatest += 1
+        } label: {
+            Image(lucide: "arrow-down", size: 16)
+                .frame(width: 36, height: 36)
+                .glassEffect(.regular.interactive(), in: .circle)
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .hoverEffect(.highlight)
+        .accessibilityLabel("Scroll to latest message")
+        .accessibilityIdentifier("chat.scroll-to-bottom")
     }
 
     private var isWorking: Bool { model.info["activeTurnId"]?.stringValue != nil }
@@ -229,7 +257,12 @@ struct ChatScreen: View {
             Color.clear.contentShape(composerShape)
                 .onTapGesture { composerFocused = true }
         }
-        .glassEffect(.regular.interactive(), in: composerShape)
+        .contentShape(composerShape)
+        .glassEffect(.regular, in: composerShape)
+        .overlay {
+            composerShape.stroke(.primary.opacity(composerFocused ? 0.16 : 0), lineWidth: 1)
+                .allowsHitTesting(false)
+        }
         .disabled(!model.connected || model.loading)
     }
 

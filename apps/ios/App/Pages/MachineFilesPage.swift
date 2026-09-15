@@ -53,11 +53,14 @@ struct MachineFilesPage: View {
         .navigationTitle(path == "~" ? "Files" : URL(fileURLWithPath: path).lastPathComponent)
         .searchable(text: $search, prompt: "Filter this folder")
         .toolbar {
-            Menu {
-                Toggle("Show hidden files", isOn: $hidden)
-            } label: {
-                Label("File options", lucideIcon: "ellipsis")
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Toggle("Show hidden files", isOn: $hidden)
+                } label: {
+                    Label("File options", lucideIcon: "ellipsis")
+                }
             }
+            .sharedBackgroundVisibility(.hidden)
         }
         .task(id: "\(path):\(hidden)") {
             await RemotePageLifecycle.run(

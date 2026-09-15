@@ -14,6 +14,7 @@ struct AppHome: View {
     @State private var search = ""
     @State private var sceneID = UUID().uuidString
     @Environment(\.scenePhase) private var phase
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @AppStorage("ruimte.ios.appearance") private var appearance = "system"
 
     init(runtime: AppRuntime, projects: UnifiedProjects = UnifiedProjects()) {
@@ -39,6 +40,7 @@ struct AppHome: View {
                 }
             }
             .navigationTitle(hasWorkspace ? "Projects" : "")
+            .navigationBarTitleDisplayMode(sizeClass == .regular ? .inline : .automatic)
             .toolbar {
                 if hasWorkspace {
                     ToolbarItem(placement: .topBarLeading) {

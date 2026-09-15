@@ -26,7 +26,7 @@ struct ChatTimeline: UIViewControllerRepresentable {
     }
 }
 
-struct ChatViewportGeometry {
+struct ChatViewportGeometry: Equatable {
     let contentHeight: CGFloat
     let height: CGFloat
     var topInset: CGFloat = 0
@@ -87,6 +87,8 @@ final class ChatTimelineCollection: UICollectionView {
     private var readingAnchor: ChatReadingAnchor?
     private var adjustingOffset = false
     private var scrollingToLatest = false
+    private var measuredGeometry: ChatViewportGeometry?
+    private var contentChangePending = true
 
     var geometry: ChatViewportGeometry {
         ChatViewportGeometry(
@@ -96,6 +98,7 @@ final class ChatTimelineCollection: UICollectionView {
     var userIsScrolling: Bool { isTracking || isDragging || isDecelerating || viewport.isInteracting }
 
     func prepareForContentChange() {
+        contentChangePending = true
         if !viewport.followsLatest && !userIsScrolling { readingAnchor = captureReadingAnchor?() }
     }
 
@@ -112,6 +115,7 @@ final class ChatTimelineCollection: UICollectionView {
     }
 
     func expandAtCurrentPosition() {
+        contentChangePending = true
         scrollingToLatest = false
         viewport.readHere()
         readingAnchor = captureReadingAnchor?()
@@ -127,6 +131,7 @@ final class ChatTimelineCollection: UICollectionView {
 
     func finishScrollingToLatest() {
         scrollingToLatest = false
+        contentChangePending = true
         setNeedsLayout()
     }
 
@@ -138,9 +143,17 @@ final class ChatTimelineCollection: UICollectionView {
     }
 
     override func layoutSubviews() {
-        // UIKit also animates later self-sizing passes, independently of the SwiftUI transaction.
-        UIView.performWithoutAnimation { super.layoutSubviews() }
+        if userIsScrolling || scrollingToLatest {
+            super.layoutSubviews()
+        } else {
+            UIView.performWithoutAnimation { super.layoutSubviews() }
+        }
         defer { viewportChanged?() }
+        let currentGeometry = geometry
+        let needsRestoration = contentChangePending || measuredGeometry != currentGeometry
+        measuredGeometry = currentGeometry
+        contentChangePending = false
+        guard needsRestoration else { return }
         guard !adjustingOffset, !userIsScrolling, !scrollingToLatest, bounds.height > 0 else { return }
         let anchorOffset = readingAnchor.flatMap { anchor in
             itemTop?(anchor.id).map { anchor.offset(itemTop: $0, inset: adjustedContentInset.top) }
@@ -154,12 +167,6 @@ final class ChatTimelineCollection: UICollectionView {
         }
         // Hosted text can finish measuring after a snapshot. Keep the same reading position on those later passes too.
         if !viewport.followsLatest { readingAnchor = captureReadingAnchor?() }
-    }
-}
-
-private final class ChatTimelineLayout: UICollectionViewCompositionalLayout {
-    override func invalidateLayout(with context: UICollectionViewLayoutInvalidationContext) {
-        UIView.performWithoutAnimation { super.invalidateLayout(with: context) }
     }
 }
 
@@ -191,7 +198,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         var configuration = UICollectionLayoutListConfiguration(appearance: .plain)
         configuration.showsSeparators = false
         configuration.backgroundColor = .systemBackground
-        let layout = ChatTimelineLayout { _, environment in
+        let layout = UICollectionViewCompositionalLayout { _, environment in
             NSCollectionLayoutSection.list(using: configuration, layoutEnvironment: environment)
         }
         layout.configuration.contentInsetsReference = .none
@@ -236,7 +243,10 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
                 .id(id)
                 .environment(\.chatWillExpand, { [weak self] in self?.collection.expandAtCurrentPosition() })
                 .disclosureGroupStyle(ChatDisclosureStyle())
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .fixedSize(horizontal: false, vertical: true)
+                // The collection owns toolbar and keyboard insets; individual messages must scroll through them.
+                .ignoresSafeArea()
                 .transaction { transaction in
                     transaction.animation = nil
                     transaction.disablesAnimations = true

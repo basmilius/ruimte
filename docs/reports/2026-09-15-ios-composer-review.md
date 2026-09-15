@@ -272,3 +272,113 @@ describes the corner behavior used here.
 The signed app and Live Activity extension built successfully and were installed on
 Bas's iPhone and iPad Pro. Log: `/tmp/ruimte-ios-lucide-composer-device.log`.
 Verdict: approve the inspected code, with the physical checks above still unverified.
+
+## Project tabs, iPad alignment and chat scrolling
+
+Full source review of the SwiftUI project navigation, iPad shell and UIKit chat
+viewport. Use the existing Lucide icons and native iOS 26 tab and toolbar APIs.
+
+| Category | Evidence inspected | Result |
+| --- | --- | --- |
+| Typography | Projects navigation title on iPad | Use an inline centered title above the centered list |
+| Surfaces | Split sidebar, chat dock and action menus | Add a sidebar separator, reduce the scroll button to 36 points inside a 44-point touch target, remove ellipsis toolbar backgrounds |
+| Animations | Collection layout, snapshots and offset restoration | Keep native drag/deceleration; restore reading position only after content or geometry changes |
+| Icons | Project tabs, usage and overflow actions | Lucide labels for all five tabs; usage replaces the tools button |
+| Performance | Hosted chat rows and tab navigation | Give rows intrinsic height and no safe-area adjustment; retain native tab state |
+
+| Severity | Location | Before | After | Why |
+| --- | --- | --- | --- | --- |
+| HIGH | `ChatTimeline.swift` | Hosted message content inherits safe areas and every layout restores its offset | The viewport owns insets; messages ignore safe areas, and unchanged geometry leaves the native offset alone | Prevent messages appearing pinned while the collection moves behind the toolbar |
+| MEDIUM | `ChatTimeline.swift` | Layout invalidations suppress animation during interaction | Standard compositional layout, with nonanimated data snapshots retained | Preserve native dragging and deceleration |
+| MEDIUM | `ChatScreen.swift` | Large scroll button directly above the composer | Smaller round control with more clearance; beside the composer when an iPad pane is at least 640 points wide | Keep the control distinct without covering the editor |
+| MEDIUM | `AppHome.swift`, `WorkspacePage.swift` | Left-aligned large title above a centered iPad list; no sidebar boundary | Center the inline Projects title and add a one-point sidebar separator | Align the heading with its content and clarify the split |
+| MEDIUM | `WorkspacePage.swift` | Search field and a separate Project tools sheet | Views, Files, Git, Processes and Search tabs; Usage in the toolbar | Expose the requested project destinations directly |
+| LOW | `ChatScreen.swift`, `MachineFilesPage.swift` | Circular glass background around ellipsis actions | Ellipsis-only toolbar items | Apply the requested appearance while retaining native menu interaction |
+
+Search uses the native [search tab role](https://developer.apple.com/documentation/swiftui/tabrole/search)
+and a searchable TabView. The action menus use Apple's
+[toolbar background visibility](https://developer.apple.com/documentation/swiftui/toolbarcontent/sharedbackgroundvisibility(_:)).
+
+| Location | Candidate | Rejected because |
+| --- | --- | --- |
+| Chat scrolling | Restore the offset on every layout pass | Native scrolling itself causes layout passes |
+| iPad composer | Add the button gutter only when the button appears | This would change editor width while scrolling |
+| Project tabs | Draw a custom floating bar | Native TabView supplies platform layout, search and accessibility behavior |
+
+The signed build and 17 targeted tests passed on the iPad (8 scroll, 9 drawing).
+Build: `/tmp/ruimte-ios-tabs-drawing-final.log`; tests: `/tmp/ruimte-ios-tabs-drawing-tests.log`.
+The final rejected-gesture preview correction was compiled after that test run.
+The added scroll regression checks
+unchanged content and viewport geometry with synthetic collection cells. It does not
+verify the visual movement of hosted Markdown near the toolbar. Physical scrolling,
+tab transitions and iPad sizing remain acceptance checks; no simulator run is planned.
+
+## Native drawing authoring
+
+The drawing editor now exposes the web editor's authoring tool set: pan, select,
+rectangle, diamond, ellipse, arrow, line, pen, text, sticky note and eraser. Pan is
+the initial mode. Shapes have stroke, fill, roughness and text controls. Selection
+supports marquee, moving, resizing, rotation, line endpoints, duplication,
+copy/cut/paste, layer order, locking and deletion. Undo/redo and fit/zoom controls
+remain local editing actions; saves use the existing revision-checked protocol.
+
+The compact dock uses interactive glass buttons with 44-point touch areas and
+hover feedback. Pencil pressure is retained; additional palm/finger touches cannot
+restart an active Pencil stroke. Pencil double-tap and squeeze follow the OS
+preferred action. PNG and SVG can be copied or sent through the share sheet, with
+an optional background and selection-only export.
+
+| Category | Evidence inspected | Result |
+| --- | --- | --- |
+| Typography | Text editing and export fonts | Native text sheet; Chalkboard SE for the hand font, with cursive fallback in exported SVG |
+| Surfaces | Dock controls and canvas hit testing | Compact control layout, visible selection handles and no circle around the overflow icon |
+| Animations | Shape preview and final render | Stable per-shape seed; retain the committed preview until the final scene arrives |
+| Icons | All 30 drawing action/tool names | Resolve against the pinned Lucide package |
+| Performance | Scene viewport and raster export | Draw only the visible canvas region; cap PNG output at 4096 pixels on its longest edge |
+
+| Severity | Location | Before | After | Why |
+| --- | --- | --- | --- | --- |
+| HIGH | `DrawingEditorPage.swift`, `DrawingCanvas.swift`, `DrawingAuthoring.swift` | Basic pen/eraser editing only | Add the complete authoring tool set and native selection gestures | Make existing web drawings editable on iPhone and iPad |
+| MEDIUM | `DrawingEditorModel.swift` | Pen is the initial mode | Start in Pan; retain explicit tool selection | A normal drag moves the canvas |
+| MEDIUM | `DrawingCanvas.swift` | Pencil and later finger touches can reinitialize a gesture | Ignore added finger touches while Pencil is active | Preserve the current stroke when a palm touches the screen |
+| MEDIUM | `DrawingEditorPage.swift` | Taller dock with fewer actions | Compact interactive glass controls, tools menu and style sheet | Keep the drawing visible while making the expanded actions available |
+| MEDIUM | `DrawingExport.swift` | No native export actions | PNG/SVG copy and share with escaping, transforms and bounded raster size | Export a drawing or selection from the device |
+
+| Location | Candidate | Rejected because |
+| --- | --- | --- |
+| Text editing | Recreate desktop contenteditable inside the canvas | A native text sheet supports the keyboard and text selection directly |
+| Rendering | Introduce a second shape generator | Reuse the bundled web drawing renderer and existing wire document format |
+
+Verification: nine focused drawing tests cover wire-valid tools, pressure,
+transforms, locking, undo/redo, concurrent edits and escaped SVG output. All nine passed on the physical iPad. These checks do not verify physical
+Pencil hover/pressure, share-sheet presentation or interactive glass appearance.
+The native text sheet and hand-font fallback differ from the web presentation.
+
+## Composer touch feedback
+
+The supplied screenshot (`Schermafbeelding 2026-09-15 om 21.07.10.png`) shows a
+large oval highlight inside the composer's rounded rectangular boundary while
+text interaction is active. The likely source is the interactive glass effect on
+the entire editor panel. The composer now uses regular Liquid Glass, an explicit
+matching touch shape and a subtle one-point focus outline. Its buttons retain
+their own interaction behavior. No layout or text-responder changes accompany this
+visual correction.
+
+| Severity | Location | Before | After | Why |
+| --- | --- | --- | --- | --- |
+| MEDIUM | `ChatScreen.swift` | The whole composer has an interactive glass effect | Stable glass with a matching touch shape and focus outline | Avoid deforming the background during text selection |
+
+The screenshot also shows a floating text cursor over the placeholder during
+magnification. It does not establish that placeholder text is editable: the
+placeholder is a separate noninteractive UILabel. No text-selection changes were
+made from that image alone. Physical touch feedback remains unverified.
+
+Final verification: `bun run format`, `bun run check` and the signed device build
+passed. All 17 focused tests passed on the iPad before the final gesture-preview
+and composer-appearance corrections; those corrections passed the final build.
+The app was installed on Bas's iPhone and iPad Pro. Final build log:
+`/tmp/ruimte-ios-composer-touch-device.log`.
+
+Verdict: the inspected implementation is ready for device review. Physical chat
+scrolling, composer touch feedback, tab transitions, native share sheets and Pencil
+interaction remain unverified. No simulator run was made.
