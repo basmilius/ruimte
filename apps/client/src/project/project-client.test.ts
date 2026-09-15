@@ -3,6 +3,7 @@ import type {
     EventMap,
     EventType,
     ProjectCanvasView,
+    ProjectContent,
     ProjectDocument,
     ProjectLocal,
     ProjectPanels,
@@ -512,6 +513,24 @@ describe('ProjectClient', () => {
         dispose();
     });
 
+    test('a change to the list merges into a clean screen without swapping its editors out', async () => {
+        const { transport, state, dispose } = setup();
+        transport.views = [canvasView('main'), canvasView('notes')];
+        await tick();
+        const editor = focusedCanvas();
+
+        transport.emit('project.changed', { projectId: 'p1', document: document(4, [canvasView('notes'), { ...canvasView('main'), name: 'Board' }]) });
+
+        expect(useDocument.getState().views.map((view) => [view.id, 'name' in view ? view.name : null])).toEqual([
+            ['notes', 'notes'],
+            ['main', 'Board']
+        ]);
+        expect(focusedCanvas()).toBe(editor);
+        expect(state.rev).toBe(4);
+        expect(state.dirty).toBe(false);
+        dispose();
+    });
+
     test('switching projects flushes edits, lets go of the old one and remembers the new one', async () => {
         const { transport, state, client, storage, dispose } = setup();
         await tick();
@@ -781,6 +800,102 @@ describe('the project each machine had open', () => {
  * What phase 6 is for: one client per workspace, each on its own daemon and its own stores. Nothing
  * here is about the wire, it is about the client no longer having one canvas to boot a project into.
  */
+describe('the same project in two clients', () => {
+    type Client = ReturnType<typeof setup>;
+
+    /* The daemon between them: a save that lands for `from` goes to `to` as `project.changed`, the way `ProjectStore.save` sends it. */
+    const relay = (from: Client, to: Client): void => {
+        const request = from.transport.request.bind(from.transport);
+        from.transport.request = (async (type: RequestType, payload: never) => {
+            const result = await request(type, payload);
+            if (type === 'project.save') {
+                const { content } = payload as { content: ProjectContent };
+                const { rev } = result as { rev: number };
+                to.transport.rev = rev;
+                // The fake names the project apart from its summary, so only the views travel.
+                to.transport.emit('project.changed', { projectId: 'p1', document: document(rev, content.views) });
+            }
+            return result;
+        }) as FakeTransport['request'];
+    };
+
+    const twoClients = async (): Promise<{ a: Client; b: Client }> => {
+        const a = setup({ stores: createWorkspaceStores() });
+        const b = setup({ stores: createWorkspaceStores() });
+        a.transport.views = [canvasView('main'), canvasView('notes')];
+        b.transport.views = [canvasView('main'), canvasView('notes')];
+        relay(a, b);
+        await tick();
+        return { a, b };
+    };
+
+    const namesIn = (client: Client): Array<string | null> => client.stores.document.getState().views.map((view) => ('name' in view ? (view.name ?? null) : null));
+
+    test('a view renamed in one shows in the other at once', async () => {
+        const { a, b } = await twoClients();
+
+        a.stores.document.getState().renameView('notes', 'Ideas');
+        await tick(10);
+
+        expect(namesIn(b)).toEqual(['main', 'Ideas']);
+        expect(b.state.rev).toBe(4);
+        expect(b.state.conflict).toBeNull();
+        a.dispose();
+        b.dispose();
+    });
+
+    test('views put in another order in one stand in that order in the other', async () => {
+        const { a, b } = await twoClients();
+
+        a.stores.document.getState().moveView('notes', 0);
+        await tick(10);
+
+        expect(b.stores.document.getState().views.map((view) => view.id)).toEqual(['notes', 'main']);
+        expect(b.state.conflict).toBeNull();
+        a.dispose();
+        b.dispose();
+    });
+
+    test('a view added in one is listed in the other, without taking its cell', async () => {
+        const { a, b } = await twoClients();
+
+        a.stores.document.getState().addCanvasView('Third');
+        await tick(10);
+
+        expect(namesIn(b)).toEqual(['main', 'notes', 'Third']);
+        expect(b.stores.document.getState().activeViewId).toBe('main');
+        a.dispose();
+        b.dispose();
+    });
+
+    test('a rename that arrives while the other has a save on the wire merges, and that save does not write it away', async () => {
+        const { a, b } = await twoClients();
+        let release = (): void => undefined;
+        b.transport.holdSave = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        const mine = canvasOf(b.stores).getState().addNode('chat', { x: 0, y: 0 })!;
+        await tick(10);
+
+        a.stores.document.getState().renameView('notes', 'Ideas');
+        a.stores.document.getState().moveView('notes', 0);
+        await tick(10);
+        expect(b.state.conflict).toBeNull();
+        expect(namesIn(b)).toEqual(['Ideas', 'main']);
+
+        b.transport.holdSave = null;
+        release();
+        await tick(20);
+
+        const saved = b.transport.of('project.save').at(-1)?.payload as { baseRev: number; content: ProjectContent };
+        expect(saved.content.views.map((view) => ('name' in view ? (view.name ?? null) : null))).toEqual(['Ideas', 'main']);
+        expect((saved.content.views[1] as ProjectCanvasView).nodes.map((node) => node.id)).toEqual([mine]);
+        expect(b.state.conflict).toBeNull();
+        a.dispose();
+        b.dispose();
+    });
+});
+
 describe('two workspaces side by side', () => {
     test('each opens its own project on its own machine, into its own canvas', async () => {
         const storage = new Map<string, string>();

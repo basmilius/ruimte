@@ -177,32 +177,94 @@ const mergeCanvas = (base: ProjectCanvasView, mine: ProjectCanvasView, theirs: P
     return { ok: true, view, addition: empty ? null : addition };
 };
 
+/* What a view is called and what it wears, apart from what it holds. The name goes with its source, since a rename sets both. */
+const VIEW_LABELS: readonly (readonly string[])[] = [['name', 'titleSource'], ['icon']];
+
+const fieldsOf = (view: ProjectView, keys: readonly string[]): Record<string, unknown> =>
+    Object.fromEntries(keys.map((key) => [key, (view as Record<string, unknown>)[key]]));
+
+const withoutLabels = (view: ProjectView): Record<string, unknown> => {
+    const { name: _name, titleSource: _titleSource, icon: _icon, ...rest } = view as Record<string, unknown>;
+    return rest;
+};
+
+/*
+ * Three-way per label: a side that left the name or the icon alone takes the other side's, so a
+ * rename in another client lands beside an edit here. Only the same label changed differently on
+ * both sides is a conflict.
+ */
+const mergeLabels = (base: ProjectView, mine: ProjectView, theirs: ProjectView, merged: ProjectView): ViewMerge => {
+    let view = merged as Record<string, unknown>;
+    for (const keys of VIEW_LABELS) {
+        const was = fieldsOf(base, keys);
+        const here = fieldsOf(mine, keys);
+        const there = fieldsOf(theirs, keys);
+        if (same(was, there) || same(here, there)) {
+            continue;
+        }
+        if (!same(was, here)) {
+            return keys[0] === 'name'
+                ? refuse(`the view ${base.id} was renamed to "${String(there.name)}" there and to "${String(here.name)}" here`)
+                : refuse(`the icon of the view ${base.id} changed both here and there`);
+        }
+        // A label theirs dropped goes as a missing key, the shape the stores and the file both use.
+        view = Object.fromEntries(Object.entries({ ...view, ...there }).filter(([key, value]) => !keys.includes(key) || value !== undefined));
+    }
+    return { ok: true, view: view as ProjectView, addition: null };
+};
+
 const mergeView = (base: ProjectView, mine: ProjectView, theirs: ProjectView): ViewMerge => {
     if (base.kind !== theirs.kind) {
         return refuse(`the view ${base.id} became a ${theirs.kind}`);
     }
     if (!isCanvasView(base) || !isCanvasView(theirs) || !isCanvasView(mine)) {
         // Everything but a canvas holds one thing, so there is nothing in it that could be added to.
-        return same(base, theirs) ? { ok: true, view: mine, addition: null } : refuse(`the view ${base.id} changed`);
+        return same(withoutLabels(base), withoutLabels(theirs)) ? mergeLabels(base, mine, theirs, mine) : refuse(`the view ${base.id} changed`);
     }
-    if (base.name !== theirs.name) {
-        return refuse(`the view ${base.id} was renamed to "${theirs.name}"`);
+    const canvas = mergeCanvas(base, mine, theirs);
+    if (!canvas.ok) {
+        return canvas;
     }
-    if (!same(base.icon, theirs.icon) || !same(base.titleSource, theirs.titleSource)) {
-        return refuse(`the view ${base.id} changed`);
-    }
-    return mergeCanvas(base, mine, theirs);
+    const labels = mergeLabels(base, mine, theirs, canvas.view);
+    return labels.ok ? { ...canvas, view: labels.view } : labels;
+};
+
+const idsOf = (views: readonly ProjectView[], within: ReadonlySet<string>): string[] => views.map((view) => view.id).filter((id) => within.has(id));
+
+const sameOrder = (left: readonly string[], right: readonly string[]): boolean =>
+    left.length === right.length && left.every((id, index) => id === right[index]);
+
+/*
+ * `primary` in its own order, with every id of `secondary` that is missing from it put right after
+ * the nearest id before it in `secondary` that already stands, or first when there is none. Only
+ * ids in `present` take part: a view deleted on one side has no place to keep.
+ */
+const interleave = (primary: readonly string[], secondary: readonly string[], present: ReadonlySet<string>): string[] => {
+    const order = primary.filter((id) => present.has(id));
+    secondary.forEach((id, index) => {
+        if (!present.has(id) || order.includes(id)) {
+            return;
+        }
+        const before = secondary
+            .slice(0, index)
+            .reverse()
+            .find((candidate) => order.includes(candidate));
+        order.splice(before === undefined ? 0 : order.indexOf(before) + 1, 0, id);
+    });
+    return order;
 };
 
 /*
  * Three documents: what the daemon's file held at the rev this client holds (`base`), what is on
  * screen with the person's unsaved edits on top of it (`mine`), and what the daemon has just
- * written (`theirs`). The merge only ever adds: everything `theirs` has that `base` did not comes
- * over, and everything else stays as the person left it, so a drag in progress survives an agent
- * writing to the same project.
+ * written (`theirs`). Everything `theirs` has that `base` did not comes over, and so do the name and
+ * icon of a view and the order of the list when this client left them as `base` had them (another
+ * client renaming or moving views); everything else stays as the person left it, so a drag in
+ * progress survives an agent or a second client writing to the same project.
  *
- * Anything else the daemon did (a node that moved, a deletion, a rename, another arrangement) is a
- * real conflict and goes to the person. The reason names the id that made it one.
+ * Anything else (a node that moved, a deletion, a renamed project, another arrangement, the same
+ * label or the order changed on both sides) is a real conflict and goes to the person. The reason
+ * names the id that made it one.
  */
 export const mergeProject = (base: ProjectContent, mine: ProjectContent, theirs: ProjectContent): ProjectMerge => {
     if (base.name !== theirs.name) {
@@ -216,49 +278,62 @@ export const mergeProject = (base: ProjectContent, mine: ProjectContent, theirs:
     }
 
     const known = new Map(base.views.map((view) => [view.id, view]));
-    const kept = theirs.views.filter((view) => known.has(view.id));
-    const lost = base.views.find((view) => !kept.some((candidate) => candidate.id === view.id));
+    const lost = base.views.find((view) => !theirs.views.some((candidate) => candidate.id === view.id));
     if (lost) {
         return refuse(`the view ${lost.id} was removed`);
     }
-    if (kept.some((view, index) => view.id !== base.views[index]!.id)) {
-        return refuse('the views were put in another order');
-    }
 
-    const views = [...mine.views];
+    const held = new Map(mine.views.map((view) => [view.id, view]));
+    const merged = new Map<string, ProjectView>();
     const added: ProjectView[] = [];
     const canvases: Record<string, CanvasAddition> = {};
-    // Where a view this client does not know goes: after the last view of `theirs` it does know.
-    let at = 0;
     for (const view of theirs.views) {
-        const standing = views.findIndex((candidate) => candidate.id === view.id);
         const before = known.get(view.id);
-        if (before) {
-            if (standing === -1) {
-                // Deleted here and untouched there: this client's deletion stands, and takes it with it.
-                if (!same(before, view)) {
-                    return refuse(`the view ${view.id} changed after this client removed it`);
-                }
-                continue;
+        const standing = held.get(view.id);
+        if (!before) {
+            if (standing) {
+                return refuse(`the view ${view.id} arrived, and this client already has one with that id`);
             }
-            const outcome = mergeView(before, views[standing]!, view);
-            if (!outcome.ok) {
-                return outcome;
-            }
-            views[standing] = outcome.view;
-            if (outcome.addition) {
-                canvases[view.id] = outcome.addition;
-            }
-            at = standing + 1;
+            added.push(view);
             continue;
         }
-        if (standing !== -1) {
-            return refuse(`the view ${view.id} arrived, and this client already has one with that id`);
+        if (!standing) {
+            // Deleted here and untouched there: this client's deletion stands, and takes it with it.
+            if (!same(before, view)) {
+                return refuse(`the view ${view.id} changed after this client removed it`);
+            }
+            continue;
         }
-        views.splice(at, 0, view);
-        added.push(view);
-        at += 1;
+        const outcome = mergeView(before, standing, view);
+        if (!outcome.ok) {
+            return outcome;
+        }
+        merged.set(view.id, outcome.view);
+        if (outcome.addition) {
+            canvases[view.id] = outcome.addition;
+        }
     }
+
+    /*
+     * The order is three-way over the views both sides still have. A side that kept the order of
+     * `base` takes the other side's; both moving them is a conflict unless they agree. The views only
+     * one side has go beside the view they followed on that side.
+     */
+    const shared = new Set(base.views.map((view) => view.id).filter((id) => held.has(id)));
+    const baseOrder = idsOf(base.views, shared);
+    const mineOrder = idsOf(mine.views, shared);
+    const theirOrder = idsOf(theirs.views, shared);
+    const movedHere = !sameOrder(mineOrder, baseOrder);
+    const movedThere = !sameOrder(theirOrder, baseOrder);
+    if (movedHere && movedThere && !sameOrder(mineOrder, theirOrder)) {
+        return refuse('the views were put in another order both here and there');
+    }
+    const fresh = new Map(added.map((view) => [view.id, view]));
+    const present = new Set([...mine.views.map((view) => view.id), ...fresh.keys()]);
+    const mineIds = mine.views.map((view) => view.id);
+    const theirIds = theirs.views.map((view) => view.id);
+    const order = movedThere && !movedHere ? interleave(theirIds, mineIds, present) : interleave(mineIds, theirIds, present);
+    const views = order.map((id) => merged.get(id) ?? fresh.get(id) ?? held.get(id)!);
 
     return {
         ok: true,

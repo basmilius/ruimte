@@ -528,10 +528,13 @@ export class ProjectClient {
         if (!current || current.projectId !== projectId) {
             return;
         }
+        /* Merged first on a clean screen too: a load swaps every editor out and blanks the canvas
+           until it is measured, which a view renamed in another client should not cost. */
+        if (this.adopt(document)) {
+            return;
+        }
         if (dirty || this.saving) {
-            if (!this.adopt(document)) {
-                this.sink.setConflict(document);
-            }
+            this.sink.setConflict(document);
             return;
         }
         this.base = contentOf(document);
