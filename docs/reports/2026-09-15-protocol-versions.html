@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte &middot; Protocolversies: een nieuwere client op een oudere machine</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .reference { fill: var(--reference); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#samenvatting">Naar de samenvatting</a>
+<header>
+  <p class="eyebrow">Ruimte / Onderzoek / 15 september 2026</p>
+  <h1>Protocolversies: een nieuwere client op een oudere machine, en andersom</h1>
+  <p class="intro">Vervang de gelijkheidscheck door een venster. Beide kanten publiceren welke protocolversies ze nog spreken, de verbinding loopt op de hoogste die beide kennen, en de nieuwere kant past zich aan. Bijna alles wat daarvoor nodig is (het versienummer op de socket, in <code>endpoint.info</code> en in de directe handshake) staat er al; wat ontbreekt is de regel dat een verschil geen weigering is, plus een plek waar een oud frame vertaald wordt. De drie vertrouwensstukken (pairing, statements, de handshake van het directe kanaal) blijven buiten het venster en worden nooit omlaag onderhandeld.</p>
+  <p class="status">Onderzoek, niets gebouwd. Bas beslist na lezen.</p>
+  <p class="caption">Gelezen op commit <code>d081d13</code> (main). Scope: <code>packages/contracts</code>, <code>packages/pulsar</code>, de transportlaag van de client, de dispatcher en de kanaal-handshake van de daemon, en de manier waarop vergelijkbare systemen versieverschil toelaten.</p>
+  <nav aria-label="Inhoud">
+    <a href="#samenvatting">Samenvatting</a>
+    <a href="#nu">Wat er nu staat</a>
+    <a href="#breekt">Wat breekt vandaag</a>
+    <a href="#anderen">Hoe anderen het doen</a>
+    <a href="#opties">De opties</a>
+    <a href="#last">Wie draagt de last</a>
+    <a href="#beleid">Het beleid</a>
+    <a href="#vertrouwen">Pairing, statements en de handshake</a>
+    <a href="#plan">Het plan</a>
+    <a href="#open">Open vragen</a>
+    <a href="#bronnen">Bronnen</a>
+  </nav>
+</header>
+<main>
+  <section id="samenvatting" class="recommendation">
+    <h2>Samenvatting</h2>
+    <p>De aanbeveling in zes regels.</p>
+    <ol>
+      <li><strong>Eén nummer, elke wijziging telt.</strong> <code>PROTOCOL_VERSION</code> wordt een capability-nummer in de stijl van Tailscale: het gaat omhoog bij elke wijziging aan de draad, ook bij een toevoeging, met één regel changelog per stap in <code>protocol.ts</code>. Een test die de JSON Schema van <code>REQUEST_SCHEMAS</code> en <code>EVENT_SCHEMAS</code> vergelijkt met een vastgelegd snapshot dwingt die bump af.</li>
+      <li><strong>Een venster in plaats van gelijkheid.</strong> Elke kant heeft naast <code>PROTOCOL_VERSION</code> een <code>PROTOCOL_MIN</code>. De socket biedt zoals nu <code>?protocol=N</code>, de daemon neemt hem als N binnen zijn venster ligt en onthoudt N bij de verbinding; de client leest in <code>endpoint.info</code> welke versie de daemon spreekt en onthoudt die op de <code>ConnectionState</code>. Onderhandeld is <code>min(client, daemon)</code>. De directe handshake doet hetzelfde met de velden die er al in zitten.</li>
+      <li><strong>Additief binnen het venster.</strong> Een verzoek, een event of een veld wordt binnen het venster nooit hernoemd, verwijderd of van betekenis veranderd. Wat nieuw is komt erbij als optioneel veld of als nieuw type. De client verbergt of dimt wat de machine niet kent aan de hand van een tabel <code>FEATURES</code> (feature naar de versie waarin hij verscheen), en zegt dan "Update Ruimte on this machine".</li>
+      <li><strong>Adapters aan de rand, alleen voor een echte breuk.</strong> Kan een verandering niet additief, dan komt er één pure vertaling in <code>packages/contracts/src/compat/</code>, toegepast in <code>LinkTransport</code> (client) en <code>Dispatcher</code> (daemon), getest tegen opgenomen frames van de oude versie. Die vertaling gaat weg zodra de oude versie uit het venster valt.</li>
+      <li><strong>De client draagt het meeste.</strong> station.ruimte.app is altijd het nieuwst en een headless machine op <code>npx ruimte</code> loopt het langst achter. De daemon houdt zich aan additief en accepteert oude verzoekvormen; de client vertaalt en gatet.</li>
+      <li><strong>Niets aan het vertrouwen wordt onderhandeld.</strong> De signing-prefixen (<code>ruimte-client-channel-v1</code>, <code>pulsar-*-v1</code>), het spenden van nonces, de levensduur van een statement en het pinnen van de machine-sleutel staan buiten het venster. Een wijziging daar is een harde breuk met <code>PROTOCOL_MIN = PROTOCOL_VERSION</code> en een weigering met een zin.</li>
+    </ol>
+    <p>De eerste stap is klein en gedragsneutraal: het venster en het onthouden van de onderhandelde versie, met <code>PROTOCOL_MIN</code> gelijk aan <code>PROTOCOL_VERSION</code>. Daarna verandert er pas iets voor een gebruiker op het moment van de eerste bump. Het plan met acceptatievoorwaarden staat onder <a href="#plan">Het plan</a>.</p>
+  </section>
+
+  <section id="nu">
+    <h2>Wat er nu staat</h2>
+    <p>Het versienummer is op 15 september geland (<code>a0acbd6</code>). Eén integer, <code>PROTOCOL_VERSION = 1</code> in <code>packages/contracts/src/protocol.ts</code>, met drie plekken waar hij gecontroleerd wordt.</p>
+    <ul>
+      <li><strong>De socket.</strong> De client zet <code>?protocol=N</code> op de URL (<code>withProtocol</code>). De daemon upgradet de socket en sluit hem in <code>open()</code> met code 4406 en reden <code>protocol &lt;eigen versie&gt;</code> als N afwijkt (<code>acceptsOfferedProtocol</code> in <code>apps/server/src/daemon.ts</code>). Een socket zonder parameter wordt toegelaten, want een client van vóór de versies kon de weigering toch niet lezen.</li>
+      <li><strong>De gate aan de clientkant.</strong> Omdat een daemon van vóór de versies alles toelaat, vraagt de client als eerste <code>endpoint.info</code> en weigert zelf bij een andere of ontbrekende <code>protocol</code> (<code>protocolGate</code> in <code>apps/client/src/transport/protocol.ts</code>). Frames die eerder binnenkomen worden vastgehouden.</li>
+      <li><strong>Het directe kanaal.</strong> <code>direct.challenge</code> draagt de versie van de daemon, de client weigert vóór hij iets bewijst als die afwijkt (<code>webrtc-link.ts</code>, regel 179), en de proof draagt de versie van de client, waarop de daemon weigert met <code>direct.refused</code> plus <code>protocol</code> (<code>channel-auth.ts</code>, regel 92).</li>
+    </ul>
+    <p>Wat een mens leest staat in twee zinnen in <code>transport/protocol.ts</code>: "This machine runs an older Ruimte. Update Ruimte there, or restart it to pick up the update." en "This machine runs a newer Ruimte than this app. Update this app." De reconnect-lus blijft proberen, dus een machine die herstart op de goede versie komt vanzelf terug.</p>
+    <div class="stats">
+      <div><strong>89</strong><span>verzoektypen in <code>REQUEST_SCHEMAS</code></span></div>
+      <div><strong>21</strong><span>eventtypen in <code>EVENT_SCHEMAS</code></span></div>
+      <div><strong>56</strong><span><code>z.enum</code>-velden in de contracts</span></div>
+      <div><strong>15</strong><span>releases tussen 11 en 15 september</span></div>
+    </div>
+    <h3>Hoe de frames gevalideerd worden</h3>
+    <p>Elk object op de draad is een gewone <code>z.object</code>. Zod 4 stript onbekende sleutels standaard; <code>z.strictObject</code> (weigeren) en <code>z.looseObject</code> (doorlaten) komen op de draad niet voor, alleen in <code>diagram-verb.ts</code> en <code>team-verb.ts</code>, waar een agent een document instuurt en een tikfout beter een weigering is dan een stil weggelaten veld. Dat betekent dat een nieuw optioneel veld van de ene kant door de andere kant stil wordt weggegooid, en nergens een fout geeft.</p>
+    <ul>
+      <li>De daemon (<code>Dispatcher.handle</code>) parset de envelop, zoekt het type op in <code>REQUEST_SCHEMAS</code>, antwoordt <code>unknown-request</code> op een type dat hij niet kent en <code>bad-request</code> op een payload die niet past.</li>
+      <li>De client (<code>LinkTransport.receive</code>) parset de envelop, checkt het resultaat van een antwoord tegen het schema van het verzoek (<code>bad-reply</code> als het niet past), laat een onbekend event vallen met een <code>console.warn</code>, en laat een event dat niet parset ook vallen.</li>
+    </ul>
+    <p>Mechanisch is de draad dus al tolerant voor toevoegingen. Het strenge deel is de gelijkheidscheck, en die is bewust zo gebouwd: de decision-entry "A protocol version on the wire" in <code>docs/DECISIONS.md</code> zegt dat de bump alleen voor een onleesbare wijziging is en "today a client and a daemon work only on the same version".</p>
+    <h3>Wie wanneer bijwerkt</h3>
+    <div class="table" role="region" aria-label="Wie wanneer bijwerkt" tabindex="0">
+      <table>
+        <thead><tr><th scope="col">Onderdeel</th><th scope="col">Bijgewerkt door</th><th scope="col">Loopt achter</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">station.ruimte.app</th><td>Elke push naar main die de client of <code>packages/*</code> raakt (<code>.github/workflows/station.yml</code>)</td><td>Nooit. Dit is de nieuwste client die er is.</td></tr>
+          <tr><th scope="row">Desktop-app met zijn eigen service</th><td>De app-updater; de daemon onder de service leest <code>ruimte.build</code> en sluit af zodra hij idle is, of de client vraagt het in <code>MachineUpdateDialog</code> ("When idle")</td><td>Minuten tot uren. Tijdens "When idle" praat een nieuwe app bewust met een oudere daemon. Dat venster bestaat dus al als productkeuze.</td></tr>
+          <tr><th scope="row">Desktop-app die een persoon niet bijwerkt</th><td>Niemand, tot de persoon het doet</td><td>Weken. Deze client is dan ouder dan een remote machine die wel is bijgewerkt.</td></tr>
+          <tr><th scope="row"><code>npx ruimte</code> als service (<code>ruimte service install</code>)</th><td>De binary in <code>$RUIMTE_HOME/bin</code> wordt alleen vervangen door <code>install</code> opnieuw te draaien</td><td>Maanden. Dit is de machine waar de client het verst naar terug moet kunnen spreken.</td></tr>
+          <tr><th scope="row">Headless server, handmatig geïnstalleerd</th><td>De beheerder</td><td>Onbepaald.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Twee seams zijn geen zorg: <code>ruimte-context</code> staat op het PATH van een sessie van dezelfde daemon, en de hooks praten met de daemon op dezelfde machine. Beide zijn altijd van dezelfde build. De adresboek-API (<code>pulsar.ruimte.app</code>) is al per pad geversioneerd (<code>/v1/...</code>) en heeft drie clients van verschillende leeftijd (station, de desktop-app, de daemon via <code>ruimte login</code>), dus daar geldt dezelfde additieve regel als hieronder.</p>
+  </section>
+
+  <section id="breekt">
+    <h2>Wat breekt vandaag</h2>
+    <p>Los van de gelijkheidscheck, die nu alles blokkeert. De tabel zegt wat er zou gebeuren als die check er niet was, per soort wijziging, in beide richtingen.</p>
+    <div class="table" role="region" aria-label="Soorten wijziging en hun effect" tabindex="0">
+      <table class="wide">
+        <thead><tr><th scope="col">Wijziging</th><th scope="col">Nieuwe client, oude daemon</th><th scope="col">Oude client, nieuwe daemon</th><th scope="col">Oordeel</th></tr></thead>
+        <tbody>
+          <tr>
+            <th scope="row">Optioneel veld erbij (payload, result of event)</th>
+            <td>De daemon stript het veld uit de payload en doet alsof het er niet was. De client krijgt het niet terug in een result en moet <code>undefined</code> als "oude machine" lezen.</td>
+            <td>De client stript het uit een result of event. Werkt, zolang de nieuwe kant zonder het veld ook zinnig blijft.</td>
+            <td><span class="badge confirmed">Breekt niet</span> Dit is al het patroon: <code>model</code> op <code>server.hello</code>, <code>protocol</code> op <code>endpoint.info</code>, elke methode op de desktop-bridge na de eerste release.</td>
+          </tr>
+          <tr>
+            <th scope="row">Verplicht veld erbij</th>
+            <td>De oude daemon stript het en mist het niet. Werkt.</td>
+            <td>De oude client stuurt het niet; de daemon antwoordt <code>bad-request</code>. Een event met het veld wordt door de oude client stil weggelaten.</td>
+            <td><span class="badge warning">Breekt één kant</span> Binnen een venster altijd optioneel maken.</td>
+          </tr>
+          <tr>
+            <th scope="row">Nieuw verzoektype</th>
+            <td>De daemon antwoordt <code>unknown-request</code>. Alleen <code>signaling.ts</code> vangt dat op met een zin; elders is het een feature die zonder uitleg faalt.</td>
+            <td>De oude client vraagt het nooit. Werkt.</td>
+            <td><span class="badge warning">Faalt stil</span> Daarom de <code>FEATURES</code>-tabel: de client weet vooraf wat de machine kent.</td>
+          </tr>
+          <tr>
+            <th scope="row">Nieuw event</th>
+            <td>De oude daemon stuurt het nooit.</td>
+            <td>De oude client laat het vallen met een <code>console.warn</code>.</td>
+            <td><span class="badge confirmed">Breekt niet</span> De feature ontbreekt alleen.</td>
+          </tr>
+          <tr>
+            <th scope="row">Nieuwe waarde in een <code>z.enum</code> of een nieuwe tak van een <code>discriminatedUnion</code></th>
+            <td>Een <code>project.save</code> met een node van een onbekende <code>kind</code> is <code>bad-request</code>. Voor kinds in het bestand vangt "Kinds a newer Ruimte wrote" dit sinds 14 september op; op de draad zit <code>NodeKindSchema</code> nog als enum.</td>
+            <td>Eén onbekende <code>ChatItem.kind</code> laat het hele <code>chat.event</code> vallen: die thread stopt met bijwerken. Eén onbekende node-kind laat een heel <code>project.changed</code> vallen.</td>
+            <td><span class="badge danger">Scherpste rand</span> 56 enums in de contracts. Een enum groeit vaker dan een veld hernoemd wordt. Oplossing: een <code>unknown</code>-tak per union op de client, zoals <code>UNKNOWN_KIND</code> al doet voor het bestand.</td>
+          </tr>
+          <tr>
+            <th scope="row">Veld hernoemd</th>
+            <td>Verplicht: <code>bad-request</code> of <code>bad-reply</code>. Optioneel: stil weg, en het gedrag klopt niet meer zonder dat iets het meldt.</td>
+            <td>Zelfde, gespiegeld.</td>
+            <td><span class="badge danger">Breekt beide kanten</span> Nooit binnen het venster. Een nieuwe naam is een nieuw optioneel veld naast het oude.</td>
+          </tr>
+          <tr>
+            <th scope="row">Zelfde vorm, andere betekenis</th>
+            <td colspan="2">Zod merkt niets. Alleen een versienummer of een capability kan dit dragen. Voorbeeld uit de decisions: de camera die van schermoffset naar wereldpunt ging; die leest nu "als geen" en <code>project.save-local</code> accepteert beide vormen.</td>
+            <td><span class="badge danger">Onzichtbaar</span> De reden om het nummer ook bij een additieve wijziging te bumpen: een semantische wijziging krijgt dan altijd een nummer om op te gaten.</td>
+          </tr>
+          <tr>
+            <th scope="row">Handshake-frame verplaatst of veranderd</th>
+            <td colspan="2">Breekt vóór er een versie onderhandeld is. Het versienummer zit er juist in om dit te kunnen zeggen.</td>
+            <td><span class="badge danger">Harde breuk</span> Zie <a href="#vertrouwen">Pairing, statements en de handshake</a>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <details open>
+      <summary>Bewijs: de validatie op beide kanten</summary>
+      <p class="caption"><code>apps/server/src/dispatcher.ts</code> en <code>apps/client/src/transport/link-transport.ts</code> op <code>d081d13</code></p>
+<pre><code>// daemon
+const handler = isRequestType(type) ? this.handlers.get(type) : undefined;
+if (!isRequestType(type) || !handler) {
+    client.send(errorReply(id, 'unknown-request', `Unknown request type: ${type}`));
+    return;
+}
+const payloadParse = REQUEST_SCHEMAS[type].payload.safeParse(payload);
+if (!payloadParse.success) {
+    client.send(errorReply(id, 'bad-request', `Invalid payload for ${type}`));
+    return;
+}
+
+// client
+if (!isEventType(event)) {
+    console.warn('Dropped an unknown event', event);
+    return;
+}
+const parsed = EVENT_SCHEMAS[event].safeParse(payload);
+if (!parsed.success) {
+    console.warn(`Dropped a malformed ${event} event`);
+    return;
+}</code></pre>
+      <p>Dit laat zien dat een onbekend type of event geen verbinding kost, en dat een schema dat niet past het hele frame kost. Het zegt niets over wat de code boven de transportlaag doet met een feature die stil ontbreekt; dat is per aanroeper anders en meestal niets.</p>
+    </details>
+  </section>
+
+  <section id="anderen">
+    <h2>Hoe anderen het doen</h2>
+    <p>Vier patronen komen terug: een onderhandeld nummer, een lijst capabilities, additieve regels op veldniveau, en een beleid dat zegt hoeveel verschil er mag zijn. De meeste systemen combineren er twee.</p>
+    <h3>Docker Engine: onderhandelen naar de hoogste gedeelde versie</h3>
+    <p>De API-versie staat in het pad (<code>/v1.56/containers/</code>). "The Docker Engine API server and client support API-version negotiation. If a client connects to an older version of the Docker Engine, it negotiates the highest version of the API supported by both the client and daemon, downgrading to an older version of the API if necessary." Een SDK ondersteunt zijn eigen versie "as well as all earlier versions", en <code>GET /version</code> geeft sinds 1.25 een <code>MinAPIVersion</code> terug. Dit is de dichtstbijzijnde analogie: een CLI-client tegen een daemon die op zijn eigen tempo bijwerkt, en de nieuwere kant past zich aan.</p>
+    <h3>Kubernetes: een uitgeschreven skew-beleid</h3>
+    <p>"<code>kubectl</code> is supported within one minor version (older or newer) of <code>kube-apiserver</code>." En voor de agent op de node: "<code>kubelet</code> must not be newer than <code>kube-apiserver</code>" en "may be up to three minor versions older". Twee dingen zijn hier het overnemen waard: het beleid staat op één pagina met de richting erbij, en de kant die het traagst bijwerkt (de node) krijgt het ruimste venster, maar alleen naar achteren.</p>
+    <h3>Tailscale: één monotoon nummer met een changelog</h3>
+    <p><code>CapabilityVersion</code> in <code>tailcfg.go</code> is "a single monotonically increasing integer, rather than the relatively complex x.y.z-xxxxx semver+hash(es). Whenever the client gains a capability or wants to negotiate a change in semantics with the server (control plane), peers (over PeerAPI), or frontend (over LocalAPI), bump this number and document what's new." Op 9 september 2026 staat hij op 147, met per stap een regel als "67: 2023-07-25: Client understands PeerCapMap". De control plane weet per client welk nummer hij spreekt en stuurt daarop af. Headscale, de open-source control plane, houdt een minimum bij en heeft een <code>CanOldCodeBeCleanedUp()</code> die bij start panict zodra het minimum een compat-pad heeft ingehaald, zodat oud code niet blijft liggen. Precies het patroon voor Ruimte: één publisher, één nummer, elke wijziging telt, en een geschreven reden per stap.</p>
+    <h3>LSP: capabilities in plaats van versies</h3>
+    <p>"Not every language server can support all features defined by the protocol. LSP therefore provides 'capabilities'", uitgewisseld in de eerste <code>initialize</code>. Over onbekende velden: "Servers receiving a <code>ClientCapabilities</code> object literal with unknown properties should ignore these properties." De 3.x-versies voegen alleen capabilities toe. Dit past bij een ecosysteem met honderden onafhankelijke servers, waar een nummer niets zegt over wat een server kan. Ruimte heeft één client en één daemon uit dezelfde repo; daar is een lijst capabilities een duurdere manier om hetzelfde te zeggen als een nummer met een tabel erachter.</p>
+    <h3>Protobuf: regels op veldniveau</h3>
+    <p>"Adding new fields is safe", "Removing fields is safe. The same field number must not [be] used again", "Adding additional values to an enum is safe" (voor de parser; de code die de enum leest moet een onbekende waarde aankunnen). Veldnummers veranderen is niet veilig. Zod met JSON kent geen veldnummers, maar de regels vertalen één op één: toevoegen mag, hernoemen niet, een enum groeit alleen als de lezer een onbekende waarde overleeft.</p>
+    <h3>WebSocket-subprotocollen</h3>
+    <p>RFC 6455 heeft een ingebouwd mechanisme: de client biedt een lijst in <code>Sec-WebSocket-Protocol</code>, de server kiest er één en zet die in het antwoord. "Subprotocols can be versioned in backward-incompatible ways by changing the subprotocol name, e.g., going from 'bookings.example.net' to 'v2.bookings.example.net'." Bun's <code>server.upgrade()</code> neemt een <code>headers</code>-optie, dus het kan. Ik raad het toch niet aan boven <code>?protocol=N</code>: het onderhandelt alleen de socket en niet het directe kanaal, en het maakt de bestaande v1-daemons niet toegankelijk (die lezen de header niet). Hetzelfde nummer op beide draden is eenvoudiger.</p>
+    <h3>Chrome DevTools Protocol en VS Code Remote</h3>
+    <p>CDP publiceert een tip-of-tree en een stabiele 1.3; alleen die stabiele subset belooft iets. VS Code Remote kiest de andere kant van het spectrum: de server op de remote host hoort bij een commit van de client en wordt per commit opnieuw geïnstalleerd (uit eigen ervaring met <code>~/.vscode-server/bin/&lt;commit&gt;</code>; de gefetchte docs bevestigen alleen dat de extensie de server installeert en dat een update via een melding loopt). Dat is de "altijd gelijk"-strategie die Ruimte nu heeft, en die werkt bij VS Code alleen omdat de client de server zelf mag vervangen. Een machine op <code>npx ruimte</code> laat een client dat niet doen. Syncthing wisselt in zijn <code>Hello</code> naam en versie uit en leunt verder op proto3, waar alle velden optioneel zijn.</p>
+  </section>
+
+  <section id="opties">
+    <h2>De opties</h2>
+    <p>Vier manieren, met wat ze kosten in code en tests. Ze sluiten elkaar niet uit; de aanbeveling is een combinatie.</p>
+    <div class="split">
+      <div class="panel">
+        <h3>A. Alleen additief, met capabilities</h3>
+        <p>Geen versienummer op de verbinding. <code>server.hello</code> of <code>endpoint.info</code> geeft een lijst met wat de machine kan; de client gatet erop. Elke wijziging is een toevoeging.</p>
+        <p><strong>Kost:</strong> een lijst die bij elke feature groeit en nooit krimpt; de daemon moet elke oude vorm eeuwig accepteren. Kan een verwijdering of een betekenisverschil niet uitdrukken, en kan niet zeggen "te oud". Tests: goedkoop, alleen per capability.</p>
+      </div>
+      <div class="panel">
+        <h3>B. Een venster [min, max] in de handshake</h3>
+        <p>Beide kanten publiceren welke versies ze spreken; onderhandeld is de hoogste die beide kennen; buiten het venster een weigering die beide nummers noemt.</p>
+        <p><strong>Kost:</strong> klein. <code>protocol.ts</code> krijgt <code>PROTOCOL_MIN</code> en een <code>negotiate</code>, de daemon onthoudt de versie op <code>ClientAccess</code>, de client op <code>ConnectionState</code>. Op zichzelf maakt B geen oud frame leesbaar; het laat alleen de verbinding toe en vertelt beide kanten wat ze mogen verwachten.</p>
+      </div>
+      <div class="panel">
+        <h3>C. Adapters aan de rand</h3>
+        <p>Pure functies die een frame van versie N naar de huidige vorm tillen (inkomend) en terug (uitgaand), toegepast in <code>LinkTransport.receive</code> en <code>request</code>, en in <code>Dispatcher.handle</code> en <code>sendEvent</code>.</p>
+        <p><strong>Kost:</strong> per echte breuk één vertaling plus een fixture; groeit met het aantal breuken, niet met de tijd, en wordt gesnoeid door het beleid. De code erboven ziet altijd de huidige vorm. Tests: opgenomen frames per versie door de adapter halen.</p>
+      </div>
+      <div class="panel">
+        <h3>D. Geversioneerde schema's per bericht</h3>
+        <p><code>SessionCreatePayloadV1</code>, <code>V2</code>, ... en een union ervan in de tabel.</p>
+        <p><strong>Kost:</strong> hoog. Elk bericht draagt een versie, de afgeleide TypeScript-types worden unions, en elke handler en elke store moet de union uit elkaar halen. Alleen zinnig als de bevroren oude vorm die een adapter in C nodig heeft; niet als iets wat de rest van de code ziet.</p>
+      </div>
+    </div>
+    <p>De combinatie: <strong>B als mechanisme, additief als regel, C voor de uitzondering, en A's idee (gaten op wat de machine kan) afgeleid uit het nummer</strong> via een tabel <code>FEATURES</code>. Dat is wat Docker en Tailscale samen doen, en het past bij een repo waar client en daemon uit dezelfde contracts-package worden gebouwd.</p>
+    <figure class="panel">
+      <div class="table" role="region" aria-label="Diagram van de onderhandeling" tabindex="0">
+        <svg class="diagram plot" width="760" viewBox="0 0 760 250" role="img" aria-labelledby="neg-title neg-desc">
+          <title id="neg-title">Onderhandeling en adapters</title>
+          <desc id="neg-desc">De client biedt zijn versie; de daemon kiest de hoogste gedeelde versie; beide kanten passen adapters toe aan de rand, en de code erboven ziet de huidige vorm.</desc>
+          <defs><marker id="neg-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0 0 L8 4 L0 8 Z"/></marker></defs>
+          <rect class="node" x="20" y="30" width="220" height="70" rx="12"/>
+          <text x="130" y="60" text-anchor="middle">client, spreekt 5 t/m 9</text>
+          <text class="label" x="130" y="84" text-anchor="middle">stores, nodes, panels zien 9</text>
+          <rect class="node" x="520" y="30" width="220" height="70" rx="12"/>
+          <text x="630" y="60" text-anchor="middle">daemon, spreekt 4 t/m 7</text>
+          <text class="label" x="630" y="84" text-anchor="middle">handlers zien 7</text>
+          <path class="edge" d="M240 52 H512" marker-end="url(#neg-arrow)"/>
+          <text class="label" x="376" y="44" text-anchor="middle">?protocol=9 (min 5)</text>
+          <path class="edge" d="M520 78 H248" marker-end="url(#neg-arrow)"/>
+          <text class="label" x="376" y="98" text-anchor="middle">endpoint.info: protocol 7, protocols 4..7</text>
+          <rect class="node" x="20" y="150" width="220" height="70" rx="12"/>
+          <text x="130" y="180" text-anchor="middle">compat/v7 in LinkTransport</text>
+          <text class="label" x="130" y="204" text-anchor="middle">verzoek 9 naar 7, event 7 naar 9</text>
+          <rect class="node" x="520" y="150" width="220" height="70" rx="12"/>
+          <text x="630" y="180" text-anchor="middle">geen adapter nodig</text>
+          <text class="label" x="630" y="204" text-anchor="middle">7 is zijn eigen versie</text>
+          <path class="edge" d="M130 100 V142" marker-end="url(#neg-arrow)"/>
+          <path class="edge" d="M240 185 H512" marker-end="url(#neg-arrow)"/>
+          <text class="label" x="376" y="176" text-anchor="middle">frames in de vorm van 7</text>
+        </svg>
+      </div>
+      <figcaption>Een client die 5 tot en met 9 spreekt tegen een daemon die 4 tot en met 7 spreekt: onderhandeld is 7. De client vertaalt aan de rand; de daemon praat gewoon zijn eigen versie. Andersom (daemon nieuwer) vertaalt de daemon, maar met de additieve regel is dat bijna altijd niets.</figcaption>
+    </figure>
+  </section>
+
+  <section id="last">
+    <h2>Wie draagt de last</h2>
+    <p>De client. Drie redenen.</p>
+    <ul>
+      <li><strong>station is altijd het nieuwst</strong> en een <code>npx</code>-machine het oudst, dus de combinatie "client nieuwer dan daemon" is de regel, niet de uitzondering. De kant die het vaakst de nieuwste is, is de kant die het beste weet hoe de oude vorm eruitzag.</li>
+      <li><strong>Een daemon is in meer vormen in omloop</strong> (app-bundel, service, npm, handmatig) en een fix daar bereikt een machine pas als iemand bijwerkt. Een fix in de client bereikt station bij de volgende push.</li>
+      <li><strong>De daemon hoeft bijna niets te doen als hij additief blijft.</strong> Een oude client stuurt een oude payload; een daemon die geen veld verplicht heeft gemaakt en geen type heeft verwijderd, parset die gewoon. Een nieuwe event die de oude client niet kent, laat die zelf vallen.</li>
+    </ul>
+    <p>Wat de daemon wél moet doen, in de richting "daemon nieuwer dan client":</p>
+    <ul>
+      <li>De onderhandelde versie per verbinding kennen (<code>ClientAccess.protocol</code>), zodat <code>sendEvent</code> een event dat die versie niet kent kan overslaan. Dat is een netheid, geen noodzaak: de oude client laat het toch vallen.</li>
+      <li>Een enum-waarde die de oude client niet kent niet in een bestaand event stoppen, of hem afzwakken (een onbekende <code>ChatItem.kind</code> als een <code>system</code>-item met tekst). Dit is de enige plek waar de daemon echt moet vertalen, en alleen voor clients van vóór de <code>unknown</code>-tak uit stap 3 van het plan. Daarna neemt de client dit over.</li>
+      <li>Een verzoektype pas verwijderen als de versie waarin het verscheen buiten het venster valt.</li>
+    </ul>
+    <p>De verdeling in één zin: <strong>de daemon belooft dat elke versie in zijn venster een deelverzameling is van wat hij nu spreekt; de client belooft dat hij naar elke versie in zijn venster terug kan praten.</strong> Kubernetes doet hetzelfde met kubelet, dat nooit nieuwer mag zijn dan de apiserver. Ruimte kan die harde richting niet afdwingen (een persoon werkt zijn app niet bij en zijn server wel), maar hij kan de dure richting wel klein houden.</p>
+  </section>
+
+  <section id="beleid">
+    <h2>Het beleid: hoeveel, hoe lang, en wat een weigering zegt</h2>
+    <h3>Hoeveel versies</h3>
+    <p>"De drie vorige versies" is de goede intuïtie, maar niet in app-versies: er zijn vijftien tags in vijf dagen, en een protocolnummer dat bij elke wijziging omhoog gaat loopt sneller dan een tag. Het venster hoort in <strong>breuken</strong> en in <strong>tijd</strong> te staan, want alleen een breuk kost code.</p>
+    <ul>
+      <li><strong>Additief kost niets</strong>, dus een additieve stap valt nooit uit het venster. Een client van vandaag mag een machine van een jaar oud bedienen zolang er in dat jaar geen breuk was; de <code>FEATURES</code>-tabel dimt wat er niet is.</li>
+      <li><strong>Een breuk krijgt een adapter die 90 dagen leeft, of drie releases als dat langer is.</strong> Dat is <code>PROTOCOL_MIN</code>: het nummer van de oudste breuk die nog een adapter heeft. De datum en de reden staan als regel bij de bump in <code>protocol.ts</code>, en een test die de datum naast <code>PROTOCOL_MIN</code> leest faalt zodra een adapter over tijd is, zoals Headscale's <code>CanOldCodeBeCleanedUp</code>.</li>
+      <li><strong>Breuken worden gebundeld.</strong> Hoogstens één breuk per release, liefst per kwartaal, en nooit in een release die een nieuw view- of node-kind schrijft, om dezelfde reden als in "Kinds a newer Ruimte wrote": een persoon die een release overslaat verliest anders twee dingen tegelijk.</li>
+      <li><strong>De daemon houdt hetzelfde venster</strong>, maar zijn kant is alleen "oude vorm nog accepteren", dus dat is meestal een optioneel veld dat blijft staan.</li>
+    </ul>
+    <p>Zolang het project pre-alpha is met releases per dag zou ik het venster op de regel houden en <code>PROTOCOL_MIN</code> pas laten achterlopen bij de eerste breuk die er echt toe doet. Het mechanisme moet er wel vóór die breuk staan: een daemon die vandaag wordt geïnstalleerd zonder venster kan een nieuwe client nooit meer toelaten.</p>
+    <h3>Hoe te testen</h3>
+    <ol>
+      <li><strong>Een bump-wachter.</strong> Een test in <code>packages/contracts</code> schrijft <code>z.toJSONSchema</code> van elke entry in <code>REQUEST_SCHEMAS</code> en <code>EVENT_SCHEMAS</code> plus de handshake-frames naar één snapshot (<code>protocol-&lt;N&gt;.schema.json</code>) en vergelijkt. Verschilt het zonder dat <code>PROTOCOL_VERSION</code> omhoog ging, dan faalt hij met de zin "bump the protocol and write a line". Dit maakt "elke wijziging telt" afdwingbaar in plaats van een afspraak.</li>
+      <li><strong>Opgenomen frames per versie.</strong> <code>apps/server/scripts/record-frames.ts</code> draait tegen een daemon en schrijft een set frames weg: het antwoord op <code>session.attach</code>, een <code>chat.event</code> per item-kind, een <code>project.changed</code> met elk node-kind, <code>endpoint.info</code>, de <code>direct.challenge</code>. Bij elke bump wordt de set van de vorige versie ingecheckt onder <code>packages/contracts/fixtures/protocol-&lt;N&gt;/</code>. Een test haalt elke fixture van elke versie in het venster door de adapter naar de huidige schema's, en elk huidig verzoek door de adapter terug naar elke versie in het venster tegen het bevroren snapshot van die versie (punt 1 levert dat snapshot al). Geen shell, geen klok, dus in de standaardrun.</li>
+      <li><strong>Eén echte oude daemon.</strong> <code>skew.integration.test.ts</code> haalt de binary van de release die <code>PROTOCOL_MIN</code> droeg op (een GitHub-release-asset, of <code>npx ruimte@&lt;versie&gt;</code>), start hem op een vrije poort met een tijdelijke <code>RUIMTE_HOME</code>, en draait de transportlaag van de huidige client ertegen: verbinden, <code>endpoint.info</code>, <code>session.create</code>, <code>attach</code>, <code>write</code>, <code>project.open</code>, <code>save</code>. Wekelijks in CI en bij elke bump, niet per push.</li>
+      <li><strong>De weigering zelf.</strong> Een unit-test per richting op <code>protocolGate</code> en op de challenge-verwerking in <code>webrtc-link.ts</code>, met de nieuwe zinnen.</li>
+    </ol>
+    <h3>Wat een weigering zegt als het gat te groot is</h3>
+    <p>De twee zinnen van nu blijven, met de versies erbij, want <code>endpoint.info</code> draagt naast <code>protocol</code> ook <code>version</code> (de app-versie van de daemon). Een protocolnummer hoort niet in de zin; een persoon kent alleen app-versies.</p>
+    <ul>
+      <li>Machine te oud: "This machine runs Ruimte 0.0.9, older than this app can still talk to. Update Ruimte there." Op de rij van de machine, in het palet, en op het welkomstscherm van station.</li>
+      <li>App te oud: "This machine runs Ruimte 0.3.0, newer than this app can talk to. Update this app." Op de desktop met een knop naar de updater.</li>
+      <li>De close-reden van 4406 wordt <code>protocol &lt;huidig&gt; min &lt;min&gt;</code>, zodat een client ook zonder <code>endpoint.info</code> weet of hij lager kan bieden. <code>protocolOfRefusal</code> leest de oude vorm nog.</li>
+    </ul>
+    <p class="note">Overgang met de daemons die er al staan: een v1-daemon van vandaag neemt alleen <code>protocol=1</code> of geen parameter, en sluit met 4406 en reden <code>protocol 1</code>. Een client die 1 nog spreekt hoort op die reden opnieuw te verbinden met <code>?protocol=1</code> in plaats van te weigeren. Op het directe kanaal komt de challenge vóór de proof, dus de client ziet <code>protocol: 1</code> en kan zijn proof met 1 beantwoorden; de daemon van vandaag weigert alleen een proof die niet 1 is. Andersom controleert een v1-client <code>endpoint.info.protocol === 1</code> en <code>challenge.protocol === 1</code>. Een nieuwere daemon die 1 nog spreekt moet daar dus de onderhandelde versie invullen (op een socket die 1 bood is dat 1) en in de challenge zijn minimum, met het venster in een nieuw veld <code>protocols: { min, max }</code>. Dit is één keer lelijk en daarna gewoon de betekenis van het veld: <code>protocol</code> is wat deze verbinding spreekt, <code>protocols</code> is wat de machine kan.</p>
+  </section>
+
+  <section id="vertrouwen">
+    <h2>Pairing, statements en de handshake van het directe kanaal</h2>
+    <p>Nee, die worden nooit omlaag onderhandeld. De reden is de volgorde: de versie wordt gelezen vóór er iets bewezen is. <code>?protocol=N</code> staat op een URL die iedereen kan zetten, en <code>direct.challenge</code> gaat de deur uit voordat de client een handtekening heeft gezet. Alles wat een aanvaller met dat nummer kan sturen, moet dus onschuldig zijn. Een handshake die op verzoek terugvalt op een zwakkere vorm is het klassieke downgrade-lek.</p>
+    <ul>
+      <li><strong>Pairing</strong> (<code>POST /auth/pair</code>, <code>/auth/challenge</code>, <code>/auth/ticket</code>) loopt over HTTP zonder onderhandeling. De pairing-link, het registreren van een ed25519-sleutel en het tekenen van een challenge blijven één vorm per versie van de daemon. Een oudere client die een nieuwe daemon niet kan pairen ziet de zin en werkt bij. De <code>protocol</code> in het pairing-antwoord is informatie voor de rij van de machine, geen onderhandeling.</li>
+      <li><strong>Statements</strong> uit het adresboek: de handtekening over <code>accessStatementMessage</code> met prefix <code>pulsar-access-statement-v1</code>, de gepinde sleutel in <code>statement-key.ts</code>, de nonce die <code>StatementGate</code> spendt, de levensduur van <code>ACCESS_STATEMENT_LIFETIME_MS</code> en <code>refuseStatements</code> per machine. Geen van die dingen mag een functie van de onderhandelde versie worden. Een nieuwe statementvorm krijgt een nieuwe prefix (<code>-v2</code>), de daemon accepteert beide een vaste tijd, en de oude prefix gaat er op een datum uit, niet via het venster.</li>
+      <li><strong>De directe handshake</strong> (<code>direct.challenge</code>, <code>direct.key</code>, <code>direct.secret</code>, <code>direct.accepted</code>, <code>direct.refused</code>) en de binding over de DTLS-fingerprints (<code>channelBinding</code>) staan buiten de adapterlaag: ze lopen vóór de versie vaststaat en mogen alleen additief veranderen. De signing-prefixen <code>ruimte-daemon-channel-v1</code>, <code>ruimte-client-channel-v1</code> en <code>ruimte-local-channel-v1</code> zijn de versie van de handtekening, los van het protocolnummer, en volgen dezelfde regel als de statements: nieuwe prefix, een vaste overlap, een datum.</li>
+      <li><strong>De broker</strong> (<code>packages/pulsar/src/broker.ts</code>, prefix <code>pulsar-broker-hello-v1</code>) leest geen envelop en verifieert niets aan de inhoud; hij draagt alleen door. Het signal-envelop tussen daemon en client valt onder de additieve regel. De broker zelf is een dienst die Bas uitrolt en heeft geen venster nodig, wel de regel dat een nieuw broker-bericht een nieuw type is.</li>
+    </ul>
+    <p>De harde regel voor het beleid: <strong>een wijziging aan een handshake-frame, een signing-prefix, een pinned key of aan wat een nonce of ticket betekent, is een breuk zonder adapter</strong>. Dan gaat <code>PROTOCOL_MIN</code> gelijk aan <code>PROTOCOL_VERSION</code>, de release notes zeggen het, en wie te oud is leest de zin. Zulke wijzigingen horen zeldzaam te zijn; als ze samenvallen met een gewone breuk, bundel ze.</p>
+  </section>
+
+  <section id="plan">
+    <h2>Het plan</h2>
+    <p>Vier stappen, in volgorde. Stap 1 is de concrete eerste stap; hij verandert niets aan het gedrag van vandaag en is vanaf dan de reden dat elke nieuw geïnstalleerde daemon later een nieuwere client kan toelaten. De stappen 2 en 3 kunnen in dezelfde week; stap 4 pas bij de eerste echte breuk.</p>
+    <ol class="steps">
+      <li class="step"><div>
+        <h3>Het venster en de onderhandelde versie</h3>
+        <p><code>protocol.ts</code> krijgt <code>PROTOCOL_MIN</code> (nu 1), <code>negotiateProtocol(offered, own: { min, max })</code> en een close-reden <code>protocol &lt;max&gt; min &lt;min&gt;</code> die <code>protocolOfRefusal</code> in beide vormen leest. De daemon neemt een socket met een N in zijn venster, onthoudt N op <code>ClientAccess.protocol</code> en antwoordt in <code>endpoint.info</code> met <code>protocol: N</code> en <code>protocols: { min, max }</code>. <code>protocolGate</code> neemt een antwoord aan als het venster overlapt, en op een 4406 met een lagere versie die de client nog spreekt verbindt <code>LinkTransport</code> opnieuw met die versie op de URL. <code>ConnectionState</code> krijgt <code>protocol</code>. Op het directe kanaal draagt de challenge <code>protocol: min</code> plus <code>protocols</code>, de client kiest <code>min(eigen max, daemon max)</code> en zet die in de proof, en <code>channel-auth.ts</code> neemt een proof binnen het venster. De decision-entry in <code>docs/DECISIONS.md</code> wordt bijgewerkt en de twee zinnen krijgen de app-versie erbij.</p>
+        <p><strong>Acceptatie:</strong> alle bestaande tests slagen ongewijzigd; <code>protocol.test.ts</code> dekt overlap, geen overlap in beide richtingen, de oude en de nieuwe close-reden, en de retry met een lagere versie; een test met een gesimuleerde v1-daemon (die alleen <code>protocol=1</code> neemt en <code>endpoint.info</code> zonder <code>protocols</code> geeft) verbindt met een client die <code>{ min: 1, max: 2 }</code> spreekt; een gesimuleerde v1-client verbindt met een daemon die <code>{ min: 1, max: 2 }</code> spreekt en ziet <code>protocol: 1</code>; <code>bun run check</code> groen.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>De bump-wachter en de features-tabel</h3>
+        <p>Een snapshot van de JSON Schema van beide tabellen en de handshake-frames in <code>packages/contracts</code>, een test die faalt als het snapshot verandert zonder bump, en per bump één regel met datum en reden in <code>protocol.ts</code>. Daarnaast <code>FEATURES: Record&lt;string, number&gt;</code> in de contracts (feature naar de versie waarin hij verscheen) en <code>supports(feature)</code> op de transport, gelezen uit de onderhandelde versie. De eerste gebruikers: de directe verbinding in de Machines-pane (die nu op <code>unknown-request</code> leunt), <code>chat.clear</code>, de diagram-verzoeken en <code>processes.*</code>, elk met een dimmende rij of een zin "Update Ruimte on this machine for this".</p>
+        <p><strong>Acceptatie:</strong> een schema-wijziging zonder bump breekt <code>bun test</code> met een zin die zegt wat te doen; een bump zonder changelog-regel ook; elke feature in <code>FEATURES</code> heeft minstens één aanroeper van <code>supports</code>; een client die tegen een gesimuleerde oudere versie draait toont de zin in plaats van een stille fout.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Tolerante unions op de client</h3>
+        <p>Elke <code>discriminatedUnion</code> en elke enum die een nieuwere daemon kan laten groeien krijgt op de client een <code>unknown</code>-tak, zoals <code>UNKNOWN_KIND</code> die al heeft voor het bestand: <code>ChatItemSchema</code> (een onbekend item wordt een rij met de ruwe tekst of niets), <code>NodeKindSchema</code> op de draad, <code>AgentKindSchema</code>, de statussen. Een frame met één onbekende waarde kost dan één rij in plaats van de hele thread.</p>
+        <p><strong>Acceptatie:</strong> een <code>chat.event</code> met een verzonnen item-kind wordt niet meer gedropt en de rest van de thread werkt bij; een <code>project.changed</code> met een verzonnen node-kind tekent een plaat; de bestaande <code>Record&lt;Kind, ...&gt;</code>-tabellen compileren pas als ze zeggen wat een onbekende draagt.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>De adapterlaag en de fixtures, bij de eerste breuk</h3>
+        <p><code>packages/contracts/src/compat/index.ts</code> met <code>liftEvent(from, event, payload)</code>, <code>lowerRequest(to, type, payload)</code> en <code>liftResult(from, type, result)</code>, identiteit voor elke versie zonder breuk; <code>LinkTransport</code> en <code>Dispatcher</code> roepen ze aan met de versie van de verbinding. <code>record-frames.ts</code> en de fixtures per versie, de replay-test in de standaardrun, en <code>skew.integration.test.ts</code> tegen de release die <code>PROTOCOL_MIN</code> draagt. Een test die faalt zodra een adapter ouder is dan 90 dagen en drie releases.</p>
+        <p><strong>Acceptatie:</strong> de eerste breuk landt met een adapter, een fixture van de vorige versie en een groene replay in beide richtingen; de integratietest verbindt met de oude binary en rondt sessie en project af; de code boven de transportlaag is in die commit ongewijzigd.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <section id="open">
+    <h2>Open vragen</h2>
+    <ul>
+      <li><strong>Wanneer telt het venster echt?</strong> Met vijftien releases in vijf dagen is 90 dagen nu een leven lang. Mijn voorstel: bouw stap 1 tot en met 3 nu, laat <code>PROTOCOL_MIN</code> tot de eerste release met gebruikers buiten Bas gelijk aan <code>PROTOCOL_VERSION</code>, en start de klok van het beleid daar.</li>
+      <li><strong>De iOS-app.</strong> Die komt uit een App Store met eigen reviewtijd en wordt de client die het langst achterloopt. Dan wordt de richting "daemon nieuwer dan client" vaker, en dan is stap 3 (tolerante unions op de client) niet genoeg: de daemon moet dan ook een venster naar achteren dragen. Het mechanisme van stap 1 draagt dat al; het beleid moet er dan een zin over krijgen.</li>
+      <li><strong>Hoe de app-versie in de zin komt</strong> als de weigering al op de socket valt (4406 vóór <code>endpoint.info</code>). De reden kan naast de protocolnummers ook <code>version</code> dragen; of de client leest <code>/health</code>, dat de versie al geeft. Klein, maar het bepaalt of de zin altijd een versienummer heeft.</li>
+      <li><strong>Waar de adapter voor <code>bytes.read</code> en de HTTP-routes staat.</strong> Die zitten niet in de tabellen; <code>useMachineUrl</code> kiest per transport. Een breuk daar is onwaarschijnlijk, maar het snapshot van stap 2 hoort ze mee te nemen.</li>
+    </ul>
+  </section>
+
+  <section id="bronnen">
+    <h2>Bronnen</h2>
+    <ul>
+      <li>Ruimte op <code>d081d13</code>: <code>packages/contracts/src/protocol.ts</code>, <code>envelope.ts</code>, <code>direct.ts</code>, <code>index.ts</code>; <code>apps/server/src/dispatcher.ts</code>, <code>daemon.ts</code>, <code>pulsar/channel-auth.ts</code>; <code>apps/client/src/transport/protocol.ts</code>, <code>link-transport.ts</code>, <code>webrtc-link.ts</code>, <code>signaling.ts</code>; <code>packages/pulsar/src/signing.ts</code>; <code>docs/DECISIONS.md</code> ("A protocol version on the wire", "Kinds a newer Ruimte wrote").</li>
+      <li>Docker, <a href="https://docs.docker.com/reference/api/engine/">Develop with the Docker Engine API: versioned API and SDK</a>, en <a href="https://docs.docker.com/reference/api/engine/version-history/">Engine API version history</a> (v1.25: versie verplicht in het pad, <code>MinAPIVersion</code> in <code>GET /version</code>).</li>
+      <li>Kubernetes, <a href="https://kubernetes.io/releases/version-skew-policy/">Version Skew Policy</a>.</li>
+      <li>Tailscale, <a href="https://github.com/tailscale/tailscale/blob/main/tailcfg/tailcfg.go"><code>tailcfg.go</code></a>: <code>CapabilityVersion</code> en <code>CurrentCapabilityVersion = 147</code> op 9 september 2026. Headscale, <a href="https://github.com/juanfont/headscale/blob/main/hscontrol/capver/capver.go"><code>hscontrol/capver/capver.go</code></a>: <code>CanOldCodeBeCleanedUp</code> en <code>TailscaleLatestMajorMinor</code>.</li>
+      <li>Microsoft, <a href="https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/">Language Server Protocol Specification 3.17</a>: capabilities, <code>initialize</code>, onbekende properties negeren.</li>
+      <li>Protocol Buffers, <a href="https://protobuf.dev/programming-guides/proto3/#updating">Language Guide (proto 3): Updating a Message Type</a>.</li>
+      <li>Zod 4, <a href="https://zod.dev/api?id=objects">API: Objects</a> (unknown keys stripped; <code>z.strictObject</code>, <code>z.looseObject</code>).</li>
+      <li>IETF, <a href="https://www.rfc-editor.org/rfc/rfc6455#section-1.9">RFC 6455, section 1.9: Subprotocols Using the WebSocket Protocol</a>; Bun, <a href="https://bun.com/docs/api/websockets">WebSockets: headers on <code>server.upgrade()</code></a>.</li>
+      <li>Chrome DevTools Protocol, <a href="https://chromedevtools.github.io/devtools-protocol/">protocol viewer</a> (tip-of-tree naast stable 1.3).</li>
+      <li>VS Code, <a href="https://code.visualstudio.com/docs/remote/vscode-server">VS Code Server</a> en <a href="https://code.visualstudio.com/docs/remote/ssh">Remote Development using SSH</a>; de koppeling van de server aan een commit is eigen ervaring, niet in deze pagina's gevonden.</li>
+      <li>Syncthing, <a href="https://docs.syncthing.net/specs/bep-v1.html">Block Exchange Protocol v1</a> (de <code>Hello</code> met naam en versie).</li>
+    </ul>
+  </section>
+</main>
+<footer><p>Rapport geschreven op 15 september 2026 tegen commit <code>d081d13</code>. Niets is gebouwd; de codepaden zijn gelezen, niet uitgevoerd. Het tellen van verzoeken, events en enums is met <code>grep</code> op de tabellen gedaan. De bronnen zijn op 15 september opgehaald; waar een pagina de bewering niet droeg staat dat erbij.</p></footer>
+</body>
+</html>
