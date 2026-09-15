@@ -75,7 +75,7 @@ struct SidebarBrand: View {
                 .background(.white, in: RoundedRectangle(cornerRadius: 8))
             Text("Ruimte").font(.title3.weight(.semibold)).foregroundStyle(MobileStyle.text)
         }
-        .padding(.leading, 18)
+        .padding(.leading, 8)
         .fixedSize(horizontal: true, vertical: false)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Ruimte")

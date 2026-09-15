@@ -566,3 +566,28 @@ The main iPad sidebar branding now has a 32-point mark and a larger semibold nam
 The earlier activation check called the collection-view delegate directly and missed this touch regression. It has been replaced by one opt-in XCUITest in the `RuimteDeviceChecks` scheme, which requires a signed-in device with an available project. Actual synthesized taps opened Recently closed, a project and a view on both physical devices; the iPad run also switched to Machines and back to Projects. Both runs passed. The standard test scheme remains independent of device account state.
 
 The signed builds, Swift formatting and repository checks passed, with existing lint warnings. Both devices have the updated app installed and launched. No simulator was used. The press transition timing and light appearance were not visually recorded.
+
+## Sidebar brand alignment and connection timing
+
+The iPad brand moves ten points left: its mark now starts at the sidebar row background's leading edge, rather than the icon inside that row.
+
+iPhone and iPad share the same transport implementation. Startup restores the account locally, refreshes its access token when needed and requests the machine list from Pulsar. Link-paired machines can start from local storage. Each machine then opens a shared secure broker socket, authenticates it and requests ICE servers. WebRTC gathers host, STUN and TURN candidates before sending its offer. The offer waits for gathering to finish or a five-second deadline. The daemon also gathers before answering. A signed channel handshake completes before project data is requested. Successful channels release their broker membership and carry application traffic directly between peers, or through TURN when a relay candidate is selected. The normal app uses ICE policy `all`, not `relay`.
+
+One cold-launch measurement on each physical device used the existing opt-in debug trace, extended with elapsed milliseconds, candidate-pair types and round-trip time. No addresses, credentials or message contents are added to the trace. The following times start when the machine link is created, so they exclude account restoration, machine discovery and subsequent project/chat loading.
+
+| Stage, connection to this Mac | iPad | iPhone |
+| --- | ---: | ---: |
+| Broker and ICE configuration ready | 226 ms | 107 ms |
+| First host candidate | 228 ms | 109 ms |
+| Offer sent | 337 ms | 5,265 ms |
+| Answer received | 436 ms | 5,439 ms |
+| Authenticated | 697 ms | 5,625 ms |
+| First sampled round-trip time | 8 ms | 7 ms |
+
+The Mac connections were `O8XwH2Ml` and `hwJM9wxM`, correlated with the daemon log. Both selected host/host candidate pairs, with no TURN relay. The second machine also connected without TURN: 727 ms on iPad and 5,528 ms on iPhone. On iPhone, gathering reached its five-second deadline despite early host candidates. This identifies a setup delay; it does not establish a slow data path. The Mac classifies both clients as `public` from their nominated remote address. That label alone cannot distinguish globally addressed local IPv6 or NAT loopback from traffic leaving the local network. No packet-route capture was performed.
+
+The foreground policy closes machine links when all scenes enter the background and rebuilds them on return. Failed attempts have a 20-second deadline and retry delays of 0.5, 1, 2, 4, 8 and then 10 seconds. Connections and project summaries are shared/cached, but this does not avoid a fresh transport negotiation after backgrounding. Unlike desktop routes that can use a known machine socket, the mobile app currently requires broker signaling and has no broker-free LAN discovery path.
+
+The next performance change should address the measured gather wait: send usable initial candidates promptly and continue exchanging later candidates, with deployed-daemon compatibility verified. Separately, the app is missing `NSLocalNetworkUsageDescription`; Apple requires that description for apps accessing local hosts ([TN3179](https://developer.apple.com/documentation/technotes/tn3179-understanding-local-network-privacy)). Its absence is a configuration gap, not a demonstrated explanation for this measurement.
+
+The signed build and repository checks passed, with existing lint warnings. Both devices received the build. This iteration changed brand alignment and opt-in diagnostic output; the measured connection algorithm remains unchanged. No simulator or additional test suite was used.

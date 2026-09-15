@@ -13,6 +13,7 @@ import RuimtePulsar
     private let access: (() async throws -> JSONValue)?
     private let events: LinkEvents
     private let connectionID: String
+    private let startedAt = ProcessInfo.processInfo.systemUptime
     private let scheduler: any TransportScheduling
     private var membership: BrokerMembership?
     private var peer: RTCPeerConnection?
@@ -76,7 +77,8 @@ import RuimtePulsar
     private func trace(_ message: String) {
         #if DEBUG
         guard ProcessInfo.processInfo.environment["RUIMTE_TRACE_CONNECTION"] == "1" else { return }
-        print("[connection \(connectionID.prefix(8))] \(message)")
+        let elapsed = Int((ProcessInfo.processInfo.systemUptime - startedAt) * 1_000)
+        print("[connection \(connectionID.prefix(8)) +\(elapsed)ms] \(message)")
         #endif
     }
 
@@ -282,12 +284,27 @@ import RuimtePulsar
                         ($0.values["nominated"] as? Bool) == true && ($0.values["state"] as? String) == "succeeded"
                     }
                     if let selected {
-                        let local = (selected.values["localCandidateId"] as? String).flatMap { report.statistics[$0] }
-                        let remote = (selected.values["remoteCandidateId"] as? String).flatMap { report.statistics[$0] }
+                        let local = (selected.values["localCandidateId"] as? String).flatMap {
+                            report.statistics[$0]
+                        }
+                        let remote = (selected.values["remoteCandidateId"] as? String).flatMap {
+                            report.statistics[$0]
+                        }
                         let localType = local?.values["candidateType"] as? String
                         let remoteType = remote?.values["candidateType"] as? String
-                        let relayed: Bool? = localType == "relay" || remoteType == "relay" ? true : (localType != nil && remoteType != nil ? false : nil)
-                        if self.relayed != relayed { self.relayed = relayed; self.events.route(relayed) }
+                        let relayed: Bool? =
+                            localType == "relay" || remoteType == "relay"
+                            ? true : (localType != nil && remoteType != nil ? false : nil)
+                        if self.relayed != relayed {
+                            self.relayed = relayed
+                            let rtt = (selected.values["currentRoundTripTime"] as? NSNumber).map {
+                                Int($0.doubleValue * 1_000)
+                            }
+                            self.trace(
+                                "route \(localType ?? "unknown")/\(remoteType ?? "unknown"), RTT \(rtt.map(String.init) ?? "unknown")ms"
+                            )
+                            self.events.route(relayed)
+                        }
                     }
                     self.checkLiveness()
                 }
