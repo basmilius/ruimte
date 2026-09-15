@@ -26,37 +26,100 @@ export interface MachineLinkDeps {
  * fails, with its reason, rather than sitting through the reconnect loop behind it; that loop keeps
  * running, so the machine may still come up later without anyone asking again.
  */
+/* The one error a wait ends on when the person who asked stopped waiting, so a caller can tell it from a failure. */
+export class MachineWaitCancelled extends Error {
+    constructor() {
+        super('Stopped waiting for that machine');
+        this.name = 'MachineWaitCancelled';
+    }
+}
+
+interface Attempt {
+    promise: Promise<string>;
+    controller: AbortController;
+    /* Callers that may still stop waiting; the attempt, and with it the hold, ends when the last one does. */
+    waiters: number;
+    /* A caller without a signal never stops waiting, so nobody can end the attempt under it. */
+    pinned: boolean;
+}
+
 export class MachineLinks {
     private readonly deps: MachineLinkDeps;
-    private readonly attempts = new Map<string, Promise<string>>();
+    private readonly attempts = new Map<string, Attempt>();
 
     constructor(deps: MachineLinkDeps) {
         this.deps = deps;
     }
 
-    /* Resolves with the id of the row once its link is open, or rejects with a reason a person can read. */
-    ensure(id: string): Promise<string> {
+    /*
+     * Resolves with the id of the row once its link is open, or rejects with a reason a person can
+     * read. A signal that aborts rejects this call with `MachineWaitCancelled`, and lets go of the hold
+     * once no other caller is waiting on the same attempt.
+     */
+    ensure(id: string, signal?: AbortSignal): Promise<string> {
+        if (signal?.aborted) {
+            return Promise.reject(new MachineWaitCancelled());
+        }
         const known = this.deps.rowFor(id);
         if (known && this.deps.connection(known.id).status === 'open') {
             return Promise.resolve(known.id);
         }
         const key = known?.id ?? id;
-        const running = this.attempts.get(key);
-        if (running) {
-            return running;
+        const attempt = this.attempts.get(key) ?? this.start(key, id);
+        if (!signal) {
+            attempt.pinned = true;
+            return attempt.promise;
         }
-        const attempt = this.attempt(id).finally(() => {
-            this.attempts.delete(key);
+        attempt.waiters += 1;
+        return new Promise((resolve, reject) => {
+            const onAbort = (): void => {
+                attempt.waiters -= 1;
+                if (attempt.waiters === 0 && !attempt.pinned) {
+                    // Forgotten now rather than when it settles, so the next ask starts over instead of joining a wait that is ending.
+                    this.forget(key, attempt);
+                    attempt.controller.abort();
+                }
+                reject(new MachineWaitCancelled());
+            };
+            signal.addEventListener('abort', onAbort, { once: true });
+            attempt.promise.then(
+                (value) => {
+                    signal.removeEventListener('abort', onAbort);
+                    resolve(value);
+                },
+                (e: unknown) => {
+                    signal.removeEventListener('abort', onAbort);
+                    reject(e);
+                }
+            );
         });
+    }
+
+    private start(key: string, id: string): Attempt {
+        const controller = new AbortController();
+        const attempt: Attempt = {
+            promise: this.attempt(id, controller.signal).finally(() => {
+                this.forget(key, attempt);
+            }),
+            controller,
+            waiters: 0,
+            pinned: false
+        };
         this.attempts.set(key, attempt);
         return attempt;
     }
 
-    private async attempt(id: string): Promise<string> {
+    private forget(key: string, attempt: Attempt): void {
+        if (this.attempts.get(key) === attempt) {
+            this.attempts.delete(key);
+        }
+    }
+
+    private async attempt(id: string, signal: AbortSignal): Promise<string> {
         const row = this.deps.rowFor(id) ?? this.deps.createRow(id);
         const release = this.deps.hold(row);
         try {
-            await this.waitForOpen(row.id);
+            await this.waitForOpen(row.id, signal);
             // A row that answered as a daemon it already knew moved onto that id while it came up.
             return this.deps.rowFor(id)?.id ?? row.id;
         } finally {
@@ -64,11 +127,20 @@ export class MachineLinks {
         }
     }
 
-    private waitForOpen(endpointId: string): Promise<void> {
+    private waitForOpen(endpointId: string, signal: AbortSignal): Promise<void> {
         const { deps } = this;
         return new Promise((resolve, reject) => {
             let settled = false;
             let off: () => void = () => undefined;
+            const onAbort = (): void => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                clearTimeout(timer);
+                off();
+                reject(new MachineWaitCancelled());
+            };
             const finish = (failure: string | null): void => {
                 if (settled) {
                     return;
@@ -76,6 +148,7 @@ export class MachineLinks {
                 settled = true;
                 clearTimeout(timer);
                 off();
+                signal.removeEventListener('abort', onAbort);
                 if (failure === null) {
                     resolve();
                 } else {
@@ -91,6 +164,7 @@ export class MachineLinks {
                 }
             };
             const timer = setTimeout(() => finish('That machine is not answering'), deps.timeoutMs ?? ENSURE_TIMEOUT_MS);
+            signal.addEventListener('abort', onAbort, { once: true });
             off = deps.subscribe(endpointId, check);
             // A link waiting out its backoff is tried now: a person just asked for this machine.
             if (deps.connection(endpointId).status === 'closed') {

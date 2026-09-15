@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import type { Endpoint } from '@/state/endpoints';
 import type { ConnectionState } from '@/transport/transport';
-import { MachineLinks } from './ensure-machine';
+import { MachineLinks, MachineWaitCancelled } from './ensure-machine';
 
 const row = (id: string): Endpoint => ({
     id,
@@ -147,5 +147,59 @@ describe('ensuring a machine is reachable', () => {
         expect(second).not.toBe(first);
         pool.set('studio', OPEN);
         expect(await second).toBe('studio');
+    });
+    test('a caller that stops waiting ends the attempt and lets go of the hold', async () => {
+        const pool = fakePool({ rows: [row('studio')] });
+        const controller = new AbortController();
+        const waiting = pool.links.ensure('studio', controller.signal);
+        expect(pool.log).toEqual(['hold:studio']);
+        controller.abort();
+        await expect(waiting).rejects.toBeInstanceOf(MachineWaitCancelled);
+        expect(pool.log).toEqual(['hold:studio', 'release:studio']);
+        expect(pool.handlers.get('studio')?.size ?? 0).toBe(0);
+    });
+
+    test('one caller stopping leaves the attempt to the caller that still waits', async () => {
+        const pool = fakePool({ rows: [row('studio')] });
+        const controller = new AbortController();
+        const leaving = pool.links.ensure('studio', controller.signal);
+        const staying = pool.links.ensure('studio', new AbortController().signal);
+        controller.abort();
+        await expect(leaving).rejects.toBeInstanceOf(MachineWaitCancelled);
+        expect(pool.log).not.toContain('release:studio');
+        pool.set('studio', OPEN);
+        expect(await staying).toBe('studio');
+        expect(pool.log).toEqual(['hold:studio', 'release:studio']);
+    });
+
+    test('a caller without a signal keeps the attempt alive when another one stops', async () => {
+        const pool = fakePool({ rows: [row('studio')] });
+        const controller = new AbortController();
+        const pinned = pool.links.ensure('studio');
+        const leaving = pool.links.ensure('studio', controller.signal);
+        controller.abort();
+        await expect(leaving).rejects.toBeInstanceOf(MachineWaitCancelled);
+        pool.set('studio', OPEN);
+        expect(await pinned).toBe('studio');
+    });
+
+    test('after stopping, the next ask starts a new attempt', async () => {
+        const pool = fakePool({ rows: [row('studio')] });
+        const controller = new AbortController();
+        const first = pool.links.ensure('studio', controller.signal);
+        controller.abort();
+        await expect(first).rejects.toBeInstanceOf(MachineWaitCancelled);
+        const second = pool.links.ensure('studio');
+        expect(pool.log).toEqual(['hold:studio', 'release:studio', 'hold:studio']);
+        pool.set('studio', OPEN);
+        expect(await second).toBe('studio');
+    });
+
+    test('a signal that already aborted asks nothing of the pool', async () => {
+        const pool = fakePool({ rows: [row('studio')] });
+        const controller = new AbortController();
+        controller.abort();
+        await expect(pool.links.ensure('studio', controller.signal)).rejects.toBeInstanceOf(MachineWaitCancelled);
+        expect(pool.log).toEqual([]);
     });
 });
